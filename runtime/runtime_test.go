@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/onflow/cadence/runtime/parser"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -2542,7 +2543,7 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
         prepare(signer: auth(Storage) &Account) {
           // Important: Perform a write which will be pending until the end of the transaction,
           // but should be (temporarily) committed when the AuthAccount constructor is called
-          signer.save(42, to: /storage/answer)
+          signer.storage.save(42, to: /storage/answer)
           Account(payer: signer)
         }
       }
@@ -7907,213 +7908,6 @@ func TestRuntimeInvalidatedResourceUse(t *testing.T) {
 	))
 
 	victim := []byte(`
-        pub contract VictimContract {
-            pub resource Vault {
-
-                // Balance of a user's Vault
-                // we use unsigned fixed point numbers for balances
-                // because they can represent decimals and do not allow negative values
-                pub var balance: UFix64
-
-                init(balance: UFix64) {
-                    self.balance = balance
-                }
-
-                pub fun withdraw(amount: UFix64): @Vault {
-                    self.balance = self.balance - amount
-                    return <-create Vault(balance: amount)
-                }
-
-                pub fun deposit(from: @Vault) {
-                    self.balance = self.balance + from.balance
-                    destroy from
-                }
-            }
-
-            pub fun faucet(): @VictimContract.Vault {
-                return <- create VictimContract.Vault(balance: 5.0)
-            }
-        }
-    `)
-
-	// Deploy Victim
-
-	deployVictim := DeploymentTransaction("VictimContract", victim)
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: deployVictim,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	// Deploy Attacker
-
-	deployAttacker := DeploymentTransaction("AttackerContract", attacker)
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: deployAttacker,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
-	// Attack
-
-	attackTransaction := []byte(fmt.Sprintf(`
-        import VictimContract from %s
-        import AttackerContract from %s
-
-        transaction {
-            execute {
-                AttackerContract.attack()
-            }
-        }`,
-		signerAccount.HexWithPrefix(),
-		signerAccount.HexWithPrefix(),
-	))
-
-	signers = nil
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: attackTransaction,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	RequireError(t, err)
-
-	var destroyedResourceErr interpreter.DestroyedResourceError
-	require.ErrorAs(t, err, &destroyedResourceErr)
-
-}
-
-func TestRuntimeInvalidatedResourceUse2(t *testing.T) {
-
-	t.Parallel()
-
-	runtime := NewTestInterpreterRuntime()
-
-	signerAccount := common.MustBytesToAddress([]byte{0x1})
-
-	signers := []Address{signerAccount}
-
-	accountCodes := map[Location][]byte{}
-	var events []cadence.Event
-
-	runtimeInterface := &TestRuntimeInterface{
-		OnGetCode: func(location Location) (bytes []byte, err error) {
-			return accountCodes[location], nil
-		},
-		Storage: NewTestLedger(nil, nil),
-		OnGetSigningAccounts: func() ([]Address, error) {
-			return signers, nil
-		},
-		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-			return accountCodes[location], nil
-		},
-		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
-			accountCodes[location] = code
-			return nil
-		},
-		OnEmitEvent: func(event cadence.Event) error {
-			events = append(events, event)
-			return nil
-		},
-	}
-
-	nextTransactionLocation := NewTransactionLocationGenerator()
-
-	attacker := []byte(fmt.Sprintf(`
-        import VictimContract from %s
-
-        pub contract AttackerContract {
-
-            pub resource InnerResource {
-                pub var name: String
-                pub var parent: &OuterResource?
-                pub var vault: @VictimContract.Vault?
-
-                init(_ name: String) {
-                    self.name = name
-                    self.parent = nil
-                    self.vault <- nil
-                }
-
-                pub fun setParent(_ parent: &OuterResource) {
-                    self.parent = parent
-                }
-
-                pub fun setVault(_ vault: @VictimContract.Vault) {
-                    self.vault <-! vault
-                }
-
-                destroy() {
-                    self.parent!.shenanigans()
-                    var vault: @VictimContract.Vault <- self.vault!
-                    self.parent!.collect(<- vault)
-                }
-            }
-
-            pub resource OuterResource {
-                pub var inner1: @InnerResource
-                pub var inner2: @InnerResource
-                pub var collector: &VictimContract.Vault
-
-                init(_ victim: @VictimContract.Vault, _ collector: &VictimContract.Vault) {
-                    self.collector = collector
-                    var i1 <- create InnerResource("inner1")
-                    var i2 <- create InnerResource("inner2")
-                    self.inner1 <- i1
-                    self.inner2 <- i2
-                    self.inner1.setVault(<- victim)
-                    self.inner1.setParent(&self as &OuterResource)
-                    self.inner2.setParent(&self as &OuterResource)
-                }
-
-                pub fun shenanigans() {
-                    self.inner1 <-> self.inner2
-                }
-
-                pub fun collect(_ from: @VictimContract.Vault) {
-                    self.collector.deposit(from: <- from)
-                }
-
-                destroy() {
-                    destroy self.inner1
-                    // inner1 and inner2 got swapped during the above line
-                    destroy self.inner2
-                }
-            }
-
-            pub fun doubleBalanceOfVault(_ vault: @VictimContract.Vault): @VictimContract.Vault {
-                var collector <- vault.withdraw(amount: 0.0)
-                var outer <- create OuterResource(<- vault, &collector as &VictimContract.Vault)
-                destroy outer
-                return <- collector
-            }
-
-            pub fun attack() {
-                var v1 <- VictimContract.faucet()
-                var v2 <- AttackerContract.doubleBalanceOfVault(<- v1)
-                destroy v2
-           }
-        }`,
-		signerAccount.HexWithPrefix(),
-	))
-
-	victim := []byte(`
         access(all) contract VictimContract {
             access(all) resource Vault {
 
@@ -8200,8 +7994,141 @@ func TestRuntimeInvalidatedResourceUse2(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var invalidatedResourceReferenceError interpreter.InvalidatedResourceReferenceError
+	require.ErrorAs(t, err, &invalidatedResourceReferenceError)
 
+}
+
+func TestRuntimeInvalidatedResourceUse2(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	signers := []Address{signerAccount}
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return signers, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	attacker := []byte(fmt.Sprintf(`
+        import VictimContract from %s
+
+        access(all) contract AttackerContract {
+
+            access(all) resource InnerResource {
+                access(all) var name: String
+                access(all) var parent: &OuterResource?
+                access(all) var vault: @VictimContract.Vault?
+
+                init(_ name: String) {
+                    self.name = name
+                    self.parent = nil
+                    self.vault <- nil
+                }
+
+                access(all) fun setParent(_ parent: &OuterResource) {
+                    self.parent = parent
+                }
+
+                access(all) fun setVault(_ vault: @VictimContract.Vault) {
+                    self.vault <-! vault
+                }
+
+                destroy() {
+                    self.parent!.shenanigans()
+                    var vault: @VictimContract.Vault <- self.vault!
+                    self.parent!.collect(<- vault)
+                }
+            }
+
+            access(all) resource OuterResource {
+                access(all) var inner1: @InnerResource
+                access(all) var inner2: @InnerResource
+                access(all) var collector: &VictimContract.Vault
+
+                init(_ victim: @VictimContract.Vault, _ collector: &VictimContract.Vault) {
+                    self.collector = collector
+                    var i1 <- create InnerResource("inner1")
+                    var i2 <- create InnerResource("inner2")
+                    self.inner1 <- i1
+                    self.inner2 <- i2
+                    self.inner1.setVault(<- victim)
+                    self.inner1.setParent(&self as &OuterResource)
+                    self.inner2.setParent(&self as &OuterResource)
+                }
+
+                access(all) fun shenanigans() {
+                    self.inner1 <-> self.inner2
+                }
+
+                access(all) fun collect(_ from: @VictimContract.Vault) {
+                    self.collector.deposit(from: <- from)
+                }
+            }
+
+            access(all) fun doubleBalanceOfVault(_ vault: @VictimContract.Vault): @VictimContract.Vault {
+                var collector <- vault.withdraw(amount: 0.0)
+                var outer <- create OuterResource(<- vault, &collector as &VictimContract.Vault)
+                destroy outer
+                return <- collector
+            }
+
+            access(all) fun attack() {
+                var v1 <- VictimContract.faucet()
+                var v2 <- AttackerContract.doubleBalanceOfVault(<- v1)
+                destroy v2
+           }
+        }`,
+		signerAccount.HexWithPrefix(),
+	))
+
+	// Deploy Attacker
+
+	deployAttacker := DeploymentTransaction("AttackerContract", attacker)
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployAttacker,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	assertRuntimeErrorIsUserError(t, err)
+
+	var parserError parser.Error
+	require.ErrorAs(t, err, &parserError)
+
+	assert.IsType(t, &parser.CustomDestructorError{}, parserError.Errors[0])
 }
 
 func TestRuntimeOptionalReferenceAttack(t *testing.T) {
@@ -9131,27 +9058,27 @@ func TestRuntimeNestedResourceMoveInDestructor(t *testing.T) {
         import Bar from %[1]s
 
         access(all) contract Foo {
-            pub var temp: @Bar.Vault?
+            access(all) var temp: @Bar.Vault?
             init() {
                 self.temp <- nil
             }
 
-            pub fun doubler(_ vault: @Bar.Vault): @Bar.Vault {
+            access(all) fun doubler(_ vault: @Bar.Vault): @Bar.Vault {
                 destroy  <- create R(<-vault)
                 var doubled <- self.temp <- nil
                 return <- doubled!
             }
 
-            pub resource R {
-                pub var bounty: @Bar.Vault
-                pub var dummy: @Bar.Vault
+            access(all) resource R {
+                access(all) var bounty: @Bar.Vault
+                access(all) var dummy: @Bar.Vault
 
                 init(_ v: @Bar.Vault) {
                      self.bounty <- v
                      self.dummy <- Bar.createEmptyVault()
                 }
 
-                pub fun swap() {
+                access(all) fun swap() {
                     self.bounty <-> self.dummy
                 }
 
@@ -9180,59 +9107,11 @@ func TestRuntimeNestedResourceMoveInDestructor(t *testing.T) {
 		signerAccount.HexWithPrefix(),
 	))
 
-	bar := []byte(`
-        pub contract Bar {
-            pub resource Vault {
-
-                // Balance of a user's Vault
-                // we use unsigned fixed point numbers for balances
-                // because they can represent decimals and do not allow negative values
-                pub var balance: UFix64
-
-                init(balance: UFix64) {
-                    self.balance = balance
-                }
-
-                pub fun withdraw(amount: UFix64): @Vault {
-                    self.balance = self.balance - amount
-                    return <-create Vault(balance: amount)
-                }
-
-                pub fun deposit(from: @Vault) {
-                    self.balance = self.balance + from.balance
-                    destroy from
-                }
-            }
-
-            pub fun createEmptyVault(): @Bar.Vault {
-                return <- create Bar.Vault(balance: 0.0)
-            }
-
-            pub fun createVault(balance: UFix64): @Bar.Vault {
-                return <- create Bar.Vault(balance: balance)
-            }
-        }
-    `)
-
-	// Deploy Bar
-
-	deployVault := DeploymentTransaction("Bar", bar)
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: deployVault,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
 	// Deploy Attacker
 
 	deployAttacker := DeploymentTransaction("Foo", attacker)
 
-	err = runtime.ExecuteTransaction(
+	err := runtime.ExecuteTransaction(
 		Script{
 			Source: deployAttacker,
 		},
@@ -9241,40 +9120,13 @@ func TestRuntimeNestedResourceMoveInDestructor(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.NoError(t, err)
-
-	// Attack
-
-	attackTransaction := []byte(fmt.Sprintf(`
-        import Foo from %[1]s
-        import Bar from %[1]s
-
-        transaction {
-            prepare(acc: AuthAccount) {
-                acc.save(<- Bar.createVault(balance: 100.0), to: /storage/vault)!
-                var vault = acc.borrow<&Bar.Vault>(from: /storage/vault)!
-                var flow <- vault.withdraw(amount: 42.0)
-
-                var doubled <- Foo.doubler(<-flow)
-
-                destroy doubled
-            }
-        }`,
-		signerAccount.HexWithPrefix(),
-	))
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: attackTransaction,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
 
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
+	assertRuntimeErrorIsUserError(t, err)
+
+	var parserError parser.Error
+	require.ErrorAs(t, err, &parserError)
+	assert.IsType(t, &parser.CustomDestructorError{}, parserError.Errors[0])
 }
 
 func TestRuntimeNestedResourceMoveWithSecondTransferInDestructor(t *testing.T) {
@@ -9316,27 +9168,27 @@ func TestRuntimeNestedResourceMoveWithSecondTransferInDestructor(t *testing.T) {
         import Bar from %[1]s
 
         access(all) contract Foo {
-            pub var temp: @Bar.Vault?
+            access(all) var temp: @Bar.Vault?
             init() {
                 self.temp <- nil
             }
 
-            pub fun doubler(_ vault: @Bar.Vault): @Bar.Vault {
+            access(all) fun doubler(_ vault: @Bar.Vault): @Bar.Vault {
                 destroy  <- create R(<-vault)
                 var doubled <- self.temp <- nil
                 return <- doubled!
             }
 
-            pub resource R {
-                pub var bounty: @Bar.Vault
-                pub var dummy: @Bar.Vault
+            access(all) resource R {
+                access(all) var bounty: @Bar.Vault
+                access(all) var dummy: @Bar.Vault
 
                 init(_ v: @Bar.Vault) {
                      self.bounty <- v
                      self.dummy <- Bar.createEmptyVault()
                 }
 
-                pub fun swap() {
+                access(all) fun swap() {
                     self.bounty <-> self.dummy
                 }
 
@@ -9367,59 +9219,11 @@ func TestRuntimeNestedResourceMoveWithSecondTransferInDestructor(t *testing.T) {
 		signerAccount.HexWithPrefix(),
 	))
 
-	bar := []byte(`
-        pub contract Bar {
-            pub resource Vault {
-
-                // Balance of a user's Vault
-                // we use unsigned fixed point numbers for balances
-                // because they can represent decimals and do not allow negative values
-                pub var balance: UFix64
-
-                init(balance: UFix64) {
-                    self.balance = balance
-                }
-
-                pub fun withdraw(amount: UFix64): @Vault {
-                    self.balance = self.balance - amount
-                    return <-create Vault(balance: amount)
-                }
-
-                pub fun deposit(from: @Vault) {
-                    self.balance = self.balance + from.balance
-                    destroy from
-                }
-            }
-
-            pub fun createEmptyVault(): @Bar.Vault {
-                return <- create Bar.Vault(balance: 0.0)
-            }
-
-            pub fun createVault(balance: UFix64): @Bar.Vault {
-                return <- create Bar.Vault(balance: balance)
-            }
-        }
-    `)
-
-	// Deploy Bar
-
-	deployVault := DeploymentTransaction("Bar", bar)
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: deployVault,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
 	// Deploy Attacker
 
 	deployAttacker := DeploymentTransaction("Foo", attacker)
 
-	err = runtime.ExecuteTransaction(
+	err := runtime.ExecuteTransaction(
 		Script{
 			Source: deployAttacker,
 		},
@@ -9428,40 +9232,13 @@ func TestRuntimeNestedResourceMoveWithSecondTransferInDestructor(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.NoError(t, err)
-
-	// Attack
-
-	attackTransaction := []byte(fmt.Sprintf(`
-        import Foo from %[1]s
-        import Bar from %[1]s
-
-        transaction {
-            prepare(acc: AuthAccount) {
-                acc.save(<- Bar.createVault(balance: 100.0), to: /storage/vault)!
-                var vault = acc.borrow<&Bar.Vault>(from: /storage/vault)!
-                var flow <- vault.withdraw(amount: 42.0)
-
-                var doubled <- Foo.doubler(<-flow)
-
-                destroy doubled
-            }
-        }`,
-		signerAccount.HexWithPrefix(),
-	))
-
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: attackTransaction,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
 
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
+	assertRuntimeErrorIsUserError(t, err)
+
+	var parserError parser.Error
+	require.ErrorAs(t, err, &parserError)
+	assert.IsType(t, &parser.CustomDestructorError{}, parserError.Errors[0])
 }
 
 func TestRuntimeNestedResourceMoveInTransaction(t *testing.T) {
@@ -9500,10 +9277,10 @@ func TestRuntimeNestedResourceMoveInTransaction(t *testing.T) {
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	foo := []byte(`
-        pub contract Foo {
-            pub resource Vault {}
+        access(all) contract Foo {
+            access(all) resource Vault {}
 
-            pub fun createVault(): @Foo.Vault {
+            access(all) fun createVault(): @Foo.Vault {
                 return <- create Foo.Vault()
             }
         }
@@ -9532,7 +9309,7 @@ func TestRuntimeNestedResourceMoveInTransaction(t *testing.T) {
 
             let vault: @Foo.Vault?
 
-            prepare(acc: AuthAccount) {
+            prepare(acc: &Account) {
                 self.vault <- Foo.createVault()
             }
 
@@ -9596,13 +9373,13 @@ func TestRuntimePreconditionDuplication(t *testing.T) {
         import Bar from %[1]s
 
         access(all) contract Foo {
-            pub var temp: @Bar.Vault?
+            access(all) var temp: @Bar.Vault?
 
             init() {
                 self.temp <- nil
             }
 
-            pub fun doubler(_ vault: @Bar.Vault): @Bar.Vault {
+            access(all) fun doubler(_ vault: @Bar.Vault): @Bar.Vault {
                 var r  <- create R(<-vault)
                 r.doMagic()
                 destroy r
@@ -9610,32 +9387,32 @@ func TestRuntimePreconditionDuplication(t *testing.T) {
                 return <- doubled!
             }
 
-            pub fun conditionFunction(_ unusedref: &Bar.Vault, _ v : @Bar.Vault, _ ref: &R): Bool {
+            access(all) fun conditionFunction(_ unusedref: &Bar.Vault, _ v : @Bar.Vault, _ ref: &R): Bool {
                 // This gets called twice: once from the interface's precondition and the second
                 // time from the function's own precondition. We save both copies of the vault
                 // to the R object
                 if ref.counter == 0 {
-                    ref.victim1 <-! v
-                    ref.counter = 1
+                    ref.setVictim1(<- v)
+                    ref.setCounter(1)
                 } else {
-                    ref.victim2 <-! v
+                    ref.setVictim2(<- v)
                 }
                 return true
             }
 
-            pub resource interface RInterface{
-                pub fun funcFromIface( _ v: @Bar.Vault, _ ref: &R): Void {
+            access(all) resource interface RInterface{
+                access(all) fun funcFromIface( _ v: @Bar.Vault, _ ref: &R): Void {
                     post {
                         Foo.conditionFunction(&v as &Bar.Vault, <- v, ref)
                     }
                 }
             }
 
-            pub resource R: RInterface {
-                pub var bounty: @Bar.Vault?
-                pub(set) var victim1: @Bar.Vault?
-                pub(set) var victim2: @Bar.Vault?
-                pub(set) var counter: Int
+            access(all) resource R: RInterface {
+                access(all) var bounty: @Bar.Vault?
+                access(all) var victim1: @Bar.Vault?
+                access(all) var victim2: @Bar.Vault?
+                access(all) var counter: Int
 
                 init(_ v: @Bar.Vault) {
                      self.counter = 0
@@ -9644,13 +9421,13 @@ func TestRuntimePreconditionDuplication(t *testing.T) {
                      self.victim2 <- nil
                 }
 
-                pub fun funcFromIface(_ v: @Bar.Vault, _ ref: &R): Void {
+                access(all) fun funcFromIface(_ v: @Bar.Vault, _ ref: &R): Void {
                     post {
                         Foo.conditionFunction(&v as &Bar.Vault, <- v, ref)
                     }
                 }
 
-                pub fun doMagic(): Void {
+                access(all) fun doMagic(): Void {
                     var origVault <- self.bounty <- nil
                     self.funcFromIface(<- origVault!, &self as &R)
 
@@ -9659,19 +9436,25 @@ func TestRuntimePreconditionDuplication(t *testing.T) {
 
                     // Following moves copied from Supun's test
                     var r1 = &v2 as &Bar.Vault?
-                    Foo.account.save(<-v1!, to: /storage/v1)
-                    Foo.account.save(<-v2!, to: /storage/v2)
-                    var v1Reloaded <- Foo.account.load<@Bar.Vault>(from: /storage/v1)!
-                    var v2Reloaded <- Foo.account.load<@Bar.Vault>(from: /storage/v2)!
+                    Foo.account.storage.save(<-v1!, to: /storage/v1)
+                    Foo.account.storage.save(<-v2!, to: /storage/v2)
+                    var v1Reloaded <- Foo.account.storage.load<@Bar.Vault>(from: /storage/v1)!
+                    var v2Reloaded <- Foo.account.storage.load<@Bar.Vault>(from: /storage/v2)!
 
                     v1Reloaded.deposit(from:<-v2Reloaded)
                     Foo.temp <-! v1Reloaded
                 }
 
-                destroy() {
-                    destroy self.bounty
-                    destroy self.victim1
-                    destroy self.victim2
+                access(all) fun setVictim1(_ v: @Bar.Vault?) {
+                    self.victim1 <-! v
+                }
+
+                access(all) fun setVictim2(_ v: @Bar.Vault?) {
+                    self.victim2 <-! v
+                }
+
+                access(all) fun setCounter(_ v: Int) {
+                    self.counter = v
                 }
             }
         }`,
@@ -9679,34 +9462,34 @@ func TestRuntimePreconditionDuplication(t *testing.T) {
 	))
 
 	bar := []byte(`
-        pub contract Bar {
-            pub resource Vault {
+        access(all) contract Bar {
+            access(all) resource Vault {
 
                 // Balance of a user's Vault
                 // we use unsigned fixed point numbers for balances
                 // because they can represent decimals and do not allow negative values
-                pub var balance: UFix64
+                access(all) var balance: UFix64
 
                 init(balance: UFix64) {
                     self.balance = balance
                 }
 
-                pub fun withdraw(amount: UFix64): @Vault {
+                access(all) fun withdraw(amount: UFix64): @Vault {
                     self.balance = self.balance - amount
                     return <-create Vault(balance: amount)
                 }
 
-                pub fun deposit(from: @Vault) {
+                access(all) fun deposit(from: @Vault) {
                     self.balance = self.balance + from.balance
                     destroy from
                 }
             }
 
-            pub fun createEmptyVault(): @Bar.Vault {
+            access(all) fun createEmptyVault(): @Bar.Vault {
                 return <- create Bar.Vault(balance: 0.0)
             }
 
-            pub fun createVault(balance: UFix64): @Bar.Vault {
+            access(all) fun createVault(balance: UFix64): @Bar.Vault {
                 return <- create Bar.Vault(balance: balance)
             }
         }
@@ -9745,9 +9528,11 @@ func TestRuntimePreconditionDuplication(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+	errs := checker.RequireCheckerErrors(t, checkerErr, 3)
 
-	assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[0])
+	assert.IsType(t, &sema.PurityError{}, errs[0])
+	assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[1])
+	assert.IsType(t, &sema.PurityError{}, errs[2])
 }
 
 func TestRuntimeIfLetElseBranchConfusion(t *testing.T) {
@@ -9789,20 +9574,20 @@ func TestRuntimeIfLetElseBranchConfusion(t *testing.T) {
         import Bar from %[1]s
 
         access(all) contract Foo {
-            pub var temp: @Bar.Vault?
+            access(all) var temp: @Bar.Vault?
             init() {
                 self.temp <- nil
             }
 
-            pub fun doubler(_ vault: @Bar.Vault): @Bar.Vault {
+            access(all) fun doubler(_ vault: @Bar.Vault): @Bar.Vault {
                 destroy  <- create R(<-vault)
                 var doubled <- self.temp <- nil
                 return <- doubled!
             }
 
-            pub resource R {
-                priv var r: @Bar.Vault?
-                priv var r2: @Bar.Vault?
+            access(all) resource R {
+                access(self) var r: @Bar.Vault?
+                access(self) var r2: @Bar.Vault?
 
                 init(_ v: @Bar.Vault) {
                      self.r <- nil
@@ -9832,59 +9617,11 @@ func TestRuntimeIfLetElseBranchConfusion(t *testing.T) {
 		signerAccount.HexWithPrefix(),
 	))
 
-	bar := []byte(`
-        pub contract Bar {
-            pub resource Vault {
-
-                // Balance of a user's Vault
-                // we use unsigned fixed point numbers for balances
-                // because they can represent decimals and do not allow negative values
-                pub var balance: UFix64
-
-                init(balance: UFix64) {
-                    self.balance = balance
-                }
-
-                pub fun withdraw(amount: UFix64): @Vault {
-                    self.balance = self.balance - amount
-                    return <-create Vault(balance: amount)
-                }
-
-                pub fun deposit(from: @Vault) {
-                    self.balance = self.balance + from.balance
-                    destroy from
-                }
-            }
-
-            pub fun createEmptyVault(): @Bar.Vault {
-                return <- create Bar.Vault(balance: 0.0)
-            }
-
-            pub fun createVault(balance: UFix64): @Bar.Vault {
-                return <- create Bar.Vault(balance: balance)
-            }
-        }
-    `)
-
-	// Deploy Bar
-
-	deployVault := DeploymentTransaction("Bar", bar)
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: deployVault,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-
 	// Deploy Attacker
 
 	deployAttacker := DeploymentTransaction("Foo", attacker)
 
-	err = runtime.ExecuteTransaction(
+	err := runtime.ExecuteTransaction(
 		Script{
 			Source: deployAttacker,
 		},
@@ -9893,37 +9630,152 @@ func TestRuntimeIfLetElseBranchConfusion(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.NoError(t, err)
 
-	// Attack
+	RequireError(t, err)
+	assertRuntimeErrorIsUserError(t, err)
 
-	attackTransaction := []byte(fmt.Sprintf(`
-        import Foo from %[1]s
-        import Bar from %[1]s
+	var parserError parser.Error
+	require.ErrorAs(t, err, &parserError)
+	assert.IsType(t, &parser.CustomDestructorError{}, parserError.Errors[0])
+}
 
-        transaction {
-            prepare(acc: AuthAccount) {
-                acc.save(<- Bar.createVault(balance: 100.0), to: /storage/vault)!
-                var vault = acc.borrow<&Bar.Vault>(from: /storage/vault)!
-                var flow <- vault.withdraw(amount: 42.0)
+func TestRuntimeValueTransferResourceLoss(t *testing.T) {
 
-                var doubled <- Foo.doubler(<-flow)
-                destroy doubled
+	t.Parallel()
+
+	contract := []byte(`
+        access(all) contract Foo {
+
+            access(all) resource R {
+
+                access(all) let id: String
+
+                access(all) event ResourceDestroyed(id: String = self.id)
+
+                init(_ id: String) {
+                    log("Creating ".concat(id))
+                    self.id = id
+                }
             }
-        }`,
-		signerAccount.HexWithPrefix(),
-	))
 
-	err = runtime.ExecuteTransaction(
+            access(all) fun createR(_ id: String): @Foo.R {
+                return <- create Foo.R(id)
+            }
+        }
+    `)
+
+	runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		AtreeValidationEnabled: false,
+	})
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	var contractCode []byte
+	var events []cadence.Event
+	var logs []string
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+			return contractCode, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			contractCode = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
+		OnProgramLog: func(s string) {
+			logs = append(logs, s)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy
+
+	deploymentTx := DeploymentTransaction("Foo", contract)
+	err := runtime.ExecuteTransaction(
 		Script{
-			Source: attackTransaction,
+			Source: deploymentTx,
 		},
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
 		},
 	)
+	require.NoError(t, err)
 
-	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	// Execute script
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	script := []byte(fmt.Sprintf(`
+        import Foo from %[1]s
+
+    access(all) struct IndexSwitcher {
+        access(self) var counter: Int
+        init() {
+            self.counter = 0
+        }
+        access(all) fun callback(): Int {
+            self.counter = self.counter + 1
+            if self.counter == 1 {
+                // Which key we want to be read?
+                // Let's point it to a non-existent key
+                return 123
+            } else {
+                // Which key we want to be assigned to?
+                // We point it to 0 to overwrite the victim value
+                return 0
+            }
+        }
+    }
+
+    access(all) fun loseResource(victim: @Foo.R) {
+       var a <- Foo.createR("dummy resource")
+       var dict: @{Int: Foo.R} <- { 0: <- victim }
+       var indexSwitcher = IndexSwitcher()
+       
+       // this callback should only be evaluated once, rather than twice
+       var b <- dict[indexSwitcher.callback()] <- a
+       destroy b
+       destroy dict
+    }
+
+    access(all) fun main(): Void {
+       var victim <- Foo.createR("victim resource")
+       loseResource(victim: <- victim)
+    }`,
+		address.HexWithPrefix(),
+	))
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+
+	require.NoError(t, err)
+
+	require.Len(t, logs, 2)
+	require.Equal(t, `"Creating victim resource"`, logs[0])
+
+	require.Len(t, events, 3)
+	require.Equal(t, "flow.AccountContractAdded", events[0].EventType.ID())
+	require.Equal(t, `A.0000000000000001.Foo.R.ResourceDestroyed(id: "dummy resource")`, events[1].String())
+	require.Equal(t, `A.0000000000000001.Foo.R.ResourceDestroyed(id: "victim resource")`, events[2].String())
 }

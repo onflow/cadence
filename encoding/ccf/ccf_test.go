@@ -7798,6 +7798,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		ccf.SimpleTypeAnyStruct:                        cadence.AnyStructType,
 		ccf.SimpleTypeAnyStructAttachmentType:          cadence.AnyStructAttachmentType,
 		ccf.SimpleTypeAnyResourceAttachmentType:        cadence.AnyResourceAttachmentType,
+		ccf.SimpleTypeHashableStruct:                   cadence.HashableStructType,
 		ccf.SimpleTypeMetaType:                         cadence.MetaType,
 		ccf.SimpleTypeVoid:                             cadence.VoidType,
 		ccf.SimpleTypeNever:                            cadence.NeverType,
@@ -9294,7 +9295,7 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: cadence.HashableStructType{},
+				StaticType: cadence.HashableStructType,
 			},
 			[]byte{
 				// language=json, format=json-cdc
@@ -9314,8 +9315,8 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagSimpleTypeValue,
-				// HashableStruct type (56)
-				0x18, 0x38,
+				// HashableStruct type (97)
+				0x18, 0x61,
 			},
 		)
 	})

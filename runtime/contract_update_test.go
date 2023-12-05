@@ -379,7 +379,7 @@ func TestRuntimeContractRedeployInSameTransaction(t *testing.T) {
 
 		nextTransactionLocation := NewTransactionLocationGenerator()
 
-			// Deploy
+		// Deploy
 
 		err := runtime.ExecuteTransaction(
 			Script{
@@ -479,7 +479,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
                 access(all) resource Bar {}
 
                 init(){
-                   self.account.contracts.update__experimental(
+                   self.account.contracts.update(
                         name: "Foo",
                         code: "access(all) contract Foo { access(all) struct Bar {} }".utf8
                     )
@@ -553,7 +553,7 @@ func TestRuntimeNestedContractDeployment(t *testing.T) {
                 access(all) resource Bar {}
 
                 init(){
-                   self.account.contracts.update__experimental(
+                   self.account.contracts.update(
                         name: "Foo",
                         code: "access(all) contract Foo { access(all) struct Bar {} }".utf8
                     )

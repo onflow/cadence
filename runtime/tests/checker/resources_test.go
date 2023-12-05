@@ -9448,7 +9448,9 @@ func TestCheckInvalidationInCondition(t *testing.T) {
                     `,
 					kind.Keyword(),
 				))
-				require.NoError(t, err)
+
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.PurityError{}, errs[0])
 			})
 
 			t.Run("in composite", func(t *testing.T) {
@@ -9474,7 +9476,8 @@ func TestCheckInvalidationInCondition(t *testing.T) {
                     `,
 					kind.Keyword(),
 				))
-				require.NoError(t, err)
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.PurityError{}, errs[0])
 			})
 
 			t.Run("in interface, definite invalidation", func(t *testing.T) {
@@ -9501,9 +9504,9 @@ func TestCheckInvalidationInCondition(t *testing.T) {
 					kind.Keyword(),
 				))
 
-				errs := RequireCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[0])
+				errs := RequireCheckerErrors(t, err, 2)
+				assert.IsType(t, &sema.PurityError{}, errs[0])
+				assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[1])
 			})
 
 			t.Run("in interface, temporary invalidation", func(t *testing.T) {
@@ -9526,61 +9529,6 @@ func TestCheckInvalidationInCondition(t *testing.T) {
 				))
 				require.NoError(t, err)
 			})
-
-			t.Run("in nested type requirement, definite invalidation", func(t *testing.T) {
-
-				t.Parallel()
-
-				_, err := ParseAndCheck(t, fmt.Sprintf(
-					`
-                      resource R {}
-
-                      fun drop(_ r: @R): Bool {
-                          destroy r
-                          return true
-                      }
-
-                      contract interface CI {
-                          struct S {
-                              fun test(_ r: @R) {
-                                  %s {
-                                      drop(<-r)
-                                  }
-                              }
-                          }
-                      }
-                    `,
-					kind.Keyword(),
-				))
-
-				errs := RequireCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[0])
-			})
-
-			t.Run("in nested type requirement, temporary invalidation", func(t *testing.T) {
-
-				t.Parallel()
-
-				_, err := ParseAndCheck(t, fmt.Sprintf(
-					`
-                      resource R {}
-
-                      contract interface CI {
-                          struct S {
-                              fun drop(_ r: @R) {
-                                  %s {
-                                      r.isInstance(Type<@R>())
-                                  }
-                              }
-                         }
-                      }
-                    `,
-					kind.Keyword(),
-				))
-				require.NoError(t, err)
-			})
-
 		})
 	}
 
@@ -9850,4 +9798,64 @@ func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
 	})
+}
+
+func TestInterpretIfLetElseBranchConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        access(all) resource Victim{}
+
+        access(all) fun main() {
+            var r: @Victim? <- nil
+            var r2: @Victim?  <- create Victim()
+            if let dummy <- r <- r2 {
+                // unreachable token destroys to please checker
+                destroy dummy
+                destroy r
+            } else {
+                // Error: r2 is invalid here
+
+                var ref = &r as &Victim?
+                var arr: @[Victim?]<- [<- r, <- r2]
+                destroy arr
+            }
+        }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
+func TestInterpretOptionalBindingElseBranch(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		access(all) resource Victim {}
+
+		access(all) fun main() {
+
+			var r: @Victim? <- nil
+			var r2: @Victim?  <- create Victim()
+
+			if let dummy <- r <- r2 {
+				// unreachable token destroys to please checker
+				destroy dummy
+				destroy r
+			} else {
+				// checker failed to notice that r2 is invalid here
+				var ref = &r as &Victim?
+				var arr: @[Victim?]<- [
+                    <- r,
+                    <- r2
+                ]
+				destroy arr
+			}
+		}
+   `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
