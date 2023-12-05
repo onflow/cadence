@@ -202,6 +202,7 @@ type ResourceKindedValue interface {
 	Value
 	Destroy(interpreter *Interpreter, locationRange LocationRange)
 	IsDestroyed() bool
+	isInvalidatedResource(*Interpreter) bool
 }
 
 func maybeDestroy(interpreter *Interpreter, locationRange LocationRange, value Value) {
@@ -1772,11 +1773,15 @@ func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
 }
 
 func (v *ArrayValue) checkInvalidatedResourceUse(interpreter *Interpreter, locationRange LocationRange) {
-	if v.isDestroyed || (v.array == nil && v.IsResourceKinded(interpreter)) {
+	if v.isInvalidatedResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
 	}
+}
+
+func (v *ArrayValue) isInvalidatedResource(interpreter *Interpreter) bool {
+	return v.isDestroyed || (v.array == nil && v.IsResourceKinded(interpreter))
 }
 
 func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
@@ -16675,11 +16680,15 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 }
 
 func (v *CompositeValue) checkInvalidatedResourceUse(locationRange LocationRange) {
-	if v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource) {
+	if v.isInvalidatedResource(nil) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
 	}
+}
+
+func (v *CompositeValue) isInvalidatedResource(_ *Interpreter) bool {
+	return v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource)
 }
 
 func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
@@ -17955,11 +17964,15 @@ func (v *DictionaryValue) IsDestroyed() bool {
 }
 
 func (v *DictionaryValue) checkInvalidatedResourceUse(interpreter *Interpreter, locationRange LocationRange) {
-	if v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(interpreter)) {
+	if v.isInvalidatedResource(interpreter) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
 	}
+}
+
+func (v *DictionaryValue) isInvalidatedResource(interpreter *Interpreter) bool {
+	return v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(interpreter))
 }
 
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
@@ -19174,6 +19187,10 @@ func (NilValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
+func (NilValue) isInvalidatedResource(_ *Interpreter) bool {
+	return false
+}
+
 // SomeValue
 
 type SomeValue struct {
@@ -19273,7 +19290,7 @@ func (v *SomeValue) RecursiveString(seenReferences SeenReferences) string {
 	return v.value.RecursiveString(seenReferences)
 }
 
-func (v SomeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+func (v *SomeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 	return v.value.MeteredString(memoryGauge, seenReferences)
 }
 
@@ -19518,6 +19535,10 @@ func (v *SomeValue) InnerValue(interpreter *Interpreter, locationRange LocationR
 	}
 
 	return v.value
+}
+
+func (v *SomeValue) isInvalidatedResource(_ *Interpreter) bool {
+	return v.value == nil || v.IsDestroyed()
 }
 
 type SomeStorable struct {
