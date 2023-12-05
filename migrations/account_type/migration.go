@@ -43,21 +43,18 @@ func (AccountTypeMigration) Migrate(_ common.Address, value interpreter.Value) i
 	switch value := value.(type) {
 	case interpreter.TypeValue:
 		convertedType := maybeConvertAccountType(value.Type)
-		if convertedType == nil {
-			return nil
+		if convertedType != nil {
+			return interpreter.NewTypeValue(nil, convertedType)
 		}
-		return interpreter.NewTypeValue(nil, convertedType)
 
 	case *interpreter.CapabilityValue:
 		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
-		if convertedBorrowType == nil {
-			return nil
+		if convertedBorrowType != nil {
+			return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType)
 		}
-		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType)
-
-	default:
-		return nil
 	}
+
+	return nil
 }
 
 func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.StaticType {
