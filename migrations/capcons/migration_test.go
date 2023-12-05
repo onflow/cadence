@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -435,7 +436,7 @@ func testPathCapabilityValueMigration(
 	migrator, err := NewMigration(
 		storage,
 		inter,
-		&AddressSliceIterator{
+		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
 				testAddress,
 			},
@@ -1145,7 +1146,7 @@ func testLinkMigration(
 	migrator, err := NewMigration(
 		storage,
 		inter,
-		&AddressSliceIterator{
+		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
 				testAddress,
 			},

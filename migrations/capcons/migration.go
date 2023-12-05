@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -30,32 +31,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
-
-type AddressIterator interface {
-	NextAddress() common.Address
-	Reset()
-}
-
-type AddressSliceIterator struct {
-	Addresses []common.Address
-	index     int
-}
-
-var _ AddressIterator = &AddressSliceIterator{}
-
-func (a *AddressSliceIterator) NextAddress() common.Address {
-	index := a.index
-	if index >= len(a.Addresses) {
-		return common.ZeroAddress
-	}
-	address := a.Addresses[index]
-	a.index++
-	return address
-}
-
-func (a *AddressSliceIterator) Reset() {
-	a.index = 0
-}
 
 type MigrationReporter interface {
 	LinkMigrationReporter
@@ -90,14 +65,14 @@ type Migration struct {
 	storage            *runtime.Storage
 	interpreter        *interpreter.Interpreter
 	capabilityIDs      map[interpreter.AddressPath]interpreter.UInt64Value
-	addressIterator    AddressIterator
+	addressIterator    migrations.AddressIterator
 	accountIDGenerator stdlib.AccountIDGenerator
 }
 
 func NewMigration(
 	storage *runtime.Storage,
 	interpreter *interpreter.Interpreter,
-	addressIterator AddressIterator,
+	addressIterator migrations.AddressIterator,
 	accountIDGenerator stdlib.AccountIDGenerator,
 ) (*Migration, error) {
 
