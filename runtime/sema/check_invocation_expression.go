@@ -504,8 +504,8 @@ func (checker *Checker) checkInvocation(
 
 	// The invokable type might have special checks for the type parameters.
 
-	if functionType.TypePrametersCheck != nil {
-		functionType.TypePrametersCheck(
+	if functionType.TypeArgumentsCheck != nil {
+		functionType.TypeArgumentsCheck(
 			checker.memoryGauge,
 			typeArguments,
 			invocationExpression.TypeArguments,

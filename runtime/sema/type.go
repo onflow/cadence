@@ -2907,7 +2907,7 @@ type FunctionType struct {
 	ReturnTypeAnnotation     TypeAnnotation
 	Arity                    *Arity
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
-	TypePrametersCheck       TypeParametersCheck
+	TypeArgumentsCheck       TypeArgumentsCheck
 	Members                  *StringMemberOrderedMap
 	TypeParameters           []*TypeParameter
 	Parameters               []Parameter
@@ -3378,7 +3378,7 @@ type ArgumentExpressionsCheck func(
 	invocationRange ast.Range,
 )
 
-type TypeParametersCheck func(
+type TypeArgumentsCheck func(
 	memoryGauge common.MemoryGauge,
 	typeArguments *TypeParameterTypeOrderedMap,
 	astTypeArguments []*ast.TypeAnnotation,

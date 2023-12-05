@@ -76,7 +76,7 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 		),
 		// `step` parameter is optional
 		Arity: &sema.Arity{Min: 2, Max: 3},
-		TypePrametersCheck: func(
+		TypeArgumentsCheck: func(
 			memoryGauge common.MemoryGauge,
 			typeArguments *sema.TypeParameterTypeOrderedMap,
 			astTypeArguments []*ast.TypeAnnotation,
