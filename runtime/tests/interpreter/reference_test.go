@@ -1761,4 +1761,21 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
 	})
+
+	t.Run("optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                let x: (&Int)? = &1 as &Int
+                let y: (&(&Int))? = &x 
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
 }
