@@ -59,8 +59,6 @@ type Config struct {
 	OnStatement OnStatementFunc
 	// OnLoopIteration is triggered when a loop iteration is about to be executed
 	OnLoopIteration OnLoopIterationFunc
-	// InvalidatedResourceValidationEnabled determines if the validation of invalidated resources is enabled
-	InvalidatedResourceValidationEnabled bool
 	// TracingEnabled determines if tracing is enabled.
 	// Tracing reports certain operations, e.g. composite value transfers
 	TracingEnabled bool

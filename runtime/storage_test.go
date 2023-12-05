@@ -4192,3 +4192,111 @@ func TestRuntimeStorageIteration(t *testing.T) {
 		})
 	})
 }
+
+func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	signerAddress := common.MustBytesToAddress([]byte{0x42})
+
+	deployTx := DeploymentTransaction("Test", []byte(`
+      access(all) contract Test {
+
+          access(all) resource R {
+              access(all) fun foo() {}
+          }
+
+          access(all) fun createR(): @R {
+              return <-create R()
+          }
+      }
+    `))
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+	var loggedMessages []string
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAddress}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Run test transaction
+
+	const testTx = `
+      import Test from 0x42
+
+      transaction {
+          prepare(signer: AuthAccount) {
+              signer.save(<-Test.createR(), to: /storage/r)
+
+              signer.link<&Test.R>(
+                 /public/r,
+                 target: /storage/r
+              )
+
+              let ref = signer.getCapability<&Test.R>(/public/r).borrow()!
+
+              var func = ref.foo
+
+              let r <- signer.load<@Test.R>(from: /storage/r)!
+
+              // Should be OK
+              func()
+
+              destroy r
+
+              // Should fail!
+              func()
+          }
+      }
+    `
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(testTx),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+}

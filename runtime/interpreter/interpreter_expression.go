@@ -303,7 +303,19 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 }
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
-	return ast.AcceptExpression[Value](expression, interpreter)
+	result := ast.AcceptExpression[Value](expression, interpreter)
+
+	resourceKindedValue, ok := result.(ResourceKindedValue)
+	if ok && resourceKindedValue.isInvalidatedResource(interpreter) {
+		panic(InvalidatedResourceError{
+			LocationRange: LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
+		})
+	}
+
+	return result
 }
 
 func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) Value {
@@ -960,15 +972,6 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		panic(errors.NewUnreachableError())
 	}
 
-	// Bound functions
-	if boundFunction, ok := function.(BoundFunctionValue); ok && boundFunction.Self != nil {
-		self := *boundFunction.Self
-		if resource, ok := self.(ReferenceTrackedResourceKindedValue); ok {
-			storageID := resource.StorageID()
-			interpreter.trackReferencedResourceKindedValue(storageID, resource)
-		}
-	}
-
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body
 
 	var argumentExpressions []ast.Expression
@@ -1183,8 +1186,6 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
-	interpreter.maybeTrackReferencedResourceKindedValue(result)
-
 	// There are four potential cases:
 	// 1) Target type is optional, actual value is also optional (nil/SomeValue)
 	// 2) Target type is optional, actual value is non-optional
@@ -1211,7 +1212,6 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			}
 
 			innerValue := result.InnerValue(interpreter, locationRange)
-			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
 
 			return NewSomeValueNonCopying(
 				interpreter,
@@ -1251,14 +1251,15 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	case *sema.ReferenceType:
 		// Case (3): target type is non-optional, actual value is optional.
-		// Unwrap the optional and add it to reference tracking.
+		// This path shouldn't be reachable. This is only a defensive step
+		// to ensure references are properly created/tracked.
 		if someValue, ok := result.(*SomeValue); ok {
 			locationRange := LocationRange{
 				Location:    interpreter.Location,
 				HasPosition: referenceExpression.Expression,
 			}
 			innerValue := someValue.InnerValue(interpreter, locationRange)
-			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
+			return NewEphemeralReferenceValue(interpreter, typ.Authorized, innerValue, typ.Type)
 		}
 
 		// Case (4): target type is non-optional, actual value is also non-optional
@@ -1341,7 +1342,6 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		base,
 		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
 	)
-	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 
 	attachment, ok := interpreter.visitInvocationExpressionWithImplicitArgument(
 		attachExpression.Attachment,
@@ -1351,9 +1351,6 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-
-	// Because `self` in attachments is a reference, we need to track the attachment if it's a resource
-	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
 
 	base = base.Transfer(
 		interpreter,
