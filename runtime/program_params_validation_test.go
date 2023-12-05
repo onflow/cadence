@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -323,7 +324,6 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	// Since InclusiveRange isn't covariant.
 	t.Run("Invalid InclusiveRange<Integer>", func(t *testing.T) {
 		t.Parallel()
 
@@ -338,8 +338,11 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 			cadence.NewInclusiveRange(cadence.NewInt16(1), cadence.NewInt16(2), cadence.NewInt16(1)),
 		)
 
-		var entryPointErr *InvalidEntryPointArgumentError
-		require.ErrorAs(t, err, &entryPointErr)
+		var checkerError *sema.CheckerError
+		require.ErrorAs(t, err, &checkerError)
+
+		errs := checker.RequireCheckerErrors(t, checkerError, 1)
+		assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
 	})
 
 	t.Run("Invalid InclusiveRange<Int16> with mixed value types", func(t *testing.T) {
@@ -374,8 +377,11 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 			cadence.NewInclusiveRange(cadence.NewInt16(1), cadence.NewUInt(2), cadence.NewUInt(1)),
 		)
 
-		var entryPointErr *InvalidEntryPointArgumentError
-		require.ErrorAs(t, err, &entryPointErr)
+		var checkerError *sema.CheckerError
+		require.ErrorAs(t, err, &checkerError)
+
+		errs := checker.RequireCheckerErrors(t, checkerError, 1)
+		assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
 	})
 
 	t.Run("Capability", func(t *testing.T) {

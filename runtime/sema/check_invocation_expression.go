@@ -459,6 +459,20 @@ func (checker *Checker) checkInvocation(
 		}
 	}
 
+	// Compute the invocation range, once, if needed
+	getInvocationRange := func() func() ast.Range {
+		var invocationRange ast.Range
+		return func() ast.Range {
+			if invocationRange == ast.EmptyRange {
+				invocationRange = ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					invocationExpression,
+				)
+			}
+			return invocationRange
+		}
+	}()
+
 	// The invokable type might have special checks for the arguments
 
 	if functionType.ArgumentExpressionsCheck != nil && argumentCount > 0 {
@@ -467,15 +481,10 @@ func (checker *Checker) checkInvocation(
 			argumentExpressions[i] = argument.Expression
 		}
 
-		invocationRange := ast.NewRangeFromPositioned(
-			checker.memoryGauge,
-			invocationExpression,
-		)
-
 		functionType.ArgumentExpressionsCheck(
 			checker,
 			argumentExpressions,
-			invocationRange,
+			getInvocationRange(),
 		)
 	}
 
@@ -492,6 +501,18 @@ func (checker *Checker) checkInvocation(
 		typeArguments,
 		invocationExpression,
 	)
+
+	// The invokable type might have special checks for the type parameters.
+
+	if functionType.TypeArgumentsCheck != nil {
+		functionType.TypeArgumentsCheck(
+			checker.memoryGauge,
+			typeArguments,
+			invocationExpression.TypeArguments,
+			getInvocationRange(),
+			checker.report,
+		)
+	}
 
 	// Save types in the elaboration
 

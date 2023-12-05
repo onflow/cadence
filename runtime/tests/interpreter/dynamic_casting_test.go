@@ -1471,15 +1471,6 @@ func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
 
 	t.Parallel()
 
-	types := []sema.Type{
-		&sema.InclusiveRangeType{
-			MemberType: sema.IntType,
-		},
-		&sema.InclusiveRangeType{
-			MemberType: sema.IntegerType,
-		},
-	}
-
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
 
@@ -1498,66 +1489,13 @@ func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
 	for operation, returnsOptional := range dynamicCastingOperations {
 
 		t.Run(operation.Symbol(), func(t *testing.T) {
-
-			for _, fromType := range types {
-				for _, targetType := range types {
-
-					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
-
-						inter, err := parseCheckAndInterpretWithOptions(t,
-							fmt.Sprintf(
-								`
-									let x: InclusiveRange<Int> = InclusiveRange(10, 20)
-									let y: %[1]s = x
-									let z: %[2]s? = y %[3]s %[2]s
-								`,
-								fromType,
-								targetType,
-								operation.Symbol(),
-							),
-							options,
-						)
-						require.NoError(t, err)
-
-						expectedInclusiveRange := interpreter.NewInclusiveRangeValue(
-							inter,
-							interpreter.EmptyLocationRange,
-							interpreter.NewUnmeteredIntValueFromInt64(10),
-							interpreter.NewUnmeteredIntValueFromInt64(20),
-							interpreter.InclusiveRangeStaticType{
-								ElementType: interpreter.PrimitiveStaticTypeInt,
-							},
-							sema.NewInclusiveRangeType(nil, sema.IntType),
-						)
-
-						AssertValuesEqual(
-							t,
-							inter,
-							expectedInclusiveRange,
-							inter.Globals.Get("y").GetValue(),
-						)
-
-						AssertValuesEqual(
-							t,
-							inter,
-							interpreter.NewUnmeteredSomeValueNonCopying(
-								expectedInclusiveRange,
-							),
-							inter.Globals.Get("z").GetValue(),
-						)
-					})
-				}
-
-				// We cannot test for invalid casts for T since InclusiveRange<T> has a type bound Integer on T.
-			}
-
-			t.Run("invalid upcast", func(t *testing.T) {
+			t.Run("invalid cast", func(t *testing.T) {
 
 				inter, err := parseCheckAndInterpretWithOptions(t,
 					fmt.Sprintf(
 						`
 							fun test(): InclusiveRange<UInt256>? {
-								let x: InclusiveRange<Integer> = InclusiveRange(10, 20)
+								let x: InclusiveRange<Int> = InclusiveRange(10, 20)
 								return x %s InclusiveRange<UInt256>
 							}
 						`,

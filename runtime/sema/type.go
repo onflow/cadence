@@ -277,14 +277,16 @@ type LocatedType interface {
 type ParameterizedType interface {
 	Type
 	TypeParameters() []*TypeParameter
-	Instantiate(typeArguments []Type, report func(err error)) Type
+	Instantiate(memoryGauge common.MemoryGauge, typeArguments []Type, astTypeArguments []*ast.TypeAnnotation, report func(err error)) Type
 	BaseType() Type
 	TypeArguments() []Type
 }
 
 func MustInstantiate(t ParameterizedType, typeArguments ...Type) Type {
 	return t.Instantiate(
+		nil, /* memoryGauge */
 		typeArguments,
+		nil, /* astTypeArguments */
 		func(err error) {
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		},
@@ -2905,6 +2907,7 @@ type FunctionType struct {
 	ReturnTypeAnnotation     TypeAnnotation
 	Arity                    *Arity
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
+	TypeArgumentsCheck       TypeArgumentsCheck
 	Members                  *StringMemberOrderedMap
 	TypeParameters           []*TypeParameter
 	Parameters               []Parameter
@@ -3375,6 +3378,14 @@ type ArgumentExpressionsCheck func(
 	invocationRange ast.Range,
 )
 
+type TypeArgumentsCheck func(
+	memoryGauge common.MemoryGauge,
+	typeArguments *TypeParameterTypeOrderedMap,
+	astTypeArguments []*ast.TypeAnnotation,
+	astInvocationRange ast.Range,
+	report func(err error),
+)
+
 // BaseTypeActivation is the base activation that contains
 // the types available in programs
 var BaseTypeActivation = NewVariableActivation(nil)
@@ -3497,13 +3508,15 @@ var AllUnsignedIntegerTypes = []Type{
 	Word256Type,
 }
 
+var AllNonLeafIntegerTypes = []Type{
+	IntegerType,
+	SignedIntegerType,
+}
+
 var AllIntegerTypes = common.Concat(
 	AllUnsignedIntegerTypes,
 	AllSignedIntegerTypes,
-	[]Type{
-		IntegerType,
-		SignedIntegerType,
-	},
+	AllNonLeafIntegerTypes,
 )
 
 var AllNumberTypes = common.Concat(
@@ -5399,8 +5412,30 @@ func (t *InclusiveRangeType) BaseType() Type {
 	return &InclusiveRangeType{}
 }
 
-func (t *InclusiveRangeType) Instantiate(typeArguments []Type, report func(err error)) Type {
+func (t *InclusiveRangeType) Instantiate(
+	memoryGauge common.MemoryGauge,
+	typeArguments []Type,
+	astTypeArguments []*ast.TypeAnnotation,
+	report func(err error),
+) Type {
 	memberType := typeArguments[0]
+
+	if astTypeArguments == nil || astTypeArguments[0] == nil {
+		panic(errors.NewUnreachableError())
+	}
+	paramAstRange := ast.NewRangeFromPositioned(memoryGauge, astTypeArguments[0])
+
+	// memberType must only be a leaf integer type.
+	for _, ty := range AllNonLeafIntegerTypes {
+		if memberType == ty {
+			report(&InvalidTypeArgumentError{
+				TypeArgumentName: inclusiveRangeTypeParameter.Name,
+				Range:            paramAstRange,
+				Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
+			})
+		}
+	}
+
 	return &InclusiveRangeType{
 		MemberType: memberType,
 	}
@@ -7258,7 +7293,12 @@ func (t *CapabilityType) TypeParameters() []*TypeParameter {
 	}
 }
 
-func (t *CapabilityType) Instantiate(typeArguments []Type, _ func(err error)) Type {
+func (t *CapabilityType) Instantiate(
+	memoryGauge common.MemoryGauge,
+	typeArguments []Type,
+	_ []*ast.TypeAnnotation,
+	_ func(err error),
+) Type {
 	borrowType := typeArguments[0]
 	return &CapabilityType{
 		BorrowType: borrowType,
