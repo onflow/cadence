@@ -132,11 +132,11 @@ func (checker *Checker) visitAttachmentDeclaration(declaration *ast.AttachmentDe
 
 	checker.visitCompositeLikeDeclaration(declaration)
 	attachmentType := checker.Elaboration.CompositeDeclarationType(declaration)
+	checker.checkAttachmentMembersAccess(attachmentType)
 	checker.checkAttachmentBaseType(
 		attachmentType,
 		declaration.BaseType,
 	)
-	checker.checkAttachmentMembersAccess(attachmentType)
 	return
 }
 

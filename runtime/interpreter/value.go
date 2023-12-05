@@ -17706,7 +17706,7 @@ func NewEnumCaseValue(
 	return v
 }
 
-func (v *CompositeValue) getBaseValue(interpreter *Interpreter, fnAuth Authorization) *EphemeralReferenceValue {
+func (v *CompositeValue) getBaseValue(interpreter *Interpreter, functionAuthorization Authorization) *EphemeralReferenceValue {
 	attachmentType, ok := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -17720,7 +17720,7 @@ func (v *CompositeValue) getBaseValue(interpreter *Interpreter, fnAuth Authoriza
 		baseType = ty
 	}
 
-	return NewEphemeralReferenceValue(interpreter, fnAuth, v.base, baseType)
+	return NewEphemeralReferenceValue(interpreter, functionAuthorization, v.base, baseType)
 }
 
 func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {

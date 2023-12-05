@@ -4509,10 +4509,11 @@ func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 		set.SetAll(it.SupportedEntitlements())
 	})
 
-	// attachments support at least the entitlements supported by their base
+	// attachments support at least the entitlements supported by their base,
+	// and we must ensure there is no recursive case
 	if entitlementSupportingBase, isEntitlementSupportingBase :=
-		// must ensure there is no recursive case
 		t.GetBaseType().(EntitlementSupportingType); isEntitlementSupportingBase && entitlementSupportingBase != t {
+
 		set.SetAll(entitlementSupportingBase.SupportedEntitlements())
 	}
 

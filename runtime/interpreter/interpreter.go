@@ -1000,7 +1000,11 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 	if containingResourceComposite.Kind == common.CompositeKindAttachment {
 		var base *EphemeralReferenceValue
 		// in evaluation of destroy events, base and self are fully entitled, as the value must be owned
-		supportedEntitlements := interpreter.MustSemaTypeOfValue(containingResourceComposite).(*sema.CompositeType).SupportedEntitlements()
+		entitlementSupportingType, ok := interpreter.MustSemaTypeOfValue(containingResourceComposite).(sema.EntitlementSupportingType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
 		access := sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
 		base, self = attachmentBaseAndSelfValues(declarationInterpreter, access, containingResourceComposite)
 		declarationInterpreter.declareVariable(sema.BaseIdentifier, base)
@@ -1009,7 +1013,7 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 
 	for _, parameter := range parameters {
 		// "lazily" evaluate the default argument expressions.
-		// This "lazy" with respect to the event's declaration:
+		// This is "lazy" with respect to the event's declaration:
 		// if we declare a default event `ResourceDestroyed(foo: Int = self.x)`,
 		// `self.x` is evaluated in the context that exists when the event is destroyed,
 		// not the context when it is declared. This function is only called after the destroy
@@ -1361,7 +1365,13 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 					// set the base to the implicitly provided value, and remove this implicit argument from the list
 					implicitArgumentPos := len(invocation.Arguments) - 1
 					invocation.Base = invocation.Arguments[implicitArgumentPos].(*EphemeralReferenceValue)
-					value.base = invocation.Base.Value.(*CompositeValue)
+
+					var ok bool
+					value.base, ok = invocation.Base.Value.(*CompositeValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
 					invocation.Arguments[implicitArgumentPos] = nil
 					invocation.Arguments = invocation.Arguments[:implicitArgumentPos]
 					invocation.ArgumentTypes[implicitArgumentPos] = nil

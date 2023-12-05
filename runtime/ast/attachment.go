@@ -255,10 +255,7 @@ const attachExpressionDoc = prettier.Text("attach")
 const attachExpressionToDoc = prettier.Text("to")
 
 func (e *AttachExpression) Doc() prettier.Doc {
-	var doc prettier.Concat
-
-	doc = append(
-		doc,
+	return prettier.Concat{
 		attachExpressionDoc,
 		prettier.Space,
 		e.Attachment.Doc(),
@@ -266,8 +263,7 @@ func (e *AttachExpression) Doc() prettier.Doc {
 		attachExpressionToDoc,
 		prettier.Space,
 		e.Base.Doc(),
-	)
-	return doc
+	}
 }
 
 func (e *AttachExpression) StartPosition() Position {
