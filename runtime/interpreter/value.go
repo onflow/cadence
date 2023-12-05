@@ -16633,7 +16633,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 			// destroy every nested resource in this composite; note that this iteration includes attachments
 			v.ForEachField(interpreter, func(_ string, fieldValue Value) bool {
 				if compositeFieldValue, ok := fieldValue.(*CompositeValue); ok && compositeFieldValue.Kind == common.CompositeKindAttachment {
-					compositeFieldValue.setBaseValue(interpreter, v)
+					compositeFieldValue.setBaseValue(interpreter, v, locationRange)
 				}
 				maybeDestroy(interpreter, locationRange, fieldValue)
 				return true
@@ -16802,7 +16802,7 @@ func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange Loc
 	var base *EphemeralReferenceValue
 	var self MemberAccessibleValue = v
 	if v.Kind == common.CompositeKindAttachment {
-		base, self = attachmentBaseAndSelfValues(interpreter, v)
+		base, self = attachmentBaseAndSelfValues(interpreter, v, locationRange)
 	}
 	return NewBoundFunctionValue(interpreter, function, &self, base, nil)
 }
@@ -16830,6 +16830,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange Loca
 		UnauthorizedAccess,
 		ownerAccount,
 		sema.AccountType,
+		locationRange,
 	)
 
 	return NewSomeValueNonCopying(interpreter, reference)
@@ -17380,7 +17381,7 @@ func (v *CompositeValue) Transfer(
 				if compositeValue, ok := value.(*CompositeValue); ok &&
 					compositeValue.Kind == common.CompositeKindAttachment {
 
-					compositeValue.setBaseValue(interpreter, v)
+					compositeValue.setBaseValue(interpreter, v, locationRange)
 				}
 
 				value = value.Transfer(
@@ -17690,7 +17691,7 @@ func (v *CompositeValue) getBaseValue() *EphemeralReferenceValue {
 	return v.base
 }
 
-func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
+func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue, locationRange LocationRange) {
 	attachmentType, ok := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -17705,7 +17706,7 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 	}
 
 	authorization := attachmentBaseAuthorization(interpreter, v)
-	v.base = NewEphemeralReferenceValue(interpreter, authorization, base, baseType)
+	v.base = NewEphemeralReferenceValue(interpreter, authorization, base, baseType, locationRange)
 }
 
 func attachmentMemberName(ty sema.Type) string {
@@ -17753,6 +17754,7 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, loc
 					attachmentReferenceAuth,
 					attachment,
 					attachmentType,
+					locationRange,
 				)
 
 				invocation := NewInvocation(
@@ -17810,6 +17812,7 @@ func attachmentBaseAuthorization(
 func attachmentBaseAndSelfValues(
 	interpreter *Interpreter,
 	v *CompositeValue,
+	locationRange LocationRange,
 ) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
 	base = v.getBaseValue()
 
@@ -17821,12 +17824,12 @@ func attachmentBaseAndSelfValues(
 	}
 
 	// in attachment functions, self is a reference value
-	self = NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, v, interpreter.MustSemaTypeOfValue(v))
+	self = NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, v, interpreter.MustSemaTypeOfValue(v), locationRange)
 
 	return
 }
 
-func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationRange, f func(*CompositeValue)) {
+func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRange LocationRange, f func(*CompositeValue)) {
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -17855,7 +17858,7 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationR
 			// attachments is added that takes a `fun (&Attachment): Void` callback, the `f` provided here
 			// should convert the provided attachment value into a reference before passing it to the user
 			// callback
-			attachment.setBaseValue(interpreter, v)
+			attachment.setBaseValue(interpreter, v, locationRange)
 			f(attachment)
 		}
 	}
@@ -17873,7 +17876,7 @@ func (v *CompositeValue) getTypeKey(
 	}
 	attachmentType := keyType.(*sema.CompositeType)
 	// dynamically set the attachment's base to this composite, but with authorization based on the requested access on that attachment
-	attachment.setBaseValue(interpreter, v)
+	attachment.setBaseValue(interpreter, v, locationRange)
 
 	// Map the entitlements of the accessing reference through the attachment's entitlement map to get the authorization of this reference
 	attachmentReferenceAuth, err := attachmentReferenceAuthorization(interpreter, attachmentType, baseAccess)
@@ -17881,7 +17884,7 @@ func (v *CompositeValue) getTypeKey(
 		return Nil
 	}
 
-	attachmentRef := NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, attachment, attachmentType)
+	attachmentRef := NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, attachment, attachmentType, locationRange)
 
 	return NewSomeValueNonCopying(interpreter, attachmentRef)
 }
@@ -20162,7 +20165,7 @@ func forEachReference(
 
 	updatedFunction := func(value Value) (resume bool) {
 		if isResultReference {
-			value = interpreter.getReferenceValue(value, elementType)
+			value = interpreter.getReferenceValue(value, elementType, locationRange)
 		}
 
 		return function(value)
@@ -20203,7 +20206,15 @@ func NewUnmeteredEphemeralReferenceValue(
 	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
+	locationRange LocationRange,
 ) *EphemeralReferenceValue {
+	if reference, isReference := value.(*EphemeralReferenceValue); isReference {
+		panic(NestedReferenceError{
+			Value:         reference,
+			LocationRange: locationRange,
+		})
+	}
+
 	return &EphemeralReferenceValue{
 		Authorization: authorization,
 		Value:         value,
@@ -20216,10 +20227,11 @@ func NewEphemeralReferenceValue(
 	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
+	locationRange LocationRange,
 ) *EphemeralReferenceValue {
 	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
 	interpreter.maybeTrackReferencedResourceKindedValue(value)
-	return NewUnmeteredEphemeralReferenceValue(authorization, value, borrowedType)
+	return NewUnmeteredEphemeralReferenceValue(authorization, value, borrowedType, locationRange)
 }
 
 func (*EphemeralReferenceValue) isValue() {}
@@ -20519,7 +20531,7 @@ func (v *EphemeralReferenceValue) Transfer(
 }
 
 func (v *EphemeralReferenceValue) Clone(*Interpreter) Value {
-	return NewUnmeteredEphemeralReferenceValue(v.Authorization, v.Value, v.BorrowedType)
+	return NewUnmeteredEphemeralReferenceValue(v.Authorization, v.Value, v.BorrowedType, EmptyLocationRange)
 }
 
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {

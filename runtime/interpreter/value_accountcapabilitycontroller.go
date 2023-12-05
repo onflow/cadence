@@ -316,6 +316,8 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 		authorization,
 		account,
 		resultBorrowType.Type,
+		// okay to pass an empty range here because the account value is never a reference, so this can't fail
+		EmptyLocationRange,
 	)
 }
 

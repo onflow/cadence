@@ -7308,6 +7308,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 		interpreter.UnauthorizedAccess,
 		arrayValue,
 		inter.MustConvertStaticToSemaType(arrayStaticType),
+		interpreter.EmptyLocationRange,
 	)
 
 	_, err = inter.Invoke("test", ref)

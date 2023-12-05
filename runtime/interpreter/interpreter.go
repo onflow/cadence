@@ -832,6 +832,8 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 				resultAuth(returnType),
 				returnValue.value,
 				optionalType.Type,
+				// result must be a resource to get here, so it will never be a reference
+				EmptyLocationRange,
 			)
 
 			return NewSomeValueNonCopying(interpreter, innerValue)
@@ -840,7 +842,8 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 		}
 	}
 
-	return NewEphemeralReferenceValue(interpreter, resultAuth(returnType), returnValue, returnType)
+	// result must be a resource to get here, so it will never be a reference
+	return NewEphemeralReferenceValue(interpreter, resultAuth(returnType), returnValue, returnType, EmptyLocationRange)
 }
 
 func (interpreter *Interpreter) visitConditions(conditions ast.Conditions, kind ast.ConditionKind) {
@@ -1001,7 +1004,11 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 	var self MemberAccessibleValue = containingResourceComposite
 	if containingResourceComposite.Kind == common.CompositeKindAttachment {
 		var base *EphemeralReferenceValue
-		base, self = attachmentBaseAndSelfValues(declarationInterpreter, containingResourceComposite)
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: eventDecl,
+		}
+		base, self = attachmentBaseAndSelfValues(declarationInterpreter, containingResourceComposite, locationRange)
 		declarationInterpreter.declareVariable(sema.BaseIdentifier, base)
 	}
 	declarationInterpreter.declareVariable(sema.SelfIdentifier, self)
@@ -1354,7 +1361,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 					if attachmentType.AttachmentEntitlementAccess != nil {
 						auth = ConvertSemaAccessToStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
 					}
-					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType)
+					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType, locationRange)
 
 					// set the base to the implicitly provided value, and remove this implicit argument from the list
 					implicitArgumentPos := len(invocation.Arguments) - 1
@@ -2158,6 +2165,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 					ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
 					ref.Value,
 					unwrappedTargetType.Type,
+					locationRange,
 				)
 
 			case *StorageReferenceValue:
@@ -4785,6 +4793,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(
 	memberAccess *sema.Access,
 	resultValue Value,
 	resultingType sema.Type,
+	locationRange LocationRange,
 ) Value {
 
 	if memberAccess == nil {
@@ -4817,7 +4826,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(
 
 		switch refValue := resultValue.(type) {
 		case *EphemeralReferenceValue:
-			return NewEphemeralReferenceValue(interpreter, auth, refValue.Value, refValue.BorrowedType)
+			return NewEphemeralReferenceValue(interpreter, auth, refValue.Value, refValue.BorrowedType, locationRange)
 		case *StorageReferenceValue:
 			return NewStorageReferenceValue(interpreter, auth, refValue.TargetStorageAddress, refValue.TargetPath, refValue.BorrowedType)
 		case BoundFunctionValue:
@@ -4841,7 +4850,7 @@ func (interpreter *Interpreter) getMemberWithAuthMapping(
 	// once we have obtained the member, if it was declared with entitlement-mapped access, we must compute the output of the map based
 	// on the runtime authorizations of the accessing reference or composite
 	memberAccess := interpreter.getAccessOfMember(self, identifier)
-	return interpreter.mapMemberValueAuthorization(self, memberAccess, result, memberAccessInfo.ResultingType)
+	return interpreter.mapMemberValueAuthorization(self, memberAccess, result, memberAccessInfo.ResultingType, locationRange)
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.

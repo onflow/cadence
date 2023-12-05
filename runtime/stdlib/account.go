@@ -247,6 +247,8 @@ func NewAccountReferenceValue(
 		authorization,
 		account,
 		sema.AccountType,
+		// okay to pass an empty range here because the account value is never a reference, so this can't fail
+		interpreter.EmptyLocationRange,
 	)
 }
 
@@ -1320,6 +1322,7 @@ func newAccountContractsBorrowFunction(
 				interpreter.UnauthorizedAccess,
 				contractValue,
 				referenceType.Type,
+				invocation.LocationRange,
 			)
 
 			return interpreter.NewSomeValueNonCopying(
@@ -2698,6 +2701,8 @@ func getStorageCapabilityControllerReference(
 		interpreter.UnauthorizedAccess,
 		storageCapabilityController,
 		sema.StorageCapabilityControllerType,
+		// okay to pass an empty range here because the account value is never a reference, so this can't fail
+		interpreter.EmptyLocationRange,
 	)
 }
 
@@ -3499,6 +3504,8 @@ func getAccountCapabilityControllerReference(
 		interpreter.UnauthorizedAccess,
 		accountCapabilityController,
 		sema.AccountCapabilityControllerType,
+		// okay to pass an empty range here because the account value is never a reference, so this can't fail
+		interpreter.EmptyLocationRange,
 	)
 }
 
