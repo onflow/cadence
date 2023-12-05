@@ -7798,6 +7798,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		ccf.SimpleTypeAnyStruct:                        cadence.AnyStructType,
 		ccf.SimpleTypeAnyStructAttachmentType:          cadence.AnyStructAttachmentType,
 		ccf.SimpleTypeAnyResourceAttachmentType:        cadence.AnyResourceAttachmentType,
+		ccf.SimpleTypeHashableStruct:                   cadence.HashableStructType,
 		ccf.SimpleTypeMetaType:                         cadence.MetaType,
 		ccf.SimpleTypeVoid:                             cadence.VoidType,
 		ccf.SimpleTypeNever:                            cadence.NeverType,
@@ -9286,6 +9287,38 @@ func TestEncodeType(t *testing.T) {
 			},
 		)
 
+	})
+
+	t.Run("with static HashableStruct", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: cadence.HashableStructType,
+			},
+			[]byte{
+				// language=json, format=json-cdc
+				// {"type":"Type","value":{"staticType":{"kind":"Struct", "type" : {"kind" : "HashableStruct"}}}}
+				//
+				// language=edn, format=ccf
+				// 130([137(41), 185(56)])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// HashableStruct type (97)
+				0x18, 0x61,
+			},
+		)
 	})
 
 	t.Run("with static function", func(t *testing.T) {

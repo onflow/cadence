@@ -1541,6 +1541,11 @@ func TestStaticTypeConversion(t *testing.T) {
 				Type: testFunctionType,
 			},
 		},
+		{
+			name:       "HashableStruct",
+			semaType:   sema.HashableStructType,
+			staticType: PrimitiveStaticTypeHashableStruct,
+		},
 
 		// Deprecated primitive static types, only exist for migration purposes
 		{

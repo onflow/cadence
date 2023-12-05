@@ -132,6 +132,8 @@ func ExportMeteredType(
 			return cadence.AnyType
 		case sema.AnyStructType:
 			return cadence.AnyStructType
+		case sema.HashableStructType:
+			return cadence.HashableStructType
 		case sema.AnyResourceType:
 			return cadence.AnyResourceType
 		case sema.AnyStructAttachmentType:

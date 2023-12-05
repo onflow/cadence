@@ -69,6 +69,9 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	invokedExpression := invocationExpression.InvokedExpression
 	expressionType := checker.VisitExpression(invokedExpression, nil)
 
+	// `inInvocation` should be reset before visiting arguments
+	checker.inInvocation = false
+
 	// Get the member from the invoked value
 	// based on the use of optional chaining syntax
 
