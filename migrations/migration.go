@@ -9,7 +9,7 @@ import (
 
 type Migration interface {
 	Name() string
-	Migrate(value interpreter.Value) (newValue interpreter.Value)
+	Migrate(accountAddress common.Address, value interpreter.Value) (newValue interpreter.Value)
 }
 
 type StorageMigration struct {
@@ -195,7 +195,7 @@ func (m *StorageMigration) migrateNestedValue(
 	default:
 		// Assumption: all migrations only migrate non-container typed values.
 		for _, migration := range migrations {
-			converted := migration.Migrate(value)
+			converted := migration.Migrate(address, value)
 
 			if converted != nil {
 				// Chain the migrations.

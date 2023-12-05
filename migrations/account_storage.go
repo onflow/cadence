@@ -37,18 +37,20 @@ func NewAccountStorage(storage *runtime.Storage, address common.Address) Account
 	}
 }
 
+type ValueConverter func(
+	value interpreter.Value,
+	address common.Address,
+	domain common.PathDomain,
+	key string,
+) interpreter.Value
+
 // ForEachValue iterates over the values in the account.
 // The `valueConverter takes a function to be applied to each value.
 // It returns the converted, if a new value was created during conversion.
 func (i *AccountStorage) ForEachValue(
 	inter *interpreter.Interpreter,
 	domains []common.PathDomain,
-	valueConverter func(
-		value interpreter.Value,
-		address common.Address,
-		domain common.PathDomain,
-		key string,
-	) interpreter.Value,
+	valueConverter ValueConverter,
 ) {
 	for _, domain := range domains {
 		storageMap := i.storage.GetStorageMap(i.address, domain.Identifier(), false)

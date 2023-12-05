@@ -60,7 +60,7 @@ func (testStringMigration) Name() string {
 	return "testStringMigration"
 }
 
-func (testStringMigration) Migrate(value interpreter.Value) (newValue interpreter.Value) {
+func (testStringMigration) Migrate(_ common.Address, value interpreter.Value) interpreter.Value {
 	if value, ok := value.(*interpreter.StringValue); ok {
 		return interpreter.NewUnmeteredStringValue(fmt.Sprintf("updated_%s", value.Str))
 	}
@@ -76,7 +76,7 @@ func (testInt8Migration) Name() string {
 	return "testInt8Migration"
 }
 
-func (testInt8Migration) Migrate(value interpreter.Value) (newValue interpreter.Value) {
+func (testInt8Migration) Migrate(_ common.Address, value interpreter.Value) interpreter.Value {
 	if value, ok := value.(interpreter.Int8Value); ok {
 		return interpreter.NewUnmeteredInt8Value(int8(value) + 10)
 	}
@@ -194,6 +194,6 @@ func TestMultipleMigrations(t *testing.T) {
 	require.Equal(t, "testStringMigration", reporter.migratedPaths["string_value"])
 	require.Equal(t, "testInt8Migration", reporter.migratedPaths["int8_value"])
 
-	// int16 value must notbe reported as migrated.
+	// int16 value must not be reported as migrated.
 	require.NotContains(t, reporter.migratedPaths, "int16_value")
 }
