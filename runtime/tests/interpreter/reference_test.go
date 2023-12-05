@@ -658,6 +658,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
+			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", arrayRef)
@@ -763,6 +764,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
+			interpreter.EmptyLocationRange,
 		)
 
 		// Resource array in account 0x02
@@ -787,6 +789,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
+			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", arrayRef1, arrayRef2)
@@ -858,6 +861,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
+			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", arrayRef)
@@ -982,6 +986,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
+			interpreter.EmptyLocationRange,
 		)
 
 		_, err = inter.Invoke("setup", arrayRef)
@@ -1718,4 +1723,59 @@ func TestInterpretInvalidatedReferenceToOptional(t *testing.T) {
 
 	_, err := inter.Invoke("main")
 	require.NoError(t, err)
+}
+
+func TestInterpretReferenceToReference(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                let x = &1 as &Int
+                let y = &x as & &Int
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
+
+	t.Run("upcast to anystruct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                let x = &1 as &Int as AnyStruct
+                let y = &x as &AnyStruct
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
+
+	t.Run("optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                let x: (&Int)? = &1 as &Int
+                let y: (&(&Int))? = &x 
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
 }

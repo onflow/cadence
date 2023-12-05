@@ -410,6 +410,7 @@ func testAccountWithErrorHandler(
 			interpreter.FullyEntitledAccountAccess,
 			account,
 			sema.AccountType,
+			interpreter.EmptyLocationRange,
 		),
 		Kind: common.DeclarationKindConstant,
 	}
@@ -425,6 +426,7 @@ func testAccountWithErrorHandler(
 			interpreter.UnauthorizedAccess,
 			account,
 			sema.AccountType,
+			interpreter.EmptyLocationRange,
 		),
 		Kind: common.DeclarationKindConstant,
 	}

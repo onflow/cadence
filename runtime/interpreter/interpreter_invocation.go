@@ -153,13 +153,14 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 		}()
 	}
 
-	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)
+	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments, invocation.LocationRange)
 }
 
 // NOTE: assumes the function's activation (or an extension of it) is pushed!
 func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	function *InterpretedFunctionValue,
 	arguments []Value,
+	declarationLocationRange LocationRange,
 ) Value {
 	defer func() {
 		// Only unwind the call stack if there was no error
@@ -182,6 +183,7 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		},
 		function.PostConditions,
 		function.Type.ReturnTypeAnnotation.Type,
+		declarationLocationRange,
 	)
 }
 

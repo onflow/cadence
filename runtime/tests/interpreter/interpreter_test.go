@@ -7308,6 +7308,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 		interpreter.UnauthorizedAccess,
 		arrayValue,
 		inter.MustConvertStaticToSemaType(arrayStaticType),
+		interpreter.EmptyLocationRange,
 	)
 
 	_, err = inter.Invoke("test", ref)
@@ -8536,6 +8537,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 							nil,
 							addressValue,
 							interpreter.FullyEntitledAccountAccess,
+							interpreter.EmptyLocationRange,
 						)
 
 						return map[string]interpreter.Value{
@@ -9094,6 +9096,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.FullyEntitledAccountAccess,
+			interpreter.EmptyLocationRange,
 		),
 		Kind: common.DeclarationKindConstant,
 	}

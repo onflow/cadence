@@ -35,6 +35,7 @@ type CapabilityControllerValue interface {
 		interpreter *Interpreter,
 		capabilityAddress common.Address,
 		resultBorrowType *sema.ReferenceType,
+		locationRange LocationRange,
 	) ReferenceValue
 	ControllerCapabilityID() UInt64Value
 }
@@ -329,6 +330,7 @@ func (v *StorageCapabilityControllerValue) ReferenceValue(
 	interpreter *Interpreter,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
+	_ LocationRange,
 ) ReferenceValue {
 	authorization := ConvertSemaAccessToStaticAuthorization(
 		interpreter,
