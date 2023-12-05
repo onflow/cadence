@@ -114,6 +114,18 @@ func (checker *Checker) checkAssignment(
 
 	checker.recordReferenceCreation(target, value)
 
+	// Track nested resource moves.
+	// Even though this is needed only for second value transfers, it is added here because:
+	//  1) The second value transfers are checked as assignments,
+	//     so the info needed (value's type etc.) is only available here.
+	//     Adding it here covers second value transfers.
+	//  2) Having it in assignment would cover all cases, even the ones that are statically rejected by the checker.
+	//     So this would also act as a defensive check for all other cases.
+	valueIsResource := valueType != nil && valueType.IsResourceType()
+	if valueIsResource {
+		checker.elaborateNestedResourceMoveExpression(value)
+	}
+
 	return
 }
 

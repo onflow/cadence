@@ -1015,3 +1015,20 @@ func (e CapabilityAddressPublishingError) Error() string {
 		e.AccountAddress.String(),
 	)
 }
+
+// NestedReferenceError
+type NestedReferenceError struct {
+	Value *EphemeralReferenceValue
+	LocationRange
+}
+
+var _ errors.UserError = NestedReferenceError{}
+
+func (NestedReferenceError) IsUserError() {}
+
+func (e NestedReferenceError) Error() string {
+	return fmt.Sprintf(
+		"cannot create a nested reference to %s",
+		e.Value.String(),
+	)
+}

@@ -373,6 +373,19 @@ func (t *testAccountHandler) GetAccountContractNames(address common.Address) ([]
 	return t.getAccountContractNames(address)
 }
 
+func (t *testAccountHandler) StartContractAddition(common.AddressLocation) {
+	// NO-OP
+}
+
+func (t *testAccountHandler) EndContractAddition(common.AddressLocation) {
+	// NO-OP
+}
+
+func (t *testAccountHandler) IsContractBeingAdded(common.AddressLocation) bool {
+	// NO-OP
+	return false
+}
+
 func testAccountWithErrorHandler(
 	t *testing.T,
 	address interpreter.AddressValue,
@@ -397,6 +410,7 @@ func testAccountWithErrorHandler(
 			interpreter.FullyEntitledAccountAccess,
 			account,
 			sema.AccountType,
+			interpreter.EmptyLocationRange,
 		),
 		Kind: common.DeclarationKindConstant,
 	}
@@ -412,6 +426,7 @@ func testAccountWithErrorHandler(
 			interpreter.UnauthorizedAccess,
 			account,
 			sema.AccountType,
+			interpreter.EmptyLocationRange,
 		),
 		Kind: common.DeclarationKindConstant,
 	}

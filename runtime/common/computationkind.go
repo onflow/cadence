@@ -133,7 +133,7 @@ const (
 	//
 	ComputationKindSTDLIBPanic
 	ComputationKindSTDLIBAssert
-	ComputationKindSTDLIBUnsafeRandom
+	ComputationKindSTDLIBRevertibleRandom
 	_
 	_
 	_

@@ -136,7 +136,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 				},
 			)
 
-			if sema.IsValidDictionaryKeyType(ty) {
+			if sema.IsSubType(ty, sema.HashableStructType) {
 				tests = append(tests,
 					&sema.DictionaryType{
 						KeyType:   ty,
