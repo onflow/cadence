@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package account_type
+package string_normalization
 
 import (
 	"testing"
@@ -241,7 +241,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := NewStringNormalizingMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage)
 
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
@@ -250,6 +250,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 			},
 		},
 		nil,
+		NewStringNormalizingMigration(),
 	)
 
 	// Assert: Traverse through the storage and see if the values are updated now.

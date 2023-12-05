@@ -50,6 +50,7 @@ func (t *testReporter) Report(
 	address common.Address,
 	domain common.PathDomain,
 	identifier string,
+	_ string,
 ) {
 	migratedPathsInAddress, ok := t.migratedPaths[address]
 	if !ok {
@@ -66,7 +67,7 @@ func (t *testReporter) Report(
 	migratedPathsInDomain[identifier] = struct{}{}
 }
 
-func TestMigration(t *testing.T) {
+func TestTypeValueMigration(t *testing.T) {
 	t.Parallel()
 
 	account := common.Address{0x42}
@@ -341,7 +342,7 @@ func TestMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := NewAccountTypeMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage)
 
 	reporter := newTestReporter()
 
@@ -352,6 +353,7 @@ func TestMigration(t *testing.T) {
 			},
 		},
 		reporter,
+		NewAccountTypeMigration(),
 	)
 
 	// Check reported migrated paths
@@ -651,7 +653,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := NewAccountTypeMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage)
 
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
@@ -660,6 +662,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 			},
 		},
 		nil,
+		NewAccountTypeMigration(),
 	)
 
 	// Assert: Traverse through the storage and see if the values are updated now.
@@ -761,7 +764,7 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := NewAccountTypeMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage)
 
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
@@ -770,6 +773,7 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 			},
 		},
 		nil,
+		NewAccountTypeMigration(),
 	)
 
 	// Assert: Traverse through the storage and see if the values are updated now.

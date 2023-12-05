@@ -16,82 +16,34 @@
  * limitations under the License.
  */
 
-package account_type
+package string_normalization
 
 import (
 	"github.com/onflow/cadence/migrations"
-	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-type StringNormalizingMigration struct {
-	storage     *runtime.Storage
-	interpreter *interpreter.Interpreter
+type StringNormalizingMigration struct{}
+
+var _ migrations.Migration = StringNormalizingMigration{}
+
+func NewStringNormalizingMigration() StringNormalizingMigration {
+	return StringNormalizingMigration{}
 }
 
-func NewStringNormalizingMigration(
-	interpreter *interpreter.Interpreter,
-	storage *runtime.Storage,
-) *StringNormalizingMigration {
-	return &StringNormalizingMigration{
-		storage:     storage,
-		interpreter: interpreter,
-	}
+func (StringNormalizingMigration) Name() string {
+	return "StringNormalizingMigration"
 }
 
-func (m *StringNormalizingMigration) Migrate(
-	addressIterator migrations.AddressIterator,
-	reporter migrations.Reporter,
-) {
-	for {
-		address := addressIterator.NextAddress()
-		if address == common.ZeroAddress {
-			break
-		}
-
-		m.migrateStringValuesInAccount(
-			address,
-			reporter,
-		)
-	}
-
-	err := m.storage.Commit(m.interpreter, false)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (m *StringNormalizingMigration) migrateStringValuesInAccount(
-	address common.Address,
-	reporter migrations.Reporter,
-) {
-
-	accountStorage := migrations.NewAccountStorage(m.storage, address)
-
-	accountStorage.ForEachValue(
-		m.interpreter,
-		common.AllPathDomains,
-		m.migrateValue,
-		reporter,
-	)
-}
-
-func (m *StringNormalizingMigration) migrateValue(
+func (StringNormalizingMigration) Migrate(
 	value interpreter.Value,
-) (newValue interpreter.Value, updatedInPlace bool) {
-	return migrations.MigrateNestedValue(m.interpreter, value, m.migrateStringAndCharacterValues)
-}
-
-func (m *StringNormalizingMigration) migrateStringAndCharacterValues(
-	value interpreter.Value,
-) (newValue interpreter.Value, updatedInPlace bool) {
+) (newValue interpreter.Value) {
 	switch value := value.(type) {
 	case *interpreter.StringValue:
-		return interpreter.NewUnmeteredStringValue(value.Str), false
+		return interpreter.NewUnmeteredStringValue(value.Str)
 	case interpreter.CharacterValue:
-		return interpreter.NewUnmeteredCharacterValue(string(value)), false
+		return interpreter.NewUnmeteredCharacterValue(string(value))
 	}
 
-	return nil, false
+	return nil
 }

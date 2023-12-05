@@ -39,13 +39,16 @@ func NewAccountStorage(storage *runtime.Storage, address common.Address) Account
 
 // ForEachValue iterates over the values in the account.
 // The `valueConverter takes a function to be applied to each value.
-// It returns the `newValue`, if a new value was created during conversion,
-// or a flag, indicating whether the old value was updated in-place.
+// It returns the converted, if a new value was created during conversion.
 func (i *AccountStorage) ForEachValue(
 	inter *interpreter.Interpreter,
 	domains []common.PathDomain,
-	valueConverter func(interpreter.Value) (newValue interpreter.Value, updated bool),
-	reporter Reporter,
+	valueConverter func(
+		value interpreter.Value,
+		address common.Address,
+		domain common.PathDomain,
+		key string,
+	) interpreter.Value,
 ) {
 	for _, domain := range domains {
 		storageMap := i.storage.GetStorageMap(i.address, domain.Identifier(), false)
@@ -68,23 +71,17 @@ func (i *AccountStorage) ForEachValue(
 
 			value := storageMap.ReadValue(nil, storageKey)
 
-			newValue, updated := valueConverter(value)
-			if newValue == nil && !updated {
+			newValue := valueConverter(value, i.address, domain, key)
+			if newValue == nil {
 				continue
 			}
 
-			if newValue != nil {
-				// If the converter returns a new value, then replace the existing value with the new one.
-				storageMap.SetValue(
-					inter,
-					storageKey,
-					newValue,
-				)
-			}
-
-			if reporter != nil {
-				reporter.Report(i.address, domain, key)
-			}
+			// If the converter returns a new value, then replace the existing value with the new one.
+			storageMap.SetValue(
+				inter,
+				storageKey,
+				newValue,
+			)
 		}
 	}
 }
