@@ -152,66 +152,22 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	thenBlock, elseBlock *ast.Block,
 ) StatementResult {
 
-	// NOTE: It is *REQUIRED* that the getter for the value is used
-	// instead of just evaluating value expression,
-	// as the value may be an access expression (member access, index access),
-	// which implicitly removes a resource.
-	//
-	// Performing the removal from the container is essential
-	// (and just evaluating the expression does not perform the removal),
-	// because if there is a second value,
-	// the assignment to the value will cause an overwrite of the value.
-	// If the resource was not moved ou of the container,
-	// its contents get deleted.
-
-	getterSetter := interpreter.assignmentGetterSetter(declaration.Value)
-
-	const allowMissing = false
-	value := getterSetter.get(allowMissing)
-	if value == nil {
-		panic(errors.NewUnreachableError())
-	}
-
-	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes(declaration)
-	valueType := variableDeclarationTypes.ValueType
-
-	if declaration.SecondValue != nil {
-		secondValueType := variableDeclarationTypes.SecondValueType
-
-		interpreter.visitAssignment(
-			declaration.Transfer.Operation,
-			declaration.Value,
-			valueType,
-			declaration.SecondValue,
-			secondValueType,
-			declaration,
-		)
-	}
+	value := interpreter.visitVariableDeclaration(declaration, true)
 
 	if someValue, ok := value.(*SomeValue); ok {
-
-		targetType := variableDeclarationTypes.TargetType
 		locationRange := LocationRange{
 			Location:    interpreter.Location,
 			HasPosition: declaration.Value,
 		}
+
 		innerValue := someValue.InnerValue(interpreter, locationRange)
-		transferredUnwrappedValue := interpreter.transferAndConvert(
-			innerValue,
-			valueType,
-			targetType,
-			locationRange,
-		)
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
 
-		// Assignment can also be a resource move.
-		interpreter.invalidateResource(innerValue)
-
 		interpreter.declareVariable(
 			declaration.Identifier.Identifier,
-			transferredUnwrappedValue,
+			innerValue,
 		)
 
 		return interpreter.visitBlock(thenBlock)
@@ -505,18 +461,14 @@ func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration)
 // then declares the variable with the name bound to the value
 func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.VariableDeclaration) StatementResult {
 
-	interpreter.visitVariableDeclaration(
-		declaration,
-		func(identifier string, value Value) {
+	value := interpreter.visitVariableDeclaration(declaration, false)
 
-			// NOTE: lexical scope, always declare a new variable.
-			// Do not find an existing variable and assign the value!
+	// NOTE: lexical scope, always declare a new variable.
+	// Do not find an existing variable and assign the value!
 
-			_ = interpreter.declareVariable(
-				identifier,
-				value,
-			)
-		},
+	_ = interpreter.declareVariable(
+		declaration.Identifier.Identifier,
+		value,
 	)
 
 	return nil
@@ -524,8 +476,8 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 
 func (interpreter *Interpreter) visitVariableDeclaration(
 	declaration *ast.VariableDeclaration,
-	valueCallback func(identifier string, value Value),
-) {
+	isOptionalBinding bool,
+) Value {
 
 	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes(declaration)
 	targetType := variableDeclarationTypes.TargetType
@@ -541,7 +493,7 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	// (and just evaluating the expression does not perform the removal),
 	// because if there is a second value,
 	// the assignment to the value will cause an overwrite of the value.
-	// If the resource was not moved ou of the container,
+	// If the resource was not moved out of the container,
 	// its contents get deleted.
 
 	getterSetter := interpreter.assignmentGetterSetter(declaration.Value)
@@ -552,33 +504,39 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 		panic(errors.NewUnreachableError())
 	}
 
-	// Assignment is a potential resource move.
-	interpreter.invalidateResource(result)
-
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: declaration.Value,
 	}
 
-	transferredValue := interpreter.transferAndConvert(result, valueType, targetType, locationRange)
-
-	valueCallback(
-		declaration.Identifier.Identifier,
-		transferredValue,
-	)
-
-	if declaration.SecondValue == nil {
-		return
+	if isOptionalBinding {
+		targetType = &sema.OptionalType{
+			Type: targetType,
+		}
 	}
 
-	interpreter.visitAssignment(
-		declaration.Transfer.Operation,
-		declaration.Value,
+	transferredValue := interpreter.transferAndConvert(
+		result,
 		valueType,
-		declaration.SecondValue,
-		secondValueType,
-		declaration,
+		targetType,
+		locationRange,
 	)
+
+	// Assignment is a potential resource move.
+	interpreter.invalidateResource(result)
+
+	if declaration.SecondValue != nil {
+		interpreter.visitAssignment(
+			declaration.Transfer.Operation,
+			getterSetter,
+			valueType,
+			declaration.SecondValue,
+			secondValueType,
+			declaration,
+		)
+	}
+
+	return transferredValue
 }
 
 func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.AssignmentStatement) StatementResult {
@@ -589,9 +547,11 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 	target := assignment.Target
 	value := assignment.Value
 
+	getterSetter := interpreter.assignmentGetterSetter(target)
+
 	interpreter.visitAssignment(
 		assignment.Transfer.Operation,
-		target, targetType,
+		getterSetter, targetType,
 		value, valueType,
 		assignment,
 	)

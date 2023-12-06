@@ -373,6 +373,19 @@ func (t *testAccountHandler) GetAccountContractNames(address common.Address) ([]
 	return t.getAccountContractNames(address)
 }
 
+func (t *testAccountHandler) StartContractAddition(common.AddressLocation) {
+	// NO-OP
+}
+
+func (t *testAccountHandler) EndContractAddition(common.AddressLocation) {
+	// NO-OP
+}
+
+func (t *testAccountHandler) IsContractBeingAdded(common.AddressLocation) bool {
+	// NO-OP
+	return false
+}
+
 func testAccountWithErrorHandler(
 	t *testing.T,
 	address interpreter.AddressValue,

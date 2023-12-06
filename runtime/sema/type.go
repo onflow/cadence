@@ -3760,6 +3760,7 @@ func init() {
 			StorageCapabilityControllerType,
 			AccountCapabilityControllerType,
 			DeploymentResultType,
+			HashableStructType,
 		},
 	)
 
@@ -4426,6 +4427,23 @@ func isAttachmentType(t Type) bool {
 	return (ok && composite.Kind == common.CompositeKindAttachment) ||
 		t == AnyResourceAttachmentType ||
 		t == AnyStructAttachmentType
+}
+
+func IsHashableStructType(t Type) bool {
+	switch typ := t.(type) {
+	case *AddressType:
+		return true
+	case *CompositeType:
+		return typ.Kind == common.CompositeKindEnum
+	default:
+		switch typ {
+		case NeverType, BoolType, CharacterType, StringType, MetaType, HashableStructType:
+			return true
+		default:
+			return IsSubType(typ, NumberType) ||
+				IsSubType(typ, PathType)
+		}
+	}
 }
 
 func (t *CompositeType) GetBaseType() Type {
@@ -6462,6 +6480,21 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 	case AnyStructAttachmentType:
 		return !subType.IsResourceType() && isAttachmentType(subType)
 
+	case HashableStructType:
+		return IsHashableStructType(subType)
+
+	case PathType:
+		return IsSubType(subType, StoragePathType) ||
+			IsSubType(subType, CapabilityPathType)
+
+	case StorableType:
+		storableResults := map[*Member]bool{}
+		return subType.IsStorable(storableResults)
+
+	case CapabilityPathType:
+		return IsSubType(subType, PrivatePathType) ||
+			IsSubType(subType, PublicPathType)
+
 	case NumberType:
 		switch subType {
 		case NumberType, SignedNumberType:
@@ -6737,12 +6770,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				}
 			}
 		}
-
-	case *SimpleType:
-		if typedSuperType.IsSuperTypeOf == nil {
-			return false
-		}
-		return typedSuperType.IsSuperTypeOf(subType)
 	}
 
 	// TODO: enforce type arguments, remove this rule

@@ -123,6 +123,7 @@ var AnyStructType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyStruct)
 var AnyResourceType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyResource)
 var AnyStructAttachmentType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyStructAttachment)
 var AnyResourceAttachmentType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyResourceAttachment)
+var HashableStructType = PrimitiveType(interpreter.PrimitiveStaticTypeHashableStruct)
 
 var BoolType = PrimitiveType(interpreter.PrimitiveStaticTypeBool)
 var AddressType = PrimitiveType(interpreter.PrimitiveStaticTypeAddress)

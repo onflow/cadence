@@ -119,11 +119,12 @@ type Checker struct {
 	purityCheckScopes                  []PurityCheckScope
 	entitlementMappingInScope          *EntitlementMapType
 	inCondition                        bool
+	inInterface                        bool
 	allowSelfResourceFieldInvalidation bool
-	inAssignment                       bool
 	inInvocation                       bool
 	inCreate                           bool
 	isChecked                          bool
+	inAssignment                       bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -1076,7 +1077,7 @@ func (checker *Checker) convertDictionaryType(t *ast.DictionaryType) Type {
 	keyType := checker.ConvertType(t.KeyType)
 	valueType := checker.ConvertType(t.ValueType)
 
-	if !IsValidDictionaryKeyType(keyType) {
+	if !IsSubType(keyType, HashableStructType) {
 		checker.report(
 			&InvalidDictionaryKeyTypeError{
 				Type:  keyType,
@@ -1518,6 +1519,20 @@ func (checker *Checker) recordResourceInvalidation(
 
 	if !valueType.IsResourceType() {
 		return nil
+	}
+
+	// Invalidations in interface functions are not allowed,
+	// except for temporary moves
+	if invalidationKind != ResourceInvalidationKindMoveTemporary &&
+		checker.inCondition &&
+		checker.inInterface {
+
+		checker.report(&InvalidInterfaceConditionResourceInvalidationError{
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				expression,
+			),
+		})
 	}
 
 	reportInvalidNestedMove := func() {
