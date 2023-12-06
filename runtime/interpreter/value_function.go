@@ -327,6 +327,7 @@ type BoundFunctionValue struct {
 	Base               *EphemeralReferenceValue
 	Self               *MemberAccessibleValue
 	BoundAuthorization Authorization
+	selfRef            *EphemeralReferenceValue
 }
 
 var _ Value = BoundFunctionValue{}
@@ -342,9 +343,22 @@ func NewBoundFunctionValue(
 
 	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
 
+	// Since 'self' work as an implicit reference, create an explicit one and hold it.
+	// This reference is later used to check the validity of the referenced value/resource.
+	var selfRef *EphemeralReferenceValue
+	if reference, isReference := (*self).(*EphemeralReferenceValue); isReference {
+		// For attachments, 'self' is already a reference.
+		// So no need to create a reference again.
+		selfRef = reference
+	} else {
+		semaType := interpreter.MustSemaTypeOfValue(*self)
+		selfRef = NewEphemeralReferenceValue(interpreter, boundAuth, *self, semaType, EmptyLocationRange)
+	}
+
 	return BoundFunctionValue{
 		Function:           function,
 		Self:               self,
+		selfRef:            selfRef,
 		Base:               base,
 		BoundAuthorization: boundAuth,
 	}
@@ -387,14 +401,13 @@ func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
 }
 
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
-	self := f.Self
-	invocation.Self = self
-	if self != nil {
-		invocation.Interpreter.checkReferencedResourceNotMovedOrDestroyed(*self, invocation.LocationRange)
-	}
-
+	invocation.Self = f.Self
 	invocation.Base = f.Base
 	invocation.BoundAuthorization = f.BoundAuthorization
+
+	// Check if the 'self' is not invalidated.
+	_ = f.selfRef.MustReferencedValue(invocation.Interpreter, invocation.LocationRange)
+
 	return f.Function.invoke(invocation)
 }
 

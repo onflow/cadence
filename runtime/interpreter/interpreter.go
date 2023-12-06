@@ -217,7 +217,7 @@ type Storage interface {
 	CheckHealth() error
 }
 
-type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
+type ReferencedResourceKindedValues map[atree.StorageID]map[*EphemeralReferenceValue]struct{}
 
 type Interpreter struct {
 	Location     common.Location
@@ -5173,18 +5173,20 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 }
 
 func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
-	if value, ok := value.(ReferenceTrackedResourceKindedValue); ok {
-		interpreter.trackReferencedResourceKindedValue(value.StorageID(), value)
+	if referenceValue, ok := value.(*EphemeralReferenceValue); ok {
+		if value, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue); ok {
+			interpreter.trackReferencedResourceKindedValue(value.StorageID(), referenceValue)
+		}
 	}
 }
 
 func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	id atree.StorageID,
-	value ReferenceTrackedResourceKindedValue,
+	value *EphemeralReferenceValue,
 ) {
 	values := interpreter.SharedState.referencedResourceKindedValues[id]
 	if values == nil {
-		values = map[ReferenceTrackedResourceKindedValue]struct{}{}
+		values = map[*EphemeralReferenceValue]struct{}{}
 		interpreter.SharedState.referencedResourceKindedValues[id] = values
 	}
 	values[value] = struct{}{}
@@ -5232,7 +5234,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value, destr
 	}
 
 	for value := range values { //nolint:maprange
-		switch value := value.(type) {
+		switch value := value.Value.(type) {
 		case *CompositeValue:
 			value.dictionary = nil
 			value.isDestroyed = destroyed
@@ -5295,6 +5297,7 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
+
 	if identifier == sema.SelfIdentifier {
 		return
 	}

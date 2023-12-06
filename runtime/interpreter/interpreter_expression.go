@@ -357,7 +357,19 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 }
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
-	return ast.AcceptExpression[Value](expression, interpreter)
+	result := ast.AcceptExpression[Value](expression, interpreter)
+
+	resourceKindedValue, ok := result.(ResourceKindedValue)
+	if ok && resourceKindedValue.isInvalidatedResource(interpreter) {
+		panic(InvalidatedResourceError{
+			LocationRange: LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
+		})
+	}
+
+	return result
 }
 
 func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) Value {
@@ -1036,15 +1048,6 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		panic(errors.NewUnreachableError())
 	}
 
-	// Bound functions
-	if boundFunction, ok := function.(BoundFunctionValue); ok && boundFunction.Self != nil {
-		self := *boundFunction.Self
-		// Explicitly track the reference here, because the receiver 'act' as a reference,
-		// but a reference is never created during bound function invocation.
-		// This was a fix to the issue: https://github.com/onflow/cadence/pull/2561
-		interpreter.maybeTrackReferencedResourceKindedValue(self)
-	}
-
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body
 
 	var argumentExpressions []ast.Expression
@@ -1341,14 +1344,17 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	case *sema.ReferenceType:
 		// Case (3): target type is non-optional, actual value is optional.
-		// Unwrap the optional and add it to reference tracking.
+		// This path shouldn't be reachable. This is only a defensive step
+		// to ensure references are properly created/tracked.
 		if someValue, ok := result.(*SomeValue); ok {
 			locationRange := LocationRange{
 				Location:    interpreter.Location,
 				HasPosition: referenceExpression.Expression,
 			}
 			innerValue := someValue.InnerValue(interpreter, locationRange)
-			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
+
+			auth := interpreter.getEffectiveAuthorization(typ)
+			return NewEphemeralReferenceValue(interpreter, auth, innerValue, typ.Type, locationRange)
 		}
 
 		// Case (4): target type is non-optional, actual value is also non-optional
