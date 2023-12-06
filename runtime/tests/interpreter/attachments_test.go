@@ -2038,16 +2038,8 @@ func TestInterpretAttachmentMappedMembers(t *testing.T) {
 			},
 		})
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredIntValueFromInt64(3),
-			value.(*interpreter.EphemeralReferenceValue).Value,
-		)
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 	})
 
 	t.Run("mapped base cast", func(t *testing.T) {
@@ -2093,16 +2085,8 @@ func TestInterpretAttachmentMappedMembers(t *testing.T) {
 			},
 		})
 
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredIntValueFromInt64(3),
-			value.(*interpreter.EphemeralReferenceValue).Value,
-		)
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 	})
 }
 
