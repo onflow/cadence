@@ -94,7 +94,13 @@ func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.Stat
 		}
 
 	case *interpreter.IntersectionStaticType:
-		// Nothing to do. Inner types can only be interfaces.
+		// No need to convert `staticType.Types` as they can only be interfaces.
+		convertedLegacyType := maybeConvertAccountType(staticType.LegacyType)
+		if convertedLegacyType != nil {
+			intersectionType := interpreter.NewIntersectionStaticType(nil, staticType.Types)
+			intersectionType.LegacyType = convertedLegacyType
+			return intersectionType
+		}
 
 	case *interpreter.OptionalStaticType:
 		convertedInnerType := maybeConvertAccountType(staticType.Type)

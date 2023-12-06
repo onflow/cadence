@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/atree"
@@ -234,6 +235,16 @@ func TestTypeValueMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{},
 			),
 		},
+		"intersection_with_legacy_type": {
+			storedType: &interpreter.IntersectionStaticType{
+				Types:      []*interpreter.InterfaceStaticType{},
+				LegacyType: publicAccountType,
+			},
+			expectedType: &interpreter.IntersectionStaticType{
+				Types:      []*interpreter.InterfaceStaticType{},
+				LegacyType: unauthorizedAccountReferenceType,
+			},
+		},
 		"public_account_reference": {
 			storedType: interpreter.NewReferenceStaticType(
 				nil,
@@ -390,14 +401,22 @@ func TestTypeValueMigration(t *testing.T) {
 			testCase, ok := testCases[identifier]
 			require.True(t, ok)
 
-			var storageValue interpreter.Value
+			var expectedValue interpreter.Value
 			if testCase.expectedType != nil {
-				storageValue = interpreter.NewTypeValue(nil, testCase.expectedType)
+				expectedValue = interpreter.NewTypeValue(nil, testCase.expectedType)
+
+				// `IntersectionType.LegacyType` is not considered in the `IntersectionType.Equal` method.
+				// Therefore, check for the legacy type equality manually.
+				typeValue := value.(interpreter.TypeValue)
+				if actualIntersectionType, ok := typeValue.Type.(*interpreter.IntersectionStaticType); ok {
+					expectedIntersectionType := testCase.expectedType.(*interpreter.IntersectionStaticType)
+					assert.True(t, actualIntersectionType.LegacyType.Equal(expectedIntersectionType.LegacyType))
+				}
 			} else {
-				storageValue = interpreter.NewTypeValue(nil, testCase.storedType)
+				expectedValue = interpreter.NewTypeValue(nil, testCase.storedType)
 			}
 
-			utils.AssertValuesEqual(t, inter, storageValue, value)
+			utils.AssertValuesEqual(t, inter, expectedValue, value)
 		})
 	}
 }
