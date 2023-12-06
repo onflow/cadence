@@ -203,6 +203,8 @@ func (m *LinkMigration) getPathCapabilityFinalTarget(
 	err error,
 ) {
 
+	locationRange := interpreter.EmptyLocationRange
+
 	seenPaths := map[interpreter.PathValue]struct{}{}
 	paths := []interpreter.PathValue{pathValue}
 
@@ -285,6 +287,7 @@ func (m *LinkMigration) getPathCapabilityFinalTarget(
 					value.ID,
 					wantedBorrowType,
 					capabilityBorrowType,
+					locationRange,
 				)
 				if reference == nil {
 					return nil, interpreter.UnauthorizedAccess, nil
