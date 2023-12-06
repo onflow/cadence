@@ -290,7 +290,7 @@ func TestCheckRevertibleRandom(t *testing.T) {
 		},
 	}
 
-	runCase := func(t *testing.T, ty sema.Type, code string) {
+	runCase := func(t *testing.T, ty sema.Type, code string, options ParseAndCheckOptions) {
 		checker, err := ParseAndCheckWithOptions(t, code, options)
 
 		require.NoError(t, err)
@@ -299,25 +299,25 @@ func TestCheckRevertibleRandom(t *testing.T) {
 		require.Equal(t, ty, resType)
 	}
 
-	runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type) {
+	runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type, options ParseAndCheckOptions) {
 		t.Run(fmt.Sprintf("revertibleRandom<%s>_no_modulo", ty), func(t *testing.T) {
 			t.Parallel()
 
 			code := fmt.Sprintf("let rand = revertibleRandom<%s>()", ty)
-			runCase(t, ty, code)
+			runCase(t, ty, code, options)
 		})
 	}
 
-	runValidCaseWithModulo := func(t *testing.T, ty sema.Type) {
+	runValidCaseWithModulo := func(t *testing.T, ty sema.Type, options ParseAndCheckOptions) {
 		t.Run(fmt.Sprintf("revertibleRandom<%s>_modulo", ty), func(t *testing.T) {
 			t.Parallel()
 
 			code := fmt.Sprintf("let rand = revertibleRandom<%[1]s>(modulo: %[1]s(1))", ty)
-			runCase(t, ty, code)
+			runCase(t, ty, code, options)
 		})
 	}
 
-	runInvalidCase := func(t *testing.T, testName string, code string, expectedErrors []error) {
+	runInvalidCase := func(t *testing.T, testName string, code string, options ParseAndCheckOptions, expectedErrors []error) {
 		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
 
@@ -336,19 +336,19 @@ func TestCheckRevertibleRandom(t *testing.T) {
 			continue
 
 		default:
-			runValidCaseWithoutModulo(t, ty)
-			runValidCaseWithModulo(t, ty)
+			runValidCaseWithoutModulo(t, ty, options)
+			runValidCaseWithModulo(t, ty, options)
 		}
 	}
 
-	runInvalidCase(t, "revertibleRandom<Int>", "let rand = revertibleRandom<Int>()", []error{&sema.TypeMismatchError{}})
-	runInvalidCase(t, "revertibleRandom<String>", "let rand = revertibleRandom<String>(modulo: \"abcd\")", []error{&sema.TypeMismatchError{}})
-	runInvalidCase(t, "missing_argument_label", "let rand = revertibleRandom<UInt256>(UInt256(1))", []error{&sema.MissingArgumentLabelError{}})
-	runInvalidCase(t, "incorrect_argument_label", "let rand = revertibleRandom<UInt256>(typo: UInt256(1))", []error{&sema.IncorrectArgumentLabelError{}})
-	runInvalidCase(t, "too_many_args", "let rand = revertibleRandom<UInt256>(modulo: UInt256(1), 2, 3)", []error{&sema.ExcessiveArgumentsError{}})
-	runInvalidCase(t, "modulo type mismatch", "let rand = revertibleRandom<UInt256>(modulo: UInt128(1))", []error{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}})
-	runInvalidCase(t, "string modulo", "let rand = revertibleRandom<UInt256>(modulo: \"abcd\")", []error{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}})
+	runInvalidCase(t, "revertibleRandom<Int>", "let rand = revertibleRandom<Int>()", options, []error{&sema.TypeMismatchError{}})
+	runInvalidCase(t, "revertibleRandom<String>", "let rand = revertibleRandom<String>(modulo: \"abcd\")", options, []error{&sema.TypeMismatchError{}})
+	runInvalidCase(t, "missing_argument_label", "let rand = revertibleRandom<UInt256>(UInt256(1))", options, []error{&sema.MissingArgumentLabelError{}})
+	runInvalidCase(t, "incorrect_argument_label", "let rand = revertibleRandom<UInt256>(typo: UInt256(1))", options, []error{&sema.IncorrectArgumentLabelError{}})
+	runInvalidCase(t, "too_many_args", "let rand = revertibleRandom<UInt256>(modulo: UInt256(1), 2, 3)", options, []error{&sema.ExcessiveArgumentsError{}})
+	runInvalidCase(t, "modulo type mismatch", "let rand = revertibleRandom<UInt256>(modulo: UInt128(1))", options, []error{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}})
+	runInvalidCase(t, "string modulo", "let rand = revertibleRandom<UInt256>(modulo: \"abcd\")", options, []error{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}})
 
 	// This is an error since we do not support type inference of function arguments.
-	runInvalidCase(t, "missing_typeinference", "let rand = revertibleRandom<UInt256>(modulo: 1)", []error{&sema.TypeParameterTypeMismatchError{}})
+	runInvalidCase(t, "missing_typeinference", "let rand = revertibleRandom<UInt256>(modulo: 1)", options, []error{&sema.TypeParameterTypeMismatchError{}})
 }
