@@ -29,6 +29,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -1949,6 +1950,146 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 	})
 }
 
+func TestInterpretAttachmentSelfAccessMembers(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+            access(all) resource R{
+                access(all) fun baz() {}
+            }
+            access(all) attachment A for R{
+                access(all) fun foo() {}
+                access(self) fun qux1() {
+                    self.foo()
+                    base.baz()
+                }
+                access(contract) fun qux2() {
+                    self.foo()
+                    base.baz()
+                }
+                access(account) fun qux3() {
+                    self.foo()
+                    base.baz()
+                }
+                access(all) fun bar() {
+                    self.qux1()
+                    self.qux2()
+                    self.qux3()
+                }
+            }
+            
+            access(all) fun main() {
+                var r <- attach A() to <- create R()
+                r[A]!.bar()
+                destroy r
+            }
+        `)
+
+	_, err := inter.Invoke("main")
+	require.NoError(t, err)
+}
+
+func TestInterpretAttachmentMappedMembers(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("mapped self cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndInterpretWithOptions(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+            entitlement mapping M {
+                E -> F
+            }
+
+            access(all) resource R {
+                access(E) fun foo() {}
+                access(F) fun bar() {}
+            }
+            access(all) attachment A for R {
+                access(F) let x: Int
+                init() {
+                    self.x = 3
+                }
+                access(mapping M) fun foo(): auth(mapping M) &Int {
+                    if let concreteSelf = self as? auth(F) &A {
+                        return &concreteSelf.x
+                    } 
+                    return &1
+                }
+            }
+            fun test(): &Int {
+                let r <- attach A() to <- create R()
+                let a = r[A]!
+                let i = a.foo()
+                destroy r
+                return i
+            }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := checker.RequireCheckerErrors(t, err, 1)
+				require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+			},
+			CheckerConfig: &sema.Config{
+				AttachmentsEnabled: true,
+			},
+		})
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+	})
+
+	t.Run("mapped base cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, _ := parseCheckAndInterpretWithOptions(t, `
+            entitlement E
+            entitlement F
+            entitlement mapping M {
+                E -> F
+            }
+
+            access(all) resource R {
+                access(F) let x: Int
+                init() {
+                    self.x = 3
+                }
+                access(E) fun bar() {}
+            }
+            access(all) attachment A for R {
+                access(mapping M) fun foo(): auth(mapping M) &Int {
+                    if let concreteBase = base as? auth(F) &R {
+                        return &concreteBase.x
+                    } 
+                    return &1
+                }
+            }
+            fun test(): &Int {
+                let r <- attach A() to <- create R()
+                let a = r[A]!
+                let i = a.foo()
+                destroy r
+                return i
+            }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := checker.RequireCheckerErrors(t, err, 1)
+				require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+			},
+			CheckerConfig: &sema.Config{
+				AttachmentsEnabled: true,
+			},
+		})
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+	})
+}
+
 func TestInterpretForEachAttachment(t *testing.T) {
 
 	t.Parallel()
@@ -2046,32 +2187,23 @@ func TestInterpretForEachAttachment(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            entitlement E 
             entitlement F
-            entitlement X
             entitlement Y
-            entitlement mapping M {
-                E -> F
+            struct S {
+                access(F, Y) fun foo() {}
             }
-            entitlement mapping N {
-                X -> Y
-            }
-            entitlement mapping O {
-                E -> Y
-            }
-            struct S {}
-            access(mapping M) attachment A for S {
+            access(all) attachment A for S {
                 access(F) fun foo(_ x: Int): Int { return 7 + x }
             }
-            access(mapping N) attachment B for S {
+            access(all) attachment B for S {
                 access(Y) fun foo(): Int { return 10 }
             }
-            access(mapping O) attachment C for S {
+            access(all) attachment C for S {
                 access(Y) fun foo(_ x: Int): Int { return 8 + x }
             }
             fun test(): Int {
                 var s = attach C() to attach B() to attach A() to S()
-                let ref = &s as auth(E) &S
+                let ref = &s as auth(F, Y) &S
                 var i = 0
                 ref.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
                     if let a = attachmentRef as? auth(F) &A {
@@ -2091,6 +2223,49 @@ func TestInterpretForEachAttachment(t *testing.T) {
 
 		// the attachment reference is never entitled
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(0), value)
+	})
+
+	t.Run("bound function", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement F
+
+            access(all) struct S {
+                access(F) let x: Int
+                init() {
+                    self.x = 3
+                }
+            }
+            access(all) attachment A for S {
+                access(F) var funcPtr: fun(): auth(F) &Int;
+                init() {
+                    self.funcPtr = self.foo
+                }
+                access(F) fun foo(): auth(F) &Int {
+                    return &base.x
+                }
+            }
+            fun test(): &Int {
+                let r = attach A() to S()
+                let rRef = &r as auth(F) &S
+                let a = rRef[A]!
+                let i = a.foo()
+                return i
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value.(*interpreter.EphemeralReferenceValue).Value,
+		)
 	})
 
 	t.Run("access fields", func(t *testing.T) {
