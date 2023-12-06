@@ -202,7 +202,7 @@ func TestMultipleMigrations(t *testing.T) {
 	// Check the reporter
 	require.Equal(t,
 		map[interpreter.AddressPath][]string{
-			interpreter.AddressPath{
+			{
 				Address: account,
 				Path: interpreter.PathValue{
 					Domain:     pathDomain,
@@ -211,7 +211,7 @@ func TestMultipleMigrations(t *testing.T) {
 			}: {
 				"testInt8Migration",
 			},
-			interpreter.AddressPath{
+			{
 				Address: account,
 				Path: interpreter.PathValue{
 					Domain:     pathDomain,
