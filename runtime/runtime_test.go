@@ -4479,7 +4479,7 @@ func TestRuntimeRandomWithUnsafeRandom(t *testing.T) {
 
 	runtimeInterface := &TestRuntimeInterface{
 		OnReadRandom: func(buffer []byte) error {
-			binary.LittleEndian.PutUint64(buffer, 7558174677681708339)
+			binary.BigEndian.PutUint64(buffer, 7558174677681708339)
 			return nil
 		},
 		OnProgramLog: func(message string) {
