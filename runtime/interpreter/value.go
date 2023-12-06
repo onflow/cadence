@@ -20487,6 +20487,21 @@ func (v *EphemeralReferenceValue) ForEach(
 	)
 }
 
+func (v *EphemeralReferenceValue) checkValidity(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+) Value {
+	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
+	if referencedValue == nil {
+		panic(DereferenceError{
+			Cause:         "the value being referenced has been destroyed or moved",
+			LocationRange: locationRange,
+		})
+	}
+
+	return *referencedValue
+}
+
 // AddressValue
 type AddressValue common.Address
 
