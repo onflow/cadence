@@ -4481,7 +4481,7 @@ func TestRuntimeRandomWithUnsafeRandom(t *testing.T) {
 
 	runtimeInterface := &TestRuntimeInterface{
 		OnReadRandom: func(buffer []byte) error {
-			binary.LittleEndian.PutUint64(buffer, 7558174677681708339)
+			binary.BigEndian.PutUint64(buffer, 7558174677681708339)
 			return nil
 		},
 		OnProgramLog: func(message string) {
@@ -4505,7 +4505,7 @@ func TestRuntimeRandomWithUnsafeRandom(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"7558174677681708339",
-			"7558174677681708339",
+			"3683260658331673704",
 		},
 		loggedMessages,
 	)
