@@ -224,6 +224,8 @@ const (
 	interfaceTypeMask
 	functionTypeMask
 
+	hashableStructMask
+
 	invalidTypeMask
 )
 
@@ -345,6 +347,16 @@ var (
 	StorageCapabilityControllerTypeTag = newTypeTagFromUpperMask(storageCapabilityControllerTypeMask)
 	AccountCapabilityControllerTypeTag = newTypeTagFromUpperMask(accountCapabilityControllerTypeMask)
 
+	HashableStructTypeTag = newTypeTagFromUpperMask(hashableStructMask).
+				Or(AddressTypeTag).
+				Or(NeverTypeTag).
+				Or(BoolTypeTag).
+				Or(CharacterTypeTag).
+				Or(StringTypeTag).
+				Or(MetaTypeTag).
+				Or(NumberTypeTag).
+				Or(PathTypeTag)
+
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
 	// Other types (derived types such as collections, etc.) are not possible
@@ -368,7 +380,8 @@ var (
 				Or(CapabilityTypeTag).
 				Or(FunctionTypeTag).
 				Or(StorageCapabilityControllerTypeTag).
-				Or(AccountCapabilityControllerTypeTag)
+				Or(AccountCapabilityControllerTypeTag).
+				Or(HashableStructTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
 				Or(AnyResourceAttachmentTypeTag)
@@ -673,6 +686,9 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 		functionTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
 
+	case hashableStructMask:
+		return HashableStructType
+
 	case anyResourceAttachmentMask:
 		return AnyResourceAttachmentType
 
@@ -827,7 +843,7 @@ func commonSuperTypeOfDictionaries(types []Type) Type {
 		return InvalidType
 	}
 
-	if !IsValidDictionaryKeyType(keySuperType) {
+	if !IsSubType(keySuperType, HashableStructType) {
 		return commonSuperTypeOfHeterogeneousTypes(types)
 	}
 
@@ -838,11 +854,13 @@ func commonSuperTypeOfDictionaries(types []Type) Type {
 }
 
 func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
-	var hasStructs, hasResources bool
+	var hasStructs, hasResources, allHashableStructs bool
+	allHashableStructs = true
 	for _, typ := range types {
 		isResource := typ.IsResourceType()
 		hasResources = hasResources || isResource
 		hasStructs = hasStructs || !isResource
+		allHashableStructs = allHashableStructs && IsHashableStructType(typ)
 
 		if hasResources && hasStructs {
 			return AnyType
@@ -851,6 +869,10 @@ func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
 
 	if hasResources {
 		return AnyResourceType
+	}
+
+	if allHashableStructs {
+		return HashableStructType
 	}
 
 	return AnyStructType

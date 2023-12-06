@@ -33,6 +33,12 @@ import (
 // through `declareInterfaceMembers`.
 func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
 
+	wasInInterface := checker.inInterface
+	checker.inInterface = true
+	defer func() {
+		checker.inInterface = wasInInterface
+	}()
+
 	const kind = ContainerKindInterface
 	interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
 	if interfaceType == nil {

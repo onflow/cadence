@@ -294,56 +294,331 @@ func TestRuntimeContractUpdateWithPrecedingIdentifiers(t *testing.T) {
 
 }
 
-func TestRuntimeInvalidContractRedeploy(t *testing.T) {
+func TestRuntimeContractRedeployInSameTransaction(t *testing.T) {
 
 	t.Parallel()
 
-	foo1 := []byte(`
-        access(all)
-        contract Foo {
+	t.Run("two additions", func(t *testing.T) {
 
+		foo1 := []byte(`
             access(all)
-            resource R {
+            contract Foo {
 
                 access(all)
-                var x: Int
+                resource R {
 
-                init() {
-                    self.x = 0
+                    access(all)
+                    var x: Int
+
+                    init() {
+                        self.x = 0
+                    }
                 }
-            }
 
-            access(all)
-            fun createR(): @R {
-                return <-create R()
-            }
-        }
-    `)
-
-	foo2 := []byte(`
-        access(all)
-        contract Foo {
-
-            access(all)
-            struct R {
                 access(all)
-                var x: Int
-
-                init() {
-                    self.x = 0
+                fun createR(): @R {
+                    return <-create R()
                 }
             }
-        }
-    `)
+        `)
 
-	tx := []byte(`
-      transaction(foo1: String, foo2: String) {
-          prepare(signer: auth(Contracts) &Account) {
-              signer.contracts.add(name: "Foo", code: foo1.utf8)
-              signer.contracts.add(name: "Foo", code: foo2.utf8)
-          }
-      }
-    `)
+		foo2 := []byte(`
+            access(all)
+            contract Foo {
+
+                access(all)
+                struct R {
+                    access(all)
+                    var x: Int
+
+                    init() {
+                        self.x = 0
+                    }
+                }
+            }
+        `)
+
+		tx := []byte(`
+            transaction(foo1: String, foo2: String) {
+                prepare(signer: auth(Contracts) &Account) {
+                    signer.contracts.add(name: "Foo", code: foo1.utf8)
+                    signer.contracts.add(name: "Foo", code: foo2.utf8)
+                }
+            }
+        `)
+
+		runtime := NewTestInterpreterRuntimeWithConfig(Config{
+			AtreeValidationEnabled: false,
+		})
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		var events []cadence.Event
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			OnGetAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+				return nil, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				// "delay"
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		// Deploy
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: tx,
+				Arguments: encodeArgs([]cadence.Value{
+					cadence.String(foo1),
+					cadence.String(foo2),
+				}),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		require.ErrorContains(t, err, "cannot overwrite existing contract")
+	})
+}
+
+func TestRuntimeNestedContractDeployment(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("add while adding", func(t *testing.T) {
+
+		t.Parallel()
+
+		contract := []byte(`
+            access(all) contract Foo {
+ 
+                access(all) resource Bar {}
+
+                init(){
+                    self.account.contracts.add(
+                        name: "Foo",
+                        code: "access(all) contract Foo { access(all) struct Bar {} }".utf8
+                    )
+                }
+            }
+        `)
+
+		runtime := NewTestInterpreterRuntimeWithConfig(Config{
+			AtreeValidationEnabled: false,
+		})
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			OnGetAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+				return nil, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				// "delay"
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		// Deploy
+
+		deploymentTx := DeploymentTransaction("Foo", contract)
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deploymentTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		require.ErrorContains(t, err, "cannot overwrite existing contract")
+	})
+
+	t.Run("update while adding", func(t *testing.T) {
+
+		t.Parallel()
+
+		contract := []byte(`
+            access(all) contract Foo {
+ 
+                access(all) resource Bar {}
+
+                init(){
+                   self.account.contracts.update(
+                        name: "Foo",
+                        code: "access(all) contract Foo { access(all) struct Bar {} }".utf8
+                    )
+                }
+            }
+        `)
+
+		runtime := NewTestInterpreterRuntimeWithConfig(Config{
+			AtreeValidationEnabled: false,
+		})
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			OnGetAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+				return nil, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				// "delay"
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		// Deploy
+
+		deploymentTx := DeploymentTransaction("Foo", contract)
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deploymentTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		require.ErrorContains(t, err, "cannot update non-existing contract")
+	})
+
+	t.Run("update while updating", func(t *testing.T) {
+
+		t.Parallel()
+
+		deployedContract := []byte(`
+            access(all) contract Foo {
+ 
+                access(all) resource Bar {}
+
+                init() {}
+            }
+        `)
+
+		contract := []byte(`
+            access(all) contract Foo {
+ 
+                access(all) resource Bar {}
+
+                init(){
+                   self.account.contracts.update(
+                        name: "Foo",
+                        code: "access(all) contract Foo { access(all) struct Bar {} }".utf8
+                    )
+                }
+            }
+        `)
+
+		runtime := NewTestInterpreterRuntimeWithConfig(Config{
+			AtreeValidationEnabled: false,
+		})
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			OnGetAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+				return deployedContract, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				// "delay"
+				deployedContract = code
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		// Update
+
+		updateTx := UpdateTransaction("Foo", contract)
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: updateTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		// OK: since the initializer never runs.
+		require.NoError(t, err)
+	})
+}
+
+func TestRuntimeContractRedeploymentInSeparateTransactions(t *testing.T) {
+
+	t.Parallel()
+
+	contract := []byte(`
+            access(all) contract Foo {
+                access(all) resource Bar {}
+            }
+        `)
 
 	runtime := NewTestInterpreterRuntimeWithConfig(Config{
 		AtreeValidationEnabled: false,
@@ -351,7 +626,7 @@ func TestRuntimeInvalidContractRedeploy(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	var events []cadence.Event
+	var contractCode []byte
 
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: NewTestLedger(nil, nil),
@@ -359,15 +634,14 @@ func TestRuntimeInvalidContractRedeploy(t *testing.T) {
 			return []Address{address}, nil
 		},
 		OnGetAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
-			return nil, nil
+			return contractCode, nil
 		},
 		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-			// "delay"
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			contractCode = code
 			return nil
 		},
 		OnEmitEvent: func(event cadence.Event) error {
-			events = append(events, event)
 			return nil
 		},
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
@@ -379,21 +653,30 @@ func TestRuntimeInvalidContractRedeploy(t *testing.T) {
 
 	// Deploy
 
+	deploymentTx := DeploymentTransaction("Foo", contract)
 	err := runtime.ExecuteTransaction(
 		Script{
-			Source: tx,
-			Arguments: encodeArgs([]cadence.Value{
-				cadence.String(foo1),
-				cadence.String(foo2),
-			}),
+			Source: deploymentTx,
 		},
 		Context{
 			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
 		},
 	)
+	require.NoError(t, err)
 
-	RequireError(t, err)
+	// Update
+	// Updating in a separate transaction is OK, and should not abort.
 
-	require.ErrorContains(t, err, "cannot overwrite existing contract")
+	updateTx := UpdateTransaction("Foo", contract)
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: updateTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
 }

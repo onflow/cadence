@@ -252,7 +252,7 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 			// This is pre-computed at the checker.
 			if memberAccessInfo.ReturnReference {
 				// Get a reference to the value
-				resultValue = interpreter.getReferenceValue(resultValue, memberAccessInfo.ResultingType)
+				resultValue = interpreter.getReferenceValue(resultValue, memberAccessInfo.ResultingType, locationRange)
 			}
 
 			return resultValue
@@ -270,14 +270,14 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 // This has to be done recursively for nested optionals.
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
-func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.Type) Value {
+func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.Type, locationRange LocationRange) Value {
 	switch value := value.(type) {
 	case NilValue, ReferenceValue:
 		// Reference to a nil, should return a nil.
 		// If the value is already a reference then return the same reference.
 		return value
 	case *SomeValue:
-		innerValue := interpreter.getReferenceValue(value.value, resultType)
+		innerValue := interpreter.getReferenceValue(value.value, resultType, locationRange)
 		return NewSomeValueNonCopying(interpreter, innerValue)
 	}
 
@@ -290,7 +290,7 @@ func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.T
 
 	auth := interpreter.getEffectiveAuthorization(referenceType)
 
-	return NewEphemeralReferenceValue(interpreter, auth, value, referenceType.Type)
+	return NewEphemeralReferenceValue(interpreter, auth, value, referenceType.Type, locationRange)
 }
 
 func (interpreter *Interpreter) getEffectiveAuthorization(referenceType *sema.ReferenceType) Authorization {
@@ -956,8 +956,12 @@ func (interpreter *Interpreter) maybeGetReference(
 	if indexExpressionTypes.ReturnReference {
 		expectedType := indexExpressionTypes.ResultType
 
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression,
+		}
 		// Get a reference to the value
-		memberValue = interpreter.getReferenceValue(memberValue, expectedType)
+		memberValue = interpreter.getReferenceValue(memberValue, expectedType, locationRange)
 	}
 
 	return memberValue
@@ -1193,6 +1197,9 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
 			value = interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
 
+			// Failable casting is a resource invalidation
+			interpreter.invalidateResource(value)
+
 			return NewSomeValueNonCopying(interpreter, value)
 
 		case ast.OperationForceCast:
@@ -1256,11 +1263,17 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		// of that mapped access in the body of the function should be replaced with the computed output of the map
 		auth := interpreter.getEffectiveAuthorization(typ)
 
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: referenceExpression,
+		}
+
 		return NewEphemeralReferenceValue(
 			interpreter,
 			auth,
 			value,
 			typ.Type,
+			locationRange,
 		)
 	}
 
@@ -1420,6 +1433,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		auth,
 		base,
 		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
+		locationRange,
 	)
 
 	attachment, ok := interpreter.visitInvocationExpressionWithImplicitArgument(

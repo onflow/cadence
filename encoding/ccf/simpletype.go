@@ -137,6 +137,7 @@ const ( // Cadence simple type IDs
 	SimpleTypeIssueAccountCapabilityController
 	SimpleTypeCapabilitiesMapping
 	SimpleTypeAccountMapping
+	SimpleTypeHashableStruct
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -161,6 +162,7 @@ func initSimpleTypeIDBiMap() (m *bimap.BiMap[cadence.PrimitiveType, SimpleType])
 	m.Insert(cadence.BoolType, SimpleTypeBool)
 	m.Insert(cadence.StringType, SimpleTypeString)
 	m.Insert(cadence.CharacterType, SimpleTypeCharacter)
+	m.Insert(cadence.HashableStructType, SimpleTypeHashableStruct)
 
 	m.Insert(cadence.NumberType, SimpleTypeNumber)
 	m.Insert(cadence.SignedNumberType, SimpleTypeSignedNumber)
