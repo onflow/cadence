@@ -5158,7 +5158,7 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 }
 
 // TODO: Remove the `destroyed` flag
-func (interpreter *Interpreter) invalidateReferencedResources(value Value, destroyed bool) {
+func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 	// skip non-resource typed values
 	if !value.IsResourceKinded(interpreter) {
 		return
@@ -5169,25 +5169,25 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value, destr
 	switch value := value.(type) {
 	case *CompositeValue:
 		value.ForEachLoadedField(interpreter, func(_ string, fieldValue Value) (resume bool) {
-			interpreter.invalidateReferencedResources(fieldValue, destroyed)
+			interpreter.invalidateReferencedResources(fieldValue)
 			// continue iteration
 			return true
 		})
 		storageID = value.StorageID()
 	case *DictionaryValue:
 		value.IterateLoaded(interpreter, func(_, value Value) (resume bool) {
-			interpreter.invalidateReferencedResources(value, destroyed)
+			interpreter.invalidateReferencedResources(value)
 			return true
 		})
 		storageID = value.StorageID()
 	case *ArrayValue:
 		value.IterateLoaded(interpreter, func(element Value) (resume bool) {
-			interpreter.invalidateReferencedResources(element, destroyed)
+			interpreter.invalidateReferencedResources(element)
 			return true
 		})
 		storageID = value.StorageID()
 	case *SomeValue:
-		interpreter.invalidateReferencedResources(value.value, destroyed)
+		interpreter.invalidateReferencedResources(value.value)
 		return
 	default:
 		// skip non-container typed values.

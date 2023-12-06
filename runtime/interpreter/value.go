@@ -1932,7 +1932,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v, true)
+	interpreter.invalidateReferencedResources(v)
 
 	v.array = nil
 }
@@ -2810,7 +2810,7 @@ func (v *ArrayValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v, false)
+		interpreter.invalidateReferencedResources(v)
 
 		v.array = nil
 	}
@@ -16624,7 +16624,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v, true)
+	interpreter.invalidateReferencedResources(v)
 
 	v.dictionary = nil
 }
@@ -17410,7 +17410,7 @@ func (v *CompositeValue) Transfer(
 		// This allows raising an error when the resource is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v, false)
+		interpreter.invalidateReferencedResources(v)
 
 		v.dictionary = nil
 	}
@@ -18256,7 +18256,7 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v, true)
+	interpreter.invalidateReferencedResources(v)
 
 	v.dictionary = nil
 }
@@ -19050,7 +19050,7 @@ func (v *DictionaryValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v, false)
+		interpreter.invalidateReferencedResources(v)
 
 		v.dictionary = nil
 	}
@@ -20197,19 +20197,10 @@ func (v *EphemeralReferenceValue) MeteredString(memoryGauge common.MemoryGauge, 
 }
 
 func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
-	referencedValue := v.ReferencedValue(inter, EmptyLocationRange, true)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			Cause: "the value being referenced has been destroyed or moved",
-		})
-	}
-
-	self := *referencedValue
-
 	return NewReferenceStaticType(
 		inter,
 		v.Authorization,
-		self.StaticType(inter),
+		v.Value.StaticType(inter),
 	)
 }
 
@@ -20229,29 +20220,12 @@ func (v *EphemeralReferenceValue) ReferencedValue(
 	return &v.Value
 }
 
-func (v *EphemeralReferenceValue) MustReferencedValue(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			Cause:         "the value being referenced has been destroyed or moved",
-			LocationRange: locationRange,
-		})
-	}
-
-	return *referencedValue
-}
-
 func (v *EphemeralReferenceValue) GetMember(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	name string,
 ) Value {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	return interpreter.getMember(self, locationRange, name)
+	return interpreter.getMember(v.Value, locationRange, name)
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(
@@ -20259,9 +20233,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 	locationRange LocationRange,
 	identifier string,
 ) Value {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
+	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
 		return memberAccessibleValue.RemoveMember(interpreter, locationRange, identifier)
 	}
 
@@ -20274,9 +20246,7 @@ func (v *EphemeralReferenceValue) SetMember(
 	name string,
 	value Value,
 ) bool {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	return interpreter.setMember(self, locationRange, name, value)
+	return interpreter.setMember(v.Value, locationRange, name, value)
 }
 
 func (v *EphemeralReferenceValue) GetKey(
@@ -20284,9 +20254,7 @@ func (v *EphemeralReferenceValue) GetKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	return self.(ValueIndexableValue).
+	return v.Value.(ValueIndexableValue).
 		GetKey(interpreter, locationRange, key)
 }
 
@@ -20296,9 +20264,7 @@ func (v *EphemeralReferenceValue) SetKey(
 	key Value,
 	value Value,
 ) {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	self.(ValueIndexableValue).
+	v.Value.(ValueIndexableValue).
 		SetKey(interpreter, locationRange, key, value)
 }
 
@@ -20308,9 +20274,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 	key Value,
 	value Value,
 ) {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	self.(ValueIndexableValue).
+	v.Value.(ValueIndexableValue).
 		InsertKey(interpreter, locationRange, key, value)
 }
 
@@ -20319,9 +20283,7 @@ func (v *EphemeralReferenceValue) RemoveKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	return self.(ValueIndexableValue).
+	return v.Value.(ValueIndexableValue).
 		RemoveKey(interpreter, locationRange, key)
 }
 
@@ -20330,7 +20292,7 @@ func (v *EphemeralReferenceValue) GetTypeKey(
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.MustReferencedValue(interpreter, locationRange)
+	self := v.Value
 
 	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
 		return selfComposite.getTypeKey(
@@ -20351,9 +20313,7 @@ func (v *EphemeralReferenceValue) SetTypeKey(
 	key sema.Type,
 	value Value,
 ) {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	self.(TypeIndexableValue).
+	v.Value.(TypeIndexableValue).
 		SetTypeKey(interpreter, locationRange, key, value)
 }
 
@@ -20362,9 +20322,7 @@ func (v *EphemeralReferenceValue) RemoveTypeKey(
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	return self.(TypeIndexableValue).
+	return v.Value.(TypeIndexableValue).
 		RemoveTypeKey(interpreter, locationRange, key)
 }
 
@@ -20389,14 +20347,9 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
-	if referencedValue == nil {
-		return false
-	}
+	self := v.Value
 
-	self := *referencedValue
-
-	staticType := self.StaticType(interpreter)
+	staticType := v.Value.StaticType(interpreter)
 
 	if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
 		return false
@@ -20477,29 +20430,13 @@ func (v *EphemeralReferenceValue) ForEach(
 	function func(value Value) (resume bool),
 	locationRange LocationRange,
 ) {
-	referencedValue := v.MustReferencedValue(interpreter, locationRange)
 	forEachReference(
 		interpreter,
-		referencedValue,
+		v.Value,
 		elementType,
 		function,
 		locationRange,
 	)
-}
-
-func (v *EphemeralReferenceValue) checkValidity(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			Cause:         "the value being referenced has been destroyed or moved",
-			LocationRange: locationRange,
-		})
-	}
-
-	return *referencedValue
 }
 
 // AddressValue
