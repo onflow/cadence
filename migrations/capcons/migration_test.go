@@ -64,20 +64,16 @@ type testCapConsMissingCapabilityID struct {
 	addressPath    interpreter.AddressPath
 }
 
-type testMissingTarget struct {
-	accountAddressValue interpreter.AddressValue
-	path                interpreter.PathValue
-}
-
 type testMigrationReporter struct {
 	linkMigrations           []testCapConsLinkMigration
 	pathCapabilityMigrations []testCapConsPathCapabilityMigration
 	missingCapabilityIDs     []testCapConsMissingCapabilityID
 	cyclicLinkErrors         []CyclicLinkError
-	missingTargets           []testMissingTarget
+	missingTargets           []interpreter.AddressPath
 }
 
-var _ MigrationReporter = &testMigrationReporter{}
+var _ LinkMigrationReporter = &testMigrationReporter{}
+var _ CapabilityMigrationReporter = &testMigrationReporter{}
 
 func (t *testMigrationReporter) MigratedLink(
 	accountAddressPath interpreter.AddressPath,
@@ -128,15 +124,11 @@ func (t *testMigrationReporter) CyclicLink(cyclicLinkError CyclicLinkError) {
 }
 
 func (t *testMigrationReporter) MissingTarget(
-	accountAddressValue interpreter.AddressValue,
-	path interpreter.PathValue,
+	accountAddressPath interpreter.AddressPath,
 ) {
 	t.missingTargets = append(
 		t.missingTargets,
-		testMissingTarget{
-			accountAddressValue: accountAddressValue,
-			path:                path,
-		},
+		accountAddressPath,
 	)
 }
 
@@ -433,21 +425,39 @@ func testPathCapabilityValueMigration(
 
 	// Migrate
 
-	migrator, err := NewMigration(
-		storage,
-		inter,
+	migration := migrations.NewStorageMigration(inter, storage)
+
+	capabilityIDs := map[interpreter.AddressPath]interpreter.UInt64Value{}
+
+	reporter := &testMigrationReporter{}
+
+	migration.Migrate(
 		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
 				testAddress,
 			},
 		},
-		&testAccountIDGenerator{},
+		nil,
+		&LinkMigration{
+			CapabilityIDs:      capabilityIDs,
+			AccountIDGenerator: &testAccountIDGenerator{},
+			Reporter:           reporter,
+		},
 	)
 	require.NoError(t, err)
 
-	reporter := &testMigrationReporter{}
-
-	err = migrator.Migrate(reporter)
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		nil,
+		&CapabilityMigration{
+			CapabilityIDs: capabilityIDs,
+			Reporter:      reporter,
+		},
+	)
 	require.NoError(t, err)
 
 	// Check migrated capabilities
@@ -1060,7 +1070,7 @@ func testLinkMigration(
 	accountLinks []interpreter.PathValue,
 	expectedLinkMigrations []testCapConsLinkMigration,
 	expectedCyclicLinkErrors []CyclicLinkError,
-	expectedMissingTargets []testMissingTarget,
+	expectedMissingTargets []interpreter.AddressPath,
 ) {
 	require.True(t,
 		len(expectedLinkMigrations) == 0 ||
@@ -1143,21 +1153,25 @@ func testLinkMigration(
 
 	// Migrate
 
-	migrator, err := NewMigration(
-		storage,
-		inter,
+	migration := migrations.NewStorageMigration(inter, storage)
+
+	capabilityIDs := map[interpreter.AddressPath]interpreter.UInt64Value{}
+
+	reporter := &testMigrationReporter{}
+
+	migration.Migrate(
 		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
 				testAddress,
 			},
 		},
-		&testAccountIDGenerator{},
+		nil,
+		&LinkMigration{
+			CapabilityIDs:      capabilityIDs,
+			AccountIDGenerator: &testAccountIDGenerator{},
+			Reporter:           reporter,
+		},
 	)
-	require.NoError(t, err)
-
-	reporter := &testMigrationReporter{}
-
-	err = migrator.Migrate(reporter)
 	require.NoError(t, err)
 
 	// Assert
@@ -1186,7 +1200,7 @@ func TestLinkMigration(t *testing.T) {
 		accountLinks             []interpreter.PathValue
 		expectedLinkMigrations   []testCapConsLinkMigration
 		expectedCyclicLinkErrors []CyclicLinkError
-		expectedMissingTargets   []testMissingTarget
+		expectedMissingTargets   []interpreter.AddressPath
 	}
 
 	linkTestCases := []linkTestCase{
@@ -1225,7 +1239,7 @@ func TestLinkMigration(t *testing.T) {
 					accountAddressPath: interpreter.AddressPath{
 						Address: testAddress,
 						Path: interpreter.PathValue{
-							Domain:     common.PathDomainPublic,
+							Domain:     common.PathDomainPrivate,
 							Identifier: testPathIdentifier,
 						},
 					},
@@ -1235,7 +1249,7 @@ func TestLinkMigration(t *testing.T) {
 					accountAddressPath: interpreter.AddressPath{
 						Address: testAddress,
 						Path: interpreter.PathValue{
-							Domain:     common.PathDomainPrivate,
+							Domain:     common.PathDomainPublic,
 							Identifier: testPathIdentifier,
 						},
 					},
@@ -1428,15 +1442,15 @@ func TestLinkMigration(t *testing.T) {
 					Address: testAddress,
 					Paths: []interpreter.PathValue{
 						{
-							Domain:     common.PathDomainPublic,
-							Identifier: testPathIdentifier,
-						},
-						{
 							Domain:     common.PathDomainPrivate,
 							Identifier: testPathIdentifier,
 						},
 						{
 							Domain:     common.PathDomainPublic,
+							Identifier: testPathIdentifier,
+						},
+						{
+							Domain:     common.PathDomainPrivate,
 							Identifier: testPathIdentifier,
 						},
 					},
@@ -1445,15 +1459,15 @@ func TestLinkMigration(t *testing.T) {
 					Address: testAddress,
 					Paths: []interpreter.PathValue{
 						{
-							Domain:     common.PathDomainPrivate,
-							Identifier: testPathIdentifier,
-						},
-						{
 							Domain:     common.PathDomainPublic,
 							Identifier: testPathIdentifier,
 						},
 						{
 							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+						{
+							Domain:     common.PathDomainPublic,
 							Identifier: testPathIdentifier,
 						},
 					},
@@ -1477,10 +1491,10 @@ func TestLinkMigration(t *testing.T) {
 					borrowType: testRReferenceStaticType,
 				},
 			},
-			expectedMissingTargets: []testMissingTarget{
+			expectedMissingTargets: []interpreter.AddressPath{
 				{
-					accountAddressValue: interpreter.AddressValue(testAddress),
-					path: interpreter.PathValue{
+					Address: testAddress,
+					Path: interpreter.PathValue{
 						Identifier: testPathIdentifier,
 						Domain:     common.PathDomainPublic,
 					},
