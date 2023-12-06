@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -4459,7 +4460,7 @@ func TestRuntimeBlock(t *testing.T) {
 	)
 }
 
-func TestRuntimeRandom(t *testing.T) {
+func TestRuntimeRandomWithUnsafeRandom(t *testing.T) {
 
 	t.Parallel()
 
@@ -4468,7 +4469,7 @@ func TestRuntimeRandom(t *testing.T) {
 	script := []byte(`
       transaction {
         prepare() {
-          let rand1 = revertibleRandom()
+          let rand1 = revertibleRandom<UInt64>()
           log(rand1)
           let rand2 = unsafeRandom()
           log(rand2)
@@ -4508,6 +4509,93 @@ func TestRuntimeRandom(t *testing.T) {
 		},
 		loggedMessages,
 	)
+}
+
+func getFixedSizeUnsignedIntegerForSemaType(ty sema.Type) cadence.Value {
+	switch ty {
+	case sema.UInt8Type:
+		return cadence.NewUInt8(math.MaxUint8)
+	case sema.UInt16Type:
+		return cadence.NewUInt16(math.MaxUint16)
+	case sema.UInt32Type:
+		return cadence.NewUInt32(math.MaxUint32)
+	case sema.UInt64Type:
+		return cadence.NewUInt64(math.MaxUint64)
+	case sema.UInt128Type:
+		value, _ := cadence.NewUInt128FromBig(sema.UInt128TypeMaxIntBig)
+		return value
+	case sema.UInt256Type:
+		value, _ := cadence.NewUInt256FromBig(sema.UInt256TypeMaxIntBig)
+		return value
+
+	case sema.Word8Type:
+		return cadence.NewWord8(math.MaxUint8)
+	case sema.Word16Type:
+		return cadence.NewWord16(math.MaxUint16)
+	case sema.Word32Type:
+		return cadence.NewWord32(math.MaxUint32)
+	case sema.Word64Type:
+		return cadence.NewWord64(math.MaxUint64)
+	case sema.Word128Type:
+		value, _ := cadence.NewWord128FromBig(sema.Word128TypeMaxIntBig)
+		return value
+	case sema.Word256Type:
+		value, _ := cadence.NewWord256FromBig(sema.Word256TypeMaxIntBig)
+		return value
+	}
+
+	panic(fmt.Sprintf("Broken test. Trying to get fixed size unsigned integer for ty: %s", ty))
+}
+
+func TestRuntimeRandom(t *testing.T) {
+
+	t.Parallel()
+
+	script := `
+		access(all) fun main(): %[1]s {
+			let rand = revertibleRandom<%[1]s>()
+			return rand
+		}
+	`
+
+	runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type) {
+		t.Run(ty.String(), func(t *testing.T) {
+			t.Parallel()
+
+			nextScriptLocation := NewScriptLocationGenerator()
+
+			runtime := NewTestInterpreterRuntime()
+			value, err := runtime.ExecuteScript(
+				Script{
+					Source: []byte(fmt.Sprintf(script, ty.String())),
+				},
+				Context{
+					Interface: &TestRuntimeInterface{
+						OnReadRandom: func(buffer []byte) error {
+							for i := 0; i < len(buffer); i++ {
+								buffer[i] = 0xff
+							}
+							return nil
+						},
+					},
+					Location: nextScriptLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			require.Equal(t, getFixedSizeUnsignedIntegerForSemaType(ty), value)
+		})
+	}
+
+	for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
+		switch ty {
+		case sema.FixedSizeUnsignedIntegerType:
+			continue
+
+		default:
+			runValidCaseWithoutModulo(t, ty)
+		}
+	}
 }
 
 func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {

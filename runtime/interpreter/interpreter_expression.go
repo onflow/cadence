@@ -746,7 +746,7 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 	case sema.UInt128Type:
 		// BigInt value is already metered at parser.
 		return NewUnmeteredUInt128ValueFromBigInt(value)
-	case sema.UInt256Type:
+	case sema.UInt256Type, sema.FixedSizeUnsignedIntegerType:
 		// BigInt value is already metered at parser.
 		return NewUnmeteredUInt256ValueFromBigInt(value)
 

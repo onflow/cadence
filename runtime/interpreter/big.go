@@ -140,3 +140,16 @@ func BigEndianBytesToSignedBigInt(b []byte) *big.Int {
 func BigEndianBytesToUnsignedBigInt(b []byte) *big.Int {
 	return new(big.Int).SetBytes(b)
 }
+
+func LittleEndianBytesToUnsignedBigInt(b []byte) *big.Int {
+	len := len(b)
+
+	// Convert the little endian byte slice to big-endian.
+	bigEndianBytes := make([]byte, len)
+	copy(bigEndianBytes, b)
+	for i := 0; i < len/2; i++ {
+		bigEndianBytes[i], bigEndianBytes[len-i-1] = bigEndianBytes[len-i-1], bigEndianBytes[i]
+	}
+
+	return BigEndianBytesToUnsignedBigInt(bigEndianBytes)
+}

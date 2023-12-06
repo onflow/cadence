@@ -7509,7 +7509,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 	for _, integerType := range sema.AllIntegerTypes {
 
 		switch integerType {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 

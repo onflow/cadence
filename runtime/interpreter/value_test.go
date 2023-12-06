@@ -3491,7 +3491,7 @@ func TestNumberValueIntegerConversion(t *testing.T) {
 	for _, ty := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -3796,7 +3796,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		for _, ty := range sema.AllIntegerTypes {
 			// Only test leaf types
 			switch ty {
-			case sema.IntegerType, sema.SignedIntegerType:
+			case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 				continue
 			}
 
