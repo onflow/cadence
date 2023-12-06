@@ -1492,6 +1492,11 @@ var (
 
 	SignedIntegerTypeAnnotation = NewTypeAnnotation(SignedIntegerType)
 
+	// FixedSizeUnsignedIntegerType represents the super-type of all unsigned integer types which have a fixed size.
+	FixedSizeUnsignedIntegerType = NewNumericType(FixedSizeUnsignedIntegerTypeName).
+					WithTag(FixedSizeUnsignedIntegerTypeTag).
+					AsSuperType()
+
 	// IntType represents the arbitrary-precision integer type `Int`
 	IntType = NewNumericType(IntTypeName).
 		WithTag(IntTypeTag)
@@ -3847,9 +3852,8 @@ var AllSignedIntegerTypes = []Type{
 	Int256Type,
 }
 
-var AllUnsignedIntegerTypes = []Type{
+var AllFixedSizeUnsignedIntegerTypes = []Type{
 	// UInt*
-	UIntType,
 	UInt8Type,
 	UInt16Type,
 	UInt32Type,
@@ -3865,12 +3869,20 @@ var AllUnsignedIntegerTypes = []Type{
 	Word256Type,
 }
 
+var AllUnsignedIntegerTypes = common.Concat(
+	AllFixedSizeUnsignedIntegerTypes,
+	[]Type{
+		UIntType,
+	},
+)
+
 var AllIntegerTypes = common.Concat(
 	AllUnsignedIntegerTypes,
 	AllSignedIntegerTypes,
 	[]Type{
 		IntegerType,
 		SignedIntegerType,
+		FixedSizeUnsignedIntegerType,
 	},
 )
 
@@ -3910,7 +3922,7 @@ func init() {
 
 		switch numberType {
 		case NumberType, SignedNumberType,
-			IntegerType, SignedIntegerType,
+			IntegerType, SignedIntegerType, FixedSizeUnsignedIntegerType,
 			FixedPointType, SignedFixedPointType:
 			continue
 
@@ -6514,15 +6526,13 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	case IntegerType:
 		switch subType {
-		case IntegerType, SignedIntegerType,
-			UIntType,
-			UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
-			Word8Type, Word16Type, Word32Type, Word64Type, Word128Type, Word256Type:
+		case IntegerType, SignedIntegerType, FixedSizeUnsignedIntegerType,
+			UIntType:
 
 			return true
 
 		default:
-			return IsSubType(subType, SignedIntegerType)
+			return IsSubType(subType, SignedIntegerType) || IsSubType(subType, FixedSizeUnsignedIntegerType)
 		}
 
 	case SignedIntegerType:
@@ -6530,6 +6540,17 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		case SignedIntegerType,
 			IntType,
 			Int8Type, Int16Type, Int32Type, Int64Type, Int128Type, Int256Type:
+
+			return true
+
+		default:
+			return false
+		}
+
+	case FixedSizeUnsignedIntegerType:
+		switch subType {
+		case UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
+			Word8Type, Word16Type, Word32Type, Word64Type, Word128Type, Word256Type:
 
 			return true
 

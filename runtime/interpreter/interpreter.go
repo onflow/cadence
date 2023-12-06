@@ -3343,7 +3343,7 @@ func init() {
 
 		switch numberType {
 		case sema.NumberType, sema.SignedNumberType,
-			sema.IntegerType, sema.SignedIntegerType,
+			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}

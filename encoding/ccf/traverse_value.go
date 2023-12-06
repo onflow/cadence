@@ -225,6 +225,7 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		cadence.SignedNumberType,
 		cadence.IntegerType,
 		cadence.SignedIntegerType,
+		cadence.FixedSizeUnsignedIntegerType,
 		cadence.FixedPointType,
 		cadence.SignedFixedPointType:
 

@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestCheckToString(t *testing.T) {
@@ -252,7 +253,7 @@ func TestCheckFromBigEndianBytes(t *testing.T) {
 	for _, ty := range sema.AllNumberTypes {
 		switch ty {
 		case sema.NumberType, sema.SignedNumberType,
-			sema.IntegerType, sema.SignedIntegerType,
+			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 
@@ -267,4 +268,87 @@ func TestCheckFromBigEndianBytes(t *testing.T) {
 			runInvalidCase(t, ty, "typo: [1]", &sema.IncorrectArgumentLabelError{})
 		}
 	}
+}
+
+type testRandomGenerator struct{}
+
+func (*testRandomGenerator) ReadRandom([]byte) error {
+	return nil
+}
+
+func TestCheckRevertibleRandom(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.NewRevertibleRandomFunction(&testRandomGenerator{}))
+	options := ParseAndCheckOptions{
+		Config: &sema.Config{
+			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+				return baseValueActivation
+			},
+		},
+	}
+
+	runCase := func(t *testing.T, ty sema.Type, code string) {
+		checker, err := ParseAndCheckWithOptions(t, code, options)
+
+		require.NoError(t, err)
+
+		resType := RequireGlobalValue(t, checker.Elaboration, "rand")
+		require.Equal(t, ty, resType)
+	}
+
+	runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type) {
+		t.Run(fmt.Sprintf("revertibleRandom<%s>_no_modulo", ty), func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("let rand = revertibleRandom<%s>()", ty)
+			runCase(t, ty, code)
+		})
+	}
+
+	runValidCaseWithModulo := func(t *testing.T, ty sema.Type) {
+		t.Run(fmt.Sprintf("revertibleRandom<%s>_modulo", ty), func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf("let rand = revertibleRandom<%[1]s>(modulo: %[1]s(1))", ty)
+			runCase(t, ty, code)
+		})
+	}
+
+	runInvalidCase := func(t *testing.T, testName string, code string, expectedErrors []error) {
+		t.Run(testName, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheckWithOptions(t, code, options)
+
+			errs := RequireCheckerErrors(t, err, len(expectedErrors))
+			for i := range expectedErrors {
+				assert.IsType(t, expectedErrors[i], errs[i])
+			}
+		})
+	}
+
+	for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
+		switch ty {
+		case sema.FixedSizeUnsignedIntegerType:
+			continue
+
+		default:
+			runValidCaseWithoutModulo(t, ty)
+			runValidCaseWithModulo(t, ty)
+		}
+	}
+
+	runInvalidCase(t, "revertibleRandom<Int>", "let rand = revertibleRandom<Int>()", []error{&sema.TypeMismatchError{}})
+	runInvalidCase(t, "revertibleRandom<String>", "let rand = revertibleRandom<String>(modulo: \"abcd\")", []error{&sema.TypeMismatchError{}})
+	runInvalidCase(t, "missing_argument_label", "let rand = revertibleRandom<UInt256>(UInt256(1))", []error{&sema.MissingArgumentLabelError{}})
+	runInvalidCase(t, "incorrect_argument_label", "let rand = revertibleRandom<UInt256>(typo: UInt256(1))", []error{&sema.IncorrectArgumentLabelError{}})
+	runInvalidCase(t, "too_many_args", "let rand = revertibleRandom<UInt256>(modulo: UInt256(1), 2, 3)", []error{&sema.ExcessiveArgumentsError{}})
+	runInvalidCase(t, "modulo type mismatch", "let rand = revertibleRandom<UInt256>(modulo: UInt128(1))", []error{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}})
+	runInvalidCase(t, "string modulo", "let rand = revertibleRandom<UInt256>(modulo: \"abcd\")", []error{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}})
+
+	// This is an error since we do not support type inference of function arguments.
+	runInvalidCase(t, "missing_typeinference", "let rand = revertibleRandom<UInt256>(modulo: 1)", []error{&sema.TypeParameterTypeMismatchError{}})
 }
