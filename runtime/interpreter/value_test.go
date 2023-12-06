@@ -1118,6 +1118,7 @@ func TestStringer(t *testing.T) {
 					common.ZeroAddress,
 				)
 				arrayRef := NewUnmeteredEphemeralReferenceValue(
+					inter,
 					UnauthorizedAccess,
 					array,
 					&sema.VariableSizedType{

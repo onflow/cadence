@@ -1004,7 +1004,7 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				common.ZeroAddress,
@@ -1144,7 +1144,7 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
             fun test(): @{String: Foo} {
                 let dictionary: @{String: Foo} <- {"a": <- create Foo(), "b": <- create Foo(), "c": <- create Foo()}
 
-                var dictionaryRef = &dictionary as &{String: Foo}
+                var dictionaryRef = &dictionary as auth(Mutate) &{String: Foo}
 
                 var i = 0
                 dictionary.forEachKey(fun (key: String): Bool {

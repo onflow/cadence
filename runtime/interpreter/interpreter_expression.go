@@ -358,18 +358,44 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
 	result := ast.AcceptExpression[Value](expression, interpreter)
+	interpreter.checkInvalidatedResourceOrResourceReference(result, expression)
+	return result
+}
 
-	resourceKindedValue, ok := result.(ResourceKindedValue)
-	if ok && resourceKindedValue.isInvalidatedResource(interpreter) {
-		panic(InvalidatedResourceError{
-			LocationRange: LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: expression,
-			},
-		})
+func (interpreter *Interpreter) checkInvalidatedResourceOrResourceReference(value Value, hasPosition ast.HasPosition) {
+	// Unwrap SomeValue, to access references wrapped inside optionals.
+	someValue, isSomeValue := value.(*SomeValue)
+	for isSomeValue && someValue.value != nil {
+		value = someValue.value
+		someValue, isSomeValue = value.(*SomeValue)
 	}
 
-	return result
+	switch value := value.(type) {
+	case ResourceKindedValue:
+		if value.isInvalidatedResource(interpreter) {
+			panic(InvalidatedResourceError{
+				LocationRange: LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: hasPosition,
+				},
+			})
+		}
+	case *EphemeralReferenceValue:
+		if value.Value == nil {
+			panic(InvalidatedResourceReferenceError{
+				LocationRange: LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: hasPosition,
+				},
+			})
+		} else {
+			// If the value is there, check whether the referenced value is an invalidated one.
+			// This step is not really needed, since reference tracking is supposed to clear the
+			// `value.Value` if the referenced-value was moved/deleted.
+			// However, have this as a second layer of defensive.
+			interpreter.checkInvalidatedResourceOrResourceReference(value.Value, hasPosition)
+		}
+	}
 }
 
 func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) Value {

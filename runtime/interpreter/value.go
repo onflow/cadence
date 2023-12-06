@@ -19845,11 +19845,7 @@ func (v *StorageReferenceValue) mustReferencedValue(
 		})
 	}
 
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
-
-	return self
+	return *referencedValue
 }
 
 func (v *StorageReferenceValue) GetMember(
@@ -20245,10 +20241,7 @@ func (v *EphemeralReferenceValue) MustReferencedValue(
 		})
 	}
 
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotMovedOrDestroyed(self, locationRange)
-	return self
+	return *referencedValue
 }
 
 func (v *EphemeralReferenceValue) GetMember(
@@ -20400,8 +20393,6 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	if referencedValue == nil {
 		return false
 	}
-
-	interpreter.checkReferencedResourceNotMovedOrDestroyed(*referencedValue, locationRange)
 
 	self := *referencedValue
 

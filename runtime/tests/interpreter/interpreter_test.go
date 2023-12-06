@@ -7305,6 +7305,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 	)
 
 	ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+		inter,
 		interpreter.UnauthorizedAccess,
 		arrayValue,
 		inter.MustConvertStaticToSemaType(arrayStaticType),

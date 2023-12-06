@@ -406,7 +406,7 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	invocation.BoundAuthorization = f.BoundAuthorization
 
 	// Check if the 'self' is not invalidated.
-	_ = f.selfRef.MustReferencedValue(invocation.Interpreter, invocation.LocationRange)
+	invocation.Interpreter.checkInvalidatedResourceOrResourceReference(f.selfRef, invocation.LocationRange)
 
 	return f.Function.invoke(invocation)
 }

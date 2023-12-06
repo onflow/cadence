@@ -1990,7 +1990,7 @@ func TestInterpreterResourceDoubleWrappedPreCondition(t *testing.T) {
       }
 
       struct interface B {
-          pub fun deposit(from: @S) {
+          access(all) fun deposit(from: @S) {
               pre {
                   from != nil: ""
               }
@@ -1998,7 +1998,7 @@ func TestInterpreterResourceDoubleWrappedPreCondition(t *testing.T) {
       }
 
       struct Vault: A, B {
-          pub fun deposit(from: @S) {
+          access(all) fun deposit(from: @S) {
               pre {
                   from != nil: ""
               }
@@ -2023,7 +2023,7 @@ func TestInterpreterResourceDoubleWrappedPostCondition(t *testing.T) {
       resource S {}
 
       struct interface A {
-          pub fun deposit(from: @S) {
+          access(all) fun deposit(from: @S) {
               post {
                   from != nil: ""
               }
@@ -2693,69 +2693,31 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 	assert.Equal(t, 53, errorStartPos.Column)
 }
 
-func TestInterpretOptionalBindingElseBranch(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-		access(all) resource Victim {}
-
-		access(all) fun main() {
-
-			var r: @Victim? <- nil
-			var r2: @Victim?  <- create Victim()
-
-			if let dummy <- r <- r2 {
-				// unreachable token destroys to please checker
-				destroy dummy
-				destroy r
-			} else {
-				// checker failed to notice that r2 is invalid here
-				var ref = &r as &Victim?
-				var arr: @[Victim?]<- [
-                    <- r,
-                    <- r2
-                ]
-				destroy arr
-			}
-		}
-   `)
-
-	_, err := inter.Invoke("main")
-	RequireError(t, err)
-
-	var invalidatedResourceErr interpreter.InvalidatedResourceError
-	require.ErrorAs(t, err, &invalidatedResourceErr)
-
-	// Error must be thrown at `<-r2` in the array literal
-	assert.Equal(t, 18, invalidatedResourceErr.StartPosition().Line)
-}
-
 func TestInterpretPreConditionResourceMove(t *testing.T) {
 
 	t.Parallel()
 
 	inter, err := parseCheckAndInterpretWithOptions(t, `
-        pub resource Vault { }
-        pub resource interface Interface {
-            pub fun foo(_ r: @AnyResource) {
+        access(all) resource Vault { }
+        access(all) resource interface Interface {
+            access(all) fun foo(_ r: @AnyResource) {
                 pre {
                     consume(&r as &AnyResource, <- r)
                 }
             }
         }
-        pub resource Implementation: Interface {
-            pub fun foo(_ r: @AnyResource) {
+        access(all) resource Implementation: Interface {
+            access(all) fun foo(_ r: @AnyResource) {
                 pre {
                     consume(&r as &AnyResource, <- r)
                 }
             }
         }
-        pub fun consume(_ unusedRef: &AnyResource?, _ r: @AnyResource): Bool {
+        access(all) fun consume(_ unusedRef: &AnyResource?, _ r: @AnyResource): Bool {
             destroy r
             return true
         }
-        pub fun main() {
+        access(all) fun main() {
             let a <- create Implementation()
             let b <- create Vault()
             a.foo(<-b)
@@ -2763,8 +2725,10 @@ func TestInterpretPreConditionResourceMove(t *testing.T) {
         }`,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				checkerErrors := checker.RequireCheckerErrors(t, err, 1)
-				require.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, checkerErrors[0])
+				checkerErrors := checker.RequireCheckerErrors(t, err, 3)
+				require.IsType(t, &sema.PurityError{}, checkerErrors[0])
+				require.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, checkerErrors[1])
+				require.IsType(t, &sema.PurityError{}, checkerErrors[2])
 			},
 		},
 	)

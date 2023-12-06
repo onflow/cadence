@@ -5611,19 +5611,14 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
       import Test from 0x42
 
       transaction {
-          prepare(signer: AuthAccount) {
-              signer.save(<-Test.createR(), to: /storage/r)
+          prepare(signer: auth(Storage) &Account) {
+              signer.storage.save(<-Test.createR(), to: /storage/r)
 
-              signer.link<&Test.R>(
-                 /public/r,
-                 target: /storage/r
-              )
-
-              let ref = signer.getCapability<&Test.R>(/public/r).borrow()!
+              let ref = signer.storage.borrow<&Test.R>(from: /storage/r)!
 
               var func = ref.foo
 
-              let r <- signer.load<@Test.R>(from: /storage/r)!
+              let r <- signer.storage.load<@Test.R>(from: /storage/r)!
 
               // Should be OK
               func()
@@ -5647,5 +5642,5 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 	)
 
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
