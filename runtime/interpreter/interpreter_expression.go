@@ -1184,8 +1184,17 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		valueStaticType := value.StaticType(interpreter)
-		valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
+		// if the value itself has a mapped entitlement type in its authorization
+		// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
+		// substitution must also be performed on its entitlements
+		//
+		// we do this here (as opposed to in `IsSubTypeOfSemaType`) because casting is the only way that
+		// an entitlement can "traverse the boundary", so to speak, between runtime and static types, and
+		// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
+		// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
+		// so we don't substitute them.
+		valueSemaType := interpreter.substituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
+		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
 
 		switch expression.Operation {
@@ -1417,16 +1426,13 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist.
 	// Instead, we create an implicit constructor argument containing a reference to the base.
 
-	var auth Authorization = UnauthorizedAccess
-	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
+	// within the constructor, the attachment's base and self references should be fully entitled,
+	// as the constructor of the attachment is only callable by the owner of the base
+	baseType := interpreter.MustSemaTypeOfValue(base).(sema.EntitlementSupportingType)
+	baseAccess := sema.NewAccessFromEntitlementSet(baseType.SupportedEntitlements(), sema.Conjunction)
+	auth := ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess)
 
-	if attachmentType.RequiredEntitlements.Len() > 0 {
-		baseAccess := sema.EntitlementSetAccess{
-			SetKind:      sema.Conjunction,
-			Entitlements: attachmentType.RequiredEntitlements,
-		}
-		auth = ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess)
-	}
+	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
 
 	var baseValue Value = NewEphemeralReferenceValue(
 		interpreter,
@@ -1453,6 +1459,8 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		nil,
 		nil,
 	).(*CompositeValue)
+
+	attachment.setBaseValue(interpreter, base)
 
 	// we enforce this in the checker
 	if !ok {

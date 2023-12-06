@@ -304,6 +304,7 @@ func TypeActivationNestedType(typeActivation *VariableActivation, qualifiedIdent
 // CompositeKindedType is a type which has a composite kind
 type CompositeKindedType interface {
 	Type
+	EntitlementSupportingType
 	GetCompositeKind() common.CompositeKind
 }
 
@@ -4305,10 +4306,8 @@ type CompositeType struct {
 	// in a language with support for algebraic data types,
 	// we would implement this as an argument to the CompositeKind type constructor.
 	// Alas, this is Go, so for now these fields are only non-nil when Kind is CompositeKindAttachment
-	baseType                    Type
-	baseTypeDocString           string
-	RequiredEntitlements        *EntitlementOrderedSet
-	AttachmentEntitlementAccess *EntitlementMapAccess
+	baseType          Type
+	baseTypeDocString string
 
 	DefaultDestroyEvent *CompositeType
 
@@ -4540,6 +4539,14 @@ func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
 		set.SetAll(it.SupportedEntitlements())
 	})
 
+	// attachments support at least the entitlements supported by their base,
+	// and we must ensure there is no recursive case
+	if entitlementSupportingBase, isEntitlementSupportingBase :=
+		t.GetBaseType().(EntitlementSupportingType); isEntitlementSupportingBase && entitlementSupportingBase != t {
+
+		set.SetAll(entitlementSupportingBase.SupportedEntitlements())
+	}
+
 	t.supportedEntitlements = set
 	return set
 }
@@ -4698,10 +4705,9 @@ func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ func() ast.
 	var access Access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
-		attachmentEntitlementAccess := attachment.AttachmentEntitlementAccess
-		if attachmentEntitlementAccess != nil {
-			access = attachmentEntitlementAccess.Codomain()
-		}
+		// when accessed on an owned value, the produced attachment reference is entitled to all the
+		// entitlements it supports
+		access = NewAccessFromEntitlementSet(attachment.SupportedEntitlements(), Conjunction)
 	}
 
 	return &OptionalType{
@@ -6049,6 +6055,9 @@ func (t *ReferenceType) String() string {
 	if t.Authorization != UnauthorizedAccess {
 		authorization = t.Authorization.String()
 	}
+	if _, isMapping := t.Authorization.(*EntitlementMapAccess); isMapping {
+		authorization = "mapping " + authorization
+	}
 	return formatReferenceType(" ", authorization, t.Type.String())
 }
 
@@ -6059,6 +6068,9 @@ func (t *ReferenceType) QualifiedString() string {
 	var authorization string
 	if t.Authorization != UnauthorizedAccess {
 		authorization = t.Authorization.QualifiedString()
+	}
+	if _, isMapping := t.Authorization.(*EntitlementMapAccess); isMapping {
+		authorization = "mapping " + authorization
 	}
 	return formatReferenceType(" ", authorization, t.Type.QualifiedString())
 }
@@ -6170,15 +6182,11 @@ func (t *ReferenceType) TypeIndexingElementType(indexingType Type, astRange func
 	}
 
 	var access Access = UnauthorizedAccess
-	switch attachment := indexingType.(type) {
+	switch indexingType.(type) {
 	case *CompositeType:
-		if attachment.AttachmentEntitlementAccess != nil {
-			var err error
-			access, err = attachment.AttachmentEntitlementAccess.Image(t.Authorization, astRange)
-			if err != nil {
-				return nil, err
-			}
-		}
+		// attachment access on a composite reference yields a reference to the attachment entitled to the same
+		// entitlements as that reference
+		access = t.Authorization
 	}
 
 	return &OptionalType{
@@ -7261,9 +7269,9 @@ func (t *IntersectionType) TypeIndexingElementType(indexingType Type, _ func() a
 	var access Access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
-		if attachment.AttachmentEntitlementAccess != nil {
-			access = attachment.AttachmentEntitlementAccess.Codomain()
-		}
+		// when accessed on an owned value, the produced attachment reference is entitled to all the
+		// entitlements it supports
+		access = NewAccessFromEntitlementSet(attachment.SupportedEntitlements(), Conjunction)
 	}
 
 	return &OptionalType{

@@ -2185,7 +2185,7 @@ func TestReferenceType_String(t *testing.T) {
 
 		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
-			"auth(M) &Int",
+			"auth(mapping M) &Int",
 			referenceType.String(),
 		)
 	})
@@ -2239,7 +2239,7 @@ func TestReferenceType_QualifiedString(t *testing.T) {
 
 		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
-			"auth(M) &Int",
+			"auth(mapping M) &Int",
 			referenceType.QualifiedString(),
 		)
 	})
@@ -2275,7 +2275,7 @@ func TestReferenceType_QualifiedString(t *testing.T) {
 
 		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
-			"auth(C.M) &Int",
+			"auth(mapping C.M) &Int",
 			referenceType.QualifiedString(),
 		)
 	})

@@ -46,7 +46,6 @@ func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibr
 		RLPContract,
 		NewLogFunction(handler),
 		NewRevertibleRandomFunction(handler),
-		NewUnsafeRandomFunction(handler),
 		NewGetBlockFunction(handler),
 		NewGetCurrentBlockFunction(handler),
 		NewGetAccountFunction(handler),

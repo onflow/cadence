@@ -217,7 +217,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 }
 
-func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
+func TestRuntimeAccountEntitlementAttachment(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
@@ -226,16 +226,13 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 
 	deployTx := DeploymentTransaction("Test", []byte(`
         access(all) contract Test {
-            access(all) entitlement X
             access(all) entitlement Y
 
-            access(all) entitlement mapping M {
-                X -> Y
-            }
+            access(all) resource R {
+				access(Y) fun foo() {}
+			}
 
-            access(all) resource R {}
-
-            access(mapping M) attachment A for R {
+            access(all) attachment A for R {
                 access(Y) fun foo() {}
             }
 
@@ -252,7 +249,7 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
             prepare(signer: auth(Storage, Capabilities) &Account) {
                 let r <- Test.createRWithA()
                 signer.storage.save(<-r, to: /storage/foo)
-                let cap = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
+                let cap = signer.capabilities.storage.issue<auth(Test.Y) &Test.R>(/storage/foo)
                 signer.capabilities.publish(cap, at: /public/foo)
             }
         }
@@ -263,7 +260,7 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 
         transaction {
             prepare(signer: &Account) {
-                let ref = signer.capabilities.borrow<auth(Test.X) &Test.R>(/public/foo)!
+                let ref = signer.capabilities.borrow<auth(Test.Y) &Test.R>(/public/foo)!
                 ref[Test.A]!.foo()
             }
         }

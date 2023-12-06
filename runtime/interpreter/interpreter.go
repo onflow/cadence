@@ -42,8 +42,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-//
-
 type getterSetter struct {
 	target Value
 	// allowMissing may be true when the got value is nil.
@@ -1003,18 +1001,25 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 	var self MemberAccessibleValue = containingResourceComposite
 	if containingResourceComposite.Kind == common.CompositeKindAttachment {
 		var base *EphemeralReferenceValue
+		// in evaluation of destroy events, base and self are fully entitled, as the value must be owned
+		entitlementSupportingType, ok := interpreter.MustSemaTypeOfValue(containingResourceComposite).(sema.EntitlementSupportingType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
+		access := sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
 		locationRange := LocationRange{
 			Location:    interpreter.Location,
 			HasPosition: eventDecl,
 		}
-		base, self = attachmentBaseAndSelfValues(declarationInterpreter, containingResourceComposite, locationRange)
+		base, self = attachmentBaseAndSelfValues(declarationInterpreter, access, containingResourceComposite, locationRange)
 		declarationInterpreter.declareVariable(sema.BaseIdentifier, base)
 	}
 	declarationInterpreter.declareVariable(sema.SelfIdentifier, self)
 
 	for _, parameter := range parameters {
 		// "lazily" evaluate the default argument expressions.
-		// This "lazy" with respect to the event's declaration:
+		// This is "lazy" with respect to the event's declaration:
 		// if we declare a default event `ResourceDestroyed(foo: Int = self.x)`,
 		// `self.x` is evaluated in the context that exists when the event is destroyed,
 		// not the context when it is declared. This function is only called after the destroy
@@ -1352,19 +1357,27 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 				var self MemberAccessibleValue = value
 				if declaration.Kind() == common.CompositeKindAttachment {
 
-					var auth Authorization = UnauthorizedAccess
 					attachmentType := interpreter.MustSemaTypeOfValue(value).(*sema.CompositeType)
-					// Self's type in the constructor is codomain of the attachment's entitlement map, since
+					// Self's type in the constructor is fully entitled, since
 					// the constructor can only be called when in possession of the base resource
-					// if the attachment is declared with access(all) access, then self is unauthorized
-					if attachmentType.AttachmentEntitlementAccess != nil {
-						auth = ConvertSemaAccessToStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
-					}
+
+					auth := ConvertSemaAccessToStaticAuthorization(
+						interpreter,
+						sema.NewAccessFromEntitlementSet(attachmentType.SupportedEntitlements(), sema.Conjunction),
+					)
+
 					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType, locationRange)
 
 					// set the base to the implicitly provided value, and remove this implicit argument from the list
 					implicitArgumentPos := len(invocation.Arguments) - 1
 					invocation.Base = invocation.Arguments[implicitArgumentPos].(*EphemeralReferenceValue)
+
+					var ok bool
+					value.base, ok = invocation.Base.Value.(*CompositeValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
 					invocation.Arguments[implicitArgumentPos] = nil
 					invocation.Arguments = invocation.Arguments[:implicitArgumentPos]
 					invocation.ArgumentTypes[implicitArgumentPos] = nil
@@ -4780,25 +4793,25 @@ func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKin
 	}
 }
 
-func (interpreter *Interpreter) getAccessOfMember(self Value, identifier string) *sema.Access {
+func (interpreter *Interpreter) getAccessOfMember(self Value, identifier string) sema.Access {
 	typ, err := interpreter.ConvertStaticToSemaType(self.StaticType(interpreter))
 	// some values (like transactions) do not have types that can be looked up this way. These types
 	// do not support entitled members, so their access is always unauthorized
 	if err != nil {
-		return &sema.UnauthorizedAccess
+		return sema.UnauthorizedAccess
 	}
 	member, hasMember := typ.GetMembers()[identifier]
 	// certain values (like functions) have builtin members that are not present on the type
 	// in such cases the access is always unauthorized
 	if !hasMember {
-		return &sema.UnauthorizedAccess
+		return sema.UnauthorizedAccess
 	}
-	return &member.Resolve(interpreter, identifier, ast.EmptyRange, func(err error) {}).Access
+	return member.Resolve(interpreter, identifier, ast.EmptyRange, func(err error) {}).Access
 }
 
 func (interpreter *Interpreter) mapMemberValueAuthorization(
 	self Value,
-	memberAccess *sema.Access,
+	memberAccess sema.Access,
 	resultValue Value,
 	resultingType sema.Type,
 	locationRange LocationRange,
@@ -4808,7 +4821,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(
 		return resultValue
 	}
 
-	if mappedAccess, isMappedAccess := (*memberAccess).(*sema.EntitlementMapAccess); isMappedAccess {
+	if mappedAccess, isMappedAccess := (memberAccess).(*sema.EntitlementMapAccess); isMappedAccess {
 		var auth Authorization
 		switch selfValue := self.(type) {
 		case AuthorizedValue:

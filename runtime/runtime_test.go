@@ -4469,10 +4469,7 @@ func TestRuntimeRandomWithUnsafeRandom(t *testing.T) {
 	script := []byte(`
       transaction {
         prepare() {
-          let rand1 = revertibleRandom<UInt64>()
-          log(rand1)
-          let rand2 = unsafeRandom()
-          log(rand2)
+          log(revertibleRandom<UInt64>())
         }
       }
     `)
@@ -4505,7 +4502,6 @@ func TestRuntimeRandomWithUnsafeRandom(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"7558174677681708339",
-			"3683260658331673704",
 		},
 		loggedMessages,
 	)
