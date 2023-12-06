@@ -20,7 +20,6 @@ package string_normalization
 
 import (
 	"github.com/onflow/cadence/migrations"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
@@ -37,12 +36,15 @@ func (StringNormalizingMigration) Name() string {
 }
 
 func (StringNormalizingMigration) Migrate(
-	_ common.Address,
+	_ interpreter.AddressPath,
 	value interpreter.Value,
+	_ *interpreter.Interpreter,
 ) interpreter.Value {
+
 	switch value := value.(type) {
 	case *interpreter.StringValue:
 		return interpreter.NewUnmeteredStringValue(value.Str)
+
 	case interpreter.CharacterValue:
 		return interpreter.NewUnmeteredCharacterValue(string(value))
 	}

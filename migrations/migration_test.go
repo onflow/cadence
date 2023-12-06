@@ -34,22 +34,23 @@ import (
 )
 
 type testReporter struct {
-	migratedPaths map[string]string
+	migratedPaths map[interpreter.AddressPath][]string
 }
 
 func newTestReporter() *testReporter {
 	return &testReporter{
-		migratedPaths: map[string]string{},
+		migratedPaths: map[interpreter.AddressPath][]string{},
 	}
 }
 
 func (t *testReporter) Report(
-	_ common.Address,
-	_ common.PathDomain,
-	key string,
+	addressPath interpreter.AddressPath,
 	migration string,
 ) {
-	t.migratedPaths[key] = migration
+	t.migratedPaths[addressPath] = append(
+		t.migratedPaths[addressPath],
+		migration,
+	)
 }
 
 // testStringMigration
@@ -60,7 +61,11 @@ func (testStringMigration) Name() string {
 	return "testStringMigration"
 }
 
-func (testStringMigration) Migrate(_ common.Address, value interpreter.Value) interpreter.Value {
+func (testStringMigration) Migrate(
+	_ interpreter.AddressPath,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) interpreter.Value {
 	if value, ok := value.(*interpreter.StringValue); ok {
 		return interpreter.NewUnmeteredStringValue(fmt.Sprintf("updated_%s", value.Str))
 	}
@@ -76,7 +81,11 @@ func (testInt8Migration) Name() string {
 	return "testInt8Migration"
 }
 
-func (testInt8Migration) Migrate(_ common.Address, value interpreter.Value) interpreter.Value {
+func (testInt8Migration) Migrate(
+	_ interpreter.AddressPath,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) interpreter.Value {
 	if value, ok := value.(interpreter.Int8Value); ok {
 		return interpreter.NewUnmeteredInt8Value(int8(value) + 10)
 	}
@@ -191,9 +200,27 @@ func TestMultipleMigrations(t *testing.T) {
 	}
 
 	// Check the reporter
-	require.Equal(t, "testStringMigration", reporter.migratedPaths["string_value"])
-	require.Equal(t, "testInt8Migration", reporter.migratedPaths["int8_value"])
-
-	// int16 value must not be reported as migrated.
-	require.NotContains(t, reporter.migratedPaths, "int16_value")
+	require.Equal(t,
+		map[interpreter.AddressPath][]string{
+			interpreter.AddressPath{
+				Address: account,
+				Path: interpreter.PathValue{
+					Domain:     pathDomain,
+					Identifier: "int8_value",
+				},
+			}: {
+				"testInt8Migration",
+			},
+			interpreter.AddressPath{
+				Address: account,
+				Path: interpreter.PathValue{
+					Domain:     pathDomain,
+					Identifier: "string_value",
+				},
+			}: {
+				"testStringMigration",
+			},
+		},
+		reporter.migratedPaths,
+	)
 }

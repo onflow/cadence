@@ -39,7 +39,11 @@ func (AccountTypeMigration) Name() string {
 
 // Migrate migrates `AuthAccount` and `PublicAccount` types inside `TypeValue`s,
 // to the account reference type (&Account).
-func (AccountTypeMigration) Migrate(_ common.Address, value interpreter.Value) interpreter.Value {
+func (AccountTypeMigration) Migrate(
+	_ interpreter.AddressPath,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) interpreter.Value {
 	switch value := value.(type) {
 	case interpreter.TypeValue:
 		convertedType := maybeConvertAccountType(value.Type)
