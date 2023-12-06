@@ -109,21 +109,21 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 				return interpreter.NewUInt16Value(
 					inter,
 					func() uint16 {
-						return binary.LittleEndian.Uint16(getRandomBytes(generator, 2))
+						return binary.BigEndian.Uint16(getRandomBytes(generator, 2))
 					},
 				)
 			case interpreter.PrimitiveStaticTypeUInt32:
 				return interpreter.NewUInt32Value(
 					inter,
 					func() uint32 {
-						return binary.LittleEndian.Uint32(getRandomBytes(generator, 4))
+						return binary.BigEndian.Uint32(getRandomBytes(generator, 4))
 					},
 				)
 			case interpreter.PrimitiveStaticTypeUInt64:
 				return interpreter.NewUInt64Value(
 					inter,
 					func() uint64 {
-						return binary.LittleEndian.Uint64(getRandomBytes(generator, 8))
+						return binary.BigEndian.Uint64(getRandomBytes(generator, 8))
 					},
 				)
 			case interpreter.PrimitiveStaticTypeUInt128:
@@ -131,7 +131,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					inter,
 					func() *big.Int {
 						buffer := getRandomBytes(generator, 16)
-						return interpreter.LittleEndianBytesToUnsignedBigInt(buffer)
+						return interpreter.BigEndianBytesToUnsignedBigInt(buffer)
 					},
 				)
 			case interpreter.PrimitiveStaticTypeUInt256:
@@ -139,7 +139,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					inter,
 					func() *big.Int {
 						buffer := getRandomBytes(generator, 32)
-						return interpreter.LittleEndianBytesToUnsignedBigInt(buffer)
+						return interpreter.BigEndianBytesToUnsignedBigInt(buffer)
 					},
 				)
 
@@ -155,21 +155,21 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 				return interpreter.NewWord16Value(
 					inter,
 					func() uint16 {
-						return binary.LittleEndian.Uint16(getRandomBytes(generator, 2))
+						return binary.BigEndian.Uint16(getRandomBytes(generator, 2))
 					},
 				)
 			case interpreter.PrimitiveStaticTypeWord32:
 				return interpreter.NewWord32Value(
 					inter,
 					func() uint32 {
-						return binary.LittleEndian.Uint32(getRandomBytes(generator, 4))
+						return binary.BigEndian.Uint32(getRandomBytes(generator, 4))
 					},
 				)
 			case interpreter.PrimitiveStaticTypeWord64:
 				return interpreter.NewWord64Value(
 					inter,
 					func() uint64 {
-						return binary.LittleEndian.Uint64(getRandomBytes(generator, 8))
+						return binary.BigEndian.Uint64(getRandomBytes(generator, 8))
 					},
 				)
 			case interpreter.PrimitiveStaticTypeWord128:
@@ -177,7 +177,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					inter,
 					func() *big.Int {
 						buffer := getRandomBytes(generator, 16)
-						return interpreter.LittleEndianBytesToUnsignedBigInt(buffer)
+						return interpreter.BigEndianBytesToUnsignedBigInt(buffer)
 					},
 				)
 			case interpreter.PrimitiveStaticTypeWord256:
@@ -185,7 +185,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					inter,
 					func() *big.Int {
 						buffer := getRandomBytes(generator, 32)
-						return interpreter.LittleEndianBytesToUnsignedBigInt(buffer)
+						return interpreter.BigEndianBytesToUnsignedBigInt(buffer)
 					},
 				)
 
