@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -812,6 +813,141 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	testFunctionTpe := func(t *testing.T, functionType *sema.FunctionType) error {
+		baseTypeActivation := sema.NewVariableActivation(sema.BaseTypeActivation)
+		baseTypeActivation.DeclareType(stdlib.StandardLibraryType{
+			Name: "TestFunc",
+			Kind: common.DeclarationKindType,
+			Type: functionType,
+		})
+
+		options := ParseAndCheckOptions{
+			Config: &sema.Config{
+				BaseTypeActivation: baseTypeActivation,
+			},
+		}
+
+		_, err := ParseAndCheckWithOptions(t, "fun test(testFunc: TestFunc) {}", options)
+		return err
+	}
+
+	t.Run("Function type, return type not instantiated", func(t *testing.T) {
+
+		t.Parallel()
+		err := testFunctionTpe(t,
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.InclusiveRangeType{},
+				),
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Function type, return type instantiated", func(t *testing.T) {
+
+		t.Parallel()
+		err := testFunctionTpe(t,
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.InclusiveRangeType{
+						MemberType: sema.IntType,
+					},
+				),
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Function type, parameter type not instantiated", func(t *testing.T) {
+
+		t.Parallel()
+		err := testFunctionTpe(t,
+			&sema.FunctionType{
+				Parameters: []sema.Parameter{
+					{
+						Identifier: "a",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.InclusiveRangeType{},
+						),
+					},
+				},
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Function type, parameter type instantiated", func(t *testing.T) {
+
+		t.Parallel()
+		err := testFunctionTpe(t,
+			&sema.FunctionType{
+				Parameters: []sema.Parameter{
+					{
+						Identifier: "a",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.InclusiveRangeType{
+								MemberType: sema.IntType,
+							},
+						),
+					},
+				},
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("Function type, type parameter type bound not instantiated", func(t *testing.T) {
+
+		t.Parallel()
+		err := testFunctionTpe(t,
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					{
+						Name:      "T",
+						TypeBound: &sema.InclusiveRangeType{},
+					},
+				},
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Function type,type parameter type bound instantiated", func(t *testing.T) {
+
+		t.Parallel()
+		err := testFunctionTpe(t,
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					{
+						Name: "T",
+						TypeBound: &sema.InclusiveRangeType{
+							MemberType: sema.IntType,
+						},
+					},
+				},
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
 }
 
 func TestCheckTypeArgumentSubtyping(t *testing.T) {
@@ -904,7 +1040,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
             `,
 			&sema.CapabilityType{},
 		)
-		require.NotNil(t, checker)
+		require.NoError(t, err)
 
 		capType := RequireGlobalValue(t, checker.Elaboration, "cap")
 		require.IsType(t,
@@ -945,7 +1081,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 				},
 			},
 		)
-		require.NotNil(t, checker)
+		require.NoError(t, err)
 
 		assert.Equal(t,
 			&sema.CapabilityType{
