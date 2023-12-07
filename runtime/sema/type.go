@@ -676,7 +676,7 @@ func (t *OptionalType) IsResourceType() bool {
 }
 
 func (t *OptionalType) IsPrimitiveType() bool {
-	return false
+	return t.Type.IsPrimitiveType()
 }
 
 func (t *OptionalType) IsInvalidType() bool {
