@@ -94,39 +94,38 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 			// TODO: Check if invocation has an argument and implement modulo operation.
 
 			returnIntegerType := invocation.TypeParameterTypes.Oldest().Value
-			returnIntegerStaticType := interpreter.ConvertSemaToStaticType(inter, returnIntegerType)
 
-			switch returnIntegerStaticType {
+			switch returnIntegerType {
 			// UInt*
-			case interpreter.PrimitiveStaticTypeUInt8:
+			case sema.UInt8Type:
 				return interpreter.NewUInt8Value(
 					inter,
 					func() uint8 {
 						return getRandomBytes(generator, 1)[0]
 					},
 				)
-			case interpreter.PrimitiveStaticTypeUInt16:
+			case sema.UInt16Type:
 				return interpreter.NewUInt16Value(
 					inter,
 					func() uint16 {
 						return binary.BigEndian.Uint16(getRandomBytes(generator, 2))
 					},
 				)
-			case interpreter.PrimitiveStaticTypeUInt32:
+			case sema.UInt32Type:
 				return interpreter.NewUInt32Value(
 					inter,
 					func() uint32 {
 						return binary.BigEndian.Uint32(getRandomBytes(generator, 4))
 					},
 				)
-			case interpreter.PrimitiveStaticTypeUInt64:
+			case sema.UInt64Type:
 				return interpreter.NewUInt64Value(
 					inter,
 					func() uint64 {
 						return binary.BigEndian.Uint64(getRandomBytes(generator, 8))
 					},
 				)
-			case interpreter.PrimitiveStaticTypeUInt128:
+			case sema.UInt128Type:
 				return interpreter.NewUInt128ValueFromBigInt(
 					inter,
 					func() *big.Int {
@@ -134,7 +133,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 						return interpreter.BigEndianBytesToUnsignedBigInt(buffer)
 					},
 				)
-			case interpreter.PrimitiveStaticTypeUInt256:
+			case sema.UInt256Type:
 				return interpreter.NewUInt256ValueFromBigInt(
 					inter,
 					func() *big.Int {
@@ -144,35 +143,35 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 				)
 
 			// Word*
-			case interpreter.PrimitiveStaticTypeWord8:
+			case sema.Word8Type:
 				return interpreter.NewWord8Value(
 					inter,
 					func() uint8 {
 						return getRandomBytes(generator, 1)[0]
 					},
 				)
-			case interpreter.PrimitiveStaticTypeWord16:
+			case sema.Word16Type:
 				return interpreter.NewWord16Value(
 					inter,
 					func() uint16 {
 						return binary.BigEndian.Uint16(getRandomBytes(generator, 2))
 					},
 				)
-			case interpreter.PrimitiveStaticTypeWord32:
+			case sema.Word32Type:
 				return interpreter.NewWord32Value(
 					inter,
 					func() uint32 {
 						return binary.BigEndian.Uint32(getRandomBytes(generator, 4))
 					},
 				)
-			case interpreter.PrimitiveStaticTypeWord64:
+			case sema.Word64Type:
 				return interpreter.NewWord64Value(
 					inter,
 					func() uint64 {
 						return binary.BigEndian.Uint64(getRandomBytes(generator, 8))
 					},
 				)
-			case interpreter.PrimitiveStaticTypeWord128:
+			case sema.Word128Type:
 				return interpreter.NewWord128ValueFromBigInt(
 					inter,
 					func() *big.Int {
@@ -180,7 +179,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 						return interpreter.BigEndianBytesToUnsignedBigInt(buffer)
 					},
 				)
-			case interpreter.PrimitiveStaticTypeWord256:
+			case sema.Word256Type:
 				return interpreter.NewWord256ValueFromBigInt(
 					inter,
 					func() *big.Int {
