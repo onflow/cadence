@@ -27,7 +27,7 @@ var AnyResourceAttachmentType = &SimpleType{
 	TypeID:        AnyResourceAttachmentTypeName,
 	TypeTag:       AnyResourceAttachmentTypeTag,
 	IsResource:    true,
-	IsPrimitive:   false,
+	Primitive:     false,
 	// The actual storability of a value is checked at run-time
 	Storable:   true,
 	Equatable:  false,
@@ -46,7 +46,7 @@ var AnyStructAttachmentType = &SimpleType{
 	TypeID:        AnyStructAttachmentTypeName,
 	TypeTag:       AnyStructAttachmentTypeTag,
 	IsResource:    false,
-	IsPrimitive:   false,
+	Primitive:     false,
 	// The actual storability of a value is checked at run-time
 	Storable:   true,
 	Equatable:  false,

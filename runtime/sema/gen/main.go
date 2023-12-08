@@ -155,6 +155,7 @@ type typeDecl struct {
 	fullTypeName       string
 	compositeKind      common.CompositeKind
 	storable           bool
+	primitive          bool
 	equatable          bool
 	exportable         bool
 	comparable         bool
@@ -523,6 +524,15 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 				))
 			}
 			typeDecl.storable = true
+
+		case "Primitive":
+			if !generateSimpleType {
+				panic(fmt.Errorf(
+					"composite types cannot be explicitly marked as primitive: %s",
+					g.currentTypeID(),
+				))
+			}
+			typeDecl.primitive = true
 
 		case "Equatable":
 			if !generateSimpleType {
@@ -1575,8 +1585,8 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 	//	TypeID:        TestTypeName,
 	//	tag:           TestTypeTag,
 	//	IsResource:    true,
-	//	IsPrimitive:   false,
 	//	Storable:      false,
+	//	Primitive:     false,
 	//	Equatable:     false,
 	//	Comparable:    false,
 	//	Exportable:    false,
@@ -1584,15 +1594,14 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 	//}
 
 	isResource := ty.compositeKind == common.CompositeKindResource
-	_, isPrimitive := sema.GeneratedPrimitiveSimpleTypes[ty.typeName]
 	elements := []dst.Expr{
 		goKeyValue("Name", typeNameVarIdent(ty.fullTypeName)),
 		goKeyValue("QualifiedName", typeNameVarIdent(ty.fullTypeName)),
 		goKeyValue("TypeID", typeNameVarIdent(ty.fullTypeName)),
 		goKeyValue("TypeTag", typeTagVarIdent(ty.fullTypeName)),
 		goKeyValue("IsResource", goBoolLit(isResource)),
-		goKeyValue("IsPrimitive", goBoolLit(isPrimitive)),
 		goKeyValue("Storable", goBoolLit(ty.storable)),
+		goKeyValue("Primitive", goBoolLit(ty.primitive)),
 		goKeyValue("Equatable", goBoolLit(ty.equatable)),
 		goKeyValue("Comparable", goBoolLit(ty.comparable)),
 		goKeyValue("Exportable", goBoolLit(ty.exportable)),

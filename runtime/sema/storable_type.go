@@ -33,11 +33,11 @@ var StorableType = &SimpleType{
 	// only used as e.g. a type bound, but is not accessible
 	// to user programs, i.e. can't be used in type annotations
 	// for e.g. parameters, return types, fields, etc.
-	IsResource:  false,
-	IsPrimitive: false,
-	Storable:    true,
-	Equatable:   false,
-	Comparable:  false,
-	Exportable:  false,
-	Importable:  false,
+	IsResource: false,
+	Storable:   true,
+	Primitive:  false,
+	Equatable:  false,
+	Comparable: false,
+	Exportable: false,
+	Importable: false,
 }
