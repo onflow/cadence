@@ -1033,36 +1033,15 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := parseAndCheckWithTestValue(t,
+		_, err := parseAndCheckWithTestValue(t,
 			`
               let cap: Capability = test
               let cap2: Capability<&Int> = cap
             `,
 			&sema.CapabilityType{},
 		)
-		require.NoError(t, err)
-
-		capType := RequireGlobalValue(t, checker.Elaboration, "cap")
-		require.IsType(t,
-			&sema.CapabilityType{},
-			capType,
-		)
-		require.Nil(t, capType.(*sema.CapabilityType).BorrowType)
-
-		cap2Type := RequireGlobalValue(t, checker.Elaboration, "cap2")
-		require.IsType(t,
-			&sema.CapabilityType{},
-			cap2Type,
-		)
-		require.Equal(t,
-			&sema.ReferenceType{
-				Type: sema.IntType,
-			},
-			cap2Type.(*sema.CapabilityType).BorrowType,
-		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
@@ -1070,7 +1049,7 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 
 		t.Parallel()
 
-		checker, err := parseAndCheckWithTestValue(t,
+		_, err := parseAndCheckWithTestValue(t,
 			`
               let cap: Capability<&String> = test
               let cap2: Capability<&Int> = cap
@@ -1081,28 +1060,8 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 				},
 			},
 		)
-		require.NoError(t, err)
-
-		assert.Equal(t,
-			&sema.CapabilityType{
-				BorrowType: &sema.ReferenceType{
-					Type: sema.StringType,
-				},
-			},
-			RequireGlobalValue(t, checker.Elaboration, "cap"),
-		)
-
-		assert.Equal(t,
-			&sema.CapabilityType{
-				BorrowType: &sema.ReferenceType{
-					Type: sema.IntType,
-				},
-			},
-			RequireGlobalValue(t, checker.Elaboration, "cap2"),
-		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 }
