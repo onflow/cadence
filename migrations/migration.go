@@ -140,7 +140,7 @@ func (m *StorageMigration) migrateNestedValue(
 		// Read the field names first, so the iteration wouldn't be affected
 		// by the modification of the nested values.
 		var fieldNames []string
-		composite.ForEachField(nil, func(fieldName string, fieldValue interpreter.Value) (resume bool) {
+		composite.ForEachFieldName(func(fieldName string) (resume bool) {
 			fieldNames = append(fieldNames, fieldName)
 			return true
 		})
@@ -165,7 +165,7 @@ func (m *StorageMigration) migrateNestedValue(
 		// Read the keys first, so the iteration wouldn't be affected
 		// by the modification of the nested values.
 		var existingKeys []interpreter.Value
-		dictionary.Iterate(m.interpreter, func(key, _ interpreter.Value) (resume bool) {
+		dictionary.IterateKeys(m.interpreter, func(key interpreter.Value) (resume bool) {
 			existingKeys = append(existingKeys, key)
 			return true
 		})
