@@ -28,6 +28,7 @@ var HashableStructType = &SimpleType{
 	TypeTag:       HashableStructTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     false,
 	Equatable:     false,
 	Comparable:    false,
 	Exportable:    true,
