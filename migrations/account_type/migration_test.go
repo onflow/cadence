@@ -756,6 +756,36 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 				interpreter.PrimitiveStaticTypeString,
 			),
 		},
+		"account_capability_controller": {
+			storedValue: interpreter.NewUnmeteredAccountCapabilityControllerValue(
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.UnauthorizedAccess,
+					interpreter.PrimitiveStaticTypeAuthAccount, //nolint:staticcheck,
+				),
+				1234,
+			),
+			expectedValue: interpreter.NewUnmeteredAccountCapabilityControllerValue(
+				authAccountReferenceType,
+				1234,
+			),
+		},
+		"storage_capability_controller": {
+			storedValue: interpreter.NewUnmeteredStorageCapabilityControllerValue(
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.UnauthorizedAccess,
+					interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck,
+				),
+				1234,
+				interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
+			),
+			expectedValue: interpreter.NewUnmeteredStorageCapabilityControllerValue(
+				unauthorizedAccountReferenceType,
+				1234,
+				interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
+			),
+		},
 	}
 
 	// Store values

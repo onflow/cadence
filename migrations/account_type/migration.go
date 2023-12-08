@@ -55,6 +55,23 @@ func (AccountTypeMigration) Migrate(value interpreter.Value) (newValue interpret
 		}
 		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType)
 
+	case *interpreter.AccountCapabilityControllerValue:
+		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
+		if convertedBorrowType == nil {
+			return
+		}
+		borrowType := convertedBorrowType.(*interpreter.ReferenceStaticType)
+		return interpreter.NewUnmeteredAccountCapabilityControllerValue(borrowType, value.CapabilityID)
+
+	case *interpreter.StorageCapabilityControllerValue:
+		// Note: A storage capability with Account type shouldn't be possible theoretically.
+		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
+		if convertedBorrowType == nil {
+			return
+		}
+		borrowType := convertedBorrowType.(*interpreter.ReferenceStaticType)
+		return interpreter.NewUnmeteredStorageCapabilityControllerValue(borrowType, value.CapabilityID, value.TargetPath)
+
 	default:
 		return nil
 	}
