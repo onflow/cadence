@@ -3061,3 +3061,49 @@ func TestCheckResourceReferenceIndexNilAssignment(t *testing.T) {
 		require.IsType(t, &sema.InvalidResourceAssignmentError{}, errors[2])
 	})
 }
+
+func TestCheckNestedReference(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let x = &1 as &Int
+                let y = &x as & &Int
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NestedReferenceError{}, errors[0])
+	})
+
+	t.Run("type of underlying value checked", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let x = &1 as &Int
+                let y = &x as &AnyStruct
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NestedReferenceError{}, errors[0])
+	})
+
+	t.Run("optional", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let x: &Int? = &1 as &Int
+                let y = &x as &AnyStruct?
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NestedReferenceError{}, errors[0])
+	})
+}

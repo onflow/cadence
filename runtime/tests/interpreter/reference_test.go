@@ -1747,7 +1747,7 @@ func TestInterpretReferenceToReference(t *testing.T) {
         `, ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
 				errs := checker.RequireCheckerErrors(t, err, 1)
-				require.IsType(t, errs[0], &sema.NestedReferenceError{})
+				require.IsType(t, &sema.NestedReferenceError{}, errs[0])
 			},
 		})
 		require.NoError(t, err)

@@ -84,12 +84,19 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 	referencedType, actualType := checker.visitExpression(referencedExpression, expectedLeftType)
 
 	// check that the type of the referenced value is not itself a reference
-	if nestedReference, isNestedReference := actualType.(*ReferenceType); isNestedReference {
-		checker.report(&NestedReferenceError{
-			Type:  nestedReference,
-			Range: checker.expressionRange(referenceExpression),
-		})
+	var requireNoReferenceNesting func(actualType Type)
+	requireNoReferenceNesting = func(actualType Type) {
+		switch nestedReference := actualType.(type) {
+		case *ReferenceType:
+			checker.report(&NestedReferenceError{
+				Type:  nestedReference,
+				Range: checker.expressionRange(referenceExpression),
+			})
+		case *OptionalType:
+			requireNoReferenceNesting(nestedReference.Type)
+		}
 	}
+	requireNoReferenceNesting(actualType)
 
 	hasErrors := len(checker.errors) > beforeErrors
 	if !hasErrors {
