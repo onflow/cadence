@@ -3106,4 +3106,18 @@ func TestCheckNestedReference(t *testing.T) {
 		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.NestedReferenceError{}, errors[0])
 	})
+
+	t.Run("nested optional", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let x: &Int?? = &1 as &Int
+                let y = &x as &AnyStruct?
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NestedReferenceError{}, errors[0])
+	})
 }
