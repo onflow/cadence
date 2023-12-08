@@ -969,7 +969,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 			typeMismatchError.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
-			"auth(M) &Int",
+			"auth(mapping M) &Int",
 			typeMismatchError.ActualType.QualifiedString(),
 		)
 	})
@@ -1310,7 +1310,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		var typeMismatchErr *sema.TypeMismatchError
 		require.ErrorAs(t, errs[0], &typeMismatchErr)
 		assert.Equal(t,
-			"auth(NM) &Int",
+			"auth(mapping NM) &Int",
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
@@ -1397,7 +1397,7 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 		var typeMismatchErr *sema.TypeMismatchError
 		require.ErrorAs(t, errs[0], &typeMismatchErr)
 		assert.Equal(t,
-			"auth(NM) &Int",
+			"auth(mapping NM) &Int",
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
@@ -2995,48 +2995,71 @@ func TestCheckEntitlementInheritance(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("attachment default function entitlements", func(t *testing.T) {
+	t.Run("attachment inherited default entitled function entitlements on base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             entitlement E
             entitlement F
-            entitlement G
-            entitlement mapping M {
-                E -> F
-            }
-            entitlement mapping N {
-                G -> E
-            }
             struct interface I {
-                access(mapping M) fun foo(): auth(mapping M) &Int {
-                    return &1 as auth(mapping M) &Int
+                access(E) fun foo(): auth(F) &Int {
+                    return &1 as auth(F) &Int
                 }
             }
-            struct S {}
-            access(mapping N) attachment A for S: I {}
+            struct interface I2: I {}
+            struct S {
+                access(E) fun foo() {}
+            }
+            access(all) attachment A for S: I2 {}
             fun test() {
                 let s = attach A() to S()
-                let ref = &s as auth(G) &S
-                let i: auth(F) &Int = s[A]!.foo()
+                let ref = &s as auth(E) &S
+                let attachmentRef: auth(E) &A = s[A]!
+                let i: auth(F) &Int = attachmentRef.foo()
             }
         `)
 
 		assert.NoError(t, err)
 	})
 
-	t.Run("attachment inherited default function entitlements", func(t *testing.T) {
+	t.Run("attachment inherited default mapped function entitlements on base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             entitlement E
             entitlement F
-            entitlement G
             entitlement mapping M {
                 E -> F
             }
-            entitlement mapping N {
-                G -> E
+            struct interface I {
+                access(mapping M) fun foo(): auth(mapping M) &Int {
+                    return &1 as auth(mapping M) &Int
+                }
+            }
+            struct interface I2: I {}
+            struct S {
+                access(E) fun foo() {}
+            }
+            access(all) attachment A for S: I2 {}
+            fun test() {
+                let s = attach A() to S()
+                let ref = &s as auth(E) &S
+                let attachmentRef: auth(E) &A = s[A]!
+                let i: auth(F) &Int = attachmentRef.foo()
+            }
+        `)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("attachment inherited default mapped function entitlements not on base", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+            entitlement F
+            entitlement mapping M {
+                E -> F
             }
             struct interface I {
                 access(mapping M) fun foo(): auth(mapping M) &Int {
@@ -3045,48 +3068,41 @@ func TestCheckEntitlementInheritance(t *testing.T) {
             }
             struct interface I2: I {}
             struct S {}
-            access(mapping N) attachment A for S: I2 {}
+            access(all) attachment A for S: I2 {}
             fun test() {
                 let s = attach A() to S()
-                let ref = &s as auth(G) &S
+                let ref = &s as auth(E) &S
                 let i: auth(F) &Int = s[A]!.foo()
             }
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentEntitlementError{}, errs[0])
 	})
 
-	t.Run("attachment default function entitlements no attachment mapping", func(t *testing.T) {
+	t.Run("attachment inherited default entitled function entitlements not on base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             entitlement E
             entitlement F
-            entitlement G
-            entitlement mapping M {
-                E -> F
-            }
-            entitlement mapping N {
-                G -> E
-            }
             struct interface I {
-                access(mapping M) fun foo(): auth(mapping M) &Int {
-                    return &1 as auth(mapping M) &Int
+                access(E) fun foo(): auth(F) &Int {
+                    return &1 as auth(F) &Int
                 }
             }
+            struct interface I2: I {}
             struct S {}
-            attachment A for S: I {}
+            access(all) attachment A for S: I2 {}
             fun test() {
                 let s = attach A() to S()
-                let ref = &s as auth(G) &S
-                let i: auth(F) &Int = s[A]!.foo() // mismatch
+                let ref = &s as auth(E) &S
+                let i: auth(F) &Int = s[A]!.foo()
             }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
-
-		// because A is declared with no mapping, all its references are unentitled
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.IsType(t, &sema.InvalidAttachmentEntitlementError{}, errs[0])
 	})
 }
 
@@ -3583,7 +3599,7 @@ func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("mapping allowed", func(t *testing.T) {
+	t.Run("mapping not allowed", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -3592,7 +3608,9 @@ func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
             access(mapping E) attachment A for AnyStruct {}
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("entitlement set not allowed", func(t *testing.T) {
@@ -3611,7 +3629,7 @@ func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
 		require.IsType(t, &sema.InvalidEntitlementAccessError{}, errs[0])
 	})
 
-	t.Run("mapping allowed in contract", func(t *testing.T) {
+	t.Run("mapping not allowed in contract", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -3624,12 +3642,14 @@ func TestCheckAttachmentEntitlementAccessAnnotation(t *testing.T) {
                 X -> Y
             }
             access(mapping E) attachment A for AnyStruct {
-                access(Y) fun foo() {}
+                access(all) fun foo() {}
             }
         }
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("entitlement set not allowed in contract", func(t *testing.T) {
@@ -4604,11 +4624,10 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		_, err := ParseAndCheck(t, `
         entitlement X
         entitlement Y
-        entitlement mapping M {
-            X -> Y
+        struct S {
+            access(Y) fun foo() {}
         }
-        struct S {}
-        access(mapping M) attachment A for S {
+        access(all) attachment A for S {
             access(Y) fun entitled() {
                 let a: auth(Y) &A = self
                 let b: &S = base
@@ -4629,7 +4648,7 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
-			"auth(Y) &A",
+			"&A",
 			typeMismatchErr.ActualType.QualifiedString(),
 		)
 
@@ -4650,12 +4669,8 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		_, err := ParseAndCheck(t, `
         entitlement X
         entitlement Y
-        entitlement mapping M {
-            X -> Y
-        }
         struct S {}
-        access(mapping M) attachment A for S {
-            require entitlement X
+        access(all) attachment A for S {
             access(all) fun unentitled() {
                 let b: &S = base
             }
@@ -4674,43 +4689,30 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
-			"auth(X) &S",
+			"&S",
 			typeMismatchErr.ActualType.QualifiedString(),
 		)
 	})
 
-	t.Run("base type with no requirements", func(t *testing.T) {
+	t.Run("base type with sufficient requirements", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
         entitlement X
-        entitlement Y
-        entitlement mapping M {
-            X -> Y
+        struct S {
+            access(X) fun foo() {}
         }
-        struct S {}
-        access(mapping M) attachment A for S {
+        access(all) attachment A for S {
             access(all) fun unentitled() {
                 let b: &S = base
             }
-            access(all) fun entitled() {
+            access(X) fun entitled() {
                 let b: auth(X) &S = base
             }
         }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-
-		var typeMismatchErr *sema.TypeMismatchError
-		require.ErrorAs(t, errs[0], &typeMismatchErr)
-		assert.Equal(t,
-			typeMismatchErr.ExpectedType.QualifiedString(),
-			"auth(X) &S",
-		)
-		assert.Equal(t,
-			"&S",
-			typeMismatchErr.ActualType.QualifiedString(),
-		)
+		assert.NoError(t, err)
 	})
 
 	t.Run("base type", func(t *testing.T) {
@@ -4719,17 +4721,15 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		_, err := ParseAndCheck(t, `
         entitlement X
         entitlement Y
-        entitlement mapping M {
-            X -> Y
+        struct S {
+            access(X) fun foo() {}
+            access(Y) fun bar() {}
         }
-        struct S {}
-        access(mapping M) attachment A for S {
-            require entitlement X
-            require entitlement Y
+        access(all) attachment A for S {
             access(all) fun unentitled() {
                 let b: &S = base
             }
-            access(all) fun entitled() {
+            access(X, Y) fun entitled() {
                 let b: auth(X, Y) &S = base
             }
         }
@@ -4738,46 +4738,80 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("multiple mappings", func(t *testing.T) {
+	t.Run("base and self in mapped functions", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
         entitlement X
         entitlement Y
-        entitlement E
-        entitlement F
         entitlement mapping M {
             X -> Y
-            E -> F
         }
         struct S {
-            access(E, X) fun foo() {}
+            access(X) fun foo() {}
         }
-        access(mapping M) attachment A for S {
-            access(F, Y) fun entitled() {
-                let a: auth(F, Y) &A = self
-            }
-            access(all) fun unentitled() {
-                let a: auth(F, Y, E) &A = self // err
+        access(all) attachment A for S {
+            access(mapping M) fun foo(): auth(mapping M) &Int {
+                let b: auth(mapping M) &S = base
+                let a: auth(mapping M) &A = self
+
+                return &1
             }
         }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("invalid base and self in mapped functions", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        entitlement X
+        entitlement Y
+        entitlement mapping M {
+            X -> Y
+        }
+        struct S {
+            access(X) fun foo() {}
+        }
+        access(all) attachment A for S {
+            access(mapping M) fun foo(): auth(mapping M) &Int {
+                let b: auth(Y) &S = base
+                let a: auth(Y) &A = self
+
+                return &1
+            }
+        }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 3)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 
 		var typeMismatchErr *sema.TypeMismatchError
-		require.ErrorAs(t, errs[0], &typeMismatchErr)
+		require.ErrorAs(t, errs[1], &typeMismatchErr)
 		assert.Equal(t,
-			"auth(F, Y, E) &A",
+			"auth(Y) &S",
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
-			"auth(Y, F) &A",
+			"auth(mapping M) &S",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
+
+		require.ErrorAs(t, errs[2], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(Y) &A",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(mapping M) &A",
 			typeMismatchErr.ActualType.QualifiedString(),
 		)
 	})
 
-	t.Run("missing in codomain", func(t *testing.T) {
+	t.Run("missing in S", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -4785,12 +4819,14 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
         entitlement Y
         entitlement Z
         entitlement E
-        entitlement mapping M {
-            X -> Y
-            X -> Z
+        struct S {
+            access(X) fun foo() {}
+            access(Y | Z) let bar: Int
+            init() {
+                self.bar = 1
+            }
         }
-        struct S {}
-        access(mapping M) attachment A for S {
+        access(all) attachment A for S {
             access(E) fun entitled() {}
         }
         `)
@@ -4805,20 +4841,17 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
 		)
 	})
 
-	t.Run("missing in codomain in set", func(t *testing.T) {
+	t.Run("missing in set", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-        entitlement X
         entitlement Y
         entitlement Z
         entitlement E
-        entitlement mapping M {
-            X -> Y
-            X -> Z
+        struct S {
+            access(Y, Z) fun foo() {}
         }
-        struct S {}
-        access(mapping M) attachment A for S {
+        access(all) attachment A for S {
             access(Y | E | Z) fun entitled() {}
         }
         `)
@@ -4840,11 +4873,10 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
         entitlement X
         entitlement E
         entitlement F
-        entitlement mapping M {
-            E -> F
+        struct S {
+            access(F) fun foo() {}
         }
-        struct S {}
-        access(mapping M) attachment A for S {
+        access(all) attachment A for S {
             access(F, X, E) fun entitled() {}
         }
         `)
@@ -4875,9 +4907,9 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
             X -> Y
         }
         struct S {
-            access(Y) fun foo() {}
+            access(X) fun foo() {}
         }
-        access(mapping M) attachment A for S {
+        access(all) attachment A for S {
             access(mapping M) let x: auth(mapping M) &S
             init() {
                 self.x = &S() as auth(Y) &S
@@ -4885,7 +4917,8 @@ func TestCheckAttachmentEntitlements(t *testing.T) {
         }
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("access(all) decl", func(t *testing.T) {
@@ -4964,12 +4997,10 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
         entitlement X
         entitlement Y
         entitlement Z
-        entitlement mapping M {
-            X -> Y
-            X -> Z
+        struct S {
+            access(Y, Z) fun foo() {}
         }
-        struct S {}
-        access(mapping M) attachment A for S {
+        access(all) attachment A for S {
             access(Y, Z) fun foo() {}
         }
         let s = attach A() to S()
@@ -4977,6 +5008,27 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
         `)
 
 		assert.NoError(t, err)
+	})
+
+	t.Run("basic owned fully entitled missing X", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        entitlement X
+        entitlement Y
+        entitlement Z
+        struct S {
+            access(Y, Z) fun foo() {}
+        }
+        access(all) attachment A for S {
+            access(Y, Z) fun foo() {}
+        }
+        let s = attach A() to S()
+        let a: auth(X, Y, Z) &A = s[A]!
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("basic owned intersection fully entitled", func(t *testing.T) {
@@ -4986,13 +5038,13 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
         entitlement X
         entitlement Y
         entitlement Z
-        entitlement mapping M {
-            X -> Y
-            X -> Z
+        struct interface I {
+            access(Y, Z) fun foo()
         }
-        struct interface I {}
-        struct S: I {}
-        access(mapping M) attachment A for I {
+        struct S: I {
+            access(Y, Z) fun foo() {}
+        }
+        access(all) attachment A for I {
             access(Y, Z) fun foo() {}
         }
         let s: {I} = attach A() to S()
@@ -5002,33 +5054,51 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("basic reference mapping", func(t *testing.T) {
+	t.Run("basic owned intersection fully entitled missing X", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
         entitlement X
         entitlement Y
-        entitlement E
-        entitlement F
-        entitlement mapping M {
-            X -> Y
-            E -> F
+        entitlement Z
+        struct interface I {
+            access(Y, Z) fun foo()
         }
+        struct S: I {
+            access(Y, Z) fun foo() {}
+        }
+        access(all) attachment A for I {
+            access(Y, Z) fun foo() {}
+        }
+        let s: {I} = attach A() to S()
+        let a: auth(X, Y, Z) &A = s[A]!
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("basic reference mapping", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        entitlement X
+        entitlement E
         struct S {
             access(X, E) fun foo() {}
         }
-        access(mapping M) attachment A for S {
-            access(Y, F) fun foo() {}
+        access(all) attachment A for S {
+            access(X, E) fun foo() {}
         }
         let s = attach A() to S()
-        let yRef = &s as auth(X) &S
-        let fRef = &s as auth(E) &S
+        let xRef = &s as auth(X) &S
+        let eRef = &s as auth(E) &S
         let bothRef = &s as auth(X, E) &S
-        let a1: auth(Y) &A = yRef[A]!
-        let a2: auth(F) &A = fRef[A]!
-        let a3: auth(F) &A = yRef[A]! // err
-        let a4: auth(Y) &A = fRef[A]! // err
-        let a5: auth(Y, F) &A = bothRef[A]!
+        let a1: auth(X) &A = xRef[A]!
+        let a2: auth(E) &A = eRef[A]!
+        let a3: auth(E) &A = xRef[A]! // err
+        let a4: auth(X) &A = eRef[A]! // err
+        let a5: auth(X, E) &A = bothRef[A]!
         `)
 
 		errs := RequireCheckerErrors(t, err, 2)
@@ -5036,21 +5106,21 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		var typeMismatchErr *sema.TypeMismatchError
 		require.ErrorAs(t, errs[0], &typeMismatchErr)
 		assert.Equal(t,
-			"auth(F) &A?",
+			"auth(E) &A?",
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
-			"auth(Y) &A?",
+			"auth(X) &A?",
 			typeMismatchErr.ActualType.QualifiedString(),
 		)
 
 		require.ErrorAs(t, errs[1], &typeMismatchErr)
 		assert.Equal(t,
-			"auth(Y) &A?",
+			"auth(X) &A?",
 			typeMismatchErr.ExpectedType.QualifiedString(),
 		)
 		assert.Equal(t,
-			"auth(F) &A?",
+			"auth(E) &A?",
 			typeMismatchErr.ActualType.QualifiedString(),
 		)
 	})
@@ -5059,51 +5129,15 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-        entitlement X
         entitlement Y
-        entitlement mapping M {
-            X -> Y
+        struct S {
+            access(Y) fun foo() {}
         }
-        struct S {}
-        access(mapping M) attachment A for S {
+        access(all) attachment A for S {
             access(Y) fun foo() {}
         }
         let s = attach A() to S()
         let ref = &s as &S
-        let a1: auth(Y) &A = ref[A]!
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		var typeMismatchErr *sema.TypeMismatchError
-		require.ErrorAs(t, errs[0], &typeMismatchErr)
-		assert.Equal(t,
-			"auth(Y) &A?",
-			typeMismatchErr.ExpectedType.QualifiedString(),
-		)
-		assert.Equal(t,
-			"&A?",
-			typeMismatchErr.ActualType.QualifiedString(),
-		)
-	})
-
-	t.Run("entitled access access(all) attachment", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-        entitlement X
-        entitlement Y
-        entitlement mapping M {
-            X -> Y
-        }
-        struct S {
-            access(X) fun foo() {}
-        }
-        access(all) attachment A for S {
-            access(all) fun foo() {}
-        }
-        let s = attach A() to S()
-        let ref = &s as auth(X) &S
         let a1: auth(Y) &A = ref[A]!
         `)
 
@@ -5156,41 +5190,65 @@ func TestCheckAttachmentAccessEntitlements(t *testing.T) {
 		)
 	})
 
-	t.Run("unrepresentable access mapping", func(t *testing.T) {
+	t.Run("mapped function in attachment", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-          entitlement X
-          entitlement Y
-          entitlement Z
-          entitlement E
-          entitlement F
-          entitlement G
+        entitlement X
+        entitlement Y
+        entitlement mapping M {
+            X -> Y
+        }
+        struct S {
+            access(X) fun foo() {}
+        }
+        access(all) attachment A for S {
+            access(mapping M) fun foo(): auth(mapping M) &Int {
+                let s: auth(mapping M) &A = base[A]!
 
-          entitlement mapping M {
-              X -> Y
-              X -> Z
-              E -> F
-              E -> G
-          }
+                return &1
+            }
+        }
+        `)
 
-          struct S {
-              access(X, E) fun foo() {}
-          }
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+	})
 
-          access(mapping M) attachment A for S {
-              access(Y, Z, F, G) fun foo() {}
-          }
+	t.Run("invalid base attachment access in mapped function", func(t *testing.T) {
+		t.Parallel()
 
-          let s = attach A() to S()
-          let ref = (&s as auth(X) &S) as auth(X | E) &S
-          let a1 = ref[A]!
+		_, err := ParseAndCheck(t, `
+        entitlement X
+        entitlement Y
+        entitlement mapping M {
+            X -> Y
+        }
+        struct S {
+            access(X) fun foo() {}
+        }
+        access(all) attachment A for S {
+            access(mapping M) fun foo(): auth(mapping M) &Int {
+                let s: auth(Y) &A? = base[A]
+
+                return &1
+            }
+        }
         `)
 
 		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 
-		require.IsType(t, &sema.UnrepresentableEntitlementMapOutputError{}, errs[0])
-		require.IsType(t, &sema.InvalidTypeIndexingError{}, errs[1])
+		var typeMismatchErr *sema.TypeMismatchError
+		require.ErrorAs(t, errs[1], &typeMismatchErr)
+		assert.Equal(t,
+			"auth(Y) &A?",
+			typeMismatchErr.ExpectedType.QualifiedString(),
+		)
+		assert.Equal(t,
+			"auth(mapping M) &A?",
+			typeMismatchErr.ActualType.QualifiedString(),
+		)
 	})
 }
 
@@ -5778,400 +5836,6 @@ func TestCheckEntitledWriteAndMutateNotAllowed(t *testing.T) {
 		assert.Equal(t,
 			"reference needs one of entitlements `Insert` or `Mutate`",
 			invalidAccessErr.SecondaryError(),
-		)
-	})
-}
-
-func TestCheckAttachmentRequireEntitlements(t *testing.T) {
-	t.Parallel()
-
-	t.Run("entitlements allowed", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            entitlement F
-            attachment A for AnyStruct {
-                require entitlement E
-                require entitlement F
-            }
-        `)
-
-		assert.NoError(t, err)
-	})
-
-	t.Run("entitlement mapping disallowed", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            entitlement mapping M {}
-            attachment A for AnyStruct {
-                require entitlement E
-                require entitlement M
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
-	})
-
-	t.Run("event disallowed", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            event M()
-            attachment A for AnyStruct {
-                require entitlement E
-                require entitlement M
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
-	})
-
-	t.Run("struct disallowed", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            struct M {}
-            attachment A for AnyStruct {
-                require entitlement E
-                require entitlement M
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
-	})
-
-	t.Run("struct interface disallowed", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            struct interface M {}
-            attachment A for AnyStruct {
-                require entitlement E
-                require entitlement M
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
-	})
-
-	t.Run("resource disallowed", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            resource M {}
-            attachment A for AnyStruct {
-                require entitlement E
-                require entitlement M
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
-	})
-
-	t.Run("resource interface disallowed", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            resource interface M {}
-            attachment A for AnyStruct {
-                require entitlement E
-                require entitlement M
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
-	})
-
-	t.Run("attachment disallowed", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            attachment M for AnyResource {}
-            attachment A for AnyStruct {
-                require entitlement E
-                require entitlement M
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
-	})
-
-	t.Run("enum disallowed", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            enum M: UInt8 {}
-            attachment A for AnyStruct {
-                require entitlement E
-                require entitlement M
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
-	})
-
-	t.Run("int disallowed", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            attachment A for AnyStruct {
-                require entitlement E
-                require entitlement Int
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidNonEntitlementRequirement{}, errs[0])
-	})
-
-	t.Run("duplicates disallowed", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            attachment A for AnyStruct {
-                require entitlement E
-                require entitlement E
-            }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.DuplicateEntitlementRequirementError{}, errs[0])
-	})
-}
-
-func TestCheckAttachProvidedEntitlements(t *testing.T) {
-	t.Parallel()
-
-	t.Run("all provided", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            entitlement F
-            struct S {}
-            attachment A for S {
-                require entitlement E
-                require entitlement F
-            }
-            fun foo() {
-                let s = attach A() to S() with (E, F)
-            }
-
-        `)
-		assert.NoError(t, err)
-	})
-
-	t.Run("extra provided", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            entitlement F
-            entitlement G
-            struct S {}
-            attachment A for S {
-                require entitlement E
-                require entitlement F
-            }
-            fun foo() {
-                let s = attach A() to S() with (E, F, G)
-            }
-
-        `)
-		assert.NoError(t, err)
-	})
-
-	t.Run("one missing", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            entitlement F
-            struct S {}
-            attachment A for S {
-                require entitlement E
-                require entitlement F
-            }
-            fun foo() {
-                let s = attach A() to S() with (E)
-            }
-
-        `)
-		errs := RequireCheckerErrors(t, err, 1)
-
-		var requiredEntitlementNotProvidedErr *sema.RequiredEntitlementNotProvidedError
-		require.ErrorAs(t, errs[0], &requiredEntitlementNotProvidedErr)
-		assert.Equal(t,
-			"F",
-			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
-		)
-	})
-
-	t.Run("one missing with extra provided", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            entitlement F
-            entitlement G
-            struct S {}
-            attachment A for S {
-                require entitlement E
-                require entitlement F
-            }
-            fun foo() {
-                let s = attach A() to S() with (E, G)
-            }
-
-        `)
-		errs := RequireCheckerErrors(t, err, 1)
-
-		var requiredEntitlementNotProvidedErr *sema.RequiredEntitlementNotProvidedError
-		require.ErrorAs(t, errs[0], &requiredEntitlementNotProvidedErr)
-		assert.Equal(t,
-			"F",
-			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
-		)
-	})
-
-	t.Run("two missing", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            entitlement F
-            struct S {}
-            attachment A for S {
-                require entitlement E
-                require entitlement F
-            }
-            fun foo() {
-                let s = attach A() to S()
-            }
-
-        `)
-		errs := RequireCheckerErrors(t, err, 2)
-
-		var requiredEntitlementNotProvidedErr *sema.RequiredEntitlementNotProvidedError
-		require.ErrorAs(t, errs[0], &requiredEntitlementNotProvidedErr)
-		assert.Equal(t,
-			"E",
-			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
-		)
-
-		require.ErrorAs(t, errs[1], &requiredEntitlementNotProvidedErr)
-		assert.Equal(t,
-			"F",
-			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
-		)
-	})
-
-	t.Run("mapping provided", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            entitlement mapping M {}
-            struct S {}
-            attachment A for S {
-                require entitlement E
-            }
-            fun foo() {
-                let s = attach A() to S() with (M)
-            }
-
-        `)
-		errs := RequireCheckerErrors(t, err, 2)
-
-		require.IsType(t, &sema.InvalidNonEntitlementProvidedError{}, errs[0])
-
-		var requiredEntitlementNotProvidedErr *sema.RequiredEntitlementNotProvidedError
-		require.ErrorAs(t, errs[1], &requiredEntitlementNotProvidedErr)
-		assert.Equal(t,
-			"E",
-			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
-		)
-	})
-
-	t.Run("int provided", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            struct S {}
-            attachment A for S {
-                require entitlement E
-            }
-            fun foo() {
-                let s = attach A() to S() with (UInt8)
-            }
-
-        `)
-		errs := RequireCheckerErrors(t, err, 2)
-
-		require.IsType(t, &sema.InvalidNonEntitlementProvidedError{}, errs[0])
-
-		var requiredEntitlementNotProvidedErr *sema.RequiredEntitlementNotProvidedError
-		require.ErrorAs(t, errs[1], &requiredEntitlementNotProvidedErr)
-		assert.Equal(t,
-			"E",
-			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
-		)
-	})
-
-	t.Run("struct provided", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-            entitlement E
-            struct S {}
-            attachment A for S {
-                require entitlement E
-            }
-            fun foo() {
-                let s = attach A() to S() with (S)
-            }
-
-        `)
-		errs := RequireCheckerErrors(t, err, 2)
-
-		require.IsType(t, &sema.InvalidNonEntitlementProvidedError{}, errs[0])
-
-		var requiredEntitlementNotProvidedErr *sema.RequiredEntitlementNotProvidedError
-		require.ErrorAs(t, errs[1], &requiredEntitlementNotProvidedErr)
-		assert.Equal(t,
-			"E",
-			requiredEntitlementNotProvidedErr.RequiredEntitlement.Identifier,
 		)
 	})
 }

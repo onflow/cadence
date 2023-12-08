@@ -648,6 +648,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				func() []common.TypeID { return []common.TypeID{"Mutate"} },
@@ -754,6 +755,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef1 := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				func() []common.TypeID { return []common.TypeID{"Mutate"} },
@@ -779,6 +781,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef2 := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				func() []common.TypeID { return []common.TypeID{"Mutate"} },
@@ -851,6 +854,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				func() []common.TypeID { return []common.TypeID{"Mutate"} },
@@ -976,6 +980,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				func() []common.TypeID { return []common.TypeID{"Mutate"} },
@@ -1555,7 +1560,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("ref source is field", func(t *testing.T) {
@@ -1598,7 +1603,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 
 	})
 }
@@ -1722,7 +1727,9 @@ func TestInterpretInvalidatedReferenceToOptional(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("main")
-	require.NoError(t, err)
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestInterpretReferenceToReference(t *testing.T) {
