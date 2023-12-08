@@ -69,7 +69,6 @@ const (
 	keywordAttach      = "attach"
 	keywordRemove      = "remove"
 	keywordTo          = "to"
-	KeywordWith        = "with"
 	KeywordRequire     = "require"
 	KeywordStatic      = "static"
 	KeywordNative      = "native"
@@ -122,7 +121,6 @@ var allKeywords = []string{
 	KeywordDefault,
 	KeywordEnum,
 	KeywordView,
-	KeywordWith,
 	KeywordMapping,
 	KeywordRequire,
 	keywordAttach,

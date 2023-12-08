@@ -4209,6 +4209,30 @@ func (e *InvalidMappedEntitlementMemberError) EndPosition(common.MemoryGauge) as
 	return e.Pos
 }
 
+// InvalidAttachmentMappedEntitlementMemberError
+type InvalidAttachmentMappedEntitlementMemberError struct {
+	Pos ast.Position
+}
+
+var _ SemanticError = &InvalidAttachmentMappedEntitlementMemberError{}
+var _ errors.UserError = &InvalidAttachmentMappedEntitlementMemberError{}
+
+func (*InvalidAttachmentMappedEntitlementMemberError) isSemanticError() {}
+
+func (*InvalidAttachmentMappedEntitlementMemberError) IsUserError() {}
+
+func (e *InvalidAttachmentMappedEntitlementMemberError) Error() string {
+	return "entitlement mapped members are not yet supported on attachments"
+}
+
+func (e *InvalidAttachmentMappedEntitlementMemberError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *InvalidAttachmentMappedEntitlementMemberError) EndPosition(common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
 // InvalidNonEntitlementAccessError
 type InvalidNonEntitlementAccessError struct {
 	ast.Range
@@ -4393,94 +4417,6 @@ func (e *CyclicEntitlementMappingError) Error() string {
 	)
 }
 
-type DuplicateEntitlementRequirementError struct {
-	Entitlement *EntitlementType
-	ast.Range
-}
-
-var _ SemanticError = &DuplicateEntitlementRequirementError{}
-var _ errors.UserError = &DuplicateEntitlementRequirementError{}
-
-func (*DuplicateEntitlementRequirementError) isSemanticError() {}
-
-func (*DuplicateEntitlementRequirementError) IsUserError() {}
-
-func (e *DuplicateEntitlementRequirementError) Error() string {
-	return fmt.Sprintf("entitlement %s is already required by this attachment", e.Entitlement.QualifiedString())
-}
-
-type DuplicateEntitlementProvidedError struct {
-	Entitlement *EntitlementType
-	ast.Range
-}
-
-var _ SemanticError = &DuplicateEntitlementProvidedError{}
-var _ errors.UserError = &DuplicateEntitlementProvidedError{}
-
-func (*DuplicateEntitlementProvidedError) isSemanticError() {}
-
-func (*DuplicateEntitlementProvidedError) IsUserError() {}
-
-func (e *DuplicateEntitlementProvidedError) Error() string {
-	return fmt.Sprintf("entitlement %s is already provided to this attachment", e.Entitlement.QualifiedString())
-}
-
-// InvalidNonEntitlementRequirement
-type InvalidNonEntitlementRequirement struct {
-	InvalidType Type
-	ast.Range
-}
-
-var _ SemanticError = &InvalidNonEntitlementRequirement{}
-var _ errors.UserError = &InvalidNonEntitlementRequirement{}
-
-func (*InvalidNonEntitlementRequirement) isSemanticError() {}
-
-func (*InvalidNonEntitlementRequirement) IsUserError() {}
-
-func (e *InvalidNonEntitlementRequirement) Error() string {
-	return fmt.Sprintf("cannot use %s as an entitlement requirement", e.InvalidType.QualifiedString())
-}
-
-// InvalidNonEntitlementRequirement
-type InvalidNonEntitlementProvidedError struct {
-	InvalidType Type
-	ast.Range
-}
-
-var _ SemanticError = &InvalidNonEntitlementProvidedError{}
-var _ errors.UserError = &InvalidNonEntitlementProvidedError{}
-
-func (*InvalidNonEntitlementProvidedError) isSemanticError() {}
-
-func (*InvalidNonEntitlementProvidedError) IsUserError() {}
-
-func (e *InvalidNonEntitlementProvidedError) Error() string {
-	return fmt.Sprintf("cannot provide %s as an entitlement to this attachment", e.InvalidType.QualifiedString())
-}
-
-// InvalidNonEntitlementRequirement
-type RequiredEntitlementNotProvidedError struct {
-	RequiredEntitlement *EntitlementType
-	AttachmentType      *CompositeType
-	ast.Range
-}
-
-var _ SemanticError = &RequiredEntitlementNotProvidedError{}
-var _ errors.UserError = &RequiredEntitlementNotProvidedError{}
-
-func (*RequiredEntitlementNotProvidedError) isSemanticError() {}
-
-func (*RequiredEntitlementNotProvidedError) IsUserError() {}
-
-func (e *RequiredEntitlementNotProvidedError) Error() string {
-	return fmt.Sprintf(
-		"attachment type `%s` requires entitlement `%s` to be provided when attaching",
-		e.AttachmentType.QualifiedString(),
-		e.RequiredEntitlement.QualifiedString(),
-	)
-}
-
 // InvalidBaseTypeError
 
 type InvalidBaseTypeError struct {
@@ -4647,10 +4583,10 @@ func (e *AttachmentsNotEnabledError) Error() string {
 
 // InvalidAttachmentEntitlementError
 type InvalidAttachmentEntitlementError struct {
-	Attachment               *CompositeType
-	AttachmentAccessModifier Access
-	InvalidEntitlement       *EntitlementType
-	Pos                      ast.Position
+	Attachment         *CompositeType
+	BaseType           Type
+	InvalidEntitlement *EntitlementType
+	Pos                ast.Position
 }
 
 var _ SemanticError = &InvalidAttachmentEntitlementError{}
@@ -4672,15 +4608,10 @@ func (e *InvalidAttachmentEntitlementError) Error() string {
 }
 
 func (e *InvalidAttachmentEntitlementError) SecondaryError() string {
-	switch access := e.AttachmentAccessModifier.(type) {
-	case PrimitiveAccess:
-		return "attachments declared with `access(all)` access do not support entitlements on their members"
-	case *EntitlementMapAccess:
-		return fmt.Sprintf("`%s` must appear in the output of the entitlement mapping `%s`",
-			e.InvalidEntitlement.QualifiedIdentifier(),
-			access.Type.QualifiedIdentifier())
-	}
-	return ""
+	return fmt.Sprintf("`%s` must appear in the base type `%s`",
+		e.InvalidEntitlement.QualifiedIdentifier(),
+		e.BaseType.String(),
+	)
 }
 
 func (e *InvalidAttachmentEntitlementError) StartPosition() ast.Position {
