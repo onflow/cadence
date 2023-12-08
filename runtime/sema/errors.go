@@ -4694,3 +4694,20 @@ func (*InvalidTypeParameterizedNonNativeFunctionError) IsUserError() {}
 func (e *InvalidTypeParameterizedNonNativeFunctionError) Error() string {
 	return "invalid type parameters in non-native function"
 }
+
+// NestedReferenceError
+type NestedReferenceError struct {
+	Type *ReferenceType
+	ast.Range
+}
+
+var _ SemanticError = &NestedReferenceError{}
+var _ errors.UserError = &NestedReferenceError{}
+
+func (*NestedReferenceError) isSemanticError() {}
+
+func (*NestedReferenceError) IsUserError() {}
+
+func (e *NestedReferenceError) Error() string {
+	return fmt.Sprintf("cannot create a nested reference to value of type %s", e.Type.QualifiedString())
+}
