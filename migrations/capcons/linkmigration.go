@@ -135,7 +135,9 @@ func (m *LinkMigration) Migrate(
 
 	switch target := target.(type) {
 	case nil:
-		reporter.MissingTarget(addressPath)
+		if reporter != nil {
+			reporter.MissingTarget(addressPath)
+		}
 
 		// TODO: really leave as-is? or still convert?
 		return nil
