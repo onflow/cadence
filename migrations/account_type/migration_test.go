@@ -342,6 +342,8 @@ func TestTypeValueMigration(t *testing.T) {
 		NewAccountTypeMigration(),
 	)
 
+	migration.Commit()
+
 	// Check reported migrated paths
 	for identifier, test := range testCases {
 		addressPath := interpreter.AddressPath{
@@ -650,6 +652,8 @@ func TestNestedTypeValueMigration(t *testing.T) {
 		NewAccountTypeMigration(),
 	)
 
+	migration.Commit()
+
 	// Assert: Traverse through the storage and see if the values are updated now.
 
 	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
@@ -760,6 +764,8 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 		nil,
 		NewAccountTypeMigration(),
 	)
+
+	migration.Commit()
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 

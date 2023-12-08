@@ -444,7 +444,6 @@ func testPathCapabilityValueMigration(
 			Reporter:           reporter,
 		},
 	)
-	require.NoError(t, err)
 
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
@@ -458,7 +457,8 @@ func testPathCapabilityValueMigration(
 			Reporter:      reporter,
 		},
 	)
-	require.NoError(t, err)
+
+	migration.Commit()
 
 	// Check migrated capabilities
 
@@ -1172,7 +1172,8 @@ func testLinkMigration(
 			Reporter:           reporter,
 		},
 	)
-	require.NoError(t, err)
+
+	migration.Commit()
 
 	// Assert
 

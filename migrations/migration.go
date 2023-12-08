@@ -66,7 +66,9 @@ func (m *StorageMigration) Migrate(
 			migrations,
 		)
 	}
+}
 
+func (m *StorageMigration) Commit() {
 	err := m.storage.Commit(m.interpreter, false)
 	if err != nil {
 		panic(err)
