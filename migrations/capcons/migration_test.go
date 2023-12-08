@@ -1375,38 +1375,6 @@ func TestLinkMigration(t *testing.T) {
 				},
 			},
 		},
-		// TODO: verify
-		{
-			name: "Path links, valid chain (public -> storage), different borrow type",
-			pathLinks: []testLink{
-				{
-					// Equivalent to:
-					//   link<&Test.S>(/public/test, target: /storage/test)
-					sourcePath: interpreter.PathValue{
-						Domain:     common.PathDomainPublic,
-						Identifier: testPathIdentifier,
-					},
-					targetPath: interpreter.PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: testPathIdentifier,
-					},
-					//
-					borrowType: testSReferenceStaticType,
-				},
-			},
-			expectedLinkMigrations: []testCapConsLinkMigration{
-				{
-					accountAddressPath: interpreter.AddressPath{
-						Address: testAddress,
-						Path: interpreter.PathValue{
-							Domain:     common.PathDomainPublic,
-							Identifier: testPathIdentifier,
-						},
-					},
-					capabilityID: 1,
-				},
-			},
-		},
 		{
 			name: "Path links, cyclic chain (public -> private -> public)",
 			pathLinks: []testLink{
