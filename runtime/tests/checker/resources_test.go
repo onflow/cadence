@@ -9800,7 +9800,7 @@ func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
 	})
 }
 
-func TestInterpretIfLetElseBranchConfusion(t *testing.T) {
+func TestCheckIfLetElseBranchConfusion(t *testing.T) {
 
 	t.Parallel()
 
@@ -9828,7 +9828,7 @@ func TestInterpretIfLetElseBranchConfusion(t *testing.T) {
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
 
-func TestInterpretOptionalBindingElseBranch(t *testing.T) {
+func TestCheckOptionalBindingElseBranch(t *testing.T) {
 
 	t.Parallel()
 

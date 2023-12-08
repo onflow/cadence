@@ -4174,120 +4174,17 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("required entitlements", func(t *testing.T) {
+	t.Run("required entitlements error", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseDeclarations(`access(all) attachment E for S {
+		_, errs := testParseDeclarations(`access(all) attachment E for S {
 			require entitlement X
-			require entitlement Y
-		}`)
-		require.Empty(t, errs)
-
-		utils.AssertEqualWithDiff(t,
-			[]ast.Declaration{
-				&ast.AttachmentDeclaration{
-					Access: ast.AccessAll,
-					Identifier: ast.Identifier{
-						Identifier: "E",
-						Pos: ast.Position{
-							Offset: 23,
-							Line:   1,
-							Column: 23,
-						},
-					},
-					BaseType: &ast.NominalType{
-						Identifier: ast.Identifier{
-							Identifier: "S",
-							Pos: ast.Position{
-								Offset: 29,
-								Line:   1,
-								Column: 29,
-							},
-						},
-					},
-					RequiredEntitlements: []*ast.NominalType{
-						{
-							Identifier: ast.Identifier{
-								Identifier: "X",
-								Pos: ast.Position{
-									Offset: 56,
-									Line:   2,
-									Column: 23,
-								},
-							},
-						},
-						{
-							Identifier: ast.Identifier{
-								Identifier: "Y",
-								Pos: ast.Position{
-									Offset: 81,
-									Line:   3,
-									Column: 23,
-								},
-							},
-						},
-					},
-					Members: ast.NewUnmeteredMembers(nil),
-					Range: ast.Range{
-						StartPos: ast.Position{
-							Offset: 0,
-							Line:   1,
-							Column: 0,
-						},
-						EndPos: ast.Position{
-							Offset: 85,
-							Line:   4,
-							Column: 2,
-						},
-					},
-				},
-			},
-			result,
-		)
-	})
-
-	t.Run("required entitlements error no identifier", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, errs := testParseDeclarations(`access(all) attachment E for S {
-			require entitlement 
 		}`)
 		utils.AssertEqualWithDiff(t, []error{
 			&SyntaxError{
-				Pos:     ast.Position{Line: 3, Column: 3, Offset: 60},
-				Message: "unexpected token in type: '}'",
-			},
-		}, errs)
-	})
-
-	t.Run("required entitlements error no entitlement", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, errs := testParseDeclarations(`access(all) attachment E for S {
-			require X 
-		}`)
-		utils.AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 2, Column: 11, Offset: 44},
-				Message: "expected 'entitlement', got identifier",
-			},
-		}, errs)
-	})
-
-	t.Run("required entitlements error non-nominal type", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, errs := testParseDeclarations(`access(all) attachment E for S {
-			require entitlement [X]
-		}`)
-		utils.AssertEqualWithDiff(t, []error{
-			&SyntaxError{
-				Pos:     ast.Position{Line: 2, Column: 26, Offset: 59},
-				Message: "unexpected non-nominal type: [X]",
+				Pos:     ast.Position{Line: 2, Column: 3, Offset: 36},
+				Message: "unexpected identifier",
 			},
 		}, errs)
 	})

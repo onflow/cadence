@@ -32,6 +32,7 @@ import (
 
 type Access interface {
 	isAccess()
+	IsPrimitiveAccess() bool
 	ID() TypeID
 	String() string
 	QualifiedString() string
@@ -72,7 +73,25 @@ func NewEntitlementSetAccess(
 	}
 }
 
+func NewAccessFromEntitlementSet(
+	set *EntitlementOrderedSet,
+	setKind EntitlementSetKind,
+) Access {
+	if set.Len() == 0 {
+		return UnauthorizedAccess
+	}
+
+	return EntitlementSetAccess{
+		Entitlements: set,
+		SetKind:      setKind,
+	}
+}
+
 func (EntitlementSetAccess) isAccess() {}
+
+func (EntitlementSetAccess) IsPrimitiveAccess() bool {
+	return false
+}
 
 func (e EntitlementSetAccess) ID() TypeID {
 	entitlementTypeIDs := make([]TypeID, 0, e.Entitlements.Len())
@@ -266,6 +285,10 @@ func NewEntitlementMapAccess(mapType *EntitlementMapType) *EntitlementMapAccess 
 
 func (*EntitlementMapAccess) isAccess() {}
 
+func (*EntitlementMapAccess) IsPrimitiveAccess() bool {
+	return false
+}
+
 func (e *EntitlementMapAccess) ID() TypeID {
 	return e.Type.ID()
 }
@@ -434,6 +457,10 @@ type PrimitiveAccess ast.PrimitiveAccess
 var _ Access = PrimitiveAccess(0)
 
 func (PrimitiveAccess) isAccess() {}
+
+func (PrimitiveAccess) IsPrimitiveAccess() bool {
+	return true
+}
 
 func (PrimitiveAccess) ID() TypeID {
 	panic(errors.NewUnreachableError())
