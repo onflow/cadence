@@ -437,12 +437,14 @@ func testPathCapabilityValueMigration(
 				testAddress,
 			},
 		},
-		nil,
-		&LinkValueMigration{
-			CapabilityIDs:      capabilityIDs,
-			AccountIDGenerator: &testAccountIDGenerator{},
-			Reporter:           reporter,
-		},
+		migration.NewValueMigrationsPathMigrator(
+			nil,
+			&LinkValueMigration{
+				CapabilityIDs:      capabilityIDs,
+				AccountIDGenerator: &testAccountIDGenerator{},
+				Reporter:           reporter,
+			},
+		),
 	)
 
 	migration.Migrate(
@@ -451,11 +453,13 @@ func testPathCapabilityValueMigration(
 				testAddress,
 			},
 		},
-		nil,
-		&CapabilityValueMigration{
-			CapabilityIDs: capabilityIDs,
-			Reporter:      reporter,
-		},
+		migration.NewValueMigrationsPathMigrator(
+			nil,
+			&CapabilityValueMigration{
+				CapabilityIDs: capabilityIDs,
+				Reporter:      reporter,
+			},
+		),
 	)
 
 	migration.Commit()
@@ -1165,12 +1169,14 @@ func testLinkMigration(
 				testAddress,
 			},
 		},
-		nil,
-		&LinkValueMigration{
-			CapabilityIDs:      capabilityIDs,
-			AccountIDGenerator: &testAccountIDGenerator{},
-			Reporter:           reporter,
-		},
+		migration.NewValueMigrationsPathMigrator(
+			nil,
+			&LinkValueMigration{
+				CapabilityIDs:      capabilityIDs,
+				AccountIDGenerator: &testAccountIDGenerator{},
+				Reporter:           reporter,
+			},
+		),
 	)
 
 	migration.Commit()

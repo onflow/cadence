@@ -170,9 +170,11 @@ func TestMultipleMigrations(t *testing.T) {
 				account,
 			},
 		},
-		reporter,
-		testStringMigration{},
-		testInt8Migration{},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testStringMigration{},
+			testInt8Migration{},
+		),
 	)
 
 	migration.Commit()

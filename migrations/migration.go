@@ -34,6 +34,13 @@ type ValueMigration interface {
 	) (newValue interpreter.Value)
 }
 
+type DomainMigration interface {
+	Name() string
+	Migrate(
+		addressPath interpreter.AddressPath,
+	)
+}
+
 type StorageMigration struct {
 	storage     *runtime.Storage
 	interpreter *interpreter.Interpreter
@@ -51,8 +58,7 @@ func NewStorageMigration(
 
 func (m *StorageMigration) Migrate(
 	addressIterator AddressIterator,
-	reporter Reporter,
-	migrations ...ValueMigration,
+	migratePath PathMigrator,
 ) {
 	for {
 		address := addressIterator.NextAddress()
@@ -60,11 +66,7 @@ func (m *StorageMigration) Migrate(
 			break
 		}
 
-		m.migrateValuesInAccount(
-			address,
-			reporter,
-			migrations,
-		)
+		m.MigrateAccount(address, migratePath)
 	}
 }
 
@@ -75,30 +77,32 @@ func (m *StorageMigration) Commit() {
 	}
 }
 
-func (m *StorageMigration) migrateValuesInAccount(
+func (m *StorageMigration) MigrateAccount(
 	address common.Address,
-	reporter Reporter,
-	valueMigrations []ValueMigration,
+	migratePath PathMigrator,
 ) {
-
 	accountStorage := NewAccountStorage(m.storage, address)
 
-	migrateValue := func(
-		addressPath interpreter.AddressPath,
-		value interpreter.Value,
-	) interpreter.Value {
-		return m.migrateNestedValue(
-			addressPath,
-			value,
-			valueMigrations,
-			reporter,
-		)
-	}
-
-	accountStorage.ForEachValue(
+	accountStorage.MigratePathsInDomains(
 		m.interpreter,
 		common.AllPathDomains,
-		migrateValue,
+		migratePath,
+	)
+}
+
+func (m *StorageMigration) NewValueMigrationsPathMigrator(
+	reporter Reporter,
+	valueMigrations ...ValueMigration,
+) PathMigrator {
+	return NewValueConverterPathMigrator(
+		func(addressPath interpreter.AddressPath, value interpreter.Value) interpreter.Value {
+			return m.migrateNestedValue(
+				addressPath,
+				value,
+				valueMigrations,
+				reporter,
+			)
+		},
 	)
 }
 

@@ -37,61 +37,92 @@ func NewAccountStorage(storage *runtime.Storage, address common.Address) Account
 	}
 }
 
+type PathMigrator func(
+	inter *interpreter.Interpreter,
+	storageMap *interpreter.StorageMap,
+	storageKey interpreter.StringStorageMapKey,
+	addressPath interpreter.AddressPath,
+)
+
 type ValueConverter func(
 	addressPath interpreter.AddressPath,
 	value interpreter.Value,
 ) interpreter.Value
 
-// ForEachValue iterates over the values in the account.
-// The `valueConverter takes a function to be applied to each value.
-// It returns the converted, if a new value was created during conversion.
-func (i *AccountStorage) ForEachValue(
-	inter *interpreter.Interpreter,
-	domains []common.PathDomain,
-	valueConverter ValueConverter,
-) {
-	for _, domain := range domains {
-		storageMap := i.storage.GetStorageMap(i.address, domain.Identifier(), false)
-		if storageMap == nil || storageMap.Count() == 0 {
-			continue
-		}
+func NewValueConverterPathMigrator(convertValue ValueConverter) PathMigrator {
+	return func(
+		inter *interpreter.Interpreter,
+		storageMap *interpreter.StorageMap,
+		storageKey interpreter.StringStorageMapKey,
+		addressPath interpreter.AddressPath,
+	) {
+		value := storageMap.ReadValue(nil, storageKey)
 
-		iterator := storageMap.Iterator(inter)
-
-		// Read the keys first, so the iteration wouldn't be affected
-		// by the modification of the storage values.
-		var keys []string
-		for key, _ := iterator.Next(); key != nil; key, _ = iterator.Next() {
-			identifier := string(key.(interpreter.StringAtreeValue))
-			keys = append(keys, identifier)
-		}
-
-		for _, key := range keys {
-			storageKey := interpreter.StringStorageMapKey(key)
-
-			path := interpreter.PathValue{
-				Identifier: key,
-				Domain:     domain,
-			}
-
-			addressPath := interpreter.AddressPath{
-				Address: i.address,
-				Path:    path,
-			}
-
-			value := storageMap.ReadValue(nil, storageKey)
-
-			newValue := valueConverter(addressPath, value)
-			if newValue == nil {
-				continue
-			}
-
-			// If the converter returns a new value, then replace the existing value with the new one.
+		newValue := convertValue(addressPath, value)
+		if newValue != nil {
+			// If the converter returns a new value,
+			// then replace the existing value with the new one.
 			storageMap.SetValue(
 				inter,
 				storageKey,
 				newValue,
 			)
 		}
+	}
+}
+
+func (i *AccountStorage) MigratePathsInDomain(
+	inter *interpreter.Interpreter,
+	domain common.PathDomain,
+	migratePath PathMigrator,
+) {
+	storageMap := i.storage.GetStorageMap(i.address, domain.Identifier(), false)
+	if storageMap == nil || storageMap.Count() == 0 {
+		return
+	}
+
+	iterator := storageMap.Iterator(inter)
+
+	// Read the keys first, so the iteration wouldn't be affected
+	// by the modification of the storage values.
+	var keys []string
+	for key, _ := iterator.Next(); key != nil; key, _ = iterator.Next() {
+		identifier := string(key.(interpreter.StringAtreeValue))
+		keys = append(keys, identifier)
+	}
+
+	for _, key := range keys {
+		storageKey := interpreter.StringStorageMapKey(key)
+
+		path := interpreter.PathValue{
+			Identifier: key,
+			Domain:     domain,
+		}
+
+		addressPath := interpreter.AddressPath{
+			Address: i.address,
+			Path:    path,
+		}
+
+		migratePath(
+			inter,
+			storageMap,
+			storageKey,
+			addressPath,
+		)
+	}
+}
+
+func (i *AccountStorage) MigratePathsInDomains(
+	inter *interpreter.Interpreter,
+	domains []common.PathDomain,
+	migratePath PathMigrator,
+) {
+	for _, domain := range domains {
+		i.MigratePathsInDomain(
+			inter,
+			domain,
+			migratePath,
+		)
 	}
 }
