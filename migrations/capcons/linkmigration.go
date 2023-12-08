@@ -45,11 +45,11 @@ type LinkMigration struct {
 	Reporter           LinkMigrationReporter
 }
 
+var _ migrations.Migration = &LinkMigration{}
+
 func (*LinkMigration) Name() string {
 	return "LinkMigration"
 }
-
-var _ migrations.Migration = &LinkMigration{}
 
 func (m *LinkMigration) Migrate(
 	addressPath interpreter.AddressPath,
