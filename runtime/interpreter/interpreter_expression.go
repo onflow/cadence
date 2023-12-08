@@ -357,7 +357,45 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 }
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
-	return ast.AcceptExpression[Value](expression, interpreter)
+	result := ast.AcceptExpression[Value](expression, interpreter)
+	interpreter.checkInvalidatedResourceOrResourceReference(result, expression)
+	return result
+}
+
+func (interpreter *Interpreter) checkInvalidatedResourceOrResourceReference(value Value, hasPosition ast.HasPosition) {
+	// Unwrap SomeValue, to access references wrapped inside optionals.
+	someValue, isSomeValue := value.(*SomeValue)
+	for isSomeValue && someValue.value != nil {
+		value = someValue.value
+		someValue, isSomeValue = value.(*SomeValue)
+	}
+
+	switch value := value.(type) {
+	case ResourceKindedValue:
+		if value.isInvalidatedResource(interpreter) {
+			panic(InvalidatedResourceError{
+				LocationRange: LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: hasPosition,
+				},
+			})
+		}
+	case *EphemeralReferenceValue:
+		if value.Value == nil {
+			panic(InvalidatedResourceReferenceError{
+				LocationRange: LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: hasPosition,
+				},
+			})
+		} else {
+			// If the value is there, check whether the referenced value is an invalidated one.
+			// This step is not really needed, since reference tracking is supposed to clear the
+			// `value.Value` if the referenced-value was moved/deleted.
+			// However, have this as a second layer of defensive.
+			interpreter.checkInvalidatedResourceOrResourceReference(value.Value, hasPosition)
+		}
+	}
 }
 
 func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) Value {
@@ -1036,15 +1074,6 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		panic(errors.NewUnreachableError())
 	}
 
-	// Bound functions
-	if boundFunction, ok := function.(BoundFunctionValue); ok && boundFunction.Self != nil {
-		self := *boundFunction.Self
-		// Explicitly track the reference here, because the receiver 'act' as a reference,
-		// but a reference is never created during bound function invocation.
-		// This was a fix to the issue: https://github.com/onflow/cadence/pull/2561
-		interpreter.maybeTrackReferencedResourceKindedValue(self)
-	}
-
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body
 
 	var argumentExpressions []ast.Expression
@@ -1341,14 +1370,17 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	case *sema.ReferenceType:
 		// Case (3): target type is non-optional, actual value is optional.
-		// Unwrap the optional and add it to reference tracking.
+		// This path shouldn't be reachable. This is only a defensive step
+		// to ensure references are properly created/tracked.
 		if someValue, ok := result.(*SomeValue); ok {
 			locationRange := LocationRange{
 				Location:    interpreter.Location,
 				HasPosition: referenceExpression.Expression,
 			}
 			innerValue := someValue.InnerValue(interpreter, locationRange)
-			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
+
+			auth := interpreter.getEffectiveAuthorization(typ)
+			return NewEphemeralReferenceValue(interpreter, auth, innerValue, typ.Type, locationRange)
 		}
 
 		// Case (4): target type is non-optional, actual value is also non-optional

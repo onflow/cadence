@@ -217,7 +217,7 @@ type Storage interface {
 	CheckHealth() error
 }
 
-type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
+type ReferencedResourceKindedValues map[atree.StorageID]map[*EphemeralReferenceValue]struct{}
 
 type Interpreter struct {
 	Location     common.Location
@@ -4979,41 +4979,6 @@ func (interpreter *Interpreter) checkContainerMutation(
 	}
 }
 
-func (interpreter *Interpreter) checkReferencedResourceNotDestroyed(value Value, locationRange LocationRange) {
-	resourceKindedValue, ok := value.(ResourceKindedValue)
-	if !ok || !resourceKindedValue.IsDestroyed() {
-		return
-	}
-
-	panic(DestroyedResourceError{
-		LocationRange: locationRange,
-	})
-}
-
-func (interpreter *Interpreter) checkReferencedResourceNotMovedOrDestroyed(
-	referencedValue Value,
-	locationRange LocationRange,
-) {
-
-	// First check if the referencedValue is a resource.
-	// This is to handle optionals, since optionals does not
-	// belong to `ReferenceTrackedResourceKindedValue`
-
-	resourceKindedValue, ok := referencedValue.(ResourceKindedValue)
-	if ok && resourceKindedValue.IsDestroyed() {
-		panic(DestroyedResourceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	referenceTrackedResourceKindedValue, ok := referencedValue.(ReferenceTrackedResourceKindedValue)
-	if ok && referenceTrackedResourceKindedValue.IsStaleResource(interpreter) {
-		panic(InvalidatedResourceReferenceError{
-			LocationRange: locationRange,
-		})
-	}
-}
-
 func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	storageIDStorable, ok := storable.(atree.StorageIDStorable)
 	if !ok {
@@ -5173,23 +5138,26 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 }
 
 func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
-	if value, ok := value.(ReferenceTrackedResourceKindedValue); ok {
-		interpreter.trackReferencedResourceKindedValue(value.StorageID(), value)
+	if referenceValue, ok := value.(*EphemeralReferenceValue); ok {
+		if value, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue); ok {
+			interpreter.trackReferencedResourceKindedValue(value.StorageID(), referenceValue)
+		}
 	}
 }
 
 func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	id atree.StorageID,
-	value ReferenceTrackedResourceKindedValue,
+	value *EphemeralReferenceValue,
 ) {
 	values := interpreter.SharedState.referencedResourceKindedValues[id]
 	if values == nil {
-		values = map[ReferenceTrackedResourceKindedValue]struct{}{}
+		values = map[*EphemeralReferenceValue]struct{}{}
 		interpreter.SharedState.referencedResourceKindedValues[id] = values
 	}
 	values[value] = struct{}{}
 }
 
+// TODO: Remove the `destroyed` flag
 func (interpreter *Interpreter) invalidateReferencedResources(value Value, destroyed bool) {
 	// skip non-resource typed values
 	if !value.IsResourceKinded(interpreter) {
@@ -5232,19 +5200,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value, destr
 	}
 
 	for value := range values { //nolint:maprange
-		switch value := value.(type) {
-		case *CompositeValue:
-			value.dictionary = nil
-			value.isDestroyed = destroyed
-		case *DictionaryValue:
-			value.dictionary = nil
-			value.isDestroyed = destroyed
-		case *ArrayValue:
-			value.array = nil
-			value.isDestroyed = destroyed
-		default:
-			panic(errors.NewUnreachableError())
-		}
+		value.Value = nil
 	}
 
 	// The old resource instances are already cleared/invalidated above.
@@ -5295,6 +5251,7 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
+
 	if identifier == sema.SelfIdentifier {
 		return
 	}

@@ -5286,7 +5286,7 @@ func TestRuntimeDestroyedResourceReferenceExport(t *testing.T) {
 		},
 	)
 	require.Error(t, err)
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {

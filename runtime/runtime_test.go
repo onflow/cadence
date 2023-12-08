@@ -8270,7 +8270,7 @@ func TestRuntimeReturnDestroyedOptional(t *testing.T) {
 	)
 
 	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestRuntimeComputationMeteringError(t *testing.T) {
