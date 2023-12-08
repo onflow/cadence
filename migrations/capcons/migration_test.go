@@ -438,7 +438,7 @@ func testPathCapabilityValueMigration(
 			},
 		},
 		nil,
-		&LinkMigration{
+		&LinkValueMigration{
 			CapabilityIDs:      capabilityIDs,
 			AccountIDGenerator: &testAccountIDGenerator{},
 			Reporter:           reporter,
@@ -452,7 +452,7 @@ func testPathCapabilityValueMigration(
 			},
 		},
 		nil,
-		&CapabilityMigration{
+		&CapabilityValueMigration{
 			CapabilityIDs: capabilityIDs,
 			Reporter:      reporter,
 		},
@@ -1166,7 +1166,7 @@ func testLinkMigration(
 			},
 		},
 		nil,
-		&LinkMigration{
+		&LinkValueMigration{
 			CapabilityIDs:      capabilityIDs,
 			AccountIDGenerator: &testAccountIDGenerator{},
 			Reporter:           reporter,
