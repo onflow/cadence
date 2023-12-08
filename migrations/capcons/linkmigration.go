@@ -273,8 +273,13 @@ func (m *LinkMigration) getPathCapabilityFinalTarget(
 
 			case *interpreter.CapabilityValue:
 
-				// For backwards-compatibility, follow ID capability values
-				// which are published in the public or private domain
+				// Follow ID capability values which are published in the public or private domain.
+				// This is needed for two reasons:
+				// 1. Support for migrating path capabilities to ID capabilities was already enabled on Testnet
+				// 2. During the migration of a whole link chain,
+				//    the order of the migration of the individual links is undefined,
+				//    so it's possible that a capability value is encountered when determining the final target,
+				//    when a part of the full link chain was already previously migrated.
 
 				capabilityBorrowType, ok := inter.MustConvertStaticToSemaType(value.BorrowType).(*sema.ReferenceType)
 				if !ok {
