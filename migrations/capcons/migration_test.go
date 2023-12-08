@@ -714,7 +714,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				},
 			},
 		},
-		// TODO: verify
+		// NOTE: this migrates a broken capability to a broken capability
 		{
 			name: "Path links, valid chain (public -> storage), different borrow type",
 			// Equivalent to: getCapability<&Test.R>(/public/test)
