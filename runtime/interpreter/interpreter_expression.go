@@ -117,7 +117,26 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 	indexExpression *ast.IndexExpression,
 	locationRange LocationRange,
 ) getterSetter {
-	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
+
+	// Use getter/setter functions to evaluate the target expression,
+	// instead of evaluating it directly.
+	//
+	// In a swap statement, the left or right side may be an index expression,
+	// and the indexed type (type of the target expression) may be a resource type.
+	// In that case, the target expression must be considered as a nested resource move expression,
+	// i.e. needs to be temporarily moved out (get)
+	// and back in (set) after the index expression got evaluated.
+	//
+	// This is because the evaluation of the index expression
+	// should not be able to access/move the target resource.
+	//
+	// For example, if a side is `a.b[c()]`, then `a.b` is the target expression.
+	// If `a.b` is a resource, then `c()` should not be able to access/move it.
+
+	targetExpression := indexExpression.TargetExpression
+	targetGetterSetter := interpreter.assignmentGetterSetter(targetExpression, locationRange)
+	const allowMissing = false
+	target, ok := targetGetterSetter.get(allowMissing).(ValueIndexableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -140,6 +159,11 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 			HasPosition: indexExpression.IndexingExpression,
 		},
 	)
+
+	isTargetNestedResourceMove := elaboration.IsNestedResourceMoveExpression(targetExpression)
+	if isTargetNestedResourceMove {
+		targetGetterSetter.set(target)
+	}
 
 	// Normally, moves of nested resources (e.g `let r <- rs[0]`) are statically rejected.
 	//
