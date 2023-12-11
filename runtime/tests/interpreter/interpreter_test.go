@@ -12207,15 +12207,10 @@ func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
-		require.NoError(t, err)
+		RequireError(t, err)
 
-		events := getEvents()
-		require.Len(t, events, 3)
-		require.Equal(t, "Resource.ResourceDestroyed", events[0].event.QualifiedIdentifier)
-		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[0].event.GetField(inter, interpreter.EmptyLocationRange, "value"))
-		require.Equal(t, "Resource.ResourceDestroyed", events[1].event.QualifiedIdentifier)
-		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[1].event.GetField(inter, interpreter.EmptyLocationRange, "value"))
-		require.Equal(t, "Resource.ResourceDestroyed", events[2].event.QualifiedIdentifier)
-		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 3), events[2].event.GetField(inter, interpreter.EmptyLocationRange, "value"))
+		assert.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
+
+		require.Empty(t, getEvents())
 	})
 }
