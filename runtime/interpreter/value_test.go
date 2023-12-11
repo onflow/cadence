@@ -1118,11 +1118,13 @@ func TestStringer(t *testing.T) {
 					common.ZeroAddress,
 				)
 				arrayRef := NewUnmeteredEphemeralReferenceValue(
+					inter,
 					UnauthorizedAccess,
 					array,
 					&sema.VariableSizedType{
 						Type: sema.AnyStructType,
 					},
+					EmptyLocationRange,
 				)
 
 				array.Insert(inter, EmptyLocationRange, 0, arrayRef)
@@ -3852,22 +3854,26 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		t.Parallel()
 
 		test(
-			func(*Interpreter) Value {
+			func(inter *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
+					inter,
 					UnauthorizedAccess,
 					TrueValue,
 					sema.BoolType,
+					EmptyLocationRange,
 				)
 			},
 			true,
 		)
 
 		test(
-			func(*Interpreter) Value {
+			func(inter *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
+					inter,
 					UnauthorizedAccess,
 					TrueValue,
 					sema.StringType,
+					EmptyLocationRange,
 				)
 			},
 			false,

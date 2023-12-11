@@ -222,6 +222,27 @@ func TestRuntimeExportValue(t *testing.T) {
 			}),
 		},
 		{
+			label: "Array (non-empty) with HashableStruct",
+			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					&interpreter.VariableSizedStaticType{
+						Type: interpreter.PrimitiveStaticTypeHashableStruct,
+					},
+					common.ZeroAddress,
+					interpreter.NewUnmeteredIntValueFromInt64(42),
+					interpreter.NewUnmeteredStringValue("foo"),
+				)
+			},
+			expected: cadence.NewArray([]cadence.Value{
+				cadence.NewInt(42),
+				cadence.String("foo"),
+			}).WithType(&cadence.VariableSizedArrayType{
+				ElementType: cadence.HashableStructType,
+			}),
+		},
+		{
 			label: "Dictionary",
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
 				return interpreter.NewDictionaryValue(
@@ -903,6 +924,11 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 			label:    "AnyStruct",
 			actual:   cadence.AnyStructType,
 			expected: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		{
+			label:    "HashableStruct",
+			actual:   cadence.HashableStructType,
+			expected: interpreter.PrimitiveStaticTypeHashableStruct,
 		},
 		{
 			label:    "AnyResource",
@@ -2781,6 +2807,10 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 					Identifier: "j",
 					Type:       cadence.AnyStructType,
 				},
+				{
+					Identifier: "k",
+					Type:       cadence.HashableStructType,
+				},
 			},
 		},
 
@@ -2825,6 +2855,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 				Identifier: "foo",
 			},
 			cadence.String("foo"),
+			cadence.String("foo"),
 		},
 	}
 
@@ -2850,6 +2881,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
               access(all) var h: PublicPath
               access(all) var i: PrivatePath
               access(all) var j: AnyStruct
+              access(all) var k: HashableStruct
 
               init() {
                   self.a = "Hello"
@@ -2862,6 +2894,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
                   self.h = /public/foo
                   self.i = /private/foo
                   self.j = nil
+                  self.k = "hashable_struct_value"
               }
           }
         `,
@@ -2976,6 +3009,114 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
                   self.e = /storage/foo
               }
         }
+        `,
+		"Foo",
+	)
+
+	actual, err := executeTestScript(t, script, complexStructValue)
+	require.NoError(t, err)
+
+	assert.Equal(t, complexStructValue, actual)
+}
+
+func TestRuntimeComplexStructWithHashableStructFields(t *testing.T) {
+
+	t.Parallel()
+
+	// Complex struct value
+	complexStructValue := cadence.Struct{
+		StructType: &cadence.StructType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type: &cadence.OptionalType{
+						Type: cadence.HashableStructType,
+					},
+				},
+				{
+					Identifier: "b",
+					Type: &cadence.DictionaryType{
+						KeyType:     cadence.StringType,
+						ElementType: cadence.HashableStructType,
+					},
+				},
+				{
+					Identifier: "c",
+					Type: &cadence.VariableSizedArrayType{
+						ElementType: cadence.HashableStructType,
+					},
+				},
+				{
+					Identifier: "d",
+					Type: &cadence.ConstantSizedArrayType{
+						ElementType: cadence.HashableStructType,
+						Size:        2,
+					},
+				},
+				{
+					Identifier: "e",
+					Type:       cadence.HashableStructType,
+				},
+			},
+		},
+
+		Fields: []cadence.Value{
+			cadence.NewOptional(cadence.String("John")),
+			cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.String("name"),
+					Value: cadence.String("Doe"),
+				},
+			}).WithType(&cadence.DictionaryType{
+				KeyType:     cadence.StringType,
+				ElementType: cadence.HashableStructType,
+			}),
+			cadence.NewArray([]cadence.Value{
+				cadence.String("foo"),
+				cadence.String("bar"),
+			}).WithType(&cadence.VariableSizedArrayType{
+				ElementType: cadence.HashableStructType,
+			}),
+			cadence.NewArray([]cadence.Value{
+				cadence.String("foo"),
+				cadence.String("bar"),
+			}).WithType(&cadence.ConstantSizedArrayType{
+				ElementType: cadence.HashableStructType,
+				Size:        2,
+			}),
+			cadence.Path{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
+		},
+	}
+
+	script := fmt.Sprintf(
+		`
+          access(all) fun main(arg: %[1]s): %[1]s {
+              if !arg.isInstance(Type<%[1]s>()) {
+                  panic("Not a %[1]s value")
+              }
+              return arg
+          }
+
+          access(all) struct Foo {
+            access(all) var a: HashableStruct?
+            access(all) var b: {String: HashableStruct}
+            access(all) var c: [HashableStruct]
+            access(all) var d: [HashableStruct; 2]
+            access(all) var e: HashableStruct
+
+            init() {
+              self.a = "Hello"
+              self.b = {}
+              self.c = []
+              self.d = ["foo", "bar"]
+              self.e = /storage/foo
+            }
+          }
         `,
 		"Foo",
 	)
@@ -3704,7 +3845,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 					KeyType: interpreter.PrimitiveStaticTypeString,
 					ValueType: &interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
-						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+						ValueType: interpreter.PrimitiveStaticTypeHashableStruct,
 					},
 				},
 
@@ -3714,7 +3855,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 					interpreter.EmptyLocationRange,
 					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeInt8,
-						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+						ValueType: interpreter.PrimitiveStaticTypeHashableStruct,
 					},
 					interpreter.NewUnmeteredInt8Value(1), interpreter.NewUnmeteredIntValueFromInt64(100),
 					interpreter.NewUnmeteredInt8Value(2), interpreter.NewUnmeteredStringValue("hello"),
@@ -3726,7 +3867,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 					interpreter.EmptyLocationRange,
 					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
-						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+						ValueType: interpreter.PrimitiveStaticTypeHashableStruct,
 					},
 					interpreter.NewUnmeteredInt8Value(1), interpreter.NewUnmeteredStringValue("foo"),
 					interpreter.NewUnmeteredIntValueFromInt64(2), interpreter.NewUnmeteredIntValueFromInt64(50),
@@ -3739,52 +3880,47 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 	t.Run("import dictionary with heterogeneous keys", func(t *testing.T) {
 		t.Parallel()
 
-		script :=
-			`access(all) fun main(arg: Foo) {
-            }
+		dictionaryWithHeterogenousKeys := cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key:   cadence.String("foo"),
+				Value: cadence.String("value1"),
+			},
+			{
+				Key:   cadence.NewInt(5),
+				Value: cadence.String("value2"),
+			},
+		})
 
-            access(all) struct Foo {
-                access(all) var a: AnyStruct
+		inter := NewTestInterpreter(t)
 
-                init() {
-                    self.a = nil
-                }
-            }`
+		actual, err := ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			dictionaryWithHeterogenousKeys,
+			sema.AnyStructType,
+		)
+		require.NoError(t, err)
 
-		// Struct with nested malformed dictionary value
-		malformedStruct := cadence.Struct{
-			StructType: &cadence.StructType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Foo",
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type:       cadence.AnyStructType,
-					},
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewDictionaryValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.DictionaryStaticType{
+					KeyType:   interpreter.PrimitiveStaticTypeHashableStruct,
+					ValueType: interpreter.PrimitiveStaticTypeString,
 				},
-			},
-			Fields: []cadence.Value{
-				cadence.NewDictionary([]cadence.KeyValuePair{
-					{
-						Key:   cadence.String("foo"),
-						Value: cadence.String("value1"),
-					},
-					{
-						Key:   cadence.NewInt(5),
-						Value: cadence.String("value2"),
-					},
-				}),
-			},
-		}
 
-		_, err := executeTestScript(t, script, malformedStruct)
-		RequireError(t, err)
-		assertUserError(t, err)
+				interpreter.NewUnmeteredStringValue("foo"),
+				interpreter.NewUnmeteredStringValue("value1"),
 
-		var argErr *InvalidEntryPointArgumentError
-		require.ErrorAs(t, err, &argErr)
-
-		assert.Contains(t, argErr.Error(), "cannot import dictionary: keys does not belong to the same type")
+				interpreter.NewIntValueFromInt64(nil, 5),
+				interpreter.NewUnmeteredStringValue("value2"),
+			),
+			actual,
+		)
 	})
 
 	t.Run("nested dictionary with mismatching element", func(t *testing.T) {
@@ -5150,7 +5286,7 @@ func TestRuntimeDestroyedResourceReferenceExport(t *testing.T) {
 		},
 	)
 	require.Error(t, err)
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {

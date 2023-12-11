@@ -9417,3 +9417,445 @@ func TestCheckInvalidResourceDestructionInFunction(t *testing.T) {
 
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }
+
+func TestCheckInvalidationInCondition(t *testing.T) {
+
+	t.Parallel()
+
+	testKind := func(kind ast.ConditionKind) {
+		t.Run(kind.Name(), func(t *testing.T) {
+
+			t.Parallel()
+
+			t.Run("global function", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      fun drop(_ r: @R): Bool {
+                          destroy r
+                          return true
+                      }
+
+                      fun test(_ r: @R) {
+                          %s {
+                              drop(<-r)
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.PurityError{}, errs[0])
+			})
+
+			t.Run("in composite", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      fun drop(_ r: @R): Bool {
+                          destroy r
+                          return true
+                      }
+
+                      struct S {
+                          fun test(_ r: @R) {
+                              %s {
+                                  drop(<-r)
+                              }
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.PurityError{}, errs[0])
+			})
+
+			t.Run("in interface, definite invalidation", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      fun drop(_ r: @R): Bool {
+                          destroy r
+                          return true
+                      }
+
+                      struct interface S {
+                          fun test(_ r: @R) {
+                              %s {
+                                  drop(<-r)
+                              }
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+
+				errs := RequireCheckerErrors(t, err, 2)
+				assert.IsType(t, &sema.PurityError{}, errs[0])
+				assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[1])
+			})
+
+			t.Run("in interface, temporary invalidation", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      struct interface SI {
+                          fun drop(_ r: @R) {
+                              %s {
+                                  r.isInstance(Type<@R>())
+                              }
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+				require.NoError(t, err)
+			})
+		})
+	}
+
+	for kind := ast.ConditionKindUnknown + 1; int(kind) < ast.ConditionKindCount(); kind++ {
+		testKind(kind)
+	}
+}
+
+func TestCheckBoundFunctionToResource(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+
+                let bypass = fun(x: (fun(): Void)): (fun(): Void) {
+                    return x
+                }
+
+                // This is forbidden (ResourceMethodBindingError):
+                //    var f = r.sayHi
+                // Passing to a function invocation as an argument should also be forbidden
+                var f = bypass(r.sayHi)
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+	})
+
+	t.Run("nested invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+
+                let bypass = fun(x: (fun(): Void)): (fun(): (fun(): Void)) {
+                    return fun(): (fun(): Void) {
+                        return x
+                    }
+                }
+
+                // This is forbidden (ResourceMethodBindingError):
+                //    var f = r.sayHi
+                // Passing to a function invocation as an argument should also be forbidden
+                var f = bypass(r.sayHi)()
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+	})
+
+	t.Run("nested valid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+
+                let bypass = fun(x: Void): (fun(): Void) {
+                    return fun(): Void {
+                        return x
+                    }
+                }
+
+                // It's okay to use in an argument, as long as it's another invocation.
+                bypass(r.sayHi())()
+
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("inside index expr", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var array: [(fun(): Void)] = []
+
+                let bypass = fun(x: (fun(): Void)): Int {
+                    return 0
+                }
+
+                array[bypass(r.sayHi)]()
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+	})
+
+	t.Run("as index", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var array: [(fun(): Void)] = []
+
+                let bypass = fun(x: (fun(): Void)): Int {
+                    return 0
+                }
+
+                array[r.sayHi]()
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("function expression", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var array: [(fun(): Void)] = []
+
+                let bypass = fun(x: (fun(): Void)): Int {
+                    return 0
+                }
+
+                var i = fun(): Int {
+                    var f = r.sayHi
+                    return 0
+                }()
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("array expression", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var array: [(fun(): Void)] = []
+
+                let bypass = fun(x: (fun(): Void)): Int {
+                    return 0
+                }
+
+                [r.sayHi, r.sayHi][0]()
+
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+}
+
+func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid assignment", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                var f: (fun(): Void)
+
+                init() {
+                    self.f = fun() {}
+                }
+
+                fun assignNewValue() {
+                    self.f = fun() {}
+                }
+            }
+
+            access(all) fun someFunc(_ f: (fun(): Void)): Int {
+                return 0
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var arr: [Int] = [1]
+
+                // Must not report an error
+                r.f = fun(): Void {}
+
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("simple invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun f() {}
+            }
+
+            access(all) fun someFunc(_ f: (fun(): Void)): Int {
+                return 0
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var arr: [Int] = [1]
+
+                // Must report an error!
+                arr[someFunc(r.f)]  = 2
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+	})
+}
+
+func TestCheckIfLetElseBranchConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        access(all) resource Victim{}
+
+        access(all) fun main() {
+            var r: @Victim? <- nil
+            var r2: @Victim?  <- create Victim()
+            if let dummy <- r <- r2 {
+                // unreachable token destroys to please checker
+                destroy dummy
+                destroy r
+            } else {
+                // Error: r2 is invalid here
+
+                var ref = &r as &Victim?
+                var arr: @[Victim?]<- [<- r, <- r2]
+                destroy arr
+            }
+        }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
+func TestCheckOptionalBindingElseBranch(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		access(all) resource Victim {}
+
+		access(all) fun main() {
+
+			var r: @Victim? <- nil
+			var r2: @Victim?  <- create Victim()
+
+			if let dummy <- r <- r2 {
+				// unreachable token destroys to please checker
+				destroy dummy
+				destroy r
+			} else {
+				// checker failed to notice that r2 is invalid here
+				var ref = &r as &Victim?
+				var arr: @[Victim?]<- [
+                    <- r,
+                    <- r2
+                ]
+				destroy arr
+			}
+		}
+   `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}

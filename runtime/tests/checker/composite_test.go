@@ -1236,15 +1236,30 @@ func TestCheckInvalidCompositeFunctionAssignment(t *testing.T) {
 				),
 			)
 
-			errs := RequireCheckerErrors(t, err, 2)
+			if kind == common.CompositeKindResource {
+				errs := RequireCheckerErrors(t, err, 3)
 
-			require.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
-			assert.Equal(t,
-				"foo",
-				errs[0].(*sema.AssignmentToConstantMemberError).Name,
-			)
+				require.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				require.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[1])
+				assert.Equal(t,
+					"foo",
+					errs[1].(*sema.AssignmentToConstantMemberError).Name,
+				)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+
+			} else {
+				errs := RequireCheckerErrors(t, err, 2)
+
+				require.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
+				assert.Equal(t,
+					"foo",
+					errs[0].(*sema.AssignmentToConstantMemberError).Name,
+				)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			}
 		})
 	}
 }

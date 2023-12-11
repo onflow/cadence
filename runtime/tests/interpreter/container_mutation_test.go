@@ -939,6 +939,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 			nil,
 			interpreter.AddressValue{1},
 			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", owner)
@@ -970,6 +971,197 @@ func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
 		),
 		result,
 	)
+}
+
+func TestInterpretContainerMutationWhileIterating(t *testing.T) {
+
+	t.Run("array, append", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): [String] {
+                let array: [String] = ["foo", "bar"]
+
+                var i = 0
+                for element in array {
+                    if i == 0 {
+                        array.append("baz")
+                    }
+                    array[i] = "hello"
+                    i = i + 1
+                }
+
+                return array
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("hello"), // updated
+				interpreter.NewUnmeteredStringValue("hello"), // updated
+				interpreter.NewUnmeteredStringValue("baz"),   // NOT updated
+			),
+			result,
+		)
+	})
+
+	t.Run("array, remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let array: [String] = ["foo", "bar", "baz"]
+
+                var i = 0
+                for element in array {
+                    if i == 0 {
+                        array.remove(at: 1)
+                    }
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ArrayIndexOutOfBoundsError{})
+	})
+
+	t.Run("dictionary, add", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): {String: String} {
+                let dictionary: {String: String} = {"a": "foo", "b": "bar"}
+
+                var i = 0
+                dictionary.forEachKey(fun (key: String): Bool {
+                    if i == 0 {
+                        dictionary["c"] = "baz"
+                    }
+
+                    dictionary[key] = "hello"
+                    return true
+                })
+
+                return dictionary
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, result)
+		dictionary := result.(*interpreter.DictionaryValue)
+
+		require.Equal(t, 3, dictionary.Count())
+
+		val, present := dictionary.Get(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue("a"),
+		)
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("hello"), val) // Updated
+
+		val, present = dictionary.Get(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue("b"),
+		)
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("hello"), val) // Updated
+
+		val, present = dictionary.Get(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue("c"),
+		)
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("baz"), val) // Not Updated
+	})
+
+	t.Run("dictionary, remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): {String: String} {
+                let dictionary: {String: String} = {"a": "foo", "b": "bar", "c": "baz"}
+
+                var i = 0
+                dictionary.forEachKey(fun (key: String): Bool {
+                    if i == 0 {
+                        dictionary.remove(key: "b")
+                    }
+                    return true
+                })
+
+                return dictionary
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, result)
+		dictionary := result.(*interpreter.DictionaryValue)
+
+		require.Equal(t, 2, dictionary.Count())
+
+		val, present := dictionary.Get(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue("a"),
+		)
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("foo"), val)
+
+		val, present = dictionary.Get(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue("c"),
+		)
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("baz"), val)
+	})
+
+	t.Run("resource dictionary, remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {}
+
+            fun test(): @{String: Foo} {
+                let dictionary: @{String: Foo} <- {"a": <- create Foo(), "b": <- create Foo(), "c": <- create Foo()}
+
+                var dictionaryRef = &dictionary as auth(Mutate) &{String: Foo}
+
+                var i = 0
+                dictionary.forEachKey(fun (key: String): Bool {
+                    if i == 0 {
+                        destroy dictionaryRef.remove(key: "b")
+                    }
+                    return true
+                })
+
+                return <- dictionary
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+	})
 }
 
 func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {

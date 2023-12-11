@@ -42,8 +42,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-//
-
 type getterSetter struct {
 	target Value
 	// allowMissing may be true when the got value is nil.
@@ -219,7 +217,7 @@ type Storage interface {
 	CheckHealth() error
 }
 
-type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
+type ReferencedResourceKindedValues map[atree.StorageID]map[*EphemeralReferenceValue]struct{}
 
 type Interpreter struct {
 	Location     common.Location
@@ -642,10 +640,7 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 			var variable *Variable
 
 			variable = NewVariableWithGetter(interpreter, func() Value {
-				var result Value
-				interpreter.visitVariableDeclaration(declaration, func(_ string, value Value) {
-					result = value
-				})
+				result := interpreter.visitVariableDeclaration(declaration, false)
 
 				// Global variables are lazily loaded. Therefore, start resource tracking also
 				// lazily when the resource is used for the first time.
@@ -752,6 +747,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 	body func() StatementResult,
 	postConditions ast.Conditions,
 	returnType sema.Type,
+	declarationLocationRange LocationRange,
 ) Value {
 
 	// block scope: each function block gets an activation record
@@ -781,7 +777,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 	// If there is a return type, declare the constant `result`.
 
 	if returnType != sema.VoidType {
-		resultValue := interpreter.resultValue(returnValue, returnType)
+		resultValue := interpreter.resultValue(returnValue, returnType, declarationLocationRange)
 		interpreter.declareVariable(
 			sema.ResultIdentifier,
 			resultValue,
@@ -801,7 +797,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 // If the return type is a resource:
 //   - The constant has the same type as a reference to the return type.
 //   - `result` value is a reference to the return value.
-func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.Type) Value {
+func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.Type, declarationLocationRange LocationRange) Value {
 	if !returnType.IsResourceType() {
 		return returnValue
 	}
@@ -832,6 +828,7 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 				resultAuth(returnType),
 				returnValue.value,
 				optionalType.Type,
+				declarationLocationRange,
 			)
 
 			return NewSomeValueNonCopying(interpreter, innerValue)
@@ -840,7 +837,13 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 		}
 	}
 
-	return NewEphemeralReferenceValue(interpreter, resultAuth(returnType), returnValue, returnType)
+	return NewEphemeralReferenceValue(
+		interpreter,
+		resultAuth(returnType),
+		returnValue,
+		returnType,
+		declarationLocationRange,
+	)
 }
 
 func (interpreter *Interpreter) visitConditions(conditions ast.Conditions, kind ast.ConditionKind) {
@@ -909,13 +912,10 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 
 func (interpreter *Interpreter) visitAssignment(
 	transferOperation ast.TransferOperation,
-	targetExpression ast.Expression, targetType sema.Type,
+	targetGetterSetter getterSetter, targetType sema.Type,
 	valueExpression ast.Expression, valueType sema.Type,
 	position ast.HasPosition,
 ) {
-	// First evaluate the target, which results in a getter/setter function pair
-	getterSetter := interpreter.assignmentGetterSetter(targetExpression)
-
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: position,
@@ -932,7 +932,7 @@ func (interpreter *Interpreter) visitAssignment(
 
 		const allowMissing = true
 
-		target := getterSetter.get(allowMissing)
+		target := targetGetterSetter.get(allowMissing)
 
 		if _, ok := target.(NilValue); !ok && target != nil {
 			panic(ForceAssignmentToNonNilResourceError{
@@ -947,7 +947,7 @@ func (interpreter *Interpreter) visitAssignment(
 
 	transferredValue := interpreter.transferAndConvert(value, valueType, targetType, locationRange)
 
-	getterSetter.set(transferredValue)
+	targetGetterSetter.set(transferredValue)
 }
 
 // NOTE: only called for top-level composite declarations
@@ -1001,14 +1001,25 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 	var self MemberAccessibleValue = containingResourceComposite
 	if containingResourceComposite.Kind == common.CompositeKindAttachment {
 		var base *EphemeralReferenceValue
-		base, self = attachmentBaseAndSelfValues(declarationInterpreter, containingResourceComposite)
+		// in evaluation of destroy events, base and self are fully entitled, as the value must be owned
+		entitlementSupportingType, ok := interpreter.MustSemaTypeOfValue(containingResourceComposite).(sema.EntitlementSupportingType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
+		access := sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: eventDecl,
+		}
+		base, self = attachmentBaseAndSelfValues(declarationInterpreter, access, containingResourceComposite, locationRange)
 		declarationInterpreter.declareVariable(sema.BaseIdentifier, base)
 	}
 	declarationInterpreter.declareVariable(sema.SelfIdentifier, self)
 
 	for _, parameter := range parameters {
 		// "lazily" evaluate the default argument expressions.
-		// This "lazy" with respect to the event's declaration:
+		// This is "lazy" with respect to the event's declaration:
 		// if we declare a default event `ResourceDestroyed(foo: Int = self.x)`,
 		// `self.x` is evaluated in the context that exists when the event is destroyed,
 		// not the context when it is declared. This function is only called after the destroy
@@ -1346,19 +1357,27 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 				var self MemberAccessibleValue = value
 				if declaration.Kind() == common.CompositeKindAttachment {
 
-					var auth Authorization = UnauthorizedAccess
 					attachmentType := interpreter.MustSemaTypeOfValue(value).(*sema.CompositeType)
-					// Self's type in the constructor is codomain of the attachment's entitlement map, since
+					// Self's type in the constructor is fully entitled, since
 					// the constructor can only be called when in possession of the base resource
-					// if the attachment is declared with access(all) access, then self is unauthorized
-					if attachmentType.AttachmentEntitlementAccess != nil {
-						auth = ConvertSemaAccessToStaticAuthorization(interpreter, attachmentType.AttachmentEntitlementAccess.Codomain())
-					}
-					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType)
+
+					auth := ConvertSemaAccessToStaticAuthorization(
+						interpreter,
+						sema.NewAccessFromEntitlementSet(attachmentType.SupportedEntitlements(), sema.Conjunction),
+					)
+
+					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType, locationRange)
 
 					// set the base to the implicitly provided value, and remove this implicit argument from the list
 					implicitArgumentPos := len(invocation.Arguments) - 1
 					invocation.Base = invocation.Arguments[implicitArgumentPos].(*EphemeralReferenceValue)
+
+					var ok bool
+					value.base, ok = invocation.Base.Value.(*CompositeValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
 					invocation.Arguments[implicitArgumentPos] = nil
 					invocation.Arguments = invocation.Arguments[:implicitArgumentPos]
 					invocation.ArgumentTypes[implicitArgumentPos] = nil
@@ -2158,6 +2177,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 					ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
 					ref.Value,
 					unwrappedTargetType.Type,
+					locationRange,
 				)
 
 			case *StorageReferenceValue:
@@ -2435,12 +2455,18 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 					}
 				}
 
+				declarationLocationRange := LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: declaration,
+				}
+
 				return interpreter.visitFunctionBody(
 					beforeStatements,
 					preConditions,
 					body,
 					rewrittenPostConditions,
 					functionType.ReturnTypeAnnotation.Type,
+					declarationLocationRange,
 				)
 			},
 		)
@@ -3409,7 +3435,10 @@ func dictionaryTypeFunction(invocation Invocation) Value {
 
 	// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
 	if keyType == nil ||
-		!sema.IsValidDictionaryKeyType(invocation.Interpreter.MustConvertStaticToSemaType(keyType)) {
+		!sema.IsSubType(
+			invocation.Interpreter.MustConvertStaticToSemaType(keyType),
+			sema.HashableStructType,
+		) {
 		return Nil
 	}
 
@@ -4764,34 +4793,35 @@ func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKin
 	}
 }
 
-func (interpreter *Interpreter) getAccessOfMember(self Value, identifier string) *sema.Access {
+func (interpreter *Interpreter) getAccessOfMember(self Value, identifier string) sema.Access {
 	typ, err := interpreter.ConvertStaticToSemaType(self.StaticType(interpreter))
 	// some values (like transactions) do not have types that can be looked up this way. These types
 	// do not support entitled members, so their access is always unauthorized
 	if err != nil {
-		return &sema.UnauthorizedAccess
+		return sema.UnauthorizedAccess
 	}
 	member, hasMember := typ.GetMembers()[identifier]
 	// certain values (like functions) have builtin members that are not present on the type
 	// in such cases the access is always unauthorized
 	if !hasMember {
-		return &sema.UnauthorizedAccess
+		return sema.UnauthorizedAccess
 	}
-	return &member.Resolve(interpreter, identifier, ast.EmptyRange, func(err error) {}).Access
+	return member.Resolve(interpreter, identifier, ast.EmptyRange, func(err error) {}).Access
 }
 
 func (interpreter *Interpreter) mapMemberValueAuthorization(
 	self Value,
-	memberAccess *sema.Access,
+	memberAccess sema.Access,
 	resultValue Value,
 	resultingType sema.Type,
+	locationRange LocationRange,
 ) Value {
 
 	if memberAccess == nil {
 		return resultValue
 	}
 
-	if mappedAccess, isMappedAccess := (*memberAccess).(*sema.EntitlementMapAccess); isMappedAccess {
+	if mappedAccess, isMappedAccess := (memberAccess).(*sema.EntitlementMapAccess); isMappedAccess {
 		var auth Authorization
 		switch selfValue := self.(type) {
 		case AuthorizedValue:
@@ -4817,7 +4847,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(
 
 		switch refValue := resultValue.(type) {
 		case *EphemeralReferenceValue:
-			return NewEphemeralReferenceValue(interpreter, auth, refValue.Value, refValue.BorrowedType)
+			return NewEphemeralReferenceValue(interpreter, auth, refValue.Value, refValue.BorrowedType, locationRange)
 		case *StorageReferenceValue:
 			return NewStorageReferenceValue(interpreter, auth, refValue.TargetStorageAddress, refValue.TargetPath, refValue.BorrowedType)
 		case BoundFunctionValue:
@@ -4841,7 +4871,7 @@ func (interpreter *Interpreter) getMemberWithAuthMapping(
 	// once we have obtained the member, if it was declared with entitlement-mapped access, we must compute the output of the map based
 	// on the runtime authorizations of the accessing reference or composite
 	memberAccess := interpreter.getAccessOfMember(self, identifier)
-	return interpreter.mapMemberValueAuthorization(self, memberAccess, result, memberAccessInfo.ResultingType)
+	return interpreter.mapMemberValueAuthorization(self, memberAccess, result, memberAccessInfo.ResultingType, locationRange)
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
@@ -4944,41 +4974,6 @@ func (interpreter *Interpreter) checkContainerMutation(
 		panic(ContainerMutationError{
 			ExpectedType:  interpreter.MustConvertStaticToSemaType(elementType),
 			ActualType:    interpreter.MustSemaTypeOfValue(element),
-			LocationRange: locationRange,
-		})
-	}
-}
-
-func (interpreter *Interpreter) checkReferencedResourceNotDestroyed(value Value, locationRange LocationRange) {
-	resourceKindedValue, ok := value.(ResourceKindedValue)
-	if !ok || !resourceKindedValue.IsDestroyed() {
-		return
-	}
-
-	panic(DestroyedResourceError{
-		LocationRange: locationRange,
-	})
-}
-
-func (interpreter *Interpreter) checkReferencedResourceNotMovedOrDestroyed(
-	referencedValue Value,
-	locationRange LocationRange,
-) {
-
-	// First check if the referencedValue is a resource.
-	// This is to handle optionals, since optionals does not
-	// belong to `ReferenceTrackedResourceKindedValue`
-
-	resourceKindedValue, ok := referencedValue.(ResourceKindedValue)
-	if ok && resourceKindedValue.IsDestroyed() {
-		panic(DestroyedResourceError{
-			LocationRange: locationRange,
-		})
-	}
-
-	referenceTrackedResourceKindedValue, ok := referencedValue.(ReferenceTrackedResourceKindedValue)
-	if ok && referenceTrackedResourceKindedValue.IsStaleResource(interpreter) {
-		panic(InvalidatedResourceReferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -5143,24 +5138,27 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 }
 
 func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
-	if value, ok := value.(ReferenceTrackedResourceKindedValue); ok {
-		interpreter.trackReferencedResourceKindedValue(value.StorageID(), value)
+	if referenceValue, ok := value.(*EphemeralReferenceValue); ok {
+		if value, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue); ok {
+			interpreter.trackReferencedResourceKindedValue(value.StorageID(), referenceValue)
+		}
 	}
 }
 
 func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	id atree.StorageID,
-	value ReferenceTrackedResourceKindedValue,
+	value *EphemeralReferenceValue,
 ) {
 	values := interpreter.SharedState.referencedResourceKindedValues[id]
 	if values == nil {
-		values = map[ReferenceTrackedResourceKindedValue]struct{}{}
+		values = map[*EphemeralReferenceValue]struct{}{}
 		interpreter.SharedState.referencedResourceKindedValues[id] = values
 	}
 	values[value] = struct{}{}
 }
 
-func (interpreter *Interpreter) invalidateReferencedResources(value Value, destroyed bool) {
+// TODO: Remove the `destroyed` flag
+func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 	// skip non-resource typed values
 	if !value.IsResourceKinded(interpreter) {
 		return
@@ -5171,25 +5169,25 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value, destr
 	switch value := value.(type) {
 	case *CompositeValue:
 		value.ForEachLoadedField(interpreter, func(_ string, fieldValue Value) (resume bool) {
-			interpreter.invalidateReferencedResources(fieldValue, destroyed)
+			interpreter.invalidateReferencedResources(fieldValue)
 			// continue iteration
 			return true
 		})
 		storageID = value.StorageID()
 	case *DictionaryValue:
 		value.IterateLoaded(interpreter, func(_, value Value) (resume bool) {
-			interpreter.invalidateReferencedResources(value, destroyed)
+			interpreter.invalidateReferencedResources(value)
 			return true
 		})
 		storageID = value.StorageID()
 	case *ArrayValue:
 		value.IterateLoaded(interpreter, func(element Value) (resume bool) {
-			interpreter.invalidateReferencedResources(element, destroyed)
+			interpreter.invalidateReferencedResources(element)
 			return true
 		})
 		storageID = value.StorageID()
 	case *SomeValue:
-		interpreter.invalidateReferencedResources(value.value, destroyed)
+		interpreter.invalidateReferencedResources(value.value)
 		return
 	default:
 		// skip non-container typed values.
@@ -5202,19 +5200,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value, destr
 	}
 
 	for value := range values { //nolint:maprange
-		switch value := value.(type) {
-		case *CompositeValue:
-			value.dictionary = nil
-			value.isDestroyed = destroyed
-		case *DictionaryValue:
-			value.dictionary = nil
-			value.isDestroyed = destroyed
-		case *ArrayValue:
-			value.array = nil
-			value.isDestroyed = destroyed
-		default:
-			panic(errors.NewUnreachableError())
-		}
+		value.Value = nil
 	}
 
 	// The old resource instances are already cleared/invalidated above.
@@ -5265,6 +5251,7 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
+
 	if identifier == sema.SelfIdentifier {
 		return
 	}
@@ -5452,10 +5439,9 @@ func (interpreter *Interpreter) withMutationPrevention(storageID atree.StorageID
 	}
 }
 
-func (interpreter *Interpreter) withResourceDestruction(
+func (interpreter *Interpreter) enforceNotResourceDestruction(
 	storageID atree.StorageID,
 	locationRange LocationRange,
-	f func(),
 ) {
 	_, exists := interpreter.SharedState.destroyedResources[storageID]
 	if exists {
@@ -5463,6 +5449,14 @@ func (interpreter *Interpreter) withResourceDestruction(
 			LocationRange: locationRange,
 		})
 	}
+}
+
+func (interpreter *Interpreter) withResourceDestruction(
+	storageID atree.StorageID,
+	locationRange LocationRange,
+	f func(),
+) {
+	interpreter.enforceNotResourceDestruction(storageID, locationRange)
 
 	interpreter.SharedState.destroyedResources[storageID] = struct{}{}
 

@@ -781,7 +781,7 @@ func TestCommonSuperType(t *testing.T) {
 					StringType,
 					Int8Type,
 				},
-				expectedSuperType: AnyStructType,
+				expectedSuperType: HashableStructType,
 			},
 			{
 				name: "all nil",
@@ -1036,7 +1036,7 @@ func TestCommonSuperType(t *testing.T) {
 					stringArray,
 					&VariableSizedType{Type: BoolType},
 				},
-				expectedSuperType: &VariableSizedType{Type: AnyStructType},
+				expectedSuperType: &VariableSizedType{Type: HashableStructType},
 			},
 			{
 				name: "simple-typed array & resource array",
@@ -1160,7 +1160,7 @@ func TestCommonSuperType(t *testing.T) {
 				},
 				expectedSuperType: &DictionaryType{
 					KeyType:   StringType,
-					ValueType: AnyStructType,
+					ValueType: HashableStructType,
 				},
 			},
 			{
@@ -1349,7 +1349,7 @@ func TestCommonSuperType(t *testing.T) {
 					StoragePathType,
 					StringType,
 				},
-				expectedSuperType: AnyStructType,
+				expectedSuperType: HashableStructType,
 			},
 		}
 
@@ -1618,7 +1618,9 @@ func TestCommonSuperType(t *testing.T) {
 					Int8Type,
 					StringType,
 				},
-				expectedSuperType: AnyStructType,
+				expectedSuperType: &OptionalType{
+					Type: HashableStructType,
+				},
 			},
 			{
 				name: "nil with simple type",
@@ -1637,7 +1639,9 @@ func TestCommonSuperType(t *testing.T) {
 					Int8Type,
 					StringType,
 				},
-				expectedSuperType: AnyStructType,
+				expectedSuperType: &OptionalType{
+					Type: HashableStructType,
+				},
 			},
 			{
 				name: "multi-level simple optional types",
@@ -2163,7 +2167,7 @@ func TestReferenceType_String(t *testing.T) {
 
 		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
-			"auth(M) &Int",
+			"auth(mapping M) &Int",
 			referenceType.String(),
 		)
 	})
@@ -2217,7 +2221,7 @@ func TestReferenceType_QualifiedString(t *testing.T) {
 
 		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
-			"auth(M) &Int",
+			"auth(mapping M) &Int",
 			referenceType.QualifiedString(),
 		)
 	})
@@ -2253,7 +2257,7 @@ func TestReferenceType_QualifiedString(t *testing.T) {
 
 		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
-			"auth(C.M) &Int",
+			"auth(mapping C.M) &Int",
 			referenceType.QualifiedString(),
 		)
 	})

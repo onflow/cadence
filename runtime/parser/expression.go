@@ -971,37 +971,7 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 
 	p.skipSpaceAndComments()
 
-	var entitlements []*ast.NominalType
-	if p.isToken(p.current, lexer.TokenIdentifier, KeywordWith) {
-		// consume the `with` token
-		p.nextSemanticToken()
-
-		_, err = p.mustOne(lexer.TokenParenOpen)
-		if err != nil {
-			return nil, err
-		}
-
-		entitlements, _, err = parseNominalTypes(p, lexer.TokenParenClose, lexer.TokenComma)
-		for _, entitlement := range entitlements {
-			_, err = rejectAccessKeywords(p, func() (*ast.NominalType, error) {
-				return entitlement, nil
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		_, err = p.mustOne(lexer.TokenParenClose)
-		if err != nil {
-			return nil, err
-		}
-		p.skipSpaceAndComments()
-	}
-
-	return ast.NewAttachExpression(p.memoryGauge, base, attachment, entitlements, token.StartPos), nil
+	return ast.NewAttachExpression(p.memoryGauge, base, attachment, token.StartPos), nil
 }
 
 // Invocation Expression Grammar:

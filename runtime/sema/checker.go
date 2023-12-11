@@ -119,11 +119,12 @@ type Checker struct {
 	purityCheckScopes                  []PurityCheckScope
 	entitlementMappingInScope          *EntitlementMapType
 	inCondition                        bool
+	inInterface                        bool
 	allowSelfResourceFieldInvalidation bool
-	inAssignment                       bool
 	inInvocation                       bool
 	inCreate                           bool
 	isChecked                          bool
+	inAssignment                       bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -1076,7 +1077,7 @@ func (checker *Checker) convertDictionaryType(t *ast.DictionaryType) Type {
 	keyType := checker.ConvertType(t.KeyType)
 	valueType := checker.ConvertType(t.ValueType)
 
-	if !IsValidDictionaryKeyType(keyType) {
+	if !IsSubType(keyType, HashableStructType) {
 		checker.report(
 			&InvalidDictionaryKeyTypeError{
 				Type:  keyType,
@@ -1520,6 +1521,20 @@ func (checker *Checker) recordResourceInvalidation(
 		return nil
 	}
 
+	// Invalidations in interface functions are not allowed,
+	// except for temporary moves
+	if invalidationKind != ResourceInvalidationKindMoveTemporary &&
+		checker.inCondition &&
+		checker.inInterface {
+
+		checker.report(&InvalidInterfaceConditionResourceInvalidationError{
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				expression,
+			),
+		})
+	}
+
 	reportInvalidNestedMove := func() {
 		checker.report(
 			&InvalidNestedResourceMoveError{
@@ -1900,12 +1915,7 @@ func (checker *Checker) checkEntitlementMapAccess(
 	containerKind *common.CompositeKind,
 	startPos ast.Position,
 ) {
-	// attachments may be declared with an entitlement map access
-	if declarationKind == common.DeclarationKindAttachment {
-		return
-	}
-
-	// otherwise, mapped entitlements may only be used in structs, resources and attachments
+	// mapped entitlements may only be used in structs, resources and attachments
 	if containerKind == nil ||
 		(*containerKind != common.CompositeKindResource &&
 			*containerKind != common.CompositeKindStructure &&
@@ -1918,7 +1928,17 @@ func (checker *Checker) checkEntitlementMapAccess(
 		return
 	}
 
-	// mapped entitlement fields must be, one of:
+	// due to potential security issues, entitlement mappings are disabled on attachments for now
+	if *containerKind == common.CompositeKindAttachment {
+		checker.report(
+			&InvalidAttachmentMappedEntitlementMemberError{
+				Pos: startPos,
+			},
+		)
+		return
+	}
+
+	// mapped entitlement fields must be one of:
 	// 1) An [optional] reference that is authorized to the same mapped entitlement.
 	// 2) A function that return an [optional] reference authorized to the same mapped entitlement.
 	// 3) A container - So if the parent is a reference, entitlements can be granted to the resulting field reference.
@@ -2360,7 +2380,7 @@ func (checker *Checker) TypeActivationDepth() int {
 func (checker *Checker) effectiveMemberAccess(access Access, containerKind ContainerKind) Access {
 	switch containerKind {
 	case ContainerKindComposite:
-		return checker.effectiveCompositeMemberAccess(access)
+		return checker.EffectiveCompositeMemberAccess(access)
 	case ContainerKindInterface:
 		return checker.effectiveInterfaceMemberAccess(access)
 	default:
@@ -2376,7 +2396,7 @@ func (checker *Checker) effectiveInterfaceMemberAccess(access Access) Access {
 	}
 }
 
-func (checker *Checker) effectiveCompositeMemberAccess(access Access) Access {
+func (checker *Checker) EffectiveCompositeMemberAccess(access Access) Access {
 	if !access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return access
 	}

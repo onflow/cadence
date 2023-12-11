@@ -136,7 +136,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 				},
 			)
 
-			if sema.IsValidDictionaryKeyType(ty) {
+			if sema.IsSubType(ty, sema.HashableStructType) {
 				tests = append(tests,
 					&sema.DictionaryType{
 						KeyType:   ty,
@@ -1202,30 +1202,6 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 				}
 			}
         `)
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
-	})
-
-	t.Run("attachment with entitled base allowed", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t, `
-			entitlement E
-
-			attachment A for R {
-				require entitlement E
-				event ResourceDestroyed(name: Int  = base.field)
-			}
-
-			resource R {
-				access(E) let field : Int
-
-				init() {
-					self.field = 3
-				}
-			}
-        `)
 		require.NoError(t, err)
 	})
 
@@ -1236,11 +1212,7 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		_, err := ParseAndCheck(t, `
 			entitlement E
 
-			entitlement  mapping M {
-				E -> E
-			}
-
-			access(mapping M) attachment A for R {
+			access(all) attachment A for R {
 				access(E) let field : Int
 				event ResourceDestroyed(name: Int  = self.field)
 				init() {
@@ -1248,7 +1220,9 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 				}
 			}
 
-			resource R {}
+			resource R {
+				access(E) fun foo() {}
+			}
         `)
 		require.NoError(t, err)
 	})
