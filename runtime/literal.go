@@ -258,7 +258,7 @@ func convertIntValue(
 		return interpreter.ConvertUInt64(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.UInt128Type:
 		return interpreter.ConvertUInt128(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
-	case sema.UInt256Type:
+	case sema.UInt256Type, sema.FixedSizeUnsignedIntegerType:
 		return interpreter.ConvertUInt256(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 
 	case sema.Word8Type:

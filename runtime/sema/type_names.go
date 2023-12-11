@@ -19,12 +19,13 @@
 package sema
 
 const (
-	NumberTypeName           = "Number"
-	SignedNumberTypeName     = "SignedNumber"
-	IntegerTypeName          = "Integer"
-	SignedIntegerTypeName    = "SignedInteger"
-	FixedPointTypeName       = "FixedPoint"
-	SignedFixedPointTypeName = "SignedFixedPoint"
+	NumberTypeName                   = "Number"
+	SignedNumberTypeName             = "SignedNumber"
+	IntegerTypeName                  = "Integer"
+	SignedIntegerTypeName            = "SignedInteger"
+	FixedSizeUnsignedIntegerTypeName = "FixedSizeUnsignedInteger"
+	FixedPointTypeName               = "FixedPoint"
+	SignedFixedPointTypeName         = "SignedFixedPoint"
 
 	IntTypeName    = "Int"
 	Int8TypeName   = "Int8"
