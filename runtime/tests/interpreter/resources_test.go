@@ -19,7 +19,6 @@
 package interpreter_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -2960,16 +2959,37 @@ func TestInterpretNestedSwap(t *testing.T) {
 
             access(all) fun callback(): Int {
                 var x: @[NFT] <- []
+
+                log("before inner")
+                log(&self.arr as &AnyResource)
+                log(&x as &AnyResource)
+
                 self.arr <-> x
+
+                log("after inner")
+                log(&self.arr as &AnyResource)
+                log(&x as &AnyResource)
+
                 // We hand over the array to the Company object after the swap
                 // has already been "scheduled"
                 self.company <-! create Company(incorporationEquityCollection: <- x)
+
+                log("end callback")
+
                 return 0
             }
 
             access(all) fun doMagic() {
-                // Start a swap and trigger callback at the last possible moment 
+                log("before outer")
+                log(&self.arr as &AnyResource)
+                log(&self.trashNFT as &AnyResource)
+
                 self.trashNFT <-> self.arr[self.callback()]
+
+                log("after outer")
+                log(&self.arr as &AnyResource)
+                log(&self.trashNFT as &AnyResource)
+
                 self.company?.logContents()
                 log("Look what I pickpocketd:")
                 log(self.trashNFT.name)
@@ -2991,9 +3011,17 @@ func TestInterpretNestedSwap(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("main")
-	require.NoError(t, err)
+	RequireError(t, err)
 
-	for _, log := range getLogs() {
-		fmt.Println(log)
-	}
+	assert.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
+
+	assert.Equal(t,
+		[]string{
+			`"before outer"`,
+			`[S.test.NFT(uuid: 2, name: "High-value NFT")]`,
+			`S.test.NFT(name: "Trash NFT", uuid: 3)`,
+			`"before inner"`,
+		},
+		getLogs(),
+	)
 }

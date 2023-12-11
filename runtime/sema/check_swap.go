@@ -50,6 +50,27 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 		checker.elaborateNestedResourceMoveExpression(swap.Right)
 	}
 
+	// If the left or right side is an index expression,
+	// and the indexed type (type of the target expression) is a resource type,
+	// then the target expression must be considered as a nested resource move expression.
+	//
+	// This is because the evaluation of the index expression
+	// should not be able to access/move the target resource.
+	//
+	// For example, if a side is `a.b[c()]`, then `a.b` is the target expression.
+	// If `a.b` is a resource, then `c()` should not be able to access/move it.
+
+	for _, side := range []ast.Expression{swap.Left, swap.Right} {
+		if indexExpression, ok := side.(*ast.IndexExpression); ok {
+			targetExpression := indexExpression.TargetExpression
+
+			indexExpressionTypes := checker.Elaboration.IndexExpressionTypes(indexExpression)
+			if indexExpressionTypes.IndexedType.IsResourceType() {
+				checker.elaborateNestedResourceMoveExpression(targetExpression)
+			}
+		}
+	}
+
 	return
 }
 
