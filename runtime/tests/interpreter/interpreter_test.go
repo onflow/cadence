@@ -12403,16 +12403,15 @@ func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = inter.Invoke("test")
-		require.NoError(t, err)
+		RequireError(t, err)
+
+		assert.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
 
 		assert.Equal(t,
 			[]string{
 				`"Creating resource with UUID 1 and value 1"`,
 				`"Creating resource with UUID 3 and value 2"`,
 				`"Creating resource with UUID 4 and value 3"`,
-				`"Destroying resource with UUID 3 and value 2"`,
-				`"Destroying resource with UUID 1 and value 1"`,
-				`"Destroying resource with UUID 4 and value 3"`,
 			},
 			getLogs(),
 		)
