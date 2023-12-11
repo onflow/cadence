@@ -85,6 +85,5 @@ func ConvertToEntitledType(t sema.Type) sema.Type {
 }
 
 func (mig EntitlementsMigration) Migrate(value interpreter.Value) (newValue interpreter.Value) {
-	mig.Interpreter.ConvertValueToEntitlements(value, ConvertToEntitledType)
-	return value
+	return mig.Interpreter.ConvertValueToEntitlements(value, ConvertToEntitledType)
 }

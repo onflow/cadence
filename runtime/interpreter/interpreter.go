@@ -5471,7 +5471,7 @@ func (interpreter *Interpreter) withResourceDestruction(
 func (interpreter *Interpreter) ConvertValueToEntitlements(
 	v Value,
 	convertToEntitledType func(sema.Type) sema.Type,
-) {
+) Value {
 
 	var staticType StaticType
 	// for reference types, we want to use the borrow type, rather than the type of the referenced value
@@ -5537,50 +5537,59 @@ func (interpreter *Interpreter) ConvertValueToEntitlements(
 	case *EphemeralReferenceValue:
 		entitledReferenceType := entitledType.(*sema.ReferenceType)
 		staticAuthorization := ConvertSemaAccessToStaticAuthorization(interpreter, entitledReferenceType.Authorization)
-		v.Authorization = staticAuthorization
-		v.BorrowedType = entitledReferenceType.Type
-		interpreter.ConvertValueToEntitlements(v.Value, convertToEntitledType)
+		convertedValue := interpreter.ConvertValueToEntitlements(v.Value, convertToEntitledType)
+		return NewEphemeralReferenceValue(
+			interpreter,
+			staticAuthorization,
+			convertedValue,
+			entitledReferenceType,
+			EmptyLocationRange,
+		)
+
 	case *StorageReferenceValue:
 		// a stored value will in itself be migrated at another point, so no need to do anything here other than change the type
 		entitledReferenceType := entitledType.(*sema.ReferenceType)
 		staticAuthorization := ConvertSemaAccessToStaticAuthorization(interpreter, entitledReferenceType.Authorization)
-		v.Authorization = staticAuthorization
-		v.BorrowedType = entitledReferenceType.Type
-
+		return NewStorageReferenceValue(
+			interpreter,
+			staticAuthorization,
+			v.TargetStorageAddress,
+			v.TargetPath,
+			entitledReferenceType,
+		)
 	case *SomeValue:
-		interpreter.ConvertValueToEntitlements(v.value, convertToEntitledType)
-		// reset the storable, to be recomputed on next access
-		v.valueStorable = nil
-	case *CompositeValue:
-		// convert all the fields of this composite value to entitlements
-		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v, convertToEntitledType) })
+		return NewSomeValueNonCopying(interpreter, interpreter.ConvertValueToEntitlements(v.value, convertToEntitledType))
+
 	case *ArrayValue:
 		entitledArrayType := entitledType.(sema.ArrayType)
-		v.semaType = entitledArrayType
-		v.Type = ConvertSemaArrayTypeToStaticArrayType(interpreter, entitledArrayType)
-		// convert all the elements of this array value to entitlements
-		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v, convertToEntitledType) })
+		arrayStaticType := ConvertSemaArrayTypeToStaticArrayType(interpreter, entitledArrayType)
+		return newArrayValueFromAtreeArray(interpreter, arrayStaticType, v.elementSize, v.array)
+
 	case *DictionaryValue:
 		entitledDictionaryType := entitledType.(*sema.DictionaryType)
-		v.semaType = entitledDictionaryType
-		v.Type = ConvertSemaDictionaryTypeToStaticDictionaryType(interpreter, entitledDictionaryType)
-		// convert all the elements of this array value to entitlements
-		v.Walk(interpreter, func(v Value) { interpreter.ConvertValueToEntitlements(v, convertToEntitledType) })
+		dictionaryStaticType := ConvertSemaDictionaryTypeToStaticDictionaryType(interpreter, entitledDictionaryType)
+		return newDictionaryValueFromAtreeMap(interpreter, dictionaryStaticType, v.elementSize, v.dictionary)
+
 	case *CapabilityValue:
 		// capabilities should just have their borrow type updated, as the pointed-to value will also be visited
 		// by the migration on its own
 		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
-		v.BorrowType = ConvertSemaToStaticType(interpreter, entitledCapabilityValue.BorrowType)
+		capabilityStaticType := ConvertSemaToStaticType(interpreter, entitledCapabilityValue.BorrowType)
+		return NewCapabilityValue(interpreter, v.ID, v.Address, capabilityStaticType)
+
 	case *TypeValue:
 		if v.Type == nil {
-			return
+			return v
 		}
 		// convert the static type of the value
-		v.Type = ConvertSemaToStaticType(
+		entitledStaticType := ConvertSemaToStaticType(
 			interpreter,
 			convertToEntitledType(
 				interpreter.MustConvertStaticToSemaType(v.Type),
 			),
 		)
+		return NewTypeValue(interpreter, entitledStaticType)
 	}
+
+	return v
 }

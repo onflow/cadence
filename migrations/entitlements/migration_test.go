@@ -466,7 +466,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	// &S
 
-	unentitledSRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue))
+	unentitledSRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue), interpreter.EmptyLocationRange)
 	unentitledSRefStaticType := unentitledSRef.StaticType(inter)
 
 	entitledSRef := interpreter.NewEphemeralReferenceValue(
@@ -479,12 +479,13 @@ func TestConvertToEntitledValue(t *testing.T) {
 		),
 		sValue,
 		inter.MustSemaTypeOfValue(sValue),
+		interpreter.EmptyLocationRange,
 	)
 	entitledSRefStaticType := entitledSRef.StaticType(inter)
 
 	// &R
 
-	unentitledRRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue))
+	unentitledRRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue), interpreter.EmptyLocationRange)
 	unentitledRRefStaticType := unentitledRRef.StaticType(inter)
 
 	entitledRRef := interpreter.NewEphemeralReferenceValue(
@@ -497,13 +498,14 @@ func TestConvertToEntitledValue(t *testing.T) {
 		),
 		rValue,
 		inter.MustSemaTypeOfValue(rValue),
+		interpreter.EmptyLocationRange,
 	)
 	entitledRRefStaticType := entitledRRef.StaticType(inter)
 
 	// &{I}
 
 	intersectionIType := sema.NewIntersectionType(inter, []*sema.InterfaceType{checker.Elaboration.InterfaceType("S.test.I")})
-	unentitledIRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, intersectionIType)
+	unentitledIRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, intersectionIType, interpreter.EmptyLocationRange)
 
 	entitledIRef := interpreter.NewEphemeralReferenceValue(
 		inter,
@@ -515,6 +517,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 		),
 		rValue,
 		intersectionIType,
+		interpreter.EmptyLocationRange,
 	)
 
 	// legacy Capability<&R{I}>
@@ -581,7 +584,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 			checker.Elaboration.InterfaceType("S.test.J"),
 		},
 	)
-	unentitledIJRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, intersectionIJType)
+	unentitledIJRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, intersectionIJType, interpreter.EmptyLocationRange)
 
 	entitledIJRef := interpreter.NewEphemeralReferenceValue(
 		inter,
@@ -593,11 +596,12 @@ func TestConvertToEntitledValue(t *testing.T) {
 		),
 		rValue,
 		intersectionIJType,
+		interpreter.EmptyLocationRange,
 	)
 
 	// &Nested
 
-	unentitledNestedRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, nestedValue, inter.MustSemaTypeOfValue(nestedValue))
+	unentitledNestedRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, nestedValue, inter.MustSemaTypeOfValue(nestedValue), interpreter.EmptyLocationRange)
 	unentitledNestedRefStaticType := unentitledNestedRef.StaticType(inter)
 
 	entitledNestedRef := interpreter.NewEphemeralReferenceValue(
@@ -610,6 +614,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 		),
 		nestedValue,
 		inter.MustSemaTypeOfValue(nestedValue),
+		interpreter.EmptyLocationRange,
 	)
 	entitledNestedRefStaticType := entitledNestedRef.StaticType(inter)
 
@@ -807,6 +812,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 					rValue.Clone(inter),
 				),
 				sema.NewVariableSizedType(inter, inter.MustSemaTypeOfValue(rValue)),
+				interpreter.EmptyLocationRange,
 			),
 			Output: interpreter.NewEphemeralReferenceValue(
 				inter,
@@ -824,6 +830,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 					rValue.Clone(inter),
 				),
 				sema.NewVariableSizedType(inter, inter.MustSemaTypeOfValue(rValue)),
+				interpreter.EmptyLocationRange,
 			),
 			Name: "&[R]",
 		},
@@ -846,6 +853,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 						inter.MustSemaTypeOfValue(rValue),
 					),
 				),
+				interpreter.EmptyLocationRange,
 			),
 			Output: interpreter.NewEphemeralReferenceValue(
 				inter,
@@ -876,6 +884,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 						inter.MustSemaTypeOfValue(rValue),
 					),
 				),
+				interpreter.EmptyLocationRange,
 			),
 			Name: "&[&R]",
 		},
@@ -891,6 +900,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 					rValue.Clone(inter),
 				),
 				sema.NewDictionaryType(inter, sema.IntType, inter.MustSemaTypeOfValue(rValue)),
+				interpreter.EmptyLocationRange,
 			),
 			Output: interpreter.NewEphemeralReferenceValue(
 				inter,
@@ -908,6 +918,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 					rValue.Clone(inter),
 				),
 				sema.NewDictionaryType(inter, sema.IntType, inter.MustSemaTypeOfValue(rValue)),
+				interpreter.EmptyLocationRange,
 			),
 			Name: "&{Int: R}",
 		},
@@ -929,6 +940,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 						inter.MustSemaTypeOfValue(rValue),
 					),
 				),
+				interpreter.EmptyLocationRange,
 			),
 			Output: interpreter.NewEphemeralReferenceValue(
 				inter,
@@ -958,6 +970,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 						inter.MustSemaTypeOfValue(rValue),
 					),
 				),
+				interpreter.EmptyLocationRange,
 			),
 			Name: "&{Int: &R}",
 		},
@@ -1122,7 +1135,7 @@ func TestMigrateSimpleContract(t *testing.T) {
 	tValue, err := inter.Invoke("makeT")
 	require.NoError(t, err)
 
-	unentitledRRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue))
+	unentitledRRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue), interpreter.EmptyLocationRange)
 	unentitledRRefStaticType := unentitledRRef.StaticType(inter)
 
 	unentitledRCap := interpreter.NewCapabilityValue(
@@ -1142,6 +1155,7 @@ func TestMigrateSimpleContract(t *testing.T) {
 		),
 		rValue,
 		inter.MustSemaTypeOfValue(rValue),
+		interpreter.EmptyLocationRange,
 	)
 	entitledRRefStaticType := entitledRRef.StaticType(inter)
 	entitledRCap := interpreter.NewCapabilityValue(
