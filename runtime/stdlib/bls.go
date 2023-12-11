@@ -18,97 +18,14 @@
 
 package stdlib
 
+//go:generate go run ../sema/gen -p stdlib bls.cdc bls.gen.go
+
 import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
-
-var blsContractType = func() *sema.CompositeType {
-	ty := &sema.CompositeType{
-		Identifier: "BLS",
-		Kind:       common.CompositeKindContract,
-	}
-
-	ty.Members = sema.MembersAsMap([]*sema.Member{
-		sema.NewUnmeteredPublicFunctionMember(
-			ty,
-			blsAggregatePublicKeysFunctionName,
-			blsAggregatePublicKeysFunctionType,
-			blsAggregatePublicKeysFunctionDocString,
-		),
-		sema.NewUnmeteredPublicFunctionMember(
-			ty,
-			blsAggregateSignaturesFunctionName,
-			blsAggregateSignaturesFunctionType,
-			blsAggregateSignaturesFunctionDocString,
-		),
-	})
-	return ty
-}()
-
-var blsContractStaticType interpreter.StaticType = interpreter.ConvertSemaCompositeTypeToStaticCompositeType(
-	nil,
-	blsContractType,
-)
-
-const blsAggregateSignaturesFunctionDocString = `
-Aggregates multiple BLS signatures into one,
-considering the proof of possession as a defense against rogue attacks.
-
-Signatures could be generated from the same or distinct messages,
-they could also be the aggregation of other signatures.
-The order of the signatures in the slice does not matter since the aggregation is commutative.
-No subgroup membership check is performed on the input signatures.
-The function returns nil if the array is empty or if decoding one of the signature fails.
-`
-
-const blsAggregateSignaturesFunctionName = "aggregateSignatures"
-
-var blsAggregateSignaturesFunctionType = &sema.FunctionType{
-	Parameters: []sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "signatures",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.ByteArrayArrayType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.OptionalType{
-			Type: sema.ByteArrayType,
-		},
-	),
-}
-
-const blsAggregatePublicKeysFunctionDocString = `
-Aggregates multiple BLS public keys into one.
-
-The order of the public keys in the slice does not matter since the aggregation is commutative.
-No subgroup membership check is performed on the input keys.
-The function returns nil if the array is empty or any of the input keys is not a BLS key.
-`
-
-const blsAggregatePublicKeysFunctionName = "aggregatePublicKeys"
-
-var blsAggregatePublicKeysFunctionType = &sema.FunctionType{
-	Parameters: []sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "keys",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.PublicKeyArrayType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.OptionalType{
-			Type: sema.PublicKeyType,
-		},
-	),
-}
 
 type BLSPublicKeyAggregator interface {
 	PublicKeySignatureVerifier
@@ -123,7 +40,7 @@ func newBLSAggregatePublicKeysFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		blsAggregatePublicKeysFunctionType,
+		BLSTypeAggregatePublicKeysFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			publicKeysValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -193,7 +110,7 @@ func newBLSAggregateSignaturesFunction(
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
-		blsAggregateSignaturesFunctionType,
+		BLSTypeAggregateSignaturesFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			signaturesValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
@@ -256,19 +173,21 @@ type BLSContractHandler interface {
 	BLSSignatureAggregator
 }
 
+var BLSTypeStaticType = interpreter.ConvertSemaToStaticType(nil, BLSType)
+
 func NewBLSContract(
 	gauge common.MemoryGauge,
 	handler BLSContractHandler,
 ) StandardLibraryValue {
-	var blsContractFields = map[string]interpreter.Value{
-		blsAggregatePublicKeysFunctionName: newBLSAggregatePublicKeysFunction(gauge, handler),
-		blsAggregateSignaturesFunctionName: newBLSAggregateSignaturesFunction(gauge, handler),
+	blsContractFields := map[string]interpreter.Value{
+		BLSTypeAggregatePublicKeysFunctionName: newBLSAggregatePublicKeysFunction(gauge, handler),
+		BLSTypeAggregateSignaturesFunctionName: newBLSAggregateSignaturesFunction(gauge, handler),
 	}
 
-	var blsContractValue = interpreter.NewSimpleCompositeValue(
-		nil,
-		blsContractType.ID(),
-		blsContractStaticType,
+	blsContractValue := interpreter.NewSimpleCompositeValue(
+		gauge,
+		BLSType.ID(),
+		BLSTypeStaticType,
 		nil,
 		blsContractFields,
 		nil,
@@ -277,8 +196,8 @@ func NewBLSContract(
 	)
 
 	return StandardLibraryValue{
-		Name:  "BLS",
-		Type:  blsContractType,
+		Name:  BLSTypeName,
+		Type:  BLSType,
 		Value: blsContractValue,
 		Kind:  common.DeclarationKindContract,
 	}

@@ -22,46 +22,47 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 )
 
-// VisitReferenceExpression checks a reference expression `&t as T`,
-// where `t` is the referenced expression, and `T` is the result type.
+// VisitReferenceExpression checks a reference expression
 func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.ReferenceExpression) Type {
 
+	resultType := checker.expectedType
+	if resultType == nil {
+		checker.report(
+			&TypeAnnotationRequiredError{
+				Cause: "cannot infer type from reference expression:",
+				Pos:   referenceExpression.Expression.StartPosition(),
+			},
+		)
+		return InvalidType
+	}
+
 	// Check the result type and ensure it is a reference type
-
-	rightType := checker.ConvertType(referenceExpression.Type)
-	checker.checkInvalidInterfaceAsType(rightType, referenceExpression.Type)
-
 	var isOpt bool
 	var referenceType *ReferenceType
-	var expectedLeftType Type
-	var returnType Type
+	var expectedLeftType, returnType Type
 
-	if !rightType.IsInvalidType() {
-
+	if !resultType.IsInvalidType() {
+		var ok bool
 		// Reference expressions may reference a value which has an optional type.
 		// For example, the result of indexing into a dictionary is an optional:
 		//
 		// let ints: {Int: String} = {0: "zero"}
 		// let ref: &T? = &ints[0] as &T?   // read as (&T)?
 		//
-		// In this case the reference expression's borrow type must be an optional type.
-		//
 		// In this case the reference expression's type is an optional type.
 		// Unwrap it one level to get the actual reference type
-
 		var optType *OptionalType
-		optType, isOpt = rightType.(*OptionalType)
+		optType, isOpt = resultType.(*OptionalType)
 		if isOpt {
-			rightType = optType.Type
+			resultType = optType.Type
 		}
 
-		var isRef bool
-		referenceType, isRef = rightType.(*ReferenceType)
-		if !isRef {
+		referenceType, ok = resultType.(*ReferenceType)
+		if !ok {
 			checker.report(
 				&NonReferenceTypeReferenceError{
-					ActualType: rightType,
-					Range:      ast.NewRangeFromPositioned(checker.memoryGauge, referenceExpression.Type),
+					ActualType: resultType,
+					Range:      ast.NewRangeFromPositioned(checker.memoryGauge, referenceExpression),
 				},
 			)
 		} else {

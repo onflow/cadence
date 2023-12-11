@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"math/big"
@@ -27,11 +27,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -55,30 +58,30 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 		checkScript func(result cadence.Value, err error),
 	) {
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		deploy := DeploymentTransaction(contractName, []byte(contract))
 
 		var accountCode []byte
 		var events []cadence.Event
 
-		runtimeInterface := &testRuntimeInterface{
-			getCode: func(_ Location) (bytes []byte, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(_ Location) (bytes []byte, err error) {
 				return accountCode, nil
 			},
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{address}, nil
 			},
-			resolveLocation: singleIdentifierLocationResolver(t),
-			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return accountCode, nil
 			},
-			updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+			OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 				accountCode = code
 				return nil
 			},
-			emitEvent: func(event cadence.Event) error {
+			OnEmitEvent: func(event cadence.Event) error {
 				events = append(events, event)
 				return nil
 			},
@@ -129,8 +132,8 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 
 		test(t,
 			`
-	          pub contract C {
-	              pub fun foo(): Int {
+	          access(all) contract C {
+	              access(all) fun foo(): Int {
 	                  return foo
 	              }
 	          }
@@ -138,7 +141,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			`
 	          import C from 0x1
 
-	          pub fun main(): Int {
+	          access(all) fun main(): Int {
 	        	  return foo + C.foo()
 	          }
 	        `,
@@ -170,8 +173,8 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 
 		test(t,
 			`
-	          pub contract C {
-	              pub fun foo(): Int {
+	          access(all) contract C {
+	              access(all) fun foo(): Int {
 	                  return foo
 	              }
 	          }
@@ -179,7 +182,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			`
 	          import C from 0x1
 
-	          pub fun main(): Int {
+	          access(all) fun main(): Int {
 	        	  return C.foo()
 	          }
 	        `,
@@ -211,8 +214,8 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 
 		test(t,
 			`
-	          pub contract C {
-	              pub fun foo(): Int {
+	          access(all) contract C {
+	              access(all) fun foo(): Int {
 	                  return foo
 	              }
 	          }
@@ -220,7 +223,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			`
 	          import C from 0x1
 
-	          pub fun main(): Int {
+	          access(all) fun main(): Int {
 	        	  return foo + C.foo()
 	          }
 	        `,
@@ -276,19 +279,20 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		}
 
 		script := []byte(`
-          pub fun main(): X {
+          access(all)
+          fun main(): X {
               return x
           }
 	    `)
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
 			},
-			resolveLocation: singleIdentifierLocationResolver(t),
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
 		}
 
 		// Run script
@@ -346,19 +350,20 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		}
 
 		script := []byte(`
-          pub fun main(): X {
+          access(all)
+          fun main(): X {
               return x
           }
 	    `)
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
 			},
-			resolveLocation: singleIdentifierLocationResolver(t),
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
 		}
 
 		// Run script
@@ -380,12 +385,10 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t,
-			cadence.ValueWithCachedTypeID(
-				cadence.Struct{
-					StructType: cadence.NewStructType(nil, xType.QualifiedIdentifier(), []cadence.Field{}, nil),
-					Fields:     []cadence.Value{},
-				},
-			),
+			cadence.Struct{
+				StructType: cadence.NewStructType(nil, xType.QualifiedIdentifier(), []cadence.Field{}, nil),
+				Fields:     []cadence.Value{},
+			},
 			result,
 		)
 	})
@@ -415,19 +418,20 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		}
 
 		script := []byte(`
-          pub fun main(): AnyStruct {
+          access(all)
+          fun main(): AnyStruct {
               return x
           }
 	    `)
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
 			},
-			resolveLocation: singleIdentifierLocationResolver(t),
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
 		}
 
 		// Run script
@@ -490,19 +494,20 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		}
 
 		script := []byte(`
-          pub fun main(): X.Y {
+          access(all)
+          fun main(): X.Y {
               return y
           }
 	    `)
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
 			},
-			resolveLocation: singleIdentifierLocationResolver(t),
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
 		}
 
 		// Run script
@@ -524,12 +529,10 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t,
-			cadence.ValueWithCachedTypeID(
-				cadence.Struct{
-					StructType: cadence.NewStructType(nil, yType.QualifiedIdentifier(), []cadence.Field{}, nil),
-					Fields:     []cadence.Value{},
-				},
-			),
+			cadence.Struct{
+				StructType: cadence.NewStructType(nil, yType.QualifiedIdentifier(), []cadence.Field{}, nil),
+				Fields:     []cadence.Value{},
+			},
 			result,
 		)
 	})
@@ -567,19 +570,20 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		}
 
 		script := []byte(`
-          pub fun main(): AnyStruct {
+          access(all)
+          fun main(): AnyStruct {
               return y
           }
 	    `)
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
 			},
-			resolveLocation: singleIdentifierLocationResolver(t),
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
 		}
 
 		// Run script
@@ -667,19 +671,20 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 	}
 
 	script := []byte(`
-      pub fun main(): String {
+      access(all)
+      fun main(): String {
           return X().foo(bar: 1)
       }
 	`)
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
 	}
 
 	// Run script
@@ -693,21 +698,21 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 			inter *interpreter.Interpreter,
 			locationRange interpreter.LocationRange,
 			compositeValue *interpreter.CompositeValue,
-		) map[string]interpreter.FunctionValue {
+		) *interpreter.FunctionOrderedMap {
 			require.NotNil(t, compositeValue)
 
-			return map[string]interpreter.FunctionValue{
-				fooFunctionName: interpreter.NewHostFunctionValue(
-					inter,
-					fooFunctionType,
-					func(invocation interpreter.Invocation) interpreter.Value {
-						arg := invocation.Arguments[0]
-						require.IsType(t, interpreter.UInt8Value(0), arg)
+			functions := orderedmap.New[interpreter.FunctionOrderedMap](1)
+			functions.Set(fooFunctionName, interpreter.NewHostFunctionValue(
+				inter,
+				fooFunctionType,
+				func(invocation interpreter.Invocation) interpreter.Value {
+					arg := invocation.Arguments[0]
+					require.IsType(t, interpreter.UInt8Value(0), arg)
 
-						return interpreter.NewUnmeteredStringValue(strconv.Itoa(int(arg.(interpreter.UInt8Value) + 1)))
-					},
-				),
-			}
+					return interpreter.NewUnmeteredStringValue(strconv.Itoa(int(arg.(interpreter.UInt8Value) + 1)))
+				},
+			))
+			return functions
 		},
 	)
 

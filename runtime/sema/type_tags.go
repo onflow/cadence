@@ -214,7 +214,7 @@ const (
 // Upper mask types
 const (
 	capabilityTypeMask uint64 = 1 << iota
-	restrictedTypeMask
+	intersectionTypeMask
 	transactionTypeMask
 	anyResourceAttachmentMask
 	anyStructAttachmentMask
@@ -338,7 +338,7 @@ var (
 	FunctionTypeTag      = newTypeTagFromUpperMask(functionTypeMask)
 	InterfaceTypeTag     = newTypeTagFromUpperMask(interfaceTypeMask)
 
-	RestrictedTypeTag                  = newTypeTagFromUpperMask(restrictedTypeMask)
+	IntersectionTypeTag                = newTypeTagFromUpperMask(intersectionTypeMask)
 	CapabilityTypeTag                  = newTypeTagFromUpperMask(capabilityTypeMask)
 	InvalidTypeTag                     = newTypeTagFromUpperMask(invalidTypeMask)
 	TransactionTypeTag                 = newTypeTagFromUpperMask(transactionTypeMask)
@@ -395,7 +395,7 @@ var (
 			Or(GenericTypeTag).
 			Or(InterfaceTypeTag).
 			Or(TransactionTypeTag).
-			Or(RestrictedTypeTag)
+			Or(IntersectionTypeTag)
 )
 
 // Methods
@@ -680,7 +680,7 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 
 	// All derived types goes here.
 	case capabilityTypeMask,
-		restrictedTypeMask,
+		intersectionTypeMask,
 		transactionTypeMask,
 		interfaceTypeMask,
 		functionTypeMask:
@@ -881,7 +881,7 @@ func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
 func commonSuperTypeOfComposites(types []Type) Type {
 	var hasStructs, hasResources bool
 
-	commonInterfaces := map[string]bool{}
+	commonInterfaces := map[*InterfaceType]struct{}{}
 	commonInterfacesList := make([]*InterfaceType, 0)
 
 	hasCommonInterface := true
@@ -915,25 +915,33 @@ func commonSuperTypeOfComposites(types []Type) Type {
 			panic(errors.NewUnreachableError())
 		}
 
-		// NOTE: index 0 may not always be the first type, since there can be 'Never' types.
-		if firstType {
-			for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
-				commonInterfaces[interfaceType.QualifiedIdentifier()] = true
-				commonInterfacesList = append(commonInterfacesList, interfaceType)
-			}
-			firstType = false
-		} else {
-			intersection := map[string]bool{}
-			commonInterfacesList = make([]*InterfaceType, 0)
+		conformances := compositeType.EffectiveInterfaceConformances()
 
-			for _, interfaceType := range compositeType.ExplicitInterfaceConformances {
-				if _, ok := commonInterfaces[interfaceType.QualifiedIdentifier()]; ok {
-					intersection[interfaceType.QualifiedIdentifier()] = true
-					commonInterfacesList = append(commonInterfacesList, interfaceType)
+		if len(conformances) > 0 {
+
+			// NOTE: index 0 may not always be the first type, since there can be 'Never' types.
+			if firstType {
+				for _, interfaceType := range conformances {
+					conformance := interfaceType.InterfaceType
+					commonInterfaces[conformance] = struct{}{}
+					commonInterfacesList = append(commonInterfacesList, conformance)
 				}
-			}
 
-			commonInterfaces = intersection
+				firstType = false
+			} else {
+				intersection := map[*InterfaceType]struct{}{}
+				commonInterfacesList = make([]*InterfaceType, 0)
+
+				for _, interfaceType := range conformances {
+					conformance := interfaceType.InterfaceType
+					if _, ok := commonInterfaces[conformance]; ok {
+						intersection[conformance] = struct{}{}
+						commonInterfacesList = append(commonInterfacesList, conformance)
+					}
+				}
+
+				commonInterfaces = intersection
+			}
 		}
 
 		if len(commonInterfaces) == 0 {
@@ -941,21 +949,15 @@ func commonSuperTypeOfComposites(types []Type) Type {
 		}
 	}
 
-	var superType Type
-	if hasResources {
-		superType = AnyResourceType
-	} else {
-		superType = AnyStructType
-	}
-
 	if hasCommonInterface {
-		return &RestrictedType{
-			Type:         superType,
-			Restrictions: commonInterfacesList,
+		return &IntersectionType{
+			Types: commonInterfacesList,
 		}
+	} else if hasResources {
+		return AnyResourceType
+	} else {
+		return AnyStructType
 	}
-
-	return superType
 }
 
 func unwrapOptionals(types []Type) ([]Type, int) {

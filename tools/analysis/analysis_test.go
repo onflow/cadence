@@ -42,7 +42,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 	const txCode = `
 	  import 0x1
 
-	  pub let y = "test" as! String
+	  access(all) let y = "test" as! String
 	`
 
 	contractAddress := common.MustBytesToAddress([]byte{0x1})
@@ -51,7 +51,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 		Name:    "ContractA",
 	}
 	const contractCode = `
-      pub contract ContractA {
+      access(all) contract ContractA {
 	    init() {
 	      let y = true as! Bool
 	    }
@@ -152,15 +152,15 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 			{
 				location: contractLocation,
 				Range: ast.Range{
-					StartPos: ast.Position{Offset: 61, Line: 4, Column: 15},
-					EndPos:   ast.Position{Offset: 73, Line: 4, Column: 27},
+					StartPos: ast.Position{Offset: 69, Line: 4, Column: 15},
+					EndPos:   ast.Position{Offset: 81, Line: 4, Column: 27},
 				},
 			},
 			{
 				location: txLocation,
 				Range: ast.Range{
-					StartPos: ast.Position{Offset: 31, Line: 4, Column: 15},
-					EndPos:   ast.Position{Offset: 47, Line: 4, Column: 31},
+					StartPos: ast.Position{Offset: 39, Line: 4, Column: 23},
+					EndPos:   ast.Position{Offset: 55, Line: 4, Column: 39},
 				},
 			},
 		},
@@ -178,7 +178,7 @@ func TestParseError(t *testing.T) {
 		Name:    "ContractA",
 	}
 	const contractCode = `
-      pub contract ContractA {
+      access(all) contract ContractA {
 	    init() {
 	      ???
 	    }
@@ -224,7 +224,7 @@ func TestCheckError(t *testing.T) {
 		Name:    "ContractA",
 	}
 	const contractCode = `
-      pub contract ContractA {
+      access(all) contract ContractA {
 	    init() {
 	      X
 	    }
@@ -267,7 +267,7 @@ func TestStdlib(t *testing.T) {
 	scriptLocation := common.ScriptLocation{}
 
 	const code = `
-	  pub fun main() {
+	  access(all) fun main() {
           panic("test")
       }
 	`
@@ -309,7 +309,7 @@ func TestCyclicImports(t *testing.T) {
 	}
 	const fooContractCode = `
         import 0x2
-        pub contract Foo {}
+        access(all) contract Foo {}
 	`
 
 	barContractAddress := common.MustBytesToAddress([]byte{0x2})
@@ -319,7 +319,7 @@ func TestCyclicImports(t *testing.T) {
 	}
 	const barContractCode = `
         import 0x1
-        pub contract Bar {}
+        access(all) contract Bar {}
 	`
 
 	config := &analysis.Config{

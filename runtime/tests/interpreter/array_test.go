@@ -19,69 +19,116 @@
 package interpreter_test
 
 import (
-	"github.com/onflow/cadence/runtime/interpreter"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func arrayElements(inter *interpreter.Interpreter, array *interpreter.ArrayValue) []interpreter.Value {
-	count := array.Count()
-	result := make([]interpreter.Value, count)
-	for i := 0; i < count; i++ {
-		result[i] = array.Get(inter, interpreter.EmptyLocationRange, i)
-	}
-	return result
-}
+func TestInterpretArrayFunctionEntitlements(t *testing.T) {
 
-func dictionaryKeyValues(inter *interpreter.Interpreter, dict *interpreter.DictionaryValue) []interpreter.Value {
-	count := dict.Count() * 2
-	result := make([]interpreter.Value, count)
-	i := 0
-	dict.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
-		result[i*2] = key
-		result[i*2+1] = value
-		i++
+	t.Parallel()
 
-		return true
-	})
-	return result
-}
+	t.Run("mutable reference", func(t *testing.T) {
+		t.Parallel()
 
-type entry[K, V any] struct {
-	key   K
-	value V
-}
+		inter := parseCheckAndInterpret(t, `
+            let array: [String] = ["foo", "bar"]
 
-// Similar to `dictionaryKeyValues`, attempting to map untyped Values to concrete values using the provided morphisms.
-// If a conversion fails, then this function returns (nil, false).
-// Useful in contexts when Cadence values need to be extracted into their go counterparts.
-func dictionaryEntries[K, V any](
-	inter *interpreter.Interpreter,
-	dict *interpreter.DictionaryValue,
-	fromKey func(interpreter.Value) (K, bool),
-	fromVal func(interpreter.Value) (V, bool),
-) ([]entry[K, V], bool) {
+            fun test() {
+                var arrayRef = &array as auth(Mutate) &[String]
 
-	count := dict.Count()
-	res := make([]entry[K, V], count)
+                // Public functions
+                arrayRef.contains("hello")
+                arrayRef.firstIndex(of: "hello")
+                arrayRef.slice(from: 1, upTo: 1)
+                arrayRef.concat(["hello"])
 
-	iterStatus := true
-	idx := 0
-	dict.Iterate(inter, func(rawKey, rawValue interpreter.Value) (resume bool) {
-		key, ok := fromKey(rawKey)
+                // Insert functions
+                arrayRef.append("baz")
+                arrayRef.appendAll(["baz"])
+                arrayRef.insert(at:0, "baz")
 
-		if !ok {
-			iterStatus = false
-			return iterStatus
-		}
+                // Remove functions
+                arrayRef.remove(at: 1)
+                arrayRef.removeFirst()
+                arrayRef.removeLast()
+            }
+        `)
 
-		value, ok := fromVal(rawValue)
-		if !ok {
-			iterStatus = false
-			return iterStatus
-		}
-
-		res[idx] = entry[K, V]{key, value}
-		return iterStatus
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
 	})
 
-	return res, iterStatus
+	t.Run("non auth reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            let array: [String] = ["foo", "bar"]
+
+            fun test() {
+                var arrayRef = &array as &[String]
+
+                // Public functions
+                arrayRef.contains("hello")
+                arrayRef.firstIndex(of: "hello")
+                arrayRef.slice(from: 1, upTo: 1)
+                arrayRef.concat(["hello"])
+            }
+	        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("insert reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            let array: [String] = ["foo", "bar"]
+
+            fun test() {
+                var arrayRef = &array as auth(Insert) &[String]
+
+                // Public functions
+                arrayRef.contains("hello")
+                arrayRef.firstIndex(of: "hello")
+                arrayRef.slice(from: 1, upTo: 1)
+                arrayRef.concat(["hello"])
+
+                // Insert functions
+                arrayRef.append("baz")
+                arrayRef.appendAll(["baz"])
+                arrayRef.insert(at:0, "baz")
+            }
+	        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("remove reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            let array: [String] = ["foo", "bar", "baz"]
+
+            fun test() {
+                var arrayRef = &array as auth(Remove) &[String]
+
+                // Public functions
+                arrayRef.contains("hello")
+                arrayRef.firstIndex(of: "hello")
+                arrayRef.slice(from: 1, upTo: 1)
+                arrayRef.concat(["hello"])
+
+                // Remove functions
+                arrayRef.remove(at: 1)
+                arrayRef.removeFirst()
+                arrayRef.removeLast()
+            }
+	        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }

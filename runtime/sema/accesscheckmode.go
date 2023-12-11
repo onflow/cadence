@@ -50,19 +50,17 @@ var AccessCheckModes = []AccessCheckMode{
 	AccessCheckModeNone,
 }
 
-func (mode AccessCheckMode) IsReadableAccess(access ast.Access) bool {
+func (mode AccessCheckMode) IsReadableAccess(access Access) bool {
 	switch mode {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
 
-		return access == ast.AccessPublic ||
-			access == ast.AccessPublicSettable
+		return access.PermitsAccess(UnauthorizedAccess)
 
 	case AccessCheckModeNotSpecifiedUnrestricted:
 
-		return access == ast.AccessNotSpecified ||
-			access == ast.AccessPublic ||
-			access == ast.AccessPublicSettable
+		return access == PrimitiveAccess(ast.AccessNotSpecified) ||
+			access.PermitsAccess(UnauthorizedAccess)
 
 	case AccessCheckModeNone:
 		return true
@@ -72,17 +70,15 @@ func (mode AccessCheckMode) IsReadableAccess(access ast.Access) bool {
 	}
 }
 
-func (mode AccessCheckMode) IsWriteableAccess(access ast.Access) bool {
+func (mode AccessCheckMode) IsWriteableAccess(access Access) bool {
 	switch mode {
 	case AccessCheckModeStrict,
 		AccessCheckModeNotSpecifiedRestricted:
-
-		return access == ast.AccessPublicSettable
+		return false
 
 	case AccessCheckModeNotSpecifiedUnrestricted:
 
-		return access == ast.AccessNotSpecified ||
-			access == ast.AccessPublicSettable
+		return access == PrimitiveAccess(ast.AccessNotSpecified)
 
 	case AccessCheckModeNone:
 		return true

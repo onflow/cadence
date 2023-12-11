@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -45,7 +46,7 @@ func TestInterpretOptionalType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.OptionalStaticType{
+			Type: &interpreter.OptionalStaticType{
 				Type: interpreter.PrimitiveStaticTypeString,
 			},
 		},
@@ -54,7 +55,7 @@ func TestInterpretOptionalType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.OptionalStaticType{
+			Type: &interpreter.OptionalStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
@@ -63,7 +64,7 @@ func TestInterpretOptionalType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.OptionalStaticType{
+			Type: &interpreter.OptionalStaticType{
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 			},
 		},
@@ -72,8 +73,8 @@ func TestInterpretOptionalType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.OptionalStaticType{
-				Type: interpreter.OptionalStaticType{
+			Type: &interpreter.OptionalStaticType{
+				Type: &interpreter.OptionalStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 			},
@@ -104,7 +105,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.VariableSizedStaticType{
+			Type: &interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeString,
 			},
 		},
@@ -113,7 +114,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.VariableSizedStaticType{
+			Type: &interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
@@ -122,7 +123,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.VariableSizedStaticType{
+			Type: &interpreter.VariableSizedStaticType{
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 			},
 		},
@@ -131,8 +132,8 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.VariableSizedStaticType{
-				Type: interpreter.VariableSizedStaticType{
+			Type: &interpreter.VariableSizedStaticType{
+				Type: &interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 			},
@@ -162,7 +163,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ConstantSizedStaticType{
+			Type: &interpreter.ConstantSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeString,
 				Size: int64(10),
 			},
@@ -172,7 +173,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ConstantSizedStaticType{
+			Type: &interpreter.ConstantSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 				Size: int64(5),
 			},
@@ -182,7 +183,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ConstantSizedStaticType{
+			Type: &interpreter.ConstantSizedStaticType{
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				Size: int64(400),
 			},
@@ -192,8 +193,8 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ConstantSizedStaticType{
-				Type: interpreter.ConstantSizedStaticType{
+			Type: &interpreter.ConstantSizedStaticType{
+				Type: &interpreter.ConstantSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 					Size: int64(10),
 				},
@@ -228,7 +229,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.DictionaryStaticType{
+			Type: &interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -238,7 +239,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.DictionaryStaticType{
+			Type: &interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeInt,
 				ValueType: interpreter.PrimitiveStaticTypeString,
 			},
@@ -248,7 +249,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.DictionaryStaticType{
+			Type: &interpreter.DictionaryStaticType{
 				ValueType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				KeyType:   interpreter.PrimitiveStaticTypeInt,
 			},
@@ -258,8 +259,8 @@ func TestInterpretDictionaryType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.DictionaryStaticType{
-				ValueType: interpreter.DictionaryStaticType{
+			Type: &interpreter.DictionaryStaticType{
+				ValueType: &interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -402,7 +403,7 @@ func TestInterpretFunctionType(t *testing.T) {
       let b = FunctionType(parameters: [Type<String>(), Type<Int>()], return: Type<Bool>())
       let c = FunctionType(parameters: [], return: Type<String>())
 
-      let d = Type<((String): Int)>();
+      let d = Type<fun(String): Int>();
     `)
 
 	assert.Equal(t,
@@ -411,10 +412,10 @@ func TestInterpretFunctionType(t *testing.T) {
 				Type: &sema.FunctionType{
 					Parameters: []sema.Parameter{
 						{
-							TypeAnnotation: sema.TypeAnnotation{Type: sema.StringType},
+							TypeAnnotation: sema.StringTypeAnnotation,
 						},
 					},
-					ReturnTypeAnnotation: sema.TypeAnnotation{Type: sema.IntType},
+					ReturnTypeAnnotation: sema.IntTypeAnnotation,
 				},
 			},
 		},
@@ -426,10 +427,10 @@ func TestInterpretFunctionType(t *testing.T) {
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
 					Parameters: []sema.Parameter{
-						{TypeAnnotation: sema.TypeAnnotation{Type: sema.StringType}},
-						{TypeAnnotation: sema.TypeAnnotation{Type: sema.IntType}},
+						{TypeAnnotation: sema.StringTypeAnnotation},
+						{TypeAnnotation: sema.IntTypeAnnotation},
 					},
-					ReturnTypeAnnotation: sema.TypeAnnotation{Type: sema.BoolType},
+					ReturnTypeAnnotation: sema.BoolTypeAnnotation,
 				},
 			},
 		},
@@ -440,7 +441,7 @@ func TestInterpretFunctionType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
-					ReturnTypeAnnotation: sema.TypeAnnotation{Type: sema.StringType},
+					ReturnTypeAnnotation: sema.StringTypeAnnotation,
 				},
 			},
 		},
@@ -460,18 +461,25 @@ func TestInterpretReferenceType(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
       resource R {}
       struct S {}
+	  entitlement X
 
-      let a = ReferenceType(authorized: true, type: Type<@R>())
-      let b = ReferenceType(authorized: false, type: Type<String>())
-      let c = ReferenceType(authorized: true, type: Type<S>()) 
-      let d = Type<auth &R>()
+      let a = ReferenceType(entitlements: ["S.test.X"], type: Type<@R>())!
+      let b = ReferenceType(entitlements: [], type: Type<String>())!
+      let c = ReferenceType(entitlements: ["S.test.X"], type: Type<S>())!
+      let d = Type<auth(X) &R>()
+	  let e = ReferenceType(entitlements: ["S.test.Y"], type: Type<S>())
     `)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ReferenceStaticType{
-				BorrowedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
-				Authorized:   true,
+			Type: &interpreter.ReferenceStaticType{
+				ReferencedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
+				Authorization: interpreter.NewEntitlementSetAuthorization(
+					nil,
+					func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+					1,
+					sema.Conjunction,
+				),
 			},
 		},
 		inter.Globals.Get("a").GetValue(),
@@ -479,9 +487,9 @@ func TestInterpretReferenceType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ReferenceStaticType{
-				BorrowedType: interpreter.PrimitiveStaticTypeString,
-				Authorized:   false,
+			Type: &interpreter.ReferenceStaticType{
+				ReferencedType: interpreter.PrimitiveStaticTypeString,
+				Authorization:  interpreter.UnauthorizedAccess,
 			},
 		},
 		inter.Globals.Get("b").GetValue(),
@@ -489,9 +497,14 @@ func TestInterpretReferenceType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ReferenceStaticType{
-				BorrowedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
-				Authorized:   true,
+			Type: &interpreter.ReferenceStaticType{
+				ReferencedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
+				Authorization: interpreter.NewEntitlementSetAuthorization(
+					nil,
+					func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+					1,
+					sema.Conjunction,
+				),
 			},
 		},
 		inter.Globals.Get("c").GetValue(),
@@ -501,9 +514,14 @@ func TestInterpretReferenceType(t *testing.T) {
 		inter.Globals.Get("a").GetValue(),
 		inter.Globals.Get("d").GetValue(),
 	)
+
+	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("e").GetValue(),
+	)
 }
 
-func TestInterpretRestrictedType(t *testing.T) {
+func TestInterpretIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
@@ -514,31 +532,27 @@ func TestInterpretRestrictedType(t *testing.T) {
       struct B : S {}
 
       struct interface S2 {
-        pub let foo : Int
+        access(all) let foo : Int
       }
 
-      let a = RestrictedType(identifier: "S.test.A", restrictions: ["S.test.R"])!
-      let b = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.S"])!
+      let a = IntersectionType(types: ["S.test.R"])!
+      let b = IntersectionType(types: ["S.test.S"])!
 
-      let c = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.R"])
-      let d = RestrictedType(identifier: "S.test.A", restrictions: ["S.test.S"])
-      let e = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.S2"])
+	  let c = IntersectionType(types: [])
 
-      let f = RestrictedType(identifier: "S.test.B", restrictions: ["X"])
-      let g = RestrictedType(identifier: "S.test.N", restrictions: ["S.test.S2"])
+      let f = IntersectionType(types: ["X"])
 
-      let h = Type<@A{R}>()
-      let i = Type<B{S}>()
+      let h = Type<@{R}>()
+      let i = Type<{S}>()
 
-      let j = RestrictedType(identifier: nil, restrictions: ["S.test.R"])!
-      let k = RestrictedType(identifier: nil, restrictions: ["S.test.S"])!
+      let j = IntersectionType(types: ["S.test.R", "S.test.S" ])
+      let k = IntersectionType(types: ["S.test.S", "S.test.S2"])!
     `)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "A"),
-				Restrictions: []interpreter.InterfaceStaticType{
+			Type: &interpreter.IntersectionStaticType{
+				Types: []*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				},
 			},
@@ -547,10 +561,14 @@ func TestInterpretRestrictedType(t *testing.T) {
 	)
 
 	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("c").GetValue(),
+	)
+
+	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "B"),
-				Restrictions: []interpreter.InterfaceStaticType{
+			Type: &interpreter.IntersectionStaticType{
+				Types: []*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
 				},
 			},
@@ -559,23 +577,16 @@ func TestInterpretRestrictedType(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyResource,
-				Restrictions: []interpreter.InterfaceStaticType{
-					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
-				},
-			},
-		},
+		interpreter.Nil,
 		inter.Globals.Get("j").GetValue(),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyStruct,
-				Restrictions: []interpreter.InterfaceStaticType{
+			Type: &interpreter.IntersectionStaticType{
+				Types: []*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S2"),
 				},
 			},
 		},
@@ -584,27 +595,7 @@ func TestInterpretRestrictedType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("e").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
 		inter.Globals.Get("f").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("g").GetValue(),
 	)
 
 	assert.Equal(t,
@@ -635,10 +626,10 @@ func TestInterpretCapabilityType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CapabilityStaticType{
-				BorrowType: interpreter.ReferenceStaticType{
-					BorrowedType: interpreter.PrimitiveStaticTypeString,
-					Authorized:   false,
+			Type: &interpreter.CapabilityStaticType{
+				BorrowType: &interpreter.ReferenceStaticType{
+					ReferencedType: interpreter.PrimitiveStaticTypeString,
+					Authorization:  interpreter.UnauthorizedAccess,
 				},
 			},
 		},
@@ -647,10 +638,10 @@ func TestInterpretCapabilityType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CapabilityStaticType{
-				BorrowType: interpreter.ReferenceStaticType{
-					BorrowedType: interpreter.PrimitiveStaticTypeInt,
-					Authorized:   false,
+			Type: &interpreter.CapabilityStaticType{
+				BorrowType: &interpreter.ReferenceStaticType{
+					ReferencedType: interpreter.PrimitiveStaticTypeInt,
+					Authorization:  interpreter.UnauthorizedAccess,
 				},
 			},
 		},
@@ -659,10 +650,10 @@ func TestInterpretCapabilityType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CapabilityStaticType{
-				BorrowType: interpreter.ReferenceStaticType{
-					BorrowedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
-					Authorized:   false,
+			Type: &interpreter.CapabilityStaticType{
+				BorrowType: &interpreter.ReferenceStaticType{
+					ReferencedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
+					Authorization:  interpreter.UnauthorizedAccess,
 				},
 			},
 		},

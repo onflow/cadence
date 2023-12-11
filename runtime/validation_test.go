@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -25,8 +25,10 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -42,25 +44,22 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
           transaction(value: AnyStruct) {}
         `)
 
-		runtimeInterface := &testRuntimeInterface{
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return nil, nil
 			},
-			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return nil, nil
 			},
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		err := runtime.ExecuteTransaction(
@@ -92,25 +91,22 @@ func TestRuntimeArgumentImportMissingType(t *testing.T) {
 
 		t.Parallel()
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
 		script := []byte(`
-          pub fun main(value: AnyStruct) {}
+          access(all) fun main(value: AnyStruct) {}
         `)
 
-		runtimeInterface := &testRuntimeInterface{
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return nil, nil
 			},
-			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+			OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 				return nil, nil
 			},
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := runtime.ExecuteScript(

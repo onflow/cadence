@@ -128,8 +128,9 @@ type Runtime interface {
 	// InvokeContractFunction invokes a contract function with the given arguments.
 	//
 	// This function returns an error if the execution fails.
-	// If the contract function accepts an AuthAccount as a parameter the corresponding argument can be an interpreter.Address.
-	// returns a cadence.Value
+	// If the contract function accepts an &Account as a parameter,
+	// the corresponding argument can be an interpreter.Address.
+	// Returns a cadence.Value
 	InvokeContractFunction(
 		contractLocation common.AddressLocation,
 		functionName string,
@@ -146,10 +147,6 @@ type Runtime interface {
 	// ReadStored reads the value stored at the given path
 	//
 	ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
-
-	// Deprecated: ReadLinked dereferences the path and returns the value stored at the target.
-	//
-	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
 
 	// Storage returns the storage system and an interpreter which can be used for
 	// accessing values in storage.
@@ -325,9 +322,9 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	return err
 }
 
-// userPanicToError Executes `f` and gracefully handle `UserError` panics.
+// UserPanicToError Executes `f` and gracefully handle `UserError` panics.
 // All on-user panics (including `InternalError` and `ExternalError`) are propagated up.
-func userPanicToError(f func()) (returnedError error) {
+func UserPanicToError(f func()) (returnedError error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err, ok := r.(error)
@@ -411,7 +408,7 @@ func validateArgumentParams(
 		}
 
 		var arg interpreter.Value
-		panicError := userPanicToError(func() {
+		panicError := UserPanicToError(func() {
 			// if importing an invalid public key, this call panics
 			arg, err = ImportValue(
 				inter,
@@ -560,6 +557,7 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 	if environment == nil {
 		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
 	}
+
 	environment.Configure(
 		context.Interface,
 		codesAndPrograms,
@@ -623,86 +621,6 @@ func (r *interpreterRuntime) ReadStored(
 	}
 
 	return exportedValue, nil
-}
-
-func (r *interpreterRuntime) ReadLinked(
-	address common.Address,
-	path cadence.Path,
-	context Context,
-) (
-	val cadence.Value,
-	err error,
-) {
-	location := context.Location
-
-	var codesAndPrograms CodesAndPrograms
-
-	defer r.Recover(
-		func(internalErr Error) {
-			err = internalErr
-		},
-		location,
-		codesAndPrograms,
-	)
-
-	_, inter, err := r.Storage(context)
-	if err != nil {
-		// error is already wrapped as Error in Storage
-		return nil, err
-	}
-
-	pathValue := valueImporter{inter: inter}.importPathValue(path)
-
-	target, _, err := inter.GetPathCapabilityFinalTarget(
-		address,
-		pathValue,
-		// Use top-most type to follow link all the way to final target
-		&sema.ReferenceType{
-			Type: sema.AnyType,
-		},
-		true,
-		interpreter.EmptyLocationRange,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if target == nil {
-		return nil, nil
-	}
-
-	switch target := target.(type) {
-	case interpreter.AccountCapabilityTarget:
-		return nil, nil
-
-	case interpreter.PathCapabilityTarget:
-
-		targetPath := interpreter.PathValue(target)
-
-		if targetPath == interpreter.EmptyPathValue {
-			return nil, nil
-		}
-
-		domain := targetPath.Domain.Identifier()
-		identifier := targetPath.Identifier
-
-		storageMapKey := interpreter.StringStorageMapKey(identifier)
-
-		value := inter.ReadStored(address, domain, storageMapKey)
-
-		var exportedValue cadence.Value
-		if value != nil {
-			exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
-			if err != nil {
-				return nil, newError(err, location, codesAndPrograms)
-			}
-		}
-
-		return exportedValue, nil
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
 }
 
 func (r *interpreterRuntime) SetDebugger(debugger *interpreter.Debugger) {

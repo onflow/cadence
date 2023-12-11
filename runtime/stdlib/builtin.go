@@ -29,7 +29,6 @@ type StandardLibraryHandler interface {
 	RandomGenerator
 	BlockAtHeightProvider
 	CurrentBlockProvider
-	PublicAccountHandler
 	AccountCreator
 	PublicKeyValidator
 	PublicKeySignatureVerifier
@@ -47,11 +46,10 @@ func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibr
 		RLPContract,
 		NewLogFunction(handler),
 		NewRevertibleRandomFunction(handler),
-		NewUnsafeRandomFunction(handler),
 		NewGetBlockFunction(handler),
 		NewGetCurrentBlockFunction(handler),
 		NewGetAccountFunction(handler),
-		NewAuthAccountConstructor(handler),
+		NewAccountConstructor(handler),
 		NewPublicKeyConstructor(handler),
 		NewBLSContract(nil, handler),
 		NewHashAlgorithmConstructor(handler),
@@ -69,7 +67,7 @@ type CompositeValueFunctionsHandler func(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	compositeValue *interpreter.CompositeValue,
-) map[string]interpreter.FunctionValue
+) *interpreter.FunctionOrderedMap
 
 type CompositeValueFunctionsHandlers map[common.TypeID]CompositeValueFunctionsHandler
 
@@ -81,7 +79,7 @@ func DefaultStandardLibraryCompositeValueFunctionHandlers(
 			inter *interpreter.Interpreter,
 			_ interpreter.LocationRange,
 			_ *interpreter.CompositeValue,
-		) map[string]interpreter.FunctionValue {
+		) *interpreter.FunctionOrderedMap {
 			return PublicKeyFunctions(inter, handler)
 		},
 	}

@@ -42,12 +42,17 @@ const StringTypeJoinFunctionDocString = `
 Returns a string after joining the array of strings with the provided separator.
 `
 
+const StringTypeSplitFunctionName = "split"
+const StringTypeSplitFunctionDocString = `
+Returns a variable-sized array of strings after splitting the string on the delimiter.
+`
+
 // StringType represents the string type
 var StringType = &SimpleType{
 	Name:          "String",
 	QualifiedName: "String",
 	TypeID:        "String",
-	tag:           StringTypeTag,
+	TypeTag:       StringTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     true,
@@ -63,6 +68,8 @@ var StringType = &SimpleType{
 		IndexingType: IntegerType,
 	},
 }
+
+var StringTypeAnnotation = NewTypeAnnotation(StringType)
 
 func init() {
 	StringType.Members = func(t *SimpleType) map[string]MemberResolver {
@@ -97,28 +104,39 @@ func init() {
 				IntType,
 				stringTypeLengthFieldDocString,
 			),
-			NewUnmeteredPublicConstantFieldMember(
+			NewUnmeteredPublicFunctionMember(
 				t,
 				StringTypeToLowerFunctionName,
 				StringTypeToLowerFunctionType,
 				stringTypeToLowerFunctionDocString,
 			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeSplitFunctionName,
+				StringTypeSplitFunctionType,
+				StringTypeSplitFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeReplaceAllFunctionName,
+				StringTypeReplaceAllFunctionType,
+				StringTypeReplaceAllFunctionDocString,
+			),
 		})
 	}
 }
 
-var StringTypeConcatFunctionType = &FunctionType{
-	Parameters: []Parameter{
+var StringTypeConcatFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "other",
-			TypeAnnotation: NewTypeAnnotation(StringType),
+			TypeAnnotation: StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		StringType,
-	),
-}
+	StringTypeAnnotation,
+)
 
 const StringTypeConcatFunctionName = "concat"
 
@@ -126,21 +144,20 @@ const stringTypeConcatFunctionDocString = `
 Returns a new string which contains the given string concatenated to the end of the original string, but does not modify the original string
 `
 
-var StringTypeSliceFunctionType = &FunctionType{
-	Parameters: []Parameter{
+var StringTypeSliceFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
 			Identifier:     "from",
-			TypeAnnotation: NewTypeAnnotation(IntType),
+			TypeAnnotation: IntTypeAnnotation,
 		},
 		{
 			Identifier:     "upTo",
-			TypeAnnotation: NewTypeAnnotation(IntType),
+			TypeAnnotation: IntTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		StringType,
-	),
-}
+	StringTypeAnnotation,
+)
 
 const StringTypeSliceFunctionName = "slice"
 
@@ -152,19 +169,32 @@ It does not modify the original string.
 If either of the parameters are out of the bounds of the string, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail
 `
 
+const StringTypeReplaceAllFunctionName = "replaceAll"
+const StringTypeReplaceAllFunctionDocString = `
+Returns a new string after replacing all the occurrences of parameter ` + "`of` with the parameter `with`" + `.
+
+If ` + "`with`" + ` is empty, it matches at the beginning of the string and after each UTF-8 sequence, yielding k+1 replacements for a string of length k.
+`
+
 // ByteArrayType represents the type [UInt8]
 var ByteArrayType = &VariableSizedType{
 	Type: UInt8Type,
 }
+
+var ByteArrayTypeAnnotation = NewTypeAnnotation(ByteArrayType)
 
 // ByteArrayArrayType represents the type [[UInt8]]
 var ByteArrayArrayType = &VariableSizedType{
 	Type: ByteArrayType,
 }
 
-var StringTypeDecodeHexFunctionType = &FunctionType{
-	ReturnTypeAnnotation: NewTypeAnnotation(ByteArrayType),
-}
+var ByteArrayArrayTypeAnnotation = NewTypeAnnotation(ByteArrayArrayType)
+
+var StringTypeDecodeHexFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	nil,
+	ByteArrayTypeAnnotation,
+)
 
 const StringTypeDecodeHexFunctionName = "decodeHex"
 
@@ -187,9 +217,11 @@ const stringTypeUtf8FieldDocString = `
 The byte array of the UTF-8 encoding
 `
 
-var StringTypeToLowerFunctionType = &FunctionType{
-	ReturnTypeAnnotation: NewTypeAnnotation(StringType),
-}
+var StringTypeToLowerFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	nil,
+	StringTypeAnnotation,
+)
 
 const StringTypeToLowerFunctionName = "toLower"
 
@@ -211,9 +243,11 @@ var StringFunctionType = func() *FunctionType {
 		panic(errors.NewUnreachableError())
 	}
 
-	functionType := &FunctionType{
-		ReturnTypeAnnotation: NewTypeAnnotation(StringType),
-	}
+	functionType := NewSimpleFunctionType(
+		FunctionPurityView,
+		nil,
+		StringTypeAnnotation,
+	)
 
 	addMember := func(member *Member) {
 		if functionType.Members == nil {
@@ -266,38 +300,37 @@ var StringFunctionType = func() *FunctionType {
 	return functionType
 }()
 
-var StringTypeEncodeHexFunctionType = &FunctionType{
-	Parameters: []Parameter{
+var StringTypeEncodeHexFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "data",
-			TypeAnnotation: NewTypeAnnotation(
-				ByteArrayType,
-			),
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "data",
+			TypeAnnotation: ByteArrayTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		StringType,
-	),
-}
+	StringTypeAnnotation,
+)
 
-var StringTypeFromUtf8FunctionType = &FunctionType{
-	Parameters: []Parameter{
+var StringTypeFromUtf8FunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "bytes",
-			TypeAnnotation: NewTypeAnnotation(ByteArrayType),
+			TypeAnnotation: ByteArrayTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
+	NewTypeAnnotation(
 		&OptionalType{
 			Type: StringType,
 		},
 	),
-}
+)
 
-var StringTypeFromCharactersFunctionType = &FunctionType{
-	Parameters: []Parameter{
+var StringTypeFromCharactersFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
 			Identifier: "characters",
@@ -306,16 +339,15 @@ var StringTypeFromCharactersFunctionType = &FunctionType{
 			}),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		StringType,
-	),
-}
+	StringTypeAnnotation,
+)
 
-var StringTypeJoinFunctionType = &FunctionType{
-	Parameters: []Parameter{
+var StringTypeJoinFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
-			Identifier: "strs",
+			Identifier: "strings",
 			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
 				Type: StringType,
 			}),
@@ -325,5 +357,35 @@ var StringTypeJoinFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(StringType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(StringType),
-}
+	StringTypeAnnotation,
+)
+
+var StringTypeSplitFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Identifier:     "separator",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+	},
+	NewTypeAnnotation(
+		&VariableSizedType{
+			Type: StringType,
+		},
+	),
+)
+
+var StringTypeReplaceAllFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Identifier:     "of",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+		{
+			Identifier:     "with",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+	},
+	StringTypeAnnotation,
+)

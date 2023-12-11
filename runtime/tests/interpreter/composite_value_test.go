@@ -189,18 +189,12 @@ func TestInterpretContractTransfer(t *testing.T) {
               contract C {}
 
               fun test() {
-                  authAccount.save(%s, to: /storage/c)
+                  authAccount.storage.save(%s, to: /storage/c)
               }
 		    `,
 			value,
 		)
-		inter, _ := testAccount(
-			t,
-			address,
-			true,
-			code,
-			sema.Config{},
-		)
+		inter, _ := testAccount(t, address, true, nil, code, sema.Config{})
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -25,10 +25,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/ast"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -36,21 +36,21 @@ func TestRuntimeSharedState(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	signerAddress := common.MustBytesToAddress([]byte{0x1})
 
 	deploy1 := DeploymentTransaction("C1", []byte(`
-        pub contract C1 {
-            pub fun hello() {
+        access(all) contract C1 {
+            access(all) fun hello() {
                 log("Hello from C1!")
             }
         }
     `))
 
 	deploy2 := DeploymentTransaction("C2", []byte(`
-        pub contract C2 {
-            pub fun hello() {
+        access(all) contract C2 {
+            access(all) fun hello() {
                 log("Hello from C2!")
             }
         }
@@ -65,7 +65,7 @@ func TestRuntimeSharedState(t *testing.T) {
 
 	var ledgerReads []ownerKeyPair
 
-	ledger := newTestLedger(
+	ledger := NewTestLedger(
 		func(owner, key, value []byte) {
 			ledgerReads = append(
 				ledgerReads,
@@ -78,59 +78,42 @@ func TestRuntimeSharedState(t *testing.T) {
 		nil,
 	)
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: ledger,
-		getSigningAccounts: func() ([]Address, error) {
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: ledger,
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAddress}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
-		removeAccountContractCode: func(location common.AddressLocation) error {
+		OnRemoveAccountContractCode: func(location common.AddressLocation) error {
 			delete(accountCodes, location)
 			return nil
 		},
-		resolveLocation: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
-
-			// Resolve each identifier as an address location
-
-			for _, identifier := range identifiers {
-				result = append(result, sema.ResolvedLocation{
-					Location: common.AddressLocation{
-						Address: location.(common.AddressLocation).Address,
-						Name:    identifier.Identifier,
-					},
-					Identifiers: []ast.Identifier{
-						identifier,
-					},
-				})
-			}
-
-			return
-		},
-		log: func(message string) {
+		OnResolveLocation: MultipleIdentifierLocationResolver,
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		setInterpreterSharedState: func(state *interpreter.SharedState) {
+		OnSetInterpreterSharedState: func(state *interpreter.SharedState) {
 			interpreterState = state
 		},
-		getInterpreterSharedState: func() *interpreter.SharedState {
+		OnGetInterpreterSharedState: func() *interpreter.SharedState {
 			return interpreterState
 		},
 	}
 
 	environment := NewBaseInterpreterEnvironment(Config{})
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy contracts
 
@@ -163,7 +146,7 @@ func TestRuntimeSharedState(t *testing.T) {
                 import C1 from 0x1
 
                 transaction {
-                    prepare(signer: AuthAccount) {
+                    prepare(signer: &Account) {
                         C1.hello()
                     }
                 }

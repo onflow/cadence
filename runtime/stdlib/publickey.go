@@ -20,6 +20,7 @@ package stdlib
 
 import (
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -29,19 +30,20 @@ const publicKeyConstructorFunctionDocString = `
 Constructs a new public key
 `
 
-var publicKeyConstructorFunctionType = &sema.FunctionType{
-	Parameters: []sema.Parameter{
+var publicKeyConstructorFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]sema.Parameter{
 		{
 			Identifier:     sema.PublicKeyTypePublicKeyFieldName,
-			TypeAnnotation: sema.NewTypeAnnotation(sema.ByteArrayType),
+			TypeAnnotation: sema.ByteArrayTypeAnnotation,
 		},
 		{
 			Identifier:     sema.PublicKeyTypeSignAlgoFieldName,
-			TypeAnnotation: sema.NewTypeAnnotation(sema.SignatureAlgorithmType),
+			TypeAnnotation: sema.SignatureAlgorithmTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
-}
+	sema.PublicKeyTypeAnnotation,
+)
 
 type PublicKey struct {
 	PublicKey []byte
@@ -349,9 +351,9 @@ type PublicKeyFunctionsHandler interface {
 func PublicKeyFunctions(
 	gauge common.MemoryGauge,
 	handler PublicKeyFunctionsHandler,
-) map[string]interpreter.FunctionValue {
-	return map[string]interpreter.FunctionValue{
-		sema.PublicKeyTypeVerifyFunctionName:    newPublicKeyVerifySignatureFunction(gauge, handler),
-		sema.PublicKeyTypeVerifyPoPFunctionName: newPublicKeyVerifyPoPFunction(gauge, handler),
-	}
+) *interpreter.FunctionOrderedMap {
+	functions := orderedmap.New[interpreter.FunctionOrderedMap](2)
+	functions.Set(sema.PublicKeyTypeVerifyFunctionName, newPublicKeyVerifySignatureFunction(gauge, handler))
+	functions.Set(sema.PublicKeyTypeVerifyPoPFunctionName, newPublicKeyVerifyPoPFunction(gauge, handler))
+	return functions
 }

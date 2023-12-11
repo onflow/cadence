@@ -225,18 +225,12 @@ func exportValueWithInterpreter(
 		)
 	case interpreter.AddressValue:
 		return cadence.NewMeteredAddress(inter, v), nil
-	case interpreter.PathLinkValue:
-		return exportPathLinkValue(v, inter)
-	case interpreter.AccountLinkValue:
-		return exportAccountLinkValue(inter), nil
 	case interpreter.PathValue:
 		return exportPathValue(inter, v)
 	case interpreter.TypeValue:
 		return exportTypeValue(v, inter), nil
-	case *interpreter.IDCapabilityValue:
-		return exportIDCapabilityValue(v, inter)
-	case *interpreter.PathCapabilityValue:
-		return exportPathCapabilityValue(v, inter)
+	case *interpreter.CapabilityValue:
+		return exportCapabilityValue(v, inter)
 	case *interpreter.EphemeralReferenceValue:
 		// Break recursion through references
 		if _, ok := seenReferences[v]; ok {
@@ -245,10 +239,8 @@ func exportValueWithInterpreter(
 		defer delete(seenReferences, v)
 		seenReferences[v] = struct{}{}
 
-		referencedValue := v.MustReferencedValue(inter, locationRange)
-
 		return exportValueWithInterpreter(
-			referencedValue,
+			v.Value,
 			inter,
 			locationRange,
 			seenReferences,
@@ -604,19 +596,6 @@ func exportDictionaryValue(
 	return dictionary.WithType(exportType), err
 }
 
-func exportPathLinkValue(v interpreter.PathLinkValue, inter *interpreter.Interpreter) (cadence.PathLink, error) {
-	path, err := exportPathValue(inter, v.TargetPath)
-	if err != nil {
-		return cadence.PathLink{}, err
-	}
-	ty := string(inter.MustConvertStaticToSemaType(v.Type).ID())
-	return cadence.NewMeteredPathLink(inter, path, ty), nil
-}
-
-func exportAccountLinkValue(inter *interpreter.Interpreter) cadence.AccountLink {
-	return cadence.NewMeteredAccountLink(inter)
-}
-
 func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) (cadence.Path, error) {
 	return cadence.NewMeteredPath(
 		gauge,
@@ -636,36 +615,14 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 	)
 }
 
-func exportPathCapabilityValue(
-	v *interpreter.PathCapabilityValue,
+func exportCapabilityValue(
+	v *interpreter.CapabilityValue,
 	inter *interpreter.Interpreter,
-) (cadence.PathCapability, error) {
-	var borrowType sema.Type
-	if v.BorrowType != nil {
-		borrowType = inter.MustConvertStaticToSemaType(v.BorrowType)
-	}
-
-	path, err := exportPathValue(inter, v.Path)
-	if err != nil {
-		return cadence.PathCapability{}, err
-	}
-
-	return cadence.NewMeteredPathCapability(
-		inter,
-		cadence.NewMeteredAddress(inter, v.Address),
-		path,
-		ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{}),
-	), nil
-}
-
-func exportIDCapabilityValue(
-	v *interpreter.IDCapabilityValue,
-	inter *interpreter.Interpreter,
-) (cadence.IDCapability, error) {
+) (cadence.Capability, error) {
 	borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
 	exportedBorrowType := ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{})
 
-	return cadence.NewMeteredIDCapability(
+	return cadence.NewMeteredCapability(
 		inter,
 		cadence.NewMeteredUInt64(inter, uint64(v.ID)),
 		cadence.NewMeteredAddress(inter, v.Address),
@@ -846,14 +803,8 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 		)
 	case cadence.TypeValue:
 		return i.importTypeValue(v.StaticType)
-	case cadence.PathCapability:
-		return i.importPathCapability(
-			v.Address,
-			v.Path,
-			v.BorrowType,
-		)
-	case cadence.IDCapability:
-		return i.importIDCapability(
+	case cadence.Capability:
+		return i.importCapability(
 			v.ID,
 			v.Address,
 			v.BorrowType,
@@ -862,10 +813,6 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 		return nil, errors.NewDefaultUserError("cannot import contract")
 	case cadence.Function:
 		return nil, errors.NewDefaultUserError("cannot import function")
-	case cadence.PathLink:
-		return nil, errors.NewDefaultUserError("cannot import path link")
-	case cadence.AccountLink:
-		return nil, errors.NewDefaultUserError("cannot import account link")
 	default:
 		// This means the implementation has unhandled types.
 		// Hence, return an internal error
@@ -1141,41 +1088,12 @@ func (i valueImporter) importTypeValue(v cadence.Type) (interpreter.TypeValue, e
 	return interpreter.NewTypeValue(inter, typ), nil
 }
 
-func (i valueImporter) importPathCapability(
-	address cadence.Address,
-	path cadence.Path,
-	borrowType cadence.Type,
-) (
-	*interpreter.PathCapabilityValue,
-	error,
-) {
-	_, ok := borrowType.(*cadence.ReferenceType)
-	if !ok {
-		return nil, errors.NewDefaultUserError(
-			"cannot import capability: expected reference, got '%s'",
-			borrowType.ID(),
-		)
-	}
-
-	inter := i.inter
-
-	return interpreter.NewPathCapabilityValue(
-		inter,
-		interpreter.NewAddressValue(
-			inter,
-			common.Address(address),
-		),
-		i.importPathValue(path),
-		ImportType(inter, borrowType),
-	), nil
-}
-
-func (i valueImporter) importIDCapability(
+func (i valueImporter) importCapability(
 	id cadence.UInt64,
 	address cadence.Address,
 	borrowType cadence.Type,
 ) (
-	*interpreter.IDCapabilityValue,
+	*interpreter.CapabilityValue,
 	error,
 ) {
 	_, ok := borrowType.(*cadence.ReferenceType)
@@ -1193,7 +1111,7 @@ func (i valueImporter) importIDCapability(
 		common.Address(address),
 	)
 
-	return interpreter.NewIDCapabilityValue(
+	return interpreter.NewCapabilityValue(
 		inter,
 		i.importUInt64(id),
 		addressValue,
@@ -1323,7 +1241,7 @@ func (i valueImporter) importDictionaryValue(
 		keysAndValues[pairIndex*2+1] = value
 	}
 
-	var dictionaryStaticType interpreter.DictionaryStaticType
+	var dictionaryStaticType *interpreter.DictionaryStaticType
 	if dictionaryType != nil {
 		dictionaryStaticType = interpreter.ConvertSemaDictionaryTypeToStaticDictionaryType(inter, dictionaryType)
 	} else {

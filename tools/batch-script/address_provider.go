@@ -46,8 +46,8 @@ type AddressProvider struct {
 const endOfAccountsError = "get storage used failed"
 
 const accountStorageUsageScript = `
-pub fun main(address: Address): UInt64 {
-  return getAccount(address).storageUsed
+access(all) fun main(address: Address): UInt64 {
+  return getAccount(address).storage.used
 }
 `
 

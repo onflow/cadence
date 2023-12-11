@@ -23,7 +23,7 @@ var NeverType = &SimpleType{
 	Name:          "Never",
 	QualifiedName: "Never",
 	TypeID:        "Never",
-	tag:           NeverTypeTag,
+	TypeTag:       NeverTypeTag,
 	IsResource:    false,
 	Storable:      false,
 	Equatable:     false,
@@ -31,3 +31,5 @@ var NeverType = &SimpleType{
 	Exportable:    false,
 	Importable:    false,
 }
+
+var NeverTypeAnnotation = NewTypeAnnotation(NeverType)

@@ -24,6 +24,8 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -37,7 +39,7 @@ type Type interface {
 // This type should not be used when encoding values,
 // and should only be used for decoding values that were encoded
 // using an older format of the JSON encoding (<v0.3.0)
-type TypeID string
+type TypeID common.TypeID
 
 func (TypeID) isType() {}
 
@@ -49,111 +51,10 @@ func (t TypeID) Equal(other Type) bool {
 	return t == other
 }
 
-// AnyType
-
-type AnyType struct{}
-
-var TheAnyType = AnyType{}
-
-func NewAnyType() AnyType {
-	return TheAnyType
-}
-
-func (AnyType) isType() {}
-
-func (AnyType) ID() string {
-	return "Any"
-}
-
-func (t AnyType) Equal(other Type) bool {
-	return t == other
-}
-
-// AnyStructType
-
-type AnyStructType struct{}
-
-var TheAnyStructType = AnyStructType{}
-
-func NewAnyStructType() AnyStructType {
-	return TheAnyStructType
-}
-
-func (AnyStructType) isType() {}
-
-func (AnyStructType) ID() string {
-	return "AnyStruct"
-}
-
-func (t AnyStructType) Equal(other Type) bool {
-	return t == other
-}
-
-// AnyStructAttachmentType
-
-type AnyStructAttachmentType struct{}
-
-var TheAnyStructAttachmentType = AnyStructAttachmentType{}
-
-func NewAnyStructAttachmentType() AnyStructAttachmentType {
-	return TheAnyStructAttachmentType
-}
-
-func (AnyStructAttachmentType) isType() {}
-
-func (AnyStructAttachmentType) ID() string {
-	return "AnyStructAttachment"
-}
-
-func (t AnyStructAttachmentType) Equal(other Type) bool {
-	return t == other
-}
-
-// AnyResourceType
-
-type AnyResourceType struct{}
-
-var TheAnyResourceType = AnyResourceType{}
-
-func NewAnyResourceType() AnyResourceType {
-	return TheAnyResourceType
-}
-
-func (AnyResourceType) isType() {}
-
-func (AnyResourceType) ID() string {
-	return "AnyResource"
-}
-
-func (t AnyResourceType) Equal(other Type) bool {
-	return t == other
-}
-
-// AnyResourceAttachmentType
-
-type AnyResourceAttachmentType struct{}
-
-var TheAnyResourceAttachmentType = AnyResourceAttachmentType{}
-
-func NewAnyResourceAttachmentType() AnyResourceAttachmentType {
-	return TheAnyResourceAttachmentType
-}
-
-func (AnyResourceAttachmentType) isType() {}
-
-func (AnyResourceAttachmentType) ID() string {
-	return "AnyResourceAttachment"
-}
-
-func (t AnyResourceAttachmentType) Equal(other Type) bool {
-	return t == other
-}
-
 // OptionalType
 
 type OptionalType struct {
-	Type   Type
-	typeID string
+	Type Type
 }
 
 var _ Type = &OptionalType{}
@@ -170,10 +71,7 @@ func NewMeteredOptionalType(gauge common.MemoryGauge, typ Type) *OptionalType {
 func (*OptionalType) isType() {}
 
 func (t *OptionalType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = fmt.Sprintf("%s?", t.Type.ID())
-	}
-	return t.typeID
+	return sema.FormatOptionalTypeID(t.Type.ID())
 }
 
 func (t *OptionalType) Equal(other Type) bool {
@@ -185,135 +83,11 @@ func (t *OptionalType) Equal(other Type) bool {
 	return t.Type.Equal(otherOptional.Type)
 }
 
-// MetaType
-
-type MetaType struct{}
-
-var TheMetaType = MetaType{}
-
-func NewMetaType() MetaType {
-	return TheMetaType
-}
-
-func (MetaType) isType() {}
-
-func (MetaType) ID() string {
-	return "Type"
-}
-
-func (t MetaType) Equal(other Type) bool {
-	return t == other
-}
-
-// VoidType
-
-type VoidType struct{}
-
-var TheVoidType = VoidType{}
-
-func NewVoidType() VoidType {
-	return TheVoidType
-}
-
-func (VoidType) isType() {}
-
-func (VoidType) ID() string {
-	return "Void"
-}
-
-func (t VoidType) Equal(other Type) bool {
-	return t == other
-}
-
-// NeverType
-
-type NeverType struct{}
-
-var TheNeverType = NeverType{}
-
-func NewNeverType() NeverType {
-	return TheNeverType
-}
-
-func (NeverType) isType() {}
-
-func (NeverType) ID() string {
-	return "Never"
-}
-
-func (t NeverType) Equal(other Type) bool {
-	return t == other
-}
-
-// BoolType
-
-type BoolType struct{}
-
-var TheBoolType = BoolType{}
-
-func NewBoolType() BoolType {
-	return TheBoolType
-}
-
-func (BoolType) isType() {}
-
-func (BoolType) ID() string {
-	return "Bool"
-}
-
-func (t BoolType) Equal(other Type) bool {
-	return t == other
-}
-
-// StringType
-
-type StringType struct{}
-
-var TheStringType = StringType{}
-
-func NewStringType() StringType {
-	return TheStringType
-}
-
-func (StringType) isType() {}
-
-func (StringType) ID() string {
-	return "String"
-}
-
-func (t StringType) Equal(other Type) bool {
-	return t == other
-}
-
-// CharacterType
-
-type CharacterType struct{}
-
-var TheCharacterType = CharacterType{}
-
-func NewCharacterType() CharacterType {
-	return TheCharacterType
-}
-
-func (CharacterType) isType() {}
-
-func (CharacterType) ID() string {
-	return "Character"
-}
-
-func (t CharacterType) Equal(other Type) bool {
-	return t == other
-}
-
 // BytesType
 
 type BytesType struct{}
 
 var TheBytesType = BytesType{}
-
-func NewBytesType() BytesType {
-	return TheBytesType
-}
 
 func (BytesType) isType() {}
 
@@ -325,585 +99,127 @@ func (t BytesType) Equal(other Type) bool {
 	return t == other
 }
 
-// AddressType
-
-type AddressType struct{}
-
-var TheAddressType = AddressType{}
-
-func NewAddressType() AddressType {
-	return TheAddressType
-}
-
-func (AddressType) isType() {}
-
-func (AddressType) ID() string {
-	return "Address"
-}
-
-func (t AddressType) Equal(other Type) bool {
-	return t == other
-}
-
-// NumberType
-
-type NumberType struct{}
-
-var TheNumberType = NumberType{}
-
-func NewNumberType() NumberType {
-	return TheNumberType
-}
-
-func (NumberType) isType() {}
-
-func (NumberType) ID() string {
-	return "Number"
-}
-
-func (t NumberType) Equal(other Type) bool {
-	return t == other
-}
-
-// SignedNumberType
-
-type SignedNumberType struct{}
-
-var TheSignedNumberType = SignedNumberType{}
-
-func NewSignedNumberType() SignedNumberType {
-	return TheSignedNumberType
-}
-
-func (SignedNumberType) isType() {}
-
-func (SignedNumberType) ID() string {
-	return "SignedNumber"
-}
-
-func (t SignedNumberType) Equal(other Type) bool {
-	return t == other
-}
-
-// IntegerType
-
-type IntegerType struct{}
-
-var TheIntegerType = IntegerType{}
-
-func NewIntegerType() IntegerType {
-	return TheIntegerType
-}
-
-func (IntegerType) isType() {}
-
-func (IntegerType) ID() string {
-	return "Integer"
-}
-
-func (t IntegerType) Equal(other Type) bool {
-	return t == other
-}
-
-// SignedIntegerType
-
-type SignedIntegerType struct{}
-
-var TheSignedIntegerType = SignedIntegerType{}
-
-func NewSignedIntegerType() SignedIntegerType {
-	return TheSignedIntegerType
-}
-
-func (SignedIntegerType) isType() {}
-
-func (SignedIntegerType) ID() string {
-	return "SignedInteger"
-}
-
-func (t SignedIntegerType) Equal(other Type) bool {
-	return t == other
-}
-
-// FixedPointType
-
-type FixedPointType struct{}
-
-var TheFixedPointType = FixedPointType{}
-
-func NewFixedPointType() FixedPointType {
-	return TheFixedPointType
-}
-
-func (FixedPointType) isType() {}
-
-func (FixedPointType) ID() string {
-	return "FixedPoint"
-}
-
-func (t FixedPointType) Equal(other Type) bool {
-	return t == other
-}
-
-// SignedFixedPointType
-
-type SignedFixedPointType struct{}
-
-var TheSignedFixedPointType = SignedFixedPointType{}
-
-func NewSignedFixedPointType() SignedFixedPointType {
-	return TheSignedFixedPointType
-}
-
-func (SignedFixedPointType) isType() {}
-
-func (SignedFixedPointType) ID() string {
-	return "SignedFixedPoint"
-}
-
-func (t SignedFixedPointType) Equal(other Type) bool {
-	return t == other
-}
-
-// IntType
-
-type IntType struct{}
-
-var TheIntType = IntType{}
-
-func NewIntType() IntType {
-	return TheIntType
-}
-
-func (IntType) isType() {}
-
-func (IntType) ID() string {
-	return "Int"
-}
-
-func (t IntType) Equal(other Type) bool {
-	return t == other
-}
-
-// Int8Type
-
-type Int8Type struct{}
-
-var TheInt8Type = Int8Type{}
-
-func NewInt8Type() Int8Type {
-	return TheInt8Type
-}
-
-func (t Int8Type) Equal(other Type) bool {
-	return t == other
-}
-
-func (Int8Type) isType() {}
-
-func (Int8Type) ID() string {
-	return "Int8"
-}
-
-// Int16Type
-
-type Int16Type struct{}
-
-var TheInt16Type = Int16Type{}
-
-func NewInt16Type() Int16Type {
-	return TheInt16Type
-}
-
-func (Int16Type) isType() {}
-
-func (Int16Type) ID() string {
-	return "Int16"
-}
-
-func (t Int16Type) Equal(other Type) bool {
-	return t == other
-}
-
-// Int32Type
-
-type Int32Type struct{}
-
-var TheInt32Type = Int32Type{}
-
-func NewInt32Type() Int32Type {
-	return TheInt32Type
-}
-
-func (Int32Type) isType() {}
-
-func (Int32Type) ID() string {
-	return "Int32"
-}
-
-func (t Int32Type) Equal(other Type) bool {
-	return t == other
-}
-
-// Int64Type
-
-type Int64Type struct{}
-
-var TheInt64Type = Int64Type{}
-
-func NewInt64Type() Int64Type {
-	return TheInt64Type
-}
-
-func (Int64Type) isType() {}
-
-func (Int64Type) ID() string {
-	return "Int64"
-}
-
-func (t Int64Type) Equal(other Type) bool {
-	return t == other
-}
-
-// Int128Type
-
-type Int128Type struct{}
-
-var TheInt128Type = Int128Type{}
-
-func NewInt128Type() Int128Type {
-	return TheInt128Type
-}
-
-func (Int128Type) isType() {}
-
-func (Int128Type) ID() string {
-	return "Int128"
-}
-
-func (t Int128Type) Equal(other Type) bool {
-	return t == other
-}
-
-// Int256Type
-
-type Int256Type struct{}
-
-var TheInt256Type = Int256Type{}
-
-func NewInt256Type() Int256Type {
-	return TheInt256Type
-}
-
-func (Int256Type) isType() {}
-
-func (Int256Type) ID() string {
-	return "Int256"
-}
-
-func (t Int256Type) Equal(other Type) bool {
-	return t == other
-}
-
-// UIntType
-
-type UIntType struct{}
-
-var TheUIntType = UIntType{}
-
-func NewUIntType() UIntType {
-	return TheUIntType
-}
-
-func (UIntType) isType() {}
-
-func (UIntType) ID() string {
-	return "UInt"
-}
-
-func (t UIntType) Equal(other Type) bool {
-	return t == other
-}
-
-// UInt8Type
-
-type UInt8Type struct{}
-
-var TheUInt8Type = UInt8Type{}
-
-func NewUInt8Type() UInt8Type {
-	return TheUInt8Type
-}
-
-func (UInt8Type) isType() {}
-
-func (UInt8Type) ID() string {
-	return "UInt8"
-}
-
-func (t UInt8Type) Equal(other Type) bool {
-	return t == other
-}
-
-// UInt16Type
-
-type UInt16Type struct{}
-
-var TheUInt16Type = UInt16Type{}
-
-func NewUInt16Type() UInt16Type {
-	return TheUInt16Type
-}
-
-func (UInt16Type) isType() {}
-
-func (UInt16Type) ID() string {
-	return "UInt16"
-}
-
-func (t UInt16Type) Equal(other Type) bool {
-	return t == other
-}
-
-// UInt32Type
-
-type UInt32Type struct{}
-
-var TheUInt32Type = UInt32Type{}
-
-func NewUInt32Type() UInt32Type {
-	return TheUInt32Type
-}
-
-func (UInt32Type) isType() {}
-
-func (UInt32Type) ID() string {
-	return "UInt32"
-}
-
-func (t UInt32Type) Equal(other Type) bool {
-	return t == other
-}
-
-// UInt64Type
-
-type UInt64Type struct{}
-
-var TheUInt64Type = UInt64Type{}
-
-func NewUInt64Type() UInt64Type {
-	return TheUInt64Type
-}
-
-func (UInt64Type) isType() {}
-
-func (UInt64Type) ID() string {
-	return "UInt64"
-}
-
-func (t UInt64Type) Equal(other Type) bool {
-	return t == other
-}
-
-// UInt128Type
-
-type UInt128Type struct{}
-
-var TheUInt128Type = UInt128Type{}
-
-func NewUInt128Type() UInt128Type {
-	return TheUInt128Type
-}
-
-func (UInt128Type) isType() {}
-
-func (UInt128Type) ID() string {
-	return "UInt128"
-}
-
-func (t UInt128Type) Equal(other Type) bool {
-	return t == other
-}
-
-// UInt256Type
-
-type UInt256Type struct{}
-
-var TheUInt256Type = UInt256Type{}
-
-func NewUInt256Type() UInt256Type {
-	return TheUInt256Type
-}
-
-func (UInt256Type) isType() {}
-
-func (UInt256Type) ID() string {
-	return "UInt256"
-}
-
-func (t UInt256Type) Equal(other Type) bool {
-	return t == other
-}
-
-// Word8Type
-
-type Word8Type struct{}
-
-var TheWord8Type = Word8Type{}
-
-func NewWord8Type() Word8Type {
-	return TheWord8Type
-}
-
-func (Word8Type) isType() {}
-
-func (Word8Type) ID() string {
-	return "Word8"
-}
-
-func (t Word8Type) Equal(other Type) bool {
-	return t == other
-}
-
-// Word16Type
-
-type Word16Type struct{}
-
-var TheWord16Type = Word16Type{}
-
-func NewWord16Type() Word16Type {
-	return TheWord16Type
-}
-
-func (Word16Type) isType() {}
-
-func (Word16Type) ID() string {
-	return "Word16"
-}
-
-func (t Word16Type) Equal(other Type) bool {
-	return t == other
-}
-
-// Word32Type
-
-type Word32Type struct{}
-
-var TheWord32Type = Word32Type{}
-
-func NewWord32Type() Word32Type {
-	return TheWord32Type
-}
-
-func (Word32Type) isType() {}
-
-func (Word32Type) ID() string {
-	return "Word32"
-}
-
-func (t Word32Type) Equal(other Type) bool {
-	return t == other
-}
-
-// Word64Type
-
-type Word64Type struct{}
-
-var TheWord64Type = Word64Type{}
-
-func NewWord64Type() Word64Type {
-	return TheWord64Type
-}
-
-func (Word64Type) isType() {}
-
-func (Word64Type) ID() string {
-	return "Word64"
-}
-
-func (t Word64Type) Equal(other Type) bool {
-	return t == other
-}
-
-// Word128Type
-
-type Word128Type struct{}
-
-var TheWord128Type = Word128Type{}
-
-func NewWord128Type() Word128Type {
-	return TheWord128Type
-}
-
-func (Word128Type) isType() {}
-
-func (Word128Type) ID() string {
-	return "Word128"
-}
-
-func (t Word128Type) Equal(other Type) bool {
-	return t == other
-}
-
-// Word256Type
-
-type Word256Type struct{}
-
-var TheWord256Type = Word256Type{}
-
-func NewWord256Type() Word256Type {
-	return TheWord256Type
-}
-
-func (Word256Type) isType() {}
-
-func (Word256Type) ID() string {
-	return "Word256"
-}
-
-func (t Word256Type) Equal(other Type) bool {
-	return t == other
-}
-
-// Fix64Type
-
-type Fix64Type struct{}
-
-var TheFix64Type = Fix64Type{}
-
-func NewFix64Type() Fix64Type {
-	return TheFix64Type
-}
-
-func (Fix64Type) isType() {}
-
-func (Fix64Type) ID() string {
-	return "Fix64"
-}
-
-func (t Fix64Type) Equal(other Type) bool {
-	return t == other
-}
-
-// UFix64Type
-
-type UFix64Type struct{}
-
-var TheUFix64Type = UFix64Type{}
-
-func NewUFix64Type() UFix64Type {
-	return TheUFix64Type
-}
-
-func (UFix64Type) isType() {}
-
-func (UFix64Type) ID() string {
-	return "UFix64"
-}
-
-func (t UFix64Type) Equal(other Type) bool {
-	return t == other
-}
+// PrimitiveType
+
+type PrimitiveType interpreter.PrimitiveStaticType
+
+var _ Type = PrimitiveType(interpreter.PrimitiveStaticTypeUnknown)
+
+func (p PrimitiveType) isType() {}
+
+func (p PrimitiveType) ID() string {
+	return string(interpreter.PrimitiveStaticType(p).ID())
+}
+
+func (p PrimitiveType) Equal(other Type) bool {
+	otherP, ok := other.(PrimitiveType)
+	return ok && p == otherP
+}
+
+var VoidType = PrimitiveType(interpreter.PrimitiveStaticTypeVoid)
+var AnyType = PrimitiveType(interpreter.PrimitiveStaticTypeAny)
+var NeverType = PrimitiveType(interpreter.PrimitiveStaticTypeNever)
+var AnyStructType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyStruct)
+var AnyResourceType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyResource)
+var AnyStructAttachmentType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyStructAttachment)
+var AnyResourceAttachmentType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyResourceAttachment)
+var HashableStructType = PrimitiveType(interpreter.PrimitiveStaticTypeHashableStruct)
+
+var BoolType = PrimitiveType(interpreter.PrimitiveStaticTypeBool)
+var AddressType = PrimitiveType(interpreter.PrimitiveStaticTypeAddress)
+var StringType = PrimitiveType(interpreter.PrimitiveStaticTypeString)
+var CharacterType = PrimitiveType(interpreter.PrimitiveStaticTypeCharacter)
+var MetaType = PrimitiveType(interpreter.PrimitiveStaticTypeMetaType)
+var BlockType = PrimitiveType(interpreter.PrimitiveStaticTypeBlock)
+
+var NumberType = PrimitiveType(interpreter.PrimitiveStaticTypeNumber)
+var SignedNumberType = PrimitiveType(interpreter.PrimitiveStaticTypeSignedNumber)
+
+var IntegerType = PrimitiveType(interpreter.PrimitiveStaticTypeInteger)
+var SignedIntegerType = PrimitiveType(interpreter.PrimitiveStaticTypeSignedInteger)
+
+var FixedPointType = PrimitiveType(interpreter.PrimitiveStaticTypeFixedPoint)
+var SignedFixedPointType = PrimitiveType(interpreter.PrimitiveStaticTypeSignedFixedPoint)
+
+var IntType = PrimitiveType(interpreter.PrimitiveStaticTypeInt)
+var Int8Type = PrimitiveType(interpreter.PrimitiveStaticTypeInt8)
+var Int16Type = PrimitiveType(interpreter.PrimitiveStaticTypeInt16)
+var Int32Type = PrimitiveType(interpreter.PrimitiveStaticTypeInt32)
+var Int64Type = PrimitiveType(interpreter.PrimitiveStaticTypeInt64)
+var Int128Type = PrimitiveType(interpreter.PrimitiveStaticTypeInt128)
+var Int256Type = PrimitiveType(interpreter.PrimitiveStaticTypeInt256)
+
+var UIntType = PrimitiveType(interpreter.PrimitiveStaticTypeUInt)
+var UInt8Type = PrimitiveType(interpreter.PrimitiveStaticTypeUInt8)
+var UInt16Type = PrimitiveType(interpreter.PrimitiveStaticTypeUInt16)
+var UInt32Type = PrimitiveType(interpreter.PrimitiveStaticTypeUInt32)
+var UInt64Type = PrimitiveType(interpreter.PrimitiveStaticTypeUInt64)
+var UInt128Type = PrimitiveType(interpreter.PrimitiveStaticTypeUInt128)
+var UInt256Type = PrimitiveType(interpreter.PrimitiveStaticTypeUInt256)
+
+var Word8Type = PrimitiveType(interpreter.PrimitiveStaticTypeWord8)
+var Word16Type = PrimitiveType(interpreter.PrimitiveStaticTypeWord16)
+var Word32Type = PrimitiveType(interpreter.PrimitiveStaticTypeWord32)
+var Word64Type = PrimitiveType(interpreter.PrimitiveStaticTypeWord64)
+var Word128Type = PrimitiveType(interpreter.PrimitiveStaticTypeWord128)
+var Word256Type = PrimitiveType(interpreter.PrimitiveStaticTypeWord256)
+
+var Fix64Type = PrimitiveType(interpreter.PrimitiveStaticTypeFix64)
+var UFix64Type = PrimitiveType(interpreter.PrimitiveStaticTypeUFix64)
+
+var PathType = PrimitiveType(interpreter.PrimitiveStaticTypePath)
+var CapabilityPathType = PrimitiveType(interpreter.PrimitiveStaticTypeCapabilityPath)
+var StoragePathType = PrimitiveType(interpreter.PrimitiveStaticTypeStoragePath)
+var PublicPathType = PrimitiveType(interpreter.PrimitiveStaticTypePublicPath)
+var PrivatePathType = PrimitiveType(interpreter.PrimitiveStaticTypePrivatePath)
+
+var DeployedContractType = PrimitiveType(interpreter.PrimitiveStaticTypeDeployedContract)
+
+var StorageCapabilityControllerType = PrimitiveType(interpreter.PrimitiveStaticTypeStorageCapabilityController)
+var AccountCapabilityControllerType = PrimitiveType(interpreter.PrimitiveStaticTypeAccountCapabilityController)
+
+var AccountType = PrimitiveType(interpreter.PrimitiveStaticTypeAccount)
+var Account_ContractsType = PrimitiveType(interpreter.PrimitiveStaticTypeAccount_Contracts)
+var Account_KeysType = PrimitiveType(interpreter.PrimitiveStaticTypeAccount_Keys)
+var Account_StorageType = PrimitiveType(interpreter.PrimitiveStaticTypeAccount_Storage)
+var Account_InboxType = PrimitiveType(interpreter.PrimitiveStaticTypeAccount_Inbox)
+var Account_CapabilitiesType = PrimitiveType(interpreter.PrimitiveStaticTypeAccount_Capabilities)
+var Account_StorageCapabilitiesType = PrimitiveType(interpreter.PrimitiveStaticTypeAccount_StorageCapabilities)
+var Account_AccountCapabilitiesType = PrimitiveType(interpreter.PrimitiveStaticTypeAccount_AccountCapabilities)
+
+var MutateType = PrimitiveType(interpreter.PrimitiveStaticTypeMutate)
+var InsertType = PrimitiveType(interpreter.PrimitiveStaticTypeInsert)
+var RemoveType = PrimitiveType(interpreter.PrimitiveStaticTypeRemove)
+var IdentityType = PrimitiveType(interpreter.PrimitiveStaticTypeIdentity)
+
+var StorageType = PrimitiveType(interpreter.PrimitiveStaticTypeStorage)
+var SaveValueType = PrimitiveType(interpreter.PrimitiveStaticTypeSaveValue)
+var LoadValueType = PrimitiveType(interpreter.PrimitiveStaticTypeLoadValue)
+var CopyValueType = PrimitiveType(interpreter.PrimitiveStaticTypeCopyValue)
+var BorrowValueType = PrimitiveType(interpreter.PrimitiveStaticTypeBorrowValue)
+var ContractsType = PrimitiveType(interpreter.PrimitiveStaticTypeContracts)
+var AddContractType = PrimitiveType(interpreter.PrimitiveStaticTypeAddContract)
+var UpdateContractType = PrimitiveType(interpreter.PrimitiveStaticTypeUpdateContract)
+var RemoveContractType = PrimitiveType(interpreter.PrimitiveStaticTypeRemoveContract)
+var KeysType = PrimitiveType(interpreter.PrimitiveStaticTypeKeys)
+var AddKeyType = PrimitiveType(interpreter.PrimitiveStaticTypeAddKey)
+var RevokeKeyType = PrimitiveType(interpreter.PrimitiveStaticTypeRevokeKey)
+var InboxType = PrimitiveType(interpreter.PrimitiveStaticTypeInbox)
+var PublishInboxCapabilityType = PrimitiveType(interpreter.PrimitiveStaticTypePublishInboxCapability)
+var UnpublishInboxCapabilityType = PrimitiveType(interpreter.PrimitiveStaticTypeUnpublishInboxCapability)
+var ClaimInboxCapabilityType = PrimitiveType(interpreter.PrimitiveStaticTypeClaimInboxCapability)
+var CapabilitiesType = PrimitiveType(interpreter.PrimitiveStaticTypeCapabilities)
+var StorageCapabilitiesType = PrimitiveType(interpreter.PrimitiveStaticTypeStorageCapabilities)
+var AccountCapabilitiesType = PrimitiveType(interpreter.PrimitiveStaticTypeAccountCapabilities)
+var PublishCapabilityType = PrimitiveType(interpreter.PrimitiveStaticTypePublishCapability)
+var UnpublishCapabilityType = PrimitiveType(interpreter.PrimitiveStaticTypeUnpublishCapability)
+var GetStorageCapabilityControllerType = PrimitiveType(interpreter.PrimitiveStaticTypeGetStorageCapabilityController)
+var IssueStorageCapabilityControllerType = PrimitiveType(interpreter.PrimitiveStaticTypeIssueStorageCapabilityController)
+var GetAccountCapabilityControllerType = PrimitiveType(interpreter.PrimitiveStaticTypeGetAccountCapabilityController)
+var IssueAccountCapabilityControllerType = PrimitiveType(interpreter.PrimitiveStaticTypeIssueAccountCapabilityController)
+
+var CapabilitiesMappingType = PrimitiveType(interpreter.PrimitiveStaticTypeCapabilitiesMapping)
+var AccountMappingType = PrimitiveType(interpreter.PrimitiveStaticTypeAccountMapping)
 
 type ArrayType interface {
 	Type
@@ -914,7 +230,6 @@ type ArrayType interface {
 
 type VariableSizedArrayType struct {
 	ElementType Type
-	typeID      string
 }
 
 var _ Type = &VariableSizedArrayType{}
@@ -936,10 +251,7 @@ func NewMeteredVariableSizedArrayType(
 func (*VariableSizedArrayType) isType() {}
 
 func (t *VariableSizedArrayType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = fmt.Sprintf("[%s]", t.ElementType.ID())
-	}
-	return t.typeID
+	return sema.FormatVariableSizedTypeID(t.ElementType.ID())
 }
 
 func (t *VariableSizedArrayType) Element() Type {
@@ -960,7 +272,6 @@ func (t *VariableSizedArrayType) Equal(other Type) bool {
 type ConstantSizedArrayType struct {
 	ElementType Type
 	Size        uint
-	typeID      string
 }
 
 var _ Type = &ConstantSizedArrayType{}
@@ -987,10 +298,7 @@ func NewMeteredConstantSizedArrayType(
 func (*ConstantSizedArrayType) isType() {}
 
 func (t *ConstantSizedArrayType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = fmt.Sprintf("[%s;%d]", t.ElementType.ID(), t.Size)
-	}
-	return t.typeID
+	return sema.FormatConstantSizedTypeID(t.ElementType.ID(), int64(t.Size))
 }
 
 func (t *ConstantSizedArrayType) Element() Type {
@@ -1012,7 +320,6 @@ func (t *ConstantSizedArrayType) Equal(other Type) bool {
 type DictionaryType struct {
 	KeyType     Type
 	ElementType Type
-	typeID      string
 }
 
 var _ Type = &DictionaryType{}
@@ -1039,14 +346,10 @@ func NewMeteredDictionaryType(
 func (*DictionaryType) isType() {}
 
 func (t *DictionaryType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = fmt.Sprintf(
-			"{%s:%s}",
-			t.KeyType.ID(),
-			t.ElementType.ID(),
-		)
-	}
-	return t.typeID
+	return sema.FormatDictionaryTypeID(
+		t.KeyType.ID(),
+		t.ElementType.ID(),
+	)
 }
 
 func (t *DictionaryType) Equal(other Type) bool {
@@ -1356,7 +659,6 @@ type StructType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewStructType(
@@ -1387,10 +689,7 @@ func NewMeteredStructType(
 func (*StructType) isType() {}
 
 func (t *StructType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*StructType) isCompositeType() {}
@@ -1432,7 +731,6 @@ type ResourceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewResourceType(
@@ -1463,10 +761,7 @@ func NewMeteredResourceType(
 func (*ResourceType) isType() {}
 
 func (t *ResourceType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*ResourceType) isCompositeType() {}
@@ -1502,13 +797,13 @@ func (t *ResourceType) Equal(other Type) bool {
 }
 
 // AttachmentType
+
 type AttachmentType struct {
 	Location            common.Location
 	BaseType            Type
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewAttachmentType(
@@ -1535,7 +830,7 @@ func NewMeteredAttachmentType(
 	fields []Field,
 	initializers [][]Parameter,
 ) *AttachmentType {
-	common.UseMemory(gauge, common.CadenceStructTypeMemoryUsage)
+	common.UseMemory(gauge, common.CadenceAttachmentTypeMemoryUsage)
 	return NewAttachmentType(
 		location,
 		baseType,
@@ -1548,10 +843,7 @@ func NewMeteredAttachmentType(
 func (*AttachmentType) isType() {}
 
 func (t *AttachmentType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*AttachmentType) isCompositeType() {}
@@ -1597,7 +889,6 @@ type EventType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializer         []Parameter
-	typeID              string
 }
 
 func NewEventType(
@@ -1628,10 +919,7 @@ func NewMeteredEventType(
 func (*EventType) isType() {}
 
 func (t *EventType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*EventType) isCompositeType() {}
@@ -1673,7 +961,6 @@ type ContractType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewContractType(
@@ -1704,10 +991,7 @@ func NewMeteredContractType(
 func (*ContractType) isType() {}
 
 func (t *ContractType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*ContractType) isCompositeType() {}
@@ -1761,7 +1045,6 @@ type StructInterfaceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewStructInterfaceType(
@@ -1792,10 +1075,7 @@ func NewMeteredStructInterfaceType(
 func (*StructInterfaceType) isType() {}
 
 func (t *StructInterfaceType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*StructInterfaceType) isInterfaceType() {}
@@ -1837,7 +1117,6 @@ type ResourceInterfaceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewResourceInterfaceType(
@@ -1868,10 +1147,7 @@ func NewMeteredResourceInterfaceType(
 func (*ResourceInterfaceType) isType() {}
 
 func (t *ResourceInterfaceType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*ResourceInterfaceType) isInterfaceType() {}
@@ -1913,7 +1189,6 @@ type ContractInterfaceType struct {
 	QualifiedIdentifier string
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewContractInterfaceType(
@@ -1944,10 +1219,7 @@ func NewMeteredContractInterfaceType(
 func (*ContractInterfaceType) isType() {}
 
 func (t *ContractInterfaceType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*ContractInterfaceType) isInterfaceType() {}
@@ -1984,19 +1256,28 @@ func (t *ContractInterfaceType) Equal(other Type) bool {
 
 // Function
 
+type FunctionPurity int
+
+const (
+	FunctionPurityUnspecified FunctionPurity = iota
+	FunctionPurityView
+)
+
 type FunctionType struct {
 	TypeParameters []TypeParameter
 	Parameters     []Parameter
 	ReturnType     Type
-	typeID         string
+	Purity         FunctionPurity
 }
 
 func NewFunctionType(
+	purity FunctionPurity,
 	typeParameters []TypeParameter,
 	parameters []Parameter,
 	returnType Type,
 ) *FunctionType {
 	return &FunctionType{
+		Purity:         purity,
 		TypeParameters: typeParameters,
 		Parameters:     parameters,
 		ReturnType:     returnType,
@@ -2005,46 +1286,50 @@ func NewFunctionType(
 
 func NewMeteredFunctionType(
 	gauge common.MemoryGauge,
+	purity FunctionPurity,
 	typeParameters []TypeParameter,
 	parameters []Parameter,
 	returnType Type,
 ) *FunctionType {
 	common.UseMemory(gauge, common.CadenceFunctionTypeMemoryUsage)
-	return NewFunctionType(typeParameters, parameters, returnType)
+	return NewFunctionType(purity, typeParameters, parameters, returnType)
 }
 
 func (*FunctionType) isType() {}
 
 func (t *FunctionType) ID() string {
-	if t.typeID == "" {
 
-		typeParameterCount := len(t.TypeParameters)
-		var typeParameters []string
-		if typeParameterCount > 0 {
-			typeParameters = make([]string, typeParameterCount)
-			for i, typeParameter := range t.TypeParameters {
-				typeParameters[i] = typeParameter.Name
-			}
-		}
-
-		parameterCount := len(t.Parameters)
-		var parameters []string
-		if parameterCount > 0 {
-			parameters = make([]string, parameterCount)
-			for i, parameter := range t.Parameters {
-				parameters[i] = parameter.Type.ID()
-			}
-		}
-
-		returnType := t.ReturnType.ID()
-
-		t.typeID = sema.FormatFunctionTypeID(
-			typeParameters,
-			parameters,
-			returnType,
-		)
+	var purity string
+	if t.Purity == FunctionPurityView {
+		purity = "view"
 	}
-	return t.typeID
+
+	typeParameterCount := len(t.TypeParameters)
+	var typeParameters []string
+	if typeParameterCount > 0 {
+		typeParameters = make([]string, typeParameterCount)
+		for i, typeParameter := range t.TypeParameters {
+			typeParameters[i] = typeParameter.Name
+		}
+	}
+
+	parameterCount := len(t.Parameters)
+	var parameters []string
+	if parameterCount > 0 {
+		parameters = make([]string, parameterCount)
+		for i, parameter := range t.Parameters {
+			parameters[i] = parameter.Type.ID()
+		}
+	}
+
+	returnType := t.ReturnType.ID()
+
+	return sema.FormatFunctionTypeID(
+		purity,
+		typeParameters,
+		parameters,
+		returnType,
+	)
 }
 
 func (t *FunctionType) Equal(other Type) bool {
@@ -2089,42 +1374,154 @@ func (t *FunctionType) Equal(other Type) bool {
 	return t.ReturnType.Equal(otherType.ReturnType)
 }
 
+// Authorization
+
+type Authorization interface {
+	isAuthorization()
+	ID() string
+	Equal(auth Authorization) bool
+}
+
+type Unauthorized struct{}
+
+var UnauthorizedAccess Authorization = Unauthorized{}
+
+func (Unauthorized) isAuthorization() {}
+
+func (Unauthorized) ID() string {
+	panic(errors.NewUnreachableError())
+}
+
+func (Unauthorized) Equal(other Authorization) bool {
+	_, ok := other.(Unauthorized)
+	return ok
+}
+
+type EntitlementSetKind = sema.EntitlementSetKind
+
+const Conjunction = sema.Conjunction
+const Disjunction = sema.Disjunction
+
+type EntitlementSetAuthorization struct {
+	Entitlements []common.TypeID
+	Kind         EntitlementSetKind
+}
+
+var _ Authorization = EntitlementSetAuthorization{}
+
+func NewEntitlementSetAuthorization(
+	gauge common.MemoryGauge,
+	entitlements []common.TypeID,
+	kind EntitlementSetKind,
+) EntitlementSetAuthorization {
+	common.UseMemory(gauge, common.MemoryUsage{
+		Kind:   common.MemoryKindCadenceEntitlementSetAccess,
+		Amount: uint64(len(entitlements)),
+	})
+	return EntitlementSetAuthorization{
+		Entitlements: entitlements,
+		Kind:         kind,
+	}
+}
+
+func (EntitlementSetAuthorization) isAuthorization() {}
+
+func (e EntitlementSetAuthorization) ID() string {
+	entitlementTypeIDs := make([]string, 0, len(e.Entitlements))
+	for _, typeID := range e.Entitlements {
+		entitlementTypeIDs = append(
+			entitlementTypeIDs,
+			string(typeID),
+		)
+	}
+
+	// FormatEntitlementSetTypeID sorts
+	return sema.FormatEntitlementSetTypeID(entitlementTypeIDs, e.Kind)
+}
+
+func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
+	switch auth := auth.(type) {
+	case EntitlementSetAuthorization:
+		if len(e.Entitlements) != len(auth.Entitlements) {
+			return false
+		}
+
+		for i, entitlement := range e.Entitlements {
+			if auth.Entitlements[i] != entitlement {
+				return false
+			}
+		}
+		return e.Kind == auth.Kind
+	}
+	return false
+}
+
+type EntitlementMapAuthorization struct {
+	TypeID common.TypeID
+}
+
+var _ Authorization = EntitlementMapAuthorization{}
+
+func NewEntitlementMapAuthorization(gauge common.MemoryGauge, id common.TypeID) EntitlementMapAuthorization {
+	common.UseMemory(gauge, common.NewConstantMemoryUsage(common.MemoryKindCadenceEntitlementMapAccess))
+	return EntitlementMapAuthorization{
+		TypeID: id,
+	}
+}
+
+func (EntitlementMapAuthorization) isAuthorization() {}
+
+func (e EntitlementMapAuthorization) ID() string {
+	return string(e.TypeID)
+}
+
+func (e EntitlementMapAuthorization) Equal(other Authorization) bool {
+	auth, ok := other.(EntitlementMapAuthorization)
+	if !ok {
+		return false
+	}
+	return e.TypeID == auth.TypeID
+}
+
 // ReferenceType
 
 type ReferenceType struct {
-	Type       Type
-	Authorized bool
-	typeID     string
+	Type          Type
+	Authorization Authorization
 }
 
 var _ Type = &ReferenceType{}
 
 func NewReferenceType(
-	authorized bool,
+	authorization Authorization,
 	typ Type,
 ) *ReferenceType {
 	return &ReferenceType{
-		Authorized: authorized,
-		Type:       typ,
+		Authorization: authorization,
+		Type:          typ,
 	}
 }
 
 func NewMeteredReferenceType(
 	gauge common.MemoryGauge,
-	authorized bool,
+	authorization Authorization,
 	typ Type,
 ) *ReferenceType {
 	common.UseMemory(gauge, common.CadenceReferenceTypeMemoryUsage)
-	return NewReferenceType(authorized, typ)
+	return NewReferenceType(authorization, typ)
 }
 
 func (*ReferenceType) isType() {}
 
 func (t *ReferenceType) ID() string {
-	if t.typeID == "" {
-		t.typeID = sema.FormatReferenceTypeID(t.Authorized, t.Type.ID())
+	var authorization string
+	if t.Authorization != UnauthorizedAccess {
+		authorization = t.Authorization.ID()
 	}
-	return t.typeID
+	return sema.FormatReferenceTypeID(
+		authorization,
+		t.Type.ID(),
+	)
 }
 
 func (t *ReferenceType) Equal(other Type) bool {
@@ -2133,87 +1530,66 @@ func (t *ReferenceType) Equal(other Type) bool {
 		return false
 	}
 
-	return t.Authorized == otherType.Authorized &&
+	return t.Authorization.Equal(otherType.Authorization) &&
 		t.Type.Equal(otherType.Type)
 }
 
-// RestrictedType
+// IntersectionType
 
-type RestrictionSet = map[Type]struct{}
+type IntersectionSet = map[Type]struct{}
 
-type RestrictedType struct {
-	typeID             string
-	Type               Type
-	Restrictions       []Type
-	restrictionSet     RestrictionSet
-	restrictionSetOnce sync.Once
+type IntersectionType struct {
+	Types               []Type
+	intersectionSet     IntersectionSet
+	intersectionSetOnce sync.Once
 }
 
-func NewRestrictedType(
-	typ Type,
-	restrictions []Type,
-) *RestrictedType {
-	return &RestrictedType{
-		Type:         typ,
-		Restrictions: restrictions,
+func NewIntersectionType(
+	types []Type,
+) *IntersectionType {
+	return &IntersectionType{
+		Types: types,
 	}
 }
 
-func NewMeteredRestrictedType(
+func NewMeteredIntersectionType(
 	gauge common.MemoryGauge,
-	typ Type,
-	restrictions []Type,
-) *RestrictedType {
-	common.UseMemory(gauge, common.CadenceRestrictedTypeMemoryUsage)
-	return NewRestrictedType(typ, restrictions)
+	types []Type,
+) *IntersectionType {
+	common.UseMemory(gauge, common.CadenceIntersectionTypeMemoryUsage)
+	return NewIntersectionType(types)
 }
 
-func (*RestrictedType) isType() {}
+func (*IntersectionType) isType() {}
 
-func (t *RestrictedType) ID() string {
-	if t.typeID == "" {
-		var restrictionStrings []string
-		restrictionCount := len(t.Restrictions)
-		if restrictionCount > 0 {
-			restrictionStrings = make([]string, 0, restrictionCount)
-			for _, restriction := range t.Restrictions {
-				restrictionStrings = append(restrictionStrings, restriction.ID())
-			}
+func (t *IntersectionType) ID() string {
+	var interfaceTypeIDs []string
+	typeCount := len(t.Types)
+	if typeCount > 0 {
+		interfaceTypeIDs = make([]string, 0, typeCount)
+		for _, typ := range t.Types {
+			interfaceTypeIDs = append(interfaceTypeIDs, typ.ID())
 		}
-		var typeString string
-		if t.Type != nil {
-			typeString = t.Type.ID()
-		}
-		t.typeID = sema.FormatRestrictedTypeID(typeString, restrictionStrings)
 	}
-	return t.typeID
+	// FormatIntersectionTypeID sorts
+	return sema.FormatIntersectionTypeID(interfaceTypeIDs)
 }
 
-func (t *RestrictedType) Equal(other Type) bool {
-	otherType, ok := other.(*RestrictedType)
+func (t *IntersectionType) Equal(other Type) bool {
+	otherType, ok := other.(*IntersectionType)
 	if !ok {
 		return false
 	}
 
-	if t.Type == nil && otherType.Type != nil {
-		return false
-	}
-	if t.Type != nil && otherType.Type == nil {
-		return false
-	}
-	if t.Type != nil && !t.Type.Equal(otherType.Type) {
+	intersectionSet := t.IntersectionSet()
+	otherIntersectionSet := otherType.IntersectionSet()
+
+	if len(intersectionSet) != len(otherIntersectionSet) {
 		return false
 	}
 
-	restrictionSet := t.RestrictionSet()
-	otherRestrictionSet := otherType.RestrictionSet()
-
-	if len(restrictionSet) != len(otherRestrictionSet) {
-		return false
-	}
-
-	for restriction := range restrictionSet { //nolint:maprange
-		_, ok := otherRestrictionSet[restriction]
+	for typ := range intersectionSet { //nolint:maprange
+		_, ok := otherIntersectionSet[typ]
 		if !ok {
 			return false
 		}
@@ -2222,145 +1598,24 @@ func (t *RestrictedType) Equal(other Type) bool {
 	return true
 }
 
-func (t *RestrictedType) initializeRestrictionSet() {
-	t.restrictionSetOnce.Do(func() {
-		t.restrictionSet = make(RestrictionSet, len(t.Restrictions))
-		for _, restriction := range t.Restrictions {
-			t.restrictionSet[restriction] = struct{}{}
+func (t *IntersectionType) initializeIntersectionSet() {
+	t.intersectionSetOnce.Do(func() {
+		t.intersectionSet = make(IntersectionSet, len(t.Types))
+		for _, typ := range t.Types {
+			t.intersectionSet[typ] = struct{}{}
 		}
 	})
 }
 
-func (t *RestrictedType) RestrictionSet() RestrictionSet {
-	t.initializeRestrictionSet()
-	return t.restrictionSet
-}
-
-// BlockType
-
-type BlockType struct{}
-
-var TheBlockType = BlockType{}
-
-func NewBlockType() BlockType {
-	return TheBlockType
-}
-
-func (BlockType) isType() {}
-
-func (BlockType) ID() string {
-	return "Block"
-}
-
-func (t BlockType) Equal(other Type) bool {
-	return t == other
-}
-
-// PathType
-
-type PathType struct{}
-
-var ThePathType = PathType{}
-
-func NewPathType() PathType {
-	return ThePathType
-}
-
-func (PathType) isType() {}
-
-func (PathType) ID() string {
-	return "Path"
-}
-
-func (t PathType) Equal(other Type) bool {
-	return t == other
-}
-
-// CapabilityPathType
-
-type CapabilityPathType struct{}
-
-var TheCapabilityPathType = CapabilityPathType{}
-
-func NewCapabilityPathType() CapabilityPathType {
-	return TheCapabilityPathType
-}
-
-func (CapabilityPathType) isType() {}
-
-func (CapabilityPathType) ID() string {
-	return "CapabilityPath"
-}
-
-func (t CapabilityPathType) Equal(other Type) bool {
-	return t == other
-}
-
-// StoragePathType
-
-type StoragePathType struct{}
-
-var TheStoragePathType = StoragePathType{}
-
-func NewStoragePathType() StoragePathType {
-	return TheStoragePathType
-}
-
-func (StoragePathType) isType() {}
-
-func (StoragePathType) ID() string {
-	return "StoragePath"
-}
-
-func (t StoragePathType) Equal(other Type) bool {
-	return t == other
-}
-
-// PublicPathType
-
-type PublicPathType struct{}
-
-var ThePublicPathType = PublicPathType{}
-
-func NewPublicPathType() PublicPathType {
-	return ThePublicPathType
-}
-
-func (PublicPathType) isType() {}
-
-func (PublicPathType) ID() string {
-	return "PublicPath"
-}
-
-func (t PublicPathType) Equal(other Type) bool {
-	return t == other
-}
-
-// PrivatePathType
-
-type PrivatePathType struct{}
-
-var ThePrivatePathType = PrivatePathType{}
-
-func NewPrivatePathType() PrivatePathType {
-	return ThePrivatePathType
-}
-
-func (PrivatePathType) isType() {}
-
-func (PrivatePathType) ID() string {
-	return "PrivatePath"
-}
-
-func (t PrivatePathType) Equal(other Type) bool {
-	return t == other
+func (t *IntersectionType) IntersectionSet() IntersectionSet {
+	t.initializeIntersectionSet()
+	return t.intersectionSet
 }
 
 // CapabilityType
 
 type CapabilityType struct {
 	BorrowType Type
-	typeID     string
 }
 
 var _ Type = &CapabilityType{}
@@ -2380,15 +1635,12 @@ func NewMeteredCapabilityType(
 func (*CapabilityType) isType() {}
 
 func (t *CapabilityType) ID() string {
-	if t.typeID == "" {
-		var borrowTypeString string
-		borrowType := t.BorrowType
-		if borrowType != nil {
-			borrowTypeString = borrowType.ID()
-		}
-		t.typeID = sema.FormatCapabilityTypeID(borrowTypeString)
+	var borrowTypeID string
+	borrowType := t.BorrowType
+	if borrowType != nil {
+		borrowTypeID = borrowType.ID()
 	}
-	return t.typeID
+	return sema.FormatCapabilityTypeID(borrowTypeID)
 }
 
 func (t *CapabilityType) Equal(other Type) bool {
@@ -2405,13 +1657,13 @@ func (t *CapabilityType) Equal(other Type) bool {
 }
 
 // EnumType
+
 type EnumType struct {
 	Location            common.Location
 	QualifiedIdentifier string
 	RawType             Type
 	Fields              []Field
 	Initializers        [][]Parameter
-	typeID              string
 }
 
 func NewEnumType(
@@ -2445,10 +1697,7 @@ func NewMeteredEnumType(
 func (*EnumType) isType() {}
 
 func (t *EnumType) ID() string {
-	if len(t.typeID) == 0 {
-		t.typeID = string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
-	}
-	return t.typeID
+	return string(common.NewTypeIDFromQualifiedName(nil, t.Location, t.QualifiedIdentifier))
 }
 
 func (*EnumType) isCompositeType() {}
@@ -2481,211 +1730,4 @@ func (t *EnumType) Equal(other Type) bool {
 
 	return t.Location == otherType.Location &&
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
-}
-
-// AuthAccountType
-type AuthAccountType struct{}
-
-var TheAuthAccountType = AuthAccountType{}
-
-func NewAuthAccountType() AuthAccountType {
-	return TheAuthAccountType
-}
-
-func (AuthAccountType) isType() {}
-
-func (AuthAccountType) ID() string {
-	return "AuthAccount"
-}
-
-func (t AuthAccountType) Equal(other Type) bool {
-	return t == other
-}
-
-// PublicAccountType
-type PublicAccountType struct{}
-
-var ThePublicAccountType = PublicAccountType{}
-
-func NewPublicAccountType() PublicAccountType {
-	return ThePublicAccountType
-}
-
-func (PublicAccountType) isType() {}
-
-func (PublicAccountType) ID() string {
-	return "PublicAccount"
-}
-
-func (t PublicAccountType) Equal(other Type) bool {
-	return t == other
-}
-
-// DeployedContractType
-type DeployedContractType struct{}
-
-var TheDeployedContractType = DeployedContractType{}
-
-func NewDeployedContractType() DeployedContractType {
-	return TheDeployedContractType
-}
-
-func (DeployedContractType) isType() {}
-
-func (DeployedContractType) ID() string {
-	return "DeployedContract"
-}
-
-func (t DeployedContractType) Equal(other Type) bool {
-	return t == other
-}
-
-// AuthAccountContractsType
-type AuthAccountContractsType struct{}
-
-var TheAuthAccountContractsType = AuthAccountContractsType{}
-
-func NewAuthAccountContractsType() AuthAccountContractsType {
-	return TheAuthAccountContractsType
-}
-
-func (AuthAccountContractsType) isType() {}
-
-func (AuthAccountContractsType) ID() string {
-	return "AuthAccount.Contracts"
-}
-
-func (t AuthAccountContractsType) Equal(other Type) bool {
-	return t == other
-}
-
-// PublicAccountContractsType
-type PublicAccountContractsType struct{}
-
-var ThePublicAccountContractsType = PublicAccountContractsType{}
-
-func NewPublicAccountContractsType() PublicAccountContractsType {
-	return ThePublicAccountContractsType
-}
-
-func (PublicAccountContractsType) isType() {}
-
-func (PublicAccountContractsType) ID() string {
-	return "PublicAccount.Contracts"
-}
-
-func (t PublicAccountContractsType) Equal(other Type) bool {
-	return t == other
-}
-
-// AuthAccountKeysType
-type AuthAccountKeysType struct{}
-
-var TheAuthAccountKeysType = AuthAccountKeysType{}
-
-func NewAuthAccountKeysType() AuthAccountKeysType {
-	return TheAuthAccountKeysType
-}
-
-func (AuthAccountKeysType) isType() {}
-
-func (AuthAccountKeysType) ID() string {
-	return "AuthAccount.Keys"
-}
-
-func (t AuthAccountKeysType) Equal(other Type) bool {
-	return t == other
-}
-
-// PublicAccountKeysType
-type PublicAccountKeysType struct{}
-
-var ThePublicAccountKeysType = PublicAccountKeysType{}
-
-func NewPublicAccountKeysType() PublicAccountKeysType {
-	return ThePublicAccountKeysType
-}
-
-func (PublicAccountKeysType) isType() {}
-
-func (PublicAccountKeysType) ID() string {
-	return "PublicAccount.Keys"
-}
-
-func (t PublicAccountKeysType) Equal(other Type) bool {
-	return t == other
-}
-
-// AccountKeyType
-type AccountKeyType struct{}
-
-var TheAccountKeyType = AccountKeyType{}
-
-func NewAccountKeyType() AccountKeyType {
-	return TheAccountKeyType
-}
-
-func (AccountKeyType) isType() {}
-
-func (AccountKeyType) ID() string {
-	return "AccountKey"
-}
-
-func (t AccountKeyType) Equal(other Type) bool {
-	return t == other
-}
-
-// HashableStructType
-type HashableStructType struct{}
-
-var TheHashableStructType = HashableStructType{}
-var _ Type = &HashableStructType{}
-
-func NewHashableStruct() HashableStructType {
-	return TheHashableStructType
-}
-
-func (HashableStructType) isType() {}
-
-func (HashableStructType) ID() string {
-	return "HashableStruct"
-}
-
-func (t HashableStructType) Equal(other Type) bool {
-	return t == other
-}
-
-// TypeWithCachedTypeID recursively caches type ID of type t.
-// This is needed because each type ID is lazily cached on
-// its first use in ID() to avoid performance penalty.
-func TypeWithCachedTypeID(t Type) Type {
-	if t == nil {
-		return t
-	}
-
-	// Cache type ID by calling ID()
-	t.ID()
-
-	switch t := t.(type) {
-
-	case CompositeType:
-		fields := t.CompositeFields()
-		for _, f := range fields {
-			TypeWithCachedTypeID(f.Type)
-		}
-
-		initializers := t.CompositeInitializers()
-		for _, params := range initializers {
-			for _, p := range params {
-				TypeWithCachedTypeID(p.Type)
-			}
-		}
-
-	case *RestrictedType:
-		for _, restriction := range t.Restrictions {
-			TypeWithCachedTypeID(restriction)
-		}
-	}
-
-	return t
 }

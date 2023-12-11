@@ -223,15 +223,72 @@ func (b *FunctionBlock) HasStatements() bool {
 	return b != nil && len(b.Block.Statements) > 0
 }
 
-// Condition
-
-type Condition struct {
-	Test    Expression
-	Message Expression
-	Kind    ConditionKind
+func (b *FunctionBlock) HasConditions() bool {
+	return b != nil &&
+		(!b.PreConditions.IsEmpty() || !b.PostConditions.IsEmpty())
 }
 
-func (c Condition) Doc() prettier.Doc {
+// Condition
+
+type Condition interface {
+	Element
+	isCondition()
+	CodeElement() Element
+	Doc() prettier.Doc
+	HasPosition
+}
+
+// TestCondition
+
+type TestCondition struct {
+	Test    Expression
+	Message Expression
+}
+
+func (c TestCondition) ElementType() ElementType {
+	return ElementTypeUnknown
+}
+
+func (c TestCondition) Walk(walkChild func(Element)) {
+	walkChild(c.Test)
+	if c.Message != nil {
+		walkChild(c.Message)
+	}
+}
+
+var _ Condition = TestCondition{}
+
+func (c TestCondition) isCondition() {}
+
+func (c TestCondition) CodeElement() Element {
+	return c.Test
+}
+
+func (c TestCondition) StartPosition() Position {
+	return c.Test.StartPosition()
+}
+
+func (c TestCondition) EndPosition(memoryGauge common.MemoryGauge) Position {
+	if c.Message == nil {
+		return c.Test.EndPosition(memoryGauge)
+	}
+	return c.Message.EndPosition(memoryGauge)
+}
+
+func (c TestCondition) MarshalJSON() ([]byte, error) {
+	type Alias TestCondition
+	return json.Marshal(&struct {
+		Alias
+		Type string
+		Range
+	}{
+		Type:  "TestCondition",
+		Range: NewUnmeteredRangeFromPositioned(c),
+		Alias: (Alias)(c),
+	})
+}
+
+func (c TestCondition) Doc() prettier.Doc {
 	doc := c.Test.Doc()
 	if c.Message != nil {
 		doc = prettier.Concat{
@@ -251,9 +308,54 @@ func (c Condition) Doc() prettier.Doc {
 	}
 }
 
+// EmitCondition
+
+type EmitCondition EmitStatement
+
+var _ Condition = &EmitCondition{}
+
+func (c *EmitCondition) isCondition() {}
+
+func (c *EmitCondition) CodeElement() Element {
+	return (*EmitStatement)(c)
+}
+
+func (c *EmitCondition) StartPosition() Position {
+	return (*EmitStatement)(c).StartPosition()
+}
+
+func (c *EmitCondition) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return (*EmitStatement)(c).EndPosition(memoryGauge)
+}
+
+func (c *EmitCondition) Doc() prettier.Doc {
+	return (*EmitStatement)(c).Doc()
+}
+
+func (c *EmitCondition) MarshalJSON() ([]byte, error) {
+	type Alias EmitCondition
+	return json.Marshal(&struct {
+		*Alias
+		Type string
+		Range
+	}{
+		Type:  "EmitCondition",
+		Range: NewUnmeteredRangeFromPositioned(c),
+		Alias: (*Alias)(c),
+	})
+}
+
+func (c *EmitCondition) ElementType() ElementType {
+	return (*EmitStatement)(c).ElementType()
+}
+
+func (c *EmitCondition) Walk(walkChild func(Element)) {
+	(*EmitStatement)(c).Walk(walkChild)
+}
+
 // Conditions
 
-type Conditions []*Condition
+type Conditions []Condition
 
 func (c *Conditions) IsEmpty() bool {
 	return c == nil || len(*c) == 0
@@ -294,9 +396,6 @@ func (c *Conditions) Walk(walkChild func(Element)) {
 	}
 
 	for _, condition := range *c {
-		walkChild(condition.Test)
-		if condition.Message != nil {
-			walkChild(condition.Message)
-		}
+		walkChild(condition)
 	}
 }

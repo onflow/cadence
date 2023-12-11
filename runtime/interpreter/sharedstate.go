@@ -45,6 +45,7 @@ type SharedState struct {
 	MutationDuringCapabilityControllerIteration bool
 	containerValueIteration                     map[atree.StorageID]struct{}
 	destroyedResources                          map[atree.StorageID]struct{}
+	currentEntitlementMappedValue               Authorization
 }
 
 func NewSharedState(config *Config) *SharedState {
@@ -53,9 +54,8 @@ func NewSharedState(config *Config) *SharedState {
 		allInterpreters: map[common.Location]*Interpreter{},
 		callStack:       &CallStack{},
 		typeCodes: TypeCodes{
-			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
-			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
-			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
+			CompositeCodes: map[sema.TypeID]CompositeTypeCode{},
+			InterfaceCodes: map[sema.TypeID]WrapperCode{},
 		},
 		inStorageIteration:             false,
 		storageMutatedDuringIteration:  false,

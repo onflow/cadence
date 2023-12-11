@@ -23,7 +23,7 @@ var AnyStructType = &SimpleType{
 	Name:          "AnyStruct",
 	QualifiedName: "AnyStruct",
 	TypeID:        "AnyStruct",
-	tag:           AnyStructTypeTag,
+	TypeTag:       AnyStructTypeTag,
 	IsResource:    false,
 	// The actual storability of a value is checked at run-time
 	Storable:   true,
@@ -31,5 +31,8 @@ var AnyStructType = &SimpleType{
 	Comparable: false,
 	Exportable: true,
 	// The actual importability is checked at runtime
-	Importable: true,
+	Importable:    true,
+	ContainFields: true,
 }
+
+var AnyStructTypeAnnotation = NewTypeAnnotation(AnyStructType)

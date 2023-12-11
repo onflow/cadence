@@ -40,11 +40,36 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 
 	checker.checkSelfVariableUseInInitializer(variable, identifier.Pos)
 
+	checker.checkReferenceValidity(variable, expression)
+
 	if checker.inInvocation {
 		checker.Elaboration.SetIdentifierInInvocationType(expression, valueType)
 	}
 
 	return valueType
+}
+
+func (checker *Checker) checkReferenceValidity(variable *Variable, hasPosition ast.HasPosition) {
+	typ := UnwrapOptionalType(variable.Type)
+	if _, ok := typ.(*ReferenceType); !ok {
+		return
+	}
+
+	// Here it is not required to find the root of the reference chain,
+	// because it is already done at the time of recoding the reference.
+	// i.e: It is always the roots of the chain that is being stored as the `referencedResourceVariables`.
+	for _, referencedVar := range variable.referencedResourceVariables {
+		resourceInfo := checker.resources.Get(Resource{Variable: referencedVar})
+		invalidation := resourceInfo.Invalidation()
+		if invalidation == nil {
+			continue
+		}
+
+		checker.report(&InvalidatedResourceReferenceError{
+			Invalidation: *invalidation,
+			Range:        ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
+		})
+	}
 }
 
 // checkSelfVariableUseInInitializer checks uses of `self` in the initializer
@@ -291,11 +316,26 @@ func (checker *Checker) visitIndexExpression(
 
 		checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
 
+		// If the element,
+		//   1) is accessed via a reference, and
+		//   2) is container-typed,
+		// then the element type should also be a reference.
+		returnReference := false
+		if shouldReturnReference(valueIndexedType, elementType, isAssignment) {
+			// For index expressions, element are un-authorized.
+			elementType = checker.getReferenceType(elementType, false, UnauthorizedAccess)
+
+			// Store the result in elaboration, so the interpreter can re-use this.
+			returnReference = true
+		}
+
 		checker.Elaboration.SetIndexExpressionTypes(
 			indexExpression,
 			IndexExpressionTypes{
-				IndexedType:  valueIndexedType,
-				IndexingType: indexingType,
+				IndexedType:     valueIndexedType,
+				IndexingType:    indexingType,
+				ResultType:      elementType,
+				ReturnReference: returnReference,
 			},
 		)
 
@@ -360,5 +400,10 @@ func (checker *Checker) checkTypeIndexingExpression(
 
 	// at this point, the base is known to be a struct/resource,
 	// and the attachment is known to be a valid attachment for that base
-	return base.TypeIndexingElementType(nominalType)
+	indexedType, err := base.TypeIndexingElementType(nominalType, func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression) })
+	if err != nil {
+		checker.report(err)
+		return InvalidType
+	}
+	return indexedType
 }

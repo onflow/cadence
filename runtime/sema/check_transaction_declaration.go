@@ -57,7 +57,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	checker.enterValueScope()
 	defer checker.leaveValueScope(declaration.EndPosition, true)
 
-	checker.declareSelfValue(transactionType, "")
+	checker.declareSelfValue(UnauthorizedAccess, transactionType, "")
 
 	if declaration.ParameterList != nil {
 		checker.checkTransactionParameters(declaration, transactionType.Parameters)
@@ -186,6 +186,7 @@ func (checker *Checker) visitTransactionPrepareFunction(
 	checker.checkFunction(
 		prepareFunction.FunctionDeclaration.ParameterList,
 		nil,
+		UnauthorizedAccess,
 		prepareFunctionType,
 		prepareFunction.FunctionDeclaration.FunctionBlock,
 		true,
@@ -208,7 +209,7 @@ func (checker *Checker) checkTransactionPrepareFunctionParameters(
 		parameterType := parameters[i].TypeAnnotation.Type
 
 		if !parameterType.IsInvalidType() &&
-			!IsSameTypeKind(parameterType, AuthAccountType) {
+			!IsSubType(parameterType, AccountReferenceType) {
 
 			checker.report(
 				&InvalidTransactionPrepareParameterTypeError{
@@ -235,6 +236,7 @@ func (checker *Checker) visitTransactionExecuteFunction(
 	checker.checkFunction(
 		&ast.ParameterList{},
 		nil,
+		UnauthorizedAccess,
 		executeFunctionType,
 		executeFunction.FunctionDeclaration.FunctionBlock,
 		true,

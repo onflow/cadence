@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -34,7 +35,7 @@ func TestCheckArrayUpdateIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -65,8 +66,8 @@ func TestCheckArrayUpdateIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract C {
-                    pub %s Foo {
+                access(all) contract C {
+                    access(all) %s Foo {
                         %s %s x: [Int]
                 
                         init() {
@@ -74,7 +75,7 @@ func TestCheckArrayUpdateIndexAccess(t *testing.T) {
                         }
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let foo %s Foo()
                         foo.x[0] = 3
                         %s
@@ -83,9 +84,7 @@ func TestCheckArrayUpdateIndexAccess(t *testing.T) {
             `, valueKind.Keyword(), access.Keyword(), declaration.Keywords(), assignmentOp, destroyStatement),
 			)
 
-			errs := RequireCheckerErrors(t, err, 1)
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[0], &externalMutationError)
+			require.NoError(t, err)
 		})
 	}
 
@@ -103,7 +102,7 @@ func TestCheckDictionaryUpdateIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -134,8 +133,8 @@ func TestCheckDictionaryUpdateIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract C {
-                    pub %s Foo {
+                access(all) contract C {
+                    access(all) %s Foo {
                         %s %s x: {Int: Int}
                 
                         init() {
@@ -143,7 +142,7 @@ func TestCheckDictionaryUpdateIndexAccess(t *testing.T) {
                         }
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let foo %s Foo()
                         foo.x[0] = 3
                         %s
@@ -152,9 +151,7 @@ func TestCheckDictionaryUpdateIndexAccess(t *testing.T) {
             `, valueKind.Keyword(), access.Keyword(), declaration.Keywords(), assignmentOp, destroyStatement),
 			)
 
-			errs := RequireCheckerErrors(t, err, 1)
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[0], &externalMutationError)
+			require.NoError(t, err)
 		})
 	}
 
@@ -172,7 +169,7 @@ func TestCheckNestedArrayUpdateIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -191,15 +188,15 @@ func TestCheckNestedArrayUpdateIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract C {
-                    pub struct Bar {
-                        pub let foo: Foo
+                access(all) contract C {
+                    access(all) struct Bar {
+                        access(all) let foo: Foo
                         init() {
                             self.foo = Foo()
                         }
                     }
 
-                    pub struct Foo {
+                    access(all) struct Foo {
                         %s %s x: [Int]
                 
                         init() {
@@ -207,7 +204,7 @@ func TestCheckNestedArrayUpdateIndexAccess(t *testing.T) {
                         }
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let bar = Bar()
                         bar.foo.x[0] = 3
                     }
@@ -215,9 +212,7 @@ func TestCheckNestedArrayUpdateIndexAccess(t *testing.T) {
             `, access.Keyword(), declaration.Keywords()),
 			)
 
-			errs := RequireCheckerErrors(t, err, 1)
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[0], &externalMutationError)
+			require.NoError(t, err)
 		})
 	}
 
@@ -233,7 +228,7 @@ func TestCheckNestedDictionaryUpdateIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -252,15 +247,15 @@ func TestCheckNestedDictionaryUpdateIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract C {
-                    pub struct Bar {
-                        pub let foo: Foo
+                access(all) contract C {
+                    access(all) struct Bar {
+                        access(all) let foo: Foo
                         init() {
                             self.foo = Foo()
                         }
                     }
 
-                    pub struct Foo {
+                    access(all) struct Foo {
                         %s %s x: {Int: Int}
                 
                         init() {
@@ -268,7 +263,7 @@ func TestCheckNestedDictionaryUpdateIndexAccess(t *testing.T) {
                         }
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let bar = Bar()
                         bar.foo.x[0] = 3
                     }
@@ -276,9 +271,7 @@ func TestCheckNestedDictionaryUpdateIndexAccess(t *testing.T) {
             `, access.Keyword(), declaration.Keywords()),
 			)
 
-			errs := RequireCheckerErrors(t, err, 1)
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[0], &externalMutationError)
+			require.NoError(t, err)
 		})
 	}
 
@@ -294,7 +287,7 @@ func TestCheckMutateContractIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -313,7 +306,7 @@ func TestCheckMutateContractIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract Foo {
+                access(all) contract Foo {
                     %s %s x: [Int]
                 
                     init() {
@@ -321,24 +314,21 @@ func TestCheckMutateContractIndexAccess(t *testing.T) {
                     }
                 }
                 
-                pub fun bar() {
+                access(all) fun bar() {
                     Foo.x[0] = 1
                 }
             `, access.Keyword(), declaration.Keywords()),
 			)
 
-			expectedErrors := 1
-			if access == ast.AccessContract {
-				expectedErrors++
-			}
+			expectError := access == ast.AccessContract
 
-			errs := RequireCheckerErrors(t, err, expectedErrors)
-			if expectedErrors > 1 {
+			if expectError {
+				errs := RequireCheckerErrors(t, err, 1)
 				var accessError *sema.InvalidAccessError
-				require.ErrorAs(t, errs[expectedErrors-2], &accessError)
+				require.ErrorAs(t, errs[0], &accessError)
+			} else {
+				require.NoError(t, err)
 			}
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[expectedErrors-1], &externalMutationError)
 		})
 	}
 
@@ -354,7 +344,7 @@ func TestCheckContractNestedStructIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -373,10 +363,10 @@ func TestCheckContractNestedStructIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract Foo {
-                    pub let x: S
+                access(all) contract Foo {
+                    access(all) let x: S
                     
-                    pub struct S {
+                    access(all) struct S {
                         %s %s y: [Int]
                         init() {
                             self.y = [3]
@@ -388,24 +378,21 @@ func TestCheckContractNestedStructIndexAccess(t *testing.T) {
                     }
                 }
                 
-                pub fun bar() {
+                access(all) fun bar() {
                     Foo.x.y[0] = 1
                 }                
             `, access.Keyword(), declaration.Keywords()),
 			)
 
-			expectedErrors := 1
-			if access == ast.AccessContract {
-				expectedErrors++
-			}
+			expectError := access == ast.AccessContract
 
-			errs := RequireCheckerErrors(t, err, expectedErrors)
-			if expectedErrors > 1 {
+			if expectError {
+				errs := RequireCheckerErrors(t, err, 1)
 				var accessError *sema.InvalidAccessError
-				require.ErrorAs(t, errs[expectedErrors-2], &accessError)
+				require.ErrorAs(t, errs[0], &accessError)
+			} else {
+				require.NoError(t, err)
 			}
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[expectedErrors-1], &externalMutationError)
 		})
 	}
 
@@ -421,7 +408,7 @@ func TestCheckContractStructInitIndexAccess(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -440,10 +427,10 @@ func TestCheckContractStructInitIndexAccess(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract Foo {
-                    pub let x: S
+                access(all) contract Foo {
+                    access(all) let x: S
                     
-                    pub struct S {
+                    access(all) struct S {
                         %s %s y: [Int]
                         init() {
                             self.y = [3]
@@ -458,9 +445,7 @@ func TestCheckContractStructInitIndexAccess(t *testing.T) {
             `, access.Keyword(), declaration.Keywords()),
 			)
 
-			errs := RequireCheckerErrors(t, err, 1)
-			var externalMutationError *sema.ExternalMutationError
-			require.ErrorAs(t, errs[0], &externalMutationError)
+			require.NoError(t, err)
 		})
 	}
 
@@ -476,7 +461,7 @@ func TestCheckArrayUpdateMethodCall(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -525,8 +510,8 @@ func TestCheckArrayUpdateMethodCall(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract C {
-                    pub %s Foo {
+                access(all) contract C {
+                    access(all) %s Foo {
                         %s %s x: [Int]
                 
                         init() {
@@ -534,7 +519,7 @@ func TestCheckArrayUpdateMethodCall(t *testing.T) {
                         }
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let foo %s Foo()
                         foo.x%s
                         %s
@@ -543,13 +528,7 @@ func TestCheckArrayUpdateMethodCall(t *testing.T) {
             `, valueKind.Keyword(), access.Keyword(), declaration.Keywords(), assignmentOp, member.Code, destroyStatement),
 			)
 
-			if member.Mutating {
-				errs := RequireCheckerErrors(t, err, 1)
-				var externalMutationError *sema.ExternalMutationError
-				require.ErrorAs(t, errs[0], &externalMutationError)
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 		})
 	}
 
@@ -569,7 +548,7 @@ func TestCheckDictionaryUpdateMethodCall(t *testing.T) {
 	t.Parallel()
 
 	accessModifiers := []ast.Access{
-		ast.AccessPublic,
+		ast.AccessAll,
 		ast.AccessAccount,
 		ast.AccessContract,
 	}
@@ -614,8 +593,8 @@ func TestCheckDictionaryUpdateMethodCall(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
-                pub contract C {
-                    pub %s Foo {
+                access(all) contract C {
+                    access(all) %s Foo {
                         %s %s x: {Int: Int}
                 
                         init() {
@@ -623,7 +602,7 @@ func TestCheckDictionaryUpdateMethodCall(t *testing.T) {
                         }
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let foo %s Foo()
                         foo.x%s
                         %s
@@ -632,13 +611,7 @@ func TestCheckDictionaryUpdateMethodCall(t *testing.T) {
             `, valueKind.Keyword(), access.Keyword(), declaration.Keywords(), assignmentOp, member.Code, destroyStatement),
 			)
 
-			if member.Mutating {
-				errs := RequireCheckerErrors(t, err, 1)
-				var externalMutationError *sema.ExternalMutationError
-				require.ErrorAs(t, errs[0], &externalMutationError)
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 		})
 	}
 
@@ -653,92 +626,25 @@ func TestCheckDictionaryUpdateMethodCall(t *testing.T) {
 	}
 }
 
-func TestCheckPubSetAccessModifier(t *testing.T) {
-
-	t.Parallel()
-	t.Run("pub set dict", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-            pub contract C {
-                pub struct Foo {
-                    pub(set) var x: {Int: Int}
-            
-                    init() {
-                        self.x = {3: 3}
-                    }
-                }
-
-                pub fun bar() {
-                    let foo = Foo()
-                    foo.x[0] = 3
-                }
-            }
-        `,
-		)
-		require.NoError(t, err)
-
-	})
-}
-
-func TestCheckPubSetNestedAccessModifier(t *testing.T) {
-
-	t.Parallel()
-	t.Run("pub set nested", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-            pub contract C {
-                pub struct Bar {
-                    pub let foo: Foo
-                    init() { 
-                       self.foo = Foo()
-                    }
-                }
-                
-                pub struct Foo {
-                    pub(set) var x: [Int]
-                
-                    init() {
-                       self.x = [3]
-                    }
-                }
-                
-                pub fun bar() {
-                    let bar = Bar()
-                    bar.foo.x[0] = 3
-                }
-            }
-        `,
-		)
-		require.NoError(t, err)
-
-	})
-}
-
 func TestCheckSelfContainingStruct(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("pub let", func(t *testing.T) {
+	t.Run("access(all) let", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract C {
-                pub struct Foo {
-                    pub let x: {Int: Int}
+            access(all) contract C {
+                access(all) struct Foo {
+                    access(all) let x: {Int: Int}
             
                     init() {
                         self.x = {3: 3}
                     }
 
-                    pub fun bar() {
+                    access(all) fun bar() {
                         let foo = Foo()
                         foo.x[0] = 3
                     }
@@ -755,26 +661,26 @@ func TestCheckMutationThroughReference(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("pub let", func(t *testing.T) {
+	t.Run("access(all) let", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun main() {
+            access(all) fun main() {
                 let foo = Foo()
                 foo.ref.arr.append("y")
               }
               
-              pub struct Foo {
-                pub let ref: &Bar
+              access(all) struct Foo {
+                access(all) let ref: &Bar
                 init() {
                   self.ref = &Bar() as &Bar
                 }
               }
               
-              pub struct Bar {
-                pub let arr: [String]
+              access(all) struct Bar {
+                access(all) let arr: [String]
                 init() {
                   self.arr = ["x"]
                 }
@@ -782,8 +688,7 @@ func TestCheckMutationThroughReference(t *testing.T) {
         `,
 		)
 		errs := RequireCheckerErrors(t, err, 1)
-		var externalMutationError *sema.ExternalMutationError
-		require.ErrorAs(t, errs[0], &externalMutationError)
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 }
 
@@ -791,34 +696,36 @@ func TestCheckMutationThroughInnerReference(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("pub let", func(t *testing.T) {
+	t.Run("access(all) let", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
-            pub fun main() {
+            access(all) fun main() {
                 let foo = Foo()
-                var arrayRef = &foo.ref.arr as &[String]
+                var arrayRef = foo.ref.arr
                 arrayRef[0] = "y"
               }
               
-              pub struct Foo {
-                pub let ref: &Bar
+              access(all) struct Foo {
+                access(all) let ref: &Bar
                 init() {
                   self.ref = &Bar() as &Bar
                 }
               }
               
-              pub struct Bar {
-                pub let arr: [String]
+              access(all) struct Bar {
+                access(all) let arr: [String]
                 init() {
                   self.arr = ["x"]
                 }
               }
         `,
 		)
-		require.NoError(t, err)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[0])
 	})
 }
 
@@ -826,39 +733,37 @@ func TestCheckMutationThroughAccess(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("pub let", func(t *testing.T) {
+	t.Run("access(all) let", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
-            pub contract C {
-                pub struct Foo {
-                    pub let arr: [Int]
+            access(all) contract C {
+                access(all) struct Foo {
+                    access(all) let arr: [Int]
                     init() {
                         self.arr = [3]
                     }
                 }
                 
-                priv let foo : Foo
+                access(self) let foo : Foo
             
                 init() {
                     self.foo = Foo()
                 }
             
-                pub fun getFoo(): Foo {
+                access(all) fun getFoo(): Foo {
                     return self.foo
                 }
             }
             
-            pub fun main() {
+            access(all) fun main() {
                 let a = C.getFoo()
                 a.arr.append(0) // a.arr is now [3, 0]
             }
         `,
 		)
-		errs := RequireCheckerErrors(t, err, 1)
-		var externalMutationError *sema.ExternalMutationError
-		require.ErrorAs(t, errs[0], &externalMutationError)
+		require.NoError(t, err)
 	})
 }

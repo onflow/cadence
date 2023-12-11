@@ -80,7 +80,8 @@ func TestCheckStorable(t *testing.T) {
 			nestedTypes = append(nestedTypes,
 				&sema.CapabilityType{
 					BorrowType: &sema.ReferenceType{
-						Type: ty,
+						Type:          ty,
+						Authorization: sema.UnauthorizedAccess,
 					},
 				},
 			)
@@ -129,12 +130,12 @@ func TestCheckStorable(t *testing.T) {
 
 	nonStorableTypes := []sema.Type{
 		&sema.FunctionType{
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+			Purity:               sema.FunctionPurityImpure,
+			ReturnTypeAnnotation: sema.IntTypeAnnotation,
 		},
 		sema.NeverType,
 		sema.VoidType,
-		sema.AuthAccountType,
-		sema.PublicAccountType,
+		sema.AccountType,
 	}
 
 	// Capabilities of non-storable types are storable
@@ -144,7 +145,8 @@ func TestCheckStorable(t *testing.T) {
 			storableTypes,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: nonStorableType,
+					Type:          nonStorableType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 		)
@@ -152,7 +154,8 @@ func TestCheckStorable(t *testing.T) {
 
 	nonStorableTypes = append(nonStorableTypes,
 		&sema.ReferenceType{
-			Type: sema.BoolType,
+			Type:          sema.BoolType,
+			Authorization: sema.UnauthorizedAccess,
 		},
 	)
 
@@ -269,7 +272,6 @@ func TestCheckStorable(t *testing.T) {
 				var interfaceKeyword string
 				var baseType string
 				var initializer string
-				var destructor string
 
 				if isInterface {
 					interfaceKeyword = "interface"
@@ -296,14 +298,6 @@ func TestCheckStorable(t *testing.T) {
 						typeName,
 						transferOperation.Operator(),
 					)
-
-					if isResource {
-						destructor = `
-                              destroy() {
-                                  destroy self.value
-                              }
-                        `
-					}
 				}
 
 				if compositeKind == common.CompositeKindAttachment {
@@ -319,14 +313,11 @@ func TestCheckStorable(t *testing.T) {
                               let value: %[1]s%[2]s
 
                               %[3]s
-
-                              %[4]s
                           }
                         `,
 						typeAnnotation,
 						typeName,
 						initializer,
-						destructor,
 					)
 				}
 

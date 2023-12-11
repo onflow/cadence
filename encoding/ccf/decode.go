@@ -140,8 +140,8 @@ type DecOptions struct {
 	// EnforceSortCompositeFields specifies how decoder should enforce sort order of compsite fields.
 	EnforceSortCompositeFields EnforceSortMode
 
-	// EnforceSortRestrictedTypes specifies how decoder should enforce sort order of restricted types.
-	EnforceSortRestrictedTypes EnforceSortMode
+	// EnforceSortIntersectionTypes specifies how decoder should enforce sort order of restricted types.
+	EnforceSortIntersectionTypes EnforceSortMode
 
 	// CBORDecMode will default to defaultCBORDecMode if nil.  The decoding mode contains
 	// immutable decoding options (cbor.DecOptions) and is safe for concurrent use.
@@ -168,15 +168,15 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 	if !opts.EnforceSortCompositeFields.valid() {
 		return nil, fmt.Errorf("ccf: invalid EnforceSortCompositeFields %d", opts.EnforceSortCompositeFields)
 	}
-	if !opts.EnforceSortRestrictedTypes.valid() {
-		return nil, fmt.Errorf("ccf: invalid EnforceSortRestrictedTypes %d", opts.EnforceSortRestrictedTypes)
+	if !opts.EnforceSortIntersectionTypes.valid() {
+		return nil, fmt.Errorf("ccf: invalid EnforceSortRestrictedTypes %d", opts.EnforceSortIntersectionTypes)
 	}
 	if opts.CBORDecMode == nil {
 		opts.CBORDecMode = defaultCBORDecMode
 	}
 	return &decMode{
 		enforceSortCompositeFields: opts.EnforceSortCompositeFields,
-		enforceSortRestrictedTypes: opts.EnforceSortRestrictedTypes,
+		enforceSortRestrictedTypes: opts.EnforceSortIntersectionTypes,
 		cborDecMode:                opts.CBORDecMode,
 	}, nil
 }
@@ -410,12 +410,9 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 	// If type t for the value to be decoded is a concrete type (e.g. IntType),
 	// value MUST NOT be ccf-type-and-value-message.
 
-	switch t := t.(type) {
+	switch t {
 	case cadence.VoidType:
 		return d.decodeVoid()
-
-	case *cadence.OptionalType:
-		return d.decodeOptional(t, types)
 
 	case cadence.BoolType:
 		return d.decodeBool()
@@ -495,27 +492,6 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 	case cadence.UFix64Type:
 		return d.decodeUFix64()
 
-	case *cadence.VariableSizedArrayType:
-		return d.decodeArray(t, false, 0, types)
-
-	case *cadence.ConstantSizedArrayType:
-		return d.decodeArray(t, true, uint64(t.Size), types)
-
-	case *cadence.DictionaryType:
-		return d.decodeDictionary(t, types)
-
-	case *cadence.ResourceType:
-		return d.decodeResource(t, types)
-
-	case *cadence.StructType:
-		return d.decodeStruct(t, types)
-
-	case *cadence.EventType:
-		return d.decodeEvent(t, types)
-
-	case *cadence.ContractType:
-		return d.decodeContract(t, types)
-
 	case cadence.StoragePathType:
 		return d.decodePath()
 
@@ -536,6 +512,32 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 			return nil, err
 		}
 		return cadence.NewMeteredTypeValue(d.gauge, typeValue), nil
+	}
+
+	switch t := t.(type) {
+	case *cadence.OptionalType:
+		return d.decodeOptional(t, types)
+
+	case *cadence.VariableSizedArrayType:
+		return d.decodeArray(t, false, 0, types)
+
+	case *cadence.ConstantSizedArrayType:
+		return d.decodeArray(t, true, uint64(t.Size), types)
+
+	case *cadence.DictionaryType:
+		return d.decodeDictionary(t, types)
+
+	case *cadence.ResourceType:
+		return d.decodeResource(t, types)
+
+	case *cadence.StructType:
+		return d.decodeStruct(t, types)
+
+	case *cadence.EventType:
+		return d.decodeEvent(t, types)
+
+	case *cadence.ContractType:
+		return d.decodeContract(t, types)
 
 	case *cadence.CapabilityType:
 		return d.decodeCapability(t, types)
@@ -1398,38 +1400,17 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 		return nil, err
 	}
 
-	// Decode ID or path.
-	nextType, err = d.dec.NextType()
+	// Decode ID.
+
+	id, err := d.decodeUInt64()
 	if err != nil {
 		return nil, err
 	}
 
-	if nextType == cbor.UintType {
-		// Decode ID.
-
-		id, err := d.decodeUInt64()
-		if err != nil {
-			return nil, err
-		}
-
-		return cadence.NewMeteredIDCapability(
-			d.gauge,
-			id.(cadence.UInt64),
-			address.(cadence.Address),
-			typ.BorrowType,
-		), nil
-	}
-
-	// Decode path.
-	path, err := d.decodePath()
-	if err != nil {
-		return nil, err
-	}
-
-	return cadence.NewMeteredPathCapability(
+	return cadence.NewMeteredCapability(
 		d.gauge,
+		id.(cadence.UInt64),
 		address.(cadence.Address),
-		path.(cadence.Path),
 		typ.BorrowType,
 	), nil
 }
@@ -1452,7 +1433,7 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 //	/ contract-interface-type-value
 //	/ function-type-value
 //	/ reference-type-value
-//	/ restricted-type-value
+//	/ intersection-type-value
 //	/ capability-type-value
 //	/ type-value-ref
 func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type, error) {
@@ -1488,8 +1469,8 @@ func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type
 	case CBORTagReferenceTypeValue:
 		return d.decodeReferenceType(visited, d.decodeTypeValue)
 
-	case CBORTagRestrictedTypeValue:
-		return d.decodeRestrictedType(visited, d.decodeNullableTypeValue, d.decodeTypeValue)
+	case CBORTagIntersectionTypeValue:
+		return d.decodeIntersectionType(visited, d.decodeTypeValue)
 
 	case CBORTagFunctionTypeValue:
 		return d.decodeFunctionTypeValue(visited)
@@ -2223,8 +2204,12 @@ func (d *Decoder) decodeFunctionTypeValue(visited *cadenceTypeByCCFTypeID) (cade
 		return nil, errors.New("unexpected nil function return type")
 	}
 
+	// TODO:
+	purity := cadence.FunctionPurityUnspecified
+
 	return cadence.NewMeteredFunctionType(
 		d.gauge,
+		purity,
 		typeParameters,
 		parameters,
 		returnType,

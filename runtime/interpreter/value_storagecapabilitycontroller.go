@@ -30,11 +30,12 @@ import (
 type CapabilityControllerValue interface {
 	Value
 	isCapabilityControllerValue()
-	CapabilityControllerBorrowType() ReferenceStaticType
+	CapabilityControllerBorrowType() *ReferenceStaticType
 	ReferenceValue(
 		interpreter *Interpreter,
 		capabilityAddress common.Address,
 		resultBorrowType *sema.ReferenceType,
+		locationRange LocationRange,
 	) ReferenceValue
 	ControllerCapabilityID() UInt64Value
 }
@@ -42,7 +43,7 @@ type CapabilityControllerValue interface {
 // StorageCapabilityControllerValue
 
 type StorageCapabilityControllerValue struct {
-	BorrowType   ReferenceStaticType
+	BorrowType   *ReferenceStaticType
 	CapabilityID UInt64Value
 	TargetPath   PathValue
 
@@ -54,12 +55,13 @@ type StorageCapabilityControllerValue struct {
 	deleteFunction   FunctionValue
 	targetFunction   FunctionValue
 	retargetFunction FunctionValue
+	setTagFunction   FunctionValue
 
 	// Injected functions.
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
 	// when the controller is loaded for borrowing/checking
-	GetCapability func(inter *Interpreter) *IDCapabilityValue
+	GetCapability func(inter *Interpreter) *CapabilityValue
 	GetTag        func(inter *Interpreter) *StringValue
 	SetTag        func(inter *Interpreter, tag *StringValue)
 	Delete        func(inter *Interpreter, locationRange LocationRange)
@@ -67,7 +69,7 @@ type StorageCapabilityControllerValue struct {
 }
 
 func NewUnmeteredStorageCapabilityControllerValue(
-	borrowType ReferenceStaticType,
+	borrowType *ReferenceStaticType,
 	capabilityID UInt64Value,
 	targetPath PathValue,
 ) *StorageCapabilityControllerValue {
@@ -80,7 +82,7 @@ func NewUnmeteredStorageCapabilityControllerValue(
 
 func NewStorageCapabilityControllerValue(
 	memoryGauge common.MemoryGauge,
-	borrowType ReferenceStaticType,
+	borrowType *ReferenceStaticType,
 	capabilityID UInt64Value,
 	targetPath PathValue,
 ) *StorageCapabilityControllerValue {
@@ -103,7 +105,7 @@ func (*StorageCapabilityControllerValue) isValue() {}
 
 func (*StorageCapabilityControllerValue) isCapabilityControllerValue() {}
 
-func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() ReferenceStaticType {
+func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *ReferenceStaticType {
 	return v.BorrowType
 }
 
@@ -253,6 +255,12 @@ func (v *StorageCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 	case sema.StorageCapabilityControllerTypeTagFieldName:
 		return v.GetTag(inter)
 
+	case sema.StorageCapabilityControllerTypeSetTagFunctionName:
+		if v.setTagFunction == nil {
+			v.setTagFunction = v.newSetTagFunction(inter)
+		}
+		return v.setTagFunction
+
 	case sema.StorageCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
 
@@ -322,10 +330,15 @@ func (v *StorageCapabilityControllerValue) ReferenceValue(
 	interpreter *Interpreter,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
+	_ LocationRange,
 ) ReferenceValue {
+	authorization := ConvertSemaAccessToStaticAuthorization(
+		interpreter,
+		resultBorrowType.Authorization,
+	)
 	return NewStorageReferenceValue(
 		interpreter,
-		resultBorrowType.Authorized,
+		authorization,
 		capabilityAddress,
 		v.TargetPath,
 		resultBorrowType.Type,
@@ -409,6 +422,27 @@ func (v *StorageCapabilityControllerValue) newRetargetFunction(
 
 			v.SetTarget(inter, locationRange, newTargetPathValue)
 			v.TargetPath = newTargetPathValue
+
+			return Void
+		},
+	)
+}
+
+func (v *StorageCapabilityControllerValue) newSetTagFunction(
+	inter *Interpreter,
+) FunctionValue {
+	return v.newHostFunctionValue(
+		inter,
+		sema.StorageCapabilityControllerTypeSetTagFunctionType,
+		func(invocation Invocation) Value {
+			inter := invocation.Interpreter
+
+			newTagValue, ok := invocation.Arguments[0].(*StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			v.SetTag(inter, newTagValue)
 
 			return Void
 		},

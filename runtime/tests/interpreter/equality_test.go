@@ -40,67 +40,6 @@ func TestInterpretEquality(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("capability (path)", func(t *testing.T) {
-
-		t.Parallel()
-
-		capabilityValueDeclaration := stdlib.StandardLibraryValue{
-			Name: "cap",
-			Type: &sema.CapabilityType{},
-			Value: interpreter.NewUnmeteredPathCapabilityValue(
-				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
-				interpreter.PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: "something",
-				},
-				nil,
-			),
-			Kind: common.DeclarationKindConstant,
-		}
-
-		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseValueActivation.DeclareValue(capabilityValueDeclaration)
-
-		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		interpreter.Declare(baseActivation, capabilityValueDeclaration)
-
-		inter, err := parseCheckAndInterpretWithOptions(t,
-			`
-              let maybeCapNonNil: Capability? = cap
-              let maybeCapNil: Capability? = nil
-              let res1 = maybeCapNonNil != nil
-              let res2 = maybeCapNil == nil
-		    `,
-			ParseCheckAndInterpretOptions{
-				Config: &interpreter.Config{
-					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
-						return baseActivation
-					},
-				},
-				CheckerConfig: &sema.Config{
-					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
-						return baseValueActivation
-					},
-				},
-			},
-		)
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			inter.Globals.Get("res1").GetValue(),
-		)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.TrueValue,
-			inter.Globals.Get("res2").GetValue(),
-		)
-	})
-
 	t.Run("capability (ID)", func(t *testing.T) {
 
 		t.Parallel()
@@ -108,7 +47,7 @@ func TestInterpretEquality(t *testing.T) {
 		capabilityValueDeclaration := stdlib.StandardLibraryValue{
 			Name: "cap",
 			Type: &sema.CapabilityType{},
-			Value: interpreter.NewUnmeteredIDCapabilityValue(
+			Value: interpreter.NewUnmeteredCapabilityValue(
 				4,
 				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 				nil,
@@ -166,8 +105,8 @@ func TestInterpretEquality(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
 		  fun func() {}
 
-          let maybeFuncNonNil: ((): Void)? = func
-          let maybeFuncNil: ((): Void)? = nil
+          let maybeFuncNonNil: (fun(): Void)? = func
+          let maybeFuncNil: (fun(): Void)? = nil
           let res1 = maybeFuncNonNil != nil
           let res2 = maybeFuncNil == nil
 		`)

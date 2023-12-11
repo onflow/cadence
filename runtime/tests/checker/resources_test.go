@@ -618,15 +618,6 @@ func TestCheckFieldDeclarationWithResourceAnnotation(t *testing.T) {
 
 			t.Parallel()
 
-			destructor := ""
-			if kind == common.CompositeKindResource {
-				destructor = `
-                  destroy() {
-                      destroy self.t
-                  }
-                `
-			}
-
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
@@ -637,13 +628,10 @@ func TestCheckFieldDeclarationWithResourceAnnotation(t *testing.T) {
                           init(t: @T) {
                               self.t %[2]s t
                           }
-
-                          %[3]s
                       }
                     `,
 					kind.Keyword(),
 					kind.TransferOperator(),
-					destructor,
 				),
 			)
 
@@ -690,15 +678,6 @@ func TestCheckFieldDeclarationWithoutResourceAnnotation(t *testing.T) {
 
 			t.Parallel()
 
-			destructor := ""
-			if kind == common.CompositeKindResource {
-				destructor = `
-                  destroy() {
-                      destroy self.t
-                  }
-                `
-			}
-
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
@@ -709,13 +688,10 @@ func TestCheckFieldDeclarationWithoutResourceAnnotation(t *testing.T) {
                           init(t: T) {
                               self.t %[2]s t
                           }
-
-                          %[3]s
                       }
                     `,
 					kind.Keyword(),
 					kind.TransferOperator(),
-					destructor,
 				),
 			)
 
@@ -1100,7 +1076,7 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 					`
                       %[1]s T %[5]s %[2]s %[3]s
 
-                      let test: ((@T): Void) = fun (r: @T) {
+                      let test: fun(@T): Void = fun (r: @T) {
                           %[4]s r
                       }
                     `,
@@ -1173,7 +1149,7 @@ func TestCheckFunctionTypeParameterWithoutResourceAnnotation(t *testing.T) {
 					`
                       %[1]s T %[6]s %[2]s %[3]s
 
-                      let test: ((T): Void) = fun (r: %[4]sT) {
+                      let test: fun(T): Void = fun (r: %[4]sT) {
                           %[5]s r
                       }
                     `,
@@ -1250,7 +1226,7 @@ func TestCheckFunctionTypeReturnTypeWithResourceAnnotation(t *testing.T) {
 					`
                       %[1]s T %[7]s %[2]s %[3]s
 
-                      let test: ((): @T) = fun (): @T {
+                      let test: fun(): @T = fun (): @T {
                           return %[4]s %[5]s T%[6]s
                       }
                     `,
@@ -1340,7 +1316,7 @@ func TestCheckFunctionTypeReturnTypeWithoutResourceAnnotation(t *testing.T) {
 					`
                       %[1]s T %[7]s %[2]s %[3]s
 
-                      let test: ((): T) = fun (): T {
+                      let test: fun(): T = fun (): T {
                           return %[4]s %[5]s T%[6]s
                       }
                     `,
@@ -1627,7 +1603,7 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-          pub resource R {}
+          access(all) resource R {}
         `,
 		ParseAndCheckOptions{
 			Location: ImportedLocation,
@@ -1640,7 +1616,7 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
 		`
           import R from "imported"
 
-          pub fun test() {
+          access(all) fun test() {
               destroy create R()
           }
         `,
@@ -1674,7 +1650,7 @@ func TestCheckResourceCreationInContracts(t *testing.T) {
 
               contract B {
 
-                  pub fun test() {
+                  access(all) fun test() {
                       destroy create A.R()
                   }
               }
@@ -1693,7 +1669,7 @@ func TestCheckResourceCreationInContracts(t *testing.T) {
               contract A {
                   resource R {}
 
-                  pub fun test() {
+                  access(all) fun test() {
                       destroy create R()
                   }
               }
@@ -1811,11 +1787,11 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             resource Foo {}
 
-            pub fun foo(): @Foo? {
+            access(all) fun foo(): @Foo? {
                 return <- create Foo()
             }
 
-            pub let isNil = foo() == nil
+            access(all) let isNil = foo() == nil
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -3142,18 +3118,6 @@ func testResourceNesting(
 			)
 		}
 
-		destructor := ""
-		if !outerIsInterface &&
-			outerCompositeKind == common.CompositeKindResource &&
-			innerCompositeKind == common.CompositeKindResource {
-
-			destructor = `
-              destroy() {
-                  destroy self.t
-              }
-            `
-		}
-
 		innerBody := "{}"
 		if innerCompositeKind == common.CompositeKindEvent {
 			innerBody = "()"
@@ -3169,12 +3133,11 @@ func testResourceNesting(
 
 		program := fmt.Sprintf(
 			`
-              %[1]s %[2]s T%[10]s %[3]s
+              %[1]s %[2]s T%[9]s %[3]s
 
               %[4]s %[5]s U {
                   let t: %[6]s%[7]s
                   %[8]s
-                  %[9]s
               }
             `,
 			innerCompositeKind.Keyword(),
@@ -3185,7 +3148,6 @@ func testResourceNesting(
 			innerCompositeKind.Annotation(),
 			innerTypeAnnotation,
 			initializer,
-			destructor,
 			innerConformances,
 		)
 
@@ -3383,7 +3345,7 @@ func TestCheckInvalidResourceInterfaceUseAsType(t *testing.T) {
 }
 
 // TestCheckResourceInterfaceUseAsType test if a resource
-// is a subtype of a restricted AnyResource type.
+// is a subtype of a intersection AnyResource type.
 func TestCheckResourceInterfaceUseAsType(t *testing.T) {
 
 	t.Parallel()
@@ -3499,7 +3461,7 @@ func TestCheckInvalidResourceLossThroughFunctionResultAccess(t *testing.T) {
 }
 
 // TestCheckAnyResourceDestruction tests if resources
-// can be passed to restricted AnyResources parameters,
+// can be passed to intersection AnyResources parameters,
 // and if the argument can be destroyed.
 func TestCheckAnyResourceDestruction(t *testing.T) {
 
@@ -3538,10 +3500,6 @@ func TestCheckInvalidResourceFieldMoveThroughVariableDeclaration(t *testing.T) {
           init(foo: @Foo) {
               self.foo <- foo
           }
-
-          destroy() {
-              destroy self.foo
-          }
       }
 
       fun test(): @[Foo] {
@@ -3576,10 +3534,6 @@ func TestCheckInvalidResourceFieldMoveThroughParameter(t *testing.T) {
 
           init(foo: @Foo) {
               self.foo <- foo
-          }
-
-          destroy() {
-              destroy self.foo
           }
       }
 
@@ -3621,10 +3575,6 @@ func TestCheckInvalidResourceFieldMoveSelf(t *testing.T) {
           fun test() {
              absorb(<-self.y)
           }
-
-          destroy() {
-              destroy self.y
-          }
       }
 
       fun absorb(_ y: @Y) {
@@ -3635,33 +3585,6 @@ func TestCheckInvalidResourceFieldMoveSelf(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
-}
-
-func TestCheckInvalidResourceFieldUseAfterDestroy(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      resource Y {}
-
-      resource X {
-
-          var y: @Y
-
-          init() {
-              self.y <- create Y()
-          }
-
-          destroy() {
-              destroy self.y
-              destroy self.y
-          }
-      }
-    `)
-
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
 
 func TestCheckResourceArrayAppend(t *testing.T) {
@@ -3977,7 +3900,7 @@ func TestCheckInvalidResourceDictionaryKeysForeach(t *testing.T) {
             xs.forEachKey(fun (x: @X): Bool {
                 destroy x
                 return true
-            }) 
+            })
             destroy xs
         }
     `)
@@ -4042,10 +3965,6 @@ func TestCheckInvalidResourceConstantResourceFieldSwap(t *testing.T) {
           init(foo: @Foo) {
               self.foo <- foo
           }
-
-          destroy() {
-              destroy self.foo
-          }
       }
 
       fun test() {
@@ -4077,9 +3996,6 @@ func TestCheckResourceVariableResourceFieldSwap(t *testing.T) {
               self.foo <- foo
           }
 
-          destroy() {
-              destroy self.foo
-          }
       }
 
       fun test() {
@@ -4107,10 +4023,6 @@ func TestCheckInvalidResourceFieldDestroy(t *testing.T) {
 
          init(foo: @Foo) {
              self.foo <- foo
-         }
-
-         destroy() {
-             destroy self.foo
          }
      }
 
@@ -4205,10 +4117,6 @@ func TestCheckResourceFieldUseAndDestruction(t *testing.T) {
             let ri <- self.ris.remove(key: "first")
             absorb(<-ri)
          }
-
-         destroy() {
-             destroy self.ris
-         }
      }
 
      fun absorb(_ ri: @{RI}?) {
@@ -4270,8 +4178,6 @@ func TestCheckResourceOptionalBinding(t *testing.T) {
           let maybeR: @R? <- create R()
           if let r <- maybeR {
               destroy r
-          } else {
-              destroy maybeR
           }
       }
     `)
@@ -4290,30 +4196,6 @@ func TestCheckInvalidResourceOptionalBindingResourceLossInThen(t *testing.T) {
           let maybeR: @R? <- create R()
           if let r <- maybeR {
               // resource loss of r
-          } else {
-              destroy maybeR
-          }
-      }
-    `)
-
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
-}
-
-func TestCheckInvalidResourceOptionalBindingResourceLossInElse(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      resource R {}
-
-      fun test() {
-          let maybeR: @R? <- create R()
-          if let r <- maybeR {
-              destroy r
-          } else {
-              // resource loss of maybeR
           }
       }
     `)
@@ -4335,8 +4217,6 @@ func TestCheckInvalidResourceOptionalBindingResourceUseAfterInvalidationInThen(t
           if let r <- maybeR {
               destroy r
               destroy maybeR
-          } else {
-              destroy maybeR
           }
       }
     `)
@@ -4357,8 +4237,6 @@ func TestCheckInvalidResourceOptionalBindingResourceUseAfterInvalidationAfterBra
           let maybeR: @R? <- create R()
           if let r <- maybeR {
               destroy r
-          } else {
-              destroy maybeR
           }
           f(<-maybeR)
       }
@@ -4371,6 +4249,173 @@ func TestCheckInvalidResourceOptionalBindingResourceUseAfterInvalidationAfterBra
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
+func TestCheckResourceOptionalBindingWithSecondValue(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun test() {
+          let r1 <- create R()
+          var r2: @R? <- create R()
+
+          if let r3 <- r2 <- r1 {
+              // r1 was definitely moved
+              // r2 contains r1
+              destroy r2
+              // only then branch defined r3
+              destroy r3
+          } else {
+              // r1 was definitely moved
+              // r2 contains r1
+              destroy r2
+          }
+      }
+    `)
+	require.NoError(t, err)
+}
+
+func TestCheckResourceOptionalBindingResourceInvalidation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("separate, without else", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun asOpt(_ r: @R): @R? {
+              return <-r
+          }
+
+          fun test() {
+              let r <- create R()
+              let optR <- asOpt(<-r)
+              if let r2 <- optR {
+                  destroy r2
+              }
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("separate, with else", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun asOpt(_ r: @R): @R? {
+              return <-r
+          }
+
+          fun consume(_ r: @R?) {
+              destroy <-r
+          }
+
+          fun test() {
+              let r <- create R()
+              let optR <- asOpt(<-r)
+              if let r2 <- optR {
+                  destroy r2
+              } else {
+                  consume(<-optR)
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("inline, without else", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun asOpt(_ r: @R): @R? {
+              return <-r
+          }
+
+          fun test() {
+              let r <- create R()
+              if let r2 <- asOpt(<-r) {
+                  destroy r2
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("inline, with else, non-optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun asOpt(_ r: @R): @R? {
+              return <-r
+          }
+
+          fun consume(_ r: @R?) {
+              destroy <-r
+          }
+
+          fun test() {
+              let r <- create R()
+              if let r2 <- asOpt(<-r) {
+                  destroy r2
+              } else {
+                  consume(<-r)
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("inline, with else, optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun identity(_ r: @R?): @R? {
+              return <-r
+          }
+
+          fun consume(_ r: @R?) {
+              destroy <-r
+          }
+
+          fun test() {
+              let r: @R? <- create R()
+              if let r2 <- identity(<-r) {
+                  destroy r2
+              } else {
+                  consume(<-r)
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
 }
 
 func TestCheckResourceOptionalBindingFailableCast(t *testing.T) {
@@ -4543,29 +4588,6 @@ func TestCheckInvalidResourceOptionalBindingFailableCastMissingElse(t *testing.T
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
-
-	t.Run("contract interface resource to contract to resource", func(t *testing.T) {
-
-		_, err := ParseAndCheck(t, `
-          contract interface CI {
-              resource R {}
-          }
-
-          contract C: CI {
-              resource R {}
-          }
-
-          fun test(r: @CI.R) {
-              if let r2 <- r as? @C.R {
-                  destroy r2
-              }
-          }
-        `)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
-	})
 }
 
 func TestCheckInvalidResourceFailableCastOutsideOptionalBinding(t *testing.T) {
@@ -4584,9 +4606,10 @@ func TestCheckInvalidResourceFailableCastOutsideOptionalBinding(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{}, errs[0])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
 
 func TestCheckInvalidResourceFailableCastNonIdentifier(t *testing.T) {
@@ -4949,9 +4972,9 @@ func TestCheckInvalidResourceOwnerField(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       resource Test {
-          let owner: PublicAccount
+          let owner: &Account
 
-          init(owner: PublicAccount) {
+          init(owner: &Account) {
               self.owner = owner
           }
       }
@@ -4968,7 +4991,7 @@ func TestCheckInvalidResourceInterfaceOwnerField(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
      resource interface Test {
-         let owner: PublicAccount
+         let owner: &Account
      }
    `)
 
@@ -5014,7 +5037,7 @@ func TestCheckResourceOwnerFieldUse(t *testing.T) {
 	_, err := ParseAndCheck(t, `
      resource Test {
 
-         fun test(): PublicAccount? {
+         fun test(): &Account? {
              return self.owner
          }
      }
@@ -5039,6 +5062,45 @@ func TestCheckResourceInterfaceOwnerFieldUse(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestCheckResourceOwnerFieldType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      var owner: &Account? = nil
+
+      resource Test {
+
+          init() {
+              owner = self.owner
+          }
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckResourceOwnerFieldTypeAccess(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+
+      resource Test {}
+
+      let r <- create Test()
+      let owner = r.owner
+    `)
+
+	require.NoError(t, err)
+
+	ownerType := RequireGlobalValue(t, checker.Elaboration, "owner")
+	require.Equal(t,
+		sema.NewOptionalType(nil, sema.AccountReferenceType),
+		ownerType,
+	)
+}
+
 func TestCheckInvalidResourceOwnerFieldInitialization(t *testing.T) {
 
 	t.Parallel()
@@ -5046,7 +5108,7 @@ func TestCheckInvalidResourceOwnerFieldInitialization(t *testing.T) {
 	_, err := ParseAndCheck(t, `
      resource Test {
 
-         init(owner: PublicAccount) {
+         init(owner: &Account) {
              self.owner = owner
          }
      }
@@ -5090,7 +5152,7 @@ func TestCheckInvalidResourceInterfaceType(t *testing.T) {
 	})
 }
 
-func TestCheckRestrictedAnyResourceType(t *testing.T) {
+func TestCheckIntersectionAnyResourceType(t *testing.T) {
 
 	t.Parallel()
 
@@ -5100,7 +5162,7 @@ func TestCheckRestrictedAnyResourceType(t *testing.T) {
 
           resource R: RI {}
 
-          let ri: @AnyResource{RI} <- create R()
+          let ri: @{RI} <- create R()
         `)
 
 		require.NoError(t, err)
@@ -5112,7 +5174,7 @@ func TestCheckRestrictedAnyResourceType(t *testing.T) {
 
           resource R: RI {}
 
-          let ri: @[AnyResource{RI}] <- [<-create R()]
+          let ri: @[{RI}] <- [<-create R()]
         `)
 
 		require.NoError(t, err)
@@ -5186,7 +5248,7 @@ func TestCheckInvalidResourceLossInNestedContractResource(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
 
-      pub contract C {
+      access(all) contract C {
 
           resource R {
 
@@ -5197,7 +5259,7 @@ func TestCheckInvalidResourceLossInNestedContractResource(t *testing.T) {
               }
           }
 
-          pub fun bar() {
+          access(all) fun bar() {
               return
           }
       }
@@ -5355,9 +5417,10 @@ func TestCheckInvalidationInPreCondition(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	assert.IsType(t, &sema.PurityError{}, errs[0])
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
 }
 
 func TestCheckResourceRepeatedInvalidationWithBreak(t *testing.T) {
@@ -5518,9 +5581,10 @@ func TestCheckInvalidationInPostConditionBefore(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	assert.IsType(t, &sema.PurityError{}, errs[0])
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
 }
 
 func TestCheckInvalidationInPostCondition(t *testing.T) {
@@ -5543,9 +5607,10 @@ func TestCheckInvalidationInPostCondition(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[1])
+	assert.IsType(t, &sema.PurityError{}, errs[0])
 }
 
 func TestCheckFunctionDefinitelyHaltedNoResourceLoss(t *testing.T) {
@@ -5604,10 +5669,6 @@ func TestCheckOptionalResourceBindingWithSecondValue(t *testing.T) {
 
           init() {
               self.r <- create R()
-          }
-
-          destroy () {
-              destroy self.r
           }
 
           fun duplicate(): @R? {
@@ -8470,18 +8531,15 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
                 switch n {
                     case 1:
                         panic("")
-                        return
                     default:
                         return
                 }
-                panic("")
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
 
 	t.Run("switch-case: invalidation missing in default case, transaction", func(t *testing.T) {
@@ -8503,19 +8561,16 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
                     switch n {
                         case 1:
                             panic("")
-                            return
                         default:
                             return
                     }
-                    panic("")
                 }
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[1])
+		assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
 	})
 
 	t.Run("switch-case: invalidation missing in default case, mixed", func(t *testing.T) {
@@ -8529,7 +8584,6 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
                 switch n {
                     case 1:
                         panic("")
-                        return
                     default:
                         return
                 }
@@ -8539,8 +8593,8 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
 	})
 
 	t.Run("switch-case: invalidation missing in default case, mixed, transaction", func(t *testing.T) {
@@ -8562,7 +8616,6 @@ func TestCheckResourceInvalidationNeverFunctionCall(t *testing.T) {
                     switch n {
                         case 1:
                             panic("")
-                            return
                         default:
                             return
                     }
@@ -9219,9 +9272,9 @@ func TestCheckBadResourceInterface(t *testing.T) {
 
 	t.Run("bad resource interface: shorter", func(t *testing.T) {
 
-		_, err := ParseAndCheck(t, "resource interface struct{struct d:struct{ struct d:struct{ }struct d:struct{ struct d:struct{ }}}}")
+		_, err := ParseAndCheck(t, "resource interface foo{struct d:foo{ struct d:foo{ }struct d:foo{ struct d:foo{ }}}}")
 
-		errs := RequireCheckerErrors(t, err, 17)
+		errs := RequireCheckerErrors(t, err, 6)
 
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
@@ -9229,24 +9282,13 @@ func TestCheckBadResourceInterface(t *testing.T) {
 		assert.IsType(t, &sema.RedeclarationError{}, errs[3])
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[4])
 		assert.IsType(t, &sema.RedeclarationError{}, errs[5])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[6])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[7])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[8])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[9])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[10])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[11])
-		assert.IsType(t, &sema.ConformanceError{}, errs[12])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[13])
-		assert.IsType(t, &sema.ConformanceError{}, errs[14])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[15])
-		assert.IsType(t, &sema.ConformanceError{}, errs[16])
 	})
 
 	t.Run("bad resource interface: longer", func(t *testing.T) {
 
-		_, err := ParseAndCheck(t, "resource interface struct{struct d:struct{ contract d:struct{ contract x:struct{ struct d{} contract d:struct{ contract d:struct {}}}}}}")
+		_, err := ParseAndCheck(t, "resource interface foo{struct d:foo{ contract d:foo{ contract x:foo{ struct d{} contract d:foo{ contract d:foo {}}}}}}")
 
-		errs := RequireCheckerErrors(t, err, 24)
+		errs := RequireCheckerErrors(t, err, 9)
 
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
@@ -9257,25 +9299,10 @@ func TestCheckBadResourceInterface(t *testing.T) {
 		assert.IsType(t, &sema.RedeclarationError{}, errs[6])
 		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[7])
 		assert.IsType(t, &sema.RedeclarationError{}, errs[8])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[9])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[10])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[11])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[12])
-		assert.IsType(t, &sema.ConformanceError{}, errs[13])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[14])
-		assert.IsType(t, &sema.ConformanceError{}, errs[15])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[16])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[17])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[18])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[19])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[20])
-		assert.IsType(t, &sema.ConformanceError{}, errs[21])
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[22])
-		assert.IsType(t, &sema.ConformanceError{}, errs[23])
 	})
 }
 
-func TestCheckInvalidUnreachableResourceInvalidation(t *testing.T) {
+func TestCheckUnreachableResourceInvalidation(t *testing.T) {
 
 	t.Parallel()
 
@@ -9292,15 +9319,47 @@ func TestCheckInvalidUnreachableResourceInvalidation(t *testing.T) {
                     panic("")
                 }
             }
-
-            destroy r
-            panic("")
         }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	require.NoError(t, err)
+}
 
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+func TestCheckConditionalResourceCreationAndReturn(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithPanic(t, `
+        resource R {}
+
+        fun mint(id: UInt64): @R {
+            if id > 100 {
+                return <- create R()
+            } else {
+                panic("bad id")
+            }
+        }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckIndexExpressionResourceLoss(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource R {}
+
+      fun test() {
+          let rs <- [<-create R()]
+          rs[0]
+          destroy rs
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 }
 
 func TestCheckResourceWithFunction(t *testing.T) {
@@ -9389,7 +9448,9 @@ func TestCheckInvalidationInCondition(t *testing.T) {
                     `,
 					kind.Keyword(),
 				))
-				require.NoError(t, err)
+
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.PurityError{}, errs[0])
 			})
 
 			t.Run("in composite", func(t *testing.T) {
@@ -9415,7 +9476,8 @@ func TestCheckInvalidationInCondition(t *testing.T) {
                     `,
 					kind.Keyword(),
 				))
-				require.NoError(t, err)
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.PurityError{}, errs[0])
 			})
 
 			t.Run("in interface, definite invalidation", func(t *testing.T) {
@@ -9442,9 +9504,9 @@ func TestCheckInvalidationInCondition(t *testing.T) {
 					kind.Keyword(),
 				))
 
-				errs := RequireCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[0])
+				errs := RequireCheckerErrors(t, err, 2)
+				assert.IsType(t, &sema.PurityError{}, errs[0])
+				assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[1])
 			})
 
 			t.Run("in interface, temporary invalidation", func(t *testing.T) {
@@ -9467,61 +9529,6 @@ func TestCheckInvalidationInCondition(t *testing.T) {
 				))
 				require.NoError(t, err)
 			})
-
-			t.Run("in nested type requirement, definite invalidation", func(t *testing.T) {
-
-				t.Parallel()
-
-				_, err := ParseAndCheck(t, fmt.Sprintf(
-					`
-                      resource R {}
-
-                      fun drop(_ r: @R): Bool {
-                          destroy r
-                          return true
-                      }
-
-                      contract interface CI {
-                          struct S {
-                              fun test(_ r: @R) {
-                                  %s {
-                                      drop(<-r)
-                                  }
-                              }
-                          }
-                      }
-                    `,
-					kind.Keyword(),
-				))
-
-				errs := RequireCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[0])
-			})
-
-			t.Run("in nested type requirement, temporary invalidation", func(t *testing.T) {
-
-				t.Parallel()
-
-				_, err := ParseAndCheck(t, fmt.Sprintf(
-					`
-                      resource R {}
-
-                      contract interface CI {
-                          struct S {
-                              fun drop(_ r: @R) {
-                                  %s {
-                                      r.isInstance(Type<@R>())
-                                  }
-                              }
-                         }
-                      }
-                    `,
-					kind.Keyword(),
-				))
-				require.NoError(t, err)
-			})
-
 		})
 	}
 
@@ -9545,7 +9552,7 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
             access(all) fun main() {
                 var r <- create R()
 
-                let bypass = fun(x: ((): Void)): ((): Void) {
+                let bypass = fun(x: (fun(): Void)): (fun(): Void) {
                     return x
                 }
 
@@ -9573,8 +9580,8 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
             access(all) fun main() {
                 var r <- create R()
 
-                let bypass = fun(x: ((): Void)): ((): ((): Void)) {
-                    return fun(): ((): Void) {
+                let bypass = fun(x: (fun(): Void)): (fun(): (fun(): Void)) {
+                    return fun(): (fun(): Void) {
                         return x
                     }
                 }
@@ -9603,7 +9610,7 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
             access(all) fun main() {
                 var r <- create R()
 
-                let bypass = fun(x: Void): ((): Void) {
+                let bypass = fun(x: Void): (fun(): Void) {
                     return fun(): Void {
                         return x
                     }
@@ -9629,9 +9636,9 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
 
             access(all) fun main() {
                 var r <- create R()
-                var array: [((): Void)] = []
+                var array: [(fun(): Void)] = []
 
-                let bypass = fun(x: ((): Void)): Int {
+                let bypass = fun(x: (fun(): Void)): Int {
                     return 0
                 }
 
@@ -9655,9 +9662,9 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
 
             access(all) fun main() {
                 var r <- create R()
-                var array: [((): Void)] = []
+                var array: [(fun(): Void)] = []
 
-                let bypass = fun(x: ((): Void)): Int {
+                let bypass = fun(x: (fun(): Void)): Int {
                     return 0
                 }
 
@@ -9681,9 +9688,9 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
 
             access(all) fun main() {
                 var r <- create R()
-                var array: [((): Void)] = []
+                var array: [(fun(): Void)] = []
 
-                let bypass = fun(x: ((): Void)): Int {
+                let bypass = fun(x: (fun(): Void)): Int {
                     return 0
                 }
 
@@ -9710,9 +9717,9 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
 
             access(all) fun main() {
                 var r <- create R()
-                var array: [((): Void)] = []
+                var array: [(fun(): Void)] = []
 
-                let bypass = fun(x: ((): Void)): Int {
+                let bypass = fun(x: (fun(): Void)): Int {
                     return 0
                 }
 
@@ -9736,7 +9743,7 @@ func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             access(all) resource R {
-                pub(set) var f: ((): Void)
+                var f: (fun(): Void)
 
                 init() {
                     self.f = fun() {}
@@ -9747,7 +9754,7 @@ func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
                 }
             }
 
-            access(all) fun someFunc(_ f: ((): Void)): Int {
+            access(all) fun someFunc(_ f: (fun(): Void)): Int {
                 return 0
             }
 
@@ -9773,7 +9780,7 @@ func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
                 access(all) fun f() {}
             }
 
-            access(all) fun someFunc(_ f: ((): Void)): Int {
+            access(all) fun someFunc(_ f: (fun(): Void)): Int {
                 return 0
             }
 
@@ -9791,4 +9798,64 @@ func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
 	})
+}
+
+func TestCheckIfLetElseBranchConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        access(all) resource Victim{}
+
+        access(all) fun main() {
+            var r: @Victim? <- nil
+            var r2: @Victim?  <- create Victim()
+            if let dummy <- r <- r2 {
+                // unreachable token destroys to please checker
+                destroy dummy
+                destroy r
+            } else {
+                // Error: r2 is invalid here
+
+                var ref = &r as &Victim?
+                var arr: @[Victim?]<- [<- r, <- r2]
+                destroy arr
+            }
+        }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
+func TestCheckOptionalBindingElseBranch(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		access(all) resource Victim {}
+
+		access(all) fun main() {
+
+			var r: @Victim? <- nil
+			var r2: @Victim?  <- create Victim()
+
+			if let dummy <- r <- r2 {
+				// unreachable token destroys to please checker
+				destroy dummy
+				destroy r
+			} else {
+				// checker failed to notice that r2 is invalid here
+				var ref = &r as &Victim?
+				var arr: @[Victim?]<- [
+                    <- r,
+                    <- r2
+                ]
+				destroy arr
+			}
+		}
+   `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }

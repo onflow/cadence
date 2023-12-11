@@ -37,6 +37,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
@@ -220,6 +221,7 @@ type ReferenceTrackedResourceKindedValue interface {
 	ResourceKindedValue
 	IsReferenceTrackedResourceKindedValue()
 	StorageID() atree.StorageID
+	IsStaleResource(*Interpreter) bool
 }
 
 // ContractValue is the value of a contract.
@@ -231,23 +233,16 @@ type ContractValue interface {
 	SetNestedVariables(variables map[string]*Variable)
 }
 
-// CapabilityValue
-type CapabilityValue interface {
-	atree.Storable
-	EquatableValue
-	isCapabilityValue()
-}
-
-// LinkValue
-type LinkValue interface {
-	Value
-	isLinkValue()
-}
-
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
 type IterableValue interface {
 	Value
 	Iterator(interpreter *Interpreter) ValueIterator
+	ForEach(
+		interpreter *Interpreter,
+		elementType sema.Type,
+		function func(value Value) (resume bool),
+		locationRange LocationRange,
+	)
 }
 
 // ValueIterator is an iterator which returns values.
@@ -813,7 +808,7 @@ func (BoolValue) ChildStorables() []atree.Storable {
 type CharacterValue string
 
 func NewUnmeteredCharacterValue(r string) CharacterValue {
-	return CharacterValue(r)
+	return CharacterValue(norm.NFC.String(r))
 }
 
 func NewCharacterValue(
@@ -822,8 +817,9 @@ func NewCharacterValue(
 	characterConstructor func() string,
 ) CharacterValue {
 	common.UseMemory(memoryGauge, memoryUsage)
-
 	character := characterConstructor()
+	// NewUnmeteredCharacterValue normalizes (= allocates)
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(character)))
 	return NewUnmeteredCharacterValue(character)
 }
 
@@ -866,16 +862,12 @@ func (v CharacterValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenRefe
 	return v.String()
 }
 
-func (v CharacterValue) NormalForm() string {
-	return norm.NFC.String(string(v))
-}
-
 func (v CharacterValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 	otherChar, ok := other.(CharacterValue)
 	if !ok {
 		return false
 	}
-	return v.NormalForm() == otherChar.NormalForm()
+	return v == otherChar
 }
 
 func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -883,7 +875,7 @@ func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRa
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v.NormalForm() < otherChar.NormalForm()
+	return v < otherChar
 }
 
 func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -891,7 +883,7 @@ func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ Locat
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v.NormalForm() <= otherChar.NormalForm()
+	return v <= otherChar
 }
 
 func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -899,7 +891,7 @@ func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ Locatio
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v.NormalForm() > otherChar.NormalForm()
+	return v > otherChar
 }
 
 func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -907,7 +899,7 @@ func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ Lo
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v.NormalForm() >= otherChar.NormalForm()
+	return v >= otherChar
 }
 
 func (v CharacterValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
@@ -1032,7 +1024,7 @@ type StringValue struct {
 
 func NewUnmeteredStringValue(str string) *StringValue {
 	return &StringValue{
-		Str: str,
+		Str: norm.NFC.String(str),
 		// a negative value indicates the length has not been initialized, see Length()
 		length: -1,
 	}
@@ -1045,6 +1037,8 @@ func NewStringValue(
 ) *StringValue {
 	common.UseMemory(memoryGauge, memoryUsage)
 	str := stringConstructor()
+	// NewUnmeteredStringValue normalizes (= allocates)
+	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(str)))
 	return NewUnmeteredStringValue(str)
 }
 
@@ -1056,6 +1050,8 @@ var _ HashableValue = &StringValue{}
 var _ ValueIndexableValue = &StringValue{}
 var _ MemberAccessibleValue = &StringValue{}
 var _ IterableValue = &StringValue{}
+
+var VarSizedArrayOfStringType = NewVariableSizedStaticType(nil, PrimitiveStaticTypeString)
 
 func (v *StringValue) prepareGraphemes() {
 	if v.graphemes == nil {
@@ -1102,7 +1098,7 @@ func (v *StringValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 	if !ok {
 		return false
 	}
-	return v.NormalForm() == otherString.NormalForm()
+	return v.Str == otherString.Str
 }
 
 func (v *StringValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -1116,7 +1112,7 @@ func (v *StringValue) Less(interpreter *Interpreter, other ComparableValue, loca
 		})
 	}
 
-	return AsBoolValue(v.NormalForm() < otherString.NormalForm())
+	return AsBoolValue(v.Str < otherString.Str)
 }
 
 func (v *StringValue) LessEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -1130,7 +1126,7 @@ func (v *StringValue) LessEqual(interpreter *Interpreter, other ComparableValue,
 		})
 	}
 
-	return AsBoolValue(v.NormalForm() <= otherString.NormalForm())
+	return AsBoolValue(v.Str <= otherString.Str)
 }
 
 func (v *StringValue) Greater(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -1144,7 +1140,7 @@ func (v *StringValue) Greater(interpreter *Interpreter, other ComparableValue, l
 		})
 	}
 
-	return AsBoolValue(v.NormalForm() > otherString.NormalForm())
+	return AsBoolValue(v.Str > otherString.Str)
 }
 
 func (v *StringValue) GreaterEqual(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -1158,7 +1154,7 @@ func (v *StringValue) GreaterEqual(interpreter *Interpreter, other ComparableVal
 		})
 	}
 
-	return AsBoolValue(v.NormalForm() >= otherString.NormalForm())
+	return AsBoolValue(v.Str >= otherString.Str)
 }
 
 // HashInput returns a byte slice containing:
@@ -1176,10 +1172,6 @@ func (v *StringValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte)
 	buffer[0] = byte(HashInputTypeString)
 	copy(buffer[1:], v.Str)
 	return buffer
-}
-
-func (v *StringValue) NormalForm() string {
-	return norm.NFC.String(v.Str)
 }
 
 func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue, locationRange LocationRange) Value {
@@ -1360,6 +1352,39 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 				return v.ToLower(invocation.Interpreter)
 			},
 		)
+
+	case sema.StringTypeSplitFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.StringTypeSplitFunctionType,
+			func(invocation Invocation) Value {
+				separator, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.Split(invocation.Interpreter, invocation.LocationRange, separator.Str)
+			},
+		)
+
+	case sema.StringTypeReplaceAllFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.StringTypeReplaceAllFunctionType,
+			func(invocation Invocation) Value {
+				of, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				with, ok := invocation.Arguments[1].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.ReplaceAll(invocation.Interpreter, invocation.LocationRange, of.Str, with.Str)
+			},
+		)
 	}
 
 	return nil
@@ -1410,6 +1435,52 @@ func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 		memoryUsage,
 		func() string {
 			return strings.ToLower(v.Str)
+		},
+	)
+}
+
+func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, separator string) Value {
+	split := strings.Split(v.Str, separator)
+
+	var index int
+	count := len(split)
+
+	return NewArrayValueWithIterator(
+		inter,
+		VarSizedArrayOfStringType,
+		common.ZeroAddress,
+		uint64(count),
+		func() Value {
+			if index >= count {
+				return nil
+			}
+
+			str := split[index]
+			index++
+			return NewStringValue(
+				inter,
+				common.NewStringMemoryUsage(len(str)),
+				func() string {
+					return str
+				},
+			)
+		},
+	)
+}
+
+func (v *StringValue) ReplaceAll(inter *Interpreter, locationRange LocationRange, of string, with string) *StringValue {
+	// Over-estimate the resulting string length.
+	// In the worst case, `of` can be empty in which case, `with` will be added at every index.
+	// e.g. `of` = "", `v` = "ABC", `with` = "1": result = "1A1B1C1".
+	lengthOverEstimate := (2*len(v.Str) + 1) * len(with)
+
+	memoryUsage := common.NewStringMemoryUsage(lengthOverEstimate)
+
+	return NewStringValue(
+		inter,
+		memoryUsage,
+		func() string {
+			return strings.ReplaceAll(v.Str, of, with)
 		},
 	)
 }
@@ -1520,6 +1591,25 @@ func (v *StringValue) ConformsToStaticType(
 func (v *StringValue) Iterator(_ *Interpreter) ValueIterator {
 	return StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
+	}
+}
+
+func (v *StringValue) ForEach(
+	interpreter *Interpreter,
+	_ sema.Type,
+	function func(value Value) (resume bool),
+	_ LocationRange,
+) {
+	iterator := v.Iterator(interpreter)
+	for {
+		value := iterator.Next(interpreter)
+		if value == nil {
+			return
+		}
+
+		if !function(value) {
+			return
+		}
 	}
 }
 
@@ -1670,14 +1760,11 @@ func NewArrayValueWithIterator(
 	return v
 }
 
-func newArrayValueFromAtreeValue(
-	array *atree.Array,
-	staticType ArrayStaticType,
-) *ArrayValue {
-	return &ArrayValue{
-		Type:  staticType,
-		array: array,
+func ArrayElementSize(staticType ArrayStaticType) uint {
+	if staticType == nil {
+		return 0
 	}
+	return staticType.ElementType().elementSize()
 }
 
 func newArrayValueFromConstructor(
@@ -1685,20 +1772,38 @@ func newArrayValueFromConstructor(
 	staticType ArrayStaticType,
 	countOverestimate uint64,
 	constructor func() *atree.Array,
-) (array *ArrayValue) {
-	var elementSize uint
-	if staticType != nil {
-		elementSize = staticType.ElementType().elementSize()
-	}
-	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(countOverestimate, elementSize)
-	common.UseMemory(gauge, baseUsage)
+) *ArrayValue {
+
+	elementSize := ArrayElementSize(staticType)
+
+	elementUsage, dataSlabs, metaDataSlabs :=
+		common.NewAtreeArrayMemoryUsages(countOverestimate, elementSize)
 	common.UseMemory(gauge, elementUsage)
 	common.UseMemory(gauge, dataSlabs)
 	common.UseMemory(gauge, metaDataSlabs)
 
-	array = newArrayValueFromAtreeValue(constructor(), staticType)
-	array.elementSize = elementSize
-	return
+	return newArrayValueFromAtreeArray(
+		gauge,
+		staticType,
+		elementSize,
+		constructor(),
+	)
+}
+
+func newArrayValueFromAtreeArray(
+	gauge common.MemoryGauge,
+	staticType ArrayStaticType,
+	elementSize uint,
+	atreeArray *atree.Array,
+) *ArrayValue {
+
+	common.UseMemory(gauge, common.ArrayValueBaseMemoryUsage)
+
+	return &ArrayValue{
+		Type:        staticType,
+		array:       atreeArray,
+		elementSize: elementSize,
+	}
 }
 
 var _ Value = &ArrayValue{}
@@ -1723,8 +1828,20 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (resume bool)) {
+	v.iterate(interpreter, v.array.Iterate, f)
+}
+
+func (v *ArrayValue) IterateLoaded(interpreter *Interpreter, f func(element Value) (resume bool)) {
+	v.iterate(interpreter, v.array.IterateLoadedValues, f)
+}
+
+func (v *ArrayValue) iterate(
+	interpreter *Interpreter,
+	atreeIterate func(fn atree.ArrayIterationFunc) error,
+	f func(element Value) (resume bool),
+) {
 	iterate := func() {
-		err := v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 
@@ -1776,6 +1893,10 @@ func (v *ArrayValue) isInvalidatedResource(interpreter *Interpreter) bool {
 	return v.isDestroyed || (v.array == nil && v.IsResourceKinded(interpreter))
 }
 
+func (v *ArrayValue) IsStaleResource(interpreter *Interpreter) bool {
+	return v.array == nil && v.IsResourceKinded(interpreter)
+}
+
 func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 
 	interpreter.ReportComputation(common.ComputationKindDestroyArrayValue, 1)
@@ -1810,21 +1931,10 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 	)
 
 	v.isDestroyed = true
+
+	interpreter.invalidateReferencedResources(v)
+
 	v.array = nil
-
-	interpreter.updateReferencedResource(
-		storageID,
-		storageID,
-		func(value *EphemeralReferenceValue) {
-			arrayValue, ok := value.Value.(*ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			arrayValue.isDestroyed = true
-			arrayValue.array = nil
-		},
-	)
 }
 
 func (v *ArrayValue) IsDestroyed() bool {
@@ -2510,12 +2620,12 @@ func (v *ArrayValue) ConformsToStaticType(
 
 	var elementType StaticType
 	switch staticType := v.StaticType(interpreter).(type) {
-	case ConstantSizedStaticType:
+	case *ConstantSizedStaticType:
 		elementType = staticType.ElementType()
 		if v.Count() != int(staticType.Size) {
 			return false
 		}
-	case VariableSizedStaticType:
+	case *VariableSizedStaticType:
 		elementType = staticType.ElementType()
 	default:
 		return false
@@ -2601,15 +2711,13 @@ func (v *ArrayValue) Transfer(
 	storable atree.Storable,
 	preventTransfer map[atree.StorageID]struct{},
 ) Value {
-	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
-	common.UseMemory(interpreter, baseUsage)
-	common.UseMemory(interpreter, elementUsage)
-	common.UseMemory(interpreter, dataSlabs)
-	common.UseMemory(interpreter, metaDataSlabs)
 
 	config := interpreter.SharedState.Config
 
-	interpreter.ReportComputation(common.ComputationKindTransferArrayValue, uint(v.Count()))
+	interpreter.ReportComputation(
+		common.ComputationKindTransferArrayValue,
+		uint(v.Count()),
+	)
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -2650,6 +2758,14 @@ func (v *ArrayValue) Transfer(
 			panic(errors.NewExternalError(err))
 		}
 
+		elementUsage, dataSlabs, metaDataSlabs := common.NewAtreeArrayMemoryUsages(
+			v.array.Count(),
+			v.elementSize,
+		)
+		common.UseMemory(interpreter, elementUsage)
+		common.UseMemory(interpreter, dataSlabs)
+		common.UseMemory(interpreter, metaDataSlabs)
+
 		array, err = atree.NewArrayFromBatchData(
 			config.Storage,
 			address,
@@ -2674,9 +2790,7 @@ func (v *ArrayValue) Transfer(
 		}
 
 		if remove {
-			err = v.array.PopIterate(func(storable atree.Storable) {
-				interpreter.RemoveReferencedSlab(storable)
-			})
+			err = v.array.PopIterate(interpreter.RemoveReferencedSlab)
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
@@ -2685,12 +2799,6 @@ func (v *ArrayValue) Transfer(
 			interpreter.RemoveReferencedSlab(storable)
 		}
 	}
-
-	res := newArrayValueFromAtreeValue(array, v.Type)
-	res.elementSize = v.elementSize
-	res.semaType = v.semaType
-	res.isResourceKinded = v.isResourceKinded
-	res.isDestroyed = v.isDestroyed
 
 	if isResourceKinded {
 		// Update the resource in-place,
@@ -2702,18 +2810,21 @@ func (v *ArrayValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
+		interpreter.invalidateReferencedResources(v)
+
 		v.array = nil
-
-		newStorageID := array.StorageID()
-
-		interpreter.updateReferencedResource(
-			currentStorageID,
-			newStorageID,
-			func(value *EphemeralReferenceValue) {
-				value.Value = res
-			},
-		)
 	}
+
+	res := newArrayValueFromAtreeArray(
+		interpreter,
+		v.Type,
+		v.elementSize,
+		array,
+	)
+
+	res.semaType = v.semaType
+	res.isResourceKinded = v.isResourceKinded
+	res.isDestroyed = v.isDestroyed
 
 	return res
 }
@@ -2721,46 +2832,48 @@ func (v *ArrayValue) Transfer(
 func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 	config := interpreter.SharedState.Config
 
-	iterator, err := v.array.Iterator()
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-
-	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
-	common.UseMemory(interpreter, baseUsage)
-	common.UseMemory(interpreter, elementUsage)
-	common.UseMemory(interpreter, dataSlabs)
-	common.UseMemory(interpreter, metaDataSlabs)
-
-	array, err := atree.NewArrayFromBatchData(
-		config.Storage,
-		v.StorageAddress(),
-		v.array.Type(),
-		func() (atree.Value, error) {
-			value, err := iterator.Next()
+	array := newArrayValueFromConstructor(
+		interpreter,
+		v.Type,
+		v.array.Count(),
+		func() *atree.Array {
+			iterator, err := v.array.Iterator()
 			if err != nil {
-				return nil, err
-			}
-			if value == nil {
-				return nil, nil
+				panic(errors.NewExternalError(err))
 			}
 
-			element := MustConvertStoredValue(interpreter, value).
-				Clone(interpreter)
+			array, err := atree.NewArrayFromBatchData(
+				config.Storage,
+				v.StorageAddress(),
+				v.array.Type(),
+				func() (atree.Value, error) {
+					value, err := iterator.Next()
+					if err != nil {
+						return nil, err
+					}
+					if value == nil {
+						return nil, nil
+					}
 
-			return element, nil
+					element := MustConvertStoredValue(interpreter, value).
+						Clone(interpreter)
+
+					return element, nil
+				},
+			)
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+
+			return array
 		},
 	)
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-	return &ArrayValue{
-		Type:             v.Type,
-		semaType:         v.semaType,
-		isResourceKinded: v.isResourceKinded,
-		array:            array,
-		isDestroyed:      v.isDestroyed,
-	}
+
+	array.semaType = v.semaType
+	array.isResourceKinded = v.isResourceKinded
+	array.isDestroyed = v.isDestroyed
+
+	return array
 }
 
 func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
@@ -2955,6 +3068,7 @@ func (v *ArrayValue) Filter(
 			interpreter,
 			nil,
 			nil,
+			nil,
 			[]Value{arrayElement},
 			elementTypeSlice,
 			nil,
@@ -3032,6 +3146,7 @@ func (v *ArrayValue) Map(
 			interpreter,
 			nil,
 			nil,
+			nil,
 			[]Value{arrayElement},
 			elementTypeSlice,
 			nil,
@@ -3047,12 +3162,12 @@ func (v *ArrayValue) Map(
 
 	var returnArrayStaticType ArrayStaticType
 	switch v.Type.(type) {
-	case VariableSizedStaticType:
+	case *VariableSizedStaticType:
 		returnArrayStaticType = NewVariableSizedStaticType(
 			interpreter,
 			returnType,
 		)
-	case ConstantSizedStaticType:
+	case *ConstantSizedStaticType:
 		returnArrayStaticType = NewConstantSizedStaticType(
 			interpreter,
 			returnType,
@@ -3101,6 +3216,15 @@ func (v *ArrayValue) Map(
 	)
 }
 
+func (v *ArrayValue) ForEach(
+	interpreter *Interpreter,
+	_ sema.Type,
+	function func(value Value) (resume bool),
+	_ LocationRange,
+) {
+	v.Iterate(interpreter, function)
+}
+
 // NumberValue
 type NumberValue interface {
 	ComparableValue
@@ -3143,11 +3267,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	case sema.ToBigEndianBytesFunctionName:
 		return NewHostFunctionValue(
 			interpreter,
-			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					sema.ByteArrayType,
-				),
-			},
+			sema.ToBigEndianBytesFunctionType,
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(
 					invocation.Interpreter,
@@ -7091,7 +7211,7 @@ func (Int128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value)
 }
 
 func (v Int128Value) ToBigEndianBytes() []byte {
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return SignedBigIntToSizedBigEndianBytes(v.BigInt, sema.Int128TypeSize)
 }
 
 func (v Int128Value) ConformsToStaticType(
@@ -7832,7 +7952,7 @@ func (Int256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value)
 }
 
 func (v Int256Value) ToBigEndianBytes() []byte {
-	return SignedBigIntToBigEndianBytes(v.BigInt)
+	return SignedBigIntToSizedBigEndianBytes(v.BigInt, sema.Int256TypeSize)
 }
 
 func (v Int256Value) ConformsToStaticType(
@@ -11372,7 +11492,7 @@ func (UInt128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value
 }
 
 func (v UInt128Value) ToBigEndianBytes() []byte {
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return UnsignedBigIntToSizedBigEndianBytes(v.BigInt, sema.UInt128TypeSize)
 }
 
 func (v UInt128Value) ConformsToStaticType(
@@ -12047,7 +12167,7 @@ func (UInt256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value
 }
 
 func (v UInt256Value) ToBigEndianBytes() []byte {
-	return UnsignedBigIntToBigEndianBytes(v.BigInt)
+	return UnsignedBigIntToSizedBigEndianBytes(v.BigInt, sema.UInt256TypeSize)
 }
 
 func (v UInt256Value) ConformsToStaticType(
@@ -16168,15 +16288,16 @@ func (UFix64Value) Scale() int {
 
 // CompositeValue
 
+type FunctionOrderedMap = orderedmap.OrderedMap[string, FunctionValue]
+
 type CompositeValue struct {
-	Destructor      FunctionValue
 	Location        common.Location
 	staticType      StaticType
 	Stringer        func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
 	injectedFields  map[string]Value
 	computedFields  map[string]ComputedField
 	NestedVariables map[string]*Variable
-	Functions       map[string]FunctionValue
+	Functions       *FunctionOrderedMap
 	dictionary      *atree.OrderedMap
 	typeID          TypeID
 
@@ -16185,7 +16306,7 @@ type CompositeValue struct {
 	// 2) When a resource `r`'s destructor is invoked, all of `r`'s attachments' destructors will also run, and
 	//    have their `base` fields set to `&r`
 	// 3) When a value is transferred, this field is copied between its attachments
-	base                *EphemeralReferenceValue
+	base                *CompositeValue
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
 	isDestroyed         bool
@@ -16198,7 +16319,8 @@ type CompositeField struct {
 	Name  string
 }
 
-const attachmentNamePrefix = "$"
+const unrepresentableNamePrefix = "$"
+const resourceDefaultDestroyEventPrefix = ast.ResourceDestructionDefaultEventName + unrepresentableNamePrefix
 
 var _ TypeIndexableValue = &CompositeValue{}
 
@@ -16292,30 +16414,40 @@ func NewCompositeValue(
 	return v
 }
 
-func newCompositeValueFromOrderedMap(
-	dict *atree.OrderedMap,
-	typeInfo compositeTypeInfo,
-) *CompositeValue {
-	return &CompositeValue{
-		dictionary:          dict,
-		Location:            typeInfo.location,
-		QualifiedIdentifier: typeInfo.qualifiedIdentifier,
-		Kind:                typeInfo.kind,
-	}
-}
-
 func newCompositeValueFromConstructor(
 	gauge common.MemoryGauge,
 	count uint64,
 	typeInfo compositeTypeInfo,
 	constructor func() *atree.OrderedMap,
 ) *CompositeValue {
-	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(count, 0)
-	common.UseMemory(gauge, baseUse)
+
+	elementOverhead, dataUse, metaDataUse :=
+		common.NewAtreeMapMemoryUsages(count, 0)
 	common.UseMemory(gauge, elementOverhead)
 	common.UseMemory(gauge, dataUse)
 	common.UseMemory(gauge, metaDataUse)
-	return newCompositeValueFromOrderedMap(constructor(), typeInfo)
+
+	return newCompositeValueFromAtreeMap(
+		gauge,
+		typeInfo,
+		constructor(),
+	)
+}
+
+func newCompositeValueFromAtreeMap(
+	gauge common.MemoryGauge,
+	typeInfo compositeTypeInfo,
+	atreeOrderedMap *atree.OrderedMap,
+) *CompositeValue {
+
+	common.UseMemory(gauge, common.CompositeValueBaseMemoryUsage)
+
+	return &CompositeValue{
+		dictionary:          atreeOrderedMap,
+		Location:            typeInfo.location,
+		QualifiedIdentifier: typeInfo.qualifiedIdentifier,
+		Kind:                typeInfo.kind,
+	}
 }
 
 var _ Value = &CompositeValue{}
@@ -16360,7 +16492,7 @@ func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
 			interpreter,
 			v.Location,
 			v.QualifiedIdentifier,
-			v.TypeID(), // TODO TypeID metering
+			v.TypeID(),
 		)
 	}
 	return v.staticType
@@ -16394,6 +16526,26 @@ func (v *CompositeValue) IsDestroyed() bool {
 	return v.isDestroyed
 }
 
+func resourceDefaultDestroyEventName(t sema.ContainerType) string {
+	return resourceDefaultDestroyEventPrefix + string(t.ID())
+}
+
+// get all the default destroy event constructors associated with this composite value.
+// note that there can be more than one in the case where a resource inherits from an interface
+// that also defines a default destroy event. When that composite is destroyed, all of these
+// events will need to be emitted.
+func (v *CompositeValue) defaultDestroyEventConstructors() (constructors []FunctionValue) {
+	if v.Functions == nil {
+		return
+	}
+	v.Functions.Foreach(func(name string, f FunctionValue) {
+		if strings.HasPrefix(name, resourceDefaultDestroyEventPrefix) {
+			constructors = append(constructors, f)
+		}
+	})
+	return
+}
+
 func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 
 	interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
@@ -16418,71 +16570,63 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 		}()
 	}
 
+	// before actually performing the destruction (i.e. so that any fields are still available),
+	// compute the default arguments of the default destruction events (if any exist). However,
+	// wait until after the destruction completes to actually emit the events, so that the correct order
+	// is preserved and nested resource destroy events happen first
+
+	// default destroy event constructors are encoded as functions on the resource (with an unrepresentable name)
+	// so that we can leverage existing atree encoding and decoding. However, we need to make sure functions are initialized
+	// if the composite was recently loaded from storage
+	if v.Functions == nil {
+		v.Functions = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
+	}
+	for _, constructor := range v.defaultDestroyEventConstructors() {
+
+		// pass the container value to the creation of the default event as an implicit argument, so that
+		// its fields are accessible in the body of the event constructor
+		eventConstructorInvocation := NewInvocation(
+			interpreter,
+			nil,
+			nil,
+			nil,
+			[]Value{v},
+			[]sema.Type{},
+			nil,
+			locationRange,
+		)
+
+		event := constructor.invoke(eventConstructorInvocation).(*CompositeValue)
+		eventType := interpreter.MustSemaTypeOfValue(event).(*sema.CompositeType)
+
+		// emit the event once destruction is complete
+		defer interpreter.emitEvent(event, eventType, locationRange)
+	}
+
 	storageID := v.StorageID()
 
 	interpreter.withResourceDestruction(
 		storageID,
 		locationRange,
 		func() {
-			// if this type has attachments, destroy all of them before invoking the destructor
-			v.forEachAttachment(interpreter, locationRange, func(attachment *CompositeValue) {
-				// an attachment's destructor may make reference to `base`, so we must set the base value
-				// for the attachment before invoking its destructor. For other functions, this happens
-				// automatically when the attachment is accessed with the access expression `v[A]`, which
-				// is a necessary pre-requisite for calling any members of the attachment. However, in
-				// the case of a destructor, this is called implicitly, and thus must have its `base`
-				// set manually
-				attachment.setBaseValue(interpreter, v)
-				attachment.Destroy(interpreter, locationRange)
-			})
-
 			interpreter = v.getInterpreter(interpreter)
 
-			// if composite was deserialized, dynamically link in the destructor
-			if v.Destructor == nil {
-				v.Destructor = interpreter.SharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
-			}
-
-			destructor := v.Destructor
-
-			if destructor != nil {
-				var base *EphemeralReferenceValue
-				var self MemberAccessibleValue = v
-				if v.Kind == common.CompositeKindAttachment {
-					base, self = attachmentBaseAndSelfValues(interpreter, v)
+			// destroy every nested resource in this composite; note that this iteration includes attachments
+			v.ForEachField(interpreter, func(_ string, fieldValue Value) bool {
+				if compositeFieldValue, ok := fieldValue.(*CompositeValue); ok && compositeFieldValue.Kind == common.CompositeKindAttachment {
+					compositeFieldValue.setBaseValue(interpreter, v)
 				}
-				invocation := NewInvocation(
-					interpreter,
-					&self,
-					base,
-					nil,
-					nil,
-					nil,
-					locationRange,
-				)
-
-				destructor.invoke(invocation)
-			}
+				maybeDestroy(interpreter, locationRange, fieldValue)
+				return true
+			})
 		},
 	)
 
 	v.isDestroyed = true
+
+	interpreter.invalidateReferencedResources(v)
+
 	v.dictionary = nil
-
-	interpreter.updateReferencedResource(
-		storageID,
-		storageID,
-		func(value *EphemeralReferenceValue) {
-			compositeValue, ok := value.Value.(*CompositeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			compositeValue.isDestroyed = true
-			compositeValue.dictionary = nil
-		},
-	)
-
 }
 
 func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
@@ -16491,6 +16635,10 @@ func (v *CompositeValue) getBuiltinMember(interpreter *Interpreter, locationRang
 	case sema.ResourceOwnerFieldName:
 		if v.Kind == common.CompositeKindResource {
 			return v.OwnerValue(interpreter, locationRange)
+		}
+	case sema.CompositeForEachAttachmentFunctionName:
+		if v.Kind.SupportsAttachments() {
+			return v.forEachAttachmentFunction(interpreter, locationRange)
 		}
 	}
 
@@ -16563,6 +16711,10 @@ func (v *CompositeValue) isInvalidatedResource(_ *Interpreter) bool {
 	return v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource)
 }
 
+func (v *CompositeValue) IsStaleResource(inter *Interpreter) bool {
+	return v.dictionary == nil && v.IsResourceKinded(inter)
+}
+
 func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
 
 	// Get the correct interpreter. The program code might need to be loaded.
@@ -16612,18 +16764,42 @@ func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange Loc
 	if v.Functions == nil {
 		v.Functions = interpreter.GetCompositeValueFunctions(v, locationRange)
 	}
+	// if no functions were produced, the `Get` below will be nil
+	if v.Functions == nil {
+		return nil
+	}
 
-	function, ok := v.Functions[name]
-	if !ok {
+	function, present := v.Functions.Get(name)
+	if !present {
 		return nil
 	}
 
 	var base *EphemeralReferenceValue
 	var self MemberAccessibleValue = v
 	if v.Kind == common.CompositeKindAttachment {
-		base, self = attachmentBaseAndSelfValues(interpreter, v)
+		functionAccess := interpreter.getAccessOfMember(v, name)
+
+		// with respect to entitlements, any access inside an attachment that is not an entitlement access
+		// does not provide any entitlements to base and self
+		// E.g. consider:
+		//
+		//    access(E) fun foo() {}
+		//    access(self) fun bar() {
+		//        self.foo()
+		//    }
+		//    access(all) fun baz() {
+		//        self.bar()
+		//    }
+		//
+		// clearly `bar` should be callable within `baz`, but we cannot allow `foo`
+		// to be callable within `bar`, or it will be possible to access `E` entitled
+		// methods on `base`
+		if functionAccess.IsPrimitiveAccess() {
+			functionAccess = sema.UnauthorizedAccess
+		}
+		base, self = attachmentBaseAndSelfValues(interpreter, functionAccess, v, locationRange)
 	}
-	return NewBoundFunctionValue(interpreter, function, &self, base)
+	return NewBoundFunctionValue(interpreter, function, &self, base, nil)
 }
 
 func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange LocationRange) OptionalValue {
@@ -16635,12 +16811,24 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange Loca
 
 	config := interpreter.SharedState.Config
 
-	ownerAccount := config.PublicAccountHandler(AddressValue(address))
+	ownerAccount := config.AccountHandler(AddressValue(address))
 
-	// Owner must be of `PublicAccount` type.
-	interpreter.ExpectType(ownerAccount, sema.PublicAccountType, locationRange)
+	// Owner must be of `Account` type.
+	interpreter.ExpectType(
+		ownerAccount,
+		sema.AccountType,
+		locationRange,
+	)
 
-	return NewSomeValueNonCopying(interpreter, ownerAccount)
+	reference := NewEphemeralReferenceValue(
+		interpreter,
+		UnauthorizedAccess,
+		ownerAccount,
+		sema.AccountType,
+		locationRange,
+	)
+
+	return NewSomeValueNonCopying(interpreter, reference)
 }
 
 func (v *CompositeValue) RemoveMember(
@@ -16966,7 +17154,7 @@ func (v *CompositeValue) ConformsToStaticType(
 		}()
 	}
 
-	staticType := v.StaticType(interpreter).(CompositeStaticType)
+	staticType := v.StaticType(interpreter).(*CompositeStaticType)
 
 	semaType := interpreter.MustConvertStaticToSemaType(staticType)
 
@@ -16979,7 +17167,7 @@ func (v *CompositeValue) ConformsToStaticType(
 	}
 
 	if compositeType.Kind == common.CompositeKindAttachment {
-		base := v.getBaseValue().Value
+		base := v.getBaseValue(interpreter, UnauthorizedAccess, locationRange).Value
 		if base == nil || !base.ConformsToStaticType(interpreter, locationRange, results) {
 			return false
 		}
@@ -17093,12 +17281,6 @@ func (v *CompositeValue) Transfer(
 
 	config := interpreter.SharedState.Config
 
-	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(v.dictionary.Count(), 0)
-	common.UseMemory(interpreter, baseUse)
-	common.UseMemory(interpreter, elementOverhead)
-	common.UseMemory(interpreter, dataUse)
-	common.UseMemory(interpreter, metaDataUse)
-
 	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
 
 	if config.TracingEnabled {
@@ -17148,7 +17330,14 @@ func (v *CompositeValue) Transfer(
 			panic(errors.NewExternalError(err))
 		}
 
-		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
+		elementCount := v.dictionary.Count()
+
+		elementOverhead, dataUse, metaDataUse := common.NewAtreeMapMemoryUsages(elementCount, 0)
+		common.UseMemory(interpreter, elementOverhead)
+		common.UseMemory(interpreter, dataUse)
+		common.UseMemory(interpreter, metaDataUse)
+
+		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(elementCount, 0)
 		common.UseMemory(config.MemoryGauge, elementMemoryUse)
 
 		dictionary, err = atree.NewMapFromBatchData(
@@ -17211,25 +17400,6 @@ func (v *CompositeValue) Transfer(
 		}
 	}
 
-	info := NewCompositeTypeInfo(
-		interpreter,
-		v.Location,
-		v.QualifiedIdentifier,
-		v.Kind,
-	)
-
-	res := newCompositeValueFromOrderedMap(dictionary, info)
-	res.injectedFields = v.injectedFields
-	res.computedFields = v.computedFields
-	res.NestedVariables = v.NestedVariables
-	res.Functions = v.Functions
-	res.Destructor = v.Destructor
-	res.Stringer = v.Stringer
-	res.isDestroyed = v.isDestroyed
-	res.typeID = v.typeID
-	res.staticType = v.staticType
-	res.base = v.base
-
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
@@ -17240,18 +17410,33 @@ func (v *CompositeValue) Transfer(
 		// This allows raising an error when the resource is attempted
 		// to be transferred/moved again (see beginning of this function)
 
+		interpreter.invalidateReferencedResources(v)
+
 		v.dictionary = nil
-
-		newStorageID := dictionary.StorageID()
-
-		interpreter.updateReferencedResource(
-			currentStorageID,
-			newStorageID,
-			func(value *EphemeralReferenceValue) {
-				value.Value = res
-			},
-		)
 	}
+
+	info := NewCompositeTypeInfo(
+		interpreter,
+		v.Location,
+		v.QualifiedIdentifier,
+		v.Kind,
+	)
+
+	res := newCompositeValueFromAtreeMap(
+		interpreter,
+		info,
+		dictionary,
+	)
+
+	res.injectedFields = v.injectedFields
+	res.computedFields = v.computedFields
+	res.NestedVariables = v.NestedVariables
+	res.Functions = v.Functions
+	res.Stringer = v.Stringer
+	res.isDestroyed = v.isDestroyed
+	res.typeID = v.typeID
+	res.staticType = v.staticType
+	res.base = v.base
 
 	onResourceOwnerChange := config.OnResourceOwnerChange
 
@@ -17287,9 +17472,6 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 	}
 
 	config := interpreter.SharedState.Config
-
-	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
-	common.UseMemory(config.MemoryGauge, elementMemoryUse)
 
 	dictionary, err := atree.NewMapFromBatchData(
 		config.Storage,
@@ -17331,7 +17513,6 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 		computedFields:      v.computedFields,
 		NestedVariables:     v.NestedVariables,
 		Functions:           v.Functions,
-		Destructor:          v.Destructor,
 		Stringer:            v.Stringer,
 		isDestroyed:         v.isDestroyed,
 		typeID:              v.typeID,
@@ -17389,8 +17570,24 @@ func (v *CompositeValue) ForEachField(
 	gauge common.MemoryGauge,
 	f func(fieldName string, fieldValue Value) (resume bool),
 ) {
+	v.forEachField(gauge, v.dictionary.Iterate, f)
+}
 
-	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
+// ForEachLoadedField iterates over all LOADED field-name field-value pairs of the composite value.
+// It does NOT iterate over computed fields and functions!
+func (v *CompositeValue) ForEachLoadedField(
+	gauge common.MemoryGauge,
+	f func(fieldName string, fieldValue Value) (resume bool),
+) {
+	v.forEachField(gauge, v.dictionary.IterateLoadedValues, f)
+}
+
+func (v *CompositeValue) forEachField(
+	gauge common.MemoryGauge,
+	atreeIterate func(fn atree.MapEntryIterationFunc) error,
+	f func(fieldName string, fieldValue Value) (resume bool),
+) {
+	err := atreeIterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		resume = f(
 			string(key.(StringAtreeValue)),
 			MustConvertStoredValue(gauge, value),
@@ -17451,7 +17648,7 @@ func NewEnumCaseValue(
 	locationRange LocationRange,
 	enumType *sema.CompositeType,
 	rawValue NumberValue,
-	functions map[string]FunctionValue,
+	functions *FunctionOrderedMap,
 ) *CompositeValue {
 
 	fields := []CompositeField{
@@ -17476,11 +17673,11 @@ func NewEnumCaseValue(
 	return v
 }
 
-func (v *CompositeValue) getBaseValue() *EphemeralReferenceValue {
-	return v.base
-}
-
-func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
+func (v *CompositeValue) getBaseValue(
+	interpreter *Interpreter,
+	functionAuthorization Authorization,
+	locationRange LocationRange,
+) *EphemeralReferenceValue {
 	attachmentType, ok := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -17489,17 +17686,20 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 	var baseType sema.Type
 	switch ty := attachmentType.GetBaseType().(type) {
 	case *sema.InterfaceType:
-		baseType, _ = ty.RewriteWithRestrictedTypes()
+		baseType, _ = ty.RewriteWithIntersectionTypes()
 	default:
 		baseType = ty
 	}
 
-	// the base reference can only be borrowed with the declared type of the attachment's base
-	v.base = NewEphemeralReferenceValue(interpreter, false, base, baseType)
+	return NewEphemeralReferenceValue(interpreter, functionAuthorization, v.base, baseType, locationRange)
+}
+
+func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeValue) {
+	v.base = base
 }
 
 func attachmentMemberName(ty sema.Type) string {
-	return attachmentNamePrefix + string(ty.ID())
+	return unrepresentableNamePrefix + string(ty.ID())
 }
 
 func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) *CompositeValue {
@@ -17517,17 +17717,68 @@ func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange 
 	return attachments
 }
 
+func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, locationRange LocationRange) Value {
+	return NewHostFunctionValue(
+		interpreter,
+		sema.CompositeForEachAttachmentFunctionType(interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType).GetCompositeKind()),
+		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
+			functionValue, ok := invocation.Arguments[0].(FunctionValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			fn := func(attachment *CompositeValue) {
+
+				attachmentType := interpreter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
+
+				// attachments are unauthorized during iteration
+				attachmentReferenceAuth := UnauthorizedAccess
+
+				attachmentReference := NewEphemeralReferenceValue(
+					interpreter,
+					attachmentReferenceAuth,
+					attachment,
+					attachmentType,
+					locationRange,
+				)
+
+				invocation := NewInvocation(
+					interpreter,
+					nil,
+					nil,
+					nil,
+					[]Value{attachmentReference},
+					[]sema.Type{sema.NewReferenceType(interpreter, sema.UnauthorizedAccess, attachmentType)},
+					nil,
+					locationRange,
+				)
+				functionValue.invoke(invocation)
+			}
+
+			v.forEachAttachment(interpreter, locationRange, fn)
+			return Void
+		},
+	)
+}
+
 func attachmentBaseAndSelfValues(
 	interpreter *Interpreter,
+	fnAccess sema.Access,
 	v *CompositeValue,
+	locationRange LocationRange,
 ) (base *EphemeralReferenceValue, self *EphemeralReferenceValue) {
-	base = v.getBaseValue()
+	attachmentReferenceAuth := ConvertSemaAccessToStaticAuthorization(interpreter, fnAccess)
+
+	base = v.getBaseValue(interpreter, attachmentReferenceAuth, locationRange)
 	// in attachment functions, self is a reference value
-	self = NewEphemeralReferenceValue(interpreter, false, v, interpreter.MustSemaTypeOfValue(v))
+	self = NewEphemeralReferenceValue(interpreter, attachmentReferenceAuth, v, interpreter.MustSemaTypeOfValue(v), locationRange)
+
 	return
 }
 
-func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationRange, f func(*CompositeValue)) {
+func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRange LocationRange, f func(*CompositeValue)) {
 	iterator, err := v.dictionary.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -17547,7 +17798,7 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationR
 		if key == nil {
 			break
 		}
-		if strings.HasPrefix(string(key.(StringAtreeValue)), attachmentNamePrefix) {
+		if strings.HasPrefix(string(key.(StringAtreeValue)), unrepresentableNamePrefix) {
 			attachment, ok := MustConvertStoredValue(interpreter, value).(*CompositeValue)
 			if !ok {
 				panic(errors.NewExternalError(err))
@@ -17556,9 +17807,36 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationR
 			// attachments is added that takes a `fun (&Attachment): Void` callback, the `f` provided here
 			// should convert the provided attachment value into a reference before passing it to the user
 			// callback
+			attachment.setBaseValue(interpreter, v)
 			f(attachment)
 		}
 	}
+}
+
+func (v *CompositeValue) getTypeKey(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	keyType sema.Type,
+	baseAccess sema.Access,
+) Value {
+	attachment := v.getAttachmentValue(interpreter, locationRange, keyType)
+	if attachment == nil {
+		return Nil
+	}
+	attachmentType := keyType.(*sema.CompositeType)
+	// dynamically set the attachment's base to this composite
+	attachment.setBaseValue(interpreter, v)
+
+	// The attachment reference has the same entitlements as the base access
+	attachmentRef := NewEphemeralReferenceValue(
+		interpreter,
+		ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess),
+		attachment,
+		attachmentType,
+		locationRange,
+	)
+
+	return NewSomeValueNonCopying(interpreter, attachmentRef)
 }
 
 func (v *CompositeValue) GetTypeKey(
@@ -17566,16 +17844,12 @@ func (v *CompositeValue) GetTypeKey(
 	locationRange LocationRange,
 	ty sema.Type,
 ) Value {
-	attachment := v.getAttachmentValue(interpreter, locationRange, ty)
-	if attachment == nil {
-		return NilValue{}
+	var access sema.Access = sema.UnauthorizedAccess
+	attachmentTyp, isAttachmentType := ty.(*sema.CompositeType)
+	if isAttachmentType {
+		access = sema.NewAccessFromEntitlementSet(attachmentTyp.SupportedEntitlements(), sema.Conjunction)
 	}
-	// dynamically set the attachment's base to this composite
-	attachment.setBaseValue(interpreter, v)
-
-	attachmentRef := NewEphemeralReferenceValue(interpreter, false, attachment, ty)
-
-	return NewSomeValueNonCopying(interpreter, attachmentRef)
+	return v.getTypeKey(interpreter, locationRange, ty, access)
 }
 
 func (v *CompositeValue) SetTypeKey(
@@ -17604,7 +17878,7 @@ func (v *CompositeValue) RemoveTypeKey(
 // DictionaryValue
 
 type DictionaryValue struct {
-	Type             DictionaryStaticType
+	Type             *DictionaryStaticType
 	semaType         *sema.DictionaryType
 	isResourceKinded *bool
 	dictionary       *atree.OrderedMap
@@ -17615,7 +17889,7 @@ type DictionaryValue struct {
 func NewDictionaryValue(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	dictionaryType DictionaryStaticType,
+	dictionaryType *DictionaryStaticType,
 	keysAndValues ...Value,
 ) *DictionaryValue {
 	return NewDictionaryValueWithAddress(
@@ -17630,7 +17904,7 @@ func NewDictionaryValue(
 func NewDictionaryValueWithAddress(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	dictionaryType DictionaryStaticType,
+	dictionaryType *DictionaryStaticType,
 	address common.Address,
 	keysAndValues ...Value,
 ) *DictionaryValue {
@@ -17710,38 +17984,114 @@ func NewDictionaryValueWithAddress(
 	return v
 }
 
-func newDictionaryValueFromOrderedMap(
-	dict *atree.OrderedMap,
-	staticType DictionaryStaticType,
-) *DictionaryValue {
-	return &DictionaryValue{
-		Type:       staticType,
-		dictionary: dict,
+func DictionaryElementSize(staticType *DictionaryStaticType) uint {
+	keySize := staticType.KeyType.elementSize()
+	valueSize := staticType.ValueType.elementSize()
+	if keySize == 0 || valueSize == 0 {
+		return 0
 	}
+	return keySize + valueSize
+}
+
+func newDictionaryValueWithIterator(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	staticType *DictionaryStaticType,
+	count uint64,
+	seed uint64,
+	address common.Address,
+	values func() (Value, Value),
+) *DictionaryValue {
+	interpreter.ReportComputation(common.ComputationKindCreateDictionaryValue, 1)
+
+	var v *DictionaryValue
+
+	config := interpreter.SharedState.Config
+
+	if config.TracingEnabled {
+		startTime := time.Now()
+
+		defer func() {
+			// NOTE: in defer, as v is only initialized at the end of the function
+			// if there was no error during construction
+			if v == nil {
+				return
+			}
+
+			typeInfo := v.Type.String()
+			count := v.Count()
+
+			interpreter.reportDictionaryValueConstructTrace(
+				typeInfo,
+				count,
+				time.Since(startTime),
+			)
+		}()
+	}
+
+	constructor := func() *atree.OrderedMap {
+		orderedMap, err := atree.NewMapFromBatchData(
+			config.Storage,
+			atree.Address(address),
+			atree.NewDefaultDigesterBuilder(),
+			staticType,
+			newValueComparator(interpreter, locationRange),
+			newHashInputProvider(interpreter, locationRange),
+			seed,
+			func() (atree.Value, atree.Value, error) {
+				key, value := values()
+				return key, value, nil
+			},
+		)
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+		return orderedMap
+	}
+
+	// values are added to the dictionary after creation, not here
+	v = newDictionaryValueFromConstructor(interpreter, staticType, count, constructor)
+
+	return v
 }
 
 func newDictionaryValueFromConstructor(
 	gauge common.MemoryGauge,
-	staticType DictionaryStaticType,
+	staticType *DictionaryStaticType,
 	count uint64,
 	constructor func() *atree.OrderedMap,
-) (dict *DictionaryValue) {
+) *DictionaryValue {
 
-	keySize := staticType.KeyType.elementSize()
-	valueSize := staticType.ValueType.elementSize()
-	var elementSize uint
-	if keySize != 0 && valueSize != 0 {
-		elementSize = keySize + valueSize
-	}
-	baseUsage, overheadUsage, dataSlabs, metaDataSlabs := common.NewDictionaryMemoryUsages(count, elementSize)
-	common.UseMemory(gauge, baseUsage)
+	elementSize := DictionaryElementSize(staticType)
+
+	overheadUsage, dataSlabs, metaDataSlabs :=
+		common.NewAtreeMapMemoryUsages(count, elementSize)
 	common.UseMemory(gauge, overheadUsage)
 	common.UseMemory(gauge, dataSlabs)
 	common.UseMemory(gauge, metaDataSlabs)
 
-	dict = newDictionaryValueFromOrderedMap(constructor(), staticType)
-	dict.elementSize = elementSize
-	return
+	return newDictionaryValueFromAtreeMap(
+		gauge,
+		staticType,
+		elementSize,
+		constructor(),
+	)
+}
+
+func newDictionaryValueFromAtreeMap(
+	gauge common.MemoryGauge,
+	staticType *DictionaryStaticType,
+	elementSize uint,
+	atreeOrderedMap *atree.OrderedMap,
+) *DictionaryValue {
+
+	common.UseMemory(gauge, common.DictionaryValueBaseMemoryUsage)
+
+	return &DictionaryValue{
+		Type:        staticType,
+		dictionary:  atreeOrderedMap,
+		elementSize: elementSize,
+	}
 }
 
 var _ Value = &DictionaryValue{}
@@ -17765,8 +18115,20 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+	v.iterate(interpreter, v.dictionary.Iterate, f)
+}
+
+func (v *DictionaryValue) IterateLoaded(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+	v.iterate(interpreter, v.dictionary.IterateLoadedValues, f)
+}
+
+func (v *DictionaryValue) iterate(
+	interpreter *Interpreter,
+	atreeIterate func(fn atree.MapEntryIterationFunc) error,
+	f func(key Value, value Value) (resume bool),
+) {
 	iterate := func() {
-		err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
+		err := atreeIterate(func(key, value atree.Value) (resume bool, err error) {
 			// atree.OrderedMap iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
 
@@ -17851,6 +18213,10 @@ func (v *DictionaryValue) isInvalidatedResource(interpreter *Interpreter) bool {
 	return v.isDestroyed || (v.dictionary == nil && v.IsResourceKinded(interpreter))
 }
 
+func (v *DictionaryValue) IsStaleResource(interpreter *Interpreter) bool {
+	return v.dictionary == nil && v.IsResourceKinded(interpreter)
+}
+
 func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 
 	interpreter.ReportComputation(common.ComputationKindDestroyDictionaryValue, 1)
@@ -17890,19 +18256,9 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	v.isDestroyed = true
 
-	interpreter.updateReferencedResource(
-		storageID,
-		storageID,
-		func(value *EphemeralReferenceValue) {
-			dictionaryValue, ok := value.Value.(*DictionaryValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+	interpreter.invalidateReferencedResources(v)
 
-			dictionaryValue.isDestroyed = true
-			dictionaryValue.dictionary = nil
-		},
-	)
+	v.dictionary = nil
 }
 
 func (v *DictionaryValue) ForEachKey(
@@ -17915,6 +18271,7 @@ func (v *DictionaryValue) ForEachKey(
 	iterationInvocation := func(key Value) Invocation {
 		return NewInvocation(
 			interpreter,
+			nil,
 			nil,
 			nil,
 			[]Value{key},
@@ -18016,7 +18373,7 @@ func (v *DictionaryValue) SetKey(
 
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
 	interpreter.checkContainerMutation(
-		OptionalStaticType{ // intentionally unmetered
+		&OptionalStaticType{ // intentionally unmetered
 			Type: v.Type.ValueType,
 		},
 		value,
@@ -18445,7 +18802,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 		}()
 	}
 
-	staticType, ok := v.StaticType(interpreter).(DictionaryStaticType)
+	staticType, ok := v.StaticType(interpreter).(*DictionaryStaticType)
 	if !ok {
 		return false
 	}
@@ -18572,18 +18929,13 @@ func (v *DictionaryValue) Transfer(
 	storable atree.Storable,
 	preventTransfer map[atree.StorageID]struct{},
 ) Value {
-	baseUse, elementOverhead, dataUse, metaDataUse := common.NewDictionaryMemoryUsages(
-		v.dictionary.Count(),
-		v.elementSize,
-	)
-	common.UseMemory(interpreter, baseUse)
-	common.UseMemory(interpreter, elementOverhead)
-	common.UseMemory(interpreter, dataUse)
-	common.UseMemory(interpreter, metaDataUse)
-
-	interpreter.ReportComputation(common.ComputationKindTransferDictionaryValue, uint(v.Count()))
 
 	config := interpreter.SharedState.Config
+
+	interpreter.ReportComputation(
+		common.ComputationKindTransferDictionaryValue,
+		uint(v.Count()),
+	)
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -18627,7 +18979,20 @@ func (v *DictionaryValue) Transfer(
 			panic(errors.NewExternalError(err))
 		}
 
-		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), v.elementSize)
+		elementCount := v.dictionary.Count()
+
+		elementOverhead, dataUse, metaDataUse := common.NewAtreeMapMemoryUsages(
+			elementCount,
+			v.elementSize,
+		)
+		common.UseMemory(interpreter, elementOverhead)
+		common.UseMemory(interpreter, dataUse)
+		common.UseMemory(interpreter, metaDataUse)
+
+		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(
+			elementCount,
+			v.elementSize,
+		)
 		common.UseMemory(config.MemoryGauge, elementMemoryUse)
 
 		dictionary, err = atree.NewMapFromBatchData(
@@ -18675,12 +19040,6 @@ func (v *DictionaryValue) Transfer(
 		}
 	}
 
-	res := newDictionaryValueFromOrderedMap(dictionary, v.Type)
-	res.elementSize = v.elementSize
-	res.semaType = v.semaType
-	res.isResourceKinded = v.isResourceKinded
-	res.isDestroyed = v.isDestroyed
-
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
@@ -18691,18 +19050,21 @@ func (v *DictionaryValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
+		interpreter.invalidateReferencedResources(v)
+
 		v.dictionary = nil
-
-		newStorageID := dictionary.StorageID()
-
-		interpreter.updateReferencedResource(
-			currentStorageID,
-			newStorageID,
-			func(value *EphemeralReferenceValue) {
-				value.Value = res
-			},
-		)
 	}
+
+	res := newDictionaryValueFromAtreeMap(
+		interpreter,
+		v.Type,
+		v.elementSize,
+		dictionary,
+	)
+
+	res.semaType = v.semaType
+	res.isResourceKinded = v.isResourceKinded
+	res.isDestroyed = v.isDestroyed
 
 	return res
 }
@@ -18718,10 +19080,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), v.elementSize)
-	common.UseMemory(config.MemoryGauge, elementMemoryUse)
-
-	dictionary, err := atree.NewMapFromBatchData(
+	orderedMap, err := atree.NewMapFromBatchData(
 		config.Storage,
 		v.StorageAddress(),
 		atree.NewDefaultDigesterBuilder(),
@@ -18752,13 +19111,18 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	return &DictionaryValue{
-		Type:             v.Type,
-		semaType:         v.semaType,
-		isResourceKinded: v.isResourceKinded,
-		dictionary:       dictionary,
-		isDestroyed:      v.isDestroyed,
-	}
+	dictionary := newDictionaryValueFromAtreeMap(
+		interpreter,
+		v.Type,
+		v.elementSize,
+		orderedMap,
+	)
+
+	dictionary.semaType = v.semaType
+	dictionary.isResourceKinded = v.isResourceKinded
+	dictionary.isDestroyed = v.isDestroyed
+
+	return dictionary
 }
 
 func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
@@ -18888,9 +19252,7 @@ func (NilValue) IsDestroyed() bool {
 	return false
 }
 
-func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) {
-	// NO-OP
-}
+func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) {}
 
 func (NilValue) String() string {
 	return format.Nil
@@ -18908,11 +19270,7 @@ func (v NilValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences
 // nilValueMapFunction is created only once per interpreter.
 // Hence, no need to meter, as it's a constant.
 var nilValueMapFunction = NewUnmeteredHostFunctionValue(
-	&sema.FunctionType{
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(
-			sema.NeverType,
-		),
-	},
+	sema.OptionalTypeMapFunctionType(sema.NeverType),
 	func(invocation Invocation) Value {
 		return Nil
 	},
@@ -19080,9 +19438,10 @@ func (v *SomeValue) IsDestroyed() bool {
 
 func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) {
 	innerValue := v.InnerValue(interpreter, locationRange)
-
 	maybeDestroy(interpreter, locationRange, innerValue)
+
 	v.isDestroyed = true
+	v.value = nil
 }
 
 func (v *SomeValue) String() string {
@@ -19124,6 +19483,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRa
 				f := func(v Value) Value {
 					transformInvocation := NewInvocation(
 						invocation.Interpreter,
+						nil,
 						nil,
 						nil,
 						[]Value{v},
@@ -19256,8 +19616,6 @@ func (v *SomeValue) Transfer(
 		}
 	}
 
-	var res *SomeValue
-
 	if isResourceKinded {
 		// Update the resource in-place,
 		// and also update all values that are referencing the same value
@@ -19270,11 +19628,9 @@ func (v *SomeValue) Transfer(
 		v.value = nil
 	}
 
-	if res == nil {
-		res = NewSomeValueNonCopying(interpreter, innerValue)
-		res.valueStorable = nil
-		res.isDestroyed = v.isDestroyed
-	}
+	res := NewSomeValueNonCopying(interpreter, innerValue)
+	res.valueStorable = nil
+	res.isDestroyed = v.isDestroyed
 
 	return res
 }
@@ -19325,6 +19681,10 @@ func (s SomeStorable) ChildStorables() []atree.Storable {
 	}
 }
 
+type AuthorizedValue interface {
+	GetAuthorization() Authorization
+}
+
 type ReferenceValue interface {
 	Value
 	isReference()
@@ -19332,12 +19692,11 @@ type ReferenceValue interface {
 }
 
 // StorageReferenceValue
-
 type StorageReferenceValue struct {
 	BorrowedType         sema.Type
 	TargetPath           PathValue
 	TargetStorageAddress common.Address
-	Authorized           bool
+	Authorization        Authorization
 }
 
 var _ Value = &StorageReferenceValue{}
@@ -19345,16 +19704,18 @@ var _ EquatableValue = &StorageReferenceValue{}
 var _ ValueIndexableValue = &StorageReferenceValue{}
 var _ TypeIndexableValue = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
+var _ AuthorizedValue = &StorageReferenceValue{}
 var _ ReferenceValue = &StorageReferenceValue{}
+var _ IterableValue = &StorageReferenceValue{}
 
 func NewUnmeteredStorageReferenceValue(
-	authorized bool,
+	authorization Authorization,
 	targetStorageAddress common.Address,
 	targetPath PathValue,
 	borrowedType sema.Type,
 ) *StorageReferenceValue {
 	return &StorageReferenceValue{
-		Authorized:           authorized,
+		Authorization:        authorization,
 		TargetStorageAddress: targetStorageAddress,
 		TargetPath:           targetPath,
 		BorrowedType:         borrowedType,
@@ -19363,14 +19724,14 @@ func NewUnmeteredStorageReferenceValue(
 
 func NewStorageReferenceValue(
 	memoryGauge common.MemoryGauge,
-	authorized bool,
+	authorization Authorization,
 	targetStorageAddress common.Address,
 	targetPath PathValue,
 	borrowedType sema.Type,
 ) *StorageReferenceValue {
 	common.UseMemory(memoryGauge, common.StorageReferenceValueMemoryUsage)
 	return NewUnmeteredStorageReferenceValue(
-		authorized,
+		authorization,
 		targetStorageAddress,
 		targetPath,
 		borrowedType,
@@ -19411,10 +19772,13 @@ func (v *StorageReferenceValue) StaticType(inter *Interpreter) StaticType {
 
 	return NewReferenceStaticType(
 		inter,
-		v.Authorized,
-		ConvertSemaToStaticType(inter, v.BorrowedType),
+		v.Authorization,
 		self.StaticType(inter),
 	)
+}
+
+func (v *StorageReferenceValue) GetAuthorization() Authorization {
+	return v.Authorization
 }
 
 func (*StorageReferenceValue) IsImportable(_ *Interpreter) bool {
@@ -19481,11 +19845,7 @@ func (v *StorageReferenceValue) mustReferencedValue(
 		})
 	}
 
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
-
-	return self
+	return *referencedValue
 }
 
 func (v *StorageReferenceValue) GetMember(
@@ -19572,6 +19932,15 @@ func (v *StorageReferenceValue) GetTypeKey(
 ) Value {
 	self := v.mustReferencedValue(interpreter, locationRange)
 
+	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
+		return selfComposite.getTypeKey(
+			interpreter,
+			locationRange,
+			key,
+			interpreter.MustConvertStaticAuthorizationToSemaAccess(v.Authorization),
+		)
+	}
+
 	return self.(TypeIndexableValue).
 		GetTypeKey(interpreter, locationRange, key)
 }
@@ -19604,7 +19973,7 @@ func (v *StorageReferenceValue) Equal(_ *Interpreter, _ LocationRange, other Val
 	if !ok ||
 		v.TargetStorageAddress != otherReference.TargetStorageAddress ||
 		v.TargetPath != otherReference.TargetPath ||
-		v.Authorized != otherReference.Authorized {
+		!v.Authorization.Equal(otherReference.Authorization) {
 
 		return false
 	}
@@ -19673,7 +20042,7 @@ func (v *StorageReferenceValue) Transfer(
 
 func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
 	return NewUnmeteredStorageReferenceValue(
-		v.Authorized,
+		v.Authorization,
 		v.TargetStorageAddress,
 		v.TargetPath,
 		v.BorrowedType,
@@ -19686,13 +20055,69 @@ func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 
 func (*StorageReferenceValue) isReference() {}
 
+func (v *StorageReferenceValue) Iterator(_ *Interpreter) ValueIterator {
+	// Not used for now
+	panic(errors.NewUnreachableError())
+}
+
+func (v *StorageReferenceValue) ForEach(
+	interpreter *Interpreter,
+	elementType sema.Type,
+	function func(value Value) (resume bool),
+	locationRange LocationRange,
+) {
+	referencedValue := v.mustReferencedValue(interpreter, locationRange)
+	forEachReference(
+		interpreter,
+		referencedValue,
+		elementType,
+		function,
+		locationRange,
+	)
+}
+
+func forEachReference(
+	interpreter *Interpreter,
+	referencedValue Value,
+	elementType sema.Type,
+	function func(value Value) (resume bool),
+	locationRange LocationRange,
+) {
+	referencedIterable, ok := referencedValue.(IterableValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	referenceType, isResultReference := sema.MaybeReferenceType(elementType)
+
+	updatedFunction := func(value Value) (resume bool) {
+		if isResultReference {
+			value = interpreter.getReferenceValue(value, elementType, locationRange)
+		}
+
+		return function(value)
+	}
+
+	referencedElementType := elementType
+	if isResultReference {
+		referencedElementType = referenceType.Type
+	}
+
+	referencedIterable.ForEach(
+		interpreter,
+		referencedElementType,
+		updatedFunction,
+		locationRange,
+	)
+}
+
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
 	Value Value
 	// BorrowedType is the T in &T
-	BorrowedType sema.Type
-	Authorized   bool
+	BorrowedType  sema.Type
+	Authorization Authorization
 }
 
 var _ Value = &EphemeralReferenceValue{}
@@ -19700,18 +20125,28 @@ var _ EquatableValue = &EphemeralReferenceValue{}
 var _ ValueIndexableValue = &EphemeralReferenceValue{}
 var _ TypeIndexableValue = &EphemeralReferenceValue{}
 var _ MemberAccessibleValue = &EphemeralReferenceValue{}
+var _ AuthorizedValue = &EphemeralReferenceValue{}
 var _ ReferenceValue = &EphemeralReferenceValue{}
+var _ IterableValue = &EphemeralReferenceValue{}
 
 func NewUnmeteredEphemeralReferenceValue(
 	interpreter *Interpreter,
-	authorized bool,
+	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
+	locationRange LocationRange,
 ) *EphemeralReferenceValue {
+	if reference, isReference := value.(*EphemeralReferenceValue); isReference {
+		panic(NestedReferenceError{
+			Value:         reference,
+			LocationRange: locationRange,
+		})
+	}
+
 	ref := &EphemeralReferenceValue{
-		Authorized:   authorized,
-		Value:        value,
-		BorrowedType: borrowedType,
+		Authorization: authorization,
+		Value:         value,
+		BorrowedType:  borrowedType,
 	}
 
 	interpreter.maybeTrackReferencedResourceKindedValue(ref)
@@ -19721,12 +20156,13 @@ func NewUnmeteredEphemeralReferenceValue(
 
 func NewEphemeralReferenceValue(
 	interpreter *Interpreter,
-	authorized bool,
+	authorization Authorization,
 	value Value,
 	borrowedType sema.Type,
+	locationRange LocationRange,
 ) *EphemeralReferenceValue {
 	common.UseMemory(interpreter, common.EphemeralReferenceValueMemoryUsage)
-	return NewUnmeteredEphemeralReferenceValue(interpreter, authorized, value, borrowedType)
+	return NewUnmeteredEphemeralReferenceValue(interpreter, authorization, value, borrowedType, locationRange)
 }
 
 func (*EphemeralReferenceValue) isValue() {}
@@ -19761,21 +20197,15 @@ func (v *EphemeralReferenceValue) MeteredString(memoryGauge common.MemoryGauge, 
 }
 
 func (v *EphemeralReferenceValue) StaticType(inter *Interpreter) StaticType {
-	referencedValue := v.ReferencedValue(inter, EmptyLocationRange, true)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			Cause: "the value being referenced has been destroyed or moved",
-		})
-	}
-
-	self := *referencedValue
-
 	return NewReferenceStaticType(
 		inter,
-		v.Authorized,
-		ConvertSemaToStaticType(inter, v.BorrowedType),
-		self.StaticType(inter),
+		v.Authorization,
+		v.Value.StaticType(inter),
 	)
+}
+
+func (v *EphemeralReferenceValue) GetAuthorization() Authorization {
+	return v.Authorization
 }
 
 func (*EphemeralReferenceValue) IsImportable(_ *Interpreter) bool {
@@ -19790,32 +20220,12 @@ func (v *EphemeralReferenceValue) ReferencedValue(
 	return &v.Value
 }
 
-func (v *EphemeralReferenceValue) MustReferencedValue(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-) Value {
-	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
-	if referencedValue == nil {
-		panic(DereferenceError{
-			Cause:         "the value being referenced has been destroyed or moved",
-			LocationRange: locationRange,
-		})
-	}
-
-	self := *referencedValue
-
-	interpreter.checkReferencedResourceNotDestroyed(self, locationRange)
-	return self
-}
-
 func (v *EphemeralReferenceValue) GetMember(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	name string,
 ) Value {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	return interpreter.getMember(self, locationRange, name)
+	return interpreter.getMember(v.Value, locationRange, name)
 }
 
 func (v *EphemeralReferenceValue) RemoveMember(
@@ -19823,9 +20233,7 @@ func (v *EphemeralReferenceValue) RemoveMember(
 	locationRange LocationRange,
 	identifier string,
 ) Value {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
+	if memberAccessibleValue, ok := v.Value.(MemberAccessibleValue); ok {
 		return memberAccessibleValue.RemoveMember(interpreter, locationRange, identifier)
 	}
 
@@ -19838,9 +20246,7 @@ func (v *EphemeralReferenceValue) SetMember(
 	name string,
 	value Value,
 ) bool {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	return interpreter.setMember(self, locationRange, name, value)
+	return interpreter.setMember(v.Value, locationRange, name, value)
 }
 
 func (v *EphemeralReferenceValue) GetKey(
@@ -19848,9 +20254,7 @@ func (v *EphemeralReferenceValue) GetKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	return self.(ValueIndexableValue).
+	return v.Value.(ValueIndexableValue).
 		GetKey(interpreter, locationRange, key)
 }
 
@@ -19860,9 +20264,7 @@ func (v *EphemeralReferenceValue) SetKey(
 	key Value,
 	value Value,
 ) {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	self.(ValueIndexableValue).
+	v.Value.(ValueIndexableValue).
 		SetKey(interpreter, locationRange, key, value)
 }
 
@@ -19872,9 +20274,7 @@ func (v *EphemeralReferenceValue) InsertKey(
 	key Value,
 	value Value,
 ) {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	self.(ValueIndexableValue).
+	v.Value.(ValueIndexableValue).
 		InsertKey(interpreter, locationRange, key, value)
 }
 
@@ -19883,9 +20283,7 @@ func (v *EphemeralReferenceValue) RemoveKey(
 	locationRange LocationRange,
 	key Value,
 ) Value {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	return self.(ValueIndexableValue).
+	return v.Value.(ValueIndexableValue).
 		RemoveKey(interpreter, locationRange, key)
 }
 
@@ -19894,7 +20292,16 @@ func (v *EphemeralReferenceValue) GetTypeKey(
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.MustReferencedValue(interpreter, locationRange)
+	self := v.Value
+
+	if selfComposite, isComposite := self.(*CompositeValue); isComposite {
+		return selfComposite.getTypeKey(
+			interpreter,
+			locationRange,
+			key,
+			interpreter.MustConvertStaticAuthorizationToSemaAccess(v.Authorization),
+		)
+	}
 
 	return self.(TypeIndexableValue).
 		GetTypeKey(interpreter, locationRange, key)
@@ -19906,9 +20313,7 @@ func (v *EphemeralReferenceValue) SetTypeKey(
 	key sema.Type,
 	value Value,
 ) {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	self.(TypeIndexableValue).
+	v.Value.(TypeIndexableValue).
 		SetTypeKey(interpreter, locationRange, key, value)
 }
 
@@ -19917,9 +20322,7 @@ func (v *EphemeralReferenceValue) RemoveTypeKey(
 	locationRange LocationRange,
 	key sema.Type,
 ) Value {
-	self := v.MustReferencedValue(interpreter, locationRange)
-
-	return self.(TypeIndexableValue).
+	return v.Value.(TypeIndexableValue).
 		RemoveTypeKey(interpreter, locationRange, key)
 }
 
@@ -19927,7 +20330,7 @@ func (v *EphemeralReferenceValue) Equal(_ *Interpreter, _ LocationRange, other V
 	otherReference, ok := other.(*EphemeralReferenceValue)
 	if !ok ||
 		v.Value != otherReference.Value ||
-		v.Authorized != otherReference.Authorized {
+		!v.Authorization.Equal(otherReference.Authorization) {
 
 		return false
 	}
@@ -19944,14 +20347,9 @@ func (v *EphemeralReferenceValue) ConformsToStaticType(
 	locationRange LocationRange,
 	results TypeConformanceResults,
 ) bool {
-	referencedValue := v.ReferencedValue(interpreter, locationRange, true)
-	if referencedValue == nil {
-		return false
-	}
+	self := v.Value
 
-	self := *referencedValue
-
-	staticType := self.StaticType(interpreter)
+	staticType := v.Value.StaticType(interpreter)
 
 	if !interpreter.IsSubTypeOfSemaType(staticType, v.BorrowedType) {
 		return false
@@ -20012,7 +20410,7 @@ func (v *EphemeralReferenceValue) Transfer(
 }
 
 func (v *EphemeralReferenceValue) Clone(inter *Interpreter) Value {
-	return NewUnmeteredEphemeralReferenceValue(inter, v.Authorized, v.Value, v.BorrowedType)
+	return NewUnmeteredEphemeralReferenceValue(inter, v.Authorization, v.Value, v.BorrowedType, EmptyLocationRange)
 }
 
 func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
@@ -20020,6 +20418,26 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 }
 
 func (*EphemeralReferenceValue) isReference() {}
+
+func (v *EphemeralReferenceValue) Iterator(_ *Interpreter) ValueIterator {
+	// Not used for now
+	panic(errors.NewUnreachableError())
+}
+
+func (v *EphemeralReferenceValue) ForEach(
+	interpreter *Interpreter,
+	elementType sema.Type,
+	function func(value Value) (resume bool),
+	locationRange LocationRange,
+) {
+	forEachReference(
+		interpreter,
+		v.Value,
+		elementType,
+		function,
+		locationRange,
+	)
+}
 
 // AddressValue
 type AddressValue common.Address
@@ -20535,589 +20953,16 @@ func (PathValue) ChildStorables() []atree.Storable {
 	return nil
 }
 
-// PathCapabilityValue
-
-type PathCapabilityValue struct {
-	BorrowType StaticType
-	Path       PathValue
-	Address    AddressValue
-}
-
-func NewUnmeteredPathCapabilityValue(
-	address AddressValue,
-	path PathValue,
-	borrowType StaticType,
-) *PathCapabilityValue {
-	return &PathCapabilityValue{
-		Address:    address,
-		Path:       path,
-		BorrowType: borrowType,
-	}
-}
-
-func NewPathCapabilityValue(
-	memoryGauge common.MemoryGauge,
-	address AddressValue,
-	path PathValue,
-	borrowType StaticType,
-) *PathCapabilityValue {
-	// Constant because its constituents are already metered.
-	common.UseMemory(memoryGauge, common.PathCapabilityValueMemoryUsage)
-	return NewUnmeteredPathCapabilityValue(address, path, borrowType)
-}
-
-var _ Value = &PathCapabilityValue{}
-var _ atree.Storable = &PathCapabilityValue{}
-var _ EquatableValue = &PathCapabilityValue{}
-var _ CapabilityValue = &PathCapabilityValue{}
-var _ MemberAccessibleValue = &PathCapabilityValue{}
-
-func (*PathCapabilityValue) isValue() {}
-
-func (*PathCapabilityValue) isCapabilityValue() {}
-
-func (v *PathCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitPathCapabilityValue(interpreter, v)
-}
-
-func (v *PathCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
-	walkChild(v.Address)
-	walkChild(v.Path)
-}
-
-func (v *PathCapabilityValue) StaticType(inter *Interpreter) StaticType {
-	return NewCapabilityStaticType(
-		inter,
-		v.BorrowType,
-	)
-}
-
-func (v *PathCapabilityValue) IsImportable(_ *Interpreter) bool {
-	return v.Path.Domain == common.PathDomainPublic
-}
-
-func (v *PathCapabilityValue) String() string {
-	return v.RecursiveString(SeenReferences{})
-}
-
-func (v *PathCapabilityValue) RecursiveString(seenReferences SeenReferences) string {
-	var borrowType string
-	if v.BorrowType != nil {
-		borrowType = v.BorrowType.String()
-	}
-	return format.PathCapability(
-		borrowType,
-		v.Address.RecursiveString(seenReferences),
-		v.Path.RecursiveString(seenReferences),
-	)
-}
-
-func (v *PathCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-	common.UseMemory(memoryGauge, common.PathCapabilityValueStringMemoryUsage)
-
-	var borrowType string
-	if v.BorrowType != nil {
-		borrowType = v.BorrowType.MeteredString(memoryGauge)
-	}
-
-	return format.PathCapability(
-		borrowType,
-		v.Address.MeteredString(memoryGauge, seenReferences),
-		v.Path.MeteredString(memoryGauge, seenReferences),
-	)
-}
-
-func (v *PathCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
-	switch name {
-	case sema.CapabilityTypeBorrowFunctionName:
-		var borrowType *sema.ReferenceType
-		if v.BorrowType != nil {
-			// this function will panic already if this conversion fails
-			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-		}
-		return interpreter.pathCapabilityBorrowFunction(v.Address, v.Path, borrowType)
-
-	case sema.CapabilityTypeCheckFunctionName:
-		var borrowType *sema.ReferenceType
-		if v.BorrowType != nil {
-			// this function will panic already if this conversion fails
-			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-		}
-		return interpreter.pathCapabilityCheckFunction(v.Address, v.Path, borrowType)
-
-	case sema.CapabilityTypeAddressFieldName:
-		return v.Address
-
-	case sema.CapabilityTypeIDFieldName:
-		return UInt64Value(0)
-	}
-
-	return nil
-}
-
-func (*PathCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
-	// Capabilities have no removable members (fields / functions)
-	panic(errors.NewUnreachableError())
-}
-
-func (*PathCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
-	// Capabilities have no settable members (fields / functions)
-	panic(errors.NewUnreachableError())
-}
-
-func (v *PathCapabilityValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
-	_ TypeConformanceResults,
-) bool {
-	return true
-}
-
-func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
-	otherCapability, ok := other.(*PathCapabilityValue)
-	if !ok {
-		return false
-	}
-
-	// BorrowType is optional
-
-	if v.BorrowType == nil {
-		if otherCapability.BorrowType != nil {
-			return false
-		}
-	} else if !v.BorrowType.Equal(otherCapability.BorrowType) {
-		return false
-	}
-
-	return otherCapability.Address.Equal(interpreter, locationRange, v.Address) &&
-		otherCapability.Path.Equal(interpreter, locationRange, v.Path)
-}
-
-func (*PathCapabilityValue) IsStorable() bool {
-	return true
-}
-
-func (v *PathCapabilityValue) Storable(
-	storage atree.SlabStorage,
-	address atree.Address,
-	maxInlineSize uint64,
-) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(
-		v,
-		storage,
-		address,
-		maxInlineSize,
-	)
-}
-
-func (*PathCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
-	return false
-}
-
-func (*PathCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (v *PathCapabilityValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
-	_ atree.Address,
-	remove bool,
-	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
-) Value {
-	if remove {
-		v.DeepRemove(interpreter)
-		interpreter.RemoveReferencedSlab(storable)
-	}
-	return v
-}
-
-func (v *PathCapabilityValue) Clone(interpreter *Interpreter) Value {
-	return NewUnmeteredPathCapabilityValue(
-		v.Address.Clone(interpreter).(AddressValue),
-		v.Path.Clone(interpreter).(PathValue),
-		v.BorrowType,
-	)
-}
-
-func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter) {
-	v.Address.DeepRemove(interpreter)
-	v.Path.DeepRemove(interpreter)
-}
-
-func (v *PathCapabilityValue) ByteSize() uint32 {
-	return mustStorableSize(v)
-}
-
-func (v *PathCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
-}
-
-func (v *PathCapabilityValue) ChildStorables() []atree.Storable {
-	return []atree.Storable{
-		v.Address,
-		v.Path,
-	}
-}
-
-// IDCapabilityValue
-
-type IDCapabilityValue struct {
-	BorrowType StaticType
-	Address    AddressValue
-	ID         UInt64Value
-}
-
-func NewUnmeteredIDCapabilityValue(
-	id UInt64Value,
-	address AddressValue,
-	borrowType StaticType,
-) *IDCapabilityValue {
-	return &IDCapabilityValue{
-		ID:         id,
-		Address:    address,
-		BorrowType: borrowType,
-	}
-}
-
-func NewIDCapabilityValue(
-	memoryGauge common.MemoryGauge,
-	id UInt64Value,
-	address AddressValue,
-	borrowType StaticType,
-) *IDCapabilityValue {
-	// Constant because its constituents are already metered.
-	common.UseMemory(memoryGauge, common.IDCapabilityValueMemoryUsage)
-	return NewUnmeteredIDCapabilityValue(id, address, borrowType)
-}
-
-var _ Value = &IDCapabilityValue{}
-var _ atree.Storable = &IDCapabilityValue{}
-var _ CapabilityValue = &IDCapabilityValue{}
-var _ EquatableValue = &IDCapabilityValue{}
-var _ MemberAccessibleValue = &IDCapabilityValue{}
-
-func (*IDCapabilityValue) isValue() {}
-
-func (*IDCapabilityValue) isCapabilityValue() {}
-
-func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitIDCapabilityValue(interpreter, v)
-}
-
-func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
-	walkChild(v.ID)
-	walkChild(v.Address)
-}
-
-func (v *IDCapabilityValue) StaticType(inter *Interpreter) StaticType {
-	return NewCapabilityStaticType(
-		inter,
-		v.BorrowType,
-	)
-}
-
-func (v *IDCapabilityValue) IsImportable(_ *Interpreter) bool {
-	return false
-}
-
-func (v *IDCapabilityValue) String() string {
-	return v.RecursiveString(SeenReferences{})
-}
-
-func (v *IDCapabilityValue) RecursiveString(seenReferences SeenReferences) string {
-	return format.IDCapability(
-		v.BorrowType.String(),
-		v.Address.RecursiveString(seenReferences),
-		v.ID.RecursiveString(seenReferences),
-	)
-}
-
-func (v *IDCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-	common.UseMemory(memoryGauge, common.IDCapabilityValueStringMemoryUsage)
-
-	return format.IDCapability(
-		v.BorrowType.MeteredString(memoryGauge),
-		v.Address.MeteredString(memoryGauge, seenReferences),
-		v.ID.MeteredString(memoryGauge, seenReferences),
-	)
-}
-
-func (v *IDCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
-	switch name {
-	case sema.CapabilityTypeBorrowFunctionName:
-		// this function will panic already if this conversion fails
-		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-		return interpreter.idCapabilityBorrowFunction(v.Address, v.ID, borrowType)
-
-	case sema.CapabilityTypeCheckFunctionName:
-		// this function will panic already if this conversion fails
-		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-		return interpreter.idCapabilityCheckFunction(v.Address, v.ID, borrowType)
-
-	case sema.CapabilityTypeAddressFieldName:
-		return v.Address
-
-	case sema.CapabilityTypeIDFieldName:
-		return v.ID
-	}
-
-	return nil
-}
-
-func (*IDCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
-	// Capabilities have no removable members (fields / functions)
-	panic(errors.NewUnreachableError())
-}
-
-func (*IDCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
-	// Capabilities have no settable members (fields / functions)
-	panic(errors.NewUnreachableError())
-}
-
-func (v *IDCapabilityValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
-	_ TypeConformanceResults,
-) bool {
-	return true
-}
-
-func (v *IDCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
-	otherCapability, ok := other.(*IDCapabilityValue)
-	if !ok {
-		return false
-	}
-
-	return otherCapability.ID == v.ID &&
-		otherCapability.Address.Equal(interpreter, locationRange, v.Address) &&
-		otherCapability.BorrowType.Equal(v.BorrowType)
-}
-
-func (*IDCapabilityValue) IsStorable() bool {
-	return true
-}
-
-func (v *IDCapabilityValue) Storable(
-	storage atree.SlabStorage,
-	address atree.Address,
-	maxInlineSize uint64,
-) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(
-		v,
-		storage,
-		address,
-		maxInlineSize,
-	)
-}
-
-func (*IDCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
-	return false
-}
-
-func (*IDCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (v *IDCapabilityValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
-	_ atree.Address,
-	remove bool,
-	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
-) Value {
-	if remove {
-		v.DeepRemove(interpreter)
-		interpreter.RemoveReferencedSlab(storable)
-	}
-	return v
-}
-
-func (v *IDCapabilityValue) Clone(interpreter *Interpreter) Value {
-	return NewUnmeteredIDCapabilityValue(
-		v.ID,
-		v.Address.Clone(interpreter).(AddressValue),
-		v.BorrowType,
-	)
-}
-
-func (v *IDCapabilityValue) DeepRemove(interpreter *Interpreter) {
-	v.Address.DeepRemove(interpreter)
-}
-
-func (v *IDCapabilityValue) ByteSize() uint32 {
-	return mustStorableSize(v)
-}
-
-func (v *IDCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
-}
-
-func (v *IDCapabilityValue) ChildStorables() []atree.Storable {
-	return []atree.Storable{
-		v.Address,
-	}
-}
-
-// PathLinkValue
-
-type PathLinkValue struct {
-	Type       StaticType
-	TargetPath PathValue
-}
-
-func NewUnmeteredPathLinkValue(targetPath PathValue, staticType StaticType) PathLinkValue {
-	return PathLinkValue{
-		TargetPath: targetPath,
-		Type:       staticType,
-	}
-}
-
-func NewPathLinkValue(memoryGauge common.MemoryGauge, targetPath PathValue, staticType StaticType) PathLinkValue {
-	// The only variable is TargetPath, which is already metered as a PathValue.
-	common.UseMemory(memoryGauge, common.PathLinkValueMemoryUsage)
-	return NewUnmeteredPathLinkValue(targetPath, staticType)
-}
-
-var EmptyPathLinkValue = PathLinkValue{}
-
-var _ Value = PathLinkValue{}
-var _ atree.Value = PathLinkValue{}
-var _ EquatableValue = PathLinkValue{}
-var _ LinkValue = PathLinkValue{}
-
-func (PathLinkValue) isValue() {}
-
-func (PathLinkValue) isLinkValue() {}
-
-func (v PathLinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitPathLinkValue(interpreter, v)
-}
-
-func (v PathLinkValue) Walk(_ *Interpreter, walkChild func(Value)) {
-	walkChild(v.TargetPath)
-}
-
-func (v PathLinkValue) StaticType(interpreter *Interpreter) StaticType {
-	// When iterating over public/private paths,
-	// the values at these paths are PathLinkValues,
-	// placed there by the `link` function.
-	//
-	// These are loaded as links, however,
-	// for the purposes of checking their type,
-	// we treat them as capabilities
-	return NewCapabilityStaticType(interpreter, v.Type)
-}
-
-func (PathLinkValue) IsImportable(_ *Interpreter) bool {
-	return false
-}
-
-func (v PathLinkValue) String() string {
-	return v.RecursiveString(SeenReferences{})
-}
-
-func (v PathLinkValue) RecursiveString(seenReferences SeenReferences) string {
-	return format.PathLink(
-		v.Type.String(),
-		v.TargetPath.RecursiveString(seenReferences),
-	)
-}
-
-func (v PathLinkValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-	common.UseMemory(memoryGauge, common.PathLinkValueStringMemoryUsage)
-
-	return format.PathLink(
-		v.Type.MeteredString(memoryGauge),
-		v.TargetPath.MeteredString(memoryGauge, seenReferences),
-	)
-}
-
-func (v PathLinkValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
-	_ TypeConformanceResults,
-) bool {
-	return true
-}
-
-func (v PathLinkValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
-	otherLink, ok := other.(PathLinkValue)
-	if !ok {
-		return false
-	}
-
-	return otherLink.TargetPath.Equal(interpreter, locationRange, v.TargetPath) &&
-		otherLink.Type.Equal(v.Type)
-}
-
-func (PathLinkValue) IsStorable() bool {
-	return true
-}
-
-func (v PathLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
-}
-
-func (PathLinkValue) NeedsStoreTo(_ atree.Address) bool {
-	return false
-}
-
-func (PathLinkValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (v PathLinkValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
-	_ atree.Address,
-	remove bool,
-	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
-) Value {
-	if remove {
-		interpreter.RemoveReferencedSlab(storable)
-	}
-	return v
-}
-
-func (v PathLinkValue) Clone(interpreter *Interpreter) Value {
-	return PathLinkValue{
-		TargetPath: v.TargetPath.Clone(interpreter).(PathValue),
-		Type:       v.Type,
-	}
-}
-
-func (PathLinkValue) DeepRemove(_ *Interpreter) {
-	// NO-OP
-}
-
-func (v PathLinkValue) ByteSize() uint32 {
-	return mustStorableSize(v)
-}
-
-func (v PathLinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
-}
-
-func (v PathLinkValue) ChildStorables() []atree.Storable {
-	return []atree.Storable{
-		v.TargetPath,
-	}
-}
-
 // PublishedValue
 
 type PublishedValue struct {
 	// NB: If `publish` and `claim` are ever extended to support arbitrary values, rather than just capabilities,
 	// this will need to be changed to `Value`, and more storage-related operations must be implemented for `PublishedValue`
-	Value     CapabilityValue
+	Value     *CapabilityValue
 	Recipient AddressValue
 }
 
-func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, value CapabilityValue) *PublishedValue {
+func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, value *CapabilityValue) *PublishedValue {
 	common.UseMemory(memoryGauge, common.PublishedValueMemoryUsage)
 	return &PublishedValue{
 		Recipient: recipient,
@@ -21226,7 +21071,7 @@ func (v *PublishedValue) Transfer(
 			remove,
 			nil,
 			preventTransfer,
-		).(CapabilityValue)
+		).(*CapabilityValue)
 
 		addressValue := v.Recipient.Transfer(
 			interpreter,
@@ -21251,7 +21096,7 @@ func (v *PublishedValue) Transfer(
 func (v *PublishedValue) Clone(interpreter *Interpreter) Value {
 	return &PublishedValue{
 		Recipient: v.Recipient,
-		Value:     v.Value.Clone(interpreter).(CapabilityValue),
+		Value:     v.Value.Clone(interpreter).(*CapabilityValue),
 	}
 }
 
@@ -21272,132 +21117,4 @@ func (v *PublishedValue) ChildStorables() []atree.Storable {
 		v.Recipient,
 		v.Value,
 	}
-}
-
-// AccountLinkValue
-
-type AccountLinkValue struct{}
-
-func NewUnmeteredAccountLinkValue() AccountLinkValue {
-	return EmptyAccountLinkValue
-}
-
-func NewAccountLinkValue(memoryGauge common.MemoryGauge) AccountLinkValue {
-	common.UseMemory(memoryGauge, common.AccountLinkValueMemoryUsage)
-	return NewUnmeteredAccountLinkValue()
-}
-
-var EmptyAccountLinkValue = AccountLinkValue{}
-
-var _ Value = AccountLinkValue{}
-var _ atree.Value = AccountLinkValue{}
-var _ EquatableValue = AccountLinkValue{}
-var _ LinkValue = AccountLinkValue{}
-
-func (AccountLinkValue) isValue() {}
-
-func (AccountLinkValue) isLinkValue() {}
-
-func (v AccountLinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitAccountLinkValue(interpreter, v)
-}
-
-func (AccountLinkValue) Walk(_ *Interpreter, _ func(Value)) {
-	// NO-OP
-}
-
-func (v AccountLinkValue) StaticType(interpreter *Interpreter) StaticType {
-	// When iterating over public/private paths,
-	// the values at these paths are AccountLinkValues,
-	// placed there by the `linkAccount` function.
-	//
-	// These are loaded as links, however,
-	// for the purposes of checking their type,
-	// we treat them as capabilities
-	return NewCapabilityStaticType(
-		interpreter,
-		ReferenceStaticType{
-			BorrowedType:   authAccountStaticType,
-			ReferencedType: authAccountStaticType,
-		},
-	)
-}
-
-func (AccountLinkValue) IsImportable(_ *Interpreter) bool {
-	return false
-}
-
-func (v AccountLinkValue) String() string {
-	return v.RecursiveString(SeenReferences{})
-}
-
-func (v AccountLinkValue) RecursiveString(_ SeenReferences) string {
-	return format.AccountLink
-}
-
-func (v AccountLinkValue) MeteredString(_ common.MemoryGauge, _ SeenReferences) string {
-	return format.AccountLink
-}
-
-func (v AccountLinkValue) ConformsToStaticType(
-	_ *Interpreter,
-	_ LocationRange,
-	_ TypeConformanceResults,
-) bool {
-	return true
-}
-
-func (v AccountLinkValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
-	_, ok := other.(AccountLinkValue)
-	return ok
-}
-
-func (AccountLinkValue) IsStorable() bool {
-	return true
-}
-
-func (v AccountLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
-	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
-}
-
-func (AccountLinkValue) NeedsStoreTo(_ atree.Address) bool {
-	return false
-}
-
-func (AccountLinkValue) IsResourceKinded(_ *Interpreter) bool {
-	return false
-}
-
-func (v AccountLinkValue) Transfer(
-	interpreter *Interpreter,
-	_ LocationRange,
-	_ atree.Address,
-	remove bool,
-	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
-) Value {
-	if remove {
-		interpreter.RemoveReferencedSlab(storable)
-	}
-	return v
-}
-
-func (AccountLinkValue) Clone(_ *Interpreter) Value {
-	return AccountLinkValue{}
-}
-
-func (AccountLinkValue) DeepRemove(_ *Interpreter) {
-	// NO-OP
-}
-
-func (v AccountLinkValue) ByteSize() uint32 {
-	return mustStorableSize(v)
-}
-
-func (v AccountLinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
-	return v, nil
-}
-
-func (v AccountLinkValue) ChildStorables() []atree.Storable {
-	return nil
 }

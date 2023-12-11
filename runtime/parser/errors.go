@@ -72,13 +72,6 @@ func NewSyntaxError(pos ast.Position, message string, params ...any) *SyntaxErro
 	}
 }
 
-func NewUnpositionedSyntaxError(message string, params ...any) *SyntaxError {
-	return &SyntaxError{
-		Pos:     ast.Position{Line: 1},
-		Message: fmt.Sprintf(message, params...),
-	}
-}
-
 var _ ParseError = &SyntaxError{}
 var _ errors.UserError = &SyntaxError{}
 
@@ -96,6 +89,48 @@ func (e *SyntaxError) EndPosition(_ common.MemoryGauge) ast.Position {
 
 func (e *SyntaxError) Error() string {
 	return e.Message
+}
+
+// SyntaxErrorWithSuggestedFix
+
+type SyntaxErrorWithSuggestedReplacement struct {
+	Message      string
+	SuggestedFix string
+	ast.Range
+}
+
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &SyntaxErrorWithSuggestedReplacement{}
+
+func NewSyntaxErrorWithSuggestedReplacement(r ast.Range, message string, suggestedFix string) *SyntaxErrorWithSuggestedReplacement {
+	return &SyntaxErrorWithSuggestedReplacement{
+		Range:        r,
+		Message:      message,
+		SuggestedFix: suggestedFix,
+	}
+}
+
+var _ ParseError = &SyntaxErrorWithSuggestedReplacement{}
+var _ errors.UserError = &SyntaxErrorWithSuggestedReplacement{}
+
+func (*SyntaxErrorWithSuggestedReplacement) isParseError() {}
+
+func (*SyntaxErrorWithSuggestedReplacement) IsUserError() {}
+func (e *SyntaxErrorWithSuggestedReplacement) Error() string {
+	return e.Message
+}
+
+func (e *SyntaxErrorWithSuggestedReplacement) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: fmt.Sprintf("replace with %s", e.SuggestedFix),
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: e.SuggestedFix,
+					Range:       e.Range,
+				},
+			},
+		},
+	}
 }
 
 // JuxtaposedUnaryOperatorsError
@@ -253,4 +288,33 @@ func (e *MissingCommaInParameterListError) EndPosition(_ common.MemoryGauge) ast
 
 func (e *MissingCommaInParameterListError) Error() string {
 	return "missing comma after parameter"
+}
+
+// CustomDestructorError
+
+type CustomDestructorError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &CustomDestructorError{}
+var _ errors.UserError = &CustomDestructorError{}
+
+func (*CustomDestructorError) isParseError() {}
+
+func (*CustomDestructorError) IsUserError() {}
+
+func (e *CustomDestructorError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *CustomDestructorError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *CustomDestructorError) Error() string {
+	return "custom destructor definitions are no longer permitted"
+}
+
+func (e *CustomDestructorError) SecondaryError() string {
+	return "remove the destructor definition"
 }

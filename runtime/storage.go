@@ -35,7 +35,7 @@ const StorageDomainContract = "contract"
 
 type Storage struct {
 	*atree.PersistentSlabStorage
-	newStorageMaps  *orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]
+	NewStorageMaps  *orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]
 	storageMaps     map[interpreter.StorageKey]*interpreter.StorageMap
 	contractUpdates *orderedmap.OrderedMap[interpreter.StorageKey, *interpreter.CompositeValue]
 	Ledger          atree.Ledger
@@ -124,7 +124,7 @@ func (s *Storage) GetStorageMap(
 			copy(storageIndex[:], data[:])
 			storageMap = s.loadExistingStorageMap(atreeAddress, storageIndex)
 		} else if createIfNotExists {
-			storageMap = s.storeNewStorageMap(atreeAddress, domain)
+			storageMap = s.StoreNewStorageMap(atreeAddress, domain)
 		}
 
 		if storageMap != nil {
@@ -145,17 +145,17 @@ func (s *Storage) loadExistingStorageMap(address atree.Address, storageIndex atr
 	return interpreter.NewStorageMapWithRootID(s, storageID)
 }
 
-func (s *Storage) storeNewStorageMap(address atree.Address, domain string) *interpreter.StorageMap {
+func (s *Storage) StoreNewStorageMap(address atree.Address, domain string) *interpreter.StorageMap {
 	storageMap := interpreter.NewStorageMap(s.memoryGauge, s, address)
 
 	storageIndex := storageMap.StorageID().Index
 
 	storageKey := interpreter.NewStorageKey(s.memoryGauge, common.Address(address), domain)
 
-	if s.newStorageMaps == nil {
-		s.newStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]{}
+	if s.NewStorageMaps == nil {
+		s.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]{}
 	}
-	s.newStorageMaps.Set(storageKey, storageIndex)
+	s.NewStorageMaps.Set(storageKey, storageIndex)
 
 	return storageMap
 }
@@ -255,11 +255,11 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 }
 
 func (s *Storage) commitNewStorageMaps() error {
-	if s.newStorageMaps == nil {
+	if s.NewStorageMaps == nil {
 		return nil
 	}
 
-	for pair := s.newStorageMaps.Oldest(); pair != nil; pair = pair.Next() {
+	for pair := s.NewStorageMaps.Oldest(); pair != nil; pair = pair.Next() {
 		var err error
 		errors.WrapPanic(func() {
 			err = s.Ledger.SetValue(
@@ -347,7 +347,7 @@ func (s *Storage) CheckHealth() error {
 			return a.Compare(b) < 0
 		})
 
-		return errors.NewUnexpectedError("slabs not referenced from account storage: %s", unreferencedRootSlabIDs)
+		return errors.NewUnexpectedError("slabs not referenced from account Storage: %s", unreferencedRootSlabIDs)
 	}
 
 	return nil

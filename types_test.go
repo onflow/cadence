@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -38,84 +39,41 @@ func TestType_ID(t *testing.T) {
 	}
 
 	stringerTests := []testCase{
-		{AnyType{}, "Any"},
-		{AnyStructType{}, "AnyStruct"},
-		{AnyResourceType{}, "AnyResource"},
-		{NumberType{}, "Number"},
-		{SignedNumberType{}, "SignedNumber"},
-		{IntegerType{}, "Integer"},
-		{SignedIntegerType{}, "SignedInteger"},
-		{FixedPointType{}, "FixedPoint"},
-		{SignedFixedPointType{}, "SignedFixedPoint"},
-		{UIntType{}, "UInt"},
-		{UInt8Type{}, "UInt8"},
-		{UInt16Type{}, "UInt16"},
-		{UInt32Type{}, "UInt32"},
-		{UInt64Type{}, "UInt64"},
-		{UInt128Type{}, "UInt128"},
-		{UInt256Type{}, "UInt256"},
-		{IntType{}, "Int"},
-		{Int8Type{}, "Int8"},
-		{Int16Type{}, "Int16"},
-		{Int32Type{}, "Int32"},
-		{Int64Type{}, "Int64"},
-		{Int128Type{}, "Int128"},
-		{Int256Type{}, "Int256"},
-		{Word8Type{}, "Word8"},
-		{Word16Type{}, "Word16"},
-		{Word32Type{}, "Word32"},
-		{Word64Type{}, "Word64"},
-		{Word128Type{}, "Word128"},
-		{Word256Type{}, "Word256"},
-		{UFix64Type{}, "UFix64"},
-		{Fix64Type{}, "Fix64"},
-		{VoidType{}, "Void"},
-		{BoolType{}, "Bool"},
-		{CharacterType{}, "Character"},
-		{NeverType{}, "Never"},
-		{StringType{}, "String"},
+		{AnyType, "Any"},
 		{BytesType{}, "Bytes"},
-		{AddressType{}, "Address"},
-		{PathType{}, "Path"},
-		{StoragePathType{}, "StoragePath"},
-		{CapabilityPathType{}, "CapabilityPath"},
-		{PublicPathType{}, "PublicPath"},
-		{PrivatePathType{}, "PrivatePath"},
-		{BlockType{}, "Block"},
-		{MetaType{}, "Type"},
 		{
 			&CapabilityType{},
 			"Capability",
 		},
 		{
 			&CapabilityType{
-				BorrowType: IntType{},
+				BorrowType: IntType,
 			},
 			"Capability<Int>",
 		},
 		{
 			&OptionalType{
-				Type: StringType{},
+				Type: StringType,
 			},
 			"String?",
 		},
 		{
 			&VariableSizedArrayType{
-				ElementType: StringType{},
+				ElementType: StringType,
 			},
 			"[String]",
 		},
 		{
 			&ConstantSizedArrayType{
-				ElementType: StringType{},
+				ElementType: StringType,
 				Size:        2,
 			},
 			"[String;2]",
 		},
 		{
 			&DictionaryType{
-				KeyType:     StringType{},
-				ElementType: IntType{},
+				KeyType:     StringType,
+				ElementType: IntType,
 			},
 			"{String:Int}",
 		},
@@ -172,28 +130,24 @@ func TestType_ID(t *testing.T) {
 			"S.test.BarI",
 		},
 		{
-			&RestrictedType{
-				Type: &ResourceType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "Foo",
-				},
-				Restrictions: []Type{
+			&IntersectionType{
+				Types: []Type{
 					&ResourceInterfaceType{
 						Location:            utils.TestLocation,
 						QualifiedIdentifier: "FooI",
 					},
 				},
 			},
-			"S.test.Foo{S.test.FooI}",
+			"{S.test.FooI}",
 		},
 		{
 			&FunctionType{
 				Parameters: []Parameter{
-					{Type: IntType{}},
+					{Type: IntType},
 				},
-				ReturnType: StringType{},
+				ReturnType: StringType,
 			},
-			"((Int):String)",
+			"fun(Int):String",
 		},
 		{
 			&EventType{
@@ -273,59 +227,8 @@ func TestTypeEquality(t *testing.T) {
 		t.Parallel()
 
 		types := []Type{
-			AnyType{},
-			AnyStructType{},
-			AnyResourceType{},
-			NumberType{},
-			SignedNumberType{},
-			IntegerType{},
-			SignedIntegerType{},
-			FixedPointType{},
-			SignedFixedPointType{},
-			UIntType{},
-			UInt8Type{},
-			UInt16Type{},
-			UInt32Type{},
-			UInt64Type{},
-			UInt128Type{},
-			UInt256Type{},
-			IntType{},
-			Int8Type{},
-			Int16Type{},
-			Int32Type{},
-			Int64Type{},
-			Int128Type{},
-			Int256Type{},
-			Word8Type{},
-			Word16Type{},
-			Word32Type{},
-			Word64Type{},
-			Word128Type{},
-			Word256Type{},
-			UFix64Type{},
-			Fix64Type{},
-			VoidType{},
-			BoolType{},
-			CharacterType{},
-			NeverType{},
-			StringType{},
-			BytesType{},
-			AddressType{},
-			PathType{},
-			StoragePathType{},
-			CapabilityPathType{},
-			PublicPathType{},
-			PrivatePathType{},
-			BlockType{},
-			MetaType{},
-			AuthAccountType{},
-			AuthAccountKeysType{},
-			AuthAccountContractsType{},
-			PublicAccountType{},
-			PublicAccountKeysType{},
-			PublicAccountContractsType{},
-			AccountKeyType{},
-			DeployedContractType{},
+			AnyType,
+			TheBytesType,
 		}
 
 		for i, source := range types {
@@ -366,10 +269,10 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &CapabilityType{
-				BorrowType: IntType{},
+				BorrowType: IntType,
 			}
 			target := &CapabilityType{
-				BorrowType: IntType{},
+				BorrowType: IntType,
 			}
 			assert.True(t, source.Equal(target))
 		})
@@ -386,10 +289,10 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &CapabilityType{
-				BorrowType: IntType{},
+				BorrowType: IntType,
 			}
 			target := &CapabilityType{
-				BorrowType: StringType{},
+				BorrowType: StringType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -399,7 +302,7 @@ func TestTypeEquality(t *testing.T) {
 
 			source := &CapabilityType{}
 			target := &CapabilityType{
-				BorrowType: StringType{},
+				BorrowType: StringType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -408,7 +311,7 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &CapabilityType{
-				BorrowType: IntType{},
+				BorrowType: IntType,
 			}
 			target := &CapabilityType{}
 			assert.False(t, source.Equal(target))
@@ -418,9 +321,9 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &CapabilityType{
-				BorrowType: IntType{},
+				BorrowType: IntType,
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -432,10 +335,10 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &OptionalType{
-				Type: IntType{},
+				Type: IntType,
 			}
 			target := &OptionalType{
-				Type: IntType{},
+				Type: IntType,
 			}
 			assert.True(t, source.Equal(target))
 		})
@@ -444,10 +347,10 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &OptionalType{
-				Type: IntType{},
+				Type: IntType,
 			}
 			target := &OptionalType{
-				Type: StringType{},
+				Type: StringType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -456,9 +359,9 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &OptionalType{
-				Type: IntType{},
+				Type: IntType,
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -470,10 +373,10 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &VariableSizedArrayType{
-				ElementType: IntType{},
+				ElementType: IntType,
 			}
 			target := &VariableSizedArrayType{
-				ElementType: IntType{},
+				ElementType: IntType,
 			}
 			assert.True(t, source.Equal(target))
 		})
@@ -482,10 +385,10 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &VariableSizedArrayType{
-				ElementType: IntType{},
+				ElementType: IntType,
 			}
 			target := &VariableSizedArrayType{
-				ElementType: StringType{},
+				ElementType: StringType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -494,9 +397,9 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &VariableSizedArrayType{
-				ElementType: IntType{},
+				ElementType: IntType,
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -508,11 +411,11 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ConstantSizedArrayType{
-				ElementType: IntType{},
+				ElementType: IntType,
 				Size:        3,
 			}
 			target := &ConstantSizedArrayType{
-				ElementType: IntType{},
+				ElementType: IntType,
 				Size:        3,
 			}
 			assert.True(t, source.Equal(target))
@@ -522,11 +425,11 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ConstantSizedArrayType{
-				ElementType: IntType{},
+				ElementType: IntType,
 				Size:        3,
 			}
 			target := &ConstantSizedArrayType{
-				ElementType: StringType{},
+				ElementType: StringType,
 				Size:        3,
 			}
 			assert.False(t, source.Equal(target))
@@ -536,11 +439,11 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ConstantSizedArrayType{
-				ElementType: IntType{},
+				ElementType: IntType,
 				Size:        3,
 			}
 			target := &ConstantSizedArrayType{
-				ElementType: IntType{},
+				ElementType: IntType,
 				Size:        4,
 			}
 			assert.False(t, source.Equal(target))
@@ -550,10 +453,10 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ConstantSizedArrayType{
-				ElementType: IntType{},
+				ElementType: IntType,
 				Size:        3,
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -565,12 +468,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &DictionaryType{
-				KeyType:     IntType{},
-				ElementType: BoolType{},
+				KeyType:     IntType,
+				ElementType: BoolType,
 			}
 			target := &DictionaryType{
-				KeyType:     IntType{},
-				ElementType: BoolType{},
+				KeyType:     IntType,
+				ElementType: BoolType,
 			}
 			assert.True(t, source.Equal(target))
 		})
@@ -579,12 +482,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &DictionaryType{
-				KeyType:     IntType{},
-				ElementType: BoolType{},
+				KeyType:     IntType,
+				ElementType: BoolType,
 			}
 			target := &DictionaryType{
-				KeyType:     UIntType{},
-				ElementType: BoolType{},
+				KeyType:     UIntType,
+				ElementType: BoolType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -593,12 +496,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &DictionaryType{
-				KeyType:     IntType{},
-				ElementType: BoolType{},
+				KeyType:     IntType,
+				ElementType: BoolType,
 			}
 			target := &DictionaryType{
-				KeyType:     IntType{},
-				ElementType: StringType{},
+				KeyType:     IntType,
+				ElementType: StringType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -607,12 +510,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &DictionaryType{
-				KeyType:     IntType{},
-				ElementType: BoolType{},
+				KeyType:     IntType,
+				ElementType: BoolType,
 			}
 			target := &DictionaryType{
-				KeyType:     UIntType{},
-				ElementType: StringType{},
+				KeyType:     UIntType,
+				ElementType: StringType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -621,10 +524,10 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &DictionaryType{
-				KeyType:     IntType{},
-				ElementType: BoolType{},
+				KeyType:     IntType,
+				ElementType: BoolType,
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -722,7 +625,7 @@ func TestTypeEquality(t *testing.T) {
 				},
 				QualifiedIdentifier: "Bar",
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -820,7 +723,7 @@ func TestTypeEquality(t *testing.T) {
 				},
 				QualifiedIdentifier: "Bar",
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -918,7 +821,7 @@ func TestTypeEquality(t *testing.T) {
 				},
 				QualifiedIdentifier: "Bar",
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -1016,7 +919,7 @@ func TestTypeEquality(t *testing.T) {
 				},
 				QualifiedIdentifier: "Bar",
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -1114,7 +1017,7 @@ func TestTypeEquality(t *testing.T) {
 				},
 				QualifiedIdentifier: "Bar",
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -1212,7 +1115,7 @@ func TestTypeEquality(t *testing.T) {
 				},
 				QualifiedIdentifier: "Bar",
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -1310,7 +1213,7 @@ func TestTypeEquality(t *testing.T) {
 				},
 				QualifiedIdentifier: "Bar",
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -1322,24 +1225,24 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &FunctionType{
-				ReturnType: StringType{},
+				ReturnType: StringType,
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 					{
-						Type: BoolType{},
+						Type: BoolType,
 					},
 				},
 			}
 			target := &FunctionType{
-				ReturnType: StringType{},
+				ReturnType: StringType,
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 					{
-						Type: BoolType{},
+						Type: BoolType,
 					},
 				},
 			}
@@ -1350,18 +1253,18 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &FunctionType{
-				ReturnType: StringType{},
+				ReturnType: StringType,
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
 			}
 			target := &FunctionType{
-				ReturnType: BoolType{},
+				ReturnType: BoolType,
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
 			}
@@ -1372,18 +1275,18 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &FunctionType{
-				ReturnType: StringType{},
+				ReturnType: StringType,
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
 			}
 			target := &FunctionType{
-				ReturnType: StringType{},
+				ReturnType: StringType,
 				Parameters: []Parameter{
 					{
-						Type: StringType{},
+						Type: StringType,
 					},
 				},
 			}
@@ -1394,21 +1297,21 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &FunctionType{
-				ReturnType: StringType{},
+				ReturnType: StringType,
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
 			}
 			target := &FunctionType{
-				ReturnType: StringType{},
+				ReturnType: StringType,
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 					{
-						Type: StringType{},
+						Type: StringType,
 					},
 				},
 			}
@@ -1426,19 +1329,19 @@ func TestTypeEquality(t *testing.T) {
 				},
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
-				ReturnType: StringType{},
+				ReturnType: StringType,
 			}
 			target := &FunctionType{
 				TypeParameters: []TypeParameter{},
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
-				ReturnType: StringType{},
+				ReturnType: StringType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -1454,10 +1357,10 @@ func TestTypeEquality(t *testing.T) {
 				},
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
-				ReturnType: StringType{},
+				ReturnType: StringType,
 			}
 			target := &FunctionType{
 				TypeParameters: []TypeParameter{
@@ -1467,10 +1370,10 @@ func TestTypeEquality(t *testing.T) {
 				},
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
-				ReturnType: StringType{},
+				ReturnType: StringType,
 			}
 			assert.True(t, source.Equal(target))
 		})
@@ -1486,24 +1389,24 @@ func TestTypeEquality(t *testing.T) {
 				},
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
-				ReturnType: StringType{},
+				ReturnType: StringType,
 			}
 			target := &FunctionType{
 				TypeParameters: []TypeParameter{
 					{
 						Name:      "T",
-						TypeBound: AnyStructType{},
+						TypeBound: AnyStructType,
 					},
 				},
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
-				ReturnType: StringType{},
+				ReturnType: StringType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -1515,15 +1418,15 @@ func TestTypeEquality(t *testing.T) {
 				TypeParameters: []TypeParameter{
 					{
 						Name:      "T",
-						TypeBound: AnyStructType{},
+						TypeBound: AnyStructType,
 					},
 				},
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
-				ReturnType: StringType{},
+				ReturnType: StringType,
 			}
 			target := &FunctionType{
 				TypeParameters: []TypeParameter{
@@ -1533,10 +1436,10 @@ func TestTypeEquality(t *testing.T) {
 				},
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
-				ReturnType: StringType{},
+				ReturnType: StringType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -1548,29 +1451,29 @@ func TestTypeEquality(t *testing.T) {
 				TypeParameters: []TypeParameter{
 					{
 						Name:      "T",
-						TypeBound: AnyResourceType{},
+						TypeBound: AnyResourceType,
 					},
 				},
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
-				ReturnType: StringType{},
+				ReturnType: StringType,
 			}
 			target := &FunctionType{
 				TypeParameters: []TypeParameter{
 					{
 						Name:      "T",
-						TypeBound: AnyStructType{},
+						TypeBound: AnyStructType,
 					},
 				},
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
-				ReturnType: StringType{},
+				ReturnType: StringType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -1582,29 +1485,29 @@ func TestTypeEquality(t *testing.T) {
 				TypeParameters: []TypeParameter{
 					{
 						Name:      "T",
-						TypeBound: AnyResourceType{},
+						TypeBound: AnyResourceType,
 					},
 				},
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
-				ReturnType: StringType{},
+				ReturnType: StringType,
 			}
 			target := &FunctionType{
 				TypeParameters: []TypeParameter{
 					{
 						Name:      "T",
-						TypeBound: AnyResourceType{},
+						TypeBound: AnyResourceType,
 					},
 				},
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
-				ReturnType: StringType{},
+				ReturnType: StringType,
 			}
 			assert.True(t, source.Equal(target))
 		})
@@ -1613,14 +1516,14 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &FunctionType{
-				ReturnType: StringType{},
+				ReturnType: StringType,
 				Parameters: []Parameter{
 					{
-						Type: IntType{},
+						Type: IntType,
 					},
 				},
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -1632,12 +1535,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ReferenceType{
-				Type:       IntType{},
-				Authorized: false,
+				Type:          IntType,
+				Authorization: UnauthorizedAccess,
 			}
 			target := &ReferenceType{
-				Type:       IntType{},
-				Authorized: false,
+				Type:          IntType,
+				Authorization: UnauthorizedAccess,
 			}
 			assert.True(t, source.Equal(target))
 		})
@@ -1646,12 +1549,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ReferenceType{
-				Type:       IntType{},
-				Authorized: false,
+				Type:          IntType,
+				Authorization: UnauthorizedAccess,
 			}
 			target := &ReferenceType{
-				Type:       StringType{},
-				Authorized: false,
+				Type:          StringType,
+				Authorization: UnauthorizedAccess,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -1660,12 +1563,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ReferenceType{
-				Type:       IntType{},
-				Authorized: false,
+				Type:          IntType,
+				Authorization: UnauthorizedAccess,
 			}
 			target := &ReferenceType{
-				Type:       IntType{},
-				Authorized: true,
+				Type:          IntType,
+				Authorization: EntitlementMapAuthorization{TypeID: "foo"},
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -1674,12 +1577,12 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ReferenceType{
-				Type:       IntType{},
-				Authorized: true,
+				Type:          IntType,
+				Authorization: EntitlementMapAuthorization{TypeID: "foo"},
 			}
 			target := &ReferenceType{
-				Type:       IntType{},
-				Authorized: false,
+				Type:          IntType,
+				Authorization: UnauthorizedAccess,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -1688,132 +1591,102 @@ func TestTypeEquality(t *testing.T) {
 			t.Parallel()
 
 			source := &ReferenceType{
-				Type:       IntType{},
-				Authorized: true,
+				Type:          IntType,
+				Authorization: EntitlementMapAuthorization{TypeID: "foo"},
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
 
-	t.Run("restricted type", func(t *testing.T) {
+	t.Run("intersection type", func(t *testing.T) {
 		t.Parallel()
 
 		t.Run("equal", func(t *testing.T) {
 			t.Parallel()
 
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
-					AnyType{},
-					IntType{},
+			source := &IntersectionType{
+				Types: []Type{
+					AnyType,
+					IntType,
 				},
 			}
-			target := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
-					AnyType{},
-					IntType{},
-				},
-			}
-			assert.True(t, source.Equal(target))
-		})
-
-		t.Run("different restrictions order", func(t *testing.T) {
-			t.Parallel()
-
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
-					AnyType{},
-					IntType{},
-				},
-			}
-			target := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
-					IntType{},
-					AnyType{},
+			target := &IntersectionType{
+				Types: []Type{
+					AnyType,
+					IntType,
 				},
 			}
 			assert.True(t, source.Equal(target))
 		})
 
-		t.Run("duplicate restrictions", func(t *testing.T) {
+		t.Run("different intersections order", func(t *testing.T) {
 			t.Parallel()
 
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
-					IntType{},
-					AnyType{},
-					IntType{},
+			source := &IntersectionType{
+				Types: []Type{
+					AnyType,
+					IntType,
 				},
 			}
-			target := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
-					IntType{},
-					AnyType{},
+			target := &IntersectionType{
+				Types: []Type{
+					IntType,
+					AnyType,
 				},
 			}
 			assert.True(t, source.Equal(target))
 		})
 
-		t.Run("different inner type", func(t *testing.T) {
+		t.Run("duplicate intersections", func(t *testing.T) {
 			t.Parallel()
 
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
-					AnyType{},
-					IntType{},
+			source := &IntersectionType{
+				Types: []Type{
+					IntType,
+					AnyType,
+					IntType,
 				},
 			}
-			target := &RestrictedType{
-				Type: StringType{},
-				Restrictions: []Type{
-					AnyType{},
-					IntType{},
+			target := &IntersectionType{
+				Types: []Type{
+					IntType,
+					AnyType,
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different intersections", func(t *testing.T) {
+			t.Parallel()
+
+			source := &IntersectionType{
+				Types: []Type{
+					AnyType,
+					IntType,
+				},
+			}
+			target := &IntersectionType{
+				Types: []Type{
+					AnyType,
+					StringType,
 				},
 			}
 			assert.False(t, source.Equal(target))
 		})
 
-		t.Run("different restrictions", func(t *testing.T) {
+		t.Run("different intersections length", func(t *testing.T) {
 			t.Parallel()
 
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
-					AnyType{},
-					IntType{},
+			source := &IntersectionType{
+				Types: []Type{
+					AnyType,
 				},
 			}
-			target := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
-					AnyType{},
-					StringType{},
-				},
-			}
-			assert.False(t, source.Equal(target))
-		})
-
-		t.Run("different restrictions length", func(t *testing.T) {
-			t.Parallel()
-
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
-					AnyType{},
-				},
-			}
-			target := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
-					AnyType{},
-					StringType{},
+			target := &IntersectionType{
+				Types: []Type{
+					AnyType,
+					StringType,
 				},
 			}
 			assert.False(t, source.Equal(target))
@@ -1822,13 +1695,12 @@ func TestTypeEquality(t *testing.T) {
 		t.Run("different type", func(t *testing.T) {
 			t.Parallel()
 
-			source := &RestrictedType{
-				Type: IntType{},
-				Restrictions: []Type{
-					AnyType{},
+			source := &IntersectionType{
+				Types: []Type{
+					AnyType,
 				},
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -1845,7 +1717,7 @@ func TestTypeEquality(t *testing.T) {
 					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
 				},
 				QualifiedIdentifier: "Bar",
-				RawType:             IntType{},
+				RawType:             IntType,
 			}
 			target := &EnumType{
 				Location: common.AddressLocation{
@@ -1853,7 +1725,7 @@ func TestTypeEquality(t *testing.T) {
 					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
 				},
 				QualifiedIdentifier: "Bar",
-				RawType:             IntType{},
+				RawType:             IntType,
 			}
 			assert.True(t, source.Equal(target))
 		})
@@ -1867,7 +1739,7 @@ func TestTypeEquality(t *testing.T) {
 					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
 				},
 				QualifiedIdentifier: "Bar",
-				RawType:             IntType{},
+				RawType:             IntType,
 			}
 			target := &EnumType{
 				Location: common.AddressLocation{
@@ -1875,7 +1747,7 @@ func TestTypeEquality(t *testing.T) {
 					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
 				},
 				QualifiedIdentifier: "Bar",
-				RawType:             IntType{},
+				RawType:             IntType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -1889,7 +1761,7 @@ func TestTypeEquality(t *testing.T) {
 					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
 				},
 				QualifiedIdentifier: "Bar",
-				RawType:             IntType{},
+				RawType:             IntType,
 			}
 			target := &EnumType{
 				Location: common.AddressLocation{
@@ -1897,7 +1769,7 @@ func TestTypeEquality(t *testing.T) {
 					Address: common.Address{0, 0, 0, 0, 0, 0, 0, 0x01},
 				},
 				QualifiedIdentifier: "Bar",
-				RawType:             IntType{},
+				RawType:             IntType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -1911,7 +1783,7 @@ func TestTypeEquality(t *testing.T) {
 					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
 				},
 				QualifiedIdentifier: "Bar",
-				RawType:             IntType{},
+				RawType:             IntType,
 			}
 			target := &EnumType{
 				Location: common.AddressLocation{
@@ -1919,7 +1791,7 @@ func TestTypeEquality(t *testing.T) {
 					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
 				},
 				QualifiedIdentifier: "Baz",
-				RawType:             IntType{},
+				RawType:             IntType,
 			}
 			assert.False(t, source.Equal(target))
 		})
@@ -1933,9 +1805,9 @@ func TestTypeEquality(t *testing.T) {
 					Address: common.Address{0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef},
 				},
 				QualifiedIdentifier: "Bar",
-				RawType:             IntType{},
+				RawType:             IntType,
 			}
-			target := AnyType{}
+			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
 	})
@@ -1970,11 +1842,11 @@ func TestDecodeFields(t *testing.T) {
 			NewOptional(NewInt(2)),
 			String("bar"),
 			Array{
-				ArrayType: NewVariableSizedArrayType(IntType{}),
+				ArrayType: NewVariableSizedArrayType(IntType),
 				Values:    []Value{NewInt(1), NewInt(2)},
 			},
 			Array{
-				ArrayType: NewVariableSizedArrayType(&OptionalType{Type: IntType{}}),
+				ArrayType: NewVariableSizedArrayType(&OptionalType{Type: IntType}),
 				Values: []Value{
 					NewOptional(NewInt(1)),
 					NewOptional(NewInt(2)),
@@ -1982,18 +1854,18 @@ func TestDecodeFields(t *testing.T) {
 				},
 			},
 			Array{
-				ArrayType: NewConstantSizedArrayType(2, IntType{}),
+				ArrayType: NewConstantSizedArrayType(2, IntType),
 				Values:    []Value{NewInt(1), NewInt(2)},
 			},
 			Array{
-				ArrayType: NewVariableSizedArrayType(AnyStructType{}),
+				ArrayType: NewVariableSizedArrayType(AnyStructType),
 				Values: []Value{
 					NewInt(3),
 					String("foo"),
 				},
 			},
 			Array{
-				ArrayType: NewVariableSizedArrayType(&OptionalType{Type: AnyStructType{}}),
+				ArrayType: NewVariableSizedArrayType(&OptionalType{Type: AnyStructType}),
 				Values: []Value{
 					NewOptional(NewInt(1)),
 					NewOptional(nil),
@@ -2006,63 +1878,95 @@ func TestDecodeFields(t *testing.T) {
 		Fields: []Field{
 			{
 				Identifier: "intField",
-				Type:       IntType{},
+				Type:       IntType,
 			},
 			{
 				Identifier: "stringField",
-				Type:       StringType{},
+				Type:       StringType,
 			},
 			{
 				Identifier: "nilOptionalIntField",
-				Type:       &OptionalType{Type: IntType{}},
+				Type: &OptionalType{
+					Type: IntType,
+				},
 			},
 			{
 				Identifier: "optionalIntField",
-				Type:       &OptionalType{Type: IntType{}},
+				Type: &OptionalType{
+					Type: IntType,
+				},
 			},
 			{
 				Identifier: "dictField",
-				Type:       &DictionaryType{KeyType: StringType{}, ElementType: IntType{}},
+				Type: &DictionaryType{
+					KeyType:     StringType,
+					ElementType: IntType,
+				},
 			},
 			{
 				Identifier: "dictOptionalField",
-				Type:       &OptionalType{Type: &DictionaryType{KeyType: StringType{}, ElementType: &OptionalType{Type: IntType{}}}},
+				Type: &OptionalType{
+					Type: &DictionaryType{
+						KeyType: StringType,
+						ElementType: &OptionalType{
+							Type: IntType,
+						},
+					},
+				},
 			},
 			{
 				Identifier: "dictAnyStructField",
-				Type:       &DictionaryType{KeyType: StringType{}, ElementType: AnyStructType{}},
+				Type: &DictionaryType{
+					KeyType:     StringType,
+					ElementType: AnyStructType,
+				},
 			},
 			{
 				Identifier: "dictOptionalAnyStructField",
-				Type:       &DictionaryType{KeyType: StringType{}, ElementType: &OptionalType{Type: AnyStructType{}}},
+				Type: &DictionaryType{
+					KeyType: StringType,
+					ElementType: &OptionalType{
+						Type: AnyStructType,
+					},
+				},
 			},
 			{
 				Identifier: "optionalAnyStructField",
-				Type:       &OptionalType{Type: AnyStructType{}},
+				Type: &OptionalType{
+					Type: AnyStructType,
+				},
 			},
 			{
 				Identifier: "anyStructField",
-				Type:       AnyStructType{},
+				Type:       AnyStructType,
 			},
 			{
 				Identifier: "variableArrayIntField",
-				Type:       NewVariableSizedArrayType(IntType{}),
+				Type:       NewVariableSizedArrayType(IntType),
 			},
 			{
 				Identifier: "variableArrayOptionalIntField",
-				Type:       NewVariableSizedArrayType(&OptionalType{Type: IntType{}}),
+				Type: NewVariableSizedArrayType(
+					&OptionalType{
+						Type: IntType,
+					},
+				),
 			},
 			{
 				Identifier: "fixedArrayIntField",
-				Type:       NewConstantSizedArrayType(2, IntType{}),
+				Type:       NewConstantSizedArrayType(2, IntType),
 			},
 			{
 				Identifier: "variableArrayAnyStructField",
-				Type:       NewVariableSizedArrayType(AnyStructType{}),
+				Type:       NewVariableSizedArrayType(AnyStructType),
 			},
 			{
 				Identifier: "variableArrayOptionalAnyStructField",
-				Type:       NewVariableSizedArrayType(&OptionalType{Type: AnyStructType{}}),
+				Type: NewVariableSizedArrayType(
+					&OptionalType{
+						Type: AnyStructType,
+					},
+				),
 			},
 		},
 	})
@@ -2265,4 +2169,269 @@ func TestDecodeFields(t *testing.T) {
 			assert.Equal(t, errCase.ExpectedErr, err.Error())
 		})
 	}
+}
+
+func TestIntersectionStaticType_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level, single", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionType(
+			[]Type{
+				NewStructInterfaceType(testLocation, "I", nil, nil),
+			},
+		)
+		assert.Equal(t,
+			"{S.test.I}",
+			intersectionType.ID(),
+		)
+	})
+
+	t.Run("top-level, two", func(t *testing.T) {
+		t.Parallel()
+
+		intersectionType := NewIntersectionType(
+			[]Type{
+				// NOTE: order
+				NewStructInterfaceType(testLocation, "I2", nil, nil),
+				NewStructInterfaceType(testLocation, "I1", nil, nil),
+			},
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			"{S.test.I1,S.test.I2}",
+			intersectionType.ID(),
+		)
+	})
+
+	t.Run("nested, two", func(t *testing.T) {
+		t.Parallel()
+
+		interfaceType1 := NewStructInterfaceType(testLocation, "C.I1", nil, nil)
+		interfaceType2 := NewStructInterfaceType(testLocation, "C.I2", nil, nil)
+
+		intersectionType := NewIntersectionType(
+			[]Type{
+				// NOTE: order
+				interfaceType2,
+				interfaceType1,
+			},
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			"{S.test.C.I1,S.test.C.I2}",
+			intersectionType.ID(),
+		)
+	})
+}
+
+func TestEntitlementMapAuthorization_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "M")
+		authorization := NewEntitlementMapAuthorization(nil, mapTypeID)
+		assert.Equal(t, "S.test.M", authorization.ID())
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "C.M")
+		authorization := NewEntitlementMapAuthorization(nil, mapTypeID)
+		assert.Equal(t, "S.test.C.M", authorization.ID())
+	})
+}
+
+func TestEntitlementSetAuthorization_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("single", func(t *testing.T) {
+		t.Parallel()
+
+		authorization := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				testLocation.TypeID(nil, "E"),
+			},
+			sema.Conjunction,
+		)
+		assert.Equal(t,
+			"S.test.E",
+			authorization.ID(),
+		)
+	})
+
+	t.Run("two, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				// NOTE: order
+				testLocation.TypeID(nil, "E2"),
+				testLocation.TypeID(nil, "E1"),
+			},
+			sema.Conjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			"S.test.E1,S.test.E2",
+			access.ID(),
+		)
+	})
+
+	t.Run("two, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				// NOTE: order
+				testLocation.TypeID(nil, "E2"),
+				testLocation.TypeID(nil, "E1"),
+			},
+			sema.Disjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			"S.test.E1|S.test.E2",
+			access.ID(),
+		)
+	})
+
+	t.Run("three, nested, conjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				// NOTE: order
+				testLocation.TypeID(nil, "C.E3"),
+				testLocation.TypeID(nil, "C.E2"),
+				testLocation.TypeID(nil, "C.E1"),
+			},
+			sema.Conjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			"S.test.C.E1,S.test.C.E2,S.test.C.E3",
+			access.ID(),
+		)
+	})
+
+	t.Run("three, nested, disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				// NOTE: order
+				testLocation.TypeID(nil, "C.E3"),
+				testLocation.TypeID(nil, "C.E2"),
+				testLocation.TypeID(nil, "C.E1"),
+			},
+			sema.Disjunction,
+		)
+		// NOTE: sorted
+		assert.Equal(t,
+			"S.test.C.E1|S.test.C.E2|S.test.C.E3",
+			access.ID(),
+		)
+	})
+}
+
+func TestReferenceStaticType_ID(t *testing.T) {
+	t.Parallel()
+
+	testLocation := common.StringLocation("test")
+
+	t.Run("top-level, unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		referenceType := NewReferenceType(UnauthorizedAccess, IntType)
+		assert.Equal(t,
+			"&Int",
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("top-level, authorized, map", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "M")
+		access := NewEntitlementMapAuthorization(nil, mapTypeID)
+
+		referenceType := NewReferenceType(access, IntType)
+		assert.Equal(t,
+			"auth(S.test.M)&Int",
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("top-level, authorized, set", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				// NOTE: order
+				testLocation.TypeID(nil, "E2"),
+				testLocation.TypeID(nil, "E1"),
+			},
+			sema.Conjunction,
+		)
+
+		referenceType := NewReferenceType(access, IntType)
+
+		// NOTE: sorted
+		assert.Equal(t,
+			"auth(S.test.E1,S.test.E2)&Int",
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("nested, authorized, map", func(t *testing.T) {
+		t.Parallel()
+
+		mapTypeID := testLocation.TypeID(nil, "C.M")
+		access := NewEntitlementMapAuthorization(nil, mapTypeID)
+
+		referenceType := NewReferenceType(access, IntType)
+		assert.Equal(t,
+			"auth(S.test.C.M)&Int",
+			referenceType.ID(),
+		)
+	})
+
+	t.Run("nested, authorized, set", func(t *testing.T) {
+		t.Parallel()
+
+		access := NewEntitlementSetAuthorization(
+			nil,
+			[]common.TypeID{
+				// NOTE: order
+				testLocation.TypeID(nil, "C.E2"),
+				testLocation.TypeID(nil, "C.E1"),
+			},
+			sema.Conjunction,
+		)
+
+		referenceType := NewReferenceType(access, IntType)
+
+		// NOTE: sorted
+		assert.Equal(t,
+			"auth(S.test.C.E1,S.test.C.E2)&Int",
+			referenceType.ID(),
+		)
+	})
 }

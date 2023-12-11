@@ -712,12 +712,12 @@ func TestCheckInvalidArrayEqual(t *testing.T) {
 	}
 
 	assertInvalid("variable size array", `
-		let xs = [fun(){}]
+		let xs = [fun() {}]
 		return xs == xs
 	`)
 
 	assertInvalid("fixed size array", `
-		let xs: [((): Void); 1] = [fun(){}]
+		let xs: [fun (): Void; 1] = [fun() {}]
 		return xs == xs
 	`)
 
@@ -1140,7 +1140,7 @@ func TestCheckArrayFilter(t *testing.T) {
 		fun test() {
 			let x = [1, 2, 3]
 			let onlyEven =
-				fun (_ x: Int): Bool {
+				view fun (_ x: Int): Bool {
 					return x % 2 == 0
 				}
 
@@ -1150,7 +1150,7 @@ func TestCheckArrayFilter(t *testing.T) {
 		fun testFixedSize() {
 			let x : [Int; 5] = [1, 2, 3, 21, 30]
 			let onlyEvenInt =
-				fun (_ x: Int): Bool {
+				view fun (_ x: Int): Bool {
 					return x % 2 == 0
 				}
 
@@ -1190,7 +1190,7 @@ func TestCheckArrayFilterInvalidArgs(t *testing.T) {
 		fun test() {
 			let x = [1, 2, 3]
 			let onlyEvenInt16 =
-				fun (_ x: Int16): Bool {
+				view fun (_ x: Int16): Bool {
 					return x % 2 == 0
 				}
 
@@ -1224,9 +1224,10 @@ func TestCheckResourceArrayFilterInvalid(t *testing.T) {
 		}
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 func TestCheckArrayMap(t *testing.T) {
@@ -1703,7 +1704,7 @@ func TestCheckDictionaryKeyTypesExpressions(t *testing.T) {
 	}
 }
 
-func TestNilAssignmentToDictionary(t *testing.T) {
+func TestCheckNilAssignmentToDictionary(t *testing.T) {
 
 	t.Parallel()
 
@@ -1731,5 +1732,749 @@ func TestNilAssignmentToDictionary(t *testing.T) {
 	    `)
 
 		require.NoError(t, err)
+	})
+}
+
+func TestCheckArrayFunctionEntitlements(t *testing.T) {
+	t.Parallel()
+
+	t.Run("inserting functions", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Mutate) &[String]
+                    arrayRef.append("baz")
+                    arrayRef.appendAll(["baz"])
+                    arrayRef.insert(at:0, "baz")
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as &[String]
+                    arrayRef.append("baz")
+                    arrayRef.appendAll(["baz"])
+                    arrayRef.insert(at:0, "baz")
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 3)
+
+			var invalidAccessError = &sema.InvalidAccessError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+		})
+
+		t.Run("insert reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Insert) &[String]
+                    arrayRef.append("baz")
+                    arrayRef.appendAll(["baz"])
+                    arrayRef.insert(at:0, "baz")
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("remove reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Remove) &[String]
+                    arrayRef.append("baz")
+                    arrayRef.appendAll(["baz"])
+                    arrayRef.insert(at:0, "baz")
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 3)
+
+			var invalidAccessError = &sema.InvalidAccessError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+		})
+	})
+
+	t.Run("removing functions", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Mutate) &[String]
+                    arrayRef.remove(at: 1)
+                    arrayRef.removeFirst()
+                    arrayRef.removeLast()
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as &[String]
+                    arrayRef.remove(at: 1)
+                    arrayRef.removeFirst()
+                    arrayRef.removeLast()
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 3)
+
+			var invalidAccessError = &sema.InvalidAccessError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+		})
+
+		t.Run("insert reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Insert) &[String]
+                    arrayRef.remove(at: 1)
+                    arrayRef.removeFirst()
+                    arrayRef.removeLast()
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 3)
+
+			var invalidAccessError = &sema.InvalidAccessError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+		})
+
+		t.Run("remove reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Remove) &[String]
+                    arrayRef.remove(at: 1)
+                    arrayRef.removeFirst()
+                    arrayRef.removeLast()
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("public functions", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Mutate) &[String]
+                    arrayRef.contains("hello")
+                    arrayRef.firstIndex(of: "hello")
+                    arrayRef.slice(from: 2, upTo: 4)
+                    arrayRef.concat(["hello"])
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as &[String]
+                    arrayRef.contains("hello")
+                    arrayRef.firstIndex(of: "hello")
+                    arrayRef.slice(from: 2, upTo: 4)
+                    arrayRef.concat(["hello"])
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("insert reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Insert) &[String]
+                    arrayRef.contains("hello")
+                    arrayRef.firstIndex(of: "hello")
+                    arrayRef.slice(from: 2, upTo: 4)
+                    arrayRef.concat(["hello"])
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("remove reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Remove) &[String]
+                    arrayRef.contains("hello")
+                    arrayRef.firstIndex(of: "hello")
+                    arrayRef.slice(from: 2, upTo: 4)
+                    arrayRef.concat(["hello"])
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("assignment", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Mutate) &[String]
+                    arrayRef[0] = "baz"
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as &[String]
+                    arrayRef[0] = "baz"
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+
+			assert.Contains(
+				t,
+				errors[0].Error(),
+				"can only assign to a reference with (Mutate) or (Insert, Remove) access, but found a non-auth reference",
+			)
+		})
+
+		t.Run("insert reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Insert) &[String]
+                    arrayRef[0] = "baz"
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+
+			assert.Contains(
+				t,
+				errors[0].Error(),
+				"can only assign to a reference with (Mutate) or (Insert, Remove) access, but found a (Insert) reference",
+			)
+		})
+
+		t.Run("remove reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Remove) &[String]
+                    arrayRef[0] = "baz"
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+
+			assert.Contains(
+				t,
+				errors[0].Error(),
+				"can only assign to a reference with (Mutate) or (Insert, Remove) access, but found a (Remove) reference",
+			)
+		})
+
+		t.Run("insert and remove reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Insert, Remove) &[String]
+                    arrayRef[0] = "baz"
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("swap", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as auth(Mutate) &[String]
+                    arrayRef[0] <-> arrayRef[1]
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let array: [String] = ["foo", "bar"]
+
+                fun test() {
+                    var arrayRef = &array as &[String]
+                    arrayRef[0] <-> arrayRef[1]
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 2)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+		})
+	})
+}
+
+func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
+	t.Parallel()
+
+	t.Run("inserting functions", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
+                    dictionaryRef.insert(key: "three", "baz")
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as &{String: String}
+                    dictionaryRef.insert(key: "three", "baz")
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.InvalidAccessError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+		})
+
+		t.Run("insert reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Insert) &{String: String}
+                    dictionaryRef.insert(key: "three", "baz")
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("remove reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as &{String: String}
+                    dictionaryRef.insert(key: "three", "baz")
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.InvalidAccessError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+		})
+	})
+
+	t.Run("removing functions", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
+                    dictionaryRef.remove(key: "foo")
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as &{String: String}
+                    dictionaryRef.remove(key: "foo")
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.InvalidAccessError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+		})
+
+		t.Run("insert reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Insert) &{String: String}
+                    dictionaryRef.remove(key: "foo")
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.InvalidAccessError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+		})
+
+		t.Run("remove reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Remove) &{String: String}
+                    dictionaryRef.remove(key: "foo")
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("public functions", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
+                    dictionaryRef.containsKey("foo")
+                    dictionaryRef.forEachKey(fun(key: String): Bool {return true} )
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as &{String: String}
+                    dictionaryRef.containsKey("foo")
+                    dictionaryRef.forEachKey(fun(key: String): Bool {return true} )
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("insert reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Insert) &{String: String}
+                    dictionaryRef.containsKey("foo")
+                    dictionaryRef.forEachKey(fun(key: String): Bool {return true} )
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("remove reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Remove) &{String: String}
+                    dictionaryRef.containsKey("foo")
+                    dictionaryRef.forEachKey(fun(key: String): Bool {return true} )
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("assignment", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Mutate) &{String: String}
+                    dictionaryRef["three"] = "baz"
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as &{String: String}
+                    dictionaryRef["three"] = "baz"
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+
+			assert.Contains(
+				t,
+				errors[0].Error(),
+				"can only assign to a reference with (Mutate) or (Insert, Remove) access, but found a non-auth reference",
+			)
+		})
+
+		t.Run("insert reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Remove) &{String: String}
+                    dictionaryRef["three"] = "baz"
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+
+			assert.Contains(
+				t,
+				errors[0].Error(),
+				"can only assign to a reference with (Mutate) or (Insert, Remove) access, but found a (Remove) reference",
+			)
+		})
+
+		t.Run("remove reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Insert) &{String: String}
+                    dictionaryRef["three"] = "baz"
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 1)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+
+			assert.Contains(
+				t,
+				errors[0].Error(),
+				"can only assign to a reference with (Mutate) or (Insert, Remove) access, but found a (Insert) reference",
+			)
+		})
+
+		t.Run("insert and remove reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Insert, Remove) &{String: String}
+                    dictionaryRef["three"] = "baz"
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("swap", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("mutable reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: AnyStruct} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as auth(Mutate) &{String: AnyStruct}
+                    dictionaryRef["one"] <-> dictionaryRef["two"]
+                }
+	        `)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("non auth reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                let dictionary: {String: String} = {"one" : "foo", "two" : "bar"}
+
+                fun test() {
+                    var dictionaryRef = &dictionary as &{String: String}
+                    dictionaryRef["one"] <-> dictionaryRef["two"]
+                }
+	        `)
+
+			errors := RequireCheckerErrors(t, err, 2)
+
+			var invalidAccessError = &sema.UnauthorizedReferenceAssignmentError{}
+			assert.ErrorAs(t, errors[0], &invalidAccessError)
+			assert.ErrorAs(t, errors[1], &invalidAccessError)
+		})
 	})
 }

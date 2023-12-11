@@ -178,21 +178,16 @@ var HashType = &sema.ConstantSizedType{
 	Type: sema.UInt8Type,
 }
 
+var HashTypeAnnotation = sema.NewTypeAnnotation(HashType)
+
 var AccountEventAddressParameter = sema.Parameter{
 	Identifier:     "address",
-	TypeAnnotation: sema.NewTypeAnnotation(sema.TheAddressType),
+	TypeAnnotation: sema.AddressTypeAnnotation,
 }
 
 var AccountEventCodeHashParameter = sema.Parameter{
 	Identifier:     "codeHash",
-	TypeAnnotation: sema.NewTypeAnnotation(HashType),
-}
-
-var AccountEventPublicKeyParameterAsByteArrayType = sema.Parameter{
-	Identifier: "publicKey",
-	TypeAnnotation: sema.NewTypeAnnotation(
-		sema.ByteArrayType,
-	),
+	TypeAnnotation: HashTypeAnnotation,
 }
 
 var AccountEventPublicKeyParameterAsCompositeType = sema.Parameter{
@@ -211,7 +206,7 @@ var AccountEventPublicKeyIndexParameter = sema.Parameter{
 
 var AccountEventContractParameter = sema.Parameter{
 	Identifier:     "contract",
-	TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+	TypeAnnotation: sema.StringTypeAnnotation,
 }
 
 var AccountCreatedEventType = newFlowEventType(
@@ -219,22 +214,10 @@ var AccountCreatedEventType = newFlowEventType(
 	AccountEventAddressParameter,
 )
 
-var AccountKeyAddedFromByteArrayEventType = newFlowEventType(
-	"AccountKeyAdded",
-	AccountEventAddressParameter,
-	AccountEventPublicKeyParameterAsByteArrayType,
-)
-
 var AccountKeyAddedFromPublicKeyEventType = newFlowEventType(
 	"AccountKeyAdded",
 	AccountEventAddressParameter,
 	AccountEventPublicKeyParameterAsCompositeType,
-)
-
-var AccountKeyRemovedFromByteArrayEventType = newFlowEventType(
-	"AccountKeyRemoved",
-	AccountEventAddressParameter,
-	AccountEventPublicKeyParameterAsByteArrayType,
 )
 
 var AccountKeyRemovedFromPublicKeyIndexEventType = newFlowEventType(
@@ -266,22 +249,22 @@ var AccountContractRemovedEventType = newFlowEventType(
 
 var AccountEventProviderParameter = sema.Parameter{
 	Identifier:     "provider",
-	TypeAnnotation: sema.NewTypeAnnotation(sema.TheAddressType),
+	TypeAnnotation: sema.AddressTypeAnnotation,
 }
 
 var AccountEventRecipientParameter = sema.Parameter{
 	Identifier:     "recipient",
-	TypeAnnotation: sema.NewTypeAnnotation(sema.TheAddressType),
+	TypeAnnotation: sema.AddressTypeAnnotation,
 }
 
 var AccountEventNameParameter = sema.Parameter{
 	Identifier:     "name",
-	TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+	TypeAnnotation: sema.StringTypeAnnotation,
 }
 
 var AccountEventTypeParameter = sema.Parameter{
 	Identifier:     "type",
-	TypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
+	TypeAnnotation: sema.MetaTypeAnnotation,
 }
 
 var AccountInboxPublishedEventType = newFlowEventType(
@@ -303,13 +286,4 @@ var AccountInboxClaimedEventType = newFlowEventType(
 	AccountEventProviderParameter,
 	AccountEventRecipientParameter,
 	AccountEventNameParameter,
-)
-
-var AccountLinkedEventType = newFlowEventType(
-	"AccountLinked",
-	AccountEventAddressParameter,
-	sema.Parameter{
-		Identifier:     "path",
-		TypeAnnotation: sema.AuthAccountTypeLinkAccountFunctionTypePathParameterTypeAnnotation,
-	},
 )

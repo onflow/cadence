@@ -29,6 +29,8 @@ const (
 	TypeAnnotationStateInvalidResourceAnnotation
 	// Resource types must have a resource annotation (@)
 	TypeAnnotationStateMissingResourceAnnotation
+	// Entitlement types must only appear in `access` or `auth` modifier positions
+	TypeAnnotationStateDirectEntitlementTypeAnnotation
 	// attachments types must never appear directly as annotations, and instead
 	// should appear only in reference types: e.g. `&A` or `[&A]`
 	TypeAnnotationStateDirectAttachmentTypeAnnotation

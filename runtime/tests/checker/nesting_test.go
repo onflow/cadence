@@ -103,13 +103,21 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 
 								assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 
+							case common.CompositeKindEvent:
+								require.NoError(t, err)
+
 							case common.CompositeKindResource,
 								common.CompositeKindStructure,
-								common.CompositeKindEvent,
 								common.CompositeKindAttachment,
 								common.CompositeKindEnum:
 
-								require.NoError(t, err)
+								if outerIsInterface && !innerIsInterface {
+									errs := RequireCheckerErrors(t, err, 1)
+
+									assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+								} else {
+									require.NoError(t, err)
+								}
 
 							default:
 								t.Errorf("unknown outer composite kind %s", outerComposite)
@@ -164,9 +172,9 @@ func TestCheckCompositeDeclarationNestedStructInterfaceUse(t *testing.T) {
 
           struct X: XI {}
 
-          var xi: AnyStruct{XI}
+          var xi: {XI}
 
-          init(xi: AnyStruct{XI}) {
+          init(xi: {XI}) {
               self.xi = xi
           }
 

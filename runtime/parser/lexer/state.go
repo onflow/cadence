@@ -43,7 +43,14 @@ func rootState(l *lexer) stateFn {
 		case '+':
 			l.emitType(TokenPlus)
 		case '-':
-			l.emitType(TokenMinus)
+			r = l.next()
+			switch r {
+			case '>':
+				l.emitType(TokenRightArrow)
+			default:
+				l.backupOne()
+				l.emitType(TokenMinus)
+			}
 		case '*':
 			l.emitType(TokenStar)
 		case '%':

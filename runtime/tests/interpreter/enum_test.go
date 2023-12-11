@@ -136,7 +136,7 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.ZeroAddress,
@@ -172,7 +172,7 @@ func TestInterpretEnumConstructor(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.ZeroAddress,
@@ -207,7 +207,7 @@ func TestInterpretEnumInstance(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
 			common.ZeroAddress,
@@ -226,8 +226,8 @@ func TestInterpretEnumInContract(t *testing.T) {
 		`
           contract C {
               enum E: UInt8 {
-                  pub case a
-                  pub case b
+                  access(all) case a
+                  access(all) case b
               }
 
               var e: E

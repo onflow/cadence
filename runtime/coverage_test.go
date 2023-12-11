@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"encoding/json"
@@ -27,12 +27,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 )
 
-func TestNewLocationCoverage(t *testing.T) {
+func TestRuntimeNewLocationCoverage(t *testing.T) {
 
 	t.Parallel()
 
@@ -58,7 +60,7 @@ func TestNewLocationCoverage(t *testing.T) {
 	assert.Equal(t, 0, locationCoverage.CoveredLines())
 }
 
-func TestLocationCoverageAddLineHit(t *testing.T) {
+func TestRuntimeLocationCoverageAddLineHit(t *testing.T) {
 
 	t.Parallel()
 
@@ -88,7 +90,7 @@ func TestLocationCoverageAddLineHit(t *testing.T) {
 	assert.Equal(t, "66.7%", locationCoverage.Percentage())
 }
 
-func TestLocationCoverageCoveredLines(t *testing.T) {
+func TestRuntimeLocationCoverageCoveredLines(t *testing.T) {
 
 	t.Parallel()
 
@@ -104,7 +106,7 @@ func TestLocationCoverageCoveredLines(t *testing.T) {
 	assert.Equal(t, 4, locationCoverage.CoveredLines())
 }
 
-func TestLocationCoverageMissedLines(t *testing.T) {
+func TestRuntimeLocationCoverageMissedLines(t *testing.T) {
 
 	t.Parallel()
 
@@ -124,7 +126,7 @@ func TestLocationCoverageMissedLines(t *testing.T) {
 	)
 }
 
-func TestLocationCoveragePercentage(t *testing.T) {
+func TestRuntimeLocationCoveragePercentage(t *testing.T) {
 
 	t.Parallel()
 
@@ -141,7 +143,7 @@ func TestLocationCoveragePercentage(t *testing.T) {
 	assert.Equal(t, "100.0%", locationCoverage.Percentage())
 }
 
-func TestNewCoverageReport(t *testing.T) {
+func TestRuntimeNewCoverageReport(t *testing.T) {
 
 	t.Parallel()
 
@@ -152,7 +154,7 @@ func TestNewCoverageReport(t *testing.T) {
 	assert.Equal(t, 0, len(coverageReport.ExcludedLocations))
 }
 
-func TestCoverageReportExcludeLocation(t *testing.T) {
+func TestRuntimeCoverageReportExcludeLocation(t *testing.T) {
 
 	t.Parallel()
 
@@ -167,12 +169,12 @@ func TestCoverageReportExcludeLocation(t *testing.T) {
 	assert.Equal(t, true, coverageReport.IsLocationExcluded(location))
 }
 
-func TestCoverageReportInspectProgram(t *testing.T) {
+func TestRuntimeCoverageReportInspectProgram(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -194,12 +196,12 @@ func TestCoverageReportInspectProgram(t *testing.T) {
 	assert.Equal(t, true, coverageReport.IsLocationInspected(location))
 }
 
-func TestCoverageReportInspectProgramForExcludedLocation(t *testing.T) {
+func TestRuntimeCoverageReportInspectProgramForExcludedLocation(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -222,13 +224,13 @@ func TestCoverageReportInspectProgramForExcludedLocation(t *testing.T) {
 	assert.Equal(t, false, coverageReport.IsLocationInspected(location))
 }
 
-func TestCoverageReportInspectProgramWithLocationFilter(t *testing.T) {
+func TestRuntimeCoverageReportInspectProgramWithLocationFilter(t *testing.T) {
 
 	t.Parallel()
 
 	transaction := []byte(`
 	  transaction(amount: UFix64) {
-	    prepare(account: AuthAccount) {
+	    prepare(account: &Account) {
 	      assert(account.balance >= amount)
 	    }
 	  }
@@ -253,12 +255,12 @@ func TestCoverageReportInspectProgramWithLocationFilter(t *testing.T) {
 	assert.Equal(t, false, coverageReport.IsLocationInspected(location))
 }
 
-func TestCoverageReportAddLineHit(t *testing.T) {
+func TestRuntimeCoverageReportAddLineHit(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -296,12 +298,12 @@ func TestCoverageReportAddLineHit(t *testing.T) {
 	assert.Equal(t, 2, locationCoverage.CoveredLines())
 }
 
-func TestCoverageReportWithFlowLocation(t *testing.T) {
+func TestRuntimeCoverageReportWithFlowLocation(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -342,12 +344,12 @@ func TestCoverageReportWithFlowLocation(t *testing.T) {
 	require.JSONEq(t, expected, string(actual))
 }
 
-func TestCoverageReportWithREPLLocation(t *testing.T) {
+func TestRuntimeCoverageReportWithREPLLocation(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -388,12 +390,12 @@ func TestCoverageReportWithREPLLocation(t *testing.T) {
 	require.JSONEq(t, expected, string(actual))
 }
 
-func TestCoverageReportWithScriptLocation(t *testing.T) {
+func TestRuntimeCoverageReportWithScriptLocation(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -434,12 +436,12 @@ func TestCoverageReportWithScriptLocation(t *testing.T) {
 	require.JSONEq(t, expected, string(actual))
 }
 
-func TestCoverageReportWithStringLocation(t *testing.T) {
+func TestRuntimeCoverageReportWithStringLocation(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -480,12 +482,12 @@ func TestCoverageReportWithStringLocation(t *testing.T) {
 	require.JSONEq(t, expected, string(actual))
 }
 
-func TestCoverageReportWithIdentifierLocation(t *testing.T) {
+func TestRuntimeCoverageReportWithIdentifierLocation(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -526,12 +528,12 @@ func TestCoverageReportWithIdentifierLocation(t *testing.T) {
 	require.JSONEq(t, expected, string(actual))
 }
 
-func TestCoverageReportWithTransactionLocation(t *testing.T) {
+func TestRuntimeCoverageReportWithTransactionLocation(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -572,12 +574,12 @@ func TestCoverageReportWithTransactionLocation(t *testing.T) {
 	require.JSONEq(t, expected, string(actual))
 }
 
-func TestCoverageReportWithAddressLocation(t *testing.T) {
+func TestRuntimeCoverageReportWithAddressLocation(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -626,7 +628,7 @@ func TestCoverageReportWithLocationMappings(t *testing.T) {
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -732,12 +734,12 @@ func TestCoverageReportWithLocationMappings(t *testing.T) {
 	})
 }
 
-func TestCoverageReportReset(t *testing.T) {
+func TestRuntimeCoverageReportReset(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -775,7 +777,7 @@ func TestCoverageReportReset(t *testing.T) {
 	assert.Equal(t, true, coverageReport.IsLocationExcluded(excludedLocation))
 }
 
-func TestCoverageReportAddLineHitForExcludedLocation(t *testing.T) {
+func TestRuntimeCoverageReportAddLineHitForExcludedLocation(t *testing.T) {
 
 	t.Parallel()
 
@@ -792,7 +794,7 @@ func TestCoverageReportAddLineHitForExcludedLocation(t *testing.T) {
 	assert.Equal(t, false, coverageReport.IsLocationInspected(location))
 }
 
-func TestCoverageReportAddLineHitWithLocationFilter(t *testing.T) {
+func TestRuntimeCoverageReportAddLineHitWithLocationFilter(t *testing.T) {
 
 	t.Parallel()
 
@@ -813,7 +815,7 @@ func TestCoverageReportAddLineHitWithLocationFilter(t *testing.T) {
 	assert.Equal(t, false, coverageReport.IsLocationInspected(location))
 }
 
-func TestCoverageReportAddLineHitForNonInspectedProgram(t *testing.T) {
+func TestRuntimeCoverageReportAddLineHitForNonInspectedProgram(t *testing.T) {
 
 	t.Parallel()
 
@@ -829,12 +831,12 @@ func TestCoverageReportAddLineHitForNonInspectedProgram(t *testing.T) {
 	assert.Equal(t, false, coverageReport.IsLocationInspected(location))
 }
 
-func TestCoverageReportPercentage(t *testing.T) {
+func TestRuntimeCoverageReportPercentage(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -879,12 +881,12 @@ func TestCoverageReportPercentage(t *testing.T) {
 	assert.Equal(t, "50.0%", coverageReport.Percentage())
 }
 
-func TestCoverageReportString(t *testing.T) {
+func TestRuntimeCoverageReportString(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -934,12 +936,12 @@ func TestCoverageReportString(t *testing.T) {
 	)
 }
 
-func TestCoverageReportDiff(t *testing.T) {
+func TestRuntimeCoverageReportDiff(t *testing.T) {
 
 	t.Parallel()
 
 	script := []byte(`
-	  pub fun answer(): Int {
+	  access(all) fun answer(): Int {
 	    var i = 0
 	    while i < 42 {
 	      i = i + 1
@@ -999,22 +1001,22 @@ func TestCoverageReportDiff(t *testing.T) {
 	require.JSONEq(t, expected, string(actual))
 }
 
-func TestCoverageReportMerge(t *testing.T) {
+func TestRuntimeCoverageReportMerge(t *testing.T) {
 
 	t.Parallel()
 
 	integerTraitsScript := []byte(`
-	  pub let specialNumbers: {Int: String} = {
+	  access(all) let specialNumbers: {Int: String} = {
 	    1729: "Harshad",
 	    8128: "Harmonic",
 	    41041: "Carmichael"
 	  }
 
-	  pub fun addSpecialNumber(_ n: Int, _ trait: String) {
+	  access(all) fun addSpecialNumber(_ n: Int, _ trait: String) {
 	    specialNumbers[n] = trait
 	  }
 
-	  pub fun getIntegerTrait(_ n: Int): String {
+	  access(all) fun getIntegerTrait(_ n: Int): String {
 	    if n < 0 {
 	      return "Negative"
 	    } else if n == 0 {
@@ -1044,7 +1046,7 @@ func TestCoverageReportMerge(t *testing.T) {
 	coverageReport.InspectProgram(location, program)
 
 	factorialScript := []byte(`
-	  pub fun factorial(_ n: Int): Int {
+	  access(all) fun factorial(_ n: Int): Int {
 	    pre {
 	      n >= 0:
 	        "factorial is only defined for integers greater than or equal to zero"
@@ -1125,7 +1127,7 @@ func TestCoverageReportMerge(t *testing.T) {
 	require.JSONEq(t, expected, string(actual))
 }
 
-func TestCoverageReportUnmarshalJSON(t *testing.T) {
+func TestRuntimeCoverageReportUnmarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
@@ -1240,7 +1242,7 @@ func TestCoverageReportUnmarshalJSON(t *testing.T) {
 	)
 }
 
-func TestCoverageReportUnmarshalJSONWithFormatError(t *testing.T) {
+func TestRuntimeCoverageReportUnmarshalJSONWithFormatError(t *testing.T) {
 
 	t.Parallel()
 
@@ -1251,7 +1253,7 @@ func TestCoverageReportUnmarshalJSONWithFormatError(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestCoverageReportUnmarshalJSONWithDecodeLocationError(t *testing.T) {
+func TestRuntimeCoverageReportUnmarshalJSONWithDecodeLocationError(t *testing.T) {
 
 	t.Parallel()
 
@@ -1280,7 +1282,7 @@ func TestCoverageReportUnmarshalJSONWithDecodeLocationError(t *testing.T) {
 	require.ErrorContains(t, err, "invalid Location ID: X.Factorial")
 }
 
-func TestCoverageReportUnmarshalJSONWithDecodeExcludedLocationError(t *testing.T) {
+func TestRuntimeCoverageReportUnmarshalJSONWithDecodeExcludedLocationError(t *testing.T) {
 
 	t.Parallel()
 
@@ -1314,17 +1316,17 @@ func TestRuntimeCoverage(t *testing.T) {
 	t.Parallel()
 
 	importedScript := []byte(`
-	  pub let specialNumbers: {Int: String} = {
+	  access(all) let specialNumbers: {Int: String} = {
 	    1729: "Harshad",
 	    8128: "Harmonic",
 	    41041: "Carmichael"
 	  }
 
-	  pub fun addSpecialNumber(_ n: Int, _ trait: String) {
+	  access(all) fun addSpecialNumber(_ n: Int, _ trait: String) {
 	    specialNumbers[n] = trait
 	  }
 
-	  pub fun getIntegerTrait(_ n: Int): String {
+	  access(all) fun getIntegerTrait(_ n: Int): String {
 	    if n < 0 {
 	      return "Negative"
 	    } else if n == 0 {
@@ -1344,7 +1346,7 @@ func TestRuntimeCoverage(t *testing.T) {
 	    return "Enormous"
 	  }
 
-	  pub fun factorial(_ n: Int): Int {
+	  access(all) fun factorial(_ n: Int): Int {
 	    pre {
 	      n >= 0:
 	        "factorial is only defined for integers greater than or equal to zero"
@@ -1365,7 +1367,7 @@ func TestRuntimeCoverage(t *testing.T) {
 	script := []byte(`
 	  import "imported"
 
-	  pub fun main(): Int {
+	  access(all) fun main(): Int {
 	    let testInputs: {Int: String} = {
 	      -1: "Negative",
 	      0: "Zero",
@@ -1394,8 +1396,8 @@ func TestRuntimeCoverage(t *testing.T) {
 	`)
 
 	coverageReport := NewCoverageReport()
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return importedScript, nil
@@ -1405,8 +1407,9 @@ func TestRuntimeCoverage(t *testing.T) {
 		},
 	}
 
-	runtime := newTestInterpreterRuntime()
-	runtime.defaultConfig.CoverageReport = coverageReport
+	config := DefaultTestInterpreterConfig
+	config.CoverageReport = coverageReport
+	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 	value, err := runtime.ExecuteScript(
 		Script{
@@ -1488,17 +1491,17 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 	t.Parallel()
 
 	importedScript := []byte(`
-	  pub let specialNumbers: {Int: String} = {
+	  access(all) let specialNumbers: {Int: String} = {
 	    1729: "Harshad",
 	    8128: "Harmonic",
 	    41041: "Carmichael"
 	  }
 
-	  pub fun addSpecialNumber(_ n: Int, _ trait: String) {
+	  access(all) fun addSpecialNumber(_ n: Int, _ trait: String) {
 	    specialNumbers[n] = trait
 	  }
 
-	  pub fun getIntegerTrait(_ n: Int): String {
+	  access(all) fun getIntegerTrait(_ n: Int): String {
 	    if n < 0 {
 	      return "Negative"
 	    } else if n == 0 {
@@ -1522,7 +1525,7 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 	script := []byte(`
 	  import "imported"
 
-	  pub fun main(): Int {
+	  access(all) fun main(): Int {
 	    let testInputs: {Int: String} = {
 	      -1: "Negative",
 	      0: "Zero",
@@ -1551,8 +1554,8 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 	scriptlocation := common.ScriptLocation{}
 	coverageReport.ExcludeLocation(scriptlocation)
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return importedScript, nil
@@ -1562,8 +1565,9 @@ func TestRuntimeCoverageWithExcludedLocation(t *testing.T) {
 		},
 	}
 
-	runtime := newTestInterpreterRuntime()
-	runtime.defaultConfig.CoverageReport = coverageReport
+	config := DefaultTestInterpreterConfig
+	config.CoverageReport = coverageReport
+	runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 	value, err := runtime.ExecuteScript(
 		Script{
@@ -1624,17 +1628,17 @@ func TestRuntimeCoverageWithLocationFilter(t *testing.T) {
 	t.Parallel()
 
 	importedScript := []byte(`
-	  pub let specialNumbers: {Int: String} = {
+	  access(all) let specialNumbers: {Int: String} = {
 	    1729: "Harshad",
 	    8128: "Harmonic",
 	    41041: "Carmichael"
 	  }
 
-	  pub fun addSpecialNumber(_ n: Int, _ trait: String) {
+	  access(all) fun addSpecialNumber(_ n: Int, _ trait: String) {
 	    specialNumbers[n] = trait
 	  }
 
-	  pub fun getIntegerTrait(_ n: Int): String {
+	  access(all) fun getIntegerTrait(_ n: Int): String {
 	    if n < 0 {
 	      return "Negative"
 	    } else if n == 0 {
@@ -1658,7 +1662,7 @@ func TestRuntimeCoverageWithLocationFilter(t *testing.T) {
 	script := []byte(`
 	  import "imported"
 
-	  pub fun main(): Int {
+	  access(all) fun main(): Int {
 	    let testInputs: {Int: String} = {
 	      -1: "Negative",
 	      0: "Zero",
@@ -1692,8 +1696,8 @@ func TestRuntimeCoverageWithLocationFilter(t *testing.T) {
 	})
 	scriptlocation := common.ScriptLocation{0x1b, 0x2c}
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
 				return importedScript, nil
@@ -1765,15 +1769,15 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 	t.Parallel()
 
 	importedScript := []byte(`
-	  pub contract FooContract {
-	    pub resource interface Receiver {
+	  access(all) contract FooContract {
+	    access(all) resource interface Receiver {
 	    }
 	  }
 	`)
 
 	script := []byte(`
 	  import "FooContract"
-	  pub fun main(): Int {
+	  access(all) fun main(): Int {
 		Type<@{FooContract.Receiver}>().identifier
 		return 42
 	  }
@@ -1783,8 +1787,8 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 
 	scriptlocation := common.ScriptLocation{0x1b, 0x2c}
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("FooContract"):
 				return importedScript, nil
@@ -1837,22 +1841,22 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 	require.JSONEq(t, expected, string(actual))
 }
 
-func TestCoverageReportLCOVFormat(t *testing.T) {
+func TestRuntimeCoverageReportLCOVFormat(t *testing.T) {
 
 	t.Parallel()
 
 	integerTraits := []byte(`
-	  pub let specialNumbers: {Int: String} = {
+	  access(all) let specialNumbers: {Int: String} = {
 	    1729: "Harshad",
 	    8128: "Harmonic",
 	    41041: "Carmichael"
 	  }
 
-	  pub fun addSpecialNumber(_ n: Int, _ trait: String) {
+	  access(all) fun addSpecialNumber(_ n: Int, _ trait: String) {
 	    specialNumbers[n] = trait
 	  }
 
-	  pub fun getIntegerTrait(_ n: Int): String {
+	  access(all) fun getIntegerTrait(_ n: Int): String {
 	    if n < 0 {
 	      return "Negative"
 	    } else if n == 0 {
@@ -1876,7 +1880,7 @@ func TestCoverageReportLCOVFormat(t *testing.T) {
 	script := []byte(`
 	  import "IntegerTraits"
 
-	  pub fun main(): Int {
+	  access(all) fun main(): Int {
 	    let testInputs: {Int: String} = {
 	      -1: "Negative",
 	      0: "Zero",
@@ -1906,8 +1910,8 @@ func TestCoverageReportLCOVFormat(t *testing.T) {
 		scriptlocation := common.ScriptLocation{}
 		coverageReport.ExcludeLocation(scriptlocation)
 
-		runtimeInterface := &testRuntimeInterface{
-			getCode: func(location Location) (bytes []byte, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
 				switch location {
 				case common.StringLocation("IntegerTraits"):
 					return integerTraits, nil
@@ -1917,8 +1921,9 @@ func TestCoverageReportLCOVFormat(t *testing.T) {
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
-		runtime.defaultConfig.CoverageReport = coverageReport
+		config := DefaultTestInterpreterConfig
+		config.CoverageReport = coverageReport
+		runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 		value, err := runtime.ExecuteScript(
 			Script{
@@ -1976,8 +1981,8 @@ end_of_record
 		scriptlocation := common.ScriptLocation{}
 		coverageReport.ExcludeLocation(scriptlocation)
 
-		runtimeInterface := &testRuntimeInterface{
-			getCode: func(location Location) (bytes []byte, err error) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
 				switch location {
 				case common.StringLocation("IntegerTraits"):
 					return integerTraits, nil
@@ -1987,8 +1992,9 @@ end_of_record
 			},
 		}
 
-		runtime := newTestInterpreterRuntime()
-		runtime.defaultConfig.CoverageReport = coverageReport
+		config := DefaultTestInterpreterConfig
+		config.CoverageReport = coverageReport
+		runtime := NewTestInterpreterRuntimeWithConfig(config)
 
 		value, err := runtime.ExecuteScript(
 			Script{

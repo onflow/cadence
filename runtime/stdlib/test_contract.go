@@ -56,24 +56,19 @@ Fails the test-case if the given condition is false, and reports a message which
 const testTypeAssertFunctionName = "assert"
 
 var testTypeAssertFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "condition",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.BoolType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "condition",
+			TypeAnnotation: sema.BoolTypeAnnotation,
 		},
 		{
-			Identifier: "message",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Identifier:     "message",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 	// `message` parameter is optional
 	Arity: &sema.Arity{Min: 1, Max: 2},
 }
@@ -183,17 +178,14 @@ Fails the test-case with a message.
 const testTypeFailFunctionName = "fail"
 
 var testTypeFailFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
-			Identifier: "message",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Identifier:     "message",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 	// `message` parameter is optional
 	Arity: &sema.Arity{Min: 0, Max: 1},
 }
@@ -233,6 +225,9 @@ func newTestTypeExpectFunctionType(matcherType *sema.CompositeType) *sema.Functi
 	}
 
 	return &sema.FunctionType{
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
+		},
 		Parameters: []sema.Parameter{
 			{
 				Label:      sema.ArgumentLabelNotRequired,
@@ -249,12 +244,7 @@ func newTestTypeExpectFunctionType(matcherType *sema.CompositeType) *sema.Functi
 				TypeAnnotation: sema.NewTypeAnnotation(matcherType),
 			},
 		},
-		TypeParameters: []*sema.TypeParameter{
-			typeParameter,
-		},
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(
-			sema.VoidType,
-		),
+		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 	}
 }
 
@@ -286,7 +276,7 @@ func newTestTypeExpectFunction(functionType *sema.FunctionType) interpreter.Func
 				)
 				panic(AssertionError{
 					Message:       message,
-					LocationRange: invocation.LocationRange,
+					LocationRange: locationRange,
 				})
 			}
 
@@ -304,14 +294,14 @@ func invokeMatcherTest(
 	testFunc := matcher.GetMember(
 		inter,
 		locationRange,
-		matcherTestFunctionName,
+		matcherTestFieldName,
 	)
 
 	funcValue, ok := testFunc.(interpreter.FunctionValue)
 	if !ok {
 		panic(errors.NewUnexpectedError(
 			"invalid type for '%s'. expected function",
-			matcherTestFunctionName,
+			matcherTestFieldName,
 		))
 	}
 
@@ -348,16 +338,12 @@ const testTypeReadFileFunctionName = "readFile"
 var testTypeReadFileFunctionType = &sema.FunctionType{
 	Parameters: []sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "path",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.StringType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.StringType,
-	),
+	ReturnTypeAnnotation: sema.StringTypeAnnotation,
 }
 
 func newTestTypeReadFileFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
@@ -384,7 +370,7 @@ func newTestTypeReadFileFunction(testFramework TestFramework) *interpreter.HostF
 // Accepts test function that accepts subtype of 'AnyStruct'.
 //
 // Signature:
-//    fun newMatcher<T: AnyStruct>(test: ((T): Bool)): Test.Matcher
+//    fun newMatcher<T: AnyStruct>(test: fun(T): Bool): Test.Matcher
 //
 // where `T` is optional, and bound to `AnyStruct`.
 //
@@ -392,7 +378,7 @@ func newTestTypeReadFileFunction(testFramework TestFramework) *interpreter.HostF
 
 const testTypeNewMatcherFunctionDocString = `
 Creates a matcher with a test function.
-The test function is of type '((T): Bool)', where 'T' is bound to 'AnyStruct'.
+The test function is of type 'fun(T): Bool', where 'T' is bound to 'AnyStruct'.
 `
 
 const testTypeNewMatcherFunctionName = "newMatcher"
@@ -405,12 +391,16 @@ func newTestTypeNewMatcherFunctionType(matcherType *sema.CompositeType) *sema.Fu
 	}
 
 	return &sema.FunctionType{
+		Purity: sema.FunctionPurityView,
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
+		},
 		Parameters: []sema.Parameter{
 			{
 				Label:      sema.ArgumentLabelNotRequired,
 				Identifier: "test",
 				TypeAnnotation: sema.NewTypeAnnotation(
-					// Type of the 'test' function: ((T): Bool)
+					// Type of the 'test' function: fun(T): Bool
 					&sema.FunctionType{
 						Parameters: []sema.Parameter{
 							{
@@ -423,17 +413,12 @@ func newTestTypeNewMatcherFunctionType(matcherType *sema.CompositeType) *sema.Fu
 								),
 							},
 						},
-						ReturnTypeAnnotation: sema.NewTypeAnnotation(
-							sema.BoolType,
-						),
+						ReturnTypeAnnotation: sema.BoolTypeAnnotation,
 					},
 				),
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
-		TypeParameters: []*sema.TypeParameter{
-			typeParameter,
-		},
 	}
 }
 
@@ -474,6 +459,7 @@ func newTestTypeEqualFunctionType(matcherType *sema.CompositeType) *sema.Functio
 	}
 
 	return &sema.FunctionType{
+		Purity: sema.FunctionPurityView,
 		TypeParameters: []*sema.TypeParameter{
 			typeParameter,
 		},
@@ -546,8 +532,7 @@ and the tested value contains no elements.
 
 func newTestTypeBeEmptyFunctionType(matcherType *sema.CompositeType) *sema.FunctionType {
 	return &sema.FunctionType{
-		TypeParameters:       []*sema.TypeParameter{},
-		Parameters:           []sema.Parameter{},
+		Purity:               sema.FunctionPurityView,
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
 	}
 }
@@ -577,10 +562,9 @@ func newTestTypeBeEmptyFunction(
 				},
 			)
 
-			return newMatcherWithGenericTestFunction(
+			return newMatcherWithAnyStructTestFunction(
 				invocation,
 				beEmptyTestFunc,
-				matcherTestFunctionType,
 			)
 		},
 	)
@@ -597,14 +581,12 @@ and has the given number of elements.
 
 func newTestTypeHaveElementCountFunctionType(matcherType *sema.CompositeType) *sema.FunctionType {
 	return &sema.FunctionType{
-		TypeParameters: []*sema.TypeParameter{},
+		Purity: sema.FunctionPurityView,
 		Parameters: []sema.Parameter{
 			{
-				Label:      sema.ArgumentLabelNotRequired,
-				Identifier: "count",
-				TypeAnnotation: sema.NewTypeAnnotation(
-					sema.IntType,
-				),
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "count",
+				TypeAnnotation: sema.IntTypeAnnotation,
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
@@ -641,10 +623,9 @@ func newTestTypeHaveElementCountFunction(
 				},
 			)
 
-			return newMatcherWithGenericTestFunction(
+			return newMatcherWithAnyStructTestFunction(
 				invocation,
 				haveElementCountTestFunc,
-				matcherTestFunctionType,
 			)
 		},
 	)
@@ -662,14 +643,12 @@ that contains an entry where the key is equal to the given value.
 
 func newTestTypeContainFunctionType(matcherType *sema.CompositeType) *sema.FunctionType {
 	return &sema.FunctionType{
-		TypeParameters: []*sema.TypeParameter{},
+		Purity: sema.FunctionPurityView,
 		Parameters: []sema.Parameter{
 			{
-				Label:      sema.ArgumentLabelNotRequired,
-				Identifier: "element",
-				TypeAnnotation: sema.NewTypeAnnotation(
-					sema.AnyStructType,
-				),
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "element",
+				TypeAnnotation: sema.AnyStructTypeAnnotation,
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
@@ -716,10 +695,9 @@ func newTestTypeContainFunction(
 				},
 			)
 
-			return newMatcherWithGenericTestFunction(
+			return newMatcherWithAnyStructTestFunction(
 				invocation,
 				containTestFunc,
-				matcherTestFunctionType,
 			)
 		},
 	)
@@ -736,14 +714,12 @@ greater than the given number.
 
 func newTestTypeBeGreaterThanFunctionType(matcherType *sema.CompositeType) *sema.FunctionType {
 	return &sema.FunctionType{
-		TypeParameters: []*sema.TypeParameter{},
+		Purity: sema.FunctionPurityView,
 		Parameters: []sema.Parameter{
 			{
-				Label:      sema.ArgumentLabelNotRequired,
-				Identifier: "value",
-				TypeAnnotation: sema.NewTypeAnnotation(
-					sema.NumberType,
-				),
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: sema.NumberTypeAnnotation,
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
@@ -783,10 +759,9 @@ func newTestTypeBeGreaterThanFunction(
 				},
 			)
 
-			return newMatcherWithGenericTestFunction(
+			return newMatcherWithAnyStructTestFunction(
 				invocation,
 				beGreaterThanTestFunc,
-				matcherTestFunctionType,
 			)
 		},
 	)
@@ -803,14 +778,12 @@ less than the given number.
 
 func newTestTypeBeLessThanFunctionType(matcherType *sema.CompositeType) *sema.FunctionType {
 	return &sema.FunctionType{
-		TypeParameters: []*sema.TypeParameter{},
+		Purity: sema.FunctionPurityView,
 		Parameters: []sema.Parameter{
 			{
-				Label:      sema.ArgumentLabelNotRequired,
-				Identifier: "value",
-				TypeAnnotation: sema.NewTypeAnnotation(
-					sema.NumberType,
-				),
+				Label:          sema.ArgumentLabelNotRequired,
+				Identifier:     "value",
+				TypeAnnotation: sema.NumberTypeAnnotation,
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(matcherType),
@@ -834,23 +807,16 @@ func newTestTypeExpectFailureFunctionType() *sema.FunctionType {
 				Identifier: "functionWrapper",
 				TypeAnnotation: sema.NewTypeAnnotation(
 					&sema.FunctionType{
-						Parameters: nil,
-						ReturnTypeAnnotation: sema.NewTypeAnnotation(
-							sema.VoidType,
-						),
+						ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 					},
 				),
 			},
 			{
-				Identifier: "errorMessageSubstring",
-				TypeAnnotation: sema.NewTypeAnnotation(
-					sema.StringType,
-				),
+				Identifier:     "errorMessageSubstring",
+				TypeAnnotation: sema.StringTypeAnnotation,
 			},
 		},
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(
-			sema.VoidType,
-		),
+		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 	}
 }
 
@@ -936,10 +902,9 @@ func newTestTypeBeLessThanFunction(
 				},
 			)
 
-			return newMatcherWithGenericTestFunction(
+			return newMatcherWithAnyStructTestFunction(
 				invocation,
 				beLessThanTestFunc,
-				matcherTestFunctionType,
 			)
 		},
 	)
@@ -1010,7 +975,7 @@ func newTestContractType() *TestContractType {
 	)
 
 	matcherType := ty.matcherType()
-	matcherTestFunctionType := compositeFunctionType(matcherType, matcherTestFunctionName)
+	matcherTestFunctionType := compositeFunctionType(matcherType, matcherTestFieldName)
 
 	// Test.assert()
 	compositeType.Members.Set(
@@ -1265,22 +1230,22 @@ func (t *TestContractType) NewTestContract(
 	compositeValue := value.(*interpreter.CompositeValue)
 
 	// Inject natively implemented function values
-	compositeValue.Functions[testTypeAssertFunctionName] = testTypeAssertFunction
-	compositeValue.Functions[testTypeAssertEqualFunctionName] = testTypeAssertEqualFunction
-	compositeValue.Functions[testTypeFailFunctionName] = testTypeFailFunction
-	compositeValue.Functions[testTypeExpectFunctionName] = t.expectFunction
-	compositeValue.Functions[testTypeReadFileFunctionName] =
-		newTestTypeReadFileFunction(testFramework)
+	compositeValue.Functions.Set(testTypeAssertFunctionName, testTypeAssertFunction)
+	compositeValue.Functions.Set(testTypeAssertEqualFunctionName, testTypeAssertEqualFunction)
+	compositeValue.Functions.Set(testTypeFailFunctionName, testTypeFailFunction)
+	compositeValue.Functions.Set(testTypeExpectFunctionName, t.expectFunction)
+	compositeValue.Functions.Set(testTypeReadFileFunctionName,
+		newTestTypeReadFileFunction(testFramework))
 
 	// Inject natively implemented matchers
-	compositeValue.Functions[testTypeNewMatcherFunctionName] = t.newMatcherFunction
-	compositeValue.Functions[testTypeEqualFunctionName] = t.equalFunction
-	compositeValue.Functions[testTypeBeEmptyFunctionName] = t.beEmptyFunction
-	compositeValue.Functions[testTypeHaveElementCountFunctionName] = t.haveElementCountFunction
-	compositeValue.Functions[testTypeContainFunctionName] = t.containFunction
-	compositeValue.Functions[testTypeBeGreaterThanFunctionName] = t.beGreaterThanFunction
-	compositeValue.Functions[testTypeBeLessThanFunctionName] = t.beLessThanFunction
-	compositeValue.Functions[testExpectFailureFunctionName] = t.expectFailureFunction
+	compositeValue.Functions.Set(testTypeNewMatcherFunctionName, t.newMatcherFunction)
+	compositeValue.Functions.Set(testTypeEqualFunctionName, t.equalFunction)
+	compositeValue.Functions.Set(testTypeBeEmptyFunctionName, t.beEmptyFunction)
+	compositeValue.Functions.Set(testTypeHaveElementCountFunctionName, t.haveElementCountFunction)
+	compositeValue.Functions.Set(testTypeContainFunctionName, t.containFunction)
+	compositeValue.Functions.Set(testTypeBeGreaterThanFunctionName, t.beGreaterThanFunction)
+	compositeValue.Functions.Set(testTypeBeLessThanFunctionName, t.beLessThanFunction)
+	compositeValue.Functions.Set(testExpectFailureFunctionName, t.expectFailureFunction)
 
 	return compositeValue, nil
 }

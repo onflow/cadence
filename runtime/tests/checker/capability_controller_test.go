@@ -83,7 +83,7 @@ func TestCheckStorageCapabilityController(t *testing.T) {
           let _: Void = controller.retarget(/storage/test)
 
           fun setTag() {
-              controller.tag = "something"
+              controller.setTag("something")
           }
         `)
 
@@ -144,7 +144,7 @@ func TestCheckAccountCapabilityController(t *testing.T) {
           let capabilityID: UInt64 = controller.capabilityID
 
           fun setTag() {
-              controller.tag = "something"
+              controller.setTag("something")
           }
         `)
 

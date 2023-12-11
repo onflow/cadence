@@ -25,11 +25,12 @@ var HashableStructType = &SimpleType{
 	Name:          HashableStructTypeName,
 	QualifiedName: HashableStructTypeName,
 	TypeID:        HashableStructTypeName,
-	tag:           HashableStructTypeTag,
+	TypeTag:       HashableStructTypeTag,
 	IsResource:    false,
 	Storable:      true,
 	Equatable:     false,
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
+	ContainFields: false,
 }

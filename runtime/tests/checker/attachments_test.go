@@ -28,24 +28,25 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestCheckBasic(t *testing.T) {
+func TestCheckAttachmentBasic(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t,
-		`attachment Test for AnyStruct {}`,
-	)
+	_, err := ParseAndCheck(t, `
+      attachment Test for AnyStruct {}
+    `)
 
 	require.NoError(t, err)
 }
 
-func TestCheckRedeclare(t *testing.T) {
+func TestCheckAttachmentRedeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t,
-		`struct R {} 
-		 attachment R for AnyStruct {}`,
+	_, err := ParseAndCheck(t, `
+      struct R {}
+
+      attachment R for AnyStruct {}`,
 	)
 
 	errs := RequireCheckerErrors(t, err, 2)
@@ -55,15 +56,15 @@ func TestCheckRedeclare(t *testing.T) {
 	assert.IsType(t, &sema.RedeclarationError{}, errs[1])
 }
 
-func TestCheckRedeclareInContract(t *testing.T) {
+func TestCheckAttachmentRedeclareInContract(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t,
-		`contract C {
-			attachment C for AnyStruct {}
-		}`,
-	)
+	_, err := ParseAndCheck(t, `
+        contract C {
+		    attachment C for AnyStruct {}
+		}
+    `)
 
 	errs := RequireCheckerErrors(t, err, 2)
 
@@ -72,7 +73,7 @@ func TestCheckRedeclareInContract(t *testing.T) {
 	assert.IsType(t, &sema.RedeclarationError{}, errs[1])
 }
 
-func TestCheckBaseType(t *testing.T) {
+func TestCheckAttachmentBaseType(t *testing.T) {
 
 	t.Parallel()
 
@@ -141,7 +142,7 @@ func TestCheckBaseType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("anystruct", func(t *testing.T) {
+	t.Run("AnyStruct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -153,7 +154,7 @@ func TestCheckBaseType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("anyresource", func(t *testing.T) {
+	t.Run("AnyResource", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -318,12 +319,12 @@ func TestCheckBaseType(t *testing.T) {
 	})
 }
 
-func TestCheckBuiltin(t *testing.T) {
+func TestCheckAttachmentBuiltin(t *testing.T) {
 
 	t.Parallel()
 
 	_, err := ParseAndCheck(t,
-		`attachment Test for AuthAccount {}`,
+		`attachment Test for Account {}`,
 	)
 
 	errs := RequireCheckerErrors(t, err, 1)
@@ -331,7 +332,7 @@ func TestCheckBuiltin(t *testing.T) {
 	assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
 }
 
-func TestCheckNestedBaseType(t *testing.T) {
+func TestCheckAttachmentNestedBaseType(t *testing.T) {
 
 	t.Parallel()
 
@@ -420,23 +421,6 @@ func TestCheckNestedBaseType(t *testing.T) {
 		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
 	})
 
-	t.Run("contract interface", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for Test {}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidBaseTypeError{}, errs[0])
-	})
-
 	t.Run("qualified base type", func(t *testing.T) {
 
 		t.Parallel()
@@ -448,7 +432,7 @@ func TestCheckNestedBaseType(t *testing.T) {
 					fun foo() {}
 				}
 			}
-			pub attachment A for C.S {
+			access(all) attachment A for C.S {
 				fun bar() {
 					base.foo()
 				}
@@ -470,7 +454,7 @@ func TestCheckNestedBaseType(t *testing.T) {
 					fun foo() {}
 				}
 			}
-			pub attachment A for S {
+			access(all) attachment A for S {
 			}
 			`,
 		)
@@ -481,7 +465,7 @@ func TestCheckNestedBaseType(t *testing.T) {
 	})
 }
 
-func TestCheckTypeRequirement(t *testing.T) {
+func TestCheckTypeRequirementsNoLongerAllowed(t *testing.T) {
 
 	t.Parallel()
 
@@ -496,199 +480,16 @@ func TestCheckTypeRequirement(t *testing.T) {
 					fun foo(): Int 
 				}
 			}
-			contract C: Test {
-
-			}
 			`,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
-	})
-
-	t.Run("concrete struct", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for AnyStruct {}
-			}
-			contract C: Test {
-				struct A {}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
-	})
-
-	t.Run("concrete resource", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for AnyStruct {}
-			}
-			contract C: Test {
-				resource A {}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
-	})
-
-	t.Run("missing method", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for AnyStruct {
-					fun foo(): Int 
-				}
-			}
-			contract C: Test {
-				attachment A for AnyStruct {
-
-				}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
-	})
-
-	t.Run("missing field", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for AnyStruct {
-					let x: Int
-				}
-			}
-			contract C: Test {
-				attachment A for AnyStruct {
-
-				}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
-	})
-
-	t.Run("incompatible base type", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				struct S {}
-				attachment A for S {
-				}
-			}
-			contract C: Test {
-				struct S {}
-				struct S2 {}
-				attachment A for S2 {
-				}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
-	})
-
-	t.Run("basetype subtype", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for AnyStruct {
-				}
-			}
-			contract C: Test {
-				struct S {}
-				attachment A for S {
-				}
-			}
-			`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ConformanceError{}, errs[0])
-	})
-
-	t.Run("base type Basetype", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				struct S {}
-				attachment A for S {
-				}
-			}
-			contract C: Test {
-				struct S {}
-				attachment A for AnyStruct {
-				}
-			}
-			`,
-		)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("conforms", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			contract interface Test {
-				attachment A for AnyStruct {
-					fun foo(): Int 
-				}
-			}
-			contract C: Test {
-				attachment A for AnyStruct {
-					fun foo(): Int {return 3}
-				}
-			}
-			`,
-		)
-
-		require.NoError(t, err)
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 	})
 }
 
-func TestCheckWithMembers(t *testing.T) {
+func TestCheckAttachmentWithMembers(t *testing.T) {
 
 	t.Parallel()
 
@@ -739,33 +540,10 @@ func TestCheckWithMembers(t *testing.T) {
 				init(x: @R) {
 					self.x <- x
 				}
-				destroy() {
-					destroy self.x
-				}
 			}`,
 		)
 
 		require.NoError(t, err)
-	})
-
-	t.Run("resource field no destroy", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			resource R {}
-			attachment Test for R {
-				let x: @R
-				init(x: @R) {
-					self.x <- x
-				}
-			}`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.MissingDestructorError{}, errs[0])
 	})
 
 	t.Run("resource field in struct", func(t *testing.T) {
@@ -780,16 +558,12 @@ func TestCheckWithMembers(t *testing.T) {
 				init(x: @R) {
 					self.x <- x
 				}
-				destroy() {
-					destroy self.x
-				}
 			}`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidResourceFieldError{}, errs[0])
-		assert.IsType(t, &sema.InvalidDestructorError{}, errs[1])
 	})
 
 	t.Run("field with same name as base type", func(t *testing.T) {
@@ -838,32 +612,14 @@ func TestCheckWithMembers(t *testing.T) {
 			`
 			resource R {}
 			attachment Test for R {
-				destroy() {}
 			}`,
 		)
 
 		require.NoError(t, err)
 	})
-
-	t.Run("destroy in struct", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			struct S {}
-			attachment Test for S {
-				destroy() {}
-			}`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidDestructorError{}, errs[0])
-	})
 }
 
-func TestCheckConformance(t *testing.T) {
+func TestCheckAttachmentConformance(t *testing.T) {
 
 	t.Parallel()
 
@@ -1069,7 +825,7 @@ func TestCheckConformance(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("anyresource base, resource conformance", func(t *testing.T) {
+	t.Run("AnyResource base, resource conformance", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1082,7 +838,7 @@ func TestCheckConformance(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("anystruct base, struct conformance", func(t *testing.T) {
+	t.Run("AnyStruct base, struct conformance", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1095,7 +851,7 @@ func TestCheckConformance(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("anystruct base, resource conformance", func(t *testing.T) {
+	t.Run("AnyStruct base, resource conformance", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1110,7 +866,7 @@ func TestCheckConformance(t *testing.T) {
 		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 	})
 
-	t.Run("anyresource base, struct conformance", func(t *testing.T) {
+	t.Run("AnyResource base, struct conformance", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1164,7 +920,7 @@ func TestCheckConformance(t *testing.T) {
 	})
 }
 
-func TestCheckBase(t *testing.T) {
+func TestCheckAttachmentBase(t *testing.T) {
 
 	t.Parallel()
 
@@ -1217,25 +973,6 @@ func TestCheckBase(t *testing.T) {
 				let x: Int
 				init() {
 					self.x = base.foo()
-				}
-			}`,
-		)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("destroy", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			resource R {
-				fun foo() {}
-			}
-			attachment Test for R {
-				destroy() {
-					base.foo()
 				}
 			}`,
 		)
@@ -1339,20 +1076,20 @@ func TestCheckBase(t *testing.T) {
 	})
 }
 
-func TestCheckBaseScoping(t *testing.T) {
+func TestCheckAttachmentBaseScoping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("pub member", func(t *testing.T) {
+	t.Run("access(all) member", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
-			pub struct S {
-				pub fun foo() {}
+			access(all) struct S {
+				access(all) fun foo() {}
 			}
-			pub attachment Test for S {
+			access(all) attachment Test for S {
 				fun foo() {
 					base.foo()
 				}
@@ -1362,16 +1099,16 @@ func TestCheckBaseScoping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("priv member", func(t *testing.T) {
+	t.Run("access(self) member", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
-			pub struct S {
-				priv fun foo() {}
+			access(all) struct S {
+				access(self) fun foo() {}
 			}
-			pub attachment Test for S {
+			access(all) attachment Test for S {
 				fun foo() {
 					base.foo()
 				}
@@ -1389,12 +1126,12 @@ func TestCheckBaseScoping(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub contract C {
-				pub struct S {
+			access(all) contract C {
+				access(all) struct S {
 					access(contract) fun foo() {}
 				}
 			}
-			pub attachment Test for C.S {
+			access(all) attachment Test for C.S {
 				fun foo() {
 					base.foo()
 				}
@@ -1412,11 +1149,11 @@ func TestCheckBaseScoping(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub contract C {
-				pub struct S {
+			access(all) contract C {
+				access(all) struct S {
 					access(contract) fun foo() {}
 				}
-				pub attachment Test for S {
+				access(all) attachment Test for S {
 					fun foo() {
 						base.foo()
 					}
@@ -1428,7 +1165,7 @@ func TestCheckBaseScoping(t *testing.T) {
 	})
 }
 
-func TestCheckBaseTyping(t *testing.T) {
+func TestCheckAttachmentBaseTyping(t *testing.T) {
 
 	t.Parallel()
 
@@ -1442,14 +1179,12 @@ func TestCheckBaseTyping(t *testing.T) {
 			struct interface I {}
 			attachment Test for I {
 				fun foo() {
-					let x = base as! &R{I}
+					let x = base as! &{I}
 				}
 			}`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		// base is not auth
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("resource cast", func(t *testing.T) {
@@ -1462,14 +1197,12 @@ func TestCheckBaseTyping(t *testing.T) {
 			resource interface I {}
 			attachment Test for I {
 				fun foo() {
-					let x = base as! &R{I}
+					let x = base as! &{I}
 				}
 			}`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		// base is not auth
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("struct return", func(t *testing.T) {
@@ -1507,7 +1240,7 @@ func TestCheckBaseTyping(t *testing.T) {
 	})
 }
 
-func TestCheckSelfTyping(t *testing.T) {
+func TestCheckAttachmentSelfTyping(t *testing.T) {
 
 	t.Parallel()
 
@@ -1596,6 +1329,29 @@ func TestCheckSelfTyping(t *testing.T) {
 		)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("self access restricted", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			entitlement E
+			resource R {
+				access(E) fun foo() {}
+			}
+			attachment Test for R {
+				access(E) fun bar() {}
+				fun foo(t: &Test) {
+					t.bar()
+				}
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	})
 }
 
@@ -1734,7 +1490,7 @@ func TestCheckAttachmentType(t *testing.T) {
 	})
 }
 
-func TestCheckIllegalInit(t *testing.T) {
+func TestCheckAttachmentIllegalInit(t *testing.T) {
 
 	t.Parallel()
 
@@ -1759,7 +1515,7 @@ func TestCheckIllegalInit(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`attachment Test for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let t <- Test()
 				destroy t
 			}
@@ -1772,7 +1528,7 @@ func TestCheckIllegalInit(t *testing.T) {
 	})
 }
 
-func TestCheckAttachNonAttachment(t *testing.T) {
+func TestCheckAttachmentAttachNonAttachment(t *testing.T) {
 
 	t.Parallel()
 
@@ -1782,8 +1538,8 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub fun A() {}
-			pub fun foo() {
+			access(all) fun A() {}
+			access(all) fun foo() {
 				attach A() to 4
 			}
 		`,
@@ -1800,8 +1556,8 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub struct S {}
-			pub fun foo() {
+			access(all) struct S {}
+			access(all) fun foo() {
 				attach S() to 4
 			}
 		`,
@@ -1818,8 +1574,8 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub resource R {}
-			pub fun foo() {
+			access(all) resource R {}
+			access(all) fun foo() {
 				attach R() to 4
 			}
 		`,
@@ -1839,7 +1595,7 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			event E()
-			pub fun foo() {
+			access(all) fun foo() {
 				attach E() to 4
 			}
 		`,
@@ -1857,7 +1613,7 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			enum E: Int {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach E(rawValue: 0) to 4
 			}
 		`,
@@ -1875,7 +1631,7 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			contract C {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach C() to 4
 			}
 		`,
@@ -1887,7 +1643,7 @@ func TestCheckAttachNonAttachment(t *testing.T) {
 	})
 }
 
-func TestCheckAttachToNonComposite(t *testing.T) {
+func TestCheckAttachmentAttachToNonComposite(t *testing.T) {
 
 	t.Parallel()
 
@@ -1898,7 +1654,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to 4
 			}
 		`,
@@ -1917,7 +1673,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 			`
 			struct S{}
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s = S()
 				attach A() to (&s as &S)
 			}
@@ -1929,14 +1685,14 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 		assert.IsType(t, &sema.AttachToInvalidTypeError{}, errs[0])
 	})
 
-	t.Run("non-composite nonresource", func(t *testing.T) {
+	t.Run("non-composite non-resource", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to 4
 			}
 		`,
@@ -1955,7 +1711,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to [4]
 			}
 		`,
@@ -1974,7 +1730,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 			`
 			attachment A for AnyStruct {}
 			event E()
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to E()
 			}
 		`,
@@ -1993,7 +1749,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 			`
 			attachment A for AnyStruct {}
 			contract C {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to C()
 			}
 		`,
@@ -2012,7 +1768,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 			`
 			attachment A for AnyStruct {}
 			attachment B for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to B()
 			}
 		`,
@@ -2031,7 +1787,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 			`
 			attachment A for AnyStruct {}
 			enum E: Int { }
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to E(rawValue: 0)
 			}
 		`,
@@ -2050,7 +1806,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 			`
 			resource R {}
 			attachment A for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to <-[<-create R()]
 				destroy r
 			}
@@ -2063,7 +1819,7 @@ func TestCheckAttachToNonComposite(t *testing.T) {
 	})
 }
 
-func TestCheckAttach(t *testing.T) {
+func TestCheckAttachmentAttach(t *testing.T) {
 
 	t.Parallel()
 
@@ -2075,7 +1831,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			struct S {}
 			attachment A for S {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to S()
 			}
 		`,
@@ -2092,7 +1848,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource R {}
 			attachment A for R {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to <-create R()
 			}
 		`,
@@ -2111,7 +1867,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource R {}
 			attachment A for R {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to <-create R()
 				destroy r
 			}
@@ -2129,7 +1885,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource R {}
 			attachment A for R {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- create R()
 				let r2: @R <- attach A() to <-r
 				destroy r2
@@ -2148,7 +1904,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource R {}
 			attachment A for R {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to create R()
 				destroy r
 			}
@@ -2168,7 +1924,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			struct S {}
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to S()
 			}
 		`,
@@ -2177,7 +1933,7 @@ func TestCheckAttach(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("cannot attach directly to anystruct", func(t *testing.T) {
+	t.Run("cannot attach directly to AnyStruct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2185,7 +1941,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			struct S {}
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to (S() as AnyStruct)
 			}
 		`,
@@ -2196,7 +1952,7 @@ func TestCheckAttach(t *testing.T) {
 		assert.IsType(t, &sema.AttachToInvalidTypeError{}, errs[0])
 	})
 
-	t.Run("cannot attach directly to anyresource", func(t *testing.T) {
+	t.Run("cannot attach directly to AnyResource", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2204,7 +1960,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource S {}
 			attachment A for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				destroy attach A() to <-(create S() as @AnyResource)
 			}
 		`,
@@ -2223,7 +1979,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource R {}
 			attachment A for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to <-create R()
 				destroy r
 			}
@@ -2242,7 +1998,7 @@ func TestCheckAttach(t *testing.T) {
 			struct S: I {}
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to S()
 			}
 		`,
@@ -2260,7 +2016,7 @@ func TestCheckAttach(t *testing.T) {
 			struct S {}
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to S()
 			}
 		`,
@@ -2280,7 +2036,7 @@ func TestCheckAttach(t *testing.T) {
 			resource R: I {}
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to <-create R()
 				destroy r
 			}
@@ -2299,7 +2055,7 @@ func TestCheckAttach(t *testing.T) {
 			resource R {}
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to <-create R()
 				destroy r
 			}
@@ -2320,7 +2076,7 @@ func TestCheckAttach(t *testing.T) {
 			struct S {}
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to S()
 				destroy r
 			}
@@ -2342,7 +2098,7 @@ func TestCheckAttach(t *testing.T) {
 			resource R {}
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to <-create R()
 			}
 		`,
@@ -2353,7 +2109,7 @@ func TestCheckAttach(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("resource anystruct mismatch", func(t *testing.T) {
+	t.Run("resource AnyStruct mismatch", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2361,7 +2117,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			resource R {}
 			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A() to <-create R()
 			}
 		`,
@@ -2372,7 +2128,7 @@ func TestCheckAttach(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("struct anyresource mismatch", func(t *testing.T) {
+	t.Run("struct AnyResource mismatch", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2380,7 +2136,7 @@ func TestCheckAttach(t *testing.T) {
 			`
 			struct S {}
 			attachment A for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r <- attach A() to S()
 				destroy r
 			}
@@ -2402,8 +2158,8 @@ func TestCheckAttach(t *testing.T) {
 			struct interface I {}
 			struct S: I {}
 			attachment A for AnyStruct {}
-			pub fun foo() {
-				let s: S{I} = S()
+			access(all) fun foo() {
+				let s: {I} = S()
 				attach A() to s
 			}
 		`,
@@ -2413,11 +2169,11 @@ func TestCheckAttach(t *testing.T) {
 	})
 }
 
-func TestCheckAttachToRestrictedType(t *testing.T) {
+func TestCheckAttachmentAttachToIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("struct restricted", func(t *testing.T) {
+	t.Run("any struct intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2426,26 +2182,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			struct interface I {}
 			struct S: I {}
 			attachment A for AnyStruct {}
-			pub fun foo() {
-				let s: S{I} = S()
-				attach A() to s
-			}
-		`,
-		)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("any struct restricted", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			struct interface I {}
-			struct S: I {}
-			attachment A for AnyStruct {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s: {I} = S()
 				attach A() to s
 			}
@@ -2455,7 +2192,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resource restricted", func(t *testing.T) {
+	t.Run("resource intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2464,26 +2201,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			resource interface I {}
 			resource R: I {}
 			attachment A for AnyResource {}
-			pub fun foo() {
-				let r: @R{I} <- create R()
-				destroy attach A() to <-r
-			}
-		`,
-		)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("anyresource restricted", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			resource interface I {}
-			resource R: I {}
-			attachment A for AnyResource {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r: @{I} <- create R()
 				destroy attach A() to <-r
 			}
@@ -2493,26 +2211,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attach struct interface to struct interface", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			struct interface I {}
-			struct S: I {}
-			attachment A for I {}
-			pub fun foo() {
-				let s: S{I} = S()
-				attach A() to s
-			}
-		`,
-		)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("attach struct interface to struct", func(t *testing.T) {
+	t.Run("attach interface to struct", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2521,29 +2220,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			struct interface I {}
 			struct S: I {}
 			attachment A for S {}
-			pub fun foo() {
-				let s: S{I} = S()
-				attach A() to s
-			}
-		`,
-		)
-
-		// there is no reason to error here; the owner of this
-		// restricted type is always able to unrestrict
-
-		require.NoError(t, err)
-	})
-
-	t.Run("attach anystruct interface to struct", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			struct interface I {}
-			struct S: I {}
-			attachment A for S {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s: {I} = S()
 				attach A() to s
 			}
@@ -2564,8 +2241,8 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			resource interface I {}
 			resource R: I {}
 			attachment A for I {}
-			pub fun foo() {
-				let r: @R{I} <- create R()
+			access(all) fun foo() {
+				let r: @{I} <- create R()
 				destroy attach A() to <-r
 			}
 		`,
@@ -2574,7 +2251,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attach resource interface to resource", func(t *testing.T) {
+	t.Run("attach interface to resource", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2583,29 +2260,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			resource interface I {}
 			resource R: I {}
 			attachment A for R {}
-			pub fun foo() {
-				let r: @R{I} <- create R()
-				destroy attach A() to <-r
-			}
-		`,
-		)
-
-		// owner can unrestrict `r` as they wish, so there is no reason to
-		// limit attach here
-
-		require.NoError(t, err)
-	})
-
-	t.Run("attach anyresource interface to resource", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			resource interface I {}
-			resource R: I {}
-			attachment A for R {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r: @{I} <- create R()
 				destroy attach A() to <-r
 			}
@@ -2617,7 +2272,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("attach anystruct interface to struct interface", func(t *testing.T) {
+	t.Run("attach AnyStruct interface to struct interface", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2626,7 +2281,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			struct interface I {}
 			struct S: I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s: {I} = S()
 				attach A() to s
 			}
@@ -2636,7 +2291,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attach multiply restricted to struct interface", func(t *testing.T) {
+	t.Run("attach multiply intersection to struct interface", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2646,7 +2301,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			struct interface I2 {}
 			struct S: I, I2 {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let s: {I, I2} = S()
 				attach A() to s
 			}
@@ -2656,7 +2311,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attach anyresource interface to resource interface", func(t *testing.T) {
+	t.Run("attach AnyResource interface to resource interface", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2665,7 +2320,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			resource interface I {}
 			resource R: I {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r: @{I} <- create R()
 				destroy attach A() to <-r
 			}
@@ -2675,7 +2330,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("attach multiply restricted to resource interface", func(t *testing.T) {
+	t.Run("attach multiply intersection to resource interface", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2685,7 +2340,7 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 			resource interface I2 {}
 			resource R: I, I2 {}
 			attachment A for I {}
-			pub fun foo() {
+			access(all) fun foo() {
 				let r: @{I, I2} <- create R()
 				destroy attach A() to <-r
 			}
@@ -2695,10 +2350,28 @@ func TestCheckAttachToRestrictedType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	// TODO: once interfaces can conform to interfaces, add more tests here for interface hierarchy
+	t.Run("attach to super interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource interface I {}
+			resource interface I2: I {}
+			resource R: I2 {}
+			attachment A for I {}
+			access(all) fun foo() {
+				let r: @{I2} <- create R()
+				destroy attach A() to <-r
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
 }
 
-func TestCheckAttachWithArguments(t *testing.T) {
+func TestCheckAttachmentAttachWithArguments(t *testing.T) {
 
 	t.Parallel()
 
@@ -2715,7 +2388,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 					self.x = x
 				}
 			}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A(x: 3) to S()
 			}
 		`,
@@ -2737,7 +2410,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 					self.x = x
 				}
 			}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A(x: base) to S()
 			}
 		`,
@@ -2763,7 +2436,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 					self.y = y
 				}
 			}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A(x: 3, y: "") to S()
 			}
 		`,
@@ -2787,7 +2460,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 					self.y = y
 				}
 			}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A(3, "") to S()
 			}
 		`,
@@ -2814,7 +2487,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 					self.y = y
 				}
 			}
-			pub fun foo() {
+			access(all) fun foo() {
 				attach A(z: 3, a: "") to S()
 			}
 		`,
@@ -2827,7 +2500,7 @@ func TestCheckAttachWithArguments(t *testing.T) {
 	})
 }
 
-func TestCheckAttachInvalidType(t *testing.T) {
+func TestCheckAttachmentAttachInvalidType(t *testing.T) {
 
 	t.Parallel()
 
@@ -2835,7 +2508,7 @@ func TestCheckAttachInvalidType(t *testing.T) {
 		`
 		resource C {}
 		attachment A for B {}
-		pub fun foo() {
+		access(all) fun foo() {
 			destroy attach A() to <- create C()
 		}`,
 	)
@@ -2846,7 +2519,7 @@ func TestCheckAttachInvalidType(t *testing.T) {
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
-func TestCheckAnyAttachmentTypes(t *testing.T) {
+func TestCheckAttachmentAnyAttachmentTypes(t *testing.T) {
 
 	type TestCase struct {
 		subType         string
@@ -2924,7 +2597,7 @@ func TestCheckAnyAttachmentTypes(t *testing.T) {
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(`
 					%s
-					pub fun foo(x: &%s): &AnyStructAttachment {
+					access(all) fun foo(x: &%s): &AnyStructAttachment {
 						return x
 					}
 				`, testCase.setupCode, testCase.subType),
@@ -2947,7 +2620,7 @@ func TestCheckAnyAttachmentTypes(t *testing.T) {
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(`
 					%s
-					pub fun foo(x: &%s): &AnyResourceAttachment {
+					access(all) fun foo(x: &%s): &AnyResourceAttachment {
 						return x
 					}
 				`, testCase.setupCode, testCase.subType),
@@ -2964,7 +2637,7 @@ func TestCheckAnyAttachmentTypes(t *testing.T) {
 	})
 }
 
-func TestCheckRemove(t *testing.T) {
+func TestCheckAttachmentRemove(t *testing.T) {
 
 	t.Parallel()
 
@@ -2976,7 +2649,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			attachment A for S {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove A from s
 			}
 		`,
@@ -2993,7 +2666,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			resource R {}
 			attachment A for R {}
-			pub fun foo(r: @R) {
+			access(all) fun foo(r: @R) {
 				remove A from r
 				destroy r
 			}
@@ -3011,7 +2684,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			resource R {}
 			attachment A for R {}
-			pub fun foo(r: @R) {
+			access(all) fun foo(r: @R) {
 				remove A from r
 			}
 		`,
@@ -3021,7 +2694,7 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
 
-	t.Run("struct with anystruct base", func(t *testing.T) {
+	t.Run("struct with AnyStruct base", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3029,7 +2702,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			attachment A for AnyStruct {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove A from s
 			}
 		`,
@@ -3047,7 +2720,7 @@ func TestCheckRemove(t *testing.T) {
 			struct S: I {}
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove A from s
 			}
 		`,
@@ -3065,7 +2738,7 @@ func TestCheckRemove(t *testing.T) {
 			struct S {}
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove A from s
 			}
 		`,
@@ -3075,7 +2748,7 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("resource with anyresource base", func(t *testing.T) {
+	t.Run("resource with AnyResource base", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3083,7 +2756,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			resource R {}
 			attachment A for AnyResource {}
-			pub fun foo(r: @R) {
+			access(all) fun foo(r: @R) {
 				remove A from r
 				destroy r
 			}
@@ -3102,7 +2775,7 @@ func TestCheckRemove(t *testing.T) {
 			resource R: I {}
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo(r: @R) {
+			access(all) fun foo(r: @R) {
 				remove A from r
 				destroy r
 			}
@@ -3121,7 +2794,7 @@ func TestCheckRemove(t *testing.T) {
 			resource R {}
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo(r: @R) {
+			access(all) fun foo(r: @R) {
 				remove A from r
 				destroy r
 			}
@@ -3142,7 +2815,7 @@ func TestCheckRemove(t *testing.T) {
 				struct S {}
 				attachment A for S {}
 			}
-			pub fun foo(s: C.S) {
+			access(all) fun foo(s: C.S) {
 				remove C.A from s
 			}
 		`,
@@ -3151,7 +2824,7 @@ func TestCheckRemove(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("noncomposite base", func(t *testing.T) {
+	t.Run("non-composite base", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3159,7 +2832,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			attachment A for S {}
-			pub fun foo(s: Int) {
+			access(all) fun foo(s: Int) {
 				remove A from s
 			}
 		`,
@@ -3169,14 +2842,14 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("cannot remove from anystruct", func(t *testing.T) {
+	t.Run("cannot remove from AnyStruct", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyStruct {}
-			pub fun foo(s: AnyStruct) {
+			access(all) fun foo(s: AnyStruct) {
 				remove A from s
 			}
 		`,
@@ -3186,14 +2859,14 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("cannot remove from anyresource", func(t *testing.T) {
+	t.Run("cannot remove from AnyResource", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyResource {}
-			pub fun foo(s: @AnyResource) {
+			access(all) fun foo(s: @AnyResource) {
 				remove A from s
 				destroy s
 			}
@@ -3204,14 +2877,14 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("noncomposite base anystruct declaration", func(t *testing.T) {
+	t.Run("non-composite base any-struct declaration", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyStruct {}
-			pub fun foo(s: Int) {
+			access(all) fun foo(s: Int) {
 				remove A from s
 			}
 		`,
@@ -3229,7 +2902,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			attachment A for S {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove S from s
 			}
 		`,
@@ -3247,7 +2920,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			resource S {}
 			attachment A for S {}
-			pub fun foo(s: @S) {
+			access(all) fun foo(s: @S) {
 				remove S from s
 				destroy s
 			}
@@ -3258,7 +2931,7 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("remove nondeclared", func(t *testing.T) {
+	t.Run("remove non-declared", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3266,7 +2939,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			attachment A for S {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove X from s
 			}
 		`,
@@ -3284,7 +2957,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			event E()
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove E from s
 			}
 		`,
@@ -3302,7 +2975,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			contract C {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove C from s
 			}
 		`,
@@ -3320,7 +2993,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			resource interface C {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove C from s
 			}
 		`,
@@ -3338,7 +3011,7 @@ func TestCheckRemove(t *testing.T) {
 			`
 			struct S {}
 			resource interface C {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove C from s
 			}
 		`,
@@ -3348,14 +3021,14 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("remove anystruct", func(t *testing.T) {
+	t.Run("remove AnyStruct", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
 			struct S {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove AnyStruct from s
 			}
 		`,
@@ -3365,14 +3038,14 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("remove anyresource", func(t *testing.T) {
+	t.Run("remove AnyResource", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
 			resource S {}
-			pub fun foo(s: @S) {
+			access(all) fun foo(s: @S) {
 				remove AnyResource from s
 				destroy s
 			}
@@ -3383,14 +3056,14 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("remove anystructattachment", func(t *testing.T) {
+	t.Run("remove AnyStructAttachment", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
 			struct S {}
-			pub fun foo(s: S) {
+			access(all) fun foo(s: S) {
 				remove AnyStructAttachment from s
 			}
 		`,
@@ -3400,14 +3073,14 @@ func TestCheckRemove(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("remove anyresourceattachment", func(t *testing.T) {
+	t.Run("remove AnyResourceAttachment", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
 			resource S {}
-			pub fun foo(s: @S) {
+			access(all) fun foo(s: @S) {
 				remove AnyResourceAttachment from s
 				destroy s
 			}
@@ -3420,7 +3093,7 @@ func TestCheckRemove(t *testing.T) {
 
 }
 
-func TestCheckRemoveFromRestricted(t *testing.T) {
+func TestCheckAttachmentRemoveFromIntersection(t *testing.T) {
 
 	t.Parallel()
 
@@ -3433,13 +3106,14 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			struct S: I {}
 			struct interface I {}
 			attachment A for S {}
-			pub fun foo(s: S{I}) {
+			access(all) fun foo(s: {I}) {
 				remove A from s
 			}
 		`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("basic struct interface", func(t *testing.T) {
@@ -3451,7 +3125,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			struct S: I {}
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo(s: S{I}) {
+			access(all) fun foo(s: {I}) {
 				remove A from s
 			}
 		`,
@@ -3469,16 +3143,15 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			resource S: I {}
 			resource interface I {}
 			attachment A for S {}
-			pub fun foo(s: @S{I}) {
+			access(all) fun foo(s: @{I}) {
 				remove A from s
 				destroy s
 			}
 		`,
 		)
 
-		// owner can always unrestrict `s`, so no need to prevent removal of A
-
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
 	t.Run("basic resource interface", func(t *testing.T) {
@@ -3490,7 +3163,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			resource S: I {}
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo(s: @S{I}) {
+			access(all) fun foo(s: @{I}) {
 				remove A from s
 				destroy s
 			}
@@ -3500,7 +3173,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("struct base anystruct restricted", func(t *testing.T) {
+	t.Run("struct base AnyStruct intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3509,7 +3182,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			struct S: I {}
 			struct interface I {}
 			attachment A for S {}
-			pub fun foo(s: {I}) {
+			access(all) fun foo(s: {I}) {
 				remove A from s
 			}
 		`,
@@ -3519,7 +3192,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("resource base anyresource restricted", func(t *testing.T) {
+	t.Run("resource base AnyResource intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3528,7 +3201,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			resource S: I {}
 			resource interface I {}
 			attachment A for S {}
-			pub fun foo(s: @{I}) {
+			access(all) fun foo(s: @{I}) {
 				remove A from s
 				destroy s
 			}
@@ -3539,7 +3212,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidAttachmentRemoveError{}, errs[0])
 	})
 
-	t.Run("interface base anystruct restricted", func(t *testing.T) {
+	t.Run("interface base AnyStruct intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3547,7 +3220,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			`
 			struct interface I {}
 			attachment A for I {}
-			pub fun foo(s: {I}) {
+			access(all) fun foo(s: {I}) {
 				remove A from s
 			}
 		`,
@@ -3556,7 +3229,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("interface base anyresource restricted", func(t *testing.T) {
+	t.Run("interface base AnyResource intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3564,7 +3237,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			`
 			resource interface I {}
 			attachment A for I {}
-			pub fun foo(s: @{I}) {
+			access(all) fun foo(s: @{I}) {
 				remove A from s
 				destroy s
 			}
@@ -3574,26 +3247,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("multiple restriction", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			struct S: I, J {}
-			struct interface I {}
-			struct interface J {}
-			attachment A for I {}
-			pub fun foo(s: S{I, J}) {
-				remove A from s
-			}
-		`,
-		)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("anystruct multiple restriction", func(t *testing.T) {
+	t.Run("multiple intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3602,7 +3256,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 			struct interface I {}
 			struct interface J {}
 			attachment A for I {}
-			pub fun foo(s: {I, J}) {
+			access(all) fun foo(s: {I, J}) {
 				remove A from s
 			}
 		`,
@@ -3612,7 +3266,7 @@ func TestCheckRemoveFromRestricted(t *testing.T) {
 	})
 }
 
-func TestCheckAccessAttachment(t *testing.T) {
+func TestCheckAttachmentAccessAttachment(t *testing.T) {
 
 	t.Parallel()
 
@@ -3624,7 +3278,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					attachment A for R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						let a: &A? = r[A]
 						%s
 					}`, sigil, destructor),
@@ -3639,7 +3293,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					attachment A for R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						let a: &A? = r[Int]
 						%s
 					}`, sigil, destructor),
@@ -3655,7 +3309,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					struct D {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[D]
 						%s
 					}`, sigil, destructor),
@@ -3671,7 +3325,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					resource X {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[X]
 						%s
 					}
@@ -3688,7 +3342,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					contract X {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[X]
 						%s
 					}
@@ -3705,7 +3359,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					event X()
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[X]
 						%s
 					}
@@ -3722,7 +3376,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					enum X: Int {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[X]
 						%s
 					}
@@ -3738,7 +3392,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
 					resource R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[AnyStructAttachment]
 						%s
 					}
@@ -3754,7 +3408,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
 					resource R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[AnyResourceAttachment]
 						%s
 					}
@@ -3770,7 +3424,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
 					resource R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[AnyStruct]
 						%s
 					}
@@ -3786,7 +3440,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
 					resource R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[AnyResource]
 						%s
 					}
@@ -3802,7 +3456,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(`
 					attachment A for AnyResource {}
-					pub fun foo(r: %sAnyResource) {
+					access(all) fun foo(r: %sAnyResource) {
 						r[A]
 						%s
 					}
@@ -3820,7 +3474,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 					resource interface I {}
 					resource R: I {}
 					attachment A for I {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						let a: &A? = r[A]
 						%s
 					}
@@ -3837,7 +3491,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 					resource R {}
 					resource interface I {}
 					attachment A for AnyResource: I {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[I]
 						%s
 					}
@@ -3855,7 +3509,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 					resource interface I {}
 					resource R {}
 					attachment A for I {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						let a: &A? = r[A]
 						%s
 					}
@@ -3872,7 +3526,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 				fmt.Sprintf(`
 					resource R {}
 					attachment A for R {}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						r[A] = 3
 						%s
 					}
@@ -3891,7 +3545,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 					contract C {
 						attachment A for R {}
 					}
-					pub fun foo(r: %sR) {
+					access(all) fun foo(r: %sR) {
 						let a: &C.A? = r[C.A]
 						%s
 					}
@@ -3910,7 +3564,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 		_, err := ParseAndCheck(t,
 			`
 			attachment A for AnyStruct {}
-			pub fun foo(r: AnyStruct) {
+			access(all) fun foo(r: AnyStruct) {
 				r[A]
 			}
 		`,
@@ -3926,7 +3580,7 @@ func TestCheckAccessAttachment(t *testing.T) {
 			`
 			attachment A for S {}
 			struct S {}
-			pub fun foo(r: S) {
+			access(all) fun foo(r: S) {
 				r[[A]]
 			}
 		`,
@@ -3936,11 +3590,11 @@ func TestCheckAccessAttachment(t *testing.T) {
 	})
 }
 
-func TestCheckAccessAttachmentRestricted(t *testing.T) {
+func TestCheckAttachmentAccessAttachmentIntersection(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("restricted", func(t *testing.T) {
+	t.Run("intersection", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -3948,7 +3602,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct R: I {}
 		struct interface I {}
 		attachment A for I {}
-		pub fun foo(r: R{I}) {
+		access(all) fun foo(r: {I}) {
 			r[A]
 		}
 		`,
@@ -3956,7 +3610,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted concrete base", func(t *testing.T) {
+	t.Run("intersection concrete base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -3964,7 +3618,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct R: I {}
 		struct interface I {}
 		attachment A for R {}
-		pub fun foo(r: {I}) {
+		access(all) fun foo(r: {I}) {
 			r[A]
 		}
 		`,
@@ -3973,7 +3627,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
-	t.Run("restricted concrete base reference", func(t *testing.T) {
+	t.Run("intersection concrete base reference to interface", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -3981,7 +3635,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct R: I {}
 		struct interface I {}
 		attachment A for R {}
-		pub fun foo(r: &R{I}) {
+		access(all) fun foo(r: &{I}) {
 			r[A]
 		}
 		`,
@@ -3990,31 +3644,14 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
-	t.Run("restricted concrete base reference to interface", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-		struct R: I {}
-		struct interface I {}
-		attachment A for R {}
-		pub fun foo(r: &{I}) {
-			r[A]
-		}
-		`,
-		)
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
-	})
-
-	t.Run("restricted anystruct base", func(t *testing.T) {
+	t.Run("intersection AnyStruct base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
 		struct interface I {}
 		attachment A for I {}
-		pub fun foo(r: {I}) {
+		access(all) fun foo(r: {I}) {
 			r[A]
 		}
 		`,
@@ -4022,14 +3659,14 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted anystruct base interface", func(t *testing.T) {
+	t.Run("intersection AnyStruct base interface", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
 		struct interface I {}
 		attachment A for I {}
-		pub fun foo(r: &{I}) {
+		access(all) fun foo(r: &{I}) {
 			r[A]
 		}
 		`,
@@ -4037,7 +3674,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted invalid base", func(t *testing.T) {
+	t.Run("intersection invalid base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4045,7 +3682,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct interface I {}
 		struct interface J {}
 		attachment A for I {}
-		pub fun foo(r: {J}) {
+		access(all) fun foo(r: {J}) {
 			r[A]
 		}
 		`,
@@ -4055,7 +3692,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
-	t.Run("restricted multiply extended base", func(t *testing.T) {
+	t.Run("intersection multiply extended base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4064,7 +3701,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct interface I {}
 		struct interface J {}
 		attachment A for I {}
-		pub fun foo(r: R{J}) {
+		access(all) fun foo(r: {J}) {
 			r[A]
 		}
 		`,
@@ -4074,7 +3711,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
-	t.Run("restricted multiply extended base reference", func(t *testing.T) {
+	t.Run("intersection multiply extended base reference", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4083,7 +3720,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct interface I {}
 		struct interface J {}
 		attachment A for I {}
-		pub fun foo(r: &R{J}) {
+		access(all) fun foo(r: &{J}) {
 			r[A]
 		}
 		`,
@@ -4093,7 +3730,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		assert.IsType(t, &sema.InvalidTypeIndexingError{}, errs[0])
 	})
 
-	t.Run("restricted multiply restricted base", func(t *testing.T) {
+	t.Run("intersection multiply intersection base", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4101,7 +3738,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct interface I {}
 		struct interface J {}
 		attachment A for I {}
-		pub fun foo(r: {I, J}) {
+		access(all) fun foo(r: {I, J}) {
 			r[A]
 		}
 		`,
@@ -4110,7 +3747,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted multiply restricted base interface", func(t *testing.T) {
+	t.Run("intersection multiply intersection base interface", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
@@ -4118,7 +3755,7 @@ func TestCheckAccessAttachmentRestricted(t *testing.T) {
 		struct interface I {}
 		struct interface J {}
 		attachment A for I {}
-		pub fun foo(r: &{I, J}) {
+		access(all) fun foo(r: &{I, J}) {
 			r[A]
 		}
 		`,
@@ -4135,11 +3772,11 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t,
+		_, err := ParseAndCheckWithOptions(t,
 			`
-				pub resource R {}
-				pub attachment A for R {
-					pub let x: [String] 
+				access(all) resource R {}
+				access(all) attachment A for R {
+					access(all) let x: [String]
 					init() {
 						self.x = ["x"]
 					}
@@ -4150,62 +3787,193 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 					destroy r
 				}
 				`,
+			ParseAndCheckOptions{Config: &sema.Config{
+				SuggestionsEnabled: true,
+				AttachmentsEnabled: true,
+			}},
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+			sema.NewEntitlementSetAccess(
+				[]*sema.EntitlementType{
+					sema.InsertType,
+					sema.MutateType,
+				},
+				sema.Disjunction,
+			),
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+			sema.UnauthorizedAccess,
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+			"reference needs one of entitlements `Insert` or `Mutate`",
+		)
+	})
+
+	t.Run("basic, with entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+				access(all) resource R {
+					access(Mutate) fun foo() {}
+				}
+
+				access(all) attachment A for R {
+					access(mapping Identity) let x: [String]
+					init() {
+						self.x = ["x"]
+					}
+				}
+
+				fun main(r: @R) {
+					var xRef = r[A]!.x
+					xRef.append("y")
+					destroy r
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("in base", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t,
+		_, err := ParseAndCheckWithOptions(t,
 			`
-				pub resource R {
-					pub fun foo() {
+				access(all) resource R {
+					access(all) fun foo() {
+						// this only works because A supports all the entitlements of R
 						self[A]!.x.append("y")
 					}
 				}
-				pub attachment A for R {
-					pub let x: [String] 
+				access(all) attachment A for R {
+					access(all) let x: [String]
 					init() {
 						self.x = ["x"]
 					}
 				}
 				
 				`,
+			ParseAndCheckOptions{Config: &sema.Config{
+				SuggestionsEnabled: true,
+				AttachmentsEnabled: true,
+			}},
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.ExternalMutationError{}, errs[0])
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+			sema.NewEntitlementSetAccess(
+				[]*sema.EntitlementType{
+					sema.InsertType,
+					sema.MutateType,
+				},
+				sema.Disjunction,
+			),
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+			sema.UnauthorizedAccess,
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+			"reference needs one of entitlements `Insert` or `Mutate`",
+		)
+	})
+
+	t.Run("identity mapping in attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+				access(all) resource R {
+					access(Insert) fun foo() {
+						var xRef = self[A]!.x
+						xRef.append("y")
+					}
+				}
+				access(all) attachment A for R {
+					access(mapping Identity) let x: [String]
+					init() {
+						self.x = ["x"]
+					}
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("in self, through base", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t,
+		_, err := ParseAndCheckWithOptions(t,
 			`
-				pub resource R {}
-				pub attachment A for R {
-					pub let x: [String] 
+				access(all) resource R {}
+				access(all) attachment A for R {
+					access(all) let x: [String]
 					init() {
 						self.x = ["x"]
 					}
-					pub fun foo() {
+					access(all) fun foo() {
 						base[A]!.x.append("y")
 					}
 				}
 				
 				`,
+			ParseAndCheckOptions{Config: &sema.Config{
+				SuggestionsEnabled: true,
+				AttachmentsEnabled: true,
+			}},
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).RestrictingAccess,
+			sema.NewEntitlementSetAccess(
+				[]*sema.EntitlementType{
+					sema.InsertType,
+					sema.MutateType,
+				},
+				sema.Disjunction,
+			),
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).PossessedAccess,
+			sema.UnauthorizedAccess,
+		)
+		assert.Equal(
+			t,
+			errs[0].(*sema.InvalidAccessError).SecondaryError(),
+			"reference needs one of entitlements `Insert` or `Mutate`",
+		)
 	})
 }
 
-func TestInterpretAttachmentBaseNonMember(t *testing.T) {
+func TestCheckAttachmentBaseNonMember(t *testing.T) {
 
 	t.Parallel()
 
@@ -4214,9 +3982,9 @@ func TestInterpretAttachmentBaseNonMember(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-		pub resource R {}
-		pub attachment A for R {
-			pub let base: &R
+		access(all) resource R {}
+		access(all) attachment A for R {
+			access(all) let base: &R
 			init() {
 				self.base = base
 			}
@@ -4232,9 +4000,9 @@ func TestInterpretAttachmentBaseNonMember(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub resource R {}
-			pub attachment A for R {
-				pub let bases: [&R]
+			access(all) resource R {}
+			access(all) attachment A for R {
+				access(all) let bases: [&R]
 				init() {
 					self.bases = [base]
 				}
@@ -4250,9 +4018,9 @@ func TestInterpretAttachmentBaseNonMember(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub resource R {}
-			pub attachment A for R {
-				pub let bases: [&R]
+			access(all) resource R {}
+			access(all) attachment A for R {
+				access(all) let bases: [&R]
 				init() {
 					self.bases = []
 					self.bases.append(base)
@@ -4269,9 +4037,9 @@ func TestInterpretAttachmentBaseNonMember(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-			pub resource R {}
-			pub attachment A for R {
-				pub let bases: [&R]
+			access(all) resource R {}
+			access(all) attachment A for R {
+				access(all) let bases: [&R]
 				init() {
 					self.bases = []
 					self.bases[0] = base
@@ -4281,6 +4049,316 @@ func TestInterpretAttachmentBaseNonMember(t *testing.T) {
 		)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("entitlement mapped field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement G
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) fun foo() {}
+					access(G) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(mapping M) let x: [String]
+					init() {
+						self.x = ["x"]
+					}
+				}
+				fun foo() {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let x: auth(F) &[String] = a.x
+					destroy r
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("entitlement mapped function self value cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) fun foo() {}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(F) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						if let concreteSelf = self as? auth(F) &A {
+							return &concreteSelf.x
+						} 
+						return &1
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("entitlement mapped function self value cast invalid access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) fun foo() {}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(E) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						if let concreteSelf = self as? auth(F) &A {
+							return &concreteSelf.x
+						} 
+						return &1
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
+	})
+
+	t.Run("entitlement mapped function base value cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(F) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(E) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						if let concreteBase = base as? auth(F) &R {
+							return &concreteBase.x
+						} 
+						return &1
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("entitlement mapped function base value cast invalid access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						if let concreteBase = base as? auth(F) &R {
+							return &concreteBase.x
+						} 
+						return &1
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
+	})
+
+	t.Run("entitlement mapped function self value access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) fun foo() {}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(E) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						return &self.x
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
+	})
+
+	t.Run("entitlement mapped function base value access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						return &base.x
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
+	})
+}
+
+func TestCheckAttachmentsResourceReference(t *testing.T) {
+	t.Parallel()
+
+	t.Run("attachment base moved", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+        resource R {}
+        attachment A for R {
+            fun foo(): Int { return 3 }
+        }
+        fun test(): Int {
+            var r <- create R()
+            let ref = &r as &R
+            var r2 <- attach A() to <-r
+            let i = ref[A]?.foo()!
+            destroy r2
+            return i
+        }
+    `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidatedResourceReferenceError{}, errs[0])
 	})
 }
 
@@ -4373,6 +4451,331 @@ func TestCheckAttachmentsNotEnabled(t *testing.T) {
 	})
 }
 
+func TestCheckAttachmentForEachAttachment(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			struct A {}
+			access(all) fun foo(s: A) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("type check return", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment): Bool { return false }
+			struct A {}
+			access(all) fun foo(s: A) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("param not reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: AnyStructAttachment) { }
+			struct A {}
+			access(all) fun foo(s: A) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("param mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyResource) { }
+			struct A {}
+			access(all) fun foo(s: A) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("param supertype", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStruct) { }
+			struct A {}
+			access(all) fun foo(s: A) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyResourceAttachment) {}
+			resource A {}
+			access(all) fun foo(s: @A) {
+				s.forEachAttachment(bar)
+				destroy s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource type mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			resource A {}
+			access(all) fun foo(s: @A) {
+				s.forEachAttachment(bar)
+				destroy s
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("not on AnyStruct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyResourceAttachment) {}
+			access(all) fun foo(s: AnyStruct) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on AnyResource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyResourceAttachment) {}
+			access(all) fun foo(s: @AnyResource) {
+				s.forEachAttachment(bar)
+				destroy s
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on AnyResourceAttachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyResourceAttachment) {}
+			access(all) fun foo(s: &AnyResourceAttachment) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on anyStructAttachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			access(all) fun foo(s: &AnyStructAttachment) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on event", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			event E()
+			access(all) fun foo(s: E) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			contract C {}
+			access(all) fun foo(s: C) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on enum", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			enum S:Int {}
+			access(all) fun foo(s: S) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on struct attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			attachment S for AnyStruct {}
+			access(all) fun foo(s: &S) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("not on resource attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			fun bar (_: &AnyStructAttachment) {}
+			attachment R for AnyResource {}
+			access(all) fun foo(s: &R) {
+				s.forEachAttachment(bar)
+			}
+		`,
+		)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("cannot redeclare forEachAttachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			access(all) struct S {
+				access(all) fun forEachAttachment() {}
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+	})
+
+	t.Run("downcasting reference with entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			entitlement F
+			entitlement E
+			fun bar (attachmentRef: &AnyResourceAttachment) {
+				if let a = attachmentRef as? auth(F) &A {
+					a.foo()
+				}
+			}
+			resource R {
+				access(F) fun foo() {}
+			}
+			access(all) attachment A for R {
+				access(F) fun foo() {}
+			}
+			access(all) fun foo(s: @R) {
+				s.forEachAttachment(bar)
+				destroy s
+			}
+		`,
+		)
+
+		require.NoError(t, err)
+	})
+}
+
 func TestCheckAttachmentRemoveLossTracking(t *testing.T) {
 
 	t.Run("remove immediately added attachment", func(t *testing.T) {
@@ -4412,4 +4815,184 @@ func TestCheckAttachmentRemoveLossTracking(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
+}
+
+func TestCheckAttachmentPurity(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			view fun foo(s: S) {
+				s[Test]
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			view fun foo(s: S) {
+				let s2 = attach Test() to s
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach with constructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {
+				init() {}
+			}
+			view fun foo(s: S) {
+				let s2 = attach Test() to s
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("attach with pure constructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {
+				view init() {}
+			}
+			view fun foo(s: S) {
+				let s2 = attach Test() to s
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			view fun foo(s: S) {
+				remove Test from s
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("remove from global", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			var s: S = S()
+			view fun foo() {
+				remove Test from s
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("remove from field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			struct Container {
+				let s: S
+				init() {
+					self.s = S()
+				}
+				view fun foo() {
+					remove Test from self.s
+				}
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("remove from resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment Test for R {}
+			view fun foo(r: @R): @R {
+				remove Test from r
+				return <-r
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+}
+
+func TestCheckAccessOnNonEntitlementSupportingBaseCreatesUnauthorizedReference(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		access(all) contract Test {
+			access(all) resource R {}
+			access(all) attachment A for R {}
+			access(all) fun makeRWithA(): @R {
+				return <- attach A() to <-create R()
+			}
+		}
+		access(all) fun main(): &Test.A? {
+			let r <- Test.makeRWithA()
+			var a = r[Test.A]
+
+			a = returnSameRef(a)
+
+			destroy r
+			return a
+		}
+
+		access(all) fun returnSameRef(_ ref: &Test.A?): &Test.A? {
+			return ref
+		}
+    `)
+
+	require.NoError(t, err)
 }

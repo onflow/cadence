@@ -1,1 +1,0 @@
-pub resource Test {}

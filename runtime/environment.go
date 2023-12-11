@@ -74,8 +74,7 @@ type Environment interface {
 		error,
 	)
 	CommitStorage(inter *interpreter.Interpreter) error
-	NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value
-	NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value
+	NewAccountValue(address interpreter.AddressValue) interpreter.Value
 }
 
 // interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
@@ -135,10 +134,9 @@ var _ stdlib.Logger = &interpreterEnvironment{}
 var _ stdlib.RandomGenerator = &interpreterEnvironment{}
 var _ stdlib.BlockAtHeightProvider = &interpreterEnvironment{}
 var _ stdlib.CurrentBlockProvider = &interpreterEnvironment{}
-var _ stdlib.PublicAccountHandler = &interpreterEnvironment{}
+var _ stdlib.AccountHandler = &interpreterEnvironment{}
 var _ stdlib.AccountCreator = &interpreterEnvironment{}
 var _ stdlib.EventEmitter = &interpreterEnvironment{}
-var _ stdlib.AuthAccountHandler = &interpreterEnvironment{}
 var _ stdlib.PublicKeyValidator = &interpreterEnvironment{}
 var _ stdlib.PublicKeySignatureVerifier = &interpreterEnvironment{}
 var _ stdlib.BLSPoPVerifier = &interpreterEnvironment{}
@@ -171,13 +169,11 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		MemoryGauge:                    e,
 		BaseActivationHandler:          e.getBaseActivation,
 		OnEventEmitted:                 e.newOnEventEmittedHandler(),
-		OnAccountLinked:                e.newOnAccountLinkedHandler(),
 		InjectedCompositeFieldsHandler: e.newInjectedCompositeFieldsHandler(),
 		UUIDHandler:                    e.newUUIDHandler(),
 		ContractValueHandler:           e.newContractValueHandler(),
 		ImportLocationHandler:          e.newImportLocationHandler(),
-		PublicAccountHandler:           e.newPublicAccountHandler(),
-		AuthAccountHandler:             e.newAuthAccountHandler(),
+		AccountHandler:                 e.NewAccountValue,
 		OnRecordTrace:                  e.newOnRecordTraceHandler(),
 		OnResourceOwnerChange:          e.newResourceOwnerChangedHandler(),
 		CompositeTypeHandler:           e.newCompositeTypeHandler(),
@@ -194,8 +190,8 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		OnMeterComputation:            e.newOnMeterComputation(),
 		OnFunctionInvocation:          e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:       e.newOnInvokedFunctionReturnHandler(),
-		IDCapabilityBorrowHandler:     stdlib.BorrowCapabilityController,
-		IDCapabilityCheckHandler:      stdlib.CheckCapabilityController,
+		CapabilityBorrowHandler:       stdlib.BorrowCapabilityController,
+		CapabilityCheckHandler:        stdlib.CheckCapabilityController,
 	}
 }
 
@@ -208,9 +204,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		LocationHandler:                  e.newLocationHandler(),
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
-		AccountLinkingEnabled:            e.config.AccountLinkingEnabled,
 		AttachmentsEnabled:               e.config.AttachmentsEnabled,
-		CapabilityControllersEnabled:     e.config.CapabilityControllersEnabled,
 	}
 }
 
@@ -310,19 +304,11 @@ func (e *interpreterEnvironment) SetCompositeValueFunctionsHandler(
 	e.compositeValueFunctionsHandlers[typeID] = handler
 }
 
-func (e *interpreterEnvironment) NewAuthAccountValue(address interpreter.AddressValue) interpreter.Value {
-	return stdlib.NewAuthAccountValue(e, e, address)
-}
-
-func (e *interpreterEnvironment) NewPublicAccountValue(address interpreter.AddressValue) interpreter.Value {
-	return stdlib.NewPublicAccountValue(e, e, address)
-}
-
 func (e *interpreterEnvironment) MeterMemory(usage common.MemoryUsage) error {
 	return e.runtimeInterface.MeterMemory(usage)
 }
 
-func (e *interpreterEnvironment) ProgramLog(message string) error {
+func (e *interpreterEnvironment) ProgramLog(message string, _ interpreter.LocationRange) error {
 	return e.runtimeInterface.ProgramLog(message)
 }
 
@@ -398,14 +384,6 @@ func (e *interpreterEnvironment) EmitEvent(
 	)
 }
 
-func (e *interpreterEnvironment) AddEncodedAccountKey(address common.Address, key []byte) error {
-	return e.runtimeInterface.AddEncodedAccountKey(address, key)
-}
-
-func (e *interpreterEnvironment) RevokeEncodedAccountKey(address common.Address, index int) ([]byte, error) {
-	return e.runtimeInterface.RevokeEncodedAccountKey(address, index)
-}
-
 func (e *interpreterEnvironment) AddAccountKey(
 	address common.Address,
 	key *stdlib.PublicKey,
@@ -477,7 +455,11 @@ func (e *interpreterEnvironment) ParseAndCheckProgram(
 			return code, nil
 		},
 		getAndSetProgram,
-		importResolutionResults{},
+		importResolutionResults{
+			// Current program is already in check.
+			// So mark it also as 'already seen'.
+			location: true,
+		},
 	)
 }
 
@@ -686,7 +668,7 @@ func (e *interpreterEnvironment) getProgram(
 			// Loading is done by Cadence.
 			// If it panics with a user error, e.g. when parsing fails due to a memory metering error,
 			// then do not treat it as an external error (the load callback is called by the embedder)
-			panicErr := userPanicToError(func() {
+			panicErr := UserPanicToError(func() {
 				program, err = load()
 			})
 			if panicErr != nil {
@@ -785,16 +767,8 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 	}
 }
 
-func (e *interpreterEnvironment) newPublicAccountHandler() interpreter.PublicAccountHandlerFunc {
-	return func(address interpreter.AddressValue) interpreter.Value {
-		return stdlib.NewPublicAccountValue(e, e, address)
-	}
-}
-
-func (e *interpreterEnvironment) newAuthAccountHandler() interpreter.AuthAccountHandlerFunc {
-	return func(address interpreter.AddressValue) interpreter.Value {
-		return stdlib.NewAuthAccountValue(e, e, address)
-	}
+func (e *interpreterEnvironment) NewAccountValue(address interpreter.AddressValue) interpreter.Value {
+	return stdlib.NewAccountValue(e, e, address)
 }
 
 func (e *interpreterEnvironment) ValidatePublicKey(publicKey *stdlib.PublicKey) error {
@@ -914,26 +888,6 @@ func (e *interpreterEnvironment) newOnEventEmittedHandler() interpreter.OnEventE
 	}
 }
 
-func (e *interpreterEnvironment) newOnAccountLinkedHandler() interpreter.OnAccountLinkedFunc {
-	return func(
-		inter *interpreter.Interpreter,
-		locationRange interpreter.LocationRange,
-		addressValue interpreter.AddressValue,
-		pathValue interpreter.PathValue,
-	) error {
-		e.EmitEvent(
-			inter,
-			stdlib.AccountLinkedEventType,
-			[]interpreter.Value{
-				addressValue,
-				pathValue,
-			},
-			locationRange,
-		)
-		return nil
-	}
-}
-
 func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter.InjectedCompositeFieldsHandlerFunc {
 	return func(
 		inter *interpreter.Interpreter,
@@ -964,10 +918,12 @@ func (e *interpreterEnvironment) newInjectedCompositeFieldsHandler() interpreter
 				)
 
 				return map[string]interpreter.Value{
-					sema.ContractAccountFieldName: stdlib.NewAuthAccountValue(
+					sema.ContractAccountFieldName: stdlib.NewAccountReferenceValue(
 						inter,
 						e,
 						addressValue,
+						interpreter.FullyEntitledAccountAccess,
+						interpreter.EmptyLocationRange,
 					),
 				}
 			}
@@ -1043,7 +999,7 @@ func (e *interpreterEnvironment) newCompositeValueFunctionsHandler() interpreter
 		inter *interpreter.Interpreter,
 		locationRange interpreter.LocationRange,
 		compositeValue *interpreter.CompositeValue,
-	) map[string]interpreter.FunctionValue {
+	) *interpreter.FunctionOrderedMap {
 
 		handler := e.compositeValueFunctionsHandlers[compositeValue.TypeID()]
 		if handler == nil {

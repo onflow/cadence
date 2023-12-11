@@ -309,17 +309,8 @@ func (d StorableDecoder) decodeStorable() (atree.Storable, error) {
 		case CBORTagPathValue:
 			storable, err = d.decodePath()
 
-		case CBORTagPathCapabilityValue:
-			storable, err = d.decodePathCapability()
-
-		case CBORTagIDCapabilityValue:
-			storable, err = d.decodeIDCapability()
-
-		case CBORTagPathLinkValue:
-			storable, err = d.decodePathLink()
-
-		case CBORTagAccountLinkValue:
-			storable, err = d.decodeAccountLink()
+		case CBORTagCapabilityValue:
+			storable, err = d.decodeCapability()
 
 		case CBORTagPublishedValue:
 			storable, err = d.decodePublishedValue()
@@ -371,7 +362,9 @@ func (d StorableDecoder) decodeCharacter() (CharacterValue, error) {
 		)
 	}
 
-	// NOTE: already metered by decodeCharacter
+	// NOTE: character value memory usage already metered by decodeCharacter,
+	// but NewUnmeteredCharacterValue normalizes (= allocates)
+	common.UseMemory(d.memoryGauge, common.NewRawStringMemoryUsage(len(v)))
 	return NewUnmeteredCharacterValue(v), nil
 }
 
@@ -387,7 +380,9 @@ func (d StorableDecoder) decodeStringValue() (*StringValue, error) {
 		return nil, err
 	}
 
-	// NOTE: already metered by decodeString
+	// NOTE: character value memory usage already metered by decodeString,
+	// but NewUnmeteredStringValue normalizes (= allocates)
+	common.UseMemory(d.memoryGauge, common.NewRawStringMemoryUsage(len(str)))
 	return NewUnmeteredStringValue(str), nil
 }
 
@@ -926,99 +921,9 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 	), nil
 }
 
-func (d StorableDecoder) decodePathCapability() (*PathCapabilityValue, error) {
+func (d StorableDecoder) decodeCapability() (*CapabilityValue, error) {
 
-	const expectedLength = encodedPathCapabilityValueLength
-
-	size, err := d.decoder.DecodeArrayHead()
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, errors.NewUnexpectedError(
-				"invalid capability encoding: expected [%d]any, got %s",
-				expectedLength,
-				e.ActualType.String(),
-			)
-		}
-		return nil, err
-	}
-
-	if size != expectedLength {
-		return nil, errors.NewUnexpectedError(
-			"invalid capability encoding: expected [%d]any, got [%d]any",
-			expectedLength,
-			size,
-		)
-	}
-
-	// address
-
-	// Decode address at array index encodedPathCapabilityValueAddressFieldKey
-	var num uint64
-	num, err = d.decoder.DecodeTagNumber()
-	if err != nil {
-		return nil, errors.NewUnexpectedError(
-			"invalid capability address: %w",
-			err,
-		)
-	}
-	if num != CBORTagAddressValue {
-		return nil, errors.NewUnexpectedError(
-			"invalid capability address: wrong tag %d",
-			num,
-		)
-	}
-	address, err := d.decodeAddress()
-	if err != nil {
-		return nil, errors.NewUnexpectedError(
-			"invalid capability address: %w",
-			err,
-		)
-	}
-
-	// path
-
-	// Decode path at array index encodedPathCapabilityValuePathFieldKey
-	pathStorable, err := d.decodeStorable()
-	if err != nil {
-		return nil, errors.NewUnexpectedError("invalid capability path: %w", err)
-	}
-	pathValue, ok := pathStorable.(PathValue)
-	if !ok {
-		return nil, errors.NewUnexpectedError("invalid capability path: invalid type %T", pathValue)
-	}
-
-	// Decode borrow type at array index encodedPathCapabilityValueBorrowTypeFieldKey
-
-	// borrow type (optional, for backwards compatibility)
-	// Capabilities used to be untyped, i.e. they didn't have a borrow type.
-	// Later an optional type parameter, the borrow type, was added to it,
-	// which specifies as what type the capability should be borrowed.
-	//
-	// The decoding must be backwards-compatible and support both capability values
-	// with a borrow type and ones without
-
-	var borrowType StaticType
-
-	// Optional borrow type can be CBOR nil.
-	err = d.decoder.DecodeNil()
-	if _, ok := err.(*cbor.WrongTypeError); ok {
-		borrowType, err = d.DecodeStaticType()
-	}
-	if err != nil {
-		return nil, errors.NewUnexpectedError("invalid capability borrow type encoding: %w", err)
-	}
-
-	return NewPathCapabilityValue(
-		d.memoryGauge,
-		address,
-		pathValue,
-		borrowType,
-	), nil
-}
-
-func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
-
-	const expectedLength = encodedIDCapabilityValueLength
+	const expectedLength = encodedCapabilityValueLength
 
 	size, err := d.decoder.DecodeArrayHead()
 	if err != nil {
@@ -1042,7 +947,7 @@ func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
 
 	// address
 
-	// Decode address at array index encodedIDCapabilityValueAddressFieldKey
+	// Decode address at array index encodedCapabilityValueAddressFieldKey
 	var num uint64
 	num, err = d.decoder.DecodeTagNumber()
 	if err != nil {
@@ -1065,7 +970,7 @@ func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
 		)
 	}
 
-	// Decode ID at array index encodedIDCapabilityValueIDFieldKey
+	// Decode ID at array index encodedCapabilityValueIDFieldKey
 
 	id, err := d.decoder.DecodeUint64()
 	if err != nil {
@@ -1075,14 +980,14 @@ func (d StorableDecoder) decodeIDCapability() (*IDCapabilityValue, error) {
 		)
 	}
 
-	// Decode borrow type at array index encodedIDCapabilityValueBorrowTypeFieldKey
+	// Decode borrow type at array index encodedCapabilityValueBorrowTypeFieldKey
 
 	borrowType, err := d.DecodeStaticType()
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid capability borrow type encoding: %w", err)
 	}
 
-	return NewIDCapabilityValue(
+	return NewCapabilityValue(
 		d.memoryGauge,
 		UInt64Value(id),
 		address,
@@ -1119,7 +1024,7 @@ func (d StorableDecoder) decodeStorageCapabilityController() (*StorageCapability
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid storage capability controller borrow type encoding: %w", err)
 	}
-	borrowReferenceStaticType, ok := borrowStaticType.(ReferenceStaticType)
+	borrowReferenceStaticType, ok := borrowStaticType.(*ReferenceStaticType)
 	if !ok {
 		return nil, errors.NewUnexpectedError(
 			"invalid storage capability controller borrow type encoding: expected reference static type, got %T",
@@ -1191,7 +1096,7 @@ func (d StorableDecoder) decodeAccountCapabilityController() (*AccountCapability
 	if err != nil {
 		return nil, errors.NewUnexpectedError("invalid account capability controller borrow type encoding: %w", err)
 	}
-	borrowReferenceStaticType, ok := borrowStaticType.(ReferenceStaticType)
+	borrowReferenceStaticType, ok := borrowStaticType.(*ReferenceStaticType)
 	if !ok {
 		return nil, errors.NewUnexpectedError(
 			"invalid account capability controller borrow type encoding: expected reference static type, got %T",
@@ -1214,62 +1119,6 @@ func (d StorableDecoder) decodeAccountCapabilityController() (*AccountCapability
 		borrowReferenceStaticType,
 		UInt64Value(capabilityID),
 	), nil
-}
-
-func (d StorableDecoder) decodePathLink() (PathLinkValue, error) {
-
-	const expectedLength = encodedPathLinkValueLength
-
-	size, err := d.decoder.DecodeArrayHead()
-	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return EmptyPathLinkValue, errors.NewUnexpectedError(
-				"invalid link encoding: expected [%d]any, got %s",
-				expectedLength,
-				e.ActualType.String(),
-			)
-		}
-		return EmptyPathLinkValue, err
-	}
-
-	if size != expectedLength {
-		return EmptyPathLinkValue, errors.NewUnexpectedError(
-			"invalid link encoding: expected [%d]any, got [%d]any",
-			expectedLength,
-			size,
-		)
-	}
-
-	// Decode path at array index encodedPathLinkValueTargetPathFieldKey
-	num, err := d.decoder.DecodeTagNumber()
-	if err != nil {
-		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: %w", err)
-	}
-	if num != CBORTagPathValue {
-		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: expected CBOR tag %d, got %d", CBORTagPathValue, num)
-	}
-	pathValue, err := d.decodePath()
-	if err != nil {
-		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link target path encoding: %w", err)
-	}
-
-	// Decode type at array index encodedPathLinkValueTypeFieldKey
-	staticType, err := d.DecodeStaticType()
-	if err != nil {
-		return EmptyPathLinkValue, errors.NewUnexpectedError("invalid link type encoding: %w", err)
-	}
-
-	return NewPathLinkValue(d.memoryGauge, pathValue, staticType), nil
-}
-
-func (d StorableDecoder) decodeAccountLink() (AccountLinkValue, error) {
-	common.UseMemory(d.memoryGauge, common.AccountLinkValueMemoryUsage)
-	err := d.decoder.Skip()
-	if err != nil {
-		return AccountLinkValue{}, err
-	}
-
-	return AccountLinkValue{}, nil
 }
 
 func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {
@@ -1319,7 +1168,7 @@ func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {
 		return nil, errors.NewUnexpectedError("invalid published value value encoding: %w", err)
 	}
 
-	capabilityValue, ok := value.(CapabilityValue)
+	capabilityValue, ok := value.(*CapabilityValue)
 	if !ok {
 		return nil, errors.NewUnexpectedError(
 			"invalid published value value encoding: expected capability, got %T",
@@ -1428,8 +1277,8 @@ func (d TypeDecoder) DecodeStaticType() (StaticType, error) {
 	case CBORTagDictionaryStaticType:
 		return d.decodeDictionaryStaticType()
 
-	case CBORTagRestrictedStaticType:
-		return d.decodeRestrictedStaticType()
+	case CBORTagIntersectionStaticType:
+		return d.decodeIntersectionStaticType()
 
 	case CBORTagCapabilityStaticType:
 		return d.decodeCapabilityStaticType()
@@ -1509,36 +1358,34 @@ func (d TypeDecoder) decodeCompositeStaticType() (StaticType, error) {
 	return NewCompositeStaticTypeComputeTypeID(d.memoryGauge, location, qualifiedIdentifier), nil
 }
 
-func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
+func (d TypeDecoder) decodeInterfaceStaticType() (*InterfaceStaticType, error) {
 	const expectedLength = encodedInterfaceStaticTypeLength
 
 	size, err := d.decoder.DecodeArrayHead()
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return InterfaceStaticType{},
-				errors.NewUnexpectedError(
-					"invalid interface static type encoding: expected [%d]any, got %s",
-					expectedLength,
-					e.ActualType.String(),
-				)
+			return nil, errors.NewUnexpectedError(
+				"invalid interface static type encoding: expected [%d]any, got %s",
+				expectedLength,
+				e.ActualType.String(),
+			)
 		}
-		return InterfaceStaticType{}, err
+		return nil, err
 	}
 
 	if size != expectedLength {
-		return InterfaceStaticType{},
-			errors.NewUnexpectedError(
-				"invalid interface static type encoding: expected [%d]any, got [%d]any",
-				expectedLength,
-				size,
-			)
+		return nil, errors.NewUnexpectedError(
+			"invalid interface static type encoding: expected [%d]any, got [%d]any",
+			expectedLength,
+			size,
+		)
 	}
 
 	// Decode location at array index encodedInterfaceStaticTypeLocationFieldKey
 	location, err := d.DecodeLocation()
 	if err != nil {
-		return InterfaceStaticType{}, errors.NewUnexpectedError(
+		return nil, errors.NewUnexpectedError(
 			"invalid interface static type location encoding: %w",
 			err,
 		)
@@ -1548,13 +1395,12 @@ func (d TypeDecoder) decodeInterfaceStaticType() (InterfaceStaticType, error) {
 	qualifiedIdentifier, err := decodeString(d.decoder, d.memoryGauge, common.MemoryKindRawString)
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return InterfaceStaticType{},
-				errors.NewUnexpectedError(
-					"invalid interface static type qualified identifier encoding: %s",
-					e.ActualType.String(),
-				)
+			return nil, errors.NewUnexpectedError(
+				"invalid interface static type qualified identifier encoding: %s",
+				e.ActualType.String(),
+			)
 		}
-		return InterfaceStaticType{}, err
+		return nil, err
 	}
 
 	return NewInterfaceStaticTypeComputeTypeID(d.memoryGauge, location, qualifiedIdentifier), nil
@@ -1632,6 +1478,107 @@ func (d TypeDecoder) decodeConstantSizedStaticType() (StaticType, error) {
 	), nil
 }
 
+func (d TypeDecoder) decodeStaticAuthorization() (Authorization, error) {
+	number, err := d.decoder.DecodeTagNumber()
+	if err != nil {
+		if e, ok := err.(*cbor.WrongTypeError); ok {
+			return nil, errors.NewUnexpectedError(
+				"invalid static authorization encoding: %s",
+				e.ActualType.String(),
+			)
+		}
+		return nil, err
+	}
+	switch number {
+	case CBORTagUnauthorizedStaticAuthorization:
+		err := d.decoder.DecodeNil()
+		if err != nil {
+			return nil, err
+		}
+		return UnauthorizedAccess, nil
+	case CBORTagEntitlementMapStaticAuthorization:
+		typeID, err := d.decoder.DecodeString()
+		if err != nil {
+			return nil, err
+		}
+		return NewEntitlementMapAuthorization(d.memoryGauge, common.TypeID(typeID)), nil
+	case CBORTagEntitlementSetStaticAuthorization:
+		const expectedLength = encodedSetAuthorizationStaticTypeLength
+
+		arraySize, err := d.decoder.DecodeArrayHead()
+
+		if err != nil {
+			if e, ok := err.(*cbor.WrongTypeError); ok {
+				return nil, errors.NewUnexpectedError(
+					"invalid set authorization type encoding: expected [%d]any, got %s",
+					expectedLength,
+					e.ActualType.String(),
+				)
+			}
+			return nil, err
+		}
+
+		if arraySize != expectedLength {
+			return nil, errors.NewUnexpectedError(
+				"invalid set authorization type encoding: expected [%d]any, got [%d]any",
+				expectedLength,
+				arraySize,
+			)
+		}
+
+		setKind, err := d.decoder.DecodeUint64()
+		if err != nil {
+			if e, ok := err.(*cbor.WrongTypeError); ok {
+				return nil, errors.NewUnexpectedError(
+					"invalid entitlement set static authorization encoding: %s",
+					e.ActualType.String(),
+				)
+			}
+			return nil, err
+		}
+
+		entitlementsSize, err := d.decoder.DecodeArrayHead()
+		if err != nil {
+			if e, ok := err.(*cbor.WrongTypeError); ok {
+				return nil, errors.NewUnexpectedError(
+					"invalid entitlement set static authorization encoding: %s",
+					e.ActualType.String(),
+				)
+			}
+			return nil, err
+		}
+
+		var setCreationErr error
+
+		entitlementSet := NewEntitlementSetAuthorization(
+			d.memoryGauge,
+			func() (entitlements []common.TypeID) {
+				if entitlementsSize > 0 {
+					entitlements = make([]common.TypeID, entitlementsSize)
+					for i := 0; i < int(entitlementsSize); i++ {
+						typeID, err := d.decoder.DecodeString()
+						if err != nil {
+							setCreationErr = err
+							return nil
+						}
+						entitlements[i] = common.TypeID(typeID)
+					}
+				}
+				return
+			},
+			int(entitlementsSize),
+			sema.EntitlementSetKind(setKind),
+		)
+
+		if setCreationErr != nil {
+			return nil, setCreationErr
+		}
+
+		return entitlementSet, nil
+	}
+	return nil, errors.NewUnexpectedError("invalid static authorization encoding tag: %d", number)
+}
+
 func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 	const expectedLength = encodedReferenceStaticTypeLength
 
@@ -1656,16 +1603,34 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 		)
 	}
 
-	// Decode authorized at array index encodedReferenceStaticTypeAuthorizedFieldKey
-	authorized, err := d.decoder.DecodeBool()
+	var authorization Authorization
+
+	t, err := d.decoder.NextType()
 	if err != nil {
-		if e, ok := err.(*cbor.WrongTypeError); ok {
-			return nil, errors.NewUnexpectedError(
-				"invalid reference static type authorized encoding: %s",
-				e.ActualType.String(),
-			)
-		}
 		return nil, err
+	}
+
+	if t == cbor.BoolType {
+		// if we saw a bool here, this is a reference encoded in the old format
+		_, err := d.decoder.DecodeBool()
+		if err != nil {
+			return nil, err
+		}
+
+		// TODO: better decoding for old values to compute new, sensible authorizations for them.
+		authorization = UnauthorizedAccess
+	} else {
+		// Decode authorized at array index encodedReferenceStaticTypeAuthorizationFieldKey
+		authorization, err = d.decodeStaticAuthorization()
+		if err != nil {
+			if e, ok := err.(*cbor.WrongTypeError); ok {
+				return nil, errors.NewUnexpectedError(
+					"invalid reference static type authorized encoding: %s",
+					e.ActualType.String(),
+				)
+			}
+			return nil, err
+		}
 	}
 
 	// Decode type at array index encodedReferenceStaticTypeTypeFieldKey
@@ -1679,9 +1644,8 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 
 	return NewReferenceStaticType(
 		d.memoryGauge,
-		authorized,
+		authorization,
 		staticType,
-		nil,
 	), nil
 }
 
@@ -1730,15 +1694,15 @@ func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
 	return NewDictionaryStaticType(d.memoryGauge, keyType, valueType), nil
 }
 
-func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
-	const expectedLength = encodedRestrictedStaticTypeLength
+func (d TypeDecoder) decodeIntersectionStaticType() (StaticType, error) {
+	const expectedLength = encodedIntersectionStaticTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()
 
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, errors.NewUnexpectedError(
-				"invalid restricted static type encoding: expected [%d]any, got %s",
+				"invalid intersection static type encoding: expected [%d]any, got %s",
 				expectedLength,
 				e.ActualType.String(),
 			)
@@ -1748,77 +1712,93 @@ func (d TypeDecoder) decodeRestrictedStaticType() (StaticType, error) {
 
 	if arraySize != expectedLength {
 		return nil, errors.NewUnexpectedError(
-			"invalid restricted static type encoding: expected [%d]any, got [%d]any",
+			"invalid intersection static type encoding: expected [%d]any, got [%d]any",
 			expectedLength,
 			arraySize,
 		)
 	}
 
-	// Decode restricted type at array index encodedRestrictedStaticTypeTypeFieldKey
-	restrictedType, err := d.DecodeStaticType()
+	var legacyRestrictedType StaticType
+
+	t, err := d.decoder.NextType()
 	if err != nil {
-		return nil, errors.NewUnexpectedError(
-			"invalid restricted static type key type encoding: %w",
-			err,
-		)
+		return nil, err
 	}
 
-	// Decode restrictions at array index encodedRestrictedStaticTypeRestrictionsFieldKey
-	restrictionSize, err := d.decoder.DecodeArrayHead()
+	if t == cbor.NilType {
+		err = d.decoder.DecodeNil()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Decode intersection type at array index encodedIntersectionStaticTypeLegacyTypeFieldKey
+		legacyRestrictedType, err = d.DecodeStaticType()
+		if err != nil {
+			return nil, errors.NewUnexpectedError(
+				"invalid intersection static type key type encoding: %w",
+				err,
+			)
+		}
+	}
+
+	// Decode intersected types at array index encodedIntersectionStaticTypeTypesFieldKey
+	intersectionSize, err := d.decoder.DecodeArrayHead()
 	if err != nil {
 		if e, ok := err.(*cbor.WrongTypeError); ok {
 			return nil, errors.NewUnexpectedError(
-				"invalid restricted static type restrictions encoding: %s",
+				"invalid intersection static type intersections encoding: %s",
 				e.ActualType.String(),
 			)
 		}
 		return nil, err
 	}
 
-	var restrictions []InterfaceStaticType
-	if restrictionSize > 0 {
-		restrictions = make([]InterfaceStaticType, restrictionSize)
-		for i := 0; i < int(restrictionSize); i++ {
+	var intersections []*InterfaceStaticType
+	if intersectionSize > 0 {
+		intersections = make([]*InterfaceStaticType, intersectionSize)
+		for i := 0; i < int(intersectionSize); i++ {
 
 			number, err := d.decoder.DecodeTagNumber()
 			if err != nil {
 				if e, ok := err.(*cbor.WrongTypeError); ok {
 					return nil, errors.NewUnexpectedError(
-						"invalid restricted static type restriction encoding: expected CBOR tag, got %s",
+						"invalid intersection static type intersection encoding: expected CBOR tag, got %s",
 						e.ActualType.String(),
 					)
 				}
 				return nil, errors.NewUnexpectedError(
-					"invalid restricted static type restriction encoding: %w",
+					"invalid intersection static type intersection encoding: %w",
 					err,
 				)
 			}
 
 			if number != CBORTagInterfaceStaticType {
 				return nil, errors.NewUnexpectedError(
-					"invalid restricted static type restriction encoding: expected CBOR tag %d, got %d",
+					"invalid intersection static type intersection encoding: expected CBOR tag %d, got %d",
 					CBORTagInterfaceStaticType,
 					number,
 				)
 			}
 
-			restriction, err := d.decodeInterfaceStaticType()
+			intersectedType, err := d.decodeInterfaceStaticType()
 			if err != nil {
 				return nil, errors.NewUnexpectedError(
-					"invalid restricted static type restriction encoding: %w",
+					"invalid intersection static type intersection encoding: %w",
 					err,
 				)
 			}
 
-			restrictions[i] = restriction
+			intersections[i] = intersectedType
 		}
 	}
 
-	return NewRestrictedStaticType(
+	staticType := NewIntersectionStaticType(
 		d.memoryGauge,
-		restrictedType,
-		restrictions,
-	), nil
+		intersections,
+	)
+	staticType.LegacyType = legacyRestrictedType
+
+	return staticType, nil
 }
 
 func (d TypeDecoder) decodeCapabilityStaticType() (StaticType, error) {

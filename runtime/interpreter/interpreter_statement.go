@@ -107,6 +107,16 @@ func (interpreter *Interpreter) VisitContinueStatement(_ *ast.ContinueStatement)
 	return theContinueResult
 }
 
+func (interpreter *Interpreter) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) StatementResult {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (interpreter *Interpreter) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) StatementResult {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (interpreter *Interpreter) VisitIfStatement(statement *ast.IfStatement) StatementResult {
 	switch test := statement.Test.(type) {
 	case ast.Expression:
@@ -260,15 +270,10 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 
 var intOne = NewUnmeteredIntValueFromInt64(1)
 
-func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) StatementResult {
+func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (result StatementResult) {
 
 	interpreter.activations.PushNewWithCurrent()
 	defer interpreter.activations.Pop()
-
-	variable := interpreter.declareVariable(
-		statement.Identifier.Identifier,
-		nil,
-	)
 
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
@@ -290,59 +295,80 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 		panic(errors.NewUnreachableError())
 	}
 
-	iterator := iterable.Iterator(interpreter)
+	forStmtTypes := interpreter.Program.Elaboration.ForStatementType(statement)
 
-	var indexVariable *Variable
+	var index IntValue
 	if statement.Index != nil {
-		indexVariable = interpreter.declareVariable(
+		index = NewIntValueFromInt64(interpreter, 0)
+	}
+
+	executeBody := func(value Value) (resume bool) {
+		statementResult, done := interpreter.visitForStatementBody(statement, index, value)
+		if done {
+			result = statementResult
+		}
+
+		resume = !done
+
+		if statement.Index != nil {
+			index = index.Plus(interpreter, intOne, locationRange).(IntValue)
+		}
+
+		return
+	}
+
+	iterable.ForEach(
+		interpreter,
+		forStmtTypes.ValueVariableType,
+		executeBody,
+		locationRange,
+	)
+
+	return
+}
+
+func (interpreter *Interpreter) visitForStatementBody(
+	statement *ast.ForStatement,
+	index IntValue,
+	value Value,
+) (
+	result StatementResult,
+	done bool,
+) {
+	interpreter.reportLoopIteration(statement)
+
+	interpreter.activations.PushNewWithCurrent()
+	defer interpreter.activations.Pop()
+
+	if index.BigInt != nil {
+		interpreter.declareVariable(
 			statement.Index.Identifier,
-			NewIntValueFromInt64(interpreter, 0),
+			index,
 		)
 	}
 
-	for {
-		value := iterator.Next(interpreter)
-		if value == nil {
-			return nil
-		}
+	interpreter.declareVariable(
+		statement.Identifier.Identifier,
+		value,
+	)
 
-		interpreter.reportLoopIteration(statement)
+	result = interpreter.visitBlock(statement.Block)
 
-		variable.SetValue(value)
+	switch result.(type) {
+	case BreakResult:
+		return nil, true
 
-		result := interpreter.visitBlock(statement.Block)
+	case ContinueResult:
+		// NO-OP
 
-		switch result.(type) {
-		case BreakResult:
-			return nil
-
-		case ContinueResult:
-			// NO-OP
-
-		case ReturnResult:
-			return result
-		}
-
-		if indexVariable != nil {
-			currentIndex := indexVariable.GetValue().(IntValue)
-			nextIndex := currentIndex.Plus(interpreter, intOne, locationRange)
-			indexVariable.SetValue(nextIndex)
-		}
+	case ReturnResult:
+		return result, true
 	}
+
+	return nil, false
 }
 
-func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) StatementResult {
-	event, ok := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
-
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: statement,
-	}
+func (interpreter *Interpreter) emitEvent(event *CompositeValue, eventType *sema.CompositeType, locationRange LocationRange) {
 
 	config := interpreter.SharedState.Config
 
@@ -357,6 +383,23 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) StatementResult {
+
+	event, ok := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
+
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: statement,
+	}
+
+	interpreter.emitEvent(event, eventType, locationRange)
 
 	return nil
 }

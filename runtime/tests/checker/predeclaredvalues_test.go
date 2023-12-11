@@ -37,9 +37,7 @@ func TestCheckPredeclaredValues(t *testing.T) {
 	valueDeclaration := stdlib.NewStandardLibraryFunction(
 		"foo",
 		&sema.FunctionType{
-			ReturnTypeAnnotation: sema.TypeAnnotation{
-				Type: sema.VoidType,
-			},
+			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 		},
 		"",
 		nil,
@@ -48,7 +46,7 @@ func TestCheckPredeclaredValues(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-            pub fun test() {
+            access(all) fun test() {
                 foo()
             }
         `,
