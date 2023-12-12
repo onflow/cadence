@@ -48,16 +48,16 @@ func (AccountTypeMigration) Migrate(
 	case interpreter.TypeValue:
 		convertedType := maybeConvertAccountType(value.Type)
 		if convertedType == nil {
-      return
+			return
 		}
-    return interpreter.NewTypeValue(nil, convertedType)
+		return interpreter.NewTypeValue(nil, convertedType)
 
 	case *interpreter.CapabilityValue:
 		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
 		if convertedBorrowType == nil {
-		  return
-    }
-    return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType)
+			return
+		}
+		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType)
 
 	case *interpreter.AccountCapabilityControllerValue:
 		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
@@ -74,7 +74,11 @@ func (AccountTypeMigration) Migrate(
 			return
 		}
 		borrowType := convertedBorrowType.(*interpreter.ReferenceStaticType)
-		return interpreter.NewUnmeteredStorageCapabilityControllerValue(borrowType, value.CapabilityID, value.TargetPath)
+		return interpreter.NewUnmeteredStorageCapabilityControllerValue(
+			borrowType,
+			value.CapabilityID,
+			value.TargetPath,
+		)
 	}
 
 	return
