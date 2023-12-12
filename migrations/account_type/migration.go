@@ -167,6 +167,7 @@ func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.Stat
 		switch staticType {
 		case interpreter.PrimitiveStaticTypePublicAccount: //nolint:staticcheck
 			return unauthorizedAccountReferenceType
+
 		case interpreter.PrimitiveStaticTypeAuthAccount: //nolint:staticcheck
 			return authAccountReferenceType
 
