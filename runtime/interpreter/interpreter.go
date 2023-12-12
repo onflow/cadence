@@ -5542,7 +5542,7 @@ func (interpreter *Interpreter) ConvertValueToEntitlements(
 			interpreter,
 			staticAuthorization,
 			convertedValue,
-			entitledReferenceType,
+			entitledReferenceType.Type,
 			EmptyLocationRange,
 		)
 
@@ -5555,7 +5555,7 @@ func (interpreter *Interpreter) ConvertValueToEntitlements(
 			staticAuthorization,
 			v.TargetStorageAddress,
 			v.TargetPath,
-			entitledReferenceType,
+			entitledReferenceType.Type,
 		)
 	case *SomeValue:
 		return NewSomeValueNonCopying(interpreter, interpreter.ConvertValueToEntitlements(v.value, convertToEntitledType))

@@ -367,6 +367,10 @@ func TestConvertToEntitledType(t *testing.T) {
 
 }
 
+func convertEntireTestValue(inter *interpreter.Interpreter, v interpreter.Value) interpreter.Value {
+	return inter.ConvertValueToEntitlements(v, ConvertToEntitledType)
+}
+
 func TestConvertToEntitledValue(t *testing.T) {
 	t.Parallel()
 
@@ -1060,12 +1064,12 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			inter.ConvertValueToEntitlements(test.Input, ConvertToEntitledType)
-			switch input := test.Input.(type) {
+			convertedValue := convertEntireTestValue(inter, test.Input)
+			switch convertedValue := convertedValue.(type) {
 			case interpreter.EquatableValue:
-				require.True(t, referencePeekingEqual(input, test.Output))
+				require.True(t, referencePeekingEqual(convertedValue, test.Output))
 			default:
-				require.Equal(t, input, test.Output)
+				require.Equal(t, convertedValue, test.Output)
 			}
 		})
 	}
