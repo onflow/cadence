@@ -72,10 +72,9 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 
 	for _, side := range []ast.Expression{swap.Left, swap.Right} {
 		if indexExpression, ok := side.(*ast.IndexExpression); ok {
-			targetExpression := indexExpression.TargetExpression
-
 			indexExpressionTypes := checker.Elaboration.IndexExpressionTypes(indexExpression)
 			if indexExpressionTypes.IndexedType.IsResourceType() {
+				targetExpression := indexExpression.TargetExpression
 				checker.elaborateNestedResourceMoveExpression(targetExpression)
 			}
 		}
