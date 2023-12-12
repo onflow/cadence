@@ -674,6 +674,27 @@ func (t PrimitiveStaticType) IsDefined() bool {
 	return ok
 }
 
+// Deprecated: IsDeprecated only exists for migration purposes.
+func (t PrimitiveStaticType) IsDeprecated() bool {
+	switch t {
+	case PrimitiveStaticTypeAuthAccount, //nolint:staticcheck
+		PrimitiveStaticTypePublicAccount,                  //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountContracts,           //nolint:staticcheck
+		PrimitiveStaticTypePublicAccountContracts,         //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountKeys,                //nolint:staticcheck
+		PrimitiveStaticTypePublicAccountKeys,              //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountInbox,               //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountStorageCapabilities, //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountAccountCapabilities, //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountCapabilities,        //nolint:staticcheck
+		PrimitiveStaticTypePublicAccountCapabilities,      //nolint:staticcheck
+		PrimitiveStaticTypeAccountKey:                     //nolint:staticcheck
+		return true
+	}
+
+	return false
+}
+
 // ConvertSemaToPrimitiveStaticType converts a `sema.Type` to a `PrimitiveStaticType`.
 //
 // Returns `PrimitiveStaticTypeUnknown` if the given type is not a primitive type.

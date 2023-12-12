@@ -65,6 +65,10 @@ func TestTypeConversion(t *testing.T) {
 			continue
 		}
 
+		if ty.IsDeprecated() {
+			continue
+		}
+
 		if _, ok := semaType.(*sema.CapabilityType); ok {
 			continue
 		}
