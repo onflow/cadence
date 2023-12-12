@@ -97,7 +97,7 @@ const (
 	// Integer
 	PrimitiveStaticTypeInteger
 	PrimitiveStaticTypeSignedInteger
-	_
+	PrimitiveStaticTypeFixedSizeUnsignedInteger
 	_
 	_
 	_
@@ -303,6 +303,7 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeWord256,
 		PrimitiveStaticTypeInteger,
 		PrimitiveStaticTypeSignedInteger,
+		PrimitiveStaticTypeFixedSizeUnsignedInteger,
 		PrimitiveStaticTypeNumber,
 		PrimitiveStaticTypeSignedNumber:
 		return UnknownElementSize
@@ -480,6 +481,8 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 		return sema.IntegerType
 	case PrimitiveStaticTypeSignedInteger:
 		return sema.SignedIntegerType
+	case PrimitiveStaticTypeFixedSizeUnsignedInteger:
+		return sema.FixedSizeUnsignedIntegerType
 
 	// FixedPoint
 	case PrimitiveStaticTypeFixedPoint:
@@ -693,6 +696,8 @@ func ConvertSemaToPrimitiveStaticType(
 		typ = PrimitiveStaticTypeInteger
 	case sema.SignedIntegerType:
 		typ = PrimitiveStaticTypeSignedInteger
+	case sema.FixedSizeUnsignedIntegerType:
+		typ = PrimitiveStaticTypeFixedSizeUnsignedInteger
 
 	// FixedPoint
 	case sema.FixedPointType:

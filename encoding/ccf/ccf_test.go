@@ -7811,6 +7811,7 @@ func TestEncodeSimpleTypes(t *testing.T) {
 		ccf.SimpleTypeSignedNumber:                     cadence.SignedNumberType,
 		ccf.SimpleTypeInteger:                          cadence.IntegerType,
 		ccf.SimpleTypeSignedInteger:                    cadence.SignedIntegerType,
+		ccf.SimpleTypeFixedSizeUnsignedInteger:         cadence.FixedSizeUnsignedIntegerType,
 		ccf.SimpleTypeFixedPoint:                       cadence.FixedPointType,
 		ccf.SimpleTypeSignedFixedPoint:                 cadence.SignedFixedPointType,
 		ccf.SimpleTypeInt:                              cadence.IntType,

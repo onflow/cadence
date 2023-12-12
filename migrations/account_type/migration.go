@@ -43,22 +43,41 @@ func (AccountTypeMigration) Migrate(
 	_ interpreter.AddressPath,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) interpreter.Value {
+) (newValue interpreter.Value) {
 	switch value := value.(type) {
 	case interpreter.TypeValue:
 		convertedType := maybeConvertAccountType(value.Type)
-		if convertedType != nil {
-			return interpreter.NewTypeValue(nil, convertedType)
+		if convertedType == nil {
+      return
 		}
+    return interpreter.NewTypeValue(nil, convertedType)
 
 	case *interpreter.CapabilityValue:
 		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
-		if convertedBorrowType != nil {
-			return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType)
+		if convertedBorrowType == nil {
+		  return
+    }
+    return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType)
+
+	case *interpreter.AccountCapabilityControllerValue:
+		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
+		if convertedBorrowType == nil {
+			return
 		}
+		borrowType := convertedBorrowType.(*interpreter.ReferenceStaticType)
+		return interpreter.NewUnmeteredAccountCapabilityControllerValue(borrowType, value.CapabilityID)
+
+	case *interpreter.StorageCapabilityControllerValue:
+		// Note: A storage capability with Account type shouldn't be possible theoretically.
+		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
+		if convertedBorrowType == nil {
+			return
+		}
+		borrowType := convertedBorrowType.(*interpreter.ReferenceStaticType)
+		return interpreter.NewUnmeteredStorageCapabilityControllerValue(borrowType, value.CapabilityID, value.TargetPath)
 	}
 
-	return nil
+	return
 }
 
 func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.StaticType {
@@ -95,7 +114,13 @@ func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.Stat
 		}
 
 	case *interpreter.IntersectionStaticType:
-		// Nothing to do. Inner types can only be interfaces.
+		// No need to convert `staticType.Types` as they can only be interfaces.
+		convertedLegacyType := maybeConvertAccountType(staticType.LegacyType)
+		if convertedLegacyType != nil {
+			intersectionType := interpreter.NewIntersectionStaticType(nil, staticType.Types)
+			intersectionType.LegacyType = convertedLegacyType
+			return intersectionType
+		}
 
 	case *interpreter.OptionalStaticType:
 		convertedInnerType := maybeConvertAccountType(staticType.Type)

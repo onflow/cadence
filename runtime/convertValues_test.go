@@ -991,6 +991,11 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 			expected: interpreter.PrimitiveStaticTypeSignedInteger,
 		},
 		{
+			label:    "FixedSizeUnsignedInteger",
+			actual:   cadence.FixedSizeUnsignedIntegerType,
+			expected: interpreter.PrimitiveStaticTypeFixedSizeUnsignedInteger,
+		},
+		{
 			label:    "FixedPoint",
 			actual:   cadence.FixedPointType,
 			expected: interpreter.PrimitiveStaticTypeFixedPoint,

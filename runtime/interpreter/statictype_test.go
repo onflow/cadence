@@ -1020,6 +1020,11 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType:   sema.SignedIntegerType,
 			staticType: PrimitiveStaticTypeSignedInteger,
 		},
+		{
+			name:       "FixedSizeUnsignedInteger",
+			semaType:   sema.FixedSizeUnsignedIntegerType,
+			staticType: PrimitiveStaticTypeFixedSizeUnsignedInteger,
+		},
 
 		{
 			name:       "FixedPoint",
