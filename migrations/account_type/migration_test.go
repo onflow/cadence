@@ -220,6 +220,16 @@ func TestTypeValueMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{},
 			),
 		},
+		"intersection_with_legacy_type": {
+			storedType: &interpreter.IntersectionStaticType{
+				Types:      []*interpreter.InterfaceStaticType{},
+				LegacyType: publicAccountType,
+			},
+			expectedType: &interpreter.IntersectionStaticType{
+				Types:      []*interpreter.InterfaceStaticType{},
+				LegacyType: unauthorizedAccountReferenceType,
+			},
+		},
 		"public_account_reference": {
 			storedType: interpreter.NewReferenceStaticType(
 				nil,
@@ -379,14 +389,22 @@ func TestTypeValueMigration(t *testing.T) {
 			testCase, ok := testCases[identifier]
 			require.True(t, ok)
 
-			var storageValue interpreter.Value
+			var expectedValue interpreter.Value
 			if testCase.expectedType != nil {
-				storageValue = interpreter.NewTypeValue(nil, testCase.expectedType)
+				expectedValue = interpreter.NewTypeValue(nil, testCase.expectedType)
+
+				// `IntersectionType.LegacyType` is not considered in the `IntersectionType.Equal` method.
+				// Therefore, check for the legacy type equality manually.
+				typeValue := value.(interpreter.TypeValue)
+				if actualIntersectionType, ok := typeValue.Type.(*interpreter.IntersectionStaticType); ok {
+					expectedIntersectionType := testCase.expectedType.(*interpreter.IntersectionStaticType)
+					assert.True(t, actualIntersectionType.LegacyType.Equal(expectedIntersectionType.LegacyType))
+				}
 			} else {
-				storageValue = interpreter.NewTypeValue(nil, testCase.storedType)
+				expectedValue = interpreter.NewTypeValue(nil, testCase.storedType)
 			}
 
-			utils.AssertValuesEqual(t, inter, storageValue, value)
+			utils.AssertValuesEqual(t, inter, expectedValue, value)
 		})
 	}
 }
@@ -728,6 +746,36 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 				123,
 				interpreter.NewAddressValue(nil, common.Address{0x42}),
 				interpreter.PrimitiveStaticTypeString,
+			),
+		},
+		"account_capability_controller": {
+			storedValue: interpreter.NewUnmeteredAccountCapabilityControllerValue(
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.UnauthorizedAccess,
+					interpreter.PrimitiveStaticTypeAuthAccount, //nolint:staticcheck,
+				),
+				1234,
+			),
+			expectedValue: interpreter.NewUnmeteredAccountCapabilityControllerValue(
+				authAccountReferenceType,
+				1234,
+			),
+		},
+		"storage_capability_controller": {
+			storedValue: interpreter.NewUnmeteredStorageCapabilityControllerValue(
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.UnauthorizedAccess,
+					interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck,
+				),
+				1234,
+				interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
+			),
+			expectedValue: interpreter.NewUnmeteredStorageCapabilityControllerValue(
+				unauthorizedAccountReferenceType,
+				1234,
+				interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
 			),
 		},
 	}

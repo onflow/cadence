@@ -225,6 +225,70 @@ func TestInterpretEqualityOnNumericSuperTypes(t *testing.T) {
 		}
 	})
 
+	t.Run("FixedSizeUnsignedInteger subtypes", func(t *testing.T) {
+		t.Parallel()
+
+		subtypes := []interpreter.StaticType{
+			interpreter.PrimitiveStaticTypeUInt8,
+			interpreter.PrimitiveStaticTypeUInt16,
+			interpreter.PrimitiveStaticTypeUInt32,
+			interpreter.PrimitiveStaticTypeUInt64,
+			interpreter.PrimitiveStaticTypeUInt128,
+			interpreter.PrimitiveStaticTypeUInt256,
+			interpreter.PrimitiveStaticTypeWord8,
+			interpreter.PrimitiveStaticTypeWord16,
+			interpreter.PrimitiveStaticTypeWord32,
+			interpreter.PrimitiveStaticTypeWord64,
+			interpreter.PrimitiveStaticTypeWord128,
+			interpreter.PrimitiveStaticTypeWord256,
+		}
+
+		for _, subtype := range subtypes {
+			rhsType := interpreter.PrimitiveStaticTypeUInt8
+			if subtype == rhsType {
+				rhsType = interpreter.PrimitiveStaticTypeWord128
+			}
+
+			for _, op := range operations {
+				t.Run(fmt.Sprintf("%s,%s", op.String(), subtype.String()), func(t *testing.T) {
+
+					code := fmt.Sprintf(`
+                        fun test(): Bool {
+                            let x: FixedSizeUnsignedInteger = 5 as %s
+                            let y: FixedSizeUnsignedInteger = 2 as %s
+                            return x %s y
+                        }`,
+						subtype.String(),
+						rhsType.String(),
+						op.Symbol(),
+					)
+
+					inter := parseCheckAndInterpret(t, code)
+
+					result, err := inter.Invoke("test")
+
+					switch op {
+					case ast.OperationEqual:
+						require.NoError(t, err)
+						assert.Equal(t, interpreter.FalseValue, result)
+					case ast.OperationNotEqual:
+						require.NoError(t, err)
+						assert.Equal(t, interpreter.TrueValue, result)
+					default:
+						RequireError(t, err)
+
+						operandError := &interpreter.InvalidOperandsError{}
+						require.ErrorAs(t, err, operandError)
+
+						assert.Equal(t, op, operandError.Operation)
+						assert.Equal(t, subtype, operandError.LeftType)
+						assert.Equal(t, rhsType, operandError.RightType)
+					}
+				})
+			}
+		}
+	})
+
 	t.Run("Fixed point subtypes", func(t *testing.T) {
 		t.Parallel()
 

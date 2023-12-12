@@ -192,6 +192,18 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 		assert.Equal(t, uint64(32), meter[common.MemoryKindBigInt])
 	})
 
+	t.Run("FixedSizeUnsignedInteger", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun main(x: FixedSizeUnsignedInteger) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(t, script, meter, cadence.NewUInt256(2))
+		assert.Equal(t, uint64(32), meter[common.MemoryKindBigInt])
+	})
+
 	t.Run("Int", func(t *testing.T) {
 		t.Parallel()
 
