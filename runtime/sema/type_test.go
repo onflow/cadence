@@ -772,8 +772,17 @@ func TestCommonSuperType(t *testing.T) {
 				types: []Type{
 					UInt8Type,
 					UInt128Type,
+					UIntType,
 				},
 				expectedSuperType: IntegerType,
+			},
+			{
+				name: "fixed size unsigned integers",
+				types: []Type{
+					UInt8Type,
+					UInt128Type,
+				},
+				expectedSuperType: FixedSizeUnsignedIntegerType,
 			},
 			{
 				name: "heterogeneous simple types",
@@ -1744,6 +1753,16 @@ func TestTypeInclusions(t *testing.T) {
 		for _, typ := range AllUnsignedIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
 				assert.True(t, UnsignedIntegerTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("FixedSizeUnsignedInteger", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range AllFixedSizeUnsignedIntegerTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				assert.True(t, FixedSizeUnsignedIntegerTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})

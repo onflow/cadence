@@ -1618,7 +1618,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		})
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("nested", func(t *testing.T) {
@@ -1747,7 +1747,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		})
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("self reference", func(t *testing.T) {

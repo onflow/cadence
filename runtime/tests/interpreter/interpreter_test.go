@@ -7305,6 +7305,7 @@ func TestInterpretReferenceEventParameter(t *testing.T) {
 	)
 
 	ref := interpreter.NewUnmeteredEphemeralReferenceValue(
+		inter,
 		interpreter.UnauthorizedAccess,
 		arrayValue,
 		inter.MustConvertStaticToSemaType(arrayStaticType),
@@ -7509,7 +7510,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 	for _, integerType := range sema.AllIntegerTypes {
 
 		switch integerType {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 

@@ -1118,6 +1118,7 @@ func TestStringer(t *testing.T) {
 					common.ZeroAddress,
 				)
 				arrayRef := NewUnmeteredEphemeralReferenceValue(
+					inter,
 					UnauthorizedAccess,
 					array,
 					&sema.VariableSizedType{
@@ -3491,7 +3492,7 @@ func TestNumberValueIntegerConversion(t *testing.T) {
 	for _, ty := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -3796,7 +3797,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		for _, ty := range sema.AllIntegerTypes {
 			// Only test leaf types
 			switch ty {
-			case sema.IntegerType, sema.SignedIntegerType:
+			case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 				continue
 			}
 
@@ -3853,8 +3854,9 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		t.Parallel()
 
 		test(
-			func(*Interpreter) Value {
+			func(inter *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
+					inter,
 					UnauthorizedAccess,
 					TrueValue,
 					sema.BoolType,
@@ -3865,8 +3867,9 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 		)
 
 		test(
-			func(*Interpreter) Value {
+			func(inter *Interpreter) Value {
 				return NewUnmeteredEphemeralReferenceValue(
+					inter,
 					UnauthorizedAccess,
 					TrueValue,
 					sema.StringType,

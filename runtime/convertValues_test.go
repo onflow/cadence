@@ -991,6 +991,11 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 			expected: interpreter.PrimitiveStaticTypeSignedInteger,
 		},
 		{
+			label:    "FixedSizeUnsignedInteger",
+			actual:   cadence.FixedSizeUnsignedIntegerType,
+			expected: interpreter.PrimitiveStaticTypeFixedSizeUnsignedInteger,
+		},
+		{
 			label:    "FixedPoint",
 			actual:   cadence.FixedPointType,
 			expected: interpreter.PrimitiveStaticTypeFixedPoint,
@@ -5286,7 +5291,7 @@ func TestRuntimeDestroyedResourceReferenceExport(t *testing.T) {
 		},
 	)
 	require.Error(t, err)
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {

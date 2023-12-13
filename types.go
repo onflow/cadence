@@ -137,6 +137,7 @@ var SignedNumberType = PrimitiveType(interpreter.PrimitiveStaticTypeSignedNumber
 
 var IntegerType = PrimitiveType(interpreter.PrimitiveStaticTypeInteger)
 var SignedIntegerType = PrimitiveType(interpreter.PrimitiveStaticTypeSignedInteger)
+var FixedSizeUnsignedIntegerType = PrimitiveType(interpreter.PrimitiveStaticTypeFixedSizeUnsignedInteger)
 
 var FixedPointType = PrimitiveType(interpreter.PrimitiveStaticTypeFixedPoint)
 var SignedFixedPointType = PrimitiveType(interpreter.PrimitiveStaticTypeSignedFixedPoint)

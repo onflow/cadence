@@ -58,6 +58,8 @@ func ExportMeteredType(
 			return cadence.IntegerType
 		case sema.SignedIntegerType:
 			return cadence.SignedIntegerType
+		case sema.FixedSizeUnsignedIntegerType:
+			return cadence.FixedSizeUnsignedIntegerType
 		case sema.FixedPointType:
 			return cadence.FixedPointType
 		case sema.SignedFixedPointType:
