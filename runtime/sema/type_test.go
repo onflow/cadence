@@ -1762,6 +1762,17 @@ func TestIsPrimitive(t *testing.T) {
 			})
 		}
 
+		for _, ty := range []Type{
+			&GenericType{TypeParameter: &TypeParameter{Name: "T"}},
+			&TransactionType{},
+		} {
+			tests = append(tests, testCase{
+				expectedIsPrimitive: false,
+				name:                string(ty.ID()),
+				ty:                  ty,
+			})
+		}
+
 		testIsPrimitive(t, tests)
 	})
 
