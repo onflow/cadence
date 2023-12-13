@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	checkerUtils "github.com/onflow/cadence/runtime/tests/checker"
+	"github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
@@ -367,12 +368,50 @@ func TestConvertToEntitledType(t *testing.T) {
 
 }
 
+type testEntitlementsMigration struct {
+	inter *interpreter.Interpreter
+}
+
+func (testEntitlementsMigration) Name() string {
+	return "Test Entitlements Migration"
+}
+
+func (m testEntitlementsMigration) Migrate(value interpreter.Value) (newValue interpreter.Value) {
+	return ConvertValueToEntitlements(m.inter, value)
+}
+
+func convertEntireTestValue(
+	inter *interpreter.Interpreter,
+	storage *runtime.Storage,
+	address common.Address,
+	v interpreter.Value,
+) interpreter.Value {
+	testMig := testEntitlementsMigration{inter: inter}
+	storageMig := migrations.NewStorageMigration(inter, storage)
+
+	migratedValue := storageMig.MigrateNestedValue(
+		v,
+		address,
+		common.PathDomainStorage,
+		"",
+		[]migrations.Migration{testMig},
+		nil,
+	)
+
+	if migratedValue == nil {
+		return v
+	} else {
+		return migratedValue
+	}
+}
+
 func TestConvertToEntitledValue(t *testing.T) {
 	t.Parallel()
 
 	var uuid uint64
 
-	storage := interpreter.NewInMemoryStorage(nil)
+	ledger := runtime_utils.NewTestLedger(nil, nil)
+	storage := runtime.NewStorage(ledger, nil)
 
 	testAddress := common.MustBytesToAddress([]byte{0x1})
 
@@ -838,60 +877,6 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Input: interpreter.NewEphemeralReferenceValue(
 				inter,
 				interpreter.UnauthorizedAccess,
-				interpreter.NewArrayValue(
-					inter,
-					interpreter.EmptyLocationRange,
-					interpreter.NewVariableSizedStaticType(inter, unentitledRRefStaticType),
-					testAddress,
-					unentitledRRef,
-				),
-				sema.NewVariableSizedType(
-					inter,
-					sema.NewReferenceType(
-						inter,
-						sema.UnauthorizedAccess,
-						inter.MustSemaTypeOfValue(rValue),
-					),
-				),
-				interpreter.EmptyLocationRange,
-			),
-			Output: interpreter.NewEphemeralReferenceValue(
-				inter,
-				interpreter.NewEntitlementSetAuthorization(
-					inter,
-					func() []common.TypeID { return []common.TypeID{"Mutate", "Insert", "Remove"} },
-					3,
-					sema.Conjunction,
-				),
-				interpreter.NewArrayValue(
-					inter,
-					interpreter.EmptyLocationRange,
-					interpreter.NewVariableSizedStaticType(inter, entitledRRefStaticType),
-					testAddress,
-					entitledRRef,
-				),
-				sema.NewVariableSizedType(
-					inter,
-					sema.NewReferenceType(
-						inter,
-						sema.NewEntitlementSetAccess(
-							[]*sema.EntitlementType{
-								checker.Elaboration.EntitlementType("S.test.E"),
-								checker.Elaboration.EntitlementType("S.test.G"),
-							},
-							sema.Conjunction,
-						),
-						inter.MustSemaTypeOfValue(rValue),
-					),
-				),
-				interpreter.EmptyLocationRange,
-			),
-			Name: "&[&R]",
-		},
-		{
-			Input: interpreter.NewEphemeralReferenceValue(
-				inter,
-				interpreter.UnauthorizedAccess,
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
@@ -921,58 +906,6 @@ func TestConvertToEntitledValue(t *testing.T) {
 				interpreter.EmptyLocationRange,
 			),
 			Name: "&{Int: R}",
-		},
-		{
-			Input: interpreter.NewEphemeralReferenceValue(
-				inter,
-				interpreter.UnauthorizedAccess,
-				interpreter.NewDictionaryValue(
-					inter,
-					interpreter.EmptyLocationRange,
-					interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, unentitledRRefStaticType),
-					interpreter.NewIntValueFromInt64(inter, 0),
-					unentitledRRef,
-				),
-				sema.NewDictionaryType(inter, sema.IntType,
-					sema.NewReferenceType(
-						inter,
-						sema.UnauthorizedAccess,
-						inter.MustSemaTypeOfValue(rValue),
-					),
-				),
-				interpreter.EmptyLocationRange,
-			),
-			Output: interpreter.NewEphemeralReferenceValue(
-				inter,
-				interpreter.NewEntitlementSetAuthorization(
-					inter,
-					func() []common.TypeID { return []common.TypeID{"Mutate", "Insert", "Remove"} },
-					3,
-					sema.Conjunction,
-				),
-				interpreter.NewDictionaryValue(
-					inter,
-					interpreter.EmptyLocationRange,
-					interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, entitledRRefStaticType),
-					interpreter.NewIntValueFromInt64(inter, 0),
-					entitledRRef,
-				),
-				sema.NewDictionaryType(inter, sema.IntType,
-					sema.NewReferenceType(
-						inter,
-						sema.NewEntitlementSetAccess(
-							[]*sema.EntitlementType{
-								checker.Elaboration.EntitlementType("S.test.E"),
-								checker.Elaboration.EntitlementType("S.test.G"),
-							},
-							sema.Conjunction,
-						),
-						inter.MustSemaTypeOfValue(rValue),
-					),
-				),
-				interpreter.EmptyLocationRange,
-			),
-			Name: "&{Int: &R}",
 		},
 	}
 
@@ -1060,12 +993,12 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			inter.ConvertValueToEntitlements(test.Input, ConvertToEntitledType)
-			switch input := test.Input.(type) {
+			convertedValue := convertEntireTestValue(inter, storage, testAddress, test.Input)
+			switch convertedValue := convertedValue.(type) {
 			case interpreter.EquatableValue:
-				require.True(t, referencePeekingEqual(input, test.Output))
+				require.True(t, referencePeekingEqual(convertedValue, test.Output))
 			default:
-				require.Equal(t, input, test.Output)
+				require.Equal(t, convertedValue, test.Output)
 			}
 		})
 	}
@@ -1680,6 +1613,243 @@ func TestMigrateArrayOfValues(t *testing.T) {
 	)
 
 	cap2 := arrValue.Get(inter, interpreter.EmptyLocationRange, 1)
+	require.IsType(t, &interpreter.CapabilityValue{}, cap2)
+	capValue = cap1.(*interpreter.CapabilityValue)
+	require.IsType(t, &interpreter.ReferenceStaticType{}, capValue.BorrowType)
+	ref = capValue.BorrowType.(*interpreter.ReferenceStaticType)
+	require.Equal(t,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID { return []common.TypeID{"A.0000000000000001.C.E"} },
+			1,
+			sema.Conjunction,
+		),
+		ref.Authorization,
+	)
+}
+
+func TestMigrateDictOfValues(t *testing.T) {
+	t.Parallel()
+
+	address1 := [8]byte{0, 0, 0, 0, 0, 0, 0, 1}
+	address2 := [8]byte{0, 0, 0, 0, 0, 0, 0, 2}
+
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
+
+	accountCodes := map[common.Location][]byte{}
+	interfaces := map[common.Location]*TestRuntimeInterface{}
+
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{address1}, nil
+		},
+		OnGetCode: func(location common.Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnResolveLocation: MultipleIdentifierLocationResolver,
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+	runtimeInterface1.OnUpdateAccountContractCode = func(location common.AddressLocation, code []byte) error {
+		accountCodes[location] = code
+		interfaces[location] = runtimeInterface1
+		return nil
+	}
+
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnGetCode: func(location common.Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{address2}, nil
+		},
+		OnResolveLocation: MultipleIdentifierLocationResolver,
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+	runtimeInterface2.OnUpdateAccountContractCode = func(location common.AddressLocation, code []byte) error {
+		accountCodes[location] = code
+		interfaces[location] = runtimeInterface2
+		return nil
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	oldContract := []byte(`
+		access(all) contract C {
+			access(all) resource R {
+				access(all) fun foo() {}
+			}
+			access(all) fun makeR(): @R {
+				return <- create R()
+			}
+		}
+	`)
+
+	contract := []byte(`
+		access(all) contract C {
+			access(all) entitlement E
+			access(all) resource R {
+				access(E) fun foo() {}
+			}
+			access(all) fun makeR(): @R {
+				return <- create R()
+			}
+		}
+	`)
+
+	saveValues := []byte(`
+		import C from 0x1	
+
+		transaction {
+			prepare(signer: auth(Storage, Capabilities) &Account) {
+				let r1 <- C.makeR()
+				let r2 <- C.makeR()
+				signer.storage.save(<-r1, to: /storage/foo)
+				signer.storage.save(<-r2, to: /storage/bar)
+				let cap1 = signer.capabilities.storage.issue<&C.R>(/storage/foo)
+				let cap2 = signer.capabilities.storage.issue<&C.R>(/storage/bar)
+				let arr = {"a": cap1, "b": cap2}
+				signer.storage.save(arr, to: /storage/caps)
+			}
+		}
+	`)
+
+	// Deploy contract to 0x1
+	err := rt.ExecuteTransaction(
+		runtime.Script{
+			Source: DeploymentTransaction("C", oldContract),
+		},
+		runtime.Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Execute transaction on 0x2
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: saveValues,
+		},
+		runtime.Context{
+			Interface: runtimeInterface2,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// update contract on 0x1
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: UpdateTransaction("C", contract),
+		},
+		runtime.Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	runtimeStorage := runtime.NewStorage(storage, nil)
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage:                       runtimeStorage,
+			AtreeValueValidationEnabled:   false,
+			AtreeStorageValidationEnabled: false,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				program, err := rt.ParseAndCheckProgram(
+					accountCodes[location],
+					runtime.Context{
+						Interface: interfaces[location],
+						Location:  location,
+					},
+				)
+				require.NoError(t, err)
+
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				require.NoError(t, err)
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
+				}
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	storageIdentifier := common.PathDomainStorage.Identifier()
+	storageMap := runtimeStorage.GetStorageMap(address2, storageIdentifier, false)
+	require.NotNil(t, storageMap)
+	require.Greater(t, storageMap.Count(), uint64(0))
+
+	// Migrate
+
+	migration := migrations.NewStorageMigration(inter, runtimeStorage)
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				address1,
+				address2,
+			},
+		},
+		nil,
+		NewEntitlementsMigration(inter),
+	)
+
+	dictValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("caps"))
+	require.IsType(t, &interpreter.DictionaryValue{}, dictValue)
+	dictionaryValue := dictValue.(*interpreter.DictionaryValue)
+
+	valueType := dictionaryValue.Type.ValueType
+	require.IsType(t, &interpreter.CapabilityStaticType{}, valueType)
+	capElementType := valueType.(*interpreter.CapabilityStaticType)
+	require.IsType(t, &interpreter.ReferenceStaticType{}, capElementType.BorrowType)
+	ref := capElementType.BorrowType.(*interpreter.ReferenceStaticType)
+	require.Equal(t,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID { return []common.TypeID{"A.0000000000000001.C.E"} },
+			1,
+			sema.Conjunction,
+		),
+		ref.Authorization,
+	)
+
+	cap1, present := dictionaryValue.Get(inter, interpreter.EmptyLocationRange, interpreter.NewUnmeteredStringValue("a"))
+	require.True(t, present)
+	require.IsType(t, &interpreter.CapabilityValue{}, cap1)
+	capValue := cap1.(*interpreter.CapabilityValue)
+	require.IsType(t, &interpreter.ReferenceStaticType{}, capValue.BorrowType)
+	ref = capValue.BorrowType.(*interpreter.ReferenceStaticType)
+	require.Equal(t,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID { return []common.TypeID{"A.0000000000000001.C.E"} },
+			1,
+			sema.Conjunction,
+		),
+		ref.Authorization,
+	)
+
+	cap2, present := dictionaryValue.Get(inter, interpreter.EmptyLocationRange, interpreter.NewUnmeteredStringValue("b"))
+	require.True(t, present)
 	require.IsType(t, &interpreter.CapabilityValue{}, cap2)
 	capValue = cap1.(*interpreter.CapabilityValue)
 	require.IsType(t, &interpreter.ReferenceStaticType{}, capValue.BorrowType)
