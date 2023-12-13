@@ -151,6 +151,11 @@ func ConvertValueToEntitlements(
 	semaType := inter.MustConvertStaticToSemaType(staticType)
 	entitledType := ConvertToEntitledType(semaType)
 
+	// if the types of the values are equal and the value is not a runtime type, there's nothing to migrate
+	if entitledType.Equal(semaType) && !entitledType.Equal(sema.MetaType) {
+		return nil
+	}
+
 	switch v := v.(type) {
 	case *interpreter.EphemeralReferenceValue:
 		entitledReferenceType := entitledType.(*sema.ReferenceType)
@@ -220,7 +225,7 @@ func ConvertValueToEntitlements(
 
 	case *interpreter.TypeValue:
 		if v.Type == nil {
-			return v
+			return nil
 		}
 		// convert the static type of the value
 		entitledStaticType := interpreter.ConvertSemaToStaticType(
