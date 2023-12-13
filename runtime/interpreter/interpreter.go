@@ -5591,5 +5591,5 @@ func (interpreter *Interpreter) ConvertValueToEntitlements(
 		return NewTypeValue(interpreter, entitledStaticType)
 	}
 
-	return v
+	return nil
 }
