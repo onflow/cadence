@@ -86,9 +86,6 @@ func ConvertToEntitledType(t sema.Type) sema.Type {
 
 // Converts the input value into a version compatible with the new entitlements feature,
 // with the same members/operations accessible on any references as would have been accessible in the past.
-// Modifies the input `v` in place.
-// This is used for migrations, but must be located in this package because some of the fields we wish to modify are
-// privately scoped to this package
 func ConvertValueToEntitlements(
 	inter *interpreter.Interpreter,
 	v interpreter.Value,
