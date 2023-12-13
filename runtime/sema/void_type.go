@@ -26,7 +26,7 @@ var VoidType = &SimpleType{
 	TypeTag:       VoidTypeTag,
 	IsResource:    false,
 	Storable:      false,
-	Primitive:     false,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    false,
 	Exportable:    true,
