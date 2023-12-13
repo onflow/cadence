@@ -131,9 +131,6 @@ func (m *StorageMigration) migrateNestedValue(
 			}
 		}
 
-		// The array itself doesn't need to be replaced.
-		return
-
 	case *interpreter.CompositeValue:
 		composite := value
 
@@ -155,9 +152,6 @@ func (m *StorageMigration) migrateNestedValue(
 
 			composite.SetMember(m.interpreter, emptyLocationRange, fieldName, migratedValue)
 		}
-
-		// The composite itself does not have to be replaced
-		return
 
 	case *interpreter.DictionaryValue:
 		dictionary := value
@@ -207,29 +201,26 @@ func (m *StorageMigration) migrateNestedValue(
 
 			dictionary.SetKey(m.interpreter, emptyLocationRange, keyToSet, valueToSet)
 		}
+	}
 
-		// The dictionary itself does not have to be replaced
-		return
-	default:
-		// Assumption: all migrations only migrate non-container typed values.
-		for _, migration := range migrations {
-			converted := migration.Migrate(value)
+	// Assumption: all migrations only migrate non-container typed values.
+	for _, migration := range migrations {
+		converted := migration.Migrate(value)
 
-			if converted != nil {
-				// Chain the migrations.
-				// Probably not needed, because of the assumption above.
-				// i.e: A single non-container value may not get converted from two migrations.
-				// But have it here to be safe.
-				value = converted
+		if converted != nil {
+			// Chain the migrations.
+			// Probably not needed, because of the assumption above.
+			// i.e: A single non-container value may not get converted from two migrations.
+			// But have it here to be safe.
+			value = converted
 
-				newValue = converted
+			newValue = converted
 
-				if reporter != nil {
-					reporter.Report(address, domain, key, migration.Name())
-				}
+			if reporter != nil {
+				reporter.Report(address, domain, key, migration.Name())
 			}
 		}
-
-		return
 	}
+	return
+
 }
