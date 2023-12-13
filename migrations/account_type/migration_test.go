@@ -407,7 +407,7 @@ func TestTypeValueMigration(t *testing.T) {
 
 				// `IntersectionType.LegacyType` is not considered in the `IntersectionType.Equal` method.
 				// Therefore, check for the legacy type equality manually.
-				typeValue := value.(interpreter.TypeValue)
+				typeValue := value.(*interpreter.TypeValue)
 				if actualIntersectionType, ok := typeValue.Type.(*interpreter.IntersectionStaticType); ok {
 					expectedIntersectionType := testCase.expectedType.(*interpreter.IntersectionStaticType)
 					assert.True(t, actualIntersectionType.LegacyType.Equal(expectedIntersectionType.LegacyType))

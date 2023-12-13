@@ -83,7 +83,7 @@ func (m *StorageMigration) migrateValuesInAccount(
 		domain common.PathDomain,
 		key string,
 	) interpreter.Value {
-		return m.migrateNestedValue(value, address, domain, key, migrations, reporter)
+		return m.MigrateNestedValue(value, address, domain, key, migrations, reporter)
 	}
 
 	accountStorage.ForEachValue(
@@ -95,7 +95,7 @@ func (m *StorageMigration) migrateValuesInAccount(
 
 var emptyLocationRange = interpreter.EmptyLocationRange
 
-func (m *StorageMigration) migrateNestedValue(
+func (m *StorageMigration) MigrateNestedValue(
 	value interpreter.Value,
 	address common.Address,
 	domain common.PathDomain,
@@ -106,7 +106,7 @@ func (m *StorageMigration) migrateNestedValue(
 	switch value := value.(type) {
 	case *interpreter.SomeValue:
 		innerValue := value.InnerValue(m.interpreter, emptyLocationRange)
-		newInnerValue := m.migrateNestedValue(innerValue, address, domain, key, migrations, reporter)
+		newInnerValue := m.MigrateNestedValue(innerValue, address, domain, key, migrations, reporter)
 		if newInnerValue != nil {
 			return interpreter.NewSomeValueNonCopying(m.interpreter, newInnerValue)
 		}
@@ -120,7 +120,7 @@ func (m *StorageMigration) migrateNestedValue(
 		count := array.Count()
 		for index := 0; index < count; index++ {
 			element := array.Get(m.interpreter, emptyLocationRange, index)
-			newElement := m.migrateNestedValue(element, address, domain, key, migrations, reporter)
+			newElement := m.MigrateNestedValue(element, address, domain, key, migrations, reporter)
 			if newElement != nil {
 				array.Set(
 					m.interpreter,
@@ -145,7 +145,7 @@ func (m *StorageMigration) migrateNestedValue(
 		for _, fieldName := range fieldNames {
 			existingValue := composite.GetField(m.interpreter, interpreter.EmptyLocationRange, fieldName)
 
-			migratedValue := m.migrateNestedValue(existingValue, address, domain, key, migrations, reporter)
+			migratedValue := m.MigrateNestedValue(existingValue, address, domain, key, migrations, reporter)
 			if migratedValue == nil {
 				continue
 			}
@@ -170,8 +170,8 @@ func (m *StorageMigration) migrateNestedValue(
 				panic(errors.NewUnreachableError())
 			}
 
-			newKey := m.migrateNestedValue(existingKey, address, domain, key, migrations, reporter)
-			newValue := m.migrateNestedValue(existingValue, address, domain, key, migrations, reporter)
+			newKey := m.MigrateNestedValue(existingKey, address, domain, key, migrations, reporter)
+			newValue := m.MigrateNestedValue(existingValue, address, domain, key, migrations, reporter)
 			if newKey == nil && newValue == nil {
 				continue
 			}
@@ -203,7 +203,6 @@ func (m *StorageMigration) migrateNestedValue(
 		}
 	}
 
-	// Assumption: all migrations only migrate non-container typed values.
 	for _, migration := range migrations {
 		converted := migration.Migrate(value)
 
