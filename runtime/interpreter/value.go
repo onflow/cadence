@@ -16312,7 +16312,7 @@ type CompositeValue struct {
 	isDestroyed         bool
 }
 
-type ComputedField func(*Interpreter, LocationRange) Value
+type ComputedField func(*Interpreter, LocationRange, *CompositeValue) Value
 
 type CompositeField struct {
 	Value Value
@@ -16744,7 +16744,7 @@ func (v *CompositeValue) GetComputedField(interpreter *Interpreter, locationRang
 		return nil
 	}
 
-	return computedField(interpreter, locationRange)
+	return computedField(interpreter, locationRange, v)
 }
 
 func (v *CompositeValue) GetInjectedField(interpreter *Interpreter, name string) Value {
@@ -17198,7 +17198,7 @@ func (v *CompositeValue) ConformsToStaticType(
 				return false
 			}
 
-			value = fieldGetter(interpreter, locationRange)
+			value = fieldGetter(interpreter, locationRange, v)
 		}
 
 		member, ok := compositeType.Members.Get(fieldName)
