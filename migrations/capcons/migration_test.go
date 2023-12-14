@@ -1658,6 +1658,15 @@ func TestClearPrivateDomain(t *testing.T) {
 
 	storeTestAccountLinks(accountLinks, storage, inter)
 
+	require.Equal(t,
+		uint64(2),
+		storage.GetStorageMap(testAddress, common.PathDomainPublic.Identifier(), false).Count(),
+	)
+	require.Equal(t,
+		uint64(2),
+		storage.GetStorageMap(testAddress, common.PathDomainPrivate.Identifier(), false).Count(),
+	)
+
 	err = storage.Commit(inter, false)
 	require.NoError(t, err)
 
