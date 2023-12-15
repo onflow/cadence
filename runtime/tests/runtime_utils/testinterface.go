@@ -317,11 +317,17 @@ func (i *TestRuntimeInterface) GetSigningAccounts() ([]runtime.Address, error) {
 }
 
 func (i *TestRuntimeInterface) ProgramLog(message string) error {
+	if i.OnProgramLog == nil {
+		panic("must specify TestRuntimeInterface.OnProgramLog")
+	}
 	i.OnProgramLog(message)
 	return nil
 }
 
 func (i *TestRuntimeInterface) EmitEvent(event cadence.Event) error {
+	if i.OnEmitEvent == nil {
+		panic("must specify TestRuntimeInterface.OnEmitEvent")
+	}
 	return i.OnEmitEvent(event)
 }
 

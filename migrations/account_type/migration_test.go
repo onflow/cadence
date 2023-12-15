@@ -78,6 +78,9 @@ func TestTypeValueMigration(t *testing.T) {
 	const authAccountType = interpreter.PrimitiveStaticTypeAuthAccount     //nolint:staticcheck
 	const stringType = interpreter.PrimitiveStaticTypeString
 
+	const fooBarQualifiedIdentifier = "Foo.Bar"
+	fooAddressLocation := common.NewAddressLocation(nil, account, "Foo")
+
 	type testCase struct {
 		storedType   interpreter.StaticType
 		expectedType interpreter.StaticType
@@ -137,21 +140,24 @@ func TestTypeValueMigration(t *testing.T) {
 			expectedType: interpreter.NewOptionalStaticType(nil, unauthorizedAccountReferenceType),
 		},
 		"optional_string": {
-			storedType: interpreter.NewOptionalStaticType(nil, stringType),
+			storedType:   interpreter.NewOptionalStaticType(nil, stringType),
+			expectedType: nil,
 		},
 		"constant_sized_account_array": {
 			storedType:   interpreter.NewConstantSizedStaticType(nil, publicAccountType, 3),
 			expectedType: interpreter.NewConstantSizedStaticType(nil, unauthorizedAccountReferenceType, 3),
 		},
 		"constant_sized_string_array": {
-			storedType: interpreter.NewConstantSizedStaticType(nil, stringType, 3),
+			storedType:   interpreter.NewConstantSizedStaticType(nil, stringType, 3),
+			expectedType: nil,
 		},
 		"variable_sized_account_array": {
 			storedType:   interpreter.NewVariableSizedStaticType(nil, authAccountType),
 			expectedType: interpreter.NewVariableSizedStaticType(nil, authAccountReferenceType),
 		},
 		"variable_sized_string_array": {
-			storedType: interpreter.NewVariableSizedStaticType(nil, stringType),
+			storedType:   interpreter.NewVariableSizedStaticType(nil, stringType),
+			expectedType: nil,
 		},
 		"dictionary_with_account_type_value": {
 			storedType: interpreter.NewDictionaryStaticType(
@@ -195,6 +201,7 @@ func TestTypeValueMigration(t *testing.T) {
 				stringType,
 				stringType,
 			),
+			expectedType: nil,
 		},
 		"capability": {
 			storedType: interpreter.NewCapabilityStaticType(
@@ -211,6 +218,7 @@ func TestTypeValueMigration(t *testing.T) {
 				nil,
 				stringType,
 			),
+			expectedType: nil,
 		},
 		"intersection": {
 			storedType: interpreter.NewIntersectionStaticType(
@@ -219,21 +227,23 @@ func TestTypeValueMigration(t *testing.T) {
 					interpreter.NewInterfaceStaticType(
 						nil,
 						nil,
-						"Bar",
+						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
-							common.NewAddressLocation(nil, account, "Foo"),
-							"Bar",
+							fooAddressLocation,
+							fooBarQualifiedIdentifier,
 						),
 					),
 				},
 			),
+			expectedType: nil,
 		},
 		"empty intersection": {
 			storedType: interpreter.NewIntersectionStaticType(
 				nil,
 				[]*interpreter.InterfaceStaticType{},
 			),
+			expectedType: nil,
 		},
 		"intersection_with_legacy_type": {
 			storedType: &interpreter.IntersectionStaticType{
@@ -300,25 +310,27 @@ func TestTypeValueMigration(t *testing.T) {
 			storedType: interpreter.NewInterfaceStaticType(
 				nil,
 				nil,
-				"Bar",
+				fooBarQualifiedIdentifier,
 				common.NewTypeIDFromQualifiedName(
 					nil,
-					common.NewAddressLocation(nil, account, "Foo"),
-					"Bar",
+					fooAddressLocation,
+					fooBarQualifiedIdentifier,
 				),
 			),
+			expectedType: nil,
 		},
 		"composite": {
 			storedType: interpreter.NewCompositeStaticType(
 				nil,
 				nil,
-				"Bar",
+				fooBarQualifiedIdentifier,
 				common.NewTypeIDFromQualifiedName(
 					nil,
-					common.NewAddressLocation(nil, account, "Foo"),
-					"Bar",
+					fooAddressLocation,
+					fooBarQualifiedIdentifier,
 				),
 			),
+			expectedType: nil,
 		},
 	}
 
@@ -465,6 +477,9 @@ func TestNestedTypeValueMigration(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+
+	fooAddressLocation := common.NewAddressLocation(nil, account, "Foo")
+	const fooBarQualifiedIdentifier = "Foo.Bar"
 
 	testCases := map[string]testCase{
 		"account_some_value": {
@@ -623,8 +638,8 @@ func TestNestedTypeValueMigration(t *testing.T) {
 			storedValue: interpreter.NewCompositeValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				common.NewAddressLocation(nil, common.Address{0x42}, "Foo"),
-				"Bar",
+				fooAddressLocation,
+				fooBarQualifiedIdentifier,
 				common.CompositeKindResource,
 				[]interpreter.CompositeField{
 					interpreter.NewUnmeteredCompositeField("field1", storedAccountTypeValue),
@@ -635,8 +650,8 @@ func TestNestedTypeValueMigration(t *testing.T) {
 			expectedValue: interpreter.NewCompositeValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				common.NewAddressLocation(nil, common.Address{0x42}, "Foo"),
-				"Bar",
+				fooAddressLocation,
+				fooBarQualifiedIdentifier,
 				common.CompositeKindResource,
 				[]interpreter.CompositeField{
 					interpreter.NewUnmeteredCompositeField("field1", expectedAccountTypeValue),

@@ -21,6 +21,7 @@ package account_type
 import (
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -112,11 +113,15 @@ func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.Stat
 
 	case *interpreter.IntersectionStaticType:
 		// No need to convert `staticType.Types` as they can only be interfaces.
-		convertedLegacyType := maybeConvertAccountType(staticType.LegacyType)
-		if convertedLegacyType != nil {
-			intersectionType := interpreter.NewIntersectionStaticType(nil, staticType.Types)
-			intersectionType.LegacyType = convertedLegacyType
-			return intersectionType
+
+		legacyType := staticType.LegacyType
+		if legacyType != nil {
+			convertedLegacyType := maybeConvertAccountType(legacyType)
+			if convertedLegacyType != nil {
+				intersectionType := interpreter.NewIntersectionStaticType(nil, staticType.Types)
+				intersectionType.LegacyType = convertedLegacyType
+				return intersectionType
+			}
 		}
 
 	case *interpreter.OptionalStaticType:
@@ -155,7 +160,7 @@ func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.Stat
 		// Ignore the wrapper, and continue with the inner type.
 		return maybeConvertAccountType(staticType.PrimitiveStaticType)
 
-	default:
+	case interpreter.PrimitiveStaticType:
 		// Is it safe to do so?
 		switch staticType {
 		case interpreter.PrimitiveStaticTypePublicAccount: //nolint:staticcheck
@@ -187,6 +192,9 @@ func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.Stat
 		case interpreter.PrimitiveStaticTypeAccountKey: //nolint:staticcheck
 			return interpreter.AccountKeyStaticType
 		}
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
 	return nil
