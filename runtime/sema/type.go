@@ -105,6 +105,11 @@ type Type interface {
 	QualifiedString() string
 	Equal(other Type) bool
 
+	// IsPrimitiveType returns true if the type is itself a primitive,
+	// Note that the container of a primitive type (e.g. optionals, arrays, dictionaries, etc.)
+	// are not a primitive.
+	IsPrimitiveType() bool
+
 	// IsResourceType returns true if the type is itself a resource (a `CompositeType` with resource kind),
 	// or it contains a resource type (e.g. for optionals, arrays, dictionaries, etc.)
 	IsResourceType() bool
@@ -670,6 +675,10 @@ func (t *OptionalType) IsResourceType() bool {
 	return t.Type.IsResourceType()
 }
 
+func (t *OptionalType) IsPrimitiveType() bool {
+	return t.Type.IsPrimitiveType()
+}
+
 func (t *OptionalType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
@@ -876,6 +885,10 @@ func (t *GenericType) Equal(other Type) bool {
 }
 
 func (*GenericType) IsResourceType() bool {
+	return false
+}
+
+func (*GenericType) IsPrimitiveType() bool {
 	return false
 }
 
@@ -1179,6 +1192,10 @@ func (*NumericType) IsResourceType() bool {
 	return false
 }
 
+func (*NumericType) IsPrimitiveType() bool {
+	return true
+}
+
 func (*NumericType) IsInvalidType() bool {
 	return false
 }
@@ -1366,6 +1383,10 @@ func (t *FixedPointNumericType) Equal(other Type) bool {
 
 func (*FixedPointNumericType) IsResourceType() bool {
 	return false
+}
+
+func (*FixedPointNumericType) IsPrimitiveType() bool {
+	return true
 }
 
 func (*FixedPointNumericType) IsInvalidType() bool {
@@ -2668,6 +2689,10 @@ func (t *VariableSizedType) IsResourceType() bool {
 	return t.Type.IsResourceType()
 }
 
+func (t *VariableSizedType) IsPrimitiveType() bool {
+	return false
+}
+
 func (t *VariableSizedType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
@@ -2837,6 +2862,10 @@ func (t *ConstantSizedType) initializeMemberResolvers() {
 
 func (t *ConstantSizedType) IsResourceType() bool {
 	return t.Type.IsResourceType()
+}
+
+func (t *ConstantSizedType) IsPrimitiveType() bool {
+	return false
 }
 
 func (t *ConstantSizedType) IsInvalidType() bool {
@@ -3385,6 +3414,10 @@ func (t *FunctionType) HasSameArgumentLabels(other *FunctionType) bool {
 }
 
 func (*FunctionType) IsResourceType() bool {
+	return false
+}
+
+func (t *FunctionType) IsPrimitiveType() bool {
 	return false
 }
 
@@ -4561,6 +4594,10 @@ func (t *CompositeType) IsResourceType() bool {
 			t.baseType.IsResourceType())
 }
 
+func (t *CompositeType) IsPrimitiveType() bool {
+	return false
+}
+
 func (*CompositeType) IsInvalidType() bool {
 	return false
 }
@@ -5358,6 +5395,10 @@ func (t *InterfaceType) IsResourceType() bool {
 	return t.CompositeKind == common.CompositeKindResource
 }
 
+func (t *InterfaceType) IsPrimitiveType() bool {
+	return false
+}
+
 func (t *InterfaceType) IsInvalidType() bool {
 	return false
 }
@@ -5612,6 +5653,10 @@ func (t *DictionaryType) Equal(other Type) bool {
 func (t *DictionaryType) IsResourceType() bool {
 	return t.KeyType.IsResourceType() ||
 		t.ValueType.IsResourceType()
+}
+
+func (t *DictionaryType) IsPrimitiveType() bool {
+	return false
 }
 
 func (t *DictionaryType) IsInvalidType() bool {
@@ -6106,6 +6151,10 @@ func (t *ReferenceType) IsResourceType() bool {
 	return false
 }
 
+func (t *ReferenceType) IsPrimitiveType() bool {
+	return false
+}
+
 func (t *ReferenceType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
@@ -6299,6 +6348,10 @@ func (*AddressType) Equal(other Type) bool {
 
 func (*AddressType) IsResourceType() bool {
 	return false
+}
+
+func (*AddressType) IsPrimitiveType() bool {
+	return true
 }
 
 func (*AddressType) IsInvalidType() bool {
@@ -6921,6 +6974,10 @@ func (*TransactionType) IsResourceType() bool {
 	return false
 }
 
+func (*TransactionType) IsPrimitiveType() bool {
+	return false
+}
+
 func (*TransactionType) IsInvalidType() bool {
 	return false
 }
@@ -7118,6 +7175,10 @@ func (t *IntersectionType) Equal(other Type) bool {
 func (t *IntersectionType) IsResourceType() bool {
 	// intersections are guaranteed to have all their interfaces be the same kind
 	return t.Types[0].IsResourceType()
+}
+
+func (*IntersectionType) IsPrimitiveType() bool {
+	return false
 }
 
 func (t *IntersectionType) IsInvalidType() bool {
@@ -7367,6 +7428,10 @@ func (t *CapabilityType) Equal(other Type) bool {
 }
 
 func (*CapabilityType) IsResourceType() bool {
+	return false
+}
+
+func (*CapabilityType) IsPrimitiveType() bool {
 	return false
 }
 
@@ -7934,6 +7999,10 @@ func (t *EntitlementType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
+func (t *EntitlementType) IsPrimitiveType() bool {
+	return false
+}
+
 func (t *EntitlementType) IsInvalidType() bool {
 	return false
 }
@@ -8075,6 +8144,10 @@ func (t *EntitlementMapType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*Typ
 
 func (t *EntitlementMapType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
+}
+
+func (*EntitlementMapType) IsPrimitiveType() bool {
+	return false
 }
 
 func (t *EntitlementMapType) IsInvalidType() bool {

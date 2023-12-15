@@ -155,6 +155,7 @@ type typeDecl struct {
 	fullTypeName       string
 	compositeKind      common.CompositeKind
 	storable           bool
+	primitive          bool
 	equatable          bool
 	exportable         bool
 	comparable         bool
@@ -523,6 +524,15 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 				))
 			}
 			typeDecl.storable = true
+
+		case "Primitive":
+			if !generateSimpleType {
+				panic(fmt.Errorf(
+					"composite types cannot be explicitly marked as primitive: %s",
+					g.currentTypeID(),
+				))
+			}
+			typeDecl.primitive = true
 
 		case "Equatable":
 			if !generateSimpleType {
@@ -1576,6 +1586,7 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 	//	tag:           TestTypeTag,
 	//	IsResource:    true,
 	//	Storable:      false,
+	//	Primitive:     false,
 	//	Equatable:     false,
 	//	Comparable:    false,
 	//	Exportable:    false,
@@ -1590,6 +1601,7 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 		goKeyValue("TypeTag", typeTagVarIdent(ty.fullTypeName)),
 		goKeyValue("IsResource", goBoolLit(isResource)),
 		goKeyValue("Storable", goBoolLit(ty.storable)),
+		goKeyValue("Primitive", goBoolLit(ty.primitive)),
 		goKeyValue("Equatable", goBoolLit(ty.equatable)),
 		goKeyValue("Comparable", goBoolLit(ty.comparable)),
 		goKeyValue("Exportable", goBoolLit(ty.exportable)),
