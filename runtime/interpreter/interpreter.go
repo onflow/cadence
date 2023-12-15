@@ -3420,12 +3420,12 @@ func init() {
 }
 
 func dictionaryTypeFunction(invocation Invocation) Value {
-	keyTypeValue, ok := invocation.Arguments[0].(*TypeValue)
+	keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	valueTypeValue, ok := invocation.Arguments[1].(*TypeValue)
+	valueTypeValue, ok := invocation.Arguments[1].(TypeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -3461,7 +3461,7 @@ func referenceTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	typeValue, ok := invocation.Arguments[1].(*TypeValue)
+	typeValue, ok := invocation.Arguments[1].(TypeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -3565,7 +3565,7 @@ func functionTypeFunction(invocation Invocation) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	typeValue, ok := invocation.Arguments[1].(*TypeValue)
+	typeValue, ok := invocation.Arguments[1].(TypeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -3577,7 +3577,7 @@ func functionTypeFunction(invocation Invocation) Value {
 	if parameterCount > 0 {
 		parameterTypes = make([]sema.Parameter, 0, parameterCount)
 		parameters.Iterate(interpreter, func(param Value) bool {
-			semaType := interpreter.MustConvertStaticToSemaType(param.(*TypeValue).Type)
+			semaType := interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
 			parameterTypes = append(
 				parameterTypes,
 				sema.Parameter{
@@ -3756,7 +3756,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		converter: NewUnmeteredHostFunctionValue(
 			sema.OptionalTypeFunctionType,
 			func(invocation Invocation) Value {
-				typeValue, ok := invocation.Arguments[0].(*TypeValue)
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3776,7 +3776,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		converter: NewUnmeteredHostFunctionValue(
 			sema.VariableSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
-				typeValue, ok := invocation.Arguments[0].(*TypeValue)
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3797,7 +3797,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		converter: NewUnmeteredHostFunctionValue(
 			sema.ConstantSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
-				typeValue, ok := invocation.Arguments[0].(*TypeValue)
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3823,7 +3823,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		converter: NewUnmeteredHostFunctionValue(
 			sema.CapabilityTypeFunctionType,
 			func(invocation Invocation) Value {
-				typeValue, ok := invocation.Arguments[0].(*TypeValue)
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -4909,7 +4909,7 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 			interpreter := invocation.Interpreter
 
 			firstArgument := invocation.Arguments[0]
-			typeValue, ok := firstArgument.(*TypeValue)
+			typeValue, ok := firstArgument.(TypeValue)
 
 			if !ok {
 				panic(errors.NewUnreachableError())

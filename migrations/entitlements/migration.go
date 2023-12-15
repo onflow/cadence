@@ -223,7 +223,7 @@ func ConvertValueToEntitlements(
 		capabilityStaticType := interpreter.ConvertSemaToStaticType(inter, entitledCapabilityValue.BorrowType)
 		return interpreter.NewCapabilityValue(inter, v.ID, v.Address, capabilityStaticType)
 
-	case *interpreter.TypeValue:
+	case interpreter.TypeValue:
 		if v.Type == nil {
 			return nil
 		}

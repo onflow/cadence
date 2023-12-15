@@ -2112,12 +2112,12 @@ func TestTypeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.True(t,
-			(&TypeValue{
+			(TypeValue{
 				Type: PrimitiveStaticTypeString,
 			}).Equal(
 				inter,
 				EmptyLocationRange,
-				&TypeValue{
+				TypeValue{
 					Type: PrimitiveStaticTypeString,
 				},
 			),
@@ -2131,12 +2131,12 @@ func TestTypeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&TypeValue{
+			(TypeValue{
 				Type: PrimitiveStaticTypeString,
 			}).Equal(
 				inter,
 				EmptyLocationRange,
-				&TypeValue{
+				TypeValue{
 					Type: PrimitiveStaticTypeInt,
 				},
 			),
@@ -2150,7 +2150,7 @@ func TestTypeValue_Equal(t *testing.T) {
 		inter := newTestInterpreter(t)
 
 		require.False(t,
-			(&TypeValue{
+			(TypeValue{
 				Type: PrimitiveStaticTypeString,
 			}).Equal(
 				inter,

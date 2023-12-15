@@ -1179,7 +1179,7 @@ func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {
 	return NewPublishedValue(d.memoryGauge, addressValue, capabilityValue), nil
 }
 
-func (d StorableDecoder) decodeType() (*TypeValue, error) {
+func (d StorableDecoder) decodeType() (TypeValue, error) {
 	const expectedLength = encodedTypeValueTypeLength
 
 	arraySize, err := d.decoder.DecodeArrayHead()

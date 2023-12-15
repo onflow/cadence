@@ -881,7 +881,7 @@ func TestRuntimeImportValue(t *testing.T) {
 		{
 			label:    "Type<Int>()",
 			value:    cadence.NewTypeValue(cadence.IntType),
-			expected: &interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeInt},
+			expected: interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeInt},
 		},
 	} {
 		test(tt)
@@ -2104,7 +2104,7 @@ func TestRuntimeExportTypeValue(t *testing.T) {
 
 		t.Parallel()
 
-		value := &interpreter.TypeValue{
+		value := interpreter.TypeValue{
 			Type: nil,
 		}
 		actual, err := ExportValue(
@@ -2150,7 +2150,7 @@ func TestRuntimeExportTypeValue(t *testing.T) {
 		inter := NewTestInterpreter(t)
 		inter.Program = interpreter.ProgramFromChecker(checker)
 
-		ty := &interpreter.TypeValue{
+		ty := interpreter.TypeValue{
 			Type: &interpreter.IntersectionStaticType{
 				Types: []*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "SI"),

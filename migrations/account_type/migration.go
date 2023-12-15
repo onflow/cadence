@@ -41,7 +41,7 @@ func (AccountTypeMigration) Name() string {
 // to the account reference type (&Account).
 func (AccountTypeMigration) Migrate(value interpreter.Value) (newValue interpreter.Value) {
 	switch value := value.(type) {
-	case *interpreter.TypeValue:
+	case interpreter.TypeValue:
 		convertedType := maybeConvertAccountType(value.Type)
 		if convertedType == nil {
 			return

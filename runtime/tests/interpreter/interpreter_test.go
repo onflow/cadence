@@ -9910,8 +9910,8 @@ func TestInterpretHostFunctionStaticType(t *testing.T) {
 			value.StaticType(inter),
 		)
 
-		require.IsType(t, &interpreter.TypeValue{}, value)
-		typeValue := value.(*interpreter.TypeValue)
+		require.IsType(t, interpreter.TypeValue{}, value)
+		typeValue := value.(interpreter.TypeValue)
 		assert.Equal(t, interpreter.PrimitiveStaticTypeInt8, typeValue.Type)
 	})
 
@@ -9967,7 +9967,7 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			&interpreter.TypeValue{
+			interpreter.TypeValue{
 				Type: &interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -9992,7 +9992,7 @@ func TestInterpretArrayTypeInference(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			&interpreter.TypeValue{
+			interpreter.TypeValue{
 				Type: &interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -11173,7 +11173,7 @@ func TestInterpretCastingBoxing(t *testing.T) {
 		require.Equal(
 			t,
 			interpreter.NewUnmeteredSomeValueNonCopying(
-				&interpreter.TypeValue{
+				interpreter.TypeValue{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
 			),
@@ -11195,7 +11195,7 @@ func TestInterpretCastingBoxing(t *testing.T) {
 		require.Equal(
 			t,
 			interpreter.NewUnmeteredSomeValueNonCopying(
-				&interpreter.TypeValue{
+				interpreter.TypeValue{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
 			),
@@ -11217,7 +11217,7 @@ func TestInterpretCastingBoxing(t *testing.T) {
 		require.Equal(
 			t,
 			interpreter.NewUnmeteredSomeValueNonCopying(
-				&interpreter.TypeValue{
+				interpreter.TypeValue{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
 			),
