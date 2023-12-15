@@ -53,6 +53,7 @@ const (
 // EntitlementSetAccess
 
 type EntitlementSetAccess struct {
+	_            common.Incomparable
 	Entitlements *EntitlementOrderedSet
 	SetKind      EntitlementSetKind
 }

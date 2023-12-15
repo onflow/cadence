@@ -1739,14 +1739,20 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let x = &1 as &Int
                 let y = &x as & &Int
             }
-        `)
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := checker.RequireCheckerErrors(t, err, 1)
+				require.IsType(t, &sema.NestedReferenceError{}, errs[0])
+			},
+		})
+		require.NoError(t, err)
 
-		_, err := inter.Invoke("main")
+		_, err = inter.Invoke("main")
 		RequireError(t, err)
 
 		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
@@ -1773,10 +1779,33 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
+		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun main() {
                 let x: (&Int)? = &1 as &Int
                 let y: (&(&Int))? = &x 
+            }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := checker.RequireCheckerErrors(t, err, 1)
+				require.IsType(t, &sema.NestedReferenceError{}, errs[0])
+			},
+		})
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
+
+	t.Run("upcast to optional anystruct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                let x = &1 as &Int as AnyStruct?
+                let y = &x as &AnyStruct?
             }
         `)
 
