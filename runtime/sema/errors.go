@@ -2755,6 +2755,29 @@ func (e *InvalidResourceOptionalMemberError) Error() string {
 	)
 }
 
+// InvalidMemberError
+
+type InvalidMemberError struct {
+	Name            string
+	DeclarationKind common.DeclarationKind
+	ast.Range
+}
+
+var _ SemanticError = &InvalidMemberError{}
+var _ errors.UserError = &InvalidMemberError{}
+
+func (*InvalidMemberError) isSemanticError() {}
+
+func (*InvalidMemberError) IsUserError() {}
+
+func (e *InvalidMemberError) Error() string {
+	return fmt.Sprintf(
+		"%s `%s` is not available for the type",
+		e.DeclarationKind.Name(),
+		e.Name,
+	)
+}
+
 // NonReferenceTypeReferenceError
 
 type NonReferenceTypeReferenceError struct {

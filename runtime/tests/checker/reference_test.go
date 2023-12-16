@@ -3121,3 +3121,283 @@ func TestCheckNestedReference(t *testing.T) {
 		require.IsType(t, &sema.NestedReferenceError{}, errors[0])
 	})
 }
+
+func TestCheckReferenceDereferenceFunction(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		ty          sema.Type
+		initializer string
+	}
+
+	runTestCase := func(t *testing.T, name, code string, expectedTy sema.Type) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t, code)
+
+			require.NoError(t, err)
+
+			yType := RequireGlobalValue(t, checker.Elaboration, "y")
+
+			assert.Equal(t,
+				expectedTy,
+				yType,
+			)
+		})
+	}
+
+	runInvalidMemberTestCase := func(t *testing.T, name, code string, expectedErrors []error) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, code)
+
+			errs := RequireCheckerErrors(t, err, len(expectedErrors))
+			for i := range expectedErrors {
+				assert.IsType(t, expectedErrors[i], errs[i])
+			}
+		})
+	}
+
+	t.Run("Numeric Types", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range sema.AllIntegerTypes {
+			integerType := typ
+			typString := typ.QualifiedString()
+
+			runTestCase(
+				t,
+				typString,
+				fmt.Sprintf(
+					`
+	                    let x: &%[1]s = &1
+	                    let y: %[1]s = x.dereference()
+	                `,
+					integerType,
+				),
+				integerType,
+			)
+		}
+
+		for _, typ := range sema.AllFixedPointTypes {
+			fixedPointType := typ
+			typString := typ.QualifiedString()
+
+			runTestCase(
+				t,
+				typString,
+				fmt.Sprintf(
+					`
+	                    let x: &%[1]s = &1.0
+	                    let y: %[1]s = x.dereference()
+	                `,
+					fixedPointType,
+				),
+				fixedPointType,
+			)
+		}
+	})
+
+	t.Run("Simple types", func(t *testing.T) {
+		t.Parallel()
+
+		for _, testCase := range []testCase{
+			{
+				ty:          sema.CharacterType,
+				initializer: "\"\\u{FC}\"",
+			},
+			{
+				ty:          sema.StringType,
+				initializer: "\"\\u{FC}\"",
+			},
+			{
+				ty:          sema.BoolType,
+				initializer: "false",
+			},
+			{
+				ty:          sema.TheAddressType,
+				initializer: "0x0000000000000001",
+			},
+			{
+				ty:          sema.PrivatePathType,
+				initializer: "/private/foo",
+			},
+			{
+				ty:          sema.PublicPathType,
+				initializer: "/public/foo",
+			},
+		} {
+			runTestCase(
+				t,
+				testCase.ty.QualifiedString(),
+				fmt.Sprintf(
+					`
+	                    let value: %[1]s = %[2]s
+	                    let x: &%[1]s = &value
+	                    let y: %[1]s = x.dereference()
+	                `,
+					testCase.ty,
+					testCase.initializer,
+				),
+				testCase.ty,
+			)
+		}
+	})
+
+	t.Run("Arrays", func(t *testing.T) {
+		t.Parallel()
+
+		for _, testCase := range []testCase{
+			{
+				ty:          &sema.VariableSizedType{Type: sema.IntType},
+				initializer: "[1, 2, 3]",
+			},
+			{
+				ty:          &sema.VariableSizedType{Type: sema.Fix64Type},
+				initializer: "[1.0, 5.7]",
+			},
+			{
+				ty:          &sema.VariableSizedType{Type: sema.StringType},
+				initializer: "[\"abc\", \"def\"]",
+			},
+			{
+				ty: &sema.VariableSizedType{
+					Type: &sema.VariableSizedType{
+						Type: sema.StringType,
+					},
+				},
+				initializer: "[ [\"abc\", \"def\"], [\"xyz\"]]",
+			},
+			{
+				ty:          &sema.ConstantSizedType{Type: sema.IntType, Size: 3},
+				initializer: "[1, 2, 3]",
+			},
+			{
+				ty:          &sema.ConstantSizedType{Type: sema.Fix64Type, Size: 2},
+				initializer: "[1.0, 5.7]",
+			},
+			{
+				ty:          &sema.ConstantSizedType{Type: sema.StringType, Size: 2},
+				initializer: "[\"abc\", \"def\"]",
+			},
+			{
+				ty: &sema.ConstantSizedType{
+					Type: &sema.VariableSizedType{
+						Type: sema.StringType,
+					},
+					Size: 2,
+				},
+				initializer: "[ [\"abc\", \"def\"], [\"xyz\"]]",
+			},
+		} {
+			runTestCase(
+				t,
+				testCase.ty.QualifiedString(),
+				fmt.Sprintf(
+					`
+	                    let value: %[1]s = %[2]s
+	                    let x: &%[1]s = &value
+	                    let y: %[1]s = x.dereference()
+	                `,
+					testCase.ty,
+					testCase.initializer,
+				),
+				testCase.ty,
+			)
+		}
+
+		// Arrays of non-primitives do not support dereference.
+		for _, testCase := range []testCase{
+			{
+				ty: &sema.VariableSizedType{
+					Type: &sema.DictionaryType{
+						KeyType:   sema.IntType,
+						ValueType: sema.StringType,
+					}},
+				initializer: "[{1: \"abc\", 2: \"def\"}, {3: \"xyz\"}]",
+			},
+			{
+				ty: &sema.ConstantSizedType{
+					Type: &sema.DictionaryType{
+						KeyType:   sema.IntType,
+						ValueType: sema.StringType,
+					},
+					Size: 1,
+				},
+				initializer: "[{1: \"abc\", 2: \"def\"}]",
+			},
+		} {
+			runInvalidMemberTestCase(
+				t,
+				testCase.ty.QualifiedString(),
+				fmt.Sprintf(
+					`
+		                let value: %[1]s = %[2]s
+		                let x: &%[1]s = &value
+		                let y: %[1]s = x.dereference()
+		            `,
+					testCase.ty,
+					testCase.initializer,
+				),
+				[]error{
+					&sema.InvalidMemberError{},
+				},
+			)
+		}
+	})
+
+	t.Run("Resource", func(t *testing.T) {
+		t.Parallel()
+
+		runInvalidMemberTestCase(
+			t,
+			"Resource",
+			`
+                resource interface I {
+                    fun foo()
+                }
+
+                resource R: I {
+                    fun foo() {}
+                }
+
+                fun test() {
+                    let r <- create R()
+                    let ref = &r as &{I}
+                    let deref = ref.dereference()
+                    destroy r
+                }
+            `,
+			[]error{
+				&sema.InvalidMemberError{},
+				&sema.IncorrectTransferOperationError{},
+				&sema.ResourceLossError{},
+			},
+		)
+	})
+
+	t.Run("Struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		runInvalidMemberTestCase(
+			t,
+			"Struct",
+			`
+                struct S{}
+
+                fun test() {
+                    let s = S()
+                    let ref = &s as &S
+                    let deref = ref.dereference()
+                }
+            `,
+			[]error{
+				&sema.InvalidMemberError{},
+			},
+		)
+	})
+}

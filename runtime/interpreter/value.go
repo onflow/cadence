@@ -19855,6 +19855,24 @@ func (v *StorageReferenceValue) GetMember(
 ) Value {
 	self := v.mustReferencedValue(interpreter, locationRange)
 
+	switch name {
+	case sema.ReferenceTypeDereferenceFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ReferenceDereferenceFunctionType(v.BorrowedType),
+			func(invocation Invocation) Value {
+				return self.Transfer(
+					invocation.Interpreter,
+					invocation.LocationRange,
+					atree.Address{},
+					false,
+					nil,
+					nil,
+				)
+			},
+		)
+	}
+
 	return interpreter.getMember(self, locationRange, name)
 }
 
@@ -20225,6 +20243,24 @@ func (v *EphemeralReferenceValue) GetMember(
 	locationRange LocationRange,
 	name string,
 ) Value {
+	switch name {
+	case sema.ReferenceTypeDereferenceFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ReferenceDereferenceFunctionType(v.BorrowedType),
+			func(invocation Invocation) Value {
+				return v.Value.Transfer(
+					invocation.Interpreter,
+					invocation.LocationRange,
+					atree.Address{},
+					false,
+					nil,
+					nil,
+				)
+			},
+		)
+	}
+
 	return interpreter.getMember(v.Value, locationRange, name)
 }
 

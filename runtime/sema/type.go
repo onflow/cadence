@@ -6041,8 +6041,10 @@ func (t *DictionaryType) SupportedEntitlements() *EntitlementOrderedSet {
 
 // ReferenceType represents the reference to a value
 type ReferenceType struct {
-	Type          Type
-	Authorization Access
+	Type                Type
+	Authorization       Access
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
 var _ Type = &ReferenceType{}
@@ -6207,10 +6209,6 @@ func (t *ReferenceType) Map(gauge common.MemoryGauge, typeParamMap map[*TypePara
 	return f(NewReferenceType(gauge, t.Authorization, mappedType))
 }
 
-func (t *ReferenceType) GetMembers() map[string]MemberResolver {
-	return t.Type.GetMembers()
-}
-
 func (t *ReferenceType) isValueIndexableType() bool {
 	referencedType, ok := t.Type.(ValueIndexableType)
 	if !ok {
@@ -6306,6 +6304,78 @@ func (t *ReferenceType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type
 	return &ReferenceType{
 		Authorization: t.Authorization,
 		Type:          newInnerType,
+	}
+}
+
+func (t *ReferenceType) GetMembers() map[string]MemberResolver {
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+const ReferenceTypeDereferenceFunctionName = "dereference"
+
+const referenceTypeDereferenceFunctionDocString = `
+	Returns a copy of the reference value after dereferencing.
+`
+
+func (t *ReferenceType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		resolvers := t.Type.GetMembers()
+
+		type memberResolverWithName struct {
+			name     string
+			resolver MemberResolver
+		}
+
+		// Add members applicable to all ReferenceType instances
+		members := []memberResolverWithName{
+			{
+				name: ReferenceTypeDereferenceFunctionName,
+				resolver: MemberResolver{
+					Kind: common.DeclarationKindFunction,
+					Resolve: func(
+						memoryGauge common.MemoryGauge,
+						identifier string,
+						targetRange ast.Range,
+						report func(error),
+					) *Member {
+						innerType := t.Type
+
+						// Allow primitives or Array of primitives.
+						if !IsPrimitiveOrContainerOfPrimitive(innerType) {
+							report(
+								&InvalidMemberError{
+									Name:            identifier,
+									DeclarationKind: common.DeclarationKindFunction,
+									Range:           targetRange,
+								},
+							)
+						}
+
+						return NewPublicFunctionMember(
+							memoryGauge,
+							t,
+							identifier,
+							ReferenceDereferenceFunctionType(t.Type),
+							referenceTypeDereferenceFunctionDocString,
+						)
+					},
+				},
+			},
+		}
+
+		for _, member := range members {
+			resolvers[member.name] = member.resolver
+		}
+
+		t.memberResolvers = resolvers
+	})
+}
+
+func ReferenceDereferenceFunctionType(borrowedType Type) *FunctionType {
+	return &FunctionType{
+		ReturnTypeAnnotation: NewTypeAnnotation(borrowedType),
+		Purity:               FunctionPurityView,
 	}
 }
 
@@ -6446,6 +6516,33 @@ func (t *AddressType) initializeMemberResolvers() {
 		})
 		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
 	})
+}
+
+func IsPrimitiveOrContainerOfPrimitive(ty Type) bool {
+	if ty.IsPrimitiveType() {
+		return true
+	}
+
+	// TODO: Do we also want to count Dictionary?
+	switch ty.(type) {
+	case *VariableSizedType:
+		typedTy, ok := ty.(*VariableSizedType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return IsPrimitiveOrContainerOfPrimitive(typedTy.Type)
+
+	case *ConstantSizedType:
+		typedTy, ok := ty.(*ConstantSizedType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		return IsPrimitiveOrContainerOfPrimitive(typedTy.Type)
+	}
+
+	return false
 }
 
 // IsSubType determines if the given subtype is a subtype
