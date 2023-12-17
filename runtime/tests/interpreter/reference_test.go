@@ -2818,4 +2818,71 @@ func TestInterpretReferenceDereference(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("STxy"),
 		)
 	})
+
+	t.Run("Dereference Bool", func(t *testing.T) {
+		t.Parallel()
+
+		runValidTestCase(
+			t,
+			"Bool",
+			`
+                fun main(): Bool {
+                    let original: Bool = true
+                    let x: &Bool = &original
+                    return x.dereference()
+                }
+            `,
+			interpreter.BoolValue(true),
+		)
+	})
+
+	t.Run("Dereference Address", func(t *testing.T) {
+		t.Parallel()
+
+		address, err := common.HexToAddress("0x0000000000000231")
+		assert.NoError(t, err)
+
+		runValidTestCase(
+			t,
+			"Address",
+			`
+                fun main(): Address {
+                    let original: Address = 0x0000000000000231
+                    let x: &Address = &original
+                    return x.dereference()
+                }
+            `,
+			interpreter.NewAddressValue(nil, address),
+		)
+	})
+
+	t.Run("Dereference Path", func(t *testing.T) {
+		t.Parallel()
+
+		runValidTestCase(
+			t,
+			"PrivatePath",
+			`
+                fun main(): Path {
+                    let original: Path = /private/temp
+                    let x: &Path = &original
+                    return x.dereference()
+                }
+            `,
+			interpreter.NewUnmeteredPathValue(common.PathDomainPrivate, "temp"),
+		)
+
+		runValidTestCase(
+			t,
+			"PublicPath",
+			`
+                fun main(): Path {
+                    let original: Path = /public/temp
+                    let x: &Path = &original
+                    return x.dereference()
+                }
+            `,
+			interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "temp"),
+		)
+	})
 }
