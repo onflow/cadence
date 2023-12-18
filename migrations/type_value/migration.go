@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package account_type
+package type_value
 
 import (
 	"github.com/onflow/cadence/migrations"
