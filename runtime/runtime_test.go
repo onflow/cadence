@@ -4460,52 +4460,98 @@ func TestRuntimeBlock(t *testing.T) {
 	)
 }
 
-func TestRuntimeRandomWithUnsafeRandom(t *testing.T) {
+func TestRuntimeRandom(t *testing.T) {
 
 	t.Parallel()
 
 	runtime := NewTestInterpreterRuntime()
 
-	script := []byte(`
+	transactionSource := `
       transaction {
         prepare() {
-          let rand1 = revertibleRandom<UInt64>()
-          log(rand1)
+          let rand = revertibleRandom<%[1]s>()
+          log(rand)
         }
       }
-    `)
+    `
+	scriptSource := `
+		access(all) fun main(): %[1]s {
+			let rand = revertibleRandom<%[1]s>()
+			return rand
+		}
+	`
 
-	var loggedMessages []string
+	t.Run("transaction without modulo", func(t *testing.T) {
+		var loggedMessages []string
+		runtimeInterface := &TestRuntimeInterface{
+			OnReadRandom: func(buffer []byte) error {
+				binary.BigEndian.PutUint64(buffer, 7558174677681708339)
+				return nil
+			},
+			OnProgramLog: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
 
-	runtimeInterface := &TestRuntimeInterface{
-		OnReadRandom: func(buffer []byte) error {
-			binary.BigEndian.PutUint64(buffer, 7558174677681708339)
-			return nil
-		},
-		OnProgramLog: func(message string) {
-			loggedMessages = append(loggedMessages, message)
-		},
-	}
+		nextTransactionLocation := NewTransactionLocationGenerator()
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(fmt.Sprintf(string(transactionSource), sema.UInt64Type.String())),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+		assert.Equal(t,
+			[]string{
+				"7558174677681708339",
+			},
+			loggedMessages,
+		)
+	})
+	t.Run("script all types", func(t *testing.T) {
+		runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type) {
+			t.Run(ty.String(), func(t *testing.T) {
+				t.Parallel()
 
-	nextTransactionLocation := NewTransactionLocationGenerator()
+				nextScriptLocation := NewScriptLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
+				runtime := NewTestInterpreterRuntime()
+				value, err := runtime.ExecuteScript(
+					Script{
+						Source: []byte(fmt.Sprintf(scriptSource, ty.String())),
+					},
+					Context{
+						Interface: &TestRuntimeInterface{
+							OnReadRandom: func(buffer []byte) error {
+								for i := 0; i < len(buffer); i++ {
+									buffer[i] = 0xff
+								}
+								return nil
+							},
+						},
+						Location: nextScriptLocation(),
+					},
+				)
+				require.NoError(t, err)
 
-	assert.Equal(t,
-		[]string{
-			"7558174677681708339",
-		},
-		loggedMessages,
-	)
+				require.Equal(t, getFixedSizeUnsignedIntegerForSemaType(ty), value)
+			})
+		}
+
+		for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
+			switch ty {
+			case sema.FixedSizeUnsignedIntegerType:
+				continue
+
+			default:
+				runValidCaseWithoutModulo(t, ty)
+			}
+		}
+	})
+
 }
 
 func getFixedSizeUnsignedIntegerForSemaType(ty sema.Type) cadence.Value {
@@ -4542,57 +4588,6 @@ func getFixedSizeUnsignedIntegerForSemaType(ty sema.Type) cadence.Value {
 	}
 
 	panic(fmt.Sprintf("Broken test. Trying to get fixed size unsigned integer for ty: %s", ty))
-}
-
-func TestRuntimeRandom(t *testing.T) {
-
-	t.Parallel()
-
-	script := `
-		access(all) fun main(): %[1]s {
-			let rand = revertibleRandom<%[1]s>()
-			return rand
-		}
-	`
-
-	runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type) {
-		t.Run(ty.String(), func(t *testing.T) {
-			t.Parallel()
-
-			nextScriptLocation := NewScriptLocationGenerator()
-
-			runtime := NewTestInterpreterRuntime()
-			value, err := runtime.ExecuteScript(
-				Script{
-					Source: []byte(fmt.Sprintf(script, ty.String())),
-				},
-				Context{
-					Interface: &TestRuntimeInterface{
-						OnReadRandom: func(buffer []byte) error {
-							for i := 0; i < len(buffer); i++ {
-								buffer[i] = 0xff
-							}
-							return nil
-						},
-					},
-					Location: nextScriptLocation(),
-				},
-			)
-			require.NoError(t, err)
-
-			require.Equal(t, getFixedSizeUnsignedIntegerForSemaType(ty), value)
-		})
-	}
-
-	for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
-		switch ty {
-		case sema.FixedSizeUnsignedIntegerType:
-			continue
-
-		default:
-			runValidCaseWithoutModulo(t, ty)
-		}
-	}
 }
 
 func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
