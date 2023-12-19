@@ -16,21 +16,25 @@
  * limitations under the License.
  */
 
-package sema
+package capcons
 
-// BoolType represents the boolean type
-var BoolType = &SimpleType{
-	Name:          "Bool",
-	QualifiedName: "Bool",
-	TypeID:        "Bool",
-	TypeTag:       BoolTypeTag,
-	IsResource:    false,
-	Storable:      true,
-	Primitive:     true,
-	Equatable:     true,
-	Comparable:    true,
-	Exportable:    true,
-	Importable:    true,
+import (
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+)
+
+type capabilityTarget interface {
+	isCapabilityTarget()
 }
 
-var BoolTypeAnnotation = NewTypeAnnotation(BoolType)
+type pathCapabilityTarget interpreter.PathValue
+
+func (pathCapabilityTarget) isCapabilityTarget() {}
+
+var _ capabilityTarget = pathCapabilityTarget{}
+
+type accountCapabilityTarget common.Address
+
+var _ capabilityTarget = accountCapabilityTarget{}
+
+func (accountCapabilityTarget) isCapabilityTarget() {}

@@ -48,6 +48,7 @@ type SimpleType struct {
 	Equatable           bool
 	Comparable          bool
 	Storable            bool
+	Primitive           bool
 	IsResource          bool
 	ContainFields       bool
 }
@@ -80,6 +81,10 @@ func (t *SimpleType) Equal(other Type) bool {
 
 func (t *SimpleType) IsResourceType() bool {
 	return t.IsResource
+}
+
+func (t *SimpleType) IsPrimitiveType() bool {
+	return t.Primitive
 }
 
 func (t *SimpleType) IsInvalidType() bool {

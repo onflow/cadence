@@ -18,10 +18,8 @@
 
 package migrations
 
-import (
-	"github.com/onflow/cadence/runtime/common"
-)
+import "github.com/onflow/cadence/runtime/interpreter"
 
 type Reporter interface {
-	Report(address common.Address, domain common.PathDomain, key string, migration string)
+	Report(addressPath interpreter.AddressPath, migration string)
 }

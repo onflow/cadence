@@ -26,6 +26,7 @@ var NeverType = &SimpleType{
 	TypeTag:       NeverTypeTag,
 	IsResource:    false,
 	Storable:      false,
+	Primitive:     false,
 	Equatable:     false,
 	Comparable:    false,
 	Exportable:    false,

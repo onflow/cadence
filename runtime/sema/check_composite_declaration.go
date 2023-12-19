@@ -2046,14 +2046,9 @@ func (checker *Checker) checkDefaultDestroyEventParam(
 	}
 	param.DefaultArgument = checker.VisitExpression(paramDefaultArgument, paramType)
 
-	unwrappedParamType := UnwrapOptionalType(paramType)
 	// default events must have default arguments for all their parameters; this is enforced in the parser
 	// we want to check that these arguments are all either literals or field accesses, and have primitive types
-	if !IsSubType(unwrappedParamType, StringType) &&
-		!IsSubType(unwrappedParamType, NumberType) &&
-		!IsSubType(unwrappedParamType, TheAddressType) &&
-		!IsSubType(unwrappedParamType, PathType) &&
-		!IsSubType(unwrappedParamType, BoolType) {
+	if !paramType.IsPrimitiveType() {
 		checker.report(&DefaultDestroyInvalidParameterError{
 			ParamType: paramType,
 			Range:     ast.NewRangeFromPositioned(checker.memoryGauge, astParam),
