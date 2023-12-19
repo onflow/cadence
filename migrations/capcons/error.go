@@ -16,38 +16,40 @@
  * limitations under the License.
  */
 
-package string_normalization
+package capcons
 
 import (
-	"github.com/onflow/cadence/migrations"
+	"fmt"
+	"strings"
+
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-type StringNormalizingMigration struct{}
-
-var _ migrations.Migration = StringNormalizingMigration{}
-
-func NewStringNormalizingMigration() StringNormalizingMigration {
-	return StringNormalizingMigration{}
+// CyclicLinkError
+type CyclicLinkError struct {
+	Paths   []interpreter.PathValue
+	Address common.Address
 }
 
-func (StringNormalizingMigration) Name() string {
-	return "StringNormalizingMigration"
-}
+var _ errors.UserError = CyclicLinkError{}
 
-func (StringNormalizingMigration) Migrate(
-	_ interpreter.AddressPath,
-	value interpreter.Value,
-	_ *interpreter.Interpreter,
-) interpreter.Value {
+func (CyclicLinkError) IsUserError() {}
 
-	switch value := value.(type) {
-	case *interpreter.StringValue:
-		return interpreter.NewUnmeteredStringValue(value.Str)
-
-	case interpreter.CharacterValue:
-		return interpreter.NewUnmeteredCharacterValue(string(value))
+func (e CyclicLinkError) Error() string {
+	var builder strings.Builder
+	for i, path := range e.Paths {
+		if i > 0 {
+			builder.WriteString(" -> ")
+		}
+		builder.WriteString(path.String())
 	}
+	paths := builder.String()
 
-	return nil
+	return fmt.Sprintf(
+		"cyclic link in account %s: %s",
+		e.Address.ShortHexWithPrefix(),
+		paths,
+	)
 }

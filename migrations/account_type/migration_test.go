@@ -19,7 +19,6 @@
 package account_type
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,34 +37,20 @@ import (
 var _ migrations.Reporter = &testReporter{}
 
 type testReporter struct {
-	migratedPaths map[common.Address]map[common.PathDomain]map[string]struct{}
+	migratedPaths map[interpreter.AddressPath]struct{}
 }
 
 func newTestReporter() *testReporter {
 	return &testReporter{
-		migratedPaths: map[common.Address]map[common.PathDomain]map[string]struct{}{},
+		migratedPaths: map[interpreter.AddressPath]struct{}{},
 	}
 }
 
 func (t *testReporter) Report(
-	address common.Address,
-	domain common.PathDomain,
-	identifier string,
+	addressPath interpreter.AddressPath,
 	_ string,
 ) {
-	migratedPathsInAddress, ok := t.migratedPaths[address]
-	if !ok {
-		migratedPathsInAddress = make(map[common.PathDomain]map[string]struct{})
-		t.migratedPaths[address] = migratedPathsInAddress
-	}
-
-	migratedPathsInDomain, ok := migratedPathsInAddress[domain]
-	if !ok {
-		migratedPathsInDomain = make(map[string]struct{})
-		migratedPathsInAddress[domain] = migratedPathsInDomain
-	}
-
-	migratedPathsInDomain[identifier] = struct{}{}
+	t.migratedPaths[addressPath] = struct{}{}
 }
 
 func TestTypeValueMigration(t *testing.T) {
@@ -379,22 +364,23 @@ func TestTypeValueMigration(t *testing.T) {
 		NewAccountTypeMigration(),
 	)
 
+	migration.Commit()
+
 	// Check reported migrated paths
+	for identifier, test := range testCases {
+		addressPath := interpreter.AddressPath{
+			Address: account,
+			Path: interpreter.PathValue{
+				Domain:     pathDomain,
+				Identifier: identifier,
+			},
+		}
 
-	migratedPathsInDomain := reporter.migratedPaths[account][pathDomain]
-	for path, test := range testCases {
-		t.Run(fmt.Sprintf("reported_%s", path), func(t *testing.T) {
-			test := test
-			path := path
-
-			t.Parallel()
-
-			if test.expectedType == nil {
-				require.NotContains(t, migratedPathsInDomain, path)
-			} else {
-				require.Contains(t, migratedPathsInDomain, path)
-			}
-		})
+		if test.expectedType == nil {
+			assert.NotContains(t, reporter.migratedPaths, addressPath)
+		} else {
+			assert.Contains(t, reporter.migratedPaths, addressPath)
+		}
 	}
 
 	// Assert the migrated values.
@@ -699,6 +685,8 @@ func TestNestedTypeValueMigration(t *testing.T) {
 		NewAccountTypeMigration(),
 	)
 
+	migration.Commit()
+
 	// Assert: Traverse through the storage and see if the values are updated now.
 
 	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
@@ -839,6 +827,8 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 		nil,
 		NewAccountTypeMigration(),
 	)
+
+	migration.Commit()
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 

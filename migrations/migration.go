@@ -27,7 +27,11 @@ import (
 
 type Migration interface {
 	Name() string
-	Migrate(value interpreter.Value) (newValue interpreter.Value)
+	Migrate(
+		addressPath interpreter.AddressPath,
+		value interpreter.Value,
+		interpreter *interpreter.Interpreter,
+	) (newValue interpreter.Value)
 }
 
 type StorageMigration struct {
@@ -62,7 +66,9 @@ func (m *StorageMigration) Migrate(
 			migrations,
 		)
 	}
+}
 
+func (m *StorageMigration) Commit() {
 	err := m.storage.Commit(m.interpreter, false)
 	if err != nil {
 		panic(err)
@@ -78,12 +84,10 @@ func (m *StorageMigration) migrateValuesInAccount(
 	accountStorage := NewAccountStorage(m.storage, address)
 
 	migrateValue := func(
+		addressPath interpreter.AddressPath,
 		value interpreter.Value,
-		address common.Address,
-		domain common.PathDomain,
-		key string,
 	) interpreter.Value {
-		return m.migrateNestedValue(value, address, domain, key, migrations, reporter)
+		return m.migrateNestedValue(addressPath, value, migrations, reporter)
 	}
 
 	accountStorage.ForEachValue(
@@ -96,17 +100,15 @@ func (m *StorageMigration) migrateValuesInAccount(
 var emptyLocationRange = interpreter.EmptyLocationRange
 
 func (m *StorageMigration) migrateNestedValue(
+	addressPath interpreter.AddressPath,
 	value interpreter.Value,
-	address common.Address,
-	domain common.PathDomain,
-	key string,
 	migrations []Migration,
 	reporter Reporter,
 ) (newValue interpreter.Value) {
 	switch value := value.(type) {
 	case *interpreter.SomeValue:
 		innerValue := value.InnerValue(m.interpreter, emptyLocationRange)
-		newInnerValue := m.migrateNestedValue(innerValue, address, domain, key, migrations, reporter)
+		newInnerValue := m.migrateNestedValue(addressPath, innerValue, migrations, reporter)
 		if newInnerValue != nil {
 			return interpreter.NewSomeValueNonCopying(m.interpreter, newInnerValue)
 		}
@@ -120,7 +122,7 @@ func (m *StorageMigration) migrateNestedValue(
 		count := array.Count()
 		for index := 0; index < count; index++ {
 			element := array.Get(m.interpreter, emptyLocationRange, index)
-			newElement := m.migrateNestedValue(element, address, domain, key, migrations, reporter)
+			newElement := m.migrateNestedValue(addressPath, element, migrations, reporter)
 			if newElement != nil {
 				array.Set(
 					m.interpreter,
@@ -140,7 +142,7 @@ func (m *StorageMigration) migrateNestedValue(
 		// Read the field names first, so the iteration wouldn't be affected
 		// by the modification of the nested values.
 		var fieldNames []string
-		composite.ForEachField(nil, func(fieldName string, fieldValue interpreter.Value) (resume bool) {
+		composite.ForEachFieldName(func(fieldName string) (resume bool) {
 			fieldNames = append(fieldNames, fieldName)
 			return true
 		})
@@ -148,7 +150,7 @@ func (m *StorageMigration) migrateNestedValue(
 		for _, fieldName := range fieldNames {
 			existingValue := composite.GetField(m.interpreter, interpreter.EmptyLocationRange, fieldName)
 
-			migratedValue := m.migrateNestedValue(existingValue, address, domain, key, migrations, reporter)
+			migratedValue := m.migrateNestedValue(addressPath, existingValue, migrations, reporter)
 			if migratedValue == nil {
 				continue
 			}
@@ -165,7 +167,7 @@ func (m *StorageMigration) migrateNestedValue(
 		// Read the keys first, so the iteration wouldn't be affected
 		// by the modification of the nested values.
 		var existingKeys []interpreter.Value
-		dictionary.Iterate(m.interpreter, func(key, _ interpreter.Value) (resume bool) {
+		dictionary.IterateKeys(m.interpreter, func(key interpreter.Value) (resume bool) {
 			existingKeys = append(existingKeys, key)
 			return true
 		})
@@ -176,8 +178,8 @@ func (m *StorageMigration) migrateNestedValue(
 				panic(errors.NewUnreachableError())
 			}
 
-			newKey := m.migrateNestedValue(existingKey, address, domain, key, migrations, reporter)
-			newValue := m.migrateNestedValue(existingValue, address, domain, key, migrations, reporter)
+			newKey := m.migrateNestedValue(addressPath, existingKey, migrations, reporter)
+			newValue := m.migrateNestedValue(addressPath, existingValue, migrations, reporter)
 			if newKey == nil && newValue == nil {
 				continue
 			}
@@ -213,7 +215,7 @@ func (m *StorageMigration) migrateNestedValue(
 	default:
 		// Assumption: all migrations only migrate non-container typed values.
 		for _, migration := range migrations {
-			converted := migration.Migrate(value)
+			converted := migration.Migrate(addressPath, value, m.interpreter)
 
 			if converted != nil {
 				// Chain the migrations.
@@ -225,7 +227,7 @@ func (m *StorageMigration) migrateNestedValue(
 				newValue = converted
 
 				if reporter != nil {
-					reporter.Report(address, domain, key, migration.Name())
+					reporter.Report(addressPath, migration.Name())
 				}
 			}
 		}

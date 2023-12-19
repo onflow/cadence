@@ -253,6 +253,8 @@ func TestStringNormalizingMigration(t *testing.T) {
 		NewStringNormalizingMigration(),
 	)
 
+	migration.Commit()
+
 	// Assert: Traverse through the storage and see if the values are updated now.
 
 	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
