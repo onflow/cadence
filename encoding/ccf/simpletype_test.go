@@ -65,7 +65,7 @@ func TestTypeConversion(t *testing.T) {
 			continue
 		}
 
-		if ty.IsDeprecated() {  //nolint:staticcheck
+		if ty.IsDeprecated() { //nolint:staticcheck
 			continue
 		}
 
