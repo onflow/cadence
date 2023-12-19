@@ -360,8 +360,10 @@ func TestTypeValueMigration(t *testing.T) {
 				account,
 			},
 		},
-		reporter,
-		NewAccountTypeMigration(),
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewAccountTypeMigration(),
+		),
 	)
 
 	migration.Commit()
@@ -681,8 +683,10 @@ func TestNestedTypeValueMigration(t *testing.T) {
 				account,
 			},
 		},
-		nil,
-		NewAccountTypeMigration(),
+		migration.NewValueMigrationsPathMigrator(
+			nil,
+			NewAccountTypeMigration(),
+		),
 	)
 
 	migration.Commit()
@@ -824,8 +828,10 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 				account,
 			},
 		},
-		nil,
-		NewAccountTypeMigration(),
+		migration.NewValueMigrationsPathMigrator(
+			nil,
+			NewAccountTypeMigration(),
+		),
 	)
 
 	migration.Commit()

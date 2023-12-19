@@ -249,8 +249,10 @@ func TestStringNormalizingMigration(t *testing.T) {
 				account,
 			},
 		},
-		nil,
-		NewStringNormalizingMigration(),
+		migration.NewValueMigrationsPathMigrator(
+			nil,
+			NewStringNormalizingMigration(),
+		),
 	)
 
 	migration.Commit()

@@ -38,20 +38,20 @@ type LinkMigrationReporter interface {
 	MissingTarget(accountAddressPath interpreter.AddressPath)
 }
 
-// LinkMigration migrates all links to capability controllers.
-type LinkMigration struct {
+// LinkValueMigration migrates all links to capability controllers.
+type LinkValueMigration struct {
 	CapabilityIDs      map[interpreter.AddressPath]interpreter.UInt64Value
 	AccountIDGenerator stdlib.AccountIDGenerator
 	Reporter           LinkMigrationReporter
 }
 
-var _ migrations.Migration = &LinkMigration{}
+var _ migrations.ValueMigration = &LinkValueMigration{}
 
-func (*LinkMigration) Name() string {
-	return "LinkMigration"
+func (*LinkValueMigration) Name() string {
+	return "LinkValueMigration"
 }
 
-func (m *LinkMigration) Migrate(
+func (m *LinkValueMigration) Migrate(
 	addressPath interpreter.AddressPath,
 	value interpreter.Value,
 	inter *interpreter.Interpreter,
@@ -193,7 +193,7 @@ var authAccountReferenceStaticType = interpreter.NewReferenceStaticType(
 	interpreter.PrimitiveStaticTypeAuthAccount, //nolint:staticcheck
 )
 
-func (m *LinkMigration) getPathCapabilityFinalTarget(
+func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 	inter *interpreter.Interpreter,
 	accountAddress common.Address,
 	pathValue interpreter.PathValue,

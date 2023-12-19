@@ -28,7 +28,7 @@ import (
 
 type AccountTypeMigration struct{}
 
-var _ migrations.Migration = AccountTypeMigration{}
+var _ migrations.ValueMigration = AccountTypeMigration{}
 
 func NewAccountTypeMigration() AccountTypeMigration {
 	return AccountTypeMigration{}

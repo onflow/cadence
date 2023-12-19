@@ -93,7 +93,7 @@ func (testInt8Migration) Migrate(
 	return nil
 }
 
-var _ Migration = testStringMigration{}
+var _ ValueMigration = testStringMigration{}
 
 func TestMultipleMigrations(t *testing.T) {
 	t.Parallel()
@@ -170,9 +170,11 @@ func TestMultipleMigrations(t *testing.T) {
 				account,
 			},
 		},
-		reporter,
-		testStringMigration{},
-		testInt8Migration{},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testStringMigration{},
+			testInt8Migration{},
+		),
 	)
 
 	migration.Commit()

@@ -25,13 +25,20 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-type Migration interface {
+type ValueMigration interface {
 	Name() string
 	Migrate(
 		addressPath interpreter.AddressPath,
 		value interpreter.Value,
 		interpreter *interpreter.Interpreter,
 	) (newValue interpreter.Value)
+}
+
+type DomainMigration interface {
+	Name() string
+	Migrate(
+		addressPath interpreter.AddressPath,
+	)
 }
 
 type StorageMigration struct {
@@ -51,8 +58,7 @@ func NewStorageMigration(
 
 func (m *StorageMigration) Migrate(
 	addressIterator AddressIterator,
-	reporter Reporter,
-	migrations ...Migration,
+	migratePath PathMigrator,
 ) {
 	for {
 		address := addressIterator.NextAddress()
@@ -60,11 +66,7 @@ func (m *StorageMigration) Migrate(
 			break
 		}
 
-		m.migrateValuesInAccount(
-			address,
-			reporter,
-			migrations,
-		)
+		m.MigrateAccount(address, migratePath)
 	}
 }
 
@@ -75,25 +77,32 @@ func (m *StorageMigration) Commit() {
 	}
 }
 
-func (m *StorageMigration) migrateValuesInAccount(
+func (m *StorageMigration) MigrateAccount(
 	address common.Address,
-	reporter Reporter,
-	migrations []Migration,
+	migratePath PathMigrator,
 ) {
-
 	accountStorage := NewAccountStorage(m.storage, address)
 
-	migrateValue := func(
-		addressPath interpreter.AddressPath,
-		value interpreter.Value,
-	) interpreter.Value {
-		return m.migrateNestedValue(addressPath, value, migrations, reporter)
-	}
-
-	accountStorage.ForEachValue(
+	accountStorage.MigratePathsInDomains(
 		m.interpreter,
 		common.AllPathDomains,
-		migrateValue,
+		migratePath,
+	)
+}
+
+func (m *StorageMigration) NewValueMigrationsPathMigrator(
+	reporter Reporter,
+	valueMigrations ...ValueMigration,
+) PathMigrator {
+	return NewValueConverterPathMigrator(
+		func(addressPath interpreter.AddressPath, value interpreter.Value) interpreter.Value {
+			return m.migrateNestedValue(
+				addressPath,
+				value,
+				valueMigrations,
+				reporter,
+			)
+		},
 	)
 }
 
@@ -102,13 +111,18 @@ var emptyLocationRange = interpreter.EmptyLocationRange
 func (m *StorageMigration) migrateNestedValue(
 	addressPath interpreter.AddressPath,
 	value interpreter.Value,
-	migrations []Migration,
+	valueMigrations []ValueMigration,
 	reporter Reporter,
 ) (newValue interpreter.Value) {
 	switch value := value.(type) {
 	case *interpreter.SomeValue:
 		innerValue := value.InnerValue(m.interpreter, emptyLocationRange)
-		newInnerValue := m.migrateNestedValue(addressPath, innerValue, migrations, reporter)
+		newInnerValue := m.migrateNestedValue(
+			addressPath,
+			innerValue,
+			valueMigrations,
+			reporter,
+		)
 		if newInnerValue != nil {
 			return interpreter.NewSomeValueNonCopying(m.interpreter, newInnerValue)
 		}
@@ -122,7 +136,12 @@ func (m *StorageMigration) migrateNestedValue(
 		count := array.Count()
 		for index := 0; index < count; index++ {
 			element := array.Get(m.interpreter, emptyLocationRange, index)
-			newElement := m.migrateNestedValue(addressPath, element, migrations, reporter)
+			newElement := m.migrateNestedValue(
+				addressPath,
+				element,
+				valueMigrations,
+				reporter,
+			)
 			if newElement != nil {
 				array.Set(
 					m.interpreter,
@@ -148,14 +167,28 @@ func (m *StorageMigration) migrateNestedValue(
 		})
 
 		for _, fieldName := range fieldNames {
-			existingValue := composite.GetField(m.interpreter, interpreter.EmptyLocationRange, fieldName)
+			existingValue := composite.GetField(
+				m.interpreter,
+				interpreter.EmptyLocationRange,
+				fieldName,
+			)
 
-			migratedValue := m.migrateNestedValue(addressPath, existingValue, migrations, reporter)
+			migratedValue := m.migrateNestedValue(
+				addressPath,
+				existingValue,
+				valueMigrations,
+				reporter,
+			)
 			if migratedValue == nil {
 				continue
 			}
 
-			composite.SetMember(m.interpreter, emptyLocationRange, fieldName, migratedValue)
+			composite.SetMember(
+				m.interpreter,
+				emptyLocationRange,
+				fieldName,
+				migratedValue,
+			)
 		}
 
 		// The composite itself does not have to be replaced
@@ -178,8 +211,20 @@ func (m *StorageMigration) migrateNestedValue(
 				panic(errors.NewUnreachableError())
 			}
 
-			newKey := m.migrateNestedValue(addressPath, existingKey, migrations, reporter)
-			newValue := m.migrateNestedValue(addressPath, existingValue, migrations, reporter)
+			newKey := m.migrateNestedValue(
+				addressPath,
+				existingKey,
+				valueMigrations,
+				reporter,
+			)
+
+			newValue := m.migrateNestedValue(
+				addressPath,
+				existingValue,
+				valueMigrations,
+				reporter,
+			)
+
 			if newKey == nil && newValue == nil {
 				continue
 			}
@@ -193,7 +238,11 @@ func (m *StorageMigration) migrateNestedValue(
 				// Key was migrated.
 				// Remove the old value at the old key.
 				// This old value will be inserted again with the new key, unless the value is also migrated.
-				_ = dictionary.RemoveKey(m.interpreter, emptyLocationRange, existingKey)
+				_ = dictionary.RemoveKey(
+					m.interpreter,
+					emptyLocationRange,
+					existingKey,
+				)
 				keyToSet = newKey
 			}
 
@@ -207,14 +256,19 @@ func (m *StorageMigration) migrateNestedValue(
 			// Always wrap with an optional, when inserting to the dictionary.
 			valueToSet = interpreter.NewUnmeteredSomeValueNonCopying(valueToSet)
 
-			dictionary.SetKey(m.interpreter, emptyLocationRange, keyToSet, valueToSet)
+			dictionary.SetKey(
+				m.interpreter,
+				emptyLocationRange,
+				keyToSet,
+				valueToSet,
+			)
 		}
 
 		// The dictionary itself does not have to be replaced
 		return
 	default:
 		// Assumption: all migrations only migrate non-container typed values.
-		for _, migration := range migrations {
+		for _, migration := range valueMigrations {
 			converted := migration.Migrate(addressPath, value, m.interpreter)
 
 			if converted != nil {

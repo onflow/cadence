@@ -437,12 +437,14 @@ func testPathCapabilityValueMigration(
 				testAddress,
 			},
 		},
-		nil,
-		&LinkMigration{
-			CapabilityIDs:      capabilityIDs,
-			AccountIDGenerator: &testAccountIDGenerator{},
-			Reporter:           reporter,
-		},
+		migration.NewValueMigrationsPathMigrator(
+			nil,
+			&LinkValueMigration{
+				CapabilityIDs:      capabilityIDs,
+				AccountIDGenerator: &testAccountIDGenerator{},
+				Reporter:           reporter,
+			},
+		),
 	)
 
 	migration.Migrate(
@@ -451,11 +453,13 @@ func testPathCapabilityValueMigration(
 				testAddress,
 			},
 		},
-		nil,
-		&CapabilityMigration{
-			CapabilityIDs: capabilityIDs,
-			Reporter:      reporter,
-		},
+		migration.NewValueMigrationsPathMigrator(
+			nil,
+			&CapabilityValueMigration{
+				CapabilityIDs: capabilityIDs,
+				Reporter:      reporter,
+			},
+		),
 	)
 
 	migration.Commit()
@@ -1165,12 +1169,14 @@ func testLinkMigration(
 				testAddress,
 			},
 		},
-		nil,
-		&LinkMigration{
-			CapabilityIDs:      capabilityIDs,
-			AccountIDGenerator: &testAccountIDGenerator{},
-			Reporter:           reporter,
-		},
+		migration.NewValueMigrationsPathMigrator(
+			nil,
+			&LinkValueMigration{
+				CapabilityIDs:      capabilityIDs,
+				AccountIDGenerator: &testAccountIDGenerator{},
+				Reporter:           reporter,
+			},
+		),
 	)
 
 	migration.Commit()
@@ -1585,4 +1591,121 @@ func TestLinkMigration(t *testing.T) {
 	for _, linkTestCase := range linkTestCases {
 		test(linkTestCase)
 	}
+}
+
+func TestClearPrivateDomain(t *testing.T) {
+
+	t.Parallel()
+
+	pathLinks := []testLink{
+		{
+			// Equivalent to:
+			//   link<&Test.R>(/public/test1, target: /private/test2)
+			sourcePath: interpreter.PathValue{
+				Domain:     common.PathDomainPublic,
+				Identifier: "test1",
+			},
+			targetPath: interpreter.PathValue{
+				Domain:     common.PathDomainPrivate,
+				Identifier: "test2",
+			},
+			borrowType: testRReferenceStaticType,
+		},
+		{
+			// Equivalent to:
+			//   link<&Test.R>(/private/test3, target: /storage/test4)
+			sourcePath: interpreter.PathValue{
+				Domain:     common.PathDomainPrivate,
+				Identifier: "test3",
+			},
+			targetPath: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "test4",
+			},
+			borrowType: testRReferenceStaticType,
+		},
+	}
+
+	accountLinks := []interpreter.PathValue{
+		// Equivalent to:
+		//   linkAccount(/public/test5)
+		{
+			Domain:     common.PathDomainPublic,
+			Identifier: "test5",
+		},
+		// Equivalent to:
+		//   linkAccount(/private/test6)
+		{
+			Domain:     common.PathDomainPrivate,
+			Identifier: "test6",
+		},
+	}
+
+	rt := NewTestInterpreterRuntime()
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+	}
+
+	// Create and store path and account links
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	storeTestPathLinks(t, pathLinks, storage, inter)
+
+	storeTestAccountLinks(accountLinks, storage, inter)
+
+	require.Equal(t,
+		uint64(2),
+		storage.GetStorageMap(testAddress, common.PathDomainPublic.Identifier(), false).Count(),
+	)
+	require.Equal(t,
+		uint64(2),
+		storage.GetStorageMap(testAddress, common.PathDomainPrivate.Identifier(), false).Count(),
+	)
+
+	err = storage.Commit(inter, false)
+	require.NoError(t, err)
+
+	// Migrate
+
+	migration := migrations.NewStorageMigration(inter, storage)
+
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		ClearPrivateDomain,
+	)
+
+	migration.Commit()
+
+	// Assert
+
+	// Check that the private domain was cleared
+
+	privateStorageMap := storage.GetStorageMap(
+		testAddress,
+		common.PathDomainPrivate.Identifier(),
+		false,
+	)
+
+	assert.Zero(t, privateStorageMap.Count())
+
+	// Check that the public domain was not cleared
+
+	publicStorageMap := storage.GetStorageMap(
+		testAddress,
+		common.PathDomainPublic.Identifier(),
+		false,
+	)
+
+	assert.Equal(t, uint64(2), publicStorageMap.Count())
+	assert.True(t, publicStorageMap.ValueExists(interpreter.StringStorageMapKey("test1")))
+	assert.True(t, publicStorageMap.ValueExists(interpreter.StringStorageMapKey("test5")))
 }

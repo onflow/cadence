@@ -25,7 +25,7 @@ import (
 
 type StringNormalizingMigration struct{}
 
-var _ migrations.Migration = StringNormalizingMigration{}
+var _ migrations.ValueMigration = StringNormalizingMigration{}
 
 func NewStringNormalizingMigration() StringNormalizingMigration {
 	return StringNormalizingMigration{}
