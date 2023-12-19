@@ -1,3 +1,4 @@
+// Code generated from testdata/primitive/test.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -16,21 +17,23 @@
  * limitations under the License.
  */
 
-package sema
+package primitive
 
-// BoolType represents the boolean type
-var BoolType = &SimpleType{
-	Name:          "Bool",
-	QualifiedName: "Bool",
-	TypeID:        "Bool",
-	TypeTag:       BoolTypeTag,
+import "github.com/onflow/cadence/runtime/sema"
+
+const TestTypeName = "Test"
+
+var TestType = &sema.SimpleType{
+	Name:          TestTypeName,
+	QualifiedName: TestTypeName,
+	TypeID:        TestTypeName,
+	TypeTag:       TestTypeTag,
 	IsResource:    false,
-	Storable:      true,
+	Storable:      false,
 	Primitive:     true,
-	Equatable:     true,
-	Comparable:    true,
-	Exportable:    true,
-	Importable:    true,
+	Equatable:     false,
+	Comparable:    false,
+	Exportable:    false,
+	Importable:    false,
+	ContainFields: false,
 }
-
-var BoolTypeAnnotation = NewTypeAnnotation(BoolType)

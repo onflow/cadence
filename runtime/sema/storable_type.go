@@ -35,6 +35,7 @@ var StorableType = &SimpleType{
 	// for e.g. parameters, return types, fields, etc.
 	IsResource: false,
 	Storable:   true,
+	Primitive:  false,
 	Equatable:  false,
 	Comparable: false,
 	Exportable: false,
