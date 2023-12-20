@@ -19,11 +19,11 @@
 package runtime_test
 
 import (
-	"encoding/binary"
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math"
+	"math/big"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -4469,49 +4469,83 @@ func TestRuntimeRandom(t *testing.T) {
 	transactionSource := `
       transaction {
         prepare() {
-          let rand = revertibleRandom<%[1]s>()
+          let rand = revertibleRandom<%[1]s>(%[2]s)
           log(rand)
         }
       }
     `
 	scriptSource := `
 		access(all) fun main(): %[1]s {
-			let rand = revertibleRandom<%[1]s>()
+			let rand = revertibleRandom<%[1]s>(%[2]s)
 			return rand
 		}
 	`
 
-	t.Run("transaction without modulo", func(t *testing.T) {
-		var loggedMessages []string
-		runtimeInterface := &TestRuntimeInterface{
-			OnReadRandom: func(buffer []byte) error {
-				binary.BigEndian.PutUint64(buffer, 7558174677681708339)
-				return nil
-			},
-			OnProgramLog: func(message string) {
-				loggedMessages = append(loggedMessages, message)
-			},
-		}
+	testAllTypes := func(t *testing.T, testType func(*testing.T, sema.Type)) {
+		for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
+			switch ty {
+			case sema.FixedSizeUnsignedIntegerType:
+				continue
 
-		nextTransactionLocation := NewTransactionLocationGenerator()
-		err := runtime.ExecuteTransaction(
-			Script{
-				Source: []byte(fmt.Sprintf(string(transactionSource), sema.UInt64Type.String())),
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
+			default:
+				testType(t, ty)
+			}
+		}
+	}
+
+	typeToBytes := map[sema.Type]int{
+		sema.UInt8Type: 1, sema.UInt16Type: 2, sema.UInt32Type: 4, sema.UInt64Type: 8,
+		sema.Word8Type: 1, sema.Word16Type: 2, sema.Word32Type: 4, sema.Word64Type: 8,
+		sema.UInt128Type: 16, sema.UInt256Type: 32, sema.Word128Type: 16, sema.Word256Type: 32,
+	}
+
+	// test based on a transaction, all other tests are script-based - test all types
+	t.Run("transaction without modulo", func(t *testing.T) {
+		// `randBuffer` is the random source
+		randBuffer := make([]byte, 32)
+		_, err := rand.Read(randBuffer)
 		require.NoError(t, err)
-		assert.Equal(t,
-			[]string{
-				"7558174677681708339",
-			},
-			loggedMessages,
-		)
+
+		runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type) {
+			var loggedMessage string
+			runtimeInterface := &TestRuntimeInterface{
+				OnReadRandom: func(buffer []byte) error {
+					// randoms are read from the random source
+					copy(buffer, randBuffer)
+					return nil
+				},
+				OnProgramLog: func(message string) {
+					loggedMessage = message
+				},
+			}
+
+			nextTransactionLocation := NewTransactionLocationGenerator()
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: []byte(
+						fmt.Sprintf(string(transactionSource), ty.String(), ""),
+					),
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+			// prepare the expected value from the random source
+			expected := new(big.Int).SetBytes(randBuffer[:typeToBytes[ty]])
+			assert.Equal(t, expected.String(), loggedMessage)
+		}
+		testAllTypes(t, runValidCaseWithoutModulo)
 	})
-	t.Run("script all types", func(t *testing.T) {
+
+	// no modulo is passed - test all types
+	t.Run("script without modulo", func(t *testing.T) {
+		// random source
+		randBuffer := make([]byte, 32)
+		_, err := rand.Read(randBuffer)
+		require.NoError(t, err)
+
 		runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type) {
 			t.Run(ty.String(), func(t *testing.T) {
 				t.Parallel()
@@ -4521,14 +4555,15 @@ func TestRuntimeRandom(t *testing.T) {
 				runtime := NewTestInterpreterRuntime()
 				value, err := runtime.ExecuteScript(
 					Script{
-						Source: []byte(fmt.Sprintf(scriptSource, ty.String())),
+						Source: []byte(
+							fmt.Sprintf(scriptSource, ty.String(), ""),
+						),
 					},
 					Context{
 						Interface: &TestRuntimeInterface{
 							OnReadRandom: func(buffer []byte) error {
-								for i := 0; i < len(buffer); i++ {
-									buffer[i] = 0xff
-								}
+								// randoms are read from the random source
+								copy(buffer, randBuffer)
 								return nil
 							},
 						},
@@ -4536,58 +4571,187 @@ func TestRuntimeRandom(t *testing.T) {
 					},
 				)
 				require.NoError(t, err)
+				// prepare the expected value from the random source
+				expected := new(big.Int).SetBytes(randBuffer[:typeToBytes[ty]])
+				assert.Equal(t, expected.String(), value.String())
+			})
+		}
+		testAllTypes(t, runValidCaseWithoutModulo)
+	})
 
-				require.Equal(t, getFixedSizeUnsignedIntegerForSemaType(ty), value)
+	// random modulo is passed as the modulo argument - test all types
+	t.Run("script with modulo all types", func(t *testing.T) {
+		// the modulo value will be built from this buffer
+		moduloBuffer := make([]byte, 32)
+		_, err := rand.Read(moduloBuffer)
+		require.NoError(t, err)
+
+		runValidCaseWithModulo := func(t *testing.T, ty sema.Type) {
+			t.Run(ty.String(), func(t *testing.T) {
+				t.Parallel()
+
+				nextScriptLocation := NewScriptLocationGenerator()
+
+				runtime := NewTestInterpreterRuntime()
+				// build a big Int from the modulo buffer, with the required `ty` size
+				// big.Int are used as they cover all the tested types including the small ones (UInt8 ..)
+				modulo := new(big.Int).SetBytes(moduloBuffer[:typeToBytes[ty]])
+				// example "modulo: UInt8(77)"
+				moduloArgument := fmt.Sprintf("modulo: %s(%s)", ty.String(), modulo.String())
+
+				value, err := runtime.ExecuteScript(
+					Script{
+						Source: []byte(
+							fmt.Sprintf(scriptSource,
+								ty.String(),
+								moduloArgument,
+							)),
+					},
+					Context{
+						Interface: &TestRuntimeInterface{
+							OnReadRandom: func(buffer []byte) error {
+								// random value does not matter in this test
+								_, err := rand.Read(buffer)
+								return err
+							},
+						},
+						Location: nextScriptLocation(),
+					},
+				)
+				require.NoError(t, err)
+				// convert `value` to big Int for comparison
+				valueBig, ok := new(big.Int).SetString(value.String(), 10)
+				require.True(t, ok)
+				// check that modulo > value
+				require.True(t, modulo.Cmp(valueBig) == 1)
+			})
+		}
+		testAllTypes(t, runValidCaseWithModulo)
+	})
+
+	// test valid edge cases of the value modulo - test all types
+	t.Run("script with modulo edge cases all types", func(t *testing.T) {
+		// case where modulo is the max value of the type
+		runValidCaseWithMaxModulo := func(t *testing.T, ty sema.Type) {
+			t.Run(ty.String(), func(t *testing.T) {
+				t.Parallel()
+
+				nextScriptLocation := NewScriptLocationGenerator()
+
+				runtime := NewTestInterpreterRuntime()
+				// set modulo to the max value of the type: (1 << bitSize) - 1
+				// big.Int are used as they cover all the tested types including the small ones (UInt8 ..)
+				bitSize := typeToBytes[ty] << 3
+				one := big.NewInt(1)
+				modulo := new(big.Int).Lsh(one, uint(bitSize))
+				modulo.Sub(modulo, one)
+				// example "modulo: UInt8(0xFF)"
+				moduloArgument := fmt.Sprintf("modulo: %s(%s)", ty.String(), modulo.String())
+
+				value, err := runtime.ExecuteScript(
+					Script{
+						Source: []byte(
+							fmt.Sprintf(scriptSource,
+								ty.String(),
+								moduloArgument,
+							)),
+					},
+					Context{
+						Interface: &TestRuntimeInterface{
+							OnReadRandom: func(buffer []byte) error {
+								// random value does not matter in this test
+								_, err := rand.Read(buffer)
+								return err
+							},
+						},
+						Location: nextScriptLocation(),
+					},
+				)
+				require.NoError(t, err)
+				// convert `value` to big Int for comparison
+				valueBig, ok := new(big.Int).SetString(value.String(), 10)
+				require.True(t, ok)
+				// check that modulo > value
+				require.True(t, modulo.Cmp(valueBig) == 1)
 			})
 		}
 
-		for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
-			switch ty {
-			case sema.FixedSizeUnsignedIntegerType:
-				continue
+		// case where modulo is 1 and expected value in 0
+		runValidCaseWithOneModulo := func(t *testing.T, ty sema.Type) {
+			t.Run(ty.String(), func(t *testing.T) {
+				t.Parallel()
 
-			default:
-				runValidCaseWithoutModulo(t, ty)
-			}
+				nextScriptLocation := NewScriptLocationGenerator()
+
+				runtime := NewTestInterpreterRuntime()
+				// set modulo to 1
+				// example "modulo: UInt8(1)"
+				moduloArgument := fmt.Sprintf("modulo: %s(1)", ty.String())
+
+				value, err := runtime.ExecuteScript(
+					Script{
+						Source: []byte(
+							fmt.Sprintf(scriptSource,
+								ty.String(),
+								moduloArgument,
+							)),
+					},
+					Context{
+						Interface: &TestRuntimeInterface{
+							OnReadRandom: func(buffer []byte) error {
+								// random value does not matter in this test
+								_, err := rand.Read(buffer)
+								return err
+							},
+						},
+						Location: nextScriptLocation(),
+					},
+				)
+				require.NoError(t, err)
+				// check that value is zero
+				require.True(t, value.String() == "0")
+			})
 		}
+
+		t.Run("max modulo", func(t *testing.T) {
+			testAllTypes(t, runValidCaseWithMaxModulo)
+		})
+		t.Run("one modulo", func(t *testing.T) {
+			testAllTypes(t, runValidCaseWithOneModulo)
+		})
 	})
 
-}
+	// function should error if zero is used as modulo - test all types
+	t.Run("script with zero modulo", func(t *testing.T) {
+		runCaseWithZeroModulo := func(t *testing.T, ty sema.Type) {
+			t.Run(ty.String(), func(t *testing.T) {
+				t.Parallel()
 
-func getFixedSizeUnsignedIntegerForSemaType(ty sema.Type) cadence.Value {
-	switch ty {
-	case sema.UInt8Type:
-		return cadence.NewUInt8(math.MaxUint8)
-	case sema.UInt16Type:
-		return cadence.NewUInt16(math.MaxUint16)
-	case sema.UInt32Type:
-		return cadence.NewUInt32(math.MaxUint32)
-	case sema.UInt64Type:
-		return cadence.NewUInt64(math.MaxUint64)
-	case sema.UInt128Type:
-		value, _ := cadence.NewUInt128FromBig(sema.UInt128TypeMaxIntBig)
-		return value
-	case sema.UInt256Type:
-		value, _ := cadence.NewUInt256FromBig(sema.UInt256TypeMaxIntBig)
-		return value
+				nextScriptLocation := NewScriptLocationGenerator()
 
-	case sema.Word8Type:
-		return cadence.NewWord8(math.MaxUint8)
-	case sema.Word16Type:
-		return cadence.NewWord16(math.MaxUint16)
-	case sema.Word32Type:
-		return cadence.NewWord32(math.MaxUint32)
-	case sema.Word64Type:
-		return cadence.NewWord64(math.MaxUint64)
-	case sema.Word128Type:
-		value, _ := cadence.NewWord128FromBig(sema.Word128TypeMaxIntBig)
-		return value
-	case sema.Word256Type:
-		value, _ := cadence.NewWord256FromBig(sema.Word256TypeMaxIntBig)
-		return value
-	}
+				runtime := NewTestInterpreterRuntime()
+				_, err := runtime.ExecuteScript(
+					Script{
+						Source: []byte(
+							fmt.Sprintf(scriptSource, ty.String(), "modulo: "+ty.String()+"(0)"),
+						),
+					},
+					Context{
+						Interface: &TestRuntimeInterface{
+							OnReadRandom: func(buffer []byte) error {
+								return nil
+							},
+						},
+						Location: nextScriptLocation(),
+					},
+				)
+				assertUserError(t, err)
+				require.ErrorContains(t, err, stdlib.ZeroModuloError.Error())
+			})
+		}
+		testAllTypes(t, runCaseWithZeroModulo)
+	})
 
-	panic(fmt.Sprintf("Broken test. Trying to get fixed size unsigned integer for ty: %s", ty))
 }
 
 func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
