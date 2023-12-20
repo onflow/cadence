@@ -601,7 +601,7 @@ func defineLessThanOrTypeArgumentsExpression() {
 				return nil
 			}()
 
-			// `err` is nil means the expression is an invocation,
+			// `err` is nil means the expression is an invocation
 			if err == nil {
 
 				// The expression was determined to be an invocation.
