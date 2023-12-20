@@ -6315,7 +6315,7 @@ func (t *ReferenceType) GetMembers() map[string]MemberResolver {
 const ReferenceTypeDereferenceFunctionName = "dereference"
 
 const referenceTypeDereferenceFunctionDocString = `
-	Returns a copy of the reference value after dereferencing.
+	Returns a copy of the referenced value after dereferencing.
 `
 
 func (t *ReferenceType) initializeMemberResolvers() {
