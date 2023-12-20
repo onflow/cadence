@@ -19691,6 +19691,27 @@ type ReferenceValue interface {
 	ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value
 }
 
+func ReferenceTypeDereferenceFunctionValue(
+	inter *Interpreter,
+	borrowedType sema.Type,
+	value Value,
+) *HostFunctionValue {
+	return NewHostFunctionValue(
+		inter,
+		sema.ReferenceDereferenceFunctionType(borrowedType),
+		func(invocation Invocation) Value {
+			return value.Transfer(
+				invocation.Interpreter,
+				invocation.LocationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+			)
+		},
+	)
+}
+
 // StorageReferenceValue
 type StorageReferenceValue struct {
 	BorrowedType         sema.Type
@@ -19857,20 +19878,7 @@ func (v *StorageReferenceValue) GetMember(
 
 	switch name {
 	case sema.ReferenceTypeDereferenceFunctionName:
-		return NewHostFunctionValue(
-			interpreter,
-			sema.ReferenceDereferenceFunctionType(v.BorrowedType),
-			func(invocation Invocation) Value {
-				return self.Transfer(
-					invocation.Interpreter,
-					invocation.LocationRange,
-					atree.Address{},
-					false,
-					nil,
-					nil,
-				)
-			},
-		)
+		return ReferenceTypeDereferenceFunctionValue(interpreter, v.BorrowedType, self)
 	}
 
 	return interpreter.getMember(self, locationRange, name)
@@ -20245,20 +20253,7 @@ func (v *EphemeralReferenceValue) GetMember(
 ) Value {
 	switch name {
 	case sema.ReferenceTypeDereferenceFunctionName:
-		return NewHostFunctionValue(
-			interpreter,
-			sema.ReferenceDereferenceFunctionType(v.BorrowedType),
-			func(invocation Invocation) Value {
-				return v.Value.Transfer(
-					invocation.Interpreter,
-					invocation.LocationRange,
-					atree.Address{},
-					false,
-					nil,
-					nil,
-				)
-			},
-		)
+		return ReferenceTypeDereferenceFunctionValue(interpreter, v.BorrowedType, v.Value)
 	}
 
 	return interpreter.getMember(v.Value, locationRange, name)
