@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/runtime_utils"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -51,71 +51,72 @@ func (t *testReporter) Report(
 	t.migratedPaths[addressPath] = struct{}{}
 }
 
+const fooBarQualifiedIdentifier = "Foo.Bar"
+const fooBazQualifiedIdentifier = "Foo.Baz"
+
+var testAddress = common.Address{0x42}
+
+var fooAddressLocation = common.NewAddressLocation(nil, testAddress, "Foo")
+
+func newIntersectionStaticTypeWithoutInterfaces() *interpreter.IntersectionStaticType {
+	return interpreter.NewIntersectionStaticType(
+		nil,
+		[]*interpreter.InterfaceStaticType{},
+	)
+}
+
+func newIntersectionStaticTypeWithOneInterface() *interpreter.IntersectionStaticType {
+	return interpreter.NewIntersectionStaticType(
+		nil,
+		[]*interpreter.InterfaceStaticType{
+			interpreter.NewInterfaceStaticType(
+				nil,
+				nil,
+				fooBarQualifiedIdentifier,
+				common.NewTypeIDFromQualifiedName(
+					nil,
+					fooAddressLocation,
+					fooBarQualifiedIdentifier,
+				),
+			),
+		},
+	)
+}
+
+func newIntersectionStaticTypeWithTwoInterfaces() *interpreter.IntersectionStaticType {
+	return interpreter.NewIntersectionStaticType(
+		nil,
+		[]*interpreter.InterfaceStaticType{
+			interpreter.NewInterfaceStaticType(
+				nil,
+				nil,
+				fooBarQualifiedIdentifier,
+				common.NewTypeIDFromQualifiedName(
+					nil,
+					fooAddressLocation,
+					fooBarQualifiedIdentifier,
+				),
+			),
+			interpreter.NewInterfaceStaticType(
+				nil,
+				nil,
+				fooBazQualifiedIdentifier,
+				common.NewTypeIDFromQualifiedName(
+					nil,
+					fooAddressLocation,
+					fooBazQualifiedIdentifier,
+				),
+			),
+		},
+	)
+}
+
 func TestTypeValueMigration(t *testing.T) {
 	t.Parallel()
 
-	account := common.Address{0x42}
 	pathDomain := common.PathDomainPublic
 
 	const stringType = interpreter.PrimitiveStaticTypeString
-
-	const fooBarQualifiedIdentifier = "Foo.Bar"
-	const fooBazQualifiedIdentifier = "Foo.Baz"
-
-	fooAddressLocation := common.NewAddressLocation(nil, account, "Foo")
-
-	newIntersectionStaticTypeWithoutInterfaces := func() *interpreter.IntersectionStaticType {
-		return interpreter.NewIntersectionStaticType(
-			nil,
-			[]*interpreter.InterfaceStaticType{},
-		)
-	}
-
-	newIntersectionStaticTypeWithOneInterface := func() *interpreter.IntersectionStaticType {
-		return interpreter.NewIntersectionStaticType(
-			nil,
-			[]*interpreter.InterfaceStaticType{
-				interpreter.NewInterfaceStaticType(
-					nil,
-					nil,
-					fooBarQualifiedIdentifier,
-					common.NewTypeIDFromQualifiedName(
-						nil,
-						fooAddressLocation,
-						fooBarQualifiedIdentifier,
-					),
-				),
-			},
-		)
-	}
-
-	newIntersectionStaticTypeWithTwoInterfaces := func() *interpreter.IntersectionStaticType {
-		return interpreter.NewIntersectionStaticType(
-			nil,
-			[]*interpreter.InterfaceStaticType{
-				interpreter.NewInterfaceStaticType(
-					nil,
-					nil,
-					fooBarQualifiedIdentifier,
-					common.NewTypeIDFromQualifiedName(
-						nil,
-						fooAddressLocation,
-						fooBarQualifiedIdentifier,
-					),
-				),
-				interpreter.NewInterfaceStaticType(
-					nil,
-					nil,
-					fooBazQualifiedIdentifier,
-					common.NewTypeIDFromQualifiedName(
-						nil,
-						fooAddressLocation,
-						fooBazQualifiedIdentifier,
-					),
-				),
-			},
-		)
-	}
 
 	type testCase struct {
 		storedType   interpreter.StaticType
@@ -351,7 +352,7 @@ func TestTypeValueMigration(t *testing.T) {
 
 	// Store values
 
-	ledger := runtime_utils.NewTestLedger(nil, nil)
+	ledger := NewTestLedger(nil, nil)
 	storage := runtime.NewStorage(ledger, nil)
 
 	inter, err := interpreter.NewInterpreter(
@@ -368,7 +369,7 @@ func TestTypeValueMigration(t *testing.T) {
 	for name, testCase := range testCases {
 		storeTypeValue(
 			inter,
-			account,
+			testAddress,
 			pathDomain,
 			name,
 			testCase.storedType,
@@ -387,7 +388,7 @@ func TestTypeValueMigration(t *testing.T) {
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
-				account,
+				testAddress,
 			},
 		},
 		migration.NewValueMigrationsPathMigrator(
@@ -401,7 +402,7 @@ func TestTypeValueMigration(t *testing.T) {
 	// Check reported migrated paths
 	for identifier, test := range testCases {
 		addressPath := interpreter.AddressPath{
-			Address: account,
+			Address: testAddress,
 			Path: interpreter.PathValue{
 				Domain:     pathDomain,
 				Identifier: identifier,
@@ -418,7 +419,7 @@ func TestTypeValueMigration(t *testing.T) {
 	// Assert the migrated values.
 	// Traverse through the storage and see if the values are updated now.
 
-	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
+	storageMap := storage.GetStorageMap(testAddress, pathDomain.Identifier(), false)
 	require.NotNil(t, storageMap)
 	require.Greater(t, storageMap.Count(), uint64(0))
 
