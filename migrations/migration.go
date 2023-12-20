@@ -253,10 +253,7 @@ func (m *StorageMigration) migrateNestedValue(
 				valueToSet = newValue
 			}
 
-			// Always wrap with an optional, when inserting to the dictionary.
-			valueToSet = interpreter.NewUnmeteredSomeValueNonCopying(valueToSet)
-
-			dictionary.SetKey(
+			dictionary.Insert(
 				m.interpreter,
 				emptyLocationRange,
 				keyToSet,
