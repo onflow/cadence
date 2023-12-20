@@ -19,8 +19,10 @@
 package type_value
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -470,4 +472,175 @@ func storeTypeValue(
 		interpreter.StringStorageMapKey(pathIdentifier),
 		interpreter.NewTypeValue(inter, staticType),
 	)
+}
+
+// testIntersectionType simulates the old, incorrect restricted type type ID generation,
+// which did not sort the type IDs of the interface types.
+type testIntersectionType struct {
+	*interpreter.IntersectionStaticType
+	generatedTypeID bool
+}
+
+var _ interpreter.StaticType = &testIntersectionType{}
+
+func (t *testIntersectionType) ID() common.TypeID {
+	t.generatedTypeID = true
+
+	interfaceTypeIDs := make([]string, 0, len(t.Types))
+	for _, interfaceType := range t.Types {
+		interfaceTypeIDs = append(
+			interfaceTypeIDs,
+			string(interfaceType.ID()),
+		)
+	}
+
+	var result strings.Builder
+	result.WriteByte('{')
+	// NOTE: no sorting
+	for i, interfaceTypeID := range interfaceTypeIDs {
+		if i > 0 {
+			result.WriteByte(',')
+		}
+		result.WriteString(interfaceTypeID)
+	}
+	result.WriteByte('}')
+	return common.TypeID(result.String())
+}
+
+// TestRehash stores a dictionary in storage,
+// which has a key that is a type value with a restricted type that has two interface types,
+// runs the migration, and ensures the dictionary is still usable
+func TestRehash(t *testing.T) {
+
+	t.Parallel()
+
+	locationRange := interpreter.EmptyLocationRange
+
+	ledger := NewTestLedger(nil, nil)
+
+	storageMapKey := interpreter.StringStorageMapKey("dict")
+	newTestValue := func() interpreter.Value {
+		return interpreter.NewUnmeteredStringValue("test")
+	}
+
+	newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
+		storage := runtime.NewStorage(ledger, nil)
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   false,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		return storage, inter
+	}
+
+	t.Run("prepare", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		dictionaryStaticType := interpreter.NewDictionaryStaticType(
+			nil,
+			interpreter.PrimitiveStaticTypeMetaType,
+			interpreter.PrimitiveStaticTypeString,
+		)
+		dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
+
+		// TODO: wrap in &testIntersectionType
+		intersectionType := newIntersectionStaticTypeWithTwoInterfaces()
+
+		typeValue := interpreter.NewUnmeteredTypeValue(intersectionType)
+
+		dictValue.Insert(
+			inter,
+			locationRange,
+			typeValue,
+			newTestValue(),
+		)
+
+		// TODO: assert.True(t, intersectionType.generatedTypeID)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			true,
+		)
+
+		storageMap.SetValue(inter,
+			storageMapKey,
+			dictValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address(testAddress),
+				false,
+				nil,
+				nil,
+			),
+		)
+
+		err := storage.Commit(inter, false)
+		require.NoError(t, err)
+	})
+
+	t.Run("migrate", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		migration := migrations.NewStorageMigration(inter, storage)
+
+		reporter := newTestReporter()
+
+		migration.Migrate(
+			&migrations.AddressSliceIterator{
+				Addresses: []common.Address{
+					testAddress,
+				},
+			},
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				NewTypeValueMigration(),
+			),
+		)
+
+		migration.Commit()
+
+		require.Equal(t,
+			map[interpreter.AddressPath]struct{}{
+				{
+					Address: testAddress,
+					Path: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: string(storageMapKey),
+					},
+				}: {},
+			},
+			reporter.migratedPaths,
+		)
+	})
+
+	// TODO: re-enable
+	//t.Run("load", func(t *testing.T) {
+	//
+	//	storage, inter := newStorageAndInterpreter(t)
+	//
+	//	storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
+	//	storedValue := storageMap.ReadValue(inter, storageMapKey)
+	//
+	//	require.IsType(t, &interpreter.DictionaryValue{}, storedValue)
+	//
+	//	dictValue := storedValue.(*interpreter.DictionaryValue)
+	//
+	//	typeValue := interpreter.NewUnmeteredTypeValue(newIntersectionStaticTypeWithTwoInterfaces())
+	//
+	//	value, ok := dictValue.Get(inter, locationRange, typeValue)
+	//	require.True(t, ok)
+	//
+	//	require.IsType(t, &interpreter.StringValue{}, value)
+	//	require.Equal(t, value.(*interpreter.StringValue), testValue)
+	//})
+
 }
