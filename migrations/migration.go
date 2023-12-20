@@ -197,19 +197,29 @@ func (m *StorageMigration) migrateNestedValue(
 	case *interpreter.DictionaryValue:
 		dictionary := value
 
+		type keyValuePair struct {
+			key, value interpreter.Value
+		}
+
 		// Read the keys first, so the iteration wouldn't be affected
 		// by the modification of the nested values.
-		var existingKeys []interpreter.Value
-		dictionary.IterateKeys(m.interpreter, func(key interpreter.Value) (resume bool) {
-			existingKeys = append(existingKeys, key)
+		var existingKeysAndValues []keyValuePair
+		dictionary.Iterate(m.interpreter, func(key, value interpreter.Value) (resume bool) {
+			existingKeysAndValues = append(
+				existingKeysAndValues,
+				keyValuePair{
+					key:   key,
+					value: value,
+				},
+			)
+
+			// continue iteration
 			return true
 		})
 
-		for _, existingKey := range existingKeys {
-			existingValue, exist := dictionary.Get(nil, interpreter.EmptyLocationRange, existingKey)
-			if !exist {
-				panic(errors.NewUnreachableError())
-			}
+		for _, existingKeyAndValue := range existingKeysAndValues {
+			existingKey := existingKeyAndValue.key
+			existingValue := existingKeyAndValue.value
 
 			newKey := m.migrateNestedValue(
 				addressPath,
