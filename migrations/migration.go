@@ -208,9 +208,6 @@ func (m *StorageMigration) MigrateNestedValue(
 
 		if converted != nil {
 			// Chain the migrations.
-			// Probably not needed, because of the assumption above.
-			// i.e: A single non-container value may not get converted from two migrations.
-			// But have it here to be safe.
 			value = converted
 
 			newValue = converted
