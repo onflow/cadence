@@ -2415,6 +2415,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredIntValueFromInt64(2),
 						interpreter.NewUnmeteredIntValueFromInt64(3),
 					)
+
 				case sema.Int8Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2430,6 +2431,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredInt8Value(2),
 						interpreter.NewUnmeteredInt8Value(3),
 					)
+
 				case sema.Int16Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2445,6 +2447,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredInt16Value(2),
 						interpreter.NewUnmeteredInt16Value(3),
 					)
+
 				case sema.Int32Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2460,6 +2463,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredInt32Value(2),
 						interpreter.NewUnmeteredInt32Value(3),
 					)
+
 				case sema.Int64Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2475,6 +2479,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredInt64Value(2),
 						interpreter.NewUnmeteredInt64Value(3),
 					)
+
 				case sema.Int128Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2490,6 +2495,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredInt128ValueFromInt64(2),
 						interpreter.NewUnmeteredInt128ValueFromInt64(3),
 					)
+
 				case sema.Int256Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2505,6 +2511,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredInt256ValueFromInt64(2),
 						interpreter.NewUnmeteredInt256ValueFromInt64(3),
 					)
+
 				// UInt*
 				case sema.UIntType:
 					expectedValue = createArrayValue(
@@ -2521,6 +2528,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredUIntValueFromUint64(2),
 						interpreter.NewUnmeteredUIntValueFromUint64(3),
 					)
+
 				case sema.UInt8Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2536,6 +2544,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredUInt8Value(2),
 						interpreter.NewUnmeteredUInt8Value(3),
 					)
+
 				case sema.UInt16Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2551,6 +2560,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredUInt16Value(2),
 						interpreter.NewUnmeteredUInt16Value(3),
 					)
+
 				case sema.UInt32Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2566,6 +2576,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredUInt32Value(2),
 						interpreter.NewUnmeteredUInt32Value(3),
 					)
+
 				case sema.UInt64Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2581,6 +2592,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredUInt64Value(2),
 						interpreter.NewUnmeteredUInt64Value(3),
 					)
+
 				case sema.UInt128Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2596,6 +2608,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredUInt128ValueFromUint64(2),
 						interpreter.NewUnmeteredUInt128ValueFromUint64(3),
 					)
+
 				case sema.UInt256Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2611,6 +2624,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredUInt256ValueFromUint64(2),
 						interpreter.NewUnmeteredUInt256ValueFromUint64(3),
 					)
+
 				// Word*
 				case sema.Word8Type:
 					expectedValue = createArrayValue(
@@ -2627,6 +2641,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredWord8Value(2),
 						interpreter.NewUnmeteredWord8Value(3),
 					)
+
 				case sema.Word16Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2642,6 +2657,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredWord16Value(2),
 						interpreter.NewUnmeteredWord16Value(3),
 					)
+
 				case sema.Word32Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2657,6 +2673,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredWord32Value(2),
 						interpreter.NewUnmeteredWord32Value(3),
 					)
+
 				case sema.Word64Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2672,6 +2689,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredWord64Value(2),
 						interpreter.NewUnmeteredWord64Value(3),
 					)
+
 				case sema.Word128Type:
 					expectedValue = createArrayValue(
 						inter,
@@ -2687,6 +2705,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 						interpreter.NewUnmeteredWord128ValueFromUint64(2),
 						interpreter.NewUnmeteredWord128ValueFromUint64(3),
 					)
+
 				case sema.Word256Type:
 					expectedValue = createArrayValue(
 						inter,
