@@ -4482,9 +4482,8 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 		_, errs := testParseExpression("foo<X{T}>")
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "restricted types have been removed; replace with the concrete type or an equivalent intersection type",
-					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				&RestrictedTypeError{
+					Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
 				},
 			},
 			errs,

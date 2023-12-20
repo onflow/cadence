@@ -538,9 +538,8 @@ func TestParseBuffering(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "restricted types have been removed; replace with the concrete type or an equivalent intersection type",
-					Pos:     ast.Position{Offset: 138, Line: 4, Column: 55},
+				&RestrictedTypeError{
+					Pos: ast.Position{Offset: 138, Line: 4, Column: 55},
 				},
 			},
 			err.(Error).Errors,

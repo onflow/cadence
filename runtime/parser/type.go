@@ -503,7 +503,7 @@ func defineIntersectionOrDictionaryType() {
 				return left, nil, true
 			}
 
-			return nil, p.syntaxError("restricted types have been removed; replace with the concrete type or an equivalent intersection type"), true
+			return nil, &RestrictedTypeError{Pos: p.current.StartPos}, true
 		},
 	)
 }
