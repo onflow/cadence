@@ -642,7 +642,7 @@ func defineLessThanOrTypeArgumentsExpression() {
 
 				// if the error specifically occurred during parsing restricted types,
 				// this is still an invocation and we should report that error instead
-				if strings.Contains(err.Error(), "restricted type") {
+				if _, isRestrictedTypeErr := err.(*RestrictedTypeError); isRestrictedTypeErr {
 					return nil, err, true
 				}
 
