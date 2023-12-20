@@ -556,7 +556,10 @@ func TestParseIntersectionType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&RestrictedTypeError{
-					Pos: ast.Position{Offset: 2, Line: 1, Column: 2},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+					},
 				},
 			},
 			errs,
@@ -571,7 +574,10 @@ func TestParseIntersectionType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&RestrictedTypeError{
-					Pos: ast.Position{Offset: 2, Line: 1, Column: 2},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+					},
 				},
 			},
 			errs,
@@ -586,7 +592,10 @@ func TestParseIntersectionType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&RestrictedTypeError{
-					Pos: ast.Position{Offset: 2, Line: 1, Column: 2},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+					},
 				},
 			},
 			errs,

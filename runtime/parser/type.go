@@ -503,7 +503,7 @@ func defineIntersectionOrDictionaryType() {
 				return left, nil, true
 			}
 
-			return nil, &RestrictedTypeError{Pos: p.current.StartPos}, true
+			return nil, &RestrictedTypeError{Range: p.current.Range}, true
 		},
 	)
 }

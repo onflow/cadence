@@ -322,7 +322,7 @@ func (e *CustomDestructorError) SecondaryError() string {
 // RestrictedTypeError
 
 type RestrictedTypeError struct {
-	Pos ast.Position
+	ast.Range
 }
 
 var _ ParseError = &CustomDestructorError{}
@@ -331,14 +331,6 @@ var _ errors.UserError = &CustomDestructorError{}
 func (*RestrictedTypeError) isParseError() {}
 
 func (*RestrictedTypeError) IsUserError() {}
-
-func (e *RestrictedTypeError) StartPosition() ast.Position {
-	return e.Pos
-}
-
-func (e *RestrictedTypeError) EndPosition(_ common.MemoryGauge) ast.Position {
-	return e.Pos
-}
 
 func (e *RestrictedTypeError) Error() string {
 	return "restricted types have been removed; replace with the concrete type or an equivalent intersection type"

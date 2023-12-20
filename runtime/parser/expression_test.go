@@ -4483,7 +4483,10 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&RestrictedTypeError{
-					Pos: ast.Position{Offset: 6, Line: 1, Column: 6},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
 				},
 			},
 			errs,

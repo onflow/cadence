@@ -539,7 +539,10 @@ func TestParseBuffering(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&RestrictedTypeError{
-					Pos: ast.Position{Offset: 138, Line: 4, Column: 55},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 138, Line: 4, Column: 55},
+						EndPos:   ast.Position{Offset: 139, Line: 4, Column: 56},
+					},
 				},
 			},
 			err.(Error).Errors,
