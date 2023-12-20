@@ -248,11 +248,15 @@ func (m *StorageMigration) migrateNestedValue(
 				// Key was migrated.
 				// Remove the old value at the old key.
 				// This old value will be inserted again with the new key, unless the value is also migrated.
-				_ = dictionary.RemoveKey(
+				oldValue := dictionary.Remove(
 					m.interpreter,
 					emptyLocationRange,
 					existingKey,
 				)
+				if _, ok := oldValue.(*interpreter.SomeValue); !ok {
+					panic(errors.NewUnreachableError())
+				}
+
 				keyToSet = newKey
 			}
 
