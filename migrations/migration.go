@@ -169,7 +169,7 @@ func (m *StorageMigration) migrateNestedValue(
 		for _, fieldName := range fieldNames {
 			existingValue := composite.GetField(
 				m.interpreter,
-				interpreter.EmptyLocationRange,
+				emptyLocationRange,
 				fieldName,
 			)
 

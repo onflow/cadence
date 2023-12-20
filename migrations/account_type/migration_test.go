@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/runtime_utils"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -321,7 +321,7 @@ func TestTypeValueMigration(t *testing.T) {
 
 	// Store values
 
-	ledger := runtime_utils.NewTestLedger(nil, nil)
+	ledger := NewTestLedger(nil, nil)
 	storage := runtime.NewStorage(ledger, nil)
 
 	inter, err := interpreter.NewInterpreter(
@@ -451,7 +451,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 	expectedAccountTypeValue := interpreter.NewTypeValue(nil, unauthorizedAccountReferenceType)
 	stringTypeValue := interpreter.NewTypeValue(nil, interpreter.PrimitiveStaticTypeString)
 
-	ledger := runtime_utils.NewTestLedger(nil, nil)
+	ledger := NewTestLedger(nil, nil)
 	storage := runtime.NewStorage(ledger, nil)
 	locationRange := interpreter.EmptyLocationRange
 
@@ -728,7 +728,7 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 		expectedValue interpreter.Value
 	}
 
-	ledger := runtime_utils.NewTestLedger(nil, nil)
+	ledger := NewTestLedger(nil, nil)
 	storage := runtime.NewStorage(ledger, nil)
 	locationRange := interpreter.EmptyLocationRange
 
