@@ -4474,6 +4474,22 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("restricted type argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("foo<X{T}>")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "restricted types have been removed; replace with the concrete type or an equivalent intersection type",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseBoolExpression(t *testing.T) {

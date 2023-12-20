@@ -506,7 +506,7 @@ func TestParseBuffering(t *testing.T) {
 
           fun isneg(x: SignedFixedPoint): Bool {   /* I kinda forget what this is all about */
               return x                             /* but we probably need to figure it out */
-                     <                             /* ************/((TODO?{/*))************ *//
+                     <                             /* ************/((TODO?/*))************ *//
                     -x                             /* maybe it says NaNs are not negative?  */
           }
         `
@@ -515,7 +515,7 @@ func TestParseBuffering(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "expected token identifier",
-					Pos:     ast.Position{Offset: 399, Line: 9, Column: 95},
+					Pos:     ast.Position{Offset: 398, Line: 9, Column: 94},
 				},
 			},
 			err.(Error).Errors,
@@ -539,8 +539,8 @@ func TestParseBuffering(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token identifier",
-					Pos:     ast.Position{Offset: 146, Line: 4, Column: 63},
+					Message: "restricted types have been removed; replace with the concrete type or an equivalent intersection type",
+					Pos:     ast.Position{Offset: 138, Line: 4, Column: 55},
 				},
 			},
 			err.(Error).Errors,

@@ -601,7 +601,7 @@ func defineLessThanOrTypeArgumentsExpression() {
 				return nil
 			}()
 
-			// `err` is nil means the expression is an invocation
+			// `err` is nil means the expression is an invocation,
 			if err == nil {
 
 				// The expression was determined to be an invocation.
@@ -639,6 +639,12 @@ func defineLessThanOrTypeArgumentsExpression() {
 				return invocationExpression, nil, false
 
 			} else {
+
+				// if the error specifically occurred during parsing restricted types,
+				// this is still an invocation and we should report that error instead
+				if strings.Contains(err.Error(), "restricted type") {
+					return nil, err, true
+				}
 
 				// The previous attempt to parse an invocation failed,
 				// replay the buffered tokens.
