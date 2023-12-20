@@ -6316,6 +6316,7 @@ const ReferenceTypeDereferenceFunctionName = "dereference"
 
 const referenceTypeDereferenceFunctionDocString = `
 	Returns a copy of the referenced value after dereferencing.
+	Available if the referenced type is a primitive or a container of primitive.
 `
 
 func (t *ReferenceType) initializeMemberResolvers() {
