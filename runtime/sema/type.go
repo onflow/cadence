@@ -6525,22 +6525,12 @@ func IsPrimitiveOrContainerOfPrimitive(ty Type) bool {
 	}
 
 	// TODO: Do we also want to count Dictionary?
-	switch ty.(type) {
+	switch ty := ty.(type) {
 	case *VariableSizedType:
-		typedTy, ok := ty.(*VariableSizedType)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		return IsPrimitiveOrContainerOfPrimitive(typedTy.Type)
+		return IsPrimitiveOrContainerOfPrimitive(ty.Type)
 
 	case *ConstantSizedType:
-		typedTy, ok := ty.(*ConstantSizedType)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		return IsPrimitiveOrContainerOfPrimitive(typedTy.Type)
+		return IsPrimitiveOrContainerOfPrimitive(ty.Type)
 	}
 
 	return false
