@@ -16,21 +16,8 @@
  * limitations under the License.
  */
 
-package sema
+package primitive
 
-// BoolType represents the boolean type
-var BoolType = &SimpleType{
-	Name:          "Bool",
-	QualifiedName: "Bool",
-	TypeID:        "Bool",
-	TypeTag:       BoolTypeTag,
-	IsResource:    false,
-	Storable:      true,
-	Primitive:     true,
-	Equatable:     true,
-	Comparable:    true,
-	Exportable:    true,
-	Importable:    true,
-}
+import "github.com/onflow/cadence/runtime/sema"
 
-var BoolTypeAnnotation = NewTypeAnnotation(BoolType)
+var TestTypeTag sema.TypeTag

@@ -108,7 +108,6 @@ func (m *LinkValueMigration) Migrate(
 		inter,
 		accountAddress,
 		pathValue,
-		// TODO:
 		// Use top-most type to follow link all the way to final target
 		&sema.ReferenceType{
 			Authorization: sema.UnauthorizedAccess,

@@ -28,6 +28,7 @@ var InvalidType = &SimpleType{
 	TypeTag:       InvalidTypeTag,
 	IsResource:    false,
 	Storable:      false,
+	Primitive:     false,
 	Equatable:     false,
 	Comparable:    false,
 	Exportable:    false,

@@ -16,21 +16,10 @@
  * limitations under the License.
  */
 
-package sema
+package common
 
-// BoolType represents the boolean type
-var BoolType = &SimpleType{
-	Name:          "Bool",
-	QualifiedName: "Bool",
-	TypeID:        "Bool",
-	TypeTag:       BoolTypeTag,
-	IsResource:    false,
-	Storable:      true,
-	Primitive:     true,
-	Equatable:     true,
-	Comparable:    true,
-	Exportable:    true,
-	Importable:    true,
-}
-
-var BoolTypeAnnotation = NewTypeAnnotation(BoolType)
+// Incomparable (the zero-sized type [0]func()) makes the surrounding incomparable.
+// It is crucial to ensure its placed at the beginning or middle of the surrounding struct,
+// and NOT at the end of the struct, as otherwise the compiler will add padding bytes.
+// See https://i.hsfzxjy.site/zst-at-the-rear-of-go-struct/ for more details
+type Incomparable [0]func()

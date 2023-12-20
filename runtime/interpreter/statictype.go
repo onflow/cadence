@@ -1218,10 +1218,10 @@ func NewFunctionStaticType(
 	}
 }
 
-func (t FunctionStaticType) ReturnType(interpreter *Interpreter) StaticType {
+func (t FunctionStaticType) ReturnType(gauge common.MemoryGauge) StaticType {
 	var returnType StaticType
 	if t.Type.ReturnTypeAnnotation.Type != nil {
-		returnType = ConvertSemaToStaticType(interpreter, t.Type.ReturnTypeAnnotation.Type)
+		returnType = ConvertSemaToStaticType(gauge, t.Type.ReturnTypeAnnotation.Type)
 	}
 
 	return returnType

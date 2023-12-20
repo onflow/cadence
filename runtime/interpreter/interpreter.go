@@ -4597,11 +4597,15 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 	return contractValue, nil
 }
 
-func GetNativeCompositeValueComputedFields(v *CompositeValue) map[string]ComputedField {
-	switch v.QualifiedIdentifier {
+func GetNativeCompositeValueComputedFields(qualifiedIdentifier string) map[string]ComputedField {
+	switch qualifiedIdentifier {
 	case sema.PublicKeyType.Identifier:
 		return map[string]ComputedField{
-			sema.PublicKeyTypePublicKeyFieldName: func(interpreter *Interpreter, locationRange LocationRange) Value {
+			sema.PublicKeyTypePublicKeyFieldName: func(
+				interpreter *Interpreter,
+				locationRange LocationRange,
+				v *CompositeValue,
+			) Value {
 				publicKeyValue := v.GetField(interpreter, locationRange, sema.PublicKeyTypePublicKeyFieldName)
 				return publicKeyValue.Transfer(
 					interpreter,
@@ -4622,7 +4626,7 @@ func (interpreter *Interpreter) GetCompositeValueComputedFields(v *CompositeValu
 
 	var computedFields map[string]ComputedField
 	if v.Location == nil {
-		computedFields = GetNativeCompositeValueComputedFields(v)
+		computedFields = GetNativeCompositeValueComputedFields(v.QualifiedIdentifier)
 		if computedFields != nil {
 			return computedFields
 		}
