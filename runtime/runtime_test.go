@@ -4523,7 +4523,7 @@ func TestRuntimeRandom(t *testing.T) {
 			err := runtime.ExecuteTransaction(
 				Script{
 					Source: []byte(
-						fmt.Sprintf(string(transactionSource), ty.String(), ""),
+						fmt.Sprintf(transactionSource, ty.String(), ""),
 					),
 				},
 				Context{
