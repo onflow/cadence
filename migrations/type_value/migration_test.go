@@ -73,7 +73,7 @@ func newIntersectionStaticTypeWithOneInterface() *interpreter.IntersectionStatic
 		[]*interpreter.InterfaceStaticType{
 			interpreter.NewInterfaceStaticType(
 				nil,
-				nil,
+				fooAddressLocation,
 				fooBarQualifiedIdentifier,
 				common.NewTypeIDFromQualifiedName(
 					nil,
@@ -91,7 +91,7 @@ func newIntersectionStaticTypeWithTwoInterfaces() *interpreter.IntersectionStati
 		[]*interpreter.InterfaceStaticType{
 			interpreter.NewInterfaceStaticType(
 				nil,
-				nil,
+				fooAddressLocation,
 				fooBarQualifiedIdentifier,
 				common.NewTypeIDFromQualifiedName(
 					nil,
@@ -101,7 +101,7 @@ func newIntersectionStaticTypeWithTwoInterfaces() *interpreter.IntersectionStati
 			),
 			interpreter.NewInterfaceStaticType(
 				nil,
-				nil,
+				fooAddressLocation,
 				fooBazQualifiedIdentifier,
 				common.NewTypeIDFromQualifiedName(
 					nil,
