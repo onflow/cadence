@@ -19,6 +19,7 @@
 package type_value
 
 import (
+	"sort"
 	"strings"
 	"testing"
 
@@ -494,6 +495,9 @@ func (t *testIntersectionType) ID() common.TypeID {
 		)
 	}
 
+	// NOTE: ensure the interface set is in *reverse* order
+	sort.Sort(sort.Reverse(sort.StringSlice(interfaceTypeIDs)))
+
 	var result strings.Builder
 	result.WriteByte('{')
 	// NOTE: no sorting
@@ -565,6 +569,12 @@ func TestRehash(t *testing.T) {
 
 		assert.True(t, intersectionType.generatedTypeID)
 
+		// NOTE: intentionally in reverse order
+		assert.Equal(t,
+			common.TypeID("{A.4200000000000000.Foo.Baz,A.4200000000000000.Foo.Bar}"),
+			intersectionType.ID(),
+		)
+
 		storageMap := storage.GetStorageMap(
 			testAddress,
 			common.PathDomainStorage.Identifier(),
@@ -634,7 +644,14 @@ func TestRehash(t *testing.T) {
 
 		dictValue := storedValue.(*interpreter.DictionaryValue)
 
-		typeValue := interpreter.NewUnmeteredTypeValue(newIntersectionStaticTypeWithTwoInterfaces())
+		intersectionType := newIntersectionStaticTypeWithTwoInterfaces()
+		typeValue := interpreter.NewUnmeteredTypeValue(intersectionType)
+
+		// NOTE: in *sorted* order
+		assert.Equal(t,
+			common.TypeID("{A.4200000000000000.Foo.Bar,A.4200000000000000.Foo.Baz}"),
+			intersectionType.ID(),
+		)
 
 		value, ok := dictValue.Get(inter, locationRange, typeValue)
 		require.True(t, ok)
