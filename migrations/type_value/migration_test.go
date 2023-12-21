@@ -550,8 +550,9 @@ func TestRehash(t *testing.T) {
 		)
 		dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
 
-		// TODO: wrap in &testIntersectionType
-		intersectionType := newIntersectionStaticTypeWithTwoInterfaces()
+		intersectionType := &testIntersectionType{
+			IntersectionStaticType: newIntersectionStaticTypeWithTwoInterfaces(),
+		}
 
 		typeValue := interpreter.NewUnmeteredTypeValue(intersectionType)
 
@@ -562,7 +563,7 @@ func TestRehash(t *testing.T) {
 			newTestValue(),
 		)
 
-		// TODO: assert.True(t, intersectionType.generatedTypeID)
+		assert.True(t, intersectionType.generatedTypeID)
 
 		storageMap := storage.GetStorageMap(
 			testAddress,
@@ -622,25 +623,26 @@ func TestRehash(t *testing.T) {
 		)
 	})
 
-	// TODO: re-enable
-	//t.Run("load", func(t *testing.T) {
-	//
-	//	storage, inter := newStorageAndInterpreter(t)
-	//
-	//	storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
-	//	storedValue := storageMap.ReadValue(inter, storageMapKey)
-	//
-	//	require.IsType(t, &interpreter.DictionaryValue{}, storedValue)
-	//
-	//	dictValue := storedValue.(*interpreter.DictionaryValue)
-	//
-	//	typeValue := interpreter.NewUnmeteredTypeValue(newIntersectionStaticTypeWithTwoInterfaces())
-	//
-	//	value, ok := dictValue.Get(inter, locationRange, typeValue)
-	//	require.True(t, ok)
-	//
-	//	require.IsType(t, &interpreter.StringValue{}, value)
-	//	require.Equal(t, value.(*interpreter.StringValue), testValue)
-	//})
+	t.Run("load", func(t *testing.T) {
 
+		storage, inter := newStorageAndInterpreter(t)
+
+		storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
+		storedValue := storageMap.ReadValue(inter, storageMapKey)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, storedValue)
+
+		dictValue := storedValue.(*interpreter.DictionaryValue)
+
+		typeValue := interpreter.NewUnmeteredTypeValue(newIntersectionStaticTypeWithTwoInterfaces())
+
+		value, ok := dictValue.Get(inter, locationRange, typeValue)
+		require.True(t, ok)
+
+		require.IsType(t, &interpreter.StringValue{}, value)
+		require.Equal(t,
+			newTestValue(),
+			value.(*interpreter.StringValue),
+		)
+	})
 }
