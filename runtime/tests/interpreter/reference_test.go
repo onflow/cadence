@@ -2740,6 +2740,97 @@ func TestInterpretReferenceDereference(t *testing.T) {
 		}
 	})
 
+	t.Run("Dereference Dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("{Int : String}", func(t *testing.T) {
+			inter := parseCheckAndInterpret(
+				t,
+				`
+					fun main(): {Int : String} {
+						let original = { 1 : "ABC", 2 : "DEF" }
+						let x: &{Int : String} = &original
+						return x.dereference()
+					}
+				`,
+			)
+
+			value, err := inter.Invoke("main")
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					&interpreter.DictionaryStaticType{
+						KeyType:   interpreter.PrimitiveStaticTypeInt,
+						ValueType: interpreter.PrimitiveStaticTypeString,
+					},
+					interpreter.NewUnmeteredIntValueFromInt64(1),
+					interpreter.NewUnmeteredStringValue("ABC"),
+					interpreter.NewUnmeteredIntValueFromInt64(2),
+					interpreter.NewUnmeteredStringValue("DEF"),
+				),
+				value,
+			)
+		})
+
+		t.Run("{Int : [String]}", func(t *testing.T) {
+			inter := parseCheckAndInterpret(
+				t,
+				`
+					fun main(): {Int : [String]} {
+						let original = { 1 : ["ABC", "XYZ"], 2 : ["DEF"] }
+						let x: &{Int : [String]} = &original
+						return x.dereference()
+					}
+				`,
+			)
+
+			value, err := inter.Invoke("main")
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					&interpreter.DictionaryStaticType{
+						KeyType: interpreter.PrimitiveStaticTypeInt,
+						ValueType: &interpreter.VariableSizedStaticType{
+							Type: interpreter.PrimitiveStaticTypeString,
+						},
+					},
+					interpreter.NewUnmeteredIntValueFromInt64(1),
+					interpreter.NewArrayValue(
+						inter,
+						interpreter.EmptyLocationRange,
+						&interpreter.VariableSizedStaticType{
+							Type: interpreter.PrimitiveStaticTypeString,
+						},
+						common.ZeroAddress,
+						interpreter.NewUnmeteredStringValue("ABC"),
+						interpreter.NewUnmeteredStringValue("XYZ"),
+					),
+					interpreter.NewUnmeteredIntValueFromInt64(2),
+					interpreter.NewArrayValue(
+						inter,
+						interpreter.EmptyLocationRange,
+						&interpreter.VariableSizedStaticType{
+							Type: interpreter.PrimitiveStaticTypeString,
+						},
+						common.ZeroAddress,
+						interpreter.NewUnmeteredStringValue("DEF"),
+					),
+				),
+				value,
+			)
+		})
+	})
+
 	t.Run("Dereference Character", func(t *testing.T) {
 		t.Parallel()
 

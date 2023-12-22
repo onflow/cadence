@@ -2759,6 +2759,7 @@ func (e *InvalidResourceOptionalMemberError) Error() string {
 
 type InvalidMemberError struct {
 	Name            string
+	Reason          string
 	DeclarationKind common.DeclarationKind
 	ast.Range
 }
@@ -2771,10 +2772,16 @@ func (*InvalidMemberError) isSemanticError() {}
 func (*InvalidMemberError) IsUserError() {}
 
 func (e *InvalidMemberError) Error() string {
+	reason := ""
+	if e.Reason != "" {
+		reason = fmt.Sprintf(": %s", e.Reason)
+	}
+
 	return fmt.Sprintf(
-		"%s `%s` is not available for the type",
+		"%s `%s` is not available for the type %s",
 		e.DeclarationKind.Name(),
 		e.Name,
+		reason,
 	)
 }
 

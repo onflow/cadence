@@ -6342,13 +6342,14 @@ func (t *ReferenceType) initializeMemberResolvers() {
 					) *Member {
 						innerType := t.Type
 
-						// Allow primitives or Array of primitives.
+						// Allow primitives or containers of primitives.
 						if !IsPrimitiveOrContainerOfPrimitive(innerType) {
 							report(
 								&InvalidMemberError{
 									Name:            identifier,
 									DeclarationKind: common.DeclarationKindFunction,
 									Range:           targetRange,
+									Reason:          "Only available for primitives or containers of primitives",
 								},
 							)
 						}
@@ -6524,13 +6525,15 @@ func IsPrimitiveOrContainerOfPrimitive(ty Type) bool {
 		return true
 	}
 
-	// TODO: Do we also want to count Dictionary?
 	switch ty := ty.(type) {
 	case *VariableSizedType:
 		return IsPrimitiveOrContainerOfPrimitive(ty.Type)
 
 	case *ConstantSizedType:
 		return IsPrimitiveOrContainerOfPrimitive(ty.Type)
+
+	case *DictionaryType:
+		return IsPrimitiveOrContainerOfPrimitive(ty.ValueType)
 	}
 
 	return false
