@@ -248,11 +248,13 @@ func (m *StorageMigration) migrateNestedValue(
 				// Key was migrated.
 				// Remove the old value at the old key.
 				// This old value will be inserted again with the new key, unless the value is also migrated.
+				existingKey = legacyKey(existingKey)
 				oldValue := dictionary.Remove(
 					m.interpreter,
 					emptyLocationRange,
 					existingKey,
 				)
+
 				if _, ok := oldValue.(*interpreter.SomeValue); !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -299,4 +301,73 @@ func (m *StorageMigration) migrateNestedValue(
 
 		return
 	}
+}
+
+// legacyKey return the same type with the "old" hash/ID generation algo.
+func legacyKey(key interpreter.Value) interpreter.Value {
+	typeValue, isTypeValue := key.(interpreter.TypeValue)
+	if !isTypeValue {
+		return key
+	}
+
+	legacyType := legacyType(typeValue.Type)
+	if legacyType == nil {
+		return key
+	}
+
+	return interpreter.NewUnmeteredTypeValue(legacyType)
+}
+
+func legacyType(staticType interpreter.StaticType) interpreter.StaticType {
+	switch typ := staticType.(type) {
+	case *interpreter.IntersectionStaticType:
+		return &LegacyIntersectionType{
+			IntersectionStaticType: typ,
+		}
+
+	case *interpreter.ConstantSizedStaticType:
+		legacyType := legacyType(typ.Type)
+		if legacyType != nil {
+			return interpreter.NewConstantSizedStaticType(nil, legacyType, typ.Size)
+		}
+
+	case *interpreter.VariableSizedStaticType:
+		legacyType := legacyType(typ.Type)
+		if legacyType != nil {
+			return interpreter.NewVariableSizedStaticType(nil, legacyType)
+		}
+
+	case *interpreter.DictionaryStaticType:
+		legacyKeyType := legacyType(typ.KeyType)
+		legacyValueType := legacyType(typ.ValueType)
+		if legacyKeyType != nil && legacyValueType != nil {
+			return interpreter.NewDictionaryStaticType(nil, legacyKeyType, legacyValueType)
+		}
+		if legacyKeyType != nil {
+			return interpreter.NewDictionaryStaticType(nil, legacyKeyType, typ.ValueType)
+		}
+		if legacyValueType != nil {
+			return interpreter.NewDictionaryStaticType(nil, typ.KeyType, legacyValueType)
+		}
+
+	case *interpreter.OptionalStaticType:
+		legacyInnerType := legacyType(typ.Type)
+		if legacyInnerType != nil {
+			return interpreter.NewOptionalStaticType(nil, legacyInnerType)
+		}
+
+	case *interpreter.CapabilityStaticType:
+		legacyBorrowType := legacyType(typ.BorrowType)
+		if legacyBorrowType != nil {
+			return interpreter.NewCapabilityStaticType(nil, legacyBorrowType)
+		}
+
+	case *interpreter.ReferenceStaticType:
+		legacyReferencedType := legacyType(typ.ReferencedType)
+		if legacyReferencedType != nil {
+			return interpreter.NewReferenceStaticType(nil, typ.Authorization, legacyReferencedType)
+		}
+	}
+
+	return nil
 }

@@ -19,8 +19,6 @@
 package type_value
 
 import (
-	"sort"
-	"strings"
 	"testing"
 
 	"github.com/onflow/atree"
@@ -108,6 +106,34 @@ func newIntersectionStaticTypeWithTwoInterfaces() *interpreter.IntersectionStati
 					nil,
 					fooAddressLocation,
 					fooBazQualifiedIdentifier,
+				),
+			),
+		},
+	)
+}
+
+func newIntersectionStaticTypeWithTwoInterfacesReversed() *interpreter.IntersectionStaticType {
+	return interpreter.NewIntersectionStaticType(
+		nil,
+		[]*interpreter.InterfaceStaticType{
+			interpreter.NewInterfaceStaticType(
+				nil,
+				fooAddressLocation,
+				fooBazQualifiedIdentifier,
+				common.NewTypeIDFromQualifiedName(
+					nil,
+					fooAddressLocation,
+					fooBazQualifiedIdentifier,
+				),
+			),
+			interpreter.NewInterfaceStaticType(
+				nil,
+				fooAddressLocation,
+				fooBarQualifiedIdentifier,
+				common.NewTypeIDFromQualifiedName(
+					nil,
+					fooAddressLocation,
+					fooBarQualifiedIdentifier,
 				),
 			),
 		},
@@ -475,42 +501,6 @@ func storeTypeValue(
 	)
 }
 
-// testIntersectionType simulates the old, incorrect restricted type type ID generation,
-// which did not sort the type IDs of the interface types.
-type testIntersectionType struct {
-	*interpreter.IntersectionStaticType
-	generatedTypeID bool
-}
-
-var _ interpreter.StaticType = &testIntersectionType{}
-
-func (t *testIntersectionType) ID() common.TypeID {
-	t.generatedTypeID = true
-
-	interfaceTypeIDs := make([]string, 0, len(t.Types))
-	for _, interfaceType := range t.Types {
-		interfaceTypeIDs = append(
-			interfaceTypeIDs,
-			string(interfaceType.ID()),
-		)
-	}
-
-	// NOTE: ensure the interface set is in *reverse* order
-	sort.Sort(sort.Reverse(sort.StringSlice(interfaceTypeIDs)))
-
-	var result strings.Builder
-	result.WriteByte('{')
-	// NOTE: no sorting
-	for i, interfaceTypeID := range interfaceTypeIDs {
-		if i > 0 {
-			result.WriteByte(',')
-		}
-		result.WriteString(interfaceTypeID)
-	}
-	result.WriteByte('}')
-	return common.TypeID(result.String())
-}
-
 // TestRehash stores a dictionary in storage,
 // which has a key that is a type value with a restricted type that has two interface types,
 // runs the migration, and ensures the dictionary is still usable
@@ -554,8 +544,8 @@ func TestRehash(t *testing.T) {
 		)
 		dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
 
-		intersectionType := &testIntersectionType{
-			IntersectionStaticType: newIntersectionStaticTypeWithTwoInterfaces(),
+		intersectionType := &migrations.LegacyIntersectionType{
+			IntersectionStaticType: newIntersectionStaticTypeWithTwoInterfacesReversed(),
 		}
 
 		typeValue := interpreter.NewUnmeteredTypeValue(intersectionType)
@@ -566,8 +556,6 @@ func TestRehash(t *testing.T) {
 			typeValue,
 			newTestValue(),
 		)
-
-		assert.True(t, intersectionType.generatedTypeID)
 
 		// NOTE: intentionally in reverse order
 		assert.Equal(t,
@@ -661,5 +649,301 @@ func TestRehash(t *testing.T) {
 			newTestValue(),
 			value.(*interpreter.StringValue),
 		)
+	})
+}
+
+// TestRehashNestedIntersectionType stores a dictionary in storage,
+// which has a key that is a type value with a restricted type that has two interface types,
+// runs the migration, and ensures the dictionary is still usable
+func TestRehashNestedIntersectionType(t *testing.T) {
+
+	locationRange := interpreter.EmptyLocationRange
+
+	storageMapKey := interpreter.StringStorageMapKey("dict")
+	newTestValue := func() interpreter.Value {
+		return interpreter.NewUnmeteredStringValue("test")
+	}
+
+	newStorageAndInterpreter := func(t *testing.T, ledger atree.Ledger) (*runtime.Storage, *interpreter.Interpreter) {
+		storage := runtime.NewStorage(ledger, nil)
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   false,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		return storage, inter
+	}
+
+	t.Run("array type", func(t *testing.T) {
+		t.Parallel()
+
+		ledger := NewTestLedger(nil, nil)
+
+		t.Run("prepare", func(t *testing.T) {
+
+			storage, inter := newStorageAndInterpreter(t, ledger)
+
+			dictionaryStaticType := interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeMetaType,
+				interpreter.PrimitiveStaticTypeString,
+			)
+			dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
+
+			intersectionType := &migrations.LegacyIntersectionType{
+				IntersectionStaticType: newIntersectionStaticTypeWithTwoInterfacesReversed(),
+			}
+
+			typeValue := interpreter.NewUnmeteredTypeValue(
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					intersectionType,
+				),
+			)
+
+			dictValue.Insert(
+				inter,
+				locationRange,
+				typeValue,
+				newTestValue(),
+			)
+
+			// NOTE: intentionally in reverse order
+			assert.Equal(t,
+				common.TypeID("{A.4200000000000000.Foo.Baz,A.4200000000000000.Foo.Bar}"),
+				intersectionType.ID(),
+			)
+
+			storageMap := storage.GetStorageMap(
+				testAddress,
+				common.PathDomainStorage.Identifier(),
+				true,
+			)
+
+			storageMap.SetValue(inter,
+				storageMapKey,
+				dictValue.Transfer(
+					inter,
+					locationRange,
+					atree.Address(testAddress),
+					false,
+					nil,
+					nil,
+				),
+			)
+
+			err := storage.Commit(inter, false)
+			require.NoError(t, err)
+		})
+
+		t.Run("migrate", func(t *testing.T) {
+
+			storage, inter := newStorageAndInterpreter(t, ledger)
+
+			migration := migrations.NewStorageMigration(inter, storage)
+
+			reporter := newTestReporter()
+
+			migration.Migrate(
+				&migrations.AddressSliceIterator{
+					Addresses: []common.Address{
+						testAddress,
+					},
+				},
+				migration.NewValueMigrationsPathMigrator(
+					reporter,
+					NewTypeValueMigration(),
+				),
+			)
+
+			migration.Commit()
+
+			require.Equal(t,
+				map[interpreter.AddressPath]struct{}{
+					{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainStorage,
+							Identifier: string(storageMapKey),
+						},
+					}: {},
+				},
+				reporter.migratedPaths,
+			)
+		})
+
+		t.Run("load", func(t *testing.T) {
+
+			storage, inter := newStorageAndInterpreter(t, ledger)
+
+			storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
+			storedValue := storageMap.ReadValue(inter, storageMapKey)
+
+			require.IsType(t, &interpreter.DictionaryValue{}, storedValue)
+
+			dictValue := storedValue.(*interpreter.DictionaryValue)
+
+			intersectionType := newIntersectionStaticTypeWithTwoInterfaces()
+			typeValue := interpreter.NewUnmeteredTypeValue(
+				interpreter.NewVariableSizedStaticType(nil, intersectionType),
+			)
+
+			// NOTE: in *sorted* order
+			assert.Equal(t,
+				common.TypeID("{A.4200000000000000.Foo.Bar,A.4200000000000000.Foo.Baz}"),
+				intersectionType.ID(),
+			)
+
+			value, ok := dictValue.Get(inter, locationRange, typeValue)
+			require.True(t, ok)
+
+			require.IsType(t, &interpreter.StringValue{}, value)
+			require.Equal(t,
+				newTestValue(),
+				value.(*interpreter.StringValue),
+			)
+		})
+	})
+
+	t.Run("dictionary type", func(t *testing.T) {
+		t.Parallel()
+
+		ledger := NewTestLedger(nil, nil)
+
+		t.Run("prepare", func(t *testing.T) {
+
+			storage, inter := newStorageAndInterpreter(t, ledger)
+
+			dictionaryStaticType := interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeMetaType,
+				interpreter.PrimitiveStaticTypeString,
+			)
+			dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
+
+			intersectionType := &migrations.LegacyIntersectionType{
+				IntersectionStaticType: newIntersectionStaticTypeWithTwoInterfacesReversed(),
+			}
+
+			typeValue := interpreter.NewUnmeteredTypeValue(
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					intersectionType,
+				),
+			)
+
+			dictValue.Insert(
+				inter,
+				locationRange,
+				typeValue,
+				newTestValue(),
+			)
+
+			// NOTE: intentionally in reverse order
+			assert.Equal(t,
+				common.TypeID("{A.4200000000000000.Foo.Baz,A.4200000000000000.Foo.Bar}"),
+				intersectionType.ID(),
+			)
+
+			storageMap := storage.GetStorageMap(
+				testAddress,
+				common.PathDomainStorage.Identifier(),
+				true,
+			)
+
+			storageMap.SetValue(inter,
+				storageMapKey,
+				dictValue.Transfer(
+					inter,
+					locationRange,
+					atree.Address(testAddress),
+					false,
+					nil,
+					nil,
+				),
+			)
+
+			err := storage.Commit(inter, false)
+			require.NoError(t, err)
+		})
+
+		t.Run("migrate", func(t *testing.T) {
+
+			storage, inter := newStorageAndInterpreter(t, ledger)
+
+			migration := migrations.NewStorageMigration(inter, storage)
+
+			reporter := newTestReporter()
+
+			migration.Migrate(
+				&migrations.AddressSliceIterator{
+					Addresses: []common.Address{
+						testAddress,
+					},
+				},
+				migration.NewValueMigrationsPathMigrator(
+					reporter,
+					NewTypeValueMigration(),
+				),
+			)
+
+			migration.Commit()
+
+			require.Equal(t,
+				map[interpreter.AddressPath]struct{}{
+					{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainStorage,
+							Identifier: string(storageMapKey),
+						},
+					}: {},
+				},
+				reporter.migratedPaths,
+			)
+		})
+
+		t.Run("load", func(t *testing.T) {
+
+			storage, inter := newStorageAndInterpreter(t, ledger)
+
+			storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
+			storedValue := storageMap.ReadValue(inter, storageMapKey)
+
+			require.IsType(t, &interpreter.DictionaryValue{}, storedValue)
+
+			dictValue := storedValue.(*interpreter.DictionaryValue)
+
+			intersectionType := newIntersectionStaticTypeWithTwoInterfaces()
+			typeValue := interpreter.NewUnmeteredTypeValue(
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					intersectionType,
+				),
+			)
+
+			// NOTE: in *sorted* order
+			assert.Equal(t,
+				common.TypeID("{A.4200000000000000.Foo.Bar,A.4200000000000000.Foo.Baz}"),
+				intersectionType.ID(),
+			)
+
+			value, ok := dictValue.Get(inter, locationRange, typeValue)
+			require.True(t, ok)
+
+			require.IsType(t, &interpreter.StringValue{}, value)
+			require.Equal(t,
+				newTestValue(),
+				value.(*interpreter.StringValue),
+			)
+		})
 	})
 }
