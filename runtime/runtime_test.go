@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -45,6 +46,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/crypto/random"
 )
 
 func TestRuntimeImport(t *testing.T) {
@@ -4750,6 +4752,63 @@ func TestRuntimeRandom(t *testing.T) {
 			})
 		}
 		testAllTypes(t, runCaseWithZeroModulo)
+	})
+
+	// sanity statistical test to make sure the random numbers less than modulo
+	// are uniform in [0,modulo-1].
+	// The test requires the original random source (here `crypto/rand`)
+	// to be uniform.
+	// The test uses the same small values for all types: one is a power of 2
+	// and the other is not.
+	t.Run("basic uniformity with modulo", func(t *testing.T) {
+
+		runStatisticsWithModulo := func(modulo int) func(*testing.T, sema.Type) {
+			return func(t *testing.T, ty sema.Type) {
+				t.Run(ty.String(), func(t *testing.T) {
+					t.Parallel()
+
+					// make sure modulo fits in 8 bits
+					require.True(t, modulo < (1<<8))
+					nextScriptLocation := NewScriptLocationGenerator()
+					runtime := NewTestInterpreterRuntime()
+					moduloArgument := fmt.Sprintf("modulo: %s(%d)", ty.String(), modulo)
+
+					f := func() (uint64, error) {
+						value, err := runtime.ExecuteScript(
+							Script{
+								Source: []byte(
+									fmt.Sprintf(scriptSource,
+										ty.String(),
+										moduloArgument,
+									)),
+							},
+							Context{
+								Interface: &TestRuntimeInterface{
+									OnReadRandom: func(buffer []byte) error {
+										_, err := rand.Read(buffer)
+										return err
+									},
+								},
+								Location: nextScriptLocation(),
+							},
+						)
+						if err != nil {
+							return 0, err
+						}
+						random, err := strconv.ParseUint(value.String(), 10, 8)
+						return uint64(random), err
+					}
+					random.BasicDistributionTest(t, uint64(modulo), 1, f)
+				})
+			}
+		}
+
+		// first a power of 2 (that fits in 8 bits)
+		modulo := 64
+		testAllTypes(t, runStatisticsWithModulo(modulo))
+		// then with a non power of 2
+		modulo = 71
+		testAllTypes(t, runStatisticsWithModulo(modulo))
 	})
 
 }
