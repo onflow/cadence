@@ -2838,12 +2838,12 @@ func TestInterpretReferenceDereference(t *testing.T) {
 			t,
 			"Character",
 			`
-                fun main(): Character {
-                    let original: Character = "S"
-                    let x: &Character = &original
-                    return x.dereference()
-                }
-            `,
+				fun main(): Character {
+					let original: Character = "S"
+					let x: &Character = &original
+					return x.dereference()
+				}
+			`,
 			interpreter.NewUnmeteredCharacterValue("S"),
 		)
 	})
@@ -2855,12 +2855,12 @@ func TestInterpretReferenceDereference(t *testing.T) {
 			t,
 			"String",
 			`
-                fun main(): String {
-                    let original: String = "STxy"
-                    let x: &String = &original
-                    return x.dereference()
-                }
-            `,
+				fun main(): String {
+					let original: String = "STxy"
+					let x: &String = &original
+					return x.dereference()
+				}
+			`,
 			interpreter.NewUnmeteredStringValue("STxy"),
 		)
 	})
@@ -2872,12 +2872,12 @@ func TestInterpretReferenceDereference(t *testing.T) {
 			t,
 			"Bool",
 			`
-                fun main(): Bool {
-                    let original: Bool = true
-                    let x: &Bool = &original
-                    return x.dereference()
-                }
-            `,
+				fun main(): Bool {
+					let original: Bool = true
+					let x: &Bool = &original
+					return x.dereference()
+				}
+			`,
 			interpreter.BoolValue(true),
 		)
 	})
@@ -2892,12 +2892,12 @@ func TestInterpretReferenceDereference(t *testing.T) {
 			t,
 			"Address",
 			`
-                fun main(): Address {
-                    let original: Address = 0x0000000000000231
-                    let x: &Address = &original
-                    return x.dereference()
-                }
-            `,
+				fun main(): Address {
+					let original: Address = 0x0000000000000231
+					let x: &Address = &original
+					return x.dereference()
+				}
+			`,
 			interpreter.NewAddressValue(nil, address),
 		)
 	})
@@ -2909,12 +2909,12 @@ func TestInterpretReferenceDereference(t *testing.T) {
 			t,
 			"PrivatePath",
 			`
-                fun main(): Path {
-                    let original: Path = /private/temp
-                    let x: &Path = &original
-                    return x.dereference()
-                }
-            `,
+				fun main(): Path {
+					let original: Path = /private/temp
+					let x: &Path = &original
+					return x.dereference()
+				}
+			`,
 			interpreter.NewUnmeteredPathValue(common.PathDomainPrivate, "temp"),
 		)
 
@@ -2922,12 +2922,12 @@ func TestInterpretReferenceDereference(t *testing.T) {
 			t,
 			"PublicPath",
 			`
-                fun main(): Path {
-                    let original: Path = /public/temp
-                    let x: &Path = &original
-                    return x.dereference()
-                }
-            `,
+				fun main(): Path {
+					let original: Path = /public/temp
+					let x: &Path = &original
+					return x.dereference()
+				}
+			`,
 			interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "temp"),
 		)
 	})
@@ -2939,12 +2939,12 @@ func TestInterpretReferenceDereference(t *testing.T) {
 			t,
 			"Optional reference using chaining",
 			`
-                fun main(): Int? {
-                    let original: Int? = 42
-                    let x: &Int? = &original
-                    return x?.dereference()
-                }
-            `,
+				fun main(): Int? {
+					let original: Int? = 42
+					let x: &Int? = &original
+					return x?.dereference()
+				}
+			`,
 			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
 		)
 	})
