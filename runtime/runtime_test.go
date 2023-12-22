@@ -4526,7 +4526,10 @@ func TestRuntimeRandom(t *testing.T) {
 				continue
 
 			default:
-				testType(t, ty)
+				t.Run(ty.String(), func(t *testing.T) {
+					t.Parallel()
+					testType(t, ty)
+				})
 			}
 		}
 	}
@@ -4592,14 +4595,11 @@ func TestRuntimeRandom(t *testing.T) {
 		}
 
 		runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type) {
-			t.Run(ty.String(), func(t *testing.T) {
-				t.Parallel()
-				value, err := executeScript(ty, "", readFromBuffer)
-				require.NoError(t, err)
-				// prepare the expected value from the random source
-				expected := new(big.Int).SetBytes(randBuffer[:typeToBytes[ty]])
-				assert.Equal(t, expected.String(), value.String())
-			})
+			value, err := executeScript(ty, "", readFromBuffer)
+			require.NoError(t, err)
+			// prepare the expected value from the random source
+			expected := new(big.Int).SetBytes(randBuffer[:typeToBytes[ty]])
+			assert.Equal(t, expected.String(), value.String())
 		}
 		testAllTypes(t, runValidCaseWithoutModulo)
 	})
@@ -4612,21 +4612,17 @@ func TestRuntimeRandom(t *testing.T) {
 		require.NoError(t, err)
 
 		runValidCaseWithModulo := func(t *testing.T, ty sema.Type) {
-			t.Run(ty.String(), func(t *testing.T) {
-				t.Parallel()
+			// build a big Int from the modulo buffer, with the required `ty` size
+			// big.Int are used as they cover all the tested types including the small ones (UInt8 ..)
+			modulo := new(big.Int).SetBytes(moduloBuffer[:typeToBytes[ty]])
 
-				// build a big Int from the modulo buffer, with the required `ty` size
-				// big.Int are used as they cover all the tested types including the small ones (UInt8 ..)
-				modulo := new(big.Int).SetBytes(moduloBuffer[:typeToBytes[ty]])
-
-				value, err := executeScript(ty, modulo.String(), readCryptoRandom)
-				require.NoError(t, err)
-				// convert `value` to big Int for comparison
-				valueBig, ok := new(big.Int).SetString(value.String(), 10)
-				require.True(t, ok)
-				// check that modulo > value
-				require.True(t, modulo.Cmp(valueBig) == 1)
-			})
+			value, err := executeScript(ty, modulo.String(), readCryptoRandom)
+			require.NoError(t, err)
+			// convert `value` to big Int for comparison
+			valueBig, ok := new(big.Int).SetString(value.String(), 10)
+			require.True(t, ok)
+			// check that modulo > value
+			require.True(t, modulo.Cmp(valueBig) == 1)
 		}
 		testAllTypes(t, runValidCaseWithModulo)
 	})
@@ -4635,37 +4631,30 @@ func TestRuntimeRandom(t *testing.T) {
 	t.Run("script with modulo edge cases all types", func(t *testing.T) {
 		// case where modulo is the max value of the type
 		runValidCaseWithMaxModulo := func(t *testing.T, ty sema.Type) {
-			t.Run(ty.String(), func(t *testing.T) {
-				t.Parallel()
 
-				// set modulo to the max value of the type: (1 << bitSize) - 1
-				// big.Int are used as they cover all the tested types including the small ones (UInt8 ..)
-				bitSize := typeToBytes[ty] << 3
-				one := big.NewInt(1)
-				modulo := new(big.Int).Lsh(one, uint(bitSize))
-				modulo.Sub(modulo, one)
+			// set modulo to the max value of the type: (1 << bitSize) - 1
+			// big.Int are used as they cover all the tested types including the small ones (UInt8 ..)
+			bitSize := typeToBytes[ty] << 3
+			one := big.NewInt(1)
+			modulo := new(big.Int).Lsh(one, uint(bitSize))
+			modulo.Sub(modulo, one)
 
-				value, err := executeScript(ty, modulo.String(), readCryptoRandom)
-				require.NoError(t, err)
-				// convert `value` to big Int for comparison
-				valueBig, ok := new(big.Int).SetString(value.String(), 10)
-				require.True(t, ok)
-				// check that modulo > value
-				require.True(t, modulo.Cmp(valueBig) == 1)
-			})
+			value, err := executeScript(ty, modulo.String(), readCryptoRandom)
+			require.NoError(t, err)
+			// convert `value` to big Int for comparison
+			valueBig, ok := new(big.Int).SetString(value.String(), 10)
+			require.True(t, ok)
+			// check that modulo > value
+			require.True(t, modulo.Cmp(valueBig) == 1)
 		}
 
 		// case where modulo is 1 and expected value in 0
 		runValidCaseWithOneModulo := func(t *testing.T, ty sema.Type) {
-			t.Run(ty.String(), func(t *testing.T) {
-				t.Parallel()
-
-				// set modulo to 1
-				value, err := executeScript(ty, "1", readCryptoRandom)
-				require.NoError(t, err)
-				// check that value is zero
-				require.True(t, value.String() == "0")
-			})
+			// set modulo to 1
+			value, err := executeScript(ty, "1", readCryptoRandom)
+			require.NoError(t, err)
+			// check that value is zero
+			require.True(t, value.String() == "0")
 		}
 
 		t.Run("max modulo", func(t *testing.T) {
@@ -4679,14 +4668,10 @@ func TestRuntimeRandom(t *testing.T) {
 	// function should error if zero is used as modulo - test all types
 	t.Run("script with zero modulo", func(t *testing.T) {
 		runCaseWithZeroModulo := func(t *testing.T, ty sema.Type) {
-			t.Run(ty.String(), func(t *testing.T) {
-				t.Parallel()
-
-				// set modulo to "0"
-				_, err := executeScript(ty, "0", readCryptoRandom)
-				assertUserError(t, err)
-				require.ErrorContains(t, err, stdlib.ZeroModuloError.Error())
-			})
+			// set modulo to "0"
+			_, err := executeScript(ty, "0", readCryptoRandom)
+			assertUserError(t, err)
+			require.ErrorContains(t, err, stdlib.ZeroModuloError.Error())
 		}
 		testAllTypes(t, runCaseWithZeroModulo)
 	})
@@ -4698,27 +4683,24 @@ func TestRuntimeRandom(t *testing.T) {
 	// The test uses the same small values for all types: one is a power of 2
 	// and the other is not.
 	t.Run("basic uniformity with modulo", func(t *testing.T) {
+		// skipped in CI because the test is slow
 		t.Skip()
 
 		runStatisticsWithModulo := func(modulo int) func(*testing.T, sema.Type) {
 			return func(t *testing.T, ty sema.Type) {
-				t.Run(ty.String(), func(t *testing.T) {
-					t.Parallel()
+				// make sure modulo fits in 8 bits
+				require.True(t, modulo < (1<<8))
 
-					// make sure modulo fits in 8 bits
-					require.True(t, modulo < (1<<8))
-
-					moduloString := strconv.Itoa(modulo)
-					f := func() (uint64, error) {
-						value, err := executeScript(ty, moduloString, readCryptoRandom)
-						if err != nil {
-							return 0, err
-						}
-						random, err := strconv.ParseUint(value.String(), 10, 8)
-						return uint64(random), err
+				moduloString := strconv.Itoa(modulo)
+				f := func() (uint64, error) {
+					value, err := executeScript(ty, moduloString, readCryptoRandom)
+					if err != nil {
+						return 0, err
 					}
-					random.BasicDistributionTest(t, uint64(modulo), 1, f)
-				})
+					random, err := strconv.ParseUint(value.String(), 10, 8)
+					return uint64(random), err
+				}
+				random.BasicDistributionTest(t, uint64(modulo), 1, f)
 			}
 		}
 
