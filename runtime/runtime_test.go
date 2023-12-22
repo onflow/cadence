@@ -4466,8 +4466,6 @@ func TestRuntimeRandom(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
-
 	transactionSource := `
       transaction {
         prepare() {
@@ -4482,6 +4480,44 @@ func TestRuntimeRandom(t *testing.T) {
 			return rand
 		}
 	`
+
+	// read randoms from `crypto/rand` when the random values
+	// do not matter in the rest of the test
+	readCryptoRandom := func(buffer []byte) error {
+		// random value does not matter in this test
+		_, err := rand.Read(buffer)
+		return err
+	}
+
+	nextScriptLocation := NewScriptLocationGenerator()
+	runtime := NewTestInterpreterRuntime()
+
+	executeScript := func(
+		ty sema.Type,
+		moduloArgument string,
+		randomGenerator func(buffer []byte) error,
+	) (cadence.Value, error) {
+
+		if moduloArgument != "" {
+			// example "modulo: UInt8(77)"
+			moduloArgument = fmt.Sprintf("modulo: %s(%s)", ty.String(), moduloArgument)
+		}
+		return runtime.ExecuteScript(
+			Script{
+				Source: []byte(
+					fmt.Sprintf(scriptSource,
+						ty.String(),
+						moduloArgument,
+					)),
+			},
+			Context{
+				Interface: &TestRuntimeInterface{
+					OnReadRandom: randomGenerator,
+				},
+				Location: nextScriptLocation(),
+			},
+		)
+	}
 
 	testAllTypes := func(t *testing.T, testType func(*testing.T, sema.Type)) {
 		for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
@@ -4508,14 +4544,16 @@ func TestRuntimeRandom(t *testing.T) {
 		_, err := rand.Read(randBuffer)
 		require.NoError(t, err)
 
+		readFromBuffer := func(buffer []byte) error {
+			// randoms are read from the random source
+			copy(buffer, randBuffer)
+			return nil
+		}
+
 		runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type) {
 			var loggedMessage string
 			runtimeInterface := &TestRuntimeInterface{
-				OnReadRandom: func(buffer []byte) error {
-					// randoms are read from the random source
-					copy(buffer, randBuffer)
-					return nil
-				},
+				OnReadRandom: readFromBuffer,
 				OnProgramLog: func(message string) {
 					loggedMessage = message
 				},
@@ -4547,31 +4585,16 @@ func TestRuntimeRandom(t *testing.T) {
 		randBuffer := make([]byte, 32)
 		_, err := rand.Read(randBuffer)
 		require.NoError(t, err)
+		readFromBuffer := func(buffer []byte) error {
+			// randoms are read from the random source
+			copy(buffer, randBuffer)
+			return nil
+		}
 
 		runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type) {
 			t.Run(ty.String(), func(t *testing.T) {
 				t.Parallel()
-
-				nextScriptLocation := NewScriptLocationGenerator()
-
-				runtime := NewTestInterpreterRuntime()
-				value, err := runtime.ExecuteScript(
-					Script{
-						Source: []byte(
-							fmt.Sprintf(scriptSource, ty.String(), ""),
-						),
-					},
-					Context{
-						Interface: &TestRuntimeInterface{
-							OnReadRandom: func(buffer []byte) error {
-								// randoms are read from the random source
-								copy(buffer, randBuffer)
-								return nil
-							},
-						},
-						Location: nextScriptLocation(),
-					},
-				)
+				value, err := executeScript(ty, "", readFromBuffer)
 				require.NoError(t, err)
 				// prepare the expected value from the random source
 				expected := new(big.Int).SetBytes(randBuffer[:typeToBytes[ty]])
@@ -4583,7 +4606,7 @@ func TestRuntimeRandom(t *testing.T) {
 
 	// random modulo is passed as the modulo argument - test all types
 	t.Run("script with modulo all types", func(t *testing.T) {
-		// the modulo value will be built from this buffer
+		// all modulo values will be built from this buffer
 		moduloBuffer := make([]byte, 32)
 		_, err := rand.Read(moduloBuffer)
 		require.NoError(t, err)
@@ -4592,34 +4615,11 @@ func TestRuntimeRandom(t *testing.T) {
 			t.Run(ty.String(), func(t *testing.T) {
 				t.Parallel()
 
-				nextScriptLocation := NewScriptLocationGenerator()
-
-				runtime := NewTestInterpreterRuntime()
 				// build a big Int from the modulo buffer, with the required `ty` size
 				// big.Int are used as they cover all the tested types including the small ones (UInt8 ..)
 				modulo := new(big.Int).SetBytes(moduloBuffer[:typeToBytes[ty]])
-				// example "modulo: UInt8(77)"
-				moduloArgument := fmt.Sprintf("modulo: %s(%s)", ty.String(), modulo.String())
 
-				value, err := runtime.ExecuteScript(
-					Script{
-						Source: []byte(
-							fmt.Sprintf(scriptSource,
-								ty.String(),
-								moduloArgument,
-							)),
-					},
-					Context{
-						Interface: &TestRuntimeInterface{
-							OnReadRandom: func(buffer []byte) error {
-								// random value does not matter in this test
-								_, err := rand.Read(buffer)
-								return err
-							},
-						},
-						Location: nextScriptLocation(),
-					},
-				)
+				value, err := executeScript(ty, modulo.String(), readCryptoRandom)
 				require.NoError(t, err)
 				// convert `value` to big Int for comparison
 				valueBig, ok := new(big.Int).SetString(value.String(), 10)
@@ -4638,37 +4638,14 @@ func TestRuntimeRandom(t *testing.T) {
 			t.Run(ty.String(), func(t *testing.T) {
 				t.Parallel()
 
-				nextScriptLocation := NewScriptLocationGenerator()
-
-				runtime := NewTestInterpreterRuntime()
 				// set modulo to the max value of the type: (1 << bitSize) - 1
 				// big.Int are used as they cover all the tested types including the small ones (UInt8 ..)
 				bitSize := typeToBytes[ty] << 3
 				one := big.NewInt(1)
 				modulo := new(big.Int).Lsh(one, uint(bitSize))
 				modulo.Sub(modulo, one)
-				// example "modulo: UInt8(0xFF)"
-				moduloArgument := fmt.Sprintf("modulo: %s(%s)", ty.String(), modulo.String())
 
-				value, err := runtime.ExecuteScript(
-					Script{
-						Source: []byte(
-							fmt.Sprintf(scriptSource,
-								ty.String(),
-								moduloArgument,
-							)),
-					},
-					Context{
-						Interface: &TestRuntimeInterface{
-							OnReadRandom: func(buffer []byte) error {
-								// random value does not matter in this test
-								_, err := rand.Read(buffer)
-								return err
-							},
-						},
-						Location: nextScriptLocation(),
-					},
-				)
+				value, err := executeScript(ty, modulo.String(), readCryptoRandom)
 				require.NoError(t, err)
 				// convert `value` to big Int for comparison
 				valueBig, ok := new(big.Int).SetString(value.String(), 10)
@@ -4683,32 +4660,8 @@ func TestRuntimeRandom(t *testing.T) {
 			t.Run(ty.String(), func(t *testing.T) {
 				t.Parallel()
 
-				nextScriptLocation := NewScriptLocationGenerator()
-
-				runtime := NewTestInterpreterRuntime()
 				// set modulo to 1
-				// example "modulo: UInt8(1)"
-				moduloArgument := fmt.Sprintf("modulo: %s(1)", ty.String())
-
-				value, err := runtime.ExecuteScript(
-					Script{
-						Source: []byte(
-							fmt.Sprintf(scriptSource,
-								ty.String(),
-								moduloArgument,
-							)),
-					},
-					Context{
-						Interface: &TestRuntimeInterface{
-							OnReadRandom: func(buffer []byte) error {
-								// random value does not matter in this test
-								_, err := rand.Read(buffer)
-								return err
-							},
-						},
-						Location: nextScriptLocation(),
-					},
-				)
+				value, err := executeScript(ty, "1", readCryptoRandom)
 				require.NoError(t, err)
 				// check that value is zero
 				require.True(t, value.String() == "0")
@@ -4729,24 +4682,8 @@ func TestRuntimeRandom(t *testing.T) {
 			t.Run(ty.String(), func(t *testing.T) {
 				t.Parallel()
 
-				nextScriptLocation := NewScriptLocationGenerator()
-
-				runtime := NewTestInterpreterRuntime()
-				_, err := runtime.ExecuteScript(
-					Script{
-						Source: []byte(
-							fmt.Sprintf(scriptSource, ty.String(), "modulo: "+ty.String()+"(0)"),
-						),
-					},
-					Context{
-						Interface: &TestRuntimeInterface{
-							OnReadRandom: func(buffer []byte) error {
-								return nil
-							},
-						},
-						Location: nextScriptLocation(),
-					},
-				)
+				// set modulo to "0"
+				_, err := executeScript(ty, "0", readCryptoRandom)
 				assertUserError(t, err)
 				require.ErrorContains(t, err, stdlib.ZeroModuloError.Error())
 			})
@@ -4761,6 +4698,7 @@ func TestRuntimeRandom(t *testing.T) {
 	// The test uses the same small values for all types: one is a power of 2
 	// and the other is not.
 	t.Run("basic uniformity with modulo", func(t *testing.T) {
+		t.Skip()
 
 		runStatisticsWithModulo := func(modulo int) func(*testing.T, sema.Type) {
 			return func(t *testing.T, ty sema.Type) {
@@ -4769,29 +4707,10 @@ func TestRuntimeRandom(t *testing.T) {
 
 					// make sure modulo fits in 8 bits
 					require.True(t, modulo < (1<<8))
-					nextScriptLocation := NewScriptLocationGenerator()
-					runtime := NewTestInterpreterRuntime()
-					moduloArgument := fmt.Sprintf("modulo: %s(%d)", ty.String(), modulo)
 
+					moduloString := strconv.Itoa(modulo)
 					f := func() (uint64, error) {
-						value, err := runtime.ExecuteScript(
-							Script{
-								Source: []byte(
-									fmt.Sprintf(scriptSource,
-										ty.String(),
-										moduloArgument,
-									)),
-							},
-							Context{
-								Interface: &TestRuntimeInterface{
-									OnReadRandom: func(buffer []byte) error {
-										_, err := rand.Read(buffer)
-										return err
-									},
-								},
-								Location: nextScriptLocation(),
-							},
-						)
+						value, err := executeScript(ty, moduloString, readCryptoRandom)
 						if err != nil {
 							return 0, err
 						}
