@@ -2931,4 +2931,21 @@ func TestInterpretReferenceDereference(t *testing.T) {
 			interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "temp"),
 		)
 	})
+
+	t.Run("Dereference Optional Reference using chaining", func(t *testing.T) {
+		t.Parallel()
+
+		runValidTestCase(
+			t,
+			"Optional reference using chaining",
+			`
+                fun main(): Int? {
+                    let original: Int? = 42
+                    let x: &Int? = &original
+                    return x?.dereference()
+                }
+            `,
+			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
+		)
+	})
 }
