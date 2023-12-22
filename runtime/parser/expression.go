@@ -640,6 +640,12 @@ func defineLessThanOrTypeArgumentsExpression() {
 
 			} else {
 
+				// if the error specifically occurred during parsing restricted types,
+				// this is still an invocation and we should report that error instead
+				if _, isRestrictedTypeErr := err.(*RestrictedTypeError); isRestrictedTypeErr {
+					return nil, err, true
+				}
+
 				// The previous attempt to parse an invocation failed,
 				// replay the buffered tokens.
 

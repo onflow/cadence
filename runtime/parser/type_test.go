@@ -555,9 +555,11 @@ func TestParseIntersectionType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "restricted types have been removed; replace with the concrete type or an equivalent intersection type",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				&RestrictedTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+					},
 				},
 			},
 			errs,
@@ -571,9 +573,11 @@ func TestParseIntersectionType(t *testing.T) {
 		_, errs := testParseType("T{U}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "restricted types have been removed; replace with the concrete type or an equivalent intersection type",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				&RestrictedTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+					},
 				},
 			},
 			errs,
@@ -587,9 +591,11 @@ func TestParseIntersectionType(t *testing.T) {
 		_, errs := testParseType("T{U , V }")
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "restricted types have been removed; replace with the concrete type or an equivalent intersection type",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				&RestrictedTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+					},
 				},
 			},
 			errs,
