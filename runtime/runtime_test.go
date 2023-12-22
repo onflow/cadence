@@ -30,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onflow/crypto/random"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -46,7 +47,6 @@ import (
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/onflow/crypto/random"
 )
 
 func TestRuntimeImport(t *testing.T) {
@@ -4698,7 +4698,7 @@ func TestRuntimeRandom(t *testing.T) {
 						return 0, err
 					}
 					random, err := strconv.ParseUint(value.String(), 10, 8)
-					return uint64(random), err
+					return random, err
 				}
 				random.BasicDistributionTest(t, uint64(modulo), 1, f)
 			}

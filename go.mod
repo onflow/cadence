@@ -31,6 +31,7 @@ require (
 require (
 	github.com/SaveTheRbtz/mph v0.1.2
 	github.com/k0kubun/pp v3.0.1+incompatible
+	github.com/onflow/crypto v0.25.0
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 )
 
@@ -47,7 +48,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mattn/go-tty v0.0.3 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
-	github.com/onflow/crypto v0.25.0 // indirect
 	github.com/pkg/term v1.2.0-beta.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
