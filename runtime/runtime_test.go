@@ -4521,16 +4521,11 @@ func TestRuntimeRandom(t *testing.T) {
 
 	testAllTypes := func(t *testing.T, testType func(*testing.T, sema.Type)) {
 		for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
-			switch ty {
-			case sema.FixedSizeUnsignedIntegerType:
-				continue
-
-			default:
-				t.Run(ty.String(), func(t *testing.T) {
-					t.Parallel()
-					testType(t, ty)
-				})
-			}
+			tyCopy := ty
+			t.Run(ty.String(), func(t *testing.T) {
+				t.Parallel()
+				testType(t, tyCopy)
+			})
 		}
 	}
 
