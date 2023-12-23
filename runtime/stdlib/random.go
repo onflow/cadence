@@ -97,22 +97,10 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 				moduloValue = invocation.Arguments[0]
 			}
 
-			var randomUint64 uint64
-			if returnIntegerType == sema.UInt8Type || returnIntegerType == sema.UInt16Type ||
-				returnIntegerType == sema.UInt32Type || returnIntegerType == sema.UInt64Type ||
-				returnIntegerType == sema.Word8Type || returnIntegerType == sema.Word16Type ||
-				returnIntegerType == sema.Word32Type || returnIntegerType == sema.Word64Type {
-				randomUint64 = getUint64RandomNumber(generator, returnIntegerType, moduloValue)
-			}
-			var randomBig *big.Int
-			if returnIntegerType == sema.UInt128Type || returnIntegerType == sema.UInt256Type ||
-				returnIntegerType == sema.Word128Type || returnIntegerType == sema.Word256Type {
-				randomBig = getBigRandomNumber(generator, returnIntegerType, moduloValue)
-			}
-
 			switch returnIntegerType {
 			// UInt*
 			case sema.UInt8Type:
+				randomUint64 := getUint64RandomNumber(generator, returnIntegerType, moduloValue)
 				return interpreter.NewUInt8Value(
 					inter,
 					func() uint8 {
@@ -120,6 +108,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.UInt16Type:
+				randomUint64 := getUint64RandomNumber(generator, returnIntegerType, moduloValue)
 				return interpreter.NewUInt16Value(
 					inter,
 					func() uint16 {
@@ -127,6 +116,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.UInt32Type:
+				randomUint64 := getUint64RandomNumber(generator, returnIntegerType, moduloValue)
 				return interpreter.NewUInt32Value(
 					inter,
 					func() uint32 {
@@ -134,6 +124,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.UInt64Type:
+				randomUint64 := getUint64RandomNumber(generator, returnIntegerType, moduloValue)
 				return interpreter.NewUInt64Value(
 					inter,
 					func() uint64 {
@@ -141,6 +132,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.UInt128Type:
+				randomBig := getBigRandomNumber(generator, returnIntegerType, moduloValue)
 				return interpreter.NewUInt128ValueFromBigInt(
 					inter,
 					func() *big.Int {
@@ -148,6 +140,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.UInt256Type:
+				randomBig := getBigRandomNumber(generator, returnIntegerType, moduloValue)
 				return interpreter.NewUInt256ValueFromBigInt(
 					inter,
 					func() *big.Int {
@@ -157,6 +150,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 
 			// Word*
 			case sema.Word8Type:
+				randomUint64 := getUint64RandomNumber(generator, returnIntegerType, moduloValue)
 				return interpreter.NewWord8Value(
 					inter,
 					func() uint8 {
@@ -164,6 +158,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.Word16Type:
+				randomUint64 := getUint64RandomNumber(generator, returnIntegerType, moduloValue)
 				return interpreter.NewWord16Value(
 					inter,
 					func() uint16 {
@@ -171,6 +166,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.Word32Type:
+				randomUint64 := getUint64RandomNumber(generator, returnIntegerType, moduloValue)
 				return interpreter.NewWord32Value(
 					inter,
 					func() uint32 {
@@ -178,6 +174,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.Word64Type:
+				randomUint64 := getUint64RandomNumber(generator, returnIntegerType, moduloValue)
 				return interpreter.NewWord64Value(
 					inter,
 					func() uint64 {
@@ -185,6 +182,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.Word128Type:
+				randomBig := getBigRandomNumber(generator, returnIntegerType, moduloValue)
 				return interpreter.NewWord128ValueFromBigInt(
 					inter,
 					func() *big.Int {
@@ -192,6 +190,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.Word256Type:
+				randomBig := getBigRandomNumber(generator, returnIntegerType, moduloValue)
 				return interpreter.NewWord256ValueFromBigInt(
 					inter,
 					func() *big.Int {
@@ -207,6 +206,13 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 	)
 }
 
+// map for a quick type to byte-size lookup
+var typeToBytes = map[sema.Type]int{
+	sema.UInt8Type: 1, sema.UInt16Type: 2, sema.UInt32Type: 4, sema.UInt64Type: 8,
+	sema.Word8Type: 1, sema.Word16Type: 2, sema.Word32Type: 4, sema.Word64Type: 8,
+	sema.UInt128Type: 16, sema.UInt256Type: 32, sema.Word128Type: 16, sema.Word256Type: 32,
+}
+
 // cases of a random number of size 8 bytes or less can be all treated
 // by the same function, based on the uint64 type.
 // Although the final output is a `uint64`, it can be safely
@@ -217,11 +223,6 @@ func getUint64RandomNumber(
 	ty sema.Type,
 	moduloArg interpreter.Value,
 ) uint64 {
-	// map for a quick type to byte-size lookup
-	typeToBytes := map[sema.Type]int{
-		sema.UInt8Type: 1, sema.UInt16Type: 2, sema.UInt32Type: 4, sema.UInt64Type: 8,
-		sema.Word8Type: 1, sema.Word16Type: 2, sema.Word32Type: 4, sema.Word64Type: 8,
-	}
 
 	// buffer to get random bytes from the generator
 	// 8 is the size of the largest type supported
@@ -326,11 +327,6 @@ func getBigRandomNumber(
 	ty sema.Type,
 	moduloArg interpreter.Value,
 ) *big.Int {
-	// map for a quick type to bytes lookup
-	typeToBytes := map[sema.Type]int{
-		sema.UInt128Type: 16, sema.UInt256Type: 32,
-		sema.Word128Type: 16, sema.Word256Type: 32,
-	}
 
 	// buffer to get random bytes from the generator
 	// 32 is the size of the largest type supported
