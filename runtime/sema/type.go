@@ -6321,7 +6321,11 @@ const referenceTypeDereferenceFunctionDocString = `
 
 func (t *ReferenceType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
-		resolvers := t.Type.GetMembers()
+		innerResolvers := t.Type.GetMembers()
+		resolvers := make(map[string]MemberResolver)
+		for name, resolver := range innerResolvers {
+			resolvers[name] = resolver
+		}
 
 		type memberResolverWithName struct {
 			name     string
