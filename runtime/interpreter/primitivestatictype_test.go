@@ -41,6 +41,10 @@ func TestPrimitiveStaticTypeSemaTypeConversion(t *testing.T) {
 				return
 			}
 
+			if ty.IsDeprecated() {
+				return
+			}
+
 			ty2 := ConvertSemaToPrimitiveStaticType(nil, semaType)
 			require.True(t, ty2.Equal(ty))
 		})

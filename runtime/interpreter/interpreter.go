@@ -4528,12 +4528,8 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 	return ConvertStaticToSemaType(
 		config.MemoryGauge,
 		staticType,
-		func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error) {
-			return interpreter.GetInterfaceType(location, qualifiedIdentifier, typeID)
-		},
-		func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error) {
-			return interpreter.GetCompositeType(location, qualifiedIdentifier, typeID)
-		},
+		interpreter.GetInterfaceType,
+		interpreter.GetCompositeType,
 		interpreter.getEntitlement,
 		interpreter.getEntitlementMapType,
 	)

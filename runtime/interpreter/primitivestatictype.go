@@ -566,18 +566,20 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 	case PrimitiveStaticTypeAccountCapabilityController:
 		return sema.AccountCapabilityControllerType
 
-	case PrimitiveStaticTypeAuthAccount,
-		PrimitiveStaticTypePublicAccount,
-		PrimitiveStaticTypeAuthAccountContracts,
-		PrimitiveStaticTypePublicAccountContracts,
-		PrimitiveStaticTypeAuthAccountKeys,
-		PrimitiveStaticTypePublicAccountKeys,
-		PrimitiveStaticTypeAuthAccountInbox,
-		PrimitiveStaticTypeAuthAccountStorageCapabilities,
-		PrimitiveStaticTypeAuthAccountAccountCapabilities,
-		PrimitiveStaticTypeAuthAccountCapabilities,
-		PrimitiveStaticTypePublicAccountCapabilities,
-		PrimitiveStaticTypeAccountKey:
+	case PrimitiveStaticTypeAuthAccount: //nolint:staticcheck
+		return sema.FullyEntitledAccountReferenceType
+	case PrimitiveStaticTypePublicAccount: //nolint:staticcheck
+		return sema.AccountReferenceType
+	case PrimitiveStaticTypeAuthAccountContracts, //nolint:staticcheck
+		PrimitiveStaticTypePublicAccountContracts,         //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountKeys,                //nolint:staticcheck
+		PrimitiveStaticTypePublicAccountKeys,              //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountInbox,               //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountStorageCapabilities, //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountAccountCapabilities, //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountCapabilities,        //nolint:staticcheck
+		PrimitiveStaticTypePublicAccountCapabilities,      //nolint:staticcheck
+		PrimitiveStaticTypeAccountKey:                     //nolint:staticcheck
 		// These types are deprecated, and only exist for migration purposes
 		return nil
 
@@ -670,6 +672,27 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 func (t PrimitiveStaticType) IsDefined() bool {
 	_, ok := _PrimitiveStaticType_map[t]
 	return ok
+}
+
+// Deprecated: IsDeprecated only exists for migration purposes.
+func (t PrimitiveStaticType) IsDeprecated() bool {
+	switch t {
+	case PrimitiveStaticTypeAuthAccount, //nolint:staticcheck
+		PrimitiveStaticTypePublicAccount,                  //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountContracts,           //nolint:staticcheck
+		PrimitiveStaticTypePublicAccountContracts,         //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountKeys,                //nolint:staticcheck
+		PrimitiveStaticTypePublicAccountKeys,              //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountInbox,               //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountStorageCapabilities, //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountAccountCapabilities, //nolint:staticcheck
+		PrimitiveStaticTypeAuthAccountCapabilities,        //nolint:staticcheck
+		PrimitiveStaticTypePublicAccountCapabilities,      //nolint:staticcheck
+		PrimitiveStaticTypeAccountKey:                     //nolint:staticcheck
+		return true
+	}
+
+	return false
 }
 
 // ConvertSemaToPrimitiveStaticType converts a `sema.Type` to a `PrimitiveStaticType`.

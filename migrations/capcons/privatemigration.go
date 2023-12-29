@@ -16,10 +16,20 @@
  * limitations under the License.
  */
 
-package migrations
+package capcons
 
-import "github.com/onflow/cadence/runtime/interpreter"
+import (
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+)
 
-type Reporter interface {
-	Report(addressPath interpreter.AddressPath, migration string)
+func ClearPrivateDomain(
+	inter *interpreter.Interpreter,
+	storageMap *interpreter.StorageMap,
+	storageKey interpreter.StringStorageMapKey,
+	addressPath interpreter.AddressPath,
+) {
+	if addressPath.Path.Domain == common.PathDomainPrivate {
+		storageMap.RemoveValue(inter, storageKey)
+	}
 }
