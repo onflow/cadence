@@ -772,8 +772,17 @@ func TestCommonSuperType(t *testing.T) {
 				types: []Type{
 					UInt8Type,
 					UInt128Type,
+					UIntType,
 				},
 				expectedSuperType: IntegerType,
+			},
+			{
+				name: "fixed size unsigned integers",
+				types: []Type{
+					UInt8Type,
+					UInt128Type,
+				},
+				expectedSuperType: FixedSizeUnsignedIntegerType,
 			},
 			{
 				name: "heterogeneous simple types",
@@ -1703,6 +1712,332 @@ func TestCommonSuperType(t *testing.T) {
 	})
 }
 
+func TestIsPrimitive(t *testing.T) {
+	t.Parallel()
+
+	resourceType := &CompositeType{
+		Location:   nil,
+		Identifier: "Foo",
+		Kind:       common.CompositeKindResource,
+	}
+
+	type testCase struct {
+		expectedIsPrimitive bool
+		name                string
+		ty                  Type
+	}
+
+	testIsPrimitive := func(t *testing.T, tests []testCase) {
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				assert.Equal(t, test.expectedIsPrimitive, test.ty.IsPrimitiveType())
+			})
+		}
+	}
+
+	t.Run("number types", func(t *testing.T) {
+		t.Parallel()
+
+		var tests []testCase
+		for _, ty := range AllNumberTypes {
+			tests = append(tests, testCase{
+				expectedIsPrimitive: true,
+				name:                string(ty.ID()),
+				ty:                  ty,
+			})
+		}
+
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("simple types", func(t *testing.T) {
+		t.Parallel()
+
+		var tests []testCase
+		for _, ty := range []Type{
+			CharacterType,
+			BoolType,
+			StringType,
+			TheAddressType,
+			PrivatePathType,
+			PublicPathType,
+			StoragePathType,
+			VoidType,
+		} {
+			tests = append(tests, testCase{
+				expectedIsPrimitive: true,
+				name:                string(ty.ID()),
+				ty:                  ty,
+			})
+		}
+
+		for _, ty := range []Type{
+			&GenericType{TypeParameter: &TypeParameter{Name: "T"}},
+			&TransactionType{},
+		} {
+			tests = append(tests, testCase{
+				expectedIsPrimitive: false,
+				name:                string(ty.ID()),
+				ty:                  ty,
+			})
+		}
+
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("Optional types", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		structType := &CompositeType{
+			Location:   testLocation,
+			Identifier: "T",
+			Kind:       common.CompositeKindStructure,
+			Members:    &StringMemberOrderedMap{},
+		}
+
+		optionalStructType := &OptionalType{
+			Type: structType,
+		}
+
+		doubleOptionalStructType := &OptionalType{
+			Type: &OptionalType{
+				Type: structType,
+			},
+		}
+
+		var tests []testCase
+		for _, ty := range []Type{
+			CharacterType,
+			BoolType,
+			StringType,
+			TheAddressType,
+			PrivatePathType,
+			PublicPathType,
+			StoragePathType,
+			VoidType,
+		} {
+			tests = append(tests, testCase{
+				expectedIsPrimitive: true,
+				name:                fmt.Sprintf("Optional<%s>", string(ty.ID())),
+				ty:                  &OptionalType{Type: ty},
+			})
+
+			tests = append(tests, testCase{
+				expectedIsPrimitive: true,
+				name:                fmt.Sprintf("Optional<Optional<%s>>", string(ty.ID())),
+				ty:                  &OptionalType{Type: &OptionalType{Type: ty}},
+			})
+		}
+
+		tests = append(tests, testCase{
+			expectedIsPrimitive: false,
+			name:                "Optional<Struct>",
+			ty:                  optionalStructType,
+		})
+
+		tests = append(tests, testCase{
+			expectedIsPrimitive: false,
+			name:                "Optional<Optional<Struct>>",
+			ty:                  doubleOptionalStructType,
+		})
+
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("Arrays", func(t *testing.T) {
+		t.Parallel()
+
+		var tests []testCase
+		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			// Entitlements are not typical types. So skip.
+			if _, ok := BuiltinEntitlements[name]; ok {
+				return nil
+			}
+			if _, ok := BuiltinEntitlementMappings[name]; ok {
+				return nil
+			}
+
+			typ := variable.Type
+
+			tests = append(tests, testCase{
+				name:                fmt.Sprintf("VariableSizedType<%s>", name),
+				ty:                  &VariableSizedType{Type: typ},
+				expectedIsPrimitive: false,
+			})
+
+			tests = append(tests, testCase{
+				name:                fmt.Sprintf("ConstantSizedType<%s>", name),
+				ty:                  &ConstantSizedType{Type: typ, Size: 1},
+				expectedIsPrimitive: false,
+			})
+
+			return nil
+		})
+
+		require.NoError(t, err)
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("Dictionaries", func(t *testing.T) {
+		t.Parallel()
+
+		stringStringDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: StringType,
+		}
+
+		stringBoolDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: BoolType,
+		}
+
+		stringResourceDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: resourceType,
+		}
+
+		nestedResourceDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: stringResourceDictionary,
+		}
+
+		nestedStringDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: stringStringDictionary,
+		}
+
+		tests := []testCase{
+			{
+				name:                "Dictionary<String,String>",
+				ty:                  stringStringDictionary,
+				expectedIsPrimitive: false,
+			},
+			{
+				name:                "Dictionary<String,Bool>",
+				ty:                  stringBoolDictionary,
+				expectedIsPrimitive: false,
+			},
+			{
+				name:                "Dictionary<String,Resource>",
+				ty:                  stringResourceDictionary,
+				expectedIsPrimitive: false,
+			},
+			{
+				name:                "Dictionary<String,Dictionary<String,Resource>",
+				ty:                  nestedResourceDictionary,
+				expectedIsPrimitive: false,
+			},
+			{
+				name:                "Dictionary<String,Dictionary<String,String>",
+				ty:                  nestedStringDictionary,
+				expectedIsPrimitive: false,
+			},
+		}
+
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("References types", func(t *testing.T) {
+		t.Parallel()
+
+		var tests []testCase
+		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			// Entitlements are not typical types. So skip.
+			if _, ok := BuiltinEntitlements[name]; ok {
+				return nil
+			}
+			if _, ok := BuiltinEntitlementMappings[name]; ok {
+				return nil
+			}
+
+			typ := variable.Type
+
+			tests = append(tests, testCase{
+				name:                fmt.Sprintf("ReferenceType<%s>", name),
+				ty:                  &ReferenceType{Type: typ},
+				expectedIsPrimitive: false,
+			})
+
+			return nil
+		})
+
+		require.NoError(t, err)
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("Capability types", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		interfaceType1 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I1",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       &StringMemberOrderedMap{},
+		}
+
+		capType := &CapabilityType{
+			BorrowType: &IntersectionType{
+				Types: []*InterfaceType{interfaceType1},
+			},
+		}
+
+		tests := []testCase{
+			{
+				name:                "CapabilityType",
+				ty:                  capType,
+				expectedIsPrimitive: false,
+			},
+		}
+
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("Function types", func(t *testing.T) {
+		t.Parallel()
+
+		funcType1 := &FunctionType{
+			Purity: FunctionPurityImpure,
+			Parameters: []Parameter{
+				{
+					TypeAnnotation: StringTypeAnnotation,
+				},
+			},
+			ReturnTypeAnnotation: Int8TypeAnnotation,
+			Members:              &StringMemberOrderedMap{},
+		}
+
+		funcType2 := &FunctionType{
+			Purity: FunctionPurityImpure,
+			Parameters: []Parameter{
+				{
+					TypeAnnotation: IntTypeAnnotation,
+				},
+			},
+			ReturnTypeAnnotation: PublicPathTypeAnnotation,
+			Members:              &StringMemberOrderedMap{},
+		}
+
+		tests := []testCase{
+			{
+				name:                "Function(String): Int8",
+				ty:                  funcType1,
+				expectedIsPrimitive: false,
+			},
+			{
+				name:                "Function(Int): PublicPath",
+				ty:                  funcType2,
+				expectedIsPrimitive: false,
+			},
+		}
+
+		testIsPrimitive(t, tests)
+	})
+}
+
 func TestTypeInclusions(t *testing.T) {
 
 	t.Parallel()
@@ -1744,6 +2079,16 @@ func TestTypeInclusions(t *testing.T) {
 		for _, typ := range AllUnsignedIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
 				assert.True(t, UnsignedIntegerTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("FixedSizeUnsignedInteger", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range AllFixedSizeUnsignedIntegerTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				assert.True(t, FixedSizeUnsignedIntegerTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})

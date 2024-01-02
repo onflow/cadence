@@ -30,6 +30,7 @@ var TestType = &sema.SimpleType{
 	TypeTag:       TestTypeTag,
 	IsResource:    true,
 	Storable:      false,
+	Primitive:     false,
 	Equatable:     false,
 	Comparable:    false,
 	Exportable:    false,

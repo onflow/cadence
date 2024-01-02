@@ -26,6 +26,7 @@ var BoolType = &SimpleType{
 	TypeTag:       BoolTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    true,
 	Exportable:    true,

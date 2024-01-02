@@ -3343,7 +3343,7 @@ func init() {
 
 		switch numberType {
 		case sema.NumberType, sema.SignedNumberType,
-			sema.IntegerType, sema.SignedIntegerType,
+			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
@@ -4528,12 +4528,8 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 	return ConvertStaticToSemaType(
 		config.MemoryGauge,
 		staticType,
-		func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error) {
-			return interpreter.GetInterfaceType(location, qualifiedIdentifier, typeID)
-		},
-		func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error) {
-			return interpreter.GetCompositeType(location, qualifiedIdentifier, typeID)
-		},
+		interpreter.GetInterfaceType,
+		interpreter.GetCompositeType,
 		interpreter.getEntitlement,
 		interpreter.getEntitlementMapType,
 	)
@@ -4601,11 +4597,15 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 	return contractValue, nil
 }
 
-func GetNativeCompositeValueComputedFields(v *CompositeValue) map[string]ComputedField {
-	switch v.QualifiedIdentifier {
+func GetNativeCompositeValueComputedFields(qualifiedIdentifier string) map[string]ComputedField {
+	switch qualifiedIdentifier {
 	case sema.PublicKeyType.Identifier:
 		return map[string]ComputedField{
-			sema.PublicKeyTypePublicKeyFieldName: func(interpreter *Interpreter, locationRange LocationRange) Value {
+			sema.PublicKeyTypePublicKeyFieldName: func(
+				interpreter *Interpreter,
+				locationRange LocationRange,
+				v *CompositeValue,
+			) Value {
 				publicKeyValue := v.GetField(interpreter, locationRange, sema.PublicKeyTypePublicKeyFieldName)
 				return publicKeyValue.Transfer(
 					interpreter,
@@ -4626,7 +4626,7 @@ func (interpreter *Interpreter) GetCompositeValueComputedFields(v *CompositeValu
 
 	var computedFields map[string]ComputedField
 	if v.Location == nil {
-		computedFields = GetNativeCompositeValueComputedFields(v)
+		computedFields = GetNativeCompositeValueComputedFields(v.QualifiedIdentifier)
 		if computedFields != nil {
 			return computedFields
 		}

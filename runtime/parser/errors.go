@@ -318,3 +318,20 @@ func (e *CustomDestructorError) Error() string {
 func (e *CustomDestructorError) SecondaryError() string {
 	return "remove the destructor definition"
 }
+
+// RestrictedTypeError
+
+type RestrictedTypeError struct {
+	ast.Range
+}
+
+var _ ParseError = &CustomDestructorError{}
+var _ errors.UserError = &CustomDestructorError{}
+
+func (*RestrictedTypeError) isParseError() {}
+
+func (*RestrictedTypeError) IsUserError() {}
+
+func (e *RestrictedTypeError) Error() string {
+	return "restricted types have been removed; replace with the concrete type or an equivalent intersection type"
+}

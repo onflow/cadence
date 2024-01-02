@@ -137,6 +137,7 @@ var StorageCapabilityControllerType = &SimpleType{
 	TypeTag:       StorageCapabilityControllerTypeTag,
 	IsResource:    false,
 	Storable:      false,
+	Primitive:     false,
 	Equatable:     false,
 	Comparable:    false,
 	Exportable:    false,

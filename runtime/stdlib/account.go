@@ -2463,7 +2463,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			capabilityIDValue, borrowStaticType := issueStorageCapabilityController(
+			capabilityIDValue, borrowStaticType := IssueStorageCapabilityController(
 				inter,
 				locationRange,
 				idGenerator,
@@ -2482,7 +2482,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 	)
 }
 
-func issueStorageCapabilityController(
+func IssueStorageCapabilityController(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	idGenerator AccountIDGenerator,
@@ -2547,7 +2547,7 @@ func newAccountAccountCapabilitiesIssueFunction(
 			}
 
 			capabilityIDValue, borrowStaticType :=
-				issueAccountCapabilityController(
+				IssueAccountCapabilityController(
 					inter,
 					locationRange,
 					idGenerator,
@@ -2565,7 +2565,7 @@ func newAccountAccountCapabilitiesIssueFunction(
 	)
 }
 
-func issueAccountCapabilityController(
+func IssueAccountCapabilityController(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	idGenerator AccountIDGenerator,
@@ -3272,7 +3272,7 @@ func getCheckedCapabilityController(
 	return controller, wantedBorrowType
 }
 
-func getCheckedCapabilityControllerReference(
+func GetCheckedCapabilityControllerReference(
 	inter *interpreter.Interpreter,
 	capabilityAddressValue interpreter.AddressValue,
 	capabilityIDValue interpreter.UInt64Value,
@@ -3309,7 +3309,7 @@ func BorrowCapabilityController(
 	wantedBorrowType *sema.ReferenceType,
 	capabilityBorrowType *sema.ReferenceType,
 ) interpreter.ReferenceValue {
-	referenceValue := getCheckedCapabilityControllerReference(
+	referenceValue := GetCheckedCapabilityControllerReference(
 		inter,
 		capabilityAddress,
 		capabilityID,
@@ -3345,7 +3345,7 @@ func CheckCapabilityController(
 	wantedBorrowType *sema.ReferenceType,
 	capabilityBorrowType *sema.ReferenceType,
 ) interpreter.BoolValue {
-	referenceValue := getCheckedCapabilityControllerReference(
+	referenceValue := GetCheckedCapabilityControllerReference(
 		inter,
 		capabilityAddress,
 		capabilityID,

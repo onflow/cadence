@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -51,9 +52,9 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
             let key = AccountKey(
                 PublicKey(
                     publicKey: "0102".decodeHex(),
-                    signAlgo: "SignatureAlgorithmECDSA_P256"
+                    signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
                 ),
-                hashAlgorithm: "HashAlgorithmSHA3_256",
+                hashAlgorithm: HashAlgorithm.SHA3_256,
                 weight: 1.7
             )
 
@@ -2227,4 +2228,67 @@ type fakeError struct{}
 
 func (fakeError) Error() string {
 	return "fake error for testing"
+}
+
+// TestRuntimePublicKeyPublicKeyField tests PublicKey's `publicKey` field.
+// It is a computed field, which always returns a copy of the stored raw public key ([UInt8]).
+//
+// This test ensures that the field can be accessed even after the PublicKey value has been transferred (copied),
+// and the original PublicKey value has been removed.
+func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
+
+	t.Parallel()
+
+	inter := NewTestInterpreter(t)
+
+	locationRange := interpreter.EmptyLocationRange
+
+	publicKey := interpreter.NewCompositeValue(
+		inter,
+		locationRange,
+		nil,
+		sema.PublicKeyType.Identifier,
+		common.CompositeKindStructure,
+		[]interpreter.CompositeField{
+			{
+				Name: sema.PublicKeyTypePublicKeyFieldName,
+				Value: interpreter.NewArrayValue(
+					inter,
+					locationRange,
+					interpreter.ByteArrayStaticType,
+					common.ZeroAddress,
+					interpreter.NewUnmeteredUInt8Value(1),
+				),
+			},
+		},
+		common.ZeroAddress,
+	)
+
+	publicKeyArray1 := publicKey.GetMember(
+		inter,
+		locationRange,
+		sema.PublicKeyTypePublicKeyFieldName,
+	)
+
+	publicKey2 := publicKey.Transfer(
+		inter,
+		locationRange,
+		atree.Address{},
+		false,
+		nil,
+		nil,
+	).(*interpreter.CompositeValue)
+
+	publicKey.DeepRemove(inter)
+
+	publicKeyArray2 := publicKey2.GetMember(
+		inter,
+		locationRange,
+		sema.PublicKeyTypePublicKeyFieldName,
+	)
+
+	require.True(t,
+		publicKeyArray2.(interpreter.EquatableValue).
+			Equal(inter, locationRange, publicKeyArray1),
+	)
 }

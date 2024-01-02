@@ -221,6 +221,8 @@ const (
 	storageCapabilityControllerTypeMask
 	accountCapabilityControllerTypeMask
 
+	fixedSizeUnsignedIntegerTypeMask
+
 	interfaceTypeMask
 	functionTypeMask
 
@@ -242,20 +244,23 @@ var (
 				Or(Int128TypeTag).
 				Or(Int256TypeTag)
 
+	FixedSizeUnsignedIntegerTypeTag = newTypeTagFromUpperMask(fixedSizeUnsignedIntegerTypeMask).
+					Or(UInt8TypeTag).
+					Or(UInt16TypeTag).
+					Or(UInt32TypeTag).
+					Or(UInt64TypeTag).
+					Or(UInt128TypeTag).
+					Or(UInt256TypeTag).
+					Or(Word8TypeTag).
+					Or(Word16TypeTag).
+					Or(Word32TypeTag).
+					Or(Word64TypeTag).
+					Or(Word128TypeTag).
+					Or(Word256TypeTag)
+
 	UnsignedIntegerTypeTag = newTypeTagFromLowerMask(unsignedIntegerTypeMask).
 				Or(UIntTypeTag).
-				Or(UInt8TypeTag).
-				Or(UInt16TypeTag).
-				Or(UInt32TypeTag).
-				Or(UInt64TypeTag).
-				Or(UInt128TypeTag).
-				Or(UInt256TypeTag).
-				Or(Word8TypeTag).
-				Or(Word16TypeTag).
-				Or(Word32TypeTag).
-				Or(Word64TypeTag).
-				Or(Word128TypeTag).
-				Or(Word256TypeTag)
+				Or(FixedSizeUnsignedIntegerTypeTag)
 
 	IntegerTypeTag = newTypeTagFromLowerMask(integerTypeMask).
 			Or(SignedIntegerTypeTag).
@@ -502,6 +507,8 @@ func findCommonSuperType(joinedTypeTag TypeTag, types ...Type) Type {
 		return InvalidType
 	case joinedTypeTag.BelongsTo(SignedIntegerTypeTag):
 		return SignedIntegerType
+	case joinedTypeTag.BelongsTo(FixedSizeUnsignedIntegerTypeTag):
+		return FixedSizeUnsignedIntegerType
 	case joinedTypeTag.BelongsTo(IntegerTypeTag):
 		return IntegerType
 	case joinedTypeTag.BelongsTo(SignedFixedPointTypeTag):
@@ -700,6 +707,9 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 
 	case accountCapabilityControllerTypeMask:
 		return AccountCapabilityControllerType
+
+	case fixedSizeUnsignedIntegerTypeMask:
+		return FixedSizeUnsignedIntegerType
 
 	default:
 		return nil

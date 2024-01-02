@@ -57,6 +57,15 @@ func TestOptionalSubtyping(t *testing.T) {
 			),
 		)
 	})
+
+	t.Run("UInt8? <: FixedSizedUnsignedInteger?", func(t *testing.T) {
+		assert.True(t,
+			IsSubType(
+				&OptionalType{Type: UInt8Type},
+				&OptionalType{Type: FixedSizeUnsignedIntegerType},
+			),
+		)
+	})
 }
 
 func TestCompositeType_ID(t *testing.T) {

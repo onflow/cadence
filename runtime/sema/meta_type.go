@@ -40,6 +40,7 @@ var MetaType = &SimpleType{
 	TypeTag:       MetaTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     false,
 	Equatable:     true,
 	Comparable:    false,
 	Exportable:    true,

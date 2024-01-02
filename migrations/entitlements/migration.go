@@ -28,7 +28,7 @@ type EntitlementsMigration struct {
 	Interpreter *interpreter.Interpreter
 }
 
-var _ migrations.Migration = EntitlementsMigration{}
+var _ migrations.ValueMigration = EntitlementsMigration{}
 
 func NewEntitlementsMigration(inter *interpreter.Interpreter) EntitlementsMigration {
 	return EntitlementsMigration{Interpreter: inter}
@@ -240,6 +240,6 @@ func ConvertValueToEntitlements(
 	return nil
 }
 
-func (mig EntitlementsMigration) Migrate(value interpreter.Value) (newValue interpreter.Value) {
+func (mig EntitlementsMigration) Migrate(_ interpreter.AddressPath, value interpreter.Value, _ *interpreter.Interpreter) (newValue interpreter.Value) {
 	return ConvertValueToEntitlements(mig.Interpreter, value)
 }

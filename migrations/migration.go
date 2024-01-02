@@ -25,9 +25,20 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-type Migration interface {
+type ValueMigration interface {
 	Name() string
-	Migrate(value interpreter.Value) (newValue interpreter.Value)
+	Migrate(
+		addressPath interpreter.AddressPath,
+		value interpreter.Value,
+		interpreter *interpreter.Interpreter,
+	) (newValue interpreter.Value)
+}
+
+type DomainMigration interface {
+	Name() string
+	Migrate(
+		addressPath interpreter.AddressPath,
+	)
 }
 
 type StorageMigration struct {
@@ -47,8 +58,7 @@ func NewStorageMigration(
 
 func (m *StorageMigration) Migrate(
 	addressIterator AddressIterator,
-	reporter Reporter,
-	migrations ...Migration,
+	migratePath PathMigrator,
 ) {
 	for {
 		address := addressIterator.NextAddress()
@@ -56,57 +66,63 @@ func (m *StorageMigration) Migrate(
 			break
 		}
 
-		m.migrateValuesInAccount(
-			address,
-			reporter,
-			migrations,
-		)
+		m.MigrateAccount(address, migratePath)
 	}
+}
 
+func (m *StorageMigration) Commit() {
 	err := m.storage.Commit(m.interpreter, false)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (m *StorageMigration) migrateValuesInAccount(
+func (m *StorageMigration) MigrateAccount(
 	address common.Address,
-	reporter Reporter,
-	migrations []Migration,
+	migratePath PathMigrator,
 ) {
-
 	accountStorage := NewAccountStorage(m.storage, address)
 
-	migrateValue := func(
-		value interpreter.Value,
-		address common.Address,
-		domain common.PathDomain,
-		key string,
-	) interpreter.Value {
-		return m.MigrateNestedValue(value, address, domain, key, migrations, reporter)
-	}
-
-	accountStorage.ForEachValue(
+	accountStorage.MigratePathsInDomains(
 		m.interpreter,
 		common.AllPathDomains,
-		migrateValue,
+		migratePath,
+	)
+}
+
+func (m *StorageMigration) NewValueMigrationsPathMigrator(
+	reporter Reporter,
+	valueMigrations ...ValueMigration,
+) PathMigrator {
+	return NewValueConverterPathMigrator(
+		func(addressPath interpreter.AddressPath, value interpreter.Value) interpreter.Value {
+			return m.MigrateNestedValue(
+				addressPath,
+				value,
+				valueMigrations,
+				reporter,
+			)
+		},
 	)
 }
 
 var emptyLocationRange = interpreter.EmptyLocationRange
 
 func (m *StorageMigration) MigrateNestedValue(
+	addressPath interpreter.AddressPath,
 	value interpreter.Value,
-	address common.Address,
-	domain common.PathDomain,
-	key string,
-	migrations []Migration,
+	valueMigrations []ValueMigration,
 	reporter Reporter,
 ) (newValue interpreter.Value) {
 	switch value := value.(type) {
 	case *interpreter.SomeValue:
 		innerValue := value.InnerValue(m.interpreter, emptyLocationRange)
-		newInnerValue := m.MigrateNestedValue(innerValue, address, domain, key, migrations, reporter)
+		newInnerValue := m.MigrateNestedValue(
+			addressPath,
+			innerValue,
+			valueMigrations,
+			reporter,
+		)
 		if newInnerValue != nil {
 			return interpreter.NewSomeValueNonCopying(m.interpreter, newInnerValue)
 		}
@@ -120,7 +136,12 @@ func (m *StorageMigration) MigrateNestedValue(
 		count := array.Count()
 		for index := 0; index < count; index++ {
 			element := array.Get(m.interpreter, emptyLocationRange, index)
-			newElement := m.MigrateNestedValue(element, address, domain, key, migrations, reporter)
+			newElement := m.MigrateNestedValue(
+				addressPath,
+				element,
+				valueMigrations,
+				reporter,
+			)
 			if newElement != nil {
 				array.Set(
 					m.interpreter,
@@ -137,41 +158,78 @@ func (m *StorageMigration) MigrateNestedValue(
 		// Read the field names first, so the iteration wouldn't be affected
 		// by the modification of the nested values.
 		var fieldNames []string
-		composite.ForEachField(nil, func(fieldName string, fieldValue interpreter.Value) (resume bool) {
+		composite.ForEachFieldName(func(fieldName string) (resume bool) {
 			fieldNames = append(fieldNames, fieldName)
 			return true
 		})
 
 		for _, fieldName := range fieldNames {
-			existingValue := composite.GetField(m.interpreter, interpreter.EmptyLocationRange, fieldName)
+			existingValue := composite.GetField(
+				m.interpreter,
+				emptyLocationRange,
+				fieldName,
+			)
 
-			migratedValue := m.MigrateNestedValue(existingValue, address, domain, key, migrations, reporter)
+			migratedValue := m.MigrateNestedValue(
+				addressPath,
+				existingValue,
+				valueMigrations,
+				reporter,
+			)
+
 			if migratedValue == nil {
 				continue
 			}
 
-			composite.SetMember(m.interpreter, emptyLocationRange, fieldName, migratedValue)
+			composite.SetMember(
+				m.interpreter,
+				emptyLocationRange,
+				fieldName,
+				migratedValue,
+			)
 		}
 
 	case *interpreter.DictionaryValue:
 		dictionary := value
 
+		type keyValuePair struct {
+			key, value interpreter.Value
+		}
+
 		// Read the keys first, so the iteration wouldn't be affected
 		// by the modification of the nested values.
-		var existingKeys []interpreter.Value
-		dictionary.Iterate(m.interpreter, func(key, _ interpreter.Value) (resume bool) {
-			existingKeys = append(existingKeys, key)
+		var existingKeysAndValues []keyValuePair
+		dictionary.Iterate(m.interpreter, func(key, value interpreter.Value) (resume bool) {
+			existingKeysAndValues = append(
+				existingKeysAndValues,
+				keyValuePair{
+					key:   key,
+					value: value,
+				},
+			)
+
+			// continue iteration
 			return true
 		})
 
-		for _, existingKey := range existingKeys {
-			existingValue, exist := dictionary.Get(nil, interpreter.EmptyLocationRange, existingKey)
-			if !exist {
-				panic(errors.NewUnreachableError())
-			}
+		for _, existingKeyAndValue := range existingKeysAndValues {
+			existingKey := existingKeyAndValue.key
+			existingValue := existingKeyAndValue.value
 
-			newKey := m.MigrateNestedValue(existingKey, address, domain, key, migrations, reporter)
-			newValue := m.MigrateNestedValue(existingValue, address, domain, key, migrations, reporter)
+			newKey := m.MigrateNestedValue(
+				addressPath,
+				existingKey,
+				valueMigrations,
+				reporter,
+			)
+
+			newValue := m.MigrateNestedValue(
+				addressPath,
+				existingValue,
+				valueMigrations,
+				reporter,
+			)
+
 			if newKey == nil && newValue == nil {
 				continue
 			}
@@ -185,7 +243,17 @@ func (m *StorageMigration) MigrateNestedValue(
 				// Key was migrated.
 				// Remove the old value at the old key.
 				// This old value will be inserted again with the new key, unless the value is also migrated.
-				_ = dictionary.RemoveKey(m.interpreter, emptyLocationRange, existingKey)
+				existingKey = legacyKey(existingKey)
+				oldValue := dictionary.Remove(
+					m.interpreter,
+					emptyLocationRange,
+					existingKey,
+				)
+
+				if _, ok := oldValue.(*interpreter.SomeValue); !ok {
+					panic(errors.NewUnreachableError())
+				}
+
 				keyToSet = newKey
 			}
 
@@ -196,15 +264,17 @@ func (m *StorageMigration) MigrateNestedValue(
 				valueToSet = newValue
 			}
 
-			// Always wrap with an optional, when inserting to the dictionary.
-			valueToSet = interpreter.NewUnmeteredSomeValueNonCopying(valueToSet)
-
-			dictionary.SetKey(m.interpreter, emptyLocationRange, keyToSet, valueToSet)
+			dictionary.Insert(
+				m.interpreter,
+				emptyLocationRange,
+				keyToSet,
+				valueToSet,
+			)
 		}
 	}
 
-	for _, migration := range migrations {
-		converted := migration.Migrate(value)
+	for _, migration := range valueMigrations {
+		converted := migration.Migrate(addressPath, value, m.interpreter)
 
 		if converted != nil {
 			// Chain the migrations.
@@ -213,10 +283,79 @@ func (m *StorageMigration) MigrateNestedValue(
 			newValue = converted
 
 			if reporter != nil {
-				reporter.Report(address, domain, key, migration.Name())
+				reporter.Report(addressPath, migration.Name())
 			}
 		}
 	}
 	return
 
+}
+
+// legacyKey return the same type with the "old" hash/ID generation algo.
+func legacyKey(key interpreter.Value) interpreter.Value {
+	typeValue, isTypeValue := key.(interpreter.TypeValue)
+	if !isTypeValue {
+		return key
+	}
+
+	legacyType := legacyType(typeValue.Type)
+	if legacyType == nil {
+		return key
+	}
+
+	return interpreter.NewUnmeteredTypeValue(legacyType)
+}
+
+func legacyType(staticType interpreter.StaticType) interpreter.StaticType {
+	switch typ := staticType.(type) {
+	case *interpreter.IntersectionStaticType:
+		return &LegacyIntersectionType{
+			IntersectionStaticType: typ,
+		}
+
+	case *interpreter.ConstantSizedStaticType:
+		legacyType := legacyType(typ.Type)
+		if legacyType != nil {
+			return interpreter.NewConstantSizedStaticType(nil, legacyType, typ.Size)
+		}
+
+	case *interpreter.VariableSizedStaticType:
+		legacyType := legacyType(typ.Type)
+		if legacyType != nil {
+			return interpreter.NewVariableSizedStaticType(nil, legacyType)
+		}
+
+	case *interpreter.DictionaryStaticType:
+		legacyKeyType := legacyType(typ.KeyType)
+		legacyValueType := legacyType(typ.ValueType)
+		if legacyKeyType != nil && legacyValueType != nil {
+			return interpreter.NewDictionaryStaticType(nil, legacyKeyType, legacyValueType)
+		}
+		if legacyKeyType != nil {
+			return interpreter.NewDictionaryStaticType(nil, legacyKeyType, typ.ValueType)
+		}
+		if legacyValueType != nil {
+			return interpreter.NewDictionaryStaticType(nil, typ.KeyType, legacyValueType)
+		}
+
+	case *interpreter.OptionalStaticType:
+		legacyInnerType := legacyType(typ.Type)
+		if legacyInnerType != nil {
+			return interpreter.NewOptionalStaticType(nil, legacyInnerType)
+		}
+
+	case *interpreter.CapabilityStaticType:
+		legacyBorrowType := legacyType(typ.BorrowType)
+		if legacyBorrowType != nil {
+			return interpreter.NewCapabilityStaticType(nil, legacyBorrowType)
+		}
+
+	case *interpreter.ReferenceStaticType:
+		legacyReferencedType := legacyType(typ.ReferencedType)
+		if legacyReferencedType != nil {
+			return interpreter.NewReferenceStaticType(nil, typ.Authorization, legacyReferencedType)
+		}
+	}
+
+	return nil
 }

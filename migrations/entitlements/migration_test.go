@@ -376,7 +376,7 @@ func (testEntitlementsMigration) Name() string {
 	return "Test Entitlements Migration"
 }
 
-func (m testEntitlementsMigration) Migrate(value interpreter.Value) (newValue interpreter.Value) {
+func (m testEntitlementsMigration) Migrate(_ interpreter.AddressPath, value interpreter.Value, _ *interpreter.Interpreter) (newValue interpreter.Value) {
 	return ConvertValueToEntitlements(m.inter, value)
 }
 
@@ -390,11 +390,12 @@ func convertEntireTestValue(
 	storageMig := migrations.NewStorageMigration(inter, storage)
 
 	migratedValue := storageMig.MigrateNestedValue(
+		interpreter.AddressPath{
+			Address: address,
+			Path:    interpreter.NewPathValue(nil, common.PathDomainStorage, ""),
+		},
 		v,
-		address,
-		common.PathDomainStorage,
-		"",
-		[]migrations.Migration{testMig},
+		[]migrations.ValueMigration{testMig},
 		nil,
 	)
 
@@ -1138,14 +1139,14 @@ func TestMigrateSimpleContract(t *testing.T) {
 	// Migrate
 
 	migration := migrations.NewStorageMigration(inter, storage)
+	pathMigrator := migration.NewValueMigrationsPathMigrator(nil, NewEntitlementsMigration(inter))
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
 				account,
 			},
 		},
-		nil,
-		NewEntitlementsMigration(inter),
+		pathMigrator,
 	)
 
 	storageMap := storage.GetStorageMap(account, storageIdentifier, false)
@@ -1357,6 +1358,7 @@ func TestMigrateAcrossContracts(t *testing.T) {
 	// Migrate
 
 	migration := migrations.NewStorageMigration(inter, runtimeStorage)
+	pathMigrator := migration.NewValueMigrationsPathMigrator(nil, NewEntitlementsMigration(inter))
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
@@ -1364,8 +1366,7 @@ func TestMigrateAcrossContracts(t *testing.T) {
 				address2,
 			},
 		},
-		nil,
-		NewEntitlementsMigration(inter),
+		pathMigrator,
 	)
 
 	value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("bar"))
@@ -1566,6 +1567,7 @@ func TestMigrateArrayOfValues(t *testing.T) {
 	// Migrate
 
 	migration := migrations.NewStorageMigration(inter, runtimeStorage)
+	pathMigrator := migration.NewValueMigrationsPathMigrator(nil, NewEntitlementsMigration(inter))
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
@@ -1573,8 +1575,7 @@ func TestMigrateArrayOfValues(t *testing.T) {
 				address2,
 			},
 		},
-		nil,
-		NewEntitlementsMigration(inter),
+		pathMigrator,
 	)
 
 	arrayValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("caps"))
@@ -1802,6 +1803,7 @@ func TestMigrateDictOfValues(t *testing.T) {
 	// Migrate
 
 	migration := migrations.NewStorageMigration(inter, runtimeStorage)
+	pathMigrator := migration.NewValueMigrationsPathMigrator(nil, NewEntitlementsMigration(inter))
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
@@ -1809,8 +1811,7 @@ func TestMigrateDictOfValues(t *testing.T) {
 				address2,
 			},
 		},
-		nil,
-		NewEntitlementsMigration(inter),
+		pathMigrator,
 	)
 
 	dictValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("caps"))

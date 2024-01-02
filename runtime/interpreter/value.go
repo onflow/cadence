@@ -510,7 +510,7 @@ func (TypeValue) ChildStorables() []atree.Storable {
 // HashInput returns a byte slice containing:
 // - HashInputTypeType (1 byte)
 // - type id (n bytes)
-func (v TypeValue) HashInput(interpreter *Interpreter, _ LocationRange, scratch []byte) []byte {
+func (v TypeValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
 	typeID := v.Type.ID()
 
 	length := 1 + len(typeID)
@@ -16312,7 +16312,7 @@ type CompositeValue struct {
 	isDestroyed         bool
 }
 
-type ComputedField func(*Interpreter, LocationRange) Value
+type ComputedField func(*Interpreter, LocationRange, *CompositeValue) Value
 
 type CompositeField struct {
 	Value Value
@@ -16744,7 +16744,7 @@ func (v *CompositeValue) GetComputedField(interpreter *Interpreter, locationRang
 		return nil
 	}
 
-	return computedField(interpreter, locationRange)
+	return computedField(interpreter, locationRange, v)
 }
 
 func (v *CompositeValue) GetInjectedField(interpreter *Interpreter, name string) Value {
@@ -17198,7 +17198,7 @@ func (v *CompositeValue) ConformsToStaticType(
 				return false
 			}
 
-			value = fieldGetter(interpreter, locationRange)
+			value = fieldGetter(interpreter, locationRange, v)
 		}
 
 		member, ok := compositeType.Members.Get(fieldName)
@@ -17562,6 +17562,29 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 
 func (v *CompositeValue) GetOwner() common.Address {
 	return common.Address(v.StorageAddress())
+}
+
+// ForEachFieldName iterates over all field names of the composite value.
+// It does NOT iterate over computed fields and functions!
+func (v *CompositeValue) ForEachFieldName(
+	f func(fieldName string) (resume bool),
+) {
+	v.forEachFieldName(v.dictionary.IterateKeys, f)
+}
+
+func (v *CompositeValue) forEachFieldName(
+	atreeIterate func(fn atree.MapElementIterationFunc) error,
+	f func(fieldName string) (resume bool),
+) {
+	err := atreeIterate(func(key atree.Value) (resume bool, err error) {
+		resume = f(
+			string(key.(StringAtreeValue)),
+		)
+		return
+	})
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
 }
 
 // ForEachField iterates over all field-name field-value pairs of the composite value.
@@ -18112,6 +18135,40 @@ func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	v.Walk(interpreter, func(value Value) {
 		value.Accept(interpreter, visitor)
 	})
+}
+
+func (v *DictionaryValue) IterateKeys(
+	interpreter *Interpreter,
+	f func(key Value) (resume bool),
+) {
+	v.iterateKeys(interpreter, v.dictionary.IterateKeys, f)
+}
+
+func (v *DictionaryValue) iterateKeys(
+	interpreter *Interpreter,
+	atreeIterate func(fn atree.MapElementIterationFunc) error,
+	f func(key Value) (resume bool),
+) {
+	iterate := func() {
+		err := atreeIterate(func(key atree.Value) (resume bool, err error) {
+			// atree.OrderedMap iteration provides low-level atree.Value,
+			// convert to high-level interpreter.Value
+
+			resume = f(
+				MustConvertStoredValue(interpreter, key),
+			)
+
+			return resume, nil
+		})
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	}
+	if v.IsResourceKinded(interpreter) {
+		interpreter.withMutationPrevention(v.StorageID(), iterate)
+	} else {
+		iterate()
+	}
 }
 
 func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
