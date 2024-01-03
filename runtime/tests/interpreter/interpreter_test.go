@@ -9554,6 +9554,7 @@ func newTestAuthAccountValue(gauge common.MemoryGauge, addressValue interpreter.
 				panicFunctionValue,
 				panicFunctionValue,
 				panicFunctionValue,
+				panicFunctionValue,
 				func(
 					inter *interpreter.Interpreter,
 					locationRange interpreter.LocationRange,

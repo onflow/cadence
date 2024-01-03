@@ -1572,6 +1572,48 @@ func TestAuthAccountContracts(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("try update, unauthorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: &PublicAccount.Contracts): DeploymentResult {
+                return contracts.tryUpdate(name: "foo", code: "012".decodeHex())
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+
+		var missingMemberError *sema.NotDeclaredMemberError
+		require.ErrorAs(t, errors[0], &missingMemberError)
+		assert.Equal(t, "tryUpdate", missingMemberError.Name)
+	})
+
+	t.Run("try update, authorized", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: &AuthAccount.Contracts): DeploymentResult {
+                return contracts.tryUpdate(name: "foo", code: "012".decodeHex())
+            }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("deployment result fields", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(contracts: &AuthAccount.Contracts) {
+                let deploymentResult: DeploymentResult = contracts.tryUpdate(name: "foo", code: "012".decodeHex())
+                let deployedContract: DeployedContract = deploymentResult.deployedContract!
+                let name: String = deployedContract.name
+                let address: Address = deployedContract.address
+                let code: [UInt8] = deployedContract.code
+            }
+        `)
+		require.NoError(t, err)
+	})
+
 }
 
 func TestPublicAccountContracts(t *testing.T) {
