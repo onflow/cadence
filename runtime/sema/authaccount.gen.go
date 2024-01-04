@@ -773,6 +773,46 @@ or if the given name does not match the name of the contract/contract interface 
 Returns the deployed contract for the updated contract.
 `
 
+const AuthAccountContractsTypeTryUpdateFunctionName = "tryUpdate"
+
+var AuthAccountContractsTypeTryUpdateFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Identifier:     "name",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+		{
+			Identifier: "code",
+			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
+				Type: UInt8Type,
+			}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		DeploymentResultType,
+	),
+}
+
+const AuthAccountContractsTypeTryUpdateFunctionDocString = `
+Updates the code for the contract/contract interface in the account,
+and handle any deployment errors gracefully.
+
+The ` + "`code`" + ` parameter is the UTF-8 encoded representation of the source code.
+The code must contain exactly one contract or contract interface,
+which must have the same name as the ` + "`name`" + ` parameter.
+
+Does **not** run the initializer of the contract/contract interface again.
+The contract instance in the world state stays as is.
+
+Fails if no contract/contract interface with the given name exists in the account,
+if the given code does not declare exactly one contract or contract interface,
+or if the given name does not match the name of the contract/contract interface declaration in the code.
+
+Returns the deployment result.
+Result would contain the deployed contract for the updated contract, if the update was successfull.
+Otherwise, the deployed contract would be nil.
+`
+
 const AuthAccountContractsTypeGetFunctionName = "get"
 
 var AuthAccountContractsTypeGetFunctionType = &FunctionType{
@@ -890,6 +930,13 @@ func init() {
 			AuthAccountContractsTypeUpdate__experimentalFunctionName,
 			AuthAccountContractsTypeUpdate__experimentalFunctionType,
 			AuthAccountContractsTypeUpdate__experimentalFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			AuthAccountContractsType,
+			ast.AccessPublic,
+			AuthAccountContractsTypeTryUpdateFunctionName,
+			AuthAccountContractsTypeTryUpdateFunctionType,
+			AuthAccountContractsTypeTryUpdateFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			AuthAccountContractsType,
