@@ -133,7 +133,8 @@ fun testKeyListVerify() {
 
     let isValid = keyList.verify(
         signatureSet: signatureSet,
-        signedData: signedData
+        signedData: signedData,
+        domainSeparationTag: "FLOW-V0.0-user"
     )
 
     Test.assert(isValid)
@@ -185,7 +186,8 @@ fun testKeyListVerifyInsufficientWeights() {
 
     let isValid = keyList.verify(
         signatureSet: signatureSet,
-        signedData: signedData
+        signedData: signedData,
+        domainSeparationTag: "FLOW-V0.0-user"
     )
 
     Test.assert(!isValid)
@@ -221,7 +223,8 @@ fun testKeyListVerifyWithRevokedKey() {
 
     let isValid = keyList.verify(
         signatureSet: signatureSet,
-        signedData: signedData
+        signedData: signedData,
+        domainSeparationTag: "FLOW-V0.0-user"
     )
 
     Test.assert(!isValid)
@@ -255,7 +258,8 @@ fun testKeyListVerifyWithMissingSignature() {
 
     let isValid = keyList.verify(
         signatureSet: signatureSet,
-        signedData: signedData
+        signedData: signedData,
+        domainSeparationTag: "FLOW-V0.0-user"
     )
 
     Test.assert(!isValid)
@@ -294,7 +298,8 @@ fun testKeyListVerifyDuplicateSignature() {
 
     let isValid = keyList.verify(
         signatureSet: signatureSet,
-        signedData: signedData
+        signedData: signedData,
+        domainSeparationTag: "FLOW-V0.0-user"
     )
 
     Test.assert(!isValid)
@@ -328,7 +333,8 @@ fun testKeyListVerifyInvalidSignature() {
 
     let isValid = keyList.verify(
         signatureSet: signatureSet,
-        signedData: signedData
+        signedData: signedData,
+        domainSeparationTag: "FLOW-V0.0-user"
     )
 
     Test.assert(!isValid)

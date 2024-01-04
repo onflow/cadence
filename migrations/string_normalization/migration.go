@@ -25,7 +25,7 @@ import (
 
 type StringNormalizingMigration struct{}
 
-var _ migrations.Migration = StringNormalizingMigration{}
+var _ migrations.ValueMigration = StringNormalizingMigration{}
 
 func NewStringNormalizingMigration() StringNormalizingMigration {
 	return StringNormalizingMigration{}
@@ -36,11 +36,15 @@ func (StringNormalizingMigration) Name() string {
 }
 
 func (StringNormalizingMigration) Migrate(
+	_ interpreter.AddressPath,
 	value interpreter.Value,
-) (newValue interpreter.Value) {
+	_ *interpreter.Interpreter,
+) interpreter.Value {
+
 	switch value := value.(type) {
 	case *interpreter.StringValue:
 		return interpreter.NewUnmeteredStringValue(value.Str)
+
 	case interpreter.CharacterValue:
 		return interpreter.NewUnmeteredCharacterValue(string(value))
 	}
