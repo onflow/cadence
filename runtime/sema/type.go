@@ -1108,6 +1108,7 @@ type SaturatingArithmeticSupport struct {
 type NumericType struct {
 	minInt               *big.Int
 	maxInt               *big.Int
+	byteSize             int
 	memberResolvers      map[string]MemberResolver
 	name                 string
 	tag                  TypeTag
@@ -1136,6 +1137,11 @@ func (t *NumericType) WithTag(tag TypeTag) *NumericType {
 func (t *NumericType) WithIntRange(min *big.Int, max *big.Int) *NumericType {
 	t.minInt = min
 	t.maxInt = max
+	return t
+}
+
+func (t *NumericType) WithByteSize(size int) *NumericType {
+	t.byteSize = size
 	return t
 }
 
@@ -1238,6 +1244,10 @@ func (t *NumericType) MinInt() *big.Int {
 
 func (t *NumericType) MaxInt() *big.Int {
 	return t.maxInt
+}
+
+func (t *NumericType) ByteSize() int {
+	return t.byteSize
 }
 
 func (*NumericType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
@@ -1528,6 +1538,7 @@ var (
 	Int8Type = NewNumericType(Int8TypeName).
 			WithTag(Int8TypeTag).
 			WithIntRange(Int8TypeMinInt, Int8TypeMaxInt).
+			WithByteSize(1).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1541,6 +1552,7 @@ var (
 	Int16Type = NewNumericType(Int16TypeName).
 			WithTag(Int16TypeTag).
 			WithIntRange(Int16TypeMinInt, Int16TypeMaxInt).
+			WithByteSize(2).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1554,6 +1566,7 @@ var (
 	Int32Type = NewNumericType(Int32TypeName).
 			WithTag(Int32TypeTag).
 			WithIntRange(Int32TypeMinInt, Int32TypeMaxInt).
+			WithByteSize(4).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1567,6 +1580,7 @@ var (
 	Int64Type = NewNumericType(Int64TypeName).
 			WithTag(Int64TypeTag).
 			WithIntRange(Int64TypeMinInt, Int64TypeMaxInt).
+			WithByteSize(8).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1580,6 +1594,7 @@ var (
 	Int128Type = NewNumericType(Int128TypeName).
 			WithTag(Int128TypeTag).
 			WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig).
+			WithByteSize(16).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1593,6 +1608,7 @@ var (
 	Int256Type = NewNumericType(Int256TypeName).
 			WithTag(Int256TypeTag).
 			WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig).
+			WithByteSize(32).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1617,6 +1633,7 @@ var (
 	UInt8Type = NewNumericType(UInt8TypeName).
 			WithTag(UInt8TypeTag).
 			WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt).
+			WithByteSize(1).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1630,6 +1647,7 @@ var (
 	UInt16Type = NewNumericType(UInt16TypeName).
 			WithTag(UInt16TypeTag).
 			WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt).
+			WithByteSize(2).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1643,6 +1661,7 @@ var (
 	UInt32Type = NewNumericType(UInt32TypeName).
 			WithTag(UInt32TypeTag).
 			WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt).
+			WithByteSize(4).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1656,6 +1675,7 @@ var (
 	UInt64Type = NewNumericType(UInt64TypeName).
 			WithTag(UInt64TypeTag).
 			WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt).
+			WithByteSize(8).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1669,6 +1689,7 @@ var (
 	UInt128Type = NewNumericType(UInt128TypeName).
 			WithTag(UInt128TypeTag).
 			WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig).
+			WithByteSize(16).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1682,6 +1703,7 @@ var (
 	UInt256Type = NewNumericType(UInt256TypeName).
 			WithTag(UInt256TypeTag).
 			WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig).
+			WithByteSize(32).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1694,6 +1716,7 @@ var (
 	// which does NOT check for overflow and underflow
 	Word8Type = NewNumericType(Word8TypeName).
 			WithTag(Word8TypeTag).
+			WithByteSize(1).
 			WithIntRange(Word8TypeMinInt, Word8TypeMaxInt)
 
 	Word8TypeAnnotation = NewTypeAnnotation(Word8Type)
@@ -1702,6 +1725,7 @@ var (
 	// which does NOT check for overflow and underflow
 	Word16Type = NewNumericType(Word16TypeName).
 			WithTag(Word16TypeTag).
+			WithByteSize(2).
 			WithIntRange(Word16TypeMinInt, Word16TypeMaxInt)
 
 	Word16TypeAnnotation = NewTypeAnnotation(Word16Type)
@@ -1710,6 +1734,7 @@ var (
 	// which does NOT check for overflow and underflow
 	Word32Type = NewNumericType(Word32TypeName).
 			WithTag(Word32TypeTag).
+			WithByteSize(4).
 			WithIntRange(Word32TypeMinInt, Word32TypeMaxInt)
 
 	Word32TypeAnnotation = NewTypeAnnotation(Word32Type)
@@ -1718,6 +1743,7 @@ var (
 	// which does NOT check for overflow and underflow
 	Word64Type = NewNumericType(Word64TypeName).
 			WithTag(Word64TypeTag).
+			WithByteSize(8).
 			WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
 
 	Word64TypeAnnotation = NewTypeAnnotation(Word64Type)
@@ -1726,6 +1752,7 @@ var (
 	// which does NOT check for overflow and underflow
 	Word128Type = NewNumericType(Word128TypeName).
 			WithTag(Word128TypeTag).
+			WithByteSize(16).
 			WithIntRange(Word128TypeMinIntBig, Word128TypeMaxIntBig)
 
 	Word128TypeAnnotation = NewTypeAnnotation(Word128Type)
@@ -1734,6 +1761,7 @@ var (
 	// which does NOT check for overflow and underflow
 	Word256Type = NewNumericType(Word256TypeName).
 			WithTag(Word256TypeTag).
+			WithByteSize(32).
 			WithIntRange(Word256TypeMinIntBig, Word256TypeMaxIntBig)
 
 	Word256TypeAnnotation = NewTypeAnnotation(Word256Type)

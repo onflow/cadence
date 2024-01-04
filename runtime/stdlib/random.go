@@ -206,13 +206,6 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 	)
 }
 
-// map for a quick type to byte-size lookup
-var typeToBytes = map[sema.Type]int{
-	sema.UInt8Type: 1, sema.UInt16Type: 2, sema.UInt32Type: 4, sema.UInt64Type: 8,
-	sema.Word8Type: 1, sema.Word16Type: 2, sema.Word32Type: 4, sema.Word64Type: 8,
-	sema.UInt128Type: 16, sema.UInt256Type: 32, sema.Word128Type: 16, sema.Word256Type: 32,
-}
-
 // cases of a random number of size 8 bytes or less can be all treated
 // by the same function, based on the uint64 type.
 // Although the final output is a `uint64`, it can be safely
@@ -231,7 +224,12 @@ func getUint64RandomNumber(
 
 	// case where no modulo argument was provided
 	if moduloArg == nil {
-		bytes := typeToBytes[ty]
+		numericType, ok := ty.(*sema.NumericType)
+		if !ok {
+			// checker should prevent this
+			panic(errors.NewUnreachableError())
+		}
+		bytes := numericType.ByteSize()
 		getRandomBytes(buffer[bufferSize-bytes:], generator)
 		return binary.BigEndian.Uint64(buffer[:])
 	}
@@ -334,7 +332,12 @@ func getBigRandomNumber(
 	var buffer [bufferSize]byte
 	// case where no modulo argument was provided
 	if moduloArg == nil {
-		bytes := typeToBytes[ty]
+		numericType, ok := ty.(*sema.NumericType)
+		if !ok {
+			// checker should prevent this
+			panic(errors.NewUnreachableError())
+		}
+		bytes := numericType.ByteSize()
 		getRandomBytes(buffer[:bytes], generator)
 		// SetBytes considers big endianness (although little endian could be used too)
 		return new(big.Int).SetBytes(buffer[:bytes])

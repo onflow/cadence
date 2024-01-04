@@ -4529,10 +4529,10 @@ func TestRuntimeRandom(t *testing.T) {
 		}
 	}
 
-	typeToBytes := map[sema.Type]int{
-		sema.UInt8Type: 1, sema.UInt16Type: 2, sema.UInt32Type: 4, sema.UInt64Type: 8,
-		sema.Word8Type: 1, sema.Word16Type: 2, sema.Word32Type: 4, sema.Word64Type: 8,
-		sema.UInt128Type: 16, sema.UInt256Type: 32, sema.Word128Type: 16, sema.Word256Type: 32,
+	typeToBytes := func(t *testing.T, ty sema.Type) int {
+		numericType, ok := ty.(*sema.NumericType)
+		require.True(t, ok)
+		return numericType.ByteSize()
 	}
 
 	// test based on a transaction, all other tests are script-based - test all types
@@ -4571,7 +4571,7 @@ func TestRuntimeRandom(t *testing.T) {
 			)
 			require.NoError(t, err)
 			// prepare the expected value from the random source
-			expected := new(big.Int).SetBytes(randBuffer[:typeToBytes[ty]])
+			expected := new(big.Int).SetBytes(randBuffer[:typeToBytes(t, ty)])
 			assert.Equal(t, expected.String(), loggedMessage)
 		}
 		testAllTypes(t, runValidCaseWithoutModulo)
@@ -4593,7 +4593,7 @@ func TestRuntimeRandom(t *testing.T) {
 			value, err := executeScript(ty, "", readFromBuffer)
 			require.NoError(t, err)
 			// prepare the expected value from the random source
-			expected := new(big.Int).SetBytes(randBuffer[:typeToBytes[ty]])
+			expected := new(big.Int).SetBytes(randBuffer[:typeToBytes(t, ty)])
 			assert.Equal(t, expected.String(), value.String())
 		}
 		testAllTypes(t, runValidCaseWithoutModulo)
@@ -4609,7 +4609,7 @@ func TestRuntimeRandom(t *testing.T) {
 		runValidCaseWithModulo := func(t *testing.T, ty sema.Type) {
 			// build a big Int from the modulo buffer, with the required `ty` size
 			// big.Int are used as they cover all the tested types including the small ones (UInt8 ..)
-			modulo := new(big.Int).SetBytes(moduloBuffer[:typeToBytes[ty]])
+			modulo := new(big.Int).SetBytes(moduloBuffer[:typeToBytes(t, ty)])
 
 			value, err := executeScript(ty, modulo.String(), readCryptoRandom)
 			require.NoError(t, err)
@@ -4629,7 +4629,7 @@ func TestRuntimeRandom(t *testing.T) {
 
 			// set modulo to the max value of the type: (1 << bitSize) - 1
 			// big.Int are used as they cover all the tested types including the small ones (UInt8 ..)
-			bitSize := typeToBytes[ty] << 3
+			bitSize := typeToBytes(t, ty) << 3
 			one := big.NewInt(1)
 			modulo := new(big.Int).Lsh(one, uint(bitSize))
 			modulo.Sub(modulo, one)
