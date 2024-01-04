@@ -4678,8 +4678,10 @@ func TestRuntimeRandom(t *testing.T) {
 	// The test uses the same small values for all types: one is a power of 2
 	// and the other is not.
 	t.Run("basic uniformity with modulo", func(t *testing.T) {
-		// skipped in CI because the test is slow
-		t.Skip()
+		if testing.Short() {
+			// skipped because the test is slow
+			t.Skip()
+		}
 
 		runStatisticsWithModulo := func(modulo int) func(*testing.T, sema.Type) {
 			return func(t *testing.T, ty sema.Type) {
