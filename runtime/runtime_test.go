@@ -1680,10 +1680,10 @@ func TestRuntimeStorageMultipleTransactionsInclusiveRangeFunction(t *testing.T) 
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	inclusiveRangeCreation := []byte(`
-      pub fun createInclusiveRange(): InclusiveRange<Int> {
+      access(all) fun createInclusiveRange(): InclusiveRange<Int> {
         return InclusiveRange(10, 20)
       }
     `)
@@ -1691,17 +1691,17 @@ func TestRuntimeStorageMultipleTransactionsInclusiveRangeFunction(t *testing.T) 
 	script1 := []byte(`
       import "inclusive-range-creation"
       transaction {
-        prepare(signer: AuthAccount) {
+        prepare(signer: auth(Storage) &Account) {
           let ir = createInclusiveRange()
-          signer.save(ir, to: /storage/inclusiveRange)
+          signer.storage.save(ir, to: /storage/inclusiveRange)
         }
       }
     `)
 
-	ledger := newTestLedger(nil, nil)
+	ledger := NewTestLedger(nil, nil)
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("inclusive-range-creation"):
 				return inclusiveRangeCreation, nil
@@ -1709,13 +1709,13 @@ func TestRuntimeStorageMultipleTransactionsInclusiveRangeFunction(t *testing.T) 
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		storage: ledger,
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: ledger,
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -8909,6 +8909,10 @@ func TestRuntimeTypesAndConversions(t *testing.T) {
 	}
 
 	for name, ty := range checker.AllBaseSemaTypes() {
+		// Inclusive range is a dynamically created type.
+		if _, isInclusiveRange := ty.(*sema.InclusiveRangeType); isInclusiveRange {
+			continue
+		}
 		test(name, ty)
 	}
 }

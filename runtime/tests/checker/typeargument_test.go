@@ -68,7 +68,9 @@ func TestCheckTypeArguments(t *testing.T) {
             `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
 		)
@@ -167,7 +169,9 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 		baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
 		options := ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		}
 
@@ -456,10 +460,10 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 		err := test(t,
 			`
 				struct Bar {
-					let f: ((): InclusiveRange<Int>)
+					let f: (fun(): InclusiveRange<Int>)
 
 					init() {
-						self.f = fun () : InclusiveRange<Int> {
+						self.f = fun(): InclusiveRange<Int> {
 							return InclusiveRange(1, 10)
 						}
 					}
@@ -477,10 +481,10 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 		err := test(t,
 			`
 				struct Bar {
-					let f: ((): InclusiveRange)
+					let f: (fun(): InclusiveRange)
 
 					init() {
-						self.f = fun () : InclusiveRange {
+						self.f = fun(): InclusiveRange {
 							return InclusiveRange(1, 10)
 						}
 					}
@@ -623,10 +627,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					init(b : @Bar) {
 						self.bar <- b
 					}
-
-					destroy() {
-						destroy self.bar
-					}
 				}
 			`,
 		)
@@ -653,10 +653,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 					init(b : @Bar) {
 						self.bar <- b
-					}
-
-					destroy() {
-						destroy self.bar
 					}
 				}
 			`,
@@ -741,7 +737,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		err := test(t,
 			`
-				pub fun main(): Type {
+				access(all) fun main(): Type {
 					return Type<InclusiveRange<Word256>>()
 				}
 			`,
@@ -756,7 +752,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		err := test(t,
 			`
-				pub fun main(): Type {
+				access(all) fun main(): Type {
 					return Type<InclusiveRange>()
 				}
 			`,
@@ -800,15 +796,15 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		err := test(t,
 			`
-				pub fun main(): Direction {
+				access(all) fun main(): Direction {
 					return Direction.RIGHT
 				}
 
-				pub enum Direction: Int {
-					pub case UP
-					pub case DOWN
-					pub case LEFT
-					pub case RIGHT
+				access(all) enum Direction: Int {
+					access(all) case UP
+					access(all) case DOWN
+					access(all) case LEFT
+					access(all) case RIGHT
 				}
 			`,
 		)
@@ -826,7 +822,9 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		options := ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseTypeActivation: baseTypeActivation,
+				BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseTypeActivation
+				},
 			},
 		}
 

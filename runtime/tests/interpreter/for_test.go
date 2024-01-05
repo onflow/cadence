@@ -805,10 +805,14 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 			inter, err := parseCheckAndInterpretWithOptions(t, code,
 				ParseCheckAndInterpretOptions{
 					CheckerConfig: &sema.Config{
-						BaseValueActivation: baseValueActivation,
+						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 					Config: &interpreter.Config{
-						BaseActivation: baseActivation,
+						BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+							return baseActivation
+						},
 					},
 				},
 			)
@@ -850,7 +854,9 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 	for _, typ := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch typ {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType,
+			sema.SignedIntegerType,
+			sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 

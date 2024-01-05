@@ -2071,7 +2071,6 @@ func (v Contract) GetFieldValues() []Value {
 	return v.Fields
 }
 
-
 // InclusiveRange
 
 type InclusiveRange struct {

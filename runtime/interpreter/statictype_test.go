@@ -730,7 +730,7 @@ func TestInclusiveRangeStaticType_Equal(t *testing.T) {
 			InclusiveRangeStaticType{
 				ElementType: PrimitiveStaticTypeInt,
 			}.Equal(
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt,
 				},
 			),

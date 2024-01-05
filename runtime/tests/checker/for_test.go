@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -89,7 +90,9 @@ func TestCheckForInclusiveRange(t *testing.T) {
 	for _, typ := range sema.AllIntegerTypes {
 		// Only test leaf integer types
 		switch typ {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType,
+			sema.SignedIntegerType,
+			sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -109,7 +112,9 @@ func TestCheckForInclusiveRange(t *testing.T) {
 		_, err := ParseAndCheckWithOptions(t, code,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
 		)

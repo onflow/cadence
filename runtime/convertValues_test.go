@@ -1515,20 +1515,19 @@ func TestExportInclusiveRangeValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			pub fun main(): InclusiveRange<Int> {
+			access(all) fun main(): InclusiveRange<Int> {
 				return InclusiveRange(10, 20, step: 2)
 			}
 		`
 
-		inclusiveRangeType := cadence.NewInclusiveRangeType(cadence.IntType{})
+		inclusiveRangeType := cadence.NewInclusiveRangeType(cadence.IntType)
 
-		actual := cadence.ValueWithCachedTypeID(exportValueFromScript(t, script))
-		expected := cadence.ValueWithCachedTypeID(
-			cadence.NewInclusiveRange(
-				cadence.NewInt(10),
-				cadence.NewInt(20),
-				cadence.NewInt(2)).WithType(inclusiveRangeType),
-		)
+		actual := exportValueFromScript(t, script)
+		expected := cadence.NewInclusiveRange(
+			cadence.NewInt(10),
+			cadence.NewInt(20),
+			cadence.NewInt(2),
+		).WithType(inclusiveRangeType)
 
 		assert.Equal(t, expected, actual)
 	})
@@ -1538,20 +1537,19 @@ func TestExportInclusiveRangeValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			pub fun main(): InclusiveRange<Int> {
+			access(all) fun main(): InclusiveRange<Int> {
 				return InclusiveRange(10, 20)
 			}
 		`
 
-		inclusiveRangeType := cadence.NewInclusiveRangeType(cadence.IntType{})
+		inclusiveRangeType := cadence.NewInclusiveRangeType(cadence.IntType)
 
-		actual := cadence.ValueWithCachedTypeID(exportValueFromScript(t, script))
-		expected := cadence.ValueWithCachedTypeID(
-			cadence.NewInclusiveRange(
-				cadence.NewInt(10),
-				cadence.NewInt(20),
-				cadence.NewInt(1)).WithType(inclusiveRangeType),
-		)
+		actual := exportValueFromScript(t, script)
+		expected := cadence.NewInclusiveRange(
+			cadence.NewInt(10),
+			cadence.NewInt(20),
+			cadence.NewInt(1),
+		).WithType(inclusiveRangeType)
 
 		assert.Equal(t, expected, actual)
 	})
@@ -1566,7 +1564,7 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 
 		value := cadence.NewInclusiveRange(cadence.NewInt(10), cadence.NewInt(-10), cadence.NewInt(-2))
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		actual, err := ImportValue(
 			inter,
@@ -1600,7 +1598,7 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 
 		value := cadence.NewInclusiveRange(cadence.NewInt(10), cadence.NewInt(-10), cadence.NewInt(-2))
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		actual, err := ImportValue(
 			inter,
@@ -1634,7 +1632,7 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 
 		value := cadence.NewInclusiveRange(cadence.NewInt(10), cadence.NewUInt(100), cadence.NewUInt64(1))
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		_, err := ImportValue(
 			inter,
@@ -1664,7 +1662,7 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 
 		value := cadence.NewInclusiveRange(strValue, strValue, strValue)
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		_, err = ImportValue(
 			inter,
@@ -2762,7 +2760,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 				cadence.NewUInt128(500),
 				cadence.NewUInt128(25),
 			).WithType(&cadence.InclusiveRangeType{
-				ElementType: cadence.UInt128Type{},
+				ElementType: cadence.UInt128Type,
 			}),
 		},
 		{

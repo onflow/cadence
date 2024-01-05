@@ -1027,7 +1027,9 @@ func (t *GenericType) GetMembers() map[string]MemberResolver {
 }
 
 func (t *GenericType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
-	t.TypeParameter.TypeBound.CheckInstantiated(pos, memoryGauge, report)
+	if t.TypeParameter.TypeBound != nil {
+		t.TypeParameter.TypeBound.CheckInstantiated(pos, memoryGauge, report)
+	}
 }
 
 // IntegerRangedType
@@ -3990,15 +3992,13 @@ var AllUnsignedIntegerTypes = common.Concat(
 var AllNonLeafIntegerTypes = []Type{
 	IntegerType,
 	SignedIntegerType,
+	FixedSizeUnsignedIntegerType,
 }
 
 var AllIntegerTypes = common.Concat(
 	AllUnsignedIntegerTypes,
 	AllSignedIntegerTypes,
 	AllNonLeafIntegerTypes,
-	[]Type{
-		FixedSizeUnsignedIntegerType,
-	},
 )
 
 var AllNumberTypes = common.Concat(
@@ -5004,10 +5004,6 @@ func (t *CompositeType) CheckInstantiated(pos ast.HasPosition, memoryGauge commo
 
 	if t.baseType != nil {
 		t.baseType.CheckInstantiated(pos, memoryGauge, report)
-	}
-
-	for _, typ := range t.ImplicitTypeRequirementConformances {
-		typ.CheckInstantiated(pos, memoryGauge, report)
 	}
 
 	for _, typ := range t.ExplicitInterfaceConformances {
@@ -6262,11 +6258,11 @@ func (t *InclusiveRangeType) TypeAnnotationState() TypeAnnotationState {
 	return t.MemberType.TypeAnnotationState()
 }
 
-func (t *InclusiveRangeType) RewriteWithRestrictedTypes() (Type, bool) {
+func (t *InclusiveRangeType) RewriteWithIntersectionTypes() (Type, bool) {
 	if t.MemberType == nil {
 		return t, false
 	}
-	rewrittenMemberType, rewritten := t.MemberType.RewriteWithRestrictedTypes()
+	rewrittenMemberType, rewritten := t.MemberType.RewriteWithIntersectionTypes()
 	if rewritten {
 		return &InclusiveRangeType{
 			MemberType: rewrittenMemberType,
@@ -6463,6 +6459,23 @@ func (t *InclusiveRangeType) Resolve(typeArguments *TypeParameterTypeOrderedMap)
 	return &InclusiveRangeType{
 		MemberType: memberType,
 	}
+}
+
+func (t *InclusiveRangeType) IsPrimitiveType() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) ContainFieldsOrElements() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) Map(
+	gauge common.MemoryGauge,
+	typeParamMap map[*TypeParameter]*TypeParameter,
+	f func(Type) Type,
+) Type {
+	mappedMemberType := t.MemberType.Map(gauge, typeParamMap, f)
+	return f(NewInclusiveRangeType(gauge, mappedMemberType))
 }
 
 // ReferenceType represents the reference to a value
@@ -7794,8 +7807,8 @@ func (t *IntersectionType) IsValidIndexingType(ty Type) bool {
 		attachmentType.IsResourceType() == t.IsResourceType()
 }
 
-func (t *IntersectionType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
-	t.Type.CheckInstantiated(pos, memoryGauge, report)
+func (t *IntersectionType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// No-OP
 }
 
 // CapabilityType
@@ -8508,6 +8521,10 @@ func (t *EntitlementType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
+func (t *EntitlementType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// No-OP
+}
+
 // EntitlementMapType
 
 type EntitlementRelation struct {
@@ -8722,6 +8739,10 @@ func (t *EntitlementMapType) resolveEntitlementMappingInclusions(
 			includedMaps[includedMapType] = struct{}{}
 		}
 	})
+}
+
+func (t *EntitlementMapType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }
 
 var NativeCompositeTypes = map[string]*CompositeType{}

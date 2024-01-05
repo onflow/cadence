@@ -1479,10 +1479,14 @@ func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
 
 	options := ParseCheckAndInterpretOptions{
 		CheckerConfig: &sema.Config{
-			BaseValueActivation: baseValueActivation,
+			BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+				return baseValueActivation
+			},
 		},
 		Config: &interpreter.Config{
-			BaseActivation: baseActivation,
+			BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+				return baseActivation
+			},
 		},
 	}
 

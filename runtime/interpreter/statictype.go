@@ -1166,7 +1166,14 @@ func ConvertStaticToSemaType(
 		), nil
 
 	case InclusiveRangeStaticType:
-		elementType, err := ConvertStaticToSemaType(memoryGauge, t.ElementType, getInterface, getComposite)
+		elementType, err := ConvertStaticToSemaType(
+			memoryGauge,
+			t.ElementType,
+			getInterface,
+			getComposite,
+			getEntitlement,
+			getEntitlementMapType,
+		)
 		if err != nil {
 			return nil, err
 		}

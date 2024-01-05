@@ -296,7 +296,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			pub fun main(arg: InclusiveRange<Int16>) {
+			access(all) fun main(arg: InclusiveRange<Int16>) {
 			}
 		`
 
@@ -313,7 +313,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			pub fun main(arg: AnyStruct) {
+			access(all) fun main(arg: AnyStruct) {
 			}
 		`
 
@@ -334,7 +334,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			pub fun main(arg: InclusiveRange<Integer>) {
+			access(all) fun main(arg: InclusiveRange<Integer>) {
 			}
 		`
 
@@ -355,7 +355,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			pub fun main(arg: InclusiveRange<Int16>) {
+			access(all) fun main(arg: InclusiveRange<Int16>) {
 			}
 		`
 
@@ -373,7 +373,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			pub fun main(arg: InclusiveRange<Integer>) {
+			access(all) fun main(arg: InclusiveRange<Integer>) {
 			}
 		`
 

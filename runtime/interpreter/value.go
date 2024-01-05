@@ -1598,11 +1598,11 @@ func (v *StringValue) ForEach(
 	interpreter *Interpreter,
 	_ sema.Type,
 	function func(value Value) (resume bool),
-	_ LocationRange,
+	locationRange LocationRange,
 ) {
-	iterator := v.Iterator(interpreter)
+	iterator := v.Iterator(interpreter, locationRange)
 	for {
-		value := iterator.Next(interpreter)
+		value := iterator.Next(interpreter, locationRange)
 		if value == nil {
 			return
 		}
@@ -16291,12 +16291,12 @@ func (UFix64Value) Scale() int {
 type FunctionOrderedMap = orderedmap.OrderedMap[string, FunctionValue]
 
 type CompositeValue struct {
-	Location        common.Location
+	Location common.Location
 
 	// note that the staticType is not guaranteed to be a CompositeStaticType as there can be types
 	// which are non-composite but their values are treated as CompositeValue.
 	// For e.g. InclusiveRangeValue
-	staticType      StaticType
+	staticType StaticType
 
 	Stringer        func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
 	injectedFields  map[string]Value
@@ -17996,6 +17996,25 @@ func (v *CompositeValue) Iterator(interpreter *Interpreter, locationRange Locati
 	default:
 		// Must be caught in the checker.
 		panic(errors.NewUnreachableError())
+	}
+}
+
+func (v *CompositeValue) ForEach(
+	interpreter *Interpreter,
+	_ sema.Type,
+	function func(value Value) (resume bool),
+	locationRange LocationRange,
+) {
+	iterator := v.Iterator(interpreter, locationRange)
+	for {
+		value := iterator.Next(interpreter, locationRange)
+		if value == nil {
+			return
+		}
+
+		if !function(value) {
+			return
+		}
 	}
 }
 
@@ -20268,7 +20287,7 @@ func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 
 func (*StorageReferenceValue) isReference() {}
 
-func (v *StorageReferenceValue) Iterator(_ *Interpreter) ValueIterator {
+func (v *StorageReferenceValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 	// Not used for now
 	panic(errors.NewUnreachableError())
 }
@@ -20632,7 +20651,7 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 
 func (*EphemeralReferenceValue) isReference() {}
 
-func (v *EphemeralReferenceValue) Iterator(_ *Interpreter) ValueIterator {
+func (v *EphemeralReferenceValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 	// Not used for now
 	panic(errors.NewUnreachableError())
 }

@@ -663,19 +663,6 @@ func exportCompositeValueAsInclusiveRange(
 	return inclusiveRange.WithType(t), err
 }
 
-func exportPathLinkValue(v interpreter.PathLinkValue, inter *interpreter.Interpreter) (cadence.PathLink, error) {
-	path, err := exportPathValue(inter, v.TargetPath)
-	if err != nil {
-		return cadence.PathLink{}, err
-	}
-	ty := string(inter.MustConvertStaticToSemaType(v.Type).ID())
-	return cadence.NewMeteredPathLink(inter, path, ty), nil
-}
-
-func exportAccountLinkValue(inter *interpreter.Interpreter) cadence.AccountLink {
-	return cadence.NewMeteredAccountLink(inter)
-}
-
 func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) (cadence.Path, error) {
 	return cadence.NewMeteredPath(
 		gauge,

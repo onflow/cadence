@@ -184,7 +184,7 @@ var (
 	EntitlementMapSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindEntitlementMapSemaType)
 	EntitlementRelationSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementRelationSemaType)
 	CapabilitySemaTypeMemoryUsage          = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
-	InclusiveRangeSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindInclusiveRangeSemaType)
+	InclusiveRangeSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindInclusiveRangeSemaType)
 
 	// Storage related memory usages
 
@@ -269,7 +269,7 @@ var (
 	CapabilityStaticTypeStringMemoryUsage            = NewRawStringMemoryUsage(12) // Capability<>
 	IntersectionStaticTypeStringMemoryUsage          = NewRawStringMemoryUsage(2)  // {}
 	IntersectionStaticTypeSeparatorStringMemoryUsage = NewRawStringMemoryUsage(2)  // ,
-	InclusiveRangeStaticTypeStringMemoryUsage = NewRawStringMemoryUsage(16) // InclusiveRange<>
+	InclusiveRangeStaticTypeStringMemoryUsage        = NewRawStringMemoryUsage(16) // InclusiveRange<>
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {
