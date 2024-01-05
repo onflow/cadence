@@ -362,7 +362,8 @@ func TestConvertToEntitledType(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			compareTypesRecursively(t, ConvertToEntitledType(test.Input), test.Output)
+			converedType, _ := ConvertToEntitledType(test.Input)
+			compareTypesRecursively(t, converedType, test.Output)
 		})
 	}
 

@@ -44,12 +44,12 @@ func (EntitlementsMigration) Name() string {
 // * `ConvertToEntitledType(T?) ---> ConvertToEntitledType(T)?
 // * `ConvertToEntitledType(T) ---> T`
 // where Entitlements(I) is defined as the result of T.SupportedEntitlements()
-func ConvertToEntitledType(t sema.Type) sema.Type {
+func ConvertToEntitledType(t sema.Type) (sema.Type, bool) {
 	switch t := t.(type) {
 	case *sema.ReferenceType:
 		switch t.Authorization {
 		case sema.UnauthorizedAccess:
-			innerType := ConvertToEntitledType(t.Type)
+			innerType, convertedInner := ConvertToEntitledType(t.Type)
 			auth := sema.UnauthorizedAccess
 			if entitlementSupportingType, ok := innerType.(sema.EntitlementSupportingType); ok {
 				supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
@@ -60,27 +60,51 @@ func ConvertToEntitledType(t sema.Type) sema.Type {
 					}
 				}
 			}
+			if auth.Equal(sema.UnauthorizedAccess) && !convertedInner {
+				return t, false
+			}
 			return sema.NewReferenceType(
 				nil,
 				auth,
 				innerType,
-			)
+			), true
 		// type is already entitled
 		default:
-			return t
+			return t, false
 		}
 	case *sema.OptionalType:
-		return sema.NewOptionalType(nil, ConvertToEntitledType(t.Type))
+		ty, converted := ConvertToEntitledType(t.Type)
+		if !converted {
+			return t, false
+		}
+		return sema.NewOptionalType(nil, ty), true
 	case *sema.CapabilityType:
-		return sema.NewCapabilityType(nil, ConvertToEntitledType(t.BorrowType))
+		ty, converted := ConvertToEntitledType(t.BorrowType)
+		if !converted {
+			return t, false
+		}
+		return sema.NewCapabilityType(nil, ty), true
 	case *sema.VariableSizedType:
-		return sema.NewVariableSizedType(nil, ConvertToEntitledType(t.Type))
+		ty, converted := ConvertToEntitledType(t.Type)
+		if !converted {
+			return t, false
+		}
+		return sema.NewVariableSizedType(nil, ty), true
 	case *sema.ConstantSizedType:
-		return sema.NewConstantSizedType(nil, ConvertToEntitledType(t.Type), t.Size)
+		ty, converted := ConvertToEntitledType(t.Type)
+		if !converted {
+			return t, false
+		}
+		return sema.NewConstantSizedType(nil, ty, t.Size), true
 	case *sema.DictionaryType:
-		return sema.NewDictionaryType(nil, ConvertToEntitledType(t.KeyType), ConvertToEntitledType(t.ValueType))
+		keyTy, convertedKey := ConvertToEntitledType(t.KeyType)
+		valueTy, convertedValue := ConvertToEntitledType(t.ValueType)
+		if !convertedKey && !convertedValue {
+			return t, false
+		}
+		return sema.NewDictionaryType(nil, keyTy, valueTy), true
 	default:
-		return t
+		return t, false
 	}
 }
 
@@ -149,10 +173,10 @@ func ConvertValueToEntitlements(
 
 	convertLegacyStaticType(staticType)
 	semaType := inter.MustConvertStaticToSemaType(staticType)
-	entitledType := ConvertToEntitledType(semaType)
+	entitledType, converted := ConvertToEntitledType(semaType)
 
 	// if the types of the values are equal and the value is not a runtime type, there's nothing to migrate
-	if entitledType.Equal(semaType) && !entitledType.Equal(sema.MetaType) {
+	if !converted && !entitledType.Equal(sema.MetaType) {
 		return nil
 	}
 
@@ -227,12 +251,15 @@ func ConvertValueToEntitlements(
 		if v.Type == nil {
 			return nil
 		}
+
+		convertedType, _ := ConvertToEntitledType(
+			inter.MustConvertStaticToSemaType(v.Type),
+		)
+
 		// convert the static type of the value
 		entitledStaticType := interpreter.ConvertSemaToStaticType(
 			inter,
-			ConvertToEntitledType(
-				inter.MustConvertStaticToSemaType(v.Type),
-			),
+			convertedType,
 		)
 		return interpreter.NewTypeValue(inter, entitledStaticType)
 	}
