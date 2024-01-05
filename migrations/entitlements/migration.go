@@ -116,6 +116,7 @@ func ConvertValueToEntitlements(
 ) interpreter.Value {
 
 	var staticType interpreter.StaticType
+	// during a real migration these two reference cases will not be hit, but they are here for easier testing
 	// for reference types, we want to use the borrow type, rather than the type of the referenced value
 	switch referenceValue := v.(type) {
 	case *interpreter.EphemeralReferenceValue:
@@ -181,6 +182,7 @@ func ConvertValueToEntitlements(
 	}
 
 	switch v := v.(type) {
+	// during a real migration these two reference cases will not be hit, but they are here for easier testing
 	case *interpreter.EphemeralReferenceValue:
 		entitledReferenceType := entitledType.(*sema.ReferenceType)
 		staticAuthorization := interpreter.ConvertSemaAccessToStaticAuthorization(inter, entitledReferenceType.Authorization)
