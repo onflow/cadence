@@ -24,10 +24,11 @@ var AnyType = &SimpleType{
 	Name:          "Any",
 	QualifiedName: "Any",
 	TypeID:        "Any",
-	tag:           AnyTypeTag,
+	TypeTag:       AnyTypeTag,
 	IsResource:    false,
 	// `Any` is never a valid type in user programs
 	Storable:   true,
+	Primitive:  false,
 	Equatable:  false,
 	Comparable: false,
 	// `Any` is never a valid type in user programs

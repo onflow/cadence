@@ -44,10 +44,11 @@ const (
 	DeclarationKindEvent
 	DeclarationKindField
 	DeclarationKindInitializer
-	DeclarationKindDestructor
 	DeclarationKindStructureInterface
 	DeclarationKindResourceInterface
 	DeclarationKindContractInterface
+	DeclarationKindEntitlement
+	DeclarationKindEntitlementMapping
 	DeclarationKindImport
 	DeclarationKindSelf
 	DeclarationKindBase
@@ -70,6 +71,8 @@ func (k DeclarationKind) IsTypeDeclaration() bool {
 	case DeclarationKindStructure,
 		DeclarationKindResource,
 		DeclarationKindContract,
+		DeclarationKindEntitlement,
+		DeclarationKindEntitlementMapping,
 		DeclarationKindEvent,
 		DeclarationKindStructureInterface,
 		DeclarationKindResourceInterface,
@@ -113,8 +116,6 @@ func (k DeclarationKind) Name() string {
 		return "field"
 	case DeclarationKindInitializer:
 		return "initializer"
-	case DeclarationKindDestructor:
-		return "destructor"
 	case DeclarationKindAttachment:
 		return "attachment"
 	case DeclarationKindStructureInterface:
@@ -123,6 +124,10 @@ func (k DeclarationKind) Name() string {
 		return "resource interface"
 	case DeclarationKindContractInterface:
 		return "contract interface"
+	case DeclarationKindEntitlement:
+		return "entitlement"
+	case DeclarationKindEntitlementMapping:
+		return "entitlement mapping"
 	case DeclarationKindImport:
 		return "import"
 	case DeclarationKindSelf:
@@ -168,8 +173,6 @@ func (k DeclarationKind) Keywords() string {
 		return "event"
 	case DeclarationKindInitializer:
 		return "init"
-	case DeclarationKindDestructor:
-		return "destroy"
 	case DeclarationKindAttachment:
 		return "attachment"
 	case DeclarationKindStructureInterface:
@@ -178,6 +181,10 @@ func (k DeclarationKind) Keywords() string {
 		return "resource interface"
 	case DeclarationKindContractInterface:
 		return "contract interface"
+	case DeclarationKindEntitlement:
+		return "entitlement"
+	case DeclarationKindEntitlementMapping:
+		return "entitlement mapping"
 	case DeclarationKindImport:
 		return "import"
 	case DeclarationKindSelf:
@@ -197,6 +204,16 @@ func (k DeclarationKind) Keywords() string {
 	default:
 		return ""
 	}
+}
+
+func (k DeclarationKind) IsInterfaceDeclaration() bool {
+	switch k {
+	case DeclarationKindContractInterface,
+		DeclarationKindStructureInterface,
+		DeclarationKindResourceInterface:
+		return true
+	}
+	return false
 }
 
 func (k DeclarationKind) MarshalJSON() ([]byte, error) {

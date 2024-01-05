@@ -36,20 +36,19 @@ The message argument is optional.
 `
 
 var assertFunctionType = &sema.FunctionType{
+	Purity: sema.FunctionPurityView,
 	Parameters: []sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "condition",
-			TypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
+			TypeAnnotation: sema.BoolTypeAnnotation,
 		},
 		{
 			Identifier:     "message",
-			TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
+	ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 	// `message` parameter is optional
 	Arity: &sema.Arity{Min: 1, Max: 2},
 }

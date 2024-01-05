@@ -1,0 +1,1 @@
+access(all) resource Test {}

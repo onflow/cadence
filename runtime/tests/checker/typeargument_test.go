@@ -105,7 +105,8 @@ func TestCheckTypeArguments(t *testing.T) {
             `,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 		)
@@ -114,7 +115,8 @@ func TestCheckTypeArguments(t *testing.T) {
 		assert.Equal(t,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 			RequireGlobalValue(t, checker.Elaboration, "cap"),
@@ -965,7 +967,8 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
             `,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 		)
@@ -978,7 +981,8 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 		)
 		require.Equal(t,
 			&sema.ReferenceType{
-				Type: sema.IntType,
+				Type:          sema.IntType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 			capType.(*sema.CapabilityType).BorrowType,
 		)
@@ -1004,7 +1008,8 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
             `,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 		)
@@ -1013,7 +1018,8 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 		assert.Equal(t,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 			RequireGlobalValue(t, checker.Elaboration, "cap"),
@@ -1022,7 +1028,8 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 		assert.Equal(t,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 			RequireGlobalValue(t, checker.Elaboration, "cap2"),
@@ -1033,12 +1040,33 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseAndCheckWithTestValue(t,
+		checker, err := parseAndCheckWithTestValue(t,
 			`
               let cap: Capability = test
               let cap2: Capability<&Int> = cap
             `,
 			&sema.CapabilityType{},
+		)
+		require.NotNil(t, checker)
+
+		capType := RequireGlobalValue(t, checker.Elaboration, "cap")
+		require.IsType(t,
+			&sema.CapabilityType{},
+			capType,
+		)
+		require.Nil(t, capType.(*sema.CapabilityType).BorrowType)
+
+		cap2Type := RequireGlobalValue(t, checker.Elaboration, "cap2")
+		require.IsType(t,
+			&sema.CapabilityType{},
+			cap2Type,
+		)
+		require.Equal(t,
+			&sema.ReferenceType{
+				Type:          sema.IntType,
+				Authorization: sema.UnauthorizedAccess,
+			},
+			cap2Type.(*sema.CapabilityType).BorrowType,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -1049,16 +1077,38 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseAndCheckWithTestValue(t,
+		checker, err := parseAndCheckWithTestValue(t,
 			`
               let cap: Capability<&String> = test
               let cap2: Capability<&Int> = cap
             `,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.StringType,
+					Type:          sema.StringType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
+		)
+		require.NotNil(t, checker)
+
+		assert.Equal(t,
+			&sema.CapabilityType{
+				BorrowType: &sema.ReferenceType{
+					Type:          sema.StringType,
+					Authorization: sema.UnauthorizedAccess,
+				},
+			},
+			RequireGlobalValue(t, checker.Elaboration, "cap"),
+		)
+
+		assert.Equal(t,
+			&sema.CapabilityType{
+				BorrowType: &sema.ReferenceType{
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
+				},
+			},
+			RequireGlobalValue(t, checker.Elaboration, "cap2"),
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)

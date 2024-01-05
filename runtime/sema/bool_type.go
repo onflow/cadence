@@ -23,11 +23,14 @@ var BoolType = &SimpleType{
 	Name:          "Bool",
 	QualifiedName: "Bool",
 	TypeID:        "Bool",
-	tag:           BoolTypeTag,
+	TypeTag:       BoolTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    true,
 	Exportable:    true,
 	Importable:    true,
 }
+
+var BoolTypeAnnotation = NewTypeAnnotation(BoolType)

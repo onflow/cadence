@@ -74,6 +74,19 @@ func (position Position) Compare(other Position) int {
 	}
 }
 
+func EarlierPosition(p1, p2 *Position) *Position {
+	if p1 == nil {
+		return p2
+	}
+	if p2 == nil {
+		return p1
+	}
+	if p1.Compare(*p2) < 0 {
+		return p1
+	}
+	return p2
+}
+
 func EndPosition(memoryGauge common.MemoryGauge, startPosition Position, end int) Position {
 	length := end - startPosition.Offset
 	return startPosition.Shifted(memoryGauge, length)
@@ -94,6 +107,11 @@ func EarliestPosition(p Position, ps ...*Position) (earliest Position) {
 type HasPosition interface {
 	StartPosition() Position
 	EndPosition(memoryGauge common.MemoryGauge) Position
+}
+
+func RangeContains(memoryGauge common.MemoryGauge, a, b HasPosition) bool {
+	return a.StartPosition().Compare(b.StartPosition()) <= 0 &&
+		a.EndPosition(memoryGauge).Compare(b.EndPosition(memoryGauge)) >= 0
 }
 
 // Range

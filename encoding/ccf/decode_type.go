@@ -43,7 +43,7 @@ type decodeTypeFn func(types *cadenceTypeByCCFTypeID) (cadence.Type, error)
 //	/ constsized-array-type
 //	/ dict-type
 //	/ reference-type
-//	/ restricted-type
+//	/ intersection-type
 //	/ capability-type
 //	/ inclusiverange-type
 //	/ type-ref
@@ -78,8 +78,8 @@ func (d *Decoder) decodeInlineType(types *cadenceTypeByCCFTypeID) (cadence.Type,
 	case CBORTagReferenceType:
 		return d.decodeReferenceType(types, d.decodeInlineType)
 
-	case CBORTagRestrictedType:
-		return d.decodeRestrictedType(types, d.decodeNullableInlineType, d.decodeInlineType)
+	case CBORTagIntersectionType:
+		return d.decodeIntersectionType(types, d.decodeInlineType)
 
 	case CBORTagCapabilityType:
 		return d.decodeCapabilityType(types, d.decodeNullableInlineType)
@@ -113,175 +113,12 @@ func (d *Decoder) decodeSimpleTypeID() (cadence.Type, error) {
 		return nil, err
 	}
 
-	switch simpleTypeID {
-	case TypeBool:
-		return cadence.TheBoolType, nil
-
-	case TypeString:
-		return cadence.TheStringType, nil
-
-	case TypeCharacter:
-		return cadence.TheCharacterType, nil
-
-	case TypeAddress:
-		return cadence.TheAddressType, nil
-
-	case TypeInt:
-		return cadence.TheIntType, nil
-
-	case TypeInt8:
-		return cadence.TheInt8Type, nil
-
-	case TypeInt16:
-		return cadence.TheInt16Type, nil
-
-	case TypeInt32:
-		return cadence.TheInt32Type, nil
-
-	case TypeInt64:
-		return cadence.TheInt64Type, nil
-
-	case TypeInt128:
-		return cadence.TheInt128Type, nil
-
-	case TypeInt256:
-		return cadence.TheInt256Type, nil
-
-	case TypeUInt:
-		return cadence.TheUIntType, nil
-
-	case TypeUInt8:
-		return cadence.TheUInt8Type, nil
-
-	case TypeUInt16:
-		return cadence.TheUInt16Type, nil
-
-	case TypeUInt32:
-		return cadence.TheUInt32Type, nil
-
-	case TypeUInt64:
-		return cadence.TheUInt64Type, nil
-
-	case TypeUInt128:
-		return cadence.TheUInt128Type, nil
-
-	case TypeUInt256:
-		return cadence.TheUInt256Type, nil
-
-	case TypeWord8:
-		return cadence.TheWord8Type, nil
-
-	case TypeWord16:
-		return cadence.TheWord16Type, nil
-
-	case TypeWord32:
-		return cadence.TheWord32Type, nil
-
-	case TypeWord64:
-		return cadence.TheWord64Type, nil
-
-	case TypeWord128:
-		return cadence.TheWord128Type, nil
-
-	case TypeWord256:
-		return cadence.TheWord256Type, nil
-
-	case TypeFix64:
-		return cadence.TheFix64Type, nil
-
-	case TypeUFix64:
-		return cadence.TheUFix64Type, nil
-
-	case TypePath:
-		return cadence.ThePathType, nil
-
-	case TypeCapabilityPath:
-		return cadence.TheCapabilityPathType, nil
-
-	case TypeStoragePath:
-		return cadence.TheStoragePathType, nil
-
-	case TypePublicPath:
-		return cadence.ThePublicPathType, nil
-
-	case TypePrivatePath:
-		return cadence.ThePrivatePathType, nil
-
-	case TypeAuthAccount:
-		return cadence.TheAuthAccountType, nil
-
-	case TypePublicAccount:
-		return cadence.ThePublicAccountType, nil
-
-	case TypeAuthAccountKeys:
-		return cadence.TheAuthAccountKeysType, nil
-
-	case TypePublicAccountKeys:
-		return cadence.ThePublicAccountKeysType, nil
-
-	case TypeAuthAccountContracts:
-		return cadence.TheAuthAccountContractsType, nil
-
-	case TypePublicAccountContracts:
-		return cadence.ThePublicAccountContractsType, nil
-
-	case TypeDeployedContract:
-		return cadence.TheDeployedContractType, nil
-
-	case TypeAccountKey:
-		return cadence.TheAccountKeyType, nil
-
-	case TypeBlock:
-		return cadence.TheBlockType, nil
-
-	case TypeAny:
-		return cadence.TheAnyType, nil
-
-	case TypeAnyStruct:
-		return cadence.TheAnyStructType, nil
-
-	case TypeAnyResource:
-		return cadence.TheAnyResourceType, nil
-
-	case TypeMetaType:
-		return cadence.TheMetaType, nil
-
-	case TypeNever:
-		return cadence.TheNeverType, nil
-
-	case TypeNumber:
-		return cadence.TheNumberType, nil
-
-	case TypeSignedNumber:
-		return cadence.TheSignedNumberType, nil
-
-	case TypeInteger:
-		return cadence.TheIntegerType, nil
-
-	case TypeSignedInteger:
-		return cadence.TheSignedIntegerType, nil
-
-	case TypeFixedPoint:
-		return cadence.TheFixedPointType, nil
-
-	case TypeSignedFixedPoint:
-		return cadence.TheSignedFixedPointType, nil
-
-	case TypeBytes:
-		return cadence.TheBytesType, nil
-
-	case TypeVoid:
-		return cadence.TheVoidType, nil
-
-	case TypeAnyStructAttachmentType:
-		return cadence.TheAnyStructAttachmentType, nil
-
-	case TypeAnyResourceAttachmentType:
-		return cadence.TheAnyResourceAttachmentType, nil
-
-	default:
+	ty := typeBySimpleTypeID(SimpleType(simpleTypeID))
+	if ty == nil {
 		return nil, fmt.Errorf("unsupported encoded simple type ID %d", simpleTypeID)
 	}
+
+	return ty, nil
 }
 
 // decodeOptionalType decodes optional-type or optional-type-value as
@@ -510,6 +347,11 @@ func (d *Decoder) decodeCapabilityType(
 	return cadence.NewMeteredCapabilityType(d.gauge, borrowType), nil
 }
 
+func (d *Decoder) decodeAuthorization() (cadence.Authorization, error) {
+	err := d.dec.DecodeNil()
+	return cadence.UnauthorizedAccess, err
+}
+
 // decodeReferenceType decodes reference-type or reference-type-value as
 // language=CDDL
 // reference-type =
@@ -539,8 +381,8 @@ func (d *Decoder) decodeReferenceType(
 		return nil, err
 	}
 
-	// element 0: authorized
-	authorized, err := d.dec.DecodeBool()
+	// element 0: authorization
+	authorization, err := d.decodeAuthorization()
 	if err != nil {
 		return nil, err
 	}
@@ -555,95 +397,88 @@ func (d *Decoder) decodeReferenceType(
 		return nil, errors.New("unexpected nil type as reference type")
 	}
 
-	return cadence.NewMeteredReferenceType(d.gauge, authorized, elementType), nil
+	return cadence.NewMeteredReferenceType(d.gauge, authorization, elementType), nil
 }
 
-// decodeRestrictedType decodes restricted-type or restricted-type-value as
+// decodeIntersectionType decodes intersection-type or intersection-type-value as
 // language=CDDL
-// restricted-type =
+// intersection-type =
 //
-//	; cbor-tag-restricted-type
+//	; cbor-tag-intersection-type
 //	#6.143([
 //	  type: inline-type / nil,
-//	  restrictions: [* inline-type]
+//	  types: [* inline-type]
 //	])
 //
-// restricted-type-value =
+// intersection-type-value =
 //
-//	; cbor-tag-restricted-type-value
+//	; cbor-tag-intersection-type-value
 //	#6.191([
 //	  type: type-value / nil,
-//	  restrictions: [* type-value]
+//	  types: [* type-value]
 //	])
 //
 // NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
-func (d *Decoder) decodeRestrictedType(
+func (d *Decoder) decodeIntersectionType(
 	types *cadenceTypeByCCFTypeID,
-	decodeTypeFn decodeTypeFn,
-	decodeRestrictionTypeFn decodeTypeFn,
+	decodeIntersectionTypeFn decodeTypeFn,
 ) (cadence.Type, error) {
-	// Decode array of length 2.
-	err := decodeCBORArrayWithKnownSize(d.dec, 2)
+	// types
+	typeCount, err := d.dec.DecodeArrayHead()
 	if err != nil {
 		return nil, err
 	}
-
-	// element 0: type
-	typ, err := decodeTypeFn(types)
-	if err != nil {
-		return nil, err
+	if typeCount == 0 {
+		return nil, errors.New("unexpected empty intersection type")
 	}
 
-	// element 1: restrictions
-	restrictionCount, err := d.dec.DecodeArrayHead()
-	if err != nil {
-		return nil, err
-	}
+	intersectionTypeIDs := make(map[string]struct{}, typeCount)
+	var previousIntersectionTypeID string
 
-	restrictionTypeIDs := make(map[string]struct{}, restrictionCount)
-	var previousRestrictedTypeID string
-
-	restrictions := make([]cadence.Type, restrictionCount)
-	for i := 0; i < int(restrictionCount); i++ {
-		// Decode restriction.
-		restrictedType, err := decodeRestrictionTypeFn(types)
+	intersectionTypes := make([]cadence.Type, typeCount)
+	for i := 0; i < int(typeCount); i++ {
+		// Decode type.
+		intersectedType, err := decodeIntersectionTypeFn(types)
 		if err != nil {
 			return nil, err
 		}
 
-		if restrictedType == nil {
-			return nil, errors.New("unexpected nil type as restriction type")
+		if intersectedType == nil {
+			return nil, errors.New("unexpected nil type as intersection type")
 		}
 
-		restrictedTypeID := restrictedType.ID()
+		intersectionTypeID := intersectedType.ID()
 
 		// "Valid CCF Encoding Requirements" in CCF specs:
 		//
-		//   "Elements MUST be unique in restricted-type or restricted-type-value."
-		if _, ok := restrictionTypeIDs[restrictedTypeID]; ok {
-			return nil, fmt.Errorf("found duplicate restricted type %s", restrictedTypeID)
+		//   "Elements MUST be unique in intersection-type or intersection-type-value."
+		if _, ok := intersectionTypeIDs[intersectionTypeID]; ok {
+			return nil, fmt.Errorf("found duplicate intersection type %s", intersectionTypeID)
 		}
 
 		if d.dm.enforceSortRestrictedTypes == EnforceSortBytewiseLexical {
 			// "Deterministic CCF Encoding Requirements" in CCF specs:
 			//
-			//   "restricted-type.restrictions MUST be sorted by restriction's cadence-type-id"
-			//   "restricted-type-value.restrictions MUST be sorted by restriction's cadence-type-id."
-			if !stringsAreSortedBytewise(previousRestrictedTypeID, restrictedTypeID) {
-				return nil, fmt.Errorf("restricted types are not sorted (%s, %s)", previousRestrictedTypeID, restrictedTypeID)
+			//   "intersection-type.types MUST be sorted by intersection's cadence-type-id"
+			//   "intersection-type-value.types MUST be sorted by intersection's cadence-type-id."
+			if !stringsAreSortedBytewise(previousIntersectionTypeID, intersectionTypeID) {
+				return nil, fmt.Errorf("restricted types are not sorted (%s, %s)", previousIntersectionTypeID, intersectionTypeID)
 			}
 		}
 
-		restrictionTypeIDs[restrictedTypeID] = struct{}{}
-		previousRestrictedTypeID = restrictedTypeID
+		intersectionTypeIDs[intersectionTypeID] = struct{}{}
+		previousIntersectionTypeID = intersectionTypeID
 
-		restrictions[i] = restrictedType
+		intersectionTypes[i] = intersectedType
 	}
 
-	return cadence.NewMeteredRestrictedType(
+	if len(intersectionTypes) == 0 {
+		return nil, errors.New("unexpected empty intersection type")
+	}
+
+	return cadence.NewMeteredIntersectionType(
 		d.gauge,
-		typ,
-		restrictions,
+		intersectionTypes,
 	), nil
 }
 

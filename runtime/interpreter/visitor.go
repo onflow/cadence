@@ -53,14 +53,10 @@ type Visitor interface {
 	VisitNilValue(interpreter *Interpreter, value NilValue)
 	VisitSomeValue(interpreter *Interpreter, value *SomeValue) bool
 	VisitStorageReferenceValue(interpreter *Interpreter, value *StorageReferenceValue)
-	VisitAccountReferenceValue(interpreter *Interpreter, value *AccountReferenceValue)
 	VisitEphemeralReferenceValue(interpreter *Interpreter, value *EphemeralReferenceValue)
 	VisitAddressValue(interpreter *Interpreter, value AddressValue)
 	VisitPathValue(interpreter *Interpreter, value PathValue)
-	VisitPathCapabilityValue(interpreter *Interpreter, value *PathCapabilityValue)
-	VisitIDCapabilityValue(interpreter *Interpreter, value *IDCapabilityValue)
-	VisitPathLinkValue(interpreter *Interpreter, value PathLinkValue)
-	VisitAccountLinkValue(interpreter *Interpreter, value AccountLinkValue)
+	VisitCapabilityValue(interpreter *Interpreter, value *CapabilityValue)
 	VisitPublishedValue(interpreter *Interpreter, value *PublishedValue)
 	VisitInterpretedFunctionValue(interpreter *Interpreter, value *InterpretedFunctionValue)
 	VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue)
@@ -104,14 +100,10 @@ type EmptyVisitor struct {
 	NilValueVisitor                         func(interpreter *Interpreter, value NilValue)
 	SomeValueVisitor                        func(interpreter *Interpreter, value *SomeValue) bool
 	StorageReferenceValueVisitor            func(interpreter *Interpreter, value *StorageReferenceValue)
-	AccountReferenceValueVisitor            func(interpreter *Interpreter, value *AccountReferenceValue)
 	EphemeralReferenceValueVisitor          func(interpreter *Interpreter, value *EphemeralReferenceValue)
 	AddressValueVisitor                     func(interpreter *Interpreter, value AddressValue)
 	PathValueVisitor                        func(interpreter *Interpreter, value PathValue)
-	PathCapabilityValueVisitor              func(interpreter *Interpreter, value *PathCapabilityValue)
-	IDCapabilityValueVisitor                func(interpreter *Interpreter, value *IDCapabilityValue)
-	PathLinkValueVisitor                    func(interpreter *Interpreter, value PathLinkValue)
-	AccountLinkValueVisitor                 func(interpreter *Interpreter, value AccountLinkValue)
+	CapabilityValueVisitor                  func(interpreter *Interpreter, value *CapabilityValue)
 	PublishedValueVisitor                   func(interpreter *Interpreter, value *PublishedValue)
 	InterpretedFunctionValueVisitor         func(interpreter *Interpreter, value *InterpretedFunctionValue)
 	HostFunctionValueVisitor                func(interpreter *Interpreter, value *HostFunctionValue)
@@ -360,13 +352,6 @@ func (v EmptyVisitor) VisitStorageReferenceValue(interpreter *Interpreter, value
 	v.StorageReferenceValueVisitor(interpreter, value)
 }
 
-func (v EmptyVisitor) VisitAccountReferenceValue(interpreter *Interpreter, value *AccountReferenceValue) {
-	if v.AccountReferenceValueVisitor == nil {
-		return
-	}
-	v.AccountReferenceValueVisitor(interpreter, value)
-}
-
 func (v EmptyVisitor) VisitEphemeralReferenceValue(interpreter *Interpreter, value *EphemeralReferenceValue) {
 	if v.EphemeralReferenceValueVisitor == nil {
 		return
@@ -388,32 +373,11 @@ func (v EmptyVisitor) VisitPathValue(interpreter *Interpreter, value PathValue) 
 	v.PathValueVisitor(interpreter, value)
 }
 
-func (v EmptyVisitor) VisitPathCapabilityValue(interpreter *Interpreter, value *PathCapabilityValue) {
-	if v.PathCapabilityValueVisitor == nil {
+func (v EmptyVisitor) VisitCapabilityValue(interpreter *Interpreter, value *CapabilityValue) {
+	if v.CapabilityValueVisitor == nil {
 		return
 	}
-	v.PathCapabilityValueVisitor(interpreter, value)
-}
-
-func (v EmptyVisitor) VisitIDCapabilityValue(interpreter *Interpreter, value *IDCapabilityValue) {
-	if v.IDCapabilityValueVisitor == nil {
-		return
-	}
-	v.IDCapabilityValueVisitor(interpreter, value)
-}
-
-func (v EmptyVisitor) VisitPathLinkValue(interpreter *Interpreter, value PathLinkValue) {
-	if v.PathLinkValueVisitor == nil {
-		return
-	}
-	v.PathLinkValueVisitor(interpreter, value)
-}
-
-func (v EmptyVisitor) VisitAccountLinkValue(interpreter *Interpreter, value AccountLinkValue) {
-	if v.AccountLinkValueVisitor == nil {
-		return
-	}
-	v.AccountLinkValueVisitor(interpreter, value)
+	v.CapabilityValueVisitor(interpreter, value)
 }
 
 func (v EmptyVisitor) VisitPublishedValue(interpreter *Interpreter, value *PublishedValue) {

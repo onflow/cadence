@@ -80,7 +80,7 @@ func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, 
 				nestedTypes := compositeType.NestedTypes
 				pair := nestedTypes.Oldest()
 				// all top-level type declarations in a contract must be public
-				// no need to filter here for public visiblity
+				// no need to filter here for public visibility
 				yieldNext := func() Value {
 					if pair == nil {
 						return nil

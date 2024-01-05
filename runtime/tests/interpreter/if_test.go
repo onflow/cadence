@@ -37,7 +37,7 @@ func TestInterpretIfStatement(t *testing.T) {
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
-           pub fun testTrue(): Int {
+           access(all) fun testTrue(): Int {
                if true {
                    return 2
                } else {
@@ -46,7 +46,7 @@ func TestInterpretIfStatement(t *testing.T) {
                return 4
            }
 
-           pub fun testFalse(): Int {
+           access(all) fun testFalse(): Int {
                if false {
                    return 2
                } else {
@@ -55,14 +55,14 @@ func TestInterpretIfStatement(t *testing.T) {
                return 4
            }
 
-           pub fun testNoElse(): Int {
+           access(all) fun testNoElse(): Int {
                if true {
                    return 2
                }
                return 3
            }
 
-           pub fun testElseIf(): Int {
+           access(all) fun testElseIf(): Int {
                if false {
                    return 2
                } else if true {
@@ -71,7 +71,7 @@ func TestInterpretIfStatement(t *testing.T) {
                return 4
            }
            
-           pub fun testElseIfElse(): Int {
+           access(all) fun testElseIfElse(): Int {
                if false {
                    return 2
                } else if false {

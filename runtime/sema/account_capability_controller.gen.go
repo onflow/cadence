@@ -39,6 +39,25 @@ For example, it could be used to describe the purpose of the capability.
 Empty by default.
 `
 
+const AccountCapabilityControllerTypeSetTagFunctionName = "setTag"
+
+var AccountCapabilityControllerTypeSetTagFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "tag",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const AccountCapabilityControllerTypeSetTagFunctionDocString = `
+Updates this controller's tag to the provided string
+`
+
 const AccountCapabilityControllerTypeBorrowTypeFieldName = "borrowType"
 
 var AccountCapabilityControllerTypeBorrowTypeFieldType = MetaType
@@ -83,13 +102,15 @@ var AccountCapabilityControllerType = &SimpleType{
 	Name:          AccountCapabilityControllerTypeName,
 	QualifiedName: AccountCapabilityControllerTypeName,
 	TypeID:        AccountCapabilityControllerTypeName,
-	tag:           AccountCapabilityControllerTypeTag,
+	TypeTag:       AccountCapabilityControllerTypeTag,
 	IsResource:    false,
 	Storable:      false,
+	Primitive:     false,
 	Equatable:     false,
 	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
+	ContainFields: true,
 }
 
 func init() {
@@ -97,7 +118,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				AccountCapabilityControllerTypeCapabilityFieldName,
 				AccountCapabilityControllerTypeCapabilityFieldType,
@@ -105,15 +126,22 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublicSettable,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindVariable,
 				AccountCapabilityControllerTypeTagFieldName,
 				AccountCapabilityControllerTypeTagFieldType,
 				AccountCapabilityControllerTypeTagFieldDocString,
 			),
+			NewUnmeteredFunctionMember(
+				t,
+				PrimitiveAccess(ast.AccessAll),
+				AccountCapabilityControllerTypeSetTagFunctionName,
+				AccountCapabilityControllerTypeSetTagFunctionType,
+				AccountCapabilityControllerTypeSetTagFunctionDocString,
+			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				AccountCapabilityControllerTypeBorrowTypeFieldName,
 				AccountCapabilityControllerTypeBorrowTypeFieldType,
@@ -121,7 +149,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				AccountCapabilityControllerTypeCapabilityIDFieldName,
 				AccountCapabilityControllerTypeCapabilityIDFieldType,
@@ -129,7 +157,7 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				AccountCapabilityControllerTypeDeleteFunctionName,
 				AccountCapabilityControllerTypeDeleteFunctionType,
 				AccountCapabilityControllerTypeDeleteFunctionDocString,

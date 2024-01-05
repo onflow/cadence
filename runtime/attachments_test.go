@@ -16,47 +16,45 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func newTestInterpreterRuntimeWithAttachments() testInterpreterRuntime {
-	rt := newTestInterpreterRuntime()
-	rt.interpreterRuntime.defaultConfig.AttachmentsEnabled = true
-	return rt
-}
-
-func TestAccountAttachmentSaveAndLoad(t *testing.T) {
+func TestRuntimeAccountAttachmentSaveAndLoad(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 
 	var logs []string
 	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub resource R {
-				pub fun foo(): Int {
+		access(all) contract Test {
+			access(all) resource R {
+				access(all) fun foo(): Int {
 					return 3
 				}
 			}
-			pub attachment A for R {
-				pub fun foo(): Int {
+			access(all) attachment A for R {
+				access(all) fun foo(): Int {
 					return base.foo()
 				}
 			}
-			pub fun makeRWithA(): @R {
+			access(all) fun makeRWithA(): @R {
 				return <- attach A() to <-create R()
 			}
 		}
@@ -65,9 +63,9 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	transaction1 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Storage) &Account) {
 				let r <- Test.makeRWithA()
-				signer.save(<-r, to: /storage/foo)
+				signer.storage.save(<-r, to: /storage/foo)
 			}
 		}
 	 `)
@@ -75,8 +73,8 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	transaction2 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
-				let r <- signer.load<@Test.R>(from: /storage/foo)!
+			prepare(signer: auth(Storage) &Account) {
+				let r <- signer.storage.load<@Test.R>(from: /storage/foo)!
 				let i = r[Test.A]!.foo()
 				destroy r
 				log(i)
@@ -84,30 +82,30 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 		}
 	 `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -145,22 +143,21 @@ func TestAccountAttachmentSaveAndLoad(t *testing.T) {
 	require.Equal(t, []string{"3"}, logs)
 }
 
-func TestAccountAttachmentExport(t *testing.T) {
-
+func TestRuntimeAccountAttachmentExportFailure(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 
-	var logs []string
-	var events []string
+	logs := make([]string, 0)
+	events := make([]string, 0)
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub resource R {}
-			pub attachment A for R {}
-			pub fun makeRWithA(): @R {
+		access(all) contract Test {
+			access(all) resource R {}
+			access(all) attachment A for R {}
+			access(all) fun makeRWithA(): @R {
 				return <- attach A() to <-create R()
 			}
 		}
@@ -168,43 +165,132 @@ func TestAccountAttachmentExport(t *testing.T) {
 
 	script := []byte(`
 		import Test from 0x1
-		pub fun main(): &Test.A? { 
+		access(all) fun main(): &Test.A? {
 			let r <- Test.makeRWithA()
+			var a = r[Test.A]
 
-			let acc = getAuthAccount(0x1)
-			acc.save(<-r, to: /storage/r)
-			var rRef = acc.borrow<&Test.R>(from: /storage/r)!
+			// Life span of attachments (references) are validated statically.
+			// This indirection helps to trick the checker and causes to perform the validation at runtime,
+			// which is the intention of this test.
+			a = returnSameRef(a)
 
-			let a = rRef[Test.A]
+			destroy r
 			return a
+		}
+
+		access(all) fun returnSameRef(_ ref: &Test.A?): &Test.A? {
+		    return ref
 		}
 	 `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	nextScriptLocation := newScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface1,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.Error(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+}
+
+func TestRuntimeAccountAttachmentExport(t *testing.T) {
+
+	t.Parallel()
+
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
+
+	var logs []string
+	var events []string
+	accountCodes := map[Location][]byte{}
+
+	deployTx := DeploymentTransaction("Test", []byte(`
+		access(all) contract Test {
+			access(all) resource R {}
+			access(all) attachment A for R {}
+			access(all) fun makeRWithA(): @R {
+				return <- attach A() to <-create R()
+			}
+		}
+	`))
+
+	script := []byte(`
+		import Test from 0x1
+		access(all) fun main(): &Test.A? {
+			let r <- Test.makeRWithA()
+			let authAccount = getAuthAccount<auth(Storage) &Account>(0x1)
+			authAccount.storage.save(<-r, to: /storage/foo)
+			let ref = authAccount.storage.borrow<&Test.R>(from: /storage/foo)!
+			let a = ref[Test.A]
+			return a
+		}
+	 `)
+
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
+			logs = append(logs, message)
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event.String())
+			return nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -227,28 +313,27 @@ func TestAccountAttachmentExport(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-
 	require.IsType(t, cadence.Optional{}, v)
 	require.IsType(t, cadence.Attachment{}, v.(cadence.Optional).Value)
 	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Optional).Value.String())
 }
 
-func TestAccountAttachedExport(t *testing.T) {
+func TestRuntimeAccountAttachedExport(t *testing.T) {
 
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 
 	var logs []string
 	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub resource R {}
-			pub attachment A for R {}
-			pub fun makeRWithA(): @R {
+		access(all) contract Test {
+			access(all) resource R {}
+			access(all) attachment A for R {}
+			access(all) fun makeRWithA(): @R {
 				return <- attach A() to <-create R()
 			}
 		}
@@ -256,36 +341,36 @@ func TestAccountAttachedExport(t *testing.T) {
 
 	script := []byte(`
 		import Test from 0x1
-		pub fun main(): @Test.R { 
+		access(all) fun main(): @Test.R {
 			return <-Test.makeRWithA()
 		}
 	 `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	nextScriptLocation := newScriptLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -315,32 +400,32 @@ func TestAccountAttachedExport(t *testing.T) {
 	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Resource).Fields[1].String())
 }
 
-func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
+func TestRuntimeAccountAttachmentSaveAndBorrow(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 
 	var logs []string
 	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub resource interface I {
-				pub fun foo(): Int
+		access(all) contract Test {
+			access(all) resource interface I {
+				access(all) fun foo(): Int
 			}
-			pub resource R: I {
-				pub fun foo(): Int {
+			access(all) resource R: I {
+				access(all) fun foo(): Int {
 					return 3
 				}
 			}
-			pub attachment A for I {
-				pub fun foo(): Int {
+			access(all) attachment A for I {
+				access(all) fun foo(): Int {
 					return base.foo()
 				}
 			}
-			pub fun makeRWithA(): @R {
+			access(all) fun makeRWithA(): @R {
 				return <- attach A() to <-create R()
 			}
 		}
@@ -349,9 +434,9 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	transaction1 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Storage) &Account) {
 				let r <- Test.makeRWithA()
-				signer.save(<-r, to: /storage/foo)
+				signer.storage.save(<-r, to: /storage/foo)
 			}
 		}
 	 `)
@@ -359,8 +444,8 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	transaction2 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
-				let r = signer.borrow<&{Test.I}>(from: /storage/foo)!
+			prepare(signer: auth(Storage) &Account) {
+				let r = signer.storage.borrow<&{Test.I}>(from: /storage/foo)!
 				let a: &Test.A = r[Test.A]!
 				let i = a.foo()
 				log(i)
@@ -368,30 +453,30 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 		}
 	 `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -429,32 +514,32 @@ func TestAccountAttachmentSaveAndBorrow(t *testing.T) {
 	require.Equal(t, []string{"3"}, logs)
 }
 
-func TestAccountAttachmentCapability(t *testing.T) {
+func TestRuntimeAccountAttachmentCapability(t *testing.T) {
 	t.Parallel()
 
-	storage := newTestLedger(nil, nil)
-	rt := newTestInterpreterRuntimeWithAttachments()
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntimeWithAttachments()
 
 	var logs []string
 	var events []string
 	accountCodes := map[Location][]byte{}
 
 	deployTx := DeploymentTransaction("Test", []byte(`
-		pub contract Test {
-			pub resource interface I {
-				pub fun foo(): Int
+		access(all) contract Test {
+			access(all) resource interface I {
+				access(all) fun foo(): Int
 			}
-			pub resource R: I {
-				pub fun foo(): Int {
+			access(all) resource R: I {
+				access(all) fun foo(): Int {
 					return 3
 				}
 			}
-			pub attachment A for I {
-				pub fun foo(): Int {
+			access(all) attachment A for I {
+				access(all) fun foo(): Int {
 					return base.foo()
 				}
 			}
-			pub fun makeRWithA(): @R {
+			access(all) fun makeRWithA(): @R {
 				return <- attach A() to <-create R()
 			}
 		}
@@ -463,10 +548,10 @@ func TestAccountAttachmentCapability(t *testing.T) {
 	transaction1 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Storage, Capabilities, Inbox) &Account) {
 				let r <- Test.makeRWithA()
-				signer.save(<-r, to: /storage/foo)
-				let cap = signer.link<&{Test.I}>(/public/foo, target: /storage/foo)!
+				signer.storage.save(<-r, to: /storage/foo)
+				let cap = signer.capabilities.storage.issue<&{Test.I}>(/storage/foo)!
 				signer.inbox.publish(cap, name: "foo", recipient: 0x2)
 			}
 		}
@@ -475,7 +560,7 @@ func TestAccountAttachmentCapability(t *testing.T) {
 	transaction2 := []byte(`
 		import Test from 0x1
 		transaction {
-			prepare(signer: AuthAccount) {
+			prepare(signer: auth(Inbox) &Account) {
 				let cap = signer.inbox.claim<&{Test.I}>("foo", provider: 0x1)!
 				let ref = cap.borrow()!
 				let i = ref[Test.A]!.foo()
@@ -484,53 +569,53 @@ func TestAccountAttachmentCapability(t *testing.T) {
 		}
 	 `)
 
-	runtimeInterface1 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 1}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	runtimeInterface2 := &testRuntimeInterface{
-		storage: storage,
-		log: func(message string) {
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event.String())
 			return nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getSigningAccounts: func() ([]Address, error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{[8]byte{0, 0, 0, 0, 0, 0, 0, 2}}, nil
 		},
-		updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
@@ -566,4 +651,220 @@ func TestAccountAttachmentCapability(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, []string{"3"}, logs)
+}
+
+func TestRuntimeAttachmentStorage(t *testing.T) {
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
+		runtime := NewTestInterpreterRuntimeWithAttachments()
+
+		accountCodes := map[common.Location][]byte{}
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				code = accountCodes[location]
+				return code, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+		}
+		return runtime, runtimeInterface
+	}
+
+	t.Run("save and load", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+          access(all)
+          resource R {}
+
+          access(all)
+          attachment A for R {
+
+              access(all)
+              fun foo(): Int { return 3 }
+          }
+
+          access(all)
+          fun main(): Int {
+              let authAccount = getAuthAccount<auth(Storage) &Account>(0x1)
+
+              let r <- create R()
+              let r2 <- attach A() to <-r
+              authAccount.storage.save(<-r2, to: /storage/foo)
+              let r3 <- authAccount.storage.load<@R>(from: /storage/foo)!
+              let i = r3[A]?.foo()!
+              destroy r3
+              return i
+          }
+        `
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, cadence.NewInt(3), result)
+	})
+
+	t.Run("save and borrow", func(t *testing.T) {
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+		  access(all)
+	      resource R {}
+
+		  access(all)
+	      attachment A for R {
+
+	          access(all)
+	          fun foo(): Int { return 3 }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let authAccount = getAuthAccount<auth(Storage) &Account>(0x1)
+
+	          let r <- create R()
+	          let r2 <- attach A() to <-r
+	          authAccount.storage.save(<-r2, to: /storage/foo)
+	          let r3 = authAccount.storage.borrow<&R>(from: /storage/foo)!
+	          return r3[A]?.foo()!
+	      }
+	    `
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, cadence.NewInt(3), result)
+	})
+
+	t.Run("capability", func(t *testing.T) {
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+		  access(all)
+	      resource R {}
+
+		  access(all)
+	      attachment A for R {
+
+	          access(all)
+	          fun foo(): Int { return 3 }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let authAccount = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
+              let pubAccount = getAccount(0x1)
+
+	          let r <- create R()
+	          let r2 <- attach A() to <-r
+	          authAccount.storage.save(<-r2, to: /storage/foo)
+	          let cap = authAccount.capabilities.storage
+                  .issue<&R>(/storage/foo)
+              authAccount.capabilities.publish(cap, at: /public/foo)
+
+	          let ref = pubAccount.capabilities.borrow<&R>(/public/foo)!
+	          return ref[A]?.foo()!
+	      }
+	    `
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, cadence.NewInt(3), result)
+	})
+
+	t.Run("capability interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		const script = `
+	      access(all)
+	      resource R: I {}
+
+	      access(all)
+	      resource interface I {}
+
+	      access(all)
+	      attachment A for I {
+
+	          access(all)
+	          fun foo(): Int { return 3 }
+	      }
+
+	      access(all)
+          fun main(): Int {
+              let authAccount = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
+              let pubAccount = getAccount(0x1)
+
+	          let r <- create R()
+	          let r2 <- attach A() to <-r
+	          authAccount.storage.save(<-r2, to: /storage/foo)
+	          let cap = authAccount.capabilities.storage
+                    .issue<&{I}>(/storage/foo)
+              authAccount.capabilities.publish(cap, at: /public/foo)
+
+	          let ref = pubAccount.capabilities.borrow<&{I}>(/public/foo)!
+	          return ref[A]?.foo()!
+	      }
+	    `
+
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, cadence.NewInt(3), result)
+	})
 }

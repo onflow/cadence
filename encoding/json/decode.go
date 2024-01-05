@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -111,35 +112,37 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 }
 
 const (
-	typeKey           = "type"
-	kindKey           = "kind"
-	valueKey          = "value"
-	keyKey            = "key"
-	nameKey           = "name"
-	fieldsKey         = "fields"
-	initializersKey   = "initializers"
-	idKey             = "id"
-	targetPathKey     = "targetPath"
-	borrowTypeKey     = "borrowType"
-	domainKey         = "domain"
-	identifierKey     = "identifier"
-	staticTypeKey     = "staticType"
-	addressKey        = "address"
-	pathKey           = "path"
-	authorizedKey     = "authorized"
-	sizeKey           = "size"
-	typeIDKey         = "typeID"
-	restrictionsKey   = "restrictions"
-	labelKey          = "label"
-	parametersKey     = "parameters"
-	typeParametersKey = "typeParameters"
-	returnKey         = "return"
-	typeBoundKey      = "typeBound"
-	functionTypeKey   = "functionType"
-	elementKey        = "element"
-	startKey          = "start"
-	endKey            = "end"
-	stepKey           = "step"
+	typeKey              = "type"
+	kindKey              = "kind"
+	valueKey             = "value"
+	keyKey               = "key"
+	nameKey              = "name"
+	fieldsKey            = "fields"
+	initializersKey      = "initializers"
+	idKey                = "id"
+	targetPathKey        = "targetPath"
+	borrowTypeKey        = "borrowType"
+	domainKey            = "domain"
+	identifierKey        = "identifier"
+	staticTypeKey        = "staticType"
+	addressKey           = "address"
+	pathKey              = "path"
+	authorizationKey     = "authorization"
+	entitlementsKey      = "entitlements"
+	sizeKey              = "size"
+	typeIDKey            = "typeID"
+	intersectionTypesKey = "types"
+	labelKey             = "label"
+	parametersKey        = "parameters"
+	typeParametersKey    = "typeParameters"
+	returnKey            = "return"
+	typeBoundKey         = "typeBound"
+	purityKey            = "purity"
+	functionTypeKey      = "functionType"
+	elementKey           = "element"
+	startKey             = "start"
+	endKey               = "end"
+	stepKey              = "step"
 )
 
 func (d *Decoder) decodeJSON(v any) cadence.Value {
@@ -1002,20 +1005,62 @@ func (d *Decoder) decodeFieldType(valueJSON any, results typeDecodingResults) ca
 	)
 }
 
-func (d *Decoder) decodeFunctionType(typeParametersValue, parametersValue, returnValue any, results typeDecodingResults) cadence.Type {
+func (d *Decoder) decodePurity(purity any) cadence.FunctionPurity {
+	functionPurity := toString(purity)
+	if functionPurity == "view" {
+		return cadence.FunctionPurityView
+	}
+	return cadence.FunctionPurityUnspecified
+}
+
+func (d *Decoder) decodeFunctionType(typeParametersValue, parametersValue, returnValue any, purity any, results typeDecodingResults) cadence.Type {
 	var typeParameters []cadence.TypeParameter
 	if typeParametersValue != nil {
 		typeParameters = d.decodeTypeParameters(toSlice(typeParametersValue), results)
 	}
 	parameters := d.decodeParameters(toSlice(parametersValue), results)
 	returnType := d.decodeType(returnValue, results)
+	functionPurity := d.decodePurity(purity)
 
 	return cadence.NewMeteredFunctionType(
 		d.gauge,
+		functionPurity,
 		typeParameters,
 		parameters,
 		returnType,
 	)
+}
+
+func (d *Decoder) decodeAuthorization(authorizationJSON any) cadence.Authorization {
+	obj := toObject(authorizationJSON)
+	kind := obj.Get(kindKey)
+
+	switch kind {
+	case "Unauthorized":
+		return cadence.UnauthorizedAccess
+	case "EntitlementMapAuthorization":
+		entitlements := toSlice(obj.Get(entitlementsKey))
+		m := toString(toObject(entitlements[0]).Get("typeID"))
+		return cadence.NewEntitlementMapAuthorization(d.gauge, common.TypeID(m))
+	case "EntitlementConjunctionSet":
+		var typeIDs []common.TypeID
+		entitlements := toSlice(obj.Get(entitlementsKey))
+		for _, entitlement := range entitlements {
+			id := toString(toObject(entitlement).Get("typeID"))
+			typeIDs = append(typeIDs, common.TypeID(id))
+		}
+		return cadence.NewEntitlementSetAuthorization(d.gauge, typeIDs, cadence.Conjunction)
+	case "EntitlementDisjunctionSet":
+		var typeIDs []common.TypeID
+		entitlements := toSlice(obj.Get(entitlementsKey))
+		for _, entitlement := range entitlements {
+			id := toString(toObject(entitlement).Get("typeID"))
+			typeIDs = append(typeIDs, common.TypeID(id))
+		}
+		return cadence.NewEntitlementSetAuthorization(d.gauge, typeIDs, cadence.Disjunction)
+	}
+
+	panic(errors.NewDefaultUserError("invalid kind in authorization: %s", kind))
 }
 
 func (d *Decoder) decodeNominalType(
@@ -1135,26 +1180,57 @@ func (d *Decoder) decodeNominalType(
 	return result
 }
 
-func (d *Decoder) decodeRestrictedType(
-	typeValue any,
-	restrictionsValue []any,
+func (d *Decoder) decodeIntersectionType(
+	intersectionValue []any,
 	results typeDecodingResults,
 ) cadence.Type {
-	typ := d.decodeType(typeValue, results)
-
-	restrictions := make([]cadence.Type, 0, len(restrictionsValue))
-	for _, restriction := range restrictionsValue {
-		restrictions = append(restrictions, d.decodeType(restriction, results))
+	types := make([]cadence.Type, 0, len(intersectionValue))
+	for _, typ := range intersectionValue {
+		types = append(types, d.decodeType(typ, results))
 	}
 
-	return cadence.NewMeteredRestrictedType(
+	return cadence.NewMeteredIntersectionType(
 		d.gauge,
-		typ,
-		restrictions,
+		types,
 	)
 }
 
 type typeDecodingResults map[string]cadence.Type
+
+var simpleTypes = func() map[string]cadence.Type {
+	typeMap := make(map[string]cadence.Type, interpreter.PrimitiveStaticType_Count)
+
+	// Bytes is not a primitive static type
+	typeMap["Bytes"] = cadence.TheBytesType
+
+	for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
+		if !ty.IsDefined() {
+			continue
+		}
+
+		cadenceType := cadence.PrimitiveType(ty)
+		if !canEncodeAsSimpleType(cadenceType) {
+			continue
+		}
+
+		semaType := ty.SemaType()
+
+		// Some primitive static types are deprecated,
+		// and only exist for migration purposes,
+		// so do not have an equivalent sema type
+		if semaType == nil {
+			continue
+		}
+
+		typeMap[string(semaType.ID())] = cadenceType
+	}
+
+	return typeMap
+}()
+
+func canEncodeAsSimpleType(primitiveType cadence.PrimitiveType) bool {
+	return primitiveType != cadence.PrimitiveType(interpreter.PrimitiveStaticTypeCapability)
+}
 
 func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence.Type {
 	if valueJSON == "" {
@@ -1181,13 +1257,15 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		typeParametersValue := obj[typeParametersKey]
 		parametersValue := obj.Get(parametersKey)
 		returnValue := obj.Get(returnKey)
-		return d.decodeFunctionType(typeParametersValue, parametersValue, returnValue, results)
-	case "Restriction":
-		restrictionsValue := obj.Get(restrictionsKey)
-		typeValue := obj.Get(typeKey)
-		return d.decodeRestrictedType(
-			typeValue,
-			toSlice(restrictionsValue),
+		purity, hasPurity := obj[purityKey]
+		if !hasPurity {
+			purity = "impure"
+		}
+		return d.decodeFunctionType(typeParametersValue, parametersValue, returnValue, purity, results)
+	case "Intersection":
+		intersectionValue := obj.Get(intersectionTypesKey)
+		return d.decodeIntersectionType(
+			toSlice(intersectionValue),
 			results,
 		)
 	case "Optional":
@@ -1224,123 +1302,17 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.decodeType(obj.Get(typeKey), results),
 		)
 	case "Reference":
-		auth := toBool(obj.Get(authorizedKey))
 		return cadence.NewMeteredReferenceType(
 			d.gauge,
-			auth,
+			d.decodeAuthorization(obj.Get(authorizationKey)),
 			d.decodeType(obj.Get(typeKey), results),
 		)
-	case "Any":
-		return cadence.TheAnyType
-	case "AnyStruct":
-		return cadence.TheAnyStructType
-	case "AnyStructAttachment":
-		return cadence.TheAnyStructAttachmentType
-	case "AnyResource":
-		return cadence.TheAnyResourceType
-	case "AnyResourceAttachment":
-		return cadence.TheAnyResourceAttachmentType
-	case "Type":
-		return cadence.TheMetaType
-	case "Void":
-		return cadence.TheVoidType
-	case "Never":
-		return cadence.TheNeverType
-	case "Bool":
-		return cadence.TheBoolType
-	case "String":
-		return cadence.TheStringType
-	case "Character":
-		return cadence.TheCharacterType
-	case "Bytes":
-		return cadence.TheBytesType
-	case "Address":
-		return cadence.TheAddressType
-	case "Number":
-		return cadence.TheNumberType
-	case "SignedNumber":
-		return cadence.TheSignedNumberType
-	case "Integer":
-		return cadence.TheIntegerType
-	case "SignedInteger":
-		return cadence.TheSignedIntegerType
-	case "FixedPoint":
-		return cadence.TheFixedPointType
-	case "SignedFixedPoint":
-		return cadence.TheSignedFixedPointType
-	case "Int":
-		return cadence.TheIntType
-	case "Int8":
-		return cadence.TheInt8Type
-	case "Int16":
-		return cadence.TheInt16Type
-	case "Int32":
-		return cadence.TheInt32Type
-	case "Int64":
-		return cadence.TheInt64Type
-	case "Int128":
-		return cadence.TheInt128Type
-	case "Int256":
-		return cadence.TheInt256Type
-	case "UInt":
-		return cadence.TheUIntType
-	case "UInt8":
-		return cadence.TheUInt8Type
-	case "UInt16":
-		return cadence.TheUInt16Type
-	case "UInt32":
-		return cadence.TheUInt32Type
-	case "UInt64":
-		return cadence.TheUInt64Type
-	case "UInt128":
-		return cadence.TheUInt128Type
-	case "UInt256":
-		return cadence.TheUInt256Type
-	case "Word8":
-		return cadence.TheWord8Type
-	case "Word16":
-		return cadence.TheWord16Type
-	case "Word32":
-		return cadence.TheWord32Type
-	case "Word64":
-		return cadence.TheWord64Type
-	case "Word128":
-		return cadence.TheWord128Type
-	case "Word256":
-		return cadence.TheWord256Type
-	case "Fix64":
-		return cadence.TheFix64Type
-	case "UFix64":
-		return cadence.TheUFix64Type
-	case "Path":
-		return cadence.ThePathType
-	case "CapabilityPath":
-		return cadence.TheCapabilityPathType
-	case "StoragePath":
-		return cadence.TheStoragePathType
-	case "PublicPath":
-		return cadence.ThePublicPathType
-	case "PrivatePath":
-		return cadence.ThePrivatePathType
-	case "AuthAccount":
-		return cadence.TheAuthAccountType
-	case "PublicAccount":
-		return cadence.ThePublicAccountType
-	case "AuthAccount.Keys":
-		return cadence.TheAuthAccountKeysType
-	case "PublicAccount.Keys":
-		return cadence.ThePublicAccountKeysType
-	case "AuthAccount.Contracts":
-		return cadence.TheAuthAccountContractsType
-	case "PublicAccount.Contracts":
-		return cadence.ThePublicAccountContractsType
-	case "DeployedContract":
-		return cadence.TheDeployedContractType
-	case "AccountKey":
-		return cadence.TheAccountKeyType
-	case "Block":
-		return cadence.TheBlockType
 	default:
+		simpleType, ok := simpleTypes[kindValue]
+		if ok {
+			return simpleType
+		}
+
 		fieldsValue := obj.Get(fieldsKey)
 		typeIDValue := toString(obj.Get(typeIDKey))
 		initValue := obj.Get(initializersKey)
@@ -1367,26 +1339,12 @@ func (d *Decoder) decodeTypeValue(valueJSON any) cadence.TypeValue {
 func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 	obj := toObject(valueJSON)
 
-	if id, ok := obj[idKey]; ok {
-		return cadence.NewMeteredIDCapability(
-			d.gauge,
-			d.decodeUInt64(id),
-			d.decodeAddress(obj.Get(addressKey)),
-			d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
-		)
-	} else {
-		path, ok := d.decodeJSON(obj.Get(pathKey)).(cadence.Path)
-		if !ok {
-			panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
-		}
-
-		return cadence.NewMeteredPathCapability(
-			d.gauge,
-			d.decodeAddress(obj.Get(addressKey)),
-			path,
-			d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
-		)
-	}
+	return cadence.NewMeteredCapability(
+		d.gauge,
+		d.decodeUInt64(obj.Get(idKey)),
+		d.decodeAddress(obj.Get(addressKey)),
+		d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
+	)
 }
 
 // JSON types

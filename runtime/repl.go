@@ -49,10 +49,15 @@ type REPL struct {
 
 func NewREPL() (*REPL, error) {
 
+	// Prepare checkers
+
 	checkers := map[Location]*sema.Checker{}
 	codes := map[Location][]byte{}
 
-	checkerConfig := cmd.DefaultCheckerConfig(checkers, codes)
+	standardLibraryHandler := &cmd.StandardLibraryHandler{}
+	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(standardLibraryHandler)
+
+	checkerConfig := cmd.DefaultCheckerConfig(checkers, codes, standardLibraryValues)
 	checkerConfig.AccessCheckMode = sema.AccessCheckModeNotSpecifiedUnrestricted
 
 	checker, err := sema.NewChecker(
@@ -65,14 +70,16 @@ func NewREPL() (*REPL, error) {
 		return nil, err
 	}
 
+	// Prepare interpreter
+
 	var uuid uint64
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
-	// necessary now due to log being looked up in the
-	// interpreter's activations instead of the checker
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, stdlib.NewLogFunction(cmd.StandardOutputLogger{}))
+	for _, value := range standardLibraryValues {
+		interpreter.Declare(baseActivation, value)
+	}
 
 	interpreterConfig := &interpreter.Config{
 		Storage: storage,
@@ -80,7 +87,10 @@ func NewREPL() (*REPL, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
 		},
-		BaseActivation: baseActivation,
+		BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+			return baseActivation
+		},
+		OnEventEmitted: standardLibraryHandler.NewOnEventEmittedHandler(),
 	}
 
 	inter, err := interpreter.NewInterpreter(
@@ -332,6 +342,13 @@ func (r *REPL) Suggestions() (result []REPLSuggestion) {
 			return
 		}
 		names[name] = variable.Type.String()
+	})
+
+	_ = r.checker.Config.BaseValueActivationHandler(nil).ForEach(func(name string, variable *sema.Variable) error {
+		if names[name] == "" {
+			names[name] = variable.Type.String()
+		}
+		return nil
 	})
 
 	// Iterating over the dictionary of names is safe,

@@ -64,6 +64,14 @@ func (m *Members) Interfaces() []*InterfaceDeclaration {
 	return m.indices.Interfaces(m.declarations)
 }
 
+func (m *Members) Entitlements() []*EntitlementDeclaration {
+	return m.indices.Entitlements(m.declarations)
+}
+
+func (m *Members) EntitlementMaps() []*EntitlementMappingDeclaration {
+	return m.indices.EntitlementMappings(m.declarations)
+}
+
 func (m *Members) Composites() []*CompositeDeclaration {
 	return m.indices.Composites(m.declarations)
 }
@@ -92,25 +100,20 @@ func (m *Members) AttachmentsByIdentifier() map[string]*AttachmentDeclaration {
 	return m.indices.AttachmentsByIdentifier(m.declarations)
 }
 
+func (m *Members) EntitlementsByIdentifier() map[string]*EntitlementDeclaration {
+	return m.indices.EntitlementsByIdentifier(m.declarations)
+}
+
+func (m *Members) EntitlementMappingsByIdentifier() map[string]*EntitlementMappingDeclaration {
+	return m.indices.EntitlementMappingsByIdentifier(m.declarations)
+}
+
 func (m *Members) InterfacesByIdentifier() map[string]*InterfaceDeclaration {
 	return m.indices.InterfacesByIdentifier(m.declarations)
 }
 
 func (m *Members) Initializers() []*SpecialFunctionDeclaration {
 	return m.indices.Initializers(m.declarations)
-}
-
-func (m *Members) Destructors() []*SpecialFunctionDeclaration {
-	return m.indices.Destructors(m.declarations)
-}
-
-// Destructor returns the first destructor, if any
-func (m *Members) Destructor() *SpecialFunctionDeclaration {
-	destructors := m.Destructors()
-	if len(destructors) == 0 {
-		return nil
-	}
-	return destructors[0]
 }
 
 func (m *Members) FieldPosition(name string, compositeKind common.CompositeKind) Position {
@@ -140,11 +143,7 @@ var membersStartDoc prettier.Doc = prettier.Text("{")
 var membersEndDoc prettier.Doc = prettier.Text("}")
 var membersEmptyDoc prettier.Doc = prettier.Text("{}")
 
-func (m *Members) Doc() prettier.Doc {
-	if len(m.declarations) == 0 {
-		return membersEmptyDoc
-	}
-
+func (m *Members) docWithNoBraces() prettier.Concat {
 	var docs []prettier.Doc
 
 	for _, decl := range m.declarations {
@@ -158,7 +157,6 @@ func (m *Members) Doc() prettier.Doc {
 	}
 
 	return prettier.Concat{
-		membersStartDoc,
 		prettier.Indent{
 			Doc: prettier.Join(
 				prettier.HardLine{},
@@ -166,6 +164,16 @@ func (m *Members) Doc() prettier.Doc {
 			),
 		},
 		prettier.HardLine{},
-		membersEndDoc,
 	}
+}
+
+func (m *Members) Doc() prettier.Doc {
+	if len(m.declarations) == 0 {
+		return membersEmptyDoc
+	}
+
+	membersDoc := m.docWithNoBraces()
+	membersDoc = append(prettier.Concat{membersStartDoc}, membersDoc...)
+	membersDoc = append(membersDoc, membersEndDoc)
+	return membersDoc
 }

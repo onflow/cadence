@@ -36,6 +36,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type memberAccountAccessFlags []string
@@ -235,6 +236,9 @@ func runPath(
 
 	location := common.NewStringLocation(nil, path)
 
+	// standard library handler is only needed for execution, but we're only checking
+	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(nil)
+
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -245,7 +249,14 @@ func runPath(
 
 		program, must = cmd.PrepareProgram(code, location, codes)
 
-		checker, _ = cmd.PrepareChecker(program, location, codes, memberAccountAccess, must)
+		checker, _ = cmd.PrepareChecker(
+			program,
+			location,
+			codes,
+			memberAccountAccess,
+			standardLibraryValues,
+			must,
+		)
 
 		err = checker.Check()
 		if err != nil {
@@ -266,7 +277,15 @@ func runPath(
 	if bench && err == nil {
 		benchRes := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				checker, must = cmd.PrepareChecker(program, location, codes, memberAccountAccess, must)
+
+				checker, must = cmd.PrepareChecker(
+					program,
+					location,
+					codes,
+					memberAccountAccess,
+					standardLibraryValues,
+					must,
+				)
 				must(checker.Check())
 				if err != nil {
 					panic(err)

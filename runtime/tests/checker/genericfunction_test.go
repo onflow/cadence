@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -44,13 +45,15 @@ func parseAndCheckWithTestValue(t *testing.T, code string, ty sema.Type) (*sema.
 		code,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
 	)
 }
 
-func TestCheckGenericFunction(t *testing.T) {
+func TestCheckGenericFunctionInvocation(t *testing.T) {
 
 	t.Parallel()
 
@@ -66,7 +69,7 @@ func TestCheckGenericFunction(t *testing.T) {
 					variant,
 				),
 				&sema.FunctionType{
-					ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+					ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 				},
 			)
 
@@ -88,7 +91,7 @@ func TestCheckGenericFunction(t *testing.T) {
               let res = test<X>()
             `,
 			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -114,7 +117,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -140,7 +143,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -189,7 +192,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -238,7 +241,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -276,7 +279,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -314,7 +317,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -358,7 +361,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -416,7 +419,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -578,7 +581,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -616,7 +619,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -653,7 +656,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 			},
 		)
 
@@ -877,7 +880,7 @@ func TestCheckGenericFunctionIsInvalid(t *testing.T) {
 				),
 			},
 		},
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.VoidType),
+		ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 	}
 
 	assert.False(t, genericFunctionType.IsInvalidType())
@@ -896,7 +899,7 @@ func TestCheckBorrowOfCapabilityWithoutTypeArgument(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckUnparameterizedTypeInstantiationE(t *testing.T) {
+func TestCheckInvalidUnparameterizedTypeInstantiation(t *testing.T) {
 
 	t.Parallel()
 
@@ -909,4 +912,211 @@ func TestCheckUnparameterizedTypeInstantiationE(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.UnparameterizedTypeInstantiationError{}, errs[0])
+}
+
+func TestCheckGenericFunctionDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("global, non-native", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+              fun head<T>(_ items: [T]): T? { return nil }
+
+              let x: Int? = head([1, 2, 3])
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					AllowNativeDeclarations: false,
+				},
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: false,
+					TypeParametersEnabled: true,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidTypeParameterizedNonNativeFunctionError{}, errs[0])
+	})
+
+	t.Run("global, native", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+              native fun head<T>(_ items: [T]): T? {}
+
+              let x: Int? = head([1, 2, 3])
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+					TypeParametersEnabled: true,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("composite function, non-native", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+	          struct S {
+	              fun head<T>(_ items: [T]): T? { return nil }
+	          }
+
+	          let x: Int? = S().head([1, 2, 3])
+	        `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					AllowNativeDeclarations: false,
+				},
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: false,
+					TypeParametersEnabled: true,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidTypeParameterizedNonNativeFunctionError{}, errs[0])
+	})
+
+	t.Run("composite function, non-native", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t, `
+	          struct S {
+	              native fun head<T>(_ items: [T]): T? {}
+	          }
+
+	          let x: Int? = S().head([1, 2, 3])
+	        `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+					TypeParametersEnabled: true,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("too many type arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+	          native fun test<T>() {}
+
+	          let x = test<Int, Bool>()
+	        `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+					TypeParametersEnabled: true,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidTypeArgumentCountError{}, errs[0])
+	})
+
+	t.Run("too few type arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+	          native fun test<T, U>() {}
+
+	          let x = test<Int>()
+	        `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+					TypeParametersEnabled: true,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+	})
+
+	t.Run("type parameter usage in following type parameter", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+	          native fun test<T, U: T>(_ u: U): U {}
+	        `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+					TypeParametersEnabled: true,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
+	t.Run("type bound is checked", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+	          native fun test<T: @AnyResource>() {}
+
+	          let x = test<Int>()
+	        `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+					TypeParametersEnabled: true,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }

@@ -1,5 +1,5 @@
 struct Test {
-    pub(set) var foo: Int
+    access(all) var foo: Int
 
     init(foo: Int) {
         self.foo = foo

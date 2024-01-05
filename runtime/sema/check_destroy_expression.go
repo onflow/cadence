@@ -27,6 +27,7 @@ func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression
 
 	valueType := checker.VisitExpression(expression.Expression, nil)
 
+	checker.ObserveImpureOperation(expression)
 	checker.recordResourceInvalidation(
 		expression.Expression,
 		valueType,

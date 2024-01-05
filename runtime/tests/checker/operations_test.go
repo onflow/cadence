@@ -619,6 +619,7 @@ func TestCheckNumericSuperTypeBinaryOperations(t *testing.T) {
 		sema.SignedNumberType,
 		sema.IntegerType,
 		sema.SignedIntegerType,
+		sema.FixedSizeUnsignedIntegerType,
 		sema.FixedPointType,
 		sema.SignedFixedPointType,
 	}

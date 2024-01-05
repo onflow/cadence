@@ -408,3 +408,129 @@ func TestCheckStringJoinTypeMissingArgumentLabelSeparator(t *testing.T) {
 
 	assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
 }
+
+func TestCheckStringSplit(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+		let s = "👪.❤️.Abc".split(separator: ".")
+	`)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		&sema.VariableSizedType{
+			Type: sema.StringType,
+		},
+		RequireGlobalValue(t, checker.Elaboration, "s"),
+	)
+}
+
+func TestCheckStringSplitTypeMismatchSeparator(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		let s = "Abc:1".split(separator: 1234)
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckStringSplitTypeMissingArgumentLabelSeparator(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	let s = "👪Abc".split("/")
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
+}
+
+func TestCheckStringReplaceAll(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+		let s = "👪.❤️.Abc".replaceAll(of: "❤️", with: "|")
+	`)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		sema.StringType,
+		RequireGlobalValue(t, checker.Elaboration, "s"),
+	)
+}
+
+func TestCheckStringReplaceAllTypeMismatchOf(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		let s = "Abc:1".replaceAll(of: 1234, with: "/")
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckStringReplaceAllTypeMismatchWith(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		let s = "Abc:1".replaceAll(of: "1", with: true)
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+}
+
+func TestCheckStringReplaceAllTypeMismatchCharacters(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		let a: Character = "x"
+		let b: Character = "y"
+		let s = "Abc:1".replaceAll(of: a, with: b)
+	`)
+
+	errs := RequireCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+}
+
+func TestCheckStringReplaceAllTypeMissingArgumentLabelOf(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	let s = "👪Abc".replaceAll("/", with: "abc")
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
+}
+
+func TestCheckStringReplaceAllTypeMissingArgumentLabelWith(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	let s = "👪Abc".replaceAll(of: "/", "abc")
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
+}

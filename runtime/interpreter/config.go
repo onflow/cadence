@@ -27,8 +27,6 @@ type Config struct {
 	Storage     Storage
 	// ImportLocationHandler is used to handle imports of locations
 	ImportLocationHandler ImportLocationHandlerFunc
-	// PublicAccountHandler is used to handle accounts
-	PublicAccountHandler PublicAccountHandlerFunc
 	// OnInvokedFunctionReturn is triggered when an invoked function returned
 	OnInvokedFunctionReturn OnInvokedFunctionReturnFunc
 	// OnRecordTrace is triggered when a trace is recorded
@@ -45,20 +43,20 @@ type Config struct {
 	OnEventEmitted OnEventEmittedFunc
 	// OnFunctionInvocation is triggered when a function invocation is about to be executed
 	OnFunctionInvocation OnFunctionInvocationFunc
-	// AuthAccountHandler is used to handle accounts
-	AuthAccountHandler AuthAccountHandlerFunc
+	// AccountHandler is used to handle accounts
+	AccountHandler AccountHandlerFunc
 	// UUIDHandler is used to handle the generation of UUIDs
 	UUIDHandler UUIDHandlerFunc
 	// CompositeTypeHandler is used to load composite types
 	CompositeTypeHandler CompositeTypeHandlerFunc
-	BaseActivation       *VariableActivation
-	Debugger             *Debugger
+	// CompositeValueFunctionsHandler is used to load composite value functions
+	CompositeValueFunctionsHandler CompositeValueFunctionsHandlerFunc
+	BaseActivationHandler          func(location common.Location) *VariableActivation
+	Debugger                       *Debugger
 	// OnStatement is triggered when a statement is about to be executed
 	OnStatement OnStatementFunc
 	// OnLoopIteration is triggered when a loop iteration is about to be executed
 	OnLoopIteration OnLoopIterationFunc
-	// InvalidatedResourceValidationEnabled determines if the validation of invalidated resources is enabled
-	InvalidatedResourceValidationEnabled bool
 	// TracingEnabled determines if tracing is enabled.
 	// Tracing reports certain operations, e.g. composite value transfers
 	TracingEnabled bool
@@ -66,12 +64,8 @@ type Config struct {
 	AtreeStorageValidationEnabled bool
 	// AtreeValueValidationEnabled determines if the validation of atree values is enabled
 	AtreeValueValidationEnabled bool
-	// AccountLinkingAllowed determines if the account linking function is allowed to be used
-	AccountLinkingAllowed bool
-	// OnAccountLinked is triggered when an account is linked by the program
-	OnAccountLinked OnAccountLinkedFunc
-	// IDCapabilityCheckHandler is used to check ID capabilities
-	IDCapabilityCheckHandler IDCapabilityCheckHandlerFunc
-	// IDCapabilityBorrowHandler is used to borrow ID capabilities
-	IDCapabilityBorrowHandler IDCapabilityBorrowHandlerFunc
+	// CapabilityCheckHandler is used to check ID capabilities
+	CapabilityCheckHandler CapabilityCheckHandlerFunc
+	// CapabilityBorrowHandler is used to borrow ID capabilities
+	CapabilityBorrowHandler CapabilityBorrowHandlerFunc
 }

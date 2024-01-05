@@ -24,6 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -226,7 +228,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
           transaction {
-            prepare(signer: AuthAccount) {}
+            prepare(signer: &Account) {}
           }
         `)
 
@@ -244,20 +246,14 @@ func TestInterpretTransactions(t *testing.T) {
           }
 
           transaction {
-            prepare(signer: AuthAccount) {}
+            prepare(signer: &Account) {}
 
             execute {}
           }
         `)
 
-		signer1 := newTestAuthAccountValue(
-			nil,
-			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
-		)
-		signer2 := newTestAuthAccountValue(
-			nil,
-			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
-		)
+		signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
+		signer2 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{2}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
 
 		// first transaction
 		err := inter.InvokeTransaction(0, signer1)
@@ -277,7 +273,7 @@ func TestInterpretTransactions(t *testing.T) {
 
           transaction(x: Int, y: Bool) {
 
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
               values.append(signer.address)
               values.append(y)
               values.append(x)
@@ -290,17 +286,22 @@ func TestInterpretTransactions(t *testing.T) {
 			interpreter.TrueValue,
 		}
 
-		prepareArguments := []interpreter.Value{
-			newTestAuthAccountValue(
-				nil,
-				interpreter.AddressValue{},
-			),
-		}
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		account := stdlib.NewAccountReferenceValue(
+			nil,
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
+		)
+
+		prepareArguments := []interpreter.Value{account}
 
 		arguments = append(arguments, prepareArguments...)
 
 		err := inter.InvokeTransaction(0, arguments...)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		values := inter.Globals.Get("values").GetValue()
 
@@ -310,11 +311,11 @@ func TestInterpretTransactions(t *testing.T) {
 			t,
 			inter,
 			[]interpreter.Value{
-				interpreter.AddressValue{},
+				interpreter.AddressValue(address),
 				interpreter.TrueValue,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
 			},
-			arrayElements(inter, values.(*interpreter.ArrayValue)),
+			ArrayElements(inter, values.(*interpreter.ArrayValue)),
 		)
 	})
 }

@@ -20,10 +20,14 @@ func _() {
 	_ = x[PrimitiveStaticTypeCharacter-9]
 	_ = x[PrimitiveStaticTypeMetaType-10]
 	_ = x[PrimitiveStaticTypeBlock-11]
+	_ = x[PrimitiveStaticTypeAnyResourceAttachment-12]
+	_ = x[PrimitiveStaticTypeAnyStructAttachment-13]
+	_ = x[PrimitiveStaticTypeHashableStruct-14]
 	_ = x[PrimitiveStaticTypeNumber-18]
 	_ = x[PrimitiveStaticTypeSignedNumber-19]
 	_ = x[PrimitiveStaticTypeInteger-24]
 	_ = x[PrimitiveStaticTypeSignedInteger-25]
+	_ = x[PrimitiveStaticTypeFixedSizeUnsignedInteger-26]
 	_ = x[PrimitiveStaticTypeFixedPoint-30]
 	_ = x[PrimitiveStaticTypeSignedFixedPoint-31]
 	_ = x[PrimitiveStaticTypeInt-36]
@@ -69,10 +73,49 @@ func _() {
 	_ = x[PrimitiveStaticTypeAuthAccountAccountCapabilities-102]
 	_ = x[PrimitiveStaticTypeAuthAccountCapabilities-103]
 	_ = x[PrimitiveStaticTypePublicAccountCapabilities-104]
-	_ = x[PrimitiveStaticType_Count-105]
+	_ = x[PrimitiveStaticTypeAccount-105]
+	_ = x[PrimitiveStaticTypeAccount_Contracts-106]
+	_ = x[PrimitiveStaticTypeAccount_Keys-107]
+	_ = x[PrimitiveStaticTypeAccount_Inbox-108]
+	_ = x[PrimitiveStaticTypeAccount_StorageCapabilities-109]
+	_ = x[PrimitiveStaticTypeAccount_AccountCapabilities-110]
+	_ = x[PrimitiveStaticTypeAccount_Capabilities-111]
+	_ = x[PrimitiveStaticTypeAccount_Storage-112]
+	_ = x[PrimitiveStaticTypeMutate-118]
+	_ = x[PrimitiveStaticTypeInsert-119]
+	_ = x[PrimitiveStaticTypeRemove-120]
+	_ = x[PrimitiveStaticTypeIdentity-121]
+	_ = x[PrimitiveStaticTypeStorage-125]
+	_ = x[PrimitiveStaticTypeSaveValue-126]
+	_ = x[PrimitiveStaticTypeLoadValue-127]
+	_ = x[PrimitiveStaticTypeCopyValue-128]
+	_ = x[PrimitiveStaticTypeBorrowValue-129]
+	_ = x[PrimitiveStaticTypeContracts-130]
+	_ = x[PrimitiveStaticTypeAddContract-131]
+	_ = x[PrimitiveStaticTypeUpdateContract-132]
+	_ = x[PrimitiveStaticTypeRemoveContract-133]
+	_ = x[PrimitiveStaticTypeKeys-134]
+	_ = x[PrimitiveStaticTypeAddKey-135]
+	_ = x[PrimitiveStaticTypeRevokeKey-136]
+	_ = x[PrimitiveStaticTypeInbox-137]
+	_ = x[PrimitiveStaticTypePublishInboxCapability-138]
+	_ = x[PrimitiveStaticTypeUnpublishInboxCapability-139]
+	_ = x[PrimitiveStaticTypeClaimInboxCapability-140]
+	_ = x[PrimitiveStaticTypeCapabilities-141]
+	_ = x[PrimitiveStaticTypeStorageCapabilities-142]
+	_ = x[PrimitiveStaticTypeAccountCapabilities-143]
+	_ = x[PrimitiveStaticTypePublishCapability-144]
+	_ = x[PrimitiveStaticTypeUnpublishCapability-145]
+	_ = x[PrimitiveStaticTypeGetStorageCapabilityController-146]
+	_ = x[PrimitiveStaticTypeIssueStorageCapabilityController-147]
+	_ = x[PrimitiveStaticTypeGetAccountCapabilityController-148]
+	_ = x[PrimitiveStaticTypeIssueAccountCapabilityController-149]
+	_ = x[PrimitiveStaticTypeCapabilitiesMapping-150]
+	_ = x[PrimitiveStaticTypeAccountMapping-151]
+	_ = x[PrimitiveStaticType_Count-152]
 }
 
-const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockNumberSignedNumberIntegerSignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Word128Word256Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityControllerAuthAccountStorageCapabilitiesAuthAccountAccountCapabilitiesAuthAccountCapabilitiesPublicAccountCapabilities_Count"
+const _PrimitiveStaticType_name = "UnknownVoidAnyNeverAnyStructAnyResourceBoolAddressStringCharacterMetaTypeBlockAnyResourceAttachmentAnyStructAttachmentHashableStructNumberSignedNumberIntegerSignedIntegerFixedSizeUnsignedIntegerFixedPointSignedFixedPointIntInt8Int16Int32Int64Int128Int256UIntUInt8UInt16UInt32UInt64UInt128UInt256Word8Word16Word32Word64Word128Word256Fix64UFix64PathCapabilityStoragePathCapabilityPathPublicPathPrivatePathAuthAccountPublicAccountDeployedContractAuthAccountContractsPublicAccountContractsAuthAccountKeysPublicAccountKeysAccountKeyAuthAccountInboxStorageCapabilityControllerAccountCapabilityControllerAuthAccountStorageCapabilitiesAuthAccountAccountCapabilitiesAuthAccountCapabilitiesPublicAccountCapabilitiesAccountAccount_ContractsAccount_KeysAccount_InboxAccount_StorageCapabilitiesAccount_AccountCapabilitiesAccount_CapabilitiesAccount_StorageMutateInsertRemoveIdentityStorageSaveValueLoadValueCopyValueBorrowValueContractsAddContractUpdateContractRemoveContractKeysAddKeyRevokeKeyInboxPublishInboxCapabilityUnpublishInboxCapabilityClaimInboxCapabilityCapabilitiesStorageCapabilitiesAccountCapabilitiesPublishCapabilityUnpublishCapabilityGetStorageCapabilityControllerIssueStorageCapabilityControllerGetAccountCapabilityControllerIssueAccountCapabilityControllerCapabilitiesMappingAccountMapping_Count"
 
 var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	0:   _PrimitiveStaticType_name[0:7],
@@ -87,56 +130,99 @@ var _PrimitiveStaticType_map = map[PrimitiveStaticType]string{
 	9:   _PrimitiveStaticType_name[56:65],
 	10:  _PrimitiveStaticType_name[65:73],
 	11:  _PrimitiveStaticType_name[73:78],
-	18:  _PrimitiveStaticType_name[78:84],
-	19:  _PrimitiveStaticType_name[84:96],
-	24:  _PrimitiveStaticType_name[96:103],
-	25:  _PrimitiveStaticType_name[103:116],
-	30:  _PrimitiveStaticType_name[116:126],
-	31:  _PrimitiveStaticType_name[126:142],
-	36:  _PrimitiveStaticType_name[142:145],
-	37:  _PrimitiveStaticType_name[145:149],
-	38:  _PrimitiveStaticType_name[149:154],
-	39:  _PrimitiveStaticType_name[154:159],
-	40:  _PrimitiveStaticType_name[159:164],
-	41:  _PrimitiveStaticType_name[164:170],
-	42:  _PrimitiveStaticType_name[170:176],
-	44:  _PrimitiveStaticType_name[176:180],
-	45:  _PrimitiveStaticType_name[180:185],
-	46:  _PrimitiveStaticType_name[185:191],
-	47:  _PrimitiveStaticType_name[191:197],
-	48:  _PrimitiveStaticType_name[197:203],
-	49:  _PrimitiveStaticType_name[203:210],
-	50:  _PrimitiveStaticType_name[210:217],
-	53:  _PrimitiveStaticType_name[217:222],
-	54:  _PrimitiveStaticType_name[222:228],
-	55:  _PrimitiveStaticType_name[228:234],
-	56:  _PrimitiveStaticType_name[234:240],
-	57:  _PrimitiveStaticType_name[240:247],
-	58:  _PrimitiveStaticType_name[247:254],
-	64:  _PrimitiveStaticType_name[254:259],
-	72:  _PrimitiveStaticType_name[259:265],
-	76:  _PrimitiveStaticType_name[265:269],
-	77:  _PrimitiveStaticType_name[269:279],
-	78:  _PrimitiveStaticType_name[279:290],
-	79:  _PrimitiveStaticType_name[290:304],
-	80:  _PrimitiveStaticType_name[304:314],
-	81:  _PrimitiveStaticType_name[314:325],
-	90:  _PrimitiveStaticType_name[325:336],
-	91:  _PrimitiveStaticType_name[336:349],
-	92:  _PrimitiveStaticType_name[349:365],
-	93:  _PrimitiveStaticType_name[365:385],
-	94:  _PrimitiveStaticType_name[385:407],
-	95:  _PrimitiveStaticType_name[407:422],
-	96:  _PrimitiveStaticType_name[422:439],
-	97:  _PrimitiveStaticType_name[439:449],
-	98:  _PrimitiveStaticType_name[449:465],
-	99:  _PrimitiveStaticType_name[465:492],
-	100: _PrimitiveStaticType_name[492:519],
-	101: _PrimitiveStaticType_name[519:549],
-	102: _PrimitiveStaticType_name[549:579],
-	103: _PrimitiveStaticType_name[579:602],
-	104: _PrimitiveStaticType_name[602:627],
-	105: _PrimitiveStaticType_name[627:633],
+	12:  _PrimitiveStaticType_name[78:99],
+	13:  _PrimitiveStaticType_name[99:118],
+	14:  _PrimitiveStaticType_name[118:132],
+	18:  _PrimitiveStaticType_name[132:138],
+	19:  _PrimitiveStaticType_name[138:150],
+	24:  _PrimitiveStaticType_name[150:157],
+	25:  _PrimitiveStaticType_name[157:170],
+	26:  _PrimitiveStaticType_name[170:194],
+	30:  _PrimitiveStaticType_name[194:204],
+	31:  _PrimitiveStaticType_name[204:220],
+	36:  _PrimitiveStaticType_name[220:223],
+	37:  _PrimitiveStaticType_name[223:227],
+	38:  _PrimitiveStaticType_name[227:232],
+	39:  _PrimitiveStaticType_name[232:237],
+	40:  _PrimitiveStaticType_name[237:242],
+	41:  _PrimitiveStaticType_name[242:248],
+	42:  _PrimitiveStaticType_name[248:254],
+	44:  _PrimitiveStaticType_name[254:258],
+	45:  _PrimitiveStaticType_name[258:263],
+	46:  _PrimitiveStaticType_name[263:269],
+	47:  _PrimitiveStaticType_name[269:275],
+	48:  _PrimitiveStaticType_name[275:281],
+	49:  _PrimitiveStaticType_name[281:288],
+	50:  _PrimitiveStaticType_name[288:295],
+	53:  _PrimitiveStaticType_name[295:300],
+	54:  _PrimitiveStaticType_name[300:306],
+	55:  _PrimitiveStaticType_name[306:312],
+	56:  _PrimitiveStaticType_name[312:318],
+	57:  _PrimitiveStaticType_name[318:325],
+	58:  _PrimitiveStaticType_name[325:332],
+	64:  _PrimitiveStaticType_name[332:337],
+	72:  _PrimitiveStaticType_name[337:343],
+	76:  _PrimitiveStaticType_name[343:347],
+	77:  _PrimitiveStaticType_name[347:357],
+	78:  _PrimitiveStaticType_name[357:368],
+	79:  _PrimitiveStaticType_name[368:382],
+	80:  _PrimitiveStaticType_name[382:392],
+	81:  _PrimitiveStaticType_name[392:403],
+	90:  _PrimitiveStaticType_name[403:414],
+	91:  _PrimitiveStaticType_name[414:427],
+	92:  _PrimitiveStaticType_name[427:443],
+	93:  _PrimitiveStaticType_name[443:463],
+	94:  _PrimitiveStaticType_name[463:485],
+	95:  _PrimitiveStaticType_name[485:500],
+	96:  _PrimitiveStaticType_name[500:517],
+	97:  _PrimitiveStaticType_name[517:527],
+	98:  _PrimitiveStaticType_name[527:543],
+	99:  _PrimitiveStaticType_name[543:570],
+	100: _PrimitiveStaticType_name[570:597],
+	101: _PrimitiveStaticType_name[597:627],
+	102: _PrimitiveStaticType_name[627:657],
+	103: _PrimitiveStaticType_name[657:680],
+	104: _PrimitiveStaticType_name[680:705],
+	105: _PrimitiveStaticType_name[705:712],
+	106: _PrimitiveStaticType_name[712:729],
+	107: _PrimitiveStaticType_name[729:741],
+	108: _PrimitiveStaticType_name[741:754],
+	109: _PrimitiveStaticType_name[754:781],
+	110: _PrimitiveStaticType_name[781:808],
+	111: _PrimitiveStaticType_name[808:828],
+	112: _PrimitiveStaticType_name[828:843],
+	118: _PrimitiveStaticType_name[843:849],
+	119: _PrimitiveStaticType_name[849:855],
+	120: _PrimitiveStaticType_name[855:861],
+	121: _PrimitiveStaticType_name[861:869],
+	125: _PrimitiveStaticType_name[869:876],
+	126: _PrimitiveStaticType_name[876:885],
+	127: _PrimitiveStaticType_name[885:894],
+	128: _PrimitiveStaticType_name[894:903],
+	129: _PrimitiveStaticType_name[903:914],
+	130: _PrimitiveStaticType_name[914:923],
+	131: _PrimitiveStaticType_name[923:934],
+	132: _PrimitiveStaticType_name[934:948],
+	133: _PrimitiveStaticType_name[948:962],
+	134: _PrimitiveStaticType_name[962:966],
+	135: _PrimitiveStaticType_name[966:972],
+	136: _PrimitiveStaticType_name[972:981],
+	137: _PrimitiveStaticType_name[981:986],
+	138: _PrimitiveStaticType_name[986:1008],
+	139: _PrimitiveStaticType_name[1008:1032],
+	140: _PrimitiveStaticType_name[1032:1052],
+	141: _PrimitiveStaticType_name[1052:1064],
+	142: _PrimitiveStaticType_name[1064:1083],
+	143: _PrimitiveStaticType_name[1083:1102],
+	144: _PrimitiveStaticType_name[1102:1119],
+	145: _PrimitiveStaticType_name[1119:1138],
+	146: _PrimitiveStaticType_name[1138:1168],
+	147: _PrimitiveStaticType_name[1168:1200],
+	148: _PrimitiveStaticType_name[1200:1230],
+	149: _PrimitiveStaticType_name[1230:1262],
+	150: _PrimitiveStaticType_name[1262:1281],
+	151: _PrimitiveStaticType_name[1281:1295],
+	152: _PrimitiveStaticType_name[1295:1301],
 }
 
 func (i PrimitiveStaticType) String() string {

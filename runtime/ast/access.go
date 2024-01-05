@@ -20,63 +20,235 @@ package ast
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-//go:generate go run golang.org/x/tools/cmd/stringer -type=Access
+//go:generate go run golang.org/x/tools/cmd/stringer -type=PrimitiveAccess
 
-type Access uint
+type Access interface {
+	isAccess()
+	Keyword() string
+	Description() string
+	String() string
+	MarshalJSON() ([]byte, error)
+}
+
+type Separator uint8
+
+const (
+	Disjunction Separator = iota
+	Conjunction
+)
+
+func (s Separator) String() string {
+	switch s {
+	case Disjunction:
+		return " |"
+	case Conjunction:
+		return ","
+	}
+	panic(errors.NewUnreachableError())
+}
+
+type EntitlementSet interface {
+	Authorization
+	Entitlements() []*NominalType
+	Separator() Separator
+}
+
+type ConjunctiveEntitlementSet struct {
+	Elements []*NominalType `json:"ConjunctiveElements"`
+}
+
+var _ EntitlementSet = &ConjunctiveEntitlementSet{}
+
+func (ConjunctiveEntitlementSet) isAuthorization() {}
+
+func (s *ConjunctiveEntitlementSet) Entitlements() []*NominalType {
+	return s.Elements
+}
+
+func (s *ConjunctiveEntitlementSet) Separator() Separator {
+	return Conjunction
+}
+
+func NewConjunctiveEntitlementSet(entitlements []*NominalType) *ConjunctiveEntitlementSet {
+	return &ConjunctiveEntitlementSet{Elements: entitlements}
+}
+
+type DisjunctiveEntitlementSet struct {
+	Elements []*NominalType `json:"DisjunctiveElements"`
+}
+
+var _ EntitlementSet = &DisjunctiveEntitlementSet{}
+
+func (DisjunctiveEntitlementSet) isAuthorization() {}
+
+func (s *DisjunctiveEntitlementSet) Entitlements() []*NominalType {
+	return s.Elements
+}
+
+func (s *DisjunctiveEntitlementSet) Separator() Separator {
+	return Disjunction
+}
+
+func NewDisjunctiveEntitlementSet(entitlements []*NominalType) *DisjunctiveEntitlementSet {
+	return &DisjunctiveEntitlementSet{Elements: entitlements}
+}
+
+type Authorization interface {
+	isAuthorization()
+}
+
+type EntitlementAccess struct {
+	EntitlementSet EntitlementSet
+}
+
+var _ Access = EntitlementAccess{}
+
+func NewEntitlementAccess(entitlements EntitlementSet) EntitlementAccess {
+	return EntitlementAccess{EntitlementSet: entitlements}
+}
+
+func (EntitlementAccess) isAccess() {}
+
+func (EntitlementAccess) Description() string {
+	return "entitled access"
+}
+
+func (e EntitlementAccess) entitlementsString(prefix *strings.Builder) {
+	for i, entitlement := range e.EntitlementSet.Entitlements() {
+		prefix.WriteString(entitlement.String())
+		if i < len(e.EntitlementSet.Entitlements())-1 {
+			prefix.WriteString(e.EntitlementSet.Separator().String())
+		}
+	}
+}
+
+func (e EntitlementAccess) String() string {
+	str := &strings.Builder{}
+	str.WriteString("EntitlementAccess ")
+	e.entitlementsString(str)
+	return str.String()
+}
+
+func (e EntitlementAccess) Keyword() string {
+	str := &strings.Builder{}
+	str.WriteString("access(")
+	e.entitlementsString(str)
+	str.WriteString(")")
+	return str.String()
+}
+
+func (e EntitlementAccess) MarshalJSON() ([]byte, error) {
+	return json.Marshal(e.String())
+}
+
+type MappedAccess struct {
+	EntitlementMap *NominalType
+	StartPos       Position
+}
+
+var _ Access = &MappedAccess{}
+
+func (*MappedAccess) isAccess()        {}
+func (*MappedAccess) isAuthorization() {}
+
+func (*MappedAccess) Description() string {
+	return "entitlement-mapped access"
+}
+
+func NewMappedAccess(
+	typ *NominalType,
+	startPos Position,
+) *MappedAccess {
+	return &MappedAccess{
+		EntitlementMap: typ,
+		StartPos:       startPos,
+	}
+}
+
+func (t *MappedAccess) StartPosition() Position {
+	return t.StartPos
+}
+
+func (t *MappedAccess) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return t.EntitlementMap.EndPosition(memoryGauge)
+}
+
+func (e *MappedAccess) String() string {
+	var str strings.Builder
+	str.WriteString("mapping ")
+	str.WriteString(e.EntitlementMap.String())
+	return str.String()
+}
+
+func (e *MappedAccess) Keyword() string {
+	var str strings.Builder
+	str.WriteString("access(")
+	str.WriteString(e.String())
+	str.WriteString(")")
+	return str.String()
+}
+
+func (e *MappedAccess) MarshalJSON() ([]byte, error) {
+	type Alias MappedAccess
+	return json.Marshal(&struct {
+		*Alias
+		Range
+	}{
+		Range: NewUnmeteredRangeFromPositioned(e),
+		Alias: (*Alias)(e),
+	})
+}
+
+type PrimitiveAccess uint8
 
 // NOTE: order indicates permissiveness: from least to most permissive!
 
 const (
-	AccessNotSpecified Access = iota
-	AccessPrivate
+	AccessNotSpecified PrimitiveAccess = iota
+	AccessSelf
 	AccessContract
 	AccessAccount
-	AccessPublic
-	AccessPublicSettable
+	AccessAll
 )
 
-func AccessCount() int {
-	return len(_Access_index) - 1
+func PrimitiveAccessCount() int {
+	return len(_PrimitiveAccess_index) - 1
 }
 
-func (a Access) IsLessPermissiveThan(otherAccess Access) bool {
-	return a < otherAccess
-}
+func (PrimitiveAccess) isAccess() {}
 
 // TODO: remove.
 //   only used by tests which are not updated yet
 //   to include contract and account access
 
-var BasicAccesses = []Access{
+var BasicAccesses = []PrimitiveAccess{
 	AccessNotSpecified,
-	AccessPrivate,
-	AccessPublic,
-	AccessPublicSettable,
+	AccessSelf,
+	AccessAll,
 }
 
 var AllAccesses = common.Concat(
 	BasicAccesses,
-	[]Access{
+	[]PrimitiveAccess{
 		AccessContract,
 		AccessAccount,
 	},
 )
 
-func (a Access) Keyword() string {
+func (a PrimitiveAccess) Keyword() string {
 	switch a {
 	case AccessNotSpecified:
 		return ""
-	case AccessPrivate:
-		return "priv"
-	case AccessPublic:
-		return "pub"
-	case AccessPublicSettable:
-		return "pub(set)"
+	case AccessSelf:
+		return "access(self)"
+	case AccessAll:
+		return "access(all)"
 	case AccessAccount:
 		return "access(account)"
 	case AccessContract:
@@ -86,16 +258,14 @@ func (a Access) Keyword() string {
 	panic(errors.NewUnreachableError())
 }
 
-func (a Access) Description() string {
+func (a PrimitiveAccess) Description() string {
 	switch a {
 	case AccessNotSpecified:
 		return "not specified"
-	case AccessPrivate:
-		return "private"
-	case AccessPublic:
-		return "public"
-	case AccessPublicSettable:
-		return "public settable"
+	case AccessSelf:
+		return "self"
+	case AccessAll:
+		return "all"
 	case AccessAccount:
 		return "account"
 	case AccessContract:
@@ -105,6 +275,6 @@ func (a Access) Description() string {
 	panic(errors.NewUnreachableError())
 }
 
-func (a Access) MarshalJSON() ([]byte, error) {
+func (a PrimitiveAccess) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())
 }

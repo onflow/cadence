@@ -34,11 +34,11 @@ func TestCyclicImport(t *testing.T) {
 
 	input.Write([]byte(`location,code
 A.0000000000000001.Foo,"import Bar from 0x0000000000000001
-pub contract Foo {}"
+access(all) contract Foo {}"
 A.0000000000000001.Bar,"import Baz from 0x0000000000000001
-pub contract Foo {}"
+access(all) contract Foo {}"
 A.0000000000000001.Baz,"import Foo from 0x0000000000000001
-pub contract Foo {}"
+access(all) contract Foo {}"
 `))
 
 	checker.CheckCSV(&input)

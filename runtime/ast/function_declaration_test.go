@@ -34,7 +34,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	decl := &FunctionDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
 		Flags:  FunctionDeclarationFlagsIsStatic | FunctionDeclarationFlagsIsNative,
 		Identifier: Identifier{
 			Identifier: "xyz",
@@ -125,7 +125,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "FunctionDeclaration",
-            "Access": "AccessPublic",
+            "Access": "AccessAll",
             "IsStatic": true,
             "IsNative": true,
             "Identifier": {
@@ -241,6 +241,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
                             "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
                             "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                         },
+						"DefaultArgument": null,
                         "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
                         "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                     }
@@ -248,6 +249,7 @@ func TestFunctionDeclaration_MarshalJSON(t *testing.T) {
                 "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
                 "EndPos": {"Offset": 19, "Line": 20, "Column": 21}
             },
+			"Purity": "Unspecified",
             "ReturnTypeAnnotation": {
                 "IsResource": true,
                 "AnnotatedType": {
@@ -288,7 +290,8 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 	t.Parallel()
 
 	decl := &FunctionDeclaration{
-		Access: AccessPublic,
+		Access: AccessAll,
+		Purity: FunctionPurityView,
 		Flags:  FunctionDeclarationFlagsIsStatic | FunctionDeclarationFlagsIsNative,
 		Identifier: Identifier{
 			Identifier: "xyz",
@@ -328,7 +331,9 @@ func TestFunctionDeclaration_Doc(t *testing.T) {
 
 	require.Equal(t,
 		prettier.Concat{
-			prettier.Text("pub"),
+			prettier.Text("access(all)"),
+			prettier.HardLine{},
+			prettier.Text("view"),
 			prettier.Space,
 			prettier.Text("static"),
 			prettier.Space,
@@ -380,7 +385,7 @@ func TestFunctionDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &FunctionDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "xyz",
 			},
@@ -417,7 +422,8 @@ func TestFunctionDeclaration_String(t *testing.T) {
 		}
 
 		require.Equal(t,
-			"pub fun xyz(ok foobar: AB): @CD {}",
+			`access(all)
+fun xyz(ok foobar: AB): @CD {}`,
 			decl.String(),
 		)
 
@@ -427,7 +433,7 @@ func TestFunctionDeclaration_String(t *testing.T) {
 		t.Parallel()
 
 		decl := &FunctionDeclaration{
-			Access: AccessPublic,
+			Access: AccessAll,
 			Identifier: Identifier{
 				Identifier: "xyz",
 			},
@@ -485,7 +491,8 @@ func TestFunctionDeclaration_String(t *testing.T) {
 		}
 
 		require.Equal(t,
-			"pub fun xyz<A, B: C>(ok foobar: AB): @CD {}",
+			`access(all)
+fun xyz<A, B: C>(ok foobar: AB): @CD {}`,
 			decl.String(),
 		)
 	})
@@ -709,6 +716,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
                                 "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
                                 "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                             },
+							"DefaultArgument": null,
                             "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
                             "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                         }
@@ -716,6 +724,7 @@ func TestSpecialFunctionDeclaration_MarshalJSON(t *testing.T) {
                     "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
                     "EndPos": {"Offset": 19, "Line": 20, "Column": 21}
                 },
+				"Purity": "Unspecified",
                 "ReturnTypeAnnotation": {
                     "IsResource": true,
                     "AnnotatedType": {

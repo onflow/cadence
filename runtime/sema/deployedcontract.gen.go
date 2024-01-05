@@ -50,6 +50,7 @@ The code of the contract.
 const DeployedContractTypePublicTypesFunctionName = "publicTypes"
 
 var DeployedContractTypePublicTypesFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
 			Type: MetaType,
@@ -64,8 +65,8 @@ Returns an array of ` + "`Type`" + ` objects representing all the public type de
 For example, given a contract
 ` + `
 contract Foo {
-pub struct Bar {...}
-pub resource Qux {...}
+access(all) struct Bar {...}
+access(all) resource Qux {...}
 }
 ` + `
 then ` + "`.publicTypes()`" + ` will return an array equivalent to the expression ` + "`[Type<Bar>(), Type<Qux>()]`" + `
@@ -77,13 +78,15 @@ var DeployedContractType = &SimpleType{
 	Name:          DeployedContractTypeName,
 	QualifiedName: DeployedContractTypeName,
 	TypeID:        DeployedContractTypeName,
-	tag:           DeployedContractTypeTag,
+	TypeTag:       DeployedContractTypeTag,
 	IsResource:    false,
 	Storable:      false,
+	Primitive:     false,
 	Equatable:     false,
 	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
+	ContainFields: true,
 }
 
 func init() {
@@ -91,7 +94,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				DeployedContractTypeAddressFieldName,
 				DeployedContractTypeAddressFieldType,
@@ -99,7 +102,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				DeployedContractTypeNameFieldName,
 				DeployedContractTypeNameFieldType,
@@ -107,7 +110,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				DeployedContractTypeCodeFieldName,
 				DeployedContractTypeCodeFieldType,
@@ -115,7 +118,7 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				DeployedContractTypePublicTypesFunctionName,
 				DeployedContractTypePublicTypesFunctionType,
 				DeployedContractTypePublicTypesFunctionDocString,

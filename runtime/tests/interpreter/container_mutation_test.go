@@ -34,7 +34,7 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-func TestArrayMutation(t *testing.T) {
+func TestInterpetArrayMutation(t *testing.T) {
 
 	t.Parallel()
 
@@ -61,7 +61,7 @@ func TestArrayMutation(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				common.ZeroAddress,
@@ -135,7 +135,7 @@ func TestArrayMutation(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				common.ZeroAddress,
@@ -210,7 +210,7 @@ func TestArrayMutation(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				common.ZeroAddress,
@@ -271,7 +271,7 @@ func TestArrayMutation(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				common.ZeroAddress,
@@ -288,7 +288,7 @@ func TestArrayMutation(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let names: [AnyStruct] = ["foo", "bar"] as [String]
-                let namesRef = &names as &[AnyStruct]
+                let namesRef = &names as auth(Mutate) &[AnyStruct]
                 namesRef[0] = 5
             }
         `)
@@ -327,19 +327,23 @@ func TestArrayMutation(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
             fun test() {
-                let array: [AnyStruct] = [nil] as [((AnyStruct):Void)?]
+                let array: [AnyStruct] = [nil] as [(fun(AnyStruct):Void)?]
 
                 array[0] = log
 
-                let logger = array[0] as! ((AnyStruct):Void)
+                let logger = array[0] as! (fun(AnyStruct): Void)
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -357,13 +361,13 @@ func TestArrayMutation(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             fun test(): [String] {
-                let array: [AnyStruct] = [nil, nil] as [(():String)?]
+                let array: [AnyStruct] = [nil, nil] as [(fun():String)?]
 
                 array[0] = foo
                 array[1] = bar
 
-                let callFoo = array[0] as! (():String)
-                let callBar = array[1] as! (():String)
+                let callFoo = array[0] as! fun(): String
+                let callBar = array[1] as! fun(): String
                 return [callFoo(), callBar()]
             }
 
@@ -412,7 +416,7 @@ func TestArrayMutation(t *testing.T) {
             }
 
             fun test(): [String] {
-                let array: [AnyStruct] = [nil, nil] as [(():String)?]
+                let array: [AnyStruct] = [nil, nil] as [(fun():String)?]
 
                 let a = Foo()
                 let b = Bar()
@@ -420,8 +424,8 @@ func TestArrayMutation(t *testing.T) {
                 array[0] = a.foo
                 array[1] = b.bar
 
-                let callFoo = array[0] as! (():String)
-                let callBar = array[1] as! (():String)
+                let callFoo = array[0] as! fun():String
+                let callBar = array[1] as! fun():String
 
                 return [callFoo(), callBar()]
             }
@@ -468,17 +472,21 @@ func TestArrayMutation(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                 fun test() {
-                    let array: [AnyStruct] = [nil] as [(():Void)?]
+                    let array: [AnyStruct] = [nil] as [(fun():Void)?]
 
                     array[0] = log
                 }
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -510,7 +518,7 @@ func TestArrayMutation(t *testing.T) {
 	})
 }
 
-func TestDictionaryMutation(t *testing.T) {
+func TestInterpretDictionaryMutation(t *testing.T) {
 
 	t.Parallel()
 
@@ -667,7 +675,7 @@ func TestDictionaryMutation(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             fun test() {
                 let names: {String: AnyStruct} = {"foo": "bar"} as {String: String}
-                let namesRef = &names as &{String: AnyStruct}
+                let namesRef = &names as auth(Mutate) &{String: AnyStruct}
                 namesRef["foo"] = 5
             }
         `)
@@ -721,15 +729,19 @@ func TestDictionaryMutation(t *testing.T) {
 
                 dict["test"] = log
 
-                let logger = dict["test"]! as! ((AnyStruct): Void)
+                let logger = dict["test"]! as! fun(AnyStruct): Void
                 logger("hello")
             }`,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -752,8 +764,8 @@ func TestDictionaryMutation(t *testing.T) {
                dict["foo"] = foo
                dict["bar"] = bar
 
-               let callFoo = dict["foo"]! as! (():String)
-               let callBar = dict["bar"]! as! (():String)
+               let callFoo = dict["foo"]! as! fun():String
+               let callBar = dict["bar"]! as! fun():String
                return [callFoo(), callBar()]
            }
 
@@ -810,8 +822,8 @@ func TestDictionaryMutation(t *testing.T) {
                dict["foo"] = a.foo
                dict["bar"] = b.bar
 
-               let callFoo = dict["foo"]! as! (():String)
-               let callBar = dict["bar"]! as! (():String)
+               let callFoo = dict["foo"]! as! fun():String
+               let callBar = dict["bar"]! as! fun():String
 
                return [callFoo(), callBar()]
            }
@@ -858,17 +870,21 @@ func TestDictionaryMutation(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, `
                fun test() {
-                   let dict: {String: AnyStruct} = {} as {String: (():Void)}
+                   let dict: {String: AnyStruct} = {} as {String: fun():Void}
 
                    dict["log"] = log
                }
            `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -909,23 +925,25 @@ func TestDictionaryMutation(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
             struct S {}
 
-            fun test(owner: PublicAccount) {
-                let funcs: {String: ((PublicAccount, [UInt64]): [S])} = {}
+            fun test(owner: &Account) {
+                let funcs: {String: fun(&Account, [UInt64]): [S]} = {}
 
-                funcs["test"] = fun (owner: PublicAccount, ids: [UInt64]): [S] { return [] }
+                funcs["test"] = fun (owner: &Account, ids: [UInt64]): [S] { return [] }
 
                 funcs["test"]!(owner: owner, ids: [1])
             }
         `)
 
-		owner := newTestPublicAccountValue(
-			inter,
-			interpreter.NewUnmeteredAddressValueFromBytes(common.Address{0x1}.Bytes()),
+		owner := stdlib.NewAccountReferenceValue(
+			nil,
+			nil,
+			interpreter.AddressValue{1},
+			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", owner)
 		require.NoError(t, err)
-
 	})
 }
 
@@ -953,6 +971,197 @@ func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
 		),
 		result,
 	)
+}
+
+func TestInterpretContainerMutationWhileIterating(t *testing.T) {
+
+	t.Run("array, append", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): [String] {
+                let array: [String] = ["foo", "bar"]
+
+                var i = 0
+                for element in array {
+                    if i == 0 {
+                        array.append("baz")
+                    }
+                    array[i] = "hello"
+                    i = i + 1
+                }
+
+                return array
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		RequireValuesEqual(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("hello"), // updated
+				interpreter.NewUnmeteredStringValue("hello"), // updated
+				interpreter.NewUnmeteredStringValue("baz"),   // NOT updated
+			),
+			result,
+		)
+	})
+
+	t.Run("array, remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let array: [String] = ["foo", "bar", "baz"]
+
+                var i = 0
+                for element in array {
+                    if i == 0 {
+                        array.remove(at: 1)
+                    }
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ArrayIndexOutOfBoundsError{})
+	})
+
+	t.Run("dictionary, add", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): {String: String} {
+                let dictionary: {String: String} = {"a": "foo", "b": "bar"}
+
+                var i = 0
+                dictionary.forEachKey(fun (key: String): Bool {
+                    if i == 0 {
+                        dictionary["c"] = "baz"
+                    }
+
+                    dictionary[key] = "hello"
+                    return true
+                })
+
+                return dictionary
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, result)
+		dictionary := result.(*interpreter.DictionaryValue)
+
+		require.Equal(t, 3, dictionary.Count())
+
+		val, present := dictionary.Get(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue("a"),
+		)
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("hello"), val) // Updated
+
+		val, present = dictionary.Get(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue("b"),
+		)
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("hello"), val) // Updated
+
+		val, present = dictionary.Get(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue("c"),
+		)
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("baz"), val) // Not Updated
+	})
+
+	t.Run("dictionary, remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): {String: String} {
+                let dictionary: {String: String} = {"a": "foo", "b": "bar", "c": "baz"}
+
+                var i = 0
+                dictionary.forEachKey(fun (key: String): Bool {
+                    if i == 0 {
+                        dictionary.remove(key: "b")
+                    }
+                    return true
+                })
+
+                return dictionary
+            }
+        `)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, result)
+		dictionary := result.(*interpreter.DictionaryValue)
+
+		require.Equal(t, 2, dictionary.Count())
+
+		val, present := dictionary.Get(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue("a"),
+		)
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("foo"), val)
+
+		val, present = dictionary.Get(
+			inter,
+			interpreter.EmptyLocationRange,
+			interpreter.NewUnmeteredStringValue("c"),
+		)
+		assert.True(t, present)
+		assert.Equal(t, interpreter.NewUnmeteredStringValue("baz"), val)
+	})
+
+	t.Run("resource dictionary, remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {}
+
+            fun test(): @{String: Foo} {
+                let dictionary: @{String: Foo} <- {"a": <- create Foo(), "b": <- create Foo(), "c": <- create Foo()}
+
+                var dictionaryRef = &dictionary as auth(Mutate) &{String: Foo}
+
+                var i = 0
+                dictionary.forEachKey(fun (key: String): Bool {
+                    if i == 0 {
+                        destroy dictionaryRef.remove(key: "b")
+                    }
+                    return true
+                })
+
+                return <- dictionary
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+	})
 }
 
 func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
@@ -984,7 +1193,7 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				common.ZeroAddress,
@@ -1018,7 +1227,7 @@ func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 				common.ZeroAddress,

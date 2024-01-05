@@ -136,23 +136,53 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 		},
 	)
 
+	// Normally, moves of nested resources (e.g `let r <- rs[0]`) are statically rejected.
+	//
+	// However, there are cases in which we do allow moves of nested resources:
+	//
+	// - In a swap statement (e.g. `rs[0] <-> rs[1]`)
+	// - In a variable declaration with two values/assignments (e.g. `let r <- rs["foo"] <- nil`)
+	//
+	// In both cases we know that a move of the nested resource is immediately followed by a replacement.
+	// This notion of an expression that moves a nested resource is tracked in the elaboration.
+	//
+	// When indexing is a move of a nested resource, we need to remove the key/value from the container.
+	// However, for some containers, like arrays, the removal influences other values in the container.
+	// In case of an array, the removal of an element shifts all following elements.
+	//
+	// A removal alone would thus result in subsequent code being executed incorrectly.
+	// For example, in the case where a swap operation through indexing is performed on the same array,
+	// e.g. `rs[0] <-> rs[1]`, once the first removal was performed, the second operates on a modified container.
+	//
+	// Prevent this problem by temporarily writing a placeholder value after the removal.
+	// Only perform the replacement with a placeholder in the case of a nested resource move.
+	// We know that in that case the get operation will be followed by a set operation,
+	// which will replace the temporary placeholder.
+
 	isNestedResourceMove := elaboration.IsNestedResourceMoveExpression(indexExpression)
+
+	var get func(allowMissing bool) Value
+
+	if isNestedResourceMove {
+		get = func(_ bool) Value {
+			value := target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
+			target.InsertKey(interpreter, locationRange, transferredIndexingValue, placeholder)
+			return value
+		}
+	} else {
+		get = func(_ bool) Value {
+			value := target.GetKey(interpreter, locationRange, transferredIndexingValue)
+
+			// If the indexing value is a reference, then return a reference for the resulting value.
+			return interpreter.maybeGetReference(indexExpression, value)
+		}
+	}
 
 	return getterSetter{
 		target: target,
-		get: func(_ bool) Value {
-			if isNestedResourceMove {
-				return target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
-			} else {
-				return target.GetKey(interpreter, locationRange, transferredIndexingValue)
-			}
-		},
+		get:    get,
 		set: func(value Value) {
-			if isNestedResourceMove {
-				target.InsertKey(interpreter, locationRange, transferredIndexingValue, value)
-			} else {
-				target.SetKey(interpreter, locationRange, transferredIndexingValue, value)
-			}
+			target.SetKey(interpreter, locationRange, transferredIndexingValue, value)
 		},
 	}
 }
@@ -168,6 +198,11 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 	}
 
 	isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression(memberExpression)
+
+	memberAccessInfo, ok := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
 
 	return getterSetter{
 		target: target,
@@ -194,8 +229,9 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 			if isNestedResourceMove {
 				resultValue = target.(MemberAccessibleValue).RemoveMember(interpreter, locationRange, identifier)
 			} else {
-				resultValue = interpreter.getMember(target, locationRange, identifier)
+				resultValue = interpreter.getMemberWithAuthMapping(target, locationRange, identifier, memberAccessInfo)
 			}
+
 			if resultValue == nil && !allowMissing {
 				panic(UseBeforeInitializationError{
 					Name:          identifier,
@@ -212,6 +248,13 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 				}
 			}
 
+			// Return a reference, if the member is accessed via a reference.
+			// This is pre-computed at the checker.
+			if memberAccessInfo.ReturnReference {
+				// Get a reference to the value
+				resultValue = interpreter.getReferenceValue(resultValue, memberAccessInfo.ResultingType, locationRange)
+			}
+
 			return resultValue
 		},
 		set: func(value Value) {
@@ -222,12 +265,50 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 	}
 }
 
+// getReferenceValue Returns a reference to a given value.
+// Reference to an optional should return an optional reference.
+// This has to be done recursively for nested optionals.
+// e.g.1: Given type T, this method returns &T.
+// e.g.2: Given T?, this returns (&T)?
+func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.Type, locationRange LocationRange) Value {
+	switch value := value.(type) {
+	case NilValue, ReferenceValue:
+		// Reference to a nil, should return a nil.
+		// If the value is already a reference then return the same reference.
+		return value
+	case *SomeValue:
+		innerValue := interpreter.getReferenceValue(value.value, resultType, locationRange)
+		return NewSomeValueNonCopying(interpreter, innerValue)
+	}
+
+	// `resultType` is always an [optional] reference.
+	// This is guaranteed by the checker.
+	referenceType, ok := sema.UnwrapOptionalType(resultType).(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	auth := interpreter.getEffectiveAuthorization(referenceType)
+
+	return NewEphemeralReferenceValue(interpreter, auth, value, referenceType.Type, locationRange)
+}
+
+func (interpreter *Interpreter) getEffectiveAuthorization(referenceType *sema.ReferenceType) Authorization {
+	_, isMapped := referenceType.Authorization.(*sema.EntitlementMapAccess)
+
+	if isMapped && interpreter.SharedState.currentEntitlementMappedValue != nil {
+		return interpreter.SharedState.currentEntitlementMappedValue
+	}
+
+	return ConvertSemaAccessToStaticAuthorization(interpreter, referenceType.Authorization)
+}
+
 func (interpreter *Interpreter) checkMemberAccess(
 	memberExpression *ast.MemberExpression,
 	target Value,
 	locationRange LocationRange,
 ) {
-	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberInfo(memberExpression)
+	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
 	switch expectedType := expectedType.(type) {
@@ -276,7 +357,45 @@ func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.Identi
 }
 
 func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value {
-	return ast.AcceptExpression[Value](expression, interpreter)
+	result := ast.AcceptExpression[Value](expression, interpreter)
+	interpreter.checkInvalidatedResourceOrResourceReference(result, expression)
+	return result
+}
+
+func (interpreter *Interpreter) checkInvalidatedResourceOrResourceReference(value Value, hasPosition ast.HasPosition) {
+	// Unwrap SomeValue, to access references wrapped inside optionals.
+	someValue, isSomeValue := value.(*SomeValue)
+	for isSomeValue && someValue.value != nil {
+		value = someValue.value
+		someValue, isSomeValue = value.(*SomeValue)
+	}
+
+	switch value := value.(type) {
+	case ResourceKindedValue:
+		if value.isInvalidatedResource(interpreter) {
+			panic(InvalidatedResourceError{
+				LocationRange: LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: hasPosition,
+				},
+			})
+		}
+	case *EphemeralReferenceValue:
+		if value.Value == nil {
+			panic(InvalidatedResourceReferenceError{
+				LocationRange: LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: hasPosition,
+				},
+			})
+		} else {
+			// If the value is there, check whether the referenced value is an invalidated one.
+			// This step is not really needed, since reference tracking is supposed to clear the
+			// `value.Value` if the referenced-value was moved/deleted.
+			// However, have this as a second layer of defensive.
+			interpreter.checkInvalidatedResourceOrResourceReference(value.Value, hasPosition)
+		}
+	}
 }
 
 func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) Value {
@@ -665,7 +784,7 @@ func (interpreter *Interpreter) NewIntegerValueFromBigInt(value *big.Int, intege
 	case sema.UInt128Type:
 		// BigInt value is already metered at parser.
 		return NewUnmeteredUInt128ValueFromBigInt(value)
-	case sema.UInt256Type:
+	case sema.UInt256Type, sema.FixedSizeUnsignedIntegerType:
 		// BigInt value is already metered at parser.
 		return NewUnmeteredUInt256ValueFromBigInt(value)
 
@@ -860,8 +979,30 @@ func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpres
 			Location:    interpreter.Location,
 			HasPosition: expression,
 		}
-		return typedResult.GetKey(interpreter, locationRange, indexingValue)
+		value := typedResult.GetKey(interpreter, locationRange, indexingValue)
+
+		// If the indexing value is a reference, then return a reference for the resulting value.
+		return interpreter.maybeGetReference(expression, value)
 	}
+}
+
+func (interpreter *Interpreter) maybeGetReference(
+	expression *ast.IndexExpression,
+	memberValue Value,
+) Value {
+	indexExpressionTypes := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
+	if indexExpressionTypes.ReturnReference {
+		expectedType := indexExpressionTypes.ResultType
+
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: expression,
+		}
+		// Get a reference to the value
+		memberValue = interpreter.getReferenceValue(memberValue, expectedType, locationRange)
+	}
+
+	return memberValue
 }
 
 func (interpreter *Interpreter) VisitConditionalExpression(expression *ast.ConditionalExpression) Value {
@@ -931,15 +1072,6 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	function, ok := result.(FunctionValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
-	}
-
-	// Bound functions
-	if boundFunction, ok := function.(BoundFunctionValue); ok && boundFunction.Self != nil {
-		self := *boundFunction.Self
-		if resource, ok := self.(ReferenceTrackedResourceKindedValue); ok {
-			storageID := resource.StorageID()
-			interpreter.trackReferencedResourceKindedValue(storageID, resource)
-		}
 	}
 
 	// NOTE: evaluate all argument expressions in call-site scope, not in function body
@@ -1077,11 +1209,21 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		HasPosition: expression.Expression,
 	}
 
-	expectedType := interpreter.Program.Elaboration.CastingExpressionTypes(expression).TargetType
+	expectedType := interpreter.substituteMappedEntitlements(interpreter.Program.Elaboration.CastingExpressionTypes(expression).TargetType)
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
-		valueStaticType := value.StaticType(interpreter)
+		// if the value itself has a mapped entitlement type in its authorization
+		// (e.g. if it is a reference to `self` or `base`  in an attachment function with mapped access)
+		// substitution must also be performed on its entitlements
+		//
+		// we do this here (as opposed to in `IsSubTypeOfSemaType`) because casting is the only way that
+		// an entitlement can "traverse the boundary", so to speak, between runtime and static types, and
+		// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
+		// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
+		// so we don't substitute them.
+		valueSemaType := interpreter.substituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
+		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
 
 		switch expression.Operation {
@@ -1091,14 +1233,15 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			value = interpreter.BoxOptional(locationRange, value, expectedType)
+			value = interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
+
+			// Failable casting is a resource invalidation
+			interpreter.invalidateResource(value)
 
 			return NewSomeValueNonCopying(interpreter, value)
 
 		case ast.OperationForceCast:
 			if !isSubType {
-				valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
-
 				locationRange := LocationRange{
 					Location:    interpreter.Location,
 					HasPosition: expression.Expression,
@@ -1112,7 +1255,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			}
 
 			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			return interpreter.BoxOptional(locationRange, value, expectedType)
+			return interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -1153,7 +1296,24 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
-	interpreter.maybeTrackReferencedResourceKindedValue(result)
+	makeReference := func(value Value, typ *sema.ReferenceType) *EphemeralReferenceValue {
+		// if we are currently interpretering a function that was declared with mapped entitlement access, any appearances
+		// of that mapped access in the body of the function should be replaced with the computed output of the map
+		auth := interpreter.getEffectiveAuthorization(typ)
+
+		locationRange := LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: referenceExpression,
+		}
+
+		return NewEphemeralReferenceValue(
+			interpreter,
+			auth,
+			value,
+			typ.Type,
+			locationRange,
+		)
+	}
 
 	// There are four potential cases:
 	// 1) Target type is optional, actual value is also optional (nil/SomeValue)
@@ -1181,16 +1341,10 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 			}
 
 			innerValue := result.InnerValue(interpreter, locationRange)
-			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
 
 			return NewSomeValueNonCopying(
 				interpreter,
-				NewEphemeralReferenceValue(
-					interpreter,
-					innerBorrowType.Authorized,
-					innerValue,
-					innerBorrowType.Type,
-				),
+				makeReference(innerValue, innerBorrowType),
 			)
 
 		case NilValue:
@@ -1209,30 +1363,28 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 			return interpreter.BoxOptional(
 				locationRange,
-				NewEphemeralReferenceValue(
-					interpreter,
-					innerBorrowType.Authorized,
-					result,
-					innerBorrowType.Type,
-				),
+				makeReference(result, innerBorrowType),
 				borrowType,
 			)
 		}
 
 	case *sema.ReferenceType:
 		// Case (3): target type is non-optional, actual value is optional.
-		// Unwrap the optional and add it to reference tracking.
+		// This path shouldn't be reachable. This is only a defensive step
+		// to ensure references are properly created/tracked.
 		if someValue, ok := result.(*SomeValue); ok {
 			locationRange := LocationRange{
 				Location:    interpreter.Location,
 				HasPosition: referenceExpression.Expression,
 			}
 			innerValue := someValue.InnerValue(interpreter, locationRange)
-			interpreter.maybeTrackReferencedResourceKindedValue(innerValue)
+
+			auth := interpreter.getEffectiveAuthorization(typ)
+			return NewEphemeralReferenceValue(interpreter, auth, innerValue, typ.Type, locationRange)
 		}
 
 		// Case (4): target type is non-optional, actual value is also non-optional
-		return NewEphemeralReferenceValue(interpreter, typ.Authorized, result, typ.Type)
+		return makeReference(result, typ)
 	}
 
 	panic(errors.NewUnreachableError())
@@ -1305,13 +1457,22 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	// the `base` value must be accessible during the attachment's constructor, but we cannot
 	// set it on the attachment's `CompositeValue` yet, because the value does not exist.
 	// Instead, we create an implicit constructor argument containing a reference to the base.
+
+	// within the constructor, the attachment's base and self references should be fully entitled,
+	// as the constructor of the attachment is only callable by the owner of the base
+	baseType := interpreter.MustSemaTypeOfValue(base).(sema.EntitlementSupportingType)
+	baseAccess := sema.NewAccessFromEntitlementSet(baseType.SupportedEntitlements(), sema.Conjunction)
+	auth := ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess)
+
+	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)
+
 	var baseValue Value = NewEphemeralReferenceValue(
 		interpreter,
-		false,
+		auth,
 		base,
 		interpreter.MustSemaTypeOfValue(base).(*sema.CompositeType),
+		locationRange,
 	)
-	interpreter.trackReferencedResourceKindedValue(base.StorageID(), base)
 
 	attachment, ok := interpreter.visitInvocationExpressionWithImplicitArgument(
 		attachExpression.Attachment,
@@ -1322,9 +1483,6 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		panic(errors.NewUnreachableError())
 	}
 
-	// Because `self` in attachments is a reference, we need to track the attachment if it's a resource
-	interpreter.trackReferencedResourceKindedValue(attachment.StorageID(), attachment)
-
 	base = base.Transfer(
 		interpreter,
 		locationRange,
@@ -1334,18 +1492,17 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 		nil,
 	).(*CompositeValue)
 
+	attachment.setBaseValue(interpreter, base)
+
 	// we enforce this in the checker
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	// when `v[A]` is executed, we set `A`'s base to `&v`
-	attachment.setBaseValue(interpreter, base)
-
 	base.SetTypeKey(
 		interpreter,
 		locationRange,
-		interpreter.MustSemaTypeOfValue(attachment),
+		attachmentType,
 		attachment,
 	)
 

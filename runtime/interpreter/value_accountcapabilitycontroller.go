@@ -30,7 +30,7 @@ import (
 // AccountCapabilityControllerValue
 
 type AccountCapabilityControllerValue struct {
-	BorrowType   ReferenceStaticType
+	BorrowType   *ReferenceStaticType
 	CapabilityID UInt64Value
 
 	// deleted indicates if the controller got deleted. Not stored
@@ -39,19 +39,20 @@ type AccountCapabilityControllerValue struct {
 	// Lazily initialized function values.
 	// Host functions based on injected functions (see below).
 	deleteFunction FunctionValue
+	setTagFunction FunctionValue
 
 	// Injected functions.
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
 	// when the controller is loaded for borrowing/checking
-	GetCapability func(inter *Interpreter) *IDCapabilityValue
+	GetCapability func(inter *Interpreter) *CapabilityValue
 	GetTag        func(inter *Interpreter) *StringValue
 	SetTag        func(inter *Interpreter, tag *StringValue)
 	Delete        func(inter *Interpreter, locationRange LocationRange)
 }
 
 func NewUnmeteredAccountCapabilityControllerValue(
-	borrowType ReferenceStaticType,
+	borrowType *ReferenceStaticType,
 	capabilityID UInt64Value,
 ) *AccountCapabilityControllerValue {
 	return &AccountCapabilityControllerValue{
@@ -62,7 +63,7 @@ func NewUnmeteredAccountCapabilityControllerValue(
 
 func NewAccountCapabilityControllerValue(
 	memoryGauge common.MemoryGauge,
-	borrowType ReferenceStaticType,
+	borrowType *ReferenceStaticType,
 	capabilityID UInt64Value,
 ) *AccountCapabilityControllerValue {
 	// Constant because its constituents are already metered.
@@ -83,7 +84,7 @@ func (*AccountCapabilityControllerValue) isValue() {}
 
 func (*AccountCapabilityControllerValue) isCapabilityControllerValue() {}
 
-func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() ReferenceStaticType {
+func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() *ReferenceStaticType {
 	return v.BorrowType
 }
 
@@ -231,6 +232,12 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 	case sema.AccountCapabilityControllerTypeTagFieldName:
 		return v.GetTag(inter)
 
+	case sema.AccountCapabilityControllerTypeSetTagFunctionName:
+		if v.setTagFunction == nil {
+			v.setTagFunction = v.newSetTagFunction(inter)
+		}
+		return v.setTagFunction
+
 	case sema.AccountCapabilityControllerTypeCapabilityIDFieldName:
 		return v.CapabilityID
 
@@ -254,7 +261,7 @@ func (v *AccountCapabilityControllerValue) GetMember(inter *Interpreter, _ Locat
 }
 
 func (*AccountCapabilityControllerValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
-	// Storage capability controllers have no removable members (fields / functions)
+	// Account capability controllers have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
@@ -288,13 +295,29 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	interpreter *Interpreter,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
+	locationRange LocationRange,
 ) ReferenceValue {
-	return NewAccountReferenceValue(
+	config := interpreter.SharedState.Config
+
+	account := config.AccountHandler(AddressValue(capabilityAddress))
+
+	// Account must be of `Account` type.
+	interpreter.ExpectType(
+		account,
+		sema.AccountType,
+		EmptyLocationRange,
+	)
+
+	authorization := ConvertSemaAccessToStaticAuthorization(
 		interpreter,
-		capabilityAddress,
-		// NOTE: no source path, not a path capability (linking API)
-		EmptyPathValue,
+		resultBorrowType.Authorization,
+	)
+	return NewEphemeralReferenceValue(
+		interpreter,
+		authorization,
+		account,
 		resultBorrowType.Type,
+		locationRange,
 	)
 }
 
@@ -338,6 +361,27 @@ func (v *AccountCapabilityControllerValue) newDeleteFunction(
 			v.Delete(inter, locationRange)
 
 			v.deleted = true
+
+			return Void
+		},
+	)
+}
+
+func (v *AccountCapabilityControllerValue) newSetTagFunction(
+	inter *Interpreter,
+) FunctionValue {
+	return v.newHostFunctionValue(
+		inter,
+		sema.AccountCapabilityControllerTypeSetTagFunctionType,
+		func(invocation Invocation) Value {
+			inter := invocation.Interpreter
+
+			newTagValue, ok := invocation.Arguments[0].(*StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			v.SetTag(inter, newTagValue)
 
 			return Void
 		},

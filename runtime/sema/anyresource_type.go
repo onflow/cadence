@@ -23,13 +23,15 @@ var AnyResourceType = &SimpleType{
 	Name:          "AnyResource",
 	QualifiedName: "AnyResource",
 	TypeID:        "AnyResource",
-	tag:           AnyResourceTypeTag,
+	TypeTag:       AnyResourceTypeTag,
 	IsResource:    true,
+	Primitive:     false,
 	// The actual storability of a value is checked at run-time
 	Storable:   true,
 	Equatable:  false,
 	Comparable: false,
 	// The actual returnability of a value is checked at run-time
-	Exportable: true,
-	Importable: false,
+	Exportable:    true,
+	Importable:    false,
+	ContainFields: true,
 }

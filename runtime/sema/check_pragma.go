@@ -20,46 +20,24 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
+// VisitPragmaDeclaration checks that the pragma declaration is valid.
+// It is valid if the root expression is an identifier or invocation.
+// Invocations must
 func (checker *Checker) VisitPragmaDeclaration(declaration *ast.PragmaDeclaration) (_ struct{}) {
 
 	switch expression := declaration.Expression.(type) {
-	case *ast.InvocationExpression:
-		// Type arguments are not supported for pragmas
-		if len(expression.TypeArguments) > 0 {
-			checker.report(&InvalidPragmaError{
-				Message: "type arguments are not supported",
-				Range: ast.NewRangeFromPositioned(
-					checker.memoryGauge,
-					expression.TypeArguments[0],
-				),
-			})
-		}
-
-		// Ensure arguments are string expressions
-		for _, arg := range expression.Arguments {
-			_, ok := arg.Expression.(*ast.StringExpression)
-			if !ok {
-				checker.report(&InvalidPragmaError{
-					Message: "invalid non-string argument",
-					Range: ast.NewRangeFromPositioned(
-						checker.memoryGauge,
-						arg.Expression,
-					),
-				})
-			}
-		}
-
 	case *ast.IdentifierExpression:
-		if IsAllowAccountLinkingPragma(declaration) {
-			checker.reportInvalidNonHeaderPragma(declaration)
-		}
+		// valid, NO-OP
+
+	case *ast.InvocationExpression:
+		checker.checkPragmaInvocationExpression(expression)
 
 	default:
 		checker.report(&InvalidPragmaError{
-			Message: "pragma must be identifier or invocation expression",
+			Message: "expression must be literal, identifier, or invocation",
 			Range: ast.NewRangeFromPositioned(
 				checker.memoryGauge,
-				declaration,
+				expression,
 			),
 		})
 	}
@@ -67,26 +45,63 @@ func (checker *Checker) VisitPragmaDeclaration(declaration *ast.PragmaDeclaratio
 	return
 }
 
-func (checker *Checker) reportInvalidNonHeaderPragma(declaration *ast.PragmaDeclaration) {
-	checker.report(&InvalidPragmaError{
-		Message: "pragma must appear at top-level, before all other declarations",
-		Range: ast.NewRangeFromPositioned(
-			checker.memoryGauge,
-			declaration,
-		),
-	})
-}
-
-// allowAccountLinkingPragmaIdentifier is the identifier that needs to be used in a pragma to allow account linking.
-// This is a temporary feature.
-const allowAccountLinkingPragmaIdentifier = "allowAccountLinking"
-
-func IsAllowAccountLinkingPragma(declaration *ast.PragmaDeclaration) bool {
-	identifierExpression, ok := declaration.Expression.(*ast.IdentifierExpression)
-	if !ok {
-		return false
+func (checker *Checker) checkPragmaInvocationExpression(expression *ast.InvocationExpression) {
+	// Invoked expression must be an identifier
+	if _, ok := expression.InvokedExpression.(*ast.IdentifierExpression); !ok {
+		checker.report(&InvalidPragmaError{
+			Message: "invoked expression must be an identifier",
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				expression.InvokedExpression,
+			),
+		})
 	}
 
-	return identifierExpression.Identifier.Identifier ==
-		allowAccountLinkingPragmaIdentifier
+	// Type arguments are not supported for pragmas
+	if len(expression.TypeArguments) > 0 {
+		checker.report(&InvalidPragmaError{
+			Message: "type arguments are not supported",
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				expression.TypeArguments[0],
+			),
+		})
+	}
+
+	// Ensure arguments are valid
+	for _, arg := range expression.Arguments {
+		checker.checkPragmaArgumentExpression(arg.Expression)
+	}
+}
+
+func (checker *Checker) checkPragmaArgumentExpression(expression ast.Expression) {
+	switch expression := expression.(type) {
+	case *ast.InvocationExpression:
+		checker.checkPragmaInvocationExpression(expression)
+		return
+
+	case *ast.StringExpression,
+		*ast.IntegerExpression,
+		*ast.FixedPointExpression,
+		*ast.ArrayExpression,
+		*ast.DictionaryExpression,
+		*ast.NilExpression,
+		*ast.BoolExpression,
+		*ast.PathExpression:
+
+		return
+
+	case *ast.UnaryExpression:
+		if expression.Operation == ast.OperationMinus {
+			return
+		}
+	}
+
+	checker.report(&InvalidPragmaError{
+		Message: "expression in invocation must be literal or invocation",
+		Range: ast.NewRangeFromPositioned(
+			checker.memoryGauge,
+			expression,
+		),
+	})
 }

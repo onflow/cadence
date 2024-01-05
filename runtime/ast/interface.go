@@ -29,9 +29,10 @@ import (
 // InterfaceDeclaration
 
 type InterfaceDeclaration struct {
-	Members    *Members
-	DocString  string
-	Identifier Identifier
+	Members      *Members
+	DocString    string
+	Identifier   Identifier
+	Conformances []*NominalType
 	Range
 	Access        Access
 	CompositeKind common.CompositeKind
@@ -46,6 +47,7 @@ func NewInterfaceDeclaration(
 	access Access,
 	compositeKind common.CompositeKind,
 	identifier Identifier,
+	conformances []*NominalType,
 	members *Members,
 	docString string,
 	declRange Range,
@@ -56,6 +58,7 @@ func NewInterfaceDeclaration(
 		Access:        access,
 		CompositeKind: compositeKind,
 		Identifier:    identifier,
+		Conformances:  conformances,
 		Members:       members,
 		DocString:     docString,
 		Range:         declRange,
@@ -113,11 +116,19 @@ func (d *InterfaceDeclaration) Doc() prettier.Doc {
 		d.CompositeKind,
 		true,
 		d.Identifier.Identifier,
-		nil,
+		d.Conformances,
 		d.Members,
 	)
 }
 
 func (d *InterfaceDeclaration) String() string {
 	return Prettier(d)
+}
+
+func (d *InterfaceDeclaration) ConformanceList() []*NominalType {
+	return d.Conformances
+}
+
+func (d *InterfaceDeclaration) Kind() common.CompositeKind {
+	return d.CompositeKind
 }

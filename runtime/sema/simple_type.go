@@ -35,21 +35,22 @@ type ValueIndexingInfo struct {
 // SimpleType represents a simple nominal type.
 type SimpleType struct {
 	ValueIndexingInfo   ValueIndexingInfo
-	IsSuperTypeOf       func(subType Type) bool
 	NestedTypes         *StringTypeOrderedMap
 	memberResolvers     map[string]MemberResolver
 	Members             func(*SimpleType) map[string]MemberResolver
 	QualifiedName       string
 	TypeID              TypeID
 	Name                string
-	tag                 TypeTag
+	TypeTag             TypeTag
 	memberResolversOnce sync.Once
 	Importable          bool
 	Exportable          bool
 	Equatable           bool
 	Comparable          bool
 	Storable            bool
+	Primitive           bool
 	IsResource          bool
+	ContainFields       bool
 }
 
 var _ Type = &SimpleType{}
@@ -59,7 +60,7 @@ var _ ContainerType = &SimpleType{}
 func (*SimpleType) IsType() {}
 
 func (t *SimpleType) Tag() TypeTag {
-	return t.tag
+	return t.TypeTag
 }
 
 func (t *SimpleType) String() string {
@@ -80,6 +81,10 @@ func (t *SimpleType) Equal(other Type) bool {
 
 func (t *SimpleType) IsResourceType() bool {
 	return t.IsResource
+}
+
+func (t *SimpleType) IsPrimitiveType() bool {
+	return t.Primitive
 }
 
 func (t *SimpleType) IsInvalidType() bool {
@@ -106,11 +111,15 @@ func (t *SimpleType) IsImportable(_ map[*Member]bool) bool {
 	return t.Importable
 }
 
+func (t *SimpleType) ContainFieldsOrElements() bool {
+	return t.ContainFields
+}
+
 func (*SimpleType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *SimpleType) RewriteWithRestrictedTypes() (Type, bool) {
+func (t *SimpleType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
@@ -120,6 +129,10 @@ func (*SimpleType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err erro
 
 func (t *SimpleType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+func (t *SimpleType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
+	return f(t)
 }
 
 func (t *SimpleType) GetMembers() map[string]MemberResolver {

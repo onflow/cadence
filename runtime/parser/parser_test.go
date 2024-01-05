@@ -506,7 +506,7 @@ func TestParseBuffering(t *testing.T) {
 
           fun isneg(x: SignedFixedPoint): Bool {   /* I kinda forget what this is all about */
               return x                             /* but we probably need to figure it out */
-                     <                             /* ************/((TODO?{/*))************ *//
+                     <                             /* ************/((TODO?/*))************ *//
                     -x                             /* maybe it says NaNs are not negative?  */
           }
         `
@@ -515,7 +515,7 @@ func TestParseBuffering(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "expected token identifier",
-					Pos:     ast.Position{Offset: 399, Line: 9, Column: 95},
+					Pos:     ast.Position{Offset: 398, Line: 9, Column: 94},
 				},
 			},
 			err.(Error).Errors,
@@ -538,9 +538,11 @@ func TestParseBuffering(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected token identifier",
-					Pos:     ast.Position{Offset: 146, Line: 4, Column: 63},
+				&RestrictedTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 138, Line: 4, Column: 55},
+						EndPos:   ast.Position{Offset: 139, Line: 4, Column: 56},
+					},
 				},
 			},
 			err.(Error).Errors,
@@ -552,17 +554,17 @@ func TestParseBuffering(t *testing.T) {
 		t.Parallel()
 
 		src := `
-            pub struct interface Y {}
-            pub struct X : Y {}
-            pub fun main():String {
+            access(all) struct interface Y {}
+            access(all) struct X : Y {}
+            access(all) fun main():String {
                 fun f(a:Bool, _:String):String { return _; }
                 let S = 1
                 if false {
                     let Type_X_Y__qp_identifier =
-                                    Type<X{Y}>().identifier; // parses fine
+                                    Type<{Y}>().identifier; // parses fine
                     return f(a:S<S, Type_X_Y__qp_identifier)
                 } else {
-                    return f(a:S<S, Type<X{Y}>().identifier) // should also parse fine
+                    return f(a:S<S, Type<{Y}>().identifier) // should also parse fine
                 }
             }`
 
@@ -576,7 +578,7 @@ func TestParseBuffering(t *testing.T) {
 
 		src := `
             transaction { }
-            pub fun main():String {
+            access(all) fun main():String {
                 let A = 1
                 let B = 2
                 let C = 3

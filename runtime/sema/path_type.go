@@ -23,75 +23,82 @@ var PathType = &SimpleType{
 	Name:          "Path",
 	QualifiedName: "Path",
 	TypeID:        "Path",
-	tag:           PathTypeTag,
+	TypeTag:       PathTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
-	IsSuperTypeOf: func(subType Type) bool {
-		return IsSubType(subType, StoragePathType) ||
-			IsSubType(subType, CapabilityPathType)
-	},
 }
+
+var PathTypeAnnotation = NewTypeAnnotation(PathType)
 
 // StoragePathType
 var StoragePathType = &SimpleType{
 	Name:          "StoragePath",
 	QualifiedName: "StoragePath",
 	TypeID:        "StoragePath",
-	tag:           StoragePathTypeTag,
+	TypeTag:       StoragePathTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
 }
+
+var StoragePathTypeAnnotation = NewTypeAnnotation(StoragePathType)
 
 // CapabilityPathType
 var CapabilityPathType = &SimpleType{
 	Name:          "CapabilityPath",
 	QualifiedName: "CapabilityPath",
 	TypeID:        "CapabilityPath",
-	tag:           CapabilityPathTypeTag,
+	TypeTag:       CapabilityPathTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
-	IsSuperTypeOf: func(subType Type) bool {
-		return IsSubType(subType, PrivatePathType) ||
-			IsSubType(subType, PublicPathType)
-	},
 }
+
+var CapabilityPathTypeAnnotation = NewTypeAnnotation(CapabilityPathType)
 
 // PublicPathType
 var PublicPathType = &SimpleType{
 	Name:          "PublicPath",
 	QualifiedName: "PublicPath",
 	TypeID:        "PublicPath",
-	tag:           PublicPathTypeTag,
+	TypeTag:       PublicPathTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
 }
 
+var PublicPathTypeAnnotation = NewTypeAnnotation(PublicPathType)
+
 // PrivatePathType
 var PrivatePathType = &SimpleType{
 	Name:          "PrivatePath",
 	QualifiedName: "PrivatePath",
 	TypeID:        "PrivatePath",
-	tag:           PrivatePathTypeTag,
+	TypeTag:       PrivatePathTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
 }
+
+var PrivatePathTypeAnnotation = NewTypeAnnotation(PrivatePathType)
