@@ -1983,9 +1983,22 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 		}
 		checker.report(&DefaultDestroyInvalidArgumentError{
 			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+			Kind:  InvalidIdentifier,
 		})
 
 	case *ast.MemberExpression:
+
+		memberExpressionInfo, ok := checker.Elaboration.MemberExpressionMemberAccessInfo(arg)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		if _, isReferenceType := UnwrapOptionalType(memberExpressionInfo.ResultingType).(*ReferenceType); isReferenceType {
+			checker.report(&DefaultDestroyInvalidArgumentError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+				Kind:  ReferenceTypedMemberAccess,
+			})
+		}
 
 		checker.checkDefaultDestroyParamExpressionKind(arg.Expression)
 
@@ -2013,12 +2026,14 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 
 		checker.report(&DefaultDestroyInvalidArgumentError{
 			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+			Kind:  NonDictionaryIndexExpression,
 		})
 
 	default:
 
 		checker.report(&DefaultDestroyInvalidArgumentError{
 			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+			Kind:  InvalidExpression,
 		})
 
 	}
