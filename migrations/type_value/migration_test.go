@@ -45,11 +45,18 @@ func newTestReporter() *testReporter {
 	}
 }
 
-func (t *testReporter) Report(
+func (t *testReporter) Migrated(
 	addressPath interpreter.AddressPath,
 	_ string,
 ) {
 	t.migratedPaths[addressPath] = struct{}{}
+}
+
+func (t *testReporter) Error(
+	_ interpreter.AddressPath,
+	_ string,
+	_ error,
+) {
 }
 
 const fooBarQualifiedIdentifier = "Foo.Bar"
@@ -426,7 +433,8 @@ func TestTypeValueMigration(t *testing.T) {
 		),
 	)
 
-	migration.Commit()
+	err = migration.Commit()
+	require.NoError(t, err)
 
 	// Check reported migrated paths
 	for identifier, test := range testCases {
@@ -605,7 +613,8 @@ func TestRehash(t *testing.T) {
 			),
 		)
 
-		migration.Commit()
+		err := migration.Commit()
+		require.NoError(t, err)
 
 		require.Equal(t,
 			map[interpreter.AddressPath]struct{}{
@@ -762,7 +771,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 				),
 			)
 
-			migration.Commit()
+			err := migration.Commit()
+			require.NoError(t, err)
 
 			require.Equal(t,
 				map[interpreter.AddressPath]struct{}{
@@ -894,7 +904,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 				),
 			)
 
-			migration.Commit()
+			err := migration.Commit()
+			require.NoError(t, err)
 
 			require.Equal(t,
 				map[interpreter.AddressPath]struct{}{
