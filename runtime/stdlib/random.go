@@ -218,7 +218,8 @@ func getUint64RandomNumber(
 ) uint64 {
 
 	// buffer to get random bytes from the generator
-	// 8 is the size of the largest type supported
+	// 8 is the size of the largest type supported, it is also the size needed for
+	// the `binary.BigEndian.Uint64` call
 	const bufferSize = 8
 	var buffer [bufferSize]byte
 
@@ -302,20 +303,21 @@ func getUint64RandomNumber(
 	// the function isn't constant-time in this case and may take longer than computing
 	// a modular reduction.
 	// However, sampling exactly the size of `max` in bits makes the loop return fast:
-	// loop returns after (k) iterations with a probability of at most 1-(1/2)^k.
+	// the probability of the loop running for (k) iterations is at most (1/2)^k.
 	//
 	// (a different approach would be to pull 128 bits more bits than the size of `max`
 	// from the random generator and use big number reduction by `modulo`)
-	random := modulo
-	for random > max {
+	for {
 		// only generate `byteSize` random bytes
 		getRandomBytes(buffer[bufferSize-byteSize:], generator)
 		// big endianness must be used in this case
-		random = binary.BigEndian.Uint64(buffer[:])
-		// adjust to the size of max in bits
+		random := binary.BigEndian.Uint64(buffer[:])
+		// truncate to the bit size of `max`
 		random &= mask
+		if random <= max {
+			return random
+		}
 	}
-	return random
 }
 
 // cases of a random number of size larger than 8 bytes can be all treated
@@ -326,26 +328,23 @@ func getBigRandomNumber(
 	moduloArg interpreter.Value,
 ) *big.Int {
 
+	// get the numeric type byte size
+	numericType, ok := ty.(*sema.NumericType)
+	if !ok {
+		// checker should prevent this
+		panic(errors.NewUnreachableError())
+	}
+	bytes := numericType.ByteSize()
 	// buffer to get random bytes from the generator
-	// 32 is the size of the largest type supported
-	const bufferSize = 32
-	var buffer [bufferSize]byte
+	buffer := make([]byte, bytes)
 	// case where no modulo argument was provided
 	if moduloArg == nil {
-		numericType, ok := ty.(*sema.NumericType)
-		if !ok {
-			// checker should prevent this
-			panic(errors.NewUnreachableError())
-		}
-		bytes := numericType.ByteSize()
-		getRandomBytes(buffer[:bytes], generator)
+		getRandomBytes(buffer, generator)
 		// SetBytes considers big endianness (although little endian could be used too)
-		return new(big.Int).SetBytes(buffer[:bytes])
+		return new(big.Int).SetBytes(buffer)
 	}
 
-	var ok bool
 	var modulo *big.Int
-
 	switch ty {
 	case sema.UInt128Type:
 		var moduloVal interpreter.UInt128Value
@@ -394,18 +393,21 @@ func getBigRandomNumber(
 	// the function isn't constant-time in this case and may take longer than computing
 	// a modular reduction.
 	// However, sampling exactly the size of `max` in bits makes the loop return fast:
-	// loop returns after (k) iterations with a probability of at most 1-(1/2)^k.
+	// the probability of the loop running for (k) iterations is at most (1/2)^k.
 	//
 	// (a different approach would be to pull 128 bits more bits than the size of `max`
 	// from the random generator and use big number reduction by `modulo`)
-	random := new(big.Int).Set(modulo)
-	for random.Cmp(max) > 0 {
+	//random := new(big.Int)
+	random := new(big.Int)
+	for {
 		// only generate `byteSize` random bytes
 		getRandomBytes(buffer[:byteSize], generator)
 		// big endianness is used for consistency (but little can be used too)
 		random.SetBytes(buffer[:byteSize])
-		// adjust to the size of max in bits
+		// truncate to the bit size of `max`
 		random.And(random, mask)
+		if random.Cmp(max) <= 0 {
+			return random
+		}
 	}
-	return random
 }
