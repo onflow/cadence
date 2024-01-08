@@ -1960,6 +1960,16 @@ func (checker *Checker) enumMembersAndOrigins(
 func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 	arg ast.Expression,
 ) {
+
+	rejectReferenceTypedSubExpressions := func(typ Type) {
+		if _, isReferenceType := UnwrapOptionalType(typ).(*ReferenceType); isReferenceType {
+			checker.report(&DefaultDestroyInvalidArgumentError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+				Kind:  ReferenceTypedMemberAccess,
+			})
+		}
+	}
+
 	switch arg := arg.(type) {
 	case *ast.StringExpression,
 		*ast.BoolExpression,
@@ -1993,12 +2003,7 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 			panic(errors.NewUnreachableError())
 		}
 
-		if _, isReferenceType := UnwrapOptionalType(memberExpressionInfo.ResultingType).(*ReferenceType); isReferenceType {
-			checker.report(&DefaultDestroyInvalidArgumentError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
-				Kind:  ReferenceTypedMemberAccess,
-			})
-		}
+		rejectReferenceTypedSubExpressions(memberExpressionInfo.ResultingType)
 
 		checker.checkDefaultDestroyParamExpressionKind(arg.Expression)
 
@@ -2017,12 +2022,7 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 			return
 		}
 
-		if _, isReferenceType := UnwrapOptionalType(indexExprType.ResultType).(*ReferenceType); isReferenceType {
-			checker.report(&DefaultDestroyInvalidArgumentError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
-				Kind:  ReferenceTypedMemberAccess,
-			})
-		}
+		rejectReferenceTypedSubExpressions(indexExprType.ResultType)
 
 		switch targetExprType := targetExprType.(type) {
 		case *DictionaryType:
