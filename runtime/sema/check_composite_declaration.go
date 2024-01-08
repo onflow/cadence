@@ -1960,6 +1960,16 @@ func (checker *Checker) enumMembersAndOrigins(
 func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 	arg ast.Expression,
 ) {
+
+	rejectReferenceTypedSubExpressions := func(typ Type) {
+		if _, isReferenceType := UnwrapOptionalType(typ).(*ReferenceType); isReferenceType {
+			checker.report(&DefaultDestroyInvalidArgumentError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+				Kind:  ReferenceTypedMemberAccess,
+			})
+		}
+	}
+
 	switch arg := arg.(type) {
 	case *ast.StringExpression,
 		*ast.BoolExpression,
@@ -1983,9 +1993,17 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 		}
 		checker.report(&DefaultDestroyInvalidArgumentError{
 			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+			Kind:  InvalidIdentifier,
 		})
 
 	case *ast.MemberExpression:
+
+		memberExpressionInfo, ok := checker.Elaboration.MemberExpressionMemberAccessInfo(arg)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		rejectReferenceTypedSubExpressions(memberExpressionInfo.ResultingType)
 
 		checker.checkDefaultDestroyParamExpressionKind(arg.Expression)
 
@@ -1994,13 +2012,17 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 		checker.checkDefaultDestroyParamExpressionKind(arg.TargetExpression)
 		checker.checkDefaultDestroyParamExpressionKind(arg.IndexingExpression)
 
+		indexExprType := checker.Elaboration.IndexExpressionTypes(arg)
+
 		// indexing expressions on arrays can fail, and must be disallowed, but
 		// indexing expressions on dicts, or composites (for attachments) will return `nil` and thus never fail
-		targetExprType := checker.Elaboration.IndexExpressionTypes(arg).IndexedType
+		targetExprType := indexExprType.IndexedType
 		// `nil` indicates that the index is a type-index (i.e. for an attachment access)
 		if targetExprType == nil {
 			return
 		}
+
+		rejectReferenceTypedSubExpressions(indexExprType.ResultType)
 
 		switch targetExprType := targetExprType.(type) {
 		case *DictionaryType:
@@ -2013,12 +2035,14 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 
 		checker.report(&DefaultDestroyInvalidArgumentError{
 			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+			Kind:  NonDictionaryIndexExpression,
 		})
 
 	default:
 
 		checker.report(&DefaultDestroyInvalidArgumentError{
 			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+			Kind:  InvalidExpression,
 		})
 
 	}

@@ -2528,6 +2528,7 @@ func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
 		HandleCheckerError: func(err error) {
 			errs := checker.RequireCheckerErrors(t, err, 1)
 			assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+			assert.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidIdentifier)
 			// ...
 		},
 	})
