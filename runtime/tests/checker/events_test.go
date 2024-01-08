@@ -1240,7 +1240,7 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("deadreference", func(t *testing.T) {
+	t.Run("dead reference", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1251,16 +1251,43 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 			}
 
 			access(all) resource IndestructibleTroll {
-				access(all) var dict: @{Int: InnerResource}
-				access(all) var ref: &{Int: InnerResource}
+				access(all) var ref: &InnerResource
 
 				access(all) init() {
-					self.dict <- {}
-					self.ref = &(self.dict) as &{Int: InnerResource}
+					var r <- create InnerResource()
+					self.ref = &r as &InnerResource
+					destroy r
 				}
 
 				// Make the event parameter dependent on the dead reference
-				access(all) event ResourceDestroyed(x: Int? = self.ref[0]?.i)
+				access(all) event ResourceDestroyed(x: Int? = self.ref.i)
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
+	})
+
+	t.Run("dead reference in dict", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) resource InnerResource {
+				access(all) var i: Int
+				access(all) init() { self.i = 123 }
+			}
+
+			access(all) resource IndestructibleTroll {
+				access(all) var dict: {Int: &InnerResource}
+
+				access(all) init() {
+					self.dict = {}
+				}
+
+				// Make the event parameter dependent on the dead reference
+				access(all) event ResourceDestroyed(x: Int? = self.dict[0]?.i)
 			}
         `)
 

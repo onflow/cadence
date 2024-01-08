@@ -2007,12 +2007,21 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 		checker.checkDefaultDestroyParamExpressionKind(arg.TargetExpression)
 		checker.checkDefaultDestroyParamExpressionKind(arg.IndexingExpression)
 
+		indexExprType := checker.Elaboration.IndexExpressionTypes(arg)
+
 		// indexing expressions on arrays can fail, and must be disallowed, but
 		// indexing expressions on dicts, or composites (for attachments) will return `nil` and thus never fail
-		targetExprType := checker.Elaboration.IndexExpressionTypes(arg).IndexedType
+		targetExprType := indexExprType.IndexedType
 		// `nil` indicates that the index is a type-index (i.e. for an attachment access)
 		if targetExprType == nil {
 			return
+		}
+
+		if _, isReferenceType := UnwrapOptionalType(indexExprType.ResultType).(*ReferenceType); isReferenceType {
+			checker.report(&DefaultDestroyInvalidArgumentError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),
+				Kind:  ReferenceTypedMemberAccess,
+			})
 		}
 
 		switch targetExprType := targetExprType.(type) {
