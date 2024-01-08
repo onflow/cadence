@@ -397,7 +397,6 @@ func getBigRandomNumber(
 	//
 	// (a different approach would be to pull 128 bits more bits than the size of `max`
 	// from the random generator and use big number reduction by `modulo`)
-	//random := new(big.Int)
 	random := new(big.Int)
 	for {
 		// only generate `byteSize` random bytes

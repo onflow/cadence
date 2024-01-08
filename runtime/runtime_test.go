@@ -4519,8 +4519,19 @@ func TestRuntimeRandom(t *testing.T) {
 		)
 	}
 
-	testAllTypes := func(t *testing.T, testType func(*testing.T, sema.Type)) {
-		for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
+	testTypes := func(t *testing.T, testType func(*testing.T, sema.Type), allTypes bool) {
+		var testedTypes []sema.Type
+		if allTypes {
+			// test all types
+			testedTypes = sema.AllFixedSizeUnsignedIntegerTypes
+		} else {
+			// test a few types only for expensive tests
+			testedTypes = []sema.Type{
+				sema.UInt8Type, sema.UInt32Type,
+				sema.UInt64Type, sema.UInt128Type,
+			}
+		}
+		for _, ty := range testedTypes {
 			tyCopy := ty
 			t.Run(ty.String(), func(t *testing.T) {
 				t.Parallel()
@@ -4574,7 +4585,7 @@ func TestRuntimeRandom(t *testing.T) {
 			expected := new(big.Int).SetBytes(randBuffer[:typeToBytes(t, ty)])
 			assert.Equal(t, expected.String(), loggedMessage)
 		}
-		testAllTypes(t, runValidCaseWithoutModulo)
+		testTypes(t, runValidCaseWithoutModulo, true)
 	})
 
 	// no modulo is passed - test all types
@@ -4596,7 +4607,7 @@ func TestRuntimeRandom(t *testing.T) {
 			expected := new(big.Int).SetBytes(randBuffer[:typeToBytes(t, ty)])
 			assert.Equal(t, expected.String(), value.String())
 		}
-		testAllTypes(t, runValidCaseWithoutModulo)
+		testTypes(t, runValidCaseWithoutModulo, true)
 	})
 
 	// random modulo is passed as the modulo argument - test all types
@@ -4619,7 +4630,7 @@ func TestRuntimeRandom(t *testing.T) {
 			// check that modulo > value
 			require.True(t, modulo.Cmp(valueBig) == 1)
 		}
-		testAllTypes(t, runValidCaseWithModulo)
+		testTypes(t, runValidCaseWithModulo, true)
 	})
 
 	// test valid edge cases of the value modulo - test all types
@@ -4653,10 +4664,10 @@ func TestRuntimeRandom(t *testing.T) {
 		}
 
 		t.Run("max modulo", func(t *testing.T) {
-			testAllTypes(t, runValidCaseWithMaxModulo)
+			testTypes(t, runValidCaseWithMaxModulo, true)
 		})
 		t.Run("one modulo", func(t *testing.T) {
-			testAllTypes(t, runValidCaseWithOneModulo)
+			testTypes(t, runValidCaseWithOneModulo, true)
 		})
 	})
 
@@ -4668,7 +4679,7 @@ func TestRuntimeRandom(t *testing.T) {
 			assertUserError(t, err)
 			require.ErrorContains(t, err, stdlib.ZeroModuloError.Error())
 		}
-		testAllTypes(t, runCaseWithZeroModulo)
+		testTypes(t, runCaseWithZeroModulo, true)
 	})
 
 	// sanity statistical test to make sure the random numbers less than modulo
@@ -4703,10 +4714,10 @@ func TestRuntimeRandom(t *testing.T) {
 
 		// first a power of 2 (that fits in 8 bits)
 		modulo := 64
-		testAllTypes(t, runStatisticsWithModulo(modulo))
+		testTypes(t, runStatisticsWithModulo(modulo), false)
 		// then with a non power of 2
 		modulo = 71
-		testAllTypes(t, runStatisticsWithModulo(modulo))
+		testTypes(t, runStatisticsWithModulo(modulo), false)
 	})
 
 }
