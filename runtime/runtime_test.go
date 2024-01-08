@@ -4526,15 +4526,14 @@ func TestRuntimeRandom(t *testing.T) {
 			testedTypes = sema.AllFixedSizeUnsignedIntegerTypes
 		} else {
 			// test a few types only for expensive tests
-			testedTypes = []sema.Type{
-				sema.UInt8Type, sema.UInt32Type,
-				sema.UInt64Type, sema.UInt128Type,
-			}
+			testedTypes = []sema.Type{sema.UInt8Type, sema.UInt32Type, sema.UInt64Type, sema.UInt128Type}
 		}
 		for _, ty := range testedTypes {
 			tyCopy := ty
 			t.Run(ty.String(), func(t *testing.T) {
-				t.Parallel()
+				if allTypes {
+					t.Parallel()
+				}
 				testType(t, tyCopy)
 			})
 		}
