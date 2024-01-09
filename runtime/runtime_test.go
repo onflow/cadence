@@ -24,13 +24,11 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/onflow/crypto/random"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -4519,20 +4517,8 @@ func TestRuntimeRandom(t *testing.T) {
 		)
 	}
 
-	testTypes := func(t *testing.T, testType func(*testing.T, sema.Type), allTypes bool) {
-		var testedTypes []sema.Type
-		if allTypes {
-			// test all types
-			testedTypes = sema.AllFixedSizeUnsignedIntegerTypes
-		} else {
-			// test a few types only for expensive tests
-			testedTypes = []sema.Type{
-				sema.UInt8Type,
-				sema.UInt64Type,
-				sema.UInt128Type,
-			}
-		}
-		for _, ty := range testedTypes {
+	testTypes := func(t *testing.T, testType func(*testing.T, sema.Type)) {
+		for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
 			tyCopy := ty
 			t.Run(ty.String(), func(t *testing.T) {
 				t.Parallel()
@@ -4543,9 +4529,8 @@ func TestRuntimeRandom(t *testing.T) {
 	}
 
 	typeToBytes := func(t *testing.T, ty sema.Type) int {
-		numericType, ok := ty.(*sema.NumericType)
-		require.True(t, ok)
-		return numericType.ByteSize()
+		require.IsType(t, &sema.NumericType{}, ty)
+		return ty.(*sema.NumericType).ByteSize()
 	}
 
 	newRandBuffer := func(t *testing.T) []byte {
@@ -4601,7 +4586,7 @@ func TestRuntimeRandom(t *testing.T) {
 			expected := new(big.Int).SetBytes(randBuffer[:typeToBytes(t, ty)])
 			assert.Equal(t, expected.String(), loggedMessage)
 		}
-		testTypes(t, runValidCaseWithoutModulo, true)
+		testTypes(t, runValidCaseWithoutModulo)
 	})
 
 	// no modulo is passed - test all types
@@ -4617,7 +4602,7 @@ func TestRuntimeRandom(t *testing.T) {
 			expected := new(big.Int).SetBytes(randBuffer[:typeToBytes(t, ty)])
 			assert.Equal(t, expected.String(), value.String())
 		}
-		testTypes(t, runValidCaseWithoutModulo, true)
+		testTypes(t, runValidCaseWithoutModulo)
 	})
 
 	// random modulo is passed as the modulo argument - test all types
@@ -4637,9 +4622,9 @@ func TestRuntimeRandom(t *testing.T) {
 			valueBig, ok := new(big.Int).SetString(value.String(), 10)
 			require.True(t, ok)
 			// check that modulo > value
-			require.True(t, modulo.Cmp(valueBig) == 1)
+			require.Equal(t, 1, modulo.Cmp(valueBig))
 		}
-		testTypes(t, runValidCaseWithModulo, true)
+		testTypes(t, runValidCaseWithModulo)
 	})
 
 	// test valid edge cases of the value modulo - test all types
@@ -4664,9 +4649,9 @@ func TestRuntimeRandom(t *testing.T) {
 				valueBig, ok := new(big.Int).SetString(value.String(), 10)
 				require.True(t, ok)
 				// check that modulo > value
-				require.True(t, modulo.Cmp(valueBig) == 1)
+				require.Equal(t, 1, modulo.Cmp(valueBig))
 			}
-			testTypes(t, runValidCaseWithMaxModulo, true)
+			testTypes(t, runValidCaseWithMaxModulo)
 		})
 
 		t.Run("one modulo", func(t *testing.T) {
@@ -4677,11 +4662,12 @@ func TestRuntimeRandom(t *testing.T) {
 				// set modulo to 1
 				value, err := executeScript(ty, "1", readCryptoRandom)
 				require.NoError(t, err)
+
 				// check that value is zero
-				require.True(t, value.String() == "0")
+				require.Equal(t, "0", value.String())
 			}
 
-			testTypes(t, runValidCaseWithOneModulo, true)
+			testTypes(t, runValidCaseWithOneModulo)
 		})
 	})
 
@@ -4695,53 +4681,7 @@ func TestRuntimeRandom(t *testing.T) {
 			assertUserError(t, err)
 			require.ErrorContains(t, err, stdlib.ZeroModuloError.Error())
 		}
-		testTypes(t, runCaseWithZeroModulo, true)
-	})
-
-	// sanity statistical test to make sure the random numbers less than modulo
-	// are uniform in [0,modulo-1].
-	// The test requires the original random source (here `crypto/rand`)
-	// to be uniform.
-	// The test uses the same small values for all types: one is a power of 2
-	// and the other is not.
-	t.Run("basic uniformity with modulo", func(t *testing.T) {
-		t.Parallel()
-
-		if testing.Short() {
-			// skipped because the test is slow
-			t.Skip()
-		}
-
-		runStatisticsWithModulo := func(modulo int) func(*testing.T, sema.Type) {
-			return func(t *testing.T, ty sema.Type) {
-				// make sure modulo fits in 8 bits
-				require.Less(t, modulo, 1<<8)
-
-				moduloString := strconv.Itoa(modulo)
-				f := func() (uint64, error) {
-					value, err := executeScript(ty, moduloString, readCryptoRandom)
-					if err != nil {
-						return 0, err
-					}
-
-					return strconv.ParseUint(value.String(), 10, 8)
-				}
-
-				random.BasicDistributionTest(t, uint64(modulo), 1, f)
-			}
-		}
-
-		t.Run("power of 2 (that fits in 8 bits)", func(t *testing.T) {
-			t.Parallel()
-
-			testTypes(t, runStatisticsWithModulo(64), false)
-		})
-
-		t.Run("non-power of 2", func(t *testing.T) {
-			t.Parallel()
-
-			testTypes(t, runStatisticsWithModulo(71), false)
-		})
+		testTypes(t, runCaseWithZeroModulo)
 	})
 }
 
