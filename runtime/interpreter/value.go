@@ -19691,24 +19691,19 @@ type ReferenceValue interface {
 	ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value
 }
 
-func ReferenceTypeDereferenceFunctionValue(
+func DereferenceValue(
 	inter *Interpreter,
-	borrowedType sema.Type,
-	value Value,
-) *HostFunctionValue {
-	return NewHostFunctionValue(
+	locationRange LocationRange,
+	referenceValue ReferenceValue,
+) Value {
+	referencedValue := referenceValue.ReferencedValue(inter, locationRange, true)
+	return (*referencedValue).Transfer(
 		inter,
-		sema.ReferenceDereferenceFunctionType(borrowedType),
-		func(invocation Invocation) Value {
-			return value.Transfer(
-				invocation.Interpreter,
-				invocation.LocationRange,
-				atree.Address{},
-				false,
-				nil,
-				nil,
-			)
-		},
+		locationRange,
+		atree.Address{},
+		false,
+		nil,
+		nil,
 	)
 }
 
@@ -19875,11 +19870,6 @@ func (v *StorageReferenceValue) GetMember(
 	name string,
 ) Value {
 	self := v.mustReferencedValue(interpreter, locationRange)
-
-	switch name {
-	case sema.ReferenceTypeDereferenceFunctionName:
-		return ReferenceTypeDereferenceFunctionValue(interpreter, v.BorrowedType, self)
-	}
 
 	return interpreter.getMember(self, locationRange, name)
 }
@@ -20251,11 +20241,6 @@ func (v *EphemeralReferenceValue) GetMember(
 	locationRange LocationRange,
 	name string,
 ) Value {
-	switch name {
-	case sema.ReferenceTypeDereferenceFunctionName:
-		return ReferenceTypeDereferenceFunctionValue(interpreter, v.BorrowedType, v.Value)
-	}
-
 	return interpreter.getMember(v.Value, locationRange, name)
 }
 

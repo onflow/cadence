@@ -1817,7 +1817,7 @@ func TestInterpretReferenceToReference(t *testing.T) {
 	})
 }
 
-func TestInterpretReferenceDereference(t *testing.T) {
+func TestInterpretDereference(t *testing.T) {
 	t.Parallel()
 
 	runValidTestCase := func(
@@ -1840,7 +1840,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 		})
 	}
 
-	t.Run("Dereference Integers", func(t *testing.T) {
+	t.Run("Integers", func(t *testing.T) {
 		t.Parallel()
 
 		expectedValues := map[sema.Type]interpreter.IntegerValue{
@@ -1883,7 +1883,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 					`
                         fun main(): %[1]s {
                             let x: &%[1]s = &42
-                            return x.dereference()
+                            return *x
                         }
 	                `,
 					integerType,
@@ -1893,7 +1893,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 		}
 	})
 
-	t.Run("Dereference Fixed points", func(t *testing.T) {
+	t.Run("Fixed-point numbers", func(t *testing.T) {
 		t.Parallel()
 
 		expectedValues := map[sema.Type]interpreter.FixedPointValue{
@@ -1918,7 +1918,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 					`
                         fun main(): %[1]s {
                             let x: &%[1]s = &42.24
-                            return x.dereference()
+                            return *x
                         }
 	                `,
 					fixedPointType,
@@ -1928,7 +1928,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 		}
 	})
 
-	t.Run("Dereference &[Integer types]", func(t *testing.T) {
+	t.Run("Variable-sized array of integers", func(t *testing.T) {
 		t.Parallel()
 
 		for _, typ := range sema.AllIntegerTypes {
@@ -1968,9 +1968,9 @@ func TestInterpretReferenceDereference(t *testing.T) {
                                 let ref: &[%[1]s] = &originalArray
 
                                 // Even a temporary value shouldn't affect originalArray.
-                                ref.dereference().append(4)
+                                (*ref).append(4)
 
-                                let deref = ref.dereference()
+                                let deref = *ref
                                 deref.append(4)
                                 return deref
                             }
@@ -2345,7 +2345,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 		}
 	})
 
-	t.Run("Dereference &[Integer types; 3]", func(t *testing.T) {
+	t.Run("Constant-sized array of integers", func(t *testing.T) {
 		t.Parallel()
 
 		for _, typ := range sema.AllIntegerTypes {
@@ -2385,7 +2385,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
                             fun main(): [%[1]s; 3] {
                                 let ref: &[%[1]s; 3] = &originalArray
 
-                                let deref = ref.dereference()
+                                let deref = *ref
                                 deref[2] = 30
                                 return deref
                             }
@@ -2740,17 +2740,17 @@ func TestInterpretReferenceDereference(t *testing.T) {
 		}
 	})
 
-	t.Run("Dereference Dictionary", func(t *testing.T) {
+	t.Run("Dictionary", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("{Int : String}", func(t *testing.T) {
+		t.Run("{Int: String}", func(t *testing.T) {
 			inter := parseCheckAndInterpret(
 				t,
 				`
-					fun main(): {Int : String} {
-						let original = { 1 : "ABC", 2 : "DEF" }
+					fun main(): {Int: String} {
+						let original = {1: "ABC", 2: "DEF"}
 						let x: &{Int : String} = &original
-						return x.dereference()
+						return *x
 					}
 				`,
 			)
@@ -2777,14 +2777,14 @@ func TestInterpretReferenceDereference(t *testing.T) {
 			)
 		})
 
-		t.Run("{Int : [String]}", func(t *testing.T) {
+		t.Run("{Int: [String]}", func(t *testing.T) {
 			inter := parseCheckAndInterpret(
 				t,
 				`
-					fun main(): {Int : [String]} {
-						let original = { 1 : ["ABC", "XYZ"], 2 : ["DEF"] }
-						let x: &{Int : [String]} = &original
-						return x.dereference()
+					fun main(): {Int: [String]} {
+						let original = {1: ["ABC", "XYZ"], 2: ["DEF"]}
+						let x: &{Int: [String]} = &original
+						return *x
 					}
 				`,
 			)
@@ -2831,7 +2831,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 		})
 	})
 
-	t.Run("Dereference Character", func(t *testing.T) {
+	t.Run("Character", func(t *testing.T) {
 		t.Parallel()
 
 		runValidTestCase(
@@ -2841,14 +2841,14 @@ func TestInterpretReferenceDereference(t *testing.T) {
 				fun main(): Character {
 					let original: Character = "S"
 					let x: &Character = &original
-					return x.dereference()
+					return *x
 				}
 			`,
 			interpreter.NewUnmeteredCharacterValue("S"),
 		)
 	})
 
-	t.Run("Dereference String", func(t *testing.T) {
+	t.Run("String", func(t *testing.T) {
 		t.Parallel()
 
 		runValidTestCase(
@@ -2858,14 +2858,14 @@ func TestInterpretReferenceDereference(t *testing.T) {
 				fun main(): String {
 					let original: String = "STxy"
 					let x: &String = &original
-					return x.dereference()
+					return *x
 				}
 			`,
 			interpreter.NewUnmeteredStringValue("STxy"),
 		)
 	})
 
-	t.Run("Dereference Bool", func(t *testing.T) {
+	t.Run("Bool", func(t *testing.T) {
 		t.Parallel()
 
 		runValidTestCase(
@@ -2875,14 +2875,14 @@ func TestInterpretReferenceDereference(t *testing.T) {
 				fun main(): Bool {
 					let original: Bool = true
 					let x: &Bool = &original
-					return x.dereference()
+					return *x
 				}
 			`,
 			interpreter.BoolValue(true),
 		)
 	})
 
-	t.Run("Dereference Address", func(t *testing.T) {
+	t.Run("Address", func(t *testing.T) {
 		t.Parallel()
 
 		address, err := common.HexToAddress("0x0000000000000231")
@@ -2895,14 +2895,14 @@ func TestInterpretReferenceDereference(t *testing.T) {
 				fun main(): Address {
 					let original: Address = 0x0000000000000231
 					let x: &Address = &original
-					return x.dereference()
+					return *x
 				}
 			`,
 			interpreter.NewAddressValue(nil, address),
 		)
 	})
 
-	t.Run("Dereference Path", func(t *testing.T) {
+	t.Run("Path", func(t *testing.T) {
 		t.Parallel()
 
 		runValidTestCase(
@@ -2912,7 +2912,7 @@ func TestInterpretReferenceDereference(t *testing.T) {
 				fun main(): Path {
 					let original: Path = /private/temp
 					let x: &Path = &original
-					return x.dereference()
+					return *x
 				}
 			`,
 			interpreter.NewUnmeteredPathValue(common.PathDomainPrivate, "temp"),
@@ -2925,27 +2925,10 @@ func TestInterpretReferenceDereference(t *testing.T) {
 				fun main(): Path {
 					let original: Path = /public/temp
 					let x: &Path = &original
-					return x.dereference()
+					return *x
 				}
 			`,
 			interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "temp"),
-		)
-	})
-
-	t.Run("Dereference Optional Reference using chaining", func(t *testing.T) {
-		t.Parallel()
-
-		runValidTestCase(
-			t,
-			"Optional reference using chaining",
-			`
-				fun main(): Int? {
-					let original: Int? = 42
-					let x: &Int? = &original
-					return x?.dereference()
-				}
-			`,
-			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
 		)
 	})
 }
