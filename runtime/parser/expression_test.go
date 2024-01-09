@@ -2201,6 +2201,43 @@ func TestParseBlockComment(t *testing.T) {
 	})
 }
 
+func TestParseMulInfixExpression(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := testParseExpression(" 1 ** 2")
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		&ast.BinaryExpression{
+			Operation: ast.OperationMul,
+			Left: &ast.IntegerExpression{
+				PositiveLiteral: []byte("1"),
+				Value:           big.NewInt(1),
+				Base:            10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
+			},
+			Right: &ast.UnaryExpression{
+				Operation: ast.OperationMul,
+				Expression: &ast.IntegerExpression{
+					PositiveLiteral: []byte("2"),
+					Value:           big.NewInt(2),
+					Base:            10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+						EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+			},
+		},
+		result,
+	)
+}
+
 func BenchmarkParseInfix(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
