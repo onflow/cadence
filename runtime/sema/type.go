@@ -6458,9 +6458,9 @@ func IsPrimitiveOrContainerOfPrimitive(ty Type) bool {
 
 	case *DictionaryType:
 		return IsPrimitiveOrContainerOfPrimitive(ty.ValueType)
-		
+
 	default:
-	  	return ty.IsPrimitiveType()
+		return ty.IsPrimitiveType()
 	}
 }
 
