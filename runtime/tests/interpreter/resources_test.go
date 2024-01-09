@@ -2499,6 +2499,62 @@ func TestInterpretResourceInterfaceDefaultDestroyEventNoCompositeEvent(t *testin
 	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "id"))
 }
 
+func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
+
+	t.Parallel()
+
+	var events []*interpreter.CompositeValue
+
+	inter, err := parseCheckAndInterpretWithOptions(t, `
+		access(all) resource R {
+			access(all) var i: Int
+			access(all) init() {
+				self.i = 123
+			}
+		}
+		access(all) var globalArray: @[R] <- [<- create R()]
+		access(all) var base: &R = &globalArray[0] // strategically named variable
+		access(all) var dummy: @R <- globalArray.removeLast() // invalidate the ref
+
+		access(all) attachment TrollAttachment for IndestructibleTroll {
+			access(all) event ResourceDestroyed( x: Int = base.i)
+		}
+		
+		access(all) resource IndestructibleTroll {
+			let i: Int
+			init() {
+				self.i = 1
+			}
+		}
+
+		access(all) fun test() {
+			var troll <- create IndestructibleTroll()
+			var trollAttachment <- attach TrollAttachment() to <-troll
+			destroy trollAttachment
+		}	
+        `, ParseCheckAndInterpretOptions{
+		CheckerConfig: &sema.Config{
+			AttachmentsEnabled: true,
+		},
+		Config: &interpreter.Config{
+			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+				events = append(events, event)
+				return nil
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	_, err = inter.Invoke("test")
+	require.NoError(t, err)
+
+	require.Len(t, events, 1)
+	require.Equal(t, "TrollAttachment.ResourceDestroyed", events[0].QualifiedIdentifier)
+
+	// should be 1, not 123
+	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "x"))
+}
+
 func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
 
 	t.Parallel()
