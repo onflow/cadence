@@ -27,7 +27,6 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/tests/utils"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/sema"
@@ -75,9 +74,9 @@ func TestCheckEventDeclaration(t *testing.T) {
 				case common.CompositeKindResource:
 					errs := RequireCheckerErrors(t, err, 3)
 
-					assert.IsType(t, &sema.ResourceLossError{}, errs[0])
-					assert.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[1])
-					assert.IsType(t, &sema.InvalidResourceFieldError{}, errs[2])
+					require.IsType(t, &sema.ResourceLossError{}, errs[0])
+					require.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[1])
+					require.IsType(t, &sema.InvalidResourceFieldError{}, errs[2])
 
 				case common.CompositeKindStructure:
 					require.NoError(t, err)
@@ -85,8 +84,8 @@ func TestCheckEventDeclaration(t *testing.T) {
 				case common.CompositeKindAttachment:
 					errs := RequireCheckerErrors(t, err, 2)
 
-					assert.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[1])
-					assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+					require.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[1])
+					require.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 				default:
 					panic(errors.NewUnreachableError())
@@ -195,8 +194,8 @@ func TestCheckEventDeclaration(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.RedeclarationError{}, errs[0])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[1])
+		require.IsType(t, &sema.RedeclarationError{}, errs[0])
+		require.IsType(t, &sema.RedeclarationError{}, errs[1])
 	})
 
 }
@@ -228,7 +227,7 @@ func TestCheckEmitEvent(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
+		require.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
 	})
 
 	t.Run("EmitNonEvent", func(t *testing.T) {
@@ -242,7 +241,7 @@ func TestCheckEmitEvent(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.EmitNonEventError{}, errs[0])
+		require.IsType(t, &sema.EmitNonEventError{}, errs[0])
 	})
 
 	t.Run("EmitNotDeclared", func(t *testing.T) {
@@ -254,7 +253,7 @@ func TestCheckEmitEvent(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 
 	t.Run("EmitImported", func(t *testing.T) {
@@ -289,7 +288,7 @@ func TestCheckEmitEvent(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.EmitImportedEventError{}, errs[0])
+		require.IsType(t, &sema.EmitImportedEventError{}, errs[0])
 	})
 }
 
@@ -369,7 +368,7 @@ func TestCheckDeclareEventInInterface(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 
 	t.Run("declare and emit type mismatch", func(t *testing.T) {
@@ -388,7 +387,7 @@ func TestCheckDeclareEventInInterface(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("declare and emit qualified", func(t *testing.T) {
@@ -409,7 +408,7 @@ func TestCheckDeclareEventInInterface(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 
 	t.Run("declare and emit in pre-condition", func(t *testing.T) {
@@ -533,7 +532,7 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
 	})
 
 	t.Run("fail in struct interface", func(t *testing.T) {
@@ -547,7 +546,7 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
 	})
 
 	t.Run("fail in contract", func(t *testing.T) {
@@ -561,7 +560,7 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
 	})
 
 	t.Run("fail in contract interface", func(t *testing.T) {
@@ -575,7 +574,7 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
 	})
 
 	t.Run("allowed in resource attachment", func(t *testing.T) {
@@ -601,7 +600,7 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
 	})
 
 	t.Run("nested declarations after first disallowed", func(t *testing.T) {
@@ -616,7 +615,7 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 	})
 
 	t.Run("cannot declare two default events", func(t *testing.T) {
@@ -631,10 +630,10 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 4)
 
-		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[1])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[2])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[3])
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+		require.IsType(t, &sema.RedeclarationError{}, errs[1])
+		require.IsType(t, &sema.RedeclarationError{}, errs[2])
+		require.IsType(t, &sema.RedeclarationError{}, errs[3])
 	})
 
 	t.Run("explicit emit disallowed", func(t *testing.T) {
@@ -651,7 +650,7 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.EmitDefaultDestroyEventError{}, errs[0])
+		require.IsType(t, &sema.EmitDefaultDestroyEventError{}, errs[0])
 	})
 
 	t.Run("explicit emit disallowed outside", func(t *testing.T) {
@@ -669,7 +668,7 @@ func TestCheckDefaultEventDeclaration(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.EmitDefaultDestroyEventError{}, errs[0])
+		require.IsType(t, &sema.EmitDefaultDestroyEventError{}, errs[0])
 	})
 }
 
@@ -712,7 +711,7 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("field", func(t *testing.T) {
@@ -771,8 +770,9 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 			}
         `)
 		errs := RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
-		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[1])
+		require.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[1])
+		require.Equal(t, errs[1].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidExpression)
 	})
 
 	t.Run("raw type", func(t *testing.T) {
@@ -785,8 +785,8 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 			}
         `)
 		errs := RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[1])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[1])
 	})
 
 	t.Run("address expr", func(t *testing.T) {
@@ -842,7 +842,7 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("self", func(t *testing.T) {
@@ -856,10 +856,10 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 4)
 
-		assert.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
-		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
-		assert.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[2])
-		assert.IsType(t, &sema.InvalidResourceFieldError{}, errs[3])
+		require.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
+		require.IsType(t, &sema.ResourceLossError{}, errs[1])
+		require.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[2])
+		require.IsType(t, &sema.InvalidResourceFieldError{}, errs[3])
 	})
 
 	t.Run("array field", func(t *testing.T) {
@@ -878,7 +878,7 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
 	})
 
 	t.Run("function call", func(t *testing.T) {
@@ -896,7 +896,8 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidExpression)
 	})
 
 	t.Run("external field", func(t *testing.T) {
@@ -919,7 +920,8 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 			}
         `)
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidIdentifier)
 	})
 
 	t.Run("double nested field", func(t *testing.T) {
@@ -967,7 +969,8 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidExpression)
 	})
 
 	t.Run("method call member", func(t *testing.T) {
@@ -991,7 +994,8 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidExpression)
 	})
 
 	t.Run("array index expression", func(t *testing.T) {
@@ -1010,7 +1014,8 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.NonDictionaryIndexExpression)
 	})
 
 	t.Run("array reference index expression", func(t *testing.T) {
@@ -1027,9 +1032,12 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 				}
 			}
         `)
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[1])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
+		require.Equal(t, errs[1].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.NonDictionaryIndexExpression)
 	})
 
 	t.Run("dict index expression", func(t *testing.T) {
@@ -1063,7 +1071,9 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 				}
 			}
         `)
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
 	})
 
 	t.Run("function call dict index expression", func(t *testing.T) {
@@ -1079,7 +1089,8 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 			}
         `)
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidExpression)
 	})
 
 	t.Run("function call dict indexed expression", func(t *testing.T) {
@@ -1097,7 +1108,8 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 			}
         `)
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidExpression)
 	})
 
 	t.Run("external var expression", func(t *testing.T) {
@@ -1116,7 +1128,8 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 			}
         `)
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidIdentifier)
 	})
 
 	t.Run("attachment index expression", func(t *testing.T) {
@@ -1225,5 +1238,128 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 			}
         `)
 		require.NoError(t, err)
+	})
+
+	t.Run("dead reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) resource InnerResource {
+				access(all) var i: Int
+				access(all) init() { self.i = 123 }
+			}
+
+			access(all) resource IndestructibleTroll {
+				access(all) var ref: &InnerResource
+
+				access(all) init() {
+					var r <- create InnerResource()
+					self.ref = &r as &InnerResource
+					destroy r
+				}
+
+				// Make the event parameter dependent on the dead reference
+				access(all) event ResourceDestroyed(x: Int? = self.ref.i)
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
+	})
+
+	t.Run("dead reference in dict", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) resource InnerResource {
+				access(all) var i: Int
+				access(all) init() { self.i = 123 }
+			}
+
+			access(all) resource IndestructibleTroll {
+				access(all) var dict: {Int: &InnerResource}
+
+				access(all) init() {
+					self.dict = {}
+				}
+
+				// Make the event parameter dependent on the dead reference
+				access(all) event ResourceDestroyed(x: Int? = self.dict[0]?.i)
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
+	})
+
+	t.Run("nested dead reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) resource InnerInnerResource {
+				access(all) var i: Int
+				access(all) init() { self.i = 123 }
+			}
+
+			access(all) resource InnerResource {
+				access(all) var innerRef: &InnerInnerResource
+				access(all) init() { 
+					var r <- create InnerInnerResource()
+					self.innerRef = &r as &InnerInnerResource
+					destroy r
+				}
+			}
+
+			access(all) resource IndestructibleTroll {
+				access(all) var dict: @{Int: InnerResource}
+
+				access(all) init() {
+					self.dict <- {}
+				}
+
+				// Make the event parameter dependent on the dead reference
+				access(all) event ResourceDestroyed(x: Int? = self.dict[0]?.innerRef?.i)
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
+	})
+
+	t.Run("nested dead reference attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		access(all) attachment Attachment for InnerResource {
+			access(all) var i: Int
+			access(all) init() { self.i = 123 }
+		}
+
+		access(all) resource InnerResource {}
+
+		access(all) resource IndestructibleTroll {
+			access(all) var ref: &InnerResource
+
+			access(all) init() {
+				var r <- create InnerResource()
+				self.ref = &r as &InnerResource
+				destroy r
+			}
+
+			// Make the event parameter dependent on the dead reference
+			access(all) event ResourceDestroyed(x: Int? = self.ref[Attachment]?.i )
+		}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
 	})
 }
