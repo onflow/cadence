@@ -4568,6 +4568,7 @@ func TestRuntimeRandom(t *testing.T) {
 
 	// test based on a transaction, all other tests are script-based - test all types
 	t.Run("transaction without modulo", func(t *testing.T) {
+		t.Parallel()
 
 		runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type) {
 
@@ -4606,6 +4607,7 @@ func TestRuntimeRandom(t *testing.T) {
 
 	// no modulo is passed - test all types
 	t.Run("script without modulo", func(t *testing.T) {
+		t.Parallel()
 
 		runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type) {
 			randBuffer := newRandBuffer(t)
@@ -4621,6 +4623,7 @@ func TestRuntimeRandom(t *testing.T) {
 
 	// random modulo is passed as the modulo argument - test all types
 	t.Run("script with modulo all types", func(t *testing.T) {
+		t.Parallel()
 
 		runValidCaseWithModulo := func(t *testing.T, ty sema.Type) {
 			moduloBuffer := newRandBuffer(t)
@@ -4644,6 +4647,8 @@ func TestRuntimeRandom(t *testing.T) {
 	t.Run("script with modulo edge cases all types", func(t *testing.T) {
 
 		t.Run("max modulo", func(t *testing.T) {
+			t.Parallel()
+
 			// case where modulo is the max value of the type
 			runValidCaseWithMaxModulo := func(t *testing.T, ty sema.Type) {
 
@@ -4666,6 +4671,8 @@ func TestRuntimeRandom(t *testing.T) {
 		})
 
 		t.Run("one modulo", func(t *testing.T) {
+			t.Parallel()
+
 			// case where modulo is 1 and expected value in 0
 			runValidCaseWithOneModulo := func(t *testing.T, ty sema.Type) {
 				// set modulo to 1
@@ -4681,6 +4688,8 @@ func TestRuntimeRandom(t *testing.T) {
 
 	// function should error if zero is used as modulo - test all types
 	t.Run("script with zero modulo", func(t *testing.T) {
+		t.Parallel()
+
 		runCaseWithZeroModulo := func(t *testing.T, ty sema.Type) {
 			// set modulo to "0"
 			_, err := executeScript(ty, "0", readCryptoRandom)
@@ -4697,6 +4706,8 @@ func TestRuntimeRandom(t *testing.T) {
 	// The test uses the same small values for all types: one is a power of 2
 	// and the other is not.
 	t.Run("basic uniformity with modulo", func(t *testing.T) {
+		t.Parallel()
+
 		if testing.Short() {
 			// skipped because the test is slow
 			t.Skip()
@@ -4722,10 +4733,14 @@ func TestRuntimeRandom(t *testing.T) {
 		}
 
 		t.Run("power of 2 (that fits in 8 bits)", func(t *testing.T) {
+			t.Parallel()
+
 			testTypes(t, runStatisticsWithModulo(64), false)
 		})
 
 		t.Run("non-power of 2", func(t *testing.T) {
+			t.Parallel()
+
 			testTypes(t, runStatisticsWithModulo(71), false)
 		})
 	})
