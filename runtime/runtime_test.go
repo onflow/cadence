@@ -30,7 +30,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onflow/crypto/random"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -47,6 +46,7 @@ import (
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/crypto/random"
 )
 
 func TestRuntimeImport(t *testing.T) {
@@ -4466,6 +4466,7 @@ func TestRuntimeRandom(t *testing.T) {
 
 	t.Parallel()
 
+	// transaction logs one random number
 	transactionSource := `
       transaction {
         prepare() {
@@ -4474,10 +4475,16 @@ func TestRuntimeRandom(t *testing.T) {
         }
       }
     `
+	// script returns an array of random numbers
 	scriptSource := `
-		access(all) fun main(): %[1]s {
-			let rand = revertibleRandom<%[1]s>(%[2]s)
-			return rand
+		access(all) fun main(): [%[1]s] {
+			var randoms: [%[1]s] = []
+			var i = 0
+			while i < %[3]d {
+				randoms.append(revertibleRandom<%[1]s>(%[2]s))
+				i = i + 1
+			}
+			return randoms
 		}
 	`
 
@@ -4492,8 +4499,9 @@ func TestRuntimeRandom(t *testing.T) {
 	executeScript := func(
 		ty sema.Type,
 		moduloArgument string,
+		randomsNumber int,
 		randomGenerator func(buffer []byte) error,
-	) (cadence.Value, error) {
+	) ([]cadence.Value, error) {
 
 		nextScriptLocation := NewScriptLocationGenerator()
 		runtime := NewTestInterpreterRuntime()
@@ -4502,12 +4510,13 @@ func TestRuntimeRandom(t *testing.T) {
 			// example "modulo: UInt8(77)"
 			moduloArgument = fmt.Sprintf("modulo: %s(%s)", ty.String(), moduloArgument)
 		}
-		return runtime.ExecuteScript(
+		val, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(
 					fmt.Sprintf(scriptSource,
 						ty.String(),
 						moduloArgument,
+						randomsNumber,
 					)),
 			},
 			Context{
@@ -4517,6 +4526,14 @@ func TestRuntimeRandom(t *testing.T) {
 				Location: nextScriptLocation(),
 			},
 		)
+		if err != nil {
+			return nil, err
+		}
+		valueArray, ok := val.(cadence.Array)
+		if !ok {
+			return nil, errors.New("script should return an array")
+		}
+		return valueArray.Values, nil
 	}
 
 	testTypes := func(t *testing.T, testType func(*testing.T, sema.Type), allTypes bool) {
@@ -4609,11 +4626,11 @@ func TestRuntimeRandom(t *testing.T) {
 		runValidCaseWithoutModulo := func(t *testing.T, ty sema.Type) {
 			randBuffer := newRandBuffer(t)
 
-			value, err := executeScript(ty, "", newReadFromBuffer(randBuffer))
+			value, err := executeScript(ty, "", 1, newReadFromBuffer(randBuffer))
 			require.NoError(t, err)
 			// prepare the expected value from the random source
 			expected := new(big.Int).SetBytes(randBuffer[:typeToBytes(t, ty)])
-			assert.Equal(t, expected.String(), value.String())
+			assert.Equal(t, expected.String(), value[0].String())
 		}
 		testTypes(t, runValidCaseWithoutModulo, true)
 	})
@@ -4629,10 +4646,10 @@ func TestRuntimeRandom(t *testing.T) {
 			// big.Int are used as they cover all the tested types including the small ones (UInt8 ..)
 			modulo := new(big.Int).SetBytes(moduloBuffer[:typeToBytes(t, ty)])
 
-			value, err := executeScript(ty, modulo.String(), readCryptoRandom)
+			value, err := executeScript(ty, modulo.String(), 1, readCryptoRandom)
 			require.NoError(t, err)
 			// convert `value` to big Int for comparison
-			valueBig, ok := new(big.Int).SetString(value.String(), 10)
+			valueBig, ok := new(big.Int).SetString(value[0].String(), 10)
 			require.True(t, ok)
 			// check that modulo > value
 			require.True(t, modulo.Cmp(valueBig) == 1)
@@ -4656,10 +4673,10 @@ func TestRuntimeRandom(t *testing.T) {
 				modulo := new(big.Int).Lsh(one, uint(bitSize))
 				modulo.Sub(modulo, one)
 
-				value, err := executeScript(ty, modulo.String(), readCryptoRandom)
+				value, err := executeScript(ty, modulo.String(), 1, readCryptoRandom)
 				require.NoError(t, err)
 				// convert `value` to big Int for comparison
-				valueBig, ok := new(big.Int).SetString(value.String(), 10)
+				valueBig, ok := new(big.Int).SetString(value[0].String(), 10)
 				require.True(t, ok)
 				// check that modulo > value
 				require.True(t, modulo.Cmp(valueBig) == 1)
@@ -4673,10 +4690,10 @@ func TestRuntimeRandom(t *testing.T) {
 			// case where modulo is 1 and expected value in 0
 			runValidCaseWithOneModulo := func(t *testing.T, ty sema.Type) {
 				// set modulo to 1
-				value, err := executeScript(ty, "1", readCryptoRandom)
+				value, err := executeScript(ty, "1", 1, readCryptoRandom)
 				require.NoError(t, err)
 				// check that value is zero
-				require.True(t, value.String() == "0")
+				require.True(t, value[0].String() == "0")
 			}
 
 			testTypes(t, runValidCaseWithOneModulo, true)
@@ -4689,7 +4706,7 @@ func TestRuntimeRandom(t *testing.T) {
 
 		runCaseWithZeroModulo := func(t *testing.T, ty sema.Type) {
 			// set modulo to "0"
-			_, err := executeScript(ty, "0", readCryptoRandom)
+			_, err := executeScript(ty, "0", 1, readCryptoRandom)
 			assertUserError(t, err)
 			require.ErrorContains(t, err, stdlib.ZeroModuloError.Error())
 		}
@@ -4710,19 +4727,44 @@ func TestRuntimeRandom(t *testing.T) {
 			t.Skip()
 		}
 
+		// `getAllRandoms` returns a large array of random numbers returned
+		// in batches from a script
+		getAllRandoms := func(ty sema.Type, modulo int) ([]uint64, error) {
+			randomSize := 85000
+			randoms := make([]uint64, 0, randomSize)
+
+			moduloString := strconv.Itoa(modulo)
+			// size of of the random batch returned from one call to the script
+			batchSize := 5000
+			for randomSize > 0 {
+				values, err := executeScript(ty, moduloString, batchSize, readCryptoRandom)
+				if err != nil {
+					return nil, err
+				}
+				for i := 0; i < batchSize && i < randomSize; i++ {
+					r, err := strconv.ParseUint(values[i].String(), 10, 8)
+					if err != nil {
+						return nil, err
+					}
+					randoms = append(randoms, r)
+				}
+				randomSize -= batchSize
+			}
+			return randoms, nil
+		}
+
 		runStatisticsWithModulo := func(modulo int) func(*testing.T, sema.Type) {
 			return func(t *testing.T, ty sema.Type) {
 				// make sure modulo fits in 8 bits
 				require.Less(t, modulo, 1<<8)
 
-				moduloString := strconv.Itoa(modulo)
+				randoms, err := getAllRandoms(ty, modulo)
+				require.NoError(t, err)
+				randomArrayIndex := 0
 				f := func() (uint64, error) {
-					value, err := executeScript(ty, moduloString, readCryptoRandom)
-					if err != nil {
-						return 0, err
-					}
-
-					return strconv.ParseUint(value.String(), 10, 8)
+					copy := randomArrayIndex
+					randomArrayIndex += 1
+					return randoms[copy], nil
 				}
 
 				random.BasicDistributionTest(t, uint64(modulo), 1, f)
