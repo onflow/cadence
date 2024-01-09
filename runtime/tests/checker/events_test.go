@@ -784,9 +784,10 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 				event ResourceDestroyed(name: Type = R)
 			}
         `)
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 3)
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		require.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[1])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[2])
 	})
 
 	t.Run("address expr", func(t *testing.T) {
@@ -1379,6 +1380,52 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 			access(all) var dummy: @R <- globalArray.removeLast() // invalidate the ref
 			access(all) resource IndestructibleTroll {
 				// Reference the fake "base" variable
+				access(all) event ResourceDestroyed( x: Int? = base.i)
+			}
+			access(all) fun main() {
+				var troll <- create IndestructibleTroll()
+				destroy troll
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidIdentifier)
+	})
+
+	t.Run("non-attachment type name", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) contract Contract {
+				access(all) var i: Int
+				access(all) init() { self.i = 1}
+			}
+			access(all) resource IndestructibleTroll {
+				access(all) event ResourceDestroyed( x: Int? = Contract.i)
+			}
+			access(all) fun main() {
+				var troll <- create IndestructibleTroll()
+				destroy troll
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidIdentifier)
+	})
+
+	t.Run("base contract type name", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) contract base {
+				access(all) var i: Int
+				access(all) init() { self.i = 1}
+			}
+			access(all) resource IndestructibleTroll {
 				access(all) event ResourceDestroyed( x: Int? = base.i)
 			}
 			access(all) fun main() {
