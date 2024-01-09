@@ -191,7 +191,8 @@ type Type interface {
 		other Type,
 		typeParameters *TypeParameterTypeOrderedMap,
 		report func(err error),
-		outerRange ast.Range,
+		memoryGauge common.MemoryGauge,
+		outerRange ast.HasPosition,
 	) bool
 
 	// Resolve returns a type that is free of generic types (see `GenericType`),
@@ -758,7 +759,8 @@ func (t *OptionalType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	otherOptional, ok := other.(*OptionalType)
@@ -766,7 +768,13 @@ func (t *OptionalType) Unify(
 		return false
 	}
 
-	return t.Type.Unify(otherOptional.Type, typeParameters, report, outerRange)
+	return t.Type.Unify(
+		otherOptional.Type,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *OptionalType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -968,7 +976,8 @@ func (t *GenericType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	if unifiedType, ok := typeParameters.Get(t.TypeParameter); ok {
@@ -983,7 +992,7 @@ func (t *GenericType) Unify(
 					TypeParameter: t.TypeParameter,
 					ExpectedType:  unifiedType,
 					ActualType:    other,
-					Range:         outerRange,
+					Range:         ast.NewRangeFromPositioned(memoryGauge, outerRange),
 				},
 			)
 		}
@@ -996,7 +1005,7 @@ func (t *GenericType) Unify(
 		// If the type parameter corresponding to the type argument has a type bound,
 		// then check that the argument's type is a subtype of the type bound.
 
-		err := t.TypeParameter.checkTypeBound(other, outerRange)
+		err := t.TypeParameter.checkTypeBound(other, memoryGauge, outerRange)
 		if err != nil {
 			report(err)
 		}
@@ -1282,7 +1291,13 @@ func (t *NumericType) MaxInt() *big.Int {
 	return t.maxInt
 }
 
-func (*NumericType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*NumericType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -1491,7 +1506,13 @@ func (t *FixedPointNumericType) Scale() uint {
 	return t.scale
 }
 
-func (*FixedPointNumericType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*FixedPointNumericType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -2806,7 +2827,8 @@ func (t *VariableSizedType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	otherArray, ok := other.(*VariableSizedType)
@@ -2814,7 +2836,13 @@ func (t *VariableSizedType) Unify(
 		return false
 	}
 
-	return t.Type.Unify(otherArray.Type, typeParameters, report, outerRange)
+	return t.Type.Unify(
+		otherArray.Type,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *VariableSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -2986,7 +3014,8 @@ func (t *ConstantSizedType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	otherArray, ok := other.(*ConstantSizedType)
@@ -2998,7 +3027,13 @@ func (t *ConstantSizedType) Unify(
 		return false
 	}
 
-	return t.Type.Unify(otherArray.Type, typeParameters, report, outerRange)
+	return t.Type.Unify(
+		otherArray.Type,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *ConstantSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -3132,7 +3167,7 @@ func (p TypeParameter) Equal(other *TypeParameter) bool {
 	return p.Optional == other.Optional
 }
 
-func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
+func (p TypeParameter) checkTypeBound(ty Type, memoryGauge common.MemoryGauge, typeRange ast.HasPosition) error {
 	if p.TypeBound == nil ||
 		p.TypeBound.IsInvalidType() ||
 		ty.IsInvalidType() {
@@ -3144,7 +3179,7 @@ func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 		return &TypeMismatchError{
 			ExpectedType: p.TypeBound,
 			ActualType:   ty,
-			Range:        typeRange,
+			Range:        ast.NewRangeFromPositioned(memoryGauge, typeRange),
 		}
 	}
 
@@ -3654,7 +3689,8 @@ func (t *FunctionType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) (
 	result bool,
 ) {
@@ -3684,6 +3720,7 @@ func (t *FunctionType) Unify(
 			otherParameter.TypeAnnotation.Type,
 			typeParameters,
 			report,
+			memoryGauge,
 			outerRange,
 		)
 		result = result || parameterUnified
@@ -3695,6 +3732,7 @@ func (t *FunctionType) Unify(
 		otherFunction.ReturnTypeAnnotation.Type,
 		typeParameters,
 		report,
+		memoryGauge,
 		outerRange,
 	)
 
@@ -4798,7 +4836,13 @@ func (t *CompositeType) RewriteWithIntersectionTypes() (result Type, rewritten b
 	return t, false
 }
 
-func (*CompositeType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*CompositeType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	// TODO:
 	return false
 }
@@ -5578,7 +5622,13 @@ func (t *InterfaceType) RewriteWithIntersectionTypes() (Type, bool) {
 
 }
 
-func (*InterfaceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*InterfaceType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	// TODO:
 	return false
 }
@@ -6112,7 +6162,8 @@ func (t *DictionaryType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	otherDictionary, ok := other.(*DictionaryType)
@@ -6120,8 +6171,22 @@ func (t *DictionaryType) Unify(
 		return false
 	}
 
-	keyUnified := t.KeyType.Unify(otherDictionary.KeyType, typeParameters, report, outerRange)
-	valueUnified := t.ValueType.Unify(otherDictionary.ValueType, typeParameters, report, outerRange)
+	keyUnified := t.KeyType.Unify(
+		otherDictionary.KeyType,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
+
+	valueUnified := t.ValueType.Unify(
+		otherDictionary.ValueType,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
+
 	return keyUnified || valueUnified
 }
 
@@ -6440,14 +6505,21 @@ func (t *InclusiveRangeType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 	otherRange, ok := other.(*InclusiveRangeType)
 	if !ok {
 		return false
 	}
 
-	return t.MemberType.Unify(otherRange.MemberType, typeParameters, report, outerRange)
+	return t.MemberType.Unify(
+		otherRange.MemberType,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *InclusiveRangeType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -6726,14 +6798,21 @@ func (t *ReferenceType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 	otherReference, ok := other.(*ReferenceType)
 	if !ok {
 		return false
 	}
 
-	return t.Type.Unify(otherReference.Type, typeParameters, report, outerRange)
+	return t.Type.Unify(
+		otherReference.Type,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *ReferenceType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -6848,7 +6927,13 @@ func (*AddressType) IsSuperType() bool {
 	return false
 }
 
-func (*AddressType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*AddressType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -7480,7 +7565,13 @@ func (t *TransactionType) initializeMemberResolvers() {
 	})
 }
 
-func (*TransactionType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*TransactionType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -7762,7 +7853,13 @@ func (t *IntersectionType) SupportedEntitlements() (set *EntitlementOrderedSet) 
 	return set
 }
 
-func (*IntersectionType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*IntersectionType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	// TODO: how do we unify the intersection sets?
 	return false
 }
@@ -7953,7 +8050,8 @@ func (t *CapabilityType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 	otherCap, ok := other.(*CapabilityType)
 	if !ok {
@@ -7964,7 +8062,13 @@ func (t *CapabilityType) Unify(
 		return false
 	}
 
-	return t.BorrowType.Unify(otherCap.BorrowType, typeParameters, report, outerRange)
+	return t.BorrowType.Unify(
+		otherCap.BorrowType,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *CapabilityType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -8513,7 +8617,13 @@ func (t *EntitlementType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
-func (*EntitlementType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*EntitlementType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -8664,7 +8774,13 @@ func (t *EntitlementMapType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
-func (*EntitlementMapType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*EntitlementMapType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 

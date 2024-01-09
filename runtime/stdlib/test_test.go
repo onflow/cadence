@@ -334,9 +334,9 @@ func TestTestNewMatcher(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("combined matcher mismatching types", func(t *testing.T) {
@@ -499,9 +499,9 @@ func TestTestEqualMatcher(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("matcher or", func(t *testing.T) {
@@ -1904,9 +1904,9 @@ func TestTestExpect(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("resource with resource matcher", func(t *testing.T) {

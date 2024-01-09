@@ -123,7 +123,13 @@ func (t *SimpleType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
-func (*SimpleType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*SimpleType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
