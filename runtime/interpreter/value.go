@@ -17075,7 +17075,7 @@ func (v *CompositeValue) ConformsToStaticType(
 		}
 	}
 
-	fieldsLen := int(v.dictionary.Count())
+	fieldsLen := v.FieldCount()
 	if v.ComputedFields != nil {
 		fieldsLen += len(v.ComputedFields)
 	}
@@ -17120,6 +17120,10 @@ func (v *CompositeValue) ConformsToStaticType(
 	}
 
 	return true
+}
+
+func (v *CompositeValue) FieldCount() int {
+	return int(v.dictionary.Count())
 }
 
 func (v *CompositeValue) IsStorable() bool {
