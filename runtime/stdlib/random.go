@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"math/big"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -132,7 +133,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.UInt128Type:
-				randomBig := getBigRandomNumber(generator, returnIntegerType, moduloValue)
+				randomBig := getBigRandomNumber(generator, returnIntegerType, moduloValue, inter)
 				return interpreter.NewUInt128ValueFromBigInt(
 					inter,
 					func() *big.Int {
@@ -140,7 +141,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.UInt256Type:
-				randomBig := getBigRandomNumber(generator, returnIntegerType, moduloValue)
+				randomBig := getBigRandomNumber(generator, returnIntegerType, moduloValue, inter)
 				return interpreter.NewUInt256ValueFromBigInt(
 					inter,
 					func() *big.Int {
@@ -182,7 +183,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.Word128Type:
-				randomBig := getBigRandomNumber(generator, returnIntegerType, moduloValue)
+				randomBig := getBigRandomNumber(generator, returnIntegerType, moduloValue, inter)
 				return interpreter.NewWord128ValueFromBigInt(
 					inter,
 					func() *big.Int {
@@ -190,7 +191,7 @@ func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue
 					},
 				)
 			case sema.Word256Type:
-				randomBig := getBigRandomNumber(generator, returnIntegerType, moduloValue)
+				randomBig := getBigRandomNumber(generator, returnIntegerType, moduloValue, inter)
 				return interpreter.NewWord256ValueFromBigInt(
 					inter,
 					func() *big.Int {
@@ -326,6 +327,7 @@ func getBigRandomNumber(
 	generator RandomGenerator,
 	ty sema.Type,
 	moduloArg interpreter.Value,
+	gauge common.MemoryGauge,
 ) *big.Int {
 
 	// get the numeric type byte size
@@ -336,11 +338,14 @@ func getBigRandomNumber(
 	}
 	bytes := numericType.ByteSize()
 	// buffer to get random bytes from the generator
+	common.UseMemory(gauge, common.NewBytesMemoryUsage(bytes))
 	buffer := make([]byte, bytes)
+
 	// case where no modulo argument was provided
 	if moduloArg == nil {
 		getRandomBytes(buffer, generator)
 		// SetBytes considers big endianness (although little endian could be used too)
+		common.UseMemory(gauge, common.NewBigIntMemoryUsage(len(buffer)))
 		return new(big.Int).SetBytes(buffer)
 	}
 
@@ -397,6 +402,7 @@ func getBigRandomNumber(
 	//
 	// (a different approach would be to pull 128 bits more bits than the size of `max`
 	// from the random generator and use big number reduction by `modulo`)
+	common.UseMemory(gauge, common.NewBigIntMemoryUsage(byteSize))
 	random := new(big.Int)
 	for {
 		// only generate `byteSize` random bytes

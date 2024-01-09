@@ -30,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onflow/crypto/random"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -46,7 +47,6 @@ import (
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/onflow/crypto/random"
 )
 
 func TestRuntimeImport(t *testing.T) {
