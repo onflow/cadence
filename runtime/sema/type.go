@@ -6449,10 +6449,6 @@ func (t *AddressType) initializeMemberResolvers() {
 }
 
 func IsPrimitiveOrContainerOfPrimitive(ty Type) bool {
-	if ty.IsPrimitiveType() {
-		return true
-	}
-
 	switch ty := ty.(type) {
 	case *VariableSizedType:
 		return IsPrimitiveOrContainerOfPrimitive(ty.Type)
@@ -6462,9 +6458,10 @@ func IsPrimitiveOrContainerOfPrimitive(ty Type) bool {
 
 	case *DictionaryType:
 		return IsPrimitiveOrContainerOfPrimitive(ty.ValueType)
+		
+	default:
+	  	return ty.IsPrimitiveType()
 	}
-
-	return false
 }
 
 // IsSubType determines if the given subtype is a subtype
