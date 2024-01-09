@@ -3122,7 +3122,7 @@ func TestCheckNestedReference(t *testing.T) {
 	})
 }
 
-func TestCheckReferenceDereferenceFunction(t *testing.T) {
+func TestCheckDereference(t *testing.T) {
 
 	t.Parallel()
 
@@ -3131,7 +3131,7 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 		initializer string
 	}
 
-	runTestCase := func(t *testing.T, name, code string, expectedTy sema.Type) {
+	runValidTestCase := func(t *testing.T, name, code string, expectedTy sema.Type) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
@@ -3148,16 +3148,14 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 		})
 	}
 
-	runInvalidMemberTestCase := func(t *testing.T, name, code string, expectedErrors []error) {
+	runInvalidTestCase := func(t *testing.T, name, code string) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, code)
 
-			errs := RequireCheckerErrors(t, err, len(expectedErrors))
-			for i := range expectedErrors {
-				assert.IsType(t, expectedErrors[i], errs[i])
-			}
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
 		})
 	}
 
@@ -3168,13 +3166,13 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 			integerType := typ
 			typString := typ.QualifiedString()
 
-			runTestCase(
+			runValidTestCase(
 				t,
 				typString,
 				fmt.Sprintf(
 					`
 						let x: &%[1]s = &1
-						let y: %[1]s = x.dereference()
+						let y: %[1]s = *x
 					`,
 					integerType,
 				),
@@ -3186,13 +3184,13 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 			fixedPointType := typ
 			typString := typ.QualifiedString()
 
-			runTestCase(
+			runValidTestCase(
 				t,
 				typString,
 				fmt.Sprintf(
 					`
 						let x: &%[1]s = &1.0
-						let y: %[1]s = x.dereference()
+						let y: %[1]s = *x
 					`,
 					fixedPointType,
 				),
@@ -3230,14 +3228,14 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 				initializer: "/public/foo",
 			},
 		} {
-			runTestCase(
+			runValidTestCase(
 				t,
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
 						let value: %[1]s = %[2]s
 						let x: &%[1]s = &value
-						let y: %[1]s = x.dereference()
+						let y: %[1]s = *x
 					`,
 					testCase.ty,
 					testCase.initializer,
@@ -3311,14 +3309,14 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 				initializer: "[{1: \"abc\", 2: \"def\"}]",
 			},
 		} {
-			runTestCase(
+			runValidTestCase(
 				t,
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
 	                    let value: %[1]s = %[2]s
 	                    let x: &%[1]s = &value
-	                    let y: %[1]s = x.dereference()
+	                    let y: %[1]s = *x
 	                `,
 					testCase.ty,
 					testCase.initializer,
@@ -3327,8 +3325,8 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 			)
 		}
 
-		// Arrays of non-primitives do not support dereference.
-		runInvalidMemberTestCase(
+		// Arrays of non-primitives cannot be dereferenced.
+		runInvalidTestCase(
 			t,
 			"[Struct]",
 			`
@@ -3337,15 +3335,12 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 				fun test() {
 					let value: [S] = [S(), S()]
 					let x: &[S] = &value
-					let y: [S] = x.dereference()
+					let y: [S] = *x
 				}
 			`,
-			[]error{
-				&sema.InvalidMemberError{},
-			},
 		)
 
-		runInvalidMemberTestCase(
+		runInvalidTestCase(
 			t,
 			"[Struct; 3]",
 			`
@@ -3354,12 +3349,9 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 				fun test() {
 					let value: [S; 3] = [S(),S(),S()]
 					let x: &[S; 3] = &value
-					let y: [S; 3] = x.dereference()
+					let y: [S; 3] = *x
 				}
 			`,
-			[]error{
-				&sema.InvalidMemberError{},
-			},
 		)
 	})
 
@@ -3399,14 +3391,14 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 				initializer: "{\"123\": [1, 2, 3], \"456\": [4, 5, 6]}",
 			},
 		} {
-			runTestCase(
+			runValidTestCase(
 				t,
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
 						let value: %[1]s = %[2]s
 						let x: &%[1]s = &value
-						let y: %[1]s = x.dereference()
+						let y: %[1]s = *x
 					`,
 					testCase.ty,
 					testCase.initializer,
@@ -3415,29 +3407,26 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 			)
 		}
 
-		// Dictionary with value as non-primitive does not support dereference.
-		runInvalidMemberTestCase(
+		// Dictionaries with value as non-primitive cannot be dereferenced.
+		runInvalidTestCase(
 			t,
-			"Dictionary<Int, Struct>",
+			"{Int: Struct}",
 			`
 				struct S{}
 
 				fun test() {
 					let value: {Int: S} = { 1: S(), 2: S() }
 					let x: &{Int: S} = &value
-					let y: {Int: S} = x.dereference()
+					let y: {Int: S} = *x
 				}
 			`,
-			[]error{
-				&sema.InvalidMemberError{},
-			},
 		)
 	})
 
 	t.Run("Resource", func(t *testing.T) {
 		t.Parallel()
 
-		runInvalidMemberTestCase(
+		runInvalidTestCase(
 			t,
 			"Resource",
 			`
@@ -3452,15 +3441,11 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 				fun test() {
 					let r <- create R()
 					let ref = &r as &{I}
-					let deref = ref.dereference()
+					let deref <- *ref
 					destroy r
+                    destroy deref
 				}
 			`,
-			[]error{
-				&sema.InvalidMemberError{},
-				&sema.IncorrectTransferOperationError{},
-				&sema.ResourceLossError{},
-			},
 		)
 	})
 
@@ -3468,7 +3453,7 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 
 		t.Parallel()
 
-		runInvalidMemberTestCase(
+		runInvalidTestCase(
 			t,
 			"Struct",
 			`
@@ -3477,12 +3462,9 @@ func TestCheckReferenceDereferenceFunction(t *testing.T) {
 				fun test() {
 					let s = S()
 					let ref = &s as &S
-					let deref = ref.dereference()
+					let deref = *ref
 				}
 			`,
-			[]error{
-				&sema.InvalidMemberError{},
-			},
 		)
 	})
 }
