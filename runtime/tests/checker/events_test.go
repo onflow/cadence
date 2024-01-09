@@ -1369,6 +1369,7 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
+
 			access(all) resource R {
 				access(all) var i: Int
 				access(all) init() {
@@ -1378,6 +1379,7 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 			access(all) var globalArray: @[R] <- [<- create R()]
 			access(all) var base: &R = &globalArray[0] // strategically named variable
 			access(all) var dummy: @R <- globalArray.removeLast() // invalidate the ref
+
 			access(all) resource IndestructibleTroll {
 				// Reference the fake "base" variable
 				access(all) event ResourceDestroyed( x: Int? = base.i)
@@ -1437,5 +1439,39 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
 		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidIdentifier)
+	})
+
+	t.Run("attachment same name as variable", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) attachment varName for IndestructibleTroll {
+				access(all) var i: Int
+				access(all) init() { self.i = 1}
+			}
+
+			access(all) resource R {
+				access(all) var i: Int
+				access(all) init() {
+					self.i = 123
+				}
+			}
+			access(all) var globalArray: @[R] <- [<- create R()]
+			access(all) var varName: &R = &globalArray[0] // strategically named variable
+			access(all) var dummy: @R <- globalArray.removeLast() // invalidate the ref
+
+			access(all) resource IndestructibleTroll {
+				access(all) event ResourceDestroyed( x: Int? = varName.i)
+			}
+			access(all) fun main() {
+				var troll <- create IndestructibleTroll()
+				destroy troll
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.RedeclarationError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errs[1])
 	})
 }
