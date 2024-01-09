@@ -4931,40 +4931,95 @@ func TestParseUnaryExpression(t *testing.T) {
 
 	t.Parallel()
 
-	const code = `
-	    let foo = -boo
-	`
-	result, errs := testParseProgram(code)
-	require.Empty(t, errs)
+	t.Run("minus", func(t *testing.T) {
 
-	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.VariableDeclaration{
-				Access:     ast.AccessNotSpecified,
-				IsConstant: true,
-				Identifier: ast.Identifier{
-					Identifier: "foo",
-					Pos:        ast.Position{Offset: 10, Line: 2, Column: 9},
-				},
-				Transfer: &ast.Transfer{
-					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 14, Line: 2, Column: 13},
-				},
-				Value: &ast.UnaryExpression{
-					Operation: ast.OperationMinus,
-					Expression: &ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "boo",
-							Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
-						},
+		t.Parallel()
+
+		const code = ` - boo`
+
+		result, errs := testParseExpression(code)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.UnaryExpression{
+				Operation: ast.OperationMinus,
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "boo",
+						Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
 					},
-					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
-				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
+				StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 			},
-		},
-		result.Declarations(),
-	)
+			result,
+		)
+	})
+
+	t.Run("negate", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = ` ! boo`
+
+		result, errs := testParseExpression(code)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.UnaryExpression{
+				Operation: ast.OperationNegate,
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "boo",
+						Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
+				},
+				StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+			},
+			result,
+		)
+	})
+
+	t.Run("star", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = ` * boo`
+
+		result, errs := testParseExpression(code)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.UnaryExpression{
+				Operation: ast.OperationMul,
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "boo",
+						Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
+				},
+				StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+			},
+			result,
+		)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = ` % boo`
+
+		_, errs := testParseExpression(code)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token in expression: '%'",
+					Pos:     ast.Position{Line: 1, Column: 2, Offset: 2},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseOrExpression(t *testing.T) {

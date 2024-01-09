@@ -488,6 +488,12 @@ func init() {
 		operation:    ast.OperationMove,
 	})
 
+	defineExpr(unaryExpr{
+		tokenType:    lexer.TokenStar,
+		bindingPower: exprLeftBindingPowerUnaryPrefix,
+		operation:    ast.OperationMul,
+	})
+
 	defineExpr(postfixExpr{
 		tokenType:    lexer.TokenExclamationMark,
 		bindingPower: exprLeftBindingPowerUnaryPostfix,
