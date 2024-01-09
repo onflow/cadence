@@ -44,21 +44,21 @@ func (AccountTypeMigration) Migrate(
 	_ interpreter.AddressPath,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) (newValue interpreter.Value) {
+) (newValue interpreter.Value, err error) {
 	switch value := value.(type) {
 	case interpreter.TypeValue:
 		convertedType := maybeConvertAccountType(value.Type)
 		if convertedType == nil {
 			return
 		}
-		return interpreter.NewTypeValue(nil, convertedType)
+		return interpreter.NewTypeValue(nil, convertedType), nil
 
 	case *interpreter.CapabilityValue:
 		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
 		if convertedBorrowType == nil {
 			return
 		}
-		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType)
+		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType), nil
 
 	case *interpreter.AccountCapabilityControllerValue:
 		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
@@ -66,7 +66,7 @@ func (AccountTypeMigration) Migrate(
 			return
 		}
 		borrowType := convertedBorrowType.(*interpreter.ReferenceStaticType)
-		return interpreter.NewUnmeteredAccountCapabilityControllerValue(borrowType, value.CapabilityID)
+		return interpreter.NewUnmeteredAccountCapabilityControllerValue(borrowType, value.CapabilityID), nil
 
 	case *interpreter.StorageCapabilityControllerValue:
 		// Note: A storage capability with Account type shouldn't be possible theoretically.
@@ -79,7 +79,7 @@ func (AccountTypeMigration) Migrate(
 			borrowType,
 			value.CapabilityID,
 			value.TargetPath,
-		)
+		), nil
 	}
 
 	return

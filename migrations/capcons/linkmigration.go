@@ -55,13 +55,13 @@ func (m *LinkValueMigration) Migrate(
 	addressPath interpreter.AddressPath,
 	value interpreter.Value,
 	inter *interpreter.Interpreter,
-) interpreter.Value {
+) (interpreter.Value, error) {
 
 	pathDomain := addressPath.Path.Domain
 	if pathDomain != common.PathDomainPublic &&
 		pathDomain != common.PathDomainPrivate {
 
-		return nil
+		return nil, nil
 	}
 
 	accountAddress := addressPath.Address
@@ -77,7 +77,7 @@ func (m *LinkValueMigration) Migrate(
 	switch readValue := value.(type) {
 	case *interpreter.CapabilityValue:
 		// Already migrated
-		return nil
+		return nil, nil
 
 	case interpreter.PathLinkValue: //nolint:staticcheck
 		var ok bool
@@ -122,10 +122,10 @@ func (m *LinkValueMigration) Migrate(
 			}
 
 			// TODO: really leave as-is? or still convert?
-			return nil
+			return nil, nil
 		}
 
-		panic(err)
+		return nil, err
 	}
 
 	// Issue appropriate capability controller
@@ -139,7 +139,7 @@ func (m *LinkValueMigration) Migrate(
 		}
 
 		// TODO: really leave as-is? or still convert?
-		return nil
+		return nil, nil
 
 	case pathCapabilityTarget:
 
@@ -184,7 +184,7 @@ func (m *LinkValueMigration) Migrate(
 		capabilityID,
 		addressValue,
 		borrowStaticType,
-	)
+	), nil
 }
 
 var authAccountReferenceStaticType = interpreter.NewReferenceStaticType(

@@ -21,5 +21,6 @@ package migrations
 import "github.com/onflow/cadence/runtime/interpreter"
 
 type Reporter interface {
-	Report(addressPath interpreter.AddressPath, migration string)
+	Migrated(addressPath interpreter.AddressPath, migration string)
+	Error(addressPath interpreter.AddressPath, migration string, err error)
 }
