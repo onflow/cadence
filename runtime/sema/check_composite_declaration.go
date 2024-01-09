@@ -1959,6 +1959,7 @@ func (checker *Checker) enumMembersAndOrigins(
 
 func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 	arg ast.Expression,
+	containerDeclarationKind common.DeclarationKind,
 ) {
 
 	rejectReferenceTypedSubExpressions := func(typ Type) {
@@ -1984,9 +1985,13 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 
 		identifier := arg.Identifier.Identifier
 		// these are guaranteed to exist at time of destruction, so we allow them
-		if identifier == SelfIdentifier || identifier == BaseIdentifier {
+		if identifier == SelfIdentifier {
 			break
 		}
+		if identifier == BaseIdentifier && containerDeclarationKind == common.DeclarationKindAttachment {
+			break
+		}
+
 		// if it's an attachment, then it's also okay
 		if checker.typeActivations.Find(identifier) != nil {
 			break
@@ -2005,12 +2010,12 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 
 		rejectReferenceTypedSubExpressions(memberExpressionInfo.ResultingType)
 
-		checker.checkDefaultDestroyParamExpressionKind(arg.Expression)
+		checker.checkDefaultDestroyParamExpressionKind(arg.Expression, containerDeclarationKind)
 
 	case *ast.IndexExpression:
 
-		checker.checkDefaultDestroyParamExpressionKind(arg.TargetExpression)
-		checker.checkDefaultDestroyParamExpressionKind(arg.IndexingExpression)
+		checker.checkDefaultDestroyParamExpressionKind(arg.TargetExpression, containerDeclarationKind)
+		checker.checkDefaultDestroyParamExpressionKind(arg.IndexingExpression, containerDeclarationKind)
 
 		indexExprType := checker.Elaboration.IndexExpressionTypes(arg)
 
@@ -2079,7 +2084,7 @@ func (checker *Checker) checkDefaultDestroyEventParam(
 		})
 	}
 
-	checker.checkDefaultDestroyParamExpressionKind(paramDefaultArgument)
+	checker.checkDefaultDestroyParamExpressionKind(paramDefaultArgument, containerDeclaration.DeclarationKind())
 }
 
 func (checker *Checker) checkDefaultDestroyEvent(
