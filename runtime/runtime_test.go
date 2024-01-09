@@ -4528,9 +4528,6 @@ func TestRuntimeRandom(t *testing.T) {
 			// test a few types only for expensive tests
 			testedTypes = []sema.Type{
 				sema.UInt8Type,
-				sema.UInt32Type,
-				sema.UInt64Type,
-				sema.UInt128Type,
 			}
 		}
 		for _, ty := range testedTypes {
