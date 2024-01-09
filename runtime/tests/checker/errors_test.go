@@ -76,8 +76,8 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
 
 						_, err := ParseAndCheckWithOptions(t,
 							`
-                              pub let x = X
-                              pub let y = Y
+                              access(all) let x = X
+                              access(all) let y = Y
                             `,
 							ParseAndCheckOptions{
 								Location: utils.ImportedLocation,

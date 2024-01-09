@@ -205,10 +205,6 @@ func TestCheckInvalidRepeatedFieldInitialization(t *testing.T) {
                   self.r <- create R()
                   self.r <- create R()
               }
-
-		      destroy() {
-		          destroy self.r
-		      }
           }
         `)
 
@@ -233,10 +229,6 @@ func TestCheckInvalidResourceMoveAfterInitialization(t *testing.T) {
                   let r <- self.r
 		          destroy r
               }
-
-		      destroy() {
-		          destroy self.r
-		      }
           }
         `)
 

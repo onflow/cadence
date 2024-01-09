@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -36,13 +37,15 @@ func TestCheckAssertWithoutMessage(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-            pub fun test() {
+            access(all) fun test() {
                 assert(1 == 2)
             }
         `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
 	)
@@ -59,13 +62,15 @@ func TestCheckAssertWithMessage(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-            pub fun test() {
+            access(all) fun test() {
                 assert(1 == 2, message: "test message")
             }
         `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
 	)

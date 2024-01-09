@@ -1,12 +1,14 @@
 /// Test contract is the standard library that provides testing functionality in Cadence.
 ///
-access(all) contract Test {
+access(all)
+contract Test {
 
     /// backend emulates a real network.
     ///
-    access(self) let backend: AnyStruct{BlockchainBackend}
+    access(self)
+    let backend: {BlockchainBackend}
 
-    init(backend: AnyStruct{BlockchainBackend}) {
+    init(backend: {BlockchainBackend}) {
         self.backend = backend
     }
 
@@ -23,14 +25,14 @@ access(all) contract Test {
     /// The returned account can be used to sign and authorize transactions.
     ///
     access(all)
-    fun createAccount(): Account {
+    fun createAccount(): TestAccount {
         return self.backend.createAccount()
     }
 
     /// Returns the account for the given address.
     ///
     access(all)
-    fun getAccount(_ address: Address): Account {
+    fun getAccount(_ address: Address): TestAccount {
         return self.backend.getAccount(address)
     }
 
@@ -111,7 +113,7 @@ access(all) contract Test {
     /// transactions with this account.
     ///
     access(all)
-    fun serviceAccount(): Account {
+    fun serviceAccount(): TestAccount {
         return self.backend.serviceAccount()
     }
 
@@ -168,11 +170,13 @@ access(all) contract Test {
         }
     }
 
-    access(all) struct Matcher {
+    access(all)
+    struct Matcher {
 
-        access(all) let test: ((AnyStruct): Bool)
+        access(all)
+        let test: fun(AnyStruct): Bool
 
-        init(test: ((AnyStruct): Bool)) {
+        init(test: fun(AnyStruct): Bool) {
             self.test = test
         }
 
@@ -200,7 +204,8 @@ access(all) contract Test {
 
     /// ResultStatus indicates status of a transaction or script execution.
     ///
-    access(all) enum ResultStatus: UInt8 {
+    access(all)
+    enum ResultStatus: UInt8 {
         access(all) case succeeded
         access(all) case failed
     }
@@ -208,21 +213,28 @@ access(all) contract Test {
     /// Result is the interface to be implemented by the various execution
     /// operations, such as transactions and scripts.
     ///
-    access(all) struct interface Result {
+    access(all)
+    struct interface Result {
         /// The result status of an executed operation.
         ///
-        access(all) let status: ResultStatus
+        access(all)
+        let status: ResultStatus
 
         /// The optional error of an executed operation.
         ///
-        access(all) let error: Error?
+        access(all)
+        let error: Error?
     }
 
     /// The result of a transaction execution.
     ///
-    access(all) struct TransactionResult: Result {
-        access(all) let status: ResultStatus
-        access(all) let error: Error?
+    access(all)
+    struct TransactionResult: Result {
+        access(all)
+        let status: ResultStatus
+
+        access(all)
+        let error: Error?
 
         init(status: ResultStatus, error: Error?) {
             self.status = status
@@ -232,10 +244,17 @@ access(all) contract Test {
 
     /// The result of a script execution.
     ///
-    access(all) struct ScriptResult: Result {
-        access(all) let status: ResultStatus
-        access(all) let returnValue: AnyStruct?
-        access(all) let error: Error?
+    access(all)
+    struct ScriptResult: Result {
+
+        access(all)
+        let status: ResultStatus
+
+        access(all)
+        let returnValue: AnyStruct?
+
+        access(all)
+        let error: Error?
 
         init(status: ResultStatus, returnValue: AnyStruct?, error: Error?) {
             self.status = status
@@ -246,19 +265,27 @@ access(all) contract Test {
 
     // Error is returned if something has gone wrong.
     //
-    access(all) struct Error {
-        access(all) let message: String
+    access(all)
+    struct Error {
+
+        access(all)
+        let message: String
 
         init(_ message: String) {
             self.message = message
         }
     }
 
-    /// Account represents info about the account created on the blockchain.
+    /// TestAccount represents info about the account created on the blockchain.
     ///
-    access(all) struct Account {
-        access(all) let address: Address
-        access(all) let publicKey: PublicKey
+    access(all)
+    struct TestAccount {
+
+        access(all)
+        let address: Address
+
+        access(all)
+        let publicKey: PublicKey
 
         init(address: Address, publicKey: PublicKey) {
             self.address = address
@@ -268,13 +295,22 @@ access(all) contract Test {
 
     /// Transaction that can be submitted and executed on the blockchain.
     ///
-    access(all) struct Transaction {
-        access(all) let code: String
-        access(all) let authorizers: [Address]
-        access(all) let signers: [Account]
-        access(all) let arguments: [AnyStruct]
+    access(all)
+    struct Transaction {
 
-        init(code: String, authorizers: [Address], signers: [Account], arguments: [AnyStruct]) {
+        access(all)
+        let code: String
+
+        access(all)
+        let authorizers: [Address]
+
+        access(all)
+        let signers: [TestAccount]
+
+        access(all)
+        let arguments: [AnyStruct]
+
+        init(code: String, authorizers: [Address], signers: [TestAccount], arguments: [AnyStruct]) {
             self.code = code
             self.authorizers = authorizers
             self.signers = signers
@@ -284,7 +320,8 @@ access(all) contract Test {
 
     /// BlockchainBackend is the interface to be implemented by the backend providers.
     ///
-    access(all) struct interface BlockchainBackend {
+    access(all)
+    struct interface BlockchainBackend {
 
         /// Executes a script and returns the script return value and the status.
         /// `returnValue` field of the result will be `nil` if the script failed.
@@ -297,12 +334,12 @@ access(all) contract Test {
         /// The returned account can be used to sign and authorize transactions.
         ///
         access(all)
-        fun createAccount(): Account
+        fun createAccount(): TestAccount
 
         /// Returns the account for the given address.
         ///
         access(all)
-        fun getAccount(_ address: Address): Account
+        fun getAccount(_ address: Address): TestAccount
 
         /// Add a transaction to the current block.
         ///
@@ -339,7 +376,7 @@ access(all) contract Test {
         /// transactions with this account.
         ///
         access(all)
-        fun serviceAccount(): Account
+        fun serviceAccount(): TestAccount
 
         /// Returns all events emitted from the blockchain, optionally filtered
         /// by type.
@@ -436,5 +473,4 @@ access(all) contract Test {
 
         assert(found, message: "the error message did not contain the given sub-string")
     }
-
 }

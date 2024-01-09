@@ -40,13 +40,13 @@ const testTransactionResultTypeName = "TransactionResult"
 const testResultStatusTypeName = "ResultStatus"
 const testResultStatusTypeSucceededCaseName = "succeeded"
 const testResultStatusTypeFailedCaseName = "failed"
-const testAccountTypeName = "Account"
+const testAccountTypeName = "TestAccount"
 const testErrorTypeName = "Error"
 const testMatcherTypeName = "Matcher"
 
 const accountAddressFieldName = "address"
 
-const matcherTestFunctionName = "test"
+const matcherTestFieldName = "test"
 
 const TestContractLocation = common.IdentifierLocation(testContractTypeName)
 
@@ -348,25 +348,51 @@ func (e TestFailedError) Error() string {
 	return fmt.Sprintf("test failed: %s", e.Err.Error())
 }
 
+// Creates a matcher using a function that accepts an `AnyStruct` typed parameter.
+// i.e: invokes `newMatcher(fun (value: AnyStruct): Bool)`.
+func newMatcherWithAnyStructTestFunction(
+	invocation interpreter.Invocation,
+	testFunc interpreter.FunctionValue,
+) interpreter.Value {
+
+	matcherConstructor := getNestedTypeConstructorValue(
+		*invocation.Self,
+		testMatcherTypeName,
+	)
+	matcher, err := invocation.Interpreter.InvokeExternally(
+		matcherConstructor,
+		matcherConstructor.Type,
+		[]interpreter.Value{
+			testFunc,
+		},
+	)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return matcher
+}
+
+// Creates a matcher using a function that accepts a generic `T` typed parameter.
+// NOTE: Use this function only if the matcher function has a generic type.
 func newMatcherWithGenericTestFunction(
 	invocation interpreter.Invocation,
 	testFunc interpreter.FunctionValue,
 	matcherTestFunctionType *sema.FunctionType,
 ) interpreter.Value {
 
-	inter := invocation.Interpreter
-
-	staticType, ok := testFunc.StaticType(inter).(interpreter.FunctionStaticType)
-	if !ok {
+	typeParameterPair := invocation.TypeParameterTypes.Oldest()
+	if typeParameterPair == nil {
 		panic(errors.NewUnreachableError())
 	}
 
-	parameters := staticType.Type.Parameters
+	parameterType := typeParameterPair.Value
 
 	// Wrap the user provided test function with a function that validates the argument types.
 	// i.e: create a closure that cast the arguments.
 	//
-	// e.g: convert `newMatcher(test: ((Int): Bool))` to:
+	// e.g: convert `newMatcher(test: fun(Int): Bool)` to:
 	//
 	//  newMatcher(fun (b: AnyStruct): Bool {
 	//      return test(b as! Int)
@@ -380,15 +406,14 @@ func newMatcherWithGenericTestFunction(
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
 
-			for i, argument := range invocation.Arguments {
-				paramType := parameters[i].TypeAnnotation.Type
+			for _, argument := range invocation.Arguments {
 				argumentStaticType := argument.StaticType(inter)
 
-				if !inter.IsSubTypeOfSemaType(argumentStaticType, paramType) {
+				if !inter.IsSubTypeOfSemaType(argumentStaticType, parameterType) {
 					argumentSemaType := inter.MustConvertStaticToSemaType(argumentStaticType)
 
 					panic(interpreter.TypeMismatchError{
-						ExpectedType:  paramType,
+						ExpectedType:  parameterType,
 						ActualType:    argumentSemaType,
 						LocationRange: invocation.LocationRange,
 					})
@@ -404,23 +429,7 @@ func newMatcherWithGenericTestFunction(
 		},
 	)
 
-	matcherConstructor := getNestedTypeConstructorValue(
-		*invocation.Self,
-		testMatcherTypeName,
-	)
-	matcher, err := inter.InvokeExternally(
-		matcherConstructor,
-		matcherConstructor.Type,
-		[]interpreter.Value{
-			matcherTestFunction,
-		},
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	return matcher
+	return newMatcherWithAnyStructTestFunction(invocation, matcherTestFunction)
 }
 
 func TestCheckerContractValueHandler(

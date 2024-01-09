@@ -43,9 +43,11 @@ func TestFunctionStaticType(t *testing.T) {
 			return TrueValue
 		}
 
-		hostFunctionType := &sema.FunctionType{
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
-		}
+		hostFunctionType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			nil,
+			sema.BoolTypeAnnotation,
+		)
 
 		hostFunctionValue := NewHostFunctionValue(
 			inter,
@@ -63,13 +65,23 @@ func TestFunctionStaticType(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
+		inter.SharedState.Config.CompositeTypeHandler = func(location common.Location, typeID TypeID) *sema.CompositeType {
+			return &sema.CompositeType{
+				Location:   utils.TestLocation,
+				Identifier: "foo",
+				Kind:       common.CompositeKindStructure,
+			}
+		}
+
 		hostFunction := func(_ Invocation) Value {
 			return TrueValue
 		}
 
-		hostFunctionType := &sema.FunctionType{
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.BoolType),
-		}
+		hostFunctionType := sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			nil,
+			sema.BoolTypeAnnotation,
+		)
 
 		hostFunctionValue := NewHostFunctionValue(
 			inter,
@@ -93,6 +105,7 @@ func TestFunctionStaticType(t *testing.T) {
 			inter,
 			hostFunctionValue,
 			&self,
+			nil,
 			nil,
 		)
 

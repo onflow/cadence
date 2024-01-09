@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -247,7 +248,9 @@ func TestCheckInclusiveRangeConstructionValid(t *testing.T) {
 			checker, err := ParseAndCheckWithOptions(t, code,
 				ParseAndCheckOptions{
 					Config: &sema.Config{
-						BaseValueActivation: baseValueActivation,
+						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
 			)
@@ -289,7 +292,9 @@ func TestCheckInclusiveRangeConstructionInvalid(t *testing.T) {
 			_, err := ParseAndCheckWithOptions(t, code,
 				ParseAndCheckOptions{
 					Config: &sema.Config{
-						BaseValueActivation: baseValueActivation,
+						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
 			)
@@ -304,7 +309,9 @@ func TestCheckInclusiveRangeConstructionInvalid(t *testing.T) {
 	for _, integerType := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch integerType {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType,
+			sema.SignedIntegerType,
+			sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -410,13 +417,15 @@ func TestInclusiveRangeNonLeafIntegerTypes(t *testing.T) {
 
 		return ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		}
 	}
 
 	test := func(t *testing.T, ty sema.Type) {
-		t.Run(fmt.Sprintf("InclusiveRange<%s>", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("InclusiveRange<%s> infer from args", ty), func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheckWithOptions(t, fmt.Sprintf(`
@@ -429,7 +438,7 @@ func TestInclusiveRangeNonLeafIntegerTypes(t *testing.T) {
 			assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
 		})
 
-		t.Run(fmt.Sprintf("InclusiveRange<%s>", ty), func(t *testing.T) {
+		t.Run(fmt.Sprintf("InclusiveRange<%s> infer from lhs", ty), func(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheckWithOptions(t, fmt.Sprintf(`
@@ -457,7 +466,10 @@ func TestInclusiveRangeNonLeafIntegerTypes(t *testing.T) {
 		})
 	}
 
-	for _, ty := range sema.AllNonLeafIntegerTypes {
+	for _, ty := range []sema.Type{
+		sema.IntegerType,
+		sema.SignedIntegerType,
+	} {
 		test(t, ty)
 	}
 }

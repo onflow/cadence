@@ -19,48 +19,48 @@
 package examples
 
 const FungibleTokenContractInterface = `
-  pub contract interface FungibleToken {
+  access(all) contract interface FungibleToken {
 
-      pub resource interface Provider {
+      access(all) resource interface Provider {
 
-          pub fun withdraw(amount: Int): @Vault
+          access(all) fun withdraw(amount: Int): @Vault
       }
 
-      pub resource interface Receiver {
+      access(all) resource interface Receiver {
 
-          pub fun deposit(vault: @Vault)
+          access(all) fun deposit(vault: @Vault)
       }
 
-      pub resource Vault: Provider, Receiver {
+      access(all) resource Vault: Provider, Receiver {
 
-          pub balance: Int
+          access(all) balance: Int
 
           init(balance: Int)
       }
 
-      pub fun absorb(vault: @Vault)
+      access(all) fun absorb(vault: @Vault)
 
-      pub fun sprout(balance: Int): @Vault
+      access(all) fun sprout(balance: Int): @Vault
   }
 `
 
 const ExampleFungibleTokenContract = `
-  pub contract ExampleToken: FungibleToken {
+  access(all) contract ExampleToken: FungibleToken {
 
-     pub resource Vault: FungibleToken.Receiver, FungibleToken.Provider {
+     access(all) resource Vault: FungibleToken.Receiver, FungibleToken.Provider {
 
-         pub var balance: Int
+         access(all) var balance: Int
 
          init(balance: Int) {
              self.balance = balance
          }
 
-         pub fun withdraw(amount: Int): @FungibleToken.Vault {
+         access(all) fun withdraw(amount: Int): @FungibleToken.Vault {
              self.balance = self.balance - amount
              return <-create Vault(balance: amount)
          }
 
-         pub fun deposit(vault: @FungibleToken.Vault) {
+         access(all) fun deposit(vault: @FungibleToken.Vault) {
             if let exampleVault <- vault as? @Vault {
                 self.balance = self.balance + exampleVault.balance
                 destroy exampleVault
@@ -71,11 +71,11 @@ const ExampleFungibleTokenContract = `
          }
      }
 
-     pub fun absorb(vault: @FungibleToken.Vault) {
+     access(all) fun absorb(vault: @FungibleToken.Vault) {
          destroy vault
      }
 
-     pub fun sprout(balance: Int): @FungibleToken.Vault {
+     access(all) fun sprout(balance: Int): @FungibleToken.Vault {
          return <-create Vault(balance: balance)
      }
   }

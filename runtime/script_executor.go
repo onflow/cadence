@@ -229,8 +229,6 @@ func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFu
 			err = internalErr
 		})
 
-		inter.ConfigureAccountLinkingAllowed()
-
 		values, err := validateArgumentParams(
 			inter,
 			executor.environment,

@@ -403,7 +403,9 @@ func TestCheckNonIntegerComparisonOperations(t *testing.T) {
 						),
 						ParseAndCheckOptions{
 							Config: &sema.Config{
-								BaseValueActivation: baseValueActivation,
+								BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+									return baseValueActivation
+								},
 							},
 						},
 					)
@@ -619,6 +621,7 @@ func TestCheckNumericSuperTypeBinaryOperations(t *testing.T) {
 		sema.SignedNumberType,
 		sema.IntegerType,
 		sema.SignedIntegerType,
+		sema.FixedSizeUnsignedIntegerType,
 		sema.FixedPointType,
 		sema.SignedFixedPointType,
 	}

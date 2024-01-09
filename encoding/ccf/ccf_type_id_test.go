@@ -122,7 +122,7 @@ func simpleStructType() *cadence.StructType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
-				Type:       cadence.IntType{},
+				Type:       cadence.IntType,
 			},
 		},
 	}
@@ -135,11 +135,11 @@ func simpleStructType2() *cadence.StructType {
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
-				Type:       cadence.IntType{},
+				Type:       cadence.IntType,
 			},
 			{
 				Identifier: "b",
-				Type:       cadence.StringType{},
+				Type:       cadence.StringType,
 			},
 		},
 	}

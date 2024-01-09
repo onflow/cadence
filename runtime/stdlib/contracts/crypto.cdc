@@ -1,20 +1,33 @@
 
-pub contract Crypto {
+access(all) contract Crypto {
 
-    pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8] {
+    access(all)
+    fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8] {
         return algorithm.hash(data)
     }
 
-    pub fun hashWithTag(_ data: [UInt8], tag: String, algorithm: HashAlgorithm): [UInt8] {
+    access(all)
+    fun hashWithTag(_ data: [UInt8], tag: String, algorithm: HashAlgorithm): [UInt8] {
         return algorithm.hashWithTag(data, tag: tag)
     }
 
-    pub struct KeyListEntry {
-        pub let keyIndex: Int
-        pub let publicKey: PublicKey
-        pub let hashAlgorithm: HashAlgorithm
-        pub let weight: UFix64
-        pub let isRevoked: Bool
+    access(all)
+    struct KeyListEntry {
+
+        access(all)
+        let keyIndex: Int
+
+        access(all)
+        let publicKey: PublicKey
+
+        access(all)
+        let hashAlgorithm: HashAlgorithm
+
+        access(all)
+        let weight: UFix64
+
+        access(all)
+        let isRevoked: Bool
 
         init(
             keyIndex: Int,
@@ -31,16 +44,19 @@ pub contract Crypto {
         }
     }
 
-    pub struct KeyList {
+    access(all)
+    struct KeyList {
 
-        priv let entries: [KeyListEntry]
+        access(self)
+        let entries: [KeyListEntry]
 
         init() {
             self.entries = []
         }
 
         /// Adds a new key with the given weight
-        pub fun add(
+        access(all)
+        fun add(
             _ publicKey: PublicKey,
             hashAlgorithm: HashAlgorithm,
             weight: UFix64
@@ -59,8 +75,9 @@ pub contract Crypto {
         }
 
         /// Returns the key at the given index, if it exists.
-        /// Revoked keys are always returned, but they have `isRevoked` field set to true
-        pub fun get(keyIndex: Int): KeyListEntry? {
+        /// Revoked keys are always returned, but they have the `isRevoked` field set to true
+        access(all)
+        fun get(keyIndex: Int): KeyListEntry? {
             if keyIndex >= self.entries.length {
                 return nil
             }
@@ -69,10 +86,12 @@ pub contract Crypto {
         }
 
         /// Marks the key at the given index revoked, but does not delete it
-        pub fun revoke(keyIndex: Int) {
+        access(all)
+        fun revoke(keyIndex: Int) {
             if keyIndex >= self.entries.length {
                 return
             }
+
             let currentEntry = self.entries[keyIndex]
             self.entries[keyIndex] = KeyListEntry(
                 keyIndex: currentEntry.keyIndex,
@@ -84,9 +103,11 @@ pub contract Crypto {
         }
 
         /// Returns true if the given signatures are valid for the given signed data
-        pub fun verify(
+        access(all)
+        fun verify(
             signatureSet: [KeyListSignature],
-            signedData: [UInt8]
+            signedData: [UInt8],
+            domainSeparationTag: String
         ): Bool {
 
             var validWeights: UFix64 = 0.0
@@ -126,7 +147,7 @@ pub contract Crypto {
                 if !key.publicKey.verify(
                     signature: signature.signature,
                     signedData: signedData,
-                    domainSeparationTag: Crypto.domainSeparationTagUser,
+                    domainSeparationTag: domainSeparationTag,
                     hashAlgorithm:key.hashAlgorithm
                 ) {
                     return false
@@ -139,19 +160,18 @@ pub contract Crypto {
         }
     }
 
-    pub struct KeyListSignature {
-        pub let keyIndex: Int
-        pub let signature: [UInt8]
+    access(all)
+    struct KeyListSignature {
 
-        pub init(keyIndex: Int, signature: [UInt8]) {
+        access(all)
+        let keyIndex: Int
+
+        access(all)
+        let signature: [UInt8]
+
+        init(keyIndex: Int, signature: [UInt8]) {
             self.keyIndex = keyIndex
             self.signature = signature
         }
-    }
-
-    priv let domainSeparationTagUser: String
-
-    init() {
-        self.domainSeparationTagUser = "FLOW-V0.0-user"
     }
 }

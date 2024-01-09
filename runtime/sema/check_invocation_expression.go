@@ -69,6 +69,9 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	invokedExpression := invocationExpression.InvokedExpression
 	expressionType := checker.VisitExpression(invokedExpression, nil)
 
+	// `inInvocation` should be reset before visiting arguments
+	checker.inInvocation = false
+
 	// Get the member from the invoked value
 	// based on the use of optional chaining syntax
 
@@ -121,6 +124,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 
 		return InvalidType
 	}
+	checker.EnforcePurity(invocationExpression, functionType.Purity)
 
 	// The invoked expression has a function type,
 	// check the invocation including all arguments.
@@ -187,6 +191,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	if returnType == NeverType {
 		returnInfo := checker.functionActivations.Current().ReturnInfo
 		returnInfo.DefinitelyHalted = true
+		returnInfo.DefinitelyExited = true
 	}
 
 	if isOptionalChainingResult {
@@ -297,7 +302,7 @@ func (checker *Checker) checkMemberInvocationArgumentLabels(
 	invocationExpression *ast.InvocationExpression,
 	memberExpression *ast.MemberExpression,
 ) {
-	_, member, _ := checker.visitMember(memberExpression)
+	_, _, member, _ := checker.visitMember(memberExpression, false)
 
 	if member == nil || len(member.ArgumentLabels) == 0 {
 		return

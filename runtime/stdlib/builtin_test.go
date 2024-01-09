@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/checker"
 
 	"github.com/stretchr/testify/assert"
@@ -55,8 +56,10 @@ func newInterpreter(t *testing.T, code string, valueDeclarations ...StandardLibr
 		utils.TestLocation,
 		nil,
 		&sema.Config{
-			BaseValueActivation: baseValueActivation,
-			AccessCheckMode:     sema.AccessCheckModeStrict,
+			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+				return baseValueActivation
+			},
+			AccessCheckMode: sema.AccessCheckModeStrict,
 		},
 	)
 	require.NoError(t, err)
@@ -75,8 +78,10 @@ func newInterpreter(t *testing.T, code string, valueDeclarations ...StandardLibr
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
 		&interpreter.Config{
-			Storage:        storage,
-			BaseActivation: baseActivation,
+			Storage: storage,
+			BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+				return baseActivation
+			},
 		},
 	)
 	require.NoError(t, err)
@@ -99,7 +104,9 @@ func TestCheckAssert(t *testing.T) {
 			code,
 			checker.ParseAndCheckOptions{
 				Config: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
 		)
@@ -163,7 +170,7 @@ func TestCheckAssert(t *testing.T) {
 func TestInterpretAssert(t *testing.T) {
 
 	inter := newInterpreter(t,
-		`pub let test = assert`,
+		`access(all) let test = assert`,
 		AssertFunction,
 	)
 
@@ -215,7 +222,9 @@ func TestCheckPanic(t *testing.T) {
 			code,
 			checker.ParseAndCheckOptions{
 				Config: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
 		)
@@ -259,7 +268,7 @@ func TestInterpretPanic(t *testing.T) {
 	t.Parallel()
 
 	inter := newInterpreter(t,
-		`pub let test = panic`,
+		`access(all) let test = panic`,
 		PanicFunction,
 	)
 

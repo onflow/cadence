@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -24,13 +24,14 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestExportRecursiveType(t *testing.T) {
+func TestRuntimeExportRecursiveType(t *testing.T) {
 
 	t.Parallel()
 
@@ -44,7 +45,7 @@ func TestExportRecursiveType(t *testing.T) {
 
 	ty.Members.Set("foo", &sema.Member{
 		ContainerType: ty,
-		Access:        ast.AccessNotSpecified,
+		Access:        sema.PrimitiveAccess(ast.AccessNotSpecified),
 		Identifier:    ast.Identifier{Identifier: "foo"},
 		// NOTE: recursive type
 		TypeAnnotation:  sema.NewTypeAnnotation(ty),
@@ -77,7 +78,7 @@ func BenchmarkExportType(b *testing.B) {
 		ty := sema.StringType
 
 		exportedType := ExportType(ty, map[sema.TypeID]cadence.Type{})
-		assert.Equal(b, cadence.NewStringType(), exportedType)
+		assert.Equal(b, cadence.StringType, exportedType)
 
 		b.ResetTimer()
 		b.ReportAllocs()
@@ -99,7 +100,7 @@ func BenchmarkExportType(b *testing.B) {
 
 		ty.Members.Set("foo", &sema.Member{
 			ContainerType: ty,
-			Access:        ast.AccessNotSpecified,
+			Access:        sema.PrimitiveAccess(ast.AccessNotSpecified),
 			Identifier:    ast.Identifier{Identifier: "foo"},
 			// NOTE: recursive type
 			TypeAnnotation:  sema.NewTypeAnnotation(ty),

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"fmt"
@@ -26,8 +26,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
-	jsoncdc "github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -38,19 +40,19 @@ func testUseMemory(meter map[common.MemoryKind]uint64) func(common.MemoryUsage) 
 	}
 }
 
-func TestImportedValueMemoryMetering(t *testing.T) {
+func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 
 	t.Parallel()
 
 	executeScript := func(t *testing.T, script []byte, meter map[common.MemoryKind]uint64, args ...cadence.Value) {
 
-		runtime := newTestInterpreterRuntime()
+		runtime := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: testUseMemory(meter),
+		runtimeInterface := &TestRuntimeInterface{
+			OnMeterMemory: testUseMemory(meter),
 		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
-			return jsoncdc.Decode(runtimeInterface, b)
+		runtimeInterface.OnDecodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := runtime.ExecuteScript(
@@ -71,7 +73,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: String) {}
+            access(all) fun main(x: String) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -90,7 +92,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: String?) {}
+            access(all) fun main(x: String?) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -110,7 +112,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt) {}
+            access(all) fun main(x: UInt) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -122,7 +124,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt8) {}
+            access(all) fun main(x: UInt8) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -134,7 +136,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt16) {}
+            access(all) fun main(x: UInt16) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -146,7 +148,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt32) {}
+            access(all) fun main(x: UInt32) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -158,7 +160,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt64) {}
+            access(all) fun main(x: UInt64) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -170,7 +172,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt128) {}
+            access(all) fun main(x: UInt128) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -182,7 +184,19 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UInt256) {}
+            access(all) fun main(x: UInt256) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(t, script, meter, cadence.NewUInt256(2))
+		assert.Equal(t, uint64(32), meter[common.MemoryKindBigInt])
+	})
+
+	t.Run("FixedSizeUnsignedInteger", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun main(x: FixedSizeUnsignedInteger) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -194,7 +208,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int) {}
+            access(all) fun main(x: Int) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -206,7 +220,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int8) {}
+            access(all) fun main(x: Int8) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -218,7 +232,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int16) {}
+            access(all) fun main(x: Int16) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -230,7 +244,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int32) {}
+            access(all) fun main(x: Int32) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -242,7 +256,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int64) {}
+            access(all) fun main(x: Int64) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -254,7 +268,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int128) {}
+            access(all) fun main(x: Int128) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -266,7 +280,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Int256) {}
+            access(all) fun main(x: Int256) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -278,7 +292,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Word8) {}
+            access(all) fun main(x: Word8) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -290,7 +304,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Word16) {}
+            access(all) fun main(x: Word16) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -302,7 +316,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Word32) {}
+            access(all) fun main(x: Word32) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -314,7 +328,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Word64) {}
+            access(all) fun main(x: Word64) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -326,7 +340,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Word128) {}
+            access(all) fun main(x: Word128) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -338,7 +352,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Word256) {}
+            access(all) fun main(x: Word256) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -350,7 +364,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Fix64) {}
+            access(all) fun main(x: Fix64) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -366,7 +380,7 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: UFix64) {}
+            access(all) fun main(x: UFix64) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -381,9 +395,9 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: Foo) {}
+            access(all) fun main(x: Foo) {}
 
-            pub struct Foo {}
+            access(all) struct Foo {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -403,13 +417,13 @@ func TestImportedValueMemoryMetering(t *testing.T) {
 		t.Parallel()
 
 		script := []byte(`
-            pub fun main(x: InclusiveRange<Int>) {}
+            access(all) fun main(x: InclusiveRange<Int>) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
 		inclusiveRangeValue := &cadence.InclusiveRange{
 			InclusiveRangeType: &cadence.InclusiveRangeType{
-				ElementType: cadence.IntType{},
+				ElementType: cadence.IntType,
 			},
 			Start: cadence.NewInt(1),
 			End:   cadence.NewInt(50),
@@ -429,7 +443,7 @@ func (testMemoryError) Error() string {
 	return "memory limit exceeded"
 }
 
-func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
+func TestRuntimeImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 
 	t.Parallel()
 
@@ -480,57 +494,6 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 			},
 		},
 
-		// Verify Capability and its composing values, Path and Type.
-		// NOTE: ID Capability is not importable, so no test necessary.
-		{
-			TypeName:   "Capability",
-			MemoryKind: common.MemoryKindPathCapabilityValue,
-			Weight:     1,
-			TypeInstance: cadence.NewPathCapability(
-				cadence.Address{},
-				cadence.Path{
-					Domain:     common.PathDomainPublic,
-					Identifier: "foobarrington",
-				},
-				&cadence.ReferenceType{
-					Authorized: true,
-					Type:       cadence.AnyType{},
-				},
-			),
-		},
-		{
-			TypeName:   "Capability",
-			MemoryKind: common.MemoryKindPathValue,
-			Weight:     1,
-			TypeInstance: cadence.NewPathCapability(
-				cadence.Address{},
-				cadence.Path{
-					Domain:     common.PathDomainPublic,
-					Identifier: "foobarrington",
-				},
-				&cadence.ReferenceType{
-					Authorized: true,
-					Type:       cadence.AnyType{},
-				},
-			),
-		},
-		{
-			TypeName:   "Capability",
-			MemoryKind: common.MemoryKindRawString,
-			Weight:     (1 + 13) + (1 + 13),
-			TypeInstance: cadence.NewPathCapability(
-				cadence.Address{},
-				cadence.Path{
-					Domain:     common.PathDomainPublic,
-					Identifier: "foobarrington",
-				},
-				&cadence.ReferenceType{
-					Authorized: true,
-					Type:       cadence.AnyType{},
-				},
-			),
-		},
-
 		// Verify Optional and its composing type
 		{
 			TypeName:     "String?",
@@ -561,19 +524,20 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
 
-			runtime := newTestInterpreterRuntime()
+			runtime := NewTestInterpreterRuntime()
 
 			meter := make(map[common.MemoryKind]uint64)
-			runtimeInterface := &testRuntimeInterface{
-				meterMemory: testUseMemory(meter),
+			runtimeInterface := &TestRuntimeInterface{
+				OnMeterMemory: testUseMemory(meter),
 			}
-			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
-				return jsoncdc.Decode(runtimeInterface, b)
+			runtimeInterface.OnDecodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(runtimeInterface, b)
 			}
 
 			script := []byte(fmt.Sprintf(
 				`
-                  pub fun main(x: %s) {}
+				  access(all) entitlement X
+                  access(all) fun main(x: %s) {}
                 `,
 				test.TypeName,
 			))
@@ -602,7 +566,7 @@ func TestImportedValueMemoryMeteringForSimpleTypes(t *testing.T) {
 	}
 }
 
-func TestScriptDecodedLocationMetering(t *testing.T) {
+func TestRuntimeScriptDecodedLocationMetering(t *testing.T) {
 
 	t.Parallel()
 
@@ -632,14 +596,14 @@ func TestScriptDecodedLocationMetering(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
 
-			runtime := newTestInterpreterRuntime()
+			runtime := NewTestInterpreterRuntime()
 
 			meter := make(map[common.MemoryKind]uint64)
-			runtimeInterface := &testRuntimeInterface{
-				meterMemory: testUseMemory(meter),
+			runtimeInterface := &TestRuntimeInterface{
+				OnMeterMemory: testUseMemory(meter),
 			}
-			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (cadence.Value, error) {
-				return jsoncdc.Decode(runtimeInterface, b)
+			runtimeInterface.OnDecodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(runtimeInterface, b)
 			}
 
 			value := cadence.NewStruct([]cadence.Value{}).WithType(
@@ -649,8 +613,8 @@ func TestScriptDecodedLocationMetering(t *testing.T) {
 				})
 
 			script := []byte(`
-                    pub struct S {}
-                    pub fun main(x: S) {}
+                    access(all) struct S {}
+                    access(all) fun main(x: S) {}
                 `)
 
 			_, err := runtime.ExecuteScript(

@@ -80,6 +80,8 @@ func (*AttachmentDeclaration) isDeclaration() {}
 // but will be rejected in semantic analysis
 func (*AttachmentDeclaration) isStatement() {}
 
+func (*AttachmentDeclaration) isCompositeLikeDeclaration() {}
+
 func (d *AttachmentDeclaration) DeclarationIdentifier() *Identifier {
 	return &d.Identifier
 }
@@ -117,14 +119,14 @@ var attachmentConformanceSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Line{},
 }
 
-func (e *AttachmentDeclaration) Doc() prettier.Doc {
+func (d *AttachmentDeclaration) Doc() prettier.Doc {
 	var doc prettier.Concat
 
-	if e.Access != AccessNotSpecified {
+	if d.Access != AccessNotSpecified {
 		doc = append(
 			doc,
-			prettier.Text(e.Access.Keyword()),
-			prettier.Space,
+			prettier.Text(d.Access.Keyword()),
+			prettier.HardLine{},
 		)
 	}
 
@@ -132,19 +134,22 @@ func (e *AttachmentDeclaration) Doc() prettier.Doc {
 		doc,
 		attachmentStatementDoc,
 		prettier.Space,
-		prettier.Text(e.Identifier.Identifier),
+		prettier.Text(d.Identifier.Identifier),
 		prettier.Space,
 		attachmentStatementForDoc,
 		prettier.Space,
-		e.BaseType.Doc(),
+		d.BaseType.Doc(),
 	)
-	if len(e.Conformances) > 0 {
+	var membersDoc prettier.Concat
 
+	membersDoc = append(membersDoc, prettier.Line{}, d.Members.Doc())
+
+	if len(d.Conformances) > 0 {
 		conformancesDoc := prettier.Concat{
 			prettier.Line{},
 		}
 
-		for i, conformance := range e.Conformances {
+		for i, conformance := range d.Conformances {
 			if i > 0 {
 				conformancesDoc = append(
 					conformancesDoc,
@@ -163,7 +168,7 @@ func (e *AttachmentDeclaration) Doc() prettier.Doc {
 			prettier.Dedent{
 				Doc: prettier.Concat{
 					prettier.Line{},
-					e.Members.Doc(),
+					membersDoc,
 				},
 			},
 		)
@@ -182,7 +187,7 @@ func (e *AttachmentDeclaration) Doc() prettier.Doc {
 		doc = append(
 			doc,
 			prettier.Space,
-			e.Members.Doc(),
+			membersDoc,
 		)
 	}
 
@@ -250,10 +255,7 @@ const attachExpressionDoc = prettier.Text("attach")
 const attachExpressionToDoc = prettier.Text("to")
 
 func (e *AttachExpression) Doc() prettier.Doc {
-	var doc prettier.Concat
-
-	return append(
-		doc,
+	return prettier.Concat{
 		attachExpressionDoc,
 		prettier.Space,
 		e.Attachment.Doc(),
@@ -261,7 +263,7 @@ func (e *AttachExpression) Doc() prettier.Doc {
 		attachExpressionToDoc,
 		prettier.Space,
 		e.Base.Doc(),
-	)
+	}
 }
 
 func (e *AttachExpression) StartPosition() Position {

@@ -38,7 +38,7 @@ func TestInterpretStatementHandler(t *testing.T) {
 
 	importedChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
-          pub fun a() {
+          access(all) fun a() {
               true
               true
           }
@@ -165,7 +165,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 
 	importedChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
-          pub fun a() {
+          access(all) fun a() {
               var i = 1
               while i <= 4 {
                   i = i + 1
@@ -292,9 +292,9 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 
 	importedChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
-          pub fun a() {}
+          access(all) fun a() {}
 
-          pub fun b() {
+          access(all) fun b() {
               true
               true
               a()
@@ -312,7 +312,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 		`
           import b from "imported"
 
-          pub fun c() {
+          access(all) fun c() {
               true
               true
               b()
@@ -320,7 +320,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
               true
           }
 
-          pub fun d() {
+          access(all) fun d() {
               true
               true
               c()
@@ -396,4 +396,119 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 		[]int{0, 0, 1},
 		occurrences,
 	)
+}
+
+func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("reverse", func(t *testing.T) {
+		t.Parallel()
+
+		computationMeteredValues := make(map[common.ComputationKind]uint)
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            fun main() {
+                let x = [1, 2, 3]
+                let y = x.reverse()
+            }`,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
+						computationMeteredValues[compKind] += intensity
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint(3), computationMeteredValues[common.ComputationKindLoop])
+	})
+
+	t.Run("map", func(t *testing.T) {
+		t.Parallel()
+
+		computationMeteredValues := make(map[common.ComputationKind]uint)
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            fun main() {
+                let x = [1, 2, 3, 4]
+			    let trueForEven = fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+                let y = x.map(trueForEven)
+            }`,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
+						computationMeteredValues[compKind] += intensity
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint(5), computationMeteredValues[common.ComputationKindLoop])
+	})
+
+	t.Run("filter", func(t *testing.T) {
+		t.Parallel()
+
+		computationMeteredValues := make(map[common.ComputationKind]uint)
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            fun main() {
+                let x = [1, 2, 3, 4, 5]
+			    let onlyEven = view fun (_ x: Int): Bool {
+					return x % 2 == 0
+				}
+                let y = x.filter(onlyEven)
+            }`,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
+						computationMeteredValues[compKind] += intensity
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint(6), computationMeteredValues[common.ComputationKindLoop])
+	})
+}
+
+func TestInterpretStdlibComputationMetering(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("string join", func(t *testing.T) {
+		t.Parallel()
+
+		computationMeteredValues := make(map[common.ComputationKind]uint)
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            fun main() {
+                let s = String.join(["one", "two", "three", "four"], separator: ", ")
+            }`,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
+						computationMeteredValues[compKind] += intensity
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint(4), computationMeteredValues[common.ComputationKindLoop])
+	})
 }

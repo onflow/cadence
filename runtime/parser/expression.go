@@ -640,6 +640,12 @@ func defineLessThanOrTypeArgumentsExpression() {
 
 			} else {
 
+				// if the error specifically occurred during parsing restricted types,
+				// this is still an invocation and we should report that error instead
+				if _, isRestrictedTypeErr := err.(*RestrictedTypeError); isRestrictedTypeErr {
+					return nil, err, true
+				}
+
 				// The previous attempt to parse an invocation failed,
 				// replay the buffered tokens.
 
@@ -787,19 +793,19 @@ func defineIdentifierExpression() {
 		tokenType: lexer.TokenIdentifier,
 		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
 			switch string(p.tokenSource(token)) {
-			case keywordTrue:
+			case KeywordTrue:
 				return ast.NewBoolExpression(p.memoryGauge, true, token.Range), nil
 
-			case keywordFalse:
+			case KeywordFalse:
 				return ast.NewBoolExpression(p.memoryGauge, false, token.Range), nil
 
-			case keywordNil:
+			case KeywordNil:
 				return ast.NewNilExpression(p.memoryGauge, token.Range.StartPos), nil
 
-			case keywordCreate:
+			case KeywordCreate:
 				return parseCreateExpressionRemainder(p, token)
 
-			case keywordDestroy:
+			case KeywordDestroy:
 				expression, err := parseExpression(p, lowestBindingPower)
 				if err != nil {
 					return nil, err
@@ -814,21 +820,37 @@ func defineIdentifierExpression() {
 			case keywordAttach:
 				return parseAttachExpressionRemainder(p, token)
 
-			case keywordFun:
-				return parseFunctionExpression(p, token)
+			case KeywordView:
+				// if `view` is followed by `fun`, then it denotes a view function expression
+				current := p.current
+				cursor := p.tokens.Cursor()
 
-			default:
-				return ast.NewIdentifierExpression(
-					p.memoryGauge,
-					p.tokenToIdentifier(token),
-				), nil
+				p.skipSpaceAndComments()
+
+				if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
+					// skip the `fun` keyword
+					p.nextSemanticToken()
+					return parseFunctionExpression(p, token, ast.FunctionPurityView)
+				}
+
+				p.tokens.Revert(cursor)
+				p.current = current
+
+				// otherwise, we treat it as an identifier called "view"
+
+			case KeywordFun:
+				return parseFunctionExpression(p, token, ast.FunctionPurityUnspecified)
 			}
+
+			return ast.NewIdentifierExpression(
+				p.memoryGauge,
+				p.tokenToIdentifier(token),
+			), nil
 		},
 	})
 }
 
-func parseFunctionExpression(p *parser, token lexer.Token) (*ast.FunctionExpression, error) {
-
+func parseFunctionExpression(p *parser, token lexer.Token, purity ast.FunctionPurity) (*ast.FunctionExpression, error) {
 	parameterList, returnTypeAnnotation, functionBlock, err :=
 		parseFunctionParameterListAndRest(p, false)
 	if err != nil {
@@ -837,6 +859,7 @@ func parseFunctionExpression(p *parser, token lexer.Token) (*ast.FunctionExpress
 
 	return ast.NewFunctionExpression(
 		p.memoryGauge,
+		purity,
 		parameterList,
 		returnTypeAnnotation,
 		functionBlock,
@@ -846,7 +869,7 @@ func parseFunctionExpression(p *parser, token lexer.Token) (*ast.FunctionExpress
 
 func defineIdentifierLeftDenotations() {
 
-	setExprIdentifierLeftBindingPower(keywordAs, exprLeftBindingPowerCasting)
+	setExprIdentifierLeftBindingPower(KeywordAs, exprLeftBindingPowerCasting)
 	setExprLeftDenotation(
 		lexer.TokenIdentifier,
 		func(parser *parser, t lexer.Token, left ast.Expression) (ast.Expression, error) {
@@ -854,7 +877,7 @@ func defineIdentifierLeftDenotations() {
 			// as this function is called for *any identifier left denotation ("postfix keyword"),
 			// not just for `as`, it might be extended with more cases (keywords) in the future
 			switch string(parser.tokenSource(t)) {
-			case keywordAs:
+			case KeywordAs:
 				right, err := parseTypeAnnotation(parser)
 				if err != nil {
 					return nil, err
@@ -948,10 +971,11 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 	p.nextSemanticToken()
 
 	base, err := parseExpression(p, lowestBindingPower)
-
 	if err != nil {
 		return nil, err
 	}
+
+	p.skipSpaceAndComments()
 
 	return ast.NewAttachExpression(p.memoryGauge, base, attachment, token.StartPos), nil
 }
@@ -1300,30 +1324,17 @@ func definePathExpression() {
 }
 
 func defineReferenceExpression() {
-	setExprNullDenotation(
-		lexer.TokenAmpersand,
-		func(p *parser, token lexer.Token) (ast.Expression, error) {
-			p.skipSpaceAndComments()
-			expression, err := parseExpression(p, exprLeftBindingPowerCasting-exprBindingPowerGap)
-			if err != nil {
-				return nil, err
-			}
-
-			castingExpression, ok := expression.(*ast.CastingExpression)
-			if !ok {
-				return nil, p.syntaxError("expected casting expression")
-			}
-
-			p.skipSpaceAndComments()
-
+	defineExpr(prefixExpr{
+		tokenType:    lexer.TokenAmpersand,
+		bindingPower: exprLeftBindingPowerUnaryPrefix,
+		nullDenotation: func(p *parser, right ast.Expression, tokenRange ast.Range) (ast.Expression, error) {
 			return ast.NewReferenceExpression(
 				p.memoryGauge,
-				castingExpression.Expression,
-				castingExpression.TypeAnnotation.Type,
-				token.StartPos,
+				right,
+				tokenRange.StartPos,
 			), nil
 		},
-	)
+	})
 }
 
 func defineMemberExpression() {

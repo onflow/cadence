@@ -26,10 +26,10 @@ type Config struct {
 	// ValidTopLevelDeclarationsHandler is used to determine the kinds of declarations
 	// which are valid at the top-level for a given location
 	ValidTopLevelDeclarationsHandler ValidTopLevelDeclarationsHandlerFunc
-	BaseTypeActivation               *VariableActivation
+	BaseTypeActivationHandler        ActivationHandlerFunc
+	BaseValueActivationHandler       ActivationHandlerFunc
 	// ImportHandler is used to resolve unresolved imports
-	ImportHandler       ImportHandlerFunc
-	BaseValueActivation *VariableActivation
+	ImportHandler ImportHandlerFunc
 	// CheckHandler is the function which is used for the checking of a program
 	CheckHandler CheckHandlerFunc
 	// LocationHandler is used to resolve locations
@@ -53,10 +53,6 @@ type Config struct {
 	AllowNativeDeclarations bool
 	// AllowStaticDeclarations determines if declarations may be static
 	AllowStaticDeclarations bool
-	// AccountLinkingEnabled determines if account linking is enabled
-	AccountLinkingEnabled bool
 	// AttachmentsEnabled determines if attachments are enabled
 	AttachmentsEnabled bool
-	// CapabilityControllersEnabled determines if capability controllers are enabled
-	CapabilityControllersEnabled bool
 }

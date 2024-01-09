@@ -76,11 +76,17 @@ func TestInterpretTransferCheck(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseTypeActivation:  baseTypeActivation,
-					BaseValueActivation: baseValueActivation,
+					BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseTypeActivation
+					},
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -92,7 +98,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
 	})
 
-	t.Run("contract and restricted type", func(t *testing.T) {
+	t.Run("contract and intersection type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -100,10 +106,6 @@ func TestInterpretTransferCheck(t *testing.T) {
 			`
 		      contract interface CI {
 		          resource interface RI {}
-
-		          resource R: RI {}
-
-		          fun createR(): @R
 		      }
 
               contract C: CI {
@@ -116,8 +118,8 @@ func TestInterpretTransferCheck(t *testing.T) {
 
               fun test() {
                   let r <- C.createR()
-                  let r2: @CI.R <- r as @CI.R
-                  let r3: @CI.R{CI.RI} <- r2
+                  let r2: @C.R <- r as @C.R
+                  let r3: @{CI.RI} <- r2
                   destroy r3
               }
             `,
@@ -133,7 +135,7 @@ func TestInterpretTransferCheck(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("contract and restricted type, reference", func(t *testing.T) {
+	t.Run("contract and intersection type, reference", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -141,10 +143,6 @@ func TestInterpretTransferCheck(t *testing.T) {
 			`
 		      contract interface CI {
 		          resource interface RI {}
-
-		          resource R: RI {}
-
-		          fun createR(): @R
 		      }
 
               contract C: CI {
@@ -157,8 +155,8 @@ func TestInterpretTransferCheck(t *testing.T) {
 
               fun test() {
                   let r <- C.createR()
-                  let ref: &CI.R = &r as &CI.R
-                  let restrictedRef: &CI.R{CI.RI} = ref
+                  let ref: &C.R = &r as &C.R
+                  let intersectionRef: &{CI.RI} = ref
                   destroy r
               }
             `,

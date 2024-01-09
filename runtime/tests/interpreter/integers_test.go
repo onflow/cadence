@@ -64,7 +64,7 @@ func init() {
 	for _, integerType := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch integerType {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -705,7 +705,7 @@ func TestInterpretIntegerConversion(t *testing.T) {
 	for _, ty := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -891,7 +891,7 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 	for _, ty := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -913,7 +913,7 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 	}
 }
 
-func TestStringIntegerConversion(t *testing.T) {
+func TestInterpretStringIntegerConversion(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, typ sema.Type) {

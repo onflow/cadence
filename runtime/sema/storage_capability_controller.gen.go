@@ -39,6 +39,25 @@ For example, it could be used to describe the purpose of the capability.
 Empty by default.
 `
 
+const StorageCapabilityControllerTypeSetTagFunctionName = "setTag"
+
+var StorageCapabilityControllerTypeSetTagFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "tag",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		VoidType,
+	),
+}
+
+const StorageCapabilityControllerTypeSetTagFunctionDocString = `
+Updates this controller's tag to the provided string
+`
+
 const StorageCapabilityControllerTypeBorrowTypeFieldName = "borrowType"
 
 var StorageCapabilityControllerTypeBorrowTypeFieldType = MetaType
@@ -115,13 +134,15 @@ var StorageCapabilityControllerType = &SimpleType{
 	Name:          StorageCapabilityControllerTypeName,
 	QualifiedName: StorageCapabilityControllerTypeName,
 	TypeID:        StorageCapabilityControllerTypeName,
-	tag:           StorageCapabilityControllerTypeTag,
+	TypeTag:       StorageCapabilityControllerTypeTag,
 	IsResource:    false,
 	Storable:      false,
+	Primitive:     false,
 	Equatable:     false,
 	Comparable:    false,
 	Exportable:    false,
 	Importable:    false,
+	ContainFields: true,
 }
 
 func init() {
@@ -129,7 +150,7 @@ func init() {
 		return MembersAsResolvers([]*Member{
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				StorageCapabilityControllerTypeCapabilityFieldName,
 				StorageCapabilityControllerTypeCapabilityFieldType,
@@ -137,15 +158,22 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublicSettable,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindVariable,
 				StorageCapabilityControllerTypeTagFieldName,
 				StorageCapabilityControllerTypeTagFieldType,
 				StorageCapabilityControllerTypeTagFieldDocString,
 			),
+			NewUnmeteredFunctionMember(
+				t,
+				PrimitiveAccess(ast.AccessAll),
+				StorageCapabilityControllerTypeSetTagFunctionName,
+				StorageCapabilityControllerTypeSetTagFunctionType,
+				StorageCapabilityControllerTypeSetTagFunctionDocString,
+			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				StorageCapabilityControllerTypeBorrowTypeFieldName,
 				StorageCapabilityControllerTypeBorrowTypeFieldType,
@@ -153,7 +181,7 @@ func init() {
 			),
 			NewUnmeteredFieldMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				ast.VariableKindConstant,
 				StorageCapabilityControllerTypeCapabilityIDFieldName,
 				StorageCapabilityControllerTypeCapabilityIDFieldType,
@@ -161,21 +189,21 @@ func init() {
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				StorageCapabilityControllerTypeDeleteFunctionName,
 				StorageCapabilityControllerTypeDeleteFunctionType,
 				StorageCapabilityControllerTypeDeleteFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				StorageCapabilityControllerTypeTargetFunctionName,
 				StorageCapabilityControllerTypeTargetFunctionType,
 				StorageCapabilityControllerTypeTargetFunctionDocString,
 			),
 			NewUnmeteredFunctionMember(
 				t,
-				ast.AccessPublic,
+				PrimitiveAccess(ast.AccessAll),
 				StorageCapabilityControllerTypeRetargetFunctionName,
 				StorageCapabilityControllerTypeRetargetFunctionType,
 				StorageCapabilityControllerTypeRetargetFunctionDocString,

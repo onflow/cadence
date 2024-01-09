@@ -132,11 +132,6 @@ type jsonCompositeField struct {
 	Name  string    `json:"name"`
 }
 
-type jsonPathLinkValue struct {
-	TargetPath jsonValue `json:"targetPath"`
-	BorrowType string    `json:"borrowType"`
-}
-
 type jsonPathValue struct {
 	Domain     string `json:"domain"`
 	Identifier string `json:"identifier"`
@@ -176,22 +171,21 @@ type jsonDictionaryType struct {
 	Kind      string    `json:"kind"`
 }
 
-type jsonInclusiveRangeType struct {
-	ElementType jsonValue `json:"element"`
-	Kind        string    `json:"kind"`
+type jsonAuthorization struct {
+	Kind         string            `json:"kind"`
+	Entitlements []jsonNominalType `json:"entitlements"`
 }
 
 type jsonReferenceType struct {
-	Type       jsonValue `json:"type"`
-	Kind       string    `json:"kind"`
-	Authorized bool      `json:"authorized"`
+	Type          jsonValue         `json:"type"`
+	Kind          string            `json:"kind"`
+	Authorization jsonAuthorization `json:"authorization"`
 }
 
-type jsonRestrictedType struct {
-	Kind         string      `json:"kind"`
-	TypeID       string      `json:"typeID"`
-	Type         jsonValue   `json:"type"`
-	Restrictions []jsonValue `json:"restrictions"`
+type jsonIntersectionType struct {
+	Kind   string      `json:"kind"`
+	TypeID string      `json:"typeID"`
+	Types  []jsonValue `json:"types"`
 }
 
 type jsonTypeParameter struct {
@@ -211,19 +205,14 @@ type jsonFunctionType struct {
 	TypeParameters []jsonTypeParameter `json:"typeParameters"`
 	Parameters     []jsonParameterType `json:"parameters"`
 	Return         jsonValue           `json:"return"`
+	Purity         string              `json:"purity"`
 }
 
 type jsonTypeValue struct {
 	StaticType jsonValue `json:"staticType"`
 }
 
-type jsonPathCapabilityValue struct {
-	Path       jsonValue `json:"path"`
-	BorrowType jsonValue `json:"borrowType"`
-	Address    string    `json:"address"`
-}
-
-type jsonIDCapabilityValue struct {
+type jsonCapabilityValue struct {
 	BorrowType jsonValue `json:"borrowType"`
 	Address    string    `json:"address"`
 	ID         string    `json:"id"`
@@ -231,6 +220,11 @@ type jsonIDCapabilityValue struct {
 
 type jsonFunctionValue struct {
 	FunctionType jsonValue `json:"functionType"`
+}
+
+type jsonInclusiveRangeType struct {
+	ElementType jsonValue `json:"element"`
+	Kind        string    `json:"kind"`
 }
 
 const (
@@ -269,14 +263,12 @@ const (
 	attachmentTypeStr     = "Attachment"
 	eventTypeStr          = "Event"
 	contractTypeStr       = "Contract"
-	inclusiveRangeTypeStr = "InclusiveRange"
-	linkTypeStr           = "Link"
-	accountLinkTypeStr    = "AccountLink"
 	pathTypeStr           = "Path"
 	typeTypeStr           = "Type"
 	capabilityTypeStr     = "Capability"
 	enumTypeStr           = "Enum"
 	functionTypeStr       = "Function"
+	inclusiveRangeTypeStr = "InclusiveRange"
 )
 
 // Prepare traverses the object graph of the provided value and constructs
@@ -353,18 +345,12 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareEvent(v)
 	case cadence.Contract:
 		return prepareContract(v)
-	case cadence.PathLink:
-		return preparePathLink(v)
-	case cadence.AccountLink:
-		return prepareAccountLink()
 	case cadence.Path:
 		return preparePath(v)
 	case cadence.TypeValue:
 		return prepareTypeValue(v)
-	case cadence.PathCapability:
-		return preparePathCapability(v)
-	case cadence.IDCapability:
-		return prepareIDCapability(v)
+	case cadence.Capability:
+		return prepareCapability(v)
 	case cadence.Enum:
 		return prepareEnum(v)
 	case cadence.Attachment:
@@ -680,19 +666,37 @@ func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cade
 	}
 }
 
-func preparePathLink(x cadence.PathLink) jsonValue {
-	return jsonValueObject{
-		Type: linkTypeStr,
-		Value: jsonPathLinkValue{
-			TargetPath: preparePath(x.TargetPath),
-			BorrowType: x.BorrowType,
-		},
+func prepareAuthorization(auth cadence.Authorization) jsonAuthorization {
+	var kind string
+	var entitlements []jsonNominalType
+	switch auth := auth.(type) {
+	case cadence.Unauthorized:
+		kind = "Unauthorized"
+	case cadence.EntitlementMapAuthorization:
+		kind = "EntitlementMapAuthorization"
+		entitlements = []jsonNominalType{
+			{
+				Kind:   "EntitlementMap",
+				TypeID: string(auth.TypeID),
+			},
+		}
+	case cadence.EntitlementSetAuthorization:
+		for _, entitlement := range auth.Entitlements {
+			entitlements = append(entitlements, jsonNominalType{
+				Kind:   "Entitlement",
+				TypeID: string(entitlement),
+			})
+		}
+		switch auth.Kind {
+		case cadence.Conjunction:
+			kind = "EntitlementConjunctionSet"
+		case cadence.Disjunction:
+			kind = "EntitlementDisjunctionSet"
+		}
 	}
-}
-
-func prepareAccountLink() jsonValue {
-	return jsonEmptyValueObject{
-		Type: accountLinkTypeStr,
+	return jsonAuthorization{
+		Kind:         kind,
+		Entitlements: entitlements,
 	}
 }
 
@@ -786,61 +790,7 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 	}
 
 	switch typ := typ.(type) {
-	case cadence.AnyType,
-		cadence.AnyStructType,
-		cadence.AnyStructAttachmentType,
-		cadence.AnyResourceType,
-		cadence.AnyResourceAttachmentType,
-		cadence.AddressType,
-		cadence.MetaType,
-		cadence.VoidType,
-		cadence.NeverType,
-		cadence.BoolType,
-		cadence.StringType,
-		cadence.CharacterType,
-		cadence.BytesType,
-		cadence.NumberType,
-		cadence.SignedNumberType,
-		cadence.IntegerType,
-		cadence.SignedIntegerType,
-		cadence.FixedPointType,
-		cadence.SignedFixedPointType,
-		cadence.IntType,
-		cadence.Int8Type,
-		cadence.Int16Type,
-		cadence.Int32Type,
-		cadence.Int64Type,
-		cadence.Int128Type,
-		cadence.Int256Type,
-		cadence.UIntType,
-		cadence.UInt8Type,
-		cadence.UInt16Type,
-		cadence.UInt32Type,
-		cadence.UInt64Type,
-		cadence.UInt128Type,
-		cadence.UInt256Type,
-		cadence.Word8Type,
-		cadence.Word16Type,
-		cadence.Word32Type,
-		cadence.Word64Type,
-		cadence.Word128Type,
-		cadence.Word256Type,
-		cadence.Fix64Type,
-		cadence.UFix64Type,
-		cadence.BlockType,
-		cadence.PathType,
-		cadence.CapabilityPathType,
-		cadence.StoragePathType,
-		cadence.PublicPathType,
-		cadence.PrivatePathType,
-		cadence.AccountKeyType,
-		cadence.AuthAccountContractsType,
-		cadence.AuthAccountKeysType,
-		cadence.AuthAccountType,
-		cadence.PublicAccountContractsType,
-		cadence.PublicAccountKeysType,
-		cadence.PublicAccountType,
-		cadence.DeployedContractType:
+	case cadence.BytesType:
 		return jsonSimpleType{
 			Kind: typ.ID(),
 		}
@@ -928,29 +878,32 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
 	case *cadence.FunctionType:
-		return jsonFunctionType{
+		typeJson := jsonFunctionType{
 			Kind:           "Function",
 			TypeID:         typ.ID(),
 			TypeParameters: prepareTypeParameters(typ.TypeParameters, results),
 			Parameters:     prepareParameters(typ.Parameters, results),
 			Return:         prepareType(typ.ReturnType, results),
 		}
+		if typ.Purity == cadence.FunctionPurityView {
+			typeJson.Purity = "view"
+		}
+		return typeJson
 	case *cadence.ReferenceType:
 		return jsonReferenceType{
-			Kind:       "Reference",
-			Authorized: typ.Authorized,
-			Type:       prepareType(typ.Type, results),
+			Kind:          "Reference",
+			Authorization: prepareAuthorization(typ.Authorization),
+			Type:          prepareType(typ.Type, results),
 		}
-	case *cadence.RestrictedType:
-		restrictions := make([]jsonValue, len(typ.Restrictions))
-		for i, restriction := range typ.Restrictions {
-			restrictions[i] = prepareType(restriction, results)
+	case *cadence.IntersectionType:
+		types := make([]jsonValue, len(typ.Types))
+		for i, typ := range typ.Types {
+			types[i] = prepareType(typ, results)
 		}
-		return jsonRestrictedType{
-			Kind:         "Restriction",
-			TypeID:       typ.ID(),
-			Type:         prepareType(typ.Type, results),
-			Restrictions: restrictions,
+		return jsonIntersectionType{
+			Kind:   "Intersection",
+			Types:  types,
+			TypeID: typ.ID(),
 		}
 	case *cadence.CapabilityType:
 		return jsonUnaryType{
@@ -965,11 +918,15 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 			Initializers: prepareInitializers(typ.Initializers, results),
 			Type:         prepareType(typ.RawType, results),
 		}
+	case cadence.PrimitiveType:
+		return jsonSimpleType{
+			Kind: typ.ID(),
+		}
 	case nil:
 		return ""
-	default:
-		panic(fmt.Errorf("unsupported type: %T, %v", typ, typ))
 	}
+
+	panic(fmt.Errorf("unsupported type: %T, %s", typ, typ))
 }
 
 type typePreparationResults map[cadence.Type]struct{}
@@ -983,21 +940,10 @@ func prepareTypeValue(typeValue cadence.TypeValue) jsonValue {
 	}
 }
 
-func preparePathCapability(capability cadence.PathCapability) jsonValue {
+func prepareCapability(capability cadence.Capability) jsonValue {
 	return jsonValueObject{
 		Type: capabilityTypeStr,
-		Value: jsonPathCapabilityValue{
-			Path:       preparePath(capability.Path),
-			Address:    encodeBytes(capability.Address.Bytes()),
-			BorrowType: prepareType(capability.BorrowType, typePreparationResults{}),
-		},
-	}
-}
-
-func prepareIDCapability(capability cadence.IDCapability) jsonValue {
-	return jsonValueObject{
-		Type: capabilityTypeStr,
-		Value: jsonIDCapabilityValue{
+		Value: jsonCapabilityValue{
 			ID:         encodeUInt(uint64(capability.ID)),
 			Address:    encodeBytes(capability.Address.Bytes()),
 			BorrowType: prepareType(capability.BorrowType, typePreparationResults{}),

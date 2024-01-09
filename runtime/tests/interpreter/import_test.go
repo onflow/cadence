@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -50,7 +51,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 			fooType,
 			"bar",
 			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UInt64Type),
+				ReturnTypeAnnotation: sema.UInt64TypeAnnotation,
 			},
 			"",
 		))
@@ -67,7 +68,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 	valueElements.Set("Foo", sema.ImportElement{
 		DeclarationKind: common.DeclarationKindStructure,
-		Access:          ast.AccessPublic,
+		Access:          sema.UnauthorizedAccess,
 		Type:            fooType,
 	})
 
@@ -91,18 +92,19 @@ func TestInterpretVirtualImport(t *testing.T) {
 						nil,
 						common.ZeroAddress,
 					)
-
-					value.Functions = map[string]interpreter.FunctionValue{
-						"bar": interpreter.NewHostFunctionValue(
+					value.Functions = orderedmap.New[interpreter.FunctionOrderedMap](1)
+					value.Functions.Set(
+						"bar",
+						interpreter.NewHostFunctionValue(
 							inter,
 							&sema.FunctionType{
-								ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UIntType),
+								ReturnTypeAnnotation: sema.UIntTypeAnnotation,
 							},
 							func(invocation interpreter.Invocation) interpreter.Value {
 								return interpreter.NewUnmeteredUInt64Value(42)
 							},
 						),
-					}
+					)
 
 					elaboration := sema.NewElaboration(nil)
 					elaboration.SetCompositeType(
@@ -156,12 +158,12 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	importedCheckerA, err := checker.ParseAndCheckWithOptions(t,
 		`
           // this function *SHOULD* be imported in the importing program
-          pub fun a(): Int {
+          access(all) fun a(): Int {
               return 1
           }
 
           // this function should *NOT* be imported in the importing program
-          pub fun b(): Int {
+          access(all) fun b(): Int {
               return 11
           }
         `,
@@ -177,12 +179,12 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	importedCheckerB, err := checker.ParseAndCheckWithOptions(t,
 		`
           // this function *SHOULD* be imported in the importing program
-          pub fun b(): Int {
+          access(all) fun b(): Int {
               return 2
           }
 
           // this function should *NOT* be imported in the importing program
-          pub fun a(): Int {
+          access(all) fun a(): Int {
               return 22
           }
         `,
@@ -199,7 +201,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 		`
           import a, b from 0x1
 
-          pub fun test(): Int {
+          access(all) fun test(): Int {
               return a() + b()
           }
         `,
@@ -331,7 +333,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 		`
           import R from 0x1
 
-          fun test(createR: ((): @R)) {
+          fun test(createR: fun(): @R) {
               let r <- createR()
               destroy r
           }

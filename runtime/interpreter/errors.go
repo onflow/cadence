@@ -464,34 +464,6 @@ func (e OverwriteError) Error() string {
 	)
 }
 
-// CyclicLinkError
-type CyclicLinkError struct {
-	LocationRange
-	Paths   []PathValue
-	Address common.Address
-}
-
-var _ errors.UserError = CyclicLinkError{}
-
-func (CyclicLinkError) IsUserError() {}
-
-func (e CyclicLinkError) Error() string {
-	var builder strings.Builder
-	for i, path := range e.Paths {
-		if i > 0 {
-			builder.WriteString(" -> ")
-		}
-		builder.WriteString(path.String())
-	}
-	paths := builder.String()
-
-	return fmt.Sprintf(
-		"cyclic link in account %s: %s",
-		e.Address.ShortHexWithPrefix(),
-		paths,
-	)
-}
-
 // ArrayIndexOutOfBoundsError
 type ArrayIndexOutOfBoundsError struct {
 	LocationRange
@@ -696,6 +668,23 @@ func (e ValueTransferTypeError) Error() string {
 		"invalid transfer of value: expected `%s`, got `%s`",
 		expected,
 		actual,
+	)
+}
+
+// UnexpectedMappedEntitlementError
+type UnexpectedMappedEntitlementError struct {
+	Type sema.Type
+	LocationRange
+}
+
+var _ errors.InternalError = UnexpectedMappedEntitlementError{}
+
+func (UnexpectedMappedEntitlementError) IsInternalError() {}
+
+func (e UnexpectedMappedEntitlementError) Error() string {
+	return fmt.Sprintf(
+		"invalid transfer of value: found an unexpected runtime mapped entitlement `%s`",
+		e.Type.QualifiedString(),
 	)
 }
 
@@ -909,6 +898,20 @@ func (InvalidHexLengthError) Error() string {
 	return "hex string has non-even length"
 }
 
+// InvalidatedResourceReferenceError is reported when accessing a reference value
+// that is pointing to a moved or destroyed resource.
+type InvalidatedResourceReferenceError struct {
+	LocationRange
+}
+
+var _ errors.UserError = InvalidatedResourceReferenceError{}
+
+func (InvalidatedResourceReferenceError) IsUserError() {}
+
+func (e InvalidatedResourceReferenceError) Error() string {
+	return "referenced resource has been moved or destroyed after taking the reference"
+}
+
 // DuplicateAttachmentError
 type DuplicateAttachmentError struct {
 	AttachmentType sema.Type
@@ -962,21 +965,6 @@ func (e InvalidAttachmentOperationTargetError) Error() string {
 	)
 }
 
-// AccountLinkingForbiddenError is the error which is reported
-// when a user uses the account link function,
-// but account linking is not allowed
-type AccountLinkingForbiddenError struct {
-	LocationRange
-}
-
-var _ errors.UserError = AccountLinkingForbiddenError{}
-
-func (AccountLinkingForbiddenError) IsUserError() {}
-
-func (e AccountLinkingForbiddenError) Error() string {
-	return "account linking is not allowed"
-}
-
 // RecursiveTransferError
 type RecursiveTransferError struct {
 	LocationRange
@@ -1007,6 +995,42 @@ func WrappedExternalError(err error) error {
 	default:
 		return errors.NewExternalError(err)
 	}
+}
+
+// CapabilityAddressPublishingError
+type CapabilityAddressPublishingError struct {
+	LocationRange
+	CapabilityAddress AddressValue
+	AccountAddress    AddressValue
+}
+
+var _ errors.UserError = CapabilityAddressPublishingError{}
+
+func (CapabilityAddressPublishingError) IsUserError() {}
+
+func (e CapabilityAddressPublishingError) Error() string {
+	return fmt.Sprintf(
+		"cannot publish capability of account %s in account %s",
+		e.CapabilityAddress.String(),
+		e.AccountAddress.String(),
+	)
+}
+
+// NestedReferenceError
+type NestedReferenceError struct {
+	Value *EphemeralReferenceValue
+	LocationRange
+}
+
+var _ errors.UserError = NestedReferenceError{}
+
+func (NestedReferenceError) IsUserError() {}
+
+func (e NestedReferenceError) Error() string {
+	return fmt.Sprintf(
+		"cannot create a nested reference to %s",
+		e.Value.String(),
+	)
 }
 
 // InclusiveRangeConstructionError

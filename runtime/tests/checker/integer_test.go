@@ -458,7 +458,7 @@ func TestCheckInvalidIntegerConversionFunctionWithoutArgs(t *testing.T) {
 	for _, ty := range allIntegerTypesAndAddressType {
 		// Only test leaf types
 		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -488,7 +488,7 @@ func TestCheckFixedPointToIntegerConversion(t *testing.T) {
 	for _, ty := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -531,7 +531,8 @@ func TestCheckIntegerLiteralArguments(t *testing.T) {
 
 			switch ty {
 			case sema.IntegerType,
-				sema.SignedIntegerType:
+				sema.SignedIntegerType,
+				sema.FixedSizeUnsignedIntegerType:
 				errs := RequireCheckerErrors(t, err, 1)
 				assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
 			default:
@@ -567,7 +568,7 @@ func TestCheckIntegerMinMax(t *testing.T) {
 	for _, ty := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 

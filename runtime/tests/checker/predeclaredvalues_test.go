@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -36,9 +37,7 @@ func TestCheckPredeclaredValues(t *testing.T) {
 	valueDeclaration := stdlib.NewStandardLibraryFunction(
 		"foo",
 		&sema.FunctionType{
-			ReturnTypeAnnotation: sema.TypeAnnotation{
-				Type: sema.VoidType,
-			},
+			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
 		},
 		"",
 		nil,
@@ -47,13 +46,15 @@ func TestCheckPredeclaredValues(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-            pub fun test() {
+            access(all) fun test() {
                 foo()
             }
         `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
 	)

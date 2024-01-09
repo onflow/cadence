@@ -103,7 +103,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 		},
 		Fields: []*FieldDeclaration{
 			{
-				Access:       AccessPublic,
+				Access:       AccessAll,
 				VariableKind: VariableKindConstant,
 				Identifier: Identifier{
 					Identifier: "f",
@@ -121,6 +121,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 		Prepare: &SpecialFunctionDeclaration{
 			Kind: common.DeclarationKindPrepare,
 			FunctionDeclaration: &FunctionDeclaration{
+				Access: AccessNotSpecified,
 				ParameterList: &ParameterList{
 					Parameters: []*Parameter{
 						{
@@ -145,8 +146,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 			},
 		},
 		PreConditions: &Conditions{
-			{
-				Kind: ConditionKindPre,
+			&TestCondition{
 				Test: &BoolExpression{
 					Value: true,
 				},
@@ -158,6 +158,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 		Execute: &SpecialFunctionDeclaration{
 			Kind: common.DeclarationKindExecute,
 			FunctionDeclaration: &FunctionDeclaration{
+				Access: AccessNotSpecified,
 				FunctionBlock: &FunctionBlock{
 					Block: &Block{
 						Statements: []Statement{
@@ -172,8 +173,7 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 			},
 		},
 		PostConditions: &Conditions{
-			{
-				Kind: ConditionKindPre,
+			&TestCondition{
 				Test: &BoolExpression{
 					Value: false,
 				},
@@ -213,17 +213,19 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 						prettier.HardLine{},
 						prettier.Group{
 							Doc: prettier.Concat{
-								prettier.Text("pub"),
-								prettier.Text(" "),
-								prettier.Text("let"),
-								prettier.Text(" "),
-								prettier.Group{
-									Doc: prettier.Concat{
-										prettier.Text("f"),
-										prettier.Text(": "),
-										prettier.Concat{
-											prettier.Text("@"),
-											prettier.Text("F"),
+								prettier.Text("access(all)"),
+								prettier.HardLine{},
+								prettier.Concat{
+									prettier.Text("let"),
+									prettier.Text(" "),
+									prettier.Group{
+										Doc: prettier.Concat{
+											prettier.Text("f"),
+											prettier.Text(": "),
+											prettier.Concat{
+												prettier.Text("@"),
+												prettier.Text("F"),
+											},
 										},
 									},
 								},
@@ -371,7 +373,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 		},
 		Fields: []*FieldDeclaration{
 			{
-				Access:       AccessPublic,
+				Access:       AccessAll,
 				VariableKind: VariableKindConstant,
 				Identifier: Identifier{
 					Identifier: "f",
@@ -389,6 +391,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 		Prepare: &SpecialFunctionDeclaration{
 			Kind: common.DeclarationKindPrepare,
 			FunctionDeclaration: &FunctionDeclaration{
+				Access: AccessNotSpecified,
 				ParameterList: &ParameterList{
 					Parameters: []*Parameter{
 						{
@@ -396,9 +399,11 @@ func TestTransactionDeclaration_String(t *testing.T) {
 								Identifier: "signer",
 							},
 							TypeAnnotation: &TypeAnnotation{
-								Type: &NominalType{
-									Identifier: Identifier{
-										Identifier: "AuthAccount",
+								Type: &ReferenceType{
+									Type: &NominalType{
+										Identifier: Identifier{
+											Identifier: "Account",
+										},
 									},
 								},
 							},
@@ -413,8 +418,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 			},
 		},
 		PreConditions: &Conditions{
-			{
-				Kind: ConditionKindPre,
+			&TestCondition{
 				Test: &BoolExpression{
 					Value: true,
 				},
@@ -426,6 +430,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 		Execute: &SpecialFunctionDeclaration{
 			Kind: common.DeclarationKindExecute,
 			FunctionDeclaration: &FunctionDeclaration{
+				Access: AccessNotSpecified,
 				FunctionBlock: &FunctionBlock{
 					Block: &Block{
 						Statements: []Statement{
@@ -440,8 +445,7 @@ func TestTransactionDeclaration_String(t *testing.T) {
 			},
 		},
 		PostConditions: &Conditions{
-			{
-				Kind: ConditionKindPre,
+			&TestCondition{
 				Test: &BoolExpression{
 					Value: false,
 				},
@@ -454,25 +458,26 @@ func TestTransactionDeclaration_String(t *testing.T) {
 
 	require.Equal(
 		t,
-		"transaction(x: X) {\n"+
-			"    pub let f: @F\n"+
-			"    \n"+
-			"    prepare(signer: AuthAccount) {}\n"+
-			"    \n"+
-			"    pre {\n"+
-			"        true:\n"+
-			"            \"pre\"\n"+
-			"    }\n"+
-			"    \n"+
-			"    execute {\n"+
-			"        \"xyz\"\n"+
-			"    }\n"+
-			"    \n"+
-			"    post {\n"+
-			"        false:\n"+
-			"            \"post\"\n"+
-			"    }\n"+
-			"}",
+		`transaction(x: X) {
+    access(all)
+    let f: @F
+    
+    prepare(signer: &Account) {}
+    
+    pre {
+        true:
+            "pre"
+    }
+    
+    execute {
+        "xyz"
+    }
+    
+    post {
+        false:
+            "post"
+    }
+}`,
 		decl.String(),
 	)
 }

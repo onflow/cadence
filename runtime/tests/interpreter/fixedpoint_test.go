@@ -599,7 +599,7 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 	}
 }
 
-func TestStringFixedpointConversion(t *testing.T) {
+func TestInterpretStringFixedPointConversion(t *testing.T) {
 	t.Parallel()
 
 	type testcase struct {

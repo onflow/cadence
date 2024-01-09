@@ -36,7 +36,7 @@ func TestInspectValue(t *testing.T) {
 
 	var compositeValue *CompositeValue
 	{
-		dictionaryStaticType := DictionaryStaticType{
+		dictionaryStaticType := &DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeInt256,
 		}
@@ -52,7 +52,7 @@ func TestInspectValue(t *testing.T) {
 		arrayValue := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: dictionaryStaticType,
 			},
 			common.ZeroAddress,

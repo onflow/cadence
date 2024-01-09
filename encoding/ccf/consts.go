@@ -62,7 +62,7 @@ const (
 	CBORTagConstsizedArrayType
 	CBORTagDictType
 	CBORTagReferenceType
-	CBORTagRestrictedType
+	CBORTagIntersectionType
 	CBORTagCapabilityType
 	CBORTagInclusiveRangeType
 	_
@@ -117,7 +117,7 @@ const (
 	CBORTagConstsizedArrayTypeValue
 	CBORTagDictTypeValue
 	CBORTagReferenceTypeValue
-	CBORTagRestrictedTypeValue
+	CBORTagIntersectionTypeValue
 	CBORTagCapabilityTypeValue
 	CBORTagFunctionTypeValue
 	CBORTagInclusiveRangeTypeValue // InclusiveRange is stored as a composite value.

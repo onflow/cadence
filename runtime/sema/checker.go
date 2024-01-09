@@ -52,6 +52,7 @@ var beforeType = func() *FunctionType {
 	)
 
 	return &FunctionType{
+		Purity: FunctionPurityView,
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
@@ -66,7 +67,9 @@ var beforeType = func() *FunctionType {
 	}
 }()
 
-type ValidTopLevelDeclarationsHandlerFunc = func(common.Location) common.DeclarationKindSet
+type ValidTopLevelDeclarationsHandlerFunc func(common.Location) common.DeclarationKindSet
+
+type ActivationHandlerFunc func(common.Location) *VariableActivation
 
 type CheckHandlerFunc func(checker *Checker, check func())
 
@@ -80,6 +83,12 @@ type LocationHandlerFunc func(identifiers []ast.Identifier, location common.Loca
 type ImportHandlerFunc func(checker *Checker, importedLocation common.Location, importRange ast.Range) (Import, error)
 
 type MemberAccountAccessHandlerFunc func(checker *Checker, memberLocation common.Location) bool
+
+type PurityCheckScope struct {
+	// whether encountering an impure operation should cause an error
+	EnforcePurity   bool
+	ActivationDepth int
+}
 
 type ContractValueHandlerFunc func(
 	checker *Checker,
@@ -107,17 +116,41 @@ type Checker struct {
 	_beforeExtractor                   *BeforeExtractor
 	errors                             []error
 	functionActivations                *FunctionActivations
+	purityCheckScopes                  []PurityCheckScope
+	entitlementMappingInScope          *EntitlementMapType
 	inCondition                        bool
+	inInterface                        bool
 	allowSelfResourceFieldInvalidation bool
-	inAssignment                       bool
 	inInvocation                       bool
 	inCreate                           bool
 	isChecked                          bool
+	inAssignment                       bool
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
 var _ ast.StatementVisitor[struct{}] = &Checker{}
 var _ ast.ExpressionVisitor[Type] = &Checker{}
+
+var baseFunctionType = NewSimpleFunctionType(
+	FunctionPurityImpure,
+	nil,
+	VoidTypeAnnotation,
+)
+
+func NewVariableActivationsFromHandler(
+	handler ActivationHandlerFunc,
+	location common.Location,
+	defaultActivation *VariableActivation,
+) *VariableActivations {
+	var activation *VariableActivation
+	if handler != nil {
+		activation = handler(location)
+	}
+	if activation == nil {
+		activation = defaultActivation
+	}
+	return NewVariableActivations(activation)
+}
 
 func NewChecker(
 	program *ast.Program,
@@ -139,9 +172,7 @@ func NewChecker(
 		activations: make([]*FunctionActivation, 0, 2),
 	}
 	functionActivations.EnterFunction(
-		&FunctionType{
-			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
-		},
+		baseFunctionType,
 		0,
 	)
 
@@ -155,24 +186,25 @@ func NewChecker(
 		resources:           NewResources(),
 		functionActivations: functionActivations,
 		containerTypes:      map[Type]bool{},
+		purityCheckScopes:   []PurityCheckScope{{}},
 		memoryGauge:         memoryGauge,
 	}
 
 	// Initialize value activations
 
-	baseValueActivation := config.BaseValueActivation
-	if baseValueActivation == nil {
-		baseValueActivation = BaseValueActivation
-	}
-	checker.valueActivations = NewVariableActivations(baseValueActivation)
+	checker.valueActivations = NewVariableActivationsFromHandler(
+		config.BaseValueActivationHandler,
+		location,
+		BaseValueActivation,
+	)
 
 	// Initialize type activations
 
-	baseTypeActivation := config.BaseTypeActivation
-	if baseTypeActivation == nil {
-		baseTypeActivation = BaseTypeActivation
-	}
-	checker.typeActivations = NewVariableActivations(baseTypeActivation)
+	checker.typeActivations = NewVariableActivationsFromHandler(
+		config.BaseTypeActivationHandler,
+		location,
+		BaseTypeActivation,
+	)
 
 	// Initialize position info, if enabled
 	if checker.Config.PositionInfoEnabled {
@@ -197,6 +229,49 @@ func (checker *Checker) SetMemoryGauge(gauge common.MemoryGauge) {
 
 func (checker *Checker) IsChecked() bool {
 	return checker.isChecked
+}
+
+func (checker *Checker) CurrentPurityScope() PurityCheckScope {
+	return checker.purityCheckScopes[len(checker.purityCheckScopes)-1]
+}
+
+func (checker *Checker) PushNewPurityScope(enforce bool, depth int) {
+	checker.purityCheckScopes = append(
+		checker.purityCheckScopes,
+		PurityCheckScope{
+			EnforcePurity:   enforce,
+			ActivationDepth: depth,
+		},
+	)
+}
+
+func (checker *Checker) PopPurityScope() PurityCheckScope {
+	scope := checker.CurrentPurityScope()
+	checker.purityCheckScopes = checker.purityCheckScopes[:len(checker.purityCheckScopes)-1]
+	return scope
+}
+
+func (checker *Checker) EnforcePurity(operation ast.Element, purity FunctionPurity) {
+	if purity == FunctionPurityImpure {
+		checker.ObserveImpureOperation(operation)
+	}
+}
+
+func (checker *Checker) ObserveImpureOperation(operation ast.Element) {
+	scope := checker.CurrentPurityScope()
+	if scope.EnforcePurity {
+		checker.report(
+			&PurityError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, operation),
+			},
+		)
+	}
+}
+
+func (checker *Checker) InNewPurityScope(enforce bool, f func()) {
+	checker.PushNewPurityScope(enforce, checker.ValueActivationDepth())
+	f()
+	checker.PopPurityScope()
 }
 
 type stopChecking struct{}
@@ -261,6 +336,7 @@ func (checker *Checker) report(err error) {
 	if err == nil {
 		return
 	}
+
 	checker.errors = append(checker.errors, err)
 	if checker.Config.ErrorShortCircuitingEnabled {
 		panic(stopChecking{})
@@ -281,17 +357,41 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 			checker.Elaboration.SetInterfaceType(typedType.ID(), typedType)
 		case *CompositeType:
 			checker.Elaboration.SetCompositeType(typedType.ID(), typedType)
+		case *EntitlementType:
+			checker.Elaboration.SetEntitlementType(typedType.ID(), typedType)
+		case *EntitlementMapType:
+			checker.Elaboration.SetEntitlementMapType(typedType.ID(), typedType)
 		default:
 			panic(errors.NewUnreachableError())
 		}
 	}
 
-	for _, declaration := range program.InterfaceDeclarations() {
-		interfaceType := checker.declareInterfaceType(declaration)
+	for _, declaration := range program.EntitlementDeclarations() {
+		entitlementType := checker.declareEntitlementType(declaration)
 
 		// NOTE: register types in elaboration
 		// *after* the full container chain is fully set up
 
+		VisitThisAndNested(entitlementType, registerInElaboration)
+	}
+
+	for _, declaration := range program.EntitlementMappingDeclarations() {
+		entitlementType := checker.declareEntitlementMappingType(declaration)
+
+		// NOTE: register types in elaboration
+		// *after* the full container chain is fully set up
+
+		VisitThisAndNested(entitlementType, registerInElaboration)
+	}
+
+	// NOTE: Resolving interface conformances and registering types in elaboration
+	// must be done *after* the full container chain is fully set up for *all* interfaces types.
+	// This is because initializing the explicit interface conformances (`explicitInterfaceConformances()`)
+	// requires the other interfaces to be already defined.
+	// Therefore, this is done in two steps.
+
+	for _, declaration := range program.InterfaceDeclarations() {
+		interfaceType := checker.declareInterfaceType(declaration)
 		VisitThisAndNested(interfaceType, registerInElaboration)
 	}
 
@@ -302,6 +402,13 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 		// *after* the full container chain is fully set up
 
 		VisitThisAndNested(compositeType, registerInElaboration)
+	}
+
+	// Resolve conformances
+	for _, declaration := range program.InterfaceDeclarations() {
+		interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
+		interfaceType.ExplicitInterfaceConformances =
+			checker.explicitInterfaceConformances(declaration, interfaceType)
 	}
 
 	for _, declaration := range program.AttachmentDeclarations() {
@@ -316,15 +423,15 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 	// Declare interfaces' and composites' members
 
 	for _, declaration := range program.InterfaceDeclarations() {
-		checker.declareInterfaceMembers(declaration)
+		checker.declareInterfaceMembersAndValue(declaration)
 	}
 
 	for _, declaration := range program.CompositeDeclarations() {
-		checker.declareCompositeLikeMembersAndValue(declaration, ContainerKindComposite)
+		checker.declareCompositeLikeMembersAndValue(declaration)
 	}
 
 	for _, declaration := range program.AttachmentDeclarations() {
-		checker.declareAttachmentMembersAndValue(declaration, ContainerKindComposite)
+		checker.declareAttachmentMembersAndValue(declaration)
 	}
 
 	// Declare events, functions, and transactions
@@ -343,29 +450,7 @@ func (checker *Checker) CheckProgram(program *ast.Program) {
 
 	checker.checkTopLevelDeclarationsValidity(declarations)
 
-	var rejectAllowAccountLinkingPragma bool
-
 	for _, declaration := range declarations {
-
-		// A pragma declaration #allowAccountLinking determines
-		// if the program is allowed to use account linking.
-		//
-		// It must appear as a top-level declaration (i.e. not nested in the program),
-		// and must appear before all other declarations (i.e. at the top of the program).
-		//
-		// This is a temporary feature, which is planned to get replaced by capability controllers,
-		// and a new Account type with entitlements.
-
-		if pragmaDeclaration, isPragma := declaration.(*ast.PragmaDeclaration); isPragma {
-			if IsAllowAccountLinkingPragma(pragmaDeclaration) {
-				if rejectAllowAccountLinkingPragma {
-					checker.reportInvalidNonHeaderPragma(pragmaDeclaration)
-				}
-				continue
-			}
-		}
-
-		rejectAllowAccountLinkingPragma = true
 
 		// Skip import declarations, they are already handled above
 		if _, isImport := declaration.(*ast.ImportDeclaration); isImport {
@@ -424,7 +509,14 @@ func (checker *Checker) checkTopLevelDeclarationValidity(
 }
 
 func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.FunctionDeclaration) {
-	functionType := checker.functionType(declaration.ParameterList, declaration.ReturnTypeAnnotation)
+	functionType := checker.functionType(
+		declaration.IsNative(),
+		declaration.Purity,
+		UnauthorizedAccess,
+		declaration.TypeParameterList,
+		declaration.ParameterList,
+		declaration.ReturnTypeAnnotation,
+	)
 	checker.Elaboration.SetFunctionDeclarationFunctionType(declaration, functionType)
 	checker.declareFunctionDeclaration(declaration, functionType)
 }
@@ -787,8 +879,8 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 	case *ast.ReferenceType:
 		return checker.convertReferenceType(t)
 
-	case *ast.RestrictedType:
-		return checker.convertRestrictedType(t)
+	case *ast.IntersectionType:
+		return checker.convertIntersectionType(t)
 
 	case *ast.InstantiationType:
 		return checker.convertInstantiationType(t)
@@ -801,55 +893,54 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 	panic(&astTypeConversionError{invalidASTType: t})
 }
 
-func CheckRestrictedType(
+func CheckIntersectionType(
 	memoryGauge common.MemoryGauge,
-	restrictedType Type,
-	restrictions []*InterfaceType,
-	report func(func(*ast.RestrictedType) error),
+	types []*InterfaceType,
+	report func(func(*ast.IntersectionType) error),
 ) Type {
-	restrictionRanges := make(map[*InterfaceType]func(*ast.RestrictedType) ast.Range, len(restrictions))
-	restrictionsCompositeKind := common.CompositeKindUnknown
+	intersectionRanges := make(map[*InterfaceType]func(*ast.IntersectionType) ast.Range, len(types))
+	intersectionsCompositeKind := common.CompositeKindUnknown
 	memberSet := map[string]*InterfaceType{}
 
-	for i, restrictionInterfaceType := range restrictions {
-		restrictionCompositeKind := restrictionInterfaceType.CompositeKind
+	for i, interfaceType := range types {
+		interfaceCompositeKind := interfaceType.CompositeKind
 
-		if restrictionsCompositeKind == common.CompositeKindUnknown {
-			restrictionsCompositeKind = restrictionCompositeKind
+		if intersectionsCompositeKind == common.CompositeKindUnknown {
+			intersectionsCompositeKind = interfaceCompositeKind
 
-		} else if restrictionCompositeKind != restrictionsCompositeKind {
-			report(func(t *ast.RestrictedType) error {
-				return &RestrictionCompositeKindMismatchError{
-					CompositeKind:         restrictionCompositeKind,
-					PreviousCompositeKind: restrictionsCompositeKind,
-					Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Restrictions[i]),
+		} else if interfaceCompositeKind != intersectionsCompositeKind {
+			report(func(t *ast.IntersectionType) error {
+				return &IntersectionCompositeKindMismatchError{
+					CompositeKind:         interfaceCompositeKind,
+					PreviousCompositeKind: intersectionsCompositeKind,
+					Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
 				}
 			})
 		}
 
-		// The restriction must not be duplicated
+		// The intersection must not be duplicated
 
-		if _, exists := restrictionRanges[restrictionInterfaceType]; exists {
-			report(func(t *ast.RestrictedType) error {
-				return &InvalidRestrictionTypeDuplicateError{
-					Type:  restrictionInterfaceType,
-					Range: ast.NewRangeFromPositioned(memoryGauge, t.Restrictions[i]),
+		if _, exists := intersectionRanges[interfaceType]; exists {
+			report(func(t *ast.IntersectionType) error {
+				return &InvalidIntersectionTypeDuplicateError{
+					Type:  interfaceType,
+					Range: ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
 				}
 			})
 
 		} else {
-			restrictionRanges[restrictionInterfaceType] =
-				func(t *ast.RestrictedType) ast.Range {
-					return ast.NewRangeFromPositioned(memoryGauge, t.Restrictions[i])
+			intersectionRanges[interfaceType] =
+				func(t *ast.IntersectionType) ast.Range {
+					return ast.NewRangeFromPositioned(memoryGauge, t.Types[i])
 				}
 		}
 
-		// The restrictions may not have clashing members
+		// The intersections may not have clashing members
 
 		// TODO: also include interface conformances' members
 		//   once interfaces can have conformances
 
-		restrictionInterfaceType.Members.Foreach(func(name string, member *Member) {
+		interfaceType.Members.Foreach(func(name string, member *Member) {
 			if previousDeclaringInterfaceType, ok := memberSet[name]; ok {
 
 				// If there is an overlap in members, ensure the members have the same type
@@ -867,178 +958,118 @@ func CheckRestrictedType(
 					!previousMemberType.IsInvalidType() &&
 					!memberType.Equal(previousMemberType) {
 
-					report(func(t *ast.RestrictedType) error {
-						return &RestrictionMemberClashError{
+					report(func(t *ast.IntersectionType) error {
+						return &IntersectionMemberClashError{
 							Name:                  name,
-							RedeclaringType:       restrictionInterfaceType,
+							RedeclaringType:       interfaceType,
 							OriginalDeclaringType: previousDeclaringInterfaceType,
-							Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Restrictions[i]),
+							Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
 						}
 					})
 				}
 			} else {
-				memberSet[name] = restrictionInterfaceType
+				memberSet[name] = interfaceType
 			}
 		})
 	}
 
-	var hadExplicitType = restrictedType != nil
+	// If no intersection type is given, infer `AnyResource`/`AnyStruct`
+	// based on the composite kind of the intersections.
 
-	if !hadExplicitType {
-		// If no restricted type is given, infer `AnyResource`/`AnyStruct`
-		// based on the composite kind of the restrictions.
+	switch intersectionsCompositeKind {
+	case common.CompositeKindUnknown:
+		// If no intersection type is given, and also no intersections,
+		// the type is ambiguous.
 
-		switch restrictionsCompositeKind {
-		case common.CompositeKindUnknown:
-			// If no restricted type is given, and also no restrictions,
-			// the type is ambiguous.
-
-			restrictedType = InvalidType
-
-			report(func(t *ast.RestrictedType) error {
-				return &AmbiguousRestrictedTypeError{Range: ast.NewRangeFromPositioned(memoryGauge, t)}
-			})
-
-		case common.CompositeKindResource:
-			restrictedType = AnyResourceType
-
-		case common.CompositeKindStructure:
-			restrictedType = AnyStructType
-
-		default:
-			panic(errors.NewUnreachableError())
-		}
-	}
-
-	// The restricted type must be a composite type
-	// or `AnyResource`/`AnyStruct`
-
-	reportInvalidRestrictedType := func() {
-		report(func(t *ast.RestrictedType) error {
-			return &InvalidRestrictedTypeError{
-				Type:  restrictedType,
-				Range: ast.NewRangeFromPositioned(memoryGauge, t.Type),
-			}
+		report(func(t *ast.IntersectionType) error {
+			return &AmbiguousIntersectionTypeError{Range: ast.NewRangeFromPositioned(memoryGauge, t)}
 		})
+		return InvalidType
+
+	case common.CompositeKindResource, common.CompositeKindStructure:
+		break
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
-	var compositeType *CompositeType
-
-	if !restrictedType.IsInvalidType() {
-
-		if typeResult, ok := restrictedType.(*CompositeType); ok {
-			switch typeResult.Kind {
-
-			case common.CompositeKindResource,
-				common.CompositeKindStructure:
-
-				compositeType = typeResult
-
-			default:
-				reportInvalidRestrictedType()
-			}
-		} else {
-
-			switch restrictedType {
-			case AnyResourceType, AnyStructType, AnyType:
-				break
-
-			default:
-				if hadExplicitType {
-					reportInvalidRestrictedType()
-				}
-			}
-		}
-	}
-
-	// If the restricted type is a composite type,
-	// check that the restrictions are conformances
-
-	if compositeType != nil {
-
-		// Prepare a set of all the conformances
-
-		conformances := compositeType.ExplicitInterfaceConformanceSet()
-
-		for _, restriction := range restrictions {
-			// The restriction must be an explicit or implicit conformance
-			// of the composite (restricted type)
-
-			if !conformances.Contains(restriction) {
-				report(func(t *ast.RestrictedType) error {
-					return &InvalidNonConformanceRestrictionError{
-						Type:  restriction,
-						Range: restrictionRanges[restriction](t),
-					}
-				})
-			}
-		}
-	}
-	return restrictedType
+	return NewIntersectionType(memoryGauge, types)
 }
 
-func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
-	var restrictedType Type
+func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
+	// Convert the intersected types
 
-	// Convert the restricted type, if any
+	var intersectedTypes []*InterfaceType
 
-	if t.Type != nil {
-		restrictedType = checker.ConvertType(t.Type)
-	}
+	for _, intersectedType := range t.Types {
+		intersectedResult := checker.ConvertType(intersectedType)
 
-	// Convert the restrictions
+		// The intersected type must be a resource or structure interface type
 
-	var restrictions []*InterfaceType
-
-	for _, restriction := range t.Restrictions {
-		restrictionResult := checker.ConvertType(restriction)
-
-		// The restriction must be a resource or structure interface type
-
-		restrictionInterfaceType, ok := restrictionResult.(*InterfaceType)
-		restrictionCompositeKind := common.CompositeKindUnknown
+		intersectedInterfaceType, ok := intersectedResult.(*InterfaceType)
+		intersectedCompositeKind := common.CompositeKindUnknown
 		if ok {
-			restrictionCompositeKind = restrictionInterfaceType.CompositeKind
+			intersectedCompositeKind = intersectedInterfaceType.CompositeKind
 		}
-		if !ok || (restrictionCompositeKind != common.CompositeKindResource &&
-			restrictionCompositeKind != common.CompositeKindStructure) {
+		if !ok || (intersectedCompositeKind != common.CompositeKindResource &&
+			intersectedCompositeKind != common.CompositeKindStructure) {
 
-			if !restrictionResult.IsInvalidType() {
-				checker.report(&InvalidRestrictionTypeError{
-					Type:  restrictionResult,
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, restriction),
+			if !intersectedResult.IsInvalidType() {
+				checker.report(&InvalidIntersectedTypeError{
+					Type:  intersectedResult,
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, intersectedType),
 				})
 			}
 
 			// NOTE: ignore this invalid type
-			// and do not add it to the restrictions result
+			// and do not add it to the intersected result
 			continue
 		}
 
-		restrictions = append(restrictions, restrictionInterfaceType)
+		intersectedTypes = append(intersectedTypes, intersectedInterfaceType)
 	}
 
-	restrictedType = CheckRestrictedType(
+	intersectionType := CheckIntersectionType(
 		checker.memoryGauge,
-		restrictedType,
-		restrictions,
-		func(getError func(*ast.RestrictedType) error) {
+		intersectedTypes,
+		func(getError func(*ast.IntersectionType) error) {
 			checker.report(getError(t))
 		},
 	)
 
-	return &RestrictedType{
-		Type:         restrictedType,
-		Restrictions: restrictions,
-	}
+	return intersectionType
 }
 
 func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
-	ty := checker.ConvertType(t.Type)
+
+	var access Access = UnauthorizedAccess
+	var ty Type
+
+	if t.Authorization != nil {
+		switch auth := t.Authorization.(type) {
+		case ast.EntitlementSet:
+			access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: auth})
+		case *ast.MappedAccess:
+			access = checker.accessFromAstAccess(auth)
+		}
+
+		if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
+			// mapped auth types are only allowed in the annotations of composite fields and accessor functions
+			if checker.entitlementMappingInScope == nil || !checker.entitlementMappingInScope.Equal(mapAccess.Type) {
+				checker.report(&InvalidMappedAuthorizationOutsideOfFieldError{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, t),
+					Map:   mapAccess.Type,
+				})
+				access = UnauthorizedAccess
+			}
+		}
+	}
+
+	ty = checker.ConvertType(t.Type)
 
 	return &ReferenceType{
-		Authorized: t.Authorized,
-		Type:       ty,
+		Authorization: access,
+		Type:          ty,
 	}
 }
 
@@ -1046,7 +1077,7 @@ func (checker *Checker) convertDictionaryType(t *ast.DictionaryType) Type {
 	keyType := checker.ConvertType(t.KeyType)
 	valueType := checker.ConvertType(t.ValueType)
 
-	if !IsValidDictionaryKeyType(keyType) {
+	if !IsSubType(keyType, HashableStructType) {
 		checker.report(
 			&InvalidDictionaryKeyTypeError{
 				Type:  keyType,
@@ -1062,6 +1093,8 @@ func (checker *Checker) convertDictionaryType(t *ast.DictionaryType) Type {
 }
 
 func (checker *Checker) convertOptionalType(t *ast.OptionalType) Type {
+	// optional types annotations are special cased to not be considered nested so that
+	// we can have mapped-entitlement optional reference fields
 	ty := checker.ConvertType(t.Type)
 	return &OptionalType{
 		Type: ty,
@@ -1092,10 +1125,13 @@ func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 
 	returnTypeAnnotation := checker.ConvertTypeAnnotation(t.ReturnTypeAnnotation)
 
-	return &FunctionType{
-		Parameters:           parameters,
-		ReturnTypeAnnotation: returnTypeAnnotation,
-	}
+	purity := PurityFromAnnotation(t.PurityAnnotation)
+
+	return NewSimpleFunctionType(
+		purity,
+		parameters,
+		returnTypeAnnotation,
+	)
 }
 
 func (checker *Checker) convertConstantSizedType(t *ast.ConstantSizedType) Type {
@@ -1240,10 +1276,74 @@ func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation
 }
 
 func (checker *Checker) functionType(
+	isNative bool,
+	purity ast.FunctionPurity,
+	access Access,
+	typeParameterList *ast.TypeParameterList,
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
 ) *FunctionType {
+
+	oldMappedAccess := checker.entitlementMappingInScope
+	if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
+		checker.entitlementMappingInScope = mapAccess.Type
+	} else {
+		checker.entitlementMappingInScope = nil
+	}
+	defer func() { checker.entitlementMappingInScope = oldMappedAccess }()
+
+	// Convert type parameters (if any)
+
+	var convertedTypeParameters []*TypeParameter
+	if typeParameterList != nil {
+
+		// Only native functions may have type parameters at the moment
+		if !isNative && !typeParameterList.IsEmpty() {
+			checker.report(&InvalidTypeParameterizedNonNativeFunctionError{
+				Range: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					typeParameterList,
+				),
+			})
+		}
+
+		checker.typeActivations.Enter()
+		defer checker.typeActivations.Leave(func(gauge common.MemoryGauge) ast.Position {
+			if returnTypeAnnotation != nil {
+				return returnTypeAnnotation.EndPosition(gauge)
+			} else {
+				return parameterList.EndPos
+			}
+		})
+
+		// All type parameters are converted at once,
+		// so type bounds may currently not refer to previous type parameters
+
+		convertedTypeParameters = checker.typeParameters(typeParameterList)
+
+		for typeParameterIndex, typeParameter := range typeParameterList.TypeParameters {
+			convertedTypeParameter := convertedTypeParameters[typeParameterIndex]
+
+			genericType := &GenericType{
+				TypeParameter: convertedTypeParameter,
+			}
+
+			_, err := checker.typeActivations.declareType(typeDeclaration{
+				identifier:               typeParameter.Identifier,
+				ty:                       genericType,
+				declarationKind:          common.DeclarationKindTypeParameter,
+				allowOuterScopeShadowing: false,
+			})
+			checker.report(err)
+
+		}
+	}
+
+	// Convert parameters
+
 	convertedParameters := checker.parameters(parameterList)
+
+	// Convert return type
 
 	convertedReturnTypeAnnotation := VoidTypeAnnotation
 	if returnTypeAnnotation != nil {
@@ -1252,18 +1352,47 @@ func (checker *Checker) functionType(
 	}
 
 	return &FunctionType{
+		Purity:               PurityFromAnnotation(purity),
+		TypeParameters:       convertedTypeParameters,
 		Parameters:           convertedParameters,
 		ReturnTypeAnnotation: convertedReturnTypeAnnotation,
 	}
 }
 
+func (checker *Checker) typeParameters(typeParameterList *ast.TypeParameterList) []*TypeParameter {
+
+	var typeParameters []*TypeParameter
+
+	typeParameterCount := len(typeParameterList.TypeParameters)
+	if typeParameterCount > 0 {
+		typeParameters = make([]*TypeParameter, typeParameterCount)
+
+		for i, typeParameter := range typeParameterList.TypeParameters {
+
+			typeBoundAnnotation := typeParameter.TypeBound
+			var convertedTypeBound Type
+			if typeBoundAnnotation != nil {
+				convertedTypeBoundAnnotation := checker.ConvertTypeAnnotation(typeBoundAnnotation)
+				checker.checkTypeAnnotation(convertedTypeBoundAnnotation, typeBoundAnnotation)
+				convertedTypeBound = convertedTypeBoundAnnotation.Type
+			}
+
+			typeParameters[i] = &TypeParameter{
+				Name:      typeParameter.Identifier.Identifier,
+				TypeBound: convertedTypeBound,
+			}
+		}
+	}
+
+	return typeParameters
+}
+
 func (checker *Checker) parameters(parameterList *ast.ParameterList) []Parameter {
 
-	var parameters []Parameter
+	// TODO: required for initializer conformance checking at the moment, optimize/refactor
+	var parameters = make([]Parameter, len(parameterList.Parameters))
 
-	parameterCount := len(parameterList.Parameters)
-	if parameterCount > 0 {
-		parameters = make([]Parameter, parameterCount)
+	if len(parameterList.Parameters) > 0 {
 
 		for i, parameter := range parameterList.Parameters {
 			convertedParameterType := checker.ConvertType(parameter.TypeAnnotation.Type)
@@ -1390,6 +1519,20 @@ func (checker *Checker) recordResourceInvalidation(
 
 	if !valueType.IsResourceType() {
 		return nil
+	}
+
+	// Invalidations in interface functions are not allowed,
+	// except for temporary moves
+	if invalidationKind != ResourceInvalidationKindMoveTemporary &&
+		checker.inCondition &&
+		checker.inInterface {
+
+		checker.report(&InvalidInterfaceConditionResourceInvalidationError{
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				expression,
+			),
+		})
 	}
 
 	reportInvalidNestedMove := func() {
@@ -1664,14 +1807,15 @@ func (checker *Checker) ResetErrors() {
 const invalidTypeDeclarationAccessModifierExplanation = "type declarations must be public"
 
 func (checker *Checker) checkDeclarationAccessModifier(
-	access ast.Access,
+	access Access,
 	declarationKind common.DeclarationKind,
+	declarationType Type,
+	containerKind *common.CompositeKind,
 	startPos ast.Position,
 	isConstant bool,
 ) {
 	if checker.functionActivations.IsLocal() {
-
-		if access != ast.AccessNotSpecified {
+		if !access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 			checker.report(
 				&InvalidAccessModifierError{
 					Access:          access,
@@ -1681,88 +1825,192 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				},
 			)
 		}
-	} else {
+		return
+	}
 
-		isTypeDeclaration := declarationKind.IsTypeDeclaration()
+	switch access := access.(type) {
+	case PrimitiveAccess:
+		checker.checkPrimitiveAccess(access, isConstant, declarationKind, startPos)
+	case *EntitlementMapAccess:
+		checker.checkEntitlementMapAccess(access, declarationKind, declarationType, containerKind, startPos)
+	case EntitlementSetAccess:
+		checker.checkEntitlementSetAccess(declarationType, containerKind, startPos)
+	}
+}
 
-		switch access {
-		case ast.AccessPublicSettable:
-			// Public settable access for a constant is not sensible
-			// and type declarations must be public for now
+func (checker *Checker) checkPrimitiveAccess(
+	access PrimitiveAccess,
+	isConstant bool,
+	declarationKind common.DeclarationKind,
+	startPos ast.Position,
+) {
 
-			if isConstant || isTypeDeclaration {
-				var explanation string
-				switch {
-				case isConstant:
-					explanation = "constants can never be set"
-				case isTypeDeclaration:
-					explanation = invalidTypeDeclarationAccessModifierExplanation
-				}
+	isTypeDeclaration := declarationKind.IsTypeDeclaration()
 
-				checker.report(
-					&InvalidAccessModifierError{
-						Access:          access,
-						Explanation:     explanation,
-						DeclarationKind: declarationKind,
-						Pos:             startPos,
-					},
-				)
+	switch ast.PrimitiveAccess(access) {
+	case ast.AccessSelf:
+		// Type declarations must be public for now
+
+		if isTypeDeclaration {
+
+			checker.report(
+				&InvalidAccessModifierError{
+					Access:          access,
+					Explanation:     invalidTypeDeclarationAccessModifierExplanation,
+					DeclarationKind: declarationKind,
+					Pos:             startPos,
+				},
+			)
+		}
+
+	case ast.AccessContract,
+		ast.AccessAccount:
+
+		// Type declarations must be public for now
+
+		if isTypeDeclaration {
+			checker.report(
+				&InvalidAccessModifierError{
+					Access:          access,
+					Explanation:     invalidTypeDeclarationAccessModifierExplanation,
+					DeclarationKind: declarationKind,
+					Pos:             startPos,
+				},
+			)
+		}
+
+	case ast.AccessNotSpecified:
+
+		// Type declarations cannot be effectively private for now
+
+		if isTypeDeclaration &&
+			checker.Config.AccessCheckMode == AccessCheckModeNotSpecifiedRestricted {
+
+			checker.report(
+				&MissingAccessModifierError{
+					DeclarationKind: declarationKind,
+					Explanation:     invalidTypeDeclarationAccessModifierExplanation,
+					Pos:             startPos,
+				},
+			)
+		}
+
+		// In strict mode, access modifiers must be given
+
+		if checker.Config.AccessCheckMode == AccessCheckModeStrict {
+			checker.report(
+				&MissingAccessModifierError{
+					DeclarationKind: declarationKind,
+					Pos:             startPos,
+				},
+			)
+		}
+	}
+}
+
+func (checker *Checker) checkEntitlementMapAccess(
+	access *EntitlementMapAccess,
+	declarationKind common.DeclarationKind,
+	declarationType Type,
+	containerKind *common.CompositeKind,
+	startPos ast.Position,
+) {
+	// mapped entitlements may only be used in structs, resources and attachments
+	if containerKind == nil ||
+		(*containerKind != common.CompositeKindResource &&
+			*containerKind != common.CompositeKindStructure &&
+			*containerKind != common.CompositeKindAttachment) {
+		checker.report(
+			&InvalidMappedEntitlementMemberError{
+				Pos: startPos,
+			},
+		)
+		return
+	}
+
+	// due to potential security issues, entitlement mappings are disabled on attachments for now
+	if *containerKind == common.CompositeKindAttachment {
+		checker.report(
+			&InvalidAttachmentMappedEntitlementMemberError{
+				Pos: startPos,
+			},
+		)
+		return
+	}
+
+	// mapped entitlement fields must be one of:
+	// 1) An [optional] reference that is authorized to the same mapped entitlement.
+	// 2) A function that return an [optional] reference authorized to the same mapped entitlement.
+	// 3) A container - So if the parent is a reference, entitlements can be granted to the resulting field reference.
+
+	entitledType := declarationType
+
+	if functionType, isFunction := declarationType.(*FunctionType); isFunction {
+		if declarationKind == common.DeclarationKindFunction {
+			entitledType = functionType.ReturnTypeAnnotation.Type
+		}
+	}
+
+	switch ty := entitledType.(type) {
+	case *ReferenceType:
+		if ty.Authorization.Equal(access) {
+			return
+		}
+	case *OptionalType:
+		switch optionalType := ty.Type.(type) {
+		case *ReferenceType:
+			if optionalType.Authorization.Equal(access) {
+				return
 			}
+		}
+	default:
+		// Also allow entitlement mappings for container-typed fields
+		if declarationType.ContainFieldsOrElements() {
+			return
+		}
+	}
 
-		case ast.AccessPrivate:
-			// Type declarations must be public for now
+	checker.report(
+		&InvalidMappedEntitlementMemberError{
+			Pos: startPos,
+		},
+	)
+}
 
-			if isTypeDeclaration {
+func (checker *Checker) checkEntitlementSetAccess(
+	declarationType Type,
+	containerKind *common.CompositeKind,
+	startPos ast.Position,
+) {
+	if containerKind == nil ||
+		(*containerKind != common.CompositeKindResource &&
+			*containerKind != common.CompositeKindStructure &&
+			*containerKind != common.CompositeKindAttachment) {
+		checker.report(
+			&InvalidEntitlementAccessError{
+				Pos: startPos,
+			},
+		)
+		return
+	}
 
+	// when using entitlement set access, it is not permitted for the value to be declared with a mapped entitlement
+	switch ty := declarationType.(type) {
+	case *ReferenceType:
+		if _, isMap := ty.Authorization.(*EntitlementMapAccess); isMap {
+			checker.report(
+				&InvalidMappedEntitlementMemberError{
+					Pos: startPos,
+				},
+			)
+		}
+	case *OptionalType:
+		switch optionalType := ty.Type.(type) {
+		case *ReferenceType:
+			if _, isMap := optionalType.Authorization.(*EntitlementMapAccess); isMap {
 				checker.report(
-					&InvalidAccessModifierError{
-						Access:          access,
-						Explanation:     invalidTypeDeclarationAccessModifierExplanation,
-						DeclarationKind: declarationKind,
-						Pos:             startPos,
-					},
-				)
-			}
-
-		case ast.AccessContract,
-			ast.AccessAccount:
-
-			// Type declarations must be public for now
-
-			if isTypeDeclaration {
-				checker.report(
-					&InvalidAccessModifierError{
-						Access:          access,
-						Explanation:     invalidTypeDeclarationAccessModifierExplanation,
-						DeclarationKind: declarationKind,
-						Pos:             startPos,
-					},
-				)
-			}
-
-		case ast.AccessNotSpecified:
-
-			// Type declarations cannot be effectively private for now
-
-			if isTypeDeclaration &&
-				checker.Config.AccessCheckMode == AccessCheckModeNotSpecifiedRestricted {
-
-				checker.report(
-					&MissingAccessModifierError{
-						DeclarationKind: declarationKind,
-						Explanation:     invalidTypeDeclarationAccessModifierExplanation,
-						Pos:             startPos,
-					},
-				)
-			}
-
-			// In strict mode, access modifiers must be given
-
-			if checker.Config.AccessCheckMode == AccessCheckModeStrict {
-				checker.report(
-					&MissingAccessModifierError{
-						DeclarationKind: declarationKind,
-						Pos:             startPos,
+					&InvalidMappedEntitlementMemberError{
+						Pos: startPos,
 					},
 				)
 			}
@@ -1770,16 +2018,24 @@ func (checker *Checker) checkDeclarationAccessModifier(
 	}
 }
 
-func (checker *Checker) checkFieldsAccessModifier(fields []*ast.FieldDeclaration) {
+func (checker *Checker) checkFieldsAccessModifier(
+	fields []*ast.FieldDeclaration,
+	members *StringMemberOrderedMap,
+	containerKind *common.CompositeKind,
+) {
 	for _, field := range fields {
 		isConstant := field.VariableKind == ast.VariableKindConstant
-
-		checker.checkDeclarationAccessModifier(
-			field.Access,
-			field.DeclarationKind(),
-			field.StartPos,
-			isConstant,
-		)
+		member, present := members.Get(field.Identifier.Identifier)
+		if present {
+			checker.checkDeclarationAccessModifier(
+				member.Access,
+				field.DeclarationKind(),
+				member.TypeAnnotation.Type,
+				containerKind,
+				field.StartPos,
+				isConstant,
+			)
+		}
 	}
 }
 
@@ -1798,6 +2054,87 @@ func (checker *Checker) checkCharacterLiteral(expression *ast.StringExpression) 
 	)
 }
 
+func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
+
+	switch access := access.(type) {
+	case ast.PrimitiveAccess:
+		return PrimitiveAccess(access)
+
+	case *ast.MappedAccess:
+		semaAccess, hasAccess := checker.Elaboration.GetSemanticAccess(access)
+		if hasAccess {
+			return semaAccess
+		}
+		defer func() {
+			checker.Elaboration.SetSemanticAccess(access, result)
+		}()
+
+		switch nominalType := checker.convertNominalType(access.EntitlementMap).(type) {
+		case *EntitlementMapType:
+			result = NewEntitlementMapAccess(nominalType)
+		default:
+			if nominalType != InvalidType {
+				checker.report(
+					&InvalidEntitlementMappingTypeError{
+						Type: nominalType,
+						Pos:  access.EntitlementMap.Identifier.Pos,
+					},
+				)
+			}
+			result = PrimitiveAccess(ast.AccessNotSpecified)
+		}
+		return
+
+	case ast.EntitlementAccess:
+		semaAccess, hasAccess := checker.Elaboration.GetSemanticAccess(access)
+		if hasAccess {
+			return semaAccess
+		}
+		defer func() {
+			checker.Elaboration.SetSemanticAccess(access, result)
+		}()
+
+		astEntitlements := access.EntitlementSet.Entitlements()
+
+		semanticEntitlements := make([]*EntitlementType, 0, len(astEntitlements))
+
+		for _, entitlement := range astEntitlements {
+			nominalType := checker.convertNominalType(entitlement)
+			entitlementType, ok := nominalType.(*EntitlementType)
+			if !ok {
+				// don't duplicate errors when the type here is invalid, as this will have triggered an error before
+				if nominalType != InvalidType {
+					if _, isMap := nominalType.(*EntitlementMapType); isMap {
+						checker.report(
+							&MappingAccessMissingKeywordError{
+								Type:  nominalType,
+								Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
+							},
+						)
+					} else {
+						checker.report(
+							&InvalidNonEntitlementAccessError{
+								Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
+							},
+						)
+					}
+				}
+				result = PrimitiveAccess(ast.AccessNotSpecified)
+				return
+			}
+			semanticEntitlements = append(semanticEntitlements, entitlementType)
+		}
+		if access.EntitlementSet.Separator() == ast.Conjunction {
+			result = NewEntitlementSetAccess(semanticEntitlements, Conjunction)
+			return
+		}
+		result = NewEntitlementSetAccess(semanticEntitlements, Disjunction)
+		return
+	}
+
+	panic(errors.NewUnreachableError())
+}
+
 func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 	allowSelfResourceFieldInvalidation := checker.allowSelfResourceFieldInvalidation
 	checker.allowSelfResourceFieldInvalidation = true
@@ -1809,9 +2146,21 @@ func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 }
 
 const ResourceOwnerFieldName = "owner"
+
+var ResourceOwnerFieldType = &OptionalType{
+	Type: AccountReferenceType,
+}
+
 const ResourceUUIDFieldName = "uuid"
 
+var ResourceUUIDFieldType = UInt64Type
+
 const ContractAccountFieldName = "account"
+
+var ContractAccountFieldType = &ReferenceType{
+	Type:          AccountType,
+	Authorization: FullyEntitledAccountAccess,
+}
 
 const contractAccountFieldDocString = `
 The account where the contract is deployed in
@@ -1832,13 +2181,13 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		identifier string,
 		fieldType Type,
 		declarationKind common.DeclarationKind,
-		access ast.Access,
+		access ast.PrimitiveAccess,
 		ignoreInSerialization bool,
 		docString string,
 	) {
 		predeclaredMembers = append(predeclaredMembers, &Member{
 			ContainerType:         containerType,
-			Access:                access,
+			Access:                PrimitiveAccess(access),
 			Identifier:            ast.NewIdentifier(checker.memoryGauge, identifier, ast.EmptyPosition),
 			DeclarationKind:       declarationKind,
 			VariableKind:          ast.VariableKindConstant,
@@ -1855,7 +2204,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		IsInstanceFunctionName,
 		IsInstanceFunctionType,
 		common.DeclarationKindFunction,
-		ast.AccessPublic,
+		ast.AccessAll,
 		true,
 		isInstanceFunctionDocString,
 	)
@@ -1866,7 +2215,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		GetTypeFunctionName,
 		GetTypeFunctionType,
 		common.DeclarationKindFunction,
-		ast.AccessPublic,
+		ast.AccessAll,
 		true,
 		getTypeFunctionDocString,
 	)
@@ -1877,14 +2226,14 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		case common.CompositeKindContract:
 
 			// All contracts have a predeclared member
-			// `priv let account: AuthAccount`,
+			// `access(self) let account: auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account`,
 			// which is ignored in serialization
 
 			addPredeclaredMember(
 				ContractAccountFieldName,
-				AuthAccountType,
+				ContractAccountFieldType,
 				common.DeclarationKindField,
-				ast.AccessPrivate,
+				ast.AccessSelf,
 				true,
 				contractAccountFieldDocString,
 			)
@@ -1893,30 +2242,39 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 
 			// All resources have two predeclared fields:
 
-			// `pub let owner: PublicAccount?`,
+			// `access(all) let owner: &Account?`,
 			// ignored in serialization
 
 			addPredeclaredMember(
 				ResourceOwnerFieldName,
-				&OptionalType{
-					Type: PublicAccountType,
-				},
+				ResourceOwnerFieldType,
 				common.DeclarationKindField,
-				ast.AccessPublic,
+				ast.AccessAll,
 				true,
 				resourceOwnerFieldDocString,
 			)
 
-			// `pub let uuid: UInt64`,
+			// `access(all) let uuid: UInt64`,
 			// included in serialization
 
 			addPredeclaredMember(
 				ResourceUUIDFieldName,
-				UInt64Type,
+				ResourceUUIDFieldType,
 				common.DeclarationKindField,
-				ast.AccessPublic,
+				ast.AccessAll,
 				false,
 				resourceUUIDFieldDocString,
+			)
+		}
+
+		if compositeKindedType.GetCompositeKind().SupportsAttachments() {
+			addPredeclaredMember(
+				CompositeForEachAttachmentFunctionName,
+				CompositeForEachAttachmentFunctionType(compositeKindedType.GetCompositeKind()),
+				common.DeclarationKindFunction,
+				ast.AccessAll,
+				true,
+				compositeForEachAttachmentFunctionDocString,
 			)
 		}
 	}
@@ -1958,71 +2316,6 @@ func (checker *Checker) checkVariableMove(expression ast.Expression) {
 	}
 }
 
-func (checker *Checker) rewritePostConditions(postConditions []*ast.Condition) PostConditionsRewrite {
-
-	var beforeStatements []ast.Statement
-
-	var rewrittenPostConditions []*ast.Condition
-
-	count := len(postConditions)
-	if count > 0 {
-		rewrittenPostConditions = make([]*ast.Condition, count)
-
-		beforeExtractor := checker.beforeExtractor()
-
-		for i, postCondition := range postConditions {
-
-			// copy condition and set expression to rewritten one
-			newPostCondition := *postCondition
-
-			testExtraction := beforeExtractor.ExtractBefore(postCondition.Test)
-
-			extractedExpressions := testExtraction.ExtractedExpressions
-
-			newPostCondition.Test = testExtraction.RewrittenExpression
-
-			if postCondition.Message != nil {
-				messageExtraction := beforeExtractor.ExtractBefore(postCondition.Message)
-
-				newPostCondition.Message = messageExtraction.RewrittenExpression
-
-				extractedExpressions = append(
-					extractedExpressions,
-					messageExtraction.ExtractedExpressions...,
-				)
-			}
-
-			for _, extractedExpression := range extractedExpressions {
-				expression := extractedExpression.Expression
-				startPos := expression.StartPosition()
-
-				// NOTE: no need to check the before statements or update elaboration here:
-				// The before statements are visited/checked later
-				variableDeclaration := ast.NewEmptyVariableDeclaration(checker.memoryGauge)
-				variableDeclaration.StartPos = startPos
-				variableDeclaration.Identifier = extractedExpression.Identifier
-				variableDeclaration.Transfer = ast.NewTransfer(
-					checker.memoryGauge,
-					ast.TransferOperationCopy,
-					startPos,
-				)
-				variableDeclaration.Value = expression
-
-				beforeStatements = append(beforeStatements,
-					variableDeclaration,
-				)
-			}
-
-			rewrittenPostConditions[i] = &newPostCondition
-		}
-	}
-
-	return PostConditionsRewrite{
-		BeforeStatements:        beforeStatements,
-		RewrittenPostConditions: rewrittenPostConditions,
-	}
-}
-
 func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos ast.HasPosition) {
 
 	switch typeAnnotation.TypeAnnotationState() {
@@ -2039,9 +2332,18 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)
+
+	case TypeAnnotationStateDirectEntitlementTypeAnnotation:
+		checker.report(
+			&DirectEntitlementAnnotationError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
+			},
+		)
+
 	case TypeAnnotationStateDirectAttachmentTypeAnnotation:
 		checker.report(
 			&InvalidAttachmentAnnotationError{
+
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 			},
 		)
@@ -2052,7 +2354,7 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 }
 
 func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition) {
-	rewrittenType, rewritten := ty.RewriteWithRestrictedTypes()
+	rewrittenType, rewritten := ty.RewriteWithIntersectionTypes()
 	if rewritten {
 		checker.report(
 			&InvalidInterfaceTypeError{
@@ -2076,10 +2378,10 @@ func (checker *Checker) TypeActivationDepth() int {
 	return checker.typeActivations.Depth()
 }
 
-func (checker *Checker) effectiveMemberAccess(access ast.Access, containerKind ContainerKind) ast.Access {
+func (checker *Checker) effectiveMemberAccess(access Access, containerKind ContainerKind) Access {
 	switch containerKind {
 	case ContainerKindComposite:
-		return checker.effectiveCompositeMemberAccess(access)
+		return checker.EffectiveCompositeMemberAccess(access)
 	case ContainerKindInterface:
 		return checker.effectiveInterfaceMemberAccess(access)
 	default:
@@ -2087,25 +2389,25 @@ func (checker *Checker) effectiveMemberAccess(access ast.Access, containerKind C
 	}
 }
 
-func (checker *Checker) effectiveInterfaceMemberAccess(access ast.Access) ast.Access {
-	if access == ast.AccessNotSpecified {
-		return ast.AccessPublic
+func (checker *Checker) effectiveInterfaceMemberAccess(access Access) Access {
+	if access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
+		return PrimitiveAccess(ast.AccessAll)
 	} else {
 		return access
 	}
 }
 
-func (checker *Checker) effectiveCompositeMemberAccess(access ast.Access) ast.Access {
-	if access != ast.AccessNotSpecified {
+func (checker *Checker) EffectiveCompositeMemberAccess(access Access) Access {
+	if !access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return access
 	}
 
 	switch checker.Config.AccessCheckMode {
 	case AccessCheckModeStrict, AccessCheckModeNotSpecifiedRestricted:
-		return ast.AccessPrivate
+		return PrimitiveAccess(ast.AccessSelf)
 
 	case AccessCheckModeNotSpecifiedUnrestricted, AccessCheckModeNone:
-		return ast.AccessPublic
+		return PrimitiveAccess(ast.AccessAll)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -2414,25 +2716,4 @@ func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosit
 			},
 		)
 	}
-}
-
-func (checker *Checker) isAvailableMember(expressionType Type, identifier string) bool {
-	switch expressionType {
-	case AuthAccountType:
-		switch identifier {
-		case AuthAccountTypeLinkAccountFunctionName:
-			return checker.Config.AccountLinkingEnabled
-
-		case AuthAccountTypeCapabilitiesFieldName:
-			return checker.Config.CapabilityControllersEnabled
-		}
-
-	case PublicAccountType:
-		switch identifier {
-		case PublicAccountTypeCapabilitiesFieldName:
-			return checker.Config.CapabilityControllersEnabled
-		}
-	}
-
-	return true
 }

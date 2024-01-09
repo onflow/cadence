@@ -24,7 +24,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -82,7 +81,7 @@ var _ FunctionValue = &InterpretedFunctionValue{}
 func (*InterpretedFunctionValue) isValue() {}
 
 func (f *InterpretedFunctionValue) String() string {
-	return format.Function(f.Type.String())
+	return f.Type.String()
 }
 
 func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
@@ -179,7 +178,7 @@ type HostFunctionValue struct {
 }
 
 func (f *HostFunctionValue) String() string {
-	return format.Function(f.Type.String())
+	return f.Type.String()
 }
 
 func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
@@ -324,9 +323,11 @@ func (v *HostFunctionValue) SetNestedVariables(variables map[string]*Variable) {
 
 // BoundFunctionValue
 type BoundFunctionValue struct {
-	Function FunctionValue
-	Base     *EphemeralReferenceValue
-	Self     *MemberAccessibleValue
+	Function           FunctionValue
+	Base               *EphemeralReferenceValue
+	Self               *MemberAccessibleValue
+	BoundAuthorization Authorization
+	selfRef            *EphemeralReferenceValue
 }
 
 var _ Value = BoundFunctionValue{}
@@ -337,14 +338,29 @@ func NewBoundFunctionValue(
 	function FunctionValue,
 	self *MemberAccessibleValue,
 	base *EphemeralReferenceValue,
+	boundAuth Authorization,
 ) BoundFunctionValue {
 
 	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
 
+	// Since 'self' work as an implicit reference, create an explicit one and hold it.
+	// This reference is later used to check the validity of the referenced value/resource.
+	var selfRef *EphemeralReferenceValue
+	if reference, isReference := (*self).(*EphemeralReferenceValue); isReference {
+		// For attachments, 'self' is already a reference.
+		// So no need to create a reference again.
+		selfRef = reference
+	} else {
+		semaType := interpreter.MustSemaTypeOfValue(*self)
+		selfRef = NewEphemeralReferenceValue(interpreter, boundAuth, *self, semaType, EmptyLocationRange)
+	}
+
 	return BoundFunctionValue{
-		Function: function,
-		Self:     self,
-		Base:     base,
+		Function:           function,
+		Self:               self,
+		selfRef:            selfRef,
+		Base:               base,
+		BoundAuthorization: boundAuth,
 	}
 }
 
@@ -385,16 +401,13 @@ func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
 }
 
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
-	self := f.Self
-	invocation.Self = self
-	if self != nil {
-		if resource, ok := (*self).(ResourceKindedValue); ok && resource.IsDestroyed() {
-			panic(DestroyedResourceError{
-				LocationRange: invocation.LocationRange,
-			})
-		}
-	}
+	invocation.Self = f.Self
 	invocation.Base = f.Base
+	invocation.BoundAuthorization = f.BoundAuthorization
+
+	// Check if the 'self' is not invalidated.
+	invocation.Interpreter.checkInvalidatedResourceOrResourceReference(f.selfRef, invocation.LocationRange)
+
 	return f.Function.invoke(invocation)
 }
 

@@ -39,9 +39,9 @@ func TestCheckInvalidUnknownDeclarationSwap(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
-
+	errs := RequireCheckerErrors(t, err, 2)
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
 
 func TestCheckInvalidLeftConstantSwap(t *testing.T) {
@@ -105,9 +105,10 @@ func TestCheckInvalidTypesSwap(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 func TestCheckInvalidTypesSwap2(t *testing.T) {
@@ -122,9 +123,10 @@ func TestCheckInvalidTypesSwap2(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 func TestCheckInvalidSwapTargetExpressionLeft(t *testing.T) {
@@ -251,10 +253,6 @@ func TestCheckSwapResourceFields(t *testing.T) {
           init(x: @X) {
               self.x <- x
           }
-
-          destroy() {
-              destroy self.x
-          }
       }
 
       fun test() {
@@ -300,10 +298,6 @@ func TestCheckInvalidSwapConstantResourceFields(t *testing.T) {
                           init(x: @X) {
                               self.x <- x
                           }
-
-                          destroy() {
-                              destroy self.x
-                          }
                       }
 
                       resource Z {
@@ -311,10 +305,6 @@ func TestCheckInvalidSwapConstantResourceFields(t *testing.T) {
 
                           init(x: @X) {
                               self.x <- x
-                          }
-
-                          destroy() {
-                              destroy self.x
                           }
                       }
 

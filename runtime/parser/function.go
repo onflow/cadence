@@ -23,7 +23,16 @@ import (
 	"github.com/onflow/cadence/runtime/parser/lexer"
 )
 
-func parseParameterList(p *parser) (*ast.ParameterList, error) {
+func parsePurityAnnotation(p *parser) ast.FunctionPurity {
+	// get the purity annotation (if one exists) and skip it
+	if p.isToken(p.current, lexer.TokenIdentifier, KeywordView) {
+		p.nextSemanticToken()
+		return ast.FunctionPurityView
+	}
+	return ast.FunctionPurityUnspecified
+}
+
+func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterList, error) {
 	var parameters []*ast.Parameter
 
 	p.skipSpaceAndComments()
@@ -54,7 +63,7 @@ func parseParameterList(p *parser) (*ast.ParameterList, error) {
 					Pos: p.current.StartPos,
 				})
 			}
-			parameter, err := parseParameter(p)
+			parameter, err := parseParameter(p, expectDefaultArguments)
 			if err != nil {
 				return nil, err
 			}
@@ -111,21 +120,17 @@ func parseParameterList(p *parser) (*ast.ParameterList, error) {
 	), nil
 }
 
-func parseParameter(p *parser) (*ast.Parameter, error) {
+func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, error) {
 	p.skipSpaceAndComments()
 
 	startPos := p.current.StartPos
-	parameterPos := startPos
 
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
-			"expected argument label or parameter name, got %s",
-			p.current.Type,
-		)
+	argumentLabel := ""
+	identifier, err := p.nonReservedIdentifier("for argument label or parameter name")
+
+	if err != nil {
+		return nil, err
 	}
-
-	var argumentLabel string
-	parameterName := string(p.currentTokenSource())
 
 	// Skip the identifier
 	p.nextSemanticToken()
@@ -133,16 +138,21 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	// If another identifier is provided, then the previous identifier
 	// is the argument label, and this identifier is the parameter name
 	if p.current.Is(lexer.TokenIdentifier) {
-		argumentLabel = parameterName
-		parameterName = string(p.currentTokenSource())
-		parameterPos = p.current.StartPos
-		// Skip the identifier
+		argumentLabel = identifier.Identifier
+		newIdentifier, err := p.nonReservedIdentifier("for parameter name")
+		if err != nil {
+			return nil, err
+		}
+
+		identifier = newIdentifier
+
+		// skip the identifier, now known to be the argument name
 		p.nextSemanticToken()
 	}
 
 	if !p.current.Is(lexer.TokenColon) {
 		return nil, p.syntaxError(
-			"expected %s after argument label/parameter name, got %s",
+			"expected %s after parameter name, got %s",
 			lexer.TokenColon,
 			p.current.Type,
 		)
@@ -152,19 +162,41 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 	p.nextSemanticToken()
 
 	typeAnnotation, err := parseTypeAnnotation(p)
+
 	if err != nil {
 		return nil, err
+	}
+
+	p.skipSpaceAndComments()
+
+	var defaultArgument ast.Expression
+
+	if expectDefaultArgument {
+		if !p.current.Is(lexer.TokenEqual) {
+			return nil, p.syntaxError(
+				"expected a default argument after type annotation, got %s",
+				p.current.Type,
+			)
+		}
+
+		// Skip the =
+		p.nextSemanticToken()
+
+		defaultArgument, err = parseExpression(p, lowestBindingPower)
+		if err != nil {
+			return nil, err
+		}
+
+	} else if p.current.Is(lexer.TokenEqual) {
+		return nil, p.syntaxError("cannot use a default argument for this function")
 	}
 
 	return ast.NewParameter(
 		p.memoryGauge,
 		argumentLabel,
-		ast.NewIdentifier(
-			p.memoryGauge,
-			parameterName,
-			parameterPos,
-		),
+		identifier,
 		typeAnnotation,
+		defaultArgument,
 		startPos,
 	), nil
 }
@@ -290,23 +322,23 @@ func parseFunctionDeclaration(
 	functionBlockIsOptional bool,
 	access ast.Access,
 	accessPos *ast.Position,
+	purity ast.FunctionPurity,
+	purityPos *ast.Position,
 	staticPos *ast.Position,
 	nativePos *ast.Position,
 	docString string,
 ) (*ast.FunctionDeclaration, error) {
 
-	startPos := ast.EarliestPosition(p.current.StartPos, accessPos, staticPos, nativePos)
+	startPos := ast.EarliestPosition(p.current.StartPos, accessPos, purityPos, staticPos, nativePos)
 
 	// Skip the `fun` keyword
 	p.nextSemanticToken()
-	if !p.current.Is(lexer.TokenIdentifier) {
-		return nil, p.syntaxError(
-			"expected identifier after start of function declaration, got %s",
-			p.current.Type,
-		)
-	}
 
-	identifier := p.tokenToIdentifier(p.current)
+	identifier, err := p.nonReservedIdentifier("after start of function declaration")
+
+	if err != nil {
+		return nil, err
+	}
 
 	// Skip the identifier
 	p.next()
@@ -331,6 +363,7 @@ func parseFunctionDeclaration(
 	return ast.NewFunctionDeclaration(
 		p.memoryGauge,
 		access,
+		purity,
 		staticPos != nil,
 		nativePos != nil,
 		identifier,
@@ -354,7 +387,7 @@ func parseFunctionParameterListAndRest(
 ) {
 	// Parameter list
 
-	parameterList, err = parseParameterList(p)
+	parameterList, err = parseParameterList(p, false)
 	if err != nil {
 		return
 	}

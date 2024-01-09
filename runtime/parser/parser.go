@@ -46,6 +46,15 @@ type Config struct {
 	StaticModifierEnabled bool
 	// NativeModifierEnabled determines if the native modifier is enabled
 	NativeModifierEnabled bool
+	// Deprecated: IgnoreLeadingIdentifierEnabled determines
+	// if leading identifiers are ignored.
+	//
+	// Pre-Stable Cadence, identifiers preceding keywords were (incorrectly) ignored,
+	// instead of being reported as invalid, e.g. `foo let bar: Int` was valid.
+	// The new default behaviour is to report an error, e.g. for `foo` in the example above.
+	//
+	// This option exists so the old behaviour can be enabled to allow developers to update their code.
+	IgnoreLeadingIdentifierEnabled bool
 	// TypeParametersEnabled determines if type parameters are enabled
 	TypeParametersEnabled bool
 }
@@ -170,8 +179,7 @@ func ParseTokenStream[T any](
 	result, err := parse(p)
 	if err != nil {
 		p.report(err)
-		var zero T
-		return zero, p.errors
+		return result, p.errors
 	}
 
 	p.skipSpaceAndComments()
@@ -185,6 +193,10 @@ func ParseTokenStream[T any](
 
 func (p *parser) syntaxError(message string, params ...any) error {
 	return NewSyntaxError(p.current.StartPos, message, params...)
+}
+
+func (p *parser) syntaxErrorWithSuggestedFix(message string, suggestedFix string) error {
+	return NewSyntaxErrorWithSuggestedReplacement(p.current.Range, message, suggestedFix)
 }
 
 func (p *parser) reportSyntaxError(message string, params ...any) {
@@ -502,7 +514,34 @@ func (p *parser) mustIdentifier() (ast.Identifier, error) {
 		return ast.Identifier{}, err
 	}
 
-	return p.tokenToIdentifier(identifier), err
+	return p.tokenToIdentifier(identifier), nil
+}
+
+// Attempt to downcast a Token into an identifier, erroring out if the identifier is a hard keyword. See keywords.HardKeywords.
+func (p *parser) mustNotKeyword(errMsgContext string, token lexer.Token) (ast.Identifier, error) {
+	nonIdentifierErr := func(invalidTokenMsg string) (ast.Identifier, error) {
+		if len(errMsgContext) > 0 {
+			errMsgContext = " " + errMsgContext
+		}
+
+		return ast.Identifier{}, p.syntaxError("expected identifier%s, got %s", errMsgContext, invalidTokenMsg)
+	}
+
+	if token.Type != lexer.TokenIdentifier {
+		return nonIdentifierErr(token.Type.String())
+	}
+
+	ident := p.tokenToIdentifier(token)
+
+	if _, ok := hardKeywordsTable.Lookup(ident.Identifier); ok {
+		return nonIdentifierErr("keyword " + ident.Identifier)
+	}
+	return ident, nil
+}
+
+// Attempt to parse an identifier that's not a hard keyword.
+func (p *parser) nonReservedIdentifier(errMsgContext string) (ast.Identifier, error) {
+	return p.mustNotKeyword(errMsgContext, p.current)
 }
 
 func (p *parser) tokenToIdentifier(token lexer.Token) ast.Identifier {

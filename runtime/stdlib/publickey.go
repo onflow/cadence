@@ -20,6 +20,7 @@ package stdlib
 
 import (
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -29,19 +30,20 @@ const publicKeyConstructorFunctionDocString = `
 Constructs a new public key
 `
 
-var publicKeyConstructorFunctionType = &sema.FunctionType{
-	Parameters: []sema.Parameter{
+var publicKeyConstructorFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]sema.Parameter{
 		{
 			Identifier:     sema.PublicKeyTypePublicKeyFieldName,
-			TypeAnnotation: sema.NewTypeAnnotation(sema.ByteArrayType),
+			TypeAnnotation: sema.ByteArrayTypeAnnotation,
 		},
 		{
 			Identifier:     sema.PublicKeyTypeSignAlgoFieldName,
-			TypeAnnotation: sema.NewTypeAnnotation(sema.SignatureAlgorithmType),
+			TypeAnnotation: sema.SignatureAlgorithmTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.PublicKeyType),
-}
+	sema.PublicKeyTypeAnnotation,
+)
 
 type PublicKey struct {
 	PublicKey []byte
@@ -76,8 +78,6 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 
 func NewPublicKeyConstructor(
 	publicKeyValidator PublicKeyValidator,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 ) StandardLibraryValue {
 	return NewStandardLibraryFunction(
 		sema.PublicKeyTypeName,
@@ -104,8 +104,6 @@ func NewPublicKeyConstructor(
 				publicKey,
 				signAlgo,
 				publicKeyValidator,
-				publicKeySignatureVerifier,
-				blsPoPVerifier,
 			)
 		},
 	)
@@ -117,8 +115,6 @@ func NewPublicKeyFromFields(
 	publicKey *interpreter.ArrayValue,
 	signAlgo *interpreter.SimpleCompositeValue,
 	publicKeyValidator PublicKeyValidator,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		inter,
@@ -126,8 +122,6 @@ func NewPublicKeyFromFields(
 		publicKey,
 		signAlgo,
 		newPublicKeyValidationHandler(publicKeyValidator),
-		newPublicKeyVerifySignatureFunction(inter, publicKeySignatureVerifier),
-		newPublicKeyVerifyPoPFunction(inter, blsPoPVerifier),
 	)
 }
 
@@ -139,8 +133,6 @@ func NewPublicKeyValue(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	publicKey *PublicKey,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		inter,
@@ -154,8 +146,6 @@ func NewPublicKeyValue(
 		),
 		// public keys converted from "native" (non-interpreter) keys are assumed to be already validated
 		assumePublicKeyIsValid,
-		newPublicKeyVerifySignatureFunction(inter, publicKeySignatureVerifier),
-		newPublicKeyVerifyPoPFunction(inter, blsPoPVerifier),
 	)
 }
 
@@ -223,7 +213,7 @@ type PublicKeySignatureVerifier interface {
 
 func newPublicKeyVerifySignatureFunction(
 	gauge common.MemoryGauge,
-	verififier PublicKeySignatureVerifier,
+	verifier PublicKeySignatureVerifier,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		gauge,
@@ -282,7 +272,7 @@ func newPublicKeyVerifySignatureFunction(
 
 			var valid bool
 			errors.WrapPanic(func() {
-				valid, err = verififier.VerifySignature(
+				valid, err = verifier.VerifySignature(
 					signature,
 					domainSeparationTag,
 					signedData,
@@ -351,4 +341,19 @@ func newPublicKeyVerifyPoPFunction(
 			return interpreter.AsBoolValue(valid)
 		},
 	)
+}
+
+type PublicKeyFunctionsHandler interface {
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+}
+
+func PublicKeyFunctions(
+	gauge common.MemoryGauge,
+	handler PublicKeyFunctionsHandler,
+) *interpreter.FunctionOrderedMap {
+	functions := orderedmap.New[interpreter.FunctionOrderedMap](2)
+	functions.Set(sema.PublicKeyTypeVerifyFunctionName, newPublicKeyVerifySignatureFunction(gauge, handler))
+	functions.Set(sema.PublicKeyTypeVerifyPoPFunctionName, newPublicKeyVerifyPoPFunction(gauge, handler))
+	return functions
 }

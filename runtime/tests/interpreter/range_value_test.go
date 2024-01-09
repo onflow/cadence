@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -394,10 +395,14 @@ func TestInclusiveRange(t *testing.T) {
 			inter, err := parseCheckAndInterpretWithOptions(t, code,
 				ParseCheckAndInterpretOptions{
 					CheckerConfig: &sema.Config{
-						BaseValueActivation: baseValueActivation,
+						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 					Config: &interpreter.Config{
-						BaseActivation: baseActivation,
+						BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+							return baseActivation
+						},
 					},
 				},
 			)
@@ -476,7 +481,9 @@ func TestGetValueForIntegerType(t *testing.T) {
 
 	for _, integerType := range sema.AllIntegerTypes {
 		switch integerType {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType,
+			sema.SignedIntegerType,
+			sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -503,10 +510,14 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 			_, err := parseCheckAndInterpretWithOptions(t, code,
 				ParseCheckAndInterpretOptions{
 					CheckerConfig: &sema.Config{
-						BaseValueActivation: baseValueActivation,
+						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 					Config: &interpreter.Config{
-						BaseActivation: baseActivation,
+						BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+							return baseActivation
+						},
 					},
 				},
 			)
@@ -521,7 +532,9 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 	for _, integerType := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch integerType {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType,
+			sema.SignedIntegerType,
+			sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 

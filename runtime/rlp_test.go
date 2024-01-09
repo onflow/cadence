@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
@@ -26,19 +26,21 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestRLPDecodeString(t *testing.T) {
+func TestRuntimeRLPDecodeString(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
 
-      pub fun main(_ data: [UInt8]): [UInt8] {
+      access(all) fun main(_ data: [UInt8]): [UInt8] {
           return RLP.decodeString(data)
       }
     `)
@@ -123,14 +125,11 @@ func TestRLPDecodeString(t *testing.T) {
 
 			t.Parallel()
 
-			runtimeInterface := &testRuntimeInterface{
-				storage: newTestLedger(nil, nil),
-				meterMemory: func(_ common.MemoryUsage) error {
-					return nil
+			runtimeInterface := &TestRuntimeInterface{
+				Storage: NewTestLedger(nil, nil),
+				OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+					return json.Decode(nil, b)
 				},
-			}
-			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(runtimeInterface, b)
 			}
 
 			result, err := runtime.ExecuteScript(
@@ -139,7 +138,7 @@ func TestRLPDecodeString(t *testing.T) {
 					Arguments: encodeArgs([]cadence.Value{
 						cadence.Array{
 							ArrayType: &cadence.VariableSizedArrayType{
-								ElementType: cadence.UInt8Type{},
+								ElementType: cadence.UInt8Type,
 							},
 							Values: test.input,
 						},
@@ -160,7 +159,7 @@ func TestRLPDecodeString(t *testing.T) {
 					cadence.Array{
 						Values: test.output,
 					}.WithType(&cadence.VariableSizedArrayType{
-						ElementType: cadence.UInt8Type{},
+						ElementType: cadence.UInt8Type,
 					}),
 					result,
 				)
@@ -173,15 +172,15 @@ func TestRLPDecodeString(t *testing.T) {
 	}
 }
 
-func TestRLPDecodeList(t *testing.T) {
+func TestRuntimeRLPDecodeList(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	script := []byte(`
 
-      pub fun main(_ data: [UInt8]): [[UInt8]] {
+      access(all) fun main(_ data: [UInt8]): [[UInt8]] {
           return RLP.decodeList(data)
       }
     `)
@@ -282,14 +281,11 @@ func TestRLPDecodeList(t *testing.T) {
 
 			t.Parallel()
 
-			runtimeInterface := &testRuntimeInterface{
-				storage: newTestLedger(nil, nil),
-				meterMemory: func(_ common.MemoryUsage) error {
-					return nil
+			runtimeInterface := &TestRuntimeInterface{
+				Storage: NewTestLedger(nil, nil),
+				OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+					return json.Decode(nil, b)
 				},
-			}
-			runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(runtimeInterface, b)
 			}
 
 			result, err := runtime.ExecuteScript(
@@ -298,7 +294,7 @@ func TestRLPDecodeList(t *testing.T) {
 					Arguments: encodeArgs([]cadence.Value{
 						cadence.Array{
 							ArrayType: &cadence.VariableSizedArrayType{
-								ElementType: cadence.UInt8Type{},
+								ElementType: cadence.UInt8Type,
 							},
 							Values: test.input,
 						},
@@ -321,7 +317,7 @@ func TestRLPDecodeList(t *testing.T) {
 					arrays = append(arrays,
 						cadence.Array{Values: values}.
 							WithType(&cadence.VariableSizedArrayType{
-								ElementType: cadence.UInt8Type{},
+								ElementType: cadence.UInt8Type,
 							}))
 				}
 
@@ -330,7 +326,7 @@ func TestRLPDecodeList(t *testing.T) {
 						Values: arrays,
 					}.WithType(&cadence.VariableSizedArrayType{
 						ElementType: &cadence.VariableSizedArrayType{
-							ElementType: cadence.UInt8Type{},
+							ElementType: cadence.UInt8Type,
 						},
 					}),
 					result,

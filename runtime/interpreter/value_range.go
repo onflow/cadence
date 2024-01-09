@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -159,8 +160,11 @@ func createInclusiveRange(
 		rangeType,
 	)
 
-	rangeValue.Functions = map[string]FunctionValue{
-		sema.InclusiveRangeTypeContainsFunctionName: NewHostFunctionValue(
+	rangeValue.Functions = orderedmap.New[FunctionOrderedMap](1)
+
+	rangeValue.Functions.Set(
+		sema.InclusiveRangeTypeContainsFunctionName,
+		NewHostFunctionValue(
 			interpreter,
 			sema.InclusiveRangeContainsFunctionType(
 				rangeSemaType.MemberType,
@@ -177,7 +181,7 @@ func createInclusiveRange(
 				)
 			},
 		),
-	}
+	)
 
 	return rangeValue
 }

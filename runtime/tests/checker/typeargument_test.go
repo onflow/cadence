@@ -68,7 +68,9 @@ func TestCheckTypeArguments(t *testing.T) {
             `,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
 		)
@@ -105,7 +107,8 @@ func TestCheckTypeArguments(t *testing.T) {
             `,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 		)
@@ -114,7 +117,8 @@ func TestCheckTypeArguments(t *testing.T) {
 		assert.Equal(t,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 			RequireGlobalValue(t, checker.Elaboration, "cap"),
@@ -165,7 +169,9 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 		baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
 		options := ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		}
 
@@ -454,10 +460,10 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 		err := test(t,
 			`
 				struct Bar {
-					let f: ((): InclusiveRange<Int>)
+					let f: (fun(): InclusiveRange<Int>)
 
 					init() {
-						self.f = fun () : InclusiveRange<Int> {
+						self.f = fun(): InclusiveRange<Int> {
 							return InclusiveRange(1, 10)
 						}
 					}
@@ -475,10 +481,10 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 		err := test(t,
 			`
 				struct Bar {
-					let f: ((): InclusiveRange)
+					let f: (fun(): InclusiveRange)
 
 					init() {
-						self.f = fun () : InclusiveRange {
+						self.f = fun(): InclusiveRange {
 							return InclusiveRange(1, 10)
 						}
 					}
@@ -621,10 +627,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 					init(b : @Bar) {
 						self.bar <- b
 					}
-
-					destroy() {
-						destroy self.bar
-					}
 				}
 			`,
 		)
@@ -651,10 +653,6 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 					init(b : @Bar) {
 						self.bar <- b
-					}
-
-					destroy() {
-						destroy self.bar
 					}
 				}
 			`,
@@ -739,7 +737,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		err := test(t,
 			`
-				pub fun main(): Type {
+				access(all) fun main(): Type {
 					return Type<InclusiveRange<Word256>>()
 				}
 			`,
@@ -754,7 +752,7 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		err := test(t,
 			`
-				pub fun main(): Type {
+				access(all) fun main(): Type {
 					return Type<InclusiveRange>()
 				}
 			`,
@@ -798,15 +796,15 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		err := test(t,
 			`
-				pub fun main(): Direction {
+				access(all) fun main(): Direction {
 					return Direction.RIGHT
 				}
 
-				pub enum Direction: Int {
-					pub case UP
-					pub case DOWN
-					pub case LEFT
-					pub case RIGHT
+				access(all) enum Direction: Int {
+					access(all) case UP
+					access(all) case DOWN
+					access(all) case LEFT
+					access(all) case RIGHT
 				}
 			`,
 		)
@@ -824,7 +822,9 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 
 		options := ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseTypeActivation: baseTypeActivation,
+				BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseTypeActivation
+				},
 			},
 		}
 
@@ -965,7 +965,8 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
             `,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 		)
@@ -978,7 +979,8 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 		)
 		require.Equal(t,
 			&sema.ReferenceType{
-				Type: sema.IntType,
+				Type:          sema.IntType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 			capType.(*sema.CapabilityType).BorrowType,
 		)
@@ -1004,7 +1006,8 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
             `,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 		)
@@ -1013,7 +1016,8 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 		assert.Equal(t,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 			RequireGlobalValue(t, checker.Elaboration, "cap"),
@@ -1022,7 +1026,8 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 		assert.Equal(t,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.IntType,
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
 			RequireGlobalValue(t, checker.Elaboration, "cap2"),
@@ -1033,12 +1038,33 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseAndCheckWithTestValue(t,
+		checker, err := parseAndCheckWithTestValue(t,
 			`
               let cap: Capability = test
               let cap2: Capability<&Int> = cap
             `,
 			&sema.CapabilityType{},
+		)
+		require.NotNil(t, checker)
+
+		capType := RequireGlobalValue(t, checker.Elaboration, "cap")
+		require.IsType(t,
+			&sema.CapabilityType{},
+			capType,
+		)
+		require.Nil(t, capType.(*sema.CapabilityType).BorrowType)
+
+		cap2Type := RequireGlobalValue(t, checker.Elaboration, "cap2")
+		require.IsType(t,
+			&sema.CapabilityType{},
+			cap2Type,
+		)
+		require.Equal(t,
+			&sema.ReferenceType{
+				Type:          sema.IntType,
+				Authorization: sema.UnauthorizedAccess,
+			},
+			cap2Type.(*sema.CapabilityType).BorrowType,
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
@@ -1049,16 +1075,38 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := parseAndCheckWithTestValue(t,
+		checker, err := parseAndCheckWithTestValue(t,
 			`
               let cap: Capability<&String> = test
               let cap2: Capability<&Int> = cap
             `,
 			&sema.CapabilityType{
 				BorrowType: &sema.ReferenceType{
-					Type: sema.StringType,
+					Type:          sema.StringType,
+					Authorization: sema.UnauthorizedAccess,
 				},
 			},
+		)
+		require.NotNil(t, checker)
+
+		assert.Equal(t,
+			&sema.CapabilityType{
+				BorrowType: &sema.ReferenceType{
+					Type:          sema.StringType,
+					Authorization: sema.UnauthorizedAccess,
+				},
+			},
+			RequireGlobalValue(t, checker.Elaboration, "cap"),
+		)
+
+		assert.Equal(t,
+			&sema.CapabilityType{
+				BorrowType: &sema.ReferenceType{
+					Type:          sema.IntType,
+					Authorization: sema.UnauthorizedAccess,
+				},
+			},
+			RequireGlobalValue(t, checker.Elaboration, "cap2"),
 		)
 
 		errs := RequireCheckerErrors(t, err, 1)
