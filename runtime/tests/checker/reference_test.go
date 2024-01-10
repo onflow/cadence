@@ -3467,4 +3467,19 @@ func TestCheckDereference(t *testing.T) {
 			`,
 		)
 	})
+
+	t.Run("built-in", func(t *testing.T) {
+
+		t.Parallel()
+
+		runInvalidTestCase(
+			t,
+			"Account",
+			`
+				fun test(ref: &Account): Account {
+					return *ref
+				}
+			`,
+		)
+	})
 }
