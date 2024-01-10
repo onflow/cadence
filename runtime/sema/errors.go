@@ -589,8 +589,9 @@ func (e *IncorrectArgumentLabelError) SuggestFixes(code string) []errors.Suggest
 // InvalidUnaryOperandError
 
 type InvalidUnaryOperandError struct {
-	ExpectedType Type
-	ActualType   Type
+	ExpectedType            Type
+	ExpectedTypeDescription string
+	ActualType              Type
 	ast.Range
 	Operation ast.Operation
 }
@@ -611,16 +612,25 @@ func (e *InvalidUnaryOperandError) Error() string {
 }
 
 func (e *InvalidUnaryOperandError) SecondaryError() string {
-	expected, actual := ErrorMessageExpectedActualTypes(
-		e.ExpectedType,
-		e.ActualType,
-	)
+	expectedType := e.ExpectedType
+	if expectedType != nil {
+		expected, actual := ErrorMessageExpectedActualTypes(
+			e.ExpectedType,
+			e.ActualType,
+		)
 
-	return fmt.Sprintf(
-		"expected `%s`, got `%s`",
-		expected,
-		actual,
-	)
+		return fmt.Sprintf(
+			"expected `%s`, got `%s`",
+			expected,
+			actual,
+		)
+	} else {
+		return fmt.Sprintf(
+			"expected %s, got `%s`",
+			e.ExpectedTypeDescription,
+			e.ActualType.QualifiedString(),
+		)
+	}
 }
 
 // InvalidBinaryOperandError

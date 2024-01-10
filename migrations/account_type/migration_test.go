@@ -46,11 +46,18 @@ func newTestReporter() *testReporter {
 	}
 }
 
-func (t *testReporter) Report(
+func (t *testReporter) Migrated(
 	addressPath interpreter.AddressPath,
 	_ string,
 ) {
 	t.migratedPaths[addressPath] = struct{}{}
+}
+
+func (t *testReporter) Error(
+	_ interpreter.AddressPath,
+	_ string,
+	_ error,
+) {
 }
 
 func TestTypeValueMigration(t *testing.T) {
@@ -366,7 +373,8 @@ func TestTypeValueMigration(t *testing.T) {
 		),
 	)
 
-	migration.Commit()
+	err = migration.Commit()
+	require.NoError(t, err)
 
 	// Check reported migrated paths
 	for identifier, test := range testCases {
@@ -689,7 +697,8 @@ func TestNestedTypeValueMigration(t *testing.T) {
 		),
 	)
 
-	migration.Commit()
+	err = migration.Commit()
+	require.NoError(t, err)
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 
@@ -834,7 +843,8 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 		),
 	)
 
-	migration.Commit()
+	err = migration.Commit()
+	require.NoError(t, err)
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 

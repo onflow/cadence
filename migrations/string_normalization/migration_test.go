@@ -255,7 +255,8 @@ func TestStringNormalizingMigration(t *testing.T) {
 		),
 	)
 
-	migration.Commit()
+	err = migration.Commit()
+	require.NoError(t, err)
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 

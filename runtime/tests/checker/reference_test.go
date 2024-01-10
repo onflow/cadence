@@ -3121,3 +3121,356 @@ func TestCheckNestedReference(t *testing.T) {
 		require.IsType(t, &sema.NestedReferenceError{}, errors[0])
 	})
 }
+
+func TestCheckDereference(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		ty          sema.Type
+		initializer string
+	}
+
+	runValidTestCase := func(t *testing.T, name, code string, expectedTy sema.Type) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t, code)
+
+			require.NoError(t, err)
+
+			yType := RequireGlobalValue(t, checker.Elaboration, "y")
+
+			assert.Equal(t,
+				expectedTy,
+				yType,
+			)
+		})
+	}
+
+	runInvalidTestCase := func(t *testing.T, name, code string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, code)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
+		})
+	}
+
+	t.Run("Numeric Types", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range sema.AllIntegerTypes {
+			integerType := typ
+			typString := typ.QualifiedString()
+
+			runValidTestCase(
+				t,
+				typString,
+				fmt.Sprintf(
+					`
+						let x: &%[1]s = &1
+						let y: %[1]s = *x
+					`,
+					integerType,
+				),
+				integerType,
+			)
+		}
+
+		for _, typ := range sema.AllFixedPointTypes {
+			fixedPointType := typ
+			typString := typ.QualifiedString()
+
+			runValidTestCase(
+				t,
+				typString,
+				fmt.Sprintf(
+					`
+						let x: &%[1]s = &1.0
+						let y: %[1]s = *x
+					`,
+					fixedPointType,
+				),
+				fixedPointType,
+			)
+		}
+	})
+
+	t.Run("Simple types", func(t *testing.T) {
+		t.Parallel()
+
+		for _, testCase := range []testCase{
+			{
+				ty:          sema.CharacterType,
+				initializer: "\"\\u{FC}\"",
+			},
+			{
+				ty:          sema.StringType,
+				initializer: "\"\\u{FC}\"",
+			},
+			{
+				ty:          sema.BoolType,
+				initializer: "false",
+			},
+			{
+				ty:          sema.TheAddressType,
+				initializer: "0x0000000000000001",
+			},
+			{
+				ty:          sema.PrivatePathType,
+				initializer: "/private/foo",
+			},
+			{
+				ty:          sema.PublicPathType,
+				initializer: "/public/foo",
+			},
+		} {
+			runValidTestCase(
+				t,
+				testCase.ty.QualifiedString(),
+				fmt.Sprintf(
+					`
+						let value: %[1]s = %[2]s
+						let x: &%[1]s = &value
+						let y: %[1]s = *x
+					`,
+					testCase.ty,
+					testCase.initializer,
+				),
+				testCase.ty,
+			)
+		}
+	})
+
+	t.Run("Arrays", func(t *testing.T) {
+		t.Parallel()
+
+		for _, testCase := range []testCase{
+			{
+				ty:          &sema.VariableSizedType{Type: sema.IntType},
+				initializer: "[1, 2, 3]",
+			},
+			{
+				ty:          &sema.VariableSizedType{Type: sema.Fix64Type},
+				initializer: "[1.0, 5.7]",
+			},
+			{
+				ty:          &sema.VariableSizedType{Type: sema.StringType},
+				initializer: "[\"abc\", \"def\"]",
+			},
+			{
+				ty: &sema.VariableSizedType{
+					Type: &sema.VariableSizedType{
+						Type: sema.StringType,
+					},
+				},
+				initializer: "[ [\"abc\", \"def\"], [\"xyz\"]]",
+			},
+			{
+				ty: &sema.VariableSizedType{
+					Type: &sema.DictionaryType{
+						KeyType:   sema.IntType,
+						ValueType: sema.StringType,
+					}},
+				initializer: "[{1: \"abc\", 2: \"def\"}, {3: \"xyz\"}]",
+			},
+			{
+				ty:          &sema.ConstantSizedType{Type: sema.IntType, Size: 3},
+				initializer: "[1, 2, 3]",
+			},
+			{
+				ty:          &sema.ConstantSizedType{Type: sema.Fix64Type, Size: 2},
+				initializer: "[1.0, 5.7]",
+			},
+			{
+				ty:          &sema.ConstantSizedType{Type: sema.StringType, Size: 2},
+				initializer: "[\"abc\", \"def\"]",
+			},
+			{
+				ty: &sema.ConstantSizedType{
+					Type: &sema.VariableSizedType{
+						Type: sema.StringType,
+					},
+					Size: 2,
+				},
+				initializer: "[ [\"abc\", \"def\"], [\"xyz\"]]",
+			},
+			{
+				ty: &sema.ConstantSizedType{
+					Type: &sema.DictionaryType{
+						KeyType:   sema.IntType,
+						ValueType: sema.StringType,
+					},
+					Size: 1,
+				},
+				initializer: "[{1: \"abc\", 2: \"def\"}]",
+			},
+		} {
+			runValidTestCase(
+				t,
+				testCase.ty.QualifiedString(),
+				fmt.Sprintf(
+					`
+	                    let value: %[1]s = %[2]s
+	                    let x: &%[1]s = &value
+	                    let y: %[1]s = *x
+	                `,
+					testCase.ty,
+					testCase.initializer,
+				),
+				testCase.ty,
+			)
+		}
+
+		// Arrays of non-primitives cannot be dereferenced.
+		runInvalidTestCase(
+			t,
+			"[Struct]",
+			`
+				struct S{}
+
+				fun test() {
+					let value: [S] = [S(), S()]
+					let x: &[S] = &value
+					let y: [S] = *x
+				}
+			`,
+		)
+
+		runInvalidTestCase(
+			t,
+			"[Struct; 3]",
+			`
+				struct S{}
+
+				fun test() {
+					let value: [S; 3] = [S(),S(),S()]
+					let x: &[S; 3] = &value
+					let y: [S; 3] = *x
+				}
+			`,
+		)
+	})
+
+	t.Run("Dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		for _, testCase := range []testCase{
+			{
+				ty:          &sema.DictionaryType{KeyType: sema.IntType, ValueType: sema.IntType},
+				initializer: "{1: 1, 2: 2, 3: 3}",
+			},
+			{
+				ty:          &sema.DictionaryType{KeyType: sema.IntType, ValueType: sema.Fix64Type},
+				initializer: "{1: 1.2, 2: 2.4, 3: 3.0}",
+			},
+			{
+				ty:          &sema.DictionaryType{KeyType: sema.StringType, ValueType: sema.StringType},
+				initializer: "{\"123\": \"abc\", \"456\": \"def\"}",
+			},
+			{
+				ty: &sema.DictionaryType{
+					KeyType: sema.StringType,
+					ValueType: &sema.VariableSizedType{
+						Type: sema.IntType,
+					},
+				},
+				initializer: "{\"123\": [1, 2, 3], \"456\": [4, 5, 6]}",
+			},
+			{
+				ty: &sema.DictionaryType{
+					KeyType: sema.StringType,
+					ValueType: &sema.ConstantSizedType{
+						Type: sema.IntType,
+						Size: 3,
+					},
+				},
+				initializer: "{\"123\": [1, 2, 3], \"456\": [4, 5, 6]}",
+			},
+		} {
+			runValidTestCase(
+				t,
+				testCase.ty.QualifiedString(),
+				fmt.Sprintf(
+					`
+						let value: %[1]s = %[2]s
+						let x: &%[1]s = &value
+						let y: %[1]s = *x
+					`,
+					testCase.ty,
+					testCase.initializer,
+				),
+				testCase.ty,
+			)
+		}
+
+		// Dictionaries with value as non-primitive cannot be dereferenced.
+		runInvalidTestCase(
+			t,
+			"{Int: Struct}",
+			`
+				struct S{}
+
+				fun test() {
+					let value: {Int: S} = { 1: S(), 2: S() }
+					let x: &{Int: S} = &value
+					let y: {Int: S} = *x
+				}
+			`,
+		)
+	})
+
+	runInvalidTestCase(
+		t,
+		"Resource",
+		`
+			resource interface I {
+				fun foo()
+			}
+
+			resource R: I {
+				fun foo() {}
+			}
+
+			fun test() {
+				let r <- create R()
+				let ref = &r as &{I}
+				let deref <- *ref
+				destroy r
+                destroy deref
+			}
+		`,
+	)
+
+	runInvalidTestCase(
+		t,
+		"Struct",
+		`
+			struct S{}
+
+			fun test() {
+				let s = S()
+				let ref = &s as &S
+				let deref = *ref
+			}
+		`,
+	)
+
+	t.Run("built-in", func(t *testing.T) {
+
+		t.Parallel()
+
+		runInvalidTestCase(
+			t,
+			"Account",
+			`
+				fun test(ref: &Account): Account {
+					return *ref
+				}
+			`,
+		)
+	})
+}
