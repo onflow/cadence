@@ -688,10 +688,25 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		return integerValue.Negate(interpreter, LocationRange{
+		return integerValue.Negate(
+			interpreter,
+			LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
+		)
+
+	case ast.OperationMul:
+		referenceValue, ok := value.(ReferenceValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		locationRange := LocationRange{
 			Location:    interpreter.Location,
 			HasPosition: expression,
-		})
+		}
+
+		return DereferenceValue(interpreter, locationRange, referenceValue)
 
 	case ast.OperationMove:
 		interpreter.invalidateResource(value)
