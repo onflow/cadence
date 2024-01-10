@@ -3423,50 +3423,41 @@ func TestCheckDereference(t *testing.T) {
 		)
 	})
 
-	t.Run("Resource", func(t *testing.T) {
-		t.Parallel()
+	runInvalidTestCase(
+		t,
+		"Resource",
+		`
+			resource interface I {
+				fun foo()
+			}
 
-		runInvalidTestCase(
-			t,
-			"Resource",
-			`
-				resource interface I {
-					fun foo()
-				}
+			resource R: I {
+				fun foo() {}
+			}
 
-				resource R: I {
-					fun foo() {}
-				}
+			fun test() {
+				let r <- create R()
+				let ref = &r as &{I}
+				let deref <- *ref
+				destroy r
+                destroy deref
+			}
+		`,
+	)
 
-				fun test() {
-					let r <- create R()
-					let ref = &r as &{I}
-					let deref <- *ref
-					destroy r
-                    destroy deref
-				}
-			`,
-		)
-	})
+	runInvalidTestCase(
+		t,
+		"Struct",
+		`
+			struct S{}
 
-	t.Run("Struct", func(t *testing.T) {
-
-		t.Parallel()
-
-		runInvalidTestCase(
-			t,
-			"Struct",
-			`
-				struct S{}
-
-				fun test() {
-					let s = S()
-					let ref = &s as &S
-					let deref = *ref
-				}
-			`,
-		)
-	})
+			fun test() {
+				let s = S()
+				let ref = &s as &S
+				let deref = *ref
+			}
+		`,
+	)
 
 	t.Run("built-in", func(t *testing.T) {
 
