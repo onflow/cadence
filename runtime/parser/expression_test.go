@@ -4511,6 +4511,24 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("restricted type argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("foo<X{T}>")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&RestrictedTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseBoolExpression(t *testing.T) {

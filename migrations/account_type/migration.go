@@ -28,7 +28,7 @@ import (
 
 type AccountTypeMigration struct{}
 
-var _ migrations.Migration = AccountTypeMigration{}
+var _ migrations.ValueMigration = AccountTypeMigration{}
 
 func NewAccountTypeMigration() AccountTypeMigration {
 	return AccountTypeMigration{}
@@ -40,21 +40,25 @@ func (AccountTypeMigration) Name() string {
 
 // Migrate migrates `AuthAccount` and `PublicAccount` types inside `TypeValue`s,
 // to the account reference type (&Account).
-func (AccountTypeMigration) Migrate(value interpreter.Value) (newValue interpreter.Value) {
+func (AccountTypeMigration) Migrate(
+	_ interpreter.AddressPath,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) (newValue interpreter.Value, err error) {
 	switch value := value.(type) {
 	case interpreter.TypeValue:
 		convertedType := maybeConvertAccountType(value.Type)
 		if convertedType == nil {
 			return
 		}
-		return interpreter.NewTypeValue(nil, convertedType)
+		return interpreter.NewTypeValue(nil, convertedType), nil
 
 	case *interpreter.CapabilityValue:
 		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
 		if convertedBorrowType == nil {
 			return
 		}
-		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType)
+		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType), nil
 
 	case *interpreter.AccountCapabilityControllerValue:
 		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
@@ -62,7 +66,7 @@ func (AccountTypeMigration) Migrate(value interpreter.Value) (newValue interpret
 			return
 		}
 		borrowType := convertedBorrowType.(*interpreter.ReferenceStaticType)
-		return interpreter.NewUnmeteredAccountCapabilityControllerValue(borrowType, value.CapabilityID)
+		return interpreter.NewUnmeteredAccountCapabilityControllerValue(borrowType, value.CapabilityID), nil
 
 	case *interpreter.StorageCapabilityControllerValue:
 		// Note: A storage capability with Account type shouldn't be possible theoretically.
@@ -71,11 +75,14 @@ func (AccountTypeMigration) Migrate(value interpreter.Value) (newValue interpret
 			return
 		}
 		borrowType := convertedBorrowType.(*interpreter.ReferenceStaticType)
-		return interpreter.NewUnmeteredStorageCapabilityControllerValue(borrowType, value.CapabilityID, value.TargetPath)
-
-	default:
-		return nil
+		return interpreter.NewUnmeteredStorageCapabilityControllerValue(
+			borrowType,
+			value.CapabilityID,
+			value.TargetPath,
+		), nil
 	}
+
+	return
 }
 
 func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.StaticType {
@@ -165,6 +172,7 @@ func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.Stat
 		switch staticType {
 		case interpreter.PrimitiveStaticTypePublicAccount: //nolint:staticcheck
 			return unauthorizedAccountReferenceType
+
 		case interpreter.PrimitiveStaticTypeAuthAccount: //nolint:staticcheck
 			return authAccountReferenceType
 

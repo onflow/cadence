@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/runtime_utils"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -44,7 +44,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 		expectedValue interpreter.Value
 	}
 
-	ledger := runtime_utils.NewTestLedger(nil, nil)
+	ledger := NewTestLedger(nil, nil)
 	storage := runtime.NewStorage(ledger, nil)
 	locationRange := interpreter.EmptyLocationRange
 
@@ -249,9 +249,14 @@ func TestStringNormalizingMigration(t *testing.T) {
 				account,
 			},
 		},
-		nil,
-		NewStringNormalizingMigration(),
+		migration.NewValueMigrationsPathMigrator(
+			nil,
+			NewStringNormalizingMigration(),
+		),
 	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 

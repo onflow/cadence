@@ -4653,10 +4653,20 @@ func (e *DefaultDestroyEventInNonResourceError) Error() string {
 	)
 }
 
+type DefaultDestroyInvalidArgumentKind int
+
+const (
+	NonDictionaryIndexExpression DefaultDestroyInvalidArgumentKind = iota
+	ReferenceTypedMemberAccess
+	InvalidIdentifier
+	InvalidExpression
+)
+
 // DefaultDestroyInvalidArgumentError
 
 type DefaultDestroyInvalidArgumentError struct {
 	ast.Range
+	Kind DefaultDestroyInvalidArgumentKind
 }
 
 var _ SemanticError = &DefaultDestroyInvalidArgumentError{}
@@ -4667,10 +4677,24 @@ func (*DefaultDestroyInvalidArgumentError) isSemanticError() {}
 func (*DefaultDestroyInvalidArgumentError) IsUserError() {}
 
 func (e *DefaultDestroyInvalidArgumentError) Error() string {
-	return "default destroy event arguments must be literals, member access expressions on `self` or `base`, indexed access expressions on dictionaries, or attachment accesses"
+	return "Invalid default destroy event argument"
 }
 
-// DefaultDestroyInvalidArgumentError
+func (e *DefaultDestroyInvalidArgumentError) SecondaryError() string {
+	switch e.Kind {
+	case NonDictionaryIndexExpression:
+		return "Indexed accesses may only be performed on dictionaries"
+	case ReferenceTypedMemberAccess:
+		return "Member accesses in arguments may not contain reference types"
+	case InvalidIdentifier:
+		return "Identifiers other than `self` or `base` may not appear in arguments"
+	case InvalidExpression:
+		return "Arguments must be literals, member access expressions on `self` or `base`, indexed access expressions on dictionaries, or attachment accesses"
+	}
+	return ""
+}
+
+// DefaultDestroyInvalidParameterError
 
 type DefaultDestroyInvalidParameterError struct {
 	ParamType Type

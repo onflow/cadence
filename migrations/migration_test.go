@@ -19,6 +19,7 @@
 package migrations
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -29,27 +30,41 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/runtime_utils"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 type testReporter struct {
-	migratedPaths map[string]string
+	migratedPaths map[interpreter.AddressPath][]string
+	erroredPaths  map[interpreter.AddressPath][]string
 }
 
 func newTestReporter() *testReporter {
 	return &testReporter{
-		migratedPaths: map[string]string{},
+		migratedPaths: map[interpreter.AddressPath][]string{},
+		erroredPaths:  map[interpreter.AddressPath][]string{},
 	}
 }
 
-func (t *testReporter) Report(
-	_ common.Address,
-	_ common.PathDomain,
-	key string,
+func (t *testReporter) Migrated(
+	addressPath interpreter.AddressPath,
 	migration string,
 ) {
-	t.migratedPaths[key] = migration
+	t.migratedPaths[addressPath] = append(
+		t.migratedPaths[addressPath],
+		migration,
+	)
+}
+
+func (t *testReporter) Error(
+	addressPath interpreter.AddressPath,
+	migration string,
+	_ error,
+) {
+	t.erroredPaths[addressPath] = append(
+		t.erroredPaths[addressPath],
+		migration,
+	)
 }
 
 // testStringMigration
@@ -60,31 +75,46 @@ func (testStringMigration) Name() string {
 	return "testStringMigration"
 }
 
-func (testStringMigration) Migrate(value interpreter.Value) (newValue interpreter.Value) {
+func (testStringMigration) Migrate(
+	_ interpreter.AddressPath,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) (interpreter.Value, error) {
 	if value, ok := value.(*interpreter.StringValue); ok {
-		return interpreter.NewUnmeteredStringValue(fmt.Sprintf("updated_%s", value.Str))
+		return interpreter.NewUnmeteredStringValue(fmt.Sprintf("updated_%s", value.Str)), nil
 	}
 
-	return nil
+	return nil, nil
 }
 
 // testInt8Migration
 
-type testInt8Migration struct{}
+type testInt8Migration struct {
+	mustError bool
+}
 
 func (testInt8Migration) Name() string {
 	return "testInt8Migration"
 }
 
-func (testInt8Migration) Migrate(value interpreter.Value) (newValue interpreter.Value) {
-	if value, ok := value.(interpreter.Int8Value); ok {
-		return interpreter.NewUnmeteredInt8Value(int8(value) + 10)
+func (m testInt8Migration) Migrate(
+	_ interpreter.AddressPath,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) (interpreter.Value, error) {
+	int8Value, ok := value.(interpreter.Int8Value)
+	if !ok {
+		return nil, nil
 	}
 
-	return nil
+	if m.mustError {
+		return nil, errors.New("error occurred while migrating int8")
+	}
+
+	return interpreter.NewUnmeteredInt8Value(int8(int8Value) + 10), nil
 }
 
-var _ Migration = testStringMigration{}
+var _ ValueMigration = testStringMigration{}
 
 func TestMultipleMigrations(t *testing.T) {
 	t.Parallel()
@@ -97,7 +127,7 @@ func TestMultipleMigrations(t *testing.T) {
 		expectedValue interpreter.Value
 	}
 
-	ledger := runtime_utils.NewTestLedger(nil, nil)
+	ledger := NewTestLedger(nil, nil)
 	storage := runtime.NewStorage(ledger, nil)
 	locationRange := interpreter.EmptyLocationRange
 
@@ -122,7 +152,8 @@ func TestMultipleMigrations(t *testing.T) {
 			expectedValue: interpreter.NewUnmeteredInt8Value(15),
 		},
 		"int16_value": {
-			storedValue: interpreter.NewUnmeteredInt16Value(5),
+			storedValue:   interpreter.NewUnmeteredInt16Value(5),
+			expectedValue: interpreter.NewUnmeteredInt16Value(5),
 		},
 	}
 
@@ -161,10 +192,15 @@ func TestMultipleMigrations(t *testing.T) {
 				account,
 			},
 		},
-		reporter,
-		testStringMigration{},
-		testInt8Migration{},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testStringMigration{},
+			testInt8Migration{},
+		),
 	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 
@@ -180,20 +216,171 @@ func TestMultipleMigrations(t *testing.T) {
 		t.Run(identifier, func(t *testing.T) {
 			testCase, ok := testCases[identifier]
 			require.True(t, ok)
-
-			expectedStoredValue := testCase.expectedValue
-			if expectedStoredValue == nil {
-				expectedStoredValue = testCase.storedValue
-			}
-
-			utils.AssertValuesEqual(t, inter, expectedStoredValue, value)
+			utils.AssertValuesEqual(t, inter, testCase.expectedValue, value)
 		})
 	}
 
 	// Check the reporter
-	require.Equal(t, "testStringMigration", reporter.migratedPaths["string_value"])
-	require.Equal(t, "testInt8Migration", reporter.migratedPaths["int8_value"])
+	require.Equal(t,
+		map[interpreter.AddressPath][]string{
+			{
+				Address: account,
+				Path: interpreter.PathValue{
+					Domain:     pathDomain,
+					Identifier: "int8_value",
+				},
+			}: {
+				"testInt8Migration",
+			},
+			{
+				Address: account,
+				Path: interpreter.PathValue{
+					Domain:     pathDomain,
+					Identifier: "string_value",
+				},
+			}: {
+				"testStringMigration",
+			},
+		},
+		reporter.migratedPaths,
+	)
+}
 
-	// int16 value must notbe reported as migrated.
-	require.NotContains(t, reporter.migratedPaths, "int16_value")
+func TestMigrationError(t *testing.T) {
+	t.Parallel()
+
+	account := common.Address{0x42}
+	pathDomain := common.PathDomainPublic
+
+	type testCase struct {
+		storedValue   interpreter.Value
+		expectedValue interpreter.Value
+	}
+
+	ledger := NewTestLedger(nil, nil)
+	storage := runtime.NewStorage(ledger, nil)
+	locationRange := interpreter.EmptyLocationRange
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage:                       storage,
+			AtreeValueValidationEnabled:   false,
+			AtreeStorageValidationEnabled: false,
+		},
+	)
+	require.NoError(t, err)
+
+	testCases := map[string]testCase{
+		"string_value": {
+			storedValue:   interpreter.NewUnmeteredStringValue("hello"),
+			expectedValue: interpreter.NewUnmeteredStringValue("updated_hello"),
+		},
+		// Since Int8 migration expected to produce error,
+		// int8 value should not have been migrated.
+		"int8_value": {
+			storedValue:   interpreter.NewUnmeteredInt8Value(5),
+			expectedValue: interpreter.NewUnmeteredInt8Value(5),
+		},
+	}
+
+	// Store values
+
+	for name, testCase := range testCases {
+		transferredValue := testCase.storedValue.Transfer(
+			inter,
+			locationRange,
+			atree.Address(account),
+			false,
+			nil,
+			nil,
+		)
+
+		inter.WriteStored(
+			account,
+			pathDomain.Identifier(),
+			interpreter.StringStorageMapKey(name),
+			transferredValue,
+		)
+	}
+
+	err = storage.Commit(inter, true)
+	require.NoError(t, err)
+
+	// Migrate
+
+	migration := NewStorageMigration(inter, storage)
+
+	reporter := newTestReporter()
+
+	migration.Migrate(
+		&AddressSliceIterator{
+			Addresses: []common.Address{
+				account,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testStringMigration{},
+
+			// Int8 migration should produce errors
+			testInt8Migration{
+				mustError: true,
+			},
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert: Traverse through the storage and see if the values are updated now.
+
+	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
+	require.NotNil(t, storageMap)
+	require.Greater(t, storageMap.Count(), uint64(0))
+
+	iterator := storageMap.Iterator(inter)
+
+	for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
+		identifier := string(key.(interpreter.StringAtreeValue))
+
+		t.Run(identifier, func(t *testing.T) {
+			testCase, ok := testCases[identifier]
+			require.True(t, ok)
+			utils.AssertValuesEqual(t, inter, testCase.expectedValue, value)
+		})
+	}
+
+	// Check the reporter.
+	// Since Int8 migration produces an error, only the string value must have been migrated.
+	require.Equal(t,
+		map[interpreter.AddressPath][]string{
+			{
+				Address: account,
+				Path: interpreter.PathValue{
+					Domain:     pathDomain,
+					Identifier: "string_value",
+				},
+			}: {
+				"testStringMigration",
+			},
+		},
+		reporter.migratedPaths,
+	)
+
+	require.Equal(t,
+		map[interpreter.AddressPath][]string{
+			{
+				Address: account,
+				Path: interpreter.PathValue{
+					Domain:     pathDomain,
+					Identifier: "int8_value",
+				},
+			}: {
+				"testInt8Migration",
+			},
+		},
+		reporter.erroredPaths,
+	)
 }

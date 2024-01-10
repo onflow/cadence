@@ -19,7 +19,6 @@
 package account_type
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,41 +30,34 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/runtime_utils"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 var _ migrations.Reporter = &testReporter{}
 
 type testReporter struct {
-	migratedPaths map[common.Address]map[common.PathDomain]map[string]struct{}
+	migratedPaths map[interpreter.AddressPath]struct{}
 }
 
 func newTestReporter() *testReporter {
 	return &testReporter{
-		migratedPaths: map[common.Address]map[common.PathDomain]map[string]struct{}{},
+		migratedPaths: map[interpreter.AddressPath]struct{}{},
 	}
 }
 
-func (t *testReporter) Report(
-	address common.Address,
-	domain common.PathDomain,
-	identifier string,
+func (t *testReporter) Migrated(
+	addressPath interpreter.AddressPath,
 	_ string,
 ) {
-	migratedPathsInAddress, ok := t.migratedPaths[address]
-	if !ok {
-		migratedPathsInAddress = make(map[common.PathDomain]map[string]struct{})
-		t.migratedPaths[address] = migratedPathsInAddress
-	}
+	t.migratedPaths[addressPath] = struct{}{}
+}
 
-	migratedPathsInDomain, ok := migratedPathsInAddress[domain]
-	if !ok {
-		migratedPathsInDomain = make(map[string]struct{})
-		migratedPathsInAddress[domain] = migratedPathsInDomain
-	}
-
-	migratedPathsInDomain[identifier] = struct{}{}
+func (t *testReporter) Error(
+	_ interpreter.AddressPath,
+	_ string,
+	_ error,
+) {
 }
 
 func TestTypeValueMigration(t *testing.T) {
@@ -336,7 +328,7 @@ func TestTypeValueMigration(t *testing.T) {
 
 	// Store values
 
-	ledger := runtime_utils.NewTestLedger(nil, nil)
+	ledger := NewTestLedger(nil, nil)
 	storage := runtime.NewStorage(ledger, nil)
 
 	inter, err := interpreter.NewInterpreter(
@@ -375,26 +367,30 @@ func TestTypeValueMigration(t *testing.T) {
 				account,
 			},
 		},
-		reporter,
-		NewAccountTypeMigration(),
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewAccountTypeMigration(),
+		),
 	)
 
+	err = migration.Commit()
+	require.NoError(t, err)
+
 	// Check reported migrated paths
+	for identifier, test := range testCases {
+		addressPath := interpreter.AddressPath{
+			Address: account,
+			Path: interpreter.PathValue{
+				Domain:     pathDomain,
+				Identifier: identifier,
+			},
+		}
 
-	migratedPathsInDomain := reporter.migratedPaths[account][pathDomain]
-	for path, test := range testCases {
-		t.Run(fmt.Sprintf("reported_%s", path), func(t *testing.T) {
-			test := test
-			path := path
-
-			t.Parallel()
-
-			if test.expectedType == nil {
-				require.NotContains(t, migratedPathsInDomain, path)
-			} else {
-				require.Contains(t, migratedPathsInDomain, path)
-			}
-		})
+		if test.expectedType == nil {
+			assert.NotContains(t, reporter.migratedPaths, addressPath)
+		} else {
+			assert.Contains(t, reporter.migratedPaths, addressPath)
+		}
 	}
 
 	// Assert the migrated values.
@@ -463,7 +459,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 	expectedAccountTypeValue := interpreter.NewTypeValue(nil, unauthorizedAccountReferenceType)
 	stringTypeValue := interpreter.NewTypeValue(nil, interpreter.PrimitiveStaticTypeString)
 
-	ledger := runtime_utils.NewTestLedger(nil, nil)
+	ledger := NewTestLedger(nil, nil)
 	storage := runtime.NewStorage(ledger, nil)
 	locationRange := interpreter.EmptyLocationRange
 
@@ -695,9 +691,14 @@ func TestNestedTypeValueMigration(t *testing.T) {
 				account,
 			},
 		},
-		nil,
-		NewAccountTypeMigration(),
+		migration.NewValueMigrationsPathMigrator(
+			nil,
+			NewAccountTypeMigration(),
+		),
 	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 
@@ -736,7 +737,7 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 		expectedValue interpreter.Value
 	}
 
-	ledger := runtime_utils.NewTestLedger(nil, nil)
+	ledger := NewTestLedger(nil, nil)
 	storage := runtime.NewStorage(ledger, nil)
 	locationRange := interpreter.EmptyLocationRange
 
@@ -836,9 +837,14 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 				account,
 			},
 		},
-		nil,
-		NewAccountTypeMigration(),
+		migration.NewValueMigrationsPathMigrator(
+			nil,
+			NewAccountTypeMigration(),
+		),
 	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 

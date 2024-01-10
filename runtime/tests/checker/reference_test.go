@@ -3171,8 +3171,8 @@ func TestCheckDereference(t *testing.T) {
 				typString,
 				fmt.Sprintf(
 					`
-                        let x: &%[1]s = &1
-                        let y: %[1]s = *x
+                      let x: &%[1]s = &1
+                      let y: %[1]s = *x
                     `,
 					integerType,
 				),
@@ -3189,8 +3189,8 @@ func TestCheckDereference(t *testing.T) {
 				typString,
 				fmt.Sprintf(
 					`
-                        let x: &%[1]s = &1.0
-                        let y: %[1]s = *x
+                      let x: &%[1]s = &1.0
+                      let y: %[1]s = *x
                     `,
 					fixedPointType,
 				),
@@ -3233,9 +3233,9 @@ func TestCheckDereference(t *testing.T) {
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
-                        let value: %[1]s = %[2]s
-                        let x: &%[1]s = &value
-                        let y: %[1]s = *x
+                      let value: %[1]s = %[2]s
+                      let x: &%[1]s = &value
+                      let y: %[1]s = *x
                     `,
 					testCase.ty,
 					testCase.initializer,
@@ -3314,9 +3314,9 @@ func TestCheckDereference(t *testing.T) {
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
-                        let value: %[1]s = %[2]s
-                        let x: &%[1]s = &value
-                        let y: %[1]s = *x
+                      let value: %[1]s = %[2]s
+                      let x: &%[1]s = &value
+                      let y: %[1]s = *x
                     `,
 					testCase.ty,
 					testCase.initializer,
@@ -3330,13 +3330,13 @@ func TestCheckDereference(t *testing.T) {
 			t,
 			"[Struct]",
 			`
-                struct S{}
+              struct S{}
 
-                fun test() {
-                    let value: [S] = [S(), S()]
-                    let x: &[S] = &value
-                    let y: [S] = *x
-                }
+              fun test() {
+                  let value: [S] = [S(), S()]
+                  let x: &[S] = &value
+                  let y: [S] = *x
+              }
             `,
 		)
 
@@ -3344,13 +3344,13 @@ func TestCheckDereference(t *testing.T) {
 			t,
 			"[Struct; 3]",
 			`
-                struct S{}
+              struct S{}
 
-                fun test() {
-                    let value: [S; 3] = [S(),S(),S()]
-                    let x: &[S; 3] = &value
-                    let y: [S; 3] = *x
-                }
+              fun test() {
+                  let value: [S; 3] = [S(),S(),S()]
+                  let x: &[S; 3] = &value
+                  let y: [S; 3] = *x
+              }
             `,
 		)
 	})
@@ -3396,9 +3396,9 @@ func TestCheckDereference(t *testing.T) {
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
-                        let value: %[1]s = %[2]s
-                        let x: &%[1]s = &value
-                        let y: %[1]s = *x
+                      let value: %[1]s = %[2]s
+                      let x: &%[1]s = &value
+                      let y: %[1]s = *x
                     `,
 					testCase.ty,
 					testCase.initializer,
@@ -3412,58 +3412,64 @@ func TestCheckDereference(t *testing.T) {
 			t,
 			"{Int: Struct}",
 			`
-                struct S{}
+              struct S{}
 
-                fun test() {
-                    let value: {Int: S} = { 1: S(), 2: S() }
-                    let x: &{Int: S} = &value
-                    let y: {Int: S} = *x
-                }
+              fun test() {
+                  let value: {Int: S} = { 1: S(), 2: S() }
+                  let x: &{Int: S} = &value
+                  let y: {Int: S} = *x
+              }
             `,
 		)
 	})
 
-	t.Run("Resource", func(t *testing.T) {
+	runInvalidTestCase(
+		t,
+		"Resource",
+		`
+          resource interface I {
+              fun foo()
+          }
+
+          resource R: I {
+              fun foo() {}
+          }
+
+          fun test() {
+              let r <- create R()
+              let ref = &r as &{I}
+              let deref <- *ref
+              destroy r
+              destroy deref
+          }
+        `,
+	)
+
+	runInvalidTestCase(
+		t,
+		"Struct",
+		`
+          struct S{}
+
+          fun test() {
+              let s = S()
+              let ref = &s as &S
+              let deref = *ref
+          }
+        `,
+	)
+
+	t.Run("built-in", func(t *testing.T) {
+
 		t.Parallel()
 
 		runInvalidTestCase(
 			t,
-			"Resource",
+			"Account",
 			`
-                resource interface I {
-                    fun foo()
-                }
-
-                resource R: I {
-                    fun foo() {}
-                }
-
-                fun test() {
-                    let r <- create R()
-                    let ref = &r as &{I}
-                    let deref <- *ref
-                    destroy r
-                    destroy deref
-                }
-            `,
-		)
-	})
-
-	t.Run("Struct", func(t *testing.T) {
-
-		t.Parallel()
-
-		runInvalidTestCase(
-			t,
-			"Struct",
-			`
-                struct S {}
-
-                fun test() {
-                    let s = S()
-                    let ref = &s as &S
-                    let deref = *ref
-                }
+              fun test(ref: &Account): Account {
+                  return *ref
+              }
             `,
 		)
 	})
@@ -3475,8 +3481,8 @@ func TestCheckDereference(t *testing.T) {
 			t,
 			"valid",
 			`
-                let ref: &Int? = &1 as &Int
-                let y = *ref
+              let ref: &Int? = &1 as &Int
+              let y = *ref
             `,
 			&sema.OptionalType{
 				Type: sema.IntType,
@@ -3487,13 +3493,13 @@ func TestCheckDereference(t *testing.T) {
 			t,
 			"invalid",
 			`
-                struct S {}
+              struct S {}
 
-                fun test() {
-                    let s = S()
-                    let ref: &S? = &s as &S
-                    let deref = *ref
-                }
+              fun test() {
+                  let s = S()
+                  let ref: &S? = &s as &S
+                  let deref = *ref
+              }
             `,
 		)
 	})

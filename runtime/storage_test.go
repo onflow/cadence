@@ -5483,14 +5483,14 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
           access(all)
           fun foo (path: StoragePath, type: Type): Bool {
               return true
-	      }
+          }
 
           access(all)
           fun main() {
               let account = getAuthAccount<auth(Storage) &Account>(0x1)
 
-	          account.storage.forEachStored(foo)
-	      }
+              account.storage.forEachStored(foo)
+          }
         `
 
 		_, err := runtime.ExecuteScript(
@@ -5511,23 +5511,23 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 		runtime, runtimeInterface := newRuntime()
 
 		const script = `
-	      access(all)
-	      struct S {
+          access(all)
+          struct S {
 
-	          access(all)
-	          fun foo(path: StoragePath, type: Type): Bool {
-	              return true
-	          }
-	      }
+              access(all)
+              fun foo(path: StoragePath, type: Type): Bool {
+                  return true
+              }
+          }
 
-	      access(all)
+          access(all)
           fun main() {
 
               let account = getAuthAccount<auth(Storage) &Account>(0x1)
-	          let s = S()
-	          account.storage.forEachStored(s.foo)
-	      }
-	    `
+              let s = S()
+              account.storage.forEachStored(s.foo)
+          }
+        `
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -5539,6 +5539,182 @@ func TestRuntimeAccountIterationMutation(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
+	})
+}
+
+func TestRuntimeTypeOrderInsignificance(t *testing.T) {
+
+	t.Parallel()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	newRuntime := func() (TestInterpreterRuntime, *TestRuntimeInterface) {
+		runtime := NewTestInterpreterRuntime()
+		accountCodes := map[common.Location][]byte{}
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				code = accountCodes[location]
+				return code, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+		}
+		return runtime, runtimeInterface
+	}
+
+	t.Run("intersection types", func(t *testing.T) {
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		deployTx := DeploymentTransaction("Test", []byte(`
+            access(all)
+            contract Test {
+
+                access(all)
+                struct interface A {}
+
+
+                access(all)
+                struct interface B {}
+            }
+        `))
+
+		tx1 := []byte(`
+          import Test from 0x1
+
+          transaction {
+              prepare(account: auth(Storage) &Account) {
+
+                  let t1 = Type<&{Test.A, Test.B}>()
+                  let t2 = Type<&{Test.B, Test.A}>()
+
+                  let dict: {Type: Bool} = {}
+                  dict[t1] = true
+
+                  assert(dict[t1]!)
+                  assert(dict[t2]!)
+
+                  account.storage.save(dict, to: /storage/dict)
+              }
+          }
+        `)
+
+		tx2 := []byte(`
+          import Test from 0x1
+
+          transaction {
+              prepare(account: auth(Storage) &Account) {
+
+                  let t1 = Type<&{Test.A, Test.B}>()
+                  let t2 = Type<&{Test.B, Test.A}>()
+
+                  let dict = account.storage.load<{Type: Bool}>(from: /storage/dict)!
+
+                  assert(dict[t1]!)
+                  assert(dict[t2]!)
+              }
+          }
+        `)
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		for _, tx := range [][]byte{deployTx, tx1, tx2} {
+
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: tx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+		}
+	})
+
+	t.Run("entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		deployTx := DeploymentTransaction("Test", []byte(`
+            access(all)
+            contract Test {
+
+                access(all)
+                entitlement A
+
+
+                access(all)
+                entitlement B
+            }
+        `))
+
+		tx1 := []byte(`
+          import Test from 0x1
+
+          transaction {
+              prepare(account: auth(Storage) &Account) {
+
+                  let t1 = Type<auth(Test.A, Test.B) &AnyStruct>()
+                  let t2 = Type<auth(Test.B, Test.A) &AnyStruct>()
+
+                  let dict: {Type: Bool} = {}
+                  dict[t1] = true
+
+                  assert(dict[t1]!)
+                  assert(dict[t2]!)
+
+                  account.storage.save(dict, to: /storage/dict)
+              }
+          }
+        `)
+
+		tx2 := []byte(`
+          import Test from 0x1
+
+          transaction {
+              prepare(account: auth(Storage) &Account) {
+
+                  let t1 = Type<auth(Test.A, Test.B) &AnyStruct>()
+                  let t2 = Type<auth(Test.B, Test.A) &AnyStruct>()
+
+                  let dict = account.storage.load<{Type: Bool}>(from: /storage/dict)!
+
+                  assert(dict[t1]!)
+                  assert(dict[t2]!)
+              }
+          }
+        `)
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		for _, tx := range [][]byte{deployTx, tx1, tx2} {
+
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: tx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+		}
 	})
 }
 
