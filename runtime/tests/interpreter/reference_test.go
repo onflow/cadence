@@ -2931,4 +2931,35 @@ func TestInterpretDereference(t *testing.T) {
 			interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "temp"),
 		)
 	})
+
+	t.Run("Optional", func(t *testing.T) {
+		t.Parallel()
+
+		runTestCase(
+			t,
+			"nil",
+			`
+              fun main(): Int? {
+                  let ref: &Int? = nil
+                  return *ref
+              }
+            `,
+			interpreter.Nil,
+		)
+
+		runTestCase(
+			t,
+			"some",
+			`
+              fun main(): Int? {
+                  let ref: &Int? = &42 as &Int
+                  return *ref
+              }
+            `,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewIntValueFromInt64(nil, 42),
+			),
+		)
+	})
+
 }

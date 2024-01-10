@@ -3467,4 +3467,34 @@ func TestCheckDereference(t *testing.T) {
 			`,
 		)
 	})
+
+	t.Run("Optional", func(t *testing.T) {
+		t.Parallel()
+
+		runValidTestCase(
+			t,
+			"valid",
+			`
+                let ref: &Int? = &1 as &Int
+                let y = *ref
+            `,
+			&sema.OptionalType{
+				Type: sema.IntType,
+			},
+		)
+
+		runInvalidTestCase(
+			t,
+			"invalid",
+			`
+                struct S {}
+
+                fun test() {
+                    let s = S()
+                    let ref: &S? = &s as &S
+                    let deref = *ref
+                }
+            `,
+		)
+	})
 }
