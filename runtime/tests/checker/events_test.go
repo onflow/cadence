@@ -1362,4 +1362,33 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
 		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
 	})
+
+	t.Run("base outside attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) resource R {
+				access(all) var i: Int
+				access(all) init() {
+					self.i = 123
+				}
+			}
+			access(all) var globalArray: @[R] <- [<- create R()]
+			access(all) var base: &R = &globalArray[0] // strategically named variable
+			access(all) var dummy: @R <- globalArray.removeLast() // invalidate the ref
+			access(all) resource IndestructibleTroll {
+				// Reference the fake "base" variable
+				access(all) event ResourceDestroyed( x: Int? = base.i)
+			}
+			access(all) fun main() {
+				var troll <- create IndestructibleTroll()
+				destroy troll
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidIdentifier)
+	})
 }
