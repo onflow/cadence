@@ -41,14 +41,14 @@ func (TypeValueMigration) Migrate(
 	_ interpreter.AddressPath,
 	value interpreter.Value,
 	inter *interpreter.Interpreter,
-) (newValue interpreter.Value) {
+) (newValue interpreter.Value, err error) {
 	switch value := value.(type) {
 	case interpreter.TypeValue:
 		convertedType := maybeConvertType(value.Type, inter)
 		if convertedType == nil {
 			return
 		}
-		return interpreter.NewTypeValue(nil, convertedType)
+		return interpreter.NewTypeValue(nil, convertedType), nil
 	}
 
 	return

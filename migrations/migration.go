@@ -31,7 +31,7 @@ type ValueMigration interface {
 		addressPath interpreter.AddressPath,
 		value interpreter.Value,
 		interpreter *interpreter.Interpreter,
-	) (newValue interpreter.Value)
+	) (newValue interpreter.Value, err error)
 }
 
 type DomainMigration interface {
@@ -70,11 +70,8 @@ func (m *StorageMigration) Migrate(
 	}
 }
 
-func (m *StorageMigration) Commit() {
-	err := m.storage.Commit(m.interpreter, false)
-	if err != nil {
-		panic(err)
-	}
+func (m *StorageMigration) Commit() error {
+	return m.storage.Commit(m.interpreter, false)
 }
 
 func (m *StorageMigration) MigrateAccount(
@@ -274,7 +271,14 @@ func (m *StorageMigration) MigrateNestedValue(
 	}
 
 	for _, migration := range valueMigrations {
-		converted := migration.Migrate(addressPath, value, m.interpreter)
+		converted, err := migration.Migrate(addressPath, value, m.interpreter)
+
+		if err != nil {
+			if reporter != nil {
+				reporter.Error(addressPath, migration.Name(), err)
+			}
+			continue
+		}
 
 		if converted != nil {
 			// Chain the migrations.
@@ -283,12 +287,32 @@ func (m *StorageMigration) MigrateNestedValue(
 			newValue = converted
 
 			if reporter != nil {
-				reporter.Report(addressPath, migration.Name())
+				reporter.Migrated(addressPath, migration.Name())
 			}
 		}
 	}
 	return
 
+}
+
+func (m *StorageMigration) migrate(
+	migration ValueMigration,
+	addressPath interpreter.AddressPath,
+	value interpreter.Value,
+) (converted interpreter.Value, err error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			switch r := r.(type) {
+			case error:
+				err = r
+			default:
+				panic(r)
+			}
+		}
+	}()
+
+	return migration.Migrate(addressPath, value, m.interpreter)
 }
 
 // legacyKey return the same type with the "old" hash/ID generation algo.

@@ -39,15 +39,14 @@ func (StringNormalizingMigration) Migrate(
 	_ interpreter.AddressPath,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) interpreter.Value {
-
+) (interpreter.Value, error) {
 	switch value := value.(type) {
 	case *interpreter.StringValue:
-		return interpreter.NewUnmeteredStringValue(value.Str)
+		return interpreter.NewUnmeteredStringValue(value.Str), nil
 
 	case interpreter.CharacterValue:
-		return interpreter.NewUnmeteredCharacterValue(string(value))
+		return interpreter.NewUnmeteredCharacterValue(string(value)), nil
 	}
 
-	return nil
+	return nil, nil
 }

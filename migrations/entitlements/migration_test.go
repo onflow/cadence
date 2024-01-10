@@ -377,8 +377,8 @@ func (testEntitlementsMigration) Name() string {
 	return "Test Entitlements Migration"
 }
 
-func (m testEntitlementsMigration) Migrate(_ interpreter.AddressPath, value interpreter.Value, _ *interpreter.Interpreter) (newValue interpreter.Value) {
-	return ConvertValueToEntitlements(m.inter, value)
+func (m testEntitlementsMigration) Migrate(_ interpreter.AddressPath, value interpreter.Value, _ *interpreter.Interpreter) (interpreter.Value, error) {
+	return ConvertValueToEntitlements(m.inter, value), nil
 }
 
 func convertEntireTestValue(

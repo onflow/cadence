@@ -462,7 +462,8 @@ func testPathCapabilityValueMigration(
 		),
 	)
 
-	migration.Commit()
+	err = migration.Commit()
+	require.NoError(t, err)
 
 	// Check migrated capabilities
 
@@ -1179,7 +1180,8 @@ func testLinkMigration(
 		),
 	)
 
-	migration.Commit()
+	err = migration.Commit()
+	require.NoError(t, err)
 
 	// Assert
 
@@ -1683,7 +1685,8 @@ func TestClearPrivateDomain(t *testing.T) {
 		ClearPrivateDomain,
 	)
 
-	migration.Commit()
+	err = migration.Commit()
+	require.NoError(t, err)
 
 	// Assert
 

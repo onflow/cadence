@@ -63,7 +63,7 @@ func (m *CapabilityValueMigration) Migrate(
 	addressPath interpreter.AddressPath,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) interpreter.Value {
+) (interpreter.Value, error) {
 	reporter := m.Reporter
 
 	switch value := value.(type) {
@@ -109,8 +109,8 @@ func (m *CapabilityValueMigration) Migrate(
 			)
 		}
 
-		return newCapability
+		return newCapability, nil
 	}
 
-	return nil
+	return nil, nil
 }

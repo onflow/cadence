@@ -269,6 +269,6 @@ func ConvertValueToEntitlements(
 	return nil
 }
 
-func (mig EntitlementsMigration) Migrate(_ interpreter.AddressPath, value interpreter.Value, _ *interpreter.Interpreter) (newValue interpreter.Value) {
-	return ConvertValueToEntitlements(mig.Interpreter, value)
+func (mig EntitlementsMigration) Migrate(_ interpreter.AddressPath, value interpreter.Value, _ *interpreter.Interpreter) (interpreter.Value, error) {
+	return ConvertValueToEntitlements(mig.Interpreter, value), nil
 }
