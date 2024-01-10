@@ -1,5 +1,5 @@
 access(all)
-struct AccountCapabilityController: ContainFields {
+resource AccountCapabilityController: ContainFields {
 
     /// The capability that is controlled by this controller.
     access(all)

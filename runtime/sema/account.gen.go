@@ -444,7 +444,7 @@ const Account_StorageTypeName = "Storage"
 var Account_StorageType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_StorageTypeName,
-		Kind:               common.CompositeKindStructure,
+		Kind:               common.CompositeKindResource,
 		ImportableBuiltin:  false,
 		HasComputedMembers: true,
 	}
@@ -773,7 +773,7 @@ const Account_ContractsTypeName = "Contracts"
 var Account_ContractsType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_ContractsTypeName,
-		Kind:               common.CompositeKindStructure,
+		Kind:               common.CompositeKindResource,
 		ImportableBuiltin:  false,
 		HasComputedMembers: true,
 	}
@@ -970,7 +970,7 @@ const Account_KeysTypeName = "Keys"
 var Account_KeysType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_KeysTypeName,
-		Kind:               common.CompositeKindStructure,
+		Kind:               common.CompositeKindResource,
 		ImportableBuiltin:  false,
 		HasComputedMembers: true,
 	}
@@ -1148,7 +1148,7 @@ const Account_InboxTypeName = "Inbox"
 var Account_InboxType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_InboxTypeName,
-		Kind:               common.CompositeKindStructure,
+		Kind:               common.CompositeKindResource,
 		ImportableBuiltin:  false,
 		HasComputedMembers: true,
 	}
@@ -1363,7 +1363,7 @@ const Account_CapabilitiesTypeName = "Capabilities"
 var Account_CapabilitiesType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_CapabilitiesTypeName,
-		Kind:               common.CompositeKindStructure,
+		Kind:               common.CompositeKindResource,
 		ImportableBuiltin:  false,
 		HasComputedMembers: true,
 	}
@@ -1576,7 +1576,7 @@ const Account_StorageCapabilitiesTypeName = "StorageCapabilities"
 var Account_StorageCapabilitiesType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_StorageCapabilitiesTypeName,
-		Kind:               common.CompositeKindStructure,
+		Kind:               common.CompositeKindResource,
 		ImportableBuiltin:  false,
 		HasComputedMembers: true,
 	}
@@ -1748,7 +1748,7 @@ const Account_AccountCapabilitiesTypeName = "AccountCapabilities"
 var Account_AccountCapabilitiesType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         Account_AccountCapabilitiesTypeName,
-		Kind:               common.CompositeKindStructure,
+		Kind:               common.CompositeKindResource,
 		ImportableBuiltin:  false,
 		HasComputedMembers: true,
 	}
@@ -1809,7 +1809,7 @@ const AccountTypeName = "Account"
 var AccountType = func() *CompositeType {
 	var t = &CompositeType{
 		Identifier:         AccountTypeName,
-		Kind:               common.CompositeKindStructure,
+		Kind:               common.CompositeKindResource,
 		ImportableBuiltin:  false,
 		HasComputedMembers: true,
 	}

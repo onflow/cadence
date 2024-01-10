@@ -1,5 +1,5 @@
 access(all)
-struct Account {
+resource Account {
 
     /// The address of the account.
     access(all)
@@ -34,7 +34,7 @@ struct Account {
     let capabilities: Account.Capabilities
 
     access(all)
-    struct Storage {
+    resource Storage {
         /// The current amount of storage used by the account in bytes.
         access(all)
         let used: UInt64
@@ -162,7 +162,7 @@ struct Account {
     }
 
     access(all)
-    struct Contracts {
+    resource Contracts {
 
         /// The names of all contracts deployed in the account.
         access(all)
@@ -248,7 +248,7 @@ struct Account {
     }
 
     access(all)
-    struct Keys {
+    resource Keys {
 
         /// Adds a new key with the given hashing algorithm and a weight.
         ///
@@ -287,7 +287,7 @@ struct Account {
     }
 
     access(all)
-    struct Inbox {
+    resource Inbox {
 
         /// Publishes a new Capability under the given name,
         /// to be claimed by the specified recipient.
@@ -313,7 +313,7 @@ struct Account {
     }
 
     access(all)
-    struct Capabilities {
+    resource Capabilities {
 
         /// The storage capabilities of the account.
         access(CapabilitiesMapping)
@@ -356,7 +356,7 @@ struct Account {
     }
 
     access(all)
-    struct StorageCapabilities {
+    resource StorageCapabilities {
 
         /// Issue/create a new storage capability.
         access(Capabilities | StorageCapabilities | IssueStorageCapabilityController)
@@ -390,7 +390,7 @@ struct Account {
     }
 
     access(all)
-    struct AccountCapabilities {
+    resource AccountCapabilities {
         /// Issue/create a new account capability.
         access(Capabilities | AccountCapabilities | IssueAccountCapabilityController)
         fun issue<T: &Account>(): Capability<T>

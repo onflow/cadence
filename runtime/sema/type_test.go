@@ -923,7 +923,7 @@ func TestCommonSuperType(t *testing.T) {
 				name: "mixed type structs",
 				types: []Type{
 					PublicKeyType,
-					AccountType,
+					BlockType,
 				},
 				expectedSuperType: AnyStructType,
 			},

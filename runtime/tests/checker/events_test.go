@@ -301,7 +301,9 @@ func TestCheckAccountEventParameter(t *testing.T) {
           event AccountEvent(account: &Account)
       }
     `)
-	require.NoError(t, err)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[0])
 }
 
 func TestCheckDeclareEventInInterface(t *testing.T) {

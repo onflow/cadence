@@ -3467,8 +3467,8 @@ func TestCheckDereference(t *testing.T) {
 			t,
 			"Account",
 			`
-				fun test(ref: &Account): Account {
-					return *ref
+				fun test(ref: &Account): @Account {
+					return <-*ref
 				}
 			`,
 		)
