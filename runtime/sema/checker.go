@@ -2475,7 +2475,8 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 
 				err := typeParameter.checkTypeBound(
 					typeArgument,
-					ast.NewRangeFromPositioned(checker.memoryGauge, rawTypeArgument),
+					checker.memoryGauge,
+					rawTypeArgument,
 				)
 				checker.report(err)
 			}

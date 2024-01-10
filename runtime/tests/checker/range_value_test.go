@@ -330,13 +330,17 @@ func TestCheckInclusiveRangeConstructionInvalid(t *testing.T) {
 			t,
 			typeString,
 			fmt.Sprintf("let r = InclusiveRange(%s(1), %s(2))", typeString, differentTypeString),
-			[]error{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}},
+			[]error{
+				&sema.TypeMismatchError{},
+			},
 		)
 		runInvalidCase(
 			t,
 			typeString,
 			fmt.Sprintf("let r = InclusiveRange(%s(1), %s(10), step: %s(2))", typeString, typeString, differentTypeString),
-			[]error{&sema.TypeParameterTypeMismatchError{}, &sema.TypeMismatchError{}},
+			[]error{
+				&sema.TypeMismatchError{},
+			},
 		)
 
 		// Not enough arguments
