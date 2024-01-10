@@ -19757,8 +19757,14 @@ func DereferenceValue(
 	locationRange LocationRange,
 	referenceValue ReferenceValue,
 ) Value {
-	referencedValue := referenceValue.ReferencedValue(inter, locationRange, true)
-	return (*referencedValue).Transfer(
+	referencedValue := *referenceValue.ReferencedValue(inter, locationRange, true)
+
+	// Defensive check: ensure that the referenced value is not a resource
+	if referencedValue.IsResourceKinded(inter) {
+		panic(errors.NewUnreachableError())
+	}
+
+	return referencedValue.Transfer(
 		inter,
 		locationRange,
 		atree.Address{},
