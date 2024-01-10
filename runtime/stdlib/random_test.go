@@ -53,7 +53,7 @@ func TestRandomBasicUniformityWithModulo(t *testing.T) {
 		t.Skip()
 	}
 
-	testTypes := func(t *testing.T, testType func(*testing.T, sema.Type), allTypes bool) {
+	testTypes := func(t *testing.T, testType func(*testing.T, sema.Type)) {
 		for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
 			tyCopy := ty
 			t.Run(ty.String(), func(t *testing.T) {
@@ -72,14 +72,14 @@ func TestRandomBasicUniformityWithModulo(t *testing.T) {
 			// make sure modulo fits in 8 bits
 			require.Less(t, modulo, 1<<8)
 
-			f := func() (uint64, error) {
+			moduloValue := inter.ConvertAndBox(
+				interpreter.EmptyLocationRange,
+				interpreter.NewUnmeteredUIntValueFromUint64(uint64(modulo)),
+				sema.UIntType,
+				ty,
+			)
 
-				moduloValue := inter.ConvertAndBox(
-					interpreter.EmptyLocationRange,
-					interpreter.NewUnmeteredUIntValueFromUint64(uint64(modulo)),
-					sema.UIntType,
-					ty,
-				)
+			f := func() (uint64, error) {
 
 				value := RevertibleRandom(
 					testCryptRandomGenerator{},
@@ -98,12 +98,12 @@ func TestRandomBasicUniformityWithModulo(t *testing.T) {
 	t.Run("power of 2 (that fits in 8 bits)", func(t *testing.T) {
 		t.Parallel()
 
-		testTypes(t, runStatisticsWithModulo(64), false)
+		testTypes(t, runStatisticsWithModulo(64))
 	})
 
 	t.Run("non-power of 2", func(t *testing.T) {
 		t.Parallel()
 
-		testTypes(t, runStatisticsWithModulo(71), false)
+		testTypes(t, runStatisticsWithModulo(71))
 	})
 }
