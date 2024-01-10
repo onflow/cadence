@@ -1992,9 +1992,13 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 			break
 		}
 
+		idTypeVariable := checker.typeActivations.Find(identifier)
+
 		// if it's an attachment, then it's also okay
-		if checker.typeActivations.Find(identifier) != nil {
-			break
+		if idTypeVariable != nil {
+			if compositeType, isComposite := idTypeVariable.Type.(*CompositeType); isComposite && compositeType.Kind == common.CompositeKindAttachment {
+				break
+			}
 		}
 		checker.report(&DefaultDestroyInvalidArgumentError{
 			Range: ast.NewRangeFromPositioned(checker.memoryGauge, arg),

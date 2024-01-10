@@ -2503,9 +2503,13 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 
 	t.Parallel()
 
-	var events []*interpreter.CompositeValue
+	t.Run("non-attachment type name", func(t *testing.T) {
 
-	inter, err := parseCheckAndInterpretWithOptions(t, `
+		t.Parallel()
+
+		var events []*interpreter.CompositeValue
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
 		access(all) resource R {
 			access(all) var i: Int
 			access(all) init() {
@@ -2533,26 +2537,79 @@ func TestInterpreterDefaultDestroyEventBaseShadowing(t *testing.T) {
 			destroy trollAttachment
 		}	
         `, ParseCheckAndInterpretOptions{
-		CheckerConfig: &sema.Config{
-			AttachmentsEnabled: true,
-		},
-		Config: &interpreter.Config{
-			OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
-				events = append(events, event)
-				return nil
+			CheckerConfig: &sema.Config{
+				AttachmentsEnabled: true,
 			},
-		},
+			Config: &interpreter.Config{
+				OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+					events = append(events, event)
+					return nil
+				},
+			},
+		})
+
+		require.NoError(t, err)
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.Len(t, events, 1)
+		require.Equal(t, "TrollAttachment.ResourceDestroyed", events[0].QualifiedIdentifier)
+
+		// should be 1, not 123
+		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "x"))
 	})
 
-	require.NoError(t, err)
-	_, err = inter.Invoke("test")
-	require.NoError(t, err)
+	t.Run("base contract name", func(t *testing.T) {
 
-	require.Len(t, events, 1)
-	require.Equal(t, "TrollAttachment.ResourceDestroyed", events[0].QualifiedIdentifier)
+		t.Parallel()
 
-	// should be 1, not 123
-	require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "x"))
+		var events []*interpreter.CompositeValue
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+		access(all) contract base {
+			access(all) var i: Int
+			access(all) init() { self.i = 1}
+		}
+
+		access(all) attachment TrollAttachment for IndestructibleTroll {
+			access(all) event ResourceDestroyed( x: Int = base.i)
+		}
+		
+		access(all) resource IndestructibleTroll {
+			let i: Int
+			init() {
+				self.i = 1
+			}
+		}
+
+		access(all) fun test() {
+			var troll <- create IndestructibleTroll()
+			var trollAttachment <- attach TrollAttachment() to <-troll
+			destroy trollAttachment
+		}	
+        `, ParseCheckAndInterpretOptions{
+			CheckerConfig: &sema.Config{
+				AttachmentsEnabled: true,
+			},
+			Config: &interpreter.Config{
+				OnEventEmitted: func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
+					events = append(events, event)
+					return nil
+				},
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+			},
+		})
+
+		require.NoError(t, err)
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.Len(t, events, 1)
+		require.Equal(t, "TrollAttachment.ResourceDestroyed", events[0].QualifiedIdentifier)
+
+		// should be 1, not 123
+		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 1), events[0].GetField(inter, interpreter.EmptyLocationRange, "x"))
+	})
 }
 
 func TestInterpretDefaultDestroyEventArgumentScoping(t *testing.T) {
