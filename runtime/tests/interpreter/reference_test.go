@@ -1648,7 +1648,7 @@ func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("main")
-	require.Error(t, err)
+	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
@@ -2956,4 +2956,69 @@ func TestInterpretDereference(t *testing.T) {
 		)
 	})
 
+	t.Run("Resource", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("direct", func(t *testing.T) {
+			t.Parallel()
+
+			inter, err := parseCheckAndInterpretWithOptions(t,
+				`
+                  resource R {}
+
+                  fun main() {
+                      let r1 <- create R()
+                      let r1Ref: &R = &r1
+                      let r2 <- *r1Ref
+                      destroy r1
+                      destroy r2
+                  }
+                `,
+				ParseCheckAndInterpretOptions{
+					HandleCheckerError: func(err error) {
+						errs := checker.RequireCheckerErrors(t, err, 1)
+
+						require.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			_, err = inter.Invoke("main")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ResourceReferenceDereferenceError{})
+		})
+
+		t.Run("array", func(t *testing.T) {
+			t.Parallel()
+
+			inter, err := parseCheckAndInterpretWithOptions(t,
+				`
+                  resource R {}
+
+                  fun main() {
+                      let rs1 <- [<- create R()]
+                      let rs1Ref: &[R] = &rs1
+                      let rs2 <- *rs1Ref
+                      destroy rs1
+                      destroy rs2
+                  }
+                `,
+				ParseCheckAndInterpretOptions{
+					HandleCheckerError: func(err error) {
+						errs := checker.RequireCheckerErrors(t, err, 1)
+
+						require.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			_, err = inter.Invoke("main")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ResourceReferenceDereferenceError{})
+		})
+	})
 }
