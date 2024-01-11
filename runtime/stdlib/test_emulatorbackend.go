@@ -726,7 +726,7 @@ func (t *testEmulatorBackendType) newMoveTimeFunction(
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			blockchain.MoveTime(int64(timeDelta.ToInt(invocation.LocationRange)))
+			blockchain.MoveTime(float64(timeDelta) / sema.Fix64Factor)
 			return interpreter.Void
 		},
 	)

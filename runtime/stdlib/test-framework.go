@@ -75,7 +75,7 @@ type Blockchain interface {
 
 	Reset(uint64)
 
-	MoveTime(int64)
+	MoveTime(float64)
 
 	CreateSnapshot(string) error
 
