@@ -19432,8 +19432,8 @@ type SomeValue struct {
 	isDestroyed bool
 }
 
-func NewSomeValueNonCopying(interpreter *Interpreter, value Value) *SomeValue {
-	common.UseMemory(interpreter, common.OptionalValueMemoryUsage)
+func NewSomeValueNonCopying(memoryGauge common.MemoryGauge, value Value) *SomeValue {
+	common.UseMemory(memoryGauge, common.OptionalValueMemoryUsage)
 
 	return NewUnmeteredSomeValueNonCopying(value)
 }

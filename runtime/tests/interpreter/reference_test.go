@@ -1636,14 +1636,14 @@ func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
           fooRef.something()
 
           // just to trick the checker
-		  fooRef = returnSameRef(fooRef)
+          fooRef = returnSameRef(fooRef)
 
           // Moving the resource should update the tracking
           var newFoo <- foo
 
-      	  fooRef.id
+            fooRef.id
 
-      	  destroy newFoo
+            destroy newFoo
       }
     `)
 
@@ -1820,12 +1820,14 @@ func TestInterpretReferenceToReference(t *testing.T) {
 func TestInterpretDereference(t *testing.T) {
 	t.Parallel()
 
-	runValidTestCase := func(
+	runTestCase := func(
 		t *testing.T,
 		name, code string,
 		expectedValue interpreter.Value,
 	) {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			inter := parseCheckAndInterpret(t, code)
 
 			value, err := inter.Invoke("main")
@@ -1876,7 +1878,7 @@ func TestInterpretDereference(t *testing.T) {
 			integerType := typ
 			typString := typ.QualifiedString()
 
-			runValidTestCase(
+			runTestCase(
 				t,
 				typString,
 				fmt.Sprintf(
@@ -1885,7 +1887,7 @@ func TestInterpretDereference(t *testing.T) {
                             let x: &%[1]s = &42
                             return *x
                         }
-	                `,
+                    `,
 					integerType,
 				),
 				expectedValues[integerType],
@@ -1911,7 +1913,7 @@ func TestInterpretDereference(t *testing.T) {
 			fixedPointType := typ
 			typString := typ.QualifiedString()
 
-			runValidTestCase(
+			runTestCase(
 				t,
 				typString,
 				fmt.Sprintf(
@@ -1920,7 +1922,7 @@ func TestInterpretDereference(t *testing.T) {
                             let x: &%[1]s = &42.24
                             return *x
                         }
-	                `,
+                    `,
 					fixedPointType,
 				),
 				expectedValues[fixedPointType],
@@ -2747,12 +2749,12 @@ func TestInterpretDereference(t *testing.T) {
 			inter := parseCheckAndInterpret(
 				t,
 				`
-					fun main(): {Int: String} {
-						let original = {1: "ABC", 2: "DEF"}
-						let x: &{Int : String} = &original
-						return *x
-					}
-				`,
+                    fun main(): {Int: String} {
+                        let original = {1: "ABC", 2: "DEF"}
+                        let x: &{Int : String} = &original
+                        return *x
+                    }
+                `,
 			)
 
 			value, err := inter.Invoke("main")
@@ -2781,12 +2783,12 @@ func TestInterpretDereference(t *testing.T) {
 			inter := parseCheckAndInterpret(
 				t,
 				`
-					fun main(): {Int: [String]} {
-						let original = {1: ["ABC", "XYZ"], 2: ["DEF"]}
-						let x: &{Int: [String]} = &original
-						return *x
-					}
-				`,
+                    fun main(): {Int: [String]} {
+                        let original = {1: ["ABC", "XYZ"], 2: ["DEF"]}
+                        let x: &{Int: [String]} = &original
+                        return *x
+                    }
+                `,
 			)
 
 			value, err := inter.Invoke("main")
@@ -2834,16 +2836,16 @@ func TestInterpretDereference(t *testing.T) {
 	t.Run("Character", func(t *testing.T) {
 		t.Parallel()
 
-		runValidTestCase(
+		runTestCase(
 			t,
 			"Character",
 			`
-				fun main(): Character {
-					let original: Character = "S"
-					let x: &Character = &original
-					return *x
-				}
-			`,
+                fun main(): Character {
+                    let original: Character = "S"
+                    let x: &Character = &original
+                    return *x
+                }
+            `,
 			interpreter.NewUnmeteredCharacterValue("S"),
 		)
 	})
@@ -2851,84 +2853,107 @@ func TestInterpretDereference(t *testing.T) {
 	t.Run("String", func(t *testing.T) {
 		t.Parallel()
 
-		runValidTestCase(
+		runTestCase(
 			t,
 			"String",
 			`
-				fun main(): String {
-					let original: String = "STxy"
-					let x: &String = &original
-					return *x
-				}
-			`,
+                fun main(): String {
+                    let original: String = "STxy"
+                    let x: &String = &original
+                    return *x
+                }
+            `,
 			interpreter.NewUnmeteredStringValue("STxy"),
 		)
 	})
 
-	t.Run("Bool", func(t *testing.T) {
-		t.Parallel()
+	runTestCase(
+		t,
+		"Bool",
+		`
+            fun main(): Bool {
+                let original: Bool = true
+                let x: &Bool = &original
+                return *x
+            }
+        `,
+		interpreter.BoolValue(true),
+	)
 
-		runValidTestCase(
-			t,
-			"Bool",
-			`
-				fun main(): Bool {
-					let original: Bool = true
-					let x: &Bool = &original
-					return *x
-				}
-			`,
-			interpreter.BoolValue(true),
-		)
-	})
+	address, err := common.HexToAddress("0x0000000000000231")
+	assert.NoError(t, err)
 
-	t.Run("Address", func(t *testing.T) {
-		t.Parallel()
-
-		address, err := common.HexToAddress("0x0000000000000231")
-		assert.NoError(t, err)
-
-		runValidTestCase(
-			t,
-			"Address",
-			`
-				fun main(): Address {
-					let original: Address = 0x0000000000000231
-					let x: &Address = &original
-					return *x
-				}
-			`,
-			interpreter.NewAddressValue(nil, address),
-		)
-	})
+	runTestCase(
+		t,
+		"Address",
+		`
+            fun main(): Address {
+                let original: Address = 0x0000000000000231
+                let x: &Address = &original
+                return *x
+            }
+        `,
+		interpreter.NewAddressValue(nil, address),
+	)
 
 	t.Run("Path", func(t *testing.T) {
 		t.Parallel()
 
-		runValidTestCase(
+		runTestCase(
 			t,
 			"PrivatePath",
 			`
-				fun main(): Path {
-					let original: Path = /private/temp
-					let x: &Path = &original
-					return *x
-				}
-			`,
+                fun main(): Path {
+                    let original: Path = /private/temp
+                    let x: &Path = &original
+                    return *x
+                }
+            `,
 			interpreter.NewUnmeteredPathValue(common.PathDomainPrivate, "temp"),
 		)
 
-		runValidTestCase(
+		runTestCase(
 			t,
 			"PublicPath",
 			`
-				fun main(): Path {
-					let original: Path = /public/temp
-					let x: &Path = &original
-					return *x
-				}
-			`,
+                fun main(): Path {
+                    let original: Path = /public/temp
+                    let x: &Path = &original
+                    return *x
+                }
+            `,
 			interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "temp"),
 		)
 	})
+
+	t.Run("Optional", func(t *testing.T) {
+		t.Parallel()
+
+		runTestCase(
+			t,
+			"nil",
+			`
+              fun main(): Int? {
+                  let ref: &Int? = nil
+                  return *ref
+              }
+            `,
+			interpreter.Nil,
+		)
+
+		runTestCase(
+			t,
+			"some",
+			`
+              fun main(): Int? {
+                  let ref: &Int? = &42 as &Int
+                  return *ref
+              }
+            `,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewIntValueFromInt64(nil, 42),
+			),
+		)
+	})
+
 }
