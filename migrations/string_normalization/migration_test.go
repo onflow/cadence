@@ -61,8 +61,8 @@ func TestStringNormalizingMigration(t *testing.T) {
 
 	newLegacyStringValue := func(s string) *interpreter.StringValue {
 		return &interpreter.StringValue{
-			Str:    s,
-			RawStr: s,
+			Str:             s,
+			UnnormalizedStr: s,
 		}
 	}
 

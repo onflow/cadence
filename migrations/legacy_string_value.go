@@ -31,8 +31,8 @@ type LegacyStringValue struct {
 var _ interpreter.Value = &LegacyStringValue{}
 
 func (v *LegacyStringValue) HashInput(_ *interpreter.Interpreter, _ interpreter.LocationRange, scratch []byte) []byte {
-	// Use the un-normalized `v.RawStr` for generating the hash.
-	length := 1 + len(v.RawStr)
+	// Use the un-normalized `v.UnnormalizedStr` for generating the hash.
+	length := 1 + len(v.UnnormalizedStr)
 	var buffer []byte
 	if length <= len(scratch) {
 		buffer = scratch[:length]
@@ -41,6 +41,6 @@ func (v *LegacyStringValue) HashInput(_ *interpreter.Interpreter, _ interpreter.
 	}
 
 	buffer[0] = byte(interpreter.HashInputTypeString)
-	copy(buffer[1:], v.RawStr)
+	copy(buffer[1:], v.UnnormalizedStr)
 	return buffer
 }
