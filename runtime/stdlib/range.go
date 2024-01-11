@@ -95,12 +95,10 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 					continue
 				}
 
-				var errorRange ast.HasPosition
 				// If type argument was provided, use its range otherwise fallback to invocation range.
+				errorRange := invocationRange
 				if len(astTypeArguments) > 0 {
 					errorRange = astTypeArguments[0]
-				} else {
-					errorRange = invocationRange
 				}
 
 				report(&sema.InvalidTypeArgumentError{
