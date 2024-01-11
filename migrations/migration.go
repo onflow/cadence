@@ -338,7 +338,7 @@ func legacyKey(key interpreter.Value) interpreter.Value {
 
 	case *interpreter.StringValue:
 		return &LegacyStringValue{
-			key,
+			StringValue: key,
 		}
 	}
 
@@ -390,9 +390,15 @@ func legacyType(staticType interpreter.StaticType) interpreter.StaticType {
 		}
 
 	case *interpreter.ReferenceStaticType:
+		referenceType := typ
+
 		legacyReferencedType := legacyType(typ.ReferencedType)
 		if legacyReferencedType != nil {
-			return interpreter.NewReferenceStaticType(nil, typ.Authorization, legacyReferencedType)
+			referenceType = interpreter.NewReferenceStaticType(nil, typ.Authorization, legacyReferencedType)
+		}
+
+		return &LegacyReferenceType{
+			ReferenceStaticType: referenceType,
 		}
 	}
 
