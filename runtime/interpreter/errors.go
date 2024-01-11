@@ -1051,3 +1051,16 @@ func (e InclusiveRangeConstructionError) Error() string {
 	}
 	return fmt.Sprintf("%s: %s", message, e.Message)
 }
+
+// ResourceReferenceDereferenceError
+type ResourceReferenceDereferenceError struct {
+	LocationRange
+}
+
+var _ errors.InternalError = ResourceReferenceDereferenceError{}
+
+func (ResourceReferenceDereferenceError) IsInternalError() {}
+
+func (e ResourceReferenceDereferenceError) Error() string {
+	return "internal error: resource-references cannot be dereferenced"
+}
