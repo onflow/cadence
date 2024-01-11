@@ -1017,6 +1017,7 @@ type StringValue struct {
 	// that are based on grapheme clusters
 	graphemes *uniseg.Graphemes
 	Str       string
+	RawStr    string
 	// length is the cached length of the string, based on grapheme clusters.
 	// a negative value indicates the length has not been initialized, see Length()
 	length int
@@ -1024,7 +1025,8 @@ type StringValue struct {
 
 func NewUnmeteredStringValue(str string) *StringValue {
 	return &StringValue{
-		Str: norm.NFC.String(str),
+		Str:    norm.NFC.String(str),
+		RawStr: str,
 		// a negative value indicates the length has not been initialized, see Length()
 		length: -1,
 	}

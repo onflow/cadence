@@ -705,8 +705,11 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			)
 			dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
 
+			intersectionStaticType := newIntersectionStaticTypeWithTwoInterfacesReversed()
+			intersectionStaticType.LegacyType = interpreter.PrimitiveStaticTypeAnyStruct
+
 			intersectionType := &migrations.LegacyIntersectionType{
-				IntersectionStaticType: newIntersectionStaticTypeWithTwoInterfacesReversed(),
+				IntersectionStaticType: intersectionStaticType,
 			}
 
 			typeValue := interpreter.NewUnmeteredTypeValue(
@@ -725,7 +728,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			// NOTE: intentionally in reverse order
 			assert.Equal(t,
-				common.TypeID("{A.4200000000000000.Foo.Baz,A.4200000000000000.Foo.Bar}"),
+				common.TypeID("AnyStruct{A.4200000000000000.Foo.Baz,A.4200000000000000.Foo.Bar}"),
 				intersectionType.ID(),
 			)
 
@@ -837,8 +840,11 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			)
 			dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
 
+			intersectionStaticType := newIntersectionStaticTypeWithTwoInterfacesReversed()
+			intersectionStaticType.LegacyType = interpreter.PrimitiveStaticTypeAnyStruct
+
 			intersectionType := &migrations.LegacyIntersectionType{
-				IntersectionStaticType: newIntersectionStaticTypeWithTwoInterfacesReversed(),
+				IntersectionStaticType: intersectionStaticType,
 			}
 
 			typeValue := interpreter.NewUnmeteredTypeValue(
@@ -858,7 +864,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			// NOTE: intentionally in reverse order
 			assert.Equal(t,
-				common.TypeID("{A.4200000000000000.Foo.Baz,A.4200000000000000.Foo.Bar}"),
+				common.TypeID("AnyStruct{A.4200000000000000.Foo.Baz,A.4200000000000000.Foo.Bar}"),
 				intersectionType.ID(),
 			)
 

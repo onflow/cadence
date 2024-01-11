@@ -59,29 +59,28 @@ func TestStringNormalizingMigration(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	newLegacyStringValue := func(s string) *interpreter.StringValue {
+		return &interpreter.StringValue{
+			Str:    s,
+			RawStr: s,
+		}
+	}
+
 	testCases := map[string]testCase{
 		"normalized_string": {
-			storedValue: &interpreter.StringValue{
-				Str: "Caf\u00E9",
-			},
+			storedValue:   newLegacyStringValue("Caf\u00E9"),
 			expectedValue: interpreter.NewUnmeteredStringValue("Caf\u00E9"),
 		},
 		"un-normalized_string": {
-			storedValue: &interpreter.StringValue{
-				Str: "Cafe\u0301",
-			},
+			storedValue:   newLegacyStringValue("Cafe\u0301"),
 			expectedValue: interpreter.NewUnmeteredStringValue("Caf\u00E9"),
 		},
 		"normalized_character": {
-			storedValue: &interpreter.StringValue{
-				Str: "Caf\u00E9",
-			},
+			storedValue:   newLegacyStringValue("Caf\u00E9"),
 			expectedValue: interpreter.NewUnmeteredStringValue("Caf\u00E9"),
 		},
 		"un-normalized_character": {
-			storedValue: &interpreter.StringValue{
-				Str: "Cafe\u0301",
-			},
+			storedValue:   newLegacyStringValue("Cafe\u0301"),
 			expectedValue: interpreter.NewUnmeteredStringValue("Caf\u00E9"),
 		},
 		"string_array": {
@@ -90,9 +89,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 				locationRange,
 				interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
 				common.ZeroAddress,
-				&interpreter.StringValue{
-					Str: "Cafe\u0301",
-				},
+				newLegacyStringValue("Cafe\u0301"),
 			),
 			expectedValue: interpreter.NewArrayValue(
 				inter,
@@ -112,9 +109,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 					interpreter.PrimitiveStaticTypeString,
 				),
 				interpreter.NewUnmeteredInt8Value(4),
-				&interpreter.StringValue{
-					Str: "Cafe\u0301",
-				},
+				newLegacyStringValue("Cafe\u0301"),
 			),
 			expectedValue: interpreter.NewDictionaryValue(
 				inter,
@@ -137,9 +132,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 					interpreter.PrimitiveStaticTypeString,
 					interpreter.PrimitiveStaticTypeInt8,
 				),
-				&interpreter.StringValue{
-					Str: "Cafe\u0301",
-				},
+				newLegacyStringValue("Cafe\u0301"),
 				interpreter.NewUnmeteredInt8Value(4),
 			),
 			expectedValue: interpreter.NewDictionaryValue(
@@ -163,12 +156,8 @@ func TestStringNormalizingMigration(t *testing.T) {
 					interpreter.PrimitiveStaticTypeString,
 					interpreter.PrimitiveStaticTypeString,
 				),
-				&interpreter.StringValue{
-					Str: "Cafe\u0301",
-				},
-				&interpreter.StringValue{
-					Str: "Cafe\u0301",
-				},
+				newLegacyStringValue("Cafe\u0301"),
+				newLegacyStringValue("Cafe\u0301"),
 			),
 			expectedValue: interpreter.NewDictionaryValue(
 				inter,
@@ -192,9 +181,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 				[]interpreter.CompositeField{
 					interpreter.NewUnmeteredCompositeField(
 						"field",
-						&interpreter.StringValue{
-							Str: "Cafe\u0301",
-						},
+						newLegacyStringValue("Cafe\u0301"),
 					),
 				},
 				common.Address{},

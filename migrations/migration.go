@@ -327,19 +327,22 @@ func (m *StorageMigration) migrate(
 	return migration.Migrate(addressPath, value, m.interpreter)
 }
 
-// legacyKey return the same type with the "old" hash/ID generation algo.
+// legacyKey return the same type with the "old" hash/ID generation function.
 func legacyKey(key interpreter.Value) interpreter.Value {
-	typeValue, isTypeValue := key.(interpreter.TypeValue)
-	if !isTypeValue {
-		return key
+	switch key := key.(type) {
+	case interpreter.TypeValue:
+		legacyType := legacyType(key.Type)
+		if legacyType != nil {
+			return interpreter.NewUnmeteredTypeValue(legacyType)
+		}
+
+	case *interpreter.StringValue:
+		return &LegacyStringValue{
+			key,
+		}
 	}
 
-	legacyType := legacyType(typeValue.Type)
-	if legacyType == nil {
-		return key
-	}
-
-	return interpreter.NewUnmeteredTypeValue(legacyType)
+	return key
 }
 
 func legacyType(staticType interpreter.StaticType) interpreter.StaticType {
