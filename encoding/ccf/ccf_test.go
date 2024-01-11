@@ -13817,7 +13817,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			},
 		},
 		{
-			name: "nil element type in inclusiverange type",
+			name: "nil element type in InclusiveRange type",
 			data: []byte{
 				// language=edn, format=ccf
 				// 130([145(nil), [10, 20, 5]])
@@ -13856,7 +13856,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid array head in inclusiverange value",
+			name: "invalid array head in InclusiveRange value",
 			data: []byte{
 				// language=edn, format=ccf
 				// 130([145(4), [10, 20, 5]])
@@ -13896,7 +13896,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			},
 		},
 		{
-			name: "incorrect member count (2 instead of 3) in inclusiverange value",
+			name: "incorrect member count (2 instead of 3) in InclusiveRange value",
 			data: []byte{
 				// language=edn, format=ccf
 				// 130([145(4), [10, 20, 5]])
@@ -13931,7 +13931,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid start value in inclusiverange value",
+			name: "invalid start value in InclusiveRange value",
 			data: []byte{
 				// language=edn, format=ccf
 				// 130([145(5), [10, 20, 5]])
@@ -13964,7 +13964,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid end value in inclusiverange value",
+			name: "invalid end value in InclusiveRange value",
 			data: []byte{
 				// language=edn, format=ccf
 				// 130([145(5), [10, 20, 5]])
@@ -13997,7 +13997,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid step value in inclusiverange value",
+			name: "invalid step value in InclusiveRange value",
 			data: []byte{
 				// language=edn, format=ccf
 				// 130([145(5), [10, 20, 5]])
@@ -14226,7 +14226,7 @@ func TestDecodeInvalidData(t *testing.T) {
 			},
 		},
 		{
-			name: "nil element type in inclusiverange type value",
+			name: "nil element type in InclusiveRange type value",
 			data: []byte{
 				// language=edn, format=ccf
 				// 130([137(41), 194([null])])

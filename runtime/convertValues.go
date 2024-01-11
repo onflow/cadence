@@ -1378,7 +1378,7 @@ func (i valueImporter) importInclusiveRangeValue(
 	inter := i.inter
 	locationRange := i.locationRange
 
-	// start, end and step. The order matters.
+	// start, end, and step. The order matters.
 	members := make([]interpreter.IntegerValue, 3)
 
 	// import members.
@@ -1390,7 +1390,7 @@ func (i valueImporter) importInclusiveRangeValue(
 		importedIntegerValue, ok := importedValue.(interpreter.IntegerValue)
 		if !ok {
 			return nil, errors.NewDefaultUserError(
-				"cannot import inclusiverange: start, end and step must be integers",
+				"cannot import InclusiveRange: start, end and step must be integers",
 			)
 		}
 

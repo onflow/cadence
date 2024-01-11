@@ -1510,7 +1510,7 @@ func TestExportInclusiveRangeValue(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("with_step", func(t *testing.T) {
+	t.Run("with step", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1532,7 +1532,7 @@ func TestExportInclusiveRangeValue(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
-	t.Run("without_step", func(t *testing.T) {
+	t.Run("without step", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1650,7 +1650,7 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 		require.Contains(
 			t,
 			userError.Error(),
-			"cannot import inclusiverange: start, end and step must be of the same type",
+			"cannot import InclusiveRange: start, end and step must be of the same type",
 		)
 	})
 
@@ -1680,7 +1680,7 @@ func TestImportInclusiveRangeValue(t *testing.T) {
 		require.Contains(
 			t,
 			userError.Error(),
-			"cannot import inclusiverange: start, end and step must be integers",
+			"cannot import InclusiveRange: start, end and step must be integers",
 		)
 	})
 }
@@ -3559,7 +3559,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
-			label:         "Malformed inclusiverange",
+			label:         "Malformed InclusiveRange",
 			typeSignature: "InclusiveRange<Int>",
 			exportedValue: cadence.NewInclusiveRange(
 				cadence.NewUInt(1),
