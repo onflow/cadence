@@ -1397,8 +1397,14 @@ func (i valueImporter) importInclusiveRangeValue(
 		members[index] = importedIntegerValue
 	}
 
+	startValue := members[0]
+	endValue := members[1]
+	stepValue := members[2]
+
+	startType := startValue.StaticType(inter)
+
 	if inclusiveRangeType == nil {
-		memberSemaType, err := inter.ConvertStaticToSemaType(members[0].StaticType(inter))
+		memberSemaType, err := inter.ConvertStaticToSemaType(startType)
 		if err != nil {
 			return nil, err
 		}
@@ -1410,7 +1416,10 @@ func (i valueImporter) importInclusiveRangeValue(
 		)
 	}
 
-	inclusiveRangeStaticType, ok := interpreter.ConvertSemaToStaticType(inter, inclusiveRangeType).(interpreter.InclusiveRangeStaticType)
+	inclusiveRangeStaticType, ok := interpreter.ConvertSemaToStaticType(
+		inter,
+		inclusiveRangeType,
+	).(interpreter.InclusiveRangeStaticType)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -1420,19 +1429,21 @@ func (i valueImporter) importInclusiveRangeValue(
 	// we do it here because the NewInclusiveRangeValueWithStep constructor performs validations
 	// which involve comparisons between these values and hence they need to be of the same static
 	// type.
-	if members[0].StaticType(inter) != members[1].StaticType(inter) ||
-		members[0].StaticType(inter) != members[2].StaticType(inter) {
+
+	if !startType.Equal(endValue.StaticType(inter)) ||
+		!startType.Equal(stepValue.StaticType(inter)) {
+
 		return nil, errors.NewDefaultUserError(
-			"cannot import inclusiverange: start, end and step must be of the same type",
+			"cannot import InclusiveRange: start, end and step must be of the same type",
 		)
 	}
 
 	return interpreter.NewInclusiveRangeValueWithStep(
 		inter,
 		locationRange,
-		members[0],
-		members[1],
-		members[2],
+		startValue,
+		endValue,
+		stepValue,
 		inclusiveRangeStaticType,
 		inclusiveRangeType,
 	), nil
