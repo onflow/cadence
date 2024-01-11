@@ -2368,7 +2368,7 @@ func TestBlockchain(t *testing.T) {
                 let timeDelta = Fix64(35 * 24 * 60 * 60)
                 Test.moveTime(by: timeDelta + 0.5)
             }
-		`
+        `
 
 		moveTimeInvoked := false
 
@@ -2405,7 +2405,7 @@ func TestBlockchain(t *testing.T) {
                 let timeDelta = Fix64(35 * 24 * 60 * 60) * -1.0
                 Test.moveTime(by: timeDelta)
             }
-		`
+        `
 
 		moveTimeInvoked := false
 
@@ -2439,7 +2439,7 @@ func TestBlockchain(t *testing.T) {
             fun testMoveTime() {
                 Test.moveTime(by: 3000)
             }
-		`
+        `
 
 		moveTimeInvoked := false
 
