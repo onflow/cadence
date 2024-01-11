@@ -358,6 +358,7 @@ func (d *Decoder) decodeTypeAndValue(types *cadenceTypeByCCFTypeID) (cadence.Val
 //	/ path-value
 //	/ path-capability-value
 //	/ id-capability-value
+//	/ inclusiverange-value
 //	/ function-value
 //	/ type-value
 //
@@ -548,6 +549,9 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 	case *cadence.ReferenceType:
 		// When static type is a reference type, encoded value is its deferenced type.
 		return d.decodeValue(t.Type, types)
+
+	case *cadence.InclusiveRangeType:
+		return d.decodeInclusiveRange(t, types)
 
 	default:
 		nt, err := d.dec.NextType()
@@ -1311,6 +1315,52 @@ func (d *Decoder) decodeEnum(typ *cadence.EnumType, types *cadenceTypeByCCFTypeI
 	return v.WithType(typ), nil
 }
 
+// decodeInclusiveRange decodes encoded inclusiverange-value as
+// language=CDDL
+// inclusiverange-value = [
+//
+//	start: value,
+//	end: value,
+//	step: value,
+//
+// ]
+func (d *Decoder) decodeInclusiveRange(typ *cadence.InclusiveRangeType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
+	// Decode array head of length 3.
+	err := decodeCBORArrayWithKnownSize(d.dec, 3)
+	if err != nil {
+		return nil, err
+	}
+
+	elementType := typ.ElementType
+
+	// Decode start.
+	start, err := d.decodeValue(elementType, types)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode end.
+	end, err := d.decodeValue(elementType, types)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode step.
+	step, err := d.decodeValue(elementType, types)
+	if err != nil {
+		return nil, err
+	}
+
+	v := cadence.NewMeteredInclusiveRange(
+		d.gauge,
+		start,
+		end,
+		step,
+	)
+
+	return v.WithType(typ), nil
+}
+
 // decodePath decodes path-value as
 // language=CDDL
 // path-value = [
@@ -1423,6 +1473,7 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 //	/ varsized-array-type-value
 //	/ constsized-array-type-value
 //	/ dict-type-value
+//	/ inclusiverange-type-value
 //	/ struct-type-value
 //	/ resource-type-value
 //	/ contract-type-value
@@ -1462,6 +1513,9 @@ func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type
 
 	case CBORTagDictTypeValue:
 		return d.decodeDictType(visited, d.decodeTypeValue)
+
+	case CBORTagInclusiveRangeTypeValue:
+		return d.decodeInclusiveRangeType(visited, d.decodeTypeValue)
 
 	case CBORTagCapabilityTypeValue:
 		return d.decodeCapabilityType(visited, d.decodeNullableTypeValue)

@@ -1313,15 +1313,15 @@ func TestCheckInvalidDictionaryAccessOptionalReference(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		access(all) struct S {
-			access(all) let foo: Number
-			init() {
-				self.foo = 0
-			}
-		}
-		let dict: {String: S} = {}
-		let s = &dict[""] as &S?
-		let n = s.foo
+        access(all) struct S {
+            access(all) let foo: Number
+            init() {
+                self.foo = 0
+            }
+        }
+        let dict: {String: S} = {}
+        let s = &dict[""] as &S?
+        let n = s.foo
     `)
 
 	errs := RequireCheckerErrors(t, err, 1)
@@ -1334,14 +1334,14 @@ func TestCheckInvalidDictionaryAccessNonOptionalReference(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		access(all) struct S {
-			access(all) let foo: Number
-			init() {
-				self.foo = 0
-			}
-		}
-		let dict: {String: S} = {}
-		let s = &dict[""] as &S
+        access(all) struct S {
+            access(all) let foo: Number
+            init() {
+                self.foo = 0
+            }
+        }
+        let dict: {String: S} = {}
+        let s = &dict[""] as &S
     `)
 
 	errs := RequireCheckerErrors(t, err, 1)
@@ -1354,15 +1354,15 @@ func TestCheckArrayAccessReference(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		access(all) struct S {
-			access(all) let foo: Number
-			init() {
-				self.foo = 0
-			}
-		}
-		let dict: [S] = []
-		let s = &dict[0] as &S
-		let n = s.foo
+        access(all) struct S {
+            access(all) let foo: Number
+            init() {
+                self.foo = 0
+            }
+        }
+        let dict: [S] = []
+        let s = &dict[0] as &S
+        let n = s.foo
     `)
 
 	require.NoError(t, err)
@@ -2939,9 +2939,9 @@ func TestCheckResourceReferenceMethodInvocationAfterMove(t *testing.T) {
             // Moving the resource should update the tracking
             var newFoo <- foo
 
-        	fooRef.id
+            fooRef.id
 
-        	destroy newFoo
+            destroy newFoo
         }
     `)
 
@@ -3171,9 +3171,9 @@ func TestCheckDereference(t *testing.T) {
 				typString,
 				fmt.Sprintf(
 					`
-						let x: &%[1]s = &1
-						let y: %[1]s = *x
-					`,
+                      let x: &%[1]s = &1
+                      let y: %[1]s = *x
+                    `,
 					integerType,
 				),
 				integerType,
@@ -3189,9 +3189,9 @@ func TestCheckDereference(t *testing.T) {
 				typString,
 				fmt.Sprintf(
 					`
-						let x: &%[1]s = &1.0
-						let y: %[1]s = *x
-					`,
+                      let x: &%[1]s = &1.0
+                      let y: %[1]s = *x
+                    `,
 					fixedPointType,
 				),
 				fixedPointType,
@@ -3233,10 +3233,10 @@ func TestCheckDereference(t *testing.T) {
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
-						let value: %[1]s = %[2]s
-						let x: &%[1]s = &value
-						let y: %[1]s = *x
-					`,
+                      let value: %[1]s = %[2]s
+                      let x: &%[1]s = &value
+                      let y: %[1]s = *x
+                    `,
 					testCase.ty,
 					testCase.initializer,
 				),
@@ -3314,10 +3314,10 @@ func TestCheckDereference(t *testing.T) {
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
-	                    let value: %[1]s = %[2]s
-	                    let x: &%[1]s = &value
-	                    let y: %[1]s = *x
-	                `,
+                      let value: %[1]s = %[2]s
+                      let x: &%[1]s = &value
+                      let y: %[1]s = *x
+                    `,
 					testCase.ty,
 					testCase.initializer,
 				),
@@ -3330,28 +3330,28 @@ func TestCheckDereference(t *testing.T) {
 			t,
 			"[Struct]",
 			`
-				struct S{}
+              struct S{}
 
-				fun test() {
-					let value: [S] = [S(), S()]
-					let x: &[S] = &value
-					let y: [S] = *x
-				}
-			`,
+              fun test() {
+                  let value: [S] = [S(), S()]
+                  let x: &[S] = &value
+                  let y: [S] = *x
+              }
+            `,
 		)
 
 		runInvalidTestCase(
 			t,
 			"[Struct; 3]",
 			`
-				struct S{}
+              struct S{}
 
-				fun test() {
-					let value: [S; 3] = [S(),S(),S()]
-					let x: &[S; 3] = &value
-					let y: [S; 3] = *x
-				}
-			`,
+              fun test() {
+                  let value: [S; 3] = [S(),S(),S()]
+                  let x: &[S; 3] = &value
+                  let y: [S; 3] = *x
+              }
+            `,
 		)
 	})
 
@@ -3396,10 +3396,10 @@ func TestCheckDereference(t *testing.T) {
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
-						let value: %[1]s = %[2]s
-						let x: &%[1]s = &value
-						let y: %[1]s = *x
-					`,
+                      let value: %[1]s = %[2]s
+                      let x: &%[1]s = &value
+                      let y: %[1]s = *x
+                    `,
 					testCase.ty,
 					testCase.initializer,
 				),
@@ -3412,14 +3412,14 @@ func TestCheckDereference(t *testing.T) {
 			t,
 			"{Int: Struct}",
 			`
-				struct S{}
+              struct S{}
 
-				fun test() {
-					let value: {Int: S} = { 1: S(), 2: S() }
-					let x: &{Int: S} = &value
-					let y: {Int: S} = *x
-				}
-			`,
+              fun test() {
+                  let value: {Int: S} = { 1: S(), 2: S() }
+                  let x: &{Int: S} = &value
+                  let y: {Int: S} = *x
+              }
+            `,
 		)
 	})
 
@@ -3427,36 +3427,36 @@ func TestCheckDereference(t *testing.T) {
 		t,
 		"Resource",
 		`
-			resource interface I {
-				fun foo()
-			}
+          resource interface I {
+              fun foo()
+          }
 
-			resource R: I {
-				fun foo() {}
-			}
+          resource R: I {
+              fun foo() {}
+          }
 
-			fun test() {
-				let r <- create R()
-				let ref = &r as &{I}
-				let deref <- *ref
-				destroy r
-                destroy deref
-			}
-		`,
+          fun test() {
+              let r <- create R()
+              let ref = &r as &{I}
+              let deref <- *ref
+              destroy r
+              destroy deref
+          }
+        `,
 	)
 
 	runInvalidTestCase(
 		t,
 		"Struct",
 		`
-			struct S{}
+          struct S{}
 
-			fun test() {
-				let s = S()
-				let ref = &s as &S
-				let deref = *ref
-			}
-		`,
+          fun test() {
+              let s = S()
+              let ref = &s as &S
+              let deref = *ref
+          }
+        `,
 	)
 
 	t.Run("built-in", func(t *testing.T) {
@@ -3467,10 +3467,40 @@ func TestCheckDereference(t *testing.T) {
 			t,
 			"Account",
 			`
-				fun test(ref: &Account): Account {
-					return *ref
-				}
-			`,
+              fun test(ref: &Account): Account {
+                  return *ref
+              }
+            `,
+		)
+	})
+
+	t.Run("Optional", func(t *testing.T) {
+		t.Parallel()
+
+		runValidTestCase(
+			t,
+			"valid",
+			`
+              let ref: &Int? = &1 as &Int
+              let y = *ref
+            `,
+			&sema.OptionalType{
+				Type: sema.IntType,
+			},
+		)
+
+		runInvalidTestCase(
+			t,
+			"invalid",
+			`
+              struct S {}
+
+              fun test() {
+                  let s = S()
+                  let ref: &S? = &s as &S
+                  let deref = *ref
+              }
+            `,
 		)
 	})
 }

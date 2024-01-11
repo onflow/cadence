@@ -170,6 +170,8 @@ var (
 	CapabilityStaticTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCapabilityStaticType)
 	FunctionStaticTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindFunctionStaticType)
 	EntitlementMapStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementMapStaticAccess)
+	InclusiveRangeStaticTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindInclusiveRangeStaticType)
+
 	// Sema types
 
 	VariableSizedSemaTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindVariableSizedSemaType)
@@ -182,6 +184,7 @@ var (
 	EntitlementMapSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindEntitlementMapSemaType)
 	EntitlementRelationSemaTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindEntitlementRelationSemaType)
 	CapabilitySemaTypeMemoryUsage          = NewConstantMemoryUsage(MemoryKindCapabilitySemaType)
+	InclusiveRangeSemaTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindInclusiveRangeSemaType)
 
 	// Storage related memory usages
 
@@ -193,6 +196,7 @@ var (
 	// Cadence external values
 
 	CadenceDictionaryValueMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceDictionaryValue)
+	CadenceInclusiveRangeValueMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceInclusiveRangeValue)
 	CadenceArrayValueBaseMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceArrayValueBase)
 	CadenceStructValueBaseMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceStructValueBase)
 	CadenceResourceValueBaseMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceResourceValueBase)
@@ -218,6 +222,7 @@ var (
 	CadenceContractInterfaceTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindCadenceContractInterfaceType)
 	CadenceContractTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceContractType)
 	CadenceDictionaryTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceDictionaryType)
+	CadenceInclusiveRangeTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceInclusiveRangeType)
 	CadenceEnumTypeMemoryUsage               = NewConstantMemoryUsage(MemoryKindCadenceEnumType)
 	CadenceEventTypeMemoryUsage              = NewConstantMemoryUsage(MemoryKindCadenceEventType)
 	CadenceFunctionTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceFunctionType)
@@ -264,6 +269,7 @@ var (
 	CapabilityStaticTypeStringMemoryUsage            = NewRawStringMemoryUsage(12) // Capability<>
 	IntersectionStaticTypeStringMemoryUsage          = NewRawStringMemoryUsage(2)  // {}
 	IntersectionStaticTypeSeparatorStringMemoryUsage = NewRawStringMemoryUsage(2)  // ,
+	InclusiveRangeStaticTypeStringMemoryUsage        = NewRawStringMemoryUsage(16) // InclusiveRange<>
 )
 
 func UseMemory(gauge MemoryGauge, usage MemoryUsage) {

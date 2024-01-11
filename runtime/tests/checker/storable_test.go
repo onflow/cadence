@@ -136,6 +136,7 @@ func TestCheckStorable(t *testing.T) {
 		sema.NeverType,
 		sema.VoidType,
 		sema.AccountType,
+		&sema.InclusiveRangeType{MemberType: sema.IntType},
 	}
 
 	// Capabilities of non-storable types are storable

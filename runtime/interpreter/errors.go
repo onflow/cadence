@@ -1033,6 +1033,25 @@ func (e NestedReferenceError) Error() string {
 	)
 }
 
+// InclusiveRangeConstructionError
+
+type InclusiveRangeConstructionError struct {
+	LocationRange
+	Message string
+}
+
+var _ errors.UserError = InclusiveRangeConstructionError{}
+
+func (InclusiveRangeConstructionError) IsUserError() {}
+
+func (e InclusiveRangeConstructionError) Error() string {
+	const message = "InclusiveRange construction failed"
+	if e.Message == "" {
+		return message
+	}
+	return fmt.Sprintf("%s: %s", message, e.Message)
+}
+
 // ResourceReferenceDereferenceError
 type ResourceReferenceDereferenceError struct {
 	LocationRange

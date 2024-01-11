@@ -697,16 +697,33 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 		)
 
 	case ast.OperationMul:
-		referenceValue, ok := value.(ReferenceValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
+
+		if _, ok := value.(NilValue); ok {
+			return Nil
 		}
+
 		locationRange := LocationRange{
 			Location:    interpreter.Location,
 			HasPosition: expression,
 		}
+		var isOptional bool
 
-		return DereferenceValue(interpreter, locationRange, referenceValue)
+		if someValue, ok := value.(*SomeValue); ok {
+			isOptional = true
+			value = someValue.InnerValue(interpreter, locationRange)
+		}
+
+		referenceValue, ok := value.(ReferenceValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		dereferencedValue := DereferenceValue(interpreter, locationRange, referenceValue)
+		if isOptional {
+			return NewSomeValueNonCopying(interpreter, dereferencedValue)
+		} else {
+			return dereferencedValue
+		}
 
 	case ast.OperationMove:
 		interpreter.invalidateResource(value)
