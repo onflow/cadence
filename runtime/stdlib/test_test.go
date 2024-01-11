@@ -726,7 +726,7 @@ func TestAssertEqual(t *testing.T) {
             fun test() {
                 Test.assertEqual("this string", "this string")
             }
-        `
+		`
 
 		inter, err := newTestContractInterpreter(t, script)
 		require.NoError(t, err)
@@ -745,7 +745,7 @@ func TestAssertEqual(t *testing.T) {
             fun test() {
                 Test.assertEqual(15, 21)
             }
-        `
+		`
 
 		inter, err := newTestContractInterpreter(t, script)
 		require.NoError(t, err)
@@ -760,7 +760,7 @@ func TestAssertEqual(t *testing.T) {
 		)
 	})
 
-	t.Run("different types", func(t *testing.T) {
+	t.Run("fail with value equality on optional type", func(t *testing.T) {
 		t.Parallel()
 
 		script := `
@@ -768,9 +768,11 @@ func TestAssertEqual(t *testing.T) {
 
             access(all)
             fun test() {
-                Test.assertEqual(true, 1)
+                let expected: Int = 15
+                let actual: Int? = 15
+                Test.assertEqual(expected, actual)
             }
-        `
+		`
 
 		inter, err := newTestContractInterpreter(t, script)
 		require.NoError(t, err)
@@ -781,7 +783,32 @@ func TestAssertEqual(t *testing.T) {
 		assert.ErrorContains(
 			t,
 			err,
-			"assertion failed: not equal: expected: true, actual: 1",
+			"assertion failed: not equal types: expected: Int, actual: Int?",
+		)
+	})
+
+	t.Run("different types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            access(all)
+            fun test() {
+                Test.assertEqual(true, 1)
+            }
+		`
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"assertion failed: not equal types: expected: Bool, actual: Int",
 		)
 	})
 
@@ -804,7 +831,7 @@ func TestAssertEqual(t *testing.T) {
                 let actual = Address(0xee82856bf20e2aa6)
                 Test.assertEqual(expected, actual)
             }
-        `
+		`
 
 		inter, err := newTestContractInterpreter(t, script)
 		require.NoError(t, err)
@@ -852,7 +879,7 @@ func TestAssertEqual(t *testing.T) {
                 let actual = Foo(answer: 420)
                 Test.assertEqual(expected, actual)
             }
-        `
+		`
 
 		inter, err := newTestContractInterpreter(t, script)
 		require.NoError(t, err)
@@ -889,7 +916,7 @@ func TestAssertEqual(t *testing.T) {
                 let actual = [1, 2]
                 Test.assertEqual(expected, actual)
             }
-        `
+		`
 
 		inter, err := newTestContractInterpreter(t, script)
 		require.NoError(t, err)
@@ -926,7 +953,7 @@ func TestAssertEqual(t *testing.T) {
                 let actual = {1: true, 2: true}
                 Test.assertEqual(expected, actual)
             }
-        `
+		`
 
 		inter, err := newTestContractInterpreter(t, script)
 		require.NoError(t, err)
@@ -959,7 +986,7 @@ func TestAssertEqual(t *testing.T) {
 
             access(all)
             resource Foo {}
-        `
+		`
 
 		_, err := newTestContractInterpreter(t, script)
 
@@ -985,7 +1012,7 @@ func TestAssertEqual(t *testing.T) {
             resource Foo {}
             access(all)
             struct Bar {}
-        `
+		`
 
 		_, err := newTestContractInterpreter(t, script)
 
@@ -1003,14 +1030,14 @@ func TestAssertEqual(t *testing.T) {
             fun test() {
                 let foo = Foo()
                 let bar <- create Bar()
-                Test.expect(foo, Test.equal(<-bar))
+                Test.assertEqual(foo, <-bar)
             }
 
             access(all)
             struct Foo {}
             access(all)
             resource Bar {}
-        `
+		`
 
 		_, err := newTestContractInterpreter(t, script)
 
