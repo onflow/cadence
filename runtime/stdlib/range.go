@@ -80,7 +80,7 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 			memoryGauge common.MemoryGauge,
 			typeArguments *sema.TypeParameterTypeOrderedMap,
 			astTypeArguments []*ast.TypeAnnotation,
-			astInvocationRange ast.Range,
+			invocationRange ast.HasPosition,
 			report func(error),
 		) {
 			memberType, ok := typeArguments.Get(typeParameter)
@@ -89,21 +89,27 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 				panic(errors.NewUnreachableError())
 			}
 
-			paramAstRange := astInvocationRange
-			// If type argument was provided, use its range otherwise fallback to invocation range.
-			if len(astTypeArguments) > 0 {
-				paramAstRange = ast.NewRangeFromPositioned(memoryGauge, astTypeArguments[0])
-			}
-
 			// memberType must only be a leaf integer type.
 			for _, ty := range sema.AllNonLeafIntegerTypes {
-				if memberType == ty {
-					report(&sema.InvalidTypeArgumentError{
-						TypeArgumentName: typeParameter.Name,
-						Range:            paramAstRange,
-						Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
-					})
+				if memberType != ty {
+					continue
 				}
+
+				var errorRange ast.HasPosition
+				// If type argument was provided, use its range otherwise fallback to invocation range.
+				if len(astTypeArguments) > 0 {
+					errorRange = astTypeArguments[0]
+				} else {
+					errorRange = invocationRange
+				}
+
+				report(&sema.InvalidTypeArgumentError{
+					TypeArgumentName: typeParameter.Name,
+					Range:            ast.NewRangeFromPositioned(memoryGauge, errorRange),
+					Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
+				})
+
+				break
 			}
 		},
 	}
