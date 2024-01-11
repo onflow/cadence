@@ -412,6 +412,29 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 		assert.Equal(t, uint64(1), meter[common.MemoryKindCompositeValueBase])
 		assert.Equal(t, uint64(71), meter[common.MemoryKindRawString])
 	})
+
+	t.Run("InclusiveRange", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun main(x: InclusiveRange<Int>) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		inclusiveRangeValue := &cadence.InclusiveRange{
+			InclusiveRangeType: &cadence.InclusiveRangeType{
+				ElementType: cadence.IntType,
+			},
+			Start: cadence.NewInt(1),
+			End:   cadence.NewInt(50),
+			Step:  cadence.NewInt(2),
+		}
+
+		executeScript(t, script, meter, inclusiveRangeValue)
+		assert.Equal(t, uint64(1), meter[common.MemoryKindCompositeValueBase])
+		assert.Equal(t, uint64(1), meter[common.MemoryKindInclusiveRangeStaticType])
+		assert.Equal(t, uint64(1), meter[common.MemoryKindCadenceInclusiveRangeValue])
+	})
 }
 
 type testMemoryError struct{}

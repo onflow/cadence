@@ -116,6 +116,12 @@ type jsonDictionaryItem struct {
 	Value jsonValue `json:"value"`
 }
 
+type jsonInclusiveRangeValue struct {
+	Start jsonValue `json:"start"`
+	End   jsonValue `json:"end"`
+	Step  jsonValue `json:"step"`
+}
+
 type jsonCompositeValue struct {
 	ID     string               `json:"id"`
 	Fields []jsonCompositeField `json:"fields"`
@@ -216,47 +222,53 @@ type jsonFunctionValue struct {
 	FunctionType jsonValue `json:"functionType"`
 }
 
+type jsonInclusiveRangeType struct {
+	ElementType jsonValue `json:"element"`
+	Kind        string    `json:"kind"`
+}
+
 const (
-	voidTypeStr       = "Void"
-	optionalTypeStr   = "Optional"
-	boolTypeStr       = "Bool"
-	characterTypeStr  = "Character"
-	stringTypeStr     = "String"
-	addressTypeStr    = "Address"
-	intTypeStr        = "Int"
-	int8TypeStr       = "Int8"
-	int16TypeStr      = "Int16"
-	int32TypeStr      = "Int32"
-	int64TypeStr      = "Int64"
-	int128TypeStr     = "Int128"
-	int256TypeStr     = "Int256"
-	uintTypeStr       = "UInt"
-	uint8TypeStr      = "UInt8"
-	uint16TypeStr     = "UInt16"
-	uint32TypeStr     = "UInt32"
-	uint64TypeStr     = "UInt64"
-	uint128TypeStr    = "UInt128"
-	uint256TypeStr    = "UInt256"
-	word8TypeStr      = "Word8"
-	word16TypeStr     = "Word16"
-	word32TypeStr     = "Word32"
-	word64TypeStr     = "Word64"
-	word128TypeStr    = "Word128"
-	word256TypeStr    = "Word256"
-	fix64TypeStr      = "Fix64"
-	ufix64TypeStr     = "UFix64"
-	arrayTypeStr      = "Array"
-	dictionaryTypeStr = "Dictionary"
-	structTypeStr     = "Struct"
-	resourceTypeStr   = "Resource"
-	attachmentTypeStr = "Attachment"
-	eventTypeStr      = "Event"
-	contractTypeStr   = "Contract"
-	pathTypeStr       = "Path"
-	typeTypeStr       = "Type"
-	capabilityTypeStr = "Capability"
-	enumTypeStr       = "Enum"
-	functionTypeStr   = "Function"
+	voidTypeStr           = "Void"
+	optionalTypeStr       = "Optional"
+	boolTypeStr           = "Bool"
+	characterTypeStr      = "Character"
+	stringTypeStr         = "String"
+	addressTypeStr        = "Address"
+	intTypeStr            = "Int"
+	int8TypeStr           = "Int8"
+	int16TypeStr          = "Int16"
+	int32TypeStr          = "Int32"
+	int64TypeStr          = "Int64"
+	int128TypeStr         = "Int128"
+	int256TypeStr         = "Int256"
+	uintTypeStr           = "UInt"
+	uint8TypeStr          = "UInt8"
+	uint16TypeStr         = "UInt16"
+	uint32TypeStr         = "UInt32"
+	uint64TypeStr         = "UInt64"
+	uint128TypeStr        = "UInt128"
+	uint256TypeStr        = "UInt256"
+	word8TypeStr          = "Word8"
+	word16TypeStr         = "Word16"
+	word32TypeStr         = "Word32"
+	word64TypeStr         = "Word64"
+	word128TypeStr        = "Word128"
+	word256TypeStr        = "Word256"
+	fix64TypeStr          = "Fix64"
+	ufix64TypeStr         = "UFix64"
+	arrayTypeStr          = "Array"
+	dictionaryTypeStr     = "Dictionary"
+	structTypeStr         = "Struct"
+	resourceTypeStr       = "Resource"
+	attachmentTypeStr     = "Attachment"
+	eventTypeStr          = "Event"
+	contractTypeStr       = "Contract"
+	pathTypeStr           = "Path"
+	typeTypeStr           = "Type"
+	capabilityTypeStr     = "Capability"
+	enumTypeStr           = "Enum"
+	functionTypeStr       = "Function"
+	inclusiveRangeTypeStr = "InclusiveRange"
 )
 
 // Prepare traverses the object graph of the provided value and constructs
@@ -323,6 +335,8 @@ func Prepare(v cadence.Value) jsonValue {
 		return prepareArray(v)
 	case cadence.Dictionary:
 		return prepareDictionary(v)
+	case *cadence.InclusiveRange:
+		return prepareInclusiveRange(v)
 	case cadence.Struct:
 		return prepareStruct(v)
 	case cadence.Resource:
@@ -578,6 +592,17 @@ func prepareDictionary(v cadence.Dictionary) jsonValue {
 	}
 }
 
+func prepareInclusiveRange(v *cadence.InclusiveRange) jsonValue {
+	return jsonValueObject{
+		Type: inclusiveRangeTypeStr,
+		Value: jsonInclusiveRangeValue{
+			Start: Prepare(v.Start),
+			End:   Prepare(v.End),
+			Step:  Prepare(v.Step),
+		},
+	}
+}
+
 func prepareStruct(v cadence.Struct) jsonValue {
 	return prepareComposite(structTypeStr, v.StructType.ID(), v.StructType.Fields, v.Fields)
 }
@@ -790,6 +815,11 @@ func prepareType(typ cadence.Type, results typePreparationResults) jsonValue {
 			Kind:      "Dictionary",
 			KeyType:   prepareType(typ.KeyType, results),
 			ValueType: prepareType(typ.ElementType, results),
+		}
+	case *cadence.InclusiveRangeType:
+		return jsonInclusiveRangeType{
+			Kind:        "InclusiveRange",
+			ElementType: prepareType(typ.ElementType, results),
 		}
 	case *cadence.StructType:
 		return jsonNominalType{

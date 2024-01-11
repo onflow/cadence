@@ -1467,6 +1467,68 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 	}
 }
 
+func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
+
+	options := ParseCheckAndInterpretOptions{
+		CheckerConfig: &sema.Config{
+			BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+				return baseValueActivation
+			},
+		},
+		Config: &interpreter.Config{
+			BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+				return baseActivation
+			},
+		},
+	}
+
+	for operation, returnsOptional := range dynamicCastingOperations {
+
+		t.Run(operation.Symbol(), func(t *testing.T) {
+			t.Run("invalid cast", func(t *testing.T) {
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					fmt.Sprintf(
+						`
+							fun test(): InclusiveRange<UInt256>? {
+								let x: InclusiveRange<Int> = InclusiveRange(10, 20)
+								return x %s InclusiveRange<UInt256>
+							}
+						`,
+						operation.Symbol(),
+					),
+					options,
+				)
+				require.NoError(t, err)
+
+				result, err := inter.Invoke("test")
+
+				if returnsOptional {
+					require.NoError(t, err)
+					AssertValuesEqual(
+						t,
+						inter,
+						interpreter.Nil,
+						result,
+					)
+				} else {
+					RequireError(t, err)
+
+					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+				}
+			})
+		})
+	}
+}
+
 func TestInterpretDynamicCastingResourceType(t *testing.T) {
 
 	t.Parallel()

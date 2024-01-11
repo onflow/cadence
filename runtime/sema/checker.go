@@ -2350,6 +2350,7 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 	}
 
 	checker.checkInvalidInterfaceAsType(typeAnnotation.Type, pos)
+	typeAnnotation.Type.CheckInstantiated(pos, checker.memoryGauge, checker.report)
 }
 
 func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition) {
@@ -2474,7 +2475,8 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 
 				err := typeParameter.checkTypeBound(
 					typeArgument,
-					ast.NewRangeFromPositioned(checker.memoryGauge, rawTypeArgument),
+					checker.memoryGauge,
+					rawTypeArgument,
 				)
 				checker.report(err)
 			}
@@ -2502,7 +2504,12 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 		return ty
 	}
 
-	return parameterizedType.Instantiate(typeArguments, checker.report)
+	return parameterizedType.Instantiate(
+		checker.memoryGauge,
+		typeArguments,
+		t.TypeArguments,
+		checker.report,
+	)
 }
 
 func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {

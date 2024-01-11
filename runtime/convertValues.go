@@ -372,6 +372,16 @@ func exportCompositeValue(
 		}
 	}
 
+	switch semaType := semaType.(type) {
+	case *sema.CompositeType:
+		// Continue.
+	case *sema.InclusiveRangeType:
+		// InclusiveRange is stored as a CompositeValue but isn't a CompositeType.
+		return exportCompositeValueAsInclusiveRange(v, semaType, inter, locationRange, seenReferences)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
 	compositeType, ok := semaType.(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -596,6 +606,63 @@ func exportDictionaryValue(
 	return dictionary.WithType(exportType), err
 }
 
+func exportCompositeValueAsInclusiveRange(
+	v interpreter.Value,
+	inclusiveRangeType *sema.InclusiveRangeType,
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	seenReferences seenReferences,
+) (
+	*cadence.InclusiveRange,
+	error,
+) {
+	compositeValue, ok := v.(*interpreter.CompositeValue)
+	if !ok {
+		// InclusiveRange is stored as a CompositeValue.
+		panic(errors.NewUnreachableError())
+	}
+
+	getNonComputedField := func(fieldName string) (cadence.Value, error) {
+		fieldValue := compositeValue.GetField(inter, locationRange, fieldName)
+		if fieldValue == nil {
+			// Bug if the field is absent.
+			panic(errors.NewUnreachableError())
+		}
+
+		return exportValueWithInterpreter(
+			fieldValue,
+			inter,
+			locationRange,
+			seenReferences,
+		)
+	}
+
+	startValue, err := getNonComputedField(sema.InclusiveRangeTypeStartFieldName)
+	if err != nil {
+		return &cadence.InclusiveRange{}, err
+	}
+
+	endValue, err := getNonComputedField(sema.InclusiveRangeTypeEndFieldName)
+	if err != nil {
+		return &cadence.InclusiveRange{}, err
+	}
+
+	stepValue, err := getNonComputedField(sema.InclusiveRangeTypeStepFieldName)
+	if err != nil {
+		return &cadence.InclusiveRange{}, err
+	}
+
+	inclusiveRange := cadence.NewMeteredInclusiveRange(
+		inter,
+		startValue,
+		endValue,
+		stepValue,
+	)
+
+	t := exportInclusiveRangeType(inter, inclusiveRangeType, map[sema.TypeID]cadence.Type{})
+	return inclusiveRange.WithType(t), err
+}
+
 func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) (cadence.Path, error) {
 	return cadence.NewMeteredPath(
 		gauge,
@@ -801,6 +868,8 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 			v.EnumType.Fields,
 			v.Fields,
 		)
+	case *cadence.InclusiveRange:
+		return i.importInclusiveRangeValue(v, expectedType)
 	case cadence.TypeValue:
 		return i.importTypeValue(v.StaticType)
 	case cadence.Capability:
@@ -1288,6 +1357,95 @@ func (i valueImporter) importDictionaryValue(
 		locationRange,
 		dictionaryStaticType,
 		keysAndValues...,
+	), nil
+}
+
+func (i valueImporter) importInclusiveRangeValue(
+	v *cadence.InclusiveRange,
+	expectedType sema.Type,
+) (
+	*interpreter.CompositeValue,
+	error,
+) {
+
+	var memberType sema.Type
+
+	inclusiveRangeType, ok := expectedType.(*sema.InclusiveRangeType)
+	if ok {
+		memberType = inclusiveRangeType.MemberType
+	}
+
+	inter := i.inter
+	locationRange := i.locationRange
+
+	// start, end, and step. The order matters.
+	members := make([]interpreter.IntegerValue, 3)
+
+	// import members.
+	for index, value := range []cadence.Value{v.Start, v.End, v.Step} {
+		importedValue, err := i.importValue(value, memberType)
+		if err != nil {
+			return nil, err
+		}
+		importedIntegerValue, ok := importedValue.(interpreter.IntegerValue)
+		if !ok {
+			return nil, errors.NewDefaultUserError(
+				"cannot import InclusiveRange: start, end and step must be integers",
+			)
+		}
+
+		members[index] = importedIntegerValue
+	}
+
+	startValue := members[0]
+	endValue := members[1]
+	stepValue := members[2]
+
+	startType := startValue.StaticType(inter)
+
+	if inclusiveRangeType == nil {
+		memberSemaType, err := inter.ConvertStaticToSemaType(startType)
+		if err != nil {
+			return nil, err
+		}
+
+		memberType = memberSemaType
+		inclusiveRangeType = sema.NewInclusiveRangeType(
+			inter,
+			memberType,
+		)
+	}
+
+	inclusiveRangeStaticType, ok := interpreter.ConvertSemaToStaticType(
+		inter,
+		inclusiveRangeType,
+	).(interpreter.InclusiveRangeStaticType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Ensure that start, end and step have the same static type.
+	// Usually this validation would be done outside of this function in ConformsToStaticType but
+	// we do it here because the NewInclusiveRangeValueWithStep constructor performs validations
+	// which involve comparisons between these values and hence they need to be of the same static
+	// type.
+
+	if !startType.Equal(endValue.StaticType(inter)) ||
+		!startType.Equal(stepValue.StaticType(inter)) {
+
+		return nil, errors.NewDefaultUserError(
+			"cannot import InclusiveRange: start, end and step must be of the same type",
+		)
+	}
+
+	return interpreter.NewInclusiveRangeValueWithStep(
+		inter,
+		locationRange,
+		startValue,
+		endValue,
+		stepValue,
+		inclusiveRangeStaticType,
+		inclusiveRangeType,
 	), nil
 }
 
