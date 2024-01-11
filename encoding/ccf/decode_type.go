@@ -301,7 +301,7 @@ func (d *Decoder) decodeInclusiveRangeType(
 	}
 
 	if elementType == nil {
-		return nil, errors.New("unexpected nil type as inclusiverange element type")
+		return nil, errors.New("unexpected nil type as InclusiveRange element type")
 	}
 
 	return cadence.NewMeteredInclusiveRangeType(d.gauge, elementType), nil

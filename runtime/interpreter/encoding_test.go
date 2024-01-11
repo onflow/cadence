@@ -3422,7 +3422,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 		)
 	})
 
-	t.Run("inclusiverange, int", func(t *testing.T) {
+	t.Run("InclusiveRange, Int", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3453,7 +3453,7 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 		)
 	})
 
-	t.Run("inclusiverange, uint256", func(t *testing.T) {
+	t.Run("InclusiveRange, UInt256", func(t *testing.T) {
 
 		t.Parallel()
 

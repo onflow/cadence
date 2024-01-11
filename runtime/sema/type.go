@@ -3868,14 +3868,14 @@ func (t *FunctionType) CheckInstantiated(pos ast.HasPosition, memoryGauge common
 type ArgumentExpressionsCheck func(
 	checker *Checker,
 	argumentExpressions []ast.Expression,
-	invocationRange ast.Range,
+	invocationRange ast.HasPosition,
 )
 
 type TypeArgumentsCheck func(
 	memoryGauge common.MemoryGauge,
 	typeArguments *TypeParameterTypeOrderedMap,
 	astTypeArguments []*ast.TypeAnnotation,
-	astInvocationRange ast.Range,
+	invocationRange ast.HasPosition,
 	report func(err error),
 )
 
@@ -4230,7 +4230,7 @@ var AddressConversionFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: AddressTypeAnnotation,
-	ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
+	ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.HasPosition) {
 		if len(argumentExpressions) < 1 {
 			return
 		}
@@ -4317,7 +4317,7 @@ func init() {
 }
 
 func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressionsCheck {
-	return func(checker *Checker, arguments []ast.Expression, invocationRange ast.Range) {
+	return func(checker *Checker, arguments []ast.Expression, invocationRange ast.HasPosition) {
 		if len(arguments) < 1 {
 			return
 		}
@@ -4331,8 +4331,11 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 					checker.Elaboration.SetNumberConversionArgumentTypes(
 						argument,
 						NumberConversionArgumentTypes{
-							Type:  targetType,
-							Range: invocationRange,
+							Type: targetType,
+							Range: ast.NewRangeFromPositioned(
+								checker.memoryGauge,
+								invocationRange,
+							),
 						},
 					)
 				}
@@ -4344,8 +4347,11 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 					checker.Elaboration.SetNumberConversionArgumentTypes(
 						argument,
 						NumberConversionArgumentTypes{
-							Type:  targetType,
-							Range: invocationRange,
+							Type: targetType,
+							Range: ast.NewRangeFromPositioned(
+								checker.memoryGauge,
+								invocationRange,
+							),
 						},
 					)
 				}
