@@ -45,6 +45,7 @@ type decodeTypeFn func(types *cadenceTypeByCCFTypeID) (cadence.Type, error)
 //	/ reference-type
 //	/ intersection-type
 //	/ capability-type
+//	/ inclusiverange-type
 //	/ type-ref
 //
 // All exported Cadence types needs to be handled in this function,
@@ -70,6 +71,9 @@ func (d *Decoder) decodeInlineType(types *cadenceTypeByCCFTypeID) (cadence.Type,
 
 	case CBORTagDictType:
 		return d.decodeDictType(types, d.decodeInlineType)
+
+	case CBORTagInclusiveRangeType:
+		return d.decodeInclusiveRangeType(types, d.decodeInlineType)
 
 	case CBORTagReferenceType:
 		return d.decodeReferenceType(types, d.decodeInlineType)
@@ -271,6 +275,36 @@ func (d *Decoder) decodeDictType(
 	}
 
 	return cadence.NewMeteredDictionaryType(d.gauge, keyType, elementType), nil
+}
+
+// decodeInclusiveRangeType decodes inclusiverange-type or inclusiverange-type-value as
+// language=CDDL
+// inclusiverange-type =
+//
+//	; cbor-tag-inclusiverange-type
+//	#6.145(inline-type)
+//
+// inclusiverange-type-value =
+//
+//	; cbor-tag-inclusiverange-type-value
+//	#6.194(type-value)
+//
+// NOTE: decodeTypeFn is responsible for decoding inline-type or type-value.
+func (d *Decoder) decodeInclusiveRangeType(
+	types *cadenceTypeByCCFTypeID,
+	decodeTypeFn decodeTypeFn,
+) (cadence.Type, error) {
+	// element 0: element type (inline-type or type-value)
+	elementType, err := decodeTypeFn(types)
+	if err != nil {
+		return nil, err
+	}
+
+	if elementType == nil {
+		return nil, errors.New("unexpected nil type as inclusiverange element type")
+	}
+
+	return cadence.NewMeteredInclusiveRangeType(d.gauge, elementType), nil
 }
 
 // decodeCapabilityType decodes capability-type or capability-type-value as

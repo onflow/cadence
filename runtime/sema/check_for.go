@@ -154,8 +154,11 @@ func (checker *Checker) loopVariableType(valueType Type, hasPosition ast.HasPosi
 }
 
 func (checker *Checker) iterableElementType(valueType Type, hasPosition ast.HasPosition) Type {
-	if arrayType, ok := valueType.(ArrayType); ok {
-		return arrayType.ElementType(false)
+	switch valueType := valueType.(type) {
+	case ArrayType:
+		return valueType.ElementType(false)
+	case *InclusiveRangeType:
+		return valueType.MemberType
 	}
 
 	if valueType == StringType {

@@ -191,7 +191,8 @@ type Type interface {
 		other Type,
 		typeParameters *TypeParameterTypeOrderedMap,
 		report func(err error),
-		outerRange ast.Range,
+		memoryGauge common.MemoryGauge,
+		outerRange ast.HasPosition,
 	) bool
 
 	// Resolve returns a type that is free of generic types (see `GenericType`),
@@ -208,6 +209,8 @@ type Type interface {
 	// i.e. `[T]` would map to `f([f(T)])`, but the internals of composite types are not
 	// inspected, as they appear simply as nominal types in annotations
 	Map(memoryGauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type
+
+	CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error))
 }
 
 // ValueIndexableType is a type which can be indexed into using a value
@@ -323,18 +326,48 @@ type LocatedType interface {
 type ParameterizedType interface {
 	Type
 	TypeParameters() []*TypeParameter
-	Instantiate(typeArguments []Type, report func(err error)) Type
+	Instantiate(memoryGauge common.MemoryGauge, typeArguments []Type, astTypeArguments []*ast.TypeAnnotation, report func(err error)) Type
 	BaseType() Type
 	TypeArguments() []Type
 }
 
 func MustInstantiate(t ParameterizedType, typeArguments ...Type) Type {
 	return t.Instantiate(
+		nil, /* memoryGauge */
 		typeArguments,
+		nil, /* astTypeArguments */
 		func(err error) {
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		},
 	)
+}
+
+func CheckParameterizedTypeInstantiated(
+	t ParameterizedType,
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+) {
+	typeArgs := t.TypeArguments()
+	typeParameters := t.TypeParameters()
+
+	// The check for the argument and parameter count already happens in the checker, so we skip that here.
+
+	// Ensure that each non-optional typeparameter is non-nil.
+	for index, typeParam := range typeParameters {
+		if !typeParam.Optional && typeArgs[index] == nil {
+			report(
+				&MissingTypeArgumentError{
+					TypeArgumentName: typeParam.Name,
+					Range: ast.NewRange(
+						memoryGauge,
+						pos.StartPosition(),
+						pos.EndPosition(memoryGauge),
+					),
+				},
+			)
+		}
+	}
 }
 
 // TypeAnnotation
@@ -726,7 +759,8 @@ func (t *OptionalType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	otherOptional, ok := other.(*OptionalType)
@@ -734,7 +768,13 @@ func (t *OptionalType) Unify(
 		return false
 	}
 
-	return t.Type.Unify(otherOptional.Type, typeParameters, report, outerRange)
+	return t.Type.Unify(
+		otherOptional.Type,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *OptionalType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -754,6 +794,10 @@ func (t *OptionalType) SupportedEntitlements() *EntitlementOrderedSet {
 		return entitlementSupportingType.SupportedEntitlements()
 	}
 	return nil
+}
+
+func (t *OptionalType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	t.Type.CheckInstantiated(pos, memoryGauge, report)
 }
 
 const optionalTypeMapFunctionDocString = `
@@ -932,7 +976,8 @@ func (t *GenericType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	if unifiedType, ok := typeParameters.Get(t.TypeParameter); ok {
@@ -947,7 +992,7 @@ func (t *GenericType) Unify(
 					TypeParameter: t.TypeParameter,
 					ExpectedType:  unifiedType,
 					ActualType:    other,
-					Range:         outerRange,
+					Range:         ast.NewRangeFromPositioned(memoryGauge, outerRange),
 				},
 			)
 		}
@@ -960,7 +1005,7 @@ func (t *GenericType) Unify(
 		// If the type parameter corresponding to the type argument has a type bound,
 		// then check that the argument's type is a subtype of the type bound.
 
-		err := t.TypeParameter.checkTypeBound(other, outerRange)
+		err := t.TypeParameter.checkTypeBound(other, memoryGauge, outerRange)
 		if err != nil {
 			report(err)
 		}
@@ -988,6 +1033,12 @@ func (t *GenericType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParame
 
 func (t *GenericType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
+}
+
+func (t *GenericType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	if t.TypeParameter.TypeBound != nil {
+		t.TypeParameter.TypeBound.CheckInstantiated(pos, memoryGauge, report)
+	}
 }
 
 // IntegerRangedType
@@ -1240,7 +1291,13 @@ func (t *NumericType) MaxInt() *big.Int {
 	return t.maxInt
 }
 
-func (*NumericType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*NumericType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -1274,6 +1331,10 @@ func (t *NumericType) AsSuperType() *NumericType {
 
 func (t *NumericType) IsSuperType() bool {
 	return t.isSuperType
+}
+
+func (*NumericType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }
 
 // FixedPointNumericType represents all the types in the fixed-point range.
@@ -1445,7 +1506,13 @@ func (t *FixedPointNumericType) Scale() uint {
 	return t.scale
 }
 
-func (*FixedPointNumericType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*FixedPointNumericType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -1479,6 +1546,10 @@ func (t *FixedPointNumericType) AsSuperType() *FixedPointNumericType {
 
 func (t *FixedPointNumericType) IsSuperType() bool {
 	return t.isSuperType
+}
+
+func (*FixedPointNumericType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }
 
 // Numeric types
@@ -2756,7 +2827,8 @@ func (t *VariableSizedType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	otherArray, ok := other.(*VariableSizedType)
@@ -2764,7 +2836,13 @@ func (t *VariableSizedType) Unify(
 		return false
 	}
 
-	return t.Type.Unify(otherArray.Type, typeParameters, report, outerRange)
+	return t.Type.Unify(
+		otherArray.Type,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *VariableSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -2789,6 +2867,10 @@ var arrayDictionaryEntitlements = func() *EntitlementOrderedSet {
 	set.Set(RemoveType, struct{}{})
 	return set
 }()
+
+func (t *VariableSizedType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	t.ElementType(false).CheckInstantiated(pos, memoryGauge, report)
+}
 
 // ConstantSizedType is a constant sized array type
 type ConstantSizedType struct {
@@ -2932,7 +3014,8 @@ func (t *ConstantSizedType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	otherArray, ok := other.(*ConstantSizedType)
@@ -2944,7 +3027,13 @@ func (t *ConstantSizedType) Unify(
 		return false
 	}
 
-	return t.Type.Unify(otherArray.Type, typeParameters, report, outerRange)
+	return t.Type.Unify(
+		otherArray.Type,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *ConstantSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -2961,6 +3050,10 @@ func (t *ConstantSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) 
 
 func (t *ConstantSizedType) SupportedEntitlements() *EntitlementOrderedSet {
 	return arrayDictionaryEntitlements
+}
+
+func (t *ConstantSizedType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	t.ElementType(false).CheckInstantiated(pos, memoryGauge, report)
 }
 
 // Parameter
@@ -3074,7 +3167,7 @@ func (p TypeParameter) Equal(other *TypeParameter) bool {
 	return p.Optional == other.Optional
 }
 
-func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
+func (p TypeParameter) checkTypeBound(ty Type, memoryGauge common.MemoryGauge, typeRange ast.HasPosition) error {
 	if p.TypeBound == nil ||
 		p.TypeBound.IsInvalidType() ||
 		ty.IsInvalidType() {
@@ -3086,7 +3179,7 @@ func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 		return &TypeMismatchError{
 			ExpectedType: p.TypeBound,
 			ActualType:   ty,
-			Range:        typeRange,
+			Range:        ast.NewRangeFromPositioned(memoryGauge, typeRange),
 		}
 	}
 
@@ -3192,6 +3285,7 @@ type FunctionType struct {
 	ReturnTypeAnnotation     TypeAnnotation
 	Arity                    *Arity
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
+	TypeArgumentsCheck       TypeArgumentsCheck
 	Members                  *StringMemberOrderedMap
 	TypeParameters           []*TypeParameter
 	Parameters               []Parameter
@@ -3595,7 +3689,8 @@ func (t *FunctionType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) (
 	result bool,
 ) {
@@ -3625,6 +3720,7 @@ func (t *FunctionType) Unify(
 			otherParameter.TypeAnnotation.Type,
 			typeParameters,
 			report,
+			memoryGauge,
 			outerRange,
 		)
 		result = result || parameterUnified
@@ -3636,6 +3732,7 @@ func (t *FunctionType) Unify(
 		otherFunction.ReturnTypeAnnotation.Type,
 		typeParameters,
 		report,
+		memoryGauge,
 		outerRange,
 	)
 
@@ -3756,10 +3853,30 @@ func (t *FunctionType) initializeMemberResolvers() {
 	})
 }
 
+func (t *FunctionType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	for _, tyParam := range t.TypeParameters {
+		tyParam.TypeBound.CheckInstantiated(pos, memoryGauge, report)
+	}
+
+	for _, param := range t.Parameters {
+		param.TypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+	}
+
+	t.ReturnTypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+}
+
 type ArgumentExpressionsCheck func(
 	checker *Checker,
 	argumentExpressions []ast.Expression,
 	invocationRange ast.Range,
+)
+
+type TypeArgumentsCheck func(
+	memoryGauge common.MemoryGauge,
+	typeArguments *TypeParameterTypeOrderedMap,
+	astTypeArguments []*ast.TypeAnnotation,
+	astInvocationRange ast.Range,
+	report func(err error),
 )
 
 // BaseTypeActivation is the base activation that contains
@@ -3799,6 +3916,7 @@ func init() {
 			AccountCapabilityControllerType,
 			DeploymentResultType,
 			HashableStructType,
+			&InclusiveRangeType{},
 		},
 	)
 
@@ -3909,14 +4027,16 @@ var AllUnsignedIntegerTypes = common.Concat(
 	},
 )
 
+var AllNonLeafIntegerTypes = []Type{
+	IntegerType,
+	SignedIntegerType,
+	FixedSizeUnsignedIntegerType,
+}
+
 var AllIntegerTypes = common.Concat(
 	AllUnsignedIntegerTypes,
 	AllSignedIntegerTypes,
-	[]Type{
-		IntegerType,
-		SignedIntegerType,
-		FixedSizeUnsignedIntegerType,
-	},
+	AllNonLeafIntegerTypes,
 )
 
 var AllNumberTypes = common.Concat(
@@ -4716,7 +4836,13 @@ func (t *CompositeType) RewriteWithIntersectionTypes() (result Type, rewritten b
 	return t, false
 }
 
-func (*CompositeType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*CompositeType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	// TODO:
 	return false
 }
@@ -4913,6 +5039,20 @@ func (t *CompositeType) InitializerEffectiveArgumentLabels() []string {
 		)
 	}
 	return argumentLabels
+}
+
+func (t *CompositeType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	if t.EnumRawType != nil {
+		t.EnumRawType.CheckInstantiated(pos, memoryGauge, report)
+	}
+
+	if t.baseType != nil {
+		t.baseType.CheckInstantiated(pos, memoryGauge, report)
+	}
+
+	for _, typ := range t.ExplicitInterfaceConformances {
+		typ.CheckInstantiated(pos, memoryGauge, report)
+	}
 }
 
 // Member
@@ -5482,7 +5622,13 @@ func (t *InterfaceType) RewriteWithIntersectionTypes() (Type, bool) {
 
 }
 
-func (*InterfaceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*InterfaceType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	// TODO:
 	return false
 }
@@ -5577,6 +5723,12 @@ func distinctConformances(
 	}
 
 	return collectedConformances
+}
+
+func (t *InterfaceType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	for _, param := range t.InitializerParameters {
+		param.TypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+	}
 }
 
 // DictionaryType consists of the key and value type
@@ -5718,6 +5870,11 @@ func (t *DictionaryType) RewriteWithIntersectionTypes() (Type, bool) {
 	} else {
 		return t, false
 	}
+}
+
+func (t *DictionaryType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	t.KeyType.CheckInstantiated(pos, memoryGauge, report)
+	t.ValueType.CheckInstantiated(pos, memoryGauge, report)
 }
 
 const dictionaryTypeContainsKeyFunctionDocString = `
@@ -6005,7 +6162,8 @@ func (t *DictionaryType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	otherDictionary, ok := other.(*DictionaryType)
@@ -6013,8 +6171,22 @@ func (t *DictionaryType) Unify(
 		return false
 	}
 
-	keyUnified := t.KeyType.Unify(otherDictionary.KeyType, typeParameters, report, outerRange)
-	valueUnified := t.ValueType.Unify(otherDictionary.ValueType, typeParameters, report, outerRange)
+	keyUnified := t.KeyType.Unify(
+		otherDictionary.KeyType,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
+
+	valueUnified := t.ValueType.Unify(
+		otherDictionary.ValueType,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
+
 	return keyUnified || valueUnified
 }
 
@@ -6037,6 +6209,345 @@ func (t *DictionaryType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 
 func (t *DictionaryType) SupportedEntitlements() *EntitlementOrderedSet {
 	return arrayDictionaryEntitlements
+}
+
+// InclusiveRangeType
+
+type InclusiveRangeType struct {
+	MemberType          Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
+}
+
+var _ Type = &InclusiveRangeType{}
+var _ ParameterizedType = &InclusiveRangeType{}
+
+func NewInclusiveRangeType(memoryGauge common.MemoryGauge, elementType Type) *InclusiveRangeType {
+	common.UseMemory(memoryGauge, common.DictionarySemaTypeMemoryUsage)
+	return &InclusiveRangeType{
+		MemberType: elementType,
+	}
+}
+
+func (*InclusiveRangeType) IsType() {}
+
+func (*InclusiveRangeType) Tag() TypeTag {
+	return InclusiveRangeTypeTag
+}
+
+func (t *InclusiveRangeType) String() string {
+	memberString := ""
+	if t.MemberType != nil {
+		memberString = fmt.Sprintf("<%s>", t.MemberType.String())
+	}
+	return fmt.Sprintf(
+		"InclusiveRange%s",
+		memberString,
+	)
+}
+
+func (t *InclusiveRangeType) QualifiedString() string {
+	memberString := ""
+	if t.MemberType != nil {
+		memberString = fmt.Sprintf("<%s>", t.MemberType.QualifiedString())
+	}
+	return fmt.Sprintf(
+		"InclusiveRange%s",
+		memberString,
+	)
+}
+
+func InclusiveRangeTypeID(memberTypeID string) TypeID {
+	if memberTypeID != "" {
+		memberTypeID = fmt.Sprintf("<%s>", memberTypeID)
+	}
+	return TypeID(fmt.Sprintf(
+		"InclusiveRange%s",
+		memberTypeID,
+	))
+}
+
+func (t *InclusiveRangeType) ID() TypeID {
+	var memberTypeID string
+	if t.MemberType != nil {
+		memberTypeID = string(t.MemberType.ID())
+	}
+	return InclusiveRangeTypeID(memberTypeID)
+}
+
+func (t *InclusiveRangeType) Equal(other Type) bool {
+	otherRange, ok := other.(*InclusiveRangeType)
+	if !ok {
+		return false
+	}
+	if otherRange.MemberType == nil {
+		return t.MemberType == nil
+	}
+
+	return otherRange.MemberType.Equal(t.MemberType)
+}
+
+func (t *InclusiveRangeType) IsResourceType() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) IsInvalidType() bool {
+	return t.MemberType != nil && t.MemberType.IsInvalidType()
+}
+
+func (t *InclusiveRangeType) IsStorable(results map[*Member]bool) bool {
+	return false
+}
+
+func (t *InclusiveRangeType) IsExportable(results map[*Member]bool) bool {
+	return t.MemberType.IsExportable(results)
+}
+
+func (t *InclusiveRangeType) IsImportable(results map[*Member]bool) bool {
+	return t.MemberType.IsImportable(results)
+}
+
+func (t *InclusiveRangeType) IsEquatable() bool {
+	return t.MemberType.IsEquatable()
+}
+
+func (*InclusiveRangeType) IsComparable() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) TypeAnnotationState() TypeAnnotationState {
+	if t.MemberType == nil {
+		return TypeAnnotationStateValid
+	}
+
+	return t.MemberType.TypeAnnotationState()
+}
+
+func (t *InclusiveRangeType) RewriteWithIntersectionTypes() (Type, bool) {
+	if t.MemberType == nil {
+		return t, false
+	}
+	rewrittenMemberType, rewritten := t.MemberType.RewriteWithIntersectionTypes()
+	if rewritten {
+		return &InclusiveRangeType{
+			MemberType: rewrittenMemberType,
+		}, true
+	}
+	return t, false
+}
+
+func (t *InclusiveRangeType) BaseType() Type {
+	if t.MemberType == nil {
+		return nil
+	}
+	return &InclusiveRangeType{}
+}
+
+func (t *InclusiveRangeType) Instantiate(
+	memoryGauge common.MemoryGauge,
+	typeArguments []Type,
+	astTypeArguments []*ast.TypeAnnotation,
+	report func(err error),
+) Type {
+	memberType := typeArguments[0]
+
+	if astTypeArguments == nil || astTypeArguments[0] == nil {
+		panic(errors.NewUnreachableError())
+	}
+	paramAstRange := ast.NewRangeFromPositioned(memoryGauge, astTypeArguments[0])
+
+	// memberType must only be a leaf integer type.
+	for _, ty := range AllNonLeafIntegerTypes {
+		if memberType == ty {
+			report(&InvalidTypeArgumentError{
+				TypeArgumentName: inclusiveRangeTypeParameter.Name,
+				Range:            paramAstRange,
+				Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
+			})
+		}
+	}
+
+	return &InclusiveRangeType{
+		MemberType: memberType,
+	}
+}
+
+func (t *InclusiveRangeType) TypeArguments() []Type {
+	memberType := t.MemberType
+	return []Type{
+		memberType,
+	}
+}
+
+func (t *InclusiveRangeType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	CheckParameterizedTypeInstantiated(t, pos, memoryGauge, report)
+}
+
+var inclusiveRangeTypeParameter = &TypeParameter{
+	Name:      "T",
+	TypeBound: IntegerType,
+}
+
+func (*InclusiveRangeType) TypeParameters() []*TypeParameter {
+	return []*TypeParameter{
+		inclusiveRangeTypeParameter,
+	}
+}
+
+const InclusiveRangeTypeStartFieldName = "start"
+const inclusiveRangeTypeStartFieldDocString = `
+The start of the InclusiveRange sequence
+`
+const InclusiveRangeTypeEndFieldName = "end"
+const inclusiveRangeTypeEndFieldDocString = `
+The end of the InclusiveRange sequence
+`
+
+const InclusiveRangeTypeStepFieldName = "step"
+const inclusiveRangeTypeStepFieldDocString = `
+The step size of the InclusiveRange sequence
+`
+
+var InclusiveRangeTypeFieldNames = []string{
+	InclusiveRangeTypeStartFieldName,
+	InclusiveRangeTypeEndFieldName,
+	InclusiveRangeTypeStepFieldName,
+}
+
+const InclusiveRangeTypeContainsFunctionName = "contains"
+
+const inclusiveRangeTypeContainsFunctionDocString = `
+Returns true if the given integer is in the InclusiveRange sequence
+`
+
+func (t *InclusiveRangeType) GetMembers() map[string]MemberResolver {
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func InclusiveRangeContainsFunctionType(elementType Type) *FunctionType {
+	return &FunctionType{
+		Parameters: []Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "element",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			BoolType,
+		),
+	}
+}
+
+func (t *InclusiveRangeType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
+			InclusiveRangeTypeStartFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						t.MemberType,
+						inclusiveRangeTypeStartFieldDocString,
+					)
+				},
+			},
+			InclusiveRangeTypeEndFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						t.MemberType,
+						inclusiveRangeTypeEndFieldDocString,
+					)
+				},
+			},
+			InclusiveRangeTypeStepFieldName: {
+				Kind: common.DeclarationKindField,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+					return NewPublicConstantFieldMember(
+						memoryGauge,
+						t,
+						identifier,
+						t.MemberType,
+						inclusiveRangeTypeStepFieldDocString,
+					)
+				},
+			},
+			InclusiveRangeTypeContainsFunctionName: {
+				Kind: common.DeclarationKindFunction,
+				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+					elementType := t.MemberType
+
+					return NewPublicFunctionMember(
+						memoryGauge,
+						t,
+						identifier,
+						InclusiveRangeContainsFunctionType(elementType),
+						inclusiveRangeTypeContainsFunctionDocString,
+					)
+				},
+			},
+		})
+	})
+}
+
+func (*InclusiveRangeType) AllowsValueIndexingAssignment() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) Unify(
+	other Type,
+	typeParameters *TypeParameterTypeOrderedMap,
+	report func(err error),
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
+) bool {
+	otherRange, ok := other.(*InclusiveRangeType)
+	if !ok {
+		return false
+	}
+
+	return t.MemberType.Unify(
+		otherRange.MemberType,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
+}
+
+func (t *InclusiveRangeType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+	memberType := t.MemberType.Resolve(typeArguments)
+	if memberType == nil {
+		return nil
+	}
+
+	return &InclusiveRangeType{
+		MemberType: memberType,
+	}
+}
+
+func (t *InclusiveRangeType) IsPrimitiveType() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) ContainFieldsOrElements() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) Map(
+	gauge common.MemoryGauge,
+	typeParamMap map[*TypeParameter]*TypeParameter,
+	f func(Type) Type,
+) Type {
+	mappedMemberType := t.MemberType.Map(gauge, typeParamMap, f)
+	return f(NewInclusiveRangeType(gauge, mappedMemberType))
 }
 
 // ReferenceType represents the reference to a value
@@ -6287,14 +6798,21 @@ func (t *ReferenceType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 	otherReference, ok := other.(*ReferenceType)
 	if !ok {
 		return false
 	}
 
-	return t.Type.Unify(otherReference.Type, typeParameters, report, outerRange)
+	return t.Type.Unify(
+		otherReference.Type,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *ReferenceType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -6307,6 +6825,10 @@ func (t *ReferenceType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type
 		Authorization: t.Authorization,
 		Type:          newInnerType,
 	}
+}
+
+func (t *ReferenceType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	t.Type.CheckInstantiated(pos, memoryGauge, report)
 }
 
 const AddressTypeName = "Address"
@@ -6405,12 +6927,22 @@ func (*AddressType) IsSuperType() bool {
 	return false
 }
 
-func (*AddressType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*AddressType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
 func (t *AddressType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+func (*AddressType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }
 
 const AddressTypeToBytesFunctionName = `toBytes`
@@ -7049,12 +7581,28 @@ func (t *TransactionType) initializeMemberResolvers() {
 	})
 }
 
-func (*TransactionType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*TransactionType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
 func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+func (t *TransactionType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	for _, param := range t.PrepareParameters {
+		param.TypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+	}
+
+	for _, param := range t.Parameters {
+		param.TypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+	}
 }
 
 // IntersectionType
@@ -7321,7 +7869,13 @@ func (t *IntersectionType) SupportedEntitlements() (set *EntitlementOrderedSet) 
 	return set
 }
 
-func (*IntersectionType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*IntersectionType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	// TODO: how do we unify the intersection sets?
 	return false
 }
@@ -7364,6 +7918,10 @@ func (t *IntersectionType) IsValidIndexingType(ty Type) bool {
 	return isComposite &&
 		IsSubType(t, attachmentType.baseType) &&
 		attachmentType.IsResourceType() == t.IsResourceType()
+}
+
+func (t *IntersectionType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// No-OP
 }
 
 // CapabilityType
@@ -7508,7 +8066,8 @@ func (t *CapabilityType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 	otherCap, ok := other.(*CapabilityType)
 	if !ok {
@@ -7519,7 +8078,13 @@ func (t *CapabilityType) Unify(
 		return false
 	}
 
-	return t.BorrowType.Unify(otherCap.BorrowType, typeParameters, report, outerRange)
+	return t.BorrowType.Unify(
+		otherCap.BorrowType,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *CapabilityType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -7547,7 +8112,12 @@ func (t *CapabilityType) TypeParameters() []*TypeParameter {
 	}
 }
 
-func (t *CapabilityType) Instantiate(typeArguments []Type, _ func(err error)) Type {
+func (t *CapabilityType) Instantiate(
+	memoryGauge common.MemoryGauge,
+	typeArguments []Type,
+	_ []*ast.TypeAnnotation,
+	_ func(err error),
+) Type {
 	borrowType := typeArguments[0]
 	return &CapabilityType{
 		BorrowType: borrowType,
@@ -7572,6 +8142,10 @@ func (t *CapabilityType) TypeArguments() []Type {
 	return []Type{
 		borrowType,
 	}
+}
+
+func (t *CapabilityType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	CheckParameterizedTypeInstantiated(t, pos, memoryGauge, report)
 }
 
 func CapabilityTypeBorrowFunctionType(borrowType Type) *FunctionType {
@@ -8059,12 +8633,22 @@ func (t *EntitlementType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
-func (*EntitlementType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*EntitlementType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
 func (t *EntitlementType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+func (t *EntitlementType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// No-OP
 }
 
 // EntitlementMapType
@@ -8206,7 +8790,13 @@ func (t *EntitlementMapType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
-func (*EntitlementMapType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*EntitlementMapType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -8281,6 +8871,10 @@ func (t *EntitlementMapType) resolveEntitlementMappingInclusions(
 			includedMaps[includedMapType] = struct{}{}
 		}
 	})
+}
+
+func (t *EntitlementMapType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }
 
 var NativeCompositeTypes = map[string]*CompositeType{}

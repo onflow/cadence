@@ -181,7 +181,8 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		return true
 
 	case cadence.BytesType,
-		*cadence.FunctionType:
+		*cadence.FunctionType,
+		*cadence.InclusiveRangeType:
 		// TODO: Maybe there are more types that we can skip checking runtime type for composite type.
 
 		return false

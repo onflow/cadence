@@ -3797,6 +3797,47 @@ func (e *InvalidTypeArgumentCountError) SecondaryError() string {
 	)
 }
 
+// MissingTypeArgumentError
+
+type MissingTypeArgumentError struct {
+	TypeArgumentName string
+	ast.Range
+}
+
+var _ SemanticError = &MissingTypeArgumentError{}
+var _ errors.UserError = &MissingTypeArgumentError{}
+
+func (e *MissingTypeArgumentError) isSemanticError() {}
+
+func (*MissingTypeArgumentError) IsUserError() {}
+
+func (e *MissingTypeArgumentError) Error() string {
+	return fmt.Sprintf("non-optional type argument %s missing", e.TypeArgumentName)
+}
+
+// InvalidTypeArgumentError
+
+type InvalidTypeArgumentError struct {
+	TypeArgumentName string
+	Details          string
+	ast.Range
+}
+
+var _ SemanticError = &InvalidTypeArgumentError{}
+var _ errors.UserError = &InvalidTypeArgumentError{}
+
+func (*InvalidTypeArgumentError) isSemanticError() {}
+
+func (*InvalidTypeArgumentError) IsUserError() {}
+
+func (e *InvalidTypeArgumentError) Error() string {
+	return fmt.Sprintf("type argument %s invalid", e.TypeArgumentName)
+}
+
+func (e *InvalidTypeArgumentError) SecondaryError() string {
+	return e.Details
+}
+
 // TypeParameterTypeInferenceError
 
 type TypeParameterTypeInferenceError struct {

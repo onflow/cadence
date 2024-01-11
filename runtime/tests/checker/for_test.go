@@ -19,12 +19,15 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestCheckForVariableSized(t *testing.T) {
@@ -75,6 +78,49 @@ func TestCheckForString(t *testing.T) {
     `)
 
 	assert.NoError(t, err)
+}
+
+func TestCheckForInclusiveRange(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+
+	for _, typ := range sema.AllIntegerTypes {
+		// Only test leaf integer types
+		switch typ {
+		case sema.IntegerType,
+			sema.SignedIntegerType,
+			sema.FixedSizeUnsignedIntegerType:
+			continue
+		}
+
+		code := fmt.Sprintf(`
+            fun test() {
+                let start : %[1]s = 1
+                let end : %[1]s = 2
+                let step : %[1]s = 1
+                let range: InclusiveRange<%[1]s> = InclusiveRange(start, end, step: step)
+                
+                for value in range {
+                    var typedValue: %[1]s = value
+                }
+            }
+        `, typ.String())
+
+		_, err := ParseAndCheckWithOptions(t, code,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+		)
+
+		assert.NoError(t, err)
+	}
 }
 
 func TestCheckForEmpty(t *testing.T) {

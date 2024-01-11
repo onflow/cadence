@@ -1283,9 +1283,8 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				ReferencedType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-
 		{
-			label: "Entitlement Disjoint Set Reference",
+			label: "Reference",
 			actual: &cadence.ReferenceType{
 				Authorization: cadence.EntitlementSetAuthorization{
 					Kind:         cadence.Disjunction,
@@ -1406,6 +1405,15 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 				},
 			},
 		},
+		{
+			label: "InclusiveRange",
+			actual: &cadence.InclusiveRangeType{
+				ElementType: cadence.IntType,
+			},
+			expected: interpreter.InclusiveRangeStaticType{
+				ElementType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
 	} {
 		test(tt)
 	}
@@ -1496,6 +1504,185 @@ func TestRuntimeExportAddressValue(t *testing.T) {
 	)
 
 	assert.Equal(t, expected, actual)
+}
+
+func TestExportInclusiveRangeValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with_step", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+			access(all) fun main(): InclusiveRange<Int> {
+				return InclusiveRange(10, 20, step: 2)
+			}
+		`
+
+		inclusiveRangeType := cadence.NewInclusiveRangeType(cadence.IntType)
+
+		actual := exportValueFromScript(t, script)
+		expected := cadence.NewInclusiveRange(
+			cadence.NewInt(10),
+			cadence.NewInt(20),
+			cadence.NewInt(2),
+		).WithType(inclusiveRangeType)
+
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("without_step", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+			access(all) fun main(): InclusiveRange<Int> {
+				return InclusiveRange(10, 20)
+			}
+		`
+
+		inclusiveRangeType := cadence.NewInclusiveRangeType(cadence.IntType)
+
+		actual := exportValueFromScript(t, script)
+		expected := cadence.NewInclusiveRange(
+			cadence.NewInt(10),
+			cadence.NewInt(20),
+			cadence.NewInt(1),
+		).WithType(inclusiveRangeType)
+
+		assert.Equal(t, expected, actual)
+	})
+}
+
+func TestImportInclusiveRangeValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple - InclusiveRange<Int>", func(t *testing.T) {
+		t.Parallel()
+
+		value := cadence.NewInclusiveRange(cadence.NewInt(10), cadence.NewInt(-10), cadence.NewInt(-2))
+
+		inter := NewTestInterpreter(t)
+
+		actual, err := ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			value,
+			sema.NewInclusiveRangeType(inter, sema.IntType),
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewInclusiveRangeValueWithStep(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewIntValueFromInt64(inter, 10),
+				interpreter.NewIntValueFromInt64(inter, -10),
+				interpreter.NewIntValueFromInt64(inter, -2),
+				interpreter.InclusiveRangeStaticType{
+					ElementType: interpreter.PrimitiveStaticTypeInt,
+				},
+				sema.NewInclusiveRangeType(nil, sema.IntType),
+			),
+			actual,
+		)
+	})
+
+	t.Run("import with broader type - AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		value := cadence.NewInclusiveRange(cadence.NewInt(10), cadence.NewInt(-10), cadence.NewInt(-2))
+
+		inter := NewTestInterpreter(t)
+
+		actual, err := ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			value,
+			sema.AnyStructType,
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewInclusiveRangeValueWithStep(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewIntValueFromInt64(inter, 10),
+				interpreter.NewIntValueFromInt64(inter, -10),
+				interpreter.NewIntValueFromInt64(inter, -2),
+				interpreter.InclusiveRangeStaticType{
+					ElementType: interpreter.PrimitiveStaticTypeInt,
+				},
+				sema.NewInclusiveRangeType(nil, sema.IntType),
+			),
+			actual,
+		)
+	})
+
+	t.Run("invalid - mixed types", func(t *testing.T) {
+		t.Parallel()
+
+		value := cadence.NewInclusiveRange(cadence.NewInt(10), cadence.NewUInt(100), cadence.NewUInt64(1))
+
+		inter := NewTestInterpreter(t)
+
+		_, err := ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			value,
+			sema.AnyStructType,
+		)
+
+		RequireError(t, err)
+		assertUserError(t, err)
+
+		var userError errors.DefaultUserError
+		require.ErrorAs(t, err, &userError)
+		require.Contains(
+			t,
+			userError.Error(),
+			"cannot import inclusiverange: start, end and step must be of the same type",
+		)
+	})
+
+	t.Run("invalid - InclusiveRange<String>", func(t *testing.T) {
+		t.Parallel()
+
+		strValue, err := cadence.NewString("anything")
+		require.NoError(t, err)
+
+		value := cadence.NewInclusiveRange(strValue, strValue, strValue)
+
+		inter := NewTestInterpreter(t)
+
+		_, err = ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			value,
+			sema.StringType,
+		)
+
+		RequireError(t, err)
+		assertUserError(t, err)
+
+		var userError errors.DefaultUserError
+		require.ErrorAs(t, err, &userError)
+		require.Contains(
+			t,
+			userError.Error(),
+			"cannot import inclusiverange: start, end and step must be integers",
+		)
+	})
 }
 
 func TestRuntimeExportStructValue(t *testing.T) {
@@ -2566,6 +2753,17 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			}),
 		},
 		{
+			label:         "InclusiveRange",
+			typeSignature: "InclusiveRange<UInt128>",
+			exportedValue: cadence.NewInclusiveRange(
+				cadence.NewUInt128(1),
+				cadence.NewUInt128(500),
+				cadence.NewUInt128(25),
+			).WithType(&cadence.InclusiveRangeType{
+				ElementType: cadence.UInt128Type,
+			}),
+		},
+		{
 			label:         "Int",
 			typeSignature: "Int",
 			exportedValue: cadence.NewInt(42),
@@ -3358,6 +3556,16 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 					Value: newMalformedStruct1(),
 				},
 			}),
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
+		},
+		{
+			label:         "Malformed inclusiverange",
+			typeSignature: "InclusiveRange<Int>",
+			exportedValue: cadence.NewInclusiveRange(
+				cadence.NewUInt(1),
+				cadence.NewUInt(10),
+				cadence.NewUInt(3),
+			),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 	}

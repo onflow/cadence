@@ -464,6 +464,20 @@ func (checker *Checker) checkInvocation(
 		}
 	}
 
+	// Compute the invocation range, once, if needed
+	getInvocationRange := func() func() ast.Range {
+		var invocationRange ast.Range
+		return func() ast.Range {
+			if invocationRange == ast.EmptyRange {
+				invocationRange = ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					invocationExpression,
+				)
+			}
+			return invocationRange
+		}
+	}()
+
 	// The invokable type might have special checks for the arguments
 
 	if functionType.ArgumentExpressionsCheck != nil && argumentCount > 0 {
@@ -472,15 +486,10 @@ func (checker *Checker) checkInvocation(
 			argumentExpressions[i] = argument.Expression
 		}
 
-		invocationRange := ast.NewRangeFromPositioned(
-			checker.memoryGauge,
-			invocationExpression,
-		)
-
 		functionType.ArgumentExpressionsCheck(
 			checker,
 			argumentExpressions,
-			invocationRange,
+			getInvocationRange(),
 		)
 	}
 
@@ -497,6 +506,18 @@ func (checker *Checker) checkInvocation(
 		typeArguments,
 		invocationExpression,
 	)
+
+	// The invokable type might have special checks for the type parameters.
+
+	if functionType.TypeArgumentsCheck != nil {
+		functionType.TypeArgumentsCheck(
+			checker.memoryGauge,
+			typeArguments,
+			invocationExpression.TypeArguments,
+			getInvocationRange(),
+			checker.report,
+		)
+	}
 
 	// Save types in the elaboration
 
@@ -557,21 +578,46 @@ func (checker *Checker) checkInvocationRequiredArgument(
 
 	var argumentType Type
 
-	if len(functionType.TypeParameters) == 0 {
-		// If the function doesn't use generic types, then the
-		// param types can be used to infer the types for arguments.
+	typeParameterCount := len(functionType.TypeParameters)
+
+	// If all type parameters have been bound to a type,
+	// then resolve the parameter type with the type arguments,
+	// and propose the parameter type as the expected type for the argument.
+	if typeParameters.Len() == typeParameterCount {
+
+		// Optimization: only resolve if there are type parameters.
+		// This avoids unnecessary work for non-generic functions.
+		if typeParameterCount > 0 {
+			parameterType = parameterType.Resolve(typeParameters)
+			// If the type parameter could not be resolved, use the invalid type.
+			if parameterType == nil {
+				parameterType = InvalidType
+			}
+		}
+
 		argumentType = checker.VisitExpression(argument.Expression, parameterType)
+
 	} else {
-		// TODO: pass the expected type to support for parameters
+		// If there are still type parameters that have not been bound to a type,
+		// then check the argument without an expected type.
+		//
+		// We will then have to manually check that the argument type is compatible
+		// with the parameter type (see below).
+
 		argumentType = checker.VisitExpression(argument.Expression, nil)
 
 		// Try to unify the parameter type with the argument type.
 		// If unification fails, fall back to the parameter type for now.
 
-		argumentRange := ast.NewRangeFromPositioned(checker.memoryGauge, argument.Expression)
-
-		if parameterType.Unify(argumentType, typeParameters, checker.report, argumentRange) {
+		if parameterType.Unify(
+			argumentType,
+			typeParameters,
+			checker.report,
+			checker.memoryGauge,
+			argument.Expression,
+		) {
 			parameterType = parameterType.Resolve(typeParameters)
+			// If the type parameter could not be resolved, use the invalid type.
 			if parameterType == nil {
 				parameterType = InvalidType
 			}
@@ -579,7 +625,6 @@ func (checker *Checker) checkInvocationRequiredArgument(
 
 		// Check that the type of the argument matches the type of the parameter.
 
-		// TODO: remove this once type inferring support for parameters is added
 		checker.checkInvocationArgumentParameterTypeCompatibility(
 			argument.Expression,
 			argumentType,
@@ -674,7 +719,7 @@ func (checker *Checker) checkAndBindGenericTypeParameterTypeArguments(
 		// If the type parameter corresponding to the type argument has a type bound,
 		// then check that the argument is a subtype of the type bound.
 
-		err := typeParameter.checkTypeBound(ty, ast.NewRangeFromPositioned(checker.memoryGauge, rawTypeArgument))
+		err := typeParameter.checkTypeBound(ty, checker.memoryGauge, rawTypeArgument)
 		checker.report(err)
 
 		// Bind the type argument to the type parameter
