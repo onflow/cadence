@@ -87,6 +87,39 @@ func TestCheckForInclusiveRange(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
 
+	test := func(typ sema.Type) {
+		t.Run(typ.String(), func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(
+				`
+                  fun test() {
+                      let start : %[1]s = 1
+                      let end : %[1]s = 2
+                      let step : %[1]s = 1
+                      let range: InclusiveRange<%[1]s> = InclusiveRange(start, end, step: step)
+
+                      for value in range {
+                          var typedValue: %[1]s = value
+                      }
+                  }
+                `,
+				typ.String(),
+			)
+
+			_, err := ParseAndCheckWithOptions(t, code,
+				ParseAndCheckOptions{
+					Config: &sema.Config{
+						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+				},
+			)
+			require.NoError(t, err)
+		})
+	}
+
 	for _, typ := range sema.AllIntegerTypes {
 		// Only test leaf integer types
 		switch typ {
@@ -96,31 +129,9 @@ func TestCheckForInclusiveRange(t *testing.T) {
 			continue
 		}
 
-		code := fmt.Sprintf(`
-            fun test() {
-                let start : %[1]s = 1
-                let end : %[1]s = 2
-                let step : %[1]s = 1
-                let range: InclusiveRange<%[1]s> = InclusiveRange(start, end, step: step)
-                
-                for value in range {
-                    var typedValue: %[1]s = value
-                }
-            }
-        `, typ.String())
-
-		_, err := ParseAndCheckWithOptions(t, code,
-			ParseAndCheckOptions{
-				Config: &sema.Config{
-					BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
-						return baseValueActivation
-					},
-				},
-			},
-		)
-
-		assert.NoError(t, err)
+		test(typ)
 	}
+
 }
 
 func TestCheckForEmpty(t *testing.T) {
