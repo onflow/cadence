@@ -2478,3 +2478,78 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 		})
 	})
 }
+
+func TestCheckArrayToVariableSized(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun testInt() {
+			let x: [Int; 4] = [1, 2, 3, 100]
+			let y: [Int] = x.toVariableSized()
+		}
+
+		fun testString() {
+			let x: [String; 4] = ["ab", "cd", "ef", "gh"]
+			let y: [String] = x.toVariableSized()
+		}
+	`)
+
+	require.NoError(t, err)
+}
+
+func TestCheckArrayToVariableSizedInvalidArgs(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x: [Int16; 3] = [1, 2, 3]
+			let y = x.toVariableSized(100)
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ExcessiveArgumentsError{}, errs[0])
+}
+
+func TestCheckVariableSizedArrayToVariableSizedInvalid(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		resource X {}
+
+		fun test() : [Int] {
+			let xs: [Int] = [1, 2, 3]
+
+			return xs.toVariableSized()
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
+func TestCheckResourceArrayToVariableSizedInvalid(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		resource X {}
+
+		fun test() : @[X] {
+			let xs: @[X; 1] <- [<-create X()]
+
+			let varsized_xs <- xs.toVariableSized()
+			destroy xs
+			return <-varsized_xs
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+}

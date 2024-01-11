@@ -11108,6 +11108,193 @@ func TestInterpretArrayMap(t *testing.T) {
 	})
 }
 
+func TestInterpretArrayToVariableSized(t *testing.T) {
+	t.Parallel()
+
+	runValidCase := func(
+		t *testing.T,
+		inter *interpreter.Interpreter,
+		expectedArray *interpreter.ArrayValue,
+	) {
+		val, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			expectedArray,
+			val,
+		)
+	}
+
+	t.Run("with empty array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let emptyVals_fixed: [Int; 0] = []
+
+			fun test(): [Int] {
+				return emptyVals_fixed.toVariableSized()
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+			),
+		)
+	})
+
+	t.Run("with integer array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let xs_fixed: [Int; 5] = [1, 2, 3, 100, 201]
+
+			fun test(): [Int] {
+				return xs_fixed.toVariableSized()
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+				interpreter.NewUnmeteredIntValueFromInt64(3),
+				interpreter.NewUnmeteredIntValueFromInt64(100),
+				interpreter.NewUnmeteredIntValueFromInt64(201),
+			),
+		)
+	})
+
+	t.Run("with string array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let xs_fixed: [String; 2] = ["abc", "def"]
+
+			fun test(): [String] {
+				return xs_fixed.toVariableSized()
+			}
+		`)
+
+		runValidCase(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.PrimitiveStaticTypeString,
+				},
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("abc"),
+				interpreter.NewUnmeteredStringValue("def"),
+			),
+		)
+	})
+
+	t.Run("with array of struct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			struct TestStruct {
+				var test: Int
+
+				init(_ t: Int) {
+					self.test = t
+				}
+			}
+
+			let sa_fixed: [TestStruct; 3] = [TestStruct(1), TestStruct(2), TestStruct(3)]
+
+			fun test(): [TestStruct] {
+				return sa_fixed.toVariableSized()
+			}
+		`)
+
+		location := common.Location(common.StringLocation("test"))
+		value1 := interpreter.NewCompositeValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			location,
+			"TestStruct",
+			common.CompositeKindStructure,
+			[]interpreter.CompositeField{
+				{
+					Name:  "test",
+					Value: interpreter.NewUnmeteredIntValueFromInt64(1),
+				},
+			},
+			common.ZeroAddress,
+		)
+		value2 := interpreter.NewCompositeValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			location,
+			"TestStruct",
+			common.CompositeKindStructure,
+			[]interpreter.CompositeField{
+				{
+					Name:  "test",
+					Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+				},
+			},
+			common.ZeroAddress,
+		)
+		value3 := interpreter.NewCompositeValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			location,
+			"TestStruct",
+			common.CompositeKindStructure,
+			[]interpreter.CompositeField{
+				{
+					Name:  "test",
+					Value: interpreter.NewUnmeteredIntValueFromInt64(3),
+				},
+			},
+			common.ZeroAddress,
+		)
+
+		runValidCase(
+			t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.VariableSizedStaticType{
+					Type: interpreter.NewCompositeStaticType(
+						nil,
+						common.Location(common.StringLocation("test")),
+						"TestStruct",
+						"S.test.TestStruct",
+					),
+				},
+				common.ZeroAddress,
+				value1,
+				value2,
+				value3,
+			),
+		)
+	})
+}
+
 func TestInterpretOptionalReference(t *testing.T) {
 
 	t.Parallel()
