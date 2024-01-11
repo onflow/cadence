@@ -1676,6 +1676,69 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestRuntimeStorageMultipleTransactionsInclusiveRangeFunction(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	inclusiveRangeCreation := []byte(`
+      access(all) fun createInclusiveRange(): InclusiveRange<Int> {
+        return InclusiveRange(10, 20)
+      }
+    `)
+
+	script1 := []byte(`
+      import "inclusive-range-creation"
+      transaction {
+        prepare(signer: auth(Storage) &Account) {
+          let ir = createInclusiveRange()
+          signer.storage.save(ir, to: /storage/inclusiveRange)
+        }
+      }
+    `)
+
+	ledger := NewTestLedger(nil, nil)
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("inclusive-range-creation"):
+				return inclusiveRangeCreation, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+		Storage: ledger,
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	var checkerErr *sema.CheckerError
+	require.ErrorAs(t, err, &checkerErr)
+
+	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+	typeMismatchError := errs[0].(*sema.TypeMismatchError)
+	assert.Contains(t, typeMismatchError.SecondaryError(), "expected `Storable`, got `InclusiveRange<Int>`")
+}
+
 func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 
 	t.Parallel()
@@ -8936,6 +8999,10 @@ func TestRuntimeTypesAndConversions(t *testing.T) {
 	}
 
 	for name, ty := range checker.AllBaseSemaTypes() {
+		// Inclusive range is a dynamically created type.
+		if _, isInclusiveRange := ty.(*sema.InclusiveRangeType); isInclusiveRange {
+			continue
+		}
 		test(name, ty)
 	}
 }

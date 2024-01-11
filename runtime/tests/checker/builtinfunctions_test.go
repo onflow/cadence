@@ -292,7 +292,7 @@ func TestCheckRevertibleRandom(t *testing.T) {
 		}
 	}
 
-	runCase := func(t *testing.T, ty sema.Type, code string) {
+	runValidCase := func(t *testing.T, ty sema.Type, code string) {
 
 		checker, err := ParseAndCheckWithOptions(t, code, newOptions())
 
@@ -307,7 +307,7 @@ func TestCheckRevertibleRandom(t *testing.T) {
 			t.Parallel()
 
 			code := fmt.Sprintf("let rand = revertibleRandom<%s>()", ty)
-			runCase(t, ty, code)
+			runValidCase(t, ty, code)
 		})
 	}
 
@@ -316,7 +316,7 @@ func TestCheckRevertibleRandom(t *testing.T) {
 			t.Parallel()
 
 			code := fmt.Sprintf("let rand = revertibleRandom<%[1]s>(modulo: %[1]s(1))", ty)
-			runCase(t, ty, code)
+			runValidCase(t, ty, code)
 		})
 	}
 
@@ -394,7 +394,6 @@ func TestCheckRevertibleRandom(t *testing.T) {
 		"modulo type mismatch",
 		"let rand = revertibleRandom<UInt256>(modulo: UInt128(1))",
 		[]error{
-			&sema.TypeParameterTypeMismatchError{},
 			&sema.TypeMismatchError{},
 		},
 	)
@@ -404,18 +403,17 @@ func TestCheckRevertibleRandom(t *testing.T) {
 		"string modulo",
 		`let rand = revertibleRandom<UInt256>(modulo: "abcd")`,
 		[]error{
-			&sema.TypeParameterTypeMismatchError{},
 			&sema.TypeMismatchError{},
 		},
 	)
 
-	// This is an error since we do not support type inference of function arguments.
-	runInvalidCase(
-		t,
-		"missing type inference",
-		"let rand = revertibleRandom<UInt256>(modulo: 1)",
-		[]error{
-			&sema.TypeParameterTypeMismatchError{},
-		},
-	)
+	t.Run("type parameter used for argument", func(t *testing.T) {
+		t.Parallel()
+
+		runValidCase(
+			t,
+			sema.UInt256Type,
+			"let rand = revertibleRandom<UInt256>(modulo: 1)",
+		)
+	})
 }

@@ -1443,6 +1443,42 @@ func TestEncodeStruct(t *testing.T) {
 	testAllEncodeAndDecode(t, simpleStruct, resourceStruct)
 }
 
+func TestEncodeInclusiveRange(t *testing.T) {
+
+	t.Parallel()
+
+	simpleInclusiveRange := encodeTest{
+		"Simple",
+		cadence.NewInclusiveRange(
+			cadence.NewInt256(10),
+			cadence.NewInt256(20),
+			cadence.NewInt256(5),
+		).WithType(cadence.NewInclusiveRangeType(cadence.Int256Type)),
+		// language=json
+		`
+			{
+				"type": "InclusiveRange",
+				"value": {
+					"start": {
+						"type": "Int256",
+						"value": "10"
+					},
+					"end": {
+						"type": "Int256",
+						"value": "20"
+					},
+					"step": {
+						"type": "Int256",
+						"value": "5"
+					}
+				}
+			}
+		`,
+	}
+
+	testAllEncodeAndDecode(t, simpleInclusiveRange)
+}
+
 func TestEncodeEvent(t *testing.T) {
 
 	t.Parallel()
@@ -1824,6 +1860,33 @@ func TestEncodeType(t *testing.T) {
                 }
               }
             `,
+		)
+
+	})
+
+	t.Run("with static InclusiveRange<Int>", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.InclusiveRangeType{
+					ElementType: cadence.IntType,
+				},
+			},
+			// language=json
+			`
+				{
+				"type": "Type",
+				"value": {
+					"staticType": {
+					"kind": "InclusiveRange",
+					"element": {
+						"kind": "Int"
+					}
+					}
+				}
+				}
+			`,
 		)
 
 	})
