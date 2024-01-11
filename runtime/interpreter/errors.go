@@ -1032,3 +1032,16 @@ func (e NestedReferenceError) Error() string {
 		e.Value.String(),
 	)
 }
+
+// ResourceReferenceDereferenceError
+type ResourceReferenceDereferenceError struct {
+	LocationRange
+}
+
+var _ errors.InternalError = ResourceReferenceDereferenceError{}
+
+func (ResourceReferenceDereferenceError) IsInternalError() {}
+
+func (e ResourceReferenceDereferenceError) Error() string {
+	return "internal error: resource-references cannot be dereferenced"
+}

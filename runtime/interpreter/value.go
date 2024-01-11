@@ -19761,7 +19761,9 @@ func DereferenceValue(
 
 	// Defensive check: ensure that the referenced value is not a resource
 	if referencedValue.IsResourceKinded(inter) {
-		panic(errors.NewUnreachableError())
+		panic(ResourceReferenceDereferenceError{
+			LocationRange: locationRange,
+		})
 	}
 
 	return referencedValue.Transfer(
