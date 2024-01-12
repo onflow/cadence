@@ -215,7 +215,10 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				continue
 
 			case KeywordPub:
-				handlePub(p)
+				err := handlePub(p)
+				if err != nil {
+					return nil, err
+				}
 				continue
 
 			case KeywordPriv:
@@ -1695,7 +1698,10 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				continue
 
 			case KeywordPub:
-				handlePub(p)
+				err := handlePub(p)
+				if err != nil {
+					return nil, err
+				}
 				continue
 
 			case KeywordPriv:

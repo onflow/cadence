@@ -922,7 +922,7 @@ func defineIdentifierTypes() {
 					p.skipSpaceAndComments()
 
 					var err error
-					authorization, err = parseAuthorization(p, authorization)
+					authorization, err = parseAuthorization(p)
 					if err != nil {
 						return nil, err
 					}
@@ -977,7 +977,7 @@ func defineIdentifierTypes() {
 	)
 }
 
-func parseAuthorization(p *parser, authorization ast.Authorization) (ast.Authorization, error) {
+func parseAuthorization(p *parser) (auth ast.Authorization, err error) {
 	keyword := p.currentTokenSource()
 	switch string(keyword) {
 	case KeywordMapping:
@@ -989,7 +989,7 @@ func parseAuthorization(p *parser, authorization ast.Authorization) (ast.Authori
 		if err != nil {
 			return nil, err
 		}
-		authorization = ast.NewMappedAccess(entitlementMapName, keywordPos)
+		auth = ast.NewMappedAccess(entitlementMapName, keywordPos)
 		p.skipSpaceAndComments()
 
 	default:
@@ -997,15 +997,15 @@ func parseAuthorization(p *parser, authorization ast.Authorization) (ast.Authori
 		if err != nil {
 			return nil, err
 		}
-		authorization = entitlements
+		auth = entitlements
 	}
 
-	_, err := p.mustOne(lexer.TokenParenClose)
+	_, err = p.mustOne(lexer.TokenParenClose)
 	if err != nil {
 		return nil, err
 	}
 
-	return authorization, nil
+	return auth, nil
 }
 
 // parse a function type starting after the `fun` keyword.
