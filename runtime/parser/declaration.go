@@ -206,7 +206,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 			case KeywordView:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, p.syntaxError("invalid second view modifier")
+					p.report(p.syntaxError("invalid second view modifier"))
 				}
 
 				pos := p.current.StartPos
@@ -215,10 +215,12 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				continue
 
 			case KeywordPub:
-				return nil, p.syntaxErrorWithSuggestedFix("`pub` is no longer a valid access keyword", "`access(all)`")
+				handlePub(p)
+				continue
 
 			case KeywordPriv:
-				return nil, p.syntaxErrorWithSuggestedFix("`priv` is no longer a valid access keyword", "`access(self)`")
+				handlePriv(p)
+				continue
 
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
@@ -273,6 +275,67 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 		return nil, nil
 	}
+}
+
+func handlePriv(p *parser) {
+	p.report(p.syntaxErrorWithSuggestedFix(
+		"`priv` is no longer a valid access keyword",
+		"`access(self)`",
+	))
+	p.next()
+}
+
+func handlePub(p *parser) error {
+	pubToken := p.current
+
+	p.nextSemanticToken()
+
+	// Try to parse `(set)` if given
+	if !p.current.Is(lexer.TokenParenOpen) {
+		p.report(NewSyntaxErrorWithSuggestedReplacement(
+			pubToken.Range,
+			"`pub` is no longer a valid access keyword",
+			"`access(all)`",
+		))
+		return nil
+	}
+
+	// Skip the opening paren
+	p.nextSemanticToken()
+
+	const keywordSet = "set"
+
+	if !p.current.Is(lexer.TokenIdentifier) {
+		return p.syntaxError(
+			"expected keyword %q, got %s",
+			keywordSet,
+			p.current.Type,
+		)
+	}
+
+	keyword := p.currentTokenSource()
+	if string(keyword) != keywordSet {
+		return p.syntaxError(
+			"expected keyword %q, got %q",
+			keywordSet,
+			keyword,
+		)
+	}
+
+	// Skip the `set` keyword
+	p.nextSemanticToken()
+
+	_, err := p.mustOne(lexer.TokenParenClose)
+	if err != nil {
+		return err
+	}
+
+	p.report(NewSyntaxError(
+		pubToken.StartPos,
+		"`pub(set)` is no longer a valid access keyword",
+	))
+
+	return nil
 }
 
 var enumeratedAccessModifierKeywords = common.EnumerateWords(
@@ -1632,10 +1695,12 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				continue
 
 			case KeywordPub:
-				return nil, p.syntaxErrorWithSuggestedFix("`pub` is no longer a valid access keyword", "`access(all)`")
+				handlePub(p)
+				continue
 
 			case KeywordPriv:
-				return nil, p.syntaxErrorWithSuggestedFix("`priv` is no longer a valid access keyword", "`access(self)`")
+				handlePriv(p)
+				continue
 
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {

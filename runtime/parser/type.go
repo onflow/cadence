@@ -916,42 +916,23 @@ func defineIdentifierTypes() {
 
 				var authorization ast.Authorization
 
-				_, err := p.mustOne(lexer.TokenParenOpen)
-				if err != nil {
-					return nil, err
-				}
+				if p.current.Is(lexer.TokenParenOpen) {
+					p.next()
 
-				p.skipSpaceAndComments()
-
-				keyword := p.currentTokenSource()
-				switch string(keyword) {
-				case KeywordMapping:
-					keywordPos := p.current.StartPos
-					// Skip the keyword
-					p.nextSemanticToken()
-
-					entitlementMapName, err := parseNominalType(p, lowestBindingPower)
-					if err != nil {
-						return nil, err
-					}
-					authorization = ast.NewMappedAccess(entitlementMapName, keywordPos)
 					p.skipSpaceAndComments()
 
-				default:
-					entitlements, err := parseEntitlementList(p)
+					var err error
+					authorization, err = parseAuthorization(p, authorization)
 					if err != nil {
 						return nil, err
 					}
-					authorization = entitlements
+				} else {
+					p.reportSyntaxError("expected authorization (entitlement list)")
 				}
 
-				_, err = p.mustOne(lexer.TokenParenClose)
-				if err != nil {
-					return nil, err
-				}
 				p.skipSpaceAndComments()
 
-				_, err = p.mustOne(lexer.TokenAmpersand)
+				_, err := p.mustOne(lexer.TokenAmpersand)
 				if err != nil {
 					return nil, err
 				}
@@ -994,6 +975,37 @@ func defineIdentifierTypes() {
 			return parseNominalTypeRemainder(p, token)
 		},
 	)
+}
+
+func parseAuthorization(p *parser, authorization ast.Authorization) (ast.Authorization, error) {
+	keyword := p.currentTokenSource()
+	switch string(keyword) {
+	case KeywordMapping:
+		keywordPos := p.current.StartPos
+		// Skip the keyword
+		p.nextSemanticToken()
+
+		entitlementMapName, err := parseNominalType(p, lowestBindingPower)
+		if err != nil {
+			return nil, err
+		}
+		authorization = ast.NewMappedAccess(entitlementMapName, keywordPos)
+		p.skipSpaceAndComments()
+
+	default:
+		entitlements, err := parseEntitlementList(p)
+		if err != nil {
+			return nil, err
+		}
+		authorization = entitlements
+	}
+
+	_, err := p.mustOne(lexer.TokenParenClose)
+	if err != nil {
+		return nil, err
+	}
+
+	return authorization, nil
 }
 
 // parse a function type starting after the `fun` keyword.
