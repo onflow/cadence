@@ -400,6 +400,25 @@ func legacyType(staticType interpreter.StaticType) interpreter.StaticType {
 		return &LegacyReferenceType{
 			ReferenceStaticType: referenceType,
 		}
+
+	case interpreter.PrimitiveStaticType:
+		switch typ {
+		case interpreter.PrimitiveStaticTypeAuthAccount, //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccount,                  //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountCapabilities,        //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccountCapabilities,      //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountAccountCapabilities, //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountStorageCapabilities, //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountContracts,           //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccountContracts,         //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountKeys,                //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccountKeys,              //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountInbox,               //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAccountKey:                     //nolint:staticcheck
+			return LegacyPrimitiveStaticType{
+				PrimitiveStaticType: typ,
+			}
+		}
 	}
 
 	return nil

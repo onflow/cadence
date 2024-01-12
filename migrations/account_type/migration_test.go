@@ -19,6 +19,7 @@
 package account_type
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -869,4 +870,234 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 			utils.AssertValuesEqual(t, inter, expectedStoredValue, value)
 		})
 	}
+}
+
+var testAddress = common.Address{0x42}
+
+func TestRehash(t *testing.T) {
+
+	t.Parallel()
+
+	locationRange := interpreter.EmptyLocationRange
+
+	ledger := NewTestLedger(nil, nil)
+
+	storageMapKey := interpreter.StringStorageMapKey("dict")
+	newStringValue := func(s string) interpreter.Value {
+		return interpreter.NewUnmeteredStringValue(s)
+	}
+
+	newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
+		storage := runtime.NewStorage(ledger, nil)
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   false,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		return storage, inter
+	}
+
+	t.Run("prepare", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		dictionaryStaticType := interpreter.NewDictionaryStaticType(
+			nil,
+			interpreter.PrimitiveStaticTypeMetaType,
+			interpreter.PrimitiveStaticTypeString,
+		)
+		dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
+
+		accountTypes := []interpreter.PrimitiveStaticType{
+			interpreter.PrimitiveStaticTypePublicAccount,                  //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccount,                    //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountCapabilities,        //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccountCapabilities,      //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountAccountCapabilities, //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountStorageCapabilities, //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountContracts,           //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccountContracts,         //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountKeys,                //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccountKeys,              //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountInbox,               //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAccountKey,                     //nolint:staticcheck
+		}
+
+		for _, typ := range accountTypes {
+			typeValue := interpreter.NewUnmeteredTypeValue(
+				migrations.LegacyPrimitiveStaticType{
+					PrimitiveStaticType: typ,
+				},
+			)
+			dictValue.Insert(
+				inter,
+				locationRange,
+				typeValue,
+				newStringValue(typ.String()),
+			)
+		}
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			true,
+		)
+
+		storageMap.SetValue(inter,
+			storageMapKey,
+			dictValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address(testAddress),
+				false,
+				nil,
+				nil,
+			),
+		)
+
+		err := storage.Commit(inter, false)
+		require.NoError(t, err)
+	})
+
+	t.Run("migrate", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		migration := migrations.NewStorageMigration(inter, storage)
+
+		reporter := newTestReporter()
+
+		migration.Migrate(
+			&migrations.AddressSliceIterator{
+				Addresses: []common.Address{
+					testAddress,
+				},
+			},
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				NewAccountTypeMigration(),
+			),
+		)
+
+		err := migration.Commit()
+		require.NoError(t, err)
+
+		require.Equal(t,
+			map[interpreter.AddressPath]struct{}{
+				{
+					Address: testAddress,
+					Path: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: string(storageMapKey),
+					},
+				}: {},
+			},
+			reporter.migratedPaths,
+		)
+	})
+
+	t.Run("load", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
+		storedValue := storageMap.ReadValue(inter, storageMapKey)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, storedValue)
+
+		dictValue := storedValue.(*interpreter.DictionaryValue)
+
+		var existingKeys []interpreter.Value
+		dictValue.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
+			existingKeys = append(existingKeys, key)
+			// continue iteration
+			return true
+		})
+
+		for _, key := range existingKeys {
+			actual := dictValue.Remove(
+				inter,
+				interpreter.EmptyLocationRange,
+				key,
+			)
+
+			assert.NotNil(t, actual)
+
+			staticType := key.(interpreter.TypeValue).Type
+
+			var possibleExpectedValues []interpreter.Value
+			var str string
+
+			switch {
+			case staticType.Equal(unauthorizedAccountReferenceType):
+				str = "PublicAccount"
+			case staticType.Equal(authAccountReferenceType):
+				str = "AuthAccount"
+			case staticType.Equal(interpreter.PrimitiveStaticTypeAccount_Capabilities):
+				// For both `AuthAccount.Capabilities` and `PublicAccount.Capabilities`,
+				// the migrated key is the same (`Account_Capabilities`).
+				// So the value at the key could be any of the two original values,
+				// depending on the order of migration.
+				possibleExpectedValues = []interpreter.Value{
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredStringValue("AuthAccountCapabilities"),
+					),
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredStringValue("PublicAccountCapabilities"),
+					),
+				}
+			case staticType.Equal(interpreter.PrimitiveStaticTypeAccount_AccountCapabilities):
+				str = "AuthAccountAccountCapabilities"
+			case staticType.Equal(interpreter.PrimitiveStaticTypeAccount_StorageCapabilities):
+				str = "AuthAccountStorageCapabilities"
+			case staticType.Equal(interpreter.PrimitiveStaticTypeAccount_Contracts):
+				// For both `AuthAccount.Contracts` and `PublicAccount.Contracts`,
+				// the migrated key is the same (Account_Contracts).
+				// So the value at the key could be any of the two original values,
+				// depending on the order of migration.
+				possibleExpectedValues = []interpreter.Value{
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredStringValue("AuthAccountContracts"),
+					),
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredStringValue("PublicAccountContracts"),
+					),
+				}
+			case staticType.Equal(interpreter.PrimitiveStaticTypeAccount_Keys):
+				// For both `AuthAccount.Keys` and `PublicAccount.Keys`,
+				// the migrated key is the same (Account_Keys).
+				// So the value at the key could be any of the two original values,
+				// depending on the order of migration.
+				possibleExpectedValues = []interpreter.Value{
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredStringValue("AuthAccountKeys"),
+					),
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredStringValue("PublicAccountKeys"),
+					),
+				}
+			case staticType.Equal(interpreter.PrimitiveStaticTypeAccount_Inbox):
+				str = "AuthAccountInbox"
+			case staticType.Equal(interpreter.AccountKeyStaticType):
+				str = "AccountKey"
+			default:
+				require.Fail(t, fmt.Sprintf("Unexpected type `%s` in dictionary key", staticType.ID()))
+			}
+
+			if possibleExpectedValues != nil {
+				assert.Contains(t, possibleExpectedValues, actual)
+			} else {
+				expected := interpreter.NewUnmeteredSomeValueNonCopying(
+					interpreter.NewUnmeteredStringValue(str),
+				)
+				assert.Equal(t, expected, actual)
+			}
+		}
+	})
 }
