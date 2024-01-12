@@ -2571,7 +2571,7 @@ func ArraySliceFunctionType(elementType Type) *FunctionType {
 
 func ArrayToVariableSizedFunctionType(elementType Type) *FunctionType {
 	return NewSimpleFunctionType(
-		FunctionPurityImpure,
+		FunctionPurityView,
 		[]Parameter{},
 		NewTypeAnnotation(&VariableSizedType{
 			Type: elementType,
