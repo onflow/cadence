@@ -140,11 +140,25 @@ var testTypeAssertEqualFunction = interpreter.NewUnmeteredHostFunctionValue(
 			panic(errors.NewUnreachableError())
 		}
 
-		inter := invocation.Interpreter
-
 		actual, ok := invocation.Arguments[1].(interpreter.EquatableValue)
 		if !ok {
 			panic(errors.NewUnreachableError())
+		}
+
+		inter := invocation.Interpreter
+
+		expectedType := expected.StaticType(inter)
+		actualType := actual.StaticType(inter)
+		if !expectedType.Equal(actualType) {
+			message := fmt.Sprintf(
+				"not equal types: expected: %s, actual: %s",
+				expectedType,
+				actualType,
+			)
+			panic(AssertionError{
+				Message:       message,
+				LocationRange: invocation.LocationRange,
+			})
 		}
 
 		equal := expected.Equal(

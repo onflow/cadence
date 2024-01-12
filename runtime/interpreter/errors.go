@@ -1032,3 +1032,35 @@ func (e NestedReferenceError) Error() string {
 		e.Value.String(),
 	)
 }
+
+// InclusiveRangeConstructionError
+
+type InclusiveRangeConstructionError struct {
+	LocationRange
+	Message string
+}
+
+var _ errors.UserError = InclusiveRangeConstructionError{}
+
+func (InclusiveRangeConstructionError) IsUserError() {}
+
+func (e InclusiveRangeConstructionError) Error() string {
+	const message = "InclusiveRange construction failed"
+	if e.Message == "" {
+		return message
+	}
+	return fmt.Sprintf("%s: %s", message, e.Message)
+}
+
+// ResourceReferenceDereferenceError
+type ResourceReferenceDereferenceError struct {
+	LocationRange
+}
+
+var _ errors.InternalError = ResourceReferenceDereferenceError{}
+
+func (ResourceReferenceDereferenceError) IsInternalError() {}
+
+func (e ResourceReferenceDereferenceError) Error() string {
+	return "internal error: resource-references cannot be dereferenced"
+}

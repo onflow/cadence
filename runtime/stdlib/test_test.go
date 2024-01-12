@@ -334,9 +334,9 @@ func TestTestNewMatcher(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("combined matcher mismatching types", func(t *testing.T) {
@@ -499,9 +499,9 @@ func TestTestEqualMatcher(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("matcher or", func(t *testing.T) {
@@ -760,6 +760,33 @@ func TestAssertEqual(t *testing.T) {
 		)
 	})
 
+	t.Run("fail with value equality on optional type", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+            import Test
+
+            access(all)
+            fun test() {
+                let expected: Int = 15
+                let actual: Int? = 15
+                Test.assertEqual(expected, actual)
+            }
+        `
+
+		inter, err := newTestContractInterpreter(t, script)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.Error(t, err)
+		assert.ErrorAs(t, err, &AssertionError{})
+		assert.ErrorContains(
+			t,
+			err,
+			"assertion failed: not equal types: expected: Int, actual: Int?",
+		)
+	})
+
 	t.Run("different types", func(t *testing.T) {
 		t.Parallel()
 
@@ -781,7 +808,7 @@ func TestAssertEqual(t *testing.T) {
 		assert.ErrorContains(
 			t,
 			err,
-			"assertion failed: not equal: expected: true, actual: 1",
+			"assertion failed: not equal types: expected: Bool, actual: Int",
 		)
 	})
 
@@ -1003,7 +1030,7 @@ func TestAssertEqual(t *testing.T) {
             fun test() {
                 let foo = Foo()
                 let bar <- create Bar()
-                Test.expect(foo, Test.equal(<-bar))
+                Test.assertEqual(foo, <-bar)
             }
 
             access(all)
@@ -1904,9 +1931,9 @@ func TestTestExpect(t *testing.T) {
 
 		_, err := newTestContractInterpreter(t, script)
 
-		errs := checker.RequireCheckerErrors(t, err, 2)
-		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("resource with resource matcher", func(t *testing.T) {

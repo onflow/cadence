@@ -335,7 +335,7 @@ func TestCheckFunctionArgumentTypeInference(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("with generics", func(t *testing.T) {
+	t.Run("with generics, void return type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -367,46 +367,146 @@ func TestCheckFunctionArgumentTypeInference(t *testing.T) {
 			},
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
-
-		require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-		typeParamMismatchErr := errs[0].(*sema.TypeParameterTypeMismatchError)
-		assert.Equal(
-			t,
-			&sema.VariableSizedType{
-				Type: sema.Int8Type,
-			},
-			typeParamMismatchErr.ExpectedType,
-		)
-
-		assert.Equal(
-			t,
-			&sema.VariableSizedType{
-				Type: sema.IntType,
-			},
-			typeParamMismatchErr.ActualType,
-		)
-
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		typeMismatchErr := errs[1].(*sema.TypeMismatchError)
-
-		assert.Equal(
-			t,
-			&sema.VariableSizedType{
-				Type: sema.Int8Type,
-			},
-			typeMismatchErr.ExpectedType,
-		)
-
-		assert.Equal(
-			t,
-			&sema.VariableSizedType{
-				Type: sema.IntType,
-			},
-			typeMismatchErr.ActualType,
-		)
-
+		require.NoError(t, err)
 	})
+
+	t.Run("with generics, generic return type", func(t *testing.T) {
+
+		t.Parallel()
+
+		typeParameter := &sema.TypeParameter{
+			Name:      "T",
+			TypeBound: nil,
+		}
+
+		_, err := parseAndCheckWithTestValue(t,
+			`
+              let res: [Int8] = test<[Int8]>([1, 2, 3])
+            `,
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter,
+				},
+				Parameters: []sema.Parameter{
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "value",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("with generics, argument type propagation, simple", func(t *testing.T) {
+
+		t.Parallel()
+
+		typeParameter := &sema.TypeParameter{
+			Name:      "T",
+			TypeBound: nil,
+		}
+
+		_, err := parseAndCheckWithTestValue(t,
+			`
+              let res: UInt8 = test(1 as UInt8, 2)
+            `,
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter,
+				},
+				Parameters: []sema.Parameter{
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "a",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
+					},
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "b",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("with generics, argument type propagation, nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		typeParameter := &sema.TypeParameter{
+			Name:      "T",
+			TypeBound: nil,
+		}
+
+		_, err := parseAndCheckWithTestValue(t,
+			`
+              let res: UInt8 = test(1 as UInt8, [2])
+            `,
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter,
+				},
+				Parameters: []sema.Parameter{
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "a",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
+					},
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "b",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.VariableSizedType{
+								Type: &sema.GenericType{
+									TypeParameter: typeParameter,
+								},
+							},
+						),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
 }
 
 func TestCheckBinaryExpressionTypeInference(t *testing.T) {

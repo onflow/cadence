@@ -219,16 +219,14 @@ func TestCheckAccountStorageSave(t *testing.T) {
 
 			if domain == common.PathDomainStorage {
 
+				errs := RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			} else {
 				errs := RequireCheckerErrors(t, err, 2)
 
-				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-			} else {
-				errs := RequireCheckerErrors(t, err, 3)
-
-				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-				require.IsType(t, &sema.TypeMismatchError{}, errs[2])
 			}
 		})
 
@@ -254,16 +252,14 @@ func TestCheckAccountStorageSave(t *testing.T) {
 
 			if domain == common.PathDomainStorage {
 
+				errs := RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			} else {
 				errs := RequireCheckerErrors(t, err, 2)
 
-				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-			} else {
-				errs := RequireCheckerErrors(t, err, 3)
-
-				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-				require.IsType(t, &sema.TypeMismatchError{}, errs[2])
 			}
 		})
 	}

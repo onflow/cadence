@@ -444,6 +444,8 @@ func testAccountWithErrorHandler(
 	accountValueDeclaration.Name = "account"
 	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
+	valueDeclarations = append(valueDeclarations, stdlib.InclusiveRangeConstructorFunction)
+
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	for _, valueDeclaration := range valueDeclarations {
 		baseValueActivation.DeclareValue(valueDeclaration)

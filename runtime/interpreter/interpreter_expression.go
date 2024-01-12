@@ -688,10 +688,42 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		return integerValue.Negate(interpreter, LocationRange{
+		return integerValue.Negate(
+			interpreter,
+			LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: expression,
+			},
+		)
+
+	case ast.OperationMul:
+
+		if _, ok := value.(NilValue); ok {
+			return Nil
+		}
+
+		locationRange := LocationRange{
 			Location:    interpreter.Location,
 			HasPosition: expression,
-		})
+		}
+		var isOptional bool
+
+		if someValue, ok := value.(*SomeValue); ok {
+			isOptional = true
+			value = someValue.InnerValue(interpreter, locationRange)
+		}
+
+		referenceValue, ok := value.(ReferenceValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		dereferencedValue := DereferenceValue(interpreter, locationRange, referenceValue)
+		if isOptional {
+			return NewSomeValueNonCopying(interpreter, dereferencedValue)
+		} else {
+			return dereferencedValue
+		}
 
 	case ast.OperationMove:
 		interpreter.invalidateResource(value)

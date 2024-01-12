@@ -1442,6 +1442,9 @@ func (d TypeDecoder) DecodeStaticType() (StaticType, error) {
 	case CBORTagCapabilityStaticType:
 		return d.decodeCapabilityStaticType()
 
+	case CBORTagInclusiveRangeStaticType:
+		return d.decodeInclusiveRangeStaticType()
+
 	default:
 		return nil, errors.NewUnexpectedError("invalid static type encoding tag: %d", number)
 	}
@@ -2024,6 +2027,17 @@ func (d TypeDecoder) decodeCompositeTypeInfo() (atree.TypeInfo, error) {
 		qualifiedIdentifier,
 		common.CompositeKind(kind),
 	), nil
+}
+
+func (d TypeDecoder) decodeInclusiveRangeStaticType() (StaticType, error) {
+	elementType, err := d.DecodeStaticType()
+	if err != nil {
+		return nil, errors.NewUnexpectedError(
+			"invalid inclusive range static type encoding: %w",
+			err,
+		)
+	}
+	return NewInclusiveRangeStaticType(d.memoryGauge, elementType), nil
 }
 
 func DecodeTypeInfo(decoder *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (atree.TypeInfo, error) {
