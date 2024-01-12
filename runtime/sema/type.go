@@ -2028,7 +2028,7 @@ Available if the array element type is not resource-kinded.
 const ArrayTypeToVariableSizedFunctionName = "toVariableSized"
 
 const arrayTypeToVariableSizedFunctionDocString = `
-Returns a new variable sized array with the same content.
+Returns a new variable-sized array with the copy of the contents of the given array.
 Available if the array is constant sized and the element type is not resource-kinded.
 `
 
