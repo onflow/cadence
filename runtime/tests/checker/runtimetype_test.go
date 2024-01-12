@@ -831,3 +831,75 @@ func TestCheckCapabilityTypeConstructor(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckInclusiveRangeTypeConstructor(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name          string
+		code          string
+		expectedError error
+	}{
+		{
+			name: "Int",
+			code: `
+              let result = InclusiveRangeType(Type<Int>())
+            `,
+			expectedError: nil,
+		},
+		{
+			name: "UInt16",
+			code: `
+              let result = InclusiveRangeType(Type<UInt16>())
+            `,
+			expectedError: nil,
+		},
+		{
+			name: "resource",
+			code: `
+		      resource R {}
+		      let result = InclusiveRangeType(Type<@R>())
+		    `,
+			expectedError: nil,
+		},
+		{
+			name: "type mismatch",
+			code: `
+              let result = InclusiveRangeType(3)
+            `,
+			expectedError: &sema.TypeMismatchError{},
+		},
+		{
+			name: "too many args",
+			code: `
+              let result = InclusiveRangeType(Type<Int>(), Type<Int>())
+            `,
+			expectedError: &sema.ExcessiveArgumentsError{},
+		},
+		{
+			name: "too few args",
+			code: `
+              let result = InclusiveRangeType()
+            `,
+			expectedError: &sema.InsufficientArgumentsError{},
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, testCase.code)
+
+			if testCase.expectedError == nil {
+				require.NoError(t, err)
+				assert.Equal(t,
+					&sema.OptionalType{Type: sema.MetaType},
+					RequireGlobalValue(t, checker.Elaboration, "result"),
+				)
+			} else {
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, testCase.expectedError, errs[0])
+			}
+		})
+	}
+}

@@ -68,6 +68,7 @@ const (
 	MemoryKindVariableSizedStaticType
 	MemoryKindConstantSizedStaticType
 	MemoryKindDictionaryStaticType
+	MemoryKindInclusiveRangeStaticType
 	MemoryKindOptionalStaticType
 	MemoryKindIntersectionStaticType
 	MemoryKindEntitlementSetStaticAccess
@@ -88,6 +89,7 @@ const (
 	MemoryKindCadenceArrayValueBase
 	MemoryKindCadenceArrayValueLength
 	MemoryKindCadenceDictionaryValue
+	MemoryKindCadenceInclusiveRangeValue
 	MemoryKindCadenceKeyValuePair
 	MemoryKindCadenceStructValueBase
 	MemoryKindCadenceStructValueSize
@@ -111,6 +113,7 @@ const (
 	MemoryKindCadenceVariableSizedArrayType
 	MemoryKindCadenceConstantSizedArrayType
 	MemoryKindCadenceDictionaryType
+	MemoryKindCadenceInclusiveRangeType
 	MemoryKindCadenceField
 	MemoryKindCadenceParameter
 	MemoryKindCadenceTypeParameter
@@ -244,6 +247,7 @@ const (
 	MemoryKindEntitlementMapSemaType
 	MemoryKindEntitlementRelationSemaType
 	MemoryKindCapabilitySemaType
+	MemoryKindInclusiveRangeSemaType
 
 	// ordered-map
 	MemoryKindOrderedMap

@@ -258,6 +258,8 @@ func ExportMeteredType(
 			return exportIntersectionType(gauge, t, results)
 		case *sema.CapabilityType:
 			return exportCapabilityType(gauge, t, results)
+		case *sema.InclusiveRangeType:
+			return exportInclusiveRangeType(gauge, t, results)
 		}
 
 		panic(fmt.Sprintf("cannot export type %s", t))
@@ -481,6 +483,19 @@ func exportDictionaryType(
 	)
 }
 
+func exportInclusiveRangeType(
+	gauge common.MemoryGauge,
+	t *sema.InclusiveRangeType,
+	results map[sema.TypeID]cadence.Type,
+) *cadence.InclusiveRangeType {
+	convertedMemberType := ExportMeteredType(gauge, t.MemberType, results)
+
+	return cadence.NewMeteredInclusiveRangeType(
+		gauge,
+		convertedMemberType,
+	)
+}
+
 func exportFunctionType(
 	gauge common.MemoryGauge,
 	t *sema.FunctionType,
@@ -691,7 +706,11 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 			ImportType(memoryGauge, t.KeyType),
 			ImportType(memoryGauge, t.ElementType),
 		)
-
+	case *cadence.InclusiveRangeType:
+		return interpreter.NewInclusiveRangeStaticType(
+			memoryGauge,
+			ImportType(memoryGauge, t.ElementType),
+		)
 	case *cadence.StructType,
 		*cadence.ResourceType,
 		*cadence.EventType,

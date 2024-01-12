@@ -39,6 +39,7 @@ type encodeTypeFn func(typ cadence.Type, tids ccfTypeIDByCadenceType) error
 //	/ reference-type
 //	/ intersection-type
 //	/ capability-type
+//	/ inclusiverange-type
 //	/ type-ref
 //
 // All exported Cadence types need to be supported by this function,
@@ -61,6 +62,9 @@ func (e *Encoder) encodeInlineType(typ cadence.Type, tids ccfTypeIDByCadenceType
 
 	case *cadence.DictionaryType:
 		return e.encodeDictType(typ, tids)
+
+	case *cadence.InclusiveRangeType:
+		return e.encodeInclusiveRangeType(typ, tids)
 
 	case cadence.CompositeType, cadence.InterfaceType:
 		id, err := tids.id(typ)
@@ -293,6 +297,43 @@ func (e *Encoder) encodeDictTypeWithRawTag(
 	}
 
 	// element 1: element type with given encodeTypeFn
+	return encodeTypeFn(typ.ElementType, tids)
+}
+
+// encodeInclusiveRangeType encodes cadence.InclusiveRangeType as
+// language=CDDL
+// inclusiverange-type =
+//
+// ; cbor-tag-inclusiverange-type
+// #6.145(inline-type)
+func (e *Encoder) encodeInclusiveRangeType(
+	typ *cadence.InclusiveRangeType,
+	tids ccfTypeIDByCadenceType,
+) error {
+	rawTagNum := []byte{0xd8, CBORTagInclusiveRangeType}
+	return e.encodeInclusiveRangeTypeWithRawTag(
+		typ,
+		tids,
+		e.encodeInlineType,
+		rawTagNum,
+	)
+}
+
+// encodeInclusiveRangeTypeWithRawTag encodes cadence.InclusiveRangeType
+// with given tag number and encode type function.
+func (e *Encoder) encodeInclusiveRangeTypeWithRawTag(
+	typ *cadence.InclusiveRangeType,
+	tids ccfTypeIDByCadenceType,
+	encodeTypeFn encodeTypeFn,
+	rawTagNumber []byte,
+) error {
+	// Encode CBOR tag number.
+	err := e.enc.EncodeRawBytes(rawTagNumber)
+	if err != nil {
+		return err
+	}
+
+	// Encode element type with given encodeTypeFn
 	return encodeTypeFn(typ.ElementType, tids)
 }
 

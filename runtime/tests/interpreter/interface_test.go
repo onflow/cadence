@@ -653,7 +653,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 					},
 				},
 				Config: &interpreter.Config{
-					BaseActivationHandler: func(location common.Location) *interpreter.VariableActivation {
+					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
 				},
@@ -765,7 +765,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 					},
 				},
 				Config: &interpreter.Config{
-					BaseActivationHandler: func(location common.Location) *interpreter.VariableActivation {
+					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
 				},
@@ -856,7 +856,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 					},
 				},
 				Config: &interpreter.Config{
-					BaseActivationHandler: func(location common.Location) *interpreter.VariableActivation {
+					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
 						return baseActivation
 					},
 					ContractValueHandler: makeContractValueHandler(nil, nil, nil),

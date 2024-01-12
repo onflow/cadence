@@ -688,6 +688,56 @@ func TestDictionaryStaticType_Equal(t *testing.T) {
 	})
 }
 
+func TestInclusiveRangeStaticType_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt256,
+			}.Equal(
+				InclusiveRangeStaticType{
+					ElementType: PrimitiveStaticTypeInt256,
+				},
+			),
+		)
+	})
+
+	t.Run("different member types", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt,
+			}.Equal(
+				InclusiveRangeStaticType{
+					ElementType: PrimitiveStaticTypeWord256,
+				},
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt,
+			}.Equal(
+				&VariableSizedStaticType{
+					Type: PrimitiveStaticTypeInt,
+				},
+			),
+		)
+	})
+}
+
 func TestIntersectionStaticType_Equal(t *testing.T) {
 
 	t.Parallel()
@@ -1615,6 +1665,15 @@ func TestStaticTypeConversion(t *testing.T) {
 			name:       "AccountKey",
 			staticType: PrimitiveStaticTypeAccountKey,
 			semaType:   nil,
+		},
+		{
+			name: "InclusiveRange",
+			semaType: &sema.InclusiveRangeType{
+				MemberType: sema.IntType,
+			},
+			staticType: InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt,
+			},
 		},
 	}
 
