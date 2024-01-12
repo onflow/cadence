@@ -2519,8 +2519,6 @@ func TestCheckVariableSizedArrayToVariableSizedInvalid(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		resource X {}
-
 		fun test() : [Int] {
 			let xs: [Int] = [1, 2, 3]
 
