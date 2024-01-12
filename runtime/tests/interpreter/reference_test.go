@@ -1814,4 +1814,54 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
 	})
+
+	t.Run("reference to storage reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            resource R {}
+
+            fun test(): Void {
+
+                let r <- [<- create R()]
+                account.storage.save(<-r, to: /storage/foo)
+                let unauthRef = account.storage.borrow<&[R]>(from: /storage/foo)!
+
+                let maskedUnauthRef = unauthRef as AnyStruct
+                let doubleRef = &maskedUnauthRef as auth(Mutate) &AnyStruct
+                let typedDoubleRef : auth(Mutate) &(&[R]) = doubleRef as! auth(Mutate) &(&[R])
+            }`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
+
+	t.Run("storage reference to storage reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            resource R {}
+
+            fun test(): Void {
+
+                let r <- [<- create R()]
+                account.storage.save(<-r, to: /storage/foo)
+                let unauthRef = account.storage.borrow<&[R]>(from: /storage/foo)!
+
+                let maskedUnauthRef = unauthRef as AnyStruct
+                let doubleRef = &maskedUnauthRef as auth(Mutate) &AnyStruct
+                let typedDoubleRef : auth(Mutate) &(&[R]) = doubleRef as! auth(Mutate) &(&[R])
+            }`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
 }
