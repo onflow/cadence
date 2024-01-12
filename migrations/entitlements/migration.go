@@ -215,10 +215,10 @@ func ConvertValueToEntitlements(
 		entitledArrayType := entitledType.(sema.ArrayType)
 		arrayStaticType := interpreter.ConvertSemaArrayTypeToStaticArrayType(inter, entitledArrayType)
 
-		iterator := v.Iterator(inter)
+		iterator := v.Iterator(inter, interpreter.EmptyLocationRange)
 
 		newArray := interpreter.NewArrayValueWithIterator(inter, arrayStaticType, v.GetOwner(), uint64(v.Count()), func() interpreter.Value {
-			return iterator.Next(inter)
+			return iterator.Next(inter, interpreter.EmptyLocationRange)
 		})
 		return newArray
 
