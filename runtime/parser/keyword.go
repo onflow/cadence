@@ -75,6 +75,22 @@ const (
 	KeywordPub         = "pub"
 	KeywordPriv        = "priv"
 	KeywordInclude     = "include"
+	KeywordTry         = "try"
+	KeywordCatch       = "catch"
+	KeywordFinally     = "finally"
+	KeywordGoto        = "goto"
+	KeywordConst       = "const"
+	KeywordExport      = "export"
+	KeywordThrow       = "throw"
+	KeywordThrows      = "throws"
+	KeywordRequires    = "requires"
+	KeywordWhere       = "where"
+	KeywordFinal       = "final"
+	KeywordInternal    = "internal"
+	KeywordTypealias   = "typealias"
+	KeywordRepeat      = "repeat"
+	KeywordGuard       = "guard"
+	KeywordIs          = "is"
 	// NOTE: ensure to update allKeywords when adding a new keyword
 )
 
@@ -127,7 +143,27 @@ var allKeywords = []string{
 	keywordAttachment,
 	keywordTo,
 	keywordRemove,
+	KeywordStatic,
+	KeywordNative,
+	KeywordPub,
+	KeywordPriv,
 	KeywordInclude,
+	KeywordTry,
+	KeywordCatch,
+	KeywordFinally,
+	KeywordGoto,
+	KeywordConst,
+	KeywordExport,
+	KeywordThrow,
+	KeywordThrows,
+	KeywordRequires,
+	KeywordWhere,
+	KeywordFinal,
+	KeywordInternal,
+	KeywordTypealias,
+	KeywordRepeat,
+	KeywordGuard,
+	KeywordIs,
 }
 
 // Keywords that can be used in identifier position without ambiguity.
