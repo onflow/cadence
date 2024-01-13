@@ -316,9 +316,11 @@ func TestRehash(t *testing.T) {
 		)
 		dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
 
-		// NOTE: non-normalized
-		stringValue := &migrations.LegacyStringValue{
-			StringValue: interpreter.NewUnmeteredStringValue("Cafe\u0301"),
+		// NOTE: un-normalized
+		unnormalizedString := "Cafe\u0301"
+		stringValue := &interpreter.StringValue{
+			Str:             unnormalizedString,
+			UnnormalizedStr: unnormalizedString,
 		}
 
 		dictValue.Insert(

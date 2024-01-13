@@ -19,6 +19,8 @@
 package migrations
 
 import (
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
@@ -43,4 +45,22 @@ func (v *LegacyStringValue) HashInput(_ *interpreter.Interpreter, _ interpreter.
 	buffer[0] = byte(interpreter.HashInputTypeString)
 	copy(buffer[1:], v.UnnormalizedStr)
 	return buffer
+}
+
+func (v *LegacyStringValue) Transfer(
+	interpreter *interpreter.Interpreter,
+	_ interpreter.LocationRange,
+	_ atree.Address,
+	remove bool,
+	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
+) interpreter.Value {
+	if remove {
+		interpreter.RemoveReferencedSlab(storable)
+	}
+	return v
+}
+
+func (v *LegacyStringValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+	return v, nil
 }
