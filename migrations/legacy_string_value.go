@@ -32,6 +32,12 @@ type LegacyStringValue struct {
 
 var _ interpreter.Value = &LegacyStringValue{}
 
+// Override HashInput to use the un-normalized string for hashing,
+// so the removal of the existing key is using this hash input function,
+// instead of the one from StringValue.
+//
+// However, after hashing the equality function should still use the equality function from StringValue.
+
 func (v *LegacyStringValue) HashInput(_ *interpreter.Interpreter, _ interpreter.LocationRange, scratch []byte) []byte {
 	// Use the un-normalized `v.UnnormalizedStr` for generating the hash.
 	length := 1 + len(v.UnnormalizedStr)
