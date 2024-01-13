@@ -2101,7 +2101,7 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
             fun test(): auth(F) &Int {
 				let s = S()
 				let sRef = &s as auth(E) &S
-                return sRef.foo(&1)
+                return sRef.foo(&1 as auth(F) &Int)
             }
         `)
 
@@ -2139,7 +2139,7 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 
             fun test(): auth(F, H) &Int {
 				let s = S()
-                return s.foo(&1)
+                return s.foo(&1 as auth(F, H) &Int)
             }
         `)
 

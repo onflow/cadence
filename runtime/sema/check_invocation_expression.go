@@ -581,7 +581,43 @@ func (checker *Checker) checkInvocationRequiredArgument(
 			}
 		}
 
-		argumentType = checker.VisitExpression(argument.Expression, parameterType)
+		// If the parameter type is an authorized reference type in particular,
+		// we do NOT use it as the expected type,
+		// to require an explicit type annotation at the invocation.
+		//
+		// The parameter type is not obvious at the call-site, which is potentially dangerous
+		// if the function is defined in a different location, and the parameter type requires an authorization.
+		//
+		// For example, consider:
+		//
+		//   // defined elsewhere, is going to mutate the passed array
+		//   fun foo(ints: auth(Mutate) &[Int]) {}
+		//
+		//   let ints = [1, 2, 3]
+		//   // would implicitly allow mutation
+		//   foo(&ints)
+
+		expectedType := parameterType
+		if referenceType, ok := parameterType.(*ReferenceType); ok &&
+			referenceType.Authorization != UnauthorizedAccess {
+
+			expectedType = nil
+		}
+
+		argumentType = checker.VisitExpression(argument.Expression, expectedType)
+
+		// If we did not pass an expected type,
+		// we must manually check that the argument type and the parameter type are compatible.
+
+		if expectedType == nil {
+			// Check that the type of the argument matches the type of the parameter.
+
+			checker.checkInvocationArgumentParameterTypeCompatibility(
+				argument.Expression,
+				argumentType,
+				parameterType,
+			)
+		}
 
 	} else {
 		// If there are still type parameters that have not been bound to a type,

@@ -7439,22 +7439,23 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
                 access(mapping MyMap) let fnArr: [fun(auth(mapping MyMap) &InnerObj): auth(mapping MyMap) &InnerObj]
                 init() {
                     let innerObj = &InnerObj() as auth(Inner1, Inner2) &InnerObj
-                    self.fnArr = [fun(_ x: &InnerObj): auth(Inner1, Inner2) &InnerObj {
-                        return innerObj
-                    }]
+                    self.fnArr = [
+                        fun(_ x: &InnerObj): auth(Inner1, Inner2) &InnerObj {
+                            return innerObj
+                        }
+                    ]
                 }
              
             }    
 
             fun foo() {
                 let x = (&Carrier() as auth(Outer1) &Carrier).fnArr[0]
-                x(&InnerObj()).first() // ok
 
                 x(&InnerObj() as auth(Inner1) &InnerObj).first() // ok
 
                 x(&InnerObj() as auth(Inner2) &InnerObj).first() // mismatch
 
-                x(&InnerObj()).second() // fails
+                x(&InnerObj() as auth(Inner1) &InnerObj).second() // fails
             }
           
         `)

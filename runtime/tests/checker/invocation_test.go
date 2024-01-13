@@ -592,3 +592,112 @@ func TestCheckArgumentLabels(t *testing.T) {
 
 	})
 }
+
+func TestCheckInvocationReferenceParameter(t *testing.T) {
+	t.Parallel()
+
+	t.Run("with authorization", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("missing type annotation", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement X
+
+                fun test(ref: auth(X) &Int) {}
+
+                let x = test(ref: &1)
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+
+		})
+
+		t.Run("matching type annotation", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement X
+
+                fun test(ref: auth(X) &Int) {}
+
+                let x = test(ref: &1 as auth(X) &Int)
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("non-matching type annotation, reference with different authorization", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement X
+                entitlement Y
+
+                fun test(ref: auth(X) &Int) {}
+
+                let x = test(ref: &1 as auth(Y) &Int)
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("non-matching type, non-reference", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                entitlement X
+                entitlement Y
+
+                fun test(ref: auth(X) &Int) {}
+
+                let x = test(ref: 1)
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	})
+
+	t.Run("without authorization", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("missing type annotation", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                fun test(ref: &Int) {}
+
+                let x = test(ref: &1)
+		    `)
+			require.NoError(t, err)
+		})
+
+		t.Run("matching type annotation", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                fun test(ref: &Int) {}
+
+                let x = test(ref: &1 as &Int)
+            `)
+			require.NoError(t, err)
+		})
+
+		t.Run("non-matching type", func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+                fun test(ref: &Int) {}
+
+                let x = test(ref: 1)
+            `)
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	})
+
+}
