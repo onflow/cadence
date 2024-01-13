@@ -21,6 +21,7 @@ package string_normalization
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/atree"
@@ -268,4 +269,140 @@ func TestStringNormalizingMigration(t *testing.T) {
 			utils.AssertValuesEqual(t, inter, expectedStoredValue, value)
 		})
 	}
+}
+
+// TestRehash stores a dictionary in storage,
+// which has a key that is a string value with a non-normalized representation,
+// runs the migration, and ensures the dictionary is still usable
+func TestRehash(t *testing.T) {
+
+	t.Parallel()
+
+	var testAddress = common.MustBytesToAddress([]byte{0x1})
+
+	locationRange := interpreter.EmptyLocationRange
+
+	ledger := NewTestLedger(nil, nil)
+
+	storageMapKey := interpreter.StringStorageMapKey("dict")
+	newTestValue := func() interpreter.Value {
+		return interpreter.NewUnmeteredIntValueFromInt64(42)
+	}
+
+	newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
+		storage := runtime.NewStorage(ledger, nil)
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   false,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		return storage, inter
+	}
+
+	t.Run("prepare", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		dictionaryStaticType := interpreter.NewDictionaryStaticType(
+			nil,
+			interpreter.PrimitiveStaticTypeString,
+			interpreter.PrimitiveStaticTypeInt,
+		)
+		dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
+
+		// NOTE: non-normalized
+		stringValue := &migrations.LegacyStringValue{
+			StringValue: interpreter.NewUnmeteredStringValue("Cafe\u0301"),
+		}
+
+		dictValue.Insert(
+			inter,
+			locationRange,
+			stringValue,
+			newTestValue(),
+		)
+
+		assert.Equal(t,
+			[]byte("\x01Cafe\xCC\x81"),
+			stringValue.HashInput(inter, locationRange, nil),
+		)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			true,
+		)
+
+		storageMap.SetValue(
+			inter,
+			storageMapKey,
+			dictValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address(testAddress),
+				false,
+				nil,
+				nil,
+			),
+		)
+
+		err := storage.Commit(inter, false)
+		require.NoError(t, err)
+	})
+
+	t.Run("migrate", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		migration := migrations.NewStorageMigration(inter, storage)
+
+		migration.Migrate(
+			&migrations.AddressSliceIterator{
+				Addresses: []common.Address{
+					testAddress,
+				},
+			},
+			migration.NewValueMigrationsPathMigrator(
+				nil,
+				NewStringNormalizingMigration(),
+			),
+		)
+
+		err := migration.Commit()
+		require.NoError(t, err)
+	})
+
+	t.Run("load", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
+		storedValue := storageMap.ReadValue(inter, storageMapKey)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, storedValue)
+
+		dictValue := storedValue.(*interpreter.DictionaryValue)
+
+		stringValue := interpreter.NewUnmeteredStringValue("Caf\u00E9")
+
+		assert.Equal(t,
+			[]byte("\x01Caf\xC3\xA9"),
+			stringValue.HashInput(inter, locationRange, nil),
+		)
+
+		value, ok := dictValue.Get(inter, locationRange, stringValue)
+		require.True(t, ok)
+
+		require.IsType(t, interpreter.IntValue{}, value)
+		require.Equal(t,
+			newTestValue(),
+			value.(interpreter.IntValue),
+		)
+	})
 }
