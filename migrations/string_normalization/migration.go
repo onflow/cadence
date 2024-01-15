@@ -45,7 +45,7 @@ func (StringNormalizingMigration) Migrate(
 		return interpreter.NewUnmeteredStringValue(value.Str), nil
 
 	case interpreter.CharacterValue:
-		return interpreter.NewUnmeteredCharacterValue(string(value)), nil
+		return interpreter.NewUnmeteredCharacterValue(value.Str), nil
 	}
 
 	return nil, nil

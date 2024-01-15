@@ -98,9 +98,9 @@ func exportValueWithInterpreter(
 	case interpreter.CharacterValue:
 		return cadence.NewMeteredCharacter(
 			inter,
-			common.NewCadenceCharacterMemoryUsage(len(v)),
+			common.NewCadenceCharacterMemoryUsage(len(v.Str)),
 			func() string {
-				return string(v)
+				return v.Str
 			},
 		)
 	case *interpreter.ArrayValue:

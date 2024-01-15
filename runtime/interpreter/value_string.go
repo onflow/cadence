@@ -95,10 +95,10 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 		common.UseMemory(inter,
 			common.MemoryUsage{
 				Kind:   common.MemoryKindStringValue,
-				Amount: uint64(len(character)),
+				Amount: uint64(len(character.Str)),
 			},
 		)
-		builder.WriteString(string(character))
+		builder.WriteString(character.Str)
 
 		return true
 	})

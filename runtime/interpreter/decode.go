@@ -357,15 +357,15 @@ func (d StorableDecoder) decodeCharacter() (CharacterValue, error) {
 	v, err := decodeCharacter(d.decoder, d.memoryGauge)
 	if err != nil {
 		if err, ok := err.(*cbor.WrongTypeError); ok {
-			return "", errors.NewUnexpectedError(
+			return CharacterValue{}, errors.NewUnexpectedError(
 				"invalid Character encoding: %s",
 				err.ActualType.String(),
 			)
 		}
-		return "", err
+		return CharacterValue{}, err
 	}
 	if !sema.IsValidCharacter(v) {
-		return "", errors.NewUnexpectedError(
+		return CharacterValue{}, errors.NewUnexpectedError(
 			"invalid character encoding: %s",
 			v,
 		)

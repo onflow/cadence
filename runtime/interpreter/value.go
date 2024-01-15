@@ -805,10 +805,16 @@ func (BoolValue) ChildStorables() []atree.Storable {
 // CharacterValue represents a Cadence character, which is a Unicode extended grapheme cluster.
 // Hence, use a Go string to be able to hold multiple Unicode code points (Go runes).
 // It should consist of exactly one grapheme cluster
-type CharacterValue string
+type CharacterValue struct {
+	Str             string
+	UnnormalizedStr string
+}
 
 func NewUnmeteredCharacterValue(r string) CharacterValue {
-	return CharacterValue(norm.NFC.String(r))
+	return CharacterValue{
+		Str:             norm.NFC.String(r),
+		UnnormalizedStr: r,
+	}
 }
 
 func NewCharacterValue(
@@ -823,12 +829,12 @@ func NewCharacterValue(
 	return NewUnmeteredCharacterValue(character)
 }
 
-var _ Value = CharacterValue("a")
-var _ atree.Storable = CharacterValue("a")
-var _ EquatableValue = CharacterValue("a")
-var _ ComparableValue = CharacterValue("a")
-var _ HashableValue = CharacterValue("a")
-var _ MemberAccessibleValue = CharacterValue("a")
+var _ Value = CharacterValue{}
+var _ atree.Storable = CharacterValue{}
+var _ EquatableValue = CharacterValue{}
+var _ ComparableValue = CharacterValue{}
+var _ HashableValue = CharacterValue{}
+var _ MemberAccessibleValue = CharacterValue{}
 
 func (CharacterValue) isValue() {}
 
@@ -849,7 +855,7 @@ func (CharacterValue) IsImportable(_ *Interpreter) bool {
 }
 
 func (v CharacterValue) String() string {
-	return format.String(string(v))
+	return format.String(v.Str)
 }
 
 func (v CharacterValue) RecursiveString(_ SeenReferences) string {
@@ -857,7 +863,7 @@ func (v CharacterValue) RecursiveString(_ SeenReferences) string {
 }
 
 func (v CharacterValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
-	l := format.FormattedStringLength(string(v))
+	l := format.FormattedStringLength(v.Str)
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
@@ -867,7 +873,7 @@ func (v CharacterValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool
 	if !ok {
 		return false
 	}
-	return v == otherChar
+	return v.Str == otherChar.Str
 }
 
 func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -875,7 +881,7 @@ func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRa
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v < otherChar
+	return v.Str < otherChar.Str
 }
 
 func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -883,7 +889,7 @@ func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ Locat
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v <= otherChar
+	return v.Str <= otherChar.Str
 }
 
 func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -891,7 +897,7 @@ func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ Locatio
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v > otherChar
+	return v.Str > otherChar.Str
 }
 
 func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -899,11 +905,11 @@ func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ Lo
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v >= otherChar
+	return v.Str >= otherChar.Str
 }
 
 func (v CharacterValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
-	s := []byte(string(v))
+	s := []byte(v.Str)
 	length := 1 + len(s)
 	var buffer []byte
 	if length <= len(scratch) {
@@ -960,7 +966,7 @@ func (CharacterValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v CharacterValue) ByteSize() uint32 {
-	return cborTagSize + getBytesCBORSize([]byte(v))
+	return cborTagSize + getBytesCBORSize([]byte(v.Str))
 }
 
 func (v CharacterValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -980,21 +986,21 @@ func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, nam
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 
-				memoryUsage := common.NewStringMemoryUsage(len(v))
+				memoryUsage := common.NewStringMemoryUsage(len(v.Str))
 
 				return NewStringValue(
 					interpreter,
 					memoryUsage,
 					func() string {
-						return string(v)
+						return v.Str
 					},
 				)
 			},
 		)
 
 	case sema.CharacterTypeUtf8FieldName:
-		common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(v)))
-		return ByteSliceToByteArrayValue(interpreter, []byte(v))
+		common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(v.Str)))
+		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
 	}
 	return nil
 }

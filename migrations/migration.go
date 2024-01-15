@@ -340,6 +340,11 @@ func legacyKey(key interpreter.Value) interpreter.Value {
 		return &LegacyStringValue{
 			StringValue: key,
 		}
+
+	case interpreter.CharacterValue:
+		return &LegacyCharacterValue{
+			CharacterValue: key,
+		}
 	}
 
 	return key
