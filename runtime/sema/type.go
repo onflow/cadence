@@ -2096,6 +2096,13 @@ Returns a new array with contents in the reversed order.
 Available if the array element type is not resource-kinded.
 `
 
+const ArrayTypeToVariableSizedFunctionName = "toVariableSized"
+
+const arrayTypeToVariableSizedFunctionDocString = `
+Returns a new variable-sized array with the copy of the contents of the given array.
+Available if the array is constant sized and the element type is not resource-kinded.
+`
+
 var insertableEntitledAccess = NewEntitlementSetAccess(
 	[]*EntitlementType{
 		InsertType,
@@ -2464,6 +2471,35 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		}
 	}
 
+	if _, ok := arrayType.(*ConstantSizedType); ok {
+
+		members[ArrayTypeToVariableSizedFunctionName] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+				elementType := arrayType.ElementType(false)
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewFunctionMember(
+					memoryGauge,
+					arrayType,
+					insertableEntitledAccess,
+					identifier,
+					ArrayToVariableSizedFunctionType(elementType),
+					arrayTypeToVariableSizedFunctionDocString,
+				)
+			},
+		}
+	}
+
 	return withBuiltinMembers(arrayType, members)
 }
 
@@ -2598,6 +2634,16 @@ func ArraySliceFunctionType(elementType Type) *FunctionType {
 				TypeAnnotation: IntTypeAnnotation,
 			},
 		},
+		NewTypeAnnotation(&VariableSizedType{
+			Type: elementType,
+		}),
+	)
+}
+
+func ArrayToVariableSizedFunctionType(elementType Type) *FunctionType {
+	return NewSimpleFunctionType(
+		FunctionPurityView,
+		[]Parameter{},
 		NewTypeAnnotation(&VariableSizedType{
 			Type: elementType,
 		}),
