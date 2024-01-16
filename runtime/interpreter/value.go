@@ -2584,6 +2584,22 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				)
 			},
 		)
+
+	case sema.ArrayTypeToVariableSizedFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ArrayToVariableSizedFunctionType(
+				v.SemaType(interpreter).ElementType(false),
+			),
+			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
+
+				return v.ToVariableSized(
+					interpreter,
+					invocation.LocationRange,
+				)
+			},
+		)
 	}
 
 	return nil
@@ -3231,6 +3247,59 @@ func (v *ArrayValue) ForEach(
 	_ LocationRange,
 ) {
 	v.Iterate(interpreter, function)
+}
+
+func (v *ArrayValue) ToVariableSized(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+) Value {
+	var returnArrayStaticType ArrayStaticType
+	switch v.Type.(type) {
+	case *ConstantSizedStaticType:
+		returnArrayStaticType = NewVariableSizedStaticType(
+			interpreter,
+			v.Type.ElementType(),
+		)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	iterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return NewArrayValueWithIterator(
+		interpreter,
+		returnArrayStaticType,
+		common.ZeroAddress,
+		uint64(v.Count()),
+		func() Value {
+
+			// Meter computation for iterating the array.
+			interpreter.ReportComputation(common.ComputationKindLoop, 1)
+
+			atreeValue, err := iterator.Next()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+
+			if atreeValue == nil {
+				return nil
+			}
+
+			value := MustConvertStoredValue(interpreter, atreeValue)
+
+			return value.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+			)
+		},
+	)
 }
 
 // NumberValue
@@ -20404,7 +20473,7 @@ func NewUnmeteredEphemeralReferenceValue(
 	borrowedType sema.Type,
 	locationRange LocationRange,
 ) *EphemeralReferenceValue {
-	if reference, isReference := value.(*EphemeralReferenceValue); isReference {
+	if reference, isReference := value.(ReferenceValue); isReference {
 		panic(NestedReferenceError{
 			Value:         reference,
 			LocationRange: locationRange,

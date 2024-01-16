@@ -1018,7 +1018,7 @@ func (e CapabilityAddressPublishingError) Error() string {
 
 // NestedReferenceError
 type NestedReferenceError struct {
-	Value *EphemeralReferenceValue
+	Value ReferenceValue
 	LocationRange
 }
 
@@ -1050,6 +1050,25 @@ func (e InclusiveRangeConstructionError) Error() string {
 		return message
 	}
 	return fmt.Sprintf("%s: %s", message, e.Message)
+}
+
+// InvalidCapabilityIssueTypeError
+type InvalidCapabilityIssueTypeError struct {
+	ExpectedTypeDescription string
+	ActualType              sema.Type
+	LocationRange
+}
+
+var _ errors.UserError = InvalidCapabilityIssueTypeError{}
+
+func (InvalidCapabilityIssueTypeError) IsUserError() {}
+
+func (e InvalidCapabilityIssueTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid type: expected %s, got `%s`",
+		e.ExpectedTypeDescription,
+		e.ActualType.QualifiedString(),
+	)
 }
 
 // ResourceReferenceDereferenceError

@@ -1201,6 +1201,63 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			require.NoError(t, err)
 		})
 
+		t.Run("issue, multiple controllers to various paths, with same or different type, type value", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				t,
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          let storagePath1 = /storage/r
+                          let storagePath2 = /storage/r2
+
+                          // Act
+                          let issuedCap1: Capability<&Test.R> = signer.capabilities.storage
+                              .issueWithType(storagePath1, type: Type<&Test.R>()) as! Capability<&Test.R>
+                          let issuedCap2: Capability<&Test.R> = signer.capabilities.storage
+                              .issueWithType(storagePath1, type: Type<&Test.R>()) as! Capability<&Test.R>
+                          let issuedCap3: Capability<&Test.R> = signer.capabilities.storage
+                              .issueWithType(storagePath1, type: Type<&Test.R>()) as! Capability<&Test.R>
+                          let issuedCap4: Capability<&Test.R> = signer.capabilities.storage
+                              .issueWithType(storagePath2, type: Type<&Test.R>()) as! Capability<&Test.R>
+
+                          // Assert
+                          assert(issuedCap1.id == 1)
+                          assert(issuedCap2.id == 2)
+                          assert(issuedCap3.id == 3)
+                          assert(issuedCap4.id == 4)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("issue with type value, invalid type", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				t,
+				// language=cadence
+				`
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          signer.capabilities.storage.issueWithType(/storage/test, type: Type<Int>())
+                      }
+                  }
+                `,
+			)
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.InvalidCapabilityIssueTypeError{})
+		})
+
 		t.Run("getController, non-existing", func(t *testing.T) {
 
 			t.Parallel()
@@ -1682,6 +1739,55 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+		})
+
+		t.Run("issue, multiple controllers, with same or different type, type value", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				t,
+				// language=cadence
+				`
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          // Act
+                          let issuedCap1: Capability<&Account> = signer.capabilities.account
+                              .issueWithType(Type<&Account>()) as! Capability<&Account>
+                          let issuedCap2: Capability<&Account> = signer.capabilities.account
+                              .issueWithType(Type<&Account>()) as! Capability<&Account>
+                          let issuedCap3: Capability<&Account> = signer.capabilities.account
+                              .issueWithType(Type<&Account>()) as! Capability<&Account>
+
+                          // Assert
+                          assert(issuedCap1.id == 1)
+                          assert(issuedCap2.id == 2)
+                          assert(issuedCap3.id == 3)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("issue with type value, invalid type", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				t,
+				// language=cadence
+				`
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          signer.capabilities.account.issueWithType(Type<Int>())
+                      }
+                  }
+                `,
+			)
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.InvalidCapabilityIssueTypeError{})
 		})
 
 		t.Run("getController, non-existing", func(t *testing.T) {
