@@ -1772,9 +1772,11 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 		return nil, err
 	}
 
+	var isAuthorized bool
+
 	if t == cbor.BoolType {
 		// if we saw a bool here, this is a reference encoded in the old format
-		_, err := d.decoder.DecodeBool()
+		isAuthorized, err = d.decoder.DecodeBool()
 		if err != nil {
 			return nil, err
 		}
@@ -1804,11 +1806,15 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 		)
 	}
 
-	return NewReferenceStaticType(
+	referenceType := NewReferenceStaticType(
 		d.memoryGauge,
 		authorization,
 		staticType,
-	), nil
+	)
+
+	referenceType.LegacyIsAuthorized = isAuthorized
+
+	return referenceType, nil
 }
 
 func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {

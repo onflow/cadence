@@ -33,9 +33,13 @@ type LegacyReferenceType struct {
 var _ interpreter.StaticType = &LegacyReferenceType{}
 
 func (t *LegacyReferenceType) ID() common.TypeID {
-	isAuthorized := t.Authorization == interpreter.UnauthorizedAccess
 	borrowedType := t.ReferencedType
-	return common.TypeID(formatReferenceType(isAuthorized, string(borrowedType.ID())))
+	return common.TypeID(
+		formatReferenceType(
+			t.LegacyIsAuthorized,
+			string(borrowedType.ID()),
+		),
+	)
 }
 
 func formatReferenceType(

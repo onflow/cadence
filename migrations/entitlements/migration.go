@@ -131,6 +131,13 @@ func ConvertValueToEntitlements(
 			referenceValue.Authorization,
 			interpreter.ConvertSemaToStaticType(inter, referenceValue.BorrowedType),
 		)
+	case interpreter.LinkValue: //nolint:staticcheck
+		// Link values are not supposed to reach here.
+		// But it could, if the type used in the link is not migrated,
+		// then the link values would be left un-migrated.
+		// These need to be skipped specifically, otherwise `v.StaticType(inter)` will panic.
+		return nil
+
 	default:
 		staticType = v.StaticType(inter)
 	}
@@ -254,9 +261,13 @@ func ConvertValueToEntitlements(
 			return nil
 		}
 
-		convertedType, _ := ConvertToEntitledType(
+		convertedType, converted := ConvertToEntitledType(
 			inter.MustConvertStaticToSemaType(v.Type),
 		)
+
+		if !converted {
+			return nil
+		}
 
 		// convert the static type of the value
 		entitledStaticType := interpreter.ConvertSemaToStaticType(
