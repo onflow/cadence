@@ -29,21 +29,14 @@ func TestPrimitiveStaticTypeSemaTypeConversion(t *testing.T) {
 	t.Parallel()
 
 	test := func(ty PrimitiveStaticType) {
+		if ty.IsDeprecated() { //nolint:staticcheck
+			return
+		}
+
 		t.Run(ty.String(), func(t *testing.T) {
 			t.Parallel()
 
 			semaType := ty.SemaType()
-
-			// Some primitive static types are deprecated,
-			// and only exist for migration purposes,
-			// so do not have an equivalent sema type
-			if semaType == nil {
-				return
-			}
-
-			if ty.IsDeprecated() {
-				return
-			}
 
 			ty2 := ConvertSemaToPrimitiveStaticType(nil, semaType)
 			require.True(t, ty2.Equal(ty))
@@ -51,7 +44,7 @@ func TestPrimitiveStaticTypeSemaTypeConversion(t *testing.T) {
 	}
 
 	for ty := PrimitiveStaticType(1); ty < PrimitiveStaticType_Count; ty++ {
-		if !ty.IsDefined() {
+		if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 			continue
 		}
 		test(ty)
@@ -71,7 +64,7 @@ func TestPrimitiveStaticType_elementSize(t *testing.T) {
 	}
 
 	for ty := PrimitiveStaticType(1); ty < PrimitiveStaticType_Count; ty++ {
-		if !ty.IsDefined() {
+		if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 			continue
 		}
 		test(ty)

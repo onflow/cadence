@@ -566,23 +566,6 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 	case PrimitiveStaticTypeAccountCapabilityController:
 		return sema.AccountCapabilityControllerType
 
-	case PrimitiveStaticTypeAuthAccount: //nolint:staticcheck
-		return sema.FullyEntitledAccountReferenceType
-	case PrimitiveStaticTypePublicAccount: //nolint:staticcheck
-		return sema.AccountReferenceType
-	case PrimitiveStaticTypeAuthAccountContracts, //nolint:staticcheck
-		PrimitiveStaticTypePublicAccountContracts,         //nolint:staticcheck
-		PrimitiveStaticTypeAuthAccountKeys,                //nolint:staticcheck
-		PrimitiveStaticTypePublicAccountKeys,              //nolint:staticcheck
-		PrimitiveStaticTypeAuthAccountInbox,               //nolint:staticcheck
-		PrimitiveStaticTypeAuthAccountStorageCapabilities, //nolint:staticcheck
-		PrimitiveStaticTypeAuthAccountAccountCapabilities, //nolint:staticcheck
-		PrimitiveStaticTypeAuthAccountCapabilities,        //nolint:staticcheck
-		PrimitiveStaticTypePublicAccountCapabilities,      //nolint:staticcheck
-		PrimitiveStaticTypeAccountKey:                     //nolint:staticcheck
-		// These types are deprecated, and only exist for migration purposes
-		return nil
-
 	case PrimitiveStaticTypeAccount:
 		return sema.AccountType
 	case PrimitiveStaticTypeAccount_Contracts:
@@ -664,6 +647,10 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 		return sema.CapabilitiesMappingType
 	case PrimitiveStaticTypeAccountMapping:
 		return sema.AccountMappingType
+	}
+
+	if t.IsDeprecated() {
+		panic(errors.NewUnexpectedError("cannot convert deprecated type %s", t))
 	}
 
 	panic(errors.NewUnexpectedError("missing case for %s", t))
