@@ -1018,7 +1018,7 @@ func (e CapabilityAddressPublishingError) Error() string {
 
 // NestedReferenceError
 type NestedReferenceError struct {
-	Value *EphemeralReferenceValue
+	Value ReferenceValue
 	LocationRange
 }
 

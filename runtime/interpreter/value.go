@@ -20465,7 +20465,7 @@ func NewUnmeteredEphemeralReferenceValue(
 	borrowedType sema.Type,
 	locationRange LocationRange,
 ) *EphemeralReferenceValue {
-	if reference, isReference := value.(*EphemeralReferenceValue); isReference {
+	if reference, isReference := value.(ReferenceValue); isReference {
 		panic(NestedReferenceError{
 			Value:         reference,
 			LocationRange: locationRange,
