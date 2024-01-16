@@ -271,7 +271,7 @@ func (m *StorageMigration) MigrateNestedValue(
 	}
 
 	for _, migration := range valueMigrations {
-		converted, err := migration.Migrate(addressPath, value, m.interpreter)
+		converted, err := m.migrate(migration, addressPath, value)
 
 		if err != nil {
 			if reporter != nil {
