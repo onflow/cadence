@@ -21,6 +21,8 @@ package entitlements
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime"
@@ -33,7 +35,6 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestConvertToEntitledType(t *testing.T) {
@@ -952,7 +953,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	var referencePeekingEqual func(interpreter.EquatableValue, interpreter.Value) bool
 
-	// equality that peeks inside referneces to use structural equality for their values
+	// equality that peeks inside references to use structural equality for their values
 	referencePeekingEqual = func(input interpreter.EquatableValue, output interpreter.Value) bool {
 		switch v := input.(type) {
 		case *interpreter.SomeValue:
