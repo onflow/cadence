@@ -47,8 +47,26 @@ func (EntitlementsMigration) Name() string {
 // * `ConvertToEntitledType(T) ---> T`
 // where Entitlements(I) is defined as the result of T.SupportedEntitlements()
 func ConvertToEntitledType(t sema.Type) (sema.Type, bool) {
+
 	switch t := t.(type) {
 	case *sema.ReferenceType:
+
+		// Do NOT add authorization for sema types
+		// that were converted from deprecated primitive static types
+		switch t.Type {
+
+		case sema.AccountType,
+			sema.Account_ContractsType,
+			sema.Account_KeysType,
+			sema.Account_InboxType,
+			sema.Account_StorageCapabilitiesType,
+			sema.Account_AccountCapabilitiesType,
+			sema.Account_CapabilitiesType,
+			sema.AccountKeyType:
+
+			return t, false
+		}
+
 		switch t.Authorization {
 		case sema.UnauthorizedAccess:
 			innerType, convertedInner := ConvertToEntitledType(t.Type)
