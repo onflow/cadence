@@ -1648,7 +1648,7 @@ func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("main")
-	require.Error(t, err)
+	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
@@ -1813,6 +1813,31 @@ func TestInterpretReferenceToReference(t *testing.T) {
 		_, err := inter.Invoke("main")
 		RequireError(t, err)
 
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
+
+	t.Run("reference to storage reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            resource R {}
+
+            fun test(): Void {
+
+                let r <- [<- create R()]
+                account.storage.save(<-r, to: /storage/foo)
+                let unauthRef = account.storage.borrow<&[R]>(from: /storage/foo)!
+
+                let maskedUnauthRef = unauthRef as AnyStruct
+                let doubleRef = &maskedUnauthRef as auth(Mutate) &AnyStruct
+                let typedDoubleRef : auth(Mutate) &(&[R]) = doubleRef as! auth(Mutate) &(&[R])
+            }`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
 	})
 }
@@ -2956,4 +2981,69 @@ func TestInterpretDereference(t *testing.T) {
 		)
 	})
 
+	t.Run("Resource", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("direct", func(t *testing.T) {
+			t.Parallel()
+
+			inter, err := parseCheckAndInterpretWithOptions(t,
+				`
+                  resource R {}
+
+                  fun main() {
+                      let r1 <- create R()
+                      let r1Ref: &R = &r1
+                      let r2 <- *r1Ref
+                      destroy r1
+                      destroy r2
+                  }
+                `,
+				ParseCheckAndInterpretOptions{
+					HandleCheckerError: func(err error) {
+						errs := checker.RequireCheckerErrors(t, err, 1)
+
+						require.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			_, err = inter.Invoke("main")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ResourceReferenceDereferenceError{})
+		})
+
+		t.Run("array", func(t *testing.T) {
+			t.Parallel()
+
+			inter, err := parseCheckAndInterpretWithOptions(t,
+				`
+                  resource R {}
+
+                  fun main() {
+                      let rs1 <- [<- create R()]
+                      let rs1Ref: &[R] = &rs1
+                      let rs2 <- *rs1Ref
+                      destroy rs1
+                      destroy rs2
+                  }
+                `,
+				ParseCheckAndInterpretOptions{
+					HandleCheckerError: func(err error) {
+						errs := checker.RequireCheckerErrors(t, err, 1)
+
+						require.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			_, err = inter.Invoke("main")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ResourceReferenceDereferenceError{})
+		})
+	})
 }

@@ -52,22 +52,11 @@ func TestTypeConversion(t *testing.T) {
 	}
 
 	for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
-		if !ty.IsDefined() {
+		if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 			continue
 		}
 
 		semaType := ty.SemaType()
-
-		// Some primitive static types are deprecated,
-		// and only exist for migration purposes,
-		// so do not have an equivalent sema type
-		if semaType == nil {
-			continue
-		}
-
-		if ty.IsDeprecated() { //nolint:staticcheck
-			continue
-		}
 
 		if _, ok := semaType.(*sema.CapabilityType); ok {
 			continue

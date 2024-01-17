@@ -93,7 +93,7 @@ func (m *StorageMigration) NewValueMigrationsPathMigrator(
 ) PathMigrator {
 	return NewValueConverterPathMigrator(
 		func(addressPath interpreter.AddressPath, value interpreter.Value) interpreter.Value {
-			return m.migrateNestedValue(
+			return m.MigrateNestedValue(
 				addressPath,
 				value,
 				valueMigrations,
@@ -105,7 +105,7 @@ func (m *StorageMigration) NewValueMigrationsPathMigrator(
 
 var emptyLocationRange = interpreter.EmptyLocationRange
 
-func (m *StorageMigration) migrateNestedValue(
+func (m *StorageMigration) MigrateNestedValue(
 	addressPath interpreter.AddressPath,
 	value interpreter.Value,
 	valueMigrations []ValueMigration,
@@ -114,7 +114,7 @@ func (m *StorageMigration) migrateNestedValue(
 	switch value := value.(type) {
 	case *interpreter.SomeValue:
 		innerValue := value.InnerValue(m.interpreter, emptyLocationRange)
-		newInnerValue := m.migrateNestedValue(
+		newInnerValue := m.MigrateNestedValue(
 			addressPath,
 			innerValue,
 			valueMigrations,
@@ -133,7 +133,7 @@ func (m *StorageMigration) migrateNestedValue(
 		count := array.Count()
 		for index := 0; index < count; index++ {
 			element := array.Get(m.interpreter, emptyLocationRange, index)
-			newElement := m.migrateNestedValue(
+			newElement := m.MigrateNestedValue(
 				addressPath,
 				element,
 				valueMigrations,
@@ -148,9 +148,6 @@ func (m *StorageMigration) migrateNestedValue(
 				)
 			}
 		}
-
-		// The array itself doesn't need to be replaced.
-		return
 
 	case *interpreter.CompositeValue:
 		composite := value
@@ -170,12 +167,13 @@ func (m *StorageMigration) migrateNestedValue(
 				fieldName,
 			)
 
-			migratedValue := m.migrateNestedValue(
+			migratedValue := m.MigrateNestedValue(
 				addressPath,
 				existingValue,
 				valueMigrations,
 				reporter,
 			)
+
 			if migratedValue == nil {
 				continue
 			}
@@ -187,9 +185,6 @@ func (m *StorageMigration) migrateNestedValue(
 				migratedValue,
 			)
 		}
-
-		// The composite itself does not have to be replaced
-		return
 
 	case *interpreter.DictionaryValue:
 		dictionary := value
@@ -218,14 +213,14 @@ func (m *StorageMigration) migrateNestedValue(
 			existingKey := existingKeyAndValue.key
 			existingValue := existingKeyAndValue.value
 
-			newKey := m.migrateNestedValue(
+			newKey := m.MigrateNestedValue(
 				addressPath,
 				existingKey,
 				valueMigrations,
 				reporter,
 			)
 
-			newValue := m.migrateNestedValue(
+			newValue := m.MigrateNestedValue(
 				addressPath,
 				existingValue,
 				valueMigrations,
@@ -273,38 +268,31 @@ func (m *StorageMigration) migrateNestedValue(
 				valueToSet,
 			)
 		}
+	}
 
-		// The dictionary itself does not have to be replaced
-		return
-	default:
-		// Assumption: all migrations only migrate non-container typed values.
-		for _, migration := range valueMigrations {
-			converted, err := m.migrate(migration, addressPath, value)
+	for _, migration := range valueMigrations {
+		converted, err := m.migrate(migration, addressPath, value)
 
-			if err != nil {
-				if reporter != nil {
-					reporter.Error(addressPath, migration.Name(), err)
-				}
-				continue
+		if err != nil {
+			if reporter != nil {
+				reporter.Error(addressPath, migration.Name(), err)
 			}
-
-			if converted != nil {
-				// Chain the migrations.
-				// Probably not needed, because of the assumption above.
-				// i.e: A single non-container value may not get converted from two migrations.
-				// But have it here to be safe.
-				value = converted
-
-				newValue = converted
-
-				if reporter != nil {
-					reporter.Migrated(addressPath, migration.Name())
-				}
-			}
+			continue
 		}
 
-		return
+		if converted != nil {
+			// Chain the migrations.
+			value = converted
+
+			newValue = converted
+
+			if reporter != nil {
+				reporter.Migrated(addressPath, migration.Name())
+			}
+		}
 	}
+	return
+
 }
 
 func (m *StorageMigration) migrate(
