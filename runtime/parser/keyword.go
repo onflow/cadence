@@ -88,6 +88,7 @@ const (
 	KeywordFinal       = "final"
 	KeywordInternal    = "internal"
 	KeywordTypealias   = "typealias"
+	KeywordType        = "type"
 	KeywordRepeat      = "repeat"
 	KeywordGuard       = "guard"
 	KeywordIs          = "is"
@@ -161,6 +162,7 @@ var allKeywords = []string{
 	KeywordFinal,
 	KeywordInternal,
 	KeywordTypealias,
+	KeywordType,
 	KeywordRepeat,
 	KeywordGuard,
 	KeywordIs,
