@@ -305,7 +305,7 @@ func TestParseReferenceType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '('",
+					Message: "expected authorization (entitlement list)",
 					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
 				},
 			},
@@ -2897,7 +2897,7 @@ func TestParseAuthorizedReferenceTypeWithNoEntitlements(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
-				Message: "expected token '('",
+				Message: "expected authorization (entitlement list)",
 				Pos:     ast.Position{Offset: 20, Line: 2, Column: 19},
 			},
 		},

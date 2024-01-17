@@ -31,6 +31,7 @@ require (
 require (
 	github.com/SaveTheRbtz/mph v0.1.1-0.20240117162131-4166ec7869bc
 	github.com/k0kubun/pp v3.0.1+incompatible
+	github.com/onflow/crypto v0.25.0
 	golang.org/x/exp v0.0.0-20240103183307-be819d1f06fc
 )
 
@@ -54,5 +55,6 @@ require (
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/term v0.6.0 // indirect
+	gonum.org/v1/gonum v0.6.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
