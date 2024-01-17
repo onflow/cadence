@@ -647,6 +647,13 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 		return sema.CapabilitiesMappingType
 	case PrimitiveStaticTypeAccountMapping:
 		return sema.AccountMappingType
+
+	case PrimitiveStaticTypeAuthAccount: //nolint:staticcheck
+		// deprecated, but needed for migration purposes
+		return sema.FullyEntitledAccountReferenceType
+	case PrimitiveStaticTypePublicAccount: //nolint:staticcheck
+		// deprecated, but needed for migration purposes
+		return sema.AccountReferenceType
 	}
 
 	if t.IsDeprecated() {

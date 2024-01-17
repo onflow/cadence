@@ -969,10 +969,11 @@ func TestStaticTypeConversion(t *testing.T) {
 	testFunctionType := &sema.FunctionType{}
 
 	type testCase struct {
-		name         string
-		semaType     sema.Type
-		staticType   StaticType
-		getInterface func(
+		name           string
+		semaType       sema.Type
+		staticType     StaticType
+		noSemaToStatic bool
+		getInterface   func(
 			t *testing.T,
 			location common.Location,
 			qualifiedIdentifier string,
@@ -1610,6 +1611,19 @@ func TestStaticTypeConversion(t *testing.T) {
 				ElementType: PrimitiveStaticTypeInt,
 			},
 		},
+		// Deprecated primitive static types, only exist for migration purposes
+		{
+			name:           "AuthAccount",
+			semaType:       sema.FullyEntitledAccountReferenceType,
+			staticType:     PrimitiveStaticTypeAuthAccount,
+			noSemaToStatic: true,
+		},
+		{
+			name:           "PublicAccount",
+			semaType:       sema.AccountReferenceType,
+			staticType:     PrimitiveStaticTypePublicAccount,
+			noSemaToStatic: true,
+		},
 	}
 
 	test := func(test testCase) {
@@ -1619,11 +1633,13 @@ func TestStaticTypeConversion(t *testing.T) {
 
 			// Test sema to static
 
-			convertedStaticType := ConvertSemaToStaticType(nil, test.semaType)
-			require.Equal(t,
-				test.staticType,
-				convertedStaticType,
-			)
+			if !test.noSemaToStatic {
+				convertedStaticType := ConvertSemaToStaticType(nil, test.semaType)
+				require.Equal(t,
+					test.staticType,
+					convertedStaticType,
+				)
+			}
 
 			// Test static to sema
 
