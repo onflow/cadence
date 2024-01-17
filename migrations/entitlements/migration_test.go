@@ -21,10 +21,12 @@ package entitlements
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/migrations"
+	"github.com/onflow/cadence/migrations/account_type"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -378,8 +380,15 @@ func (testEntitlementsMigration) Name() string {
 	return "Test Entitlements Migration"
 }
 
-func (m testEntitlementsMigration) Migrate(_ interpreter.AddressPath, value interpreter.Value, _ *interpreter.Interpreter) (interpreter.Value, error) {
-	return ConvertValueToEntitlements(m.inter, value), nil
+func (m testEntitlementsMigration) Migrate(
+	_ interpreter.AddressPath,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) (
+	interpreter.Value,
+	error,
+) {
+	return ConvertValueToEntitlements(m.inter, value)
 }
 
 func convertEntireTestValue(
@@ -394,7 +403,7 @@ func convertEntireTestValue(
 	migratedValue := storageMig.MigrateNestedValue(
 		interpreter.AddressPath{
 			Address: address,
-			Path:    interpreter.NewPathValue(nil, common.PathDomainStorage, ""),
+			Path:    interpreter.NewPathValue(nil, common.PathDomainStorage, "test"),
 		},
 		v,
 		[]migrations.ValueMigration{testMig},
@@ -2109,7 +2118,7 @@ func TestMigrateDictOfWithTypeValueKey(t *testing.T) {
 	)
 }
 
-func TestConvertDeprecatedTypes(t *testing.T) {
+func TestConvertDeprecatedStaticTypes(t *testing.T) {
 
 	t.Parallel()
 
@@ -2129,8 +2138,55 @@ func TestConvertDeprecatedTypes(t *testing.T) {
 				),
 			)
 
-			result := ConvertValueToEntitlements(inter, typeValue)
+			result, err := ConvertValueToEntitlements(inter, typeValue)
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "cannot migrate deprecated type")
+			require.Nil(t, result)
+		})
+	}
 
+	for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
+		if !ty.IsDefined() || !ty.IsDeprecated() { //nolint:staticcheck
+			continue
+		}
+
+		test(ty)
+	}
+}
+
+func TestConvertMigratedAccountTypes(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(ty interpreter.PrimitiveStaticType) {
+
+		t.Run(ty.String(), func(t *testing.T) {
+			t.Parallel()
+
+			inter := NewTestInterpreter(t)
+			value := interpreter.NewUnmeteredCapabilityValue(
+				1,
+				interpreter.AddressValue(common.ZeroAddress),
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.UnauthorizedAccess,
+					ty,
+				),
+			)
+
+			newValue, err := account_type.NewAccountTypeMigration().Migrate(
+				interpreter.AddressPath{
+					Address: common.ZeroAddress,
+					Path:    interpreter.EmptyPathValue,
+				},
+				value,
+				inter,
+			)
+			require.NoError(t, err)
+			require.NotNil(t, newValue)
+
+			result, err := ConvertValueToEntitlements(inter, newValue)
+			require.NoError(t, err)
 			require.Nil(t, result)
 		})
 	}

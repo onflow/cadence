@@ -913,8 +913,9 @@ func ConvertSemaToPrimitiveStaticType(
 	}
 
 	if typ == PrimitiveStaticTypeUnknown {
+		// default is 0 aka PrimitiveStaticTypeUnknown
 		return
 	}
 
-	return NewPrimitiveStaticType(memoryGauge, typ) // default is 0 aka PrimitiveStaticTypeUnknown
+	return NewPrimitiveStaticType(memoryGauge, typ)
 }
