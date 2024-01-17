@@ -65,10 +65,10 @@ const (
 	KeywordDefault     = "default"
 	KeywordEnum        = "enum"
 	KeywordView        = "view"
-	keywordAttachment  = "attachment"
-	keywordAttach      = "attach"
-	keywordRemove      = "remove"
-	keywordTo          = "to"
+	KeywordAttachment  = "attachment"
+	KeywordAttach      = "attach"
+	KeywordRemove      = "remove"
+	KeywordTo          = "to"
 	KeywordRequire     = "require"
 	KeywordStatic      = "static"
 	KeywordNative      = "native"
@@ -140,10 +140,10 @@ var allKeywords = []string{
 	KeywordView,
 	KeywordMapping,
 	KeywordRequire,
-	keywordAttach,
-	keywordAttachment,
-	keywordTo,
-	keywordRemove,
+	KeywordAttach,
+	KeywordAttachment,
+	KeywordTo,
+	KeywordRemove,
 	KeywordStatic,
 	KeywordNative,
 	KeywordPub,
@@ -174,9 +174,10 @@ var softKeywords = []string{
 	KeywordAccount,
 	KeywordAll,
 	KeywordView,
-	keywordAttach,
-	keywordRemove,
-	keywordTo,
+	KeywordAttach,
+	KeywordRemove,
+	KeywordTo,
+	KeywordType,
 }
 
 var softKeywordsTable = mph.Build(softKeywords)
