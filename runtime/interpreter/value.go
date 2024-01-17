@@ -2600,6 +2600,35 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				)
 			},
 		)
+
+	case sema.ArrayTypeToConstantSizedFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ArrayToConstantSizedFunctionType(
+				v.SemaType(interpreter).ElementType(false),
+			),
+			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
+
+				typeParameterPair := invocation.TypeParameterTypes.Oldest()
+				if typeParameterPair == nil {
+					panic(errors.NewUnreachableError())
+				}
+
+				ty := typeParameterPair.Value
+
+				constantSizedArrayType, ok := ty.(*sema.ConstantSizedType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.ToConstantSized(
+					interpreter,
+					invocation.LocationRange,
+					constantSizedArrayType.Size,
+				)
+			},
+		)
 	}
 
 	return nil
@@ -3259,6 +3288,65 @@ func (v *ArrayValue) ToVariableSized(
 		returnArrayStaticType = NewVariableSizedStaticType(
 			interpreter,
 			v.Type.ElementType(),
+		)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	iterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return NewArrayValueWithIterator(
+		interpreter,
+		returnArrayStaticType,
+		common.ZeroAddress,
+		uint64(v.Count()),
+		func() Value {
+
+			// Meter computation for iterating the array.
+			interpreter.ReportComputation(common.ComputationKindLoop, 1)
+
+			atreeValue, err := iterator.Next()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+
+			if atreeValue == nil {
+				return nil
+			}
+
+			value := MustConvertStoredValue(interpreter, atreeValue)
+
+			return value.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+			)
+		},
+	)
+}
+
+func (v *ArrayValue) ToConstantSized(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	expectedConstantSizedArraySize int64,
+) Value {
+	if int64(v.Count()) != expectedConstantSizedArraySize {
+		return NilOptionalValue
+	}
+
+	var returnArrayStaticType ArrayStaticType
+	switch v.Type.(type) {
+	case *VariableSizedStaticType:
+		returnArrayStaticType = NewConstantSizedStaticType(
+			interpreter,
+			v.Type.ElementType(),
+			expectedConstantSizedArraySize,
 		)
 	default:
 		panic(errors.NewUnreachableError())
