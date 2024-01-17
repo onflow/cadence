@@ -135,6 +135,10 @@ func ConvertValueToEntitlements(
 		staticType = v.StaticType(inter)
 	}
 
+	if staticType.IsDeprecated() {
+		return nil
+	}
+
 	// if the static type contains a legacy restricted type, convert it to a new type according to some rules:
 	// &T{I} -> auth(SupportedEntitlements(I)) &T
 	// Capability<&T{I}> -> Capability<auth(SupportedEntitlements(I)) &T>

@@ -2108,3 +2108,38 @@ func TestMigrateDictOfWithTypeValueKey(t *testing.T) {
 		ref.Authorization,
 	)
 }
+
+func TestConvertDeprecatedTypes(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(ty interpreter.PrimitiveStaticType) {
+
+		t.Run(ty.String(), func(t *testing.T) {
+			t.Parallel()
+
+			inter := NewTestInterpreter(t)
+			typeValue := interpreter.NewUnmeteredCapabilityValue(
+				1,
+				interpreter.AddressValue(common.ZeroAddress),
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.UnauthorizedAccess,
+					ty,
+				),
+			)
+
+			result := ConvertValueToEntitlements(inter, typeValue)
+
+			require.Nil(t, result)
+		})
+	}
+
+	for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
+		if !ty.IsDefined() || !ty.IsDeprecated() { //nolint:staticcheck
+			continue
+		}
+
+		test(ty)
+	}
+}
