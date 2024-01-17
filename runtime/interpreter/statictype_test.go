@@ -2307,3 +2307,128 @@ func TestReferenceStaticType_String(t *testing.T) {
 		)
 	})
 }
+
+func TestStaticType_IsDeprecated(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		name     string
+		ty       StaticType
+		expected bool
+		genTy    func(innerType PrimitiveStaticType) StaticType
+	}
+
+	tests := []testCase{
+		{
+			name: "Capability, with type",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &CapabilityStaticType{
+					BorrowType: innerType,
+				}
+			},
+		},
+		{
+			name:     "Capability, without type",
+			ty:       &CapabilityStaticType{},
+			expected: false,
+		},
+		{
+			name: "Variable-sized array",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &VariableSizedStaticType{
+					Type: innerType,
+				}
+			},
+		},
+		{
+			name: "Constant-sized array",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &ConstantSizedStaticType{
+					Type: innerType,
+					Size: 42,
+				}
+			},
+		},
+		{
+			name: "Optional",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &OptionalStaticType{
+					Type: innerType,
+				}
+			},
+		},
+		{
+			name: "Reference",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &ReferenceStaticType{
+					ReferencedType: innerType,
+				}
+			},
+		},
+		{
+			name: "Dictionary, key",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &DictionaryStaticType{
+					KeyType:   innerType,
+					ValueType: PrimitiveStaticTypeVoid,
+				}
+			},
+		},
+		{
+			name: "Dictionary, value",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &DictionaryStaticType{
+					KeyType:   PrimitiveStaticTypeVoid,
+					ValueType: innerType,
+				}
+			},
+		},
+		{
+			name:     "Function",
+			ty:       FunctionStaticType{},
+			expected: false,
+		},
+		{
+			name:     "Interface",
+			ty:       &InterfaceStaticType{},
+			expected: false,
+		},
+		{
+			name:     "Composite",
+			ty:       &CompositeStaticType{},
+			expected: false,
+		},
+	}
+
+	test := func(test testCase) {
+		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			if test.genTy != nil {
+				for ty := PrimitiveStaticType(1); ty < PrimitiveStaticType_Count; ty++ {
+					if !ty.IsDefined() {
+						continue
+					}
+
+					t.Run(ty.String(), func(t *testing.T) {
+						assert.Equal(t,
+							ty.IsDeprecated(),
+							test.genTy(ty).IsDeprecated(), //nolint:staticcheck
+						)
+					})
+				}
+			} else {
+				assert.Equal(t,
+					test.expected,
+					test.ty.IsDeprecated(), //nolint:staticcheck
+				)
+			}
+		})
+	}
+
+	for _, testCase := range tests {
+		test(testCase)
+	}
+}
