@@ -64,7 +64,20 @@ type testCapConsMissingCapabilityID struct {
 	addressPath    interpreter.AddressPath
 }
 
+type testMigration struct {
+	addressPath interpreter.AddressPath
+	migration   string
+}
+
+type testMigrationError struct {
+	addressPath interpreter.AddressPath
+	migration   string
+	err         error
+}
+
 type testMigrationReporter struct {
+	migrations               []testMigration
+	errors                   []testMigrationError
 	linkMigrations           []testCapConsLinkMigration
 	pathCapabilityMigrations []testCapConsPathCapabilityMigration
 	missingCapabilityIDs     []testCapConsMissingCapabilityID
@@ -72,9 +85,37 @@ type testMigrationReporter struct {
 	missingTargets           []interpreter.AddressPath
 }
 
+var _ migrations.Reporter = &testMigrationReporter{}
 var _ LinkMigrationReporter = &testMigrationReporter{}
 var _ CapabilityMigrationReporter = &testMigrationReporter{}
 
+func (t *testMigrationReporter) Migrated(
+	addressPath interpreter.AddressPath,
+	migration string,
+) {
+	t.migrations = append(
+		t.migrations,
+		testMigration{
+			addressPath: addressPath,
+			migration:   migration,
+		},
+	)
+}
+
+func (t *testMigrationReporter) Error(
+	addressPath interpreter.AddressPath,
+	migration string,
+	err error,
+) {
+	t.errors = append(
+		t.errors,
+		testMigrationError{
+			addressPath: addressPath,
+			migration:   migration,
+			err:         err,
+		},
+	)
+}
 func (t *testMigrationReporter) MigratedLink(
 	accountAddressPath interpreter.AddressPath,
 	capabilityID interpreter.UInt64Value,
@@ -204,7 +245,9 @@ func testPathCapabilityValueMigration(
 	capabilityValue *interpreter.PathCapabilityValue, //nolint:staticcheck
 	pathLinks []testLink,
 	accountLinks []interpreter.PathValue,
-	expectedMigrations []testCapConsPathCapabilityMigration,
+	expectedMigrations []testMigration,
+	expectedErrors []testMigrationError,
+	expectedPathMigrations []testCapConsPathCapabilityMigration,
 	expectedMissingCapabilityIDs []testCapConsMissingCapabilityID,
 	setupFunction, checkFunction string,
 	borrowShouldFail bool,
@@ -438,7 +481,7 @@ func testPathCapabilityValueMigration(
 			},
 		},
 		migration.NewValueMigrationsPathMigrator(
-			nil,
+			reporter,
 			&LinkValueMigration{
 				CapabilityIDs:      capabilityIDs,
 				AccountIDGenerator: &testAccountIDGenerator{},
@@ -454,7 +497,7 @@ func testPathCapabilityValueMigration(
 			},
 		},
 		migration.NewValueMigrationsPathMigrator(
-			nil,
+			reporter,
 			&CapabilityValueMigration{
 				CapabilityIDs: capabilityIDs,
 				Reporter:      reporter,
@@ -469,6 +512,14 @@ func testPathCapabilityValueMigration(
 
 	assert.Equal(t,
 		expectedMigrations,
+		reporter.migrations,
+	)
+	assert.Equal(t,
+		expectedErrors,
+		reporter.errors,
+	)
+	assert.Equal(t,
+		expectedPathMigrations,
 		reporter.pathCapabilityMigrations,
 	)
 	require.Equal(t,
@@ -522,9 +573,22 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		capabilityValue              *interpreter.PathCapabilityValue //nolint:staticcheck
 		pathLinks                    []testLink
 		accountLinks                 []interpreter.PathValue
-		expectedMigrations           []testCapConsPathCapabilityMigration
+		expectedMigrations           []testMigration
+		expectedErrors               []testMigrationError
+		expectedPathMigrations       []testCapConsPathCapabilityMigration
 		expectedMissingCapabilityIDs []testCapConsMissingCapabilityID
 		borrowShouldFail             bool
+	}
+
+	expectedWrappedCapabilityValueMigration := testMigration{
+		addressPath: interpreter.AddressPath{
+			Address: testAddress,
+			Path: interpreter.NewUnmeteredPathValue(
+				common.PathDomainStorage,
+				"wrappedCapability",
+			),
+		},
+		migration: "CapabilityValueMigration",
 	}
 
 	linkTestCases := []linkTestCase{
@@ -567,7 +631,30 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 					borrowType: testRReferenceStaticType,
 				},
 			},
-			expectedMigrations: []testCapConsPathCapabilityMigration{
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPrivate,
+							testPathIdentifier,
+						),
+					},
+					migration: "LinkValueMigration",
+				},
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPublic,
+							testPathIdentifier,
+						),
+					},
+					migration: "LinkValueMigration",
+				},
+				expectedWrappedCapabilityValueMigration,
+			},
+			expectedPathMigrations: []testCapConsPathCapabilityMigration{
 				{
 					accountAddress: testAddress,
 					addressPath: interpreter.AddressPath{
@@ -607,7 +694,20 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 					borrowType: testRReferenceStaticType,
 				},
 			},
-			expectedMigrations: []testCapConsPathCapabilityMigration{
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPublic,
+							testPathIdentifier,
+						),
+					},
+					migration: "LinkValueMigration",
+				},
+				expectedWrappedCapabilityValueMigration,
+			},
+			expectedPathMigrations: []testCapConsPathCapabilityMigration{
 				{
 					accountAddress: testAddress,
 					addressPath: interpreter.AddressPath{
@@ -647,7 +747,20 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 					borrowType: testRReferenceStaticType,
 				},
 			},
-			expectedMigrations: []testCapConsPathCapabilityMigration{
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPrivate,
+							testPathIdentifier,
+						),
+					},
+					migration: "LinkValueMigration",
+				},
+				expectedWrappedCapabilityValueMigration,
+			},
+			expectedPathMigrations: []testCapConsPathCapabilityMigration{
 				{
 					accountAddress: testAddress,
 					addressPath: interpreter.AddressPath{
@@ -705,7 +818,30 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 					borrowType: testRReferenceStaticType,
 				},
 			},
-			expectedMigrations: []testCapConsPathCapabilityMigration{
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPrivate,
+							"test2",
+						),
+					},
+					migration: "LinkValueMigration",
+				},
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPrivate,
+							testPathIdentifier,
+						),
+					},
+					migration: "LinkValueMigration",
+				},
+				expectedWrappedCapabilityValueMigration,
+			},
+			expectedPathMigrations: []testCapConsPathCapabilityMigration{
 				{
 					accountAddress: testAddress,
 					addressPath: interpreter.AddressPath{
@@ -747,7 +883,20 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 					borrowType: testSReferenceStaticType,
 				},
 			},
-			expectedMigrations: []testCapConsPathCapabilityMigration{
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPublic,
+							testPathIdentifier,
+						),
+					},
+					migration: "LinkValueMigration",
+				},
+				expectedWrappedCapabilityValueMigration,
+			},
+			expectedPathMigrations: []testCapConsPathCapabilityMigration{
 				{
 					accountAddress: testAddress,
 					addressPath: interpreter.AddressPath{
@@ -801,7 +950,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 					borrowType: testRReferenceStaticType,
 				},
 			},
-			expectedMigrations: nil,
+			expectedPathMigrations: nil,
 			expectedMissingCapabilityIDs: []testCapConsMissingCapabilityID{
 				{
 					accountAddress: testAddress,
@@ -826,8 +975,8 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				},
 				Address: interpreter.AddressValue(testAddress),
 			},
-			pathLinks:          nil,
-			expectedMigrations: nil,
+			pathLinks:              nil,
+			expectedPathMigrations: nil,
 			expectedMissingCapabilityIDs: []testCapConsMissingCapabilityID{
 				{
 					accountAddress: testAddress,
@@ -867,7 +1016,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 					borrowType: testRReferenceStaticType,
 				},
 			},
-			expectedMigrations: nil,
+			expectedPathMigrations: nil,
 			expectedMissingCapabilityIDs: []testCapConsMissingCapabilityID{
 				{
 					accountAddress: testAddress,
@@ -900,7 +1049,20 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 					Identifier: testPathIdentifier,
 				},
 			},
-			expectedMigrations: []testCapConsPathCapabilityMigration{
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPublic,
+							testPathIdentifier,
+						),
+					},
+					migration: "LinkValueMigration",
+				},
+				expectedWrappedCapabilityValueMigration,
+			},
+			expectedPathMigrations: []testCapConsPathCapabilityMigration{
 				{
 					accountAddress: testAddress,
 					addressPath: interpreter.AddressPath{
@@ -933,7 +1095,20 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 					Identifier: testPathIdentifier,
 				},
 			},
-			expectedMigrations: []testCapConsPathCapabilityMigration{
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPrivate,
+							testPathIdentifier,
+						),
+					},
+					migration: "LinkValueMigration",
+				},
+				expectedWrappedCapabilityValueMigration,
+			},
+			expectedPathMigrations: []testCapConsPathCapabilityMigration{
 				{
 					accountAddress: testAddress,
 					addressPath: interpreter.AddressPath{
@@ -1054,6 +1229,8 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				linkTestCase.pathLinks,
 				linkTestCase.accountLinks,
 				linkTestCase.expectedMigrations,
+				linkTestCase.expectedErrors,
+				linkTestCase.expectedPathMigrations,
 				linkTestCase.expectedMissingCapabilityIDs,
 				valueTestCase.setupFunction,
 				valueTestCase.checkFunction,
@@ -1073,6 +1250,8 @@ func testLinkMigration(
 	t *testing.T,
 	pathLinks []testLink,
 	accountLinks []interpreter.PathValue,
+	expectedMigrations []testMigration,
+	expectedErrors []testMigrationError,
 	expectedLinkMigrations []testCapConsLinkMigration,
 	expectedCyclicLinkErrors []CyclicLinkError,
 	expectedMissingTargets []interpreter.AddressPath,
@@ -1171,7 +1350,7 @@ func testLinkMigration(
 			},
 		},
 		migration.NewValueMigrationsPathMigrator(
-			nil,
+			reporter,
 			&LinkValueMigration{
 				CapabilityIDs:      capabilityIDs,
 				AccountIDGenerator: &testAccountIDGenerator{},
@@ -1185,6 +1364,14 @@ func testLinkMigration(
 
 	// Assert
 
+	assert.Equal(t,
+		expectedMigrations,
+		reporter.migrations,
+	)
+	assert.Equal(t,
+		expectedErrors,
+		reporter.errors,
+	)
 	assert.Equal(t,
 		expectedLinkMigrations,
 		reporter.linkMigrations,
@@ -1207,6 +1394,8 @@ func TestLinkMigration(t *testing.T) {
 		name                     string
 		pathLinks                []testLink
 		accountLinks             []interpreter.PathValue
+		expectedMigrations       []testMigration
+		expectedErrors           []testMigrationError
 		expectedLinkMigrations   []testCapConsLinkMigration
 		expectedCyclicLinkErrors []CyclicLinkError
 		expectedMissingTargets   []interpreter.AddressPath
@@ -1241,6 +1430,28 @@ func TestLinkMigration(t *testing.T) {
 						Identifier: testPathIdentifier,
 					},
 					borrowType: testRReferenceStaticType,
+				},
+			},
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+					},
+					migration: "LinkValueMigration",
+				},
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPublic,
+							Identifier: testPathIdentifier,
+						},
+					},
+					migration: "LinkValueMigration",
 				},
 			},
 			expectedLinkMigrations: []testCapConsLinkMigration{
@@ -1283,6 +1494,18 @@ func TestLinkMigration(t *testing.T) {
 					borrowType: testRReferenceStaticType,
 				},
 			},
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPublic,
+							Identifier: testPathIdentifier,
+						},
+					},
+					migration: "LinkValueMigration",
+				},
+			},
 			expectedLinkMigrations: []testCapConsLinkMigration{
 				{
 					accountAddressPath: interpreter.AddressPath{
@@ -1311,6 +1534,18 @@ func TestLinkMigration(t *testing.T) {
 						Identifier: testPathIdentifier,
 					},
 					borrowType: testRReferenceStaticType,
+				},
+			},
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+					},
+					migration: "LinkValueMigration",
 				},
 			},
 			expectedLinkMigrations: []testCapConsLinkMigration{
@@ -1359,6 +1594,28 @@ func TestLinkMigration(t *testing.T) {
 						Identifier: testPathIdentifier,
 					},
 					borrowType: testRReferenceStaticType,
+				},
+			},
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPrivate,
+							Identifier: "test2",
+						},
+					},
+					migration: "LinkValueMigration",
+				},
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+					},
+					migration: "LinkValueMigration",
 				},
 			},
 			expectedLinkMigrations: []testCapConsLinkMigration{
@@ -1488,6 +1745,18 @@ func TestLinkMigration(t *testing.T) {
 					Identifier: testPathIdentifier,
 				},
 			},
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPublic,
+							Identifier: testPathIdentifier,
+						},
+					},
+					migration: "LinkValueMigration",
+				},
+			},
 			expectedLinkMigrations: []testCapConsLinkMigration{
 				{
 					accountAddressPath: interpreter.AddressPath{
@@ -1509,6 +1778,18 @@ func TestLinkMigration(t *testing.T) {
 				{
 					Domain:     common.PathDomainPrivate,
 					Identifier: testPathIdentifier,
+				},
+			},
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+					},
+					migration: "LinkValueMigration",
 				},
 			},
 			expectedLinkMigrations: []testCapConsLinkMigration{
@@ -1549,6 +1830,28 @@ func TestLinkMigration(t *testing.T) {
 					Identifier: testPathIdentifier,
 				},
 			},
+			expectedMigrations: []testMigration{
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+					},
+					migration: "LinkValueMigration",
+				},
+				{
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPublic,
+							Identifier: testPathIdentifier,
+						},
+					},
+					migration: "LinkValueMigration",
+				},
+			},
 			expectedLinkMigrations: []testCapConsLinkMigration{
 				{
 					accountAddressPath: interpreter.AddressPath{
@@ -1583,6 +1886,8 @@ func TestLinkMigration(t *testing.T) {
 				t,
 				linkTestCase.pathLinks,
 				linkTestCase.accountLinks,
+				linkTestCase.expectedMigrations,
+				linkTestCase.expectedErrors,
 				linkTestCase.expectedLinkMigrations,
 				linkTestCase.expectedCyclicLinkErrors,
 				linkTestCase.expectedMissingTargets,
