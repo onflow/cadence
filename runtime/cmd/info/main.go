@@ -21,6 +21,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	"golang.org/x/exp/slices"
 
@@ -112,8 +113,8 @@ func dumpBuiltinTypes() {
 
 	slices.SortFunc(
 		types,
-		func(a, b sema.Type) bool {
-			return a.QualifiedString() < b.QualifiedString()
+		func(a, b sema.Type) int {
+			return strings.Compare(a.QualifiedString(), b.QualifiedString())
 		},
 	)
 
@@ -151,8 +152,8 @@ func dumpTypeMembers(ty sema.Type) {
 
 	slices.SortFunc(
 		namedResolvers,
-		func(a, b namedResolver) bool {
-			return a.name < b.name
+		func(a, b namedResolver) int {
+			return strings.Compare(a.name, b.name)
 		},
 	)
 
@@ -233,8 +234,8 @@ func dumpBuiltinValues() {
 
 	slices.SortFunc(
 		valueTypes,
-		func(a, b valueType) bool {
-			return a.name < b.name
+		func(a, b valueType) int {
+			return strings.Compare(a.name, b.name)
 		},
 	)
 
@@ -283,8 +284,8 @@ func printAvailableCommands() {
 
 	slices.SortFunc(
 		commandHelps,
-		func(a, b commandHelp) bool {
-			return a.name < b.name
+		func(a, b commandHelp) int {
+			return strings.Compare(a.name, b.name)
 		},
 	)
 
