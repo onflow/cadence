@@ -43,7 +43,7 @@ jobs:
         run: go mod tidy
 
       - name: Build
-        run: go build -v --tags ./...
+        run: go build -v ./...
 
   flow-emulator:
     name: Emulator
