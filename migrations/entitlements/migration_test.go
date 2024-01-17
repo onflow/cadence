@@ -2128,7 +2128,7 @@ func TestConvertDeprecatedStaticTypes(t *testing.T) {
 			t.Parallel()
 
 			inter := NewTestInterpreter(t)
-			typeValue := interpreter.NewUnmeteredCapabilityValue(
+			value := interpreter.NewUnmeteredCapabilityValue(
 				1,
 				interpreter.AddressValue(common.ZeroAddress),
 				interpreter.NewReferenceStaticType(
@@ -2138,7 +2138,7 @@ func TestConvertDeprecatedStaticTypes(t *testing.T) {
 				),
 			)
 
-			result, err := ConvertValueToEntitlements(inter, typeValue)
+			result, err := ConvertValueToEntitlements(inter, value)
 			require.Error(t, err)
 			assert.ErrorContains(t, err, "cannot migrate deprecated type")
 			require.Nil(t, result)
@@ -2187,7 +2187,7 @@ func TestConvertMigratedAccountTypes(t *testing.T) {
 
 			result, err := ConvertValueToEntitlements(inter, newValue)
 			require.NoError(t, err)
-			require.Nil(t, result)
+			require.Nilf(t, result, "expected no migration, but got %s", result)
 		})
 	}
 
