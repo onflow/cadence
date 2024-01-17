@@ -192,6 +192,11 @@ var hardKeywords = filter(
 
 var hardKeywordsTable = mph.Build(hardKeywords)
 
+func IsHardKeyword(identifier string) bool {
+	_, ok := hardKeywordsTable.Lookup(identifier)
+	return ok
+}
+
 func filter[T comparable](items []T, f func(T) bool) []T {
 	result := make([]T, 0, len(items))
 	for _, item := range items {
