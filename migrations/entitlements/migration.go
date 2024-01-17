@@ -19,6 +19,8 @@
 package entitlements
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -45,8 +47,26 @@ func (EntitlementsMigration) Name() string {
 // * `ConvertToEntitledType(T) ---> T`
 // where Entitlements(I) is defined as the result of T.SupportedEntitlements()
 func ConvertToEntitledType(t sema.Type) (sema.Type, bool) {
+
 	switch t := t.(type) {
 	case *sema.ReferenceType:
+
+		// Do NOT add authorization for sema types
+		// that were converted from deprecated primitive static types
+		switch t.Type {
+
+		case sema.AccountType,
+			sema.Account_ContractsType,
+			sema.Account_KeysType,
+			sema.Account_InboxType,
+			sema.Account_StorageCapabilitiesType,
+			sema.Account_AccountCapabilitiesType,
+			sema.Account_CapabilitiesType,
+			sema.AccountKeyType:
+
+			return t, false
+		}
+
 		switch t.Authorization {
 		case sema.UnauthorizedAccess:
 			innerType, convertedInner := ConvertToEntitledType(t.Type)
@@ -113,7 +133,10 @@ func ConvertToEntitledType(t sema.Type) (sema.Type, bool) {
 func ConvertValueToEntitlements(
 	inter *interpreter.Interpreter,
 	v interpreter.Value,
-) interpreter.Value {
+) (
+	interpreter.Value,
+	error,
+) {
 
 	var staticType interpreter.StaticType
 	// during a real migration these two reference cases will not be hit, but they are here for easier testing
@@ -136,10 +159,14 @@ func ConvertValueToEntitlements(
 		// But it could, if the type used in the link is not migrated,
 		// then the link values would be left un-migrated.
 		// These need to be skipped specifically, otherwise `v.StaticType(inter)` will panic.
-		return nil
+		return nil, nil
 
 	default:
 		staticType = v.StaticType(inter)
+	}
+
+	if staticType.IsDeprecated() {
+		return nil, fmt.Errorf("cannot migrate deprecated type: %s", staticType)
 	}
 
 	// if the static type contains a legacy restricted type, convert it to a new type according to some rules:
@@ -185,15 +212,22 @@ func ConvertValueToEntitlements(
 
 	// if the types of the values are equal and the value is not a runtime type, there's nothing to migrate
 	if !converted && !entitledType.Equal(sema.MetaType) {
-		return nil
+		return nil, nil
 	}
 
 	switch v := v.(type) {
 	// during a real migration these two reference cases will not be hit, but they are here for easier testing
 	case *interpreter.EphemeralReferenceValue:
 		entitledReferenceType := entitledType.(*sema.ReferenceType)
-		staticAuthorization := interpreter.ConvertSemaAccessToStaticAuthorization(inter, entitledReferenceType.Authorization)
-		convertedValue := ConvertValueToEntitlements(inter, v.Value)
+		staticAuthorization := interpreter.ConvertSemaAccessToStaticAuthorization(
+			inter,
+			entitledReferenceType.Authorization,
+		)
+		convertedValue, err := ConvertValueToEntitlements(inter, v.Value)
+		if err != nil {
+			return nil, err
+		}
+
 		// if the underlying value did not change, we still want to use the old value in the newly created reference
 		if convertedValue == nil {
 			convertedValue = v.Value
@@ -204,19 +238,23 @@ func ConvertValueToEntitlements(
 			convertedValue,
 			entitledReferenceType.Type,
 			interpreter.EmptyLocationRange,
-		)
+		), nil
 
 	case *interpreter.StorageReferenceValue:
-		// a stored value will in itself be migrated at another point, so no need to do anything here other than change the type
+		// a stored value will in itself be migrated at another point,
+		// so no need to do anything here other than change the type
 		entitledReferenceType := entitledType.(*sema.ReferenceType)
-		staticAuthorization := interpreter.ConvertSemaAccessToStaticAuthorization(inter, entitledReferenceType.Authorization)
+		staticAuthorization := interpreter.ConvertSemaAccessToStaticAuthorization(
+			inter,
+			entitledReferenceType.Authorization,
+		)
 		return interpreter.NewStorageReferenceValue(
 			inter,
 			staticAuthorization,
 			v.TargetStorageAddress,
 			v.TargetPath,
 			entitledReferenceType.Type,
-		)
+		), nil
 
 	case *interpreter.ArrayValue:
 		entitledArrayType := entitledType.(sema.ArrayType)
@@ -224,14 +262,22 @@ func ConvertValueToEntitlements(
 
 		iterator := v.Iterator(inter, interpreter.EmptyLocationRange)
 
-		newArray := interpreter.NewArrayValueWithIterator(inter, arrayStaticType, v.GetOwner(), uint64(v.Count()), func() interpreter.Value {
-			return iterator.Next(inter, interpreter.EmptyLocationRange)
-		})
-		return newArray
+		return interpreter.NewArrayValueWithIterator(
+			inter,
+			arrayStaticType,
+			v.GetOwner(),
+			uint64(v.Count()),
+			func() interpreter.Value {
+				return iterator.Next(inter, interpreter.EmptyLocationRange)
+			},
+		), nil
 
 	case *interpreter.DictionaryValue:
 		entitledDictionaryType := entitledType.(*sema.DictionaryType)
-		dictionaryStaticType := interpreter.ConvertSemaDictionaryTypeToStaticDictionaryType(inter, entitledDictionaryType)
+		dictionaryStaticType := interpreter.ConvertSemaDictionaryTypeToStaticDictionaryType(
+			inter,
+			entitledDictionaryType,
+		)
 
 		var values []interpreter.Value
 
@@ -241,24 +287,28 @@ func ConvertValueToEntitlements(
 			return true
 		})
 
-		newDict := interpreter.NewDictionaryValue(
+		return interpreter.NewDictionaryValue(
 			inter,
 			interpreter.EmptyLocationRange,
 			dictionaryStaticType,
 			values...,
-		)
-		return newDict
+		), nil
 
 	case *interpreter.CapabilityValue:
 		// capabilities should just have their borrow type updated, as the pointed-to value will also be visited
 		// by the migration on its own
 		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
 		capabilityStaticType := interpreter.ConvertSemaToStaticType(inter, entitledCapabilityValue.BorrowType)
-		return interpreter.NewCapabilityValue(inter, v.ID, v.Address, capabilityStaticType)
+		return interpreter.NewCapabilityValue(
+			inter,
+			v.ID,
+			v.Address,
+			capabilityStaticType,
+		), nil
 
 	case interpreter.TypeValue:
 		if v.Type == nil {
-			return nil
+			return nil, nil
 		}
 
 		convertedType, converted := ConvertToEntitledType(
@@ -266,7 +316,7 @@ func ConvertValueToEntitlements(
 		)
 
 		if !converted {
-			return nil
+			return nil, nil
 		}
 
 		// convert the static type of the value
@@ -274,12 +324,19 @@ func ConvertValueToEntitlements(
 			inter,
 			convertedType,
 		)
-		return interpreter.NewTypeValue(inter, entitledStaticType)
+		return interpreter.NewTypeValue(inter, entitledStaticType), nil
 	}
 
-	return nil
+	return nil, nil
 }
 
-func (mig EntitlementsMigration) Migrate(_ interpreter.AddressPath, value interpreter.Value, _ *interpreter.Interpreter) (interpreter.Value, error) {
-	return ConvertValueToEntitlements(mig.Interpreter, value), nil
+func (mig EntitlementsMigration) Migrate(
+	_ interpreter.AddressPath,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) (
+	interpreter.Value,
+	error,
+) {
+	return ConvertValueToEntitlements(mig.Interpreter, value)
 }

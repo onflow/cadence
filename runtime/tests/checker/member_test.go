@@ -940,18 +940,11 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		// Test all built-in composite types
 		for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
-			if !ty.IsDefined() {
+			if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 				continue
 			}
 
 			semaType := ty.SemaType()
-
-			// Some primitive static types are deprecated,
-			// and only exist for migration purposes,
-			// so do not have an equivalent sema type
-			if semaType == nil {
-				continue
-			}
 
 			if !semaType.ContainFieldsOrElements() ||
 				semaType.IsResourceType() {

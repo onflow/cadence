@@ -49,6 +49,7 @@ type StaticType interface {
 	Encode(e *cbor.StreamEncoder) error
 	MeteredString(memoryGauge common.MemoryGauge) string
 	ID() TypeID
+	IsDeprecated() bool
 }
 
 type TypeID = common.TypeID
@@ -129,6 +130,10 @@ func (t *CompositeStaticType) ID() TypeID {
 	return t.TypeID
 }
 
+func (*CompositeStaticType) IsDeprecated() bool {
+	return false
+}
+
 // InterfaceStaticType
 
 type InterfaceStaticType struct {
@@ -205,6 +210,10 @@ func (t *InterfaceStaticType) ID() TypeID {
 	return t.TypeID
 }
 
+func (*InterfaceStaticType) IsDeprecated() bool {
+	return false
+}
+
 // ArrayStaticType
 
 type ArrayStaticType interface {
@@ -269,6 +278,10 @@ func (t *VariableSizedStaticType) ID() TypeID {
 	return sema.FormatVariableSizedTypeID(t.Type.ID())
 }
 
+func (t *VariableSizedStaticType) IsDeprecated() bool {
+	return t.Type.IsDeprecated()
+}
+
 // InclusiveRangeStaticType
 
 type InclusiveRangeStaticType struct {
@@ -318,6 +331,10 @@ func (t InclusiveRangeStaticType) Equal(other StaticType) bool {
 
 func (t InclusiveRangeStaticType) ID() TypeID {
 	return sema.InclusiveRangeTypeID(string(t.ElementType.ID()))
+}
+
+func (t InclusiveRangeStaticType) IsDeprecated() bool {
+	return t.ElementType.IsDeprecated()
 }
 
 // ConstantSizedStaticType
@@ -386,6 +403,10 @@ func (t *ConstantSizedStaticType) ID() TypeID {
 	return sema.FormatConstantSizedTypeID(t.Type.ID(), t.Size)
 }
 
+func (t *ConstantSizedStaticType) IsDeprecated() bool {
+	return t.Type.IsDeprecated()
+}
+
 // DictionaryStaticType
 
 type DictionaryStaticType struct {
@@ -443,6 +464,11 @@ func (t *DictionaryStaticType) ID() TypeID {
 	)
 }
 
+func (t *DictionaryStaticType) IsDeprecated() bool {
+	return t.KeyType.IsDeprecated() ||
+		t.ValueType.IsDeprecated()
+}
+
 // OptionalStaticType
 
 type OptionalStaticType struct {
@@ -488,6 +514,10 @@ func (t *OptionalStaticType) Equal(other StaticType) bool {
 
 func (t *OptionalStaticType) ID() TypeID {
 	return sema.FormatOptionalTypeID(t.Type.ID())
+}
+
+func (t *OptionalStaticType) IsDeprecated() bool {
+	return t.Type.IsDeprecated()
 }
 
 var NilStaticType = &OptionalStaticType{
@@ -581,6 +611,16 @@ func (t *IntersectionStaticType) ID() TypeID {
 	}
 	// FormatIntersectionTypeID sorts
 	return sema.FormatIntersectionTypeID(interfaceTypeIDs)
+}
+
+func (t *IntersectionStaticType) IsDeprecated() bool {
+	for _, typ := range t.Types {
+		if typ.IsDeprecated() {
+			return true
+		}
+	}
+
+	return false
 }
 
 // Authorization
@@ -817,6 +857,10 @@ func (t *ReferenceStaticType) ID() TypeID {
 	)
 }
 
+func (t *ReferenceStaticType) IsDeprecated() bool {
+	return t.ReferencedType.IsDeprecated()
+}
+
 // CapabilityStaticType
 
 type CapabilityStaticType struct {
@@ -880,6 +924,13 @@ func (t *CapabilityStaticType) ID() TypeID {
 		borrowTypeID = borrowType.ID()
 	}
 	return sema.FormatCapabilityTypeID(borrowTypeID)
+}
+
+func (t *CapabilityStaticType) IsDeprecated() bool {
+	if t.BorrowType == nil {
+		return false
+	}
+	return t.BorrowType.IsDeprecated()
 }
 
 // Conversion
@@ -1330,6 +1381,12 @@ func (t FunctionStaticType) Equal(other StaticType) bool {
 func (t FunctionStaticType) ID() TypeID {
 	return t.Type.ID()
 }
+
+func (FunctionStaticType) IsDeprecated() bool {
+	return false
+}
+
+// TypeParameter
 
 type TypeParameter struct {
 	TypeBound StaticType
