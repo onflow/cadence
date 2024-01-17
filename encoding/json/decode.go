@@ -1204,7 +1204,7 @@ var simpleTypes = func() map[string]cadence.Type {
 	typeMap["Bytes"] = cadence.TheBytesType
 
 	for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
-		if !ty.IsDefined() {
+		if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 			continue
 		}
 
@@ -1214,13 +1214,6 @@ var simpleTypes = func() map[string]cadence.Type {
 		}
 
 		semaType := ty.SemaType()
-
-		// Some primitive static types are deprecated,
-		// and only exist for migration purposes,
-		// so do not have an equivalent sema type
-		if semaType == nil {
-			continue
-		}
 
 		typeMap[string(semaType.ID())] = cadenceType
 	}
