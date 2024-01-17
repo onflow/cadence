@@ -2399,6 +2399,14 @@ func TestStaticType_IsDeprecated(t *testing.T) {
 			ty:       &CompositeStaticType{},
 			expected: false,
 		},
+		{
+			name: "InclusiveRange",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &InclusiveRangeStaticType{
+					ElementType: innerType,
+				}
+			},
+		},
 	}
 
 	test := func(test testCase) {
