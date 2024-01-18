@@ -166,7 +166,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 				return parseEntitlementOrMappingDeclaration(p, access, accessPos, docString)
 
-			case keywordAttachment:
+			case KeywordAttachment:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindAttachment)
 				if err != nil {
 					return nil, err
@@ -1685,7 +1685,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
-			case keywordAttachment:
+			case KeywordAttachment:
 				return parseAttachmentDeclaration(p, access, accessPos, docString)
 
 			case KeywordView:

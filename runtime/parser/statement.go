@@ -97,7 +97,7 @@ func parseStatement(p *parser) (ast.Statement, error) {
 			return parseForStatement(p)
 		case KeywordEmit:
 			return parseEmitStatement(p)
-		case keywordRemove:
+		case KeywordRemove:
 			return parseRemoveStatement(p)
 
 		case KeywordView:

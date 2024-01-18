@@ -65,16 +65,33 @@ const (
 	KeywordDefault     = "default"
 	KeywordEnum        = "enum"
 	KeywordView        = "view"
-	keywordAttachment  = "attachment"
-	keywordAttach      = "attach"
-	keywordRemove      = "remove"
-	keywordTo          = "to"
+	KeywordAttachment  = "attachment"
+	KeywordAttach      = "attach"
+	KeywordRemove      = "remove"
+	KeywordTo          = "to"
 	KeywordRequire     = "require"
 	KeywordStatic      = "static"
 	KeywordNative      = "native"
 	KeywordPub         = "pub"
 	KeywordPriv        = "priv"
 	KeywordInclude     = "include"
+	KeywordTry         = "try"
+	KeywordCatch       = "catch"
+	KeywordFinally     = "finally"
+	KeywordGoto        = "goto"
+	KeywordConst       = "const"
+	KeywordExport      = "export"
+	KeywordThrow       = "throw"
+	KeywordThrows      = "throws"
+	KeywordRequires    = "requires"
+	KeywordWhere       = "where"
+	KeywordFinal       = "final"
+	KeywordInternal    = "internal"
+	KeywordTypealias   = "typealias"
+	KeywordType        = "type"
+	KeywordRepeat      = "repeat"
+	KeywordGuard       = "guard"
+	KeywordIs          = "is"
 	// NOTE: ensure to update allKeywords when adding a new keyword
 )
 
@@ -123,11 +140,32 @@ var allKeywords = []string{
 	KeywordView,
 	KeywordMapping,
 	KeywordRequire,
-	keywordAttach,
-	keywordAttachment,
-	keywordTo,
-	keywordRemove,
+	KeywordAttach,
+	KeywordAttachment,
+	KeywordTo,
+	KeywordRemove,
+	KeywordStatic,
+	KeywordNative,
+	KeywordPub,
+	KeywordPriv,
 	KeywordInclude,
+	KeywordTry,
+	KeywordCatch,
+	KeywordFinally,
+	KeywordGoto,
+	KeywordConst,
+	KeywordExport,
+	KeywordThrow,
+	KeywordThrows,
+	KeywordRequires,
+	KeywordWhere,
+	KeywordFinal,
+	KeywordInternal,
+	KeywordTypealias,
+	KeywordType,
+	KeywordRepeat,
+	KeywordGuard,
+	KeywordIs,
 }
 
 // Keywords that can be used in identifier position without ambiguity.
@@ -136,9 +174,10 @@ var softKeywords = []string{
 	KeywordAccount,
 	KeywordAll,
 	KeywordView,
-	keywordAttach,
-	keywordRemove,
-	keywordTo,
+	KeywordAttach,
+	KeywordRemove,
+	KeywordTo,
+	KeywordType,
 }
 
 var softKeywordsTable = mph.Build(softKeywords)
@@ -153,6 +192,11 @@ var hardKeywords = filter(
 )
 
 var hardKeywordsTable = mph.Build(hardKeywords)
+
+func IsHardKeyword(identifier string) bool {
+	_, ok := hardKeywordsTable.Lookup(identifier)
+	return ok
+}
 
 func filter[T comparable](items []T, f func(T) bool) []T {
 	result := make([]T, 0, len(items))
