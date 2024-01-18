@@ -2135,7 +2135,7 @@ const ArrayTypeToConstantSizedFunctionName = "toConstantSized"
 
 const arrayTypeToConstantSizedFunctionDocString = `
 Returns a new constant-sized array with the copy of the contents of the given array.
-Available if the array is constant sized and the element type is not resource-kinded.
+Available if the array is variable-sized and the element type is not resource-kinded.
 `
 
 var insertMutateEntitledAccess = NewEntitlementSetAccess(
