@@ -2530,6 +2530,32 @@ func (checker *Checker) VisitExpressionWithForceType(expr ast.Expression, expect
 	return visibleType
 }
 
+func (checker *Checker) VisitExpressionWithReferenceCheck(expr ast.Expression, targetType Type) Type {
+
+	expectedType := targetType
+	if expectedType.IsOrContainsReferenceType() {
+		expectedType = nil
+	}
+
+	visibleType := checker.VisitExpression(expr, expectedType)
+
+	if expectedType == nil &&
+		!visibleType.IsInvalidType() &&
+		!IsSubType(visibleType, targetType) {
+
+		checker.report(
+			&TypeMismatchError{
+				ExpectedType: targetType,
+				ActualType:   visibleType,
+				Expression:   expr,
+				Range:        checker.expressionRange(expr),
+			},
+		)
+	}
+
+	return visibleType
+}
+
 // visitExpressionWithForceType
 //
 // Parameters:

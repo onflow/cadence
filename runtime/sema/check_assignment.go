@@ -53,7 +53,7 @@ func (checker *Checker) checkAssignment(
 
 	targetType = checker.visitAssignmentValueType(target)
 
-	valueType = checker.VisitExpression(value, targetType)
+	valueType = checker.VisitExpressionWithReferenceCheck(value, targetType)
 
 	// NOTE: Visiting the `value` checks the compatibility between value and target types.
 	// Check for the *target* type, so that assignment using non-resource typed value (e.g. `nil`)

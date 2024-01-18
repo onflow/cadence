@@ -4022,7 +4022,7 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 			access(all) attachment A for R {
 				access(all) let bases: [&R]
 				init() {
-					self.bases = []
+					self.bases = [] as [&R]
 					self.bases.append(base)
 				}
 			}
@@ -4041,7 +4041,7 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 			access(all) attachment A for R {
 				access(all) let bases: [&R]
 				init() {
-					self.bases = []
+					self.bases = [] as [&R]
 					self.bases[0] = base
 				}
 			}
