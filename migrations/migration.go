@@ -315,19 +315,27 @@ func (m *StorageMigration) migrate(
 	return migration.Migrate(addressPath, value, m.interpreter)
 }
 
-// legacyKey return the same type with the "old" hash/ID generation algo.
+// legacyKey return the same type with the "old" hash/ID generation function.
 func legacyKey(key interpreter.Value) interpreter.Value {
-	typeValue, isTypeValue := key.(interpreter.TypeValue)
-	if !isTypeValue {
-		return key
+	switch key := key.(type) {
+	case interpreter.TypeValue:
+		legacyType := legacyType(key.Type)
+		if legacyType != nil {
+			return interpreter.NewUnmeteredTypeValue(legacyType)
+		}
+
+	case *interpreter.StringValue:
+		return &LegacyStringValue{
+			StringValue: key,
+		}
+
+	case interpreter.CharacterValue:
+		return &LegacyCharacterValue{
+			CharacterValue: key,
+		}
 	}
 
-	legacyType := legacyType(typeValue.Type)
-	if legacyType == nil {
-		return key
-	}
-
-	return interpreter.NewUnmeteredTypeValue(legacyType)
+	return key
 }
 
 func legacyType(staticType interpreter.StaticType) interpreter.StaticType {
@@ -375,9 +383,34 @@ func legacyType(staticType interpreter.StaticType) interpreter.StaticType {
 		}
 
 	case *interpreter.ReferenceStaticType:
+		referenceType := typ
+
 		legacyReferencedType := legacyType(typ.ReferencedType)
 		if legacyReferencedType != nil {
-			return interpreter.NewReferenceStaticType(nil, typ.Authorization, legacyReferencedType)
+			referenceType = interpreter.NewReferenceStaticType(nil, typ.Authorization, legacyReferencedType)
+		}
+
+		return &LegacyReferenceType{
+			ReferenceStaticType: referenceType,
+		}
+
+	case interpreter.PrimitiveStaticType:
+		switch typ {
+		case interpreter.PrimitiveStaticTypeAuthAccount, //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccount,                  //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountCapabilities,        //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccountCapabilities,      //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountAccountCapabilities, //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountStorageCapabilities, //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountContracts,           //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccountContracts,         //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountKeys,                //nolint:staticcheck
+			interpreter.PrimitiveStaticTypePublicAccountKeys,              //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAuthAccountInbox,               //nolint:staticcheck
+			interpreter.PrimitiveStaticTypeAccountKey:                     //nolint:staticcheck
+			return LegacyPrimitiveStaticType{
+				PrimitiveStaticType: typ,
+			}
 		}
 	}
 

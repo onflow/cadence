@@ -267,7 +267,7 @@ func (v CharacterValue) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	return e.CBOR.EncodeString(string(v))
+	return e.CBOR.EncodeString(v.Str)
 }
 
 // Encode encodes the value as a CBOR string
