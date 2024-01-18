@@ -78,17 +78,33 @@ func (k Uint64StorageMapKey) AtreeValue() atree.Value {
 }
 
 func StorageMapKeyAtreeValueHashInput(value atree.Value, scratch []byte) ([]byte, error) {
-	smk, ok := value.(StorageMapKey)
-	if !ok {
-		return nil, errors.NewUnexpectedError("StorageMapKeyAtreeValueHashInput expected StorageMapKey, got %T", value)
+	var smk StorageMapKey
+	switch value := value.(type) {
+	case StringAtreeValue:
+		smk = StringStorageMapKey(value)
+
+	case Uint64AtreeValue:
+		smk = Uint64StorageMapKey(value)
+
+	default:
+		return nil, errors.NewUnexpectedError("StorageMapKeyAtreeValueHashInput expected StringAtreeValue or Uint64AtreeValue, got %T", value)
 	}
+
 	return smk.AtreeValueHashInput(value, scratch)
 }
 
 func StorageMapKeyAtreeValueComparator(slabStorage atree.SlabStorage, value atree.Value, otherStorable atree.Storable) (bool, error) {
-	smk, ok := value.(StorageMapKey)
-	if !ok {
-		return false, errors.NewUnexpectedError("StorageMapKeyAtreeValueComparator expected StorageMapKey, got %T", value)
+	var smk StorageMapKey
+	switch value := value.(type) {
+	case StringAtreeValue:
+		smk = StringStorageMapKey(value)
+
+	case Uint64AtreeValue:
+		smk = Uint64StorageMapKey(value)
+
+	default:
+		return false, errors.NewUnexpectedError("StorageMapKeyAtreeValueComparator expected StringAtreeValue or Uint64AtreeValue, got %T", value)
 	}
+
 	return smk.AtreeValueCompare(slabStorage, value, otherStorable)
 }
