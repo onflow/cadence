@@ -845,10 +845,10 @@ func TestInterpretMetaTypeHashInput(t *testing.T) {
 	// TypeValue.HashInput should not load the program
 
 	inter := parseCheckAndInterpret(t, `
-           fun test(_ type: Type) {
-               {type: 1}
-           }
-        `)
+       fun test(_ type: Type) {
+           {type: 1}
+       }
+    `)
 
 	location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
 	staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
@@ -856,5 +856,61 @@ func TestInterpretMetaTypeHashInput(t *testing.T) {
 
 	_, err := inter.Invoke("test", typeValue)
 	require.NoError(t, err)
+
+}
+
+func TestInterpretBrokenMetaTypeUsage(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+       fun test(type1: Type, type2: Type): [Type] {
+           let dict = {type1: "a", type2: "b"}
+           log(dict.keys.length)
+           log(dict.keys.contains(type1))
+           log(dict.keys.contains(type2))
+           log(dict[type1])
+           log(dict[type2])
+           return dict.keys
+       }
+    `)
+	require.NoError(t, err)
+
+	location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
+	staticType1 := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
+	staticType2 := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Baz")
+	typeValue1 := interpreter.NewUnmeteredTypeValue(staticType1)
+	typeValue2 := interpreter.NewUnmeteredTypeValue(staticType2)
+
+	result, err := inter.Invoke("test", typeValue1, typeValue2)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{
+			`2`,
+			`true`,
+			`true`,
+			`"a"`,
+			`"b"`,
+		},
+		getLogs(),
+	)
+
+	require.IsType(t, &interpreter.ArrayValue{}, result)
+	resultArray := result.(*interpreter.ArrayValue)
+
+	require.Equal(t, 2, resultArray.Count())
+
+	RequireValuesEqual(t,
+		inter,
+		interpreter.NewTypeValue(nil, staticType2),
+		resultArray.Get(inter, interpreter.EmptyLocationRange, 0),
+	)
+
+	RequireValuesEqual(t,
+		inter,
+		interpreter.NewTypeValue(nil, staticType1),
+		resultArray.Get(inter, interpreter.EmptyLocationRange, 1),
+	)
 
 }
