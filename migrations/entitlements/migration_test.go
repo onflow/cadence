@@ -24,6 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/migrations/account_type"
@@ -1957,4 +1959,242 @@ func TestConvertMigratedAccountTypes(t *testing.T) {
 
 		test(ty)
 	}
+}
+
+var testAddress = common.Address{0x42}
+
+var _ migrations.Reporter = &testReporter{}
+
+type testReporter struct {
+	migratedPaths map[interpreter.AddressPath]struct{}
+}
+
+func newTestReporter() *testReporter {
+	return &testReporter{
+		migratedPaths: map[interpreter.AddressPath]struct{}{},
+	}
+}
+
+func (t *testReporter) Migrated(
+	addressPath interpreter.AddressPath,
+	_ string,
+) {
+	t.migratedPaths[addressPath] = struct{}{}
+}
+
+func (t *testReporter) Error(
+	_ interpreter.AddressPath,
+	_ string,
+	_ error,
+) {
+}
+
+func TestRehash(t *testing.T) {
+
+	t.Parallel()
+
+	locationRange := interpreter.EmptyLocationRange
+
+	ledger := NewTestLedger(nil, nil)
+
+	storageMapKey := interpreter.StringStorageMapKey("dict")
+	newTestValue := func() interpreter.Value {
+		return interpreter.NewUnmeteredStringValue("test")
+	}
+
+	const fooBarQualifiedIdentifier = "Foo.Bar"
+	account := common.Address{0x42}
+	fooAddressLocation := common.NewAddressLocation(nil, account, "Foo")
+
+	newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
+		storage := runtime.NewStorage(ledger, nil)
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   false,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		return storage, inter
+	}
+
+	newCompositeType := func() *interpreter.CompositeStaticType {
+		return interpreter.NewCompositeStaticType(
+			nil,
+			fooAddressLocation,
+			fooBarQualifiedIdentifier,
+			common.NewTypeIDFromQualifiedName(
+				nil,
+				fooAddressLocation,
+				fooBarQualifiedIdentifier,
+			),
+		)
+	}
+
+	entitlementSetAuthorization := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{
+			sema.NewEntitlementType(
+				nil,
+				fooAddressLocation,
+				"E",
+			),
+		},
+		sema.Conjunction,
+	)
+
+	t.Run("prepare", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		dictionaryStaticType := interpreter.NewDictionaryStaticType(
+			nil,
+			interpreter.PrimitiveStaticTypeMetaType,
+			interpreter.PrimitiveStaticTypeString,
+		)
+		dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
+
+		refType := interpreter.NewReferenceStaticType(
+			nil,
+			interpreter.UnauthorizedAccess,
+			newCompositeType(),
+		)
+		refType.LegacyIsAuthorized = true
+
+		legacyRefType := &migrations.LegacyReferenceType{
+			ReferenceStaticType: refType,
+		}
+
+		typeValue := interpreter.NewUnmeteredTypeValue(legacyRefType)
+
+		dictValue.Insert(
+			inter,
+			locationRange,
+			typeValue,
+			newTestValue(),
+		)
+
+		// Note: ID is in the old format
+		assert.Equal(t,
+			common.TypeID("auth&A.4200000000000000.Foo.Bar"),
+			legacyRefType.ID(),
+		)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			true,
+		)
+
+		storageMap.SetValue(inter,
+			storageMapKey,
+			dictValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address(testAddress),
+				false,
+				nil,
+				nil,
+			),
+		)
+
+		err := storage.Commit(inter, false)
+		require.NoError(t, err)
+	})
+
+	t.Run("migrate", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		inter.SharedState.Config.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+
+			compositeType := &sema.CompositeType{
+				Location:   fooAddressLocation,
+				Identifier: fooBarQualifiedIdentifier,
+				Kind:       common.CompositeKindStructure,
+			}
+
+			compositeType.Members = sema.MembersAsMap([]*sema.Member{
+				sema.NewUnmeteredFunctionMember(
+					compositeType,
+					entitlementSetAuthorization,
+					"sayHello",
+					&sema.FunctionType{},
+					"",
+				),
+			})
+
+			return compositeType
+		}
+
+		migration := migrations.NewStorageMigration(inter, storage)
+
+		reporter := newTestReporter()
+
+		migration.Migrate(
+			&migrations.AddressSliceIterator{
+				Addresses: []common.Address{
+					testAddress,
+				},
+			},
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				NewEntitlementsMigration(inter),
+			),
+		)
+
+		err := migration.Commit()
+		require.NoError(t, err)
+
+		require.Equal(t,
+			map[interpreter.AddressPath]struct{}{
+				{
+					Address: testAddress,
+					Path: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: string(storageMapKey),
+					},
+				}: {},
+			},
+			reporter.migratedPaths,
+		)
+	})
+
+	t.Run("load", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
+		storedValue := storageMap.ReadValue(inter, storageMapKey)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, storedValue)
+
+		dictValue := storedValue.(*interpreter.DictionaryValue)
+
+		refType := interpreter.NewReferenceStaticType(
+			nil,
+			interpreter.ConvertSemaAccessToStaticAuthorization(nil, entitlementSetAuthorization),
+			newCompositeType(),
+		)
+
+		typeValue := interpreter.NewUnmeteredTypeValue(refType)
+
+		// Note: ID is in the new format
+		assert.Equal(t,
+			common.TypeID("auth(A.4200000000000000.E)&A.4200000000000000.Foo.Bar"),
+			refType.ID(),
+		)
+
+		value, ok := dictValue.Get(inter, locationRange, typeValue)
+		require.True(t, ok)
+
+		require.IsType(t, &interpreter.StringValue{}, value)
+		require.Equal(t,
+			newTestValue(),
+			value.(*interpreter.StringValue),
+		)
+	})
 }

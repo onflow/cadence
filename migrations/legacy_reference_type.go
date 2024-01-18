@@ -21,6 +21,8 @@ package migrations
 import (
 	"strings"
 
+	"github.com/fxamacker/cbor/v2"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
@@ -53,4 +55,29 @@ func formatReferenceType(
 	builder.WriteByte('&')
 	builder.WriteString(typeString)
 	return builder.String()
+}
+
+func (t *LegacyReferenceType) Encode(e *cbor.StreamEncoder) error {
+	// Encode tag number and array head
+	err := e.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, interpreter.CBORTagReferenceStaticType,
+		// array, 2 items follow
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Encode the `LegacyIsAuthorized` flag instead of the `Authorization`.
+	// This is how it was done in pre-1.0.
+	// Decode already supports decoding this flag, for backward compatibility.
+	// Encode authorized at array index encodedReferenceStaticTypeAuthorizedFieldKey
+	err = e.EncodeBool(t.LegacyIsAuthorized)
+	if err != nil {
+		return err
+	}
+
+	// Encode type at array index encodedReferenceStaticTypeTypeFieldKey
+	return t.ReferencedType.Encode(e)
 }
