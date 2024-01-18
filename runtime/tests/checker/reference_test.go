@@ -3514,7 +3514,11 @@ func TestCheckReferenceRequiredTypeAnnotation(t *testing.T) {
 		nestingLevel int,
 	) {
 
-		test := func(t *testing.T, expr, ty string, check func(t *testing.T, err error)) {
+		test := func(
+			t *testing.T,
+			expr, ty string,
+			check func(t *testing.T, requiresTypeAnnotation bool, err error),
+		) {
 			expr, ty = gen(expr, ty)
 
 			t.Run("argument", func(t *testing.T) {
@@ -3534,10 +3538,28 @@ func TestCheckReferenceRequiredTypeAnnotation(t *testing.T) {
 						expr,
 					),
 				)
-				check(t, err)
+				check(t, true, err)
 			})
 
 			t.Run("variable declaration", func(t *testing.T) {
+				t.Parallel()
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                            entitlement X
+                            entitlement Y
+
+                            let x: %s = %s
+                        `,
+						ty,
+						expr,
+					),
+				)
+				check(t, false, err)
+			})
+
+			t.Run("self field assignment", func(t *testing.T) {
 				t.Parallel()
 
 				_, err := ParseAndCheck(t,
@@ -3558,69 +3580,136 @@ func TestCheckReferenceRequiredTypeAnnotation(t *testing.T) {
 						expr,
 					),
 				)
-				check(t, err)
+				check(t, false, err)
+			})
+
+			t.Run("external field assignment", func(t *testing.T) {
+				t.Parallel()
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                            entitlement X
+                            entitlement Y
+
+                            struct S {
+                                var v: %s?
+
+                                init() {
+                                    self.v = nil
+                                }
+                            }
+ 
+                            fun test() {
+                                let s = S()
+                                s.v = %s
+                            }
+                        `,
+						ty,
+						expr,
+					),
+				)
+				check(t, true, err)
 			})
 		}
 
 		t.Run("missing type annotation", func(t *testing.T) {
 			t.Parallel()
 
-			test(t, "&1", "&Int", func(t *testing.T, err error) {
+			test(t,
+				"&1",
+				"&Int",
+				func(t *testing.T, requiresTypeAnnotation bool, err error) {
 
-				errs := RequireCheckerErrors(t, err, 1+nestingLevel)
+					if requiresTypeAnnotation {
 
-				assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
-			})
+						errs := RequireCheckerErrors(t, err, 1+nestingLevel)
+
+						assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
+				},
+			)
 		})
 
 		t.Run("missing type annotation, with authorization", func(t *testing.T) {
 			t.Parallel()
 
-			test(t, "&1", "auth(X) &Int", func(t *testing.T, err error) {
+			test(t,
+				"&1",
+				"auth(X) &Int",
+				func(t *testing.T, requiresTypeAnnotation bool, err error) {
 
-				errs := RequireCheckerErrors(t, err, 1+nestingLevel)
+					if requiresTypeAnnotation {
 
-				assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
-			})
+						errs := RequireCheckerErrors(t, err, 1+nestingLevel)
+
+						assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
+				},
+			)
 		})
 
 		t.Run("matching type annotation", func(t *testing.T) {
 			t.Parallel()
 
-			test(t, "&1 as &Int", "&Int", func(t *testing.T, err error) {
+			test(t,
+				"&1 as &Int",
+				"&Int",
+				func(t *testing.T, _ bool, err error) {
 
-				require.NoError(t, err)
-			})
+					require.NoError(t, err)
+				},
+			)
 		})
 
 		t.Run("matching type annotation, with authorization", func(t *testing.T) {
 			t.Parallel()
 
-			test(t, "&1 as auth(X) &Int", "auth(X) &Int", func(t *testing.T, err error) {
+			test(
+				t,
+				"&1 as auth(X) &Int",
+				"auth(X) &Int",
+				func(t *testing.T, _ bool, err error) {
 
-				require.NoError(t, err)
-			})
+					require.NoError(t, err)
+				},
+			)
 		})
 
 		t.Run("non-matching type annotation, reference with different authorization", func(t *testing.T) {
 			t.Parallel()
 
-			test(t, "&1 as auth(Y) &Int", "auth(X) &Int", func(t *testing.T, err error) {
+			test(
+				t,
+				"&1 as auth(Y) &Int",
+				"auth(X) &Int",
+				func(t *testing.T, _ bool, err error) {
 
-				errs := RequireCheckerErrors(t, err, 1)
+					errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-			})
+					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				},
+			)
 		})
 
 		t.Run("non-matching type, non-reference", func(t *testing.T) {
 			t.Parallel()
 
-			test(t, "1", "&Int", func(t *testing.T, err error) {
-				errs := RequireCheckerErrors(t, err, 1)
+			test(
+				t,
+				"1",
+				"&Int",
+				func(t *testing.T, _ bool, err error) {
 
-				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-			})
+					errs := RequireCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				},
+			)
 
 		})
 	}
