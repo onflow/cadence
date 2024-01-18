@@ -581,12 +581,15 @@ func (checker *Checker) checkInvocationRequiredArgument(
 			}
 		}
 
-		// If the parameter type is an authorized reference type in particular,
+		// If the parameter type is or contains a reference type in particular,
 		// we do NOT use it as the expected type,
-		// to require an explicit type annotation at the invocation.
+		// to require an explicit type annotation in the invocation.
 		//
-		// The parameter type is not obvious at the call-site, which is potentially dangerous
-		// if the function is defined in a different location, and the parameter type requires an authorization.
+		// This is done to avoid the following situation:
+
+		// For arguments in invocations, the parameter type is not obvious at the call-site,
+		// which is potentially dangerous if the function is defined in a different location,
+		// and the parameter type potentially requires an authorization.
 		//
 		// For example, consider:
 		//
@@ -596,6 +599,16 @@ func (checker *Checker) checkInvocationRequiredArgument(
 		//   let ints = [1, 2, 3]
 		//   // would implicitly allow mutation
 		//   foo(&ints)
+		//
+		// A programmer should be able to look at a piece of code,
+		// and reason locally about whether a type will be inferred for a value
+		// based solely on how that value is used syntactically,
+		// not needing to worry about the actual or expected type of the value.
+		//
+		// Requiring an explicit type for *all* references,
+		// independent of if they require an authorization or not,
+		// is simple and allows the developer to see locally, and purely syntactically,
+		// that they are passing a reference and thus must annotate it.
 
 		expectedType := parameterType
 		if parameterType.IsOrContainsReferenceType() {
