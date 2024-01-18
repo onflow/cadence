@@ -7194,7 +7194,7 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
             struct Carrier {
                 access(mapping MyMap) let arr: [auth(mapping MyMap) &InnerObj]
                 init() {
-                    self.arr = [&InnerObj() as auth(Inner1, Inner2) &InnerObj]
+                    self.arr = [&InnerObj()]
                 }
             }    
 
@@ -7229,7 +7229,7 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
             struct Carrier {
                 access(mapping MyMap) let arr: [auth(mapping MyMap) &InnerObj]
                 init() {
-                    self.arr = [&InnerObj() as auth(Inner1, Inner2) &InnerObj]
+                    self.arr = [&InnerObj()]
                 }
             }    
 
@@ -7294,7 +7294,7 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
             struct Carrier {
                 access(mapping MyMap) let arr: [auth(mapping MyMap) &InnerObj]
                 init() {
-                    self.arr = [&InnerObj() as auth(Inner1, Inner2) &InnerObj]
+                    self.arr = [&InnerObj()]
                 }
             }   
             
@@ -7334,7 +7334,7 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
             struct Carrier {
                 access(mapping MyMap) let dict: {String: auth(mapping MyMap) &InnerObj}
                 init() {
-                    self.dict = {"": &InnerObj() as auth(Inner1, Inner2) &InnerObj}
+                    self.dict = {"": &InnerObj()}
                 }
             }    
 
@@ -7369,7 +7369,7 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
             struct Carrier {
                 access(mapping MyMap) let dict: {String: auth(mapping MyMap) &InnerObj}
                 init() {
-                    self.dict = {"": &InnerObj() as auth(Inner1, Inner2) &InnerObj}
+                    self.dict = {"": &InnerObj()}
                 }
             }    
 
