@@ -19,6 +19,7 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -356,8 +357,8 @@ func TestCheckArgumentLabels(t *testing.T) {
 			_, err := ParseAndCheck(t, `
               fun test(foo bar: Int, baz: String) {}
 
-	          let t = test(x: 1, "2")
-	        `)
+              let t = test(x: 1, "2")
+            `)
 
 			errs := RequireCheckerErrors(t, err, 2)
 
@@ -411,12 +412,12 @@ func TestCheckArgumentLabels(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
-	          struct Test {
+              struct Test {
                   fun test(foo bar: Int, baz: String) {}
-	          }
+              }
 
-	          let t = Test().test(x: 1, "2")
-	        `)
+              let t = Test().test(x: 1, "2")
+            `)
 
 			errs := RequireCheckerErrors(t, err, 2)
 
@@ -430,9 +431,9 @@ func TestCheckArgumentLabels(t *testing.T) {
 
 			importedChecker, err := ParseAndCheckWithOptions(t,
 				`
-	              struct Test {
+                  struct Test {
                       fun test(foo bar: Int, baz: String) {}
-	              }
+                  }
                 `,
 				ParseAndCheckOptions{
 					Location: utils.ImportedLocation,
@@ -476,8 +477,8 @@ func TestCheckArgumentLabels(t *testing.T) {
                   init(foo bar: Int, baz: String) {}
               }
 
-	          let t = Test(x: 1, "2")
-	        `)
+              let t = Test(x: 1, "2")
+            `)
 
 			errs := RequireCheckerErrors(t, err, 2)
 
@@ -533,14 +534,14 @@ func TestCheckArgumentLabels(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
-	          contract C {
+              contract C {
                   struct S {
                       init(foo bar: Int, baz: String) {}
                   }
-	          }
+              }
 
-	          let t = C.S(x: 1, "2")
-	        `)
+              let t = C.S(x: 1, "2")
+            `)
 
 			errs := RequireCheckerErrors(t, err, 2)
 
@@ -554,11 +555,11 @@ func TestCheckArgumentLabels(t *testing.T) {
 
 			importedChecker, err := ParseAndCheckWithOptions(t,
 				`
-	              contract C {
+                  contract C {
                       struct S {
                           init(foo bar: Int, baz: String) {}
                       }
-	              }
+                  }
                 `,
 				ParseAndCheckOptions{
 					Location: utils.ImportedLocation,
@@ -596,49 +597,73 @@ func TestCheckArgumentLabels(t *testing.T) {
 func TestCheckInvocationReferenceParameter(t *testing.T) {
 	t.Parallel()
 
-	t.Run("with authorization", func(t *testing.T) {
-		t.Parallel()
+	test := func(
+		t *testing.T,
+		gen func(expr, ty string) (string, string),
+		nestingLevel int,
+	) {
+
+		test := func(expr, ty string) error {
+			expr, ty = gen(expr, ty)
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                        entitlement X
+                        entitlement Y
+
+                        fun test(_ v: %s) {}
+
+                        let x = test(%s)
+                    `,
+					ty,
+					expr,
+				),
+			)
+			return err
+		}
 
 		t.Run("missing type annotation", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheck(t, `
-                entitlement X
+			err := test("&1", "&Int")
 
-                fun test(ref: auth(X) &Int) {}
-
-                let x = test(ref: &1)
-            `)
-			errs := RequireCheckerErrors(t, err, 1)
+			errs := RequireCheckerErrors(t, err, 1+nestingLevel)
 
 			assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+		})
 
+		t.Run("missing type annotation, with authorization", func(t *testing.T) {
+			t.Parallel()
+
+			err := test("&1", "auth(X) &Int")
+
+			errs := RequireCheckerErrors(t, err, 1+nestingLevel)
+
+			assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
 		})
 
 		t.Run("matching type annotation", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheck(t, `
-                entitlement X
+			err := test("&1 as &Int", "&Int")
 
-                fun test(ref: auth(X) &Int) {}
+			require.NoError(t, err)
+		})
 
-                let x = test(ref: &1 as auth(X) &Int)
-            `)
+		t.Run("matching type annotation, with authorization", func(t *testing.T) {
+			t.Parallel()
+
+			err := test("&1 as auth(X) &Int", "auth(X) &Int")
+
 			require.NoError(t, err)
 		})
 
 		t.Run("non-matching type annotation, reference with different authorization", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheck(t, `
-                entitlement X
-                entitlement Y
+			err := test("&1 as auth(Y) &Int", "auth(X) &Int")
 
-                fun test(ref: auth(X) &Int) {}
-
-                let x = test(ref: &1 as auth(Y) &Int)
-            `)
 			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
@@ -647,57 +672,58 @@ func TestCheckInvocationReferenceParameter(t *testing.T) {
 		t.Run("non-matching type, non-reference", func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ParseAndCheck(t, `
-                entitlement X
-                entitlement Y
+			err := test("1", "&Int")
 
-                fun test(ref: auth(X) &Int) {}
-
-                let x = test(ref: 1)
-            `)
 			errs := RequireCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
-	})
+	}
 
-	t.Run("without authorization", func(t *testing.T) {
+	t.Run("top-level", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("missing type annotation", func(t *testing.T) {
-			t.Parallel()
-
-			_, err := ParseAndCheck(t, `
-                fun test(ref: &Int) {}
-
-                let x = test(ref: &1)
-		    `)
-			require.NoError(t, err)
-		})
-
-		t.Run("matching type annotation", func(t *testing.T) {
-			t.Parallel()
-
-			_, err := ParseAndCheck(t, `
-                fun test(ref: &Int) {}
-
-                let x = test(ref: &1 as &Int)
-            `)
-			require.NoError(t, err)
-		})
-
-		t.Run("non-matching type", func(t *testing.T) {
-			t.Parallel()
-
-			_, err := ParseAndCheck(t, `
-                fun test(ref: &Int) {}
-
-                let x = test(ref: 1)
-            `)
-			errs := RequireCheckerErrors(t, err, 1)
-
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		})
+		test(t,
+			func(expr, ty string) (string, string) {
+				return expr, ty
+			},
+			0,
+		)
 	})
 
+	t.Run("nested, array", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			func(expr, ty string) (string, string) {
+				return fmt.Sprintf("[%s]", expr),
+					fmt.Sprintf("[%s]", ty)
+			},
+			1,
+		)
+	})
+
+	t.Run("nested, dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			func(expr, ty string) (string, string) {
+				return fmt.Sprintf("{true: %s}", expr),
+					fmt.Sprintf("{Bool: %s}", ty)
+			},
+			1,
+		)
+	})
+
+	t.Run("double nested, array", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			func(expr, ty string) (string, string) {
+				return fmt.Sprintf("[[%s]]", expr),
+					fmt.Sprintf("[[%s]]", ty)
+			},
+			2,
+		)
+	})
 }

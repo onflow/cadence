@@ -598,9 +598,7 @@ func (checker *Checker) checkInvocationRequiredArgument(
 		//   foo(&ints)
 
 		expectedType := parameterType
-		if referenceType, ok := parameterType.(*ReferenceType); ok &&
-			referenceType.Authorization != UnauthorizedAccess {
-
+		if parameterType.IsOrContainsReferenceType() {
 			expectedType = nil
 		}
 

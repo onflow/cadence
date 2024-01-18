@@ -8991,7 +8991,7 @@ func TestRuntimeEventEmission(t *testing.T) {
 
           access(all)
           fun main() {
-              emit TestEvent(ref: &42)
+              emit TestEvent(ref: &42 as &Int)
           }
         `)
 
