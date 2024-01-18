@@ -1029,7 +1029,7 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 				event ResourceDestroyed(name: String? = self.arr[0])
 
 				init() {
-					self.arr = &[] as &[String]
+					self.arr = &[]
 				}
 			}
         `)
@@ -1068,7 +1068,7 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 				event ResourceDestroyed(name: String? = self.dict[0])
 
 				init() {
-					self.dict = &{} as &{Int: String}
+					self.dict = &{}
 				}
 			}
         `)
@@ -1284,7 +1284,7 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 				access(all) var dict: {Int: &InnerResource}
 
 				access(all) init() {
-					self.dict = {} as {Int: &InnerResource}
+					self.dict = {}
 				}
 
 				// Make the event parameter dependent on the dead reference
@@ -1311,7 +1311,7 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 				access(all) var innerRef: &InnerInnerResource
 				access(all) init() { 
 					var r <- create InnerInnerResource()
-					self.innerRef = &r as &InnerInnerResource
+					self.innerRef = &r
 					destroy r
 				}
 			}
@@ -1350,7 +1350,7 @@ func TestCheckDefaultEventParamChecking(t *testing.T) {
 
 			access(all) init() {
 				var r <- create InnerResource()
-				self.ref = &r as &InnerResource
+				self.ref = &r
 				destroy r
 			}
 
