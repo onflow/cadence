@@ -2758,7 +2758,7 @@ func ArrayToConstantSizedFunctionType(elementType Type) *FunctionType {
 					Range:            ast.NewRangeFromPositioned(memoryGauge, errorRange),
 					Details: fmt.Sprintf(
 						"Type argument for %s must be [%s; _]",
-						sema.ArrayTypeToConstantSizedFunctionName,
+						ArrayTypeToConstantSizedFunctionName,
 						elementType,
 					),
 				})
