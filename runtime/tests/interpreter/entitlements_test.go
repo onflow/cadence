@@ -3328,10 +3328,10 @@ func TestInterpretEntitlementMappingComplexFields(t *testing.T) {
 				access(Inner2) fun second(): Int { return 8888 }
 			}
 
-			struct Carrier{
+			struct Carrier {
 				access(mapping MyMap) let arr: [auth(mapping MyMap) &InnerObj]
 				init() {
-					self.arr = [&InnerObj() as auth(mapping MyMap) &InnerObj]
+					self.arr = [&InnerObj() as auth(Inner1, Inner2) &InnerObj]
 				}
 			}    
 
@@ -3371,10 +3371,10 @@ func TestInterpretEntitlementMappingComplexFields(t *testing.T) {
 				access(Inner2) fun second(): Int { return 8888 }
 			}
 
-			struct Carrier{
+			struct Carrier {
 				access(mapping MyMap) let dict: {String: auth(mapping MyMap) &InnerObj}
 				init() {
-                    self.dict = {"": &InnerObj() as auth(mapping MyMap) &InnerObj}
+                    self.dict = {"": &InnerObj() as auth(Inner1, Inner2) &InnerObj}
                 }
 			}    
 
@@ -3414,7 +3414,7 @@ func TestInterpretEntitlementMappingComplexFields(t *testing.T) {
 			access(Inner2) fun second(): Int { return 8888 }
 		}
 
-		struct Carrier{
+		struct Carrier {
 			access(mapping MyMap) let fnArr: [fun(auth(mapping MyMap) &InnerObj): auth(mapping MyMap) &InnerObj]
 			init() {
 				let innerObj = &InnerObj() as auth(Inner1, Inner2) &InnerObj
