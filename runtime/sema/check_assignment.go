@@ -324,7 +324,7 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 	return variable.Type
 }
 
-var mutableEntitledAccess = NewEntitlementSetAccess(
+var mutateEntitledAccess = NewEntitlementSetAccess(
 	[]*EntitlementType{MutateType},
 	Disjunction,
 )
@@ -344,10 +344,10 @@ func (checker *Checker) visitIndexExpressionAssignment(
 	indexedRefType, isReference := MaybeReferenceType(indexExprTypes.IndexedType)
 
 	if isReference &&
-		!mutableEntitledAccess.PermitsAccess(indexedRefType.Authorization) &&
+		!mutateEntitledAccess.PermitsAccess(indexedRefType.Authorization) &&
 		!insertAndRemoveEntitledAccess.PermitsAccess(indexedRefType.Authorization) {
 		checker.report(&UnauthorizedReferenceAssignmentError{
-			RequiredAccess: [2]Access{mutableEntitledAccess, insertAndRemoveEntitledAccess},
+			RequiredAccess: [2]Access{mutateEntitledAccess, insertAndRemoveEntitledAccess},
 			FoundAccess:    indexedRefType.Authorization,
 			Range:          ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression),
 		})
