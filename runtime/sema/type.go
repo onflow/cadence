@@ -118,6 +118,10 @@ type Type interface {
 	// or it contains an invalid type (e.g. for optionals, arrays, dictionaries, etc.)
 	IsInvalidType() bool
 
+	// IsOrContainsReferenceType returns true if the type is itself a reference type,
+	// or it contains a reference type (e.g. for optionals, arrays, dictionaries, etc.)
+	IsOrContainsReferenceType() bool
+
 	// IsStorable returns true if the type is allowed to be a stored,
 	// e.g. in a field of a composite type.
 	//
@@ -716,6 +720,10 @@ func (t *OptionalType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
 
+func (t *OptionalType) IsOrContainsReferenceType() bool {
+	return t.Type.IsOrContainsReferenceType()
+}
+
 func (t *OptionalType) IsStorable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
 }
@@ -937,6 +945,10 @@ func (*GenericType) IsPrimitiveType() bool {
 }
 
 func (*GenericType) IsInvalidType() bool {
+	return false
+}
+
+func (*GenericType) IsOrContainsReferenceType() bool {
 	return false
 }
 
@@ -1257,6 +1269,10 @@ func (*NumericType) IsInvalidType() bool {
 	return false
 }
 
+func (*NumericType) IsOrContainsReferenceType() bool {
+	return false
+}
+
 func (*NumericType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
@@ -1461,6 +1477,10 @@ func (*FixedPointNumericType) IsPrimitiveType() bool {
 }
 
 func (*FixedPointNumericType) IsInvalidType() bool {
+	return false
+}
+
+func (*FixedPointNumericType) IsOrContainsReferenceType() bool {
 	return false
 }
 
@@ -2930,6 +2950,10 @@ func (t *VariableSizedType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
 
+func (t *VariableSizedType) IsOrContainsReferenceType() bool {
+	return t.Type.IsOrContainsReferenceType()
+}
+
 func (t *VariableSizedType) IsStorable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
 }
@@ -3114,6 +3138,10 @@ func (t *ConstantSizedType) IsPrimitiveType() bool {
 
 func (t *ConstantSizedType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
+}
+
+func (t *ConstantSizedType) IsOrContainsReferenceType() bool {
+	return t.Type.IsOrContainsReferenceType()
 }
 
 func (t *ConstantSizedType) IsStorable(results map[*Member]bool) bool {
@@ -3695,6 +3723,10 @@ func (t *FunctionType) IsInvalidType() bool {
 	}
 
 	return t.ReturnTypeAnnotation.Type.IsInvalidType()
+}
+
+func (*FunctionType) IsOrContainsReferenceType() bool {
+	return false
 }
 
 func (t *FunctionType) IsStorable(_ map[*Member]bool) bool {
@@ -4890,6 +4922,10 @@ func (*CompositeType) IsInvalidType() bool {
 	return false
 }
 
+func (*CompositeType) IsOrContainsReferenceType() bool {
+	return false
+}
+
 func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 	if t.HasComputedMembers {
 		return false
@@ -5703,11 +5739,15 @@ func (t *InterfaceType) IsResourceType() bool {
 	return t.CompositeKind == common.CompositeKindResource
 }
 
-func (t *InterfaceType) IsPrimitiveType() bool {
+func (*InterfaceType) IsPrimitiveType() bool {
 	return false
 }
 
-func (t *InterfaceType) IsInvalidType() bool {
+func (*InterfaceType) IsInvalidType() bool {
+	return false
+}
+
+func (*InterfaceType) IsOrContainsReferenceType() bool {
 	return false
 }
 
@@ -5982,6 +6022,11 @@ func (t *DictionaryType) IsPrimitiveType() bool {
 func (t *DictionaryType) IsInvalidType() bool {
 	return t.KeyType.IsInvalidType() ||
 		t.ValueType.IsInvalidType()
+}
+
+func (t *DictionaryType) IsOrContainsReferenceType() bool {
+	return t.KeyType.IsOrContainsReferenceType() ||
+		t.ValueType.IsOrContainsReferenceType()
 }
 
 func (t *DictionaryType) IsStorable(results map[*Member]bool) bool {
@@ -6455,15 +6500,18 @@ func (t *InclusiveRangeType) Equal(other Type) bool {
 	return otherRange.MemberType.Equal(t.MemberType)
 }
 
-func (t *InclusiveRangeType) IsResourceType() bool {
+func (*InclusiveRangeType) IsResourceType() bool {
 	return false
 }
-
 func (t *InclusiveRangeType) IsInvalidType() bool {
 	return t.MemberType != nil && t.MemberType.IsInvalidType()
 }
 
-func (t *InclusiveRangeType) IsStorable(results map[*Member]bool) bool {
+func (t *InclusiveRangeType) IsOrContainsReferenceType() bool {
+	return t.MemberType != nil && t.MemberType.IsOrContainsReferenceType()
+}
+
+func (*InclusiveRangeType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
@@ -6838,6 +6886,10 @@ func (t *ReferenceType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
 
+func (*ReferenceType) IsOrContainsReferenceType() bool {
+	return true
+}
+
 func (t *ReferenceType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
@@ -7045,6 +7097,10 @@ func (*AddressType) IsPrimitiveType() bool {
 }
 
 func (*AddressType) IsInvalidType() bool {
+	return false
+}
+
+func (*AddressType) IsOrContainsReferenceType() bool {
 	return false
 }
 
@@ -7695,6 +7751,10 @@ func (*TransactionType) IsInvalidType() bool {
 	return false
 }
 
+func (*TransactionType) IsOrContainsReferenceType() bool {
+	return false
+}
+
 func (*TransactionType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
@@ -7913,6 +7973,16 @@ func (*IntersectionType) IsPrimitiveType() bool {
 func (t *IntersectionType) IsInvalidType() bool {
 	for _, typ := range t.Types {
 		if typ.IsInvalidType() {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (t *IntersectionType) IsOrContainsReferenceType() bool {
+	for _, typ := range t.Types {
+		if typ.IsOrContainsReferenceType() {
 			return true
 		}
 	}
@@ -8179,6 +8249,14 @@ func (t *CapabilityType) IsInvalidType() bool {
 		return false
 	}
 	return t.BorrowType.IsInvalidType()
+
+}
+
+func (t *CapabilityType) IsOrContainsReferenceType() bool {
+	if t.BorrowType == nil {
+		return false
+	}
+	return t.BorrowType.IsOrContainsReferenceType()
 }
 
 func (t *CapabilityType) TypeAnnotationState() TypeAnnotationState {
@@ -8754,23 +8832,27 @@ func (t *EntitlementType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
-func (t *EntitlementType) IsPrimitiveType() bool {
+func (*EntitlementType) IsPrimitiveType() bool {
 	return false
 }
 
-func (t *EntitlementType) IsInvalidType() bool {
+func (*EntitlementType) IsInvalidType() bool {
 	return false
 }
 
-func (t *EntitlementType) IsStorable(_ map[*Member]bool) bool {
+func (*EntitlementType) IsOrContainsReferenceType() bool {
 	return false
 }
 
-func (t *EntitlementType) IsExportable(_ map[*Member]bool) bool {
+func (*EntitlementType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
-func (t *EntitlementType) IsImportable(_ map[*Member]bool) bool {
+func (*EntitlementType) IsExportable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*EntitlementType) IsImportable(_ map[*Member]bool) bool {
 	return false
 }
 
@@ -8915,19 +8997,23 @@ func (*EntitlementMapType) IsPrimitiveType() bool {
 	return false
 }
 
-func (t *EntitlementMapType) IsInvalidType() bool {
+func (*EntitlementMapType) IsInvalidType() bool {
 	return false
 }
 
-func (t *EntitlementMapType) IsStorable(_ map[*Member]bool) bool {
+func (*EntitlementMapType) IsOrContainsReferenceType() bool {
 	return false
 }
 
-func (t *EntitlementMapType) IsExportable(_ map[*Member]bool) bool {
+func (*EntitlementMapType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
-func (t *EntitlementMapType) IsImportable(_ map[*Member]bool) bool {
+func (*EntitlementMapType) IsExportable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*EntitlementMapType) IsImportable(_ map[*Member]bool) bool {
 	return false
 }
 

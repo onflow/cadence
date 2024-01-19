@@ -7187,11 +7187,11 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
                 Outer2 -> Inner2
             }
             struct InnerObj {
-                access(Inner1) fun first(): Int{ return 9999 }
-                access(Inner2) fun second(): Int{ return 8888 }
+                access(Inner1) fun first(): Int { return 9999 }
+                access(Inner2) fun second(): Int { return 8888 }
             }
 
-            struct Carrier{
+            struct Carrier {
                 access(mapping MyMap) let arr: [auth(mapping MyMap) &InnerObj]
                 init() {
                     self.arr = [&InnerObj()]
@@ -7222,11 +7222,11 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
                 Outer2 -> Inner2
             }
             struct InnerObj {
-                access(Inner1) fun first(): Int{ return 9999 }
-                access(Inner2) fun second(): Int{ return 8888 }
+                access(Inner1) fun first(): Int { return 9999 }
+                access(Inner2) fun second(): Int { return 8888 }
             }
 
-            struct Carrier{
+            struct Carrier {
                 access(mapping MyMap) let arr: [auth(mapping MyMap) &InnerObj]
                 init() {
                     self.arr = [&InnerObj()]
@@ -7258,17 +7258,15 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
                 Outer2 -> Inner2
             }
             struct InnerObj {
-                access(Inner1) fun first(): Int{ return 9999 }
-                access(Inner2) fun second(): Int{ return 8888 }
+                access(Inner1) fun first(): Int { return 9999 }
+                access(Inner2) fun second(): Int { return 8888 }
             }
 
-            struct Carrier{
+            struct Carrier {
                 access(mapping MyMap) fun getArr(): [auth(mapping MyMap) &InnerObj] {
                     return [&InnerObj()]
                 }
-            }    
-
-           
+            }
         `)
 
 		errors := RequireCheckerErrors(t, err, 1)
@@ -7289,11 +7287,11 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
                 Outer2 -> Inner2
             }
             struct InnerObj {
-                access(Inner1) fun first(): Int{ return 9999 }
-                access(Inner2) fun second(): Int{ return 8888 }
+                access(Inner1) fun first(): Int { return 9999 }
+                access(Inner2) fun second(): Int { return 8888 }
             }
 
-            struct Carrier{
+            struct Carrier {
                 access(mapping MyMap) let arr: [auth(mapping MyMap) &InnerObj]
                 init() {
                     self.arr = [&InnerObj()]
@@ -7329,11 +7327,11 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
                 Outer2 -> Inner2
             }
             struct InnerObj {
-                access(Inner1) fun first(): Int{ return 9999 }
-                access(Inner2) fun second(): Int{ return 8888 }
+                access(Inner1) fun first(): Int { return 9999 }
+                access(Inner2) fun second(): Int { return 8888 }
             }
 
-            struct Carrier{
+            struct Carrier {
                 access(mapping MyMap) let dict: {String: auth(mapping MyMap) &InnerObj}
                 init() {
                     self.dict = {"": &InnerObj()}
@@ -7364,11 +7362,11 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
                 Outer2 -> Inner2
             }
             struct InnerObj {
-                access(Inner1) fun first(): Int{ return 9999 }
-                access(Inner2) fun second(): Int{ return 8888 }
+                access(Inner1) fun first(): Int { return 9999 }
+                access(Inner2) fun second(): Int { return 8888 }
             }
 
-            struct Carrier{
+            struct Carrier {
                 access(mapping MyMap) let dict: {String: auth(mapping MyMap) &InnerObj}
                 init() {
                     self.dict = {"": &InnerObj()}
@@ -7400,11 +7398,11 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
                 Outer2 -> Inner2
             }
             struct InnerObj {
-                access(Inner1) fun first(): Int{ return 9999 }
-                access(Inner2) fun second(): Int{ return 8888 }
+                access(Inner1) fun first(): Int { return 9999 }
+                access(Inner2) fun second(): Int { return 8888 }
             }
 
-            struct Carrier{
+            struct Carrier {
                 access(mapping MyMap) fun getDict(): {String: auth(mapping MyMap) &InnerObj} {
                     return {"": &InnerObj()}
                 }
@@ -7431,30 +7429,31 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
                 Outer2 -> Inner2
             }
             struct InnerObj {
-                access(Inner1) fun first(): Int{ return 9999 }
-                access(Inner2) fun second(): Int{ return 8888 }
+                access(Inner1) fun first(): Int { return 9999 }
+                access(Inner2) fun second(): Int { return 8888 }
             }
 
-            struct Carrier{
+            struct Carrier {
                 access(mapping MyMap) let fnArr: [fun(auth(mapping MyMap) &InnerObj): auth(mapping MyMap) &InnerObj]
                 init() {
                     let innerObj = &InnerObj() as auth(Inner1, Inner2) &InnerObj
-                    self.fnArr = [fun(_ x: &InnerObj): auth(Inner1, Inner2) &InnerObj {
-                        return innerObj
-                    }]
+                    self.fnArr = [
+                        fun(_ x: &InnerObj): auth(Inner1, Inner2) &InnerObj {
+                            return innerObj
+                        }
+                    ]
                 }
              
             }    
 
             fun foo() {
                 let x = (&Carrier() as auth(Outer1) &Carrier).fnArr[0]
-                x(&InnerObj()).first() // ok
 
                 x(&InnerObj() as auth(Inner1) &InnerObj).first() // ok
 
                 x(&InnerObj() as auth(Inner2) &InnerObj).first() // mismatch
 
-                x(&InnerObj()).second() // fails
+                x(&InnerObj() as auth(Inner1) &InnerObj).second() // fails
             }
           
         `)
@@ -7479,8 +7478,8 @@ func TestCheckEntitlementMappingComplexFields(t *testing.T) {
 				Outer2 -> Inner2
 			}
 			struct InnerObj {
-				access(Inner1) fun first(): Int{ return 9999 }
-				access(Inner2) fun second(): Int{ return 8888 }
+				access(Inner1) fun first(): Int { return 9999 }
+				access(Inner2) fun second(): Int { return 8888 }
 			}
 
 			struct FuncGenerator {

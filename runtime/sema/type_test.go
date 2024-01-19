@@ -2845,3 +2845,137 @@ func TestIntersectionType_QualifiedString(t *testing.T) {
 		)
 	})
 }
+
+func TestType_IsOrContainsReference(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		name     string
+		ty       Type
+		expected bool
+		genTy    func(innerType Type) Type
+	}
+
+	someNonReferenceType := VoidType
+
+	tests := []testCase{
+		{
+			name: "Capability, with type",
+			genTy: func(innerType Type) Type {
+				return &CapabilityType{
+					BorrowType: innerType,
+				}
+			},
+		},
+		{
+			name:     "Capability, without type",
+			ty:       &CapabilityType{},
+			expected: false,
+		},
+		{
+			name: "Variable-sized array",
+			genTy: func(innerType Type) Type {
+				return &VariableSizedType{
+					Type: innerType,
+				}
+			},
+		},
+		{
+			name: "Constant-sized array",
+			genTy: func(innerType Type) Type {
+				return &ConstantSizedType{
+					Type: innerType,
+					Size: 42,
+				}
+			},
+		},
+		{
+			name: "Optional",
+			genTy: func(innerType Type) Type {
+				return &OptionalType{
+					Type: innerType,
+				}
+			},
+		},
+		{
+			name: "Reference",
+			genTy: func(innerType Type) Type {
+				return &ReferenceType{
+					Type: innerType,
+				}
+			},
+		},
+		{
+			name: "Dictionary, key",
+			genTy: func(innerType Type) Type {
+				return &DictionaryType{
+					KeyType:   innerType,
+					ValueType: someNonReferenceType,
+				}
+			},
+		},
+		{
+			name: "Dictionary, value",
+			genTy: func(innerType Type) Type {
+				return &DictionaryType{
+					KeyType:   someNonReferenceType,
+					ValueType: innerType,
+				}
+			},
+		},
+		{
+			name:     "Function",
+			ty:       &FunctionType{},
+			expected: false,
+		},
+		{
+			name:     "Interface",
+			ty:       &InterfaceType{},
+			expected: false,
+		},
+		{
+			name:     "Composite",
+			ty:       &CompositeType{},
+			expected: false,
+		},
+		{
+			name: "InclusiveRange",
+			genTy: func(innerType Type) Type {
+				return &InclusiveRangeType{
+					MemberType: innerType,
+				}
+			},
+		},
+	}
+
+	test := func(test testCase) {
+		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			if test.genTy != nil {
+
+				itself := test.genTy(someNonReferenceType)
+
+				_, ok := itself.(*ReferenceType)
+				assert.Equal(t, ok, itself.IsOrContainsReferenceType())
+
+				assert.True(t,
+					test.genTy(&ReferenceType{
+						Type: someNonReferenceType,
+					}).IsOrContainsReferenceType(),
+				)
+			} else {
+				assert.Equal(t,
+					test.expected,
+					test.ty.IsOrContainsReferenceType(),
+				)
+			}
+		})
+	}
+
+	for _, testCase := range tests {
+		test(testCase)
+	}
+}

@@ -1964,7 +1964,7 @@ func TestRuntimeExportEventValue(t *testing.T) {
 
           access(all)
           fun main() {
-              emit Foo(bar: &42)
+              emit Foo(bar: &42 as &Int)
           }
         `
 

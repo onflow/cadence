@@ -2101,7 +2101,7 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
             fun test(): auth(F) &Int {
 				let s = S()
 				let sRef = &s as auth(E) &S
-                return sRef.foo(&1)
+                return sRef.foo(&1 as auth(F) &Int)
             }
         `)
 
@@ -2139,7 +2139,7 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 
             fun test(): auth(F, H) &Int {
 				let s = S()
-                return s.foo(&1)
+                return s.foo(&1 as auth(F, H) &Int)
             }
         `)
 
@@ -3324,11 +3324,11 @@ func TestInterpretEntitlementMappingComplexFields(t *testing.T) {
 				Outer2 -> Inner2
 			}
 			struct InnerObj {
-				access(Inner1) fun first(): Int{ return 9999 }
-				access(Inner2) fun second(): Int{ return 8888 }
+				access(Inner1) fun first(): Int { return 9999 }
+				access(Inner2) fun second(): Int { return 8888 }
 			}
 
-			struct Carrier{
+			struct Carrier {
 				access(mapping MyMap) let arr: [auth(mapping MyMap) &InnerObj]
 				init() {
 					self.arr = [&InnerObj()]
@@ -3367,11 +3367,11 @@ func TestInterpretEntitlementMappingComplexFields(t *testing.T) {
 				Outer2 -> Inner2
 			}
 			struct InnerObj {
-				access(Inner1) fun first(): Int{ return 9999 }
-				access(Inner2) fun second(): Int{ return 8888 }
+				access(Inner1) fun first(): Int { return 9999 }
+				access(Inner2) fun second(): Int { return 8888 }
 			}
 
-			struct Carrier{
+			struct Carrier {
 				access(mapping MyMap) let dict: {String: auth(mapping MyMap) &InnerObj}
 				init() {
                     self.dict = {"": &InnerObj()}
@@ -3410,11 +3410,11 @@ func TestInterpretEntitlementMappingComplexFields(t *testing.T) {
 			Outer2 -> Inner2
 		}
 		struct InnerObj {
-			access(Inner1) fun first(): Int{ return 9999 }
-			access(Inner2) fun second(): Int{ return 8888 }
+			access(Inner1) fun first(): Int { return 9999 }
+			access(Inner2) fun second(): Int { return 8888 }
 		}
 
-		struct Carrier{
+		struct Carrier {
 			access(mapping MyMap) let fnArr: [fun(auth(mapping MyMap) &InnerObj): auth(mapping MyMap) &InnerObj]
 			init() {
 				let innerObj = &InnerObj() as auth(Inner1, Inner2) &InnerObj

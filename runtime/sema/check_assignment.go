@@ -53,7 +53,13 @@ func (checker *Checker) checkAssignment(
 
 	targetType = checker.visitAssignmentValueType(target)
 
-	valueType = checker.VisitExpression(value, targetType)
+	// For all non-self member assignments,
+	// require an explicit type annotation for references
+	checkValue := checker.VisitExpression
+	if checker.accessedSelfMember(target) == nil {
+		checkValue = checker.VisitExpressionWithReferenceCheck
+	}
+	valueType = checkValue(value, targetType)
 
 	// NOTE: Visiting the `value` checks the compatibility between value and target types.
 	// Check for the *target* type, so that assignment using non-resource typed value (e.g. `nil`)

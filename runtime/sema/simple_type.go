@@ -91,6 +91,10 @@ func (t *SimpleType) IsInvalidType() bool {
 	return t == InvalidType
 }
 
+func (*SimpleType) IsOrContainsReferenceType() bool {
+	return false
+}
+
 func (t *SimpleType) IsStorable(_ map[*Member]bool) bool {
 	return t.Storable
 }

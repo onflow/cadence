@@ -356,8 +356,8 @@ func TestCheckArgumentLabels(t *testing.T) {
 			_, err := ParseAndCheck(t, `
               fun test(foo bar: Int, baz: String) {}
 
-	          let t = test(x: 1, "2")
-	        `)
+              let t = test(x: 1, "2")
+            `)
 
 			errs := RequireCheckerErrors(t, err, 2)
 
@@ -411,12 +411,12 @@ func TestCheckArgumentLabels(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
-	          struct Test {
+              struct Test {
                   fun test(foo bar: Int, baz: String) {}
-	          }
+              }
 
-	          let t = Test().test(x: 1, "2")
-	        `)
+              let t = Test().test(x: 1, "2")
+            `)
 
 			errs := RequireCheckerErrors(t, err, 2)
 
@@ -430,9 +430,9 @@ func TestCheckArgumentLabels(t *testing.T) {
 
 			importedChecker, err := ParseAndCheckWithOptions(t,
 				`
-	              struct Test {
+                  struct Test {
                       fun test(foo bar: Int, baz: String) {}
-	              }
+                  }
                 `,
 				ParseAndCheckOptions{
 					Location: utils.ImportedLocation,
@@ -476,8 +476,8 @@ func TestCheckArgumentLabels(t *testing.T) {
                   init(foo bar: Int, baz: String) {}
               }
 
-	          let t = Test(x: 1, "2")
-	        `)
+              let t = Test(x: 1, "2")
+            `)
 
 			errs := RequireCheckerErrors(t, err, 2)
 
@@ -533,14 +533,14 @@ func TestCheckArgumentLabels(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
-	          contract C {
+              contract C {
                   struct S {
                       init(foo bar: Int, baz: String) {}
                   }
-	          }
+              }
 
-	          let t = C.S(x: 1, "2")
-	        `)
+              let t = C.S(x: 1, "2")
+            `)
 
 			errs := RequireCheckerErrors(t, err, 2)
 
@@ -554,11 +554,11 @@ func TestCheckArgumentLabels(t *testing.T) {
 
 			importedChecker, err := ParseAndCheckWithOptions(t,
 				`
-	              contract C {
+                  contract C {
                       struct S {
                           init(foo bar: Int, baz: String) {}
                       }
-	              }
+                  }
                 `,
 				ParseAndCheckOptions{
 					Location: utils.ImportedLocation,
