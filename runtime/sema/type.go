@@ -2516,10 +2516,9 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					)
 				}
 
-				return NewFunctionMember(
+				return NewPublicFunctionMember(
 					memoryGauge,
 					arrayType,
-					insertableEntitledAccess,
 					identifier,
 					ArrayToVariableSizedFunctionType(elementType),
 					arrayTypeToVariableSizedFunctionDocString,
