@@ -28,7 +28,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/migrations"
-	"github.com/onflow/cadence/migrations/account_type"
+	"github.com/onflow/cadence/migrations/statictypes"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -1935,7 +1935,7 @@ func TestConvertMigratedAccountTypes(t *testing.T) {
 				),
 			)
 
-			newValue, err := account_type.NewAccountTypeMigration().Migrate(
+			newValue, err := statictypes.NewStaticTypeMigration().Migrate(
 				interpreter.AddressPath{
 					Address: common.ZeroAddress,
 					Path:    interpreter.EmptyPathValue,

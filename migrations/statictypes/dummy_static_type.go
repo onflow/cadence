@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package account_type
+package statictypes
 
 import (
 	"github.com/onflow/cadence/runtime/common"
