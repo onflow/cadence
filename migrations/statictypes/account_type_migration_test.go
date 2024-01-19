@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package account_type
+package statictypes
 
 import (
 	"fmt"
@@ -61,7 +61,7 @@ func (t *testReporter) Error(
 ) {
 }
 
-func TestTypeValueMigration(t *testing.T) {
+func TestAccountTypeInTypeValueMigration(t *testing.T) {
 	t.Parallel()
 
 	account := common.Address{0x42}
@@ -370,7 +370,7 @@ func TestTypeValueMigration(t *testing.T) {
 		},
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
-			NewAccountTypeMigration(),
+			NewStaticTypeMigration(),
 		),
 	)
 
@@ -445,7 +445,7 @@ func storeTypeValue(
 	)
 }
 
-func TestNestedTypeValueMigration(t *testing.T) {
+func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 	t.Parallel()
 
 	account := common.Address{0x42}
@@ -694,7 +694,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 		},
 		migration.NewValueMigrationsPathMigrator(
 			nil,
-			NewAccountTypeMigration(),
+			NewStaticTypeMigration(),
 		),
 	)
 
@@ -726,7 +726,7 @@ func TestNestedTypeValueMigration(t *testing.T) {
 	}
 }
 
-func TestValuesWithStaticTypeMigration(t *testing.T) {
+func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 
 	t.Parallel()
 
@@ -840,7 +840,7 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 		},
 		migration.NewValueMigrationsPathMigrator(
 			nil,
-			NewAccountTypeMigration(),
+			NewStaticTypeMigration(),
 		),
 	)
 
@@ -874,7 +874,7 @@ func TestValuesWithStaticTypeMigration(t *testing.T) {
 
 var testAddress = common.Address{0x42}
 
-func TestRehash(t *testing.T) {
+func TestAccountTypeRehash(t *testing.T) {
 
 	t.Parallel()
 
@@ -981,7 +981,7 @@ func TestRehash(t *testing.T) {
 			},
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
-				NewAccountTypeMigration(),
+				NewStaticTypeMigration(),
 			),
 		)
 
