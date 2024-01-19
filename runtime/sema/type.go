@@ -2131,6 +2131,13 @@ Returns a new variable-sized array with the copy of the contents of the given ar
 Available if the array is constant sized and the element type is not resource-kinded.
 `
 
+const ArrayTypeToConstantSizedFunctionName = "toConstantSized"
+
+const arrayTypeToConstantSizedFunctionDocString = `
+Returns a new constant-sized array with the copy of the contents of the given array.
+Available if the array is variable-sized and the element type is not resource-kinded.
+`
+
 var insertMutateEntitledAccess = NewEntitlementSetAccess(
 	[]*EntitlementType{
 		InsertType,
@@ -2497,6 +2504,31 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				)
 			},
 		}
+
+		members[ArrayTypeToConstantSizedFunctionName] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+				elementType := arrayType.ElementType(false)
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					memoryGauge,
+					arrayType,
+					identifier,
+					ArrayToConstantSizedFunctionType(elementType),
+					arrayTypeToConstantSizedFunctionDocString,
+				)
+			},
+		}
 	}
 
 	if _, ok := arrayType.(*ConstantSizedType); ok {
@@ -2675,6 +2707,63 @@ func ArrayToVariableSizedFunctionType(elementType Type) *FunctionType {
 			Type: elementType,
 		}),
 	)
+}
+
+func ArrayToConstantSizedFunctionType(elementType Type) *FunctionType {
+	// Ideally this should have a typebound of [T; _] but since we don't know
+	// the size of the ConstantSizedArray, we omit specifying the bound.
+	typeParameter := &TypeParameter{
+		Name: "T",
+	}
+
+	typeAnnotation := NewTypeAnnotation(
+		&GenericType{
+			TypeParameter: typeParameter,
+		},
+	)
+
+	return &FunctionType{
+		Purity: FunctionPurityView,
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: typeAnnotation.Type,
+			},
+		),
+		TypeArgumentsCheck: func(
+			memoryGauge common.MemoryGauge,
+			typeArguments *TypeParameterTypeOrderedMap,
+			astTypeArguments []*ast.TypeAnnotation,
+			invocationRange ast.HasPosition,
+			report func(error),
+		) {
+			typeArg, ok := typeArguments.Get(typeParameter)
+			if !ok || typeArg == nil {
+				// checker should prevent this
+				panic(errors.NewUnreachableError())
+			}
+
+			constArrayType, ok := typeArg.(*ConstantSizedType)
+			if !ok || constArrayType.Type != elementType {
+				errorRange := invocationRange
+				if len(astTypeArguments) > 0 {
+					errorRange = astTypeArguments[0]
+				}
+
+				report(&InvalidTypeArgumentError{
+					TypeArgumentName: typeParameter.Name,
+					Range:            ast.NewRangeFromPositioned(memoryGauge, errorRange),
+					Details: fmt.Sprintf(
+						"Type argument for %s must be [%s; _]",
+						ArrayTypeToConstantSizedFunctionName,
+						elementType,
+					),
+				})
+			}
+		},
+	}
 }
 
 func ArrayReverseFunctionType(arrayType ArrayType) *FunctionType {
