@@ -3139,12 +3139,9 @@ func TestCheckDereference(t *testing.T) {
 
 			require.NoError(t, err)
 
-			yType := RequireGlobalValue(t, checker.Elaboration, "y")
+			derefType := RequireGlobalValue(t, checker.Elaboration, "deref")
 
-			assert.Equal(t,
-				expectedTy,
-				yType,
-			)
+			assert.True(t, expectedTy.Equal(derefType))
 		})
 	}
 
@@ -3171,8 +3168,8 @@ func TestCheckDereference(t *testing.T) {
 				typString,
 				fmt.Sprintf(
 					`
-                      let x: &%[1]s = &1
-                      let y: %[1]s = *x
+                      let ref: &%[1]s = &1
+                      let deref: %[1]s = *ref
                     `,
 					integerType,
 				),
@@ -3189,8 +3186,8 @@ func TestCheckDereference(t *testing.T) {
 				typString,
 				fmt.Sprintf(
 					`
-                      let x: &%[1]s = &1.0
-                      let y: %[1]s = *x
+                      let ref: &%[1]s = &1.0
+                      let deref: %[1]s = *ref
                     `,
 					fixedPointType,
 				),
@@ -3205,11 +3202,11 @@ func TestCheckDereference(t *testing.T) {
 		for _, testCase := range []testCase{
 			{
 				ty:          sema.CharacterType,
-				initializer: "\"\\u{FC}\"",
+				initializer: `"\u{FC}"`,
 			},
 			{
 				ty:          sema.StringType,
-				initializer: "\"\\u{FC}\"",
+				initializer: `"\u{FC}"`,
 			},
 			{
 				ty:          sema.BoolType,
@@ -3234,8 +3231,8 @@ func TestCheckDereference(t *testing.T) {
 				fmt.Sprintf(
 					`
                       let value: %[1]s = %[2]s
-                      let x: &%[1]s = &value
-                      let y: %[1]s = *x
+                      let ref: &%[1]s = &value
+                      let deref: %[1]s = *ref
                     `,
 					testCase.ty,
 					testCase.initializer,
@@ -3259,7 +3256,7 @@ func TestCheckDereference(t *testing.T) {
 			},
 			{
 				ty:          &sema.VariableSizedType{Type: sema.StringType},
-				initializer: "[\"abc\", \"def\"]",
+				initializer: `["abc", "def"]`,
 			},
 			{
 				ty: &sema.VariableSizedType{
@@ -3267,7 +3264,7 @@ func TestCheckDereference(t *testing.T) {
 						Type: sema.StringType,
 					},
 				},
-				initializer: "[ [\"abc\", \"def\"], [\"xyz\"]]",
+				initializer: `[ ["abc", "def"], ["xyz"]]`,
 			},
 			{
 				ty: &sema.VariableSizedType{
@@ -3275,7 +3272,7 @@ func TestCheckDereference(t *testing.T) {
 						KeyType:   sema.IntType,
 						ValueType: sema.StringType,
 					}},
-				initializer: "[{1: \"abc\", 2: \"def\"}, {3: \"xyz\"}]",
+				initializer: `[{1: "abc", 2: "def"}, {3: "xyz"}]`,
 			},
 			{
 				ty:          &sema.ConstantSizedType{Type: sema.IntType, Size: 3},
@@ -3287,7 +3284,7 @@ func TestCheckDereference(t *testing.T) {
 			},
 			{
 				ty:          &sema.ConstantSizedType{Type: sema.StringType, Size: 2},
-				initializer: "[\"abc\", \"def\"]",
+				initializer: `["abc", "def"]`,
 			},
 			{
 				ty: &sema.ConstantSizedType{
@@ -3296,7 +3293,7 @@ func TestCheckDereference(t *testing.T) {
 					},
 					Size: 2,
 				},
-				initializer: "[ [\"abc\", \"def\"], [\"xyz\"]]",
+				initializer: `[ ["abc", "def"], ["xyz"]]`,
 			},
 			{
 				ty: &sema.ConstantSizedType{
@@ -3306,7 +3303,28 @@ func TestCheckDereference(t *testing.T) {
 					},
 					Size: 1,
 				},
-				initializer: "[{1: \"abc\", 2: \"def\"}]",
+				initializer: `[{1: "abc", 2: "def"}]`,
+			},
+			{
+				ty: &sema.VariableSizedType{
+					Type: &sema.CompositeType{
+						Kind:       common.CompositeKindStructure,
+						Location:   utils.TestLocation,
+						Identifier: "S",
+					},
+				},
+				initializer: `[S(), S()]`,
+			},
+			{
+				ty: &sema.ConstantSizedType{
+					Type: &sema.CompositeType{
+						Kind:       common.CompositeKindStructure,
+						Location:   utils.TestLocation,
+						Identifier: "S",
+					},
+					Size: 2,
+				},
+				initializer: `[S(), S()]`,
 			},
 		} {
 			runValidTestCase(
@@ -3314,9 +3332,11 @@ func TestCheckDereference(t *testing.T) {
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
+                      struct S {}
+
                       let value: %[1]s = %[2]s
-                      let x: &%[1]s = &value
-                      let y: %[1]s = *x
+                      let ref: &%[1]s = &value
+                      let deref: %[1]s = *ref
                     `,
 					testCase.ty,
 					testCase.initializer,
@@ -3325,34 +3345,39 @@ func TestCheckDereference(t *testing.T) {
 			)
 		}
 
-		// Arrays of non-primitives cannot be dereferenced.
+		// Arrays of resources cannot be dereferenced.
 		runInvalidTestCase(
 			t,
-			"[Struct]",
+			"[Resource]",
 			`
-              struct S{}
+              resource R {}
 
               fun test() {
-                  let value: [S] = [S(), S()]
-                  let x: &[S] = &value
-                  let y: [S] = *x
+                  let array: @[R] <- [<-create R(), <-create R()]
+                  let ref: &[R] = &array
+                  let deref: @[R] <- *ref
+                  destroy array
+                  destroy deref
               }
             `,
 		)
 
 		runInvalidTestCase(
 			t,
-			"[Struct; 3]",
+			"[Resource; 2]",
 			`
-              struct S{}
+              resource R {}
 
               fun test() {
-                  let value: [S; 3] = [S(),S(),S()]
-                  let x: &[S; 3] = &value
-                  let y: [S; 3] = *x
+                  let array: @[R; 2] <- [<-create R(), <-create R()]
+                  let ref: &[R; 2] = &array
+                  let deref: @[R; 2] <- *ref
+                  destroy array
+                  destroy deref
               }
             `,
 		)
+
 	})
 
 	t.Run("Dictionary", func(t *testing.T) {
@@ -3369,7 +3394,7 @@ func TestCheckDereference(t *testing.T) {
 			},
 			{
 				ty:          &sema.DictionaryType{KeyType: sema.StringType, ValueType: sema.StringType},
-				initializer: "{\"123\": \"abc\", \"456\": \"def\"}",
+				initializer: `{"123": "abc", "456": "def"}`,
 			},
 			{
 				ty: &sema.DictionaryType{
@@ -3378,7 +3403,7 @@ func TestCheckDereference(t *testing.T) {
 						Type: sema.IntType,
 					},
 				},
-				initializer: "{\"123\": [1, 2, 3], \"456\": [4, 5, 6]}",
+				initializer: `{"123": [1, 2, 3], "456": [4, 5, 6]}`,
 			},
 			{
 				ty: &sema.DictionaryType{
@@ -3388,7 +3413,18 @@ func TestCheckDereference(t *testing.T) {
 						Size: 3,
 					},
 				},
-				initializer: "{\"123\": [1, 2, 3], \"456\": [4, 5, 6]}",
+				initializer: `{"123": [1, 2, 3], "456": [4, 5, 6]}`,
+			},
+			{
+				ty: &sema.DictionaryType{
+					KeyType: sema.IntType,
+					ValueType: &sema.CompositeType{
+						Kind:       common.CompositeKindStructure,
+						Location:   utils.TestLocation,
+						Identifier: "S",
+					},
+				},
+				initializer: `{1: S(), 2: S()}`,
 			},
 		} {
 			runValidTestCase(
@@ -3396,9 +3432,11 @@ func TestCheckDereference(t *testing.T) {
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
+                      struct S {}
+
                       let value: %[1]s = %[2]s
-                      let x: &%[1]s = &value
-                      let y: %[1]s = *x
+                      let ref: &%[1]s = &value
+                      let deref: %[1]s = *ref
                     `,
 					testCase.ty,
 					testCase.initializer,
@@ -3407,17 +3445,22 @@ func TestCheckDereference(t *testing.T) {
 			)
 		}
 
-		// Dictionaries with value as non-primitive cannot be dereferenced.
+		// Dictionaries of resources cannot be dereferenced.
 		runInvalidTestCase(
 			t,
-			"{Int: Struct}",
+			"{Int: Resource}",
 			`
-              struct S{}
+              resource R {}
 
               fun test() {
-                  let value: {Int: S} = { 1: S(), 2: S() }
-                  let x: &{Int: S} = &value
-                  let y: {Int: S} = *x
+                  let dict: @{Int: R} <- {
+                      1: <-create R(),
+                      2: <-create R()
+                  }
+                  let ref: &{Int: R} = &dict
+                  let deref: @{Int: R} <- *ref
+                  destroy dict
+                  destroy deref
               }
             `,
 		)
@@ -3449,7 +3492,7 @@ func TestCheckDereference(t *testing.T) {
 		t,
 		"Struct",
 		`
-          struct S{}
+          struct S {}
 
           fun test() {
               let s = S()
@@ -3482,7 +3525,7 @@ func TestCheckDereference(t *testing.T) {
 			"valid",
 			`
               let ref: &Int? = &1 as &Int
-              let y = *ref
+              let deref = *ref
             `,
 			&sema.OptionalType{
 				Type: sema.IntType,

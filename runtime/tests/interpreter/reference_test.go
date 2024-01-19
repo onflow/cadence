@@ -1848,7 +1848,7 @@ func TestInterpretDereference(t *testing.T) {
 	runTestCase := func(
 		t *testing.T,
 		name, code string,
-		expectedValue interpreter.Value,
+		expectedValueFunc func(*interpreter.Interpreter) interpreter.Value,
 	) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -1861,7 +1861,7 @@ func TestInterpretDereference(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				expectedValue,
+				expectedValueFunc(inter),
 				value,
 			)
 		})
@@ -1915,7 +1915,9 @@ func TestInterpretDereference(t *testing.T) {
                     `,
 					integerType,
 				),
-				expectedValues[integerType],
+				func(_ *interpreter.Interpreter) interpreter.Value {
+					return expectedValues[integerType]
+				},
 			)
 		}
 	})
@@ -1950,7 +1952,9 @@ func TestInterpretDereference(t *testing.T) {
                     `,
 					fixedPointType,
 				),
-				expectedValues[fixedPointType],
+				func(_ *interpreter.Interpreter) interpreter.Value {
+					return expectedValues[fixedPointType]
+				},
 			)
 		}
 	})
@@ -2871,7 +2875,9 @@ func TestInterpretDereference(t *testing.T) {
                     return *x
                 }
             `,
-			interpreter.NewUnmeteredCharacterValue("S"),
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredCharacterValue("S")
+			},
 		)
 	})
 
@@ -2888,7 +2894,9 @@ func TestInterpretDereference(t *testing.T) {
                     return *x
                 }
             `,
-			interpreter.NewUnmeteredStringValue("STxy"),
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredStringValue("STxy")
+			},
 		)
 	})
 
@@ -2902,7 +2910,9 @@ func TestInterpretDereference(t *testing.T) {
                 return *x
             }
         `,
-		interpreter.BoolValue(true),
+		func(_ *interpreter.Interpreter) interpreter.Value {
+			return interpreter.BoolValue(true)
+		},
 	)
 
 	address, err := common.HexToAddress("0x0000000000000231")
@@ -2918,7 +2928,9 @@ func TestInterpretDereference(t *testing.T) {
                 return *x
             }
         `,
-		interpreter.NewAddressValue(nil, address),
+		func(_ *interpreter.Interpreter) interpreter.Value {
+			return interpreter.NewAddressValue(nil, address)
+		},
 	)
 
 	t.Run("Path", func(t *testing.T) {
@@ -2934,7 +2946,9 @@ func TestInterpretDereference(t *testing.T) {
                     return *x
                 }
             `,
-			interpreter.NewUnmeteredPathValue(common.PathDomainPrivate, "temp"),
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredPathValue(common.PathDomainPrivate, "temp")
+			},
 		)
 
 		runTestCase(
@@ -2947,7 +2961,9 @@ func TestInterpretDereference(t *testing.T) {
                     return *x
                 }
             `,
-			interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "temp"),
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "temp")
+			},
 		)
 	})
 
@@ -2963,7 +2979,9 @@ func TestInterpretDereference(t *testing.T) {
                   return *ref
               }
             `,
-			interpreter.Nil,
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.Nil
+			},
 		)
 
 		runTestCase(
@@ -2975,9 +2993,11 @@ func TestInterpretDereference(t *testing.T) {
                   return *ref
               }
             `,
-			interpreter.NewUnmeteredSomeValueNonCopying(
-				interpreter.NewIntValueFromInt64(nil, 42),
-			),
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredSomeValueNonCopying(
+					interpreter.NewIntValueFromInt64(nil, 42),
+				)
+			},
 		)
 	})
 
@@ -3045,5 +3065,82 @@ func TestInterpretDereference(t *testing.T) {
 
 			require.ErrorAs(t, err, &interpreter.ResourceReferenceDereferenceError{})
 		})
+	})
+
+	t.Run("Struct", func(t *testing.T) {
+
+		sStaticType := interpreter.NewCompositeStaticType(
+			nil,
+			TestLocation,
+			"S",
+			TestLocation.TypeID(nil, "S"),
+		)
+
+		newS := func(inter *interpreter.Interpreter) interpreter.Value {
+			return interpreter.NewCompositeValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				TestLocation,
+				"S",
+				common.CompositeKindStructure,
+				nil,
+				common.ZeroAddress,
+			)
+		}
+
+		runTestCase(
+			t,
+			"variable-sized array",
+			`
+		      struct S {}
+
+		      fun main(): [S] {
+		          let s1: [S] = [S()]
+		          let s1Ref: &[S] = &s1
+		          let s2 = *s1Ref
+                  return s2
+		      }
+            `,
+			func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(
+						nil,
+						sStaticType,
+					),
+					common.ZeroAddress,
+					newS(inter),
+				)
+			},
+		)
+
+		runTestCase(
+			t,
+			"constant-sized array",
+			`
+		      struct S {}
+
+		      fun main(): [S; 2] {
+		          let s1: [S; 2] = [S(), S()]
+		          let s1Ref: &[S; 2] = &s1
+		          let s2 = *s1Ref
+                  return s2
+		      }
+            `,
+			func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewConstantSizedStaticType(
+						nil,
+						sStaticType,
+						2,
+					),
+					common.ZeroAddress,
+					newS(inter),
+					newS(inter),
+				)
+			},
+		)
+
 	})
 }

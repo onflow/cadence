@@ -89,12 +89,11 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) Ty
 
 		innerType := referenceType.Type
 
-		// Allow primitives or containers of primitives.
-		if !IsPrimitiveOrContainerOfPrimitive(innerType) {
+		if !IsPrimitiveOrNonResourceContainer(innerType) {
 			checker.report(
 				&InvalidUnaryOperandError{
 					Operation:               expression.Operation,
-					ExpectedTypeDescription: "primitive or container of primitives",
+					ExpectedTypeDescription: "primitive or non-resource container",
 					ActualType:              innerType,
 					Range: ast.NewRangeFromPositioned(
 						checker.memoryGauge,
