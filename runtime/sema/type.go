@@ -2131,7 +2131,7 @@ Returns a new variable-sized array with the copy of the contents of the given ar
 Available if the array is constant sized and the element type is not resource-kinded.
 `
 
-var insertableEntitledAccess = NewEntitlementSetAccess(
+var insertMutateEntitledAccess = NewEntitlementSetAccess(
 	[]*EntitlementType{
 		InsertType,
 		MutateType,
@@ -2139,7 +2139,7 @@ var insertableEntitledAccess = NewEntitlementSetAccess(
 	Disjunction,
 )
 
-var removableEntitledAccess = NewEntitlementSetAccess(
+var removeMutateEntitledAccess = NewEntitlementSetAccess(
 	[]*EntitlementType{
 		RemoveType,
 		MutateType,
@@ -2341,7 +2341,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
-					insertableEntitledAccess,
+					insertMutateEntitledAccess,
 					identifier,
 					ArrayAppendFunctionType(elementType),
 					arrayTypeAppendFunctionDocString,
@@ -2368,7 +2368,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
-					insertableEntitledAccess,
+					insertMutateEntitledAccess,
 					identifier,
 					ArrayAppendAllFunctionType(arrayType),
 					arrayTypeAppendAllFunctionDocString,
@@ -2439,7 +2439,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
-					insertableEntitledAccess,
+					insertMutateEntitledAccess,
 					identifier,
 					ArrayInsertFunctionType(elementType),
 					arrayTypeInsertFunctionDocString,
@@ -2456,7 +2456,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
-					removableEntitledAccess,
+					removeMutateEntitledAccess,
 					identifier,
 					ArrayRemoveFunctionType(elementType),
 					arrayTypeRemoveFunctionDocString,
@@ -2473,7 +2473,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
-					removableEntitledAccess,
+					removeMutateEntitledAccess,
 					identifier,
 					ArrayRemoveFirstFunctionType(elementType),
 					arrayTypeRemoveFirstFunctionDocString,
@@ -2490,7 +2490,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
-					removableEntitledAccess,
+					removeMutateEntitledAccess,
 					identifier,
 					ArrayRemoveLastFunctionType(elementType),
 					arrayTypeRemoveLastFunctionDocString,
@@ -2516,10 +2516,9 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					)
 				}
 
-				return NewFunctionMember(
+				return NewPublicFunctionMember(
 					memoryGauge,
 					arrayType,
-					insertableEntitledAccess,
 					identifier,
 					ArrayToVariableSizedFunctionType(elementType),
 					arrayTypeToVariableSizedFunctionDocString,
@@ -6089,7 +6088,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 					return NewFunctionMember(
 						memoryGauge,
 						t,
-						insertableEntitledAccess,
+						insertMutateEntitledAccess,
 						identifier,
 						DictionaryInsertFunctionType(t),
 						dictionaryTypeInsertFunctionDocString,
@@ -6102,7 +6101,7 @@ func (t *DictionaryType) initializeMemberResolvers() {
 					return NewFunctionMember(
 						memoryGauge,
 						t,
-						removableEntitledAccess,
+						removeMutateEntitledAccess,
 						identifier,
 						DictionaryRemoveFunctionType(t),
 						dictionaryTypeRemoveFunctionDocString,
