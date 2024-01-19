@@ -11293,39 +11293,6 @@ func TestInterpretArrayToVariableSized(t *testing.T) {
 			),
 		)
 	})
-
-	t.Run("with integer array", func(t *testing.T) {
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-let array: [T] = [...]
-let arrayRef = &array as &[T]
-
-			fun dereference(arrayRef &[T]): [T] {
-				constantSized = arrayRef.toConstantSized<T; n>()
-				return constantSized.toVariableSized()
-			}
-		`)
-
-		runValidCase(
-			t,
-			inter,
-			interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				&interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeInt,
-				},
-				common.ZeroAddress,
-				interpreter.NewUnmeteredIntValueFromInt64(1),
-				interpreter.NewUnmeteredIntValueFromInt64(2),
-				interpreter.NewUnmeteredIntValueFromInt64(3),
-				interpreter.NewUnmeteredIntValueFromInt64(100),
-				interpreter.NewUnmeteredIntValueFromInt64(201),
-			),
-		)
-	})
-
 }
 
 func TestInterpretOptionalReference(t *testing.T) {

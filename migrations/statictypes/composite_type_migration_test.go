@@ -38,8 +38,6 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 
 	pathDomain := common.PathDomainPublic
 
-	const stringType = interpreter.PrimitiveStaticTypeString
-
 	type testCase struct {
 		storedType   interpreter.StaticType
 		expectedType interpreter.StaticType
