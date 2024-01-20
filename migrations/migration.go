@@ -80,6 +80,7 @@ func (m *StorageMigration) MigrateAccount(
 ) {
 	accountStorage := NewAccountStorage(m.storage, address)
 
+	// TODO: migrate all storage domains, also inbox and cap cons ones
 	accountStorage.MigratePathsInDomains(
 		m.interpreter,
 		common.AllPathDomains,
