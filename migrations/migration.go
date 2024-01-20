@@ -268,6 +268,23 @@ func (m *StorageMigration) MigrateNestedValue(
 				valueToSet,
 			)
 		}
+
+	case *interpreter.PublishedValue:
+		innerValue := value.Value
+		newInnerValue := m.MigrateNestedValue(
+			addressPath,
+			innerValue,
+			valueMigrations,
+			reporter,
+		)
+		if newInnerValue != nil {
+			newInnerCapability := newInnerValue.(*interpreter.CapabilityValue)
+			return interpreter.NewPublishedValue(
+				m.interpreter,
+				value.Recipient,
+				newInnerCapability,
+			)
+		}
 	}
 
 	for _, migration := range valueMigrations {
