@@ -71,6 +71,8 @@ func (t *testReporter) Error(
 
 type testStringMigration struct{}
 
+var _ ValueMigration = testStringMigration{}
+
 func (testStringMigration) Name() string {
 	return "testStringMigration"
 }
@@ -93,6 +95,8 @@ type testInt8Migration struct {
 	mustError bool
 }
 
+var _ ValueMigration = testInt8Migration{}
+
 func (testInt8Migration) Name() string {
 	return "testInt8Migration"
 }
@@ -114,7 +118,32 @@ func (m testInt8Migration) Migrate(
 	return interpreter.NewUnmeteredInt8Value(int8(int8Value) + 10), nil
 }
 
-var _ ValueMigration = testStringMigration{}
+// testCapMigration
+
+type testCapMigration struct{}
+
+var _ ValueMigration = testCapMigration{}
+
+func (testCapMigration) Name() string {
+	return "testCapMigration"
+}
+
+func (testCapMigration) Migrate(
+	_ interpreter.AddressPath,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) (interpreter.Value, error) {
+	if value, ok := value.(*interpreter.CapabilityValue); ok {
+		return interpreter.NewCapabilityValue(
+			nil,
+			value.ID+10,
+			value.Address,
+			value.BorrowType,
+		), nil
+	}
+
+	return nil, nil
+}
 
 func TestMultipleMigrations(t *testing.T) {
 	t.Parallel()
@@ -123,6 +152,8 @@ func TestMultipleMigrations(t *testing.T) {
 	pathDomain := common.PathDomainPublic
 
 	type testCase struct {
+		name          string
+		migration     string
 		storedValue   interpreter.Value
 		expectedValue interpreter.Value
 	}
@@ -142,24 +173,185 @@ func TestMultipleMigrations(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	testCases := map[string]testCase{
-		"string_value": {
+	testCases := []testCase{
+		{
+			name:          "string_value",
+			migration:     "testStringMigration",
 			storedValue:   interpreter.NewUnmeteredStringValue("hello"),
 			expectedValue: interpreter.NewUnmeteredStringValue("updated_hello"),
 		},
-		"int8_value": {
+		{
+			name:          "int8_value",
+			migration:     "testInt8Migration",
 			storedValue:   interpreter.NewUnmeteredInt8Value(5),
 			expectedValue: interpreter.NewUnmeteredInt8Value(15),
 		},
-		"int16_value": {
+		{
+			name:          "int16_value",
+			migration:     "", // should not be migrated
 			storedValue:   interpreter.NewUnmeteredInt16Value(5),
 			expectedValue: interpreter.NewUnmeteredInt16Value(5),
 		},
+		{
+			name:      "cap_value",
+			migration: "testCapMigration",
+			storedValue: interpreter.NewCapabilityValue(
+				nil,
+				5,
+				interpreter.AddressValue(common.Address{0x1}),
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.UnauthorizedAccess,
+					interpreter.PrimitiveStaticTypeString,
+				),
+			),
+			expectedValue: interpreter.NewCapabilityValue(
+				nil,
+				15,
+				interpreter.AddressValue(common.Address{0x1}),
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.UnauthorizedAccess,
+					interpreter.PrimitiveStaticTypeString,
+				),
+			),
+		},
+	}
+
+	variableSizedAnyStructStaticType :=
+		interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct)
+
+	dictionaryAnyStructStaticType :=
+		interpreter.NewDictionaryStaticType(
+			nil,
+			interpreter.PrimitiveStaticTypeAnyStruct,
+			interpreter.PrimitiveStaticTypeAnyStruct,
+		)
+
+	for _, test := range testCases {
+		testCases = append(testCases, testCase{
+			name:      "array_" + test.name,
+			migration: test.migration,
+			storedValue: interpreter.NewArrayValue(
+				inter,
+				emptyLocationRange,
+				variableSizedAnyStructStaticType,
+				common.ZeroAddress,
+				test.storedValue,
+			),
+			expectedValue: interpreter.NewArrayValue(
+				inter,
+				emptyLocationRange,
+				variableSizedAnyStructStaticType,
+				common.ZeroAddress,
+				test.expectedValue,
+			),
+		})
+
+		if _, ok := test.storedValue.(interpreter.HashableValue); ok {
+
+			testCases = append(testCases, testCase{
+				name:      "dict_key_" + test.name,
+				migration: test.migration,
+				storedValue: interpreter.NewDictionaryValue(
+					inter,
+					emptyLocationRange,
+					dictionaryAnyStructStaticType,
+					test.storedValue,
+					interpreter.TrueValue,
+				),
+
+				expectedValue: interpreter.NewDictionaryValue(
+					inter,
+					emptyLocationRange,
+					dictionaryAnyStructStaticType,
+					test.expectedValue,
+					interpreter.TrueValue,
+				),
+			})
+		}
+
+		testCases = append(testCases, testCase{
+			name:      "dict_value_" + test.name,
+			migration: test.migration,
+			storedValue: interpreter.NewDictionaryValue(
+				inter,
+				emptyLocationRange,
+				dictionaryAnyStructStaticType,
+				interpreter.TrueValue,
+				test.storedValue,
+			),
+			expectedValue: interpreter.NewDictionaryValue(
+				inter,
+				emptyLocationRange,
+				dictionaryAnyStructStaticType,
+				interpreter.TrueValue,
+				test.expectedValue,
+			),
+		})
+
+		testCases = append(testCases, testCase{
+			name:          "some_" + test.name,
+			migration:     test.migration,
+			storedValue:   interpreter.NewSomeValueNonCopying(nil, test.storedValue),
+			expectedValue: interpreter.NewSomeValueNonCopying(nil, test.expectedValue),
+		})
+
+		if _, ok := test.storedValue.(*interpreter.CapabilityValue); ok {
+
+			testCases = append(testCases, testCase{
+				name:      "published_" + test.name,
+				migration: test.migration,
+				storedValue: interpreter.NewPublishedValue(
+					nil,
+					interpreter.AddressValue(common.ZeroAddress),
+					test.storedValue.(*interpreter.CapabilityValue),
+				),
+				expectedValue: interpreter.NewPublishedValue(
+					nil,
+					interpreter.AddressValue(common.ZeroAddress),
+					test.expectedValue.(*interpreter.CapabilityValue),
+				),
+			})
+		}
+
+		testCases = append(testCases, testCase{
+			name:      "struct_" + test.name,
+			migration: test.migration,
+			storedValue: interpreter.NewCompositeValue(
+				inter,
+				emptyLocationRange,
+				utils.TestLocation,
+				"S",
+				common.CompositeKindStructure,
+				[]interpreter.CompositeField{
+					{
+						Name:  "test",
+						Value: test.storedValue,
+					},
+				},
+				common.ZeroAddress,
+			),
+			expectedValue: interpreter.NewCompositeValue(
+				inter,
+				emptyLocationRange,
+				utils.TestLocation,
+				"S",
+				common.CompositeKindStructure,
+				[]interpreter.CompositeField{
+					{
+						Name:  "test",
+						Value: test.expectedValue,
+					},
+				},
+				common.ZeroAddress,
+			),
+		})
 	}
 
 	// Store values
 
-	for name, testCase := range testCases {
+	for _, testCase := range testCases {
 		transferredValue := testCase.storedValue.Transfer(
 			inter,
 			locationRange,
@@ -172,7 +364,7 @@ func TestMultipleMigrations(t *testing.T) {
 		inter.WriteStored(
 			account,
 			pathDomain.Identifier(),
-			interpreter.StringStorageMapKey(name),
+			interpreter.StringStorageMapKey(testCase.name),
 			transferredValue,
 		)
 	}
@@ -196,6 +388,7 @@ func TestMultipleMigrations(t *testing.T) {
 			reporter,
 			testStringMigration{},
 			testInt8Migration{},
+			testCapMigration{},
 		),
 	)
 
@@ -210,38 +403,46 @@ func TestMultipleMigrations(t *testing.T) {
 
 	iterator := storageMap.Iterator(inter)
 
+	testCasesByName := map[string]testCase{}
+
+	for _, testCase := range testCases {
+		testCasesByName[testCase.name] = testCase
+	}
+
 	for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
 		identifier := string(key.(interpreter.StringAtreeValue))
 
 		t.Run(identifier, func(t *testing.T) {
-			testCase, ok := testCases[identifier]
+			testCase, ok := testCasesByName[identifier]
 			require.True(t, ok)
 			utils.AssertValuesEqual(t, inter, testCase.expectedValue, value)
 		})
 	}
 
 	// Check the reporter
+	expectedMigrations := map[interpreter.AddressPath][]string{}
+
+	for _, testCase := range testCases {
+		if testCase.migration == "" {
+			continue
+		}
+
+		addressPath := interpreter.AddressPath{
+			Address: account,
+			Path: interpreter.PathValue{
+				Domain:     pathDomain,
+				Identifier: testCase.name,
+			},
+		}
+
+		expectedMigrations[addressPath] = append(
+			expectedMigrations[addressPath],
+			testCase.migration,
+		)
+	}
+
 	require.Equal(t,
-		map[interpreter.AddressPath][]string{
-			{
-				Address: account,
-				Path: interpreter.PathValue{
-					Domain:     pathDomain,
-					Identifier: "int8_value",
-				},
-			}: {
-				"testInt8Migration",
-			},
-			{
-				Address: account,
-				Path: interpreter.PathValue{
-					Domain:     pathDomain,
-					Identifier: "string_value",
-				},
-			}: {
-				"testStringMigration",
-			},
-		},
+		expectedMigrations,
 		reporter.migratedPaths,
 	)
 }
