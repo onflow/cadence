@@ -197,9 +197,7 @@ func (m *LinkValueMigration) Migrate(
 func storageKeyToPathValue(storageKey interpreter.StorageKey, storageMapKey interpreter.StorageMapKey) interpreter.PathValue {
 	domain := common.PathDomainFromIdentifier(storageKey.Key)
 	identifier := string(storageMapKey.(interpreter.StringStorageMapKey))
-
-	pathValue := interpreter.NewUnmeteredPathValue(domain, identifier)
-	return pathValue
+	return interpreter.NewUnmeteredPathValue(domain, identifier)
 }
 
 var authAccountReferenceStaticType = interpreter.NewReferenceStaticType(
