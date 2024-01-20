@@ -139,21 +139,18 @@ func ConvertValueToEntitlements(
 ) {
 
 	var staticType interpreter.StaticType
-	// during a real migration these two reference cases will not be hit, but they are here for easier testing
-	// for reference types, we want to use the borrow type, rather than the type of the referenced value
 	switch referenceValue := v.(type) {
+
 	case *interpreter.EphemeralReferenceValue:
+		// during a real migration this case will not be hit, because ephemeral references are not storable,
+		// but they are here for easier testing for reference types, we want to use the borrow type,
+		// rather than the type of the referenced value
 		staticType = interpreter.NewReferenceStaticType(
 			inter,
 			referenceValue.Authorization,
 			interpreter.ConvertSemaToStaticType(inter, referenceValue.BorrowedType),
 		)
-	case *interpreter.StorageReferenceValue:
-		staticType = interpreter.NewReferenceStaticType(
-			inter,
-			referenceValue.Authorization,
-			interpreter.ConvertSemaToStaticType(inter, referenceValue.BorrowedType),
-		)
+
 	case interpreter.LinkValue: //nolint:staticcheck
 		// Link values are not supposed to reach here.
 		// But it could, if the type used in the link is not migrated,
@@ -240,22 +237,6 @@ func ConvertValueToEntitlements(
 			interpreter.EmptyLocationRange,
 		), nil
 
-	case *interpreter.StorageReferenceValue:
-		// a stored value will in itself be migrated at another point,
-		// so no need to do anything here other than change the type
-		entitledReferenceType := entitledType.(*sema.ReferenceType)
-		staticAuthorization := interpreter.ConvertSemaAccessToStaticAuthorization(
-			inter,
-			entitledReferenceType.Authorization,
-		)
-		return interpreter.NewStorageReferenceValue(
-			inter,
-			staticAuthorization,
-			v.TargetStorageAddress,
-			v.TargetPath,
-			entitledReferenceType.Type,
-		), nil
-
 	case *interpreter.ArrayValue:
 		entitledArrayType := entitledType.(sema.ArrayType)
 		arrayStaticType := interpreter.ConvertSemaArrayTypeToStaticArrayType(inter, entitledArrayType)
@@ -319,7 +300,6 @@ func ConvertValueToEntitlements(
 			return nil, nil
 		}
 
-		// convert the static type of the value
 		entitledStaticType := interpreter.ConvertSemaToStaticType(
 			inter,
 			convertedType,
