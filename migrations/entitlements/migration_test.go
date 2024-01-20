@@ -51,12 +51,30 @@ func TestConvertToEntitledType(t *testing.T) {
 	entitlementF := sema.NewEntitlementType(nil, testLocation, "F")
 	entitlementG := sema.NewEntitlementType(nil, testLocation, "G")
 
-	eAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE}, sema.Conjunction)
-	fAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementF}, sema.Conjunction)
-	eOrFAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE, entitlementF}, sema.Disjunction)
-	eAndFAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE, entitlementF}, sema.Conjunction)
-	eAndGAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE, entitlementG}, sema.Conjunction)
-	eFAndGAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE, entitlementF, entitlementG}, sema.Conjunction)
+	eAccess := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{entitlementE},
+		sema.Conjunction,
+	)
+	fAccess := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{entitlementF},
+		sema.Conjunction,
+	)
+	eOrFAccess := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{entitlementE, entitlementF},
+		sema.Disjunction,
+	)
+	eAndFAccess := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{entitlementE, entitlementF},
+		sema.Conjunction,
+	)
+	eAndGAccess := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{entitlementE, entitlementG},
+		sema.Conjunction,
+	)
+	eFAndGAccess := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{entitlementE, entitlementF, entitlementG},
+		sema.Conjunction,
+	)
 
 	mapM := sema.NewEntitlementMapType(nil, testLocation, "M")
 	mapM.Relations = []sema.EntitlementRelation{
@@ -79,7 +97,15 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	compositeStructWithOnlyE.Members.Set(
 		"foo",
-		sema.NewFieldMember(nil, compositeStructWithOnlyE, eAccess, ast.VariableKindConstant, "foo", sema.IntType, ""),
+		sema.NewFieldMember(
+			nil,
+			compositeStructWithOnlyE,
+			eAccess,
+			ast.VariableKindConstant,
+			"foo",
+			sema.IntType,
+			"",
+		),
 	)
 
 	compositeResourceWithOnlyF := &sema.CompositeType{
@@ -90,11 +116,27 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	compositeResourceWithOnlyF.Members.Set(
 		"bar",
-		sema.NewFieldMember(nil, compositeResourceWithOnlyF, fAccess, ast.VariableKindConstant, "bar", sema.IntType, ""),
+		sema.NewFieldMember(
+			nil,
+			compositeResourceWithOnlyF,
+			fAccess,
+			ast.VariableKindConstant,
+			"bar",
+			sema.IntType,
+			"",
+		),
 	)
 	compositeResourceWithOnlyF.Members.Set(
 		"baz",
-		sema.NewFieldMember(nil, compositeResourceWithOnlyF, fAccess, ast.VariableKindConstant, "baz", compositeStructWithOnlyE, ""),
+		sema.NewFieldMember(
+			nil,
+			compositeResourceWithOnlyF,
+			fAccess,
+			ast.VariableKindConstant,
+			"baz",
+			compositeStructWithOnlyE,
+			"",
+		),
 	)
 
 	compositeResourceWithEOrF := &sema.CompositeType{
@@ -105,7 +147,15 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	compositeResourceWithEOrF.Members.Set(
 		"qux",
-		sema.NewFieldMember(nil, compositeResourceWithEOrF, eOrFAccess, ast.VariableKindConstant, "qux", sema.IntType, ""),
+		sema.NewFieldMember(
+			nil,
+			compositeResourceWithEOrF,
+			eOrFAccess,
+			ast.VariableKindConstant,
+			"qux",
+			sema.IntType,
+			"",
+		),
 	)
 
 	compositeTwoFields := &sema.CompositeType{
@@ -116,11 +166,27 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	compositeTwoFields.Members.Set(
 		"foo",
-		sema.NewFieldMember(nil, compositeTwoFields, eAccess, ast.VariableKindConstant, "foo", sema.IntType, ""),
+		sema.NewFieldMember(
+			nil,
+			compositeTwoFields,
+			eAccess,
+			ast.VariableKindConstant,
+			"foo",
+			sema.IntType,
+			"",
+		),
 	)
 	compositeTwoFields.Members.Set(
 		"bar",
-		sema.NewFieldMember(nil, compositeTwoFields, fAccess, ast.VariableKindConstant, "bar", sema.IntType, ""),
+		sema.NewFieldMember(
+			nil,
+			compositeTwoFields,
+			fAccess,
+			ast.VariableKindConstant,
+			"bar",
+			sema.IntType,
+			"",
+		),
 	)
 
 	interfaceTypeWithEAndG := &sema.InterfaceType{
@@ -158,7 +224,14 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	compositeTypeWithMap.Members.Set(
 		"foo",
-		sema.NewFunctionMember(nil, compositeTypeWithMap, mapAccess, "foo", &sema.FunctionType{}, ""),
+		sema.NewFunctionMember(
+			nil,
+			compositeTypeWithMap,
+			mapAccess,
+			"foo",
+			&sema.FunctionType{},
+			"",
+		),
 	)
 
 	interfaceTypeWithMap := &sema.InterfaceType{
@@ -169,7 +242,14 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	interfaceTypeWithMap.Members.Set(
 		"foo",
-		sema.NewFunctionMember(nil, interfaceTypeWithMap, mapAccess, "foo", &sema.FunctionType{}, ""),
+		sema.NewFunctionMember(
+			nil,
+			interfaceTypeWithMap,
+			mapAccess,
+			"foo",
+			&sema.FunctionType{},
+			"",
+		),
 	)
 
 	compositeTypeWithCapField := &sema.CompositeType{
@@ -181,7 +261,11 @@ func TestConvertToEntitledType(t *testing.T) {
 	compositeTypeWithCapField.Members.Set(
 		"foo",
 		sema.NewFieldMember(
-			nil, compositeTypeWithCapField, sema.UnauthorizedAccess, ast.VariableKindConstant, "foo",
+			nil,
+			compositeTypeWithCapField,
+			sema.UnauthorizedAccess,
+			ast.VariableKindConstant,
+			"foo",
 			sema.NewCapabilityType(nil,
 				sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeInheriting),
 			),
@@ -198,7 +282,11 @@ func TestConvertToEntitledType(t *testing.T) {
 	interfaceTypeWithCapField.Members.Set(
 		"foo",
 		sema.NewFieldMember(
-			nil, interfaceTypeWithCapField, sema.UnauthorizedAccess, ast.VariableKindConstant, "foo",
+			nil,
+			interfaceTypeWithCapField,
+			sema.UnauthorizedAccess,
+			ast.VariableKindConstant,
+			"foo",
 			sema.NewCapabilityType(nil,
 				sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeInheriting),
 			),
@@ -283,14 +371,45 @@ func TestConvertToEntitledType(t *testing.T) {
 			Name:   "interface map",
 		},
 		{
-			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.NewCapabilityType(nil, sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeTypeWithMap))),
-			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.NewCapabilityType(nil, sema.NewReferenceType(nil, eAndFAccess, compositeTypeWithMap))),
-			Name:   "reference to capability",
+			Input: sema.NewReferenceType(
+				nil,
+				sema.UnauthorizedAccess,
+				sema.NewCapabilityType(
+					nil,
+					sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeTypeWithMap),
+				),
+			),
+			Output: sema.NewReferenceType(
+				nil,
+				sema.UnauthorizedAccess,
+				sema.NewCapabilityType(
+					nil,
+					sema.NewReferenceType(nil, eAndFAccess, compositeTypeWithMap),
+				),
+			),
+			Name: "reference to capability",
 		},
 		{
-			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.NewIntersectionType(nil, []*sema.InterfaceType{interfaceTypeInheriting, interfaceTypeWithMap})),
-			Output: sema.NewReferenceType(nil, eFAndGAccess, sema.NewIntersectionType(nil, []*sema.InterfaceType{interfaceTypeInheriting, interfaceTypeWithMap})),
-			Name:   "intersection",
+			Input: sema.NewReferenceType(
+				nil,
+				sema.UnauthorizedAccess,
+				sema.NewIntersectionType(
+					nil,
+					[]*sema.InterfaceType{
+						interfaceTypeInheriting,
+						interfaceTypeWithMap,
+					},
+				),
+			),
+			Output: sema.NewReferenceType(
+				nil,
+				eFAndGAccess,
+				sema.NewIntersectionType(nil, []*sema.InterfaceType{
+					interfaceTypeInheriting,
+					interfaceTypeWithMap,
+				}),
+			),
+			Name: "intersection",
 		},
 		// no change
 		{
@@ -519,7 +638,13 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	// &S
 
-	unentitledSRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue), interpreter.EmptyLocationRange)
+	unentitledSRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.UnauthorizedAccess,
+		sValue,
+		inter.MustSemaTypeOfValue(sValue),
+		interpreter.EmptyLocationRange,
+	)
 	unentitledSRefStaticType := unentitledSRef.StaticType(inter)
 
 	entitledSRef := interpreter.NewEphemeralReferenceValue(
@@ -538,7 +663,13 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	// &R
 
-	unentitledRRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue), interpreter.EmptyLocationRange)
+	unentitledRRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.UnauthorizedAccess,
+		rValue,
+		inter.MustSemaTypeOfValue(rValue),
+		interpreter.EmptyLocationRange,
+	)
 	unentitledRRefStaticType := unentitledRRef.StaticType(inter)
 
 	entitledRRef := interpreter.NewEphemeralReferenceValue(
@@ -557,8 +688,19 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	// &{I}
 
-	intersectionIType := sema.NewIntersectionType(inter, []*sema.InterfaceType{checker.Elaboration.InterfaceType("S.test.I")})
-	unentitledIRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, intersectionIType, interpreter.EmptyLocationRange)
+	intersectionIType := sema.NewIntersectionType(
+		inter,
+		[]*sema.InterfaceType{
+			checker.Elaboration.InterfaceType("S.test.I"),
+		},
+	)
+	unentitledIRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.UnauthorizedAccess,
+		rValue,
+		intersectionIType,
+		interpreter.EmptyLocationRange,
+	)
 
 	entitledIRef := interpreter.NewEphemeralReferenceValue(
 		inter,
@@ -575,7 +717,8 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	// legacy Capability<&R{I}>
 
-	legacyIntersectionType := interpreter.ConvertSemaToStaticType(inter, intersectionIType).(*interpreter.IntersectionStaticType)
+	legacyIntersectionType :=
+		interpreter.ConvertSemaToStaticType(inter, intersectionIType).(*interpreter.IntersectionStaticType)
 	legacyIntersectionType.LegacyType = rValue.StaticType(inter)
 	unentitledLegacyReferenceStaticType := interpreter.NewReferenceStaticType(
 		inter,
@@ -598,7 +741,8 @@ func TestConvertToEntitledValue(t *testing.T) {
 		unentitledLegacyCapability,
 	)
 
-	unentitledLegacyCapabilityOptionalArray := interpreter.NewSomeValueNonCopying(inter, unentitledLegacyCapabilityArray)
+	unentitledLegacyCapabilityOptionalArray :=
+		interpreter.NewSomeValueNonCopying(inter, unentitledLegacyCapabilityArray)
 
 	entitledConvertedLegacyReferenceStaticType := interpreter.NewReferenceStaticType(
 		inter,
@@ -626,7 +770,8 @@ func TestConvertToEntitledValue(t *testing.T) {
 		entitledLegacyConvertedCapability,
 	)
 
-	entitledLegacyConvertedCapabilityOptionalArray := interpreter.NewSomeValueNonCopying(inter, entitledLegacyConvertedCapabilityArray)
+	entitledLegacyConvertedCapabilityOptionalArray :=
+		interpreter.NewSomeValueNonCopying(inter, entitledLegacyConvertedCapabilityArray)
 
 	// &{I, J}
 
@@ -637,7 +782,13 @@ func TestConvertToEntitledValue(t *testing.T) {
 			checker.Elaboration.InterfaceType("S.test.J"),
 		},
 	)
-	unentitledIJRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, intersectionIJType, interpreter.EmptyLocationRange)
+	unentitledIJRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.UnauthorizedAccess,
+		rValue,
+		intersectionIJType,
+		interpreter.EmptyLocationRange,
+	)
 
 	entitledIJRef := interpreter.NewEphemeralReferenceValue(
 		inter,
@@ -654,7 +805,13 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	// &Nested
 
-	unentitledNestedRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, nestedValue, inter.MustSemaTypeOfValue(nestedValue), interpreter.EmptyLocationRange)
+	unentitledNestedRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.UnauthorizedAccess,
+		nestedValue,
+		inter.MustSemaTypeOfValue(nestedValue),
+		interpreter.EmptyLocationRange,
+	)
 	unentitledNestedRefStaticType := unentitledNestedRef.StaticType(inter)
 
 	entitledNestedRef := interpreter.NewEphemeralReferenceValue(
@@ -671,11 +828,13 @@ func TestConvertToEntitledValue(t *testing.T) {
 	)
 	entitledNestedRefStaticType := entitledNestedRef.StaticType(inter)
 
-	tests := []struct {
+	type testCase struct {
 		Input  interpreter.Value
 		Output interpreter.Value
 		Name   string
-	}{
+	}
+
+	tests := []testCase{
 		{
 			Input:  rValue,
 			Output: rValue,
@@ -751,14 +910,22 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Input: interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, interpreter.PrimitiveStaticTypeMetaType),
+				interpreter.NewDictionaryStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+					interpreter.PrimitiveStaticTypeMetaType,
+				),
 				interpreter.NewIntValueFromInt64(inter, 0),
 				interpreter.NewTypeValue(inter, unentitledSRefStaticType),
 			),
 			Output: interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, interpreter.PrimitiveStaticTypeMetaType),
+				interpreter.NewDictionaryStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+					interpreter.PrimitiveStaticTypeMetaType,
+				),
 				interpreter.NewIntValueFromInt64(inter, 0),
 				interpreter.NewTypeValue(inter, entitledSRefStaticType),
 			),
@@ -937,29 +1104,37 @@ func TestConvertToEntitledValue(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		var runtimeTypeTest struct {
-			Input  interpreter.Value
-			Output interpreter.Value
-			Name   string
-		}
-		runtimeTypeTest.Input = interpreter.NewTypeValue(inter, getStaticType(test.Input.Clone(inter)))
-		runtimeTypeTest.Output = interpreter.NewTypeValue(inter, getStaticType(test.Output.Clone(inter)))
-		runtimeTypeTest.Name = "runtime type " + test.Name
-
-		tests = append(tests, runtimeTypeTest)
+		tests = append(tests, testCase{
+			Input:  interpreter.NewTypeValue(inter, getStaticType(test.Input.Clone(inter))),
+			Output: interpreter.NewTypeValue(inter, getStaticType(test.Output.Clone(inter))),
+			Name:   "runtime type " + test.Name,
+		})
 	}
 
 	for _, test := range tests {
-		var optionalValueTest struct {
-			Input  interpreter.Value
-			Output interpreter.Value
-			Name   string
-		}
-		optionalValueTest.Input = interpreter.NewSomeValueNonCopying(inter, test.Input.Clone(inter))
-		optionalValueTest.Output = interpreter.NewSomeValueNonCopying(inter, test.Output.Clone(inter))
-		optionalValueTest.Name = "optional " + test.Name
+		tests = append(tests, testCase{
+			Input:  interpreter.NewSomeValueNonCopying(inter, test.Input.Clone(inter)),
+			Output: interpreter.NewSomeValueNonCopying(inter, test.Output.Clone(inter)),
+			Name:   "optional " + test.Name,
+		})
 
-		tests = append(tests, optionalValueTest)
+		tests = append(tests, testCase{
+			Input: interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+				common.ZeroAddress,
+				test.Input.Clone(inter),
+			),
+			Output: interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+				common.ZeroAddress,
+				test.Output.Clone(inter),
+			),
+			Name: "array " + test.Name,
+		})
 	}
 
 	var referencePeekingEqual func(interpreter.EquatableValue, interpreter.Value) bool
@@ -982,6 +1157,33 @@ func TestConvertToEntitledValue(t *testing.T) {
 			default:
 				return innerValue == otherSome.InnerValue(inter, interpreter.EmptyLocationRange)
 			}
+
+		case *interpreter.ArrayValue:
+			otherArray, ok := output.(*interpreter.ArrayValue)
+			if !ok {
+				return false
+			}
+
+			for i := 0; i < v.Count(); i++ {
+				innerValue := v.Get(inter, interpreter.EmptyLocationRange, i)
+				otherInnerValue := otherArray.Get(inter, interpreter.EmptyLocationRange, i)
+
+				switch innerValue := innerValue.(type) {
+				case interpreter.EquatableValue:
+					if !referencePeekingEqual(
+						innerValue,
+						otherInnerValue,
+					) {
+						return false
+					}
+				default:
+					if innerValue != otherInnerValue {
+						return false
+					}
+				}
+			}
+			return true
+
 		case *interpreter.EphemeralReferenceValue:
 			otherReference, ok := output.(*interpreter.EphemeralReferenceValue)
 			if !ok || !v.Authorization.Equal(otherReference.Authorization) {
