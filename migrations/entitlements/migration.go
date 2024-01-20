@@ -305,6 +305,47 @@ func ConvertValueToEntitlements(
 			convertedType,
 		)
 		return interpreter.NewTypeValue(inter, entitledStaticType), nil
+
+	case *interpreter.AccountCapabilityControllerValue:
+		convertedType, converted := ConvertToEntitledType(
+			inter.MustConvertStaticToSemaType(v.BorrowType),
+		)
+
+		if !converted {
+			return nil, nil
+		}
+
+		entitledStaticType := interpreter.ConvertSemaToStaticType(
+			inter,
+			convertedType,
+		)
+		entitledBorrowType := entitledStaticType.(*interpreter.ReferenceStaticType)
+		return interpreter.NewAccountCapabilityControllerValue(
+			inter,
+			entitledBorrowType,
+			v.CapabilityID,
+		), nil
+
+	case *interpreter.StorageCapabilityControllerValue:
+		convertedType, converted := ConvertToEntitledType(
+			inter.MustConvertStaticToSemaType(v.BorrowType),
+		)
+
+		if !converted {
+			return nil, nil
+		}
+
+		entitledStaticType := interpreter.ConvertSemaToStaticType(
+			inter,
+			convertedType,
+		)
+		entitledBorrowType := entitledStaticType.(*interpreter.ReferenceStaticType)
+		return interpreter.NewStorageCapabilityControllerValue(
+			inter,
+			entitledBorrowType,
+			v.CapabilityID,
+			v.TargetPath,
+		), nil
 	}
 
 	return nil, nil
