@@ -36,7 +36,8 @@ func (StringNormalizingMigration) Name() string {
 }
 
 func (StringNormalizingMigration) Migrate(
-	_ interpreter.AddressPath,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (interpreter.Value, error) {

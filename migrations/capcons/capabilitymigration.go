@@ -60,7 +60,8 @@ var fullyEntitledAccountReferenceStaticType = interpreter.ConvertSemaReferenceTy
 // If a value is returned, the value must be updated with the replacement in the parent.
 // If nil is returned, the value was not updated and no operation has to be performed.
 func (m *CapabilityValueMigration) Migrate(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (interpreter.Value, error) {
@@ -78,7 +79,7 @@ func (m *CapabilityValueMigration) Migrate(
 		if !ok {
 			if reporter != nil {
 				reporter.MissingCapabilityID(
-					addressPath.Address,
+					storageKey.Address,
 					capabilityAddressPath,
 				)
 			}
@@ -103,7 +104,7 @@ func (m *CapabilityValueMigration) Migrate(
 
 		if reporter != nil {
 			reporter.MigratedPathCapability(
-				addressPath.Address,
+				storageKey.Address,
 				capabilityAddressPath,
 				newBorrowType,
 			)

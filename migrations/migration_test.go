@@ -35,34 +35,66 @@ import (
 )
 
 type testReporter struct {
-	migratedPaths map[interpreter.AddressPath][]string
-	erroredPaths  map[interpreter.AddressPath][]string
+	migrated map[struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}][]string
+	errored map[struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}][]string
 }
+
+var _ Reporter = &testReporter{}
 
 func newTestReporter() *testReporter {
 	return &testReporter{
-		migratedPaths: map[interpreter.AddressPath][]string{},
-		erroredPaths:  map[interpreter.AddressPath][]string{},
+		migrated: map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}][]string{},
+		errored: map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}][]string{},
 	}
 }
 
 func (t *testReporter) Migrated(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	migration string,
 ) {
-	t.migratedPaths[addressPath] = append(
-		t.migratedPaths[addressPath],
+	key := struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}{
+		StorageKey:    storageKey,
+		StorageMapKey: storageMapKey,
+	}
+
+	t.migrated[key] = append(
+		t.migrated[key],
 		migration,
 	)
 }
 
 func (t *testReporter) Error(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	migration string,
 	_ error,
 ) {
-	t.erroredPaths[addressPath] = append(
-		t.erroredPaths[addressPath],
+	key := struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}{
+		StorageKey:    storageKey,
+		StorageMapKey: storageMapKey,
+	}
+
+	t.errored[key] = append(
+		t.errored[key],
 		migration,
 	)
 }
@@ -78,7 +110,8 @@ func (testStringMigration) Name() string {
 }
 
 func (testStringMigration) Migrate(
-	_ interpreter.AddressPath,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (interpreter.Value, error) {
@@ -102,7 +135,8 @@ func (testInt8Migration) Name() string {
 }
 
 func (m testInt8Migration) Migrate(
-	_ interpreter.AddressPath,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (interpreter.Value, error) {
@@ -129,7 +163,8 @@ func (testCapMigration) Name() string {
 }
 
 func (testCapMigration) Migrate(
-	_ interpreter.AddressPath,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (interpreter.Value, error) {
@@ -420,30 +455,36 @@ func TestMultipleMigrations(t *testing.T) {
 	}
 
 	// Check the reporter
-	expectedMigrations := map[interpreter.AddressPath][]string{}
+	expectedMigrations := map[struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}][]string{}
 
 	for _, testCase := range testCases {
 		if testCase.migration == "" {
 			continue
 		}
 
-		addressPath := interpreter.AddressPath{
-			Address: account,
-			Path: interpreter.PathValue{
-				Domain:     pathDomain,
-				Identifier: testCase.name,
+		key := struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}{
+			StorageKey: interpreter.StorageKey{
+				Address: account,
+				Key:     pathDomain.Identifier(),
 			},
+			StorageMapKey: interpreter.StringStorageMapKey(testCase.name),
 		}
 
-		expectedMigrations[addressPath] = append(
-			expectedMigrations[addressPath],
+		expectedMigrations[key] = append(
+			expectedMigrations[key],
 			testCase.migration,
 		)
 	}
 
 	require.Equal(t,
 		expectedMigrations,
-		reporter.migratedPaths,
+		reporter.migrated,
 	)
 }
 
@@ -556,32 +597,38 @@ func TestMigrationError(t *testing.T) {
 	// Check the reporter.
 	// Since Int8 migration produces an error, only the string value must have been migrated.
 	require.Equal(t,
-		map[interpreter.AddressPath][]string{
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}][]string{
 			{
-				Address: account,
-				Path: interpreter.PathValue{
-					Domain:     pathDomain,
-					Identifier: "string_value",
+				StorageKey: interpreter.StorageKey{
+					Address: account,
+					Key:     pathDomain.Identifier(),
 				},
+				StorageMapKey: interpreter.StringStorageMapKey("string_value"),
 			}: {
 				"testStringMigration",
 			},
 		},
-		reporter.migratedPaths,
+		reporter.migrated,
 	)
 
 	require.Equal(t,
-		map[interpreter.AddressPath][]string{
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}][]string{
 			{
-				Address: account,
-				Path: interpreter.PathValue{
-					Domain:     pathDomain,
-					Identifier: "int8_value",
+				StorageKey: interpreter.StorageKey{
+					Address: account,
+					Key:     pathDomain.Identifier(),
 				},
+				StorageMapKey: interpreter.StringStorageMapKey("int8_value"),
 			}: {
 				"testInt8Migration",
 			},
 		},
-		reporter.erroredPaths,
+		reporter.errored,
 	)
 }

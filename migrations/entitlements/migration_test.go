@@ -497,12 +497,15 @@ type testEntitlementsMigration struct {
 	inter *interpreter.Interpreter
 }
 
+var _ migrations.ValueMigration = testEntitlementsMigration{}
+
 func (testEntitlementsMigration) Name() string {
 	return "Test Entitlements Migration"
 }
 
 func (m testEntitlementsMigration) Migrate(
-	_ interpreter.AddressPath,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (
@@ -522,10 +525,11 @@ func convertEntireTestValue(
 	storageMig := migrations.NewStorageMigration(inter, storage)
 
 	migratedValue := storageMig.MigrateNestedValue(
-		interpreter.AddressPath{
+		interpreter.StorageKey{
+			Key:     common.PathDomainStorage.Identifier(),
 			Address: address,
-			Path:    interpreter.NewPathValue(nil, common.PathDomainStorage, "test"),
 		},
+		interpreter.StringStorageMapKey("test"),
 		v,
 		[]migrations.ValueMigration{testMig},
 		nil,
@@ -2137,14 +2141,13 @@ func TestConvertMigratedAccountTypes(t *testing.T) {
 				),
 			)
 
-			newValue, err := statictypes.NewStaticTypeMigration().Migrate(
-				interpreter.AddressPath{
-					Address: common.ZeroAddress,
-					Path:    interpreter.EmptyPathValue,
-				},
-				value,
-				inter,
-			)
+			newValue, err := statictypes.NewStaticTypeMigration().
+				Migrate(
+					interpreter.StorageKey{},
+					nil,
+					value,
+					inter,
+				)
 			require.NoError(t, err)
 			require.NotNil(t, newValue)
 
@@ -2168,24 +2171,38 @@ var testAddress = common.Address{0x42}
 var _ migrations.Reporter = &testReporter{}
 
 type testReporter struct {
-	migratedPaths map[interpreter.AddressPath]struct{}
+	migrated map[struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}]struct{}
 }
 
 func newTestReporter() *testReporter {
 	return &testReporter{
-		migratedPaths: map[interpreter.AddressPath]struct{}{},
+		migrated: map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}]struct{}{},
 	}
 }
 
 func (t *testReporter) Migrated(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	_ string,
 ) {
-	t.migratedPaths[addressPath] = struct{}{}
+	t.migrated[struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}{
+		StorageKey:    storageKey,
+		StorageMapKey: storageMapKey,
+	}] = struct{}{}
 }
 
 func (t *testReporter) Error(
-	_ interpreter.AddressPath,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	_ string,
 	_ error,
 ) {
@@ -2352,16 +2369,19 @@ func TestRehash(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t,
-			map[interpreter.AddressPath]struct{}{
+			map[struct {
+				interpreter.StorageKey
+				interpreter.StorageMapKey
+			}]struct{}{
 				{
-					Address: testAddress,
-					Path: interpreter.PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: string(storageMapKey),
+					StorageKey: interpreter.StorageKey{
+						Address: testAddress,
+						Key:     common.PathDomainStorage.Identifier(),
 					},
+					StorageMapKey: storageMapKey,
 				}: {},
 			},
-			reporter.migratedPaths,
+			reporter.migrated,
 		)
 	})
 

@@ -38,24 +38,39 @@ import (
 var _ migrations.Reporter = &testReporter{}
 
 type testReporter struct {
-	migratedPaths map[interpreter.AddressPath]struct{}
+	migrated map[struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}]struct{}
 }
 
 func newTestReporter() *testReporter {
 	return &testReporter{
-		migratedPaths: map[interpreter.AddressPath]struct{}{},
+		migrated: map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}]struct{}{},
 	}
 }
 
 func (t *testReporter) Migrated(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	_ string,
 ) {
-	t.migratedPaths[addressPath] = struct{}{}
+	key := struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}{
+		StorageKey:    storageKey,
+		StorageMapKey: storageMapKey,
+	}
+	t.migrated[key] = struct{}{}
 }
 
 func (t *testReporter) Error(
-	_ interpreter.AddressPath,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	_ string,
 	_ error,
 ) {
@@ -379,18 +394,21 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 
 	// Check reported migrated paths
 	for identifier, test := range testCases {
-		addressPath := interpreter.AddressPath{
-			Address: account,
-			Path: interpreter.PathValue{
-				Domain:     pathDomain,
-				Identifier: identifier,
+		key := struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}{
+			StorageKey: interpreter.StorageKey{
+				Address: account,
+				Key:     pathDomain.Identifier(),
 			},
+			StorageMapKey: interpreter.StringStorageMapKey(identifier),
 		}
 
 		if test.expectedType == nil {
-			assert.NotContains(t, reporter.migratedPaths, addressPath)
+			assert.NotContains(t, reporter.migrated, key)
 		} else {
-			assert.Contains(t, reporter.migratedPaths, addressPath)
+			assert.Contains(t, reporter.migrated, key)
 		}
 	}
 
@@ -989,16 +1007,19 @@ func TestAccountTypeRehash(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t,
-			map[interpreter.AddressPath]struct{}{
+			map[struct {
+				interpreter.StorageKey
+				interpreter.StorageMapKey
+			}]struct{}{
 				{
-					Address: testAddress,
-					Path: interpreter.PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: string(storageMapKey),
+					StorageKey: interpreter.StorageKey{
+						Address: testAddress,
+						Key:     common.PathDomainStorage.Identifier(),
 					},
+					StorageMapKey: storageMapKey,
 				}: {},
 			},
-			reporter.migratedPaths,
+			reporter.migrated,
 		)
 	})
 

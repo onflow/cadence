@@ -65,14 +65,16 @@ type testCapConsMissingCapabilityID struct {
 }
 
 type testMigration struct {
-	addressPath interpreter.AddressPath
-	migration   string
+	storageKey    interpreter.StorageKey
+	storageMapKey interpreter.StorageMapKey
+	migration     string
 }
 
 type testMigrationError struct {
-	addressPath interpreter.AddressPath
-	migration   string
-	err         error
+	storageKey    interpreter.StorageKey
+	storageMapKey interpreter.StorageMapKey
+	migration     string
+	err           error
 }
 
 type testMigrationReporter struct {
@@ -90,29 +92,33 @@ var _ LinkMigrationReporter = &testMigrationReporter{}
 var _ CapabilityMigrationReporter = &testMigrationReporter{}
 
 func (t *testMigrationReporter) Migrated(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	migration string,
 ) {
 	t.migrations = append(
 		t.migrations,
 		testMigration{
-			addressPath: addressPath,
-			migration:   migration,
+			storageKey:    storageKey,
+			storageMapKey: storageMapKey,
+			migration:     migration,
 		},
 	)
 }
 
 func (t *testMigrationReporter) Error(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	migration string,
 	err error,
 ) {
 	t.errors = append(
 		t.errors,
 		testMigrationError{
-			addressPath: addressPath,
-			migration:   migration,
-			err:         err,
+			storageKey:    storageKey,
+			storageMapKey: storageMapKey,
+			migration:     migration,
+			err:           err,
 		},
 	)
 }
@@ -581,14 +587,12 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 	}
 
 	expectedWrappedCapabilityValueMigration := testMigration{
-		addressPath: interpreter.AddressPath{
+		storageKey: interpreter.StorageKey{
 			Address: testAddress,
-			Path: interpreter.NewUnmeteredPathValue(
-				common.PathDomainStorage,
-				"wrappedCapability",
-			),
+			Key:     common.PathDomainStorage.Identifier(),
 		},
-		migration: "CapabilityValueMigration",
+		storageMapKey: interpreter.StringStorageMapKey("wrappedCapability"),
+		migration:     "CapabilityValueMigration",
 	}
 
 	linkTestCases := []linkTestCase{
@@ -633,24 +637,20 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.NewUnmeteredPathValue(
-							common.PathDomainPrivate,
-							testPathIdentifier,
-						),
+						Key:     common.PathDomainPrivate.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.NewUnmeteredPathValue(
-							common.PathDomainPublic,
-							testPathIdentifier,
-						),
+						Key:     common.PathDomainPublic.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 				expectedWrappedCapabilityValueMigration,
 			},
@@ -696,14 +696,12 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.NewUnmeteredPathValue(
-							common.PathDomainPublic,
-							testPathIdentifier,
-						),
+						Key:     common.PathDomainPublic.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 				expectedWrappedCapabilityValueMigration,
 			},
@@ -749,14 +747,12 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.NewUnmeteredPathValue(
-							common.PathDomainPrivate,
-							testPathIdentifier,
-						),
+						Key:     common.PathDomainPrivate.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 				expectedWrappedCapabilityValueMigration,
 			},
@@ -820,24 +816,20 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.NewUnmeteredPathValue(
-							common.PathDomainPrivate,
-							"test2",
-						),
+						Key:     common.PathDomainPrivate.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey("test2"),
+					migration:     "LinkValueMigration",
 				},
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.NewUnmeteredPathValue(
-							common.PathDomainPrivate,
-							testPathIdentifier,
-						),
+						Key:     common.PathDomainPrivate.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 				expectedWrappedCapabilityValueMigration,
 			},
@@ -885,14 +877,12 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.NewUnmeteredPathValue(
-							common.PathDomainPublic,
-							testPathIdentifier,
-						),
+						Key:     common.PathDomainPublic.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 				expectedWrappedCapabilityValueMigration,
 			},
@@ -1051,14 +1041,12 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.NewUnmeteredPathValue(
-							common.PathDomainPublic,
-							testPathIdentifier,
-						),
+						Key:     common.PathDomainPublic.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 				expectedWrappedCapabilityValueMigration,
 			},
@@ -1097,14 +1085,12 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.NewUnmeteredPathValue(
-							common.PathDomainPrivate,
-							testPathIdentifier,
-						),
+						Key:     common.PathDomainPrivate.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 				expectedWrappedCapabilityValueMigration,
 			},
@@ -1434,24 +1420,20 @@ func TestLinkMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.PathValue{
-							Domain:     common.PathDomainPrivate,
-							Identifier: testPathIdentifier,
-						},
+						Key:     common.PathDomainPrivate.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.PathValue{
-							Domain:     common.PathDomainPublic,
-							Identifier: testPathIdentifier,
-						},
+						Key:     common.PathDomainPublic.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 			},
 			expectedLinkMigrations: []testCapConsLinkMigration{
@@ -1496,14 +1478,12 @@ func TestLinkMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.PathValue{
-							Domain:     common.PathDomainPublic,
-							Identifier: testPathIdentifier,
-						},
+						Key:     common.PathDomainPublic.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 			},
 			expectedLinkMigrations: []testCapConsLinkMigration{
@@ -1538,14 +1518,12 @@ func TestLinkMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.PathValue{
-							Domain:     common.PathDomainPrivate,
-							Identifier: testPathIdentifier,
-						},
+						Key:     common.PathDomainPrivate.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 			},
 			expectedLinkMigrations: []testCapConsLinkMigration{
@@ -1598,24 +1576,20 @@ func TestLinkMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.PathValue{
-							Domain:     common.PathDomainPrivate,
-							Identifier: "test2",
-						},
+						Key:     common.PathDomainPrivate.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey("test2"),
+					migration:     "LinkValueMigration",
 				},
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.PathValue{
-							Domain:     common.PathDomainPrivate,
-							Identifier: testPathIdentifier,
-						},
+						Key:     common.PathDomainPrivate.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 			},
 			expectedLinkMigrations: []testCapConsLinkMigration{
@@ -1747,14 +1721,12 @@ func TestLinkMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.PathValue{
-							Domain:     common.PathDomainPublic,
-							Identifier: testPathIdentifier,
-						},
+						Key:     common.PathDomainPublic.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 			},
 			expectedLinkMigrations: []testCapConsLinkMigration{
@@ -1782,14 +1754,12 @@ func TestLinkMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.PathValue{
-							Domain:     common.PathDomainPrivate,
-							Identifier: testPathIdentifier,
-						},
+						Key:     common.PathDomainPrivate.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 			},
 			expectedLinkMigrations: []testCapConsLinkMigration{
@@ -1832,24 +1802,20 @@ func TestLinkMigration(t *testing.T) {
 			},
 			expectedMigrations: []testMigration{
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.PathValue{
-							Domain:     common.PathDomainPrivate,
-							Identifier: testPathIdentifier,
-						},
+						Key:     common.PathDomainPrivate.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 				{
-					addressPath: interpreter.AddressPath{
+					storageKey: interpreter.StorageKey{
 						Address: testAddress,
-						Path: interpreter.PathValue{
-							Domain:     common.PathDomainPublic,
-							Identifier: testPathIdentifier,
-						},
+						Key:     common.PathDomainPublic.Identifier(),
 					},
-					migration: "LinkValueMigration",
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
 				},
 			},
 			expectedLinkMigrations: []testCapConsLinkMigration{

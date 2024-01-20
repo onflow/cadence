@@ -19,6 +19,8 @@
 package migrations
 
 import (
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -37,34 +39,35 @@ func NewAccountStorage(storage *runtime.Storage, address common.Address) Account
 	}
 }
 
-type PathMigrator func(
+type StorageMapKeyMigrator func(
 	inter *interpreter.Interpreter,
+	storageKey interpreter.StorageKey,
 	storageMap *interpreter.StorageMap,
-	storageKey interpreter.StringStorageMapKey,
-	addressPath interpreter.AddressPath,
+	storageMapKey interpreter.StorageMapKey,
 )
 
 type ValueConverter func(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	value interpreter.Value,
 ) interpreter.Value
 
-func NewValueConverterPathMigrator(convertValue ValueConverter) PathMigrator {
+func NewValueConverterPathMigrator(convertValue ValueConverter) StorageMapKeyMigrator {
 	return func(
 		inter *interpreter.Interpreter,
+		storageKey interpreter.StorageKey,
 		storageMap *interpreter.StorageMap,
-		storageKey interpreter.StringStorageMapKey,
-		addressPath interpreter.AddressPath,
+		storageMapKey interpreter.StorageMapKey,
 	) {
-		value := storageMap.ReadValue(nil, storageKey)
+		value := storageMap.ReadValue(nil, storageMapKey)
 
-		newValue := convertValue(addressPath, value)
+		newValue := convertValue(storageKey, storageMapKey, value)
 		if newValue != nil {
 			// If the converter returns a new value,
 			// then replace the existing value with the new one.
 			storageMap.SetValue(
 				inter,
-				storageKey,
+				storageMapKey,
 				newValue,
 			)
 		}
@@ -74,55 +77,50 @@ func NewValueConverterPathMigrator(convertValue ValueConverter) PathMigrator {
 func (i *AccountStorage) MigratePathsInDomain(
 	inter *interpreter.Interpreter,
 	domain common.PathDomain,
-	migratePath PathMigrator,
+	migrate StorageMapKeyMigrator,
 ) {
-	storageMap := i.storage.GetStorageMap(i.address, domain.Identifier(), false)
+	i.MigrateStorageMap(
+		inter,
+		domain.Identifier(),
+		migrate,
+		func(key atree.Value) interpreter.StorageMapKey {
+			return interpreter.StringStorageMapKey(key.(interpreter.StringAtreeValue))
+		},
+	)
+}
+
+func (i *AccountStorage) MigrateStorageMap(
+	inter *interpreter.Interpreter,
+	domain string,
+	migrate StorageMapKeyMigrator,
+	atreeKeyToStorageMapKey func(atree.Value) interpreter.StorageMapKey,
+) {
+	address := i.address
+
+	storageMap := i.storage.GetStorageMap(address, domain, false)
 	if storageMap == nil || storageMap.Count() == 0 {
 		return
 	}
 
+	storageKey := interpreter.NewStorageKey(nil, address, domain)
+
 	iterator := storageMap.Iterator(inter)
 
-	// Read the keys first, so the iteration wouldn't be affected
+	// Read the keys first, so the iteration won't be affected
 	// by the modification of the storage values.
-	var keys []string
+	var keys []interpreter.StorageMapKey
 	for key, _ := iterator.Next(); key != nil; key, _ = iterator.Next() {
-		identifier := string(key.(interpreter.StringAtreeValue))
+		identifier := atreeKeyToStorageMapKey(key)
 		keys = append(keys, identifier)
 	}
 
-	for _, key := range keys {
-		storageKey := interpreter.StringStorageMapKey(key)
+	for _, storageMapKey := range keys {
 
-		path := interpreter.PathValue{
-			Identifier: key,
-			Domain:     domain,
-		}
-
-		addressPath := interpreter.AddressPath{
-			Address: i.address,
-			Path:    path,
-		}
-
-		migratePath(
+		migrate(
 			inter,
-			storageMap,
 			storageKey,
-			addressPath,
-		)
-	}
-}
-
-func (i *AccountStorage) MigratePathsInDomains(
-	inter *interpreter.Interpreter,
-	domains []common.PathDomain,
-	migratePath PathMigrator,
-) {
-	for _, domain := range domains {
-		i.MigratePathsInDomain(
-			inter,
-			domain,
-			migratePath,
+			storageMap,
+			storageMapKey,
 		)
 	}
 }

@@ -52,20 +52,27 @@ func (*LinkValueMigration) Name() string {
 }
 
 func (m *LinkValueMigration) Migrate(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	value interpreter.Value,
 	inter *interpreter.Interpreter,
 ) (interpreter.Value, error) {
 
-	pathDomain := addressPath.Path.Domain
+	pathValue := storageKeyToPathValue(storageKey, storageMapKey)
+
+	pathDomain := pathValue.Domain
 	if pathDomain != common.PathDomainPublic &&
 		pathDomain != common.PathDomainPrivate {
 
 		return nil, nil
 	}
 
-	accountAddress := addressPath.Address
-	pathValue := addressPath.Path
+	accountAddress := storageKey.Address
+
+	addressPath := interpreter.AddressPath{
+		Address: accountAddress,
+		Path:    pathValue,
+	}
 
 	reporter := m.Reporter
 	accountIDGenerator := m.AccountIDGenerator
@@ -185,6 +192,14 @@ func (m *LinkValueMigration) Migrate(
 		addressValue,
 		borrowStaticType,
 	), nil
+}
+
+func storageKeyToPathValue(storageKey interpreter.StorageKey, storageMapKey interpreter.StorageMapKey) interpreter.PathValue {
+	domain := common.PathDomainFromIdentifier(storageKey.Key)
+	identifier := string(storageMapKey.(interpreter.StringStorageMapKey))
+
+	pathValue := interpreter.NewUnmeteredPathValue(domain, identifier)
+	return pathValue
 }
 
 var authAccountReferenceStaticType = interpreter.NewReferenceStaticType(

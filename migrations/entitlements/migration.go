@@ -352,7 +352,8 @@ func ConvertValueToEntitlements(
 }
 
 func (mig EntitlementsMigration) Migrate(
-	_ interpreter.AddressPath,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (
