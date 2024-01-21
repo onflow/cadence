@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/atree"
@@ -30,6 +31,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -180,17 +182,54 @@ func (testCapMigration) Migrate(
 	return nil, nil
 }
 
+// testCapConMigration
+
+type testCapConMigration struct{}
+
+var _ ValueMigration = testCapConMigration{}
+
+func (testCapConMigration) Name() string {
+	return "testCapConMigration"
+}
+
+func (testCapConMigration) Migrate(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) (interpreter.Value, error) {
+
+	switch value := value.(type) {
+	case *interpreter.StorageCapabilityControllerValue:
+		return interpreter.NewStorageCapabilityControllerValue(
+			nil,
+			value.BorrowType,
+			value.CapabilityID+10,
+			value.TargetPath,
+		), nil
+
+	case *interpreter.AccountCapabilityControllerValue:
+		return interpreter.NewAccountCapabilityControllerValue(
+			nil,
+			value.BorrowType,
+			value.CapabilityID+10,
+		), nil
+	}
+
+	return nil, nil
+}
+
 func TestMultipleMigrations(t *testing.T) {
 	t.Parallel()
 
 	account := common.Address{0x42}
-	pathDomain := common.PathDomainPublic
 
 	type testCase struct {
 		name          string
 		migration     string
 		storedValue   interpreter.Value
 		expectedValue interpreter.Value
+		key           string
 	}
 
 	ledger := NewTestLedger(nil, nil)
@@ -211,24 +250,28 @@ func TestMultipleMigrations(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:          "string_value",
+			key:           common.PathDomainStorage.Identifier(),
 			migration:     "testStringMigration",
 			storedValue:   interpreter.NewUnmeteredStringValue("hello"),
 			expectedValue: interpreter.NewUnmeteredStringValue("updated_hello"),
 		},
 		{
 			name:          "int8_value",
+			key:           common.PathDomainStorage.Identifier(),
 			migration:     "testInt8Migration",
 			storedValue:   interpreter.NewUnmeteredInt8Value(5),
 			expectedValue: interpreter.NewUnmeteredInt8Value(15),
 		},
 		{
 			name:          "int16_value",
+			key:           common.PathDomainStorage.Identifier(),
 			migration:     "", // should not be migrated
 			storedValue:   interpreter.NewUnmeteredInt16Value(5),
 			expectedValue: interpreter.NewUnmeteredInt16Value(5),
 		},
 		{
-			name:      "cap_value",
+			name:      "storage_cap_value",
+			key:       common.PathDomainStorage.Identifier(),
 			migration: "testCapMigration",
 			storedValue: interpreter.NewCapabilityValue(
 				nil,
@@ -251,6 +294,39 @@ func TestMultipleMigrations(t *testing.T) {
 				),
 			),
 		},
+		{
+			name:      "inbox_cap_value",
+			key:       stdlib.InboxStorageDomain,
+			migration: "testCapMigration",
+			storedValue: interpreter.NewPublishedValue(
+				nil,
+				interpreter.AddressValue(common.Address{0x2}),
+				interpreter.NewCapabilityValue(
+					nil,
+					5,
+					interpreter.AddressValue(common.Address{0x1}),
+					interpreter.NewReferenceStaticType(
+						nil,
+						interpreter.UnauthorizedAccess,
+						interpreter.PrimitiveStaticTypeString,
+					),
+				),
+			),
+			expectedValue: interpreter.NewPublishedValue(
+				nil,
+				interpreter.AddressValue(common.Address{0x2}),
+				interpreter.NewCapabilityValue(
+					nil,
+					15,
+					interpreter.AddressValue(common.Address{0x1}),
+					interpreter.NewReferenceStaticType(
+						nil,
+						interpreter.UnauthorizedAccess,
+						interpreter.PrimitiveStaticTypeString,
+					),
+				),
+			),
+		},
 	}
 
 	variableSizedAnyStructStaticType :=
@@ -264,8 +340,14 @@ func TestMultipleMigrations(t *testing.T) {
 		)
 
 	for _, test := range testCases {
+
+		if test.key != common.PathDomainStorage.Identifier() {
+			continue
+		}
+
 		testCases = append(testCases, testCase{
 			name:      "array_" + test.name,
+			key:       test.key,
 			migration: test.migration,
 			storedValue: interpreter.NewArrayValue(
 				inter,
@@ -287,6 +369,7 @@ func TestMultipleMigrations(t *testing.T) {
 
 			testCases = append(testCases, testCase{
 				name:      "dict_key_" + test.name,
+				key:       test.key,
 				migration: test.migration,
 				storedValue: interpreter.NewDictionaryValue(
 					inter,
@@ -308,6 +391,7 @@ func TestMultipleMigrations(t *testing.T) {
 
 		testCases = append(testCases, testCase{
 			name:      "dict_value_" + test.name,
+			key:       test.key,
 			migration: test.migration,
 			storedValue: interpreter.NewDictionaryValue(
 				inter,
@@ -327,6 +411,7 @@ func TestMultipleMigrations(t *testing.T) {
 
 		testCases = append(testCases, testCase{
 			name:          "some_" + test.name,
+			key:           test.key,
 			migration:     test.migration,
 			storedValue:   interpreter.NewSomeValueNonCopying(nil, test.storedValue),
 			expectedValue: interpreter.NewSomeValueNonCopying(nil, test.expectedValue),
@@ -336,6 +421,7 @@ func TestMultipleMigrations(t *testing.T) {
 
 			testCases = append(testCases, testCase{
 				name:      "published_" + test.name,
+				key:       test.key,
 				migration: test.migration,
 				storedValue: interpreter.NewPublishedValue(
 					nil,
@@ -352,6 +438,7 @@ func TestMultipleMigrations(t *testing.T) {
 
 		testCases = append(testCases, testCase{
 			name:      "struct_" + test.name,
+			key:       test.key,
 			migration: test.migration,
 			storedValue: interpreter.NewCompositeValue(
 				inter,
@@ -398,7 +485,7 @@ func TestMultipleMigrations(t *testing.T) {
 
 		inter.WriteStored(
 			account,
-			pathDomain.Identifier(),
+			testCase.key,
 			interpreter.StringStorageMapKey(testCase.name),
 			transferredValue,
 		)
@@ -432,25 +519,20 @@ func TestMultipleMigrations(t *testing.T) {
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 
-	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
-	require.NotNil(t, storageMap)
-	require.Greater(t, storageMap.Count(), uint64(0))
-
-	iterator := storageMap.Iterator(inter)
-
-	testCasesByName := map[string]testCase{}
-
 	for _, testCase := range testCases {
-		testCasesByName[testCase.name] = testCase
-	}
 
-	for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
-		identifier := string(key.(interpreter.StringAtreeValue))
+		t.Run(testCase.name, func(t *testing.T) {
 
-		t.Run(identifier, func(t *testing.T) {
-			testCase, ok := testCasesByName[identifier]
-			require.True(t, ok)
-			utils.AssertValuesEqual(t, inter, testCase.expectedValue, value)
+			storageMap := storage.GetStorageMap(account, testCase.key, false)
+			require.NotNil(t, storageMap)
+
+			readValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(testCase.name))
+
+			utils.AssertValuesEqual(t,
+				inter,
+				testCase.expectedValue,
+				readValue,
+			)
 		})
 	}
 
@@ -461,6 +543,7 @@ func TestMultipleMigrations(t *testing.T) {
 	}][]string{}
 
 	for _, testCase := range testCases {
+
 		if testCase.migration == "" {
 			continue
 		}
@@ -471,7 +554,7 @@ func TestMultipleMigrations(t *testing.T) {
 		}{
 			StorageKey: interpreter.StorageKey{
 				Address: account,
-				Key:     pathDomain.Identifier(),
+				Key:     testCase.key,
 			},
 			StorageMapKey: interpreter.StringStorageMapKey(testCase.name),
 		}
@@ -630,5 +713,117 @@ func TestMigrationError(t *testing.T) {
 			},
 		},
 		reporter.errored,
+	)
+}
+
+func TestCapConMigration(t *testing.T) {
+
+	t.Parallel()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
+	rt := NewTestInterpreterRuntime()
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{testAddress}, nil
+		},
+	}
+
+	// Prepare
+
+	setupTx := `
+	  transaction {
+          prepare(signer: auth(Capabilities) &Account) {
+              signer.capabilities.storage.issue<&AnyStruct>(/storage/foo)
+              signer.capabilities.account.issue<&Account>()
+          }
+      }
+    `
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		runtime.Script{
+			Source: []byte(setupTx),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	storageMap := storage.GetStorageMap(
+		testAddress,
+		stdlib.CapabilityControllerStorageDomain,
+		false,
+	)
+
+	assert.Equal(t, uint64(2), storageMap.Count())
+
+	controller1 := storageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(1))
+	require.IsType(t, &interpreter.StorageCapabilityControllerValue{}, controller1)
+	assert.Equal(t,
+		interpreter.UInt64Value(1),
+		controller1.(*interpreter.StorageCapabilityControllerValue).CapabilityID,
+	)
+
+	controller2 := storageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(2))
+	require.IsType(t, &interpreter.AccountCapabilityControllerValue{}, controller2)
+	assert.Equal(t,
+		interpreter.UInt64Value(2),
+		controller2.(*interpreter.AccountCapabilityControllerValue).CapabilityID,
+	)
+
+	// Migrate
+
+	reporter := newTestReporter()
+
+	migration := NewStorageMigration(inter, storage)
+
+	migration.Migrate(
+		&AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testCapConMigration{},
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	storageMap = storage.GetStorageMap(
+		testAddress,
+		stdlib.CapabilityControllerStorageDomain,
+		false,
+	)
+
+	assert.Equal(t, uint64(2), storageMap.Count())
+
+	controller1 = storageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(1))
+	require.IsType(t, &interpreter.StorageCapabilityControllerValue{}, controller1)
+	assert.Equal(t,
+		interpreter.UInt64Value(11),
+		controller1.(*interpreter.StorageCapabilityControllerValue).CapabilityID,
+	)
+
+	controller2 = storageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(2))
+	require.IsType(t, &interpreter.AccountCapabilityControllerValue{}, controller2)
+	assert.Equal(t,
+		interpreter.UInt64Value(12),
+		controller2.(*interpreter.AccountCapabilityControllerValue).CapabilityID,
 	)
 }
