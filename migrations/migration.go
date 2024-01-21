@@ -23,6 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type ValueMigration interface {
@@ -59,7 +60,7 @@ func NewStorageMigration(
 
 func (m *StorageMigration) Migrate(
 	addressIterator AddressIterator,
-	migratePath StorageMapKeyMigrator,
+	migrate StorageMapKeyMigrator,
 ) {
 	for {
 		address := addressIterator.NextAddress()
@@ -67,7 +68,7 @@ func (m *StorageMigration) Migrate(
 			break
 		}
 
-		m.MigrateAccount(address, migratePath)
+		m.MigrateAccount(address, migrate)
 	}
 }
 
@@ -77,19 +78,29 @@ func (m *StorageMigration) Commit() error {
 
 func (m *StorageMigration) MigrateAccount(
 	address common.Address,
-	migratePath StorageMapKeyMigrator,
+	migrate StorageMapKeyMigrator,
 ) {
 	accountStorage := NewAccountStorage(m.storage, address)
 
 	for _, domain := range common.AllPathDomains {
-		accountStorage.MigratePathsInDomain(
+		accountStorage.MigrateStringKeys(
 			m.interpreter,
-			domain,
-			migratePath,
+			domain.Identifier(),
+			migrate,
 		)
 	}
 
-	// TODO: migrate all storage domains, also inbox and cap cons ones
+	accountStorage.MigrateStringKeys(
+		m.interpreter,
+		stdlib.InboxStorageDomain,
+		migrate,
+	)
+
+	accountStorage.MigrateUint64Keys(
+		m.interpreter,
+		stdlib.CapabilityControllerStorageDomain,
+		migrate,
+	)
 }
 
 func (m *StorageMigration) NewValueMigrationsPathMigrator(
