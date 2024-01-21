@@ -74,17 +74,32 @@ func NewValueConverterPathMigrator(convertValue ValueConverter) StorageMapKeyMig
 	}
 }
 
-func (i *AccountStorage) MigratePathsInDomain(
+func (i *AccountStorage) MigrateStringKeys(
 	inter *interpreter.Interpreter,
-	domain common.PathDomain,
+	key string,
 	migrate StorageMapKeyMigrator,
 ) {
 	i.MigrateStorageMap(
 		inter,
-		domain.Identifier(),
+		key,
 		migrate,
 		func(key atree.Value) interpreter.StorageMapKey {
 			return interpreter.StringStorageMapKey(key.(interpreter.StringAtreeValue))
+		},
+	)
+}
+
+func (i *AccountStorage) MigrateUint64Keys(
+	inter *interpreter.Interpreter,
+	key string,
+	migrate StorageMapKeyMigrator,
+) {
+	i.MigrateStorageMap(
+		inter,
+		key,
+		migrate,
+		func(key atree.Value) interpreter.StorageMapKey {
+			return interpreter.Uint64StorageMapKey(key.(interpreter.Uint64AtreeValue))
 		},
 	)
 }
