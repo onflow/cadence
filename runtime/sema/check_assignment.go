@@ -53,7 +53,13 @@ func (checker *Checker) checkAssignment(
 
 	targetType = checker.visitAssignmentValueType(target)
 
-	valueType = checker.VisitExpression(value, targetType)
+	// For all non-self member assignments,
+	// require an explicit type annotation for references
+	checkValue := checker.VisitExpression
+	if checker.accessedSelfMember(target) == nil {
+		checkValue = checker.VisitExpressionWithReferenceCheck
+	}
+	valueType = checkValue(value, targetType)
 
 	// NOTE: Visiting the `value` checks the compatibility between value and target types.
 	// Check for the *target* type, so that assignment using non-resource typed value (e.g. `nil`)
@@ -324,7 +330,7 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 	return variable.Type
 }
 
-var mutableEntitledAccess = NewEntitlementSetAccess(
+var mutateEntitledAccess = NewEntitlementSetAccess(
 	[]*EntitlementType{MutateType},
 	Disjunction,
 )
@@ -344,10 +350,10 @@ func (checker *Checker) visitIndexExpressionAssignment(
 	indexedRefType, isReference := MaybeReferenceType(indexExprTypes.IndexedType)
 
 	if isReference &&
-		!mutableEntitledAccess.PermitsAccess(indexedRefType.Authorization) &&
+		!mutateEntitledAccess.PermitsAccess(indexedRefType.Authorization) &&
 		!insertAndRemoveEntitledAccess.PermitsAccess(indexedRefType.Authorization) {
 		checker.report(&UnauthorizedReferenceAssignmentError{
-			RequiredAccess: [2]Access{mutableEntitledAccess, insertAndRemoveEntitledAccess},
+			RequiredAccess: [2]Access{mutateEntitledAccess, insertAndRemoveEntitledAccess},
 			FoundAccess:    indexedRefType.Authorization,
 			Range:          ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression),
 		})

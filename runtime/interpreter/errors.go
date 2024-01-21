@@ -1018,7 +1018,7 @@ func (e CapabilityAddressPublishingError) Error() string {
 
 // NestedReferenceError
 type NestedReferenceError struct {
-	Value *EphemeralReferenceValue
+	Value ReferenceValue
 	LocationRange
 }
 
@@ -1031,4 +1031,55 @@ func (e NestedReferenceError) Error() string {
 		"cannot create a nested reference to %s",
 		e.Value.String(),
 	)
+}
+
+// InclusiveRangeConstructionError
+
+type InclusiveRangeConstructionError struct {
+	LocationRange
+	Message string
+}
+
+var _ errors.UserError = InclusiveRangeConstructionError{}
+
+func (InclusiveRangeConstructionError) IsUserError() {}
+
+func (e InclusiveRangeConstructionError) Error() string {
+	const message = "InclusiveRange construction failed"
+	if e.Message == "" {
+		return message
+	}
+	return fmt.Sprintf("%s: %s", message, e.Message)
+}
+
+// InvalidCapabilityIssueTypeError
+type InvalidCapabilityIssueTypeError struct {
+	ExpectedTypeDescription string
+	ActualType              sema.Type
+	LocationRange
+}
+
+var _ errors.UserError = InvalidCapabilityIssueTypeError{}
+
+func (InvalidCapabilityIssueTypeError) IsUserError() {}
+
+func (e InvalidCapabilityIssueTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid type: expected %s, got `%s`",
+		e.ExpectedTypeDescription,
+		e.ActualType.QualifiedString(),
+	)
+}
+
+// ResourceReferenceDereferenceError
+type ResourceReferenceDereferenceError struct {
+	LocationRange
+}
+
+var _ errors.InternalError = ResourceReferenceDereferenceError{}
+
+func (ResourceReferenceDereferenceError) IsInternalError() {}
+
+func (e ResourceReferenceDereferenceError) Error() string {
+	return "internal error: resource-references cannot be dereferenced"
 }

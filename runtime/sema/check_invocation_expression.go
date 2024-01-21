@@ -472,15 +472,10 @@ func (checker *Checker) checkInvocation(
 			argumentExpressions[i] = argument.Expression
 		}
 
-		invocationRange := ast.NewRangeFromPositioned(
-			checker.memoryGauge,
-			invocationExpression,
-		)
-
 		functionType.ArgumentExpressionsCheck(
 			checker,
 			argumentExpressions,
-			invocationRange,
+			invocationExpression,
 		)
 	}
 
@@ -497,6 +492,18 @@ func (checker *Checker) checkInvocation(
 		typeArguments,
 		invocationExpression,
 	)
+
+	// The invokable type might have special checks for the type parameters.
+
+	if functionType.TypeArgumentsCheck != nil {
+		functionType.TypeArgumentsCheck(
+			checker.memoryGauge,
+			typeArguments,
+			invocationExpression.TypeArguments,
+			invocationExpression,
+			checker.report,
+		)
+	}
 
 	// Save types in the elaboration
 
@@ -557,21 +564,93 @@ func (checker *Checker) checkInvocationRequiredArgument(
 
 	var argumentType Type
 
-	if len(functionType.TypeParameters) == 0 {
-		// If the function doesn't use generic types, then the
-		// param types can be used to infer the types for arguments.
-		argumentType = checker.VisitExpression(argument.Expression, parameterType)
+	typeParameterCount := len(functionType.TypeParameters)
+
+	// If all type parameters have been bound to a type,
+	// then resolve the parameter type with the type arguments,
+	// and propose the parameter type as the expected type for the argument.
+	if typeParameters.Len() == typeParameterCount {
+
+		// Optimization: only resolve if there are type parameters.
+		// This avoids unnecessary work for non-generic functions.
+		if typeParameterCount > 0 {
+			parameterType = parameterType.Resolve(typeParameters)
+			// If the type parameter could not be resolved, use the invalid type.
+			if parameterType == nil {
+				parameterType = InvalidType
+			}
+		}
+
+		// If the parameter type is or contains a reference type in particular,
+		// we do NOT use it as the expected type,
+		// to require an explicit type annotation in the invocation.
+		//
+		// This is done to avoid the following situation:
+
+		// For arguments in invocations, the parameter type is not obvious at the call-site,
+		// which is potentially dangerous if the function is defined in a different location,
+		// and the parameter type potentially requires an authorization.
+		//
+		// For example, consider:
+		//
+		//   // defined elsewhere, is going to mutate the passed array
+		//   fun foo(ints: auth(Mutate) &[Int]) {}
+		//
+		//   let ints = [1, 2, 3]
+		//   // would implicitly allow mutation
+		//   foo(&ints)
+		//
+		// A programmer should be able to look at a piece of code,
+		// and reason locally about whether a type will be inferred for a value
+		// based solely on how that value is used syntactically,
+		// not needing to worry about the actual or expected type of the value.
+		//
+		// Requiring an explicit type for *all* references,
+		// independent of if they require an authorization or not,
+		// is simple and allows the developer to see locally, and purely syntactically,
+		// that they are passing a reference and thus must annotate it.
+
+		expectedType := parameterType
+		if parameterType.IsOrContainsReferenceType() {
+			expectedType = nil
+		}
+
+		argumentType = checker.VisitExpression(argument.Expression, expectedType)
+
+		// If we did not pass an expected type,
+		// we must manually check that the argument type and the parameter type are compatible.
+
+		if expectedType == nil {
+			// Check that the type of the argument matches the type of the parameter.
+
+			checker.checkInvocationArgumentParameterTypeCompatibility(
+				argument.Expression,
+				argumentType,
+				parameterType,
+			)
+		}
+
 	} else {
-		// TODO: pass the expected type to support for parameters
+		// If there are still type parameters that have not been bound to a type,
+		// then check the argument without an expected type.
+		//
+		// We will then have to manually check that the argument type is compatible
+		// with the parameter type (see below).
+
 		argumentType = checker.VisitExpression(argument.Expression, nil)
 
 		// Try to unify the parameter type with the argument type.
 		// If unification fails, fall back to the parameter type for now.
 
-		argumentRange := ast.NewRangeFromPositioned(checker.memoryGauge, argument.Expression)
-
-		if parameterType.Unify(argumentType, typeParameters, checker.report, argumentRange) {
+		if parameterType.Unify(
+			argumentType,
+			typeParameters,
+			checker.report,
+			checker.memoryGauge,
+			argument.Expression,
+		) {
 			parameterType = parameterType.Resolve(typeParameters)
+			// If the type parameter could not be resolved, use the invalid type.
 			if parameterType == nil {
 				parameterType = InvalidType
 			}
@@ -579,7 +658,6 @@ func (checker *Checker) checkInvocationRequiredArgument(
 
 		// Check that the type of the argument matches the type of the parameter.
 
-		// TODO: remove this once type inferring support for parameters is added
 		checker.checkInvocationArgumentParameterTypeCompatibility(
 			argument.Expression,
 			argumentType,
@@ -674,7 +752,7 @@ func (checker *Checker) checkAndBindGenericTypeParameterTypeArguments(
 		// If the type parameter corresponding to the type argument has a type bound,
 		// then check that the argument is a subtype of the type bound.
 
-		err := typeParameter.checkTypeBound(ty, ast.NewRangeFromPositioned(checker.memoryGauge, rawTypeArgument))
+		err := typeParameter.checkTypeBound(ty, checker.memoryGauge, rawTypeArgument)
 		checker.report(err)
 
 		// Bind the type argument to the type parameter

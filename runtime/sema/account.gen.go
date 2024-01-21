@@ -1477,6 +1477,29 @@ const Account_StorageCapabilitiesTypeIssueFunctionDocString = `
 Issue/create a new storage capability.
 `
 
+const Account_StorageCapabilitiesTypeIssueWithTypeFunctionName = "issueWithType"
+
+var Account_StorageCapabilitiesTypeIssueWithTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: NewTypeAnnotation(StoragePathType),
+		},
+		{
+			Identifier:     "type",
+			TypeAnnotation: NewTypeAnnotation(MetaType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&CapabilityType{},
+	),
+}
+
+const Account_StorageCapabilitiesTypeIssueWithTypeFunctionDocString = `
+Issue/create a new storage capability.
+`
+
 const Account_StorageCapabilitiesTypeGetControllerFunctionName = "getController"
 
 var Account_StorageCapabilitiesTypeGetControllerFunctionType = &FunctionType{
@@ -1599,6 +1622,16 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_StorageCapabilitiesType,
 			newEntitlementAccess(
+				[]Type{CapabilitiesType, StorageCapabilitiesType, IssueStorageCapabilityControllerType},
+				Disjunction,
+			),
+			Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
+			Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
+			Account_StorageCapabilitiesTypeIssueWithTypeFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			Account_StorageCapabilitiesType,
+			newEntitlementAccess(
 				[]Type{CapabilitiesType, StorageCapabilitiesType, GetStorageCapabilityControllerType},
 				Disjunction,
 			),
@@ -1657,6 +1690,25 @@ var Account_AccountCapabilitiesTypeIssueFunctionType = &FunctionType{
 }
 
 const Account_AccountCapabilitiesTypeIssueFunctionDocString = `
+Issue/create a new account capability.
+`
+
+const Account_AccountCapabilitiesTypeIssueWithTypeFunctionName = "issueWithType"
+
+var Account_AccountCapabilitiesTypeIssueWithTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "type",
+			TypeAnnotation: NewTypeAnnotation(MetaType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&CapabilityType{},
+	),
+}
+
+const Account_AccountCapabilitiesTypeIssueWithTypeFunctionDocString = `
 Issue/create a new account capability.
 `
 
@@ -1767,6 +1819,16 @@ func init() {
 			Account_AccountCapabilitiesTypeIssueFunctionName,
 			Account_AccountCapabilitiesTypeIssueFunctionType,
 			Account_AccountCapabilitiesTypeIssueFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			Account_AccountCapabilitiesType,
+			newEntitlementAccess(
+				[]Type{CapabilitiesType, AccountCapabilitiesType, IssueAccountCapabilityControllerType},
+				Disjunction,
+			),
+			Account_AccountCapabilitiesTypeIssueWithTypeFunctionName,
+			Account_AccountCapabilitiesTypeIssueWithTypeFunctionType,
+			Account_AccountCapabilitiesTypeIssueWithTypeFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			Account_AccountCapabilitiesType,

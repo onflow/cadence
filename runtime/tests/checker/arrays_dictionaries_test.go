@@ -2478,3 +2478,182 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 		})
 	})
 }
+
+func TestCheckArrayToVariableSized(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun testInt() {
+			let x: [Int; 4] = [1, 2, 3, 100]
+			let y: [Int] = x.toVariableSized()
+		}
+
+		fun testString() {
+			let x: [String; 4] = ["ab", "cd", "ef", "gh"]
+			let y: [String] = x.toVariableSized()
+		}
+	`)
+
+	require.NoError(t, err)
+}
+
+func TestCheckArrayToVariableSizedInvalidArgs(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x: [Int16; 3] = [1, 2, 3]
+			let y = x.toVariableSized(100)
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ExcessiveArgumentsError{}, errs[0])
+}
+
+func TestCheckVariableSizedArrayToVariableSizedInvalid(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() : [Int] {
+			let xs: [Int] = [1, 2, 3]
+
+			return xs.toVariableSized()
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
+func TestCheckResourceArrayToVariableSizedInvalid(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		resource X {}
+
+		fun test() : @[X] {
+			let xs: @[X; 1] <- [<-create X()]
+
+			let varsized_xs <- xs.toVariableSized()
+			destroy xs
+			return <-varsized_xs
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+}
+
+func TestCheckArrayToConstantSized(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun testInt() {
+			let x: [Int] = [1, 2, 3, 100]
+			let y: [Int; 4]? = x.toConstantSized<[Int;4]>()
+		}
+
+		fun testString() {
+			let x: [String] = ["ab", "cd", "ef", "gh"]
+			let y: [String; 4]? = x.toConstantSized<[String; 4]>()
+			let y_incorrect_size: [String; 3]? = x.toConstantSized<[String; 3]>()
+		}
+	`)
+
+	require.NoError(t, err)
+}
+
+func TestCheckArrayToConstantSizedInvalidArgs(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x: [Int16] = [1, 2, 3]
+			let y = x.toConstantSized<[Int16; 3]>(100)
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ExcessiveArgumentsError{}, errs[0])
+}
+
+func TestCheckArrayToConstantSizedInvalidTypeArgument(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x: [Int16] = [1, 2, 3]
+			let y = x.toConstantSized<String>()
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+}
+
+func TestCheckArrayToConstantSizedInvalidTypeArgumentInnerType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x: [Int16] = [1, 2, 3]
+			let y = x.toConstantSized<[Int; 3]>()
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+}
+
+func TestCheckConstantSizedArrayToConstantSizedInvalid(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() : [Int; 3]? {
+			let xs: [Int; 3] = [1, 2, 3]
+
+			return xs.toConstantSized<[Int; 3]>()
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
+func TestCheckResourceArrayToConstantSizedInvalid(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		resource X {}
+
+		fun test() : @[X;1]? {
+			let xs: @[X] <- [<-create X()]
+
+			let constsized_xs <- xs.toConstantSized<@[X; 1]>()
+			destroy xs
+			return <-constsized_xs
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+}

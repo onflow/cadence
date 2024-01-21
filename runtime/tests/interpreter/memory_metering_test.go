@@ -9055,6 +9055,10 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 
 		for primitiveStaticType := range interpreter.PrimitiveStaticTypes {
 
+			if !primitiveStaticType.IsDefined() || primitiveStaticType.IsDeprecated() { //nolint:staticcheck
+				continue
+			}
+
 			switch primitiveStaticType {
 			case interpreter.PrimitiveStaticTypeAny,
 				interpreter.PrimitiveStaticTypeUnknown,
@@ -9063,13 +9067,6 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 			}
 
 			semaType := primitiveStaticType.SemaType()
-
-			// Some primitive static types are deprecated,
-			// and only exist for migration purposes,
-			// so do not have an equivalent sema type
-			if semaType == nil {
-				continue
-			}
 
 			switch semaType.(type) {
 			case *sema.EntitlementType,

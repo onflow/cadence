@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package type_value
+package statictypes
 
 import (
 	"testing"
@@ -33,36 +33,8 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-var _ migrations.Reporter = &testReporter{}
-
-type testReporter struct {
-	migratedPaths map[interpreter.AddressPath]struct{}
-}
-
-func newTestReporter() *testReporter {
-	return &testReporter{
-		migratedPaths: map[interpreter.AddressPath]struct{}{},
-	}
-}
-
-func (t *testReporter) Migrated(
-	addressPath interpreter.AddressPath,
-	_ string,
-) {
-	t.migratedPaths[addressPath] = struct{}{}
-}
-
-func (t *testReporter) Error(
-	_ interpreter.AddressPath,
-	_ string,
-	_ error,
-) {
-}
-
 const fooBarQualifiedIdentifier = "Foo.Bar"
 const fooBazQualifiedIdentifier = "Foo.Baz"
-
-var testAddress = common.Address{0x42}
 
 var fooAddressLocation = common.NewAddressLocation(nil, testAddress, "Foo")
 
@@ -147,7 +119,7 @@ func newIntersectionStaticTypeWithTwoInterfacesReversed() *interpreter.Intersect
 	)
 }
 
-func TestTypeValueMigration(t *testing.T) {
+func TestIntersectionTypeMigration(t *testing.T) {
 	t.Parallel()
 
 	pathDomain := common.PathDomainPublic
@@ -429,7 +401,7 @@ func TestTypeValueMigration(t *testing.T) {
 		},
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
-			NewTypeValueMigration(),
+			NewStaticTypeMigration(),
 		),
 	)
 
@@ -494,25 +466,10 @@ func TestTypeValueMigration(t *testing.T) {
 	}
 }
 
-func storeTypeValue(
-	inter *interpreter.Interpreter,
-	address common.Address,
-	domain common.PathDomain,
-	pathIdentifier string,
-	staticType interpreter.StaticType,
-) {
-	inter.WriteStored(
-		address,
-		domain.Identifier(),
-		interpreter.StringStorageMapKey(pathIdentifier),
-		interpreter.NewTypeValue(inter, staticType),
-	)
-}
-
-// TestRehash stores a dictionary in storage,
+// TestIntersectionTypeRehash stores a dictionary in storage,
 // which has a key that is a type value with a restricted type that has two interface types,
 // runs the migration, and ensures the dictionary is still usable
-func TestRehash(t *testing.T) {
+func TestIntersectionTypeRehash(t *testing.T) {
 
 	t.Parallel()
 
@@ -609,7 +566,7 @@ func TestRehash(t *testing.T) {
 			},
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
-				NewTypeValueMigration(),
+				NewStaticTypeMigration(),
 			),
 		)
 
@@ -705,8 +662,11 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			)
 			dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
 
+			intersectionStaticType := newIntersectionStaticTypeWithTwoInterfacesReversed()
+			intersectionStaticType.LegacyType = interpreter.PrimitiveStaticTypeAnyStruct
+
 			intersectionType := &migrations.LegacyIntersectionType{
-				IntersectionStaticType: newIntersectionStaticTypeWithTwoInterfacesReversed(),
+				IntersectionStaticType: intersectionStaticType,
 			}
 
 			typeValue := interpreter.NewUnmeteredTypeValue(
@@ -725,7 +685,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			// NOTE: intentionally in reverse order
 			assert.Equal(t,
-				common.TypeID("{A.4200000000000000.Foo.Baz,A.4200000000000000.Foo.Bar}"),
+				common.TypeID("AnyStruct{A.4200000000000000.Foo.Baz,A.4200000000000000.Foo.Bar}"),
 				intersectionType.ID(),
 			)
 
@@ -767,7 +727,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 				},
 				migration.NewValueMigrationsPathMigrator(
 					reporter,
-					NewTypeValueMigration(),
+					NewStaticTypeMigration(),
 				),
 			)
 
@@ -837,8 +797,11 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			)
 			dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
 
+			intersectionStaticType := newIntersectionStaticTypeWithTwoInterfacesReversed()
+			intersectionStaticType.LegacyType = interpreter.PrimitiveStaticTypeAnyStruct
+
 			intersectionType := &migrations.LegacyIntersectionType{
-				IntersectionStaticType: newIntersectionStaticTypeWithTwoInterfacesReversed(),
+				IntersectionStaticType: intersectionStaticType,
 			}
 
 			typeValue := interpreter.NewUnmeteredTypeValue(
@@ -858,7 +821,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			// NOTE: intentionally in reverse order
 			assert.Equal(t,
-				common.TypeID("{A.4200000000000000.Foo.Baz,A.4200000000000000.Foo.Bar}"),
+				common.TypeID("AnyStruct{A.4200000000000000.Foo.Baz,A.4200000000000000.Foo.Bar}"),
 				intersectionType.ID(),
 			)
 
@@ -900,7 +863,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 				},
 				migration.NewValueMigrationsPathMigrator(
 					reporter,
-					NewTypeValueMigration(),
+					NewStaticTypeMigration(),
 				),
 			)
 

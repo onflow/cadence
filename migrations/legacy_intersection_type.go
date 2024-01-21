@@ -43,6 +43,11 @@ func (t *LegacyIntersectionType) ID() common.TypeID {
 	}
 
 	var result strings.Builder
+
+	if t.LegacyType != nil {
+		result.WriteString(string(t.LegacyType.ID()))
+	}
+
 	result.WriteByte('{')
 	// NOTE: no sorting
 	for i, interfaceTypeID := range interfaceTypeIDs {

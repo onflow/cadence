@@ -292,6 +292,104 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("InclusiveRange<Int16>", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			access(all) fun main(arg: InclusiveRange<Int16>) {
+			}
+		`
+
+		err := executeScript(
+			t,
+			script,
+			cadence.NewInclusiveRange(cadence.NewInt16(1), cadence.NewInt16(2), cadence.NewInt16(1)),
+		)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("InclusiveRange<UInt16> as AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			access(all) fun main(arg: AnyStruct) {
+			}
+		`
+
+		err := executeScript(
+			t,
+			script,
+			cadence.NewInclusiveRange(
+				cadence.NewUInt16(1),
+				cadence.NewUInt16(2),
+				cadence.NewUInt16(1),
+			),
+		)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("Invalid InclusiveRange<Integer>", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			access(all) fun main(arg: InclusiveRange<Integer>) {
+			}
+		`
+
+		err := executeScript(
+			t,
+			script,
+			cadence.NewInclusiveRange(cadence.NewInt16(1), cadence.NewInt16(2), cadence.NewInt16(1)),
+		)
+
+		var checkerError *sema.CheckerError
+		require.ErrorAs(t, err, &checkerError)
+
+		errs := checker.RequireCheckerErrors(t, checkerError, 1)
+		assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Invalid InclusiveRange<Int16> with mixed value types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			access(all) fun main(arg: InclusiveRange<Int16>) {
+			}
+		`
+
+		err := executeScript(
+			t,
+			script,
+			cadence.NewInclusiveRange(cadence.NewInt16(1), cadence.NewUInt(2), cadence.NewUInt(1)),
+		)
+
+		var entryPointErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &entryPointErr)
+	})
+
+	t.Run("Invalid InclusiveRange<Integer> with mixed value types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			access(all) fun main(arg: InclusiveRange<Integer>) {
+			}
+		`
+
+		err := executeScript(
+			t,
+			script,
+			cadence.NewInclusiveRange(cadence.NewInt16(1), cadence.NewUInt(2), cadence.NewUInt(1)),
+		)
+
+		var checkerError *sema.CheckerError
+		require.ErrorAs(t, err, &checkerError)
+
+		errs := checker.RequireCheckerErrors(t, checkerError, 1)
+		assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+	})
+
 	t.Run("Capability", func(t *testing.T) {
 		t.Parallel()
 

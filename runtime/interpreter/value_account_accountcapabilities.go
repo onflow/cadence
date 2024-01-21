@@ -38,6 +38,7 @@ func NewAccountAccountCapabilitiesValue(
 	getControllersFunction FunctionValue,
 	forEachControllerFunction FunctionValue,
 	issueFunction FunctionValue,
+	issueWithTypeFunction FunctionValue,
 ) Value {
 
 	fields := map[string]Value{
@@ -45,6 +46,7 @@ func NewAccountAccountCapabilitiesValue(
 		sema.Account_AccountCapabilitiesTypeGetControllersFunctionName:    getControllersFunction,
 		sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction,
 		sema.Account_AccountCapabilitiesTypeIssueFunctionName:             issueFunction,
+		sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName:     issueWithTypeFunction,
 	}
 
 	var str string

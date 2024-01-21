@@ -2350,6 +2350,7 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 	}
 
 	checker.checkInvalidInterfaceAsType(typeAnnotation.Type, pos)
+	typeAnnotation.Type.CheckInstantiated(pos, checker.memoryGauge, checker.report)
 }
 
 func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition) {
@@ -2474,7 +2475,8 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 
 				err := typeParameter.checkTypeBound(
 					typeArgument,
-					ast.NewRangeFromPositioned(checker.memoryGauge, rawTypeArgument),
+					checker.memoryGauge,
+					rawTypeArgument,
 				)
 				checker.report(err)
 			}
@@ -2502,7 +2504,12 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 		return ty
 	}
 
-	return parameterizedType.Instantiate(typeArguments, checker.report)
+	return parameterizedType.Instantiate(
+		checker.memoryGauge,
+		typeArguments,
+		t.TypeArguments,
+		checker.report,
+	)
 }
 
 func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {
@@ -2520,6 +2527,65 @@ func (checker *Checker) VisitExpressionWithForceType(expr ast.Expression, expect
 	// Always return 'visibleType' as the type of the expression,
 	// to avoid bubbling up type-errors of inner expressions.
 	visibleType, _ := checker.visitExpressionWithForceType(expr, expectedType, forceType)
+	return visibleType
+}
+
+func (checker *Checker) VisitExpressionWithReferenceCheck(expr ast.Expression, targetType Type) Type {
+
+	// If the target type is or contains a reference type in particular,
+	// we do NOT use it as the expected type,
+	// to require an explicit type annotation and not infer it.
+	//
+	// This is done to avoid the following situation:
+	//
+	// For arguments in invocations, and for values of assignments,
+	// the target type is not obvious, which is potentially dangerous
+	// if the invoked function or assigned field is defined in a different location,
+	// and the target type potentially requires an authorization.
+	//
+	// For example, consider:
+	//
+	//   // defined elsewhere, is going to mutate the passed array
+	//   fun foo(ints: auth(Mutate) &[Int]) {}
+	//
+	//   let ints = [1, 2, 3]
+	//   // would implicitly allow mutation
+	//   foo(&ints)
+	//
+	// A programmer should be able to look at a piece of code,
+	// and reason locally about whether a type will be inferred for a value
+	// based solely on how that value is used syntactically,
+	// not needing to worry about the actual or expected type of the value.
+	//
+	// Requiring an explicit type for *all* references,
+	// independent of if they require an authorization or not,
+	// is simple and allows the developer to see locally, and purely syntactically,
+	// that they are passing a reference and thus must annotate it.
+
+	expectedType := targetType
+	if expectedType.IsOrContainsReferenceType() {
+		expectedType = nil
+	}
+
+	visibleType := checker.VisitExpression(expr, expectedType)
+
+	// If we did not pass an expected type,
+	// we must manually check that the argument type and the parameter type are compatible.
+
+	if expectedType == nil &&
+		!visibleType.IsInvalidType() &&
+		!IsSubType(visibleType, targetType) {
+
+		checker.report(
+			&TypeMismatchError{
+				ExpectedType: targetType,
+				ActualType:   visibleType,
+				Expression:   expr,
+				Range:        checker.expressionRange(expr),
+			},
+		)
+	}
+
 	return visibleType
 }
 

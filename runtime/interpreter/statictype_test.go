@@ -688,6 +688,56 @@ func TestDictionaryStaticType_Equal(t *testing.T) {
 	})
 }
 
+func TestInclusiveRangeStaticType_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt256,
+			}.Equal(
+				InclusiveRangeStaticType{
+					ElementType: PrimitiveStaticTypeInt256,
+				},
+			),
+		)
+	})
+
+	t.Run("different member types", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt,
+			}.Equal(
+				InclusiveRangeStaticType{
+					ElementType: PrimitiveStaticTypeWord256,
+				},
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt,
+			}.Equal(
+				&VariableSizedStaticType{
+					Type: PrimitiveStaticTypeInt,
+				},
+			),
+		)
+	})
+}
+
 func TestIntersectionStaticType_Equal(t *testing.T) {
 
 	t.Parallel()
@@ -1552,7 +1602,15 @@ func TestStaticTypeConversion(t *testing.T) {
 			semaType:   sema.HashableStructType,
 			staticType: PrimitiveStaticTypeHashableStruct,
 		},
-
+		{
+			name: "InclusiveRange",
+			semaType: &sema.InclusiveRangeType{
+				MemberType: sema.IntType,
+			},
+			staticType: InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt,
+			},
+		},
 		// Deprecated primitive static types, only exist for migration purposes
 		{
 			name:           "AuthAccount",
@@ -1566,56 +1624,6 @@ func TestStaticTypeConversion(t *testing.T) {
 			staticType:     PrimitiveStaticTypePublicAccount,
 			noSemaToStatic: true,
 		},
-		{
-			name:       "AuthAccount.Contracts",
-			staticType: PrimitiveStaticTypeAuthAccountContracts,
-			semaType:   nil,
-		},
-		{
-			name:       "PublicAccount.Contracts",
-			staticType: PrimitiveStaticTypePublicAccountContracts,
-			semaType:   nil,
-		},
-		{
-			name:       "AuthAccount.Keys",
-			staticType: PrimitiveStaticTypeAuthAccountKeys,
-			semaType:   nil,
-		},
-		{
-			name:       "PublicAccount.Keys",
-			staticType: PrimitiveStaticTypePublicAccountKeys,
-			semaType:   nil,
-		},
-		{
-			name:       "AuthAccount.Inbox",
-			staticType: PrimitiveStaticTypeAuthAccountInbox,
-			semaType:   nil,
-		},
-		{
-			name:       "AuthAccount.StorageCapabilities",
-			staticType: PrimitiveStaticTypeAuthAccountStorageCapabilities,
-			semaType:   nil,
-		},
-		{
-			name:       "AuthAccount.AccountCapabilities",
-			staticType: PrimitiveStaticTypeAuthAccountAccountCapabilities,
-			semaType:   nil,
-		},
-		{
-			name:       "AuthAccount.Capabilities",
-			staticType: PrimitiveStaticTypeAuthAccountCapabilities,
-			semaType:   nil,
-		},
-		{
-			name:       "PublicAccount.Capabilities",
-			staticType: PrimitiveStaticTypePublicAccountCapabilities,
-			semaType:   nil,
-		},
-		{
-			name:       "AccountKey",
-			staticType: PrimitiveStaticTypeAccountKey,
-			semaType:   nil,
-		},
 	}
 
 	test := func(test testCase) {
@@ -1625,7 +1633,7 @@ func TestStaticTypeConversion(t *testing.T) {
 
 			// Test sema to static
 
-			if test.semaType != nil && !test.noSemaToStatic {
+			if !test.noSemaToStatic {
 				convertedStaticType := ConvertSemaToStaticType(nil, test.semaType)
 				require.Equal(t,
 					test.staticType,
@@ -1699,7 +1707,7 @@ func TestStaticTypeConversion(t *testing.T) {
 	}
 
 	for ty := PrimitiveStaticType(1); ty < PrimitiveStaticType_Count; ty++ {
-		if !ty.IsDefined() {
+		if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 			continue
 		}
 		if _, ok := testedStaticTypes[ty]; !ok {
@@ -2298,4 +2306,137 @@ func TestReferenceStaticType_String(t *testing.T) {
 			referenceType.String(),
 		)
 	})
+}
+
+func TestStaticType_IsDeprecated(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		name     string
+		ty       StaticType
+		expected bool
+		genTy    func(innerType PrimitiveStaticType) StaticType
+	}
+
+	tests := []testCase{
+		{
+			name: "Capability, with type",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &CapabilityStaticType{
+					BorrowType: innerType,
+				}
+			},
+		},
+		{
+			name:     "Capability, without type",
+			ty:       &CapabilityStaticType{},
+			expected: false,
+		},
+		{
+			name: "Variable-sized array",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &VariableSizedStaticType{
+					Type: innerType,
+				}
+			},
+		},
+		{
+			name: "Constant-sized array",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &ConstantSizedStaticType{
+					Type: innerType,
+					Size: 42,
+				}
+			},
+		},
+		{
+			name: "Optional",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &OptionalStaticType{
+					Type: innerType,
+				}
+			},
+		},
+		{
+			name: "Reference",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &ReferenceStaticType{
+					ReferencedType: innerType,
+				}
+			},
+		},
+		{
+			name: "Dictionary, key",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &DictionaryStaticType{
+					KeyType:   innerType,
+					ValueType: PrimitiveStaticTypeVoid,
+				}
+			},
+		},
+		{
+			name: "Dictionary, value",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &DictionaryStaticType{
+					KeyType:   PrimitiveStaticTypeVoid,
+					ValueType: innerType,
+				}
+			},
+		},
+		{
+			name:     "Function",
+			ty:       FunctionStaticType{},
+			expected: false,
+		},
+		{
+			name:     "Interface",
+			ty:       &InterfaceStaticType{},
+			expected: false,
+		},
+		{
+			name:     "Composite",
+			ty:       &CompositeStaticType{},
+			expected: false,
+		},
+		{
+			name: "InclusiveRange",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &InclusiveRangeStaticType{
+					ElementType: innerType,
+				}
+			},
+		},
+	}
+
+	test := func(test testCase) {
+		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			if test.genTy != nil {
+				for ty := PrimitiveStaticType(1); ty < PrimitiveStaticType_Count; ty++ {
+					if !ty.IsDefined() {
+						continue
+					}
+
+					t.Run(ty.String(), func(t *testing.T) {
+						assert.Equal(t,
+							ty.IsDeprecated(),
+							test.genTy(ty).IsDeprecated(), //nolint:staticcheck
+						)
+					})
+				}
+			} else {
+				assert.Equal(t,
+					test.expected,
+					test.ty.IsDeprecated(), //nolint:staticcheck
+				)
+			}
+		})
+	}
+
+	for _, testCase := range tests {
+		test(testCase)
+	}
 }

@@ -21,6 +21,7 @@ package string_normalization
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/atree"
@@ -59,30 +60,36 @@ func TestStringNormalizingMigration(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	newLegacyStringValue := func(s string) *interpreter.StringValue {
+		return &interpreter.StringValue{
+			Str:             s,
+			UnnormalizedStr: s,
+		}
+	}
+
+	newLegacyCharacterValue := func(s string) interpreter.CharacterValue {
+		return interpreter.CharacterValue{
+			Str:             s,
+			UnnormalizedStr: s,
+		}
+	}
+
 	testCases := map[string]testCase{
 		"normalized_string": {
-			storedValue: &interpreter.StringValue{
-				Str: "Caf\u00E9",
-			},
+			storedValue:   newLegacyStringValue("Caf\u00E9"),
 			expectedValue: interpreter.NewUnmeteredStringValue("Caf\u00E9"),
 		},
 		"un-normalized_string": {
-			storedValue: &interpreter.StringValue{
-				Str: "Cafe\u0301",
-			},
+			storedValue:   newLegacyStringValue("Cafe\u0301"),
 			expectedValue: interpreter.NewUnmeteredStringValue("Caf\u00E9"),
 		},
 		"normalized_character": {
-			storedValue: &interpreter.StringValue{
-				Str: "Caf\u00E9",
-			},
-			expectedValue: interpreter.NewUnmeteredStringValue("Caf\u00E9"),
+			storedValue:   newLegacyCharacterValue("\u03A9"),
+			expectedValue: interpreter.NewUnmeteredCharacterValue("\u03A9"),
 		},
 		"un-normalized_character": {
-			storedValue: &interpreter.StringValue{
-				Str: "Cafe\u0301",
-			},
-			expectedValue: interpreter.NewUnmeteredStringValue("Caf\u00E9"),
+			storedValue:   newLegacyCharacterValue("\u2126"),
+			expectedValue: interpreter.NewUnmeteredCharacterValue("\u03A9"),
 		},
 		"string_array": {
 			storedValue: interpreter.NewArrayValue(
@@ -90,9 +97,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 				locationRange,
 				interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
 				common.ZeroAddress,
-				&interpreter.StringValue{
-					Str: "Cafe\u0301",
-				},
+				newLegacyStringValue("Cafe\u0301"),
 			),
 			expectedValue: interpreter.NewArrayValue(
 				inter,
@@ -112,9 +117,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 					interpreter.PrimitiveStaticTypeString,
 				),
 				interpreter.NewUnmeteredInt8Value(4),
-				&interpreter.StringValue{
-					Str: "Cafe\u0301",
-				},
+				newLegacyStringValue("Cafe\u0301"),
 			),
 			expectedValue: interpreter.NewDictionaryValue(
 				inter,
@@ -137,9 +140,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 					interpreter.PrimitiveStaticTypeString,
 					interpreter.PrimitiveStaticTypeInt8,
 				),
-				&interpreter.StringValue{
-					Str: "Cafe\u0301",
-				},
+				newLegacyStringValue("Cafe\u0301"),
 				interpreter.NewUnmeteredInt8Value(4),
 			),
 			expectedValue: interpreter.NewDictionaryValue(
@@ -163,12 +164,8 @@ func TestStringNormalizingMigration(t *testing.T) {
 					interpreter.PrimitiveStaticTypeString,
 					interpreter.PrimitiveStaticTypeString,
 				),
-				&interpreter.StringValue{
-					Str: "Cafe\u0301",
-				},
-				&interpreter.StringValue{
-					Str: "Cafe\u0301",
-				},
+				newLegacyStringValue("Cafe\u0301"),
+				newLegacyStringValue("Cafe\u0301"),
 			),
 			expectedValue: interpreter.NewDictionaryValue(
 				inter,
@@ -192,9 +189,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 				[]interpreter.CompositeField{
 					interpreter.NewUnmeteredCompositeField(
 						"field",
-						&interpreter.StringValue{
-							Str: "Cafe\u0301",
-						},
+						newLegacyStringValue("Cafe\u0301"),
 					),
 				},
 				common.Address{},
@@ -212,6 +207,30 @@ func TestStringNormalizingMigration(t *testing.T) {
 					),
 				},
 				common.Address{},
+			),
+		},
+		"dictionary_with_un-normalized_character_key": {
+			storedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeCharacter,
+					interpreter.PrimitiveStaticTypeInt8,
+				),
+				newLegacyCharacterValue("\u2126"),
+				interpreter.NewUnmeteredInt8Value(4),
+			),
+			expectedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeCharacter,
+					interpreter.PrimitiveStaticTypeInt8,
+				),
+				interpreter.NewUnmeteredCharacterValue("\u03A9"),
+				interpreter.NewUnmeteredInt8Value(4),
 			),
 		},
 	}
@@ -281,4 +300,281 @@ func TestStringNormalizingMigration(t *testing.T) {
 			utils.AssertValuesEqual(t, inter, expectedStoredValue, value)
 		})
 	}
+}
+
+// TestStringValueRehash stores a dictionary in storage,
+// which has a key that is a string value with a non-normalized representation,
+// runs the migration, and ensures the dictionary is still usable
+func TestStringValueRehash(t *testing.T) {
+
+	t.Parallel()
+
+	var testAddress = common.MustBytesToAddress([]byte{0x1})
+
+	locationRange := interpreter.EmptyLocationRange
+
+	ledger := NewTestLedger(nil, nil)
+
+	storageMapKey := interpreter.StringStorageMapKey("dict")
+	newTestValue := func() interpreter.Value {
+		return interpreter.NewUnmeteredIntValueFromInt64(42)
+	}
+
+	newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
+		storage := runtime.NewStorage(ledger, nil)
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   false,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		return storage, inter
+	}
+
+	t.Run("prepare", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		dictionaryStaticType := interpreter.NewDictionaryStaticType(
+			nil,
+			interpreter.PrimitiveStaticTypeString,
+			interpreter.PrimitiveStaticTypeInt,
+		)
+		dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
+
+		// NOTE: un-normalized
+		unnormalizedString := "Cafe\u0301"
+		stringValue := &interpreter.StringValue{
+			Str:             unnormalizedString,
+			UnnormalizedStr: unnormalizedString,
+		}
+
+		dictValue.Insert(
+			inter,
+			locationRange,
+			stringValue,
+			newTestValue(),
+		)
+
+		assert.Equal(t,
+			[]byte("\x01Cafe\xCC\x81"),
+			stringValue.HashInput(inter, locationRange, nil),
+		)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			true,
+		)
+
+		storageMap.SetValue(
+			inter,
+			storageMapKey,
+			dictValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address(testAddress),
+				false,
+				nil,
+				nil,
+			),
+		)
+
+		err := storage.Commit(inter, false)
+		require.NoError(t, err)
+	})
+
+	t.Run("migrate", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		migration := migrations.NewStorageMigration(inter, storage)
+
+		migration.Migrate(
+			&migrations.AddressSliceIterator{
+				Addresses: []common.Address{
+					testAddress,
+				},
+			},
+			migration.NewValueMigrationsPathMigrator(
+				nil,
+				NewStringNormalizingMigration(),
+			),
+		)
+
+		err := migration.Commit()
+		require.NoError(t, err)
+	})
+
+	t.Run("load", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
+		storedValue := storageMap.ReadValue(inter, storageMapKey)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, storedValue)
+
+		dictValue := storedValue.(*interpreter.DictionaryValue)
+
+		stringValue := interpreter.NewUnmeteredStringValue("Caf\u00E9")
+
+		assert.Equal(t,
+			[]byte("\x01Caf\xC3\xA9"),
+			stringValue.HashInput(inter, locationRange, nil),
+		)
+
+		value, ok := dictValue.Get(inter, locationRange, stringValue)
+		require.True(t, ok)
+
+		require.IsType(t, interpreter.IntValue{}, value)
+		require.Equal(t,
+			newTestValue(),
+			value.(interpreter.IntValue),
+		)
+	})
+}
+
+// TestCharacterValueRehash stores a dictionary in storage,
+// which has a key that is a character value with a non-normalized representation,
+// runs the migration, and ensures the dictionary is still usable
+func TestCharacterValueRehash(t *testing.T) {
+
+	t.Parallel()
+
+	var testAddress = common.MustBytesToAddress([]byte{0x1})
+
+	locationRange := interpreter.EmptyLocationRange
+
+	ledger := NewTestLedger(nil, nil)
+
+	storageMapKey := interpreter.StringStorageMapKey("dict")
+	newTestValue := func() interpreter.Value {
+		return interpreter.NewUnmeteredIntValueFromInt64(42)
+	}
+
+	newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
+		storage := runtime.NewStorage(ledger, nil)
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   false,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		return storage, inter
+	}
+
+	t.Run("prepare", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		dictionaryStaticType := interpreter.NewDictionaryStaticType(
+			nil,
+			interpreter.PrimitiveStaticTypeCharacter,
+			interpreter.PrimitiveStaticTypeInt,
+		)
+		dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
+
+		// NOTE: un-normalized 'Ω'.
+		unnormalizedString := "\u2126"
+
+		characterValue := &interpreter.CharacterValue{
+			Str:             unnormalizedString,
+			UnnormalizedStr: unnormalizedString,
+		}
+
+		dictValue.Insert(
+			inter,
+			locationRange,
+			characterValue,
+			newTestValue(),
+		)
+
+		assert.Equal(t,
+			[]byte("\x06\xe2\x84\xa6"),
+			characterValue.HashInput(inter, locationRange, nil),
+		)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			true,
+		)
+
+		storageMap.SetValue(
+			inter,
+			storageMapKey,
+			dictValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address(testAddress),
+				false,
+				nil,
+				nil,
+			),
+		)
+
+		err := storage.Commit(inter, false)
+		require.NoError(t, err)
+	})
+
+	t.Run("migrate", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		migration := migrations.NewStorageMigration(inter, storage)
+
+		migration.Migrate(
+			&migrations.AddressSliceIterator{
+				Addresses: []common.Address{
+					testAddress,
+				},
+			},
+			migration.NewValueMigrationsPathMigrator(
+				nil,
+				NewStringNormalizingMigration(),
+			),
+		)
+
+		err := migration.Commit()
+		require.NoError(t, err)
+	})
+
+	t.Run("load", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
+		storedValue := storageMap.ReadValue(inter, storageMapKey)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, storedValue)
+
+		dictValue := storedValue.(*interpreter.DictionaryValue)
+
+		characterValue := interpreter.NewUnmeteredCharacterValue("\u03A9")
+
+		assert.Equal(t,
+			[]byte("\x06\xCe\xA9"),
+			characterValue.HashInput(inter, locationRange, nil),
+		)
+
+		value, ok := dictValue.Get(inter, locationRange, characterValue)
+		require.True(t, ok)
+
+		require.IsType(t, interpreter.IntValue{}, value)
+		require.Equal(t,
+			newTestValue(),
+			value.(interpreter.IntValue),
+		)
+	})
 }

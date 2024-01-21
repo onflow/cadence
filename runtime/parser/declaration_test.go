@@ -9700,17 +9700,12 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		_, errs := testParseDeclarations(" pub(set) fun foo ( ) { }")
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxErrorWithSuggestedReplacement{
-					Message: "`pub` is no longer a valid access keyword",
-					Range: ast.Range{
-						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
-						EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
-					},
-					SuggestedFix: "`access(all)`",
+				&SyntaxError{
+					Message: "`pub(set)` is no longer a valid access keyword",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
 				},
 			},
 			errs,
 		)
-
 	})
 }

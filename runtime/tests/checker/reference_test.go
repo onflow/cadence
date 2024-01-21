@@ -1313,15 +1313,15 @@ func TestCheckInvalidDictionaryAccessOptionalReference(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		access(all) struct S {
-			access(all) let foo: Number
-			init() {
-				self.foo = 0
-			}
-		}
-		let dict: {String: S} = {}
-		let s = &dict[""] as &S?
-		let n = s.foo
+        access(all) struct S {
+            access(all) let foo: Number
+            init() {
+                self.foo = 0
+            }
+        }
+        let dict: {String: S} = {}
+        let s = &dict[""] as &S?
+        let n = s.foo
     `)
 
 	errs := RequireCheckerErrors(t, err, 1)
@@ -1334,14 +1334,14 @@ func TestCheckInvalidDictionaryAccessNonOptionalReference(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		access(all) struct S {
-			access(all) let foo: Number
-			init() {
-				self.foo = 0
-			}
-		}
-		let dict: {String: S} = {}
-		let s = &dict[""] as &S
+        access(all) struct S {
+            access(all) let foo: Number
+            init() {
+                self.foo = 0
+            }
+        }
+        let dict: {String: S} = {}
+        let s = &dict[""] as &S
     `)
 
 	errs := RequireCheckerErrors(t, err, 1)
@@ -1354,15 +1354,15 @@ func TestCheckArrayAccessReference(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		access(all) struct S {
-			access(all) let foo: Number
-			init() {
-				self.foo = 0
-			}
-		}
-		let dict: [S] = []
-		let s = &dict[0] as &S
-		let n = s.foo
+        access(all) struct S {
+            access(all) let foo: Number
+            init() {
+                self.foo = 0
+            }
+        }
+        let dict: [S] = []
+        let s = &dict[0] as &S
+        let n = s.foo
     `)
 
 	require.NoError(t, err)
@@ -2939,9 +2939,9 @@ func TestCheckResourceReferenceMethodInvocationAfterMove(t *testing.T) {
             // Moving the resource should update the tracking
             var newFoo <- foo
 
-        	fooRef.id
+            fooRef.id
 
-        	destroy newFoo
+            destroy newFoo
         }
     `)
 
@@ -3139,12 +3139,9 @@ func TestCheckDereference(t *testing.T) {
 
 			require.NoError(t, err)
 
-			yType := RequireGlobalValue(t, checker.Elaboration, "y")
+			derefType := RequireGlobalValue(t, checker.Elaboration, "deref")
 
-			assert.Equal(t,
-				expectedTy,
-				yType,
-			)
+			assert.True(t, expectedTy.Equal(derefType))
 		})
 	}
 
@@ -3171,9 +3168,9 @@ func TestCheckDereference(t *testing.T) {
 				typString,
 				fmt.Sprintf(
 					`
-						let x: &%[1]s = &1
-						let y: %[1]s = *x
-					`,
+                      let ref: &%[1]s = &1
+                      let deref: %[1]s = *ref
+                    `,
 					integerType,
 				),
 				integerType,
@@ -3189,9 +3186,9 @@ func TestCheckDereference(t *testing.T) {
 				typString,
 				fmt.Sprintf(
 					`
-						let x: &%[1]s = &1.0
-						let y: %[1]s = *x
-					`,
+                      let ref: &%[1]s = &1.0
+                      let deref: %[1]s = *ref
+                    `,
 					fixedPointType,
 				),
 				fixedPointType,
@@ -3205,11 +3202,11 @@ func TestCheckDereference(t *testing.T) {
 		for _, testCase := range []testCase{
 			{
 				ty:          sema.CharacterType,
-				initializer: "\"\\u{FC}\"",
+				initializer: `"\u{FC}"`,
 			},
 			{
 				ty:          sema.StringType,
-				initializer: "\"\\u{FC}\"",
+				initializer: `"\u{FC}"`,
 			},
 			{
 				ty:          sema.BoolType,
@@ -3233,10 +3230,10 @@ func TestCheckDereference(t *testing.T) {
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
-						let value: %[1]s = %[2]s
-						let x: &%[1]s = &value
-						let y: %[1]s = *x
-					`,
+                      let value: %[1]s = %[2]s
+                      let ref: &%[1]s = &value
+                      let deref: %[1]s = *ref
+                    `,
 					testCase.ty,
 					testCase.initializer,
 				),
@@ -3259,7 +3256,7 @@ func TestCheckDereference(t *testing.T) {
 			},
 			{
 				ty:          &sema.VariableSizedType{Type: sema.StringType},
-				initializer: "[\"abc\", \"def\"]",
+				initializer: `["abc", "def"]`,
 			},
 			{
 				ty: &sema.VariableSizedType{
@@ -3267,7 +3264,7 @@ func TestCheckDereference(t *testing.T) {
 						Type: sema.StringType,
 					},
 				},
-				initializer: "[ [\"abc\", \"def\"], [\"xyz\"]]",
+				initializer: `[ ["abc", "def"], ["xyz"]]`,
 			},
 			{
 				ty: &sema.VariableSizedType{
@@ -3275,7 +3272,7 @@ func TestCheckDereference(t *testing.T) {
 						KeyType:   sema.IntType,
 						ValueType: sema.StringType,
 					}},
-				initializer: "[{1: \"abc\", 2: \"def\"}, {3: \"xyz\"}]",
+				initializer: `[{1: "abc", 2: "def"}, {3: "xyz"}]`,
 			},
 			{
 				ty:          &sema.ConstantSizedType{Type: sema.IntType, Size: 3},
@@ -3287,7 +3284,7 @@ func TestCheckDereference(t *testing.T) {
 			},
 			{
 				ty:          &sema.ConstantSizedType{Type: sema.StringType, Size: 2},
-				initializer: "[\"abc\", \"def\"]",
+				initializer: `["abc", "def"]`,
 			},
 			{
 				ty: &sema.ConstantSizedType{
@@ -3296,7 +3293,7 @@ func TestCheckDereference(t *testing.T) {
 					},
 					Size: 2,
 				},
-				initializer: "[ [\"abc\", \"def\"], [\"xyz\"]]",
+				initializer: `[ ["abc", "def"], ["xyz"]]`,
 			},
 			{
 				ty: &sema.ConstantSizedType{
@@ -3306,7 +3303,28 @@ func TestCheckDereference(t *testing.T) {
 					},
 					Size: 1,
 				},
-				initializer: "[{1: \"abc\", 2: \"def\"}]",
+				initializer: `[{1: "abc", 2: "def"}]`,
+			},
+			{
+				ty: &sema.VariableSizedType{
+					Type: &sema.CompositeType{
+						Kind:       common.CompositeKindStructure,
+						Location:   utils.TestLocation,
+						Identifier: "S",
+					},
+				},
+				initializer: `[S(), S()]`,
+			},
+			{
+				ty: &sema.ConstantSizedType{
+					Type: &sema.CompositeType{
+						Kind:       common.CompositeKindStructure,
+						Location:   utils.TestLocation,
+						Identifier: "S",
+					},
+					Size: 2,
+				},
+				initializer: `[S(), S()]`,
 			},
 		} {
 			runValidTestCase(
@@ -3314,10 +3332,12 @@ func TestCheckDereference(t *testing.T) {
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
-	                    let value: %[1]s = %[2]s
-	                    let x: &%[1]s = &value
-	                    let y: %[1]s = *x
-	                `,
+                      struct S {}
+
+                      let value: %[1]s = %[2]s
+                      let ref: &%[1]s = &value
+                      let deref: %[1]s = *ref
+                    `,
 					testCase.ty,
 					testCase.initializer,
 				),
@@ -3325,34 +3345,39 @@ func TestCheckDereference(t *testing.T) {
 			)
 		}
 
-		// Arrays of non-primitives cannot be dereferenced.
+		// Arrays of resources cannot be dereferenced.
 		runInvalidTestCase(
 			t,
-			"[Struct]",
+			"[Resource]",
 			`
-				struct S{}
+              resource R {}
 
-				fun test() {
-					let value: [S] = [S(), S()]
-					let x: &[S] = &value
-					let y: [S] = *x
-				}
-			`,
+              fun test() {
+                  let array: @[R] <- [<-create R(), <-create R()]
+                  let ref: &[R] = &array
+                  let deref: @[R] <- *ref
+                  destroy array
+                  destroy deref
+              }
+            `,
 		)
 
 		runInvalidTestCase(
 			t,
-			"[Struct; 3]",
+			"[Resource; 2]",
 			`
-				struct S{}
+              resource R {}
 
-				fun test() {
-					let value: [S; 3] = [S(),S(),S()]
-					let x: &[S; 3] = &value
-					let y: [S; 3] = *x
-				}
-			`,
+              fun test() {
+                  let array: @[R; 2] <- [<-create R(), <-create R()]
+                  let ref: &[R; 2] = &array
+                  let deref: @[R; 2] <- *ref
+                  destroy array
+                  destroy deref
+              }
+            `,
 		)
+
 	})
 
 	t.Run("Dictionary", func(t *testing.T) {
@@ -3369,7 +3394,7 @@ func TestCheckDereference(t *testing.T) {
 			},
 			{
 				ty:          &sema.DictionaryType{KeyType: sema.StringType, ValueType: sema.StringType},
-				initializer: "{\"123\": \"abc\", \"456\": \"def\"}",
+				initializer: `{"123": "abc", "456": "def"}`,
 			},
 			{
 				ty: &sema.DictionaryType{
@@ -3378,7 +3403,7 @@ func TestCheckDereference(t *testing.T) {
 						Type: sema.IntType,
 					},
 				},
-				initializer: "{\"123\": [1, 2, 3], \"456\": [4, 5, 6]}",
+				initializer: `{"123": [1, 2, 3], "456": [4, 5, 6]}`,
 			},
 			{
 				ty: &sema.DictionaryType{
@@ -3388,7 +3413,18 @@ func TestCheckDereference(t *testing.T) {
 						Size: 3,
 					},
 				},
-				initializer: "{\"123\": [1, 2, 3], \"456\": [4, 5, 6]}",
+				initializer: `{"123": [1, 2, 3], "456": [4, 5, 6]}`,
+			},
+			{
+				ty: &sema.DictionaryType{
+					KeyType: sema.IntType,
+					ValueType: &sema.CompositeType{
+						Kind:       common.CompositeKindStructure,
+						Location:   utils.TestLocation,
+						Identifier: "S",
+					},
+				},
+				initializer: `{1: S(), 2: S()}`,
 			},
 		} {
 			runValidTestCase(
@@ -3396,10 +3432,12 @@ func TestCheckDereference(t *testing.T) {
 				testCase.ty.QualifiedString(),
 				fmt.Sprintf(
 					`
-						let value: %[1]s = %[2]s
-						let x: &%[1]s = &value
-						let y: %[1]s = *x
-					`,
+                      struct S {}
+
+                      let value: %[1]s = %[2]s
+                      let ref: &%[1]s = &value
+                      let deref: %[1]s = *ref
+                    `,
 					testCase.ty,
 					testCase.initializer,
 				),
@@ -3407,19 +3445,24 @@ func TestCheckDereference(t *testing.T) {
 			)
 		}
 
-		// Dictionaries with value as non-primitive cannot be dereferenced.
+		// Dictionaries of resources cannot be dereferenced.
 		runInvalidTestCase(
 			t,
-			"{Int: Struct}",
+			"{Int: Resource}",
 			`
-				struct S{}
+              resource R {}
 
-				fun test() {
-					let value: {Int: S} = { 1: S(), 2: S() }
-					let x: &{Int: S} = &value
-					let y: {Int: S} = *x
-				}
-			`,
+              fun test() {
+                  let dict: @{Int: R} <- {
+                      1: <-create R(),
+                      2: <-create R()
+                  }
+                  let ref: &{Int: R} = &dict
+                  let deref: @{Int: R} <- *ref
+                  destroy dict
+                  destroy deref
+              }
+            `,
 		)
 	})
 
@@ -3427,36 +3470,36 @@ func TestCheckDereference(t *testing.T) {
 		t,
 		"Resource",
 		`
-			resource interface I {
-				fun foo()
-			}
+          resource interface I {
+              fun foo()
+          }
 
-			resource R: I {
-				fun foo() {}
-			}
+          resource R: I {
+              fun foo() {}
+          }
 
-			fun test() {
-				let r <- create R()
-				let ref = &r as &{I}
-				let deref <- *ref
-				destroy r
-                destroy deref
-			}
-		`,
+          fun test() {
+              let r <- create R()
+              let ref = &r as &{I}
+              let deref <- *ref
+              destroy r
+              destroy deref
+          }
+        `,
 	)
 
 	runInvalidTestCase(
 		t,
 		"Struct",
 		`
-			struct S{}
+          struct S {}
 
-			fun test() {
-				let s = S()
-				let ref = &s as &S
-				let deref = *ref
-			}
-		`,
+          fun test() {
+              let s = S()
+              let ref = &s as &S
+              let deref = *ref
+          }
+        `,
 	)
 
 	t.Run("built-in", func(t *testing.T) {
@@ -3467,10 +3510,297 @@ func TestCheckDereference(t *testing.T) {
 			t,
 			"Account",
 			`
-				fun test(ref: &Account): @Account {
-					return <-*ref
-				}
-			`,
+              fun test(ref: &Account): @Account {
+                  return <-*ref
+              }
+            `,
+		)
+	})
+
+	t.Run("Optional", func(t *testing.T) {
+		t.Parallel()
+
+		runValidTestCase(
+			t,
+			"valid",
+			`
+              let ref: &Int? = &1 as &Int
+              let deref = *ref
+            `,
+			&sema.OptionalType{
+				Type: sema.IntType,
+			},
+		)
+
+		runInvalidTestCase(
+			t,
+			"invalid",
+			`
+              struct S {}
+
+              fun test() {
+                  let s = S()
+                  let ref: &S? = &s as &S
+                  let deref = *ref
+              }
+            `,
+		)
+	})
+}
+
+func TestCheckReferenceRequiredTypeAnnotation(t *testing.T) {
+	t.Parallel()
+
+	test := func(
+		t *testing.T,
+		gen func(expr, ty string) (string, string),
+		nestingLevel int,
+	) {
+
+		test := func(
+			t *testing.T,
+			expr, ty string,
+			check func(t *testing.T, requiresTypeAnnotation bool, err error),
+		) {
+			expr, ty = gen(expr, ty)
+
+			t.Run("argument", func(t *testing.T) {
+				t.Parallel()
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                            entitlement X
+                            entitlement Y
+
+                            fun test(_ v: %s) {}
+
+                            let x = test(%s)
+                        `,
+						ty,
+						expr,
+					),
+				)
+				check(t, true, err)
+			})
+
+			t.Run("variable declaration", func(t *testing.T) {
+				t.Parallel()
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                            entitlement X
+                            entitlement Y
+
+                            let x: %s = %s
+                        `,
+						ty,
+						expr,
+					),
+				)
+				check(t, false, err)
+			})
+
+			t.Run("self field assignment", func(t *testing.T) {
+				t.Parallel()
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                            entitlement X
+                            entitlement Y
+
+                            struct S {
+                                let v: %s
+
+                                init() {
+                                    self.v = %s
+                                }
+                            }
+                        `,
+						ty,
+						expr,
+					),
+				)
+				check(t, false, err)
+			})
+
+			t.Run("external field assignment", func(t *testing.T) {
+				t.Parallel()
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                            entitlement X
+                            entitlement Y
+
+                            struct S {
+                                var v: %s?
+
+                                init() {
+                                    self.v = nil
+                                }
+                            }
+ 
+                            fun test() {
+                                let s = S()
+                                s.v = %s
+                            }
+                        `,
+						ty,
+						expr,
+					),
+				)
+				check(t, true, err)
+			})
+		}
+
+		t.Run("missing type annotation", func(t *testing.T) {
+			t.Parallel()
+
+			test(t,
+				"&1",
+				"&Int",
+				func(t *testing.T, requiresTypeAnnotation bool, err error) {
+
+					if requiresTypeAnnotation {
+
+						errs := RequireCheckerErrors(t, err, 1+nestingLevel)
+
+						assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
+				},
+			)
+		})
+
+		t.Run("missing type annotation, with authorization", func(t *testing.T) {
+			t.Parallel()
+
+			test(t,
+				"&1",
+				"auth(X) &Int",
+				func(t *testing.T, requiresTypeAnnotation bool, err error) {
+
+					if requiresTypeAnnotation {
+
+						errs := RequireCheckerErrors(t, err, 1+nestingLevel)
+
+						assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
+				},
+			)
+		})
+
+		t.Run("matching type annotation", func(t *testing.T) {
+			t.Parallel()
+
+			test(t,
+				"&1 as &Int",
+				"&Int",
+				func(t *testing.T, _ bool, err error) {
+
+					require.NoError(t, err)
+				},
+			)
+		})
+
+		t.Run("matching type annotation, with authorization", func(t *testing.T) {
+			t.Parallel()
+
+			test(
+				t,
+				"&1 as auth(X) &Int",
+				"auth(X) &Int",
+				func(t *testing.T, _ bool, err error) {
+
+					require.NoError(t, err)
+				},
+			)
+		})
+
+		t.Run("non-matching type annotation, reference with different authorization", func(t *testing.T) {
+			t.Parallel()
+
+			test(
+				t,
+				"&1 as auth(Y) &Int",
+				"auth(X) &Int",
+				func(t *testing.T, _ bool, err error) {
+
+					errs := RequireCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				},
+			)
+		})
+
+		t.Run("non-matching type, non-reference", func(t *testing.T) {
+			t.Parallel()
+
+			test(
+				t,
+				"1",
+				"&Int",
+				func(t *testing.T, _ bool, err error) {
+
+					errs := RequireCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				},
+			)
+
+		})
+	}
+
+	t.Run("top-level", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			func(expr, ty string) (string, string) {
+				return expr, ty
+			},
+			0,
+		)
+	})
+
+	t.Run("nested, array", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			func(expr, ty string) (string, string) {
+				return fmt.Sprintf("[%s]", expr),
+					fmt.Sprintf("[%s]", ty)
+			},
+			1,
+		)
+	})
+
+	t.Run("nested, dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			func(expr, ty string) (string, string) {
+				return fmt.Sprintf("{true: %s}", expr),
+					fmt.Sprintf("{Bool: %s}", ty)
+			},
+			1,
+		)
+	})
+
+	t.Run("double nested, array", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			func(expr, ty string) (string, string) {
+				return fmt.Sprintf("[[%s]]", expr),
+					fmt.Sprintf("[[%s]]", ty)
+			},
+			2,
 		)
 	})
 }

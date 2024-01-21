@@ -362,6 +362,10 @@ resource Account {
         access(Capabilities | StorageCapabilities | IssueStorageCapabilityController)
         fun issue<T: &Any>(_ path: StoragePath): Capability<T>
 
+        /// Issue/create a new storage capability.
+       access(Capabilities | StorageCapabilities | IssueStorageCapabilityController)
+       fun issueWithType(_ path: StoragePath, type: Type): Capability
+
         /// Get the storage capability controller for the capability with the specified ID.
         ///
         /// Returns nil if the ID does not reference an existing storage capability.
@@ -391,9 +395,14 @@ resource Account {
 
     access(all)
     resource AccountCapabilities {
+
         /// Issue/create a new account capability.
         access(Capabilities | AccountCapabilities | IssueAccountCapabilityController)
         fun issue<T: &Account>(): Capability<T>
+
+        /// Issue/create a new account capability.
+        access(Capabilities | AccountCapabilities | IssueAccountCapabilityController)
+        fun issueWithType(_ type: Type): Capability
 
         /// Get capability controller for capability with the specified ID.
         ///

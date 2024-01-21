@@ -91,6 +91,10 @@ func (t *SimpleType) IsInvalidType() bool {
 	return t == InvalidType
 }
 
+func (*SimpleType) IsOrContainsReferenceType() bool {
+	return false
+}
+
 func (t *SimpleType) IsStorable(_ map[*Member]bool) bool {
 	return t.Storable
 }
@@ -123,7 +127,13 @@ func (t *SimpleType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
-func (*SimpleType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*SimpleType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -180,4 +190,8 @@ func (t *SimpleType) CompositeKind() common.CompositeKind {
 	} else {
 		return common.CompositeKindStructure
 	}
+}
+
+func (t *SimpleType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }

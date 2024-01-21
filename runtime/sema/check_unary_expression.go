@@ -62,6 +62,13 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) Ty
 		return checkExpectedType(valueType, SignedNumberType)
 
 	case ast.OperationMul:
+
+		var isOptional bool
+		if optionalType, ok := valueType.(*OptionalType); ok {
+			isOptional = true
+			valueType = optionalType.Type
+		}
+
 		referenceType, ok := valueType.(*ReferenceType)
 		if !ok {
 			if !valueType.IsInvalidType() {
@@ -82,12 +89,11 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) Ty
 
 		innerType := referenceType.Type
 
-		// Allow primitives or containers of primitives.
-		if !IsPrimitiveOrContainerOfPrimitive(innerType) {
+		if !IsPrimitiveOrNonResourceContainer(innerType) {
 			checker.report(
 				&InvalidUnaryOperandError{
 					Operation:               expression.Operation,
-					ExpectedTypeDescription: "primitive or container of primitives",
+					ExpectedTypeDescription: "primitive or non-resource container",
 					ActualType:              innerType,
 					Range: ast.NewRangeFromPositioned(
 						checker.memoryGauge,
@@ -97,7 +103,13 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) Ty
 			)
 		}
 
-		return innerType
+		if isOptional {
+			return &OptionalType{
+				Type: innerType,
+			}
+		} else {
+			return innerType
+		}
 
 	case ast.OperationMove:
 		if !valueType.IsInvalidType() &&

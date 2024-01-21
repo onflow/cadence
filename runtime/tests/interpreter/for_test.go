@@ -19,12 +19,16 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -733,4 +737,143 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.DereferenceError{})
 	})
+}
+
+type inclusiveRangeForInLoopTest struct {
+	start, end, step int8
+	loopElements     []int
+}
+
+func TestInclusiveRangeForInLoop(t *testing.T) {
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
+
+	unsignedTestCases := []inclusiveRangeForInLoopTest{
+		{
+			start:        0,
+			end:          10,
+			step:         1,
+			loopElements: []int{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+		},
+		{
+			start:        0,
+			end:          10,
+			step:         2,
+			loopElements: []int{0, 2, 4, 6, 8, 10},
+		},
+	}
+
+	signedTestCases := []inclusiveRangeForInLoopTest{
+		{
+			start:        10,
+			end:          -10,
+			step:         -2,
+			loopElements: []int{10, 8, 6, 4, 2, 0, -2, -4, -6, -8, -10},
+		},
+	}
+
+	runTestCase := func(t *testing.T, typ sema.Type, testCase inclusiveRangeForInLoopTest) {
+		t.Run(typ.String(), func(t *testing.T) {
+			t.Parallel()
+
+			code := fmt.Sprintf(
+				`
+					fun test(): [%[1]s] {
+						let start : %[1]s = %[2]d
+						let end : %[1]s = %[3]d
+						let step : %[1]s = %[4]d
+						let range: InclusiveRange<%[1]s> = InclusiveRange(start, end, step: step)
+
+						var elements : [%[1]s] = []
+						for element in range {
+							elements.append(element)
+						}
+						return elements
+					}
+				`,
+				typ.String(),
+				testCase.start,
+				testCase.end,
+				testCase.step,
+			)
+
+			inter, err := parseCheckAndInterpretWithOptions(t, code,
+				ParseCheckAndInterpretOptions{
+					CheckerConfig: &sema.Config{
+						BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
+					},
+					Config: &interpreter.Config{
+						BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+							return baseActivation
+						},
+					},
+				},
+			)
+
+			require.NoError(t, err)
+			loopElements, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			integerStaticType := interpreter.ConvertSemaToStaticType(
+				nil,
+				typ,
+			)
+
+			count := 0
+			iterator := (loopElements).(*interpreter.ArrayValue).Iterator(inter, interpreter.EmptyLocationRange)
+			for {
+				elem := iterator.Next(inter, interpreter.EmptyLocationRange)
+				if elem == nil {
+					break
+				}
+
+				AssertValuesEqual(
+					t,
+					inter,
+					interpreter.GetSmallIntegerValue(
+						int8(testCase.loopElements[count]),
+						integerStaticType,
+					),
+					elem,
+				)
+
+				count += 1
+			}
+
+			assert.Equal(t, len(testCase.loopElements), count)
+		})
+	}
+
+	for _, typ := range sema.AllIntegerTypes {
+		// Only test leaf types
+		switch typ {
+		case sema.IntegerType,
+			sema.SignedIntegerType,
+			sema.FixedSizeUnsignedIntegerType:
+			continue
+		}
+
+		for _, testCase := range unsignedTestCases {
+			runTestCase(t, typ, testCase)
+		}
+	}
+
+	for _, typ := range sema.AllSignedIntegerTypes {
+		// Only test leaf types
+		switch typ {
+		case sema.SignedIntegerType:
+			continue
+		}
+
+		for _, testCase := range signedTestCases {
+			runTestCase(t, typ, testCase)
+		}
+	}
 }

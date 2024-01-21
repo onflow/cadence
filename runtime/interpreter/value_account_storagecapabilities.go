@@ -38,6 +38,7 @@ func NewAccountStorageCapabilitiesValue(
 	getControllersFunction FunctionValue,
 	forEachControllerFunction FunctionValue,
 	issueFunction FunctionValue,
+	issueWithTypeFunction FunctionValue,
 ) Value {
 
 	fields := map[string]Value{
@@ -45,6 +46,7 @@ func NewAccountStorageCapabilitiesValue(
 		sema.Account_StorageCapabilitiesTypeGetControllersFunctionName:    getControllersFunction,
 		sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction,
 		sema.Account_StorageCapabilitiesTypeIssueFunctionName:             issueFunction,
+		sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName:     issueWithTypeFunction,
 	}
 
 	var str string

@@ -357,15 +357,15 @@ func (d StorableDecoder) decodeCharacter() (CharacterValue, error) {
 	v, err := decodeCharacter(d.decoder, d.memoryGauge)
 	if err != nil {
 		if err, ok := err.(*cbor.WrongTypeError); ok {
-			return "", errors.NewUnexpectedError(
+			return CharacterValue{}, errors.NewUnexpectedError(
 				"invalid Character encoding: %s",
 				err.ActualType.String(),
 			)
 		}
-		return "", err
+		return CharacterValue{}, err
 	}
 	if !sema.IsValidCharacter(v) {
-		return "", errors.NewUnexpectedError(
+		return CharacterValue{}, errors.NewUnexpectedError(
 			"invalid character encoding: %s",
 			v,
 		)
@@ -1442,6 +1442,9 @@ func (d TypeDecoder) DecodeStaticType() (StaticType, error) {
 	case CBORTagCapabilityStaticType:
 		return d.decodeCapabilityStaticType()
 
+	case CBORTagInclusiveRangeStaticType:
+		return d.decodeInclusiveRangeStaticType()
+
 	default:
 		return nil, errors.NewUnexpectedError("invalid static type encoding tag: %d", number)
 	}
@@ -1769,9 +1772,11 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 		return nil, err
 	}
 
+	var isAuthorized bool
+
 	if t == cbor.BoolType {
 		// if we saw a bool here, this is a reference encoded in the old format
-		_, err := d.decoder.DecodeBool()
+		isAuthorized, err = d.decoder.DecodeBool()
 		if err != nil {
 			return nil, err
 		}
@@ -1801,11 +1806,15 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 		)
 	}
 
-	return NewReferenceStaticType(
+	referenceType := NewReferenceStaticType(
 		d.memoryGauge,
 		authorization,
 		staticType,
-	), nil
+	)
+
+	referenceType.LegacyIsAuthorized = isAuthorized
+
+	return referenceType, nil
 }
 
 func (d TypeDecoder) decodeDictionaryStaticType() (StaticType, error) {
@@ -2024,6 +2033,17 @@ func (d TypeDecoder) decodeCompositeTypeInfo() (atree.TypeInfo, error) {
 		qualifiedIdentifier,
 		common.CompositeKind(kind),
 	), nil
+}
+
+func (d TypeDecoder) decodeInclusiveRangeStaticType() (StaticType, error) {
+	elementType, err := d.DecodeStaticType()
+	if err != nil {
+		return nil, errors.NewUnexpectedError(
+			"invalid inclusive range static type encoding: %w",
+			err,
+		)
+	}
+	return NewInclusiveRangeStaticType(d.memoryGauge, elementType), nil
 }
 
 func DecodeTypeInfo(decoder *cbor.StreamDecoder, memoryGauge common.MemoryGauge) (atree.TypeInfo, error) {

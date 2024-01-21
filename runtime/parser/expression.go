@@ -823,7 +823,7 @@ func defineIdentifierExpression() {
 					token.Range.StartPos,
 				), nil
 
-			case keywordAttach:
+			case KeywordAttach:
 				return parseAttachExpressionRemainder(p, token)
 
 			case KeywordView:
@@ -966,7 +966,7 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 
 	p.skipSpaceAndComments()
 
-	if !p.isToken(p.current, lexer.TokenIdentifier, keywordTo) {
+	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordTo) {
 		return nil, p.syntaxError(
 			"expected 'to', got %s",
 			p.current.Type,

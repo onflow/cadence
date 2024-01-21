@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package account_type
+package statictypes
 
 import (
 	"github.com/onflow/cadence/migrations"
@@ -26,42 +26,58 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type AccountTypeMigration struct{}
-
-var _ migrations.ValueMigration = AccountTypeMigration{}
-
-func NewAccountTypeMigration() AccountTypeMigration {
-	return AccountTypeMigration{}
+type StaticTypeMigration struct {
+	compositeTypeConverter CompositeTypeConverterFunc
+	interfaceTypeConverter InterfaceTypeConverterFunc
 }
 
-func (AccountTypeMigration) Name() string {
-	return "AccountTypeMigration"
+type CompositeTypeConverterFunc func(staticType *interpreter.CompositeStaticType) interpreter.StaticType
+type InterfaceTypeConverterFunc func(staticType *interpreter.InterfaceStaticType) interpreter.StaticType
+
+var _ migrations.ValueMigration = &StaticTypeMigration{}
+
+func NewStaticTypeMigration() *StaticTypeMigration {
+	return &StaticTypeMigration{}
+}
+
+func (m *StaticTypeMigration) WithCompositeTypeConverter(converterFunc CompositeTypeConverterFunc) *StaticTypeMigration {
+	m.compositeTypeConverter = converterFunc
+	return m
+}
+
+func (m *StaticTypeMigration) WithInterfaceTypeConverter(converterFunc InterfaceTypeConverterFunc) *StaticTypeMigration {
+	m.interfaceTypeConverter = converterFunc
+	return m
+}
+
+func (*StaticTypeMigration) Name() string {
+	return "StaticTypeMigration"
 }
 
 // Migrate migrates `AuthAccount` and `PublicAccount` types inside `TypeValue`s,
 // to the account reference type (&Account).
-func (AccountTypeMigration) Migrate(
+func (m *StaticTypeMigration) Migrate(
 	_ interpreter.AddressPath,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (newValue interpreter.Value, err error) {
 	switch value := value.(type) {
 	case interpreter.TypeValue:
-		convertedType := maybeConvertAccountType(value.Type)
+		convertedType := m.maybeConvertStaticType(value.Type)
 		if convertedType == nil {
 			return
 		}
 		return interpreter.NewTypeValue(nil, convertedType), nil
 
 	case *interpreter.CapabilityValue:
-		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
+		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
 		if convertedBorrowType == nil {
 			return
 		}
 		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType), nil
 
 	case *interpreter.AccountCapabilityControllerValue:
-		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
+		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
 		if convertedBorrowType == nil {
 			return
 		}
@@ -70,7 +86,7 @@ func (AccountTypeMigration) Migrate(
 
 	case *interpreter.StorageCapabilityControllerValue:
 		// Note: A storage capability with Account type shouldn't be possible theoretically.
-		convertedBorrowType := maybeConvertAccountType(value.BorrowType)
+		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
 		if convertedBorrowType == nil {
 			return
 		}
@@ -85,23 +101,23 @@ func (AccountTypeMigration) Migrate(
 	return
 }
 
-func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.StaticType {
+func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.StaticType) interpreter.StaticType {
 	switch staticType := staticType.(type) {
 	case *interpreter.ConstantSizedStaticType:
-		convertedType := maybeConvertAccountType(staticType.Type)
+		convertedType := m.maybeConvertStaticType(staticType.Type)
 		if convertedType != nil {
 			return interpreter.NewConstantSizedStaticType(nil, convertedType, staticType.Size)
 		}
 
 	case *interpreter.VariableSizedStaticType:
-		convertedType := maybeConvertAccountType(staticType.Type)
+		convertedType := m.maybeConvertStaticType(staticType.Type)
 		if convertedType != nil {
 			return interpreter.NewVariableSizedStaticType(nil, convertedType)
 		}
 
 	case *interpreter.DictionaryStaticType:
-		convertedKeyType := maybeConvertAccountType(staticType.KeyType)
-		convertedValueType := maybeConvertAccountType(staticType.ValueType)
+		convertedKeyType := m.maybeConvertStaticType(staticType.KeyType)
+		convertedValueType := m.maybeConvertStaticType(staticType.ValueType)
 		if convertedKeyType != nil && convertedValueType != nil {
 			return interpreter.NewDictionaryStaticType(nil, convertedKeyType, convertedValueType)
 		}
@@ -113,17 +129,16 @@ func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.Stat
 		}
 
 	case *interpreter.CapabilityStaticType:
-		convertedBorrowType := maybeConvertAccountType(staticType.BorrowType)
+		convertedBorrowType := m.maybeConvertStaticType(staticType.BorrowType)
 		if convertedBorrowType != nil {
 			return interpreter.NewCapabilityStaticType(nil, convertedBorrowType)
 		}
 
 	case *interpreter.IntersectionStaticType:
 		// No need to convert `staticType.Types` as they can only be interfaces.
-
 		legacyType := staticType.LegacyType
 		if legacyType != nil {
-			convertedLegacyType := maybeConvertAccountType(legacyType)
+			convertedLegacyType := m.maybeConvertStaticType(legacyType)
 			if convertedLegacyType != nil {
 				intersectionType := interpreter.NewIntersectionStaticType(nil, staticType.Types)
 				intersectionType.LegacyType = convertedLegacyType
@@ -131,15 +146,21 @@ func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.Stat
 			}
 		}
 
+		// If the set has at least two items,
+		// then force it to be re-stored/re-encoded
+		if len(staticType.Types) >= 2 {
+			return staticType
+		}
+
 	case *interpreter.OptionalStaticType:
-		convertedInnerType := maybeConvertAccountType(staticType.Type)
+		convertedInnerType := m.maybeConvertStaticType(staticType.Type)
 		if convertedInnerType != nil {
 			return interpreter.NewOptionalStaticType(nil, convertedInnerType)
 		}
 
 	case *interpreter.ReferenceStaticType:
 		// TODO: Reference of references must not be allowed?
-		convertedReferencedType := maybeConvertAccountType(staticType.ReferencedType)
+		convertedReferencedType := m.maybeConvertStaticType(staticType.ReferencedType)
 		if convertedReferencedType != nil {
 			switch convertedReferencedType {
 
@@ -157,15 +178,16 @@ func maybeConvertAccountType(staticType interpreter.StaticType) interpreter.Stat
 	case interpreter.FunctionStaticType:
 		// Non-storable
 
-	case *interpreter.CompositeStaticType,
-		*interpreter.InterfaceStaticType:
-		// Nothing to do
+	case *interpreter.CompositeStaticType:
+		return m.compositeTypeConverter(staticType)
+	case *interpreter.InterfaceStaticType:
+		return m.interfaceTypeConverter(staticType)
 
 	case dummyStaticType:
 		// This is for testing the migration.
 		// i.e: wrapper was only to make it possible to use as a dictionary-key.
 		// Ignore the wrapper, and continue with the inner type.
-		return maybeConvertAccountType(staticType.PrimitiveStaticType)
+		return m.maybeConvertStaticType(staticType.PrimitiveStaticType)
 
 	case interpreter.PrimitiveStaticType:
 		// Is it safe to do so?

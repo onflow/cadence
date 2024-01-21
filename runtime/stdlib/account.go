@@ -2177,6 +2177,7 @@ func newAccountStorageCapabilitiesValue(
 		newAccountStorageCapabilitiesGetControllersFunction(gauge, addressValue),
 		newAccountStorageCapabilitiesForEachControllerFunction(gauge, addressValue),
 		newAccountStorageCapabilitiesIssueFunction(gauge, accountIDGenerator, addressValue),
+		newAccountStorageCapabilitiesIssueWithTypeFunction(gauge, accountIDGenerator, addressValue),
 	)
 }
 
@@ -2192,6 +2193,7 @@ func newAccountAccountCapabilitiesValue(
 		newAccountAccountCapabilitiesGetControllersFunction(gauge, addressValue),
 		newAccountAccountCapabilitiesForEachControllerFunction(gauge, addressValue),
 		newAccountAccountCapabilitiesIssueFunction(gauge, accountIDGenerator, addressValue),
+		newAccountAccountCapabilitiesIssueWithTypeFunction(gauge, accountIDGenerator, addressValue),
 	)
 }
 
@@ -2458,27 +2460,105 @@ func newAccountStorageCapabilitiesIssueFunction(
 			// Get borrow type type argument
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+			ty := typeParameterPair.Value
 
-			capabilityIDValue, borrowStaticType := IssueStorageCapabilityController(
+			// Issue capability controller and return capability
+
+			return checkAndIssueStorageCapabilityControllerWithType(
 				inter,
 				locationRange,
 				idGenerator,
 				address,
-				borrowType,
 				targetPathValue,
-			)
-
-			return interpreter.NewCapabilityValue(
-				gauge,
-				capabilityIDValue,
-				addressValue,
-				borrowStaticType,
+				ty,
 			)
 		},
+	)
+}
+
+func newAccountStorageCapabilitiesIssueWithTypeFunction(
+	gauge common.MemoryGauge,
+	idGenerator AccountIDGenerator,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.Account_StorageCapabilitiesTypeIssueFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get path argument
+
+			targetPathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
+			if !ok || targetPathValue.Domain != common.PathDomainStorage {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Get type argument
+
+			typeValue, ok := invocation.Arguments[1].(interpreter.TypeValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			ty, err := inter.ConvertStaticToSemaType(typeValue.Type)
+			if err != nil {
+				panic(errors.NewUnexpectedErrorFromCause(err))
+			}
+
+			// Issue capability controller and return capability
+
+			return checkAndIssueStorageCapabilityControllerWithType(
+				inter,
+				locationRange,
+				idGenerator,
+				address,
+				targetPathValue,
+				ty,
+			)
+		},
+	)
+}
+
+func checkAndIssueStorageCapabilityControllerWithType(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	idGenerator AccountIDGenerator,
+	address common.Address,
+	targetPathValue interpreter.PathValue,
+	ty sema.Type,
+) *interpreter.CapabilityValue {
+
+	borrowType, ok := ty.(*sema.ReferenceType)
+	if !ok {
+		panic(interpreter.InvalidCapabilityIssueTypeError{
+			ExpectedTypeDescription: "reference type",
+			ActualType:              ty,
+			LocationRange:           locationRange,
+		})
+	}
+
+	// Issue capability controller
+
+	capabilityIDValue, borrowStaticType := IssueStorageCapabilityController(
+		inter,
+		locationRange,
+		idGenerator,
+		address,
+		borrowType,
+		targetPathValue,
+	)
+
+	// Return controller's capability
+
+	return interpreter.NewCapabilityValue(
+		inter,
+		capabilityIDValue,
+		interpreter.NewAddressValue(inter, address),
+		borrowStaticType,
 	)
 }
 
@@ -2541,27 +2621,102 @@ func newAccountAccountCapabilitiesIssueFunction(
 			// Get borrow type type argument
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
+			ty := typeParameterPair.Value
+
+			// Issue capability controller and return capability
+
+			return checkAndIssueAccountCapabilityControllerWithType(
+				inter,
+				locationRange,
+				idGenerator,
+				address,
+				ty,
+			)
+		},
+	)
+}
+
+func newAccountAccountCapabilitiesIssueWithTypeFunction(
+	gauge common.MemoryGauge,
+	idGenerator AccountIDGenerator,
+	addressValue interpreter.AddressValue,
+) *interpreter.HostFunctionValue {
+	address := addressValue.ToAddress()
+	return interpreter.NewHostFunctionValue(
+		gauge,
+		sema.Account_AccountCapabilitiesTypeIssueFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// Get type argument
+
+			typeValue, ok := invocation.Arguments[0].(interpreter.TypeValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			capabilityIDValue, borrowStaticType :=
-				IssueAccountCapabilityController(
-					inter,
-					locationRange,
-					idGenerator,
-					address,
-					borrowType,
-				)
+			ty, err := inter.ConvertStaticToSemaType(typeValue.Type)
+			if err != nil {
+				panic(errors.NewUnexpectedErrorFromCause(err))
+			}
 
-			return interpreter.NewCapabilityValue(
-				gauge,
-				capabilityIDValue,
-				addressValue,
-				borrowStaticType,
+			// Issue capability controller and return capability
+
+			return checkAndIssueAccountCapabilityControllerWithType(
+				inter,
+				locationRange,
+				idGenerator,
+				address,
+				ty,
 			)
 		},
+	)
+}
+
+func checkAndIssueAccountCapabilityControllerWithType(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	idGenerator AccountIDGenerator,
+	address common.Address,
+	ty sema.Type,
+) *interpreter.CapabilityValue {
+
+	// Get and check borrow type
+
+	typeBound := sema.AccountReferenceType
+	if !sema.IsSubType(ty, typeBound) {
+		panic(interpreter.InvalidCapabilityIssueTypeError{
+			ExpectedTypeDescription: fmt.Sprintf("`%s`", typeBound.QualifiedString()),
+			ActualType:              ty,
+			LocationRange:           locationRange,
+		})
+	}
+
+	borrowType, ok := ty.(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Issue capability controller
+
+	capabilityIDValue, borrowStaticType :=
+		IssueAccountCapabilityController(
+			inter,
+			locationRange,
+			idGenerator,
+			address,
+			borrowType,
+		)
+
+	// Return controller's capability
+
+	return interpreter.NewCapabilityValue(
+		inter,
+		capabilityIDValue,
+		interpreter.NewAddressValue(inter, address),
+		borrowStaticType,
 	)
 }
 

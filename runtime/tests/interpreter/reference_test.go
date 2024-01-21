@@ -1636,19 +1636,19 @@ func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
           fooRef.something()
 
           // just to trick the checker
-		  fooRef = returnSameRef(fooRef)
+          fooRef = returnSameRef(fooRef)
 
           // Moving the resource should update the tracking
           var newFoo <- foo
 
-      	  fooRef.id
+            fooRef.id
 
-      	  destroy newFoo
+            destroy newFoo
       }
     `)
 
 	_, err := inter.Invoke("main")
-	require.Error(t, err)
+	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
@@ -1815,17 +1815,44 @@ func TestInterpretReferenceToReference(t *testing.T) {
 
 		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
 	})
+
+	t.Run("reference to storage reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            resource R {}
+
+            fun test(): Void {
+
+                let r <- [<- create R()]
+                account.storage.save(<-r, to: /storage/foo)
+                let unauthRef = account.storage.borrow<&[R]>(from: /storage/foo)!
+
+                let maskedUnauthRef = unauthRef as AnyStruct
+                let doubleRef = &maskedUnauthRef as auth(Mutate) &AnyStruct
+                let typedDoubleRef : auth(Mutate) &(&[R]) = doubleRef as! auth(Mutate) &(&[R])
+            }`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
 }
 
 func TestInterpretDereference(t *testing.T) {
 	t.Parallel()
 
-	runValidTestCase := func(
+	runTestCase := func(
 		t *testing.T,
 		name, code string,
-		expectedValue interpreter.Value,
+		expectedValueFunc func(*interpreter.Interpreter) interpreter.Value,
 	) {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
 			inter := parseCheckAndInterpret(t, code)
 
 			value, err := inter.Invoke("main")
@@ -1834,7 +1861,7 @@ func TestInterpretDereference(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				expectedValue,
+				expectedValueFunc(inter),
 				value,
 			)
 		})
@@ -1876,7 +1903,7 @@ func TestInterpretDereference(t *testing.T) {
 			integerType := typ
 			typString := typ.QualifiedString()
 
-			runValidTestCase(
+			runTestCase(
 				t,
 				typString,
 				fmt.Sprintf(
@@ -1885,10 +1912,12 @@ func TestInterpretDereference(t *testing.T) {
                             let x: &%[1]s = &42
                             return *x
                         }
-	                `,
+                    `,
 					integerType,
 				),
-				expectedValues[integerType],
+				func(_ *interpreter.Interpreter) interpreter.Value {
+					return expectedValues[integerType]
+				},
 			)
 		}
 	})
@@ -1911,7 +1940,7 @@ func TestInterpretDereference(t *testing.T) {
 			fixedPointType := typ
 			typString := typ.QualifiedString()
 
-			runValidTestCase(
+			runTestCase(
 				t,
 				typString,
 				fmt.Sprintf(
@@ -1920,10 +1949,12 @@ func TestInterpretDereference(t *testing.T) {
                             let x: &%[1]s = &42.24
                             return *x
                         }
-	                `,
+                    `,
 					fixedPointType,
 				),
-				expectedValues[fixedPointType],
+				func(_ *interpreter.Interpreter) interpreter.Value {
+					return expectedValues[fixedPointType]
+				},
 			)
 		}
 	})
@@ -2747,12 +2778,12 @@ func TestInterpretDereference(t *testing.T) {
 			inter := parseCheckAndInterpret(
 				t,
 				`
-					fun main(): {Int: String} {
-						let original = {1: "ABC", 2: "DEF"}
-						let x: &{Int : String} = &original
-						return *x
-					}
-				`,
+                    fun main(): {Int: String} {
+                        let original = {1: "ABC", 2: "DEF"}
+                        let x: &{Int : String} = &original
+                        return *x
+                    }
+                `,
 			)
 
 			value, err := inter.Invoke("main")
@@ -2781,12 +2812,12 @@ func TestInterpretDereference(t *testing.T) {
 			inter := parseCheckAndInterpret(
 				t,
 				`
-					fun main(): {Int: [String]} {
-						let original = {1: ["ABC", "XYZ"], 2: ["DEF"]}
-						let x: &{Int: [String]} = &original
-						return *x
-					}
-				`,
+                    fun main(): {Int: [String]} {
+                        let original = {1: ["ABC", "XYZ"], 2: ["DEF"]}
+                        let x: &{Int: [String]} = &original
+                        return *x
+                    }
+                `,
 			)
 
 			value, err := inter.Invoke("main")
@@ -2834,101 +2865,282 @@ func TestInterpretDereference(t *testing.T) {
 	t.Run("Character", func(t *testing.T) {
 		t.Parallel()
 
-		runValidTestCase(
+		runTestCase(
 			t,
 			"Character",
 			`
-				fun main(): Character {
-					let original: Character = "S"
-					let x: &Character = &original
-					return *x
-				}
-			`,
-			interpreter.NewUnmeteredCharacterValue("S"),
+                fun main(): Character {
+                    let original: Character = "S"
+                    let x: &Character = &original
+                    return *x
+                }
+            `,
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredCharacterValue("S")
+			},
 		)
 	})
 
 	t.Run("String", func(t *testing.T) {
 		t.Parallel()
 
-		runValidTestCase(
+		runTestCase(
 			t,
 			"String",
 			`
-				fun main(): String {
-					let original: String = "STxy"
-					let x: &String = &original
-					return *x
-				}
-			`,
-			interpreter.NewUnmeteredStringValue("STxy"),
+                fun main(): String {
+                    let original: String = "STxy"
+                    let x: &String = &original
+                    return *x
+                }
+            `,
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredStringValue("STxy")
+			},
 		)
 	})
 
-	t.Run("Bool", func(t *testing.T) {
-		t.Parallel()
+	runTestCase(
+		t,
+		"Bool",
+		`
+            fun main(): Bool {
+                let original: Bool = true
+                let x: &Bool = &original
+                return *x
+            }
+        `,
+		func(_ *interpreter.Interpreter) interpreter.Value {
+			return interpreter.BoolValue(true)
+		},
+	)
 
-		runValidTestCase(
-			t,
-			"Bool",
-			`
-				fun main(): Bool {
-					let original: Bool = true
-					let x: &Bool = &original
-					return *x
-				}
-			`,
-			interpreter.BoolValue(true),
-		)
-	})
+	address, err := common.HexToAddress("0x0000000000000231")
+	assert.NoError(t, err)
 
-	t.Run("Address", func(t *testing.T) {
-		t.Parallel()
-
-		address, err := common.HexToAddress("0x0000000000000231")
-		assert.NoError(t, err)
-
-		runValidTestCase(
-			t,
-			"Address",
-			`
-				fun main(): Address {
-					let original: Address = 0x0000000000000231
-					let x: &Address = &original
-					return *x
-				}
-			`,
-			interpreter.NewAddressValue(nil, address),
-		)
-	})
+	runTestCase(
+		t,
+		"Address",
+		`
+            fun main(): Address {
+                let original: Address = 0x0000000000000231
+                let x: &Address = &original
+                return *x
+            }
+        `,
+		func(_ *interpreter.Interpreter) interpreter.Value {
+			return interpreter.NewAddressValue(nil, address)
+		},
+	)
 
 	t.Run("Path", func(t *testing.T) {
 		t.Parallel()
 
-		runValidTestCase(
+		runTestCase(
 			t,
 			"PrivatePath",
 			`
-				fun main(): Path {
-					let original: Path = /private/temp
-					let x: &Path = &original
-					return *x
-				}
-			`,
-			interpreter.NewUnmeteredPathValue(common.PathDomainPrivate, "temp"),
+                fun main(): Path {
+                    let original: Path = /private/temp
+                    let x: &Path = &original
+                    return *x
+                }
+            `,
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredPathValue(common.PathDomainPrivate, "temp")
+			},
 		)
 
-		runValidTestCase(
+		runTestCase(
 			t,
 			"PublicPath",
 			`
-				fun main(): Path {
-					let original: Path = /public/temp
-					let x: &Path = &original
-					return *x
-				}
-			`,
-			interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "temp"),
+                fun main(): Path {
+                    let original: Path = /public/temp
+                    let x: &Path = &original
+                    return *x
+                }
+            `,
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "temp")
+			},
 		)
+	})
+
+	t.Run("Optional", func(t *testing.T) {
+		t.Parallel()
+
+		runTestCase(
+			t,
+			"nil",
+			`
+              fun main(): Int? {
+                  let ref: &Int? = nil
+                  return *ref
+              }
+            `,
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.Nil
+			},
+		)
+
+		runTestCase(
+			t,
+			"some",
+			`
+              fun main(): Int? {
+                  let ref: &Int? = &42 as &Int
+                  return *ref
+              }
+            `,
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredSomeValueNonCopying(
+					interpreter.NewIntValueFromInt64(nil, 42),
+				)
+			},
+		)
+	})
+
+	t.Run("Resource", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("direct", func(t *testing.T) {
+			t.Parallel()
+
+			inter, err := parseCheckAndInterpretWithOptions(t,
+				`
+                  resource R {}
+
+                  fun main() {
+                      let r1 <- create R()
+                      let r1Ref: &R = &r1
+                      let r2 <- *r1Ref
+                      destroy r1
+                      destroy r2
+                  }
+                `,
+				ParseCheckAndInterpretOptions{
+					HandleCheckerError: func(err error) {
+						errs := checker.RequireCheckerErrors(t, err, 1)
+
+						require.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			_, err = inter.Invoke("main")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ResourceReferenceDereferenceError{})
+		})
+
+		t.Run("array", func(t *testing.T) {
+			t.Parallel()
+
+			inter, err := parseCheckAndInterpretWithOptions(t,
+				`
+                  resource R {}
+
+                  fun main() {
+                      let rs1 <- [<- create R()]
+                      let rs1Ref: &[R] = &rs1
+                      let rs2 <- *rs1Ref
+                      destroy rs1
+                      destroy rs2
+                  }
+                `,
+				ParseCheckAndInterpretOptions{
+					HandleCheckerError: func(err error) {
+						errs := checker.RequireCheckerErrors(t, err, 1)
+
+						require.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			_, err = inter.Invoke("main")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ResourceReferenceDereferenceError{})
+		})
+	})
+
+	t.Run("Struct", func(t *testing.T) {
+
+		sStaticType := interpreter.NewCompositeStaticType(
+			nil,
+			TestLocation,
+			"S",
+			TestLocation.TypeID(nil, "S"),
+		)
+
+		newS := func(inter *interpreter.Interpreter) interpreter.Value {
+			return interpreter.NewCompositeValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				TestLocation,
+				"S",
+				common.CompositeKindStructure,
+				nil,
+				common.ZeroAddress,
+			)
+		}
+
+		runTestCase(
+			t,
+			"variable-sized array",
+			`
+		      struct S {}
+
+		      fun main(): [S] {
+		          let s1: [S] = [S()]
+		          let s1Ref: &[S] = &s1
+		          let s2 = *s1Ref
+                  return s2
+		      }
+            `,
+			func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(
+						nil,
+						sStaticType,
+					),
+					common.ZeroAddress,
+					newS(inter),
+				)
+			},
+		)
+
+		runTestCase(
+			t,
+			"constant-sized array",
+			`
+		      struct S {}
+
+		      fun main(): [S; 2] {
+		          let s1: [S; 2] = [S(), S()]
+		          let s1Ref: &[S; 2] = &s1
+		          let s2 = *s1Ref
+                  return s2
+		      }
+            `,
+			func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewConstantSizedStaticType(
+						nil,
+						sStaticType,
+						2,
+					),
+					common.ZeroAddress,
+					newS(inter),
+					newS(inter),
+				)
+			},
+		)
+
 	})
 }

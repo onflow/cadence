@@ -2320,8 +2320,8 @@ func TestInterpretResourceInterfaceDefaultDestroyEvent(t *testing.T) {
 		fun test() {
 			let a <- create A(id: 1)	
 			let b <- create B(id: 2)	
-			let is: @[AnyResource] <- [<-a, <-b]
-			destroy is
+			let ab: @[AnyResource] <- [<-a, <-b]
+			destroy ab
 		}
         `, ParseCheckAndInterpretOptions{
 		Config: &interpreter.Config{

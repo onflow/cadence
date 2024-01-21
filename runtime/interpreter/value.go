@@ -236,7 +236,7 @@ type ContractValue interface {
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
 type IterableValue interface {
 	Value
-	Iterator(interpreter *Interpreter) ValueIterator
+	Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator
 	ForEach(
 		interpreter *Interpreter,
 		elementType sema.Type,
@@ -248,7 +248,7 @@ type IterableValue interface {
 // ValueIterator is an iterator which returns values.
 // When Next returns nil, it signals the end of the iterator.
 type ValueIterator interface {
-	Next(interpreter *Interpreter) Value
+	Next(interpreter *Interpreter, locationRange LocationRange) Value
 }
 
 func safeAdd(a, b int, locationRange LocationRange) int {
@@ -805,10 +805,16 @@ func (BoolValue) ChildStorables() []atree.Storable {
 // CharacterValue represents a Cadence character, which is a Unicode extended grapheme cluster.
 // Hence, use a Go string to be able to hold multiple Unicode code points (Go runes).
 // It should consist of exactly one grapheme cluster
-type CharacterValue string
+type CharacterValue struct {
+	Str             string
+	UnnormalizedStr string
+}
 
 func NewUnmeteredCharacterValue(r string) CharacterValue {
-	return CharacterValue(norm.NFC.String(r))
+	return CharacterValue{
+		Str:             norm.NFC.String(r),
+		UnnormalizedStr: r,
+	}
 }
 
 func NewCharacterValue(
@@ -823,12 +829,12 @@ func NewCharacterValue(
 	return NewUnmeteredCharacterValue(character)
 }
 
-var _ Value = CharacterValue("a")
-var _ atree.Storable = CharacterValue("a")
-var _ EquatableValue = CharacterValue("a")
-var _ ComparableValue = CharacterValue("a")
-var _ HashableValue = CharacterValue("a")
-var _ MemberAccessibleValue = CharacterValue("a")
+var _ Value = CharacterValue{}
+var _ atree.Storable = CharacterValue{}
+var _ EquatableValue = CharacterValue{}
+var _ ComparableValue = CharacterValue{}
+var _ HashableValue = CharacterValue{}
+var _ MemberAccessibleValue = CharacterValue{}
 
 func (CharacterValue) isValue() {}
 
@@ -849,7 +855,7 @@ func (CharacterValue) IsImportable(_ *Interpreter) bool {
 }
 
 func (v CharacterValue) String() string {
-	return format.String(string(v))
+	return format.String(v.Str)
 }
 
 func (v CharacterValue) RecursiveString(_ SeenReferences) string {
@@ -857,7 +863,7 @@ func (v CharacterValue) RecursiveString(_ SeenReferences) string {
 }
 
 func (v CharacterValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
-	l := format.FormattedStringLength(string(v))
+	l := format.FormattedStringLength(v.Str)
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(l))
 	return v.String()
 }
@@ -867,7 +873,7 @@ func (v CharacterValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool
 	if !ok {
 		return false
 	}
-	return v == otherChar
+	return v.Str == otherChar.Str
 }
 
 func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -875,7 +881,7 @@ func (v CharacterValue) Less(_ *Interpreter, other ComparableValue, _ LocationRa
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v < otherChar
+	return v.Str < otherChar.Str
 }
 
 func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -883,7 +889,7 @@ func (v CharacterValue) LessEqual(_ *Interpreter, other ComparableValue, _ Locat
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v <= otherChar
+	return v.Str <= otherChar.Str
 }
 
 func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -891,7 +897,7 @@ func (v CharacterValue) Greater(_ *Interpreter, other ComparableValue, _ Locatio
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v > otherChar
+	return v.Str > otherChar.Str
 }
 
 func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ LocationRange) BoolValue {
@@ -899,11 +905,11 @@ func (v CharacterValue) GreaterEqual(_ *Interpreter, other ComparableValue, _ Lo
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
-	return v >= otherChar
+	return v.Str >= otherChar.Str
 }
 
 func (v CharacterValue) HashInput(_ *Interpreter, _ LocationRange, scratch []byte) []byte {
-	s := []byte(string(v))
+	s := []byte(v.Str)
 	length := 1 + len(s)
 	var buffer []byte
 	if length <= len(scratch) {
@@ -960,7 +966,7 @@ func (CharacterValue) DeepRemove(_ *Interpreter) {
 }
 
 func (v CharacterValue) ByteSize() uint32 {
-	return cborTagSize + getBytesCBORSize([]byte(v))
+	return cborTagSize + getBytesCBORSize([]byte(v.Str))
 }
 
 func (v CharacterValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
@@ -980,21 +986,21 @@ func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, nam
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 
-				memoryUsage := common.NewStringMemoryUsage(len(v))
+				memoryUsage := common.NewStringMemoryUsage(len(v.Str))
 
 				return NewStringValue(
 					interpreter,
 					memoryUsage,
 					func() string {
-						return string(v)
+						return v.Str
 					},
 				)
 			},
 		)
 
 	case sema.CharacterTypeUtf8FieldName:
-		common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(v)))
-		return ByteSliceToByteArrayValue(interpreter, []byte(v))
+		common.UseMemory(interpreter, common.NewBytesMemoryUsage(len(v.Str)))
+		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
 	}
 	return nil
 }
@@ -1015,8 +1021,9 @@ type StringValue struct {
 	// graphemes is a grapheme cluster segmentation iterator,
 	// which is initialized lazily and reused/reset in functions
 	// that are based on grapheme clusters
-	graphemes *uniseg.Graphemes
-	Str       string
+	graphemes       *uniseg.Graphemes
+	Str             string
+	UnnormalizedStr string
 	// length is the cached length of the string, based on grapheme clusters.
 	// a negative value indicates the length has not been initialized, see Length()
 	length int
@@ -1024,7 +1031,8 @@ type StringValue struct {
 
 func NewUnmeteredStringValue(str string) *StringValue {
 	return &StringValue{
-		Str: norm.NFC.String(str),
+		Str:             norm.NFC.String(str),
+		UnnormalizedStr: str,
 		// a negative value indicates the length has not been initialized, see Length()
 		length: -1,
 	}
@@ -1588,7 +1596,7 @@ func (v *StringValue) ConformsToStaticType(
 	return true
 }
 
-func (v *StringValue) Iterator(_ *Interpreter) ValueIterator {
+func (v *StringValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 	return StringValueIterator{
 		graphemes: uniseg.NewGraphemes(v.Str),
 	}
@@ -1598,11 +1606,11 @@ func (v *StringValue) ForEach(
 	interpreter *Interpreter,
 	_ sema.Type,
 	function func(value Value) (resume bool),
-	_ LocationRange,
+	locationRange LocationRange,
 ) {
-	iterator := v.Iterator(interpreter)
+	iterator := v.Iterator(interpreter, locationRange)
 	for {
-		value := iterator.Next(interpreter)
+		value := iterator.Next(interpreter, locationRange)
 		if value == nil {
 			return
 		}
@@ -1619,7 +1627,7 @@ type StringValueIterator struct {
 
 var _ ValueIterator = StringValueIterator{}
 
-func (i StringValueIterator) Next(_ *Interpreter) Value {
+func (i StringValueIterator) Next(_ *Interpreter, _ LocationRange) Value {
 	if !i.graphemes.Next() {
 		return nil
 	}
@@ -1641,7 +1649,7 @@ type ArrayValueIterator struct {
 	atreeIterator *atree.ArrayIterator
 }
 
-func (v *ArrayValue) Iterator(_ *Interpreter) ValueIterator {
+func (v *ArrayValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 	arrayIterator, err := v.array.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -1653,7 +1661,7 @@ func (v *ArrayValue) Iterator(_ *Interpreter) ValueIterator {
 
 var _ ValueIterator = ArrayValueIterator{}
 
-func (i ArrayValueIterator) Next(interpreter *Interpreter) Value {
+func (i ArrayValueIterator) Next(interpreter *Interpreter, _ LocationRange) Value {
 	atreeValue, err := i.atreeIterator.Next()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -2576,6 +2584,51 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				)
 			},
 		)
+
+	case sema.ArrayTypeToVariableSizedFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ArrayToVariableSizedFunctionType(
+				v.SemaType(interpreter).ElementType(false),
+			),
+			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
+
+				return v.ToVariableSized(
+					interpreter,
+					invocation.LocationRange,
+				)
+			},
+		)
+
+	case sema.ArrayTypeToConstantSizedFunctionName:
+		return NewHostFunctionValue(
+			interpreter,
+			sema.ArrayToConstantSizedFunctionType(
+				v.SemaType(interpreter).ElementType(false),
+			),
+			func(invocation Invocation) Value {
+				interpreter := invocation.Interpreter
+
+				typeParameterPair := invocation.TypeParameterTypes.Oldest()
+				if typeParameterPair == nil {
+					panic(errors.NewUnreachableError())
+				}
+
+				ty := typeParameterPair.Value
+
+				constantSizedArrayType, ok := ty.(*sema.ConstantSizedType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.ToConstantSized(
+					interpreter,
+					invocation.LocationRange,
+					constantSizedArrayType.Size,
+				)
+			},
+		)
 	}
 
 	return nil
@@ -3223,6 +3276,118 @@ func (v *ArrayValue) ForEach(
 	_ LocationRange,
 ) {
 	v.Iterate(interpreter, function)
+}
+
+func (v *ArrayValue) ToVariableSized(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+) Value {
+	var returnArrayStaticType ArrayStaticType
+	switch v.Type.(type) {
+	case *ConstantSizedStaticType:
+		returnArrayStaticType = NewVariableSizedStaticType(
+			interpreter,
+			v.Type.ElementType(),
+		)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	iterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return NewArrayValueWithIterator(
+		interpreter,
+		returnArrayStaticType,
+		common.ZeroAddress,
+		uint64(v.Count()),
+		func() Value {
+
+			// Meter computation for iterating the array.
+			interpreter.ReportComputation(common.ComputationKindLoop, 1)
+
+			atreeValue, err := iterator.Next()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+
+			if atreeValue == nil {
+				return nil
+			}
+
+			value := MustConvertStoredValue(interpreter, atreeValue)
+
+			return value.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+			)
+		},
+	)
+}
+
+func (v *ArrayValue) ToConstantSized(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	expectedConstantSizedArraySize int64,
+) Value {
+	if int64(v.Count()) != expectedConstantSizedArraySize {
+		return NilOptionalValue
+	}
+
+	var returnArrayStaticType ArrayStaticType
+	switch v.Type.(type) {
+	case *VariableSizedStaticType:
+		returnArrayStaticType = NewConstantSizedStaticType(
+			interpreter,
+			v.Type.ElementType(),
+			expectedConstantSizedArraySize,
+		)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	iterator, err := v.array.Iterator()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+
+	return NewArrayValueWithIterator(
+		interpreter,
+		returnArrayStaticType,
+		common.ZeroAddress,
+		uint64(v.Count()),
+		func() Value {
+
+			// Meter computation for iterating the array.
+			interpreter.ReportComputation(common.ComputationKindLoop, 1)
+
+			atreeValue, err := iterator.Next()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+
+			if atreeValue == nil {
+				return nil
+			}
+
+			value := MustConvertStoredValue(interpreter, atreeValue)
+
+			return value.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+			)
+		},
+	)
 }
 
 // NumberValue
@@ -16291,8 +16456,13 @@ func (UFix64Value) Scale() int {
 type FunctionOrderedMap = orderedmap.OrderedMap[string, FunctionValue]
 
 type CompositeValue struct {
-	Location        common.Location
-	staticType      StaticType
+	Location common.Location
+
+	// note that the staticType is not guaranteed to be a CompositeStaticType as there can be types
+	// which are non-composite but their values are treated as CompositeValue.
+	// For e.g. InclusiveRangeValue
+	staticType StaticType
+
 	Stringer        func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
 	injectedFields  map[string]Value
 	computedFields  map[string]ComputedField
@@ -16323,6 +16493,7 @@ const unrepresentableNamePrefix = "$"
 const resourceDefaultDestroyEventPrefix = ast.ResourceDestructionDefaultEventName + unrepresentableNamePrefix
 
 var _ TypeIndexableValue = &CompositeValue{}
+var _ IterableValue = &CompositeValue{}
 
 func NewCompositeField(memoryGauge common.MemoryGauge, name string, value Value) CompositeField {
 	common.UseMemory(memoryGauge, common.CompositeFieldMemoryUsage)
@@ -16334,6 +16505,33 @@ func NewUnmeteredCompositeField(name string, value Value) CompositeField {
 		Name:  name,
 		Value: value,
 	}
+}
+
+// Create a CompositeValue with the provided StaticType.
+// Useful when we wish to utilize CompositeValue as the value
+// for a type which isn't CompositeType.
+// For e.g. InclusiveRangeType
+func NewCompositeValueWithStaticType(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	location common.Location,
+	qualifiedIdentifier string,
+	kind common.CompositeKind,
+	fields []CompositeField,
+	address common.Address,
+	staticType StaticType,
+) *CompositeValue {
+	value := NewCompositeValue(
+		interpreter,
+		locationRange,
+		location,
+		qualifiedIdentifier,
+		kind,
+		fields,
+		address,
+	)
+	value.staticType = staticType
+	return value
 }
 
 func NewCompositeValue(
@@ -17154,10 +17352,29 @@ func (v *CompositeValue) ConformsToStaticType(
 		}()
 	}
 
-	staticType := v.StaticType(interpreter).(*CompositeStaticType)
-
+	staticType := v.StaticType(interpreter)
 	semaType := interpreter.MustConvertStaticToSemaType(staticType)
 
+	switch staticType.(type) {
+	case *CompositeStaticType:
+		return v.CompositeStaticTypeConformsToStaticType(interpreter, locationRange, results, semaType)
+
+	// CompositeValue is also used for storing types which aren't CompositeStaticType.
+	// E.g. InclusiveRange.
+	case InclusiveRangeStaticType:
+		return v.InclusiveRangeStaticTypeConformsToStaticType(interpreter, locationRange, results, semaType)
+
+	default:
+		return false
+	}
+}
+
+func (v *CompositeValue) CompositeStaticTypeConformsToStaticType(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	results TypeConformanceResults,
+	semaType sema.Type,
+) bool {
 	compositeType, ok := semaType.(*sema.CompositeType)
 	if !ok ||
 		v.Kind != compositeType.Kind ||
@@ -17209,6 +17426,42 @@ func (v *CompositeValue) ConformsToStaticType(
 		fieldStaticType := value.StaticType(interpreter)
 
 		if !interpreter.IsSubTypeOfSemaType(fieldStaticType, member.TypeAnnotation.Type) {
+			return false
+		}
+
+		if !value.ConformsToStaticType(
+			interpreter,
+			locationRange,
+			results,
+		) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (v *CompositeValue) InclusiveRangeStaticTypeConformsToStaticType(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	results TypeConformanceResults,
+	semaType sema.Type,
+) bool {
+	inclusiveRangeType, ok := semaType.(*sema.InclusiveRangeType)
+	if !ok {
+		return false
+	}
+
+	expectedMemberStaticType := ConvertSemaToStaticType(interpreter, inclusiveRangeType.MemberType)
+	for _, fieldName := range sema.InclusiveRangeTypeFieldNames {
+		value := v.GetField(interpreter, locationRange, fieldName)
+
+		fieldStaticType := value.StaticType(interpreter)
+
+		// InclusiveRange is non-covariant.
+		// For e.g. we disallow assigning InclusiveRange<Int> to an InclusiveRange<Integer>.
+		// Hence we do an exact equality check instead of a sub-type check.
+		if !fieldStaticType.Equal(expectedMemberStaticType) {
 			return false
 		}
 
@@ -17900,6 +18153,93 @@ func (v *CompositeValue) RemoveTypeKey(
 	attachmentType sema.Type,
 ) Value {
 	return v.RemoveMember(interpreter, locationRange, attachmentMemberName(attachmentType))
+}
+
+func (v *CompositeValue) Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator {
+	staticType := v.StaticType(interpreter)
+
+	switch typ := staticType.(type) {
+	case InclusiveRangeStaticType:
+		return NewInclusiveRangeIterator(interpreter, locationRange, v, typ)
+
+	default:
+		// Must be caught in the checker.
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (v *CompositeValue) ForEach(
+	interpreter *Interpreter,
+	_ sema.Type,
+	function func(value Value) (resume bool),
+	locationRange LocationRange,
+) {
+	iterator := v.Iterator(interpreter, locationRange)
+	for {
+		value := iterator.Next(interpreter, locationRange)
+		if value == nil {
+			return
+		}
+
+		if !function(value) {
+			return
+		}
+	}
+}
+
+type InclusiveRangeIterator struct {
+	rangeValue *CompositeValue
+	next       IntegerValue
+
+	// Cached values
+	stepNegative bool
+	step         IntegerValue
+	end          IntegerValue
+}
+
+var _ ValueIterator = &InclusiveRangeIterator{}
+
+func NewInclusiveRangeIterator(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	v *CompositeValue,
+	typ InclusiveRangeStaticType,
+) *InclusiveRangeIterator {
+	startValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeStartFieldName)
+
+	zeroValue := GetSmallIntegerValue(0, typ.ElementType)
+	endValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeEndFieldName)
+
+	stepValue := getFieldAsIntegerValue(interpreter, v, locationRange, sema.InclusiveRangeTypeStepFieldName)
+	stepNegative := stepValue.Less(interpreter, zeroValue, locationRange)
+
+	return &InclusiveRangeIterator{
+		rangeValue:   v,
+		next:         startValue,
+		stepNegative: bool(stepNegative),
+		step:         stepValue,
+		end:          endValue,
+	}
+}
+
+func (i *InclusiveRangeIterator) Next(interpreter *Interpreter, locationRange LocationRange) Value {
+	valueToReturn := i.next
+
+	// Ensure that valueToReturn is within the bounds.
+	if i.stepNegative && bool(valueToReturn.Less(interpreter, i.end, locationRange)) {
+		return nil
+	} else if !i.stepNegative && bool(valueToReturn.Greater(interpreter, i.end, locationRange)) {
+		return nil
+	}
+
+	// Update the next value.
+	nextValueToReturn, ok := valueToReturn.Plus(interpreter, i.step, locationRange).(IntegerValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	i.next = nextValueToReturn
+	return valueToReturn
 }
 
 // DictionaryValue
@@ -19432,8 +19772,8 @@ type SomeValue struct {
 	isDestroyed bool
 }
 
-func NewSomeValueNonCopying(interpreter *Interpreter, value Value) *SomeValue {
-	common.UseMemory(interpreter, common.OptionalValueMemoryUsage)
+func NewSomeValueNonCopying(memoryGauge common.MemoryGauge, value Value) *SomeValue {
+	common.UseMemory(memoryGauge, common.OptionalValueMemoryUsage)
 
 	return NewUnmeteredSomeValueNonCopying(value)
 }
@@ -19757,8 +20097,16 @@ func DereferenceValue(
 	locationRange LocationRange,
 	referenceValue ReferenceValue,
 ) Value {
-	referencedValue := referenceValue.ReferencedValue(inter, locationRange, true)
-	return (*referencedValue).Transfer(
+	referencedValue := *referenceValue.ReferencedValue(inter, locationRange, true)
+
+	// Defensive check: ensure that the referenced value is not a resource
+	if referencedValue.IsResourceKinded(inter) {
+		panic(ResourceReferenceDereferenceError{
+			LocationRange: locationRange,
+		})
+	}
+
+	return referencedValue.Transfer(
 		inter,
 		locationRange,
 		atree.Address{},
@@ -20132,7 +20480,7 @@ func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
 
 func (*StorageReferenceValue) isReference() {}
 
-func (v *StorageReferenceValue) Iterator(_ *Interpreter) ValueIterator {
+func (v *StorageReferenceValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 	// Not used for now
 	panic(errors.NewUnreachableError())
 }
@@ -20213,7 +20561,7 @@ func NewUnmeteredEphemeralReferenceValue(
 	borrowedType sema.Type,
 	locationRange LocationRange,
 ) *EphemeralReferenceValue {
-	if reference, isReference := value.(*EphemeralReferenceValue); isReference {
+	if reference, isReference := value.(ReferenceValue); isReference {
 		panic(NestedReferenceError{
 			Value:         reference,
 			LocationRange: locationRange,
@@ -20496,7 +20844,7 @@ func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
 
 func (*EphemeralReferenceValue) isReference() {}
 
-func (v *EphemeralReferenceValue) Iterator(_ *Interpreter) ValueIterator {
+func (v *EphemeralReferenceValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
 	// Not used for now
 	panic(errors.NewUnreachableError())
 }
