@@ -1528,7 +1528,7 @@ func TestMigratePublishedValue(t *testing.T) {
             prepare(signer: auth(Inbox, Storage, Capabilities) &Account) {
                 let cap = signer.capabilities.storage.issue<&C.R>(/storage/r)
                 signer.storage.save(cap, to: /storage/cap)
-                signer.inbox.publish(cap, name: "cap", recipient: 0x2)
+                signer.inbox.publish(cap, name: "r_cap", recipient: 0x2)
             }
         }
     `)
@@ -1605,14 +1605,50 @@ func TestMigratePublishedValue(t *testing.T) {
 	// Assert
 
 	assert.Len(t, reporter.errored, 0)
-	assert.Len(t, reporter.migrated, 2)
+	assert.Equal(t,
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}]struct{}{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(1),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress,
+					Key:     common.PathDomainStorage.Identifier(),
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("cap"),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress,
+					Key:     stdlib.InboxStorageDomain,
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("r_cap"),
+			}: {},
+		},
+		reporter.migrated,
+	)
 
 	inboxStorageIdentifier := stdlib.InboxStorageDomain
-	inboxStorageMap := storage.GetStorageMap(testAddress, inboxStorageIdentifier, false)
+	inboxStorageMap := storage.GetStorageMap(
+		testAddress,
+		inboxStorageIdentifier,
+		false,
+	)
 	require.NotNil(t, inboxStorageMap)
 	require.Equal(t, inboxStorageMap.Count(), uint64(1))
 
-	storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
+	storageMap := storage.GetStorageMap(
+		testAddress,
+		common.PathDomainStorage.Identifier(),
+		false,
+	)
 	require.NotNil(t, storageMap)
 	require.Equal(t, inboxStorageMap.Count(), uint64(1))
 
@@ -1632,7 +1668,7 @@ func TestMigratePublishedValue(t *testing.T) {
 		ref.Authorization,
 	)
 
-	publishedValue := inboxStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("cap"))
+	publishedValue := inboxStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("r_cap"))
 	require.IsType(t, &interpreter.PublishedValue{}, publishedValue)
 	capabilityValue := publishedValue.(*interpreter.PublishedValue).Value
 	require.IsType(t, &interpreter.ReferenceStaticType{}, capabilityValue.BorrowType)
@@ -1716,7 +1752,7 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
            prepare(signer: auth(Inbox, Storage, Capabilities) &Account) {
                let cap = signer.capabilities.storage.issue<&C.R>(/storage/r)
                signer.storage.save(cap, to: /storage/cap)
-               signer.inbox.publish(cap, name: "cap", recipient: 0x2)
+               signer.inbox.publish(cap, name: "r_cap", recipient: 0x2)
            }
        }
    `)
@@ -1777,12 +1813,20 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
 	runtimeInterface.InvalidateUpdatedPrograms()
 
 	inboxStorageIdentifier := stdlib.InboxStorageDomain
-	inboxStorageMap := storage.GetStorageMap(testAddress2, inboxStorageIdentifier, false)
+	inboxStorageMap := storage.GetStorageMap(
+		testAddress2,
+		inboxStorageIdentifier,
+		false,
+	)
 	require.NotNil(t, inboxStorageMap)
 	require.Equal(t, inboxStorageMap.Count(), uint64(1))
 
 	storageIdentifier := common.PathDomainStorage.Identifier()
-	storageMap := storage.GetStorageMap(testAddress2, storageIdentifier, false)
+	storageMap := storage.GetStorageMap(
+		testAddress2,
+		storageIdentifier,
+		false,
+	)
 	require.NotNil(t, storageMap)
 	require.Equal(t, inboxStorageMap.Count(), uint64(1))
 
@@ -1810,7 +1854,35 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
 	// Assert
 
 	assert.Len(t, reporter.errored, 0)
-	assert.Len(t, reporter.migrated, 2)
+	assert.Equal(t,
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}]struct{}{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(1),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     common.PathDomainStorage.Identifier(),
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("cap"),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.InboxStorageDomain,
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("r_cap"),
+			}: {},
+		},
+		reporter.migrated,
+	)
 
 	cap1 := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("cap"))
 	capValue := cap1.(*interpreter.CapabilityValue)
@@ -1828,7 +1900,7 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
 		ref.Authorization,
 	)
 
-	publishedValue := inboxStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("cap"))
+	publishedValue := inboxStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("r_cap"))
 	require.IsType(t, &interpreter.PublishedValue{}, publishedValue)
 	capabilityValue := publishedValue.(*interpreter.PublishedValue).Value
 	require.IsType(t, &interpreter.ReferenceStaticType{}, capabilityValue.BorrowType)
@@ -2018,7 +2090,28 @@ func TestMigrateAcrossContracts(t *testing.T) {
 	// Assert
 
 	assert.Len(t, reporter.errored, 0)
-	assert.Len(t, reporter.migrated, 1)
+	assert.Equal(t,
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}]struct{}{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(1),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     common.PathDomainStorage.Identifier(),
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("bar"),
+			}: {},
+		},
+		reporter.migrated,
+	)
 
 	value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("bar"))
 
@@ -2205,7 +2298,35 @@ func TestMigrateArrayOfValues(t *testing.T) {
 	// Assert
 
 	assert.Len(t, reporter.errored, 0)
-	assert.Len(t, reporter.migrated, 1)
+	assert.Equal(t,
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}]struct{}{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(1),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(2),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     common.PathDomainStorage.Identifier(),
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("caps"),
+			}: {},
+		},
+		reporter.migrated,
+	)
 
 	arrayValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("caps"))
 	require.IsType(t, &interpreter.ArrayValue{}, arrayValue)
@@ -2424,7 +2545,35 @@ func TestMigrateDictOfValues(t *testing.T) {
 	// Assert
 
 	assert.Len(t, reporter.errored, 0)
-	assert.Len(t, reporter.migrated, 1)
+	assert.Equal(t,
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}]struct{}{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(1),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(2),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     common.PathDomainStorage.Identifier(),
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("caps"),
+			}: {},
+		},
+		reporter.migrated,
+	)
 
 	dictValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("caps"))
 	require.IsType(t, &interpreter.DictionaryValue{}, dictValue)
@@ -2445,7 +2594,11 @@ func TestMigrateDictOfValues(t *testing.T) {
 		ref.Authorization,
 	)
 
-	cap1, present := dictionaryValue.Get(inter, interpreter.EmptyLocationRange, interpreter.NewUnmeteredStringValue("a"))
+	cap1, present := dictionaryValue.Get(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.NewUnmeteredStringValue("a"),
+	)
 	require.True(t, present)
 	require.IsType(t, &interpreter.CapabilityValue{}, cap1)
 	capValue := cap1.(*interpreter.CapabilityValue)
@@ -2461,7 +2614,11 @@ func TestMigrateDictOfValues(t *testing.T) {
 		ref.Authorization,
 	)
 
-	cap2, present := dictionaryValue.Get(inter, interpreter.EmptyLocationRange, interpreter.NewUnmeteredStringValue("b"))
+	cap2, present := dictionaryValue.Get(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.NewUnmeteredStringValue("b"),
+	)
 	require.True(t, present)
 	require.IsType(t, &interpreter.CapabilityValue{}, cap2)
 	capValue = cap1.(*interpreter.CapabilityValue)
@@ -2557,6 +2714,159 @@ func TestConvertMigratedAccountTypes(t *testing.T) {
 
 		test(ty)
 	}
+}
+
+func TestMigrateCapConsAcrossTwoAccounts(t *testing.T) {
+	t.Parallel()
+
+	testAddress1 := common.Address{0, 0, 0, 0, 0, 0, 0, 1}
+	testAddress2 := common.Address{0, 0, 0, 0, 0, 0, 0, 2}
+
+	rt := NewTestInterpreterRuntime()
+
+	accountCodes := map[common.Location][]byte{}
+
+	var signingAddress common.Address
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{signingAddress}, nil
+		},
+		OnGetCode: func(location common.Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+	}
+
+	// Prepare
+
+	oldContract := []byte(`
+       access(all) contract C {
+           access(all) resource R {
+               access(all) fun foo() {}
+           }
+           access(all) fun makeR(): @R {
+               return <- create R()
+           }
+       }
+   `)
+
+	contract := []byte(`
+       access(all) contract C {
+           access(all) entitlement E
+           access(all) resource R {
+               access(E) fun foo() {}
+           }
+           access(all) fun makeR(): @R {
+               return <- create R()
+           }
+       }
+   `)
+
+	saveValues := []byte(`
+       import C from 0x1
+
+       transaction {
+           prepare(signer: auth(Inbox, Storage, Capabilities) &Account) {
+               signer.capabilities.storage.issue<&C.R>(/storage/r)
+           }
+       }
+   `)
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy contract to 0x1
+
+	signingAddress = testAddress1
+
+	err := rt.ExecuteTransaction(
+		runtime.Script{
+			Source: DeploymentTransaction("C", oldContract),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Execute transaction on 0x2
+
+	signingAddress = testAddress2
+
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: saveValues,
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Update contract on 0x1
+
+	signingAddress = testAddress1
+
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: UpdateTransaction("C", contract),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	// Important: invalidate the loaded program, as it was updated
+	runtimeInterface.InvalidateUpdatedPrograms()
+
+	// Migrate
+
+	reporter := newTestReporter()
+
+	migration := migrations.NewStorageMigration(inter, storage)
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress1,
+				testAddress2,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewEntitlementsMigration(inter),
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Len(t, reporter.errored, 0)
+	assert.Len(t, reporter.migrated, 1)
+
+	// TODO: assert
 }
 
 var _ migrations.Reporter = &testReporter{}
@@ -2796,7 +3106,11 @@ func TestRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
-		storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			false,
+		)
 		storedValue := storageMap.ReadValue(inter, storageMapKey)
 
 		require.IsType(t, &interpreter.DictionaryValue{}, storedValue)
