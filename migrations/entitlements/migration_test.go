@@ -1604,6 +1604,223 @@ func TestMigratePublishedValue(t *testing.T) {
 	)
 }
 
+func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
+	t.Parallel()
+
+	address1 := [8]byte{0, 0, 0, 0, 0, 0, 0, 1}
+	address2 := [8]byte{0, 0, 0, 0, 0, 0, 0, 2}
+
+	storage := NewTestLedger(nil, nil)
+	rt := NewTestInterpreterRuntime()
+
+	accountCodes := map[common.Location][]byte{}
+	interfaces := map[common.Location]*TestRuntimeInterface{}
+
+	runtimeInterface1 := &TestRuntimeInterface{
+		Storage: storage,
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{address1}, nil
+		},
+		OnGetCode: func(location common.Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnResolveLocation: MultipleIdentifierLocationResolver,
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+	runtimeInterface1.OnUpdateAccountContractCode = func(location common.AddressLocation, code []byte) error {
+		accountCodes[location] = code
+		interfaces[location] = runtimeInterface1
+		return nil
+	}
+
+	runtimeInterface2 := &TestRuntimeInterface{
+		Storage: storage,
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnGetCode: func(location common.Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{address2}, nil
+		},
+		OnResolveLocation: MultipleIdentifierLocationResolver,
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+	}
+	runtimeInterface2.OnUpdateAccountContractCode = func(location common.AddressLocation, code []byte) error {
+		accountCodes[location] = code
+		interfaces[location] = runtimeInterface2
+		return nil
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	oldContract := []byte(`
+		access(all) contract C {
+			access(all) resource R {
+				access(all) fun foo() {}
+			}
+			access(all) fun makeR(): @R {
+				return <- create R()
+			}
+		}
+	`)
+
+	contract := []byte(`
+		access(all) contract C {
+			access(all) entitlement E
+			access(all) resource R {
+				access(E) fun foo() {}
+			}
+			access(all) fun makeR(): @R {
+				return <- create R()
+			}
+		}
+	`)
+
+	saveValues := []byte(`
+		import C from 0x1	
+
+		transaction {
+			prepare(signer: auth(Inbox, Storage, Capabilities) &Account) {
+				let r <- C.makeR()
+				signer.storage.save(<-r, to: /storage/foo)
+				let cap = signer.capabilities.storage.issue<&C.R>(/storage/foo)
+				signer.storage.save(cap, to: /storage/cap)
+				signer.inbox.publish(cap, name: "cap", recipient: 0x2)
+			}
+		}
+	`)
+
+	// Deploy contract to 0x1
+	err := rt.ExecuteTransaction(
+		runtime.Script{
+			Source: DeploymentTransaction("C", oldContract),
+		},
+		runtime.Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Execute transaction on 0x2
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: saveValues,
+		},
+		runtime.Context{
+			Interface: runtimeInterface2,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// update contract on 0x1
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: UpdateTransaction("C", contract),
+		},
+		runtime.Context{
+			Interface: runtimeInterface1,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	runtimeStorage := runtime.NewStorage(storage, nil)
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage:                       runtimeStorage,
+			AtreeValueValidationEnabled:   false,
+			AtreeStorageValidationEnabled: false,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				program, err := rt.ParseAndCheckProgram(
+					accountCodes[location],
+					runtime.Context{
+						Interface: interfaces[location],
+						Location:  location,
+					},
+				)
+				require.NoError(t, err)
+
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				require.NoError(t, err)
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
+				}
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	inboxStorageIdentifier := stdlib.InboxStorageDomain
+	inboxStorageMap := runtimeStorage.GetStorageMap(address2, inboxStorageIdentifier, false)
+	require.NotNil(t, inboxStorageMap)
+	require.Equal(t, inboxStorageMap.Count(), uint64(1))
+
+	storageIdentifier := common.PathDomainStorage.Identifier()
+	storageMap := runtimeStorage.GetStorageMap(address2, storageIdentifier, false)
+	require.NotNil(t, storageMap)
+	require.Equal(t, inboxStorageMap.Count(), uint64(1))
+
+	// Migrate
+
+	migration := migrations.NewStorageMigration(inter, runtimeStorage)
+	pathMigrator := migration.NewValueMigrationsPathMigrator(nil, NewEntitlementsMigration(inter))
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				address1,
+				address2,
+			},
+		},
+		pathMigrator,
+	)
+
+	cap1 := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("cap"))
+	capValue := cap1.(*interpreter.CapabilityValue)
+	require.IsType(t, &interpreter.ReferenceStaticType{}, capValue.BorrowType)
+	ref := capValue.BorrowType.(*interpreter.ReferenceStaticType)
+	require.Equal(t,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID { return []common.TypeID{"A.0000000000000001.C.E"} },
+			1,
+			sema.Conjunction,
+		),
+		ref.Authorization,
+	)
+
+	publishedValue := inboxStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("cap"))
+	require.IsType(t, &interpreter.PublishedValue{}, publishedValue)
+	capabilityValue := publishedValue.(*interpreter.PublishedValue).Value
+	require.IsType(t, &interpreter.ReferenceStaticType{}, capabilityValue.BorrowType)
+	ref = capabilityValue.BorrowType.(*interpreter.ReferenceStaticType)
+	require.Equal(t,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID { return []common.TypeID{"A.0000000000000001.C.E"} },
+			1,
+			sema.Conjunction,
+		),
+		ref.Authorization,
+	)
+}
+
 func TestMigrateAcrossContracts(t *testing.T) {
 	t.Parallel()
 
@@ -1946,7 +2163,7 @@ func TestMigrateArrayOfValues(t *testing.T) {
 			Source: saveValues,
 		},
 		runtime.Context{
-			Interface: runtimeInterface2,
+			Interface: runtimeInterface1,
 			Location:  nextTransactionLocation(),
 		},
 	)
