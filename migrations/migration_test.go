@@ -805,6 +805,9 @@ func TestCapConMigration(t *testing.T) {
 
 	// Assert
 
+	assert.Len(t, reporter.errored, 0)
+	assert.Len(t, reporter.migrated, 2)
+
 	storageMap = storage.GetStorageMap(
 		testAddress,
 		stdlib.CapabilityControllerStorageDomain,

@@ -589,14 +589,14 @@ func (i *TestRuntimeInterface) InteractionUsed() (uint64, error) {
 }
 
 func (i *TestRuntimeInterface) onTransactionExecutionStart() {
-	i.invalidateUpdatedPrograms()
+	i.InvalidateUpdatedPrograms()
 }
 
 func (i *TestRuntimeInterface) onScriptExecutionStart() {
-	i.invalidateUpdatedPrograms()
+	i.InvalidateUpdatedPrograms()
 }
 
-func (i *TestRuntimeInterface) invalidateUpdatedPrograms() {
+func (i *TestRuntimeInterface) InvalidateUpdatedPrograms() {
 	if i.updatedContractCode {
 		// iteration order does not matter
 		for location := range i.Programs { //nolint:maprange
