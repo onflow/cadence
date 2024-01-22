@@ -1526,9 +1526,7 @@ func TestMigratePublishedValue(t *testing.T) {
 
         transaction {
             prepare(signer: auth(Inbox, Storage, Capabilities) &Account) {
-                let r <- C.makeR()
-                signer.storage.save(<-r, to: /storage/foo)
-                let cap = signer.capabilities.storage.issue<&C.R>(/storage/foo)
+                let cap = signer.capabilities.storage.issue<&C.R>(/storage/r)
                 signer.storage.save(cap, to: /storage/cap)
                 signer.inbox.publish(cap, name: "cap", recipient: 0x2)
             }
@@ -1716,9 +1714,7 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
 
        transaction {
            prepare(signer: auth(Inbox, Storage, Capabilities) &Account) {
-               let r <- C.makeR()
-               signer.storage.save(<-r, to: /storage/foo)
-               let cap = signer.capabilities.storage.issue<&C.R>(/storage/foo)
+               let cap = signer.capabilities.storage.issue<&C.R>(/storage/r)
                signer.storage.save(cap, to: /storage/cap)
                signer.inbox.publish(cap, name: "cap", recipient: 0x2)
            }
