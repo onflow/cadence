@@ -2050,6 +2050,23 @@ func (e *InvalidNestedResourceMoveError) Error() string {
 	return "cannot move nested resource"
 }
 
+// InvalidInterfaceConditionResourceInvalidationError
+
+type InvalidInterfaceConditionResourceInvalidationError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidInterfaceConditionResourceInvalidationError{}
+var _ errors.UserError = &InvalidInterfaceConditionResourceInvalidationError{}
+
+func (*InvalidInterfaceConditionResourceInvalidationError) isSemanticError() {}
+
+func (*InvalidInterfaceConditionResourceInvalidationError) IsUserError() {}
+
+func (e *InvalidInterfaceConditionResourceInvalidationError) Error() string {
+	return "cannot invalidate resource in interface condition"
+}
+
 // InvalidResourceAnnotationError
 
 type InvalidResourceAnnotationError struct {
@@ -4193,4 +4210,21 @@ func (*AttachmentsNotEnabledError) IsUserError() {}
 
 func (e *AttachmentsNotEnabledError) Error() string {
 	return "attachments are not enabled and cannot be used in this environment"
+}
+
+// InvalidTypeParameterizedNonNativeFunctionError
+
+type InvalidTypeParameterizedNonNativeFunctionError struct {
+	ast.Range
+}
+
+var _ SemanticError = &InvalidTypeParameterizedNonNativeFunctionError{}
+var _ errors.UserError = &InvalidTypeParameterizedNonNativeFunctionError{}
+
+func (*InvalidTypeParameterizedNonNativeFunctionError) isSemanticError() {}
+
+func (*InvalidTypeParameterizedNonNativeFunctionError) IsUserError() {}
+
+func (e *InvalidTypeParameterizedNonNativeFunctionError) Error() string {
+	return "invalid type parameters in non-native function"
 }

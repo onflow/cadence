@@ -1221,3 +1221,29 @@ func TestCheckTypeInferenceForTypesWithDifferentTypeMaskRanges(t *testing.T) {
 		require.IsType(t, &sema.OptionalType{Type: sema.AnyStructType}, xType)
 	})
 }
+
+func TestCheckDeploymentResultInference(t *testing.T) {
+
+	t.Parallel()
+
+	code := `
+        let x: DeploymentResult = getDeploymentResult()
+        let y: DeploymentResult = getDeploymentResult()
+        // Function is just to get a 'DeploymentResult' return type.
+        fun getDeploymentResult(): DeploymentResult {
+            let v: DeploymentResult? = nil
+            return v!
+        }
+        let z = [x, y]
+    `
+
+	checker, err := ParseAndCheck(t, code)
+	require.NoError(t, err)
+
+	zType := RequireGlobalValue(t, checker.Elaboration, "z")
+
+	require.IsType(t, &sema.VariableSizedType{}, zType)
+	variableSizedType := zType.(*sema.VariableSizedType)
+
+	assert.Equal(t, sema.DeploymentResultType, variableSizedType.Type)
+}
