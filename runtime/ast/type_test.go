@@ -1205,6 +1205,7 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "ReferenceType",
+			"LegacyAuthorized": false,
             "Authorization": {
 				 "ConjunctiveElements": [
 					{ 
@@ -1347,6 +1348,7 @@ func TestIntersectionType_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "IntersectionType",
+			"LegacyRestrictedType": null,
             "Types": [
                 {
                     "Type": "NominalType",

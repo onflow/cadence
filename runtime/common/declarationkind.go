@@ -44,6 +44,7 @@ const (
 	DeclarationKindEvent
 	DeclarationKindField
 	DeclarationKindInitializer
+	DeclarationKindDestructorLegacy
 	DeclarationKindStructureInterface
 	DeclarationKindResourceInterface
 	DeclarationKindContractInterface
@@ -116,6 +117,8 @@ func (k DeclarationKind) Name() string {
 		return "field"
 	case DeclarationKindInitializer:
 		return "initializer"
+	case DeclarationKindDestructorLegacy:
+		return "legacy destructor"
 	case DeclarationKindAttachment:
 		return "attachment"
 	case DeclarationKindStructureInterface:
@@ -173,6 +176,8 @@ func (k DeclarationKind) Keywords() string {
 		return "event"
 	case DeclarationKindInitializer:
 		return "init"
+	case DeclarationKindDestructorLegacy: // Deprecated
+		return "destroy"
 	case DeclarationKindAttachment:
 		return "attachment"
 	case DeclarationKindStructureInterface:

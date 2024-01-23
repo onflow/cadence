@@ -537,9 +537,10 @@ func (t *FunctionType) CheckEqual(other Type, checker TypeEqualityChecker) error
 
 // ReferenceType
 type ReferenceType struct {
-	Type          Type          `json:"ReferencedType"`
-	StartPos      Position      `json:"-"`
-	Authorization Authorization `json:"Authorization"`
+	Type             Type     `json:"ReferencedType"`
+	StartPos         Position `json:"-"`
+	LegacyAuthorized bool
+	Authorization    Authorization `json:"Authorization"`
 }
 
 var _ Type = &ReferenceType{}
@@ -634,7 +635,8 @@ func (t *ReferenceType) CheckEqual(other Type, checker TypeEqualityChecker) erro
 // IntersectionType
 
 type IntersectionType struct {
-	Types []*NominalType
+	LegacyRestrictedType Type // Deprecated
+	Types                []*NominalType
 	Range
 }
 
