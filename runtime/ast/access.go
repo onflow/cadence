@@ -215,7 +215,7 @@ const (
 	AccessContract
 	AccessAccount
 	AccessAll
-	PubSettableLegacy
+	PubSettableLegacy // Deprecated
 )
 
 func PrimitiveAccessCount() int {

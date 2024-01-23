@@ -176,7 +176,7 @@ func (k DeclarationKind) Keywords() string {
 		return "event"
 	case DeclarationKindInitializer:
 		return "init"
-	case DeclarationKindDestructorLegacy:
+	case DeclarationKindDestructorLegacy: // Deprecated
 		return "destroy"
 	case DeclarationKindAttachment:
 		return "attachment"
