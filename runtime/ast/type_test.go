@@ -1205,6 +1205,7 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "ReferenceType",
+			"LegacyAuthorized": false,
             "Authorization": {
 				 "ConjunctiveElements": [
 					{ 

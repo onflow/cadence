@@ -215,7 +215,7 @@ const (
 	AccessContract
 	AccessAccount
 	AccessAll
-	PubSettableLegacy // Deprecated
+	AccessPubSettableLegacy // Deprecated
 )
 
 func PrimitiveAccessCount() int {
@@ -254,7 +254,7 @@ func (a PrimitiveAccess) Keyword() string {
 		return "access(account)"
 	case AccessContract:
 		return "access(contract)"
-	case PubSettableLegacy:
+	case AccessPubSettableLegacy:
 		return "pub(set)"
 	}
 
@@ -273,7 +273,7 @@ func (a PrimitiveAccess) Description() string {
 		return "account"
 	case AccessContract:
 		return "contract"
-	case PubSettableLegacy:
+	case AccessPubSettableLegacy:
 		return "legacy public settable"
 	}
 

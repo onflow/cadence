@@ -273,7 +273,7 @@ func parseAccess(p *parser) (ast.PrimitiveAccess, error) {
 			return ast.AccessNotSpecified, err
 		}
 
-		return ast.PubSettableLegacy, nil
+		return ast.AccessPubSettableLegacy, nil
 
 	case keywordAccess:
 		// Skip the `access` keyword

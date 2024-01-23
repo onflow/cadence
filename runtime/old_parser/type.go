@@ -169,12 +169,15 @@ func init() {
 					return nil, err
 				}
 
-				return ast.NewReferenceType(
+				refType := ast.NewReferenceType(
 					p.memoryGauge,
 					nil,
 					right,
 					token.StartPos,
-				), nil
+				)
+				refType.LegacyAuthorized = true
+
+				return refType, nil
 
 			default:
 				return parseNominalTypeRemainder(p, token)

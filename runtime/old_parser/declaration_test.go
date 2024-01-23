@@ -1531,7 +1531,7 @@ func TestParseAccess(t *testing.T) {
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			ast.PubSettableLegacy,
+			ast.AccessPubSettableLegacy,
 			result,
 		)
 	})
@@ -2648,7 +2648,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.FieldDeclaration{
-								Access:       ast.PubSettableLegacy,
+								Access:       ast.AccessPubSettableLegacy,
 								VariableKind: ast.VariableKindVariable,
 								Identifier: ast.Identifier{
 									Identifier: "foo",
@@ -3031,7 +3031,7 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.FieldDeclaration{
-								Access:       ast.PubSettableLegacy,
+								Access:       ast.AccessPubSettableLegacy,
 								VariableKind: ast.VariableKindVariable,
 								Identifier: ast.Identifier{
 									Identifier: "foo",
@@ -3233,7 +3233,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 					Members: ast.NewUnmeteredMembers(
 						[]ast.Declaration{
 							&ast.FieldDeclaration{
-								Access:       ast.PubSettableLegacy,
+								Access:       ast.AccessPubSettableLegacy,
 								VariableKind: ast.VariableKindVariable,
 								Identifier: ast.Identifier{
 									Identifier: "foo",
@@ -4423,7 +4423,7 @@ func TestParseStructure(t *testing.T) {
 				Members: ast.NewUnmeteredMembers(
 					[]ast.Declaration{
 						&ast.FieldDeclaration{
-							Access:       ast.PubSettableLegacy,
+							Access:       ast.AccessPubSettableLegacy,
 							VariableKind: ast.VariableKindVariable,
 							Identifier: ast.Identifier{
 								Identifier: "foo",

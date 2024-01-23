@@ -307,7 +307,8 @@ func TestParseReferenceType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
-				Authorization: nil,
+				Authorization:    nil,
+				LegacyAuthorized: true,
 				Type: &ast.NominalType{
 					Identifier: ast.Identifier{
 						Identifier: "Int",
@@ -2739,7 +2740,8 @@ func TestParseAuthorizedReferenceType(t *testing.T) {
 				TypeAnnotation: &ast.TypeAnnotation{
 					IsResource: false,
 					Type: &ast.ReferenceType{
-						Authorization: nil,
+						LegacyAuthorized: true,
+						Authorization:    nil,
 						Type: &ast.NominalType{
 							Identifier: ast.Identifier{
 								Identifier: "R", Pos: ast.Position{Offset: 21, Line: 2, Column: 20}},
