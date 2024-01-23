@@ -96,6 +96,12 @@ func (m *StorageMigration) MigrateAccount(
 		migrate,
 	)
 
+	accountStorage.MigrateStringKeys(
+		m.interpreter,
+		runtime.StorageDomainContract,
+		migrate,
+	)
+
 	accountStorage.MigrateUint64Keys(
 		m.interpreter,
 		stdlib.CapabilityControllerStorageDomain,

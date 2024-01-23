@@ -28,6 +28,7 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -828,5 +829,121 @@ func TestCapConMigration(t *testing.T) {
 	assert.Equal(t,
 		interpreter.UInt64Value(12),
 		controller2.(*interpreter.AccountCapabilityControllerValue).CapabilityID,
+	)
+}
+
+func TestContractMigration(t *testing.T) {
+
+	t.Parallel()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
+	rt := NewTestInterpreterRuntime()
+
+	accountCodes := map[common.Location][]byte{}
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{testAddress}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnGetCode: func(location common.Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+	}
+
+	const testContract = `
+      access(all)
+      contract Test {
+
+          access(all)
+          let foo: String
+
+          init() {
+              self.foo = "bar"
+          }
+      }
+    `
+
+	// Prepare
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		runtime.Script{
+			Source: utils.DeploymentTransaction("Test", []byte(testContract)),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	// Migrate
+
+	reporter := newTestReporter()
+
+	migration := NewStorageMigration(inter, storage)
+
+	migration.Migrate(
+		&AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testStringMigration{},
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Len(t, reporter.errored, 0)
+	assert.Len(t, reporter.migrated, 1)
+
+	value, err := rt.ExecuteScript(
+		runtime.Script{
+			Source: []byte(`
+              import Test from 0x1
+
+              access(all)
+              fun main(): String {
+                  return Test.foo
+              }
+            `),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.String("updated_bar"),
+		value,
 	)
 }
