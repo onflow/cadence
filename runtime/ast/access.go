@@ -215,6 +215,7 @@ const (
 	AccessContract
 	AccessAccount
 	AccessAll
+	PubSettableLegacy
 )
 
 func PrimitiveAccessCount() int {
@@ -253,6 +254,8 @@ func (a PrimitiveAccess) Keyword() string {
 		return "access(account)"
 	case AccessContract:
 		return "access(contract)"
+	case PubSettableLegacy:
+		return "pub(set)"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -270,6 +273,8 @@ func (a PrimitiveAccess) Description() string {
 		return "account"
 	case AccessContract:
 		return "contract"
+	case PubSettableLegacy:
+		return "legacy public settable"
 	}
 
 	panic(errors.NewUnreachableError())
