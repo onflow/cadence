@@ -13,11 +13,12 @@ func _() {
 	_ = x[AccessContract-2]
 	_ = x[AccessAccount-3]
 	_ = x[AccessAll-4]
+	_ = x[PubSettableLegacy-5]
 }
 
-const _PrimitiveAccess_name = "AccessNotSpecifiedAccessSelfAccessContractAccessAccountAccessAll"
+const _PrimitiveAccess_name = "AccessNotSpecifiedAccessSelfAccessContractAccessAccountAccessAllPubSettableLegacy"
 
-var _PrimitiveAccess_index = [...]uint8{0, 18, 28, 42, 55, 64}
+var _PrimitiveAccess_index = [...]uint8{0, 18, 28, 42, 55, 64, 81}
 
 func (i PrimitiveAccess) String() string {
 	if i >= PrimitiveAccess(len(_PrimitiveAccess_index)-1) {
