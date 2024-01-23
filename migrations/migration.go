@@ -23,12 +23,14 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type ValueMigration interface {
 	Name() string
 	Migrate(
-		addressPath interpreter.AddressPath,
+		storageKey interpreter.StorageKey,
+		storageMapKey interpreter.StorageMapKey,
 		value interpreter.Value,
 		interpreter *interpreter.Interpreter,
 	) (newValue interpreter.Value, err error)
@@ -58,7 +60,7 @@ func NewStorageMigration(
 
 func (m *StorageMigration) Migrate(
 	addressIterator AddressIterator,
-	migratePath PathMigrator,
+	migrate StorageMapKeyMigrator,
 ) {
 	for {
 		address := addressIterator.NextAddress()
@@ -66,7 +68,7 @@ func (m *StorageMigration) Migrate(
 			break
 		}
 
-		m.MigrateAccount(address, migratePath)
+		m.MigrateAccount(address, migrate)
 	}
 }
 
@@ -76,25 +78,50 @@ func (m *StorageMigration) Commit() error {
 
 func (m *StorageMigration) MigrateAccount(
 	address common.Address,
-	migratePath PathMigrator,
+	migrate StorageMapKeyMigrator,
 ) {
 	accountStorage := NewAccountStorage(m.storage, address)
 
-	accountStorage.MigratePathsInDomains(
+	for _, domain := range common.AllPathDomains {
+		accountStorage.MigrateStringKeys(
+			m.interpreter,
+			domain.Identifier(),
+			migrate,
+		)
+	}
+
+	accountStorage.MigrateStringKeys(
 		m.interpreter,
-		common.AllPathDomains,
-		migratePath,
+		stdlib.InboxStorageDomain,
+		migrate,
+	)
+
+	accountStorage.MigrateStringKeys(
+		m.interpreter,
+		runtime.StorageDomainContract,
+		migrate,
+	)
+
+	accountStorage.MigrateUint64Keys(
+		m.interpreter,
+		stdlib.CapabilityControllerStorageDomain,
+		migrate,
 	)
 }
 
 func (m *StorageMigration) NewValueMigrationsPathMigrator(
 	reporter Reporter,
 	valueMigrations ...ValueMigration,
-) PathMigrator {
+) StorageMapKeyMigrator {
 	return NewValueConverterPathMigrator(
-		func(addressPath interpreter.AddressPath, value interpreter.Value) interpreter.Value {
+		func(
+			storageKey interpreter.StorageKey,
+			storageMapKey interpreter.StorageMapKey,
+			value interpreter.Value,
+		) interpreter.Value {
 			return m.MigrateNestedValue(
-				addressPath,
+				storageKey,
+				storageMapKey,
 				value,
 				valueMigrations,
 				reporter,
@@ -106,7 +133,8 @@ func (m *StorageMigration) NewValueMigrationsPathMigrator(
 var emptyLocationRange = interpreter.EmptyLocationRange
 
 func (m *StorageMigration) MigrateNestedValue(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	value interpreter.Value,
 	valueMigrations []ValueMigration,
 	reporter Reporter,
@@ -115,7 +143,8 @@ func (m *StorageMigration) MigrateNestedValue(
 	case *interpreter.SomeValue:
 		innerValue := value.InnerValue(m.interpreter, emptyLocationRange)
 		newInnerValue := m.MigrateNestedValue(
-			addressPath,
+			storageKey,
+			storageMapKey,
 			innerValue,
 			valueMigrations,
 			reporter,
@@ -134,7 +163,8 @@ func (m *StorageMigration) MigrateNestedValue(
 		for index := 0; index < count; index++ {
 			element := array.Get(m.interpreter, emptyLocationRange, index)
 			newElement := m.MigrateNestedValue(
-				addressPath,
+				storageKey,
+				storageMapKey,
 				element,
 				valueMigrations,
 				reporter,
@@ -168,7 +198,8 @@ func (m *StorageMigration) MigrateNestedValue(
 			)
 
 			migratedValue := m.MigrateNestedValue(
-				addressPath,
+				storageKey,
+				storageMapKey,
 				existingValue,
 				valueMigrations,
 				reporter,
@@ -214,14 +245,16 @@ func (m *StorageMigration) MigrateNestedValue(
 			existingValue := existingKeyAndValue.value
 
 			newKey := m.MigrateNestedValue(
-				addressPath,
+				storageKey,
+				storageMapKey,
 				existingKey,
 				valueMigrations,
 				reporter,
 			)
 
 			newValue := m.MigrateNestedValue(
-				addressPath,
+				storageKey,
+				storageMapKey,
 				existingValue,
 				valueMigrations,
 				reporter,
@@ -268,14 +301,42 @@ func (m *StorageMigration) MigrateNestedValue(
 				valueToSet,
 			)
 		}
+
+	case *interpreter.PublishedValue:
+		innerValue := value.Value
+		newInnerValue := m.MigrateNestedValue(
+			storageKey,
+			storageMapKey,
+			innerValue,
+			valueMigrations,
+			reporter,
+		)
+		if newInnerValue != nil {
+			newInnerCapability := newInnerValue.(*interpreter.CapabilityValue)
+			return interpreter.NewPublishedValue(
+				m.interpreter,
+				value.Recipient,
+				newInnerCapability,
+			)
+		}
 	}
 
 	for _, migration := range valueMigrations {
-		converted, err := m.migrate(migration, addressPath, value)
+		converted, err := m.migrate(
+			migration,
+			storageKey,
+			storageMapKey,
+			value,
+		)
 
 		if err != nil {
 			if reporter != nil {
-				reporter.Error(addressPath, migration.Name(), err)
+				reporter.Error(
+					storageKey,
+					storageMapKey,
+					migration.Name(),
+					err,
+				)
 			}
 			continue
 		}
@@ -287,7 +348,11 @@ func (m *StorageMigration) MigrateNestedValue(
 			newValue = converted
 
 			if reporter != nil {
-				reporter.Migrated(addressPath, migration.Name())
+				reporter.Migrated(
+					storageKey,
+					storageMapKey,
+					migration.Name(),
+				)
 			}
 		}
 	}
@@ -297,7 +362,8 @@ func (m *StorageMigration) MigrateNestedValue(
 
 func (m *StorageMigration) migrate(
 	migration ValueMigration,
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	value interpreter.Value,
 ) (converted interpreter.Value, err error) {
 
@@ -312,7 +378,12 @@ func (m *StorageMigration) migrate(
 		}
 	}()
 
-	return migration.Migrate(addressPath, value, m.interpreter)
+	return migration.Migrate(
+		storageKey,
+		storageMapKey,
+		value,
+		m.interpreter,
+	)
 }
 
 // legacyKey return the same type with the "old" hash/ID generation function.

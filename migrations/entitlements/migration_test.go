@@ -34,6 +34,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	checkerUtils "github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
@@ -51,12 +52,30 @@ func TestConvertToEntitledType(t *testing.T) {
 	entitlementF := sema.NewEntitlementType(nil, testLocation, "F")
 	entitlementG := sema.NewEntitlementType(nil, testLocation, "G")
 
-	eAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE}, sema.Conjunction)
-	fAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementF}, sema.Conjunction)
-	eOrFAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE, entitlementF}, sema.Disjunction)
-	eAndFAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE, entitlementF}, sema.Conjunction)
-	eAndGAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE, entitlementG}, sema.Conjunction)
-	eFAndGAccess := sema.NewEntitlementSetAccess([]*sema.EntitlementType{entitlementE, entitlementF, entitlementG}, sema.Conjunction)
+	eAccess := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{entitlementE},
+		sema.Conjunction,
+	)
+	fAccess := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{entitlementF},
+		sema.Conjunction,
+	)
+	eOrFAccess := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{entitlementE, entitlementF},
+		sema.Disjunction,
+	)
+	eAndFAccess := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{entitlementE, entitlementF},
+		sema.Conjunction,
+	)
+	eAndGAccess := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{entitlementE, entitlementG},
+		sema.Conjunction,
+	)
+	eFAndGAccess := sema.NewEntitlementSetAccess(
+		[]*sema.EntitlementType{entitlementE, entitlementF, entitlementG},
+		sema.Conjunction,
+	)
 
 	mapM := sema.NewEntitlementMapType(nil, testLocation, "M")
 	mapM.Relations = []sema.EntitlementRelation{
@@ -79,7 +98,15 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	compositeStructWithOnlyE.Members.Set(
 		"foo",
-		sema.NewFieldMember(nil, compositeStructWithOnlyE, eAccess, ast.VariableKindConstant, "foo", sema.IntType, ""),
+		sema.NewFieldMember(
+			nil,
+			compositeStructWithOnlyE,
+			eAccess,
+			ast.VariableKindConstant,
+			"foo",
+			sema.IntType,
+			"",
+		),
 	)
 
 	compositeResourceWithOnlyF := &sema.CompositeType{
@@ -90,11 +117,27 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	compositeResourceWithOnlyF.Members.Set(
 		"bar",
-		sema.NewFieldMember(nil, compositeResourceWithOnlyF, fAccess, ast.VariableKindConstant, "bar", sema.IntType, ""),
+		sema.NewFieldMember(
+			nil,
+			compositeResourceWithOnlyF,
+			fAccess,
+			ast.VariableKindConstant,
+			"bar",
+			sema.IntType,
+			"",
+		),
 	)
 	compositeResourceWithOnlyF.Members.Set(
 		"baz",
-		sema.NewFieldMember(nil, compositeResourceWithOnlyF, fAccess, ast.VariableKindConstant, "baz", compositeStructWithOnlyE, ""),
+		sema.NewFieldMember(
+			nil,
+			compositeResourceWithOnlyF,
+			fAccess,
+			ast.VariableKindConstant,
+			"baz",
+			compositeStructWithOnlyE,
+			"",
+		),
 	)
 
 	compositeResourceWithEOrF := &sema.CompositeType{
@@ -105,7 +148,15 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	compositeResourceWithEOrF.Members.Set(
 		"qux",
-		sema.NewFieldMember(nil, compositeResourceWithEOrF, eOrFAccess, ast.VariableKindConstant, "qux", sema.IntType, ""),
+		sema.NewFieldMember(
+			nil,
+			compositeResourceWithEOrF,
+			eOrFAccess,
+			ast.VariableKindConstant,
+			"qux",
+			sema.IntType,
+			"",
+		),
 	)
 
 	compositeTwoFields := &sema.CompositeType{
@@ -116,11 +167,27 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	compositeTwoFields.Members.Set(
 		"foo",
-		sema.NewFieldMember(nil, compositeTwoFields, eAccess, ast.VariableKindConstant, "foo", sema.IntType, ""),
+		sema.NewFieldMember(
+			nil,
+			compositeTwoFields,
+			eAccess,
+			ast.VariableKindConstant,
+			"foo",
+			sema.IntType,
+			"",
+		),
 	)
 	compositeTwoFields.Members.Set(
 		"bar",
-		sema.NewFieldMember(nil, compositeTwoFields, fAccess, ast.VariableKindConstant, "bar", sema.IntType, ""),
+		sema.NewFieldMember(
+			nil,
+			compositeTwoFields,
+			fAccess,
+			ast.VariableKindConstant,
+			"bar",
+			sema.IntType,
+			"",
+		),
 	)
 
 	interfaceTypeWithEAndG := &sema.InterfaceType{
@@ -158,7 +225,14 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	compositeTypeWithMap.Members.Set(
 		"foo",
-		sema.NewFunctionMember(nil, compositeTypeWithMap, mapAccess, "foo", &sema.FunctionType{}, ""),
+		sema.NewFunctionMember(
+			nil,
+			compositeTypeWithMap,
+			mapAccess,
+			"foo",
+			&sema.FunctionType{},
+			"",
+		),
 	)
 
 	interfaceTypeWithMap := &sema.InterfaceType{
@@ -169,7 +243,14 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	interfaceTypeWithMap.Members.Set(
 		"foo",
-		sema.NewFunctionMember(nil, interfaceTypeWithMap, mapAccess, "foo", &sema.FunctionType{}, ""),
+		sema.NewFunctionMember(
+			nil,
+			interfaceTypeWithMap,
+			mapAccess,
+			"foo",
+			&sema.FunctionType{},
+			"",
+		),
 	)
 
 	compositeTypeWithCapField := &sema.CompositeType{
@@ -181,7 +262,11 @@ func TestConvertToEntitledType(t *testing.T) {
 	compositeTypeWithCapField.Members.Set(
 		"foo",
 		sema.NewFieldMember(
-			nil, compositeTypeWithCapField, sema.UnauthorizedAccess, ast.VariableKindConstant, "foo",
+			nil,
+			compositeTypeWithCapField,
+			sema.UnauthorizedAccess,
+			ast.VariableKindConstant,
+			"foo",
 			sema.NewCapabilityType(nil,
 				sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeInheriting),
 			),
@@ -198,7 +283,11 @@ func TestConvertToEntitledType(t *testing.T) {
 	interfaceTypeWithCapField.Members.Set(
 		"foo",
 		sema.NewFieldMember(
-			nil, interfaceTypeWithCapField, sema.UnauthorizedAccess, ast.VariableKindConstant, "foo",
+			nil,
+			interfaceTypeWithCapField,
+			sema.UnauthorizedAccess,
+			ast.VariableKindConstant,
+			"foo",
 			sema.NewCapabilityType(nil,
 				sema.NewReferenceType(nil, sema.UnauthorizedAccess, interfaceTypeInheriting),
 			),
@@ -283,14 +372,45 @@ func TestConvertToEntitledType(t *testing.T) {
 			Name:   "interface map",
 		},
 		{
-			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.NewCapabilityType(nil, sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeTypeWithMap))),
-			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.NewCapabilityType(nil, sema.NewReferenceType(nil, eAndFAccess, compositeTypeWithMap))),
-			Name:   "reference to capability",
+			Input: sema.NewReferenceType(
+				nil,
+				sema.UnauthorizedAccess,
+				sema.NewCapabilityType(
+					nil,
+					sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeTypeWithMap),
+				),
+			),
+			Output: sema.NewReferenceType(
+				nil,
+				sema.UnauthorizedAccess,
+				sema.NewCapabilityType(
+					nil,
+					sema.NewReferenceType(nil, eAndFAccess, compositeTypeWithMap),
+				),
+			),
+			Name: "reference to capability",
 		},
 		{
-			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.NewIntersectionType(nil, []*sema.InterfaceType{interfaceTypeInheriting, interfaceTypeWithMap})),
-			Output: sema.NewReferenceType(nil, eFAndGAccess, sema.NewIntersectionType(nil, []*sema.InterfaceType{interfaceTypeInheriting, interfaceTypeWithMap})),
-			Name:   "intersection",
+			Input: sema.NewReferenceType(
+				nil,
+				sema.UnauthorizedAccess,
+				sema.NewIntersectionType(
+					nil,
+					[]*sema.InterfaceType{
+						interfaceTypeInheriting,
+						interfaceTypeWithMap,
+					},
+				),
+			),
+			Output: sema.NewReferenceType(
+				nil,
+				eFAndGAccess,
+				sema.NewIntersectionType(nil, []*sema.InterfaceType{
+					interfaceTypeInheriting,
+					interfaceTypeWithMap,
+				}),
+			),
+			Name: "intersection",
 		},
 		// no change
 		{
@@ -367,8 +487,8 @@ func TestConvertToEntitledType(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			converedType, _ := ConvertToEntitledType(test.Input)
-			compareTypesRecursively(t, converedType, test.Output)
+			convertedType, _ := ConvertToEntitledType(test.Input)
+			compareTypesRecursively(t, convertedType, test.Output)
 		})
 	}
 
@@ -378,12 +498,15 @@ type testEntitlementsMigration struct {
 	inter *interpreter.Interpreter
 }
 
+var _ migrations.ValueMigration = testEntitlementsMigration{}
+
 func (testEntitlementsMigration) Name() string {
 	return "Test Entitlements Migration"
 }
 
 func (m testEntitlementsMigration) Migrate(
-	_ interpreter.AddressPath,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (
@@ -399,18 +522,20 @@ func convertEntireTestValue(
 	address common.Address,
 	v interpreter.Value,
 ) interpreter.Value {
-	testMig := testEntitlementsMigration{inter: inter}
-	storageMig := migrations.NewStorageMigration(inter, storage)
 
-	migratedValue := storageMig.MigrateNestedValue(
-		interpreter.AddressPath{
-			Address: address,
-			Path:    interpreter.NewPathValue(nil, common.PathDomainStorage, "test"),
-		},
-		v,
-		[]migrations.ValueMigration{testMig},
-		nil,
-	)
+	migratedValue := migrations.NewStorageMigration(inter, storage).
+		MigrateNestedValue(
+			interpreter.StorageKey{
+				Key:     common.PathDomainStorage.Identifier(),
+				Address: address,
+			},
+			interpreter.StringStorageMapKey("test"),
+			v,
+			[]migrations.ValueMigration{
+				testEntitlementsMigration{inter: inter},
+			},
+			nil,
+		)
 
 	if migratedValue == nil {
 		return v
@@ -430,62 +555,62 @@ func TestConvertToEntitledValue(t *testing.T) {
 	testAddress := common.MustBytesToAddress([]byte{0x1})
 
 	code := `
-		access(all) entitlement E
-		access(all) entitlement F
-		access(all) entitlement G
+        access(all) entitlement E
+        access(all) entitlement F
+        access(all) entitlement G
 
-		access(all) entitlement mapping M {
-			E -> F
-			F -> G
-		}
+        access(all) entitlement mapping M {
+            E -> F
+            F -> G
+        }
 
-		access(all)  struct S {
-			access(E) let eField: Int
-			access(F) let fField: String
-			init() {
-				self.eField = 0
-				self.fField = ""
-			}
-		}
+        access(all)  struct S {
+            access(E) let eField: Int
+            access(F) let fField: String
+            init() {
+                self.eField = 0
+                self.fField = ""
+            }
+        }
 
-		access(all) resource interface I {
-			access(E) let eField: Int
-		}
+        access(all) resource interface I {
+            access(E) let eField: Int
+        }
 
-		access(all) resource interface J {
-			access(G) let gField: Int
-		}
+        access(all) resource interface J {
+            access(G) let gField: Int
+        }
 
-		access(all) resource R: I, J {
-			access(E) let eField: Int
-			access(G) let gField: Int
-			access(E, G) let egField: Int
-			init() {
-				self.egField = 0
-				self.eField = 1
-				self.gField = 2
-			}
-		}
+        access(all) resource R: I, J {
+            access(E) let eField: Int
+            access(G) let gField: Int
+            access(E, G) let egField: Int
+            init() {
+                self.egField = 0
+                self.eField = 1
+                self.gField = 2
+            }
+        }
 
-		access(all) resource Nested {
-			access(E | F) let efField: @R
-			init() {
-				self.efField <- create R()
-			}
-		}
+        access(all) resource Nested {
+            access(E | F) let efField: @R
+            init() {
+                self.efField <- create R()
+            }
+        }
 
-		access(all) fun makeS(): S {
-			return S()
-		}
+        access(all) fun makeS(): S {
+            return S()
+        }
 
-		access(all) fun makeR(): @R {
-			return <- create R()
-		}
+        access(all) fun makeR(): @R {
+            return <- create R()
+        }
 
-		access(all) fun makeNested(): @Nested {
-			return <- create Nested()
-		}
-	`
+        access(all) fun makeNested(): @Nested {
+            return <- create Nested()
+        }
+    `
 	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
 		code,
 		checkerUtils.ParseAndCheckOptions{},
@@ -519,14 +644,22 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	// &S
 
-	unentitledSRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, sValue, inter.MustSemaTypeOfValue(sValue), interpreter.EmptyLocationRange)
+	unentitledSRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.UnauthorizedAccess,
+		sValue,
+		inter.MustSemaTypeOfValue(sValue),
+		interpreter.EmptyLocationRange,
+	)
 	unentitledSRefStaticType := unentitledSRef.StaticType(inter)
 
 	entitledSRef := interpreter.NewEphemeralReferenceValue(
 		inter,
 		interpreter.NewEntitlementSetAuthorization(
 			inter,
-			func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
+			func() []common.TypeID {
+				return []common.TypeID{"S.test.E", "S.test.F"}
+			},
 			2,
 			sema.Conjunction,
 		),
@@ -538,14 +671,22 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	// &R
 
-	unentitledRRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue), interpreter.EmptyLocationRange)
+	unentitledRRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.UnauthorizedAccess,
+		rValue,
+		inter.MustSemaTypeOfValue(rValue),
+		interpreter.EmptyLocationRange,
+	)
 	unentitledRRefStaticType := unentitledRRef.StaticType(inter)
 
 	entitledRRef := interpreter.NewEphemeralReferenceValue(
 		inter,
 		interpreter.NewEntitlementSetAuthorization(
 			inter,
-			func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.G"} },
+			func() []common.TypeID {
+				return []common.TypeID{"S.test.E", "S.test.G"}
+			},
 			2,
 			sema.Conjunction,
 		),
@@ -557,14 +698,27 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	// &{I}
 
-	intersectionIType := sema.NewIntersectionType(inter, []*sema.InterfaceType{checker.Elaboration.InterfaceType("S.test.I")})
-	unentitledIRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, intersectionIType, interpreter.EmptyLocationRange)
+	intersectionIType := sema.NewIntersectionType(
+		inter,
+		[]*sema.InterfaceType{
+			checker.Elaboration.InterfaceType("S.test.I"),
+		},
+	)
+	unentitledIRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.UnauthorizedAccess,
+		rValue,
+		intersectionIType,
+		interpreter.EmptyLocationRange,
+	)
 
 	entitledIRef := interpreter.NewEphemeralReferenceValue(
 		inter,
 		interpreter.NewEntitlementSetAuthorization(
 			inter,
-			func() []common.TypeID { return []common.TypeID{"S.test.E"} },
+			func() []common.TypeID {
+				return []common.TypeID{"S.test.E"}
+			},
 			1,
 			sema.Conjunction,
 		),
@@ -575,7 +729,8 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	// legacy Capability<&R{I}>
 
-	legacyIntersectionType := interpreter.ConvertSemaToStaticType(inter, intersectionIType).(*interpreter.IntersectionStaticType)
+	legacyIntersectionType :=
+		interpreter.ConvertSemaToStaticType(inter, intersectionIType).(*interpreter.IntersectionStaticType)
 	legacyIntersectionType.LegacyType = rValue.StaticType(inter)
 	unentitledLegacyReferenceStaticType := interpreter.NewReferenceStaticType(
 		inter,
@@ -598,13 +753,16 @@ func TestConvertToEntitledValue(t *testing.T) {
 		unentitledLegacyCapability,
 	)
 
-	unentitledLegacyCapabilityOptionalArray := interpreter.NewSomeValueNonCopying(inter, unentitledLegacyCapabilityArray)
+	unentitledLegacyCapabilityOptionalArray :=
+		interpreter.NewSomeValueNonCopying(inter, unentitledLegacyCapabilityArray)
 
 	entitledConvertedLegacyReferenceStaticType := interpreter.NewReferenceStaticType(
 		inter,
 		interpreter.NewEntitlementSetAuthorization(
 			inter,
-			func() []common.TypeID { return []common.TypeID{"S.test.E"} },
+			func() []common.TypeID {
+				return []common.TypeID{"S.test.E"}
+			},
 			1,
 			sema.Conjunction,
 		),
@@ -626,7 +784,8 @@ func TestConvertToEntitledValue(t *testing.T) {
 		entitledLegacyConvertedCapability,
 	)
 
-	entitledLegacyConvertedCapabilityOptionalArray := interpreter.NewSomeValueNonCopying(inter, entitledLegacyConvertedCapabilityArray)
+	entitledLegacyConvertedCapabilityOptionalArray :=
+		interpreter.NewSomeValueNonCopying(inter, entitledLegacyConvertedCapabilityArray)
 
 	// &{I, J}
 
@@ -637,13 +796,21 @@ func TestConvertToEntitledValue(t *testing.T) {
 			checker.Elaboration.InterfaceType("S.test.J"),
 		},
 	)
-	unentitledIJRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, intersectionIJType, interpreter.EmptyLocationRange)
+	unentitledIJRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.UnauthorizedAccess,
+		rValue,
+		intersectionIJType,
+		interpreter.EmptyLocationRange,
+	)
 
 	entitledIJRef := interpreter.NewEphemeralReferenceValue(
 		inter,
 		interpreter.NewEntitlementSetAuthorization(
 			inter,
-			func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.G"} },
+			func() []common.TypeID {
+				return []common.TypeID{"S.test.E", "S.test.G"}
+			},
 			2,
 			sema.Conjunction,
 		),
@@ -654,14 +821,22 @@ func TestConvertToEntitledValue(t *testing.T) {
 
 	// &Nested
 
-	unentitledNestedRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, nestedValue, inter.MustSemaTypeOfValue(nestedValue), interpreter.EmptyLocationRange)
+	unentitledNestedRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.UnauthorizedAccess,
+		nestedValue,
+		inter.MustSemaTypeOfValue(nestedValue),
+		interpreter.EmptyLocationRange,
+	)
 	unentitledNestedRefStaticType := unentitledNestedRef.StaticType(inter)
 
 	entitledNestedRef := interpreter.NewEphemeralReferenceValue(
 		inter,
 		interpreter.NewEntitlementSetAuthorization(
 			inter,
-			func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.F"} },
+			func() []common.TypeID {
+				return []common.TypeID{"S.test.E", "S.test.F"}
+			},
 			2,
 			sema.Conjunction,
 		),
@@ -671,11 +846,13 @@ func TestConvertToEntitledValue(t *testing.T) {
 	)
 	entitledNestedRefStaticType := entitledNestedRef.StaticType(inter)
 
-	tests := []struct {
+	type testCase struct {
 		Input  interpreter.Value
 		Output interpreter.Value
 		Name   string
-	}{
+	}
+
+	tests := []testCase{
 		{
 			Input:  rValue,
 			Output: rValue,
@@ -734,14 +911,22 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Input: interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, unentitledSRefStaticType),
+				interpreter.NewDictionaryStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+					unentitledSRefStaticType,
+				),
 				interpreter.NewIntValueFromInt64(inter, 0),
 				unentitledSRef,
 			),
 			Output: interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, entitledSRefStaticType),
+				interpreter.NewDictionaryStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+					entitledSRefStaticType,
+				),
 				interpreter.NewIntValueFromInt64(inter, 0),
 				entitledSRef,
 			),
@@ -751,14 +936,22 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Input: interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, interpreter.PrimitiveStaticTypeMetaType),
+				interpreter.NewDictionaryStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+					interpreter.PrimitiveStaticTypeMetaType,
+				),
 				interpreter.NewIntValueFromInt64(inter, 0),
 				interpreter.NewTypeValue(inter, unentitledSRefStaticType),
 			),
 			Output: interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, interpreter.PrimitiveStaticTypeMetaType),
+				interpreter.NewDictionaryStaticType(
+					inter,
+					interpreter.PrimitiveStaticTypeInt,
+					interpreter.PrimitiveStaticTypeMetaType,
+				),
 				interpreter.NewIntValueFromInt64(inter, 0),
 				interpreter.NewTypeValue(inter, entitledSRefStaticType),
 			),
@@ -849,6 +1042,29 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Name: "Capability<&R>",
 		},
 		{
+			Input: interpreter.NewPublishedValue(
+				nil,
+				interpreter.NewAddressValue(nil, common.Address{}),
+				interpreter.NewCapabilityValue(
+					inter,
+					0,
+					interpreter.NewAddressValue(inter, testAddress),
+					unentitledRRefStaticType,
+				),
+			),
+			Output: interpreter.NewPublishedValue(
+				nil,
+				interpreter.NewAddressValue(nil, common.Address{}),
+				interpreter.NewCapabilityValue(
+					inter,
+					0,
+					interpreter.NewAddressValue(inter, testAddress),
+					entitledRRefStaticType,
+				),
+			),
+			Name: "PublishedValue(Capability<&R>)",
+		},
+		{
 			Input:  unentitledLegacyCapabilityOptionalArray.Clone(inter),
 			Output: entitledLegacyConvertedCapabilityOptionalArray.Clone(inter),
 			Name:   "[Capability<&R{I}>]? -> [Capability<auth(E) &R>]?",
@@ -871,7 +1087,9 @@ func TestConvertToEntitledValue(t *testing.T) {
 				inter,
 				interpreter.NewEntitlementSetAuthorization(
 					inter,
-					func() []common.TypeID { return []common.TypeID{"Mutate", "Insert", "Remove"} },
+					func() []common.TypeID {
+						return []common.TypeID{"Mutate", "Insert", "Remove"}
+					},
 					3,
 					sema.Conjunction,
 				),
@@ -894,7 +1112,11 @@ func TestConvertToEntitledValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, rValue.StaticType(inter)),
+					interpreter.NewDictionaryStaticType(
+						inter,
+						interpreter.PrimitiveStaticTypeInt,
+						rValue.StaticType(inter),
+					),
 					interpreter.NewIntValueFromInt64(inter, 0),
 					rValue.Clone(inter),
 				),
@@ -905,14 +1127,20 @@ func TestConvertToEntitledValue(t *testing.T) {
 				inter,
 				interpreter.NewEntitlementSetAuthorization(
 					inter,
-					func() []common.TypeID { return []common.TypeID{"Mutate", "Insert", "Remove"} },
+					func() []common.TypeID {
+						return []common.TypeID{"Mutate", "Insert", "Remove"}
+					},
 					3,
 					sema.Conjunction,
 				),
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.NewDictionaryStaticType(inter, interpreter.PrimitiveStaticTypeInt, rValue.StaticType(inter)),
+					interpreter.NewDictionaryStaticType(
+						inter,
+						interpreter.PrimitiveStaticTypeInt,
+						rValue.StaticType(inter),
+					),
 					interpreter.NewIntValueFromInt64(inter, 0),
 					rValue.Clone(inter),
 				),
@@ -937,29 +1165,37 @@ func TestConvertToEntitledValue(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		var runtimeTypeTest struct {
-			Input  interpreter.Value
-			Output interpreter.Value
-			Name   string
-		}
-		runtimeTypeTest.Input = interpreter.NewTypeValue(inter, getStaticType(test.Input.Clone(inter)))
-		runtimeTypeTest.Output = interpreter.NewTypeValue(inter, getStaticType(test.Output.Clone(inter)))
-		runtimeTypeTest.Name = "runtime type " + test.Name
-
-		tests = append(tests, runtimeTypeTest)
+		tests = append(tests, testCase{
+			Input:  interpreter.NewTypeValue(inter, getStaticType(test.Input.Clone(inter))),
+			Output: interpreter.NewTypeValue(inter, getStaticType(test.Output.Clone(inter))),
+			Name:   "runtime type " + test.Name,
+		})
 	}
 
 	for _, test := range tests {
-		var optionalValueTest struct {
-			Input  interpreter.Value
-			Output interpreter.Value
-			Name   string
-		}
-		optionalValueTest.Input = interpreter.NewSomeValueNonCopying(inter, test.Input.Clone(inter))
-		optionalValueTest.Output = interpreter.NewSomeValueNonCopying(inter, test.Output.Clone(inter))
-		optionalValueTest.Name = "optional " + test.Name
+		tests = append(tests, testCase{
+			Input:  interpreter.NewSomeValueNonCopying(inter, test.Input.Clone(inter)),
+			Output: interpreter.NewSomeValueNonCopying(inter, test.Output.Clone(inter)),
+			Name:   "optional " + test.Name,
+		})
 
-		tests = append(tests, optionalValueTest)
+		tests = append(tests, testCase{
+			Input: interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+				common.ZeroAddress,
+				test.Input.Clone(inter),
+			),
+			Output: interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
+				common.ZeroAddress,
+				test.Output.Clone(inter),
+			),
+			Name: "array " + test.Name,
+		})
 	}
 
 	var referencePeekingEqual func(interpreter.EquatableValue, interpreter.Value) bool
@@ -982,6 +1218,33 @@ func TestConvertToEntitledValue(t *testing.T) {
 			default:
 				return innerValue == otherSome.InnerValue(inter, interpreter.EmptyLocationRange)
 			}
+
+		case *interpreter.ArrayValue:
+			otherArray, ok := output.(*interpreter.ArrayValue)
+			if !ok {
+				return false
+			}
+
+			for i := 0; i < v.Count(); i++ {
+				innerValue := v.Get(inter, interpreter.EmptyLocationRange, i)
+				otherInnerValue := otherArray.Get(inter, interpreter.EmptyLocationRange, i)
+
+				switch innerValue := innerValue.(type) {
+				case interpreter.EquatableValue:
+					if !referencePeekingEqual(
+						innerValue,
+						otherInnerValue,
+					) {
+						return false
+					}
+				default:
+					if innerValue != otherInnerValue {
+						return false
+					}
+				}
+			}
+			return true
+
 		case *interpreter.EphemeralReferenceValue:
 			otherReference, ok := output.(*interpreter.EphemeralReferenceValue)
 			if !ok || !v.Authorization.Equal(otherReference.Authorization) {
@@ -1033,26 +1296,25 @@ func TestMigrateSimpleContract(t *testing.T) {
 
 	storage := runtime.NewStorage(ledger, nil)
 
-	code := `
-		access(all) entitlement E
-		access(all) resource R {
-			access(E) fun foo() {}
-		}
-		access(all) resource T {
-			access(all) let cap: Capability<auth(E) &R>?
-			init() {
-				self.cap = nil
-			}
-		}
-		access(all) fun makeR(): @R {
-			return <- create R()
-		}
-		access(all) fun makeT(): @T {
-			return <- create T()
-		}
-	`
 	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
-		code,
+		`
+            access(all) entitlement E
+            access(all) resource R {
+                access(E) fun foo() {}
+            }
+            access(all) resource T {
+                access(all) let cap: Capability<auth(E) &R>?
+                init() {
+                    self.cap = nil
+                }
+            }
+            access(all) fun makeR(): @R {
+                return <- create R()
+            }
+            access(all) fun makeT(): @T {
+                return <- create T()
+            }
+        `,
 		checkerUtils.ParseAndCheckOptions{},
 	)
 
@@ -1082,7 +1344,13 @@ func TestMigrateSimpleContract(t *testing.T) {
 	tValue, err := inter.Invoke("makeT")
 	require.NoError(t, err)
 
-	unentitledRRef := interpreter.NewEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, rValue, inter.MustSemaTypeOfValue(rValue), interpreter.EmptyLocationRange)
+	unentitledRRef := interpreter.NewEphemeralReferenceValue(
+		inter,
+		interpreter.UnauthorizedAccess,
+		rValue,
+		inter.MustSemaTypeOfValue(rValue),
+		interpreter.EmptyLocationRange,
+	)
 	unentitledRRefStaticType := unentitledRRef.StaticType(inter)
 
 	unentitledRCap := interpreter.NewCapabilityValue(
@@ -1096,7 +1364,9 @@ func TestMigrateSimpleContract(t *testing.T) {
 		inter,
 		interpreter.NewEntitlementSetAuthorization(
 			inter,
-			func() []common.TypeID { return []common.TypeID{"S.test.E"} },
+			func() []common.TypeID {
+				return []common.TypeID{"S.test.E"}
+			},
 			1,
 			sema.Conjunction,
 		),
@@ -1112,10 +1382,12 @@ func TestMigrateSimpleContract(t *testing.T) {
 		entitledRRefStaticType,
 	)
 
-	tValue.(*interpreter.CompositeValue).SetMember(inter, interpreter.EmptyLocationRange, "cap", unentitledRCap.Clone(inter))
+	tValue.(*interpreter.CompositeValue).
+		SetMember(inter, interpreter.EmptyLocationRange, "cap", unentitledRCap.Clone(inter))
 
-	expeectedTValue := tValue.Clone(inter)
-	expeectedTValue.(*interpreter.CompositeValue).SetMember(inter, interpreter.EmptyLocationRange, "cap", entitledRCap.Clone(inter))
+	expectedTValue := tValue.Clone(inter)
+	expectedTValue.(*interpreter.CompositeValue).
+		SetMember(inter, interpreter.EmptyLocationRange, "cap", entitledRCap.Clone(inter))
 
 	testCases := map[string]testCase{
 		"rCap": {
@@ -1133,7 +1405,7 @@ func TestMigrateSimpleContract(t *testing.T) {
 		},
 		"tValue": {
 			storedValue:   tValue.Clone(inter),
-			expectedValue: expeectedTValue.Clone(inter),
+			expectedValue: expectedTValue.Clone(inter),
 		},
 	}
 
@@ -1151,16 +1423,27 @@ func TestMigrateSimpleContract(t *testing.T) {
 
 	// Migrate
 
+	reporter := newTestReporter()
+
 	migration := migrations.NewStorageMigration(inter, storage)
-	pathMigrator := migration.NewValueMigrationsPathMigrator(nil, NewEntitlementsMigration(inter))
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
 				account,
 			},
 		},
-		pathMigrator,
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewEntitlementsMigration(inter),
+		),
 	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Len(t, reporter.errored, 0)
 
 	storageMap := storage.GetStorageMap(account, storageIdentifier, false)
 	require.NotNil(t, storageMap)
@@ -1182,204 +1465,652 @@ func TestMigrateSimpleContract(t *testing.T) {
 	}
 }
 
-func TestMigrateAcrossContracts(t *testing.T) {
+func TestMigratePublishedValue(t *testing.T) {
 	t.Parallel()
 
-	address1 := [8]byte{0, 0, 0, 0, 0, 0, 0, 1}
-	address2 := [8]byte{0, 0, 0, 0, 0, 0, 0, 2}
+	testAddress := common.Address{0, 0, 0, 0, 0, 0, 0, 1}
 
-	storage := NewTestLedger(nil, nil)
 	rt := NewTestInterpreterRuntime()
 
 	accountCodes := map[common.Location][]byte{}
-	interfaces := map[common.Location]*TestRuntimeInterface{}
 
-	runtimeInterface1 := &TestRuntimeInterface{
-		Storage: storage,
-		OnEmitEvent: func(event cadence.Event) error {
-			return nil
-		},
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
 		OnGetSigningAccounts: func() ([]runtime.Address, error) {
-			return []runtime.Address{address1}, nil
+			return []runtime.Address{testAddress}, nil
 		},
-		OnGetCode: func(location common.Location) (bytes []byte, err error) {
-			return accountCodes[location], nil
-		},
-		OnResolveLocation: MultipleIdentifierLocationResolver,
-		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-			code = accountCodes[location]
-			return code, nil
-		},
-	}
-	runtimeInterface1.OnUpdateAccountContractCode = func(location common.AddressLocation, code []byte) error {
-		accountCodes[location] = code
-		interfaces[location] = runtimeInterface1
-		return nil
-	}
-
-	runtimeInterface2 := &TestRuntimeInterface{
-		Storage: storage,
 		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
 		OnGetCode: func(location common.Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		OnGetSigningAccounts: func() ([]runtime.Address, error) {
-			return []runtime.Address{address2}, nil
-		},
-		OnResolveLocation: MultipleIdentifierLocationResolver,
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
 		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
 	}
-	runtimeInterface2.OnUpdateAccountContractCode = func(location common.AddressLocation, code []byte) error {
-		accountCodes[location] = code
-		interfaces[location] = runtimeInterface2
-		return nil
-	}
+
+	// Prepare
+
+	oldContract := []byte(`
+        access(all) contract C {
+            access(all) resource R {
+                access(all) fun foo() {}
+            }
+            access(all) fun makeR(): @R {
+                return <- create R()
+            }
+        }
+    `)
+
+	contract := []byte(`
+        access(all) contract C {
+            access(all) entitlement E
+            access(all) resource R {
+                access(E) fun foo() {}
+            }
+            access(all) fun makeR(): @R {
+                return <- create R()
+            }
+        }
+    `)
+
+	saveValues := []byte(`
+        import C from 0x1
+
+        transaction {
+            prepare(signer: auth(Inbox, Storage, Capabilities) &Account) {
+                let cap = signer.capabilities.storage.issue<&C.R>(/storage/r)
+                signer.storage.save(cap, to: /storage/cap)
+                signer.inbox.publish(cap, name: "r_cap", recipient: 0x2)
+            }
+        }
+    `)
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
-	oldContract := []byte(`
-		access(all) contract C {
-			access(all) resource R {
-				access(all) fun foo() {}
-			}
-			access(all) resource T {
-				access(all) let cap: Capability<&R>
-				init(_ cap: Capability<&R>) {
-					self.cap = cap
-				}
-			}
-			access(all) fun makeR(): @R {
-				return <- create R()
-			}
-			access(all) fun makeT(_ cap: Capability<&R>): @T {
-				return <- create T(cap)
-			}
-		}
-	`)
-
-	contract := []byte(`
-		access(all) contract C {
-			access(all) entitlement E
-			access(all) resource R {
-				access(E) fun foo() {}
-			}
-			access(all) resource T {
-				access(all) let cap: Capability<auth(E) &R>
-				init(_ cap: Capability<auth(E) &R>) {
-					self.cap = cap
-				}
-			}
-			access(all) fun makeR(): @R {
-				return <- create R()
-			}
-			access(all) fun makeT(_ cap: Capability<auth(E) &R>): @T {
-				return <- create T(cap)
-			}
-		}
-	`)
-
-	saveValues := []byte(`
-		import C from 0x1	
-
-		transaction {
-			prepare(signer: auth(Storage, Capabilities) &Account) {
-				let r <- C.makeR()
-				signer.storage.save(<-r, to: /storage/foo)
-				let cap = signer.capabilities.storage.issue<&C.R>(/storage/foo)
-				let t <- C.makeT(cap)
-				signer.storage.save(<-t, to: /storage/bar)
-			}
-		}
-	`)
-
 	// Deploy contract to 0x1
+
 	err := rt.ExecuteTransaction(
 		runtime.Script{
 			Source: DeploymentTransaction("C", oldContract),
 		},
 		runtime.Context{
-			Interface: runtimeInterface1,
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Execute transaction on 0x1
+
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: saveValues,
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Update contract on 0x1
+
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: UpdateTransaction("C", contract),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Important: invalidate the loaded program, as it was updated
+	runtimeInterface.InvalidateUpdatedPrograms()
+
+	// Migrate
+
+	reporter := newTestReporter()
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	migration := migrations.NewStorageMigration(inter, storage)
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewEntitlementsMigration(inter),
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Len(t, reporter.errored, 0)
+	assert.Equal(t,
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}]struct{}{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(1),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress,
+					Key:     common.PathDomainStorage.Identifier(),
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("cap"),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress,
+					Key:     stdlib.InboxStorageDomain,
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("r_cap"),
+			}: {},
+		},
+		reporter.migrated,
+	)
+
+	inboxStorageIdentifier := stdlib.InboxStorageDomain
+	inboxStorageMap := storage.GetStorageMap(
+		testAddress,
+		inboxStorageIdentifier,
+		false,
+	)
+	require.NotNil(t, inboxStorageMap)
+	require.Equal(t, inboxStorageMap.Count(), uint64(1))
+
+	storageMap := storage.GetStorageMap(
+		testAddress,
+		common.PathDomainStorage.Identifier(),
+		false,
+	)
+	require.NotNil(t, storageMap)
+	require.Equal(t, inboxStorageMap.Count(), uint64(1))
+
+	cap1 := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("cap"))
+	capValue := cap1.(*interpreter.CapabilityValue)
+	require.IsType(t, &interpreter.ReferenceStaticType{}, capValue.BorrowType)
+	ref := capValue.BorrowType.(*interpreter.ReferenceStaticType)
+	require.Equal(t,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID {
+				return []common.TypeID{"A.0000000000000001.C.E"}
+			},
+			1,
+			sema.Conjunction,
+		),
+		ref.Authorization,
+	)
+
+	publishedValue := inboxStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("r_cap"))
+	require.IsType(t, &interpreter.PublishedValue{}, publishedValue)
+	capabilityValue := publishedValue.(*interpreter.PublishedValue).Value
+	require.IsType(t, &interpreter.ReferenceStaticType{}, capabilityValue.BorrowType)
+	ref = capabilityValue.BorrowType.(*interpreter.ReferenceStaticType)
+	require.Equal(t,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID {
+				return []common.TypeID{"A.0000000000000001.C.E"}
+			},
+			1,
+			sema.Conjunction,
+		),
+		ref.Authorization,
+	)
+}
+
+func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
+	t.Parallel()
+
+	testAddress1 := common.Address{0, 0, 0, 0, 0, 0, 0, 1}
+	testAddress2 := common.Address{0, 0, 0, 0, 0, 0, 0, 2}
+
+	rt := NewTestInterpreterRuntime()
+
+	accountCodes := map[common.Location][]byte{}
+
+	var signingAddress common.Address
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{signingAddress}, nil
+		},
+		OnGetCode: func(location common.Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+	}
+
+	// Prepare
+
+	oldContract := []byte(`
+       access(all) contract C {
+           access(all) resource R {
+               access(all) fun foo() {}
+           }
+           access(all) fun makeR(): @R {
+               return <- create R()
+           }
+       }
+   `)
+
+	contract := []byte(`
+       access(all) contract C {
+           access(all) entitlement E
+           access(all) resource R {
+               access(E) fun foo() {}
+           }
+           access(all) fun makeR(): @R {
+               return <- create R()
+           }
+       }
+   `)
+
+	saveValues := []byte(`
+       import C from 0x1
+
+       transaction {
+           prepare(signer: auth(Inbox, Storage, Capabilities) &Account) {
+               let cap = signer.capabilities.storage.issue<&C.R>(/storage/r)
+               signer.storage.save(cap, to: /storage/cap)
+               signer.inbox.publish(cap, name: "r_cap", recipient: 0x2)
+           }
+       }
+   `)
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy contract to 0x1
+
+	signingAddress = testAddress1
+
+	err := rt.ExecuteTransaction(
+		runtime.Script{
+			Source: DeploymentTransaction("C", oldContract),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
 
 	// Execute transaction on 0x2
+
+	signingAddress = testAddress2
+
 	err = rt.ExecuteTransaction(
 		runtime.Script{
 			Source: saveValues,
 		},
 		runtime.Context{
-			Interface: runtimeInterface2,
+			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
 
-	// update contract on 0x1
+	// Update contract on 0x1
+
+	signingAddress = testAddress1
+
 	err = rt.ExecuteTransaction(
 		runtime.Script{
 			Source: UpdateTransaction("C", contract),
 		},
 		runtime.Context{
-			Interface: runtimeInterface1,
+			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
 
-	runtimeStorage := runtime.NewStorage(storage, nil)
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
 
-	inter, err := interpreter.NewInterpreter(
-		nil,
-		utils.TestLocation,
-		&interpreter.Config{
-			Storage:                       runtimeStorage,
-			AtreeValueValidationEnabled:   false,
-			AtreeStorageValidationEnabled: false,
-			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-				program, err := rt.ParseAndCheckProgram(
-					accountCodes[location],
-					runtime.Context{
-						Interface: interfaces[location],
-						Location:  location,
-					},
-				)
-				require.NoError(t, err)
+	// Important: invalidate the loaded program, as it was updated
+	runtimeInterface.InvalidateUpdatedPrograms()
 
-				subInterpreter, err := inter.NewSubInterpreter(program, location)
-				require.NoError(t, err)
+	inboxStorageIdentifier := stdlib.InboxStorageDomain
+	inboxStorageMap := storage.GetStorageMap(
+		testAddress2,
+		inboxStorageIdentifier,
+		false,
+	)
+	require.NotNil(t, inboxStorageMap)
+	require.Equal(t, inboxStorageMap.Count(), uint64(1))
 
-				return interpreter.InterpreterImport{
-					Interpreter: subInterpreter,
-				}
+	storageIdentifier := common.PathDomainStorage.Identifier()
+	storageMap := storage.GetStorageMap(
+		testAddress2,
+		storageIdentifier,
+		false,
+	)
+	require.NotNil(t, storageMap)
+	require.Equal(t, inboxStorageMap.Count(), uint64(1))
+
+	// Migrate
+
+	reporter := newTestReporter()
+
+	migration := migrations.NewStorageMigration(inter, storage)
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress1,
+				testAddress2,
 			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewEntitlementsMigration(inter),
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Len(t, reporter.errored, 0)
+	assert.Equal(t,
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}]struct{}{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(1),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     common.PathDomainStorage.Identifier(),
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("cap"),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.InboxStorageDomain,
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("r_cap"),
+			}: {},
+		},
+		reporter.migrated,
+	)
+
+	cap1 := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("cap"))
+	capValue := cap1.(*interpreter.CapabilityValue)
+	require.IsType(t, &interpreter.ReferenceStaticType{}, capValue.BorrowType)
+	ref := capValue.BorrowType.(*interpreter.ReferenceStaticType)
+	require.Equal(t,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID {
+				return []common.TypeID{"A.0000000000000001.C.E"}
+			},
+			1,
+			sema.Conjunction,
+		),
+		ref.Authorization,
+	)
+
+	publishedValue := inboxStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("r_cap"))
+	require.IsType(t, &interpreter.PublishedValue{}, publishedValue)
+	capabilityValue := publishedValue.(*interpreter.PublishedValue).Value
+	require.IsType(t, &interpreter.ReferenceStaticType{}, capabilityValue.BorrowType)
+	ref = capabilityValue.BorrowType.(*interpreter.ReferenceStaticType)
+	require.Equal(t,
+		interpreter.NewEntitlementSetAuthorization(
+			inter,
+			func() []common.TypeID {
+				return []common.TypeID{"A.0000000000000001.C.E"}
+			},
+			1,
+			sema.Conjunction,
+		),
+		ref.Authorization,
+	)
+}
+
+func TestMigrateAcrossContracts(t *testing.T) {
+	t.Parallel()
+
+	testAddress1 := common.Address{0, 0, 0, 0, 0, 0, 0, 1}
+	testAddress2 := common.Address{0, 0, 0, 0, 0, 0, 0, 2}
+
+	rt := NewTestInterpreterRuntime()
+
+	accountCodes := map[common.Location][]byte{}
+
+	var signingAddress common.Address
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{signingAddress}, nil
+		},
+		OnGetCode: func(location common.Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+	}
+
+	// Prepare
+
+	oldContract := []byte(`
+        access(all) contract C {
+            access(all) resource R {
+                access(all) fun foo() {}
+            }
+            access(all) resource T {
+                access(all) let cap: Capability<&R>
+                init(_ cap: Capability<&R>) {
+                    self.cap = cap
+                }
+            }
+            access(all) fun makeR(): @R {
+                return <- create R()
+            }
+            access(all) fun makeT(_ cap: Capability<&R>): @T {
+                return <- create T(cap)
+            }
+        }
+    `)
+
+	updatedContract := []byte(`
+        access(all) contract C {
+            access(all) entitlement E
+            access(all) resource R {
+                access(E) fun foo() {}
+            }
+            access(all) resource T {
+                access(all) let cap: Capability<auth(E) &R>
+                init(_ cap: Capability<auth(E) &R>) {
+                    self.cap = cap
+                }
+            }
+            access(all) fun makeR(): @R {
+                return <- create R()
+            }
+            access(all) fun makeT(_ cap: Capability<auth(E) &R>): @T {
+                return <- create T(cap)
+            }
+        }
+    `)
+
+	saveValues := []byte(`
+        import C from 0x1
+
+        transaction {
+            prepare(signer: auth(Storage, Capabilities) &Account) {
+                let r <- C.makeR()
+                signer.storage.save(<-r, to: /storage/foo)
+                let cap = signer.capabilities.storage.issue<&C.R>(/storage/foo)
+                let t <- C.makeT(cap)
+                signer.storage.save(<-t, to: /storage/bar)
+            }
+        }
+    `)
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy contract to 0x1
+
+	signingAddress = testAddress1
+
+	err := rt.ExecuteTransaction(
+		runtime.Script{
+			Source: DeploymentTransaction("C", oldContract),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
 
+	// Execute transaction on 0x2
+
+	signingAddress = testAddress2
+
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: saveValues,
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Update contract on 0x1
+
+	signingAddress = testAddress1
+
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: UpdateTransaction("C", updatedContract),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	// Important: invalidate the loaded program, as it was updated
+	runtimeInterface.InvalidateUpdatedPrograms()
+
 	storageIdentifier := common.PathDomainStorage.Identifier()
-	storageMap := runtimeStorage.GetStorageMap(address2, storageIdentifier, false)
+	storageMap := storage.GetStorageMap(testAddress2, storageIdentifier, false)
 	require.NotNil(t, storageMap)
 	require.Greater(t, storageMap.Count(), uint64(0))
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, runtimeStorage)
-	pathMigrator := migration.NewValueMigrationsPathMigrator(nil, NewEntitlementsMigration(inter))
+	reporter := newTestReporter()
+
+	migration := migrations.NewStorageMigration(inter, storage)
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
-				address1,
-				address2,
+				testAddress1,
+				testAddress2,
 			},
 		},
-		pathMigrator,
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewEntitlementsMigration(inter),
+		),
+	)
+
+	// Assert
+
+	assert.Len(t, reporter.errored, 0)
+	assert.Equal(t,
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}]struct{}{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(1),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     common.PathDomainStorage.Identifier(),
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("bar"),
+			}: {},
+		},
+		reporter.migrated,
 	)
 
 	value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("bar"))
@@ -1397,198 +2128,204 @@ func TestMigrateAcrossContracts(t *testing.T) {
 	require.Equal(t,
 		interpreter.NewEntitlementSetAuthorization(
 			inter,
-			func() []common.TypeID { return []common.TypeID{"A.0000000000000001.C.E"} },
+			func() []common.TypeID {
+				return []common.TypeID{"A.0000000000000001.C.E"}
+			},
 			1,
 			sema.Conjunction,
 		),
 		ref.Authorization,
 	)
-
 }
 
 func TestMigrateArrayOfValues(t *testing.T) {
 	t.Parallel()
 
-	address1 := [8]byte{0, 0, 0, 0, 0, 0, 0, 1}
-	address2 := [8]byte{0, 0, 0, 0, 0, 0, 0, 2}
+	testAddress1 := common.Address{0, 0, 0, 0, 0, 0, 0, 1}
+	testAddress2 := common.Address{0, 0, 0, 0, 0, 0, 0, 2}
 
-	storage := NewTestLedger(nil, nil)
 	rt := NewTestInterpreterRuntime()
 
 	accountCodes := map[common.Location][]byte{}
-	interfaces := map[common.Location]*TestRuntimeInterface{}
 
-	runtimeInterface1 := &TestRuntimeInterface{
-		Storage: storage,
+	var signingAddress common.Address
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
 		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
 		OnGetSigningAccounts: func() ([]runtime.Address, error) {
-			return []runtime.Address{address1}, nil
+			return []runtime.Address{signingAddress}, nil
 		},
 		OnGetCode: func(location common.Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		OnResolveLocation: MultipleIdentifierLocationResolver,
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
 		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
-	}
-	runtimeInterface1.OnUpdateAccountContractCode = func(location common.AddressLocation, code []byte) error {
-		accountCodes[location] = code
-		interfaces[location] = runtimeInterface1
-		return nil
-	}
-
-	runtimeInterface2 := &TestRuntimeInterface{
-		Storage: storage,
-		OnEmitEvent: func(event cadence.Event) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
 			return nil
 		},
-		OnGetCode: func(location common.Location) (bytes []byte, err error) {
-			return accountCodes[location], nil
-		},
-		OnGetSigningAccounts: func() ([]runtime.Address, error) {
-			return []runtime.Address{address2}, nil
-		},
-		OnResolveLocation: MultipleIdentifierLocationResolver,
-		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-			code = accountCodes[location]
-			return code, nil
-		},
 	}
-	runtimeInterface2.OnUpdateAccountContractCode = func(location common.AddressLocation, code []byte) error {
-		accountCodes[location] = code
-		interfaces[location] = runtimeInterface2
-		return nil
-	}
+
+	// Prepare
+
+	oldContract := []byte(`
+       access(all) contract C {
+           access(all) resource R {
+               access(all) fun foo() {}
+           }
+           access(all) fun makeR(): @R {
+               return <- create R()
+           }
+       }
+   `)
+
+	contract := []byte(`
+       access(all) contract C {
+           access(all) entitlement E
+           access(all) resource R {
+               access(E) fun foo() {}
+           }
+           access(all) fun makeR(): @R {
+               return <- create R()
+           }
+       }
+   `)
+
+	saveValues := []byte(`
+       import C from 0x1
+
+       transaction {
+           prepare(signer: auth(Storage, Capabilities) &Account) {
+               let r1 <- C.makeR()
+               let r2 <- C.makeR()
+               signer.storage.save(<-r1, to: /storage/foo)
+               signer.storage.save(<-r2, to: /storage/bar)
+               let cap1 = signer.capabilities.storage.issue<&C.R>(/storage/foo)
+               let cap2 = signer.capabilities.storage.issue<&C.R>(/storage/bar)
+               let arr = [cap1, cap2]
+               signer.storage.save(arr, to: /storage/caps)
+           }
+       }
+   `)
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
-	oldContract := []byte(`
-		access(all) contract C {
-			access(all) resource R {
-				access(all) fun foo() {}
-			}
-			access(all) fun makeR(): @R {
-				return <- create R()
-			}
-		}
-	`)
-
-	contract := []byte(`
-		access(all) contract C {
-			access(all) entitlement E
-			access(all) resource R {
-				access(E) fun foo() {}
-			}
-			access(all) fun makeR(): @R {
-				return <- create R()
-			}
-		}
-	`)
-
-	saveValues := []byte(`
-		import C from 0x1	
-
-		transaction {
-			prepare(signer: auth(Storage, Capabilities) &Account) {
-				let r1 <- C.makeR()
-				let r2 <- C.makeR()
-				signer.storage.save(<-r1, to: /storage/foo)
-				signer.storage.save(<-r2, to: /storage/bar)
-				let cap1 = signer.capabilities.storage.issue<&C.R>(/storage/foo)
-				let cap2 = signer.capabilities.storage.issue<&C.R>(/storage/bar)
-				let arr = [cap1, cap2]
-				signer.storage.save(arr, to: /storage/caps)
-			}
-		}
-	`)
-
 	// Deploy contract to 0x1
+
+	signingAddress = testAddress1
+
 	err := rt.ExecuteTransaction(
 		runtime.Script{
 			Source: DeploymentTransaction("C", oldContract),
 		},
 		runtime.Context{
-			Interface: runtimeInterface1,
+			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
 
 	// Execute transaction on 0x2
+
+	signingAddress = testAddress2
+
 	err = rt.ExecuteTransaction(
 		runtime.Script{
 			Source: saveValues,
 		},
 		runtime.Context{
-			Interface: runtimeInterface2,
+			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
 
 	// update contract on 0x1
+
+	signingAddress = testAddress1
+
 	err = rt.ExecuteTransaction(
 		runtime.Script{
 			Source: UpdateTransaction("C", contract),
 		},
 		runtime.Context{
-			Interface: runtimeInterface1,
+			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
 
-	runtimeStorage := runtime.NewStorage(storage, nil)
-
-	inter, err := interpreter.NewInterpreter(
-		nil,
-		utils.TestLocation,
-		&interpreter.Config{
-			Storage:                       runtimeStorage,
-			AtreeValueValidationEnabled:   false,
-			AtreeStorageValidationEnabled: false,
-			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-				program, err := rt.ParseAndCheckProgram(
-					accountCodes[location],
-					runtime.Context{
-						Interface: interfaces[location],
-						Location:  location,
-					},
-				)
-				require.NoError(t, err)
-
-				subInterpreter, err := inter.NewSubInterpreter(program, location)
-				require.NoError(t, err)
-
-				return interpreter.InterpreterImport{
-					Interpreter: subInterpreter,
-				}
-			},
-		},
-	)
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
 	require.NoError(t, err)
 
+	// Important: invalidate the loaded program, as it was updated
+	runtimeInterface.InvalidateUpdatedPrograms()
+
 	storageIdentifier := common.PathDomainStorage.Identifier()
-	storageMap := runtimeStorage.GetStorageMap(address2, storageIdentifier, false)
+	storageMap := storage.GetStorageMap(testAddress2, storageIdentifier, false)
 	require.NotNil(t, storageMap)
 	require.Greater(t, storageMap.Count(), uint64(0))
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, runtimeStorage)
-	pathMigrator := migration.NewValueMigrationsPathMigrator(nil, NewEntitlementsMigration(inter))
+	reporter := newTestReporter()
+
+	migration := migrations.NewStorageMigration(inter, storage)
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
-				address1,
-				address2,
+				testAddress1,
+				testAddress2,
 			},
 		},
-		pathMigrator,
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewEntitlementsMigration(inter),
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Len(t, reporter.errored, 0)
+	assert.Equal(t,
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}]struct{}{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(1),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(2),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     common.PathDomainStorage.Identifier(),
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("caps"),
+			}: {},
+		},
+		reporter.migrated,
 	)
 
 	arrayValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("caps"))
@@ -1604,7 +2341,9 @@ func TestMigrateArrayOfValues(t *testing.T) {
 	require.Equal(t,
 		interpreter.NewEntitlementSetAuthorization(
 			inter,
-			func() []common.TypeID { return []common.TypeID{"A.0000000000000001.C.E"} },
+			func() []common.TypeID {
+				return []common.TypeID{"A.0000000000000001.C.E"}
+			},
 			1,
 			sema.Conjunction,
 		),
@@ -1619,7 +2358,9 @@ func TestMigrateArrayOfValues(t *testing.T) {
 	require.Equal(t,
 		interpreter.NewEntitlementSetAuthorization(
 			inter,
-			func() []common.TypeID { return []common.TypeID{"A.0000000000000001.C.E"} },
+			func() []common.TypeID {
+				return []common.TypeID{"A.0000000000000001.C.E"}
+			},
 			1,
 			sema.Conjunction,
 		),
@@ -1634,7 +2375,9 @@ func TestMigrateArrayOfValues(t *testing.T) {
 	require.Equal(t,
 		interpreter.NewEntitlementSetAuthorization(
 			inter,
-			func() []common.TypeID { return []common.TypeID{"A.0000000000000001.C.E"} },
+			func() []common.TypeID {
+				return []common.TypeID{"A.0000000000000001.C.E"}
+			},
 			1,
 			sema.Conjunction,
 		),
@@ -1645,186 +2388,191 @@ func TestMigrateArrayOfValues(t *testing.T) {
 func TestMigrateDictOfValues(t *testing.T) {
 	t.Parallel()
 
-	address1 := [8]byte{0, 0, 0, 0, 0, 0, 0, 1}
-	address2 := [8]byte{0, 0, 0, 0, 0, 0, 0, 2}
+	testAddress1 := common.Address{0, 0, 0, 0, 0, 0, 0, 1}
+	testAddress2 := common.Address{0, 0, 0, 0, 0, 0, 0, 2}
 
-	storage := NewTestLedger(nil, nil)
 	rt := NewTestInterpreterRuntime()
 
 	accountCodes := map[common.Location][]byte{}
-	interfaces := map[common.Location]*TestRuntimeInterface{}
 
-	runtimeInterface1 := &TestRuntimeInterface{
-		Storage: storage,
+	var signingAddress common.Address
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
 		OnEmitEvent: func(event cadence.Event) error {
 			return nil
 		},
 		OnGetSigningAccounts: func() ([]runtime.Address, error) {
-			return []runtime.Address{address1}, nil
+			return []runtime.Address{signingAddress}, nil
 		},
 		OnGetCode: func(location common.Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		OnResolveLocation: MultipleIdentifierLocationResolver,
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
 		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			code = accountCodes[location]
 			return code, nil
 		},
-	}
-	runtimeInterface1.OnUpdateAccountContractCode = func(location common.AddressLocation, code []byte) error {
-		accountCodes[location] = code
-		interfaces[location] = runtimeInterface1
-		return nil
-	}
-
-	runtimeInterface2 := &TestRuntimeInterface{
-		Storage: storage,
-		OnEmitEvent: func(event cadence.Event) error {
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
 			return nil
 		},
-		OnGetCode: func(location common.Location) (bytes []byte, err error) {
-			return accountCodes[location], nil
-		},
-		OnGetSigningAccounts: func() ([]runtime.Address, error) {
-			return []runtime.Address{address2}, nil
-		},
-		OnResolveLocation: MultipleIdentifierLocationResolver,
-		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-			code = accountCodes[location]
-			return code, nil
-		},
 	}
-	runtimeInterface2.OnUpdateAccountContractCode = func(location common.AddressLocation, code []byte) error {
-		accountCodes[location] = code
-		interfaces[location] = runtimeInterface2
-		return nil
-	}
+
+	// Prepare
+
+	oldContract := []byte(`
+       access(all) contract C {
+           access(all) resource R {
+               access(all) fun foo() {}
+           }
+           access(all) fun makeR(): @R {
+               return <- create R()
+           }
+       }
+   `)
+
+	contract := []byte(`
+       access(all) contract C {
+           access(all) entitlement E
+           access(all) resource R {
+               access(E) fun foo() {}
+           }
+           access(all) fun makeR(): @R {
+               return <- create R()
+           }
+       }
+   `)
+
+	saveValues := []byte(`
+       import C from 0x1
+
+       transaction {
+           prepare(signer: auth(Storage, Capabilities) &Account) {
+               let r1 <- C.makeR()
+               let r2 <- C.makeR()
+               signer.storage.save(<-r1, to: /storage/foo)
+               signer.storage.save(<-r2, to: /storage/bar)
+               let cap1 = signer.capabilities.storage.issue<&C.R>(/storage/foo)
+               let cap2 = signer.capabilities.storage.issue<&C.R>(/storage/bar)
+               let arr = {"a": cap1, "b": cap2}
+               signer.storage.save(arr, to: /storage/caps)
+           }
+       }
+   `)
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
-	oldContract := []byte(`
-		access(all) contract C {
-			access(all) resource R {
-				access(all) fun foo() {}
-			}
-			access(all) fun makeR(): @R {
-				return <- create R()
-			}
-		}
-	`)
-
-	contract := []byte(`
-		access(all) contract C {
-			access(all) entitlement E
-			access(all) resource R {
-				access(E) fun foo() {}
-			}
-			access(all) fun makeR(): @R {
-				return <- create R()
-			}
-		}
-	`)
-
-	saveValues := []byte(`
-		import C from 0x1	
-
-		transaction {
-			prepare(signer: auth(Storage, Capabilities) &Account) {
-				let r1 <- C.makeR()
-				let r2 <- C.makeR()
-				signer.storage.save(<-r1, to: /storage/foo)
-				signer.storage.save(<-r2, to: /storage/bar)
-				let cap1 = signer.capabilities.storage.issue<&C.R>(/storage/foo)
-				let cap2 = signer.capabilities.storage.issue<&C.R>(/storage/bar)
-				let arr = {"a": cap1, "b": cap2}
-				signer.storage.save(arr, to: /storage/caps)
-			}
-		}
-	`)
-
 	// Deploy contract to 0x1
+
+	signingAddress = testAddress1
+
 	err := rt.ExecuteTransaction(
 		runtime.Script{
 			Source: DeploymentTransaction("C", oldContract),
 		},
 		runtime.Context{
-			Interface: runtimeInterface1,
+			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
 
 	// Execute transaction on 0x2
+
+	signingAddress = testAddress2
+
 	err = rt.ExecuteTransaction(
 		runtime.Script{
 			Source: saveValues,
 		},
 		runtime.Context{
-			Interface: runtimeInterface2,
+			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
 
 	// update contract on 0x1
+
+	signingAddress = testAddress1
+
 	err = rt.ExecuteTransaction(
 		runtime.Script{
 			Source: UpdateTransaction("C", contract),
 		},
 		runtime.Context{
-			Interface: runtimeInterface1,
+			Interface: runtimeInterface,
 			Location:  nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
 
-	runtimeStorage := runtime.NewStorage(storage, nil)
-
-	inter, err := interpreter.NewInterpreter(
-		nil,
-		utils.TestLocation,
-		&interpreter.Config{
-			Storage:                       runtimeStorage,
-			AtreeValueValidationEnabled:   false,
-			AtreeStorageValidationEnabled: false,
-			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
-				program, err := rt.ParseAndCheckProgram(
-					accountCodes[location],
-					runtime.Context{
-						Interface: interfaces[location],
-						Location:  location,
-					},
-				)
-				require.NoError(t, err)
-
-				subInterpreter, err := inter.NewSubInterpreter(program, location)
-				require.NoError(t, err)
-
-				return interpreter.InterpreterImport{
-					Interpreter: subInterpreter,
-				}
-			},
-		},
-	)
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
 	require.NoError(t, err)
 
+	// Important: invalidate the loaded program, as it was updated
+	runtimeInterface.InvalidateUpdatedPrograms()
+
 	storageIdentifier := common.PathDomainStorage.Identifier()
-	storageMap := runtimeStorage.GetStorageMap(address2, storageIdentifier, false)
+	storageMap := storage.GetStorageMap(testAddress2, storageIdentifier, false)
 	require.NotNil(t, storageMap)
 	require.Greater(t, storageMap.Count(), uint64(0))
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, runtimeStorage)
-	pathMigrator := migration.NewValueMigrationsPathMigrator(nil, NewEntitlementsMigration(inter))
+	reporter := newTestReporter()
+
+	migration := migrations.NewStorageMigration(inter, storage)
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
-				address1,
-				address2,
+				testAddress1,
+				testAddress2,
 			},
 		},
-		pathMigrator,
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewEntitlementsMigration(inter),
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Len(t, reporter.errored, 0)
+	assert.Equal(t,
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}]struct{}{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(1),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(2),
+			}: {},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress2,
+					Key:     common.PathDomainStorage.Identifier(),
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("caps"),
+			}: {},
+		},
+		reporter.migrated,
 	)
 
 	dictValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("caps"))
@@ -1846,7 +2594,11 @@ func TestMigrateDictOfValues(t *testing.T) {
 		ref.Authorization,
 	)
 
-	cap1, present := dictionaryValue.Get(inter, interpreter.EmptyLocationRange, interpreter.NewUnmeteredStringValue("a"))
+	cap1, present := dictionaryValue.Get(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.NewUnmeteredStringValue("a"),
+	)
 	require.True(t, present)
 	require.IsType(t, &interpreter.CapabilityValue{}, cap1)
 	capValue := cap1.(*interpreter.CapabilityValue)
@@ -1862,7 +2614,11 @@ func TestMigrateDictOfValues(t *testing.T) {
 		ref.Authorization,
 	)
 
-	cap2, present := dictionaryValue.Get(inter, interpreter.EmptyLocationRange, interpreter.NewUnmeteredStringValue("b"))
+	cap2, present := dictionaryValue.Get(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.NewUnmeteredStringValue("b"),
+	)
 	require.True(t, present)
 	require.IsType(t, &interpreter.CapabilityValue{}, cap2)
 	capValue = cap1.(*interpreter.CapabilityValue)
@@ -1935,14 +2691,13 @@ func TestConvertMigratedAccountTypes(t *testing.T) {
 				),
 			)
 
-			newValue, err := statictypes.NewStaticTypeMigration().Migrate(
-				interpreter.AddressPath{
-					Address: common.ZeroAddress,
-					Path:    interpreter.EmptyPathValue,
-				},
-				value,
-				inter,
-			)
+			newValue, err := statictypes.NewStaticTypeMigration().
+				Migrate(
+					interpreter.StorageKey{},
+					nil,
+					value,
+					inter,
+				)
 			require.NoError(t, err)
 			require.NotNil(t, newValue)
 
@@ -1961,32 +2716,213 @@ func TestConvertMigratedAccountTypes(t *testing.T) {
 	}
 }
 
-var testAddress = common.Address{0x42}
+func TestMigrateCapConsAcrossTwoAccounts(t *testing.T) {
+	t.Parallel()
+
+	testAddress1 := common.Address{0, 0, 0, 0, 0, 0, 0, 1}
+	testAddress2 := common.Address{0, 0, 0, 0, 0, 0, 0, 2}
+
+	rt := NewTestInterpreterRuntime()
+
+	accountCodes := map[common.Location][]byte{}
+
+	var signingAddress common.Address
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{signingAddress}, nil
+		},
+		OnGetCode: func(location common.Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+	}
+
+	// Prepare
+
+	oldContract := []byte(`
+       access(all) contract C {
+           access(all) resource R {
+               access(all) fun foo() {}
+           }
+           access(all) fun makeR(): @R {
+               return <- create R()
+           }
+       }
+   `)
+
+	contract := []byte(`
+       access(all) contract C {
+           access(all) entitlement E
+           access(all) resource R {
+               access(E) fun foo() {}
+           }
+           access(all) fun makeR(): @R {
+               return <- create R()
+           }
+       }
+   `)
+
+	saveValues := []byte(`
+       import C from 0x1
+
+       transaction {
+           prepare(signer: auth(Inbox, Storage, Capabilities) &Account) {
+               signer.capabilities.storage.issue<&C.R>(/storage/r)
+           }
+       }
+   `)
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy contract to 0x1
+
+	signingAddress = testAddress1
+
+	err := rt.ExecuteTransaction(
+		runtime.Script{
+			Source: DeploymentTransaction("C", oldContract),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Execute transaction on 0x2
+
+	signingAddress = testAddress2
+
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: saveValues,
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Update contract on 0x1
+
+	signingAddress = testAddress1
+
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: UpdateTransaction("C", contract),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	// Important: invalidate the loaded program, as it was updated
+	runtimeInterface.InvalidateUpdatedPrograms()
+
+	// Migrate
+
+	reporter := newTestReporter()
+
+	migration := migrations.NewStorageMigration(inter, storage)
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress1,
+				testAddress2,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewEntitlementsMigration(inter),
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Len(t, reporter.errored, 0)
+	assert.Len(t, reporter.migrated, 1)
+
+	// TODO: assert
+}
 
 var _ migrations.Reporter = &testReporter{}
 
 type testReporter struct {
-	migratedPaths map[interpreter.AddressPath]struct{}
+	migrated map[struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}]struct{}
+	errored map[struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}][]string
 }
 
 func newTestReporter() *testReporter {
 	return &testReporter{
-		migratedPaths: map[interpreter.AddressPath]struct{}{},
+		migrated: map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}]struct{}{},
 	}
 }
 
 func (t *testReporter) Migrated(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	_ string,
 ) {
-	t.migratedPaths[addressPath] = struct{}{}
+	t.migrated[struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}{
+		StorageKey:    storageKey,
+		StorageMapKey: storageMapKey,
+	}] = struct{}{}
 }
 
 func (t *testReporter) Error(
-	_ interpreter.AddressPath,
-	_ string,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
+	migration string,
 	_ error,
 ) {
+	key := struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}{
+		StorageKey:    storageKey,
+		StorageMapKey: storageMapKey,
+	}
+
+	t.errored[key] = append(
+		t.errored[key],
+		migration,
+	)
 }
 
 func TestRehash(t *testing.T) {
@@ -2003,8 +2939,8 @@ func TestRehash(t *testing.T) {
 	}
 
 	const fooBarQualifiedIdentifier = "Foo.Bar"
-	account := common.Address{0x42}
-	fooAddressLocation := common.NewAddressLocation(nil, account, "Foo")
+	testAddress := common.Address{0x42}
+	fooAddressLocation := common.NewAddressLocation(nil, testAddress, "Foo")
 
 	newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
 		storage := runtime.NewStorage(ledger, nil)
@@ -2150,16 +3086,19 @@ func TestRehash(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t,
-			map[interpreter.AddressPath]struct{}{
+			map[struct {
+				interpreter.StorageKey
+				interpreter.StorageMapKey
+			}]struct{}{
 				{
-					Address: testAddress,
-					Path: interpreter.PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: string(storageMapKey),
+					StorageKey: interpreter.StorageKey{
+						Address: testAddress,
+						Key:     common.PathDomainStorage.Identifier(),
 					},
+					StorageMapKey: storageMapKey,
 				}: {},
 			},
-			reporter.migratedPaths,
+			reporter.migrated,
 		)
 	})
 
@@ -2167,7 +3106,11 @@ func TestRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
-		storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			false,
+		)
 		storedValue := storageMap.ReadValue(inter, storageMapKey)
 
 		require.IsType(t, &interpreter.DictionaryValue{}, storedValue)

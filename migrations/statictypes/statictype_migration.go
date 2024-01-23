@@ -57,7 +57,8 @@ func (*StaticTypeMigration) Name() string {
 // Migrate migrates `AuthAccount` and `PublicAccount` types inside `TypeValue`s,
 // to the account reference type (&Account).
 func (m *StaticTypeMigration) Migrate(
-	_ interpreter.AddressPath,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (newValue interpreter.Value, err error) {

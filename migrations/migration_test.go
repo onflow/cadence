@@ -23,46 +23,81 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 type testReporter struct {
-	migratedPaths map[interpreter.AddressPath][]string
-	erroredPaths  map[interpreter.AddressPath][]string
+	migrated map[struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}][]string
+	errored map[struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}][]string
 }
+
+var _ Reporter = &testReporter{}
 
 func newTestReporter() *testReporter {
 	return &testReporter{
-		migratedPaths: map[interpreter.AddressPath][]string{},
-		erroredPaths:  map[interpreter.AddressPath][]string{},
+		migrated: map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}][]string{},
+		errored: map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}][]string{},
 	}
 }
 
 func (t *testReporter) Migrated(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	migration string,
 ) {
-	t.migratedPaths[addressPath] = append(
-		t.migratedPaths[addressPath],
+	key := struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}{
+		StorageKey:    storageKey,
+		StorageMapKey: storageMapKey,
+	}
+
+	t.migrated[key] = append(
+		t.migrated[key],
 		migration,
 	)
 }
 
 func (t *testReporter) Error(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	migration string,
 	_ error,
 ) {
-	t.erroredPaths[addressPath] = append(
-		t.erroredPaths[addressPath],
+	key := struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}{
+		StorageKey:    storageKey,
+		StorageMapKey: storageMapKey,
+	}
+
+	t.errored[key] = append(
+		t.errored[key],
 		migration,
 	)
 }
@@ -71,12 +106,15 @@ func (t *testReporter) Error(
 
 type testStringMigration struct{}
 
+var _ ValueMigration = testStringMigration{}
+
 func (testStringMigration) Name() string {
 	return "testStringMigration"
 }
 
 func (testStringMigration) Migrate(
-	_ interpreter.AddressPath,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (interpreter.Value, error) {
@@ -93,12 +131,15 @@ type testInt8Migration struct {
 	mustError bool
 }
 
+var _ ValueMigration = testInt8Migration{}
+
 func (testInt8Migration) Name() string {
 	return "testInt8Migration"
 }
 
 func (m testInt8Migration) Migrate(
-	_ interpreter.AddressPath,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (interpreter.Value, error) {
@@ -114,17 +155,82 @@ func (m testInt8Migration) Migrate(
 	return interpreter.NewUnmeteredInt8Value(int8(int8Value) + 10), nil
 }
 
-var _ ValueMigration = testStringMigration{}
+// testCapMigration
+
+type testCapMigration struct{}
+
+var _ ValueMigration = testCapMigration{}
+
+func (testCapMigration) Name() string {
+	return "testCapMigration"
+}
+
+func (testCapMigration) Migrate(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) (interpreter.Value, error) {
+	if value, ok := value.(*interpreter.CapabilityValue); ok {
+		return interpreter.NewCapabilityValue(
+			nil,
+			value.ID+10,
+			value.Address,
+			value.BorrowType,
+		), nil
+	}
+
+	return nil, nil
+}
+
+// testCapConMigration
+
+type testCapConMigration struct{}
+
+var _ ValueMigration = testCapConMigration{}
+
+func (testCapConMigration) Name() string {
+	return "testCapConMigration"
+}
+
+func (testCapConMigration) Migrate(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) (interpreter.Value, error) {
+
+	switch value := value.(type) {
+	case *interpreter.StorageCapabilityControllerValue:
+		return interpreter.NewStorageCapabilityControllerValue(
+			nil,
+			value.BorrowType,
+			value.CapabilityID+10,
+			value.TargetPath,
+		), nil
+
+	case *interpreter.AccountCapabilityControllerValue:
+		return interpreter.NewAccountCapabilityControllerValue(
+			nil,
+			value.BorrowType,
+			value.CapabilityID+10,
+		), nil
+	}
+
+	return nil, nil
+}
 
 func TestMultipleMigrations(t *testing.T) {
 	t.Parallel()
 
 	account := common.Address{0x42}
-	pathDomain := common.PathDomainPublic
 
 	type testCase struct {
+		name          string
+		migration     string
 		storedValue   interpreter.Value
 		expectedValue interpreter.Value
+		key           string
 	}
 
 	ledger := NewTestLedger(nil, nil)
@@ -142,24 +248,233 @@ func TestMultipleMigrations(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	testCases := map[string]testCase{
-		"string_value": {
+	testCases := []testCase{
+		{
+			name:          "string_value",
+			key:           common.PathDomainStorage.Identifier(),
+			migration:     "testStringMigration",
 			storedValue:   interpreter.NewUnmeteredStringValue("hello"),
 			expectedValue: interpreter.NewUnmeteredStringValue("updated_hello"),
 		},
-		"int8_value": {
+		{
+			name:          "int8_value",
+			key:           common.PathDomainStorage.Identifier(),
+			migration:     "testInt8Migration",
 			storedValue:   interpreter.NewUnmeteredInt8Value(5),
 			expectedValue: interpreter.NewUnmeteredInt8Value(15),
 		},
-		"int16_value": {
+		{
+			name:          "int16_value",
+			key:           common.PathDomainStorage.Identifier(),
+			migration:     "", // should not be migrated
 			storedValue:   interpreter.NewUnmeteredInt16Value(5),
 			expectedValue: interpreter.NewUnmeteredInt16Value(5),
 		},
+		{
+			name:      "storage_cap_value",
+			key:       common.PathDomainStorage.Identifier(),
+			migration: "testCapMigration",
+			storedValue: interpreter.NewCapabilityValue(
+				nil,
+				5,
+				interpreter.AddressValue(common.Address{0x1}),
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.UnauthorizedAccess,
+					interpreter.PrimitiveStaticTypeString,
+				),
+			),
+			expectedValue: interpreter.NewCapabilityValue(
+				nil,
+				15,
+				interpreter.AddressValue(common.Address{0x1}),
+				interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.UnauthorizedAccess,
+					interpreter.PrimitiveStaticTypeString,
+				),
+			),
+		},
+		{
+			name:      "inbox_cap_value",
+			key:       stdlib.InboxStorageDomain,
+			migration: "testCapMigration",
+			storedValue: interpreter.NewPublishedValue(
+				nil,
+				interpreter.AddressValue(common.Address{0x2}),
+				interpreter.NewCapabilityValue(
+					nil,
+					5,
+					interpreter.AddressValue(common.Address{0x1}),
+					interpreter.NewReferenceStaticType(
+						nil,
+						interpreter.UnauthorizedAccess,
+						interpreter.PrimitiveStaticTypeString,
+					),
+				),
+			),
+			expectedValue: interpreter.NewPublishedValue(
+				nil,
+				interpreter.AddressValue(common.Address{0x2}),
+				interpreter.NewCapabilityValue(
+					nil,
+					15,
+					interpreter.AddressValue(common.Address{0x1}),
+					interpreter.NewReferenceStaticType(
+						nil,
+						interpreter.UnauthorizedAccess,
+						interpreter.PrimitiveStaticTypeString,
+					),
+				),
+			),
+		},
+	}
+
+	variableSizedAnyStructStaticType :=
+		interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct)
+
+	dictionaryAnyStructStaticType :=
+		interpreter.NewDictionaryStaticType(
+			nil,
+			interpreter.PrimitiveStaticTypeAnyStruct,
+			interpreter.PrimitiveStaticTypeAnyStruct,
+		)
+
+	for _, test := range testCases {
+
+		if test.key != common.PathDomainStorage.Identifier() {
+			continue
+		}
+
+		testCases = append(testCases, testCase{
+			name:      "array_" + test.name,
+			key:       test.key,
+			migration: test.migration,
+			storedValue: interpreter.NewArrayValue(
+				inter,
+				emptyLocationRange,
+				variableSizedAnyStructStaticType,
+				common.ZeroAddress,
+				test.storedValue,
+			),
+			expectedValue: interpreter.NewArrayValue(
+				inter,
+				emptyLocationRange,
+				variableSizedAnyStructStaticType,
+				common.ZeroAddress,
+				test.expectedValue,
+			),
+		})
+
+		if _, ok := test.storedValue.(interpreter.HashableValue); ok {
+
+			testCases = append(testCases, testCase{
+				name:      "dict_key_" + test.name,
+				key:       test.key,
+				migration: test.migration,
+				storedValue: interpreter.NewDictionaryValue(
+					inter,
+					emptyLocationRange,
+					dictionaryAnyStructStaticType,
+					test.storedValue,
+					interpreter.TrueValue,
+				),
+
+				expectedValue: interpreter.NewDictionaryValue(
+					inter,
+					emptyLocationRange,
+					dictionaryAnyStructStaticType,
+					test.expectedValue,
+					interpreter.TrueValue,
+				),
+			})
+		}
+
+		testCases = append(testCases, testCase{
+			name:      "dict_value_" + test.name,
+			key:       test.key,
+			migration: test.migration,
+			storedValue: interpreter.NewDictionaryValue(
+				inter,
+				emptyLocationRange,
+				dictionaryAnyStructStaticType,
+				interpreter.TrueValue,
+				test.storedValue,
+			),
+			expectedValue: interpreter.NewDictionaryValue(
+				inter,
+				emptyLocationRange,
+				dictionaryAnyStructStaticType,
+				interpreter.TrueValue,
+				test.expectedValue,
+			),
+		})
+
+		testCases = append(testCases, testCase{
+			name:          "some_" + test.name,
+			key:           test.key,
+			migration:     test.migration,
+			storedValue:   interpreter.NewSomeValueNonCopying(nil, test.storedValue),
+			expectedValue: interpreter.NewSomeValueNonCopying(nil, test.expectedValue),
+		})
+
+		if _, ok := test.storedValue.(*interpreter.CapabilityValue); ok {
+
+			testCases = append(testCases, testCase{
+				name:      "published_" + test.name,
+				key:       test.key,
+				migration: test.migration,
+				storedValue: interpreter.NewPublishedValue(
+					nil,
+					interpreter.AddressValue(common.ZeroAddress),
+					test.storedValue.(*interpreter.CapabilityValue),
+				),
+				expectedValue: interpreter.NewPublishedValue(
+					nil,
+					interpreter.AddressValue(common.ZeroAddress),
+					test.expectedValue.(*interpreter.CapabilityValue),
+				),
+			})
+		}
+
+		testCases = append(testCases, testCase{
+			name:      "struct_" + test.name,
+			key:       test.key,
+			migration: test.migration,
+			storedValue: interpreter.NewCompositeValue(
+				inter,
+				emptyLocationRange,
+				utils.TestLocation,
+				"S",
+				common.CompositeKindStructure,
+				[]interpreter.CompositeField{
+					{
+						Name:  "test",
+						Value: test.storedValue,
+					},
+				},
+				common.ZeroAddress,
+			),
+			expectedValue: interpreter.NewCompositeValue(
+				inter,
+				emptyLocationRange,
+				utils.TestLocation,
+				"S",
+				common.CompositeKindStructure,
+				[]interpreter.CompositeField{
+					{
+						Name:  "test",
+						Value: test.expectedValue,
+					},
+				},
+				common.ZeroAddress,
+			),
+		})
 	}
 
 	// Store values
 
-	for name, testCase := range testCases {
+	for _, testCase := range testCases {
 		transferredValue := testCase.storedValue.Transfer(
 			inter,
 			locationRange,
@@ -171,8 +486,8 @@ func TestMultipleMigrations(t *testing.T) {
 
 		inter.WriteStored(
 			account,
-			pathDomain.Identifier(),
-			interpreter.StringStorageMapKey(name),
+			testCase.key,
+			interpreter.StringStorageMapKey(testCase.name),
 			transferredValue,
 		)
 	}
@@ -196,6 +511,7 @@ func TestMultipleMigrations(t *testing.T) {
 			reporter,
 			testStringMigration{},
 			testInt8Migration{},
+			testCapMigration{},
 		),
 	)
 
@@ -204,45 +520,55 @@ func TestMultipleMigrations(t *testing.T) {
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 
-	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
-	require.NotNil(t, storageMap)
-	require.Greater(t, storageMap.Count(), uint64(0))
+	for _, testCase := range testCases {
 
-	iterator := storageMap.Iterator(inter)
+		t.Run(testCase.name, func(t *testing.T) {
 
-	for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
-		identifier := string(key.(interpreter.StringAtreeValue))
+			storageMap := storage.GetStorageMap(account, testCase.key, false)
+			require.NotNil(t, storageMap)
 
-		t.Run(identifier, func(t *testing.T) {
-			testCase, ok := testCases[identifier]
-			require.True(t, ok)
-			utils.AssertValuesEqual(t, inter, testCase.expectedValue, value)
+			readValue := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(testCase.name))
+
+			utils.AssertValuesEqual(t,
+				inter,
+				testCase.expectedValue,
+				readValue,
+			)
 		})
 	}
 
 	// Check the reporter
+	expectedMigrations := map[struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}][]string{}
+
+	for _, testCase := range testCases {
+
+		if testCase.migration == "" {
+			continue
+		}
+
+		key := struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}{
+			StorageKey: interpreter.StorageKey{
+				Address: account,
+				Key:     testCase.key,
+			},
+			StorageMapKey: interpreter.StringStorageMapKey(testCase.name),
+		}
+
+		expectedMigrations[key] = append(
+			expectedMigrations[key],
+			testCase.migration,
+		)
+	}
+
 	require.Equal(t,
-		map[interpreter.AddressPath][]string{
-			{
-				Address: account,
-				Path: interpreter.PathValue{
-					Domain:     pathDomain,
-					Identifier: "int8_value",
-				},
-			}: {
-				"testInt8Migration",
-			},
-			{
-				Address: account,
-				Path: interpreter.PathValue{
-					Domain:     pathDomain,
-					Identifier: "string_value",
-				},
-			}: {
-				"testStringMigration",
-			},
-		},
-		reporter.migratedPaths,
+		expectedMigrations,
+		reporter.migrated,
 	)
 }
 
@@ -355,32 +681,269 @@ func TestMigrationError(t *testing.T) {
 	// Check the reporter.
 	// Since Int8 migration produces an error, only the string value must have been migrated.
 	require.Equal(t,
-		map[interpreter.AddressPath][]string{
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}][]string{
 			{
-				Address: account,
-				Path: interpreter.PathValue{
-					Domain:     pathDomain,
-					Identifier: "string_value",
+				StorageKey: interpreter.StorageKey{
+					Address: account,
+					Key:     pathDomain.Identifier(),
 				},
+				StorageMapKey: interpreter.StringStorageMapKey("string_value"),
 			}: {
 				"testStringMigration",
 			},
 		},
-		reporter.migratedPaths,
+		reporter.migrated,
 	)
 
 	require.Equal(t,
-		map[interpreter.AddressPath][]string{
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}][]string{
 			{
-				Address: account,
-				Path: interpreter.PathValue{
-					Domain:     pathDomain,
-					Identifier: "int8_value",
+				StorageKey: interpreter.StorageKey{
+					Address: account,
+					Key:     pathDomain.Identifier(),
 				},
+				StorageMapKey: interpreter.StringStorageMapKey("int8_value"),
 			}: {
 				"testInt8Migration",
 			},
 		},
-		reporter.erroredPaths,
+		reporter.errored,
+	)
+}
+
+func TestCapConMigration(t *testing.T) {
+
+	t.Parallel()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
+	rt := NewTestInterpreterRuntime()
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{testAddress}, nil
+		},
+	}
+
+	// Prepare
+
+	setupTx := `
+	  transaction {
+          prepare(signer: auth(Capabilities) &Account) {
+              signer.capabilities.storage.issue<&AnyStruct>(/storage/foo)
+              signer.capabilities.account.issue<&Account>()
+          }
+      }
+    `
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		runtime.Script{
+			Source: []byte(setupTx),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	storageMap := storage.GetStorageMap(
+		testAddress,
+		stdlib.CapabilityControllerStorageDomain,
+		false,
+	)
+
+	assert.Equal(t, uint64(2), storageMap.Count())
+
+	controller1 := storageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(1))
+	require.IsType(t, &interpreter.StorageCapabilityControllerValue{}, controller1)
+	assert.Equal(t,
+		interpreter.UInt64Value(1),
+		controller1.(*interpreter.StorageCapabilityControllerValue).CapabilityID,
+	)
+
+	controller2 := storageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(2))
+	require.IsType(t, &interpreter.AccountCapabilityControllerValue{}, controller2)
+	assert.Equal(t,
+		interpreter.UInt64Value(2),
+		controller2.(*interpreter.AccountCapabilityControllerValue).CapabilityID,
+	)
+
+	// Migrate
+
+	reporter := newTestReporter()
+
+	migration := NewStorageMigration(inter, storage)
+
+	migration.Migrate(
+		&AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testCapConMigration{},
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Len(t, reporter.errored, 0)
+	assert.Len(t, reporter.migrated, 2)
+
+	storageMap = storage.GetStorageMap(
+		testAddress,
+		stdlib.CapabilityControllerStorageDomain,
+		false,
+	)
+
+	assert.Equal(t, uint64(2), storageMap.Count())
+
+	controller1 = storageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(1))
+	require.IsType(t, &interpreter.StorageCapabilityControllerValue{}, controller1)
+	assert.Equal(t,
+		interpreter.UInt64Value(11),
+		controller1.(*interpreter.StorageCapabilityControllerValue).CapabilityID,
+	)
+
+	controller2 = storageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(2))
+	require.IsType(t, &interpreter.AccountCapabilityControllerValue{}, controller2)
+	assert.Equal(t,
+		interpreter.UInt64Value(12),
+		controller2.(*interpreter.AccountCapabilityControllerValue).CapabilityID,
+	)
+}
+
+func TestContractMigration(t *testing.T) {
+
+	t.Parallel()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
+	rt := NewTestInterpreterRuntime()
+
+	accountCodes := map[common.Location][]byte{}
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{testAddress}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnGetCode: func(location common.Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			code = accountCodes[location]
+			return code, nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+	}
+
+	const testContract = `
+      access(all)
+      contract Test {
+
+          access(all)
+          let foo: String
+
+          init() {
+              self.foo = "bar"
+          }
+      }
+    `
+
+	// Prepare
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	err := rt.ExecuteTransaction(
+		runtime.Script{
+			Source: utils.DeploymentTransaction("Test", []byte(testContract)),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	// Migrate
+
+	reporter := newTestReporter()
+
+	migration := NewStorageMigration(inter, storage)
+
+	migration.Migrate(
+		&AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testStringMigration{},
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Len(t, reporter.errored, 0)
+	assert.Len(t, reporter.migrated, 1)
+
+	value, err := rt.ExecuteScript(
+		runtime.Script{
+			Source: []byte(`
+              import Test from 0x1
+
+              access(all)
+              fun main(): String {
+                  return Test.foo
+              }
+            `),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		cadence.String("updated_bar"),
+		value,
 	)
 }

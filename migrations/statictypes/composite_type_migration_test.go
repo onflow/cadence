@@ -169,18 +169,21 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 
 	// Check reported migrated paths
 	for identifier, test := range testCases {
-		addressPath := interpreter.AddressPath{
-			Address: testAddress,
-			Path: interpreter.PathValue{
-				Domain:     pathDomain,
-				Identifier: identifier,
+		key := struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}{
+			StorageKey: interpreter.StorageKey{
+				Address: testAddress,
+				Key:     pathDomain.Identifier(),
 			},
+			StorageMapKey: interpreter.StringStorageMapKey(identifier),
 		}
 
 		if test.expectedType == nil {
-			assert.NotContains(t, reporter.migratedPaths, addressPath)
+			assert.NotContains(t, reporter.migrated, key)
 		} else {
-			assert.Contains(t, reporter.migratedPaths, addressPath)
+			assert.Contains(t, reporter.migrated, key)
 		}
 	}
 

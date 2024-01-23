@@ -25,11 +25,12 @@ import (
 
 func ClearPrivateDomain(
 	inter *interpreter.Interpreter,
+	storageKey interpreter.StorageKey,
 	storageMap *interpreter.StorageMap,
-	storageKey interpreter.StringStorageMapKey,
-	addressPath interpreter.AddressPath,
+	storageMapKey interpreter.StorageMapKey,
 ) {
-	if addressPath.Path.Domain == common.PathDomainPrivate {
-		storageMap.RemoveValue(inter, storageKey)
+	domain := common.PathDomainFromIdentifier(storageKey.Key)
+	if domain == common.PathDomainPrivate {
+		storageMap.RemoveValue(inter, storageMapKey)
 	}
 }

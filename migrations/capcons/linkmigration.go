@@ -52,20 +52,32 @@ func (*LinkValueMigration) Name() string {
 }
 
 func (m *LinkValueMigration) Migrate(
-	addressPath interpreter.AddressPath,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	value interpreter.Value,
 	inter *interpreter.Interpreter,
 ) (interpreter.Value, error) {
 
-	pathDomain := addressPath.Path.Domain
-	if pathDomain != common.PathDomainPublic &&
-		pathDomain != common.PathDomainPrivate {
-
+	pathValue, ok := storageKeyToPathValue(storageKey, storageMapKey)
+	if !ok {
 		return nil, nil
 	}
 
-	accountAddress := addressPath.Address
-	pathValue := addressPath.Path
+	pathDomain := pathValue.Domain
+	switch pathDomain {
+	case common.PathDomainPublic, common.PathDomainPrivate:
+		// migrate public and private domain
+	default:
+		// ignore other domains (e.g. storage)
+		return nil, nil
+	}
+
+	accountAddress := storageKey.Address
+
+	addressPath := interpreter.AddressPath{
+		Address: accountAddress,
+		Path:    pathValue,
+	}
 
 	reporter := m.Reporter
 	accountIDGenerator := m.AccountIDGenerator
@@ -185,6 +197,25 @@ func (m *LinkValueMigration) Migrate(
 		addressValue,
 		borrowStaticType,
 	), nil
+}
+
+func storageKeyToPathValue(
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
+) (
+	interpreter.PathValue,
+	bool,
+) {
+	domain := common.PathDomainFromIdentifier(storageKey.Key)
+	if domain == common.PathDomainUnknown {
+		return interpreter.PathValue{}, false
+	}
+	stringStorageMapKey, ok := storageMapKey.(interpreter.StringStorageMapKey)
+	if !ok {
+		return interpreter.PathValue{}, false
+	}
+	identifier := string(stringStorageMapKey)
+	return interpreter.NewUnmeteredPathValue(domain, identifier), true
 }
 
 var authAccountReferenceStaticType = interpreter.NewReferenceStaticType(
