@@ -29,9 +29,8 @@ func ClearPrivateDomain(
 	storageMap *interpreter.StorageMap,
 	storageMapKey interpreter.StorageMapKey,
 ) {
-	path := storageKeyToPathValue(storageKey, storageMapKey)
-
-	if path.Domain == common.PathDomainPrivate {
+	domain := common.PathDomainFromIdentifier(storageKey.Key)
+	if domain == common.PathDomainPrivate {
 		storageMap.RemoveValue(inter, storageMapKey)
 	}
 }
