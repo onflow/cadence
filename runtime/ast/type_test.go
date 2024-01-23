@@ -1347,6 +1347,7 @@ func TestIntersectionType_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "IntersectionType",
+			"LegacyRestrictedType": null,
             "Types": [
                 {
                     "Type": "NominalType",

@@ -364,6 +364,13 @@ func TestParseRestrictedType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntersectionType{
+				LegacyRestrictedType: &ast.NominalType{
+					NestedIdentifiers: nil,
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -382,6 +389,13 @@ func TestParseRestrictedType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntersectionType{
+				LegacyRestrictedType: &ast.NominalType{
+					NestedIdentifiers: nil,
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
 				Types: []*ast.NominalType{
 					{
 						Identifier: ast.Identifier{
@@ -408,6 +422,13 @@ func TestParseRestrictedType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntersectionType{
+				LegacyRestrictedType: &ast.NominalType{
+					NestedIdentifiers: nil,
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
 				Types: []*ast.NominalType{
 					{
 						Identifier: ast.Identifier{
@@ -2465,6 +2486,13 @@ func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
 					IsResource: false,
 					Type: &ast.ReferenceType{
 						Type: &ast.IntersectionType{
+							LegacyRestrictedType: &ast.NominalType{
+								NestedIdentifiers: nil,
+								Identifier: ast.Identifier{
+									Identifier: "R",
+									Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+								},
+							},
 							Types: []*ast.NominalType{
 								{
 									Identifier: ast.Identifier{
@@ -2585,6 +2613,13 @@ func TestParseOptionalRestrictedType(t *testing.T) {
 					IsResource: true,
 					Type: &ast.OptionalType{
 						Type: &ast.IntersectionType{
+							LegacyRestrictedType: &ast.NominalType{
+								NestedIdentifiers: nil,
+								Identifier: ast.Identifier{
+									Identifier: "R",
+									Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+								},
+							},
 							Types: []*ast.NominalType{
 								{
 									Identifier: ast.Identifier{

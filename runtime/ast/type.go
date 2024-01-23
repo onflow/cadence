@@ -634,7 +634,8 @@ func (t *ReferenceType) CheckEqual(other Type, checker TypeEqualityChecker) erro
 // IntersectionType
 
 type IntersectionType struct {
-	Types []*NominalType
+	LegacyRestrictedType Type // Deprecated
+	Types                []*NominalType
 	Range
 }
 

@@ -543,7 +543,7 @@ func defineRestrictedOrDictionaryType() {
 			// Skip the closing brace
 			p.next()
 
-			result = ast.NewIntersectionType(
+			intersection := ast.NewIntersectionType(
 				p.memoryGauge,
 				nominalTypes,
 				ast.NewRange(
@@ -552,6 +552,8 @@ func defineRestrictedOrDictionaryType() {
 					endPos,
 				),
 			)
+			intersection.LegacyRestrictedType = left
+			result = intersection
 
 			return result, err, false
 		},
