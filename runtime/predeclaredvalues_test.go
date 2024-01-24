@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
@@ -29,6 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -36,96 +38,218 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 
 	t.Parallel()
 
-	valueDeclaration := stdlib.StandardLibraryValue{
-		Name:  "foo",
-		Type:  sema.IntType,
-		Kind:  common.DeclarationKindConstant,
-		Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+	const contractName = "C"
+	address := common.MustBytesToAddress([]byte{0x1})
+	contractLocation := common.AddressLocation{
+		Address: address,
+		Name:    contractName,
 	}
 
-	contract := []byte(`
-	  pub contract C {
-	      pub fun foo(): Int {
-	          return foo
-	      }
-	  }
-	`)
+	test := func(
+		t *testing.T,
+		contract string,
+		script string,
+		valueDeclarations map[common.Location]stdlib.StandardLibraryValue,
+		checkTransaction func(err error) bool,
+		checkScript func(result cadence.Value, err error),
+	) {
 
-	script := []byte(`
-	  import C from 0x1
+		runtime := newTestInterpreterRuntime()
 
-	  pub fun main(): Int {
-		  return foo + C.foo()
-	  }
-	`)
+		deploy := DeploymentTransaction(contractName, []byte(contract))
 
-	runtime := newTestInterpreterRuntime()
+		var accountCode []byte
+		var events []cadence.Event
 
-	deploy := DeploymentTransaction("C", contract)
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(_ Location) (bytes []byte, err error) {
+				return accountCode, nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
+				return accountCode, nil
+			},
+			updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+				accountCode = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
 
-	var accountCode []byte
-	var events []cadence.Event
+		prepareEnvironment := func(env Environment) {
+			for location, valueDeclaration := range valueDeclarations {
+				env.DeclareValue(valueDeclaration, location)
+			}
+		}
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
-			return accountCode, nil
-		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
-			return []Address{common.MustBytesToAddress([]byte{0x1})}, nil
-		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
-			return accountCode, nil
-		},
-		updateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
-			accountCode = code
-			return nil
-		},
-		emitEvent: func(event cadence.Event) error {
-			events = append(events, event)
-			return nil
-		},
+		// Run deploy transaction
+
+		transactionEnvironment := NewBaseInterpreterEnvironment(Config{})
+		prepareEnvironment(transactionEnvironment)
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deploy,
+			},
+			Context{
+				Interface:   runtimeInterface,
+				Location:    common.TransactionLocation{},
+				Environment: transactionEnvironment,
+			},
+		)
+
+		if checkTransaction(err) {
+
+			scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
+			prepareEnvironment(scriptEnvironment)
+
+			checkScript(runtime.ExecuteScript(
+				Script{
+					Source: []byte(script),
+				},
+				Context{
+					Interface:   runtimeInterface,
+					Location:    common.ScriptLocation{},
+					Environment: scriptEnvironment,
+				},
+			))
+		}
 	}
 
-	// Run transaction
+	t.Run("everywhere", func(t *testing.T) {
+		t.Parallel()
 
-	transactionEnvironment := NewBaseInterpreterEnvironment(Config{})
-	transactionEnvironment.DeclareValue(valueDeclaration)
+		test(t,
+			`
+	          pub contract C {
+	              pub fun foo(): Int {
+	                  return foo
+	              }
+	          }
+	        `,
+			`
+	          import C from 0x1
 
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: deploy,
-		},
-		Context{
-			Interface:   runtimeInterface,
-			Location:    common.TransactionLocation{},
-			Environment: transactionEnvironment,
-		},
-	)
-	require.NoError(t, err)
+	          pub fun main(): Int {
+	        	  return foo + C.foo()
+	          }
+	        `,
+			map[common.Location]stdlib.StandardLibraryValue{
+				nil: {
+					Name:  "foo",
+					Type:  sema.IntType,
+					Kind:  common.DeclarationKindConstant,
+					Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+				},
+			},
+			func(err error) bool {
+				return assert.NoError(t, err)
+			},
+			func(result cadence.Value, err error) {
 
-	// Run script
+				require.NoError(t, err)
 
-	scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
-	scriptEnvironment.DeclareValue(valueDeclaration)
+				require.Equal(t,
+					cadence.Int{Value: big.NewInt(4)},
+					result,
+				)
+			},
+		)
+	})
 
-	result, err := runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface:   runtimeInterface,
-			Location:    common.ScriptLocation{},
-			Environment: scriptEnvironment,
-		},
-	)
-	require.NoError(t, err)
+	t.Run("only contract, no use in script", func(t *testing.T) {
+		t.Parallel()
 
-	require.Equal(t,
-		cadence.Int{Value: big.NewInt(4)},
-		result,
-	)
+		test(t,
+			`
+	          pub contract C {
+	              pub fun foo(): Int {
+	                  return foo
+	              }
+	          }
+	        `,
+			`
+	          import C from 0x1
+
+	          pub fun main(): Int {
+	        	  return C.foo()
+	          }
+	        `,
+			map[common.Location]stdlib.StandardLibraryValue{
+				contractLocation: {
+					Name:  "foo",
+					Type:  sema.IntType,
+					Kind:  common.DeclarationKindConstant,
+					Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+				},
+			},
+			func(err error) bool {
+				return assert.NoError(t, err)
+			},
+			func(result cadence.Value, err error) {
+
+				require.NoError(t, err)
+
+				require.Equal(t,
+					cadence.Int{Value: big.NewInt(2)},
+					result,
+				)
+			},
+		)
+	})
+
+	t.Run("only contract, use in script", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			`
+	          pub contract C {
+	              pub fun foo(): Int {
+	                  return foo
+	              }
+	          }
+	        `,
+			`
+	          import C from 0x1
+
+	          pub fun main(): Int {
+	        	  return foo + C.foo()
+	          }
+	        `,
+			map[common.Location]stdlib.StandardLibraryValue{
+				contractLocation: {
+					Name:  "foo",
+					Type:  sema.IntType,
+					Kind:  common.DeclarationKindConstant,
+					Value: interpreter.NewUnmeteredIntValueFromInt64(2),
+				},
+			},
+			func(err error) bool {
+				return assert.NoError(t, err)
+			},
+			func(result cadence.Value, err error) {
+				RequireError(t, err)
+
+				var checkerErr *sema.CheckerError
+				require.ErrorAs(t, err, &checkerErr)
+				assert.Equal(t, common.ScriptLocation{}, checkerErr.Location)
+
+				errs := checker.RequireCheckerErrors(t, err, 1)
+
+				var notDeclaredErr *sema.NotDeclaredError
+				require.ErrorAs(t, errs[0], &notDeclaredErr)
+				require.Equal(t, "foo", notDeclaredErr.Name)
+			},
+		)
+	})
+
 }
 
 func TestRuntimePredeclaredTypes(t *testing.T) {
@@ -169,8 +293,8 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		// Run script
 
 		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
-		scriptEnvironment.DeclareValue(valueDeclaration)
-		scriptEnvironment.DeclareType(typeDeclaration)
+		scriptEnvironment.DeclareValue(valueDeclaration, nil)
+		scriptEnvironment.DeclareType(typeDeclaration, nil)
 
 		result, err := runtime.ExecuteScript(
 			Script{
@@ -239,8 +363,8 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		// Run script
 
 		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
-		scriptEnvironment.DeclareValue(valueDeclaration)
-		scriptEnvironment.DeclareType(typeDeclaration)
+		scriptEnvironment.DeclareValue(valueDeclaration, nil)
+		scriptEnvironment.DeclareType(typeDeclaration, nil)
 
 		result, err := runtime.ExecuteScript(
 			Script{
@@ -308,7 +432,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		// Run script
 
 		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
-		scriptEnvironment.DeclareValue(valueDeclaration)
+		scriptEnvironment.DeclareValue(valueDeclaration, nil)
 
 		_, err := runtime.ExecuteScript(
 			Script{
@@ -383,8 +507,8 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		// Run script
 
 		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
-		scriptEnvironment.DeclareValue(valueDeclaration)
-		scriptEnvironment.DeclareType(typeDeclaration)
+		scriptEnvironment.DeclareValue(valueDeclaration, nil)
+		scriptEnvironment.DeclareType(typeDeclaration, nil)
 
 		result, err := runtime.ExecuteScript(
 			Script{
@@ -460,7 +584,7 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		// Run script
 
 		scriptEnvironment := NewScriptInterpreterEnvironment(Config{})
-		scriptEnvironment.DeclareValue(valueDeclaration)
+		scriptEnvironment.DeclareValue(valueDeclaration, nil)
 
 		_, err := runtime.ExecuteScript(
 			Script{

@@ -80,7 +80,9 @@ func NewREPL() (*REPL, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
 		},
-		BaseActivation: baseActivation,
+		BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+			return baseActivation
+		},
 	}
 
 	inter, err := interpreter.NewInterpreter(
