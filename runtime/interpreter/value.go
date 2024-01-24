@@ -1655,7 +1655,7 @@ type ArrayValue struct {
 }
 
 type ArrayValueIterator struct {
-	atreeIterator *atree.ArrayIterator
+	atreeIterator atree.ArrayIterator
 }
 
 func (v *ArrayValue) Iterator(_ *Interpreter, _ LocationRange) ValueIterator {
@@ -18699,7 +18699,7 @@ func (v *DictionaryValue) iterate(
 }
 
 type DictionaryKeyIterator struct {
-	mapIterator *atree.MapIterator
+	mapIterator atree.MapIterator
 }
 
 func (i DictionaryKeyIterator) NextKey(gauge common.MemoryGauge) Value {
