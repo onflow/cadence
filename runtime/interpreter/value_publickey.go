@@ -72,6 +72,7 @@ func NewPublicKeyValue(
 				false,
 				nil,
 				nil,
+				true, // publicKey is standalone because it is function parameter.
 			)
 		},
 	}

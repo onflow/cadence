@@ -42,11 +42,11 @@ import (
 // TODO: make these program args?
 const containerMaxDepth = 3
 const containerMaxSize = 100
-const innerContainerMaxSize = 300
 const compositeMaxFields = 10
 
 var runSmokeTests = flag.Bool("runSmokeTests", false, "Run smoke tests on values")
 var validateAtree = flag.Bool("validateAtree", true, "Enable atree validation")
+var smokeTestSeed = flag.Int64("smokeTestSeed", -1, "Seed for prng (-1 specifies current Unix time)")
 
 func TestRandomMapOperations(t *testing.T) {
 	if !*runSmokeTests {
@@ -131,13 +131,17 @@ func TestRandomMapOperations(t *testing.T) {
 	t.Run("iterate", func(t *testing.T) {
 		require.Equal(t, testMap.Count(), entries.size())
 
-		testMap.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
-			orgValue, ok := entries.get(inter, key)
-			require.True(t, ok, "cannot find key: %v", key)
+		testMap.Iterate(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(key, value interpreter.Value) (resume bool) {
+				orgValue, ok := entries.get(inter, key)
+				require.True(t, ok, "cannot find key: %v", key)
 
-			utils.AssertValuesEqual(t, inter, orgValue, value)
-			return true
-		})
+				utils.AssertValuesEqual(t, inter, orgValue, value)
+				return true
+			},
+		)
 	})
 
 	t.Run("deep copy", func(t *testing.T) {
@@ -149,6 +153,7 @@ func TestRandomMapOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // testMap is standalone.
 		).(*interpreter.DictionaryValue)
 
 		require.Equal(t, entries.size(), copyOfTestMap.Count())
@@ -169,7 +174,7 @@ func TestRandomMapOperations(t *testing.T) {
 	})
 
 	t.Run("deep remove", func(t *testing.T) {
-		copyOfTestMap.DeepRemove(inter)
+		copyOfTestMap.DeepRemove(inter, true)
 		err = storage.Remove(copyOfTestMap.SlabID())
 		require.NoError(t, err)
 
@@ -489,6 +494,7 @@ func TestRandomMapOperations(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true, // dictionary is standalone.
 		).(*interpreter.DictionaryValue)
 
 		require.Equal(t, entries.size(), movedDictionary.Count())
@@ -604,6 +610,7 @@ func TestRandomArrayOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // testArray is standalone.
 		).(*interpreter.ArrayValue)
 
 		require.Equal(t, len(elements), copyOfTestArray.Count())
@@ -618,7 +625,7 @@ func TestRandomArrayOperations(t *testing.T) {
 	})
 
 	t.Run("deep removal", func(t *testing.T) {
-		copyOfTestArray.DeepRemove(inter)
+		copyOfTestArray.DeepRemove(inter, true)
 		err = storage.Remove(copyOfTestArray.SlabID())
 		require.NoError(t, err)
 
@@ -860,6 +867,7 @@ func TestRandomArrayOperations(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true, // array is standalone.
 		).(*interpreter.ArrayValue)
 
 		require.Equal(t, len(elements), movedArray.Count())
@@ -951,6 +959,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // testComposite is standalone.
 		).(*interpreter.CompositeValue)
 
 		for name, orgValue := range orgFields {
@@ -963,7 +972,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 	})
 
 	t.Run("deep remove", func(t *testing.T) {
-		copyOfTestComposite.DeepRemove(inter)
+		copyOfTestComposite.DeepRemove(inter, true)
 		err = storage.Remove(copyOfTestComposite.SlabID())
 		require.NoError(t, err)
 
@@ -992,6 +1001,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // testComposite is standalone.
 		).(*interpreter.CompositeValue)
 
 		require.NoError(t, err)
@@ -1017,6 +1027,7 @@ func TestRandomCompositeValueOperations(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true, // composite is standalone.
 		).(*interpreter.CompositeValue)
 
 		// Cleanup the slab of original composite.
@@ -1135,7 +1146,10 @@ type randomValueGenerator struct {
 }
 
 func newRandomValueGenerator() randomValueGenerator {
-	seed := time.Now().UnixNano()
+	seed := *smokeTestSeed
+	if seed == -1 {
+		seed = time.Now().UnixNano()
+	}
 
 	return randomValueGenerator{
 		seed: seed,
@@ -1370,7 +1384,7 @@ func (r randomValueGenerator) randomDictionaryValue(
 	currentDepth int,
 ) interpreter.Value {
 
-	entryCount := r.randomInt(innerContainerMaxSize)
+	entryCount := r.randomInt(containerMaxSize)
 	keyValues := make([]interpreter.Value, entryCount*2)
 
 	for i := 0; i < entryCount; i++ {
@@ -1397,7 +1411,7 @@ func (r randomValueGenerator) randomInt(upperBound int) int {
 }
 
 func (r randomValueGenerator) randomArrayValue(inter *interpreter.Interpreter, currentDepth int) interpreter.Value {
-	elementsCount := r.randomInt(innerContainerMaxSize)
+	elementsCount := r.randomInt(containerMaxSize)
 	elements := make([]interpreter.Value, elementsCount)
 
 	for i := 0; i < elementsCount; i++ {
@@ -1614,4 +1628,232 @@ func (m *valueMap) internalKey(inter *interpreter.Interpreter, key interpreter.V
 
 func (m *valueMap) size() int {
 	return len(m.keys)
+}
+
+// This test is a reproducer for "slab was not reachable from leaves" false alarm.
+// https://github.com/onflow/cadence/pull/2882#issuecomment-1781298107
+// In this test, storage.CheckHealth() should be called after array.DeepRemove(),
+// not in the middle of array.DeepRemove().
+// CheckHealth() is called in the middle of array.DeepRemove() when:
+// - array.DeepRemove() calls childArray1 and childArray2 DeepRemove()
+// - DeepRemove() calls maybeValidateAtreeValue()
+// - maybeValidateAtreeValue() calls CheckHealth()
+func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
+
+	storage := newUnmeteredInMemoryStorage()
+	inter, err := interpreter.NewInterpreter(
+		&interpreter.Program{
+			Program:     ast.NewProgram(nil, []ast.Declaration{}),
+			Elaboration: sema.NewElaboration(nil),
+		},
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage: storage,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				return interpreter.VirtualImport{
+					Elaboration: inter.Program.Elaboration,
+				}
+			},
+			AtreeStorageValidationEnabled: true,
+			AtreeValueValidationEnabled:   true,
+		},
+	)
+	require.NoError(t, err)
+
+	owner := common.Address{'A'}
+
+	// Create a small child array which will be inlined in parent container.
+	childArray1 := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		interpreter.NewUnmeteredStringValue("a"),
+	)
+
+	size := int(atree.MaxInlineArrayElementSize()) - 10
+
+	// Create a large child array which will NOT be inlined in parent container.
+	childArray2 := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		interpreter.NewUnmeteredStringValue(strings.Repeat("b", size)),
+		interpreter.NewUnmeteredStringValue(strings.Repeat("c", size)),
+	)
+
+	// Create an array with childArray1 and childArray2.
+	array := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		childArray1, // inlined
+		childArray2, // not inlined
+	)
+
+	// DeepRemove removes all elements (childArray1 and childArray2) recursively in array.
+	array.DeepRemove(inter, true)
+
+	// As noted earlier in comments at the top of this test:
+	// storage.CheckHealth() should be called after array.DeepRemove(), not in the middle of array.DeepRemove().
+	// This happens when:
+	// - array.DeepRemove() calls childArray1 and childArray2 DeepRemove()
+	// - DeepRemove() calls maybeValidateAtreeValue()
+	// - maybeValidateAtreeValue() calls CheckHealth()
+}
+
+// This test is a reproducer for "slab was not reachable from leaves" false alarm.
+// https://github.com/onflow/cadence/pull/2882#issuecomment-1796381227
+// In this test, storage.CheckHealth() should be called after DictionaryValue.Transfer()
+// with remove flag, not in the middle of DictionaryValue.Transfer().
+func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
+	r := newRandomValueGenerator()
+	t.Logf("seed: %d", r.seed)
+
+	storage := newUnmeteredInMemoryStorage()
+	inter, err := interpreter.NewInterpreter(
+		&interpreter.Program{
+			Program:     ast.NewProgram(nil, []ast.Declaration{}),
+			Elaboration: sema.NewElaboration(nil),
+		},
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage: storage,
+			ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				return interpreter.VirtualImport{
+					Elaboration: inter.Program.Elaboration,
+				}
+			},
+			AtreeStorageValidationEnabled: true,
+			AtreeValueValidationEnabled:   true,
+		},
+	)
+	require.NoError(t, err)
+
+	// Create large array value with zero address which will not be inlined.
+	gchildArray := interpreter.NewArrayValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.VariableSizedStaticType{
+			Type: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		common.ZeroAddress,
+		interpreter.NewUnmeteredStringValue(strings.Repeat("b", int(atree.MaxInlineArrayElementSize())-10)),
+		interpreter.NewUnmeteredStringValue(strings.Repeat("c", int(atree.MaxInlineArrayElementSize())-10)),
+	)
+
+	// Create small composite value with zero address which will be inlined.
+	identifier := "test"
+
+	location := common.AddressLocation{
+		Address: common.ZeroAddress,
+		Name:    identifier,
+	}
+
+	compositeType := &sema.CompositeType{
+		Location:   location,
+		Identifier: identifier,
+		Kind:       common.CompositeKindStructure,
+	}
+
+	fields := []interpreter.CompositeField{
+		interpreter.NewUnmeteredCompositeField("a", interpreter.NewUnmeteredUInt64Value(0)),
+		interpreter.NewUnmeteredCompositeField("b", interpreter.NewUnmeteredUInt64Value(1)),
+		interpreter.NewUnmeteredCompositeField("c", interpreter.NewUnmeteredUInt64Value(2)),
+	}
+
+	compositeType.Members = &sema.StringMemberOrderedMap{}
+	for _, field := range fields {
+		compositeType.Members.Set(
+			field.Name,
+			sema.NewUnmeteredPublicConstantFieldMember(
+				compositeType,
+				field.Name,
+				sema.AnyStructType,
+				"",
+			),
+		)
+	}
+
+	// Add the type to the elaboration, to short-circuit the type-lookup.
+	inter.Program.Elaboration.SetCompositeType(
+		compositeType.ID(),
+		compositeType,
+	)
+
+	gchildComposite := interpreter.NewCompositeValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		location,
+		identifier,
+		common.CompositeKindStructure,
+		fields,
+		common.ZeroAddress,
+	)
+
+	// Create large dictionary with zero address with 2 data slabs containing:
+	// - SomeValue(SlabID) as first physical element in the first data slab
+	// - inlined CompositeValue as last physical element in the second data slab
+
+	numberOfValues := 10
+	firstElementIndex := 7 // index of first physical element in the first data slab
+	lastElementIndex := 8  // index of last physical element in the last data slab
+	keyValues := make([]interpreter.Value, numberOfValues*2)
+	for i := 0; i < numberOfValues; i++ {
+		key := interpreter.NewUnmeteredUInt64Value(uint64(i))
+
+		var value interpreter.Value
+		switch i {
+		case firstElementIndex:
+			value = interpreter.NewUnmeteredSomeValueNonCopying(gchildArray)
+
+		case lastElementIndex:
+			value = gchildComposite
+
+		default:
+			// Other values are inlined random strings.
+			const size = 235
+			value = interpreter.NewUnmeteredStringValue(r.randomUTF8StringOfSize(size))
+		}
+
+		keyValues[i*2] = key
+		keyValues[i*2+1] = value
+	}
+
+	childMap := interpreter.NewDictionaryValueWithAddress(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.DictionaryStaticType{
+			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		common.ZeroAddress,
+		keyValues...,
+	)
+
+	// Create dictionary with non-zero address containing child dictionary.
+	owner := common.Address{'A'}
+	m := interpreter.NewDictionaryValueWithAddress(
+		inter,
+		interpreter.EmptyLocationRange,
+		interpreter.DictionaryStaticType{
+			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+		},
+		owner,
+		interpreter.NewUnmeteredUInt64Value(0),
+		childMap,
+	)
+
+	inter.ValidateAtreeValue(m)
+
+	require.NoError(t, storage.CheckHealth())
 }

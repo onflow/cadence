@@ -831,14 +831,14 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 				optionalType.Type,
 			)
 
-			interpreter.maybeTrackReferencedResourceKindedValue(returnValue.value)
+			interpreter.MaybeTrackReferencedResourceKindedValue(returnValue.value)
 			return NewSomeValueNonCopying(interpreter, innerValue)
 		case NilValue:
 			return NilValue{}
 		}
 	}
 
-	interpreter.maybeTrackReferencedResourceKindedValue(returnValue)
+	interpreter.MaybeTrackReferencedResourceKindedValue(returnValue)
 	return NewEphemeralReferenceValue(interpreter, false, returnValue, returnType)
 }
 
@@ -1706,6 +1706,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		false,
 		nil,
 		nil,
+		true, // value is standalone.
 	)
 
 	result := interpreter.ConvertAndBox(
@@ -3924,6 +3925,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 				true,
 				nil,
 				nil,
+				true, // value is standalone because it is from invocation.Arguments[0].
 			)
 
 			// Write new value
@@ -4048,6 +4050,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				false,
 				nil,
 				nil,
+				false, // value is an element in storage map because it is from "ReadStored".
 			)
 
 			// Remove the value from storage,
@@ -5036,6 +5039,10 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 	if config.AtreeValueValidationEnabled {
 		interpreter.ValidateAtreeValue(v)
 	}
+}
+
+func (interpreter *Interpreter) maybeValidateAtreeStorage() {
+	config := interpreter.SharedState.Config
 
 	if config.AtreeStorageValidationEnabled {
 		err := config.Storage.CheckHealth()
@@ -5120,14 +5127,16 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 	}
 
+	atreeInliningEnabled := true
+
 	switch value := value.(type) {
 	case *atree.Array:
-		err := atree.ValidArray(value, value.Type(), tic, hip)
+		err := atree.VerifyArray(value, value.Address(), value.Type(), tic, hip, atreeInliningEnabled)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
 
-		err = atree.ValidArraySerialization(
+		err = atree.VerifyArraySerialization(
 			value,
 			CBORDecMode,
 			CBOREncMode,
@@ -5148,12 +5157,12 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 
 	case *atree.OrderedMap:
-		err := atree.ValidMap(value, value.Type(), tic, hip)
+		err := atree.VerifyMap(value, value.Address(), value.Type(), tic, hip, atreeInliningEnabled)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
 
-		err = atree.ValidMapSerialization(
+		err = atree.VerifyMapSerialization(
 			value,
 			CBORDecMode,
 			CBOREncMode,
@@ -5175,7 +5184,7 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	}
 }
 
-func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
+func (interpreter *Interpreter) MaybeTrackReferencedResourceKindedValue(value Value) {
 	if value, ok := value.(ReferenceTrackedResourceKindedValue); ok {
 		interpreter.trackReferencedResourceKindedValue(value.ValueID(), value)
 	}
@@ -5330,11 +5339,12 @@ func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 func (interpreter *Interpreter) DecodeStorable(
 	decoder *cbor.StreamDecoder,
 	slabID atree.SlabID,
+	inlinedExtraData []atree.ExtraData,
 ) (
 	atree.Storable,
 	error,
 ) {
-	return DecodeStorable(decoder, slabID, interpreter)
+	return DecodeStorable(decoder, slabID, inlinedExtraData, interpreter)
 }
 
 func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {

@@ -107,8 +107,8 @@ type Value interface {
 	// NOTE: important, error messages rely on values to implement String
 	fmt.Stringer
 	isValue()
-	Accept(interpreter *Interpreter, visitor Visitor)
-	Walk(interpreter *Interpreter, walkChild func(Value))
+	Accept(interpreter *Interpreter, locationRange LocationRange, visitor Visitor)
+	Walk(interpreter *Interpreter, locationRange LocationRange, walkChild func(Value))
 	StaticType(interpreter *Interpreter) StaticType
 	// ConformsToStaticType returns true if the value (i.e. its dynamic type)
 	// conforms to its own static type.
@@ -134,8 +134,12 @@ type Value interface {
 		remove bool,
 		storable atree.Storable,
 		preventTransfer map[atree.ValueID]struct{},
+		hasNoParentContainer bool, // hasNoParentContainer is true when transferred value isn't an element of another container.
 	) Value
-	DeepRemove(interpreter *Interpreter)
+	DeepRemove(
+		interpreter *Interpreter,
+		hasNoParentContainer bool, // hasNoParentContainer is true when transferred value isn't an element of another container.
+	)
 	// Clone returns a new value that is equal to this value.
 	// NOTE: not used by interpreter, but used externally (e.g. state migration)
 	// NOTE: memory metering is unnecessary for Clone methods
@@ -335,11 +339,11 @@ func NewTypeValue(
 
 func (TypeValue) isValue() {}
 
-func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v TypeValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitTypeValue(interpreter, v)
 }
 
-func (TypeValue) Walk(_ *Interpreter, _ func(Value)) {
+func (TypeValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -484,6 +488,7 @@ func (v TypeValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -495,7 +500,7 @@ func (v TypeValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (TypeValue) DeepRemove(_ *Interpreter) {
+func (TypeValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -543,11 +548,11 @@ var _ EquatableValue = VoidValue{}
 
 func (VoidValue) isValue() {}
 
-func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v VoidValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitVoidValue(interpreter, v)
 }
 
-func (VoidValue) Walk(_ *Interpreter, _ func(Value)) {
+func (VoidValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -604,6 +609,7 @@ func (v VoidValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -615,7 +621,7 @@ func (v VoidValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (VoidValue) DeepRemove(_ *Interpreter) {
+func (VoidValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -652,11 +658,11 @@ func AsBoolValue(v bool) BoolValue {
 
 func (BoolValue) isValue() {}
 
-func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v BoolValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitBoolValue(interpreter, v)
 }
 
-func (BoolValue) Walk(_ *Interpreter, _ func(Value)) {
+func (BoolValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -777,6 +783,7 @@ func (v BoolValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -788,7 +795,7 @@ func (v BoolValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (BoolValue) DeepRemove(_ *Interpreter) {
+func (BoolValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -835,11 +842,11 @@ var _ MemberAccessibleValue = CharacterValue("a")
 
 func (CharacterValue) isValue() {}
 
-func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v CharacterValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitCharacterValue(interpreter, v)
 }
 
-func (CharacterValue) Walk(_ *Interpreter, _ func(Value)) {
+func (CharacterValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -951,6 +958,7 @@ func (v CharacterValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -962,7 +970,7 @@ func (v CharacterValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (CharacterValue) DeepRemove(_ *Interpreter) {
+func (CharacterValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -1066,11 +1074,11 @@ func (v *StringValue) prepareGraphemes() {
 
 func (*StringValue) isValue() {}
 
-func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *StringValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitStringValue(interpreter, v)
 }
 
-func (*StringValue) Walk(_ *Interpreter, _ func(Value)) {
+func (*StringValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -1432,6 +1440,7 @@ func (v *StringValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -1443,7 +1452,7 @@ func (v *StringValue) Clone(_ *Interpreter) Value {
 	return NewUnmeteredStringValue(v.Str)
 }
 
-func (*StringValue) DeepRemove(_ *Interpreter) {
+func (*StringValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -1609,6 +1618,7 @@ func NewArrayValue(
 				true,
 				nil,
 				nil,
+				true, // standalone value doesn't have parent container.
 			)
 
 			return value
@@ -1710,15 +1720,19 @@ var _ IterableValue = &ArrayValue{}
 
 func (*ArrayValue) isValue() {}
 
-func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *ArrayValue) Accept(interpreter *Interpreter, locationRange LocationRange, visitor Visitor) {
 	descend := visitor.VisitArrayValue(interpreter, v)
 	if !descend {
 		return
 	}
 
-	v.Walk(interpreter, func(element Value) {
-		element.Accept(interpreter, visitor)
-	})
+	v.Walk(
+		interpreter,
+		locationRange,
+		func(element Value) {
+			element.Accept(interpreter, locationRange, visitor)
+		},
+	)
 }
 
 func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (resume bool)) {
@@ -1743,11 +1757,13 @@ func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (re
 	}
 }
 
-func (v *ArrayValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
-	v.Iterate(interpreter, func(element Value) (resume bool) {
-		walkChild(element)
-		return true
-	})
+func (v *ArrayValue) Walk(interpreter *Interpreter, _ LocationRange, walkChild func(Value)) {
+	v.Iterate(
+		interpreter,
+		func(element Value) (resume bool) {
+			walkChild(element)
+			return true
+		})
 }
 
 func (v *ArrayValue) StaticType(_ *Interpreter) StaticType {
@@ -1810,9 +1826,13 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		valueID,
 		locationRange,
 		func() {
-			v.Walk(interpreter, func(element Value) {
-				maybeDestroy(interpreter, locationRange, element)
-			})
+			v.Walk(
+				interpreter,
+				locationRange,
+				func(element Value) {
+					maybeDestroy(interpreter, locationRange, element)
+				},
+			)
 		},
 	)
 
@@ -1906,6 +1926,7 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 				false,
 				nil,
 				nil,
+				false, // value has a parent container because it is from iterator.
 			)
 		},
 	)
@@ -1995,6 +2016,7 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 		map[atree.ValueID]struct{}{
 			v.ValueID(): {},
 		},
+		true, // standalone element doesn't have a parent container yet.
 	)
 
 	existingStorable, err := v.array.Set(uint64(index), element)
@@ -2003,11 +2025,13 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.array)
+	interpreter.maybeValidateAtreeStorage()
 
 	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
 
-	existingValue.DeepRemove(interpreter)
+	existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
 
 	interpreter.RemoveReferencedSlab(existingStorable)
 }
@@ -2033,7 +2057,7 @@ func (v *ArrayValue) MeteredString(memoryGauge common.MemoryGauge, seenReference
 
 	i := 0
 
-	_ = v.array.Iterate(func(element atree.Value) (resume bool, err error) {
+	_ = v.array.IterateReadOnly(func(element atree.Value) (resume bool, err error) {
 		// ok to not meter anything created as part of this iteration, since we will discard the result
 		// upon creating the string
 		values[i] = MustConvertUnmeteredStoredValue(element).MeteredString(memoryGauge, seenReferences)
@@ -2069,19 +2093,26 @@ func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRang
 		map[atree.ValueID]struct{}{
 			v.ValueID(): {},
 		},
+		true, // standalone element doesn't have a parent container yet.
 	)
 
 	err := v.array.Append(element)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.array)
+	interpreter.maybeValidateAtreeStorage()
 }
 
 func (v *ArrayValue) AppendAll(interpreter *Interpreter, locationRange LocationRange, other *ArrayValue) {
-	other.Walk(interpreter, func(value Value) {
-		v.Append(interpreter, locationRange, value)
-	})
+	other.Walk(
+		interpreter,
+		locationRange,
+		func(value Value) {
+			v.Append(interpreter, locationRange, value)
+		},
+	)
 }
 
 func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
@@ -2131,6 +2162,7 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 		map[atree.ValueID]struct{}{
 			v.ValueID(): {},
 		},
+		true, // standalone element doesn't have a parent container yet.
 	)
 
 	err := v.array.Insert(uint64(index), element)
@@ -2139,7 +2171,9 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.array)
+	interpreter.maybeValidateAtreeStorage()
 }
 
 func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
@@ -2174,7 +2208,9 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.array)
+	interpreter.maybeValidateAtreeStorage()
 
 	value := StoredValue(interpreter, storable, interpreter.Storage())
 
@@ -2185,6 +2221,7 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 		true,
 		storable,
 		nil,
+		true, // value is standalone because it was removed from parent container.
 	)
 }
 
@@ -2654,6 +2691,7 @@ func (v *ArrayValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
+	hasNoParentContainer bool,
 ) Value {
 	baseUsage, elementUsage, dataSlabs, metaDataSlabs := common.NewArrayMemoryUsages(v.array.Count(), v.elementSize)
 	common.UseMemory(interpreter, baseUsage)
@@ -2703,6 +2741,8 @@ func (v *ArrayValue) Transfer(
 
 	if needsStoreTo || !isResourceKinded {
 
+		// Use non-readonly iterator here because iterated
+		// value can be removed if remove parameter is true.
 		iterator, err := v.array.Iterator()
 		if err != nil {
 			panic(errors.NewExternalError(err))
@@ -2722,7 +2762,15 @@ func (v *ArrayValue) Transfer(
 				}
 
 				element := MustConvertStoredValue(interpreter, value).
-					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer)
+					Transfer(
+						interpreter,
+						locationRange,
+						address,
+						remove,
+						nil,
+						preventTransfer,
+						false, // value has a parent container because it is from iterator.
+					)
 
 				return element, nil
 			},
@@ -2738,7 +2786,11 @@ func (v *ArrayValue) Transfer(
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
+
 			interpreter.maybeValidateAtreeValue(v.array)
+			if hasNoParentContainer {
+				interpreter.maybeValidateAtreeStorage()
+			}
 
 			interpreter.RemoveReferencedSlab(storable)
 		}
@@ -2792,7 +2844,7 @@ func (v *ArrayValue) Transfer(
 func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 	config := interpreter.SharedState.Config
 
-	iterator, err := v.array.Iterator()
+	iterator, err := v.array.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -2834,7 +2886,7 @@ func (v *ArrayValue) Clone(interpreter *Interpreter) Value {
 	}
 }
 
-func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
+func (v *ArrayValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
 	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {
@@ -2858,13 +2910,17 @@ func (v *ArrayValue) DeepRemove(interpreter *Interpreter) {
 
 	err := v.array.PopIterate(func(storable atree.Storable) {
 		value := StoredValue(interpreter, storable, storage)
-		value.DeepRemove(interpreter)
+		value.DeepRemove(interpreter, false) // existingValue is an element of v.array because it is from PopIterate() callback.
 		interpreter.RemoveReferencedSlab(storable)
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.array)
+	if hasNoParentContainer {
+		interpreter.maybeValidateAtreeStorage()
+	}
 }
 
 func (v *ArrayValue) SlabID() atree.SlabID {
@@ -2978,6 +3034,7 @@ func (v *ArrayValue) Slice(
 				false,
 				nil,
 				nil,
+				false, // value has a parent container because it is from iterator.
 			)
 		},
 	)
@@ -3013,6 +3070,7 @@ func (v *ArrayValue) Reverse(
 				false,
 				nil,
 				nil,
+				false, // value has a parent container because it is returned by Get().
 			)
 		},
 	)
@@ -3089,6 +3147,7 @@ func (v *ArrayValue) Filter(
 				false,
 				nil,
 				nil,
+				false, // value has a parent container because it is from iterator.
 			)
 		},
 	)
@@ -3171,6 +3230,7 @@ func (v *ArrayValue) Map(
 				false,
 				nil,
 				nil,
+				false, // value has a parent container because it is from iterator.
 			)
 		},
 	)
@@ -3388,11 +3448,11 @@ var _ MemberAccessibleValue = IntValue{}
 
 func (IntValue) isValue() {}
 
-func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v IntValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitIntValue(interpreter, v)
 }
 
-func (IntValue) Walk(_ *Interpreter, _ func(Value)) {
+func (IntValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -3894,6 +3954,7 @@ func (v IntValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -3905,7 +3966,7 @@ func (v IntValue) Clone(_ *Interpreter) Value {
 	return NewUnmeteredIntValueFromBigInt(v.BigInt)
 }
 
-func (IntValue) DeepRemove(_ *Interpreter) {
+func (IntValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -3949,11 +4010,11 @@ var _ HashableValue = Int8Value(0)
 
 func (Int8Value) isValue() {}
 
-func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int8Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitInt8Value(interpreter, v)
 }
 
-func (Int8Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int8Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -4534,6 +4595,7 @@ func (v Int8Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -4545,7 +4607,7 @@ func (v Int8Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (Int8Value) DeepRemove(_ *Interpreter) {
+func (Int8Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -4590,11 +4652,11 @@ var _ MemberAccessibleValue = Int16Value(0)
 
 func (Int16Value) isValue() {}
 
-func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int16Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitInt16Value(interpreter, v)
 }
 
-func (Int16Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int16Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -5176,6 +5238,7 @@ func (v Int16Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -5187,7 +5250,7 @@ func (v Int16Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (Int16Value) DeepRemove(_ *Interpreter) {
+func (Int16Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -5232,11 +5295,11 @@ var _ MemberAccessibleValue = Int32Value(0)
 
 func (Int32Value) isValue() {}
 
-func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int32Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitInt32Value(interpreter, v)
 }
 
-func (Int32Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int32Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -5818,6 +5881,7 @@ func (v Int32Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -5829,7 +5893,7 @@ func (v Int32Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (Int32Value) DeepRemove(_ *Interpreter) {
+func (Int32Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -5872,11 +5936,11 @@ var _ MemberAccessibleValue = Int64Value(0)
 
 func (Int64Value) isValue() {}
 
-func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int64Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitInt64Value(interpreter, v)
 }
 
-func (Int64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int64Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -6452,6 +6516,7 @@ func (v Int64Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -6463,7 +6528,7 @@ func (v Int64Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (Int64Value) DeepRemove(_ *Interpreter) {
+func (Int64Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -6523,11 +6588,11 @@ var _ MemberAccessibleValue = Int128Value{}
 
 func (Int128Value) isValue() {}
 
-func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int128Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitInt128Value(interpreter, v)
 }
 
-func (Int128Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int128Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -7196,6 +7261,7 @@ func (v Int128Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -7207,7 +7273,7 @@ func (v Int128Value) Clone(_ *Interpreter) Value {
 	return NewUnmeteredInt128ValueFromBigInt(v.BigInt)
 }
 
-func (Int128Value) DeepRemove(_ *Interpreter) {
+func (Int128Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -7267,11 +7333,11 @@ var _ MemberAccessibleValue = Int256Value{}
 
 func (Int256Value) isValue() {}
 
-func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int256Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitInt256Value(interpreter, v)
 }
 
-func (Int256Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int256Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -7937,6 +8003,7 @@ func (v Int256Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -7948,7 +8015,7 @@ func (v Int256Value) Clone(_ *Interpreter) Value {
 	return NewUnmeteredInt256ValueFromBigInt(v.BigInt)
 }
 
-func (Int256Value) DeepRemove(_ *Interpreter) {
+func (Int256Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -8049,11 +8116,11 @@ var _ MemberAccessibleValue = UIntValue{}
 
 func (UIntValue) isValue() {}
 
-func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UIntValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUIntValue(interpreter, v)
 }
 
-func (UIntValue) Walk(_ *Interpreter, _ func(Value)) {
+func (UIntValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -8566,6 +8633,7 @@ func (v UIntValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -8577,7 +8645,7 @@ func (v UIntValue) Clone(_ *Interpreter) Value {
 	return NewUnmeteredUIntValueFromBigInt(v.BigInt)
 }
 
-func (UIntValue) DeepRemove(_ *Interpreter) {
+func (UIntValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -8620,11 +8688,11 @@ func NewUnmeteredUInt8Value(value uint8) UInt8Value {
 
 func (UInt8Value) isValue() {}
 
-func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt8Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUInt8Value(interpreter, v)
 }
 
-func (UInt8Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt8Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -9152,6 +9220,7 @@ func (v UInt8Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -9163,7 +9232,7 @@ func (v UInt8Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (UInt8Value) DeepRemove(_ *Interpreter) {
+func (UInt8Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -9206,11 +9275,11 @@ func NewUnmeteredUInt16Value(value uint16) UInt16Value {
 
 func (UInt16Value) isValue() {}
 
-func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt16Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUInt16Value(interpreter, v)
 }
 
-func (UInt16Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt16Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -9693,6 +9762,7 @@ func (v UInt16Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -9704,7 +9774,7 @@ func (v UInt16Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (UInt16Value) DeepRemove(_ *Interpreter) {
+func (UInt16Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -9747,11 +9817,11 @@ var _ MemberAccessibleValue = UInt32Value(0)
 
 func (UInt32Value) isValue() {}
 
-func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt32Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUInt32Value(interpreter, v)
 }
 
-func (UInt32Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt32Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -10235,6 +10305,7 @@ func (v UInt32Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -10246,7 +10317,7 @@ func (v UInt32Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (UInt32Value) DeepRemove(_ *Interpreter) {
+func (UInt32Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -10295,11 +10366,11 @@ func NewUnmeteredUInt64Value(value uint64) UInt64Value {
 
 func (UInt64Value) isValue() {}
 
-func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt64Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUInt64Value(interpreter, v)
 }
 
-func (UInt64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt64Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -10806,6 +10877,7 @@ func (v UInt64Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -10817,7 +10889,7 @@ func (v UInt64Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (UInt64Value) DeepRemove(_ *Interpreter) {
+func (UInt64Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -10877,11 +10949,11 @@ var _ MemberAccessibleValue = UInt128Value{}
 
 func (UInt128Value) isValue() {}
 
-func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt128Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUInt128Value(interpreter, v)
 }
 
-func (UInt128Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt128Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -11481,6 +11553,7 @@ func (v UInt128Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -11492,7 +11565,7 @@ func (v UInt128Value) Clone(_ *Interpreter) Value {
 	return NewUnmeteredUInt128ValueFromBigInt(v.BigInt)
 }
 
-func (UInt128Value) DeepRemove(_ *Interpreter) {
+func (UInt128Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -11552,11 +11625,11 @@ var _ MemberAccessibleValue = UInt256Value{}
 
 func (UInt256Value) isValue() {}
 
-func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt256Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUInt256Value(interpreter, v)
 }
 
-func (UInt256Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt256Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -12155,6 +12228,7 @@ func (v UInt256Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -12166,7 +12240,7 @@ func (v UInt256Value) Clone(_ *Interpreter) Value {
 	return NewUnmeteredUInt256ValueFromBigInt(v.BigInt)
 }
 
-func (UInt256Value) DeepRemove(_ *Interpreter) {
+func (UInt256Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -12211,11 +12285,11 @@ func NewUnmeteredWord8Value(value uint8) Word8Value {
 
 func (Word8Value) isValue() {}
 
-func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word8Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitWord8Value(interpreter, v)
 }
 
-func (Word8Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word8Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -12592,6 +12666,7 @@ func (v Word8Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -12603,7 +12678,7 @@ func (v Word8Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (Word8Value) DeepRemove(_ *Interpreter) {
+func (Word8Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -12648,11 +12723,11 @@ func NewUnmeteredWord16Value(value uint16) Word16Value {
 
 func (Word16Value) isValue() {}
 
-func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word16Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitWord16Value(interpreter, v)
 }
 
-func (Word16Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word16Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -13030,6 +13105,7 @@ func (v Word16Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -13041,7 +13117,7 @@ func (v Word16Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (Word16Value) DeepRemove(_ *Interpreter) {
+func (Word16Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -13086,11 +13162,11 @@ func NewUnmeteredWord32Value(value uint32) Word32Value {
 
 func (Word32Value) isValue() {}
 
-func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word32Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitWord32Value(interpreter, v)
 }
 
-func (Word32Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word32Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -13469,6 +13545,7 @@ func (v Word32Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -13480,7 +13557,7 @@ func (v Word32Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (Word32Value) DeepRemove(_ *Interpreter) {
+func (Word32Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -13531,11 +13608,11 @@ var _ BigNumberValue = Word64Value(0)
 
 func (Word64Value) isValue() {}
 
-func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word64Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitWord64Value(interpreter, v)
 }
 
-func (Word64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word64Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -13934,6 +14011,7 @@ func (v Word64Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -13949,7 +14027,7 @@ func (v Word64Value) ByteSize() uint32 {
 	return cborTagSize + getUintCBORSize(uint64(v))
 }
 
-func (Word64Value) DeepRemove(_ *Interpreter) {
+func (Word64Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -14005,11 +14083,11 @@ var _ MemberAccessibleValue = Word128Value{}
 
 func (Word128Value) isValue() {}
 
-func (v Word128Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word128Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitWord128Value(interpreter, v)
 }
 
-func (Word128Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word128Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -14514,6 +14592,7 @@ func (v Word128Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -14525,7 +14604,7 @@ func (v Word128Value) Clone(_ *Interpreter) Value {
 	return NewUnmeteredWord128ValueFromBigInt(v.BigInt)
 }
 
-func (Word128Value) DeepRemove(_ *Interpreter) {
+func (Word128Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -14585,11 +14664,11 @@ var _ MemberAccessibleValue = Word256Value{}
 
 func (Word256Value) isValue() {}
 
-func (v Word256Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word256Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitWord256Value(interpreter, v)
 }
 
-func (Word256Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word256Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -15095,6 +15174,7 @@ func (v Word256Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -15106,7 +15186,7 @@ func (v Word256Value) Clone(_ *Interpreter) Value {
 	return NewUnmeteredWord256ValueFromBigInt(v.BigInt)
 }
 
-func (Word256Value) DeepRemove(_ *Interpreter) {
+func (Word256Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -15180,11 +15260,11 @@ var _ MemberAccessibleValue = Fix64Value(0)
 
 func (Fix64Value) isValue() {}
 
-func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Fix64Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitFix64Value(interpreter, v)
 }
 
-func (Fix64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Fix64Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -15672,6 +15752,7 @@ func (v Fix64Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -15683,7 +15764,7 @@ func (v Fix64Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (Fix64Value) DeepRemove(_ *Interpreter) {
+func (Fix64Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -15751,11 +15832,11 @@ var _ MemberAccessibleValue = UFix64Value(0)
 
 func (UFix64Value) isValue() {}
 
-func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UFix64Value) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitUFix64Value(interpreter, v)
 }
 
-func (UFix64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UFix64Value) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -16206,6 +16287,7 @@ func (v UFix64Value) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -16217,7 +16299,7 @@ func (v UFix64Value) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (UFix64Value) DeepRemove(_ *Interpreter) {
+func (UFix64Value) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -16402,14 +16484,14 @@ var _ ContractValue = &CompositeValue{}
 
 func (*CompositeValue) isValue() {}
 
-func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *CompositeValue) Accept(interpreter *Interpreter, locationRange LocationRange, visitor Visitor) {
 	descend := visitor.VisitCompositeValue(interpreter, v)
 	if !descend {
 		return
 	}
 
 	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
-		value.Accept(interpreter, visitor)
+		value.Accept(interpreter, locationRange, visitor)
 
 		// continue iteration
 		return true
@@ -16418,7 +16500,7 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed field or functions!
-func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+func (v *CompositeValue) Walk(interpreter *Interpreter, _ LocationRange, walkChild func(Value)) {
 	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
 		walkChild(value)
 
@@ -16767,7 +16849,9 @@ func (v *CompositeValue) RemoveMember(
 		}
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeStorage()
 
 	// Key
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
@@ -16787,6 +16871,7 @@ func (v *CompositeValue) RemoveMember(
 			true,
 			existingValueStorable,
 			nil,
+			true, // value is standalone because it was removed from parent container.
 		)
 }
 
@@ -16835,6 +16920,7 @@ func (v *CompositeValue) SetMember(
 		map[atree.ValueID]struct{}{
 			valueID: {},
 		},
+		true, // value is standalone before being set in parent container.
 	)
 
 	existingStorable, err := v.dictionary.Set(
@@ -16846,12 +16932,14 @@ func (v *CompositeValue) SetMember(
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeStorage()
 
 	if existingStorable != nil {
 		existingValue := StoredValue(interpreter, existingStorable, config.Storage)
 
-		existingValue.DeepRemove(interpreter)
+		existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
 
 		interpreter.RemoveReferencedSlab(existingStorable)
 		return true
@@ -16879,7 +16967,7 @@ func (v *CompositeValue) MeteredString(memoryGauge common.MemoryGauge, seenRefer
 	strLen := emptyCompositeStringLen
 
 	var fields []CompositeField
-	_ = v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
+	_ = v.dictionary.IterateReadOnly(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		field := NewCompositeField(
 			memoryGauge,
 			string(key.(StringAtreeValue)),
@@ -16971,7 +17059,7 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, locationRange LocationR
 		return false
 	}
 
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -17185,6 +17273,7 @@ func (v *CompositeValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
+	hasNoParentContainer bool,
 ) Value {
 
 	config := interpreter.SharedState.Config
@@ -17244,7 +17333,12 @@ func (v *CompositeValue) Transfer(
 	}
 
 	if needsStoreTo || !isResourceKinded {
-		iterator, err := v.dictionary.Iterator()
+		// Use non-readonly iterator here because iterated
+		// value can be removed if remove parameter is true.
+		iterator, err := v.dictionary.Iterator(
+			StringAtreeValueComparator,
+			StringAtreeValueHashInput,
+		)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -17289,6 +17383,7 @@ func (v *CompositeValue) Transfer(
 					remove,
 					nil,
 					preventTransfer,
+					false, // value is an element of parent container because it is returned from iterator.
 				)
 
 				return atreeKey, value, nil
@@ -17306,7 +17401,11 @@ func (v *CompositeValue) Transfer(
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
+
 			interpreter.maybeValidateAtreeValue(v.dictionary)
+			if hasNoParentContainer {
+				interpreter.maybeValidateAtreeStorage()
+			}
 
 			interpreter.RemoveReferencedSlab(storable)
 		}
@@ -17394,7 +17493,7 @@ func (v *CompositeValue) ResourceUUID(interpreter *Interpreter, locationRange Lo
 
 func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -17453,7 +17552,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 	}
 }
 
-func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
+func (v *CompositeValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
 	config := interpreter.SharedState.Config
 
 	if config.TracingEnabled {
@@ -17483,13 +17582,17 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 		interpreter.RemoveReferencedSlab(nameStorable)
 
 		value := StoredValue(interpreter, valueStorable, storage)
-		value.DeepRemove(interpreter)
+		value.DeepRemove(interpreter, false) // value is an element of v.dictionary because it is from PopIterate() callback.
 		interpreter.RemoveReferencedSlab(valueStorable)
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+	if hasNoParentContainer {
+		interpreter.maybeValidateAtreeStorage()
+	}
 }
 
 func (v *CompositeValue) GetOwner() common.Address {
@@ -17503,13 +17606,16 @@ func (v *CompositeValue) ForEachField(
 	f func(fieldName string, fieldValue Value) (resume bool),
 ) {
 
-	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
-		resume = f(
-			string(key.(StringAtreeValue)),
-			MustConvertStoredValue(gauge, value),
-		)
-		return
-	})
+	err := v.dictionary.Iterate(
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
+		func(key atree.Value, value atree.Value) (resume bool, err error) {
+			resume = f(
+				string(key.(StringAtreeValue)),
+				MustConvertStoredValue(gauge, value),
+			)
+			return
+		})
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -17545,7 +17651,9 @@ func (v *CompositeValue) RemoveField(
 		}
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeStorage()
 
 	// Key
 
@@ -17555,7 +17663,7 @@ func (v *CompositeValue) RemoveField(
 
 	// Value
 	existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage())
-	existingValue.DeepRemove(interpreter)
+	existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was removed from parent container.
 	interpreter.RemoveReferencedSlab(existingValueStorable)
 }
 
@@ -17648,7 +17756,10 @@ func attachmentBaseAndSelfValues(
 }
 
 func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, _ LocationRange, f func(*CompositeValue)) {
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.dictionary.Iterator(
+		StringAtreeValueComparator,
+		StringAtreeValueHashInput,
+	)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -17874,30 +17985,49 @@ var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
 
 func (*DictionaryValue) isValue() {}
 
-func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *DictionaryValue) Accept(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	visitor Visitor,
+) {
 	descend := visitor.VisitDictionaryValue(interpreter, v)
 	if !descend {
 		return
 	}
 
-	v.Walk(interpreter, func(value Value) {
-		value.Accept(interpreter, visitor)
-	})
+	v.Walk(
+		interpreter,
+		locationRange,
+		func(value Value) {
+			value.Accept(interpreter, locationRange, visitor)
+		},
+	)
 }
 
-func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
+func (v *DictionaryValue) Iterate(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	f func(key, value Value) (resume bool),
+) {
+
+	valueComparator := newValueComparator(interpreter, locationRange)
+	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+
 	iterate := func() {
-		err := v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
-			// atree.OrderedMap iteration provides low-level atree.Value,
-			// convert to high-level interpreter.Value
+		err := v.dictionary.Iterate(
+			valueComparator,
+			hashInputProvider,
+			func(key, value atree.Value) (resume bool, err error) {
+				// atree.OrderedMap iteration provides low-level atree.Value,
+				// convert to high-level interpreter.Value
 
-			resume = f(
-				MustConvertStoredValue(interpreter, key),
-				MustConvertStoredValue(interpreter, value),
-			)
+				resume = f(
+					MustConvertStoredValue(interpreter, key),
+					MustConvertStoredValue(interpreter, value),
+				)
 
-			return resume, nil
-		})
+				return resume, nil
+			})
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -17909,11 +18039,11 @@ func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Va
 	}
 }
 
-type DictionaryIterator struct {
+type DictionaryKeyIterator struct {
 	mapIterator *atree.MapIterator
 }
 
-func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
+func (i DictionaryKeyIterator) NextKey(gauge common.MemoryGauge) Value {
 	atreeValue, err := i.mapIterator.NextKey()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -17924,23 +18054,32 @@ func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
 	return MustConvertStoredValue(gauge, atreeValue)
 }
 
-func (v *DictionaryValue) Iterator() DictionaryIterator {
-	mapIterator, err := v.dictionary.Iterator()
+func (v *DictionaryValue) Iterator() DictionaryKeyIterator {
+
+	mapIterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	return DictionaryIterator{
+	return DictionaryKeyIterator{
 		mapIterator: mapIterator,
 	}
 }
 
-func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
-	v.Iterate(interpreter, func(key, value Value) (resume bool) {
-		walkChild(key)
-		walkChild(value)
-		return true
-	})
+func (v *DictionaryValue) Walk(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	walkChild func(Value),
+) {
+	v.Iterate(
+		interpreter,
+		locationRange,
+		func(key, value Value) (resume bool) {
+			walkChild(key)
+			walkChild(value)
+			return true
+		},
+	)
 }
 
 func (v *DictionaryValue) StaticType(_ *Interpreter) StaticType {
@@ -17950,16 +18089,19 @@ func (v *DictionaryValue) StaticType(_ *Interpreter) StaticType {
 
 func (v *DictionaryValue) IsImportable(inter *Interpreter) bool {
 	importable := true
-	v.Iterate(inter, func(key, value Value) (resume bool) {
-		if !key.IsImportable(inter) || !value.IsImportable(inter) {
-			importable = false
-			// stop iteration
-			return false
-		}
+	v.Iterate(
+		inter,
+		EmptyLocationRange,
+		func(key, value Value) (resume bool) {
+			if !key.IsImportable(inter) || !value.IsImportable(inter) {
+				importable = false
+				// stop iteration
+				return false
+			}
 
-		// continue iteration
-		return true
-	})
+			// continue iteration
+			return true
+		})
 
 	return importable
 }
@@ -18007,13 +18149,17 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		valueID,
 		locationRange,
 		func() {
-			v.Iterate(interpreter, func(key, value Value) (resume bool) {
-				// Resources cannot be keys at the moment, so should theoretically not be needed
-				maybeDestroy(interpreter, locationRange, key)
-				maybeDestroy(interpreter, locationRange, value)
+			v.Iterate(
+				interpreter,
+				locationRange,
+				func(key, value Value) (resume bool) {
+					// Resources cannot be keys at the moment, so should theoretically not be needed
+					maybeDestroy(interpreter, locationRange, key)
+					maybeDestroy(interpreter, locationRange, value)
 
-				return true
-			})
+					return true
+				},
+			)
 		},
 	)
 
@@ -18061,7 +18207,7 @@ func (v *DictionaryValue) ForEachKey(
 	}
 
 	iterate := func() {
-		err := v.dictionary.IterateKeys(
+		err := v.dictionary.IterateReadOnlyKeys(
 			func(item atree.Value) (bool, error) {
 				key := MustConvertStoredValue(interpreter, item)
 
@@ -18201,7 +18347,7 @@ func (v *DictionaryValue) MeteredString(memoryGauge common.MemoryGauge, seenRefe
 	}, v.Count())
 
 	index := 0
-	_ = v.dictionary.Iterate(func(key, value atree.Value) (resume bool, err error) {
+	_ = v.dictionary.IterateReadOnly(func(key, value atree.Value) (resume bool, err error) {
 		// atree.OrderedMap iteration provides low-level atree.Value,
 		// convert to high-level interpreter.Value
 
@@ -18264,7 +18410,7 @@ func (v *DictionaryValue) GetMember(
 
 	case "keys":
 
-		iterator, err := v.dictionary.Iterator()
+		iterator, err := v.dictionary.ReadOnlyIterator()
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -18292,13 +18438,17 @@ func (v *DictionaryValue) GetMember(
 						false,
 						nil,
 						nil,
+						false, // value is an element of parent container because it is returned from iterator.
 					)
 			},
 		)
 
 	case "values":
 
-		iterator, err := v.dictionary.Iterator()
+		valueComparator := newValueComparator(interpreter, locationRange)
+		hashInputProvider := newHashInputProvider(interpreter, locationRange)
+
+		iterator, err := v.dictionary.Iterator(valueComparator, hashInputProvider)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -18326,6 +18476,7 @@ func (v *DictionaryValue) GetMember(
 						false,
 						nil,
 						nil,
+						false, // value is an element of parent container because it is returned from iterator.
 					)
 			})
 
@@ -18472,14 +18623,16 @@ func (v *DictionaryValue) Remove(
 		}
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeStorage()
 
 	storage := interpreter.Storage()
 
 	// Key
 
 	existingKeyValue := StoredValue(interpreter, existingKeyStorable, storage)
-	existingKeyValue.DeepRemove(interpreter)
+	existingKeyValue.DeepRemove(interpreter, true) // existingValue is standalone because it was removed from parent container.
 	interpreter.RemoveReferencedSlab(existingKeyStorable)
 
 	// Value
@@ -18492,6 +18645,7 @@ func (v *DictionaryValue) Remove(
 			true,
 			existingValueStorable,
 			nil,
+			true, // value is standalone because it was removed from parent container.
 		)
 
 	return NewSomeValueNonCopying(interpreter, existingValue)
@@ -18535,6 +18689,7 @@ func (v *DictionaryValue) Insert(
 		true,
 		nil,
 		preventTransfer,
+		true, // keyValue is standalone before it is inserted into parent container.
 	)
 
 	value = value.Transfer(
@@ -18544,6 +18699,7 @@ func (v *DictionaryValue) Insert(
 		true,
 		nil,
 		preventTransfer,
+		true, // value is standalone before it is inserted into parent container.
 	)
 
 	valueComparator := newValueComparator(interpreter, locationRange)
@@ -18560,7 +18716,9 @@ func (v *DictionaryValue) Insert(
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeStorage()
 
 	if existingValueStorable == nil {
 		return NilOptionalValue
@@ -18579,6 +18737,7 @@ func (v *DictionaryValue) Insert(
 		true,
 		existingValueStorable,
 		nil,
+		true, // existingValueStorable is standalone after it is overwritten in parent container.
 	)
 
 	return NewSomeValueNonCopying(interpreter, existingValue)
@@ -18621,7 +18780,7 @@ func (v *DictionaryValue) ConformsToStaticType(
 	keyType := staticType.KeyType
 	valueType := staticType.ValueType
 
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -18688,7 +18847,7 @@ func (v *DictionaryValue) Equal(interpreter *Interpreter, locationRange Location
 		return false
 	}
 
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -18739,6 +18898,7 @@ func (v *DictionaryValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
+	hasNoParentContainer bool,
 ) Value {
 	baseUse, elementOverhead, dataUse, metaDataUse := common.NewDictionaryMemoryUsages(
 		v.dictionary.Count(),
@@ -18794,7 +18954,9 @@ func (v *DictionaryValue) Transfer(
 		valueComparator := newValueComparator(interpreter, locationRange)
 		hashInputProvider := newHashInputProvider(interpreter, locationRange)
 
-		iterator, err := v.dictionary.Iterator()
+		// Use non-readonly iterator here because iterated
+		// value can be removed if remove parameter is true.
+		iterator, err := v.dictionary.Iterator(valueComparator, hashInputProvider)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -18821,10 +18983,26 @@ func (v *DictionaryValue) Transfer(
 				}
 
 				key := MustConvertStoredValue(interpreter, atreeKey).
-					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer)
+					Transfer(
+						interpreter,
+						locationRange,
+						address,
+						remove,
+						nil,
+						preventTransfer,
+						false, // atreeKey has parent container because it is returned from iterator.
+					)
 
 				value := MustConvertStoredValue(interpreter, atreeValue).
-					Transfer(interpreter, locationRange, address, remove, nil, preventTransfer)
+					Transfer(
+						interpreter,
+						locationRange,
+						address,
+						remove,
+						nil,
+						preventTransfer,
+						false, // atreeValue has parent container because it is returned from iterator.
+					)
 
 				return key, value, nil
 			},
@@ -18841,7 +19019,11 @@ func (v *DictionaryValue) Transfer(
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
+
 			interpreter.maybeValidateAtreeValue(v.dictionary)
+			if hasNoParentContainer {
+				interpreter.maybeValidateAtreeStorage()
+			}
 
 			interpreter.RemoveReferencedSlab(storable)
 		}
@@ -18898,7 +19080,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	valueComparator := newValueComparator(interpreter, EmptyLocationRange)
 	hashInputProvider := newHashInputProvider(interpreter, EmptyLocationRange)
 
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.dictionary.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -18946,7 +19128,7 @@ func (v *DictionaryValue) Clone(interpreter *Interpreter) Value {
 	}
 }
 
-func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
+func (v *DictionaryValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
 
 	config := interpreter.SharedState.Config
 
@@ -18972,17 +19154,21 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 	err := v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
 
 		key := StoredValue(interpreter, keyStorable, storage)
-		key.DeepRemove(interpreter)
+		key.DeepRemove(interpreter, false) // key is an element of v.dictionary because it is from PopIterate() callback.
 		interpreter.RemoveReferencedSlab(keyStorable)
 
 		value := StoredValue(interpreter, valueStorable, storage)
-		value.DeepRemove(interpreter)
+		value.DeepRemove(interpreter, false) // value is an element of v.dictionary because it is from PopIterate() callback.
 		interpreter.RemoveReferencedSlab(valueStorable)
 	})
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+	if hasNoParentContainer {
+		interpreter.maybeValidateAtreeStorage()
+	}
 }
 
 func (v *DictionaryValue) GetOwner() common.Address {
@@ -19046,11 +19232,11 @@ var _ OptionalValue = NilValue{}
 
 func (NilValue) isValue() {}
 
-func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v NilValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitNilValue(interpreter, v)
 }
 
-func (NilValue) Walk(_ *Interpreter, _ func(Value)) {
+func (NilValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -19162,6 +19348,7 @@ func (v NilValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -19173,7 +19360,7 @@ func (v NilValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (NilValue) DeepRemove(_ *Interpreter) {
+func (NilValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -19217,15 +19404,15 @@ var _ OptionalValue = &SomeValue{}
 
 func (*SomeValue) isValue() {}
 
-func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *SomeValue) Accept(interpreter *Interpreter, locationRange LocationRange, visitor Visitor) {
 	descend := visitor.VisitSomeValue(interpreter, v)
 	if !descend {
 		return
 	}
-	v.value.Accept(interpreter, visitor)
+	v.value.Accept(interpreter, locationRange, visitor)
 }
 
-func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *SomeValue) Walk(_ *Interpreter, _ LocationRange, walkChild func(Value)) {
 	walkChild(v.value)
 }
 
@@ -19403,9 +19590,26 @@ func (v *SomeValue) Storable(
 	maxInlineSize uint64,
 ) (atree.Storable, error) {
 
+	// SomeStorable returned from this function can be encoded in two ways:
+	// - if non-SomeStorable is too large, non-SomeStorable is encoded in a separate slab
+	//   while SomeStorable wrapper is encoded inline with reference to slab containing
+	//   non-SomeStorable.
+	// - otherwise, SomeStorable with non-SomeStorable is encoded inline.
+	//
+	// The above applies to both immutable non-SomeValue (such as StringValue),
+	// and mutable non-SomeValue (such as ArrayValue).
+
 	if v.valueStorable == nil {
-		var err error
-		v.valueStorable, err = v.value.Storable(
+
+		nonSomeValue, nestedLevels := v.nonSomeValue()
+
+		someStorableEncodedPrefixSize := getSomeStorableEncodedPrefixSize(nestedLevels)
+
+		// Reduce maxInlineSize for non-SomeValue to make sure
+		// that SomeStorable wrapper is always encoded inline.
+		maxInlineSize -= uint64(someStorableEncodedPrefixSize)
+
+		nonSomeValueStorable, err := nonSomeValue.Storable(
 			storage,
 			address,
 			maxInlineSize,
@@ -19413,16 +19617,44 @@ func (v *SomeValue) Storable(
 		if err != nil {
 			return nil, err
 		}
+
+		valueStorable := nonSomeValueStorable
+		for i := 1; i < int(nestedLevels); i++ {
+			valueStorable = SomeStorable{
+				Storable: valueStorable,
+			}
+		}
+		v.valueStorable = valueStorable
 	}
 
-	return maybeLargeImmutableStorable(
-		SomeStorable{
-			Storable: v.valueStorable,
-		},
-		storage,
-		address,
-		maxInlineSize,
-	)
+	// No need to call maybeLargeImmutableStorable() here for SomeStorable because:
+	// - encoded SomeStorable size = someStorableEncodedPrefixSize + non-SomeValueStorable size
+	// - non-SomeValueStorable size < maxInlineSize - someStorableEncodedPrefixSize
+	return SomeStorable{
+		Storable: v.valueStorable,
+	}, nil
+}
+
+// nonSomeValue returns a non-SomeValue and nested levels of SomeValue reached
+// by traversing nested SomeValue (SomeValue containing SomeValue, etc.)
+// until it reaches a non-SomeValue.
+// For example,
+//   - `SomeValue{true}` has non-SomeValue `true`, and nested levels 1
+//   - `SomeValue{SomeValue{1}}` has non-SomeValue `1` and nested levels 2
+//   - `SomeValue{SomeValue{[SomeValue{SomeValue{SomeValue{1}}}]}} has
+//     non-SomeValue `[SomeValue{SomeValue{SomeValue{1}}}]` and nested levels 2
+func (v *SomeValue) nonSomeValue() (atree.Value, uint64) {
+	nestedLevels := uint64(1)
+	for {
+		switch value := v.value.(type) {
+		case *SomeValue:
+			nestedLevels++
+			v = value
+
+		default:
+			return value, nestedLevels
+		}
+	}
 }
 
 func (v *SomeValue) NeedsStoreTo(address atree.Address) bool {
@@ -19453,6 +19685,7 @@ func (v *SomeValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
+	hasNoParentContainer bool,
 ) Value {
 	config := interpreter.SharedState.Config
 
@@ -19474,6 +19707,7 @@ func (v *SomeValue) Transfer(
 			remove,
 			nil,
 			preventTransfer,
+			hasNoParentContainer,
 		)
 
 		if remove {
@@ -19518,8 +19752,8 @@ func (v *SomeValue) Clone(interpreter *Interpreter) Value {
 	return NewUnmeteredSomeValueNonCopying(innerValue)
 }
 
-func (v *SomeValue) DeepRemove(interpreter *Interpreter) {
-	v.value.DeepRemove(interpreter)
+func (v *SomeValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
+	v.value.DeepRemove(interpreter, hasNoParentContainer)
 	if v.valueStorable != nil {
 		interpreter.RemoveReferencedSlab(v.valueStorable)
 	}
@@ -19540,10 +19774,49 @@ type SomeStorable struct {
 	Storable atree.Storable
 }
 
-var _ atree.Storable = SomeStorable{}
+var _ atree.ContainerStorable = SomeStorable{}
+
+func (s SomeStorable) HasPointer() bool {
+	switch cs := s.Storable.(type) {
+	case atree.ContainerStorable:
+		return cs.HasPointer()
+	default:
+		return false
+	}
+}
+
+func getSomeStorableEncodedPrefixSize(nestedLevels uint64) uint32 {
+	if nestedLevels == 1 {
+		return cborTagSize
+	}
+	return cborTagSize + someStorableWithMultipleNestedlevelsArraySize + getUintCBORSize(nestedLevels)
+}
 
 func (s SomeStorable) ByteSize() uint32 {
-	return cborTagSize + s.Storable.ByteSize()
+	nonSomeStorable, nestedLevels := s.nonSomeStorable()
+	return getSomeStorableEncodedPrefixSize(nestedLevels) + nonSomeStorable.ByteSize()
+}
+
+// nonSomeStorable returns a non-SomeStorable and nested levels of SomeStorable reached
+// by traversing nested SomeStorable (SomeStorable containing SomeStorable, etc.)
+// until it reaches a non-SomeStorable.
+// For example,
+//   - `SomeStorable{true}` has non-SomeStorable `true`, and nested levels 1
+//   - `SomeStorable{SomeStorable{1}}` has non-SomeStorable `1` and nested levels 2
+//   - `SomeStorable{SomeStorable{[SomeStorable{SomeStorable{SomeStorable{1}}}]}} has
+//     non-SomeStorable `[SomeStorable{SomeStorable{SomeStorable{1}}}]` and nested levels 2
+func (s SomeStorable) nonSomeStorable() (atree.Storable, uint64) {
+	nestedLevels := uint64(1)
+	for {
+		switch storable := s.Storable.(type) {
+		case SomeStorable:
+			nestedLevels++
+			s = storable
+
+		default:
+			return storable, nestedLevels
+		}
+	}
 }
 
 func (s SomeStorable) StoredValue(storage atree.SlabStorage) (atree.Value, error) {
@@ -19615,11 +19888,11 @@ func NewStorageReferenceValue(
 
 func (*StorageReferenceValue) isValue() {}
 
-func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *StorageReferenceValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitStorageReferenceValue(interpreter, v)
 }
 
-func (*StorageReferenceValue) Walk(_ *Interpreter, _ func(Value)) {
+func (*StorageReferenceValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
@@ -19900,6 +20173,7 @@ func (v *StorageReferenceValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -19916,7 +20190,7 @@ func (v *StorageReferenceValue) Clone(_ *Interpreter) Value {
 	)
 }
 
-func (*StorageReferenceValue) DeepRemove(_ *Interpreter) {
+func (*StorageReferenceValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -19962,11 +20236,11 @@ func NewEphemeralReferenceValue(
 
 func (*EphemeralReferenceValue) isValue() {}
 
-func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitEphemeralReferenceValue(interpreter, v)
 }
 
-func (*EphemeralReferenceValue) Walk(_ *Interpreter, _ func(Value)) {
+func (*EphemeralReferenceValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
@@ -20235,6 +20509,7 @@ func (v *EphemeralReferenceValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -20246,7 +20521,7 @@ func (v *EphemeralReferenceValue) Clone(_ *Interpreter) Value {
 	return NewUnmeteredEphemeralReferenceValue(v.Authorized, v.Value, v.BorrowedType)
 }
 
-func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter) {
+func (*EphemeralReferenceValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -20312,11 +20587,11 @@ var _ MemberAccessibleValue = AddressValue{}
 
 func (AddressValue) isValue() {}
 
-func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v AddressValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitAddressValue(interpreter, v)
 }
 
-func (AddressValue) Walk(_ *Interpreter, _ func(Value)) {
+func (AddressValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -20452,6 +20727,7 @@ func (v AddressValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -20463,7 +20739,7 @@ func (v AddressValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (AddressValue) DeepRemove(_ *Interpreter) {
+func (AddressValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -20540,11 +20816,11 @@ var _ MemberAccessibleValue = PathValue{}
 
 func (PathValue) isValue() {}
 
-func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v PathValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitPathValue(interpreter, v)
 }
 
-func (PathValue) Walk(_ *Interpreter, _ func(Value)) {
+func (PathValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -20738,6 +21014,7 @@ func (v PathValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -20749,7 +21026,7 @@ func (v PathValue) Clone(_ *Interpreter) Value {
 	return v
 }
 
-func (PathValue) DeepRemove(_ *Interpreter) {
+func (PathValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -20807,11 +21084,11 @@ func (*PathCapabilityValue) isValue() {}
 
 func (*PathCapabilityValue) isCapabilityValue() {}
 
-func (v *PathCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *PathCapabilityValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitPathCapabilityValue(interpreter, v)
 }
 
-func (v *PathCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *PathCapabilityValue) Walk(_ *Interpreter, _ LocationRange, walkChild func(Value)) {
 	walkChild(v.Address)
 	walkChild(v.Path)
 }
@@ -20956,9 +21233,10 @@ func (v *PathCapabilityValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	hasNoParentContainer bool,
 ) Value {
 	if remove {
-		v.DeepRemove(interpreter)
+		v.DeepRemove(interpreter, hasNoParentContainer)
 		interpreter.RemoveReferencedSlab(storable)
 	}
 	return v
@@ -20972,9 +21250,9 @@ func (v *PathCapabilityValue) Clone(interpreter *Interpreter) Value {
 	)
 }
 
-func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter) {
-	v.Address.DeepRemove(interpreter)
-	v.Path.DeepRemove(interpreter)
+func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
+	v.Address.DeepRemove(interpreter, hasNoParentContainer)
+	v.Path.DeepRemove(interpreter, hasNoParentContainer)
 }
 
 func (v *PathCapabilityValue) ByteSize() uint32 {
@@ -21033,11 +21311,11 @@ func (*IDCapabilityValue) isValue() {}
 
 func (*IDCapabilityValue) isCapabilityValue() {}
 
-func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *IDCapabilityValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitIDCapabilityValue(interpreter, v)
 }
 
-func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *IDCapabilityValue) Walk(_ *Interpreter, _ LocationRange, walkChild func(Value)) {
 	walkChild(v.ID)
 	walkChild(v.Address)
 }
@@ -21158,9 +21436,10 @@ func (v *IDCapabilityValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	hasNoParentContainer bool,
 ) Value {
 	if remove {
-		v.DeepRemove(interpreter)
+		v.DeepRemove(interpreter, hasNoParentContainer)
 		interpreter.RemoveReferencedSlab(storable)
 	}
 	return v
@@ -21174,8 +21453,8 @@ func (v *IDCapabilityValue) Clone(interpreter *Interpreter) Value {
 	)
 }
 
-func (v *IDCapabilityValue) DeepRemove(interpreter *Interpreter) {
-	v.Address.DeepRemove(interpreter)
+func (v *IDCapabilityValue) DeepRemove(interpreter *Interpreter, hasNoParentContainer bool) {
+	v.Address.DeepRemove(interpreter, hasNoParentContainer)
 }
 
 func (v *IDCapabilityValue) ByteSize() uint32 {
@@ -21223,11 +21502,11 @@ func (PathLinkValue) isValue() {}
 
 func (PathLinkValue) isLinkValue() {}
 
-func (v PathLinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v PathLinkValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitPathLinkValue(interpreter, v)
 }
 
-func (v PathLinkValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v PathLinkValue) Walk(_ *Interpreter, _ LocationRange, walkChild func(Value)) {
 	walkChild(v.TargetPath)
 }
 
@@ -21307,6 +21586,7 @@ func (v PathLinkValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -21321,7 +21601,7 @@ func (v PathLinkValue) Clone(interpreter *Interpreter) Value {
 	}
 }
 
-func (PathLinkValue) DeepRemove(_ *Interpreter) {
+func (PathLinkValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -21362,7 +21642,7 @@ var _ EquatableValue = &PublishedValue{}
 
 func (*PublishedValue) isValue() {}
 
-func (v *PublishedValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *PublishedValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitPublishedValue(interpreter, v)
 }
 
@@ -21398,7 +21678,7 @@ func (v *PublishedValue) MeteredString(memoryGauge common.MemoryGauge, seenRefer
 	)
 }
 
-func (v *PublishedValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *PublishedValue) Walk(_ *Interpreter, _ LocationRange, walkChild func(Value)) {
 	walkChild(v.Recipient)
 	walkChild(v.Value)
 }
@@ -21444,6 +21724,7 @@ func (v *PublishedValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	preventTransfer map[atree.ValueID]struct{},
+	hasNoParentContainer bool,
 ) Value {
 	// NB: if the inner value of a PublishedValue can be a resource,
 	// we must perform resource-related checks here as well
@@ -21457,6 +21738,7 @@ func (v *PublishedValue) Transfer(
 			remove,
 			nil,
 			preventTransfer,
+			hasNoParentContainer,
 		).(CapabilityValue)
 
 		addressValue := v.Recipient.Transfer(
@@ -21466,6 +21748,7 @@ func (v *PublishedValue) Transfer(
 			remove,
 			nil,
 			preventTransfer,
+			hasNoParentContainer,
 		).(AddressValue)
 
 		if remove {
@@ -21486,7 +21769,7 @@ func (v *PublishedValue) Clone(interpreter *Interpreter) Value {
 	}
 }
 
-func (*PublishedValue) DeepRemove(_ *Interpreter) {
+func (*PublishedValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -21529,11 +21812,11 @@ func (AccountLinkValue) isValue() {}
 
 func (AccountLinkValue) isLinkValue() {}
 
-func (v AccountLinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v AccountLinkValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitAccountLinkValue(interpreter, v)
 }
 
-func (AccountLinkValue) Walk(_ *Interpreter, _ func(Value)) {
+func (AccountLinkValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -21606,6 +21889,7 @@ func (v AccountLinkValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -21617,7 +21901,7 @@ func (AccountLinkValue) Clone(_ *Interpreter) Value {
 	return AccountLinkValue{}
 }
 
-func (AccountLinkValue) DeepRemove(_ *Interpreter) {
+func (AccountLinkValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 

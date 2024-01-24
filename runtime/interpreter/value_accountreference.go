@@ -71,11 +71,11 @@ func (*AccountReferenceValue) isValue() {}
 
 func (*AccountReferenceValue) isReference() {}
 
-func (v *AccountReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *AccountReferenceValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitAccountReferenceValue(interpreter, v)
 }
 
-func (*AccountReferenceValue) Walk(_ *Interpreter, _ func(Value)) {
+func (*AccountReferenceValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
@@ -277,6 +277,7 @@ func (v *AccountReferenceValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -292,7 +293,7 @@ func (v *AccountReferenceValue) Clone(_ *Interpreter) Value {
 	)
 }
 
-func (*AccountReferenceValue) DeepRemove(_ *Interpreter) {
+func (*AccountReferenceValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 

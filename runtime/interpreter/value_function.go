@@ -96,11 +96,11 @@ func (f *InterpretedFunctionValue) MeteredString(memoryGauge common.MemoryGauge,
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
 }
 
-func (f *InterpretedFunctionValue) Walk(_ *Interpreter, _ func(Value)) {
+func (f *InterpretedFunctionValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -153,6 +153,7 @@ func (f *InterpretedFunctionValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -165,7 +166,7 @@ func (f *InterpretedFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter) {
+func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -226,11 +227,11 @@ var _ ContractValue = &HostFunctionValue{}
 
 func (*HostFunctionValue) isValue() {}
 
-func (f *HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (f *HostFunctionValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitHostFunctionValue(interpreter, f)
 }
 
-func (f *HostFunctionValue) Walk(_ *Interpreter, _ func(Value)) {
+func (f *HostFunctionValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -302,6 +303,7 @@ func (f *HostFunctionValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -314,7 +316,7 @@ func (f *HostFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (*HostFunctionValue) DeepRemove(_ *Interpreter) {
+func (*HostFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -362,11 +364,11 @@ func (f BoundFunctionValue) MeteredString(memoryGauge common.MemoryGauge, seenRe
 	return f.Function.MeteredString(memoryGauge, seenReferences)
 }
 
-func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (f BoundFunctionValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitBoundFunctionValue(interpreter, f)
 }
 
-func (f BoundFunctionValue) Walk(_ *Interpreter, _ func(Value)) {
+func (f BoundFunctionValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -429,6 +431,7 @@ func (f BoundFunctionValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -441,6 +444,6 @@ func (f BoundFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (BoundFunctionValue) DeepRemove(_ *Interpreter) {
+func (BoundFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }

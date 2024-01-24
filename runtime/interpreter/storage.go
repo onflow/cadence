@@ -121,8 +121,12 @@ type InMemoryStorage struct {
 var _ Storage = InMemoryStorage{}
 
 func NewInMemoryStorage(memoryGauge common.MemoryGauge) InMemoryStorage {
-	decodeStorable := func(decoder *cbor.StreamDecoder, storableSlabStorageID atree.SlabID) (atree.Storable, error) {
-		return DecodeStorable(decoder, storableSlabStorageID, memoryGauge)
+	decodeStorable := func(
+		decoder *cbor.StreamDecoder,
+		storableSlabStorageID atree.SlabID,
+		inlinedExtraData []atree.ExtraData,
+	) (atree.Storable, error) {
+		return DecodeStorable(decoder, storableSlabStorageID, inlinedExtraData, memoryGauge)
 	}
 
 	decodeTypeInfo := func(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {

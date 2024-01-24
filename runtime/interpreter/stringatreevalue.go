@@ -28,6 +28,7 @@ type StringAtreeValue string
 
 var _ atree.Value = StringAtreeValue("")
 var _ atree.Storable = StringAtreeValue("")
+var _ atree.ComparableStorable = StringAtreeValue("")
 
 func (v StringAtreeValue) Storable(
 	storage atree.SlabStorage,
@@ -55,6 +56,26 @@ func (v StringAtreeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) 
 
 func (StringAtreeValue) ChildStorables() []atree.Storable {
 	return nil
+}
+
+// Equal returns true if the given storable is equal to this StringAtreeValue.
+func (v StringAtreeValue) Equal(other atree.Storable) bool {
+	v1, ok := other.(StringAtreeValue)
+	return ok && v == v1
+}
+
+// Less returns true if the given storable is less than StringAtreeValue.
+func (v StringAtreeValue) Less(other atree.Storable) bool {
+	return v < other.(StringAtreeValue)
+}
+
+// ID returns a unique identifier.
+func (v StringAtreeValue) ID() string {
+	return string(v)
+}
+
+func (v StringAtreeValue) Copy() atree.Storable {
+	return v
 }
 
 func StringAtreeValueHashInput(v atree.Value, _ []byte) ([]byte, error) {

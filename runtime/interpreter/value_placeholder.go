@@ -45,11 +45,11 @@ func (f placeholderValue) MeteredString(_ common.MemoryGauge, _ SeenReferences) 
 	return ""
 }
 
-func (f placeholderValue) Accept(_ *Interpreter, _ Visitor) {
+func (f placeholderValue) Accept(_ *Interpreter, _ LocationRange, _ Visitor) {
 	// NO-OP
 }
 
-func (f placeholderValue) Walk(_ *Interpreter, _ func(Value)) {
+func (f placeholderValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	// NO-OP
 }
 
@@ -88,6 +88,7 @@ func (f placeholderValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -100,6 +101,6 @@ func (f placeholderValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (placeholderValue) DeepRemove(_ *Interpreter) {
+func (placeholderValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }

@@ -1108,7 +1108,7 @@ func TestMeterEncoding(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, 87, int(meter.getMemory(common.MemoryKindBytes)))
+		assert.Equal(t, 75, int(meter.getMemory(common.MemoryKindBytes)))
 	})
 
 	t.Run("string in loop", func(t *testing.T) {
@@ -1156,7 +1156,7 @@ func TestMeterEncoding(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, 62787, int(meter.getMemory(common.MemoryKindBytes)))
+		assert.Equal(t, 61455, int(meter.getMemory(common.MemoryKindBytes)))
 	})
 
 	t.Run("composite", func(t *testing.T) {
@@ -1206,6 +1206,6 @@ func TestMeterEncoding(t *testing.T) {
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, 76941, int(meter.getMemory(common.MemoryKindBytes)))
+		assert.Equal(t, 58323, int(meter.getMemory(common.MemoryKindBytes)))
 	})
 }

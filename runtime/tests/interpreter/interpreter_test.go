@@ -25,13 +25,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/activations"
-
 	"github.com/onflow/atree"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -200,8 +200,10 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 		config = *options.Config
 	}
 	config.InvalidatedResourceValidationEnabled = true
-	config.AtreeValueValidationEnabled = true
-	config.AtreeStorageValidationEnabled = true
+	if memoryGauge == nil {
+		config.AtreeValueValidationEnabled = true
+		config.AtreeStorageValidationEnabled = true
+	}
 	if config.UUIDHandler == nil {
 		config.UUIDHandler = func() (uint64, error) {
 			uuid++
@@ -5249,6 +5251,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true, // r is standalone.
 		)
 
 		domain := storagePath.Domain.Identifier()
@@ -8121,6 +8124,7 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // r1 is standalone.
 		)
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
@@ -8167,7 +8171,8 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 			permanentSlabs = append(permanentSlabs, slab)
 		}
 
-		require.Equal(t, 2, len(permanentSlabs))
+		// permanent slab is R1 (R2 is inlined in R1 slab)
+		require.Equal(t, 1, len(permanentSlabs))
 
 		sort.Slice(permanentSlabs, func(i, j int) bool {
 			a := permanentSlabs[i].SlabID()
@@ -8185,7 +8190,6 @@ func TestInterpretResourceMovingAndBorrowing(t *testing.T) {
 		require.Equal(t,
 			[]string{
 				`S.test.R1(r2: S.test.R2(value: "test", uuid: 2), uuid: 1)`,
-				`S.test.R2(value: "test", uuid: 2)`,
 			},
 			storedValues,
 		)

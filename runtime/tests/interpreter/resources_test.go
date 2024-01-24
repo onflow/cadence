@@ -196,6 +196,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // r1 is standalone.
 		)
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
@@ -325,6 +326,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // r1 is standalone.
 		)
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
@@ -449,6 +451,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // r1 is standalone.
 		)
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")
@@ -578,6 +581,7 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // r1 is standalone.
 		)
 
 		r1Type := checker.RequireGlobalType(t, inter.Program.Elaboration, "R1")

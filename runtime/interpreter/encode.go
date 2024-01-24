@@ -116,7 +116,7 @@ const (
 	_ // DO *NOT* REPLACE. Previously used for array values
 	CBORTagStringValue
 	CBORTagCharacterValue
-	_
+	CBORTagSomeValueWithNestedLevels
 	_
 	_
 	_
@@ -681,13 +681,23 @@ func (v UFix64Value) Encode(e *atree.Encoder) error {
 	return e.CBOR.EncodeUint64(uint64(v))
 }
 
-// Encode encodes SomeStorable as
+var _ atree.ContainerStorable = &SomeStorable{}
+
+func (s SomeStorable) Encode(e *atree.Encoder) error {
+	nonSomeStorable, nestedLevels := s.nonSomeStorable()
+	if nestedLevels == 1 {
+		return s.encode(e)
+	}
+	return s.encodeMultipleNestedLevels(e, nestedLevels, nonSomeStorable)
+}
+
+// encode encodes SomeStorable with nested levels = 1 as
 //
 //	cbor.Tag{
 //			Number: CBORTagSomeValue,
 //			Content: Value(v.Value),
 //	}
-func (s SomeStorable) Encode(e *atree.Encoder) error {
+func (s SomeStorable) encode(e *atree.Encoder) error {
 	// NOTE: when updating, also update SomeStorable.ByteSize
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
@@ -697,6 +707,41 @@ func (s SomeStorable) Encode(e *atree.Encoder) error {
 		return err
 	}
 	return s.Storable.Encode(e)
+}
+
+const (
+	someStorableWithMultipleNestedlevelsArraySize  = 1
+	someStorableWithMultipleNestedLevelsArrayCount = 2
+)
+
+// encodeMultipleNestedLevels encodes SomeStorable with nested levels > 1 as
+//
+//	cbor.Tag{
+//			Number: CBORTagSomeValueWithNestedLevels,
+//			Content: CBORArray[nested_levels, innermsot_value],
+//	}
+func (s SomeStorable) encodeMultipleNestedLevels(
+	e *atree.Encoder,
+	levels uint64,
+	nonSomeStorable atree.Storable,
+) error {
+	// NOTE: when updating, also update SomeStorable.ByteSize
+	err := e.CBOR.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagSomeValueWithNestedLevels,
+		// array of 2 elements
+		0x82,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = e.CBOR.EncodeUint64(levels)
+	if err != nil {
+		return err
+	}
+
+	return nonSomeStorable.Encode(e)
 }
 
 // Encode encodes AddressValue as
@@ -1601,6 +1646,19 @@ var _ atree.TypeInfo = compositeTypeInfo{}
 
 const encodedCompositeTypeInfoLength = 3
 
+func (c compositeTypeInfo) IsComposite() bool {
+	return true
+}
+
+func (c compositeTypeInfo) Identifier() string {
+	return string(c.location.TypeID(nil, c.qualifiedIdentifier))
+}
+
+func (c compositeTypeInfo) Copy() atree.TypeInfo {
+	// Return c as is because c is a value type.
+	return c
+}
+
 func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
@@ -1643,6 +1701,18 @@ type EmptyTypeInfo struct{}
 
 func (e EmptyTypeInfo) Encode(encoder *cbor.StreamEncoder) error {
 	return encoder.EncodeNil()
+}
+
+func (e EmptyTypeInfo) IsComposite() bool {
+	return false
+}
+
+func (e EmptyTypeInfo) Identifier() string {
+	return ""
+}
+
+func (e EmptyTypeInfo) Copy() atree.TypeInfo {
+	return e
 }
 
 var emptyTypeInfo atree.TypeInfo = EmptyTypeInfo{}
