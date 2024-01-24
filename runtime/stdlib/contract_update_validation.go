@@ -27,6 +27,10 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+type UpdateValidator interface {
+	Validate() error
+}
+
 type ContractUpdateValidator struct {
 	TypeComparator
 
@@ -40,6 +44,7 @@ type ContractUpdateValidator struct {
 
 // ContractUpdateValidator should implement ast.TypeEqualityChecker
 var _ ast.TypeEqualityChecker = &ContractUpdateValidator{}
+var _ UpdateValidator = &ContractUpdateValidator{}
 
 // NewContractUpdateValidator initializes and returns a validator, without performing any validation.
 // Invoke the `Validate()` method of the validator returned, to start validating the contract.
@@ -607,4 +612,38 @@ func (e *MissingDeclarationError) Error() string {
 		e.Kind,
 		e.Name,
 	)
+}
+
+type LegacyContractUpdateValidator struct {
+	TypeComparator
+
+	location     common.Location
+	contractName string
+	oldProgram   *ast.Program
+	newProgram   *ast.Program
+}
+
+// NewContractUpdateValidator initializes and returns a validator, without performing any validation.
+// Invoke the `Validate()` method of the validator returned, to start validating the contract.
+func NewLegacyContractUpdateValidator(
+	location common.Location,
+	contractName string,
+	oldProgram *ast.Program,
+	newProgram *ast.Program,
+) *LegacyContractUpdateValidator {
+
+	return &LegacyContractUpdateValidator{
+		location:     location,
+		oldProgram:   oldProgram,
+		newProgram:   newProgram,
+		contractName: contractName,
+	}
+}
+
+var _ UpdateValidator = &LegacyContractUpdateValidator{}
+
+// Validate validates the contract update, and returns an error if it is an invalid update.
+// TODO: for now this is empty until we determine what validation is necessary for a Cadence 1.0 upgrade
+func (validator *LegacyContractUpdateValidator) Validate() error {
+	return nil
 }
