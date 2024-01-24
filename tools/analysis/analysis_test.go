@@ -25,12 +25,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/parser"
-	"github.com/onflow/cadence/runtime/tests/checker"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/tools/analysis"
 )
 
@@ -102,7 +101,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 
 	for _, program := range programs {
 		require.NotNil(t, program.Program)
-		require.NotNil(t, program.Elaboration)
+		require.NotNil(t, program.Checker)
 
 		// Run a simple analysis: Detect unnecessary cast
 
@@ -114,7 +113,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 				return true
 			}
 
-			types := program.Elaboration.CastingExpressionTypes(castingExpression)
+			types := program.Checker.Elaboration.CastingExpressionTypes(castingExpression)
 			leftHandType := types.StaticValueType
 			rightHandType := types.TargetType
 
