@@ -1586,8 +1586,11 @@ func changeAccountContracts(
 		oldCode, err := handler.GetAccountContractCode(location)
 		handleContractUpdateError(err)
 
+		memoryGauge := invocation.Interpreter.SharedState.Config.MemoryGauge
+		legacyUpgradeEnabled := invocation.Interpreter.SharedState.Config.LegacyContractUpgradeEnabled
+
 		oldProgram, err := parser.ParseProgram(
-			invocation.Interpreter.SharedState.Config.MemoryGauge,
+			memoryGauge,
 			oldCode,
 			parser.Config{
 				IgnoreLeadingIdentifierEnabled: true,
@@ -1596,10 +1599,10 @@ func changeAccountContracts(
 
 		var legacyContractUpgrade bool
 		// if we are allowing legacy contract upgrades, fall back to the old parser when the new one fails
-		if !ignoreUpdatedProgramParserError(err) && invocation.Interpreter.SharedState.Config.LegacyContractUpgradeEnabled {
+		if !ignoreUpdatedProgramParserError(err) && legacyUpgradeEnabled {
 			legacyContractUpgrade = true
 			oldProgram, err = old_parser.ParseProgram(
-				invocation.Interpreter.SharedState.Config.MemoryGauge,
+				memoryGauge,
 				oldCode,
 				old_parser.Config{},
 			)
