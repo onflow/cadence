@@ -72,19 +72,19 @@ func (programs Programs) load(
 		return wrapError(err)
 	}
 
-	var elaboration *sema.Elaboration
+	var checker *sema.Checker
 	if config.Mode&NeedTypes != 0 {
-		elaboration, err = programs.check(config, program, location, seenImports)
+		checker, err = programs.check(config, program, location, seenImports)
 		if err != nil {
 			return wrapError(err)
 		}
 	}
 
 	programs[location] = &Program{
-		Location:    location,
-		Code:        code,
-		Program:     program,
-		Elaboration: elaboration,
+		Location: location,
+		Code:     code,
+		Program:  program,
+		Checker:  checker,
 	}
 
 	return nil
@@ -96,7 +96,7 @@ func (programs Programs) check(
 	location common.Location,
 	seenImports importResolutionResults,
 ) (
-	*sema.Elaboration,
+	*sema.Checker,
 	error,
 ) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -145,7 +145,7 @@ func (programs Programs) check(
 						return nil, err
 					}
 
-					elaboration = programs[importedLocation].Elaboration
+					elaboration = programs[importedLocation].Checker.Elaboration
 				}
 
 				return sema.ElaborationImport{
@@ -163,5 +163,5 @@ func (programs Programs) check(
 		return nil, err
 	}
 
-	return checker.Elaboration, nil
+	return checker, nil
 }
