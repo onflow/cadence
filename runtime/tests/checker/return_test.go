@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -209,7 +210,9 @@ func testExits(t *testing.T, test exitTest) {
 		code,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
 	)

@@ -621,6 +621,117 @@ func TestCoverageReportWithAddressLocation(t *testing.T) {
 	require.JSONEq(t, expected, string(actual))
 }
 
+func TestCoverageReportWithLocationMappings(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  pub fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	locationMappings := map[string]string{
+		"Answer": "cadence/scripts/answer.cdc",
+	}
+	coverageReport := NewCoverageReport()
+	coverageReport.WithLocationMappings(locationMappings)
+
+	t.Run("with AddressLocation", func(t *testing.T) {
+		location := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{1, 2}),
+			Name:    "Answer",
+		}
+		coverageReport.InspectProgram(location, program)
+
+		actual, err := json.Marshal(coverageReport)
+		require.NoError(t, err)
+
+		expected := `
+		  {
+		    "coverage": {
+		      "cadence/scripts/answer.cdc": {
+		        "line_hits": {
+		          "3": 0,
+		          "4": 0,
+		          "5": 0,
+		          "7": 0
+		        },
+		        "missed_lines": [3, 4, 5, 7],
+		        "statements": 4,
+		        "percentage": "0.0%"
+		      }
+		    },
+		    "excluded_locations": []
+		  }
+		`
+		require.JSONEq(t, expected, string(actual))
+	})
+
+	t.Run("with StringLocation", func(t *testing.T) {
+		location := common.StringLocation("Answer")
+		coverageReport.InspectProgram(location, program)
+
+		actual, err := json.Marshal(coverageReport)
+		require.NoError(t, err)
+
+		expected := `
+		  {
+		    "coverage": {
+		      "cadence/scripts/answer.cdc": {
+		        "line_hits": {
+		          "3": 0,
+		          "4": 0,
+		          "5": 0,
+		          "7": 0
+		        },
+		        "missed_lines": [3, 4, 5, 7],
+		        "statements": 4,
+		        "percentage": "0.0%"
+		      }
+		    },
+		    "excluded_locations": []
+		  }
+		`
+		require.JSONEq(t, expected, string(actual))
+	})
+
+	t.Run("with IdentifierLocation", func(t *testing.T) {
+		location := common.IdentifierLocation("Answer")
+		coverageReport.InspectProgram(location, program)
+
+		actual, err := json.Marshal(coverageReport)
+		require.NoError(t, err)
+
+		expected := `
+		  {
+		    "coverage": {
+		      "cadence/scripts/answer.cdc": {
+		        "line_hits": {
+		          "3": 0,
+		          "4": 0,
+		          "5": 0,
+		          "7": 0
+		        },
+		        "missed_lines": [3, 4, 5, 7],
+		        "statements": 4,
+		        "percentage": "0.0%"
+		      }
+		    },
+		    "excluded_locations": []
+		  }
+		`
+		require.JSONEq(t, expected, string(actual))
+	})
+}
+
 func TestCoverageReportReset(t *testing.T) {
 
 	t.Parallel()
@@ -1790,42 +1901,43 @@ func TestCoverageReportLCOVFormat(t *testing.T) {
 	  }
 	`)
 
-	coverageReport := NewCoverageReport()
-	scriptlocation := common.ScriptLocation{}
-	coverageReport.ExcludeLocation(scriptlocation)
+	t.Run("without location mappings", func(t *testing.T) {
+		coverageReport := NewCoverageReport()
+		scriptlocation := common.ScriptLocation{}
+		coverageReport.ExcludeLocation(scriptlocation)
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
-			switch location {
-			case common.StringLocation("IntegerTraits"):
-				return integerTraits, nil
-			default:
-				return nil, fmt.Errorf("unknown import location: %s", location)
-			}
-		},
-	}
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				switch location {
+				case common.StringLocation("IntegerTraits"):
+					return integerTraits, nil
+				default:
+					return nil, fmt.Errorf("unknown import location: %s", location)
+				}
+			},
+		}
 
-	runtime := newTestInterpreterRuntime()
-	runtime.defaultConfig.CoverageReport = coverageReport
+		runtime := newTestInterpreterRuntime()
+		runtime.defaultConfig.CoverageReport = coverageReport
 
-	value, err := runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface:      runtimeInterface,
-			Location:       scriptlocation,
-			CoverageReport: coverageReport,
-		},
-	)
-	require.NoError(t, err)
+		value, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:      runtimeInterface,
+				Location:       scriptlocation,
+				CoverageReport: coverageReport,
+			},
+		)
+		require.NoError(t, err)
 
-	assert.Equal(t, cadence.NewInt(42), value)
+		assert.Equal(t, cadence.NewInt(42), value)
 
-	actual, err := coverageReport.MarshalLCOV()
-	require.NoError(t, err)
+		actual, err := coverageReport.MarshalLCOV()
+		require.NoError(t, err)
 
-	expected := `TN:
+		expected := `TN:
 SF:S.IntegerTraits
 DA:9,1
 DA:13,10
@@ -1845,11 +1957,83 @@ LF:14
 LH:14
 end_of_record
 `
-	require.Equal(t, expected, string(actual))
 
-	assert.Equal(
-		t,
-		"Coverage: 100.0% of statements",
-		coverageReport.String(),
-	)
+		require.Equal(t, expected, string(actual))
+
+		assert.Equal(
+			t,
+			"Coverage: 100.0% of statements",
+			coverageReport.String(),
+		)
+	})
+
+	t.Run("with location mappings", func(t *testing.T) {
+		locationMappings := map[string]string{
+			"IntegerTraits": "cadence/contracts/IntegerTraits.cdc",
+		}
+		coverageReport := NewCoverageReport()
+		coverageReport.WithLocationMappings(locationMappings)
+		scriptlocation := common.ScriptLocation{}
+		coverageReport.ExcludeLocation(scriptlocation)
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				switch location {
+				case common.StringLocation("IntegerTraits"):
+					return integerTraits, nil
+				default:
+					return nil, fmt.Errorf("unknown import location: %s", location)
+				}
+			},
+		}
+
+		runtime := newTestInterpreterRuntime()
+		runtime.defaultConfig.CoverageReport = coverageReport
+
+		value, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:      runtimeInterface,
+				Location:       scriptlocation,
+				CoverageReport: coverageReport,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, cadence.NewInt(42), value)
+
+		actual, err := coverageReport.MarshalLCOV()
+		require.NoError(t, err)
+
+		expected := `TN:
+SF:cadence/contracts/IntegerTraits.cdc
+DA:9,1
+DA:13,10
+DA:14,1
+DA:15,9
+DA:16,1
+DA:17,8
+DA:18,1
+DA:19,7
+DA:20,1
+DA:21,6
+DA:22,1
+DA:25,5
+DA:26,4
+DA:29,1
+LF:14
+LH:14
+end_of_record
+`
+		require.Equal(t, expected, string(actual))
+
+		assert.Equal(
+			t,
+			"Coverage: 100.0% of statements",
+			coverageReport.String(),
+		)
+	})
+
 }

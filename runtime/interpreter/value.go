@@ -3057,6 +3057,9 @@ func (v *ArrayValue) Reverse(
 				return nil
 			}
 
+			// Meter computation for iterating the array.
+			interpreter.ReportComputation(common.ComputationKindLoop, 1)
+
 			value := v.Get(interpreter, locationRange, index)
 			index--
 
@@ -3108,6 +3111,9 @@ func (v *ArrayValue) Filter(
 			var value Value
 
 			for {
+				// Meter computation for iterating the array.
+				interpreter.ReportComputation(common.ComputationKindLoop, 1)
+
 				atreeValue, err := iterator.Next()
 				if err != nil {
 					panic(errors.NewExternalError(err))
@@ -3201,6 +3207,9 @@ func (v *ArrayValue) Map(
 		common.ZeroAddress,
 		uint64(v.Count()),
 		func() Value {
+
+			// Meter computation for iterating the array.
+			interpreter.ReportComputation(common.ComputationKindLoop, 1)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
@@ -16878,6 +16887,10 @@ func (v *CompositeValue) SetMember(
 		v.checkInvalidatedResourceUse(locationRange)
 	}
 
+	valueID := v.ValueID()
+
+	interpreter.enforceNotResourceDestruction(valueID, locationRange)
+
 	if config.TracingEnabled {
 		startTime := time.Now()
 
@@ -16905,7 +16918,7 @@ func (v *CompositeValue) SetMember(
 		true,
 		nil,
 		map[atree.ValueID]struct{}{
-			v.ValueID(): {},
+			valueID: {},
 		},
 		true, // value is standalone before being set in parent container.
 	)
@@ -17156,7 +17169,7 @@ func (v *CompositeValue) ConformsToStaticType(
 		}
 	}
 
-	fieldsLen := int(v.dictionary.Count())
+	fieldsLen := v.FieldCount()
 	if v.ComputedFields != nil {
 		fieldsLen += len(v.ComputedFields)
 	}
@@ -17201,6 +17214,10 @@ func (v *CompositeValue) ConformsToStaticType(
 	}
 
 	return true
+}
+
+func (v *CompositeValue) FieldCount() int {
+	return int(v.dictionary.Count())
 }
 
 func (v *CompositeValue) IsStorable() bool {
@@ -17259,6 +17276,13 @@ func (v *CompositeValue) Transfer(
 	hasNoParentContainer bool,
 ) Value {
 
+	config := interpreter.SharedState.Config
+
+	// Should be checked before accessing `v.dictionary`.
+	if config.InvalidatedResourceValidationEnabled {
+		v.checkInvalidatedResourceUse(locationRange)
+	}
+
 	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(v.dictionary.Count(), 0)
 	common.UseMemory(interpreter, baseUse)
 	common.UseMemory(interpreter, elementOverhead)
@@ -17266,12 +17290,6 @@ func (v *CompositeValue) Transfer(
 	common.UseMemory(interpreter, metaDataUse)
 
 	interpreter.ReportComputation(common.ComputationKindTransferCompositeValue, 1)
-
-	config := interpreter.SharedState.Config
-
-	if config.InvalidatedResourceValidationEnabled {
-		v.checkInvalidatedResourceUse(locationRange)
-	}
 
 	if config.TracingEnabled {
 		startTime := time.Now()
@@ -19644,6 +19662,11 @@ func (v *SomeValue) NeedsStoreTo(address atree.Address) bool {
 }
 
 func (v *SomeValue) IsResourceKinded(interpreter *Interpreter) bool {
+	// If the inner value is `nil`, then this is an invalidated resource.
+	if v.value == nil {
+		return true
+	}
+
 	return v.value.IsResourceKinded(interpreter)
 }
 

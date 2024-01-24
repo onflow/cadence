@@ -145,8 +145,12 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-				BaseTypeActivation:  baseTypeActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+				BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseTypeActivation
+				},
 				CheckHandler: func(checker *sema.Checker, check func()) {
 					if checker.Location == TestLocation {
 						checker.Elaboration.SetCompositeType(
@@ -158,8 +162,10 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 				},
 			},
 			Config: &interpreter.Config{
-				Storage:        storage,
-				BaseActivation: baseActivation,
+				Storage: storage,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 			},
 		},
 	)

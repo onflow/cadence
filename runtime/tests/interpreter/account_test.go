@@ -89,14 +89,15 @@ func testAccount(
 	accountValueDeclaration.Name = "account"
 	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
-	if checkerConfig.BaseValueActivation == nil {
-		checkerConfig.BaseValueActivation = sema.BaseValueActivation
-	}
-	baseValueActivation := sema.NewVariableActivation(checkerConfig.BaseValueActivation)
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	for _, valueDeclaration := range valueDeclarations {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
-	checkerConfig.BaseValueActivation = baseValueActivation
+
+	require.Nil(t, checkerConfig.BaseValueActivationHandler)
+	checkerConfig.BaseValueActivationHandler = func(_ common.Location) *sema.VariableActivation {
+		return baseValueActivation
+	}
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	for _, valueDeclaration := range valueDeclarations {
@@ -108,7 +109,9 @@ func testAccount(
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &checkerConfig,
 			Config: &interpreter.Config{
-				BaseActivation:       baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				AuthAccountHandler: func(address interpreter.AddressValue) interpreter.Value {
 					return newTestAuthAccountValue(nil, address)
@@ -3048,6 +3051,7 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 
 		t.Run(fmt.Sprintf("with imported function call, continue: %t", continueAfterMutation), func(t *testing.T) {
 			t.Parallel()
+
 			address := common.MustBytesToAddress([]byte{1})
 			addressValue := interpreter.AddressValue(address)
 
@@ -3057,6 +3061,7 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 				Value: newTestAuthAccountValue(nil, addressValue),
 				Kind:  common.DeclarationKindConstant,
 			}
+
 			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 			baseValueActivation.DeclareValue(authAccountValueDeclaration)
 			baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
@@ -3074,7 +3079,9 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 						Name:    "foo",
 					},
 					Config: &sema.Config{
-						BaseValueActivation: baseValueActivation,
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 					},
 				},
 			)
@@ -3103,7 +3110,9 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 				),
 				ParseCheckAndInterpretOptions{
 					CheckerConfig: &sema.Config{
-						BaseValueActivation: baseValueActivation,
+						BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseValueActivation
+						},
 						LocationHandler: func(
 							identifiers []ast.Identifier,
 							location common.Location,
@@ -3140,7 +3149,9 @@ func TestInterpretAccountIterationMutation(t *testing.T) {
 						},
 					},
 					Config: &interpreter.Config{
-						BaseActivation:       baseActivation,
+						BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+							return baseActivation
+						},
 						ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 						ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 							require.IsType(t, common.AddressLocation{}, location)

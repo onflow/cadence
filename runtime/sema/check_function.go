@@ -95,7 +95,13 @@ func (checker *Checker) visitFunctionDeclaration(
 
 	functionType := checker.Elaboration.FunctionDeclarationFunctionType(declaration)
 	if functionType == nil {
-		functionType = checker.functionType(declaration.ParameterList, declaration.ReturnTypeAnnotation)
+
+		functionType = checker.functionType(
+			declaration.IsNative(),
+			declaration.TypeParameterList,
+			declaration.ParameterList,
+			declaration.ReturnTypeAnnotation,
+		)
 
 		if options.declareFunction {
 			checker.declareFunctionDeclaration(declaration, functionType)
@@ -430,7 +436,12 @@ func (checker *Checker) declareBefore() {
 func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpression) Type {
 
 	// TODO: infer
-	functionType := checker.functionType(expression.ParameterList, expression.ReturnTypeAnnotation)
+	functionType := checker.functionType(
+		false,
+		nil,
+		expression.ParameterList,
+		expression.ReturnTypeAnnotation,
+	)
 
 	checker.Elaboration.SetFunctionExpressionFunctionType(expression, functionType)
 

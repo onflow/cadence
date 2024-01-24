@@ -38,6 +38,7 @@ func NewAuthAccountContractsValue(
 	address AddressValue,
 	addFunction FunctionValue,
 	updateFunction FunctionValue,
+	tryUpdateFunction FunctionValue,
 	getFunction FunctionValue,
 	borrowFunction FunctionValue,
 	removeFunction FunctionValue,
@@ -50,6 +51,7 @@ func NewAuthAccountContractsValue(
 		sema.AuthAccountContractsTypeBorrowFunctionName:               borrowFunction,
 		sema.AuthAccountContractsTypeRemoveFunctionName:               removeFunction,
 		sema.AuthAccountContractsTypeUpdate__experimentalFunctionName: updateFunction,
+		sema.AuthAccountContractsTypeTryUpdateFunctionName:            tryUpdateFunction,
 	}
 
 	computeField := func(

@@ -174,6 +174,17 @@ func (s *Storage) recordContractUpdate(
 	s.contractUpdates.Set(key, contractValue)
 }
 
+func (s *Storage) contractUpdateRecorded(
+	location common.AddressLocation,
+) bool {
+	if s.contractUpdates == nil {
+		return false
+	}
+
+	key := interpreter.NewStorageKey(s.memoryGauge, location.Address, location.Name)
+	return s.contractUpdates.Contains(key)
+}
+
 type ContractUpdate struct {
 	ContractValue *interpreter.CompositeValue
 	Key           interpreter.StorageKey
