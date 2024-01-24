@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/old_parser"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -1593,16 +1594,37 @@ func changeAccountContracts(
 			},
 		)
 
+		var legacyContractUpgrade bool
+		// if we are allowing legacy contract upgrades, fall back to the old parser when the new one fails
+		if !ignoreUpdatedProgramParserError(err) && invocation.Interpreter.SharedState.Config.LegacyContractUpgradeEnabled {
+			legacyContractUpgrade = true
+			oldProgram, err = old_parser.ParseProgram(
+				invocation.Interpreter.SharedState.Config.MemoryGauge,
+				oldCode,
+				old_parser.Config{},
+			)
+		}
+
 		if !ignoreUpdatedProgramParserError(err) {
 			handleContractUpdateError(err)
 		}
 
-		validator := NewContractUpdateValidator(
-			location,
-			contractName,
-			oldProgram,
-			program.Program,
-		)
+		var validator UpdateValidator
+		if legacyContractUpgrade {
+			validator = NewLegacyContractUpdateValidator(
+				location,
+				contractName,
+				oldProgram,
+				program.Program,
+			)
+		} else {
+			validator = NewContractUpdateValidator(
+				location,
+				contractName,
+				oldProgram,
+				program.Program,
+			)
+		}
 		err = validator.Validate()
 		handleContractUpdateError(err)
 	}

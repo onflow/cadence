@@ -192,6 +192,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		OnInvokedFunctionReturn:       e.newOnInvokedFunctionReturnHandler(),
 		CapabilityBorrowHandler:       stdlib.BorrowCapabilityController,
 		CapabilityCheckHandler:        stdlib.CheckCapabilityController,
+		LegacyContractUpgradeEnabled:  e.config.LegacyContractUpgradeEnabled,
 	}
 }
 
