@@ -204,7 +204,7 @@ func (s StorageMap) Count() uint64 {
 // StorageMapIterator is an iterator over StorageMap
 type StorageMapIterator struct {
 	gauge       common.MemoryGauge
-	mapIterator *atree.MapIterator
+	mapIterator atree.MapIterator
 	storage     atree.SlabStorage
 }
 
