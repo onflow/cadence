@@ -283,7 +283,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 func handlePriv(p *parser) {
 	p.report(p.syntaxErrorWithSuggestedFix(
 		"`priv` is no longer a valid access keyword",
-		"`access(self)`",
+		"access(self)",
 	))
 	p.next()
 }
@@ -298,7 +298,7 @@ func handlePub(p *parser) error {
 		p.report(NewSyntaxErrorWithSuggestedReplacement(
 			pubToken.Range,
 			"`pub` is no longer a valid access keyword",
-			"`access(all)`",
+			"access(all)",
 		))
 		return nil
 	}
