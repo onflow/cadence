@@ -687,6 +687,9 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			false,
 			nil,
 			nil,
+			// TODO:
+			false,
+
 		)
 
 		inter.WriteStored(
@@ -833,6 +836,8 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 			false,
 			nil,
 			nil,
+			// TODO:
+			false,
 		)
 
 		inter.WriteStored(
@@ -976,6 +981,8 @@ func TestAccountTypeRehash(t *testing.T) {
 				false,
 				nil,
 				nil,
+				// TODO:
+				false,
 			),
 		)
 
@@ -1035,11 +1042,15 @@ func TestAccountTypeRehash(t *testing.T) {
 		dictValue := storedValue.(*interpreter.DictionaryValue)
 
 		var existingKeys []interpreter.Value
-		dictValue.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
-			existingKeys = append(existingKeys, key)
-			// continue iteration
-			return true
-		})
+		dictValue.Iterate(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(key, value interpreter.Value) (resume bool) {
+				existingKeys = append(existingKeys, key)
+				// continue iteration
+				return true
+			},
+		)
 
 		for _, key := range existingKeys {
 			actual := dictValue.Remove(

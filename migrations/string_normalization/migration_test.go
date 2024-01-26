@@ -245,6 +245,8 @@ func TestStringNormalizingMigration(t *testing.T) {
 			false,
 			nil,
 			nil,
+			// TODO:
+			false,
 		)
 
 		inter.WriteStored(
@@ -382,6 +384,9 @@ func TestStringValueRehash(t *testing.T) {
 				false,
 				nil,
 				nil,
+				// TODO:
+				false,
+
 			),
 		)
 
@@ -521,6 +526,8 @@ func TestCharacterValueRehash(t *testing.T) {
 				false,
 				nil,
 				nil,
+				// TODO:
+				false,
 			),
 		)
 

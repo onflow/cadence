@@ -110,11 +110,11 @@ func TestInclusiveRangeStorage(t *testing.T) {
 		sema.NewInclusiveRangeType(inter, sema.Int16Type),
 	)
 
-	require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
+	require.NotEqual(t, atree.ValueID{}, value.ValueID())
 
 	require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
-	_, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID())
+	_, ok, err := storage.BasicSlabStorage.Retrieve(value.SlabID())
 	require.NoError(t, err)
 	require.True(t, ok)
 
@@ -125,7 +125,7 @@ func TestInclusiveRangeStorage(t *testing.T) {
 
 	require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
-	retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID())
+	retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.SlabID())
 	require.NoError(t, err)
 	require.True(t, ok)
 
@@ -588,7 +588,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		fieldMember := sema.NewFieldMember(
 			nil,
 			testCompositeType,
-			ast.AccessPublic,
+			sema.UnauthorizedAccess,
 			ast.VariableKindVariable,
 			fieldName,
 			sema.UInt8Type,
@@ -629,7 +629,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		containerValue1 := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
 			common.ZeroAddress,
@@ -638,7 +638,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		containerValue2 := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
 			common.ZeroAddress,
@@ -806,7 +806,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		containerValue1 := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
 			common.ZeroAddress,
@@ -815,7 +815,7 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 		containerValue2 := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
 			common.ZeroAddress,
@@ -855,7 +855,13 @@ func TestNestedContainerMutationAfterMove(t *testing.T) {
 
 		require.Equal(t, "S.test.TestResource(test: 3)", childValue1.String())
 
-		ref1 := NewEphemeralReferenceValue(nil, false, childValue1, testResourceType)
+		ref1 := NewEphemeralReferenceValue(
+			nil,
+			UnauthorizedAccess,
+			childValue1,
+			testResourceType,
+			EmptyLocationRange,
+		)
 
 		containerValue1.Append(inter, EmptyLocationRange, childValue1)
 		// Append invalidated, get again

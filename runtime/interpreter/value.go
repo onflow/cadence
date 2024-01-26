@@ -3390,8 +3390,7 @@ func (v *ArrayValue) ToVariableSized(
 				false,
 				nil,
 				nil,
-				// TODO:
-				nil,
+				false,
 			)
 		},
 	)
@@ -3451,8 +3450,7 @@ func (v *ArrayValue) ToConstantSized(
 				false,
 				nil,
 				nil,
-				// TODO:
-				nil,
+				false,
 			)
 		},
 	)
@@ -20436,8 +20434,7 @@ func DereferenceValue(
 		false,
 		nil,
 		nil,
-		// TODO:
-		nil,
+		false,
 	)
 }
 

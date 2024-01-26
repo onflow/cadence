@@ -1656,7 +1656,7 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 	childArray1 := interpreter.NewArrayValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.VariableSizedStaticType{
+		&interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
 		owner,
@@ -1669,7 +1669,7 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 	childArray2 := interpreter.NewArrayValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.VariableSizedStaticType{
+		&interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
 		owner,
@@ -1681,7 +1681,7 @@ func TestCheckStorageHealthInMiddleOfDeepRemove(t *testing.T) {
 	array := interpreter.NewArrayValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.VariableSizedStaticType{
+		&interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
 		owner,
@@ -1732,7 +1732,7 @@ func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 	gchildArray := interpreter.NewArrayValue(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.VariableSizedStaticType{
+		&interpreter.VariableSizedStaticType{
 			Type: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
 		common.ZeroAddress,
@@ -1821,7 +1821,7 @@ func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 	childMap := interpreter.NewDictionaryValueWithAddress(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.DictionaryStaticType{
+		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 		},
@@ -1834,7 +1834,7 @@ func TestCheckStorageHealthInMiddleOfTransferAndRemove(t *testing.T) {
 	m := interpreter.NewDictionaryValueWithAddress(
 		inter,
 		interpreter.EmptyLocationRange,
-		interpreter.DictionaryStaticType{
+		&interpreter.DictionaryStaticType{
 			KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
 			ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 		},

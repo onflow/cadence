@@ -3150,7 +3150,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				ConstantSizedStaticType{
+				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 					Size: 0,
 				},
@@ -3202,7 +3202,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 				NewArrayValue(
 					inter,
 					EmptyLocationRange,
-					ConstantSizedStaticType{
+					&ConstantSizedStaticType{
 						Type: PrimitiveStaticTypeAnyStruct,
 						Size: 0,
 					},
@@ -3261,7 +3261,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				ConstantSizedStaticType{
+				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 					Size: 0,
 				},
@@ -3300,7 +3300,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				ConstantSizedStaticType{
+				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 					Size: 0,
 				},
@@ -3342,7 +3342,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				ConstantSizedStaticType{
+				&ConstantSizedStaticType{
 					Type: PrimitiveStaticTypeAnyStruct,
 					Size: 0,
 				},

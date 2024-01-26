@@ -4652,8 +4652,7 @@ func GetNativeCompositeValueComputedFields(qualifiedIdentifier string) map[strin
 					false,
 					nil,
 					nil,
-					// TODO:
-					nil,
+					false,
 				)
 			},
 		}

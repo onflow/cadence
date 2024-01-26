@@ -482,6 +482,8 @@ func TestMultipleMigrations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			// TODO:
+			false,
 		)
 
 		inter.WriteStored(
@@ -621,6 +623,8 @@ func TestMigrationError(t *testing.T) {
 			false,
 			nil,
 			nil,
+			// TODO:
+			false,
 		)
 
 		inter.WriteStored(

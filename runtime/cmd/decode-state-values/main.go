@@ -141,11 +141,6 @@ type slabStorage struct{}
 
 var _ atree.SlabStorage = &slabStorage{}
 
-func (s *slabStorage) RetrieveIfLoaded(atree.SlabID) atree.Slab {
-	// RetrieveIfLoaded() is used for loaded resource tracking.  So it isn't needed here.
-	panic(runtimeErr.NewUnreachableError())
-}
-
 func (s *slabStorage) Retrieve(id atree.SlabID) (atree.Slab, bool, error) {
 	data, ok := storage[slabIDToStorageKey(id)]
 	if !ok {
@@ -236,8 +231,9 @@ func (s *slabStorage) Count() int {
 	return len(storage)
 }
 
-func (s *slabStorage) RetrieveIfLoaded(id atree.StorageID) atree.Slab {
-	panic("unexpected RetrieveIfLoaded call")
+func (s *slabStorage) RetrieveIfLoaded(atree.SlabID) atree.Slab {
+	// RetrieveIfLoaded() is used for loaded resource tracking.  So it isn't needed here.
+	panic(runtimeErr.NewUnreachableError())
 }
 
 // interpreterStorage

@@ -3034,6 +3034,8 @@ func TestRehash(t *testing.T) {
 				false,
 				nil,
 				nil,
+				// TODO:
+				false,
 			),
 		)
 

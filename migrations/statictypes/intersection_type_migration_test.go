@@ -546,6 +546,8 @@ func TestIntersectionTypeRehash(t *testing.T) {
 				false,
 				nil,
 				nil,
+				// TODO:
+				false,
 			),
 		)
 
@@ -710,6 +712,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 					false,
 					nil,
 					nil,
+					// TODO:
+					false,
 				),
 			)
 
@@ -849,6 +853,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 					false,
 					nil,
 					nil,
+					// TODO:
+					false,
 				),
 			)
 
