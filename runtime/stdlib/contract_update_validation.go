@@ -440,6 +440,10 @@ func (e *ContractUpdateError) ChildErrors() []error {
 	return e.Errors
 }
 
+func (e *ContractUpdateError) Unwrap() []error {
+	return e.Errors
+}
+
 func (e *ContractUpdateError) ImportLocation() common.Location {
 	return e.Location
 }

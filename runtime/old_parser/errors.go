@@ -50,6 +50,10 @@ func (e Error) ChildErrors() []error {
 	return e.Errors
 }
 
+func (e Error) Unwrap() []error {
+	return e.Errors
+}
+
 // ParserError
 
 type ParseError interface {
