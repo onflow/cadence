@@ -2102,7 +2102,10 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 			dictionary := dictValue.dictionary
 
-			iterator, err := dictionary.Iterator()
+			valueComparator := newValueComparator(interpreter, locationRange)
+			hashInputProvider := newHashInputProvider(interpreter, locationRange)
+
+			iterator, err := dictionary.Iterator(valueComparator, hashInputProvider)
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
@@ -5211,11 +5214,14 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 
 	switch value := value.(type) {
 	case *CompositeValue:
-		value.ForEachLoadedField(interpreter, func(_ string, fieldValue Value) (resume bool) {
-			interpreter.invalidateReferencedResources(fieldValue)
-			// continue iteration
-			return true
-		})
+		value.ForEachLoadedField(
+			interpreter,
+			func(_ string, fieldValue Value) (resume bool) {
+				interpreter.invalidateReferencedResources(fieldValue)
+				// continue iteration
+				return true
+			},
+		)
 		valueID = value.ValueID()
 
 	case *DictionaryValue:
@@ -5229,10 +5235,13 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 		valueID = value.ValueID()
 
 	case *ArrayValue:
-		value.IterateLoaded(interpreter, func(element Value) (resume bool) {
-			interpreter.invalidateReferencedResources(element)
-			return true
-		})
+		value.IterateLoaded(
+			interpreter,
+			func(element Value) (resume bool) {
+				interpreter.invalidateReferencedResources(element)
+				return true
+			},
+		)
 		valueID = value.ValueID()
 
 	case *SomeValue:

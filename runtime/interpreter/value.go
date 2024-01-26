@@ -1854,7 +1854,7 @@ func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (re
 }
 
 func (v *ArrayValue) IterateLoaded(interpreter *Interpreter, f func(element Value) (resume bool)) {
-	v.iterate(interpreter, v.array.IterateLoadedValues, f)
+	v.iterate(interpreter, v.array.IterateReadOnlyLoadedValues, f)
 }
 
 func (v *ArrayValue) iterate(
@@ -17937,7 +17937,14 @@ func (v *CompositeValue) GetOwner() common.Address {
 func (v *CompositeValue) ForEachFieldName(
 	f func(fieldName string) (resume bool),
 ) {
-	v.forEachFieldName(v.dictionary.IterateKeys, f)
+	iterate := func(fn atree.MapElementIterationFunc) error {
+		return v.dictionary.IterateKeys(
+			StringAtreeValueComparator,
+			StringAtreeValueHashInput,
+			fn,
+		)
+	}
+	v.forEachFieldName(iterate, f)
 }
 
 func (v *CompositeValue) forEachFieldName(
@@ -17961,8 +17968,14 @@ func (v *CompositeValue) ForEachField(
 	gauge common.MemoryGauge,
 	f func(fieldName string, fieldValue Value) (resume bool),
 ) {
-	// TODO: pass StringAtreeValueComparator, StringAtreeValueHashInput,
-	v.forEachField(gauge, v.dictionary.Iterate, f)
+	iterate := func(fn atree.MapEntryIterationFunc) error {
+		return v.dictionary.Iterate(
+			StringAtreeValueComparator,
+			StringAtreeValueHashInput,
+			fn,
+		)
+	}
+	v.forEachField(gauge, iterate, f)
 }
 
 // ForEachLoadedField iterates over all LOADED field-name field-value pairs of the composite value.
@@ -17971,7 +17984,7 @@ func (v *CompositeValue) ForEachLoadedField(
 	gauge common.MemoryGauge,
 	f func(fieldName string, fieldValue Value) (resume bool),
 ) {
-	v.forEachField(gauge, v.dictionary.IterateLoadedValues, f)
+	v.forEachField(gauge, v.dictionary.IterateReadOnlyLoadedValues, f)
 }
 
 func (v *CompositeValue) forEachField(
@@ -18619,9 +18632,19 @@ func (v *DictionaryValue) Accept(
 
 func (v *DictionaryValue) IterateKeys(
 	interpreter *Interpreter,
+	locationRange LocationRange,
 	f func(key Value) (resume bool),
 ) {
-	v.iterateKeys(interpreter, v.dictionary.IterateKeys, f)
+	valueComparator := newValueComparator(interpreter, locationRange)
+	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	iterate := func(fn atree.MapElementIterationFunc) error {
+		return v.dictionary.IterateKeys(
+			valueComparator,
+			hashInputProvider,
+			fn,
+		)
+	}
+	v.iterateKeys(interpreter, iterate, f)
 }
 
 func (v *DictionaryValue) iterateKeys(
@@ -18656,23 +18679,31 @@ func (v *DictionaryValue) Iterate(
 	locationRange LocationRange,
 	f func(key, value Value) (resume bool),
 ) {
-	// TODO: pass valueComparator, hashInputProvider,
-	//  valueComparator := newValueComparator(interpreter, locationRange)
-	//  hashInputProvider := newHashInputProvider(interpreter, locationRange)
-	v.iterate(interpreter, locationRange, v.dictionary.Iterate, f)
+	valueComparator := newValueComparator(interpreter, locationRange)
+	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	iterate := func(fn atree.MapEntryIterationFunc) error {
+		return v.dictionary.Iterate(
+			valueComparator,
+			hashInputProvider,
+			fn,
+		)
+	}
+	v.iterate(interpreter, iterate, f)
 }
 
 func (v *DictionaryValue) IterateLoaded(
 	interpreter *Interpreter,
-	locationRange LocationRange,
 	f func(key, value Value) (resume bool),
 ) {
-	v.iterate(interpreter, locationRange, v.dictionary.IterateLoadedValues, f)
+	v.iterate(
+		interpreter,
+		v.dictionary.IterateReadOnlyLoadedValues,
+		f,
+	)
 }
 
 func (v *DictionaryValue) iterate(
 	interpreter *Interpreter,
-	locationRange LocationRange,
 	atreeIterate func(fn atree.MapEntryIterationFunc) error,
 	f func(key Value, value Value) (resume bool),
 ) {
@@ -20404,6 +20435,8 @@ func DereferenceValue(
 		atree.Address{},
 		false,
 		nil,
+		nil,
+		// TODO:
 		nil,
 	)
 }
