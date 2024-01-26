@@ -148,6 +148,10 @@ func (e CheckerError) ChildErrors() []error {
 	return e.Errors
 }
 
+func (e CheckerError) Unwrap() []error {
+	return e.Errors
+}
+
 func (e CheckerError) ImportLocation() common.Location {
 	return e.Location
 }
