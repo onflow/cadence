@@ -59,7 +59,7 @@ func NewSharedState(config *Config) *SharedState {
 		},
 		inStorageIteration:             false,
 		storageMutatedDuringIteration:  false,
-		referencedResourceKindedValues: map[atree.ValueID]map[*EphemeralReferenceValue]struct{}{},
+		referencedResourceKindedValues: ReferencedResourceKindedValues{},
 		resourceVariables:              map[ResourceKindedValue]*Variable{},
 		CapabilityControllerIterations: map[AddressPath]int{},
 		containerValueIteration:        map[atree.ValueID]struct{}{},
