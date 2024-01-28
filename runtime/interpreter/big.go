@@ -22,6 +22,7 @@ import (
 	"math/big"
 
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func SignedBigIntToBigEndianBytes(bigInt *big.Int) []byte {
@@ -139,4 +140,32 @@ func BigEndianBytesToSignedBigInt(b []byte) *big.Int {
 
 func BigEndianBytesToUnsignedBigInt(b []byte) *big.Int {
 	return new(big.Int).SetBytes(b)
+}
+
+func BigIntSqrt(interpreter *Interpreter, value *big.Int, locationRange LocationRange) UFix64Value {
+	if value.Sign() < 0 {
+		panic(UnderflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	valueFloat := new(big.Float).SetPrec(64).SetInt(value)
+	res := new(big.Float).SetPrec(64).Sqrt(valueFloat)
+
+	valueGetter := func() uint64 {
+		res.Mul(res, new(big.Float).SetPrec(64).SetInt(sema.Fix64FactorBig))
+
+		resInt := new(big.Int)
+		res.Int(resInt)
+
+		if !resInt.IsUint64() || resInt.Uint64() > sema.UFix64TypeMaxInt {
+			panic(OverflowError{
+				LocationRange: locationRange,
+			})
+		}
+
+		return resInt.Uint64()
+	}
+
+	return NewUFix64Value(interpreter, valueGetter)
 }

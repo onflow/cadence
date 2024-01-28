@@ -3405,6 +3405,7 @@ type NumberValue interface {
 	Div(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
 	SaturatingDiv(interpreter *Interpreter, other NumberValue, locationRange LocationRange) NumberValue
 	ToBigEndianBytes() []byte
+	Sqrt(*Interpreter, LocationRange) UFix64Value
 }
 
 func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, typ sema.Type, locationRange LocationRange) Value {
@@ -3839,6 +3840,11 @@ func (v IntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue, loc
 	}()
 
 	return v.Div(interpreter, other, locationRange)
+}
+
+func (v IntValue) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := v.ToBigInt(interpreter)
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v IntValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -4498,6 +4504,12 @@ func (v Int8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, lo
 	return NewInt8Value(interpreter, valueGetter)
 }
 
+func (v Int8Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := new(big.Int)
+	val.SetInt64(int64(v))
+	return BigIntSqrt(interpreter, val, locationRange)
+}
+
 func (v Int8Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int8Value)
 	if !ok {
@@ -5136,6 +5148,12 @@ func (v Int16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	}
 
 	return NewInt16Value(interpreter, valueGetter)
+}
+
+func (v Int16Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := new(big.Int)
+	val.SetInt64(int64(v))
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v Int16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -5781,6 +5799,12 @@ func (v Int32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	return NewInt32Value(interpreter, valueGetter)
 }
 
+func (v Int32Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := new(big.Int)
+	val.SetInt64(int64(v))
+	return BigIntSqrt(interpreter, val, locationRange)
+}
+
 func (v Int32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int32Value)
 	if !ok {
@@ -6421,6 +6445,12 @@ func (v Int64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	}
 
 	return NewInt64Value(interpreter, valueGetter)
+}
+
+func (v Int64Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := new(big.Int)
+	val.SetInt64(int64(v))
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v Int64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -7118,6 +7148,11 @@ func (v Int128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	}
 
 	return NewInt128ValueFromBigInt(interpreter, valueGetter)
+}
+
+func (v Int128Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := v.ToBigInt(interpreter)
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v Int128Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -7862,6 +7897,11 @@ func (v Int256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return NewInt256ValueFromBigInt(interpreter, valueGetter)
 }
 
+func (v Int256Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := v.ToBigInt(interpreter)
+	return BigIntSqrt(interpreter, val, locationRange)
+}
+
 func (v Int256Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Int256Value)
 	if !ok {
@@ -8514,6 +8554,11 @@ func (v UIntValue) SaturatingDiv(interpreter *Interpreter, other NumberValue, lo
 	return v.Div(interpreter, other, locationRange)
 }
 
+func (v UIntValue) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := v.ToBigInt(interpreter)
+	return BigIntSqrt(interpreter, val, locationRange)
+}
+
 func (v UIntValue) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UIntValue)
 	if !ok {
@@ -9076,6 +9121,12 @@ func (v UInt8Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, l
 	}()
 
 	return v.Div(interpreter, other, locationRange)
+}
+
+func (v UInt8Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := new(big.Int)
+	val.SetUint64(uint64(v))
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v UInt8Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -9669,6 +9720,12 @@ func (v UInt16Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	return v.Div(interpreter, other, locationRange)
 }
 
+func (v UInt16Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := new(big.Int)
+	val.SetUint64(uint64(v))
+	return BigIntSqrt(interpreter, val, locationRange)
+}
+
 func (v UInt16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt16Value)
 	if !ok {
@@ -10209,6 +10266,12 @@ func (v UInt32Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	}()
 
 	return v.Div(interpreter, other, locationRange)
+}
+
+func (v UInt32Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := new(big.Int)
+	val.SetUint64(uint64(v))
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v UInt32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -10780,6 +10843,11 @@ func (v UInt64Value) SaturatingDiv(interpreter *Interpreter, other NumberValue, 
 	}()
 
 	return v.Div(interpreter, other, locationRange)
+}
+
+func (v UInt64Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := v.ToBigInt(interpreter)
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v UInt64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -11398,6 +11466,11 @@ func (v UInt128Value) SaturatingDiv(interpreter *Interpreter, other NumberValue,
 	}()
 
 	return v.Div(interpreter, other, locationRange)
+}
+
+func (v UInt128Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := v.ToBigInt(interpreter)
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v UInt128Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -12077,6 +12150,11 @@ func (v UInt256Value) SaturatingDiv(interpreter *Interpreter, other NumberValue,
 	return v.Div(interpreter, other, locationRange)
 }
 
+func (v UInt256Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := v.ToBigInt(interpreter)
+	return BigIntSqrt(interpreter, val, locationRange)
+}
+
 func (v UInt256Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(UInt256Value)
 	if !ok {
@@ -12581,6 +12659,12 @@ func (v Word8Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) Numb
 	panic(errors.NewUnreachableError())
 }
 
+func (v Word8Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := new(big.Int)
+	val.SetUint64(uint64(v))
+	return BigIntSqrt(interpreter, val, locationRange)
+}
+
 func (v Word8Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Word8Value)
 	if !ok {
@@ -13015,6 +13099,12 @@ func (v Word16Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 
 func (v Word16Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Word16Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := new(big.Int)
+	val.SetUint64(uint64(v))
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v Word16Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -13454,6 +13544,12 @@ func (v Word32Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 
 func (v Word32Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Word32Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := new(big.Int)
+	val.SetUint64(uint64(v))
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v Word32Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -13919,6 +14015,11 @@ func (v Word64Value) Div(interpreter *Interpreter, other NumberValue, locationRa
 
 func (v Word64Value) SaturatingDiv(*Interpreter, NumberValue, LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Word64Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := v.ToBigInt(interpreter)
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v Word64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -14436,6 +14537,11 @@ func (v Word128Value) Div(interpreter *Interpreter, other NumberValue, locationR
 
 func (v Word128Value) SaturatingDiv(_ *Interpreter, _ NumberValue, _ LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Word128Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := v.ToBigInt(interpreter)
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v Word128Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -15016,6 +15122,11 @@ func (v Word256Value) Div(interpreter *Interpreter, other NumberValue, locationR
 
 func (v Word256Value) SaturatingDiv(_ *Interpreter, _ NumberValue, _ LocationRange) NumberValue {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Word256Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := v.ToBigInt(interpreter)
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v Word256Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -15705,6 +15816,11 @@ func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 	)
 }
 
+func (v Fix64Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := new(big.Int).SetInt64(int64(v))
+	return BigIntSqrt(interpreter, val, locationRange)
+}
+
 func (v Fix64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
 	o, ok := other.(Fix64Value)
 	if !ok {
@@ -16226,6 +16342,11 @@ func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 		truncatedQuotient.Mul(interpreter, o, locationRange),
 		locationRange,
 	)
+}
+
+func (v UFix64Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
+	val := new(big.Int).SetUint64(uint64(v))
+	return BigIntSqrt(interpreter, val, locationRange)
 }
 
 func (v UFix64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {

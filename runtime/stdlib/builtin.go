@@ -45,6 +45,7 @@ func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibr
 		SignatureAlgorithmConstructor,
 		RLPContract,
 		InclusiveRangeConstructorFunction,
+		SqrtFunction,
 		NewLogFunction(handler),
 		NewRevertibleRandomFunction(handler),
 		NewGetBlockFunction(handler),
