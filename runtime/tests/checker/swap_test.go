@@ -400,3 +400,21 @@ func TestCheckInvalidTwoConstantsSwap(t *testing.T) {
 	assignmentError = errs[1].(*sema.AssignmentToConstantError)
 	assert.Equal(t, "y", assignmentError.Name)
 }
+
+func TestCheckIndexSwapWithInvalidExpression(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          let xs = [1]
+
+          // NOTE: ys is not declared
+          xs[0] <-> ys[0]
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+}
