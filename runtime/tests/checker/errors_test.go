@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -105,5 +106,85 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
 		errs = RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+}
+
+func TestCheckEntitlementsErrorMessage(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("reference subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+				access(all) entitlement E 
+				fun foo() {
+					let x = 1
+					let refX: auth(E) &Int = &x as auth(F) &Int
+				}
+            `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		require.Equal(t, "expected `auth(E) &Int`, got `auth(<<INVALID>>) &Int`", errs[1].(*sema.TypeMismatchError).SecondaryError())
+	})
+
+	t.Run("invalid access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+				access(all) entitlement E 
+				access(all) resource R {
+					access(E) fun foo() {}
+				}
+				fun foo() {
+					let r <- create R() 
+					let refR = &r as auth(F) &R
+					refR.foo()
+					destroy r
+				}
+            `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
+		require.Equal(t, "cannot access `foo`: function requires `E` authorization, but reference only has `<<INVALID>>` authorization", errs[1].(*sema.InvalidAccessError).Error())
+	})
+
+	t.Run("interface as type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+				access(all) entitlement E 
+				access(all) resource interface I {
+					access(E) fun foo()
+				}
+				access(all) resource R: I  {
+					access(E) fun foo() {}
+				}
+				fun foo() {
+					let r <- create R() 
+					let refR = &r as auth(F) &I
+					destroy r
+				}
+            `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[1])
+		require.Equal(t, "got `auth(<<INVALID>>) &I`; consider using `auth(<<INVALID>>) &{I}`", errs[1].(*sema.InvalidInterfaceTypeError).SecondaryError())
 	})
 }

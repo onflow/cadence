@@ -2119,8 +2119,8 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 						)
 					}
 				}
-				result = PrimitiveAccess(ast.AccessNotSpecified)
-				return
+				semanticEntitlements = append(semanticEntitlements, NewEntitlementType(checker.memoryGauge, checker.Location, "<<INVALID>>"))
+				continue
 			}
 			semanticEntitlements = append(semanticEntitlements, entitlementType)
 		}
