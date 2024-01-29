@@ -9709,3 +9709,26 @@ func TestParseDeprecatedAccessModifiers(t *testing.T) {
 		)
 	})
 }
+
+func TestParseKeywordsAsFieldNames(t *testing.T) {
+
+	t.Parallel()
+
+	for _, keyword := range []string{
+		"event",
+		"contract",
+		"default",
+	} {
+		keyword := keyword
+
+		t.Run(keyword, func(t *testing.T) {
+			t.Parallel()
+
+			_, errs := testParseDeclarations(fmt.Sprintf(
+				"struct Foo { var %s: String }",
+				keyword,
+			))
+			require.Empty(t, errs)
+		})
+	}
+}
