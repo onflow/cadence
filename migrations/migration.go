@@ -227,7 +227,7 @@ func (m *StorageMigration) MigrateNestedValue(
 		// Read the keys first, so the iteration wouldn't be affected
 		// by the modification of the nested values.
 		var existingKeysAndValues []keyValuePair
-		dictionary.Iterate(
+		dictionary.IterateReadOnly(
 			m.interpreter,
 			emptyLocationRange,
 			func(key, value interpreter.Value) (resume bool) {

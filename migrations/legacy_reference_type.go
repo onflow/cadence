@@ -34,6 +34,26 @@ type LegacyReferenceType struct {
 
 var _ interpreter.StaticType = &LegacyReferenceType{}
 
+// Equal() compares both value and type of t and other.
+// LegacyReferenceType.Equal() is needed because Equal() in general
+// compares values and their types.  Embedded ReferenceStaticType.Equal()
+// returns false when other is *LegacyReferenceType type.
+func (t *LegacyReferenceType) Equal(other interpreter.StaticType) bool {
+	switch other := other.(type) {
+
+	case *LegacyReferenceType:
+		return t.Authorization.Equal(other.Authorization) &&
+			t.ReferencedType.Equal(other.ReferencedType)
+
+	case *interpreter.ReferenceStaticType:
+		return t.Authorization.Equal(other.Authorization) &&
+			t.ReferencedType.Equal(other.ReferencedType)
+
+	default:
+		return false
+	}
+}
+
 func (t *LegacyReferenceType) ID() common.TypeID {
 	borrowedType := t.ReferencedType
 	return common.TypeID(
