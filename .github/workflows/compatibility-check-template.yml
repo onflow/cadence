@@ -16,6 +16,9 @@ on:
       chain:
         required: true
         type: string
+    secrets:
+      FLOWDIVER_API_KEY:
+        required: true
 
 env:
   GO_VERSION: '1.20'
