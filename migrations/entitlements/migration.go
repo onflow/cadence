@@ -285,10 +285,11 @@ func ConvertValueToEntitlements(
 			},
 		)
 
-		return interpreter.NewDictionaryValue(
+		return interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
 			dictionaryStaticType,
+			v.GetOwner(),
 			values...,
 		), nil
 
