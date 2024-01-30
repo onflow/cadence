@@ -64,9 +64,11 @@ jobs:
 
       - name: Download contracts
         if: ${{ steps.restore-cached-contracts.outputs.cache-hit != 'true' }}
-        working-directory: ./tools/batch-script
+        env:
+          FLOWDIVER_API_KEY: ${{ secrets.FLOWDIVER_API_KEY }}
+        working-directory: ./tools/get-contracts
         run: |
-          go run ./cmd/get_contracts/main.go --chain=${{ inputs.chain }} --u=${{ inputs.url }} > ../../tmp/contracts.csv
+          go run . --chain=${{ inputs.chain }} --apiKey="$FLOWDIVER_API_KEY" > ../../tmp/contracts.csv
 
       - name: Cache Contracts
         id: cache-contracts
