@@ -2236,3 +2236,35 @@ func TestCheckNativeFieldDeclaration(t *testing.T) {
 	// TODO: native fields need no initializer
 	assert.IsType(t, &sema.MissingInitializerError{}, errs[1])
 }
+
+func TestCheckKeywordsAsFieldNames(t *testing.T) {
+
+	t.Parallel()
+
+	for _, keyword := range []string{
+		"event",
+		"contract",
+		"default",
+	} {
+		keyword := keyword
+
+		t.Run(keyword, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+                    contract C {
+                        let %[1]s: Int
+
+                        init() {
+                            self.%[1]s = 5
+                        }
+                    }`,
+					keyword,
+				),
+			)
+
+			require.NoError(t, err)
+		})
+	}
+}
