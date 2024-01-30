@@ -28,7 +28,15 @@ import (
 )
 
 type UpdateValidator interface {
+	ast.TypeEqualityChecker
+
 	Validate() error
+	report(error)
+
+	getCurrentDeclaration() ast.Declaration
+	setCurrentDeclaration(ast.Declaration)
+
+	checkField(oldField *ast.FieldDeclaration, newField *ast.FieldDeclaration)
 }
 
 type ContractUpdateValidator struct {
@@ -63,21 +71,29 @@ func NewContractUpdateValidator(
 	}
 }
 
+func (validator *ContractUpdateValidator) getCurrentDeclaration() ast.Declaration {
+	return validator.currentDecl
+}
+
+func (validator *ContractUpdateValidator) setCurrentDeclaration(decl ast.Declaration) {
+	validator.currentDecl = decl
+}
+
 // Validate validates the contract update, and returns an error if it is an invalid update.
 func (validator *ContractUpdateValidator) Validate() error {
-	oldRootDecl := validator.getRootDeclaration(validator.oldProgram)
+	oldRootDecl := getRootDeclaration(validator, validator.oldProgram)
 	if validator.hasErrors() {
 		return validator.getContractUpdateError()
 	}
 
-	newRootDecl := validator.getRootDeclaration(validator.newProgram)
+	newRootDecl := getRootDeclaration(validator, validator.newProgram)
 	if validator.hasErrors() {
 		return validator.getContractUpdateError()
 	}
 
 	validator.TypeComparator.RootDeclIdentifier = newRootDecl.DeclarationIdentifier()
 
-	validator.checkDeclarationUpdatability(oldRootDecl, newRootDecl)
+	checkDeclarationUpdatability(validator, oldRootDecl, newRootDecl)
 
 	if validator.hasErrors() {
 		return validator.getContractUpdateError()
@@ -86,8 +102,8 @@ func (validator *ContractUpdateValidator) Validate() error {
 	return nil
 }
 
-func (validator *ContractUpdateValidator) getRootDeclaration(program *ast.Program) ast.Declaration {
-	decl, err := getRootDeclaration(program)
+func getRootDeclaration(validator UpdateValidator, program *ast.Program) ast.Declaration {
+	decl, err := getRootDeclarationOfProgram(program)
 
 	if err != nil {
 		validator.report(&ContractNotFoundError{
@@ -98,7 +114,7 @@ func (validator *ContractUpdateValidator) getRootDeclaration(program *ast.Progra
 	return decl
 }
 
-func getRootDeclaration(program *ast.Program) (ast.Declaration, error) {
+func getRootDeclarationOfProgram(program *ast.Program) (ast.Declaration, error) {
 	compositeDecl := program.SoleContractDeclaration()
 	if compositeDecl != nil {
 		return compositeDecl, nil
@@ -118,7 +134,8 @@ func (validator *ContractUpdateValidator) hasErrors() bool {
 	return len(validator.errors) > 0
 }
 
-func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
+func checkDeclarationUpdatability(
+	validator UpdateValidator,
 	oldDeclaration ast.Declaration,
 	newDeclaration ast.Declaration,
 ) {
@@ -137,24 +154,28 @@ func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 		return
 	}
 
-	parentDecl := validator.currentDecl
-	validator.currentDecl = newDeclaration
+	parentDecl := validator.getCurrentDeclaration()
+	validator.setCurrentDeclaration(newDeclaration)
 	defer func() {
-		validator.currentDecl = parentDecl
+		validator.setCurrentDeclaration(parentDecl)
 	}()
 
-	validator.checkFields(oldDeclaration, newDeclaration)
+	checkFields(validator, oldDeclaration, newDeclaration)
 
-	validator.checkNestedDeclarations(oldDeclaration, newDeclaration)
+	checkNestedDeclarations(validator, oldDeclaration, newDeclaration)
 
 	if newDecl, ok := newDeclaration.(*ast.CompositeDeclaration); ok {
 		if oldDecl, ok := oldDeclaration.(*ast.CompositeDeclaration); ok {
-			validator.checkConformances(oldDecl, newDecl)
+			checkConformances(validator, oldDecl, newDecl)
 		}
 	}
 }
 
-func (validator *ContractUpdateValidator) checkFields(oldDeclaration ast.Declaration, newDeclaration ast.Declaration) {
+func checkFields(
+	validator UpdateValidator,
+	oldDeclaration ast.Declaration,
+	newDeclaration ast.Declaration,
+) {
 
 	oldFields := oldDeclaration.DeclarationMembers().FieldsByIdentifier()
 	newFields := newDeclaration.DeclarationMembers().Fields()
@@ -192,7 +213,8 @@ func (validator *ContractUpdateValidator) checkField(oldField *ast.FieldDeclarat
 	}
 }
 
-func (validator *ContractUpdateValidator) checkNestedDeclarations(
+func checkNestedDeclarations(
+	validator UpdateValidator,
 	oldDeclaration ast.Declaration,
 	newDeclaration ast.Declaration,
 ) {
@@ -208,7 +230,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 			continue
 		}
 
-		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
+		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl)
 
 		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
@@ -223,7 +245,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 			continue
 		}
 
-		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
+		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl)
 
 		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
@@ -238,7 +260,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 			continue
 		}
 
-		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
+		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl)
 
 		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
@@ -270,7 +292,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	}
 
 	// Check enum-cases, if there are any.
-	validator.checkEnumCases(oldDeclaration, newDeclaration)
+	checkEnumCases(validator, oldDeclaration, newDeclaration)
 }
 
 func getNestedNominalTypeDecls(declaration ast.Declaration) map[string]ast.Declaration {
@@ -297,7 +319,11 @@ func getNestedNominalTypeDecls(declaration ast.Declaration) map[string]ast.Decla
 // checkEnumCases validates updating enum cases. Updated enum must:
 //   - Have at-least the same number of enum-cases as the old enum (Adding is allowed, but no removals).
 //   - Preserve the order of the old enum-cases (Adding to top/middle is not allowed, swapping is not allowed).
-func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Declaration, newDeclaration ast.Declaration) {
+func checkEnumCases(
+	validator UpdateValidator,
+	oldDeclaration ast.Declaration,
+	newDeclaration ast.Declaration,
+) {
 	newEnumCases := newDeclaration.DeclarationMembers().EnumCases()
 	oldEnumCases := oldDeclaration.DeclarationMembers().EnumCases()
 
@@ -337,7 +363,8 @@ func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Decl
 	}
 }
 
-func (validator *ContractUpdateValidator) checkConformances(
+func checkConformances(
+	validator UpdateValidator,
 	oldDecl *ast.CompositeDeclaration,
 	newDecl *ast.CompositeDeclaration,
 ) {
@@ -393,7 +420,7 @@ func (validator *ContractUpdateValidator) getContractUpdateError() error {
 }
 
 func containsEnumsInProgram(program *ast.Program) bool {
-	declaration, err := getRootDeclaration(program)
+	declaration, err := getRootDeclarationOfProgram(program)
 
 	if err != nil {
 		return false
@@ -616,38 +643,4 @@ func (e *MissingDeclarationError) Error() string {
 		e.Kind,
 		e.Name,
 	)
-}
-
-type LegacyContractUpdateValidator struct {
-	TypeComparator
-
-	location     common.Location
-	contractName string
-	oldProgram   *ast.Program
-	newProgram   *ast.Program
-}
-
-// NewContractUpdateValidator initializes and returns a validator, without performing any validation.
-// Invoke the `Validate()` method of the validator returned, to start validating the contract.
-func NewLegacyContractUpdateValidator(
-	location common.Location,
-	contractName string,
-	oldProgram *ast.Program,
-	newProgram *ast.Program,
-) *LegacyContractUpdateValidator {
-
-	return &LegacyContractUpdateValidator{
-		location:     location,
-		oldProgram:   oldProgram,
-		newProgram:   newProgram,
-		contractName: contractName,
-	}
-}
-
-var _ UpdateValidator = &LegacyContractUpdateValidator{}
-
-// Validate validates the contract update, and returns an error if it is an invalid update.
-// TODO: for now this is empty until we determine what validation is necessary for a Cadence 1.0 upgrade
-func (validator *LegacyContractUpdateValidator) Validate() error {
-	return nil
 }
