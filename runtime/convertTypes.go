@@ -516,7 +516,12 @@ func exportFunctionType(
 			typeBound := typeParameter.TypeBound
 			var convertedParameterTypeBound cadence.Type
 			if typeBound != nil {
-				convertedParameterTypeBound = ExportMeteredType(gauge, typeBound, results)
+				convertedParameterTypeBound = ExportMeteredType(
+					gauge,
+					// TODO:
+					typeBound.(sema.SubtypeTypeBound).Type,
+					results,
+				)
 			}
 
 			// Metered above

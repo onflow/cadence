@@ -851,26 +851,14 @@ func TestInclusiveRangeForInLoop(t *testing.T) {
 		})
 	}
 
-	for _, typ := range sema.AllIntegerTypes {
-		// Only test leaf types
-		switch typ {
-		case sema.IntegerType,
-			sema.SignedIntegerType,
-			sema.FixedSizeUnsignedIntegerType:
-			continue
-		}
+	for _, typ := range sema.AllLeafIntegerTypes {
 
 		for _, testCase := range unsignedTestCases {
 			runTestCase(t, typ, testCase)
 		}
 	}
 
-	for _, typ := range sema.AllSignedIntegerTypes {
-		// Only test leaf types
-		switch typ {
-		case sema.SignedIntegerType:
-			continue
-		}
+	for _, typ := range sema.AllLeafSignedIntegerTypes {
 
 		for _, testCase := range signedTestCases {
 			runTestCase(t, typ, testCase)

@@ -2086,9 +2086,22 @@ func typeParameterExpr(name string, typeBound dst.Expr) dst.Expr {
 		goKeyValue("Name", goStringLit(name)),
 	}
 	if typeBound != nil {
+		subtypeTypeBoundLit := &dst.CompositeLit{
+			Type: &dst.Ident{
+				Name: "SubtypeTypeBound",
+				Path: semaPath,
+			},
+			Elts: []dst.Expr{
+				goKeyValue("Type", typeBound),
+			},
+		}
+
 		elements = append(
 			elements,
-			goKeyValue("TypeBound", typeBound),
+			goKeyValue(
+				"TypeBound",
+				subtypeTypeBoundLit,
+			),
 		)
 	}
 

@@ -3310,7 +3310,7 @@ func (p Parameter) EffectiveArgumentLabel() string {
 // TypeParameter
 
 type TypeParameter struct {
-	TypeBound Type
+	TypeBound TypeBound
 	Name      string
 	Optional  bool
 }
@@ -3320,7 +3320,8 @@ func (p TypeParameter) string(typeFormatter func(Type) string) string {
 	builder.WriteString(p.Name)
 	if p.TypeBound != nil {
 		builder.WriteString(": ")
-		builder.WriteString(typeFormatter(p.TypeBound))
+		// TODO:
+		builder.WriteString(typeFormatter(p.TypeBound.(SubtypeTypeBound).Type))
 	}
 	return builder.String()
 }
@@ -3359,17 +3360,17 @@ func (p TypeParameter) Equal(other *TypeParameter) bool {
 
 func (p TypeParameter) checkTypeBound(ty Type, memoryGauge common.MemoryGauge, typeRange ast.HasPosition) error {
 	if p.TypeBound == nil ||
-		p.TypeBound.IsInvalidType() ||
+		p.TypeBound.HasInvalidType() ||
 		ty.IsInvalidType() {
 
 		return nil
 	}
 
-	if !IsSubType(ty, p.TypeBound) {
-		return &TypeMismatchError{
-			ExpectedType: p.TypeBound,
-			ActualType:   ty,
-			Range:        ast.NewRangeFromPositioned(memoryGauge, typeRange),
+	if !p.TypeBound.Satisfies(ty) {
+		return &TypeBoundError{
+			ExpectedTypeBound: p.TypeBound,
+			ActualType:        ty,
+			Range:             ast.NewRangeFromPositioned(memoryGauge, typeRange),
 		}
 	}
 
@@ -3710,7 +3711,7 @@ func (t *FunctionType) IsInvalidType() bool {
 	for _, typeParameter := range t.TypeParameters {
 
 		if typeParameter.TypeBound != nil &&
-			typeParameter.TypeBound.IsInvalidType() {
+			typeParameter.TypeBound.HasInvalidType() {
 
 			return true
 		}
@@ -3784,17 +3785,17 @@ func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
 func (t *FunctionType) RewriteWithIntersectionTypes() (Type, bool) {
 	anyRewritten := false
 
-	rewrittenTypeParameterTypeBounds := map[*TypeParameter]Type{}
+	rewrittenTypeParameterTypeBounds := map[*TypeParameter]TypeBound{}
 
 	for _, typeParameter := range t.TypeParameters {
 		if typeParameter.TypeBound == nil {
 			continue
 		}
 
-		rewrittenType, rewritten := typeParameter.TypeBound.RewriteWithIntersectionTypes()
+		rewrittenTypeBound, rewritten := typeParameter.TypeBound.RewriteWithIntersectionTypes()
 		if rewritten {
 			anyRewritten = true
-			rewrittenTypeParameterTypeBounds[typeParameter] = rewrittenType
+			rewrittenTypeParameterTypeBounds[typeParameter] = rewrittenTypeBound
 		}
 	}
 
@@ -4170,24 +4171,30 @@ func baseTypeVariable(name string, ty Type) *Variable {
 // the values available in programs
 var BaseValueActivation = NewVariableActivation(nil)
 
-var AllSignedFixedPointTypes = []Type{
+var AllLeafSignedFixedPointTypes = []Type{
 	Fix64Type,
 }
 
-var AllUnsignedFixedPointTypes = []Type{
+var AllLeafUnsignedFixedPointTypes = []Type{
 	UFix64Type,
 }
 
-var AllFixedPointTypes = common.Concat(
-	AllUnsignedFixedPointTypes,
-	AllSignedFixedPointTypes,
-	[]Type{
-		FixedPointType,
-		SignedFixedPointType,
-	},
+var AllLeafFixedPointTypes = common.Concat(
+	AllLeafUnsignedFixedPointTypes,
+	AllLeafSignedFixedPointTypes,
 )
 
-var AllSignedIntegerTypes = []Type{
+var AllNonLeafFixedPointTypes = []Type{
+	FixedPointType,
+	SignedFixedPointType,
+}
+
+var AllFixedPointTypes = common.Concat(
+	AllLeafFixedPointTypes,
+	AllNonLeafFixedPointTypes,
+)
+
+var AllLeafSignedIntegerTypes = []Type{
 	IntType,
 	Int8Type,
 	Int16Type,
@@ -4197,7 +4204,7 @@ var AllSignedIntegerTypes = []Type{
 	Int256Type,
 }
 
-var AllFixedSizeUnsignedIntegerTypes = []Type{
+var AllLeafFixedSizeUnsignedIntegerTypes = []Type{
 	// UInt*
 	UInt8Type,
 	UInt16Type,
@@ -4214,8 +4221,8 @@ var AllFixedSizeUnsignedIntegerTypes = []Type{
 	Word256Type,
 }
 
-var AllUnsignedIntegerTypes = common.Concat(
-	AllFixedSizeUnsignedIntegerTypes,
+var AllLeafUnsignedIntegerTypes = common.Concat(
+	AllLeafFixedSizeUnsignedIntegerTypes,
 	[]Type{
 		UIntType,
 	},
@@ -4227,9 +4234,13 @@ var AllNonLeafIntegerTypes = []Type{
 	FixedSizeUnsignedIntegerType,
 }
 
+var AllLeafIntegerTypes = common.Concat(
+	AllLeafUnsignedIntegerTypes,
+	AllLeafSignedIntegerTypes,
+)
+
 var AllIntegerTypes = common.Concat(
-	AllUnsignedIntegerTypes,
-	AllSignedIntegerTypes,
+	AllLeafIntegerTypes,
 	AllNonLeafIntegerTypes,
 )
 
@@ -6601,7 +6612,7 @@ func (t *InclusiveRangeType) CheckInstantiated(pos ast.HasPosition, memoryGauge 
 
 var inclusiveRangeTypeParameter = &TypeParameter{
 	Name:      "T",
-	TypeBound: IntegerType,
+	TypeBound: SubtypeTypeBound{Type: IntegerType},
 }
 
 func (*InclusiveRangeType) TypeParameters() []*TypeParameter {
@@ -7270,11 +7281,11 @@ func IsSameTypeKind(subType Type, superType Type) bool {
 	return IsSubType(subType, superType)
 }
 
-// IsProperSubType is similar to IsSubType,
+// IsStrictSubType is similar to IsSubType,
 // i.e. it determines if the given subtype is a subtype
 // of the given supertype, but returns false
 // if the subtype and supertype refer to the same type.
-func IsProperSubType(subType Type, superType Type) bool {
+func IsStrictSubType(subType Type, superType Type) bool {
 
 	if subType.Equal(superType) {
 		return false
@@ -7288,7 +7299,7 @@ func IsProperSubType(subType Type, superType Type) bool {
 // the equality of the two types, so does NOT return a specific
 // value when the two types are equal or are not.
 //
-// Consider using IsSubType or IsProperSubType
+// Consider using IsSubType or IsStrictSubType
 func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	if subType == NeverType {
@@ -8343,9 +8354,11 @@ func (t *CapabilityType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 
 var capabilityTypeParameter = &TypeParameter{
 	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
+	TypeBound: SubtypeTypeBound{
+		Type: &ReferenceType{
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
+		},
 	},
 }
 

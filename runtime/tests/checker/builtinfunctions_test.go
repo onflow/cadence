@@ -333,15 +333,9 @@ func TestCheckRevertibleRandom(t *testing.T) {
 		})
 	}
 
-	for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
-		switch ty {
-		case sema.FixedSizeUnsignedIntegerType:
-			continue
-
-		default:
-			runValidCaseWithoutModulo(t, ty)
-			runValidCaseWithModulo(t, ty)
-		}
+	for _, ty := range sema.AllLeafFixedSizeUnsignedIntegerTypes {
+		runValidCaseWithoutModulo(t, ty)
+		runValidCaseWithModulo(t, ty)
 	}
 
 	runInvalidCase(
@@ -349,7 +343,7 @@ func TestCheckRevertibleRandom(t *testing.T) {
 		"revertibleRandom<Int>",
 		"let rand = revertibleRandom<Int>()",
 		[]error{
-			&sema.TypeMismatchError{},
+			&sema.TypeBoundError{},
 		},
 	)
 
@@ -358,7 +352,7 @@ func TestCheckRevertibleRandom(t *testing.T) {
 		"revertibleRandom<String>",
 		`let rand = revertibleRandom<String>(modulo: "abcd")`,
 		[]error{
-			&sema.TypeMismatchError{},
+			&sema.TypeBoundError{},
 		},
 	)
 

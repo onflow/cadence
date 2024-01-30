@@ -128,7 +128,7 @@ const Account_StorageTypeSaveFunctionName = "save"
 
 var Account_StorageTypeSaveFunctionTypeParameterT = &TypeParameter{
 	Name:      "T",
-	TypeBound: StorableType,
+	TypeBound: SubtypeTypeBound{Type: StorableType},
 }
 
 var Account_StorageTypeSaveFunctionType = &FunctionType{
@@ -194,7 +194,7 @@ const Account_StorageTypeLoadFunctionName = "load"
 
 var Account_StorageTypeLoadFunctionTypeParameterT = &TypeParameter{
 	Name:      "T",
-	TypeBound: StorableType,
+	TypeBound: SubtypeTypeBound{Type: StorableType},
 }
 
 var Account_StorageTypeLoadFunctionType = &FunctionType{
@@ -237,7 +237,7 @@ const Account_StorageTypeCopyFunctionName = "copy"
 
 var Account_StorageTypeCopyFunctionTypeParameterT = &TypeParameter{
 	Name:      "T",
-	TypeBound: AnyStructType,
+	TypeBound: SubtypeTypeBound{Type: AnyStructType},
 }
 
 var Account_StorageTypeCopyFunctionType = &FunctionType{
@@ -280,7 +280,7 @@ const Account_StorageTypeCheckFunctionName = "check"
 
 var Account_StorageTypeCheckFunctionTypeParameterT = &TypeParameter{
 	Name:      "T",
-	TypeBound: AnyType,
+	TypeBound: SubtypeTypeBound{Type: AnyType},
 }
 
 var Account_StorageTypeCheckFunctionType = &FunctionType{
@@ -312,9 +312,11 @@ const Account_StorageTypeBorrowFunctionName = "borrow"
 
 var Account_StorageTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
+	TypeBound: SubtypeTypeBound{
+		Type: &ReferenceType{
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
+		},
 	},
 }
 
@@ -735,9 +737,11 @@ const Account_ContractsTypeBorrowFunctionName = "borrow"
 
 var Account_ContractsTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
+	TypeBound: SubtypeTypeBound{
+		Type: &ReferenceType{
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
+		},
 	},
 }
 
@@ -1060,9 +1064,11 @@ const Account_InboxTypeUnpublishFunctionName = "unpublish"
 
 var Account_InboxTypeUnpublishFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
+	TypeBound: SubtypeTypeBound{
+		Type: &ReferenceType{
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
+		},
 	},
 }
 
@@ -1101,9 +1107,11 @@ const Account_InboxTypeClaimFunctionName = "claim"
 
 var Account_InboxTypeClaimFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
+	TypeBound: SubtypeTypeBound{
+		Type: &ReferenceType{
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
+		},
 	},
 }
 
@@ -1214,9 +1222,11 @@ const Account_CapabilitiesTypeGetFunctionName = "get"
 
 var Account_CapabilitiesTypeGetFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
+	TypeBound: SubtypeTypeBound{
+		Type: &ReferenceType{
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
+		},
 	},
 }
 
@@ -1254,9 +1264,11 @@ const Account_CapabilitiesTypeBorrowFunctionName = "borrow"
 
 var Account_CapabilitiesTypeBorrowFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
+	TypeBound: SubtypeTypeBound{
+		Type: &ReferenceType{
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
+		},
 	},
 }
 
@@ -1446,9 +1458,11 @@ const Account_StorageCapabilitiesTypeIssueFunctionName = "issue"
 
 var Account_StorageCapabilitiesTypeIssueFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
+	TypeBound: SubtypeTypeBound{
+		Type: &ReferenceType{
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
+		},
 	},
 }
 
@@ -1669,9 +1683,11 @@ const Account_AccountCapabilitiesTypeIssueFunctionName = "issue"
 
 var Account_AccountCapabilitiesTypeIssueFunctionTypeParameterT = &TypeParameter{
 	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AccountType,
-		Authorization: UnauthorizedAccess,
+	TypeBound: SubtypeTypeBound{
+		Type: &ReferenceType{
+			Type:          AccountType,
+			Authorization: UnauthorizedAccess,
+		},
 	},
 }
 
