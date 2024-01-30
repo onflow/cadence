@@ -434,7 +434,6 @@ func TestInterpretContainerVariance(t *testing.T) {
 	})
 }
 
-
 func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
 
 	t.Parallel()

@@ -8006,7 +8006,6 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 	)
 }
 
-
 func TestInterpretCastingIntLiteralToInt8(t *testing.T) {
 
 	t.Parallel()

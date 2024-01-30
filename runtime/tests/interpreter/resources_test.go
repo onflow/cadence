@@ -135,7 +135,6 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		)
 	})
 
-
 	t.Run("resource, if-let statement, member expression", func(t *testing.T) {
 
 		t.Parallel()
@@ -186,7 +185,6 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 		)
 	})
 
-
 	t.Run("resource, shift statement, index expression", func(t *testing.T) {
 
 		t.Parallel()
@@ -233,7 +231,6 @@ func TestInterpretImplicitResourceRemovalFromContainer(t *testing.T) {
 			value,
 		)
 	})
-
 
 	t.Run("resource, if-let statement, index expression", func(t *testing.T) {
 
