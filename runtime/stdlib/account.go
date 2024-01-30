@@ -1619,6 +1619,7 @@ func changeAccountContracts(
 				contractName,
 				oldProgram,
 				program.Program,
+				program.Elaboration,
 			)
 		} else {
 			validator = NewContractUpdateValidator(

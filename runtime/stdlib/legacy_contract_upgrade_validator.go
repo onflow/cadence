@@ -21,10 +21,13 @@ package stdlib
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 type LegacyContractUpdateValidator struct {
 	TypeComparator
+
+	newElaboration *sema.Elaboration
 
 	underlyingUpdateValidator *ContractUpdateValidator
 }
@@ -36,12 +39,14 @@ func NewLegacyContractUpdateValidator(
 	contractName string,
 	oldProgram *ast.Program,
 	newProgram *ast.Program,
+	newElaboration *sema.Elaboration,
 ) *LegacyContractUpdateValidator {
 
 	underlyingValidator := NewContractUpdateValidator(location, contractName, oldProgram, newProgram)
 
 	return &LegacyContractUpdateValidator{
 		underlyingUpdateValidator: underlyingValidator,
+		newElaboration:            newElaboration,
 	}
 }
 
@@ -102,6 +107,47 @@ func (validator *LegacyContractUpdateValidator) checkTypeUpgradability(oldType a
 			break
 		}
 		return validator.checkTypeUpgradability(oldType.LegacyRestrictedType, newType)
+	case *ast.VariableSizedType:
+		if newVariableSizedType, isVariableSizedType := newType.(*ast.VariableSizedType); isVariableSizedType {
+			return validator.checkTypeUpgradability(oldType.Type, newVariableSizedType.Type)
+		}
+	case *ast.ConstantSizedType:
+		if newConstantSizedType, isConstantSizedType := newType.(*ast.ConstantSizedType); isConstantSizedType {
+			if oldType.Size.Value.Cmp(newConstantSizedType.Size.Value) != 0 ||
+				oldType.Size.Base != newConstantSizedType.Size.Base {
+				return newTypeMismatchError(oldType, newConstantSizedType)
+			}
+			return validator.checkTypeUpgradability(oldType.Type, newConstantSizedType.Type)
+		}
+	case *ast.DictionaryType:
+		if newDictionaryType, isDictionaryType := newType.(*ast.DictionaryType); isDictionaryType {
+			err := validator.checkTypeUpgradability(oldType.KeyType, newDictionaryType.KeyType)
+			if err != nil {
+				return err
+			}
+			return validator.checkTypeUpgradability(oldType.ValueType, newDictionaryType.ValueType)
+		}
+	case *ast.InstantiationType:
+		// if the type is a Capability, allow the borrow type to change according to the normal upgrade rules
+		if oldNominalType, isNominal := oldType.Type.(*ast.NominalType); isNominal &&
+			oldNominalType.Identifier.Identifier == "Capability" {
+
+			if instantiationType, isInstantiation := newType.(*ast.InstantiationType); isInstantiation {
+				if newNominalType, isNominal := oldType.Type.(*ast.NominalType); isNominal &&
+					newNominalType.Identifier.Identifier == "Capability" {
+
+					// Capability insantiation types must have exactly 1 type argument
+					if len(oldType.TypeArguments) != 1 || len(instantiationType.TypeArguments) != 1 {
+						break
+					}
+
+					oldTypeArg := oldType.TypeArguments[0]
+					newTypeArg := instantiationType.TypeArguments[0]
+
+					return validator.checkTypeUpgradability(oldTypeArg.Type, newTypeArg.Type)
+				}
+			}
+		}
 	}
 
 	return oldType.CheckEqual(newType, validator)
