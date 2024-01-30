@@ -57,21 +57,71 @@ func (validator *LegacyContractUpdateValidator) setCurrentDeclaration(decl ast.D
 
 // Validate validates the contract update, and returns an error if it is an invalid update.
 func (validator *LegacyContractUpdateValidator) Validate() error {
-	return validator.underlyingUpdateValidator.Validate()
+	underlyingValidator := validator.underlyingUpdateValidator
+
+	oldRootDecl := getRootDeclaration(validator, underlyingValidator.oldProgram)
+	if underlyingValidator.hasErrors() {
+		return underlyingValidator.getContractUpdateError()
+	}
+
+	newRootDecl := getRootDeclaration(validator, underlyingValidator.newProgram)
+	if underlyingValidator.hasErrors() {
+		return underlyingValidator.getContractUpdateError()
+	}
+
+	validator.TypeComparator.RootDeclIdentifier = newRootDecl.DeclarationIdentifier()
+
+	checkDeclarationUpdatability(validator, oldRootDecl, newRootDecl)
+
+	if underlyingValidator.hasErrors() {
+		return underlyingValidator.getContractUpdateError()
+	}
+
+	return nil
 }
 
 func (validator *LegacyContractUpdateValidator) report(err error) {
 	validator.underlyingUpdateValidator.report(err)
 }
 
-func (validator *LegacyContractUpdateValidator) checkField(oldField *ast.FieldDeclaration, newField *ast.FieldDeclaration) {
-	err := oldField.TypeAnnotation.Type.CheckEqual(newField.TypeAnnotation.Type, validator)
-	if err != nil {
-		validator.report(&FieldMismatchError{
-			DeclName:  validator.getCurrentDeclaration().DeclarationIdentifier().Identifier,
-			FieldName: newField.Identifier.Identifier,
-			Err:       err,
-			Range:     ast.NewUnmeteredRangeFromPositioned(newField.TypeAnnotation),
-		})
+func (validator *LegacyContractUpdateValidator) checkTypeUpgradability(oldType ast.Type, newType ast.Type) error {
+
+	switch oldType := oldType.(type) {
+	case *ast.OptionalType:
+		if newOptional, isOptional := newType.(*ast.OptionalType); isOptional {
+			return validator.checkTypeUpgradability(oldType.Type, newOptional.Type)
+		}
+	case *ast.ReferenceType:
+		if newReference, isReference := newType.(*ast.ReferenceType); isReference {
+			return validator.checkTypeUpgradability(oldType.Type, newReference.Type)
+		}
+	case *ast.IntersectionType:
+		// intersection types cannot be upgraded unless they have a legacy restricted type,
+		// in which case they must be upgraded according to the migration rules: i.e. R{I} -> R
+		if oldType.LegacyRestrictedType == nil {
+			break
+		}
+		return validator.checkTypeUpgradability(oldType.LegacyRestrictedType, newType)
 	}
+
+	return oldType.CheckEqual(newType, validator)
+
+}
+
+func (validator *LegacyContractUpdateValidator) checkField(oldField *ast.FieldDeclaration, newField *ast.FieldDeclaration) {
+	oldType := oldField.TypeAnnotation.Type
+	newType := newField.TypeAnnotation.Type
+
+	err := validator.checkTypeUpgradability(oldType, newType)
+	if err == nil {
+		return
+	}
+
+	validator.report(&FieldMismatchError{
+		DeclName:  validator.getCurrentDeclaration().DeclarationIdentifier().Identifier,
+		FieldName: newField.Identifier.Identifier,
+		Err:       err,
+		Range:     ast.NewUnmeteredRangeFromPositioned(newField.TypeAnnotation),
+	})
+
 }

@@ -223,11 +223,18 @@ func TestContractUpgradeFieldType(t *testing.T) {
             }
         `
 
+		// TODO: this should not be allowed, the migration is not going to change the underlying referenced type of `a`
 		err := testContractUpdate(t, oldCode, newCode)
 
-		// TODO: this should not be allowed, the migration is not going to change the underlying referenced type of `a`
-		require.NoError(t, err)
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertFieldTypeMismatchError(t, cause, "Test", "a", "Capability<&Int>", "Capability<auth(E) &Int>")
 	})
+
+}
+
+func TestContractUpgradeIntersectionFieldType(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("change field type restricted type", func(t *testing.T) {
 
@@ -259,13 +266,10 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 		err := testContractUpdate(t, oldCode, newCode)
 
-		require.NoError(t, err)
+		// This is not allowed because `@R{I}` is converted to `@R`, not `@{I}`
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertFieldTypeMismatchError(t, cause, "Test", "a", "R", "{I}")
 	})
-}
-
-func TestContractUpgradeIntersectionFieldType(t *testing.T) {
-
-	t.Parallel()
 
 	t.Run("change field type restricted reference type", func(t *testing.T) {
 
@@ -297,7 +301,6 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		err := testContractUpdate(t, oldCode, newCode)
 
-		// TODO: this should be allowed, as the migration will convert `&R{I}` to `&R`
 		require.NoError(t, err)
 	})
 
@@ -340,7 +343,6 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		err := testContractUpdate(t, oldCode, newCode)
 
-		// TODO: this should be allowed, as the migration will convert `&R{I}` to `auth(E) &R`
 		require.NoError(t, err)
 	})
 
