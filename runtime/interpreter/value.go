@@ -18672,6 +18672,19 @@ func (v *DictionaryValue) iterateKeys(
 	}
 }
 
+func (v *DictionaryValue) IterateReadOnly(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	f func(key, value Value) (resume bool),
+) {
+	iterate := func(fn atree.MapEntryIterationFunc) error {
+		return v.dictionary.IterateReadOnly(
+			fn,
+		)
+	}
+	v.iterate(interpreter, iterate, f)
+}
+
 func (v *DictionaryValue) Iterate(
 	interpreter *Interpreter,
 	locationRange LocationRange,
