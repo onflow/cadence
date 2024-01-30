@@ -85,8 +85,9 @@ func main() {
 	client := graphql.NewClient(apiURL, nil).
 		WithRequestModifier(func(r *http.Request) {
 			r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
-			// NOTE: important, default is forbidden
-			r.Header.Set("User-Agent", "")
+			// NOTE: important, default is forbidden by API's bot prevention 
+			// (https://github.com/Kong/kong/blob/master/kong/plugins/bot-detection/rules.lua)
+			r.Header.Set("User-Agent", "Flow Foundation Cadence Tool")
 		})
 
 	var total, offset int
