@@ -687,8 +687,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			false,
 			nil,
 			nil,
-			// TODO:
-			false,
+			true, // storedValue is standalone
 
 		)
 
@@ -836,8 +835,7 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 			false,
 			nil,
 			nil,
-			// TODO:
-			false,
+			true, // storedValue is standalone
 		)
 
 		inter.WriteStored(
@@ -981,8 +979,7 @@ func TestAccountTypeRehash(t *testing.T) {
 				false,
 				nil,
 				nil,
-				// TODO:
-				false,
+				true, // dictValue is standalone
 			),
 		)
 

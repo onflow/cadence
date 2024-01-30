@@ -3034,8 +3034,7 @@ func TestRehash(t *testing.T) {
 				false,
 				nil,
 				nil,
-				// TODO:
-				false,
+				true, // dictValue is standalone
 			),
 		)
 
