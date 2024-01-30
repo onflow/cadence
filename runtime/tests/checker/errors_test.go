@@ -129,9 +129,11 @@ func TestCheckEntitlementsErrorMessage(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
+		var mismatchError *sema.TypeMismatchError
+
 		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		require.Equal(t, "expected `auth(E) &Int`, got `auth(<<INVALID>>) &Int`", errs[1].(*sema.TypeMismatchError).SecondaryError())
+		require.ErrorAs(t, errs[1], &mismatchError)
+		require.Equal(t, "expected `auth(E) &Int`, got `auth(F) &Int`", mismatchError.SecondaryError())
 	})
 
 	t.Run("invalid access", func(t *testing.T) {
@@ -155,9 +157,14 @@ func TestCheckEntitlementsErrorMessage(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
+		var invalidAccess *sema.InvalidAccessError
+
 		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
-		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
-		require.Equal(t, "cannot access `foo`: function requires `E` authorization, but reference only has `<<INVALID>>` authorization", errs[1].(*sema.InvalidAccessError).Error())
+		require.ErrorAs(t, errs[1], &invalidAccess)
+		require.Equal(t,
+			"cannot access `foo`: function requires `E` authorization, but reference only has `F` authorization",
+			invalidAccess.Error(),
+		)
 	})
 
 	t.Run("interface as type", func(t *testing.T) {
@@ -183,8 +190,13 @@ func TestCheckEntitlementsErrorMessage(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
+		var invalidInterface *sema.InvalidInterfaceTypeError
+
 		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
-		require.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[1])
-		require.Equal(t, "got `auth(<<INVALID>>) &I`; consider using `auth(<<INVALID>>) &{I}`", errs[1].(*sema.InvalidInterfaceTypeError).SecondaryError())
+		require.ErrorAs(t, errs[1], &invalidInterface)
+		require.Equal(t,
+			"got `auth(F) &I`; consider using `auth(F) &{I}`",
+			invalidInterface.SecondaryError(),
+		)
 	})
 }
