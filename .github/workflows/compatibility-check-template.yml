@@ -16,9 +16,6 @@ on:
       chain:
         required: true
         type: string
-      url:
-        required: true
-        type: string
 
 env:
   GO_VERSION: '1.20'
