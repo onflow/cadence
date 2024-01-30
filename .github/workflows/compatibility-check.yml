@@ -65,6 +65,8 @@ jobs:
       base-branch: ${{ needs.setup.outputs.base }}
       current-branch: ${{ needs.setup.outputs.branch }}
       chain: mainnet
+    secrets:
+      FLOWDIVER_API_KEY: ${{ secrets.FLOWDIVER_API_KEY }}
 
   testnet:
     needs: setup
@@ -74,3 +76,5 @@ jobs:
       base-branch:  ${{ needs.setup.outputs.base }}
       current-branch: ${{ needs.setup.outputs.branch }}
       chain: testnet
+    secrets:
+      FLOWDIVER_API_KEY: ${{ secrets.FLOWDIVER_API_KEY }}
