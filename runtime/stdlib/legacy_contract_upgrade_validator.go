@@ -109,7 +109,8 @@ func (validator *LegacyContractUpdateValidator) idOfQualifiedType(typ *ast.Nomin
 	typIdentifier := typ.Identifier.Identifier
 	rootIdentifier := validator.TypeComparator.RootDeclIdentifier.Identifier
 
-	if typIdentifier != rootIdentifier { // &&
+	if typIdentifier != rootIdentifier {
+		// TODO: add and test support for qualifying types imported from other contracts
 		// && validator.TypeComparator.foundIdentifierImportLocations[typ.Identifier.Identifier] == nil
 		qualifiedString = fmt.Sprintf("%s.%s", rootIdentifier, qualifiedString)
 
