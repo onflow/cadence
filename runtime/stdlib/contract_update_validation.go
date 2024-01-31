@@ -34,12 +34,13 @@ type UpdateValidator interface {
 type ContractUpdateValidator struct {
 	TypeComparator
 
-	location     common.Location
-	contractName string
-	oldProgram   *ast.Program
-	newProgram   *ast.Program
-	currentDecl  ast.Declaration
-	errors       []error
+	location        common.Location
+	contractName    string
+	oldProgram      *ast.Program
+	newProgram      *ast.Program
+	currentDecl     ast.Declaration
+	importLocations map[ast.Identifier]common.Location
+	errors          []error
 }
 
 // ContractUpdateValidator should implement ast.TypeEqualityChecker
@@ -56,10 +57,11 @@ func NewContractUpdateValidator(
 ) *ContractUpdateValidator {
 
 	return &ContractUpdateValidator{
-		location:     location,
-		oldProgram:   oldProgram,
-		newProgram:   newProgram,
-		contractName: contractName,
+		location:        location,
+		oldProgram:      oldProgram,
+		newProgram:      newProgram,
+		contractName:    contractName,
+		importLocations: map[ast.Identifier]common.Location{},
 	}
 }
 
@@ -76,6 +78,8 @@ func (validator *ContractUpdateValidator) Validate() error {
 	}
 
 	validator.TypeComparator.RootDeclIdentifier = newRootDecl.DeclarationIdentifier()
+	validator.TypeComparator.expectedIdentifierImportLocations = collectImports(validator.oldProgram)
+	validator.TypeComparator.foundIdentifierImportLocations = collectImports(validator.newProgram)
 
 	validator.checkDeclarationUpdatability(oldRootDecl, newRootDecl)
 
@@ -84,6 +88,25 @@ func (validator *ContractUpdateValidator) Validate() error {
 	}
 
 	return nil
+}
+
+func collectImports(program *ast.Program) map[string]common.Location {
+
+	importLocations := map[string]common.Location{}
+
+	imports := program.ImportDeclarations()
+
+	for _, importDecl := range imports {
+		importLocation := importDecl.Location
+		for _, identifier := range importDecl.Identifiers {
+
+			// associate the location of an identifier's import with the location it's being imported from
+			// this assumes that two imports cannot have the same name, which should be prevented by the type checker
+			importLocations[identifier.Identifier] = importLocation
+		}
+	}
+
+	return importLocations
 }
 
 func (validator *ContractUpdateValidator) getRootDeclaration(program *ast.Program) ast.Declaration {
