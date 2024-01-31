@@ -969,10 +969,9 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
             }
         `
 
-		// TODO: this should not be allowed, as the migration will convert `&R{I}` to `auth(E) &R`
 		err := testContractUpdate(t, oldCode, newCode)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
-		assertFieldTypeMismatchError(t, cause, "Test", "a", "Capability<auth(E) &R>", "Capability<auth(E, F) &R>")
+		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "E", "E, F")
 	})
 }

@@ -31,7 +31,8 @@ import (
 type LegacyContractUpdateValidator struct {
 	TypeComparator
 
-	newElaboration *sema.Elaboration
+	newElaboration                           *sema.Elaboration
+	currentRestrictedTypeUpgradeRestrictions []*ast.NominalType
 
 	underlyingUpdateValidator *ContractUpdateValidator
 }
@@ -146,8 +147,8 @@ func (validator *LegacyContractUpdateValidator) getInterfaceType(intf *ast.Nomin
 	return validator.newElaboration.InterfaceType(typeID)
 }
 
-func (validator *LegacyContractUpdateValidator) getIntersectedInterfaces(intersections *ast.IntersectionType) (intfs []*sema.InterfaceType) {
-	for _, intf := range intersections.Types {
+func (validator *LegacyContractUpdateValidator) getIntersectedInterfaces(intersection []*ast.NominalType) (intfs []*sema.InterfaceType) {
+	for _, intf := range intersection {
 		intfs = append(intfs, validator.getInterfaceType(intf))
 	}
 	return
@@ -168,6 +169,40 @@ func (validator *LegacyContractUpdateValidator) requirePermitsAccess(
 	return nil
 }
 
+func (validator *LegacyContractUpdateValidator) expectedAuthorizationOfComposite(composite *ast.NominalType) sema.Access {
+	// if this field is set, we are currently upgrading a formerly legacy restricted type into a reference to a composite
+	// in this case, the expected entitlements are based not on the underlying composite type,
+	// but instead the types previously in the restriction set
+	if validator.currentRestrictedTypeUpgradeRestrictions != nil {
+		return validator.expectedAuthorizationOfIntersection(validator.currentRestrictedTypeUpgradeRestrictions)
+	}
+
+	compositeType := validator.getCompositeType(composite)
+
+	if compositeType == nil {
+		return sema.UnauthorizedAccess
+	}
+
+	supportedEntitlements := compositeType.SupportedEntitlements()
+	return sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
+}
+
+func (validator *LegacyContractUpdateValidator) expectedAuthorizationOfIntersection(intersectionTypes []*ast.NominalType) sema.Access {
+
+	// a reference to an intersection (or restricted) type is granted entitlements based on the intersected interfaces,
+	// ignoring the legacy restricted type, as an intersection type appearing in the new contract means it must have originally
+	// been a restricted type with no legacy type
+	interfaces := validator.getIntersectedInterfaces(intersectionTypes)
+
+	supportedEntitlements := orderedmap.New[sema.EntitlementOrderedSet](0)
+
+	for _, interfaceType := range interfaces {
+		supportedEntitlements.SetAll(interfaceType.SupportedEntitlements())
+	}
+
+	return sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
+}
+
 func (validator *LegacyContractUpdateValidator) checkEntitlementsUpgrade(
 	oldType *ast.ReferenceType,
 	newType *ast.ReferenceType,
@@ -184,31 +219,12 @@ func (validator *LegacyContractUpdateValidator) checkEntitlementsUpgrade(
 	switch newReferencedType := newType.Type.(type) {
 	// a lone nominal type must be a composite
 	case *ast.NominalType:
-		compositeType := validator.getCompositeType(newReferencedType)
-
-		expectedAccess := sema.UnauthorizedAccess
-
-		if compositeType != nil {
-			supportedEntitlements := compositeType.SupportedEntitlements()
-			expectedAccess = sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
-		}
-
+		expectedAccess := validator.expectedAuthorizationOfComposite(newReferencedType)
 		return validator.requirePermitsAccess(expectedAccess, foundEntitlementSet, newReferencedType)
 
-	// a reference to an intersection (or restricted) type is granted entitlements based on the intersected interfaces,
-	// ignoring the legacy restricted type
 	case *ast.IntersectionType:
-		interfaces := validator.getIntersectedInterfaces(newReferencedType)
-
-		supportedEntitlements := orderedmap.New[sema.EntitlementOrderedSet](0)
-
-		for _, interfaceType := range interfaces {
-			supportedEntitlements.SetAll(interfaceType.SupportedEntitlements())
-		}
-
-		expectedEntitlementSet := sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
-
-		return validator.requirePermitsAccess(expectedEntitlementSet, foundEntitlementSet, newReferencedType)
+		expectedAccess := validator.expectedAuthorizationOfIntersection(newReferencedType.Types)
+		return validator.requirePermitsAccess(expectedAccess, foundEntitlementSet, newReferencedType)
 	}
 
 	return nil
@@ -223,13 +239,16 @@ func (validator *LegacyContractUpdateValidator) checkTypeUpgradability(oldType a
 		}
 	case *ast.ReferenceType:
 		if newReference, isReference := newType.(*ast.ReferenceType); isReference {
-			if newReference.Authorization != nil {
-				err := validator.checkEntitlementsUpgrade(oldType, newReference)
-				if err != nil {
-					return err
-				}
+			err := validator.checkTypeUpgradability(oldType.Type, newReference.Type)
+			if err != nil {
+				return err
 			}
-			return validator.checkTypeUpgradability(oldType.Type, newReference.Type)
+
+			if newReference.Authorization != nil {
+				return validator.checkEntitlementsUpgrade(oldType, newReference)
+
+			}
+			return nil
 		}
 	case *ast.IntersectionType:
 		// intersection types cannot be upgraded unless they have a legacy restricted type,
@@ -237,7 +256,9 @@ func (validator *LegacyContractUpdateValidator) checkTypeUpgradability(oldType a
 		if oldType.LegacyRestrictedType == nil {
 			break
 		}
+		validator.currentRestrictedTypeUpgradeRestrictions = oldType.Types
 		return validator.checkTypeUpgradability(oldType.LegacyRestrictedType, newType)
+
 	case *ast.VariableSizedType:
 		if newVariableSizedType, isVariableSizedType := newType.(*ast.VariableSizedType); isVariableSizedType {
 			return validator.checkTypeUpgradability(oldType.Type, newVariableSizedType.Type)
@@ -289,6 +310,7 @@ func (validator *LegacyContractUpdateValidator) checkField(oldField *ast.FieldDe
 	oldType := oldField.TypeAnnotation.Type
 	newType := newField.TypeAnnotation.Type
 
+	validator.currentRestrictedTypeUpgradeRestrictions = nil
 	err := validator.checkTypeUpgradability(oldType, newType)
 	if err == nil {
 		return
