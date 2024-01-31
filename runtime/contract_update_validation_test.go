@@ -84,8 +84,6 @@ func newContractRemovalTransaction(contractName string) string {
 func newContractDeploymentTransactor(t *testing.T) func(code string) error {
 	rt := NewTestInterpreterRuntimeWithAttachments()
 
-	var nextAccount byte = 0x43
-
 	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	runtimeInterface := &TestRuntimeInterface{
@@ -93,11 +91,6 @@ func newContractDeploymentTransactor(t *testing.T) func(code string) error {
 			return accountCodes[location], nil
 		},
 		Storage: NewTestLedger(nil, nil),
-		OnCreateAccount: func(payer Address) (address Address, err error) {
-			result := interpreter.NewUnmeteredAddressValueFromBytes([]byte{nextAccount})
-			nextAccount++
-			return result.ToAddress(), nil
-		},
 		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{common.MustBytesToAddress([]byte{0x42})}, nil
 		},
