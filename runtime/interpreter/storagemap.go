@@ -50,10 +50,10 @@ func NewStorageMap(memoryGauge common.MemoryGauge, storage atree.SlabStorage, ad
 	}
 }
 
-func NewStorageMapWithRootID(storage atree.SlabStorage, storageID atree.StorageID) *StorageMap {
+func NewStorageMapWithRootID(storage atree.SlabStorage, slabID atree.SlabID) *StorageMap {
 	orderedMap, err := atree.NewMapWithRootID(
 		storage,
-		storageID,
+		slabID,
 		atree.NewDefaultDigesterBuilder(),
 	)
 	if err != nil {
@@ -82,7 +82,7 @@ func (s StorageMap) ValueExists(key StorageMapKey) bool {
 // ReadValue returns the value for the given key.
 // Returns nil if the key does not exist.
 func (s StorageMap) ReadValue(gauge common.MemoryGauge, key StorageMapKey) Value {
-	storable, err := s.orderedMap.Get(
+	storedValue, err := s.orderedMap.Get(
 		key.AtreeValueCompare,
 		key.AtreeValueHashInput,
 		key.AtreeValue(),
@@ -95,7 +95,7 @@ func (s StorageMap) ReadValue(gauge common.MemoryGauge, key StorageMapKey) Value
 		panic(errors.NewExternalError(err))
 	}
 
-	return StoredValue(gauge, storable, s.orderedMap.Storage)
+	return MustConvertStoredValue(gauge, storedValue)
 }
 
 // WriteValue sets or removes a value in the storage map.
@@ -125,12 +125,14 @@ func (s StorageMap) SetValue(interpreter *Interpreter, key StorageMapKey, value 
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(s.orderedMap)
+	interpreter.maybeValidateAtreeStorage()
 
 	existed = existingStorable != nil
 	if existed {
 		existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
-		existingValue.DeepRemove(interpreter)
+		existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was overwritten in parent container.
 		interpreter.RemoveReferencedSlab(existingStorable)
 	}
 	return
@@ -152,7 +154,9 @@ func (s StorageMap) RemoveValue(interpreter *Interpreter, key StorageMapKey) (ex
 		}
 		panic(errors.NewExternalError(err))
 	}
+
 	interpreter.maybeValidateAtreeValue(s.orderedMap)
+	interpreter.maybeValidateAtreeStorage()
 
 	// Key
 
@@ -165,7 +169,7 @@ func (s StorageMap) RemoveValue(interpreter *Interpreter, key StorageMapKey) (ex
 	existed = existingValueStorable != nil
 	if existed {
 		existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage())
-		existingValue.DeepRemove(interpreter)
+		existingValue.DeepRemove(interpreter, true) // existingValue is standalone because it was removed from parent container.
 		interpreter.RemoveReferencedSlab(existingValueStorable)
 	}
 	return
@@ -174,7 +178,10 @@ func (s StorageMap) RemoveValue(interpreter *Interpreter, key StorageMapKey) (ex
 // Iterator returns an iterator (StorageMapIterator),
 // which allows iterating over the keys and values of the storage map
 func (s StorageMap) Iterator(gauge common.MemoryGauge) StorageMapIterator {
-	mapIterator, err := s.orderedMap.Iterator()
+	mapIterator, err := s.orderedMap.Iterator(
+		StorageMapKeyAtreeValueComparator,
+		StorageMapKeyAtreeValueHashInput,
+	)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -186,8 +193,8 @@ func (s StorageMap) Iterator(gauge common.MemoryGauge) StorageMapIterator {
 	}
 }
 
-func (s StorageMap) StorageID() atree.StorageID {
-	return s.orderedMap.StorageID()
+func (s StorageMap) SlabID() atree.SlabID {
+	return s.orderedMap.SlabID()
 }
 
 func (s StorageMap) Count() uint64 {
@@ -197,7 +204,7 @@ func (s StorageMap) Count() uint64 {
 // StorageMapIterator is an iterator over StorageMap
 type StorageMapIterator struct {
 	gauge       common.MemoryGauge
-	mapIterator *atree.MapIterator
+	mapIterator atree.MapIterator
 	storage     atree.SlabStorage
 }
 

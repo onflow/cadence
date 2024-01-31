@@ -65,11 +65,11 @@ var _ MemberAccessibleValue = &CapabilityValue{}
 
 func (*CapabilityValue) isValue() {}
 
-func (v *CapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *CapabilityValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitCapabilityValue(interpreter, v)
 }
 
-func (v *CapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *CapabilityValue) Walk(_ *Interpreter, _ LocationRange, walkChild func(Value)) {
 	walkChild(v.ID)
 	walkChild(v.Address)
 }
@@ -189,10 +189,11 @@ func (v *CapabilityValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
-		v.DeepRemove(interpreter)
+		v.DeepRemove(interpreter, true)
 		interpreter.RemoveReferencedSlab(storable)
 	}
 	return v
@@ -206,8 +207,8 @@ func (v *CapabilityValue) Clone(interpreter *Interpreter) Value {
 	)
 }
 
-func (v *CapabilityValue) DeepRemove(interpreter *Interpreter) {
-	v.Address.DeepRemove(interpreter)
+func (v *CapabilityValue) DeepRemove(interpreter *Interpreter, _ bool) {
+	v.Address.DeepRemove(interpreter, false)
 }
 
 func (v *CapabilityValue) ByteSize() uint32 {

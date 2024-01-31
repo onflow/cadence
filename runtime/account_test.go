@@ -2277,9 +2277,13 @@ func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
 		false,
 		nil,
 		nil,
+		true, // publicKey is standalone
 	).(*interpreter.CompositeValue)
 
-	publicKey.DeepRemove(inter)
+	publicKey.DeepRemove(
+		inter,
+		true, // publicKey is standalone
+	)
 
 	publicKeyArray2 := publicKey2.GetMember(
 		inter,

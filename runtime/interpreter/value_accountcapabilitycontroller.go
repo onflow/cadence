@@ -88,11 +88,11 @@ func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() *Ref
 	return v.BorrowType
 }
 
-func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitAccountCapabilityControllerValue(interpreter, v)
 }
 
-func (v *AccountCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *AccountCapabilityControllerValue) Walk(_ *Interpreter, _ LocationRange, walkChild func(Value)) {
 	walkChild(v.CapabilityID)
 }
 
@@ -178,7 +178,8 @@ func (v *AccountCapabilityControllerValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -193,7 +194,7 @@ func (v *AccountCapabilityControllerValue) Clone(_ *Interpreter) Value {
 	}
 }
 
-func (v *AccountCapabilityControllerValue) DeepRemove(_ *Interpreter) {
+func (v *AccountCapabilityControllerValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 

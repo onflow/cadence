@@ -275,16 +275,21 @@ func ConvertValueToEntitlements(
 
 		var values []interpreter.Value
 
-		v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
-			values = append(values, key)
-			values = append(values, value)
-			return true
-		})
+		v.Iterate(
+			inter,
+			interpreter.EmptyLocationRange,
+			func(key, value interpreter.Value) (resume bool) {
+				values = append(values, key)
+				values = append(values, value)
+				return true
+			},
+		)
 
-		return interpreter.NewDictionaryValue(
+		return interpreter.NewDictionaryValueWithAddress(
 			inter,
 			interpreter.EmptyLocationRange,
 			dictionaryStaticType,
+			v.GetOwner(),
 			values...,
 		), nil
 

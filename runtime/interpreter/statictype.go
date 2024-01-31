@@ -220,6 +220,7 @@ type ArrayStaticType interface {
 	StaticType
 	isArrayStaticType()
 	ElementType() StaticType
+	atree.TypeInfo
 }
 
 // VariableSizedStaticType
@@ -240,6 +241,19 @@ func NewVariableSizedStaticType(
 	return &VariableSizedStaticType{
 		Type: elementType,
 	}
+}
+
+func (*VariableSizedStaticType) IsComposite() bool {
+	return false
+}
+
+func (t *VariableSizedStaticType) Copy() atree.TypeInfo {
+	// VariableSizedStaticType is never mutated, return a shallow copy
+	return t
+}
+
+func (t *VariableSizedStaticType) Identifier() string {
+	return string(t.ID())
 }
 
 func (*VariableSizedStaticType) isStaticType() {}
@@ -289,7 +303,6 @@ type InclusiveRangeStaticType struct {
 }
 
 var _ StaticType = InclusiveRangeStaticType{}
-var _ atree.TypeInfo = InclusiveRangeStaticType{}
 
 func NewInclusiveRangeStaticType(
 	memoryGauge common.MemoryGauge,
@@ -360,6 +373,19 @@ func NewConstantSizedStaticType(
 	}
 }
 
+func (*ConstantSizedStaticType) IsComposite() bool {
+	return false
+}
+
+func (t *ConstantSizedStaticType) Copy() atree.TypeInfo {
+	// ConstantSizedStaticType is never mutated, return a shallow copy\
+	return t
+}
+
+func (t *ConstantSizedStaticType) Identifier() string {
+	return string(t.ID())
+}
+
 func (*ConstantSizedStaticType) isStaticType() {}
 
 func (*ConstantSizedStaticType) elementSize() uint {
@@ -427,6 +453,19 @@ func NewDictionaryStaticType(
 		KeyType:   keyType,
 		ValueType: valueType,
 	}
+}
+
+func (*DictionaryStaticType) IsComposite() bool {
+	return false
+}
+
+func (t *DictionaryStaticType) Copy() atree.TypeInfo {
+	// DictionaryStaticType is never mutated, return a shallow copy
+	return t
+}
+
+func (t *DictionaryStaticType) Identifier() string {
+	return string(t.ID())
 }
 
 func (*DictionaryStaticType) isStaticType() {}
@@ -1006,15 +1045,17 @@ func ConvertSemaArrayTypeToStaticArrayType(
 ) ArrayStaticType {
 	switch t := t.(type) {
 	case *sema.VariableSizedType:
-		return &VariableSizedStaticType{
-			Type: ConvertSemaToStaticType(memoryGauge, t.Type),
-		}
+		return NewVariableSizedStaticType(
+			memoryGauge,
+			ConvertSemaToStaticType(memoryGauge, t.Type),
+		)
 
 	case *sema.ConstantSizedType:
-		return &ConstantSizedStaticType{
-			Type: ConvertSemaToStaticType(memoryGauge, t.Type),
-			Size: t.Size,
-		}
+		return NewConstantSizedStaticType(
+			memoryGauge,
+			ConvertSemaToStaticType(memoryGauge, t.Type),
+			t.Size,
+		)
 
 	default:
 		panic(errors.NewUnreachableError())

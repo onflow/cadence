@@ -41,11 +41,11 @@ var _ MemberAccessibleValue = &PathCapabilityValue{}
 
 func (*PathCapabilityValue) isValue() {}
 
-func (v *PathCapabilityValue) Accept(_ *Interpreter, _ Visitor) {
+func (v *PathCapabilityValue) Accept(_ *Interpreter, _ LocationRange, _ Visitor) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *PathCapabilityValue) Walk(_ *Interpreter, _ func(Value)) {
+func (v *PathCapabilityValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -143,10 +143,11 @@ func (v *PathCapabilityValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
-		v.DeepRemove(interpreter)
+		v.DeepRemove(interpreter, true)
 		interpreter.RemoveReferencedSlab(storable)
 	}
 	return v
@@ -156,9 +157,9 @@ func (v *PathCapabilityValue) Clone(_ *Interpreter) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter) {
-	v.Address.DeepRemove(interpreter)
-	v.Path.DeepRemove(interpreter)
+func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter, _ bool) {
+	v.Address.DeepRemove(interpreter, false)
+	v.Path.DeepRemove(interpreter, false)
 }
 
 func (v *PathCapabilityValue) ByteSize() uint32 {

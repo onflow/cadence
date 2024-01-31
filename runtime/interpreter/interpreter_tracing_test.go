@@ -79,7 +79,7 @@ func TestInterpreterTracing(t *testing.T) {
 
 		cloned := array.Clone(inter)
 		require.NotNil(t, cloned)
-		cloned.DeepRemove(inter)
+		cloned.DeepRemove(inter, true)
 		require.Equal(t, len(traceOps), 2)
 		require.Equal(t, traceOps[1], "array.deepRemove")
 
@@ -109,7 +109,7 @@ func TestInterpreterTracing(t *testing.T) {
 
 		cloned := dict.Clone(inter)
 		require.NotNil(t, cloned)
-		cloned.DeepRemove(inter)
+		cloned.DeepRemove(inter, true)
 		require.Equal(t, len(traceOps), 2)
 		require.Equal(t, traceOps[1], "dictionary.deepRemove")
 
@@ -132,7 +132,7 @@ func TestInterpreterTracing(t *testing.T) {
 
 		cloned := value.Clone(inter)
 		require.NotNil(t, cloned)
-		cloned.DeepRemove(inter)
+		cloned.DeepRemove(inter, true)
 		require.Equal(t, len(traceOps), 2)
 		require.Equal(t, traceOps[1], "composite.deepRemove")
 

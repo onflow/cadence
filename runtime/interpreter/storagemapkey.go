@@ -18,7 +18,11 @@
 
 package interpreter
 
-import "github.com/onflow/atree"
+import (
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/runtime/errors"
+)
 
 type StorageMapKey interface {
 	isStorageMapKey()
@@ -71,4 +75,36 @@ func (Uint64StorageMapKey) AtreeValueCompare(
 
 func (k Uint64StorageMapKey) AtreeValue() atree.Value {
 	return Uint64AtreeValue(k)
+}
+
+func StorageMapKeyAtreeValueHashInput(value atree.Value, scratch []byte) ([]byte, error) {
+	var smk StorageMapKey
+	switch value := value.(type) {
+	case StringAtreeValue:
+		smk = StringStorageMapKey(value)
+
+	case Uint64AtreeValue:
+		smk = Uint64StorageMapKey(value)
+
+	default:
+		return nil, errors.NewUnexpectedError("StorageMapKeyAtreeValueHashInput expected StringAtreeValue or Uint64AtreeValue, got %T", value)
+	}
+
+	return smk.AtreeValueHashInput(value, scratch)
+}
+
+func StorageMapKeyAtreeValueComparator(slabStorage atree.SlabStorage, value atree.Value, otherStorable atree.Storable) (bool, error) {
+	var smk StorageMapKey
+	switch value := value.(type) {
+	case StringAtreeValue:
+		smk = StringStorageMapKey(value)
+
+	case Uint64AtreeValue:
+		smk = Uint64StorageMapKey(value)
+
+	default:
+		return false, errors.NewUnexpectedError("StorageMapKeyAtreeValueComparator expected StringAtreeValue or Uint64AtreeValue, got %T", value)
+	}
+
+	return smk.AtreeValueCompare(slabStorage, value, otherStorable)
 }

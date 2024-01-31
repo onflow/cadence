@@ -219,11 +219,11 @@ func (i *TestRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
 	return i.Storage.SetValue(owner, key, value)
 }
 
-func (i *TestRuntimeInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
-	if i.Storage.OnAllocateStorageIndex == nil {
-		panic("must specify TestRuntimeInterface.storage.OnAllocateStorageIndex")
+func (i *TestRuntimeInterface) AllocateSlabIndex(owner []byte) (atree.SlabIndex, error) {
+	if i.Storage.OnAllocateSlabIndex == nil {
+		panic("must specify TestRuntimeInterface.storage.OnAllocateSlabIndex")
 	}
-	return i.Storage.AllocateStorageIndex(owner)
+	return i.Storage.AllocateSlabIndex(owner)
 }
 
 func (i *TestRuntimeInterface) CreateAccount(payer runtime.Address) (address runtime.Address, err error) {

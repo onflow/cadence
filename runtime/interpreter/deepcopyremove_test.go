@@ -53,7 +53,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 	}
 
 	dictValueKey := NewUnmeteredStringValue(
-		strings.Repeat("x", int(atree.MaxInlineMapKeyOrValueSize+1)),
+		strings.Repeat("x", int(atree.MaxInlineMapKeySize()+1)),
 	)
 
 	dictValueValue := NewUnmeteredInt256ValueFromInt64(1)
@@ -85,14 +85,14 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 		optionalValue,
 	)
 
-	compositeValue.DeepRemove(inter)
+	compositeValue.DeepRemove(inter, true)
 
 	// Only count non-temporary slabs,
 	// i.e. ones which have a non-empty address
 
 	count := 0
 	for id := range storage.Slabs {
-		if id.Address != (atree.Address{}) {
+		if !id.HasTempAddress() {
 			count++
 		}
 	}

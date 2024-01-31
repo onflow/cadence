@@ -59,7 +59,8 @@ func (v *LegacyCharacterValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) interpreter.Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)

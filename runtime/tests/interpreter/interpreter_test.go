@@ -26,15 +26,14 @@ import (
 
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/activations"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
@@ -198,8 +197,10 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	if options.Config != nil {
 		config = *options.Config
 	}
-	config.AtreeValueValidationEnabled = true
-	config.AtreeStorageValidationEnabled = true
+	if memoryGauge == nil {
+		config.AtreeValueValidationEnabled = true
+		config.AtreeStorageValidationEnabled = true
+	}
 	if config.UUIDHandler == nil {
 		config.UUIDHandler = func() (uint64, error) {
 			uuid++
@@ -5293,6 +5294,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true, // r is standalone.
 		)
 
 		domain := storagePath.Domain.Identifier()
