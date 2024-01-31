@@ -434,6 +434,254 @@ func TestContractUpgradeFieldType(t *testing.T) {
 	})
 }
 
+func TestContractUpgradeIntersectionAuthorization(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("change field type capability reference auth allowed intersection", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+			pub contract Test {
+				pub struct interface I {
+					pub fun foo()
+				}
+				pub struct S:I {
+					pub fun foo() {}
+				}
+
+				pub var a: Capability<&{I}>?
+				init() {
+					self.a = nil
+				}
+			}
+	`
+
+		const newCode = `
+		access(all) contract Test {
+			access(all) entitlement E
+
+			access(all) struct interface I {
+				access(E) fun foo()
+			}
+
+			access(all) struct S:I {
+				access(E) fun foo() {}
+			}
+
+			access(all) var a: Capability<auth(E) &{I}>?
+			init() {
+				self.a = nil
+			}
+		}
+	`
+
+		err := testContractUpdate(t, oldCode, newCode)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("change field type capability reference auth allowed too many entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+			pub contract Test {
+				pub struct interface I {}
+				pub struct S:I {
+					pub fun foo() {}
+				}
+
+				pub var a: Capability<&{I}>?
+				init() {
+					self.a = nil
+				}
+			}
+	`
+
+		const newCode = `
+		access(all) contract Test {
+			access(all) entitlement E
+
+			access(all) struct interface I {}
+
+			access(all) struct S:I {
+				access(E) fun foo() {}
+			}
+
+			access(all) var a: Capability<auth(E) &{I}>?
+			init() {
+				self.a = nil
+			}
+		}
+	`
+
+		err := testContractUpdate(t, oldCode, newCode)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "all", "E")
+	})
+
+	t.Run("change field type capability reference auth allowed multiple intersected", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+			pub contract Test {
+				pub struct interface I {
+					pub fun bar()
+				}
+				pub struct interface J {
+					pub fun foo()
+				}
+				pub struct S:I, J {
+					pub fun foo() {}
+					pub fun bar() {}
+				}
+
+				pub var a: Capability<&{I, J}>?
+				init() {
+					self.a = nil
+				}
+			}
+	`
+
+		const newCode = `
+		access(all) contract Test {
+			access(all) entitlement E
+			access(all) entitlement F
+
+			access(all) struct interface I {
+				access(E) fun foo()
+			}
+			access(all) struct interface J {
+				access(F) fun bar()
+			}
+
+			access(all) struct S:I, J {
+				access(E) fun foo() {}
+				access(F) fun bar() {}
+			}
+
+			access(all) var a: Capability<auth(E, F) &{I, J}>?
+			init() {
+				self.a = nil
+			}
+		}
+	`
+
+		err := testContractUpdate(t, oldCode, newCode)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("change field type capability reference auth allowed multiple intersected fewer entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+			pub contract Test {
+				pub struct interface I {
+					pub fun bar()
+				}
+				pub struct interface J {
+					pub fun foo()
+				}
+				pub struct S:I, J {
+					pub fun foo() {}
+					pub fun bar() {}
+				}
+
+				pub var a: Capability<&{I, J}>?
+				init() {
+					self.a = nil
+				}
+			}
+	`
+
+		const newCode = `
+		access(all) contract Test {
+			access(all) entitlement E
+			access(all) entitlement F
+
+			access(all) struct interface I {
+				access(E) fun foo()
+			}
+			access(all) struct interface J {
+				access(F) fun bar()
+			}
+
+			access(all) struct S:I, J {
+				access(E) fun foo() {}
+				access(F) fun bar() {}
+			}
+
+			access(all) var a: Capability<auth(E) &{I, J}>?
+			init() {
+				self.a = nil
+			}
+		}
+	`
+
+		err := testContractUpdate(t, oldCode, newCode)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("change field type capability reference auth multiple intersected with too many entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+			pub contract Test {
+				pub struct interface I {
+					pub fun bar()
+				}
+				pub struct interface J {
+					pub fun foo()
+				}
+				pub struct S:I, J {
+					pub fun foo() {}
+					pub fun bar() {}
+				}
+
+				pub var a: Capability<&{I, J}>?
+				init() {
+					self.a = nil
+				}
+			}
+	`
+
+		const newCode = `
+		access(all) contract Test {
+			access(all) entitlement E
+			access(all) entitlement F
+
+			access(all) struct interface I {
+				access(E) fun foo()
+			}
+			access(all) struct interface J {}
+
+			access(all) struct S:I, J {
+				access(E) fun foo() {}
+			}
+
+			access(all) var a: Capability<auth(E, F) &{I, J}>?
+			init() {
+				self.a = nil
+			}
+		}
+	`
+
+		err := testContractUpdate(t, oldCode, newCode)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "E", "E, F")
+	})
+
+}
+
 func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 	t.Parallel()
