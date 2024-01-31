@@ -243,10 +243,6 @@ func identifiersEqual(expected []ast.Identifier, found []ast.Identifier) bool {
 		return false
 	}
 
-	if len(expected) == 0 {
-		return true
-	}
-
 	for index, element := range found {
 		if expected[index].Identifier != element.Identifier {
 			return false
