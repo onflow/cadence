@@ -89,6 +89,10 @@ func (validator *LegacyContractUpdateValidator) report(err error) {
 	validator.underlyingUpdateValidator.report(err)
 }
 
+func (validator *LegacyContractUpdateValidator) checkEntitlementsUpgrade(oldType *ast.ReferenceType, newType *ast.ReferenceType) error {
+	newAuthorization := newType.Authorization
+}
+
 func (validator *LegacyContractUpdateValidator) checkTypeUpgradability(oldType ast.Type, newType ast.Type) error {
 
 	switch oldType := oldType.(type) {
@@ -98,6 +102,12 @@ func (validator *LegacyContractUpdateValidator) checkTypeUpgradability(oldType a
 		}
 	case *ast.ReferenceType:
 		if newReference, isReference := newType.(*ast.ReferenceType); isReference {
+			if newReference.Authorization != nil {
+				err := validator.checkEntitlementsUpgrade(oldType, newReference)
+				if err != nil {
+					return err
+				}
+			}
 			return validator.checkTypeUpgradability(oldType.Type, newReference.Type)
 		}
 	case *ast.IntersectionType:
