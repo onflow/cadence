@@ -20,13 +20,16 @@ package stdlib
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 var _ ast.TypeEqualityChecker = &TypeComparator{}
 
 type TypeComparator struct {
-	RootDeclIdentifier *ast.Identifier
+	RootDeclIdentifier                *ast.Identifier
+	expectedIdentifierImportLocations map[string]common.Location
+	foundIdentifierImportLocations    map[string]common.Location
 }
 
 func (c *TypeComparator) CheckNominalTypeEquality(expected *ast.NominalType, found ast.Type) error {
@@ -197,7 +200,15 @@ func (c *TypeComparator) checkNameEquality(expectedType *ast.NominalType, foundT
 
 	// At this point, either both are qualified names, or both are simple names.
 	// Thus, do a one-to-one match.
-	if expectedType.Identifier.Identifier != foundType.Identifier.Identifier {
+	expectedIdentifier := expectedType.Identifier.Identifier
+	foundIdentifier := foundType.Identifier.Identifier
+
+	if expectedIdentifier != foundIdentifier {
+		return false
+	}
+
+	// if the identifier is imported, then it must be imported from the same location in each type
+	if c.expectedIdentifierImportLocations[expectedIdentifier] != c.foundIdentifierImportLocations[foundIdentifier] {
 		return false
 	}
 
@@ -230,6 +241,10 @@ func (c *TypeComparator) checkIdentifierEquality(
 func identifiersEqual(expected []ast.Identifier, found []ast.Identifier) bool {
 	if len(expected) != len(found) {
 		return false
+	}
+
+	if len(expected) == 0 {
+		return true
 	}
 
 	for index, element := range found {

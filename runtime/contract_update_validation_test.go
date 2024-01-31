@@ -82,6 +82,8 @@ func newContractRemovalTransaction(contractName string) string {
 func newContractDeploymentTransactor(t *testing.T) func(code string) error {
 	rt := newTestInterpreterRuntime()
 
+	var nextAccount byte = 0x43
+
 	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
 	runtimeInterface := &testRuntimeInterface{
@@ -89,6 +91,11 @@ func newContractDeploymentTransactor(t *testing.T) func(code string) error {
 			return accountCodes[location], nil
 		},
 		storage: newTestLedger(nil, nil),
+		createAccount: func(payer Address) (address Address, err error) {
+			result := interpreter.NewUnmeteredAddressValueFromBytes([]byte{nextAccount})
+			nextAccount++
+			return result.ToAddress(), nil
+		},
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{common.MustBytesToAddress([]byte{0x42})}, nil
 		},
@@ -591,6 +598,330 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "Test", "x", "TestImport.TestStruct", "TestStruct")
+	})
+
+	t.Run("change imported field nominal type location", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		makeDeployTransaction := func(name, code string) []byte {
+			return []byte(fmt.Sprintf(
+				`
+				  transaction {
+					prepare(signer: AuthAccount) {
+					  let acct = AuthAccount(payer: signer)
+					  acct.contracts.add(name: "%s", code: "%s".decodeHex())
+					}
+				  }
+				`,
+				name,
+				hex.EncodeToString([]byte(code)),
+			))
+		}
+
+		accountCodes := map[Location][]byte{}
+		var events []cadence.Event
+
+		var nextAccount byte = 0x2
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: newTestLedger(nil, nil),
+			createAccount: func(payer Address) (address Address, err error) {
+				result := interpreter.NewUnmeteredAddressValueFromBytes([]byte{nextAccount})
+				nextAccount++
+				return result.ToAddress(), nil
+			},
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{0x1}}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		const importCode = `
+		    access(all) contract TestImport {
+
+		        access(all) struct TestStruct {
+		            access(all) let a: Int
+
+		            init() {
+		                self.a = 123
+		            }
+		        }
+		    }
+		`
+
+		deployTransaction := makeDeployTransaction("TestImport", importCode)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		const otherImportedCode = `
+			access(all) contract TestImport {
+
+				access(all) struct TestStruct {
+		            access(all) let a: Int
+		            access(all) var b: Int
+
+		            init() {
+		                self.a = 123
+		                self.b = 456
+		            }
+		        }
+		    }
+		`
+
+		deployTransaction = makeDeployTransaction("TestImport", otherImportedCode)
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		const oldCode = `
+		    import TestImport from 0x2
+
+		    access(all) contract Test {
+
+		        access(all) var x: TestImport.TestStruct
+
+		        init() {
+		            self.x = TestImport.TestStruct()
+		        }
+		    }
+		`
+
+		deployTransaction = []byte(newContractAddTransaction("Test", oldCode))
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		const newCode = `
+			import TestImport from 0x3
+
+			access(all) contract Test {
+
+				access(all) var x: TestImport.TestStruct
+
+				init() {
+					self.x = TestImport.TestStruct()
+				}
+			}
+		`
+
+		deployTransaction = []byte(newContractUpdateTransaction("Test", newCode))
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertFieldTypeMismatchError(t, cause, "Test", "x", "TestImport.TestStruct", "TestImport.TestStruct")
+	})
+
+	t.Run("change imported non-field nominal type location", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		makeDeployTransaction := func(name, code string) []byte {
+			return []byte(fmt.Sprintf(
+				`
+				  transaction {
+					prepare(signer: AuthAccount) {
+					  let acct = AuthAccount(payer: signer)
+					  acct.contracts.add(name: "%s", code: "%s".decodeHex())
+					}
+				  }
+				`,
+				name,
+				hex.EncodeToString([]byte(code)),
+			))
+		}
+
+		accountCodes := map[Location][]byte{}
+		var events []cadence.Event
+
+		var nextAccount byte = 0x2
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: newTestLedger(nil, nil),
+			createAccount: func(payer Address) (address Address, err error) {
+				result := interpreter.NewUnmeteredAddressValueFromBytes([]byte{nextAccount})
+				nextAccount++
+				return result.ToAddress(), nil
+			},
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{0x1}}, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		const importCode = `
+			access(all) contract TestImport {
+
+				access(all) struct TestStruct {
+					access(all) let a: Int
+
+		            init() {
+		                self.a = 123
+		            }
+		        }
+		    }
+		`
+
+		deployTransaction := makeDeployTransaction("TestImport", importCode)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		const otherImportedCode = `
+			access(all) contract TestImport {
+
+				access(all) struct TestStruct {
+					access(all) let a: Int
+					access(all) var b: Int
+
+		            init() {
+		                self.a = 123
+		                self.b = 456
+		            }
+		        }
+		    }
+		`
+
+		deployTransaction = makeDeployTransaction("TestImport", otherImportedCode)
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		const oldCode = `
+		    import TestImport from 0x2
+
+		    access(all) contract Test {
+
+		        access(all) fun foo(): TestImport.TestStruct {
+					return TestImport.TestStruct()
+				}
+		    }
+		`
+
+		deployTransaction = []byte(newContractAddTransaction("Test", oldCode))
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
+
+		const newCode = `
+			import TestImport from 0x3
+
+			access(all) contract Test {
+				access(all) fun foo(): TestImport.TestStruct {
+					return TestImport.TestStruct()
+				}
+			}
+		`
+
+		deployTransaction = []byte(newContractUpdateTransaction("Test", newCode))
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployTransaction,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("contract interface update", func(t *testing.T) {
