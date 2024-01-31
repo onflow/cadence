@@ -19,8 +19,12 @@
 package stdlib
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -89,8 +93,125 @@ func (validator *LegacyContractUpdateValidator) report(err error) {
 	validator.underlyingUpdateValidator.report(err)
 }
 
-func (validator *LegacyContractUpdateValidator) checkEntitlementsUpgrade(oldType *ast.ReferenceType, newType *ast.ReferenceType) error {
+func (validator *LegacyContractUpdateValidator) idOfQualifiedType(typ *ast.NominalType) common.TypeID {
+
+	qualifiedString := typ.String()
+
+	// working under the assumption that any new program we are validating already typechecks,
+	// any nominal type must fall into one of three cases:
+	// 1) type qualified by an import (e.g `C.R` where `C` is an imported type)
+	// 2) type qualified by the root declaration (e.g `C.R` where `C` is the root contract or contract interface of the new contract)
+	// 3) unqualified type (e.g. `R`, but declared inside `C`)
+	//
+	// in case 3, we prepend the root declaration identifer with a `.` to the type's string to get its qualified name,
+	// and in 1 and 2 we don't need to do anything
+	typIdentifier := typ.Identifier.Identifier
+	rootIdentifier := validator.TypeComparator.RootDeclIdentifier.Identifier
+
+	if typIdentifier != rootIdentifier { // &&
+		// && validator.TypeComparator.foundIdentifierImportLocations[typ.Identifier.Identifier] == nil
+		qualifiedString = fmt.Sprintf("%s.%s", rootIdentifier, qualifiedString)
+
+	}
+	return common.NewTypeIDFromQualifiedName(nil, validator.underlyingUpdateValidator.location, qualifiedString)
+}
+
+func (validator *LegacyContractUpdateValidator) getEntitlementType(entitlement *ast.NominalType) *sema.EntitlementType {
+	typeID := validator.idOfQualifiedType(entitlement)
+	return validator.newElaboration.EntitlementType(typeID)
+}
+
+func (validator *LegacyContractUpdateValidator) getEntitlementSetAccess(entitlementSet ast.EntitlementSet) sema.EntitlementSetAccess {
+	var entitlements []*sema.EntitlementType
+
+	for _, entitlement := range entitlementSet.Entitlements() {
+		entitlements = append(entitlements, validator.getEntitlementType(entitlement))
+	}
+
+	entitlementSetKind := sema.Conjunction
+	if entitlementSet.Separator() == ast.Disjunction {
+		entitlementSetKind = sema.Disjunction
+	}
+
+	return sema.NewEntitlementSetAccess(entitlements, entitlementSetKind)
+}
+
+func (validator *LegacyContractUpdateValidator) getCompositeType(composite *ast.NominalType) *sema.CompositeType {
+	typeID := validator.idOfQualifiedType(composite)
+	return validator.newElaboration.CompositeType(typeID)
+}
+
+func (validator *LegacyContractUpdateValidator) getInterfaceType(intf *ast.NominalType) *sema.InterfaceType {
+	typeID := validator.idOfQualifiedType(intf)
+	return validator.newElaboration.InterfaceType(typeID)
+}
+
+func (validator *LegacyContractUpdateValidator) getIntersectedInterfaces(intersections *ast.IntersectionType) (intfs []*sema.InterfaceType) {
+	for _, intf := range intersections.Types {
+		intfs = append(intfs, validator.getInterfaceType(intf))
+	}
+	return
+}
+
+func (validator *LegacyContractUpdateValidator) requirePermitsAccess(
+	expected sema.Access,
+	found sema.EntitlementSetAccess,
+	foundType ast.Type,
+) error {
+	if !found.PermitsAccess(expected) {
+		return &AuthorizationMismatchError{
+			FoundAuthorization:    found,
+			ExpectedAuthorization: expected,
+			Range:                 ast.NewUnmeteredRangeFromPositioned(foundType),
+		}
+	}
+	return nil
+}
+
+func (validator *LegacyContractUpdateValidator) checkEntitlementsUpgrade(
+	oldType *ast.ReferenceType,
+	newType *ast.ReferenceType,
+) error {
 	newAuthorization := newType.Authorization
+	newEntitlementSet, isEntitlementsSet := newAuthorization.(ast.EntitlementSet)
+	foundEntitlementSet := validator.getEntitlementSetAccess(newEntitlementSet)
+
+	// if the new authorization is not an entitlements set, there's nothing to check here
+	if !isEntitlementsSet {
+		return nil
+	}
+
+	switch newReferencedType := newType.Type.(type) {
+	// a lone nominal type must be a composite
+	case *ast.NominalType:
+		compositeType := validator.getCompositeType(newReferencedType)
+
+		expectedAccess := sema.UnauthorizedAccess
+
+		if compositeType != nil {
+			supportedEntitlements := compositeType.SupportedEntitlements()
+			expectedAccess = sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
+		}
+
+		return validator.requirePermitsAccess(expectedAccess, foundEntitlementSet, newReferencedType)
+
+	// a reference to an intersection (or restricted) type is granted entitlements based on the intersected interfaces,
+	// ignoring the legacy restricted type
+	case *ast.IntersectionType:
+		interfaces := validator.getIntersectedInterfaces(newReferencedType)
+
+		supportedEntitlements := orderedmap.New[sema.EntitlementOrderedSet](0)
+
+		for _, interfaceType := range interfaces {
+			supportedEntitlements.SetAll(interfaceType.SupportedEntitlements())
+		}
+
+		expectedEntitlementSet := sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
+
+		return validator.requirePermitsAccess(expectedEntitlementSet, foundEntitlementSet, newReferencedType)
+	}
+
+	return nil
 }
 
 func (validator *LegacyContractUpdateValidator) checkTypeUpgradability(oldType ast.Type, newType ast.Type) error {
@@ -179,5 +300,37 @@ func (validator *LegacyContractUpdateValidator) checkField(oldField *ast.FieldDe
 		Err:       err,
 		Range:     ast.NewUnmeteredRangeFromPositioned(newField.TypeAnnotation),
 	})
+}
 
+// AuthorizationMismatchError is reported during a contract upgrade,
+// when a field value is given authorization that is more powerful
+// than that which the migration would grant it
+type AuthorizationMismatchError struct {
+	ExpectedAuthorization sema.Access
+	FoundAuthorization    sema.Access
+	ast.Range
+}
+
+var _ errors.UserError = &AuthorizationMismatchError{}
+var _ errors.SecondaryError = &AuthorizationMismatchError{}
+
+func (*AuthorizationMismatchError) IsUserError() {}
+
+func (e *AuthorizationMismatchError) Error() string {
+	return "mismatching authorization"
+}
+
+func (e *AuthorizationMismatchError) SecondaryError() string {
+	if e.ExpectedAuthorization == sema.PrimitiveAccess(ast.AccessAll) {
+		return fmt.Sprintf(
+			"The entitlements migration would not grant this value any entitlements, but the annotation present is `%s`",
+			e.FoundAuthorization.QualifiedString(),
+		)
+	}
+
+	return fmt.Sprintf(
+		"The entitlements migration would only grant this value `%s`, but the annotation present is `%s`",
+		e.ExpectedAuthorization.QualifiedString(),
+		e.FoundAuthorization.QualifiedString(),
+	)
 }
