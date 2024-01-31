@@ -303,7 +303,6 @@ type InclusiveRangeStaticType struct {
 }
 
 var _ StaticType = InclusiveRangeStaticType{}
-var _ atree.TypeInfo = InclusiveRangeStaticType{}
 
 func NewInclusiveRangeStaticType(
 	memoryGauge common.MemoryGauge,
@@ -314,18 +313,6 @@ func NewInclusiveRangeStaticType(
 	return InclusiveRangeStaticType{
 		ElementType: elementType,
 	}
-}
-
-func (t InclusiveRangeStaticType) IsComposite() bool {
-	return false
-}
-
-func (t InclusiveRangeStaticType) Identifier() string {
-	return string(t.ID())
-}
-
-func (t InclusiveRangeStaticType) Copy() atree.TypeInfo {
-	return t
 }
 
 func (InclusiveRangeStaticType) isStaticType() {}
