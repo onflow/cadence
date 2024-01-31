@@ -9894,6 +9894,157 @@ func TestRuntimeIfLetElseBranchConfusion(t *testing.T) {
 	assert.IsType(t, &parser.CustomDestructorError{}, parserError.Errors[0])
 }
 
+func TestResourceLossViaSelfRugPull(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	signers := []Address{signerAccount}
+
+	accountCodes := map[Location][]byte{}
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return signers, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+			accountCodes[location] = code
+			return nil
+		},
+		OnProgramLog: func(_ string) {},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	bar := []byte(`
+        access(all) contract Bar {
+
+            access(all) resource Vault {
+
+
+                // Balance of a user's Vault
+                // we use unsigned fixed point numbers for balances
+                // because they can represent decimals and do not allow negative values
+                access(all) var balance: UFix64
+
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+
+                access(all) fun withdraw(amount: UFix64): @Vault {
+                    self.balance = self.balance - amount
+                    return <-create Vault(balance: amount)
+                }
+
+                access(all) fun deposit(from: @Vault) {
+                    self.balance = self.balance + from.balance
+                    destroy from
+                }
+            }
+
+            access(all) fun createEmptyVault(): @Bar.Vault {
+                return <- create Bar.Vault(balance: 0.0)
+            }
+
+            access(all) fun createVault(balance: UFix64): @Bar.Vault {
+                return <- create Bar.Vault(balance: balance)
+            }
+        }
+    `)
+
+	// Deploy Bar
+
+	deployVault := DeploymentTransaction("Bar", bar)
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployVault,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	attacker := []byte(fmt.Sprintf(`
+        import Bar from %[1]s
+
+        access(all) contract Foo {
+            access(all) var rCopy1: @R?
+            init() {
+                self.rCopy1 <- nil
+                log("Creating a Vault with 1337 units");
+                var r <- Bar.createVault(balance: 1337.0)
+                self.loser(<- r)
+            }
+            access(all) resource R {
+                access(all) var optional: @[Bar.Vault]?
+
+                init() {
+                    self.optional <- []
+                }
+
+                access(all) fun rugpullAndAssign(_ callback: fun(): Void, _ victim: @Bar.Vault) {
+                    callback()
+                    // "self" has now been invalidated and accessing "a" for reading would
+                    // trigger a "not initialized" error. However, force-assigning to it succeeds
+                    // and leaves the victim object hanging from an invalidated resource
+                    self.optional <-! [<- victim]
+                }
+            }
+
+            access(all) fun loser(_ victim: @Bar.Vault): Void{
+                var array: @[R] <- [<- create R()]
+                let arrRef = &array as auth(Remove) &[R]
+                fun rugPullCallback(): Void{
+                    // Here we move the R resource from the array to a contract field
+                    // invalidating the "self" during the execution of rugpullAndAssign
+                    Foo.rCopy1 <-! arrRef.removeLast()
+                }
+                array[0].rugpullAndAssign(rugPullCallback, <- victim)
+                destroy array
+
+                var y: @R? <- nil
+                self.rCopy1 <-> y
+                destroy y
+            }
+
+        }`,
+		signerAccount.HexWithPrefix(),
+	))
+
+	// Deploy Attacker
+
+	deployAttacker := DeploymentTransaction("Foo", attacker)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deployAttacker,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+}
+
 func TestRuntimeValueTransferResourceLoss(t *testing.T) {
 
 	t.Parallel()
