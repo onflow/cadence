@@ -322,7 +322,7 @@ func (m *StorageMigration) MigrateNestedValue(
 	}
 
 	for _, migration := range valueMigrations {
-		converted, err := m.migrate(
+		convertedValue, err := m.migrate(
 			migration,
 			storageKey,
 			storageMapKey,
@@ -341,11 +341,22 @@ func (m *StorageMigration) MigrateNestedValue(
 			continue
 		}
 
-		if converted != nil {
-			// Chain the migrations.
-			value = converted
+		if convertedValue != nil {
 
-			newValue = converted
+			// Sanity check: ensure that the owner of the new value
+			// is the same as the owner of the old value
+			if ownedValue, ok := value.(interpreter.OwnedValue); ok {
+				if ownedConvertedValue, ok := convertedValue.(interpreter.OwnedValue); ok {
+					if ownedConvertedValue.GetOwner() != ownedValue.GetOwner() {
+						panic(errors.NewUnreachableError())
+					}
+				}
+			}
+
+			// Chain the migrations.
+			value = convertedValue
+
+			newValue = convertedValue
 
 			if reporter != nil {
 				reporter.Migrated(
