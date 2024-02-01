@@ -139,6 +139,25 @@ func (m *StorageMigration) MigrateNestedValue(
 	valueMigrations []ValueMigration,
 	reporter Reporter,
 ) (newValue interpreter.Value) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			switch r := r.(type) {
+			case error:
+				if reporter != nil {
+					reporter.Error(
+						storageKey,
+						storageMapKey,
+						"StorageMigration",
+						r,
+					)
+				}
+			default:
+				panic(r)
+			}
+		}
+	}()
+
 	switch value := value.(type) {
 	case *interpreter.SomeValue:
 		innerValue := value.InnerValue(m.interpreter, emptyLocationRange)
