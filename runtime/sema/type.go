@@ -8767,6 +8767,7 @@ type EntitlementType struct {
 	Location      common.Location
 	containerType Type
 	Identifier    string
+	isInvalid     bool
 }
 
 var _ Type = &EntitlementType{}
@@ -8836,8 +8837,8 @@ func (*EntitlementType) IsPrimitiveType() bool {
 	return false
 }
 
-func (*EntitlementType) IsInvalidType() bool {
-	return false
+func (t *EntitlementType) IsInvalidType() bool {
+	return t.isInvalid
 }
 
 func (*EntitlementType) IsOrContainsReferenceType() bool {

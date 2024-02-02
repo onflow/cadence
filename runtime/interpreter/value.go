@@ -245,6 +245,12 @@ type IterableValue interface {
 	)
 }
 
+// OwnedValue is a value which has an owner
+type OwnedValue interface {
+	Value
+	GetOwner() common.Address
+}
+
 // ValueIterator is an iterator which returns values.
 // When Next returns nil, it signals the end of the iterator.
 type ValueIterator interface {
