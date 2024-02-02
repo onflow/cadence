@@ -37,6 +37,10 @@ function extractVersionCommit(version: string): string | null {
     return parts[parts.length-1]
 }
 
+function capitalizeFirstLetter(string: string): string {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 class Updater {
 
     constructor(
@@ -341,8 +345,8 @@ class Updater {
         const [owner, repoName] = fullRepoName.split('/')
         const dir = await mkdtemp(path.join(os.tmpdir(), `${owner}-${repoName}`))
 
-        console.log(`Cloning ${fullRepoName} ...`)
-        await gitClone(this.protocol, fullRepoName, dir)
+        console.log(`Cloning ${fullRepoName} ${repo.branch ? `(branch ${repo.branch}) `: ""}...`)
+        await gitClone(this.protocol, fullRepoName, dir, repo.branch)
         process.chdir(dir)
 
         const rootFullRepoName = this.config.repo
@@ -360,19 +364,25 @@ class Updater {
             console.log(`Updating mod ${fullModName} ...`)
             process.chdir(path.join(dir, mod.path))
 
-            for (const dep of mod.deps) {
+            const deps = mod.deps.map((dep) => {
                 const newVersion = this.getExpectedVersion(dep)
-                console.log(`Updating mod ${fullModName} dep ${dep} to version ${newVersion} ...`)
-                await exec(`go get github.com/${dep}@${newVersion}`)
                 updates.set(dep, newVersion)
-            }
+                return `github.com/${dep}@${newVersion}`
+            })
+
+            console.log(`Updating mod ${fullModName} to ${deps.join(', ')} ...`)
+
+            await exec(`go get ${deps.join(' ')}`)
 
             console.log(`Cleaning up mod ${fullModName} ...`)
             await exec(`go mod tidy`)
         }
 
         console.log(`Committing update ...`)
-        await exec(`git commit -a -m "auto update to ${rootFullRepoName} ${rootRepoVersion}"`)
+
+        const message = `Update to ${capitalizeFirstLetter(rootRepoName)} ${rootRepoVersion}`
+
+        await exec(`git commit -a -m "${message}"`)
 
         console.log(`Pushing update ...`)
         await exec(`git push -u origin ${branch}"`)
@@ -381,15 +391,25 @@ class Updater {
 
         let updateList = ''
         for (const [dep, version] of updates.entries()) {
-            updateList += `- [${dep} ${version}](https://github.com/${dep}/releases/tag/${version})\n`
+            const releaseURL = isValidSemVer(version)
+                ? `https://github.com/${dep}/releases/tag/${version}`
+                : `https://github.com/${dep}/commit/${version}`
+
+            updateList += `- [${dep} ${version}](${releaseURL})\n`
+        }
+
+        let prTitle = message
+        if (repo.prefixPRTitle) {
+            const modList = repo.mods.map((mod) => mod.path).join(', ')
+            prTitle = `[${modList}] ${prTitle}`
         }
 
         const pull = await this.octokit.rest.pulls.create({
             owner,
             repo: repoName,
             head: branch,
-            base: 'master',
-            title: `Auto update to ${rootFullRepoName} ${rootRepoVersion}`,
+            base: repo.branch || "master",
+            title: prTitle,
             body: `
 ## Description
 
@@ -474,7 +494,8 @@ class Releaser {
         const dir = await mkdtemp(path.join(os.tmpdir(), `${owner}-${repoName}`))
 
         console.log(`Cloning ${this.repo} ...`)
-        await gitClone(this.protocol, this.repo, dir)
+        // TODO: add support for different branches
+        await gitClone(this.protocol, this.repo, dir, 'master')
         process.chdir(dir)
 
         console.log(`Tagging ${this.repo} version ${this.version} ...`)
@@ -586,20 +607,20 @@ class Releaser {
 })()
 
 
-async function gitClone(protocol: Protocol, fullRepoName: string, dir: string) {
-    let command: string
+async function gitClone(protocol: Protocol, fullRepoName: string, dir: string, branch?: string) {
+    let prefix: string
     switch (protocol) {
         case Protocol.HTTPS:
-            command = `git clone https://github.com/${fullRepoName} ${dir}`
+            prefix = "https://github.com/"
             break
         case Protocol.SSH:
-            command = `git clone git@github.com:${fullRepoName} ${dir}`
+            prefix = 'git@github.com:'
             break
         default:
             console.error(`unsupported protocol: ${protocol}`)
             return
     }
-    await exec(command)
+    await exec(`git clone ${branch ? `-b ${branch} ` : ""}${prefix}${fullRepoName} ${dir}`)
 }
 
 async function runWithConsoleGroup(func: () => Promise<boolean>): Promise<boolean> {
