@@ -1742,11 +1742,11 @@ func TestCheckIllegalInit(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t,
-			`attachment Test for AnyStruct {}
-			let t = Test()
-		`,
-		)
+		_, err := ParseAndCheck(t, `
+            attachment Test for AnyStruct {}
+
+            let t = Test()
+        `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
@@ -1757,14 +1757,32 @@ func TestCheckIllegalInit(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t,
-			`attachment Test for AnyResource {}
-			pub fun foo() {
-				let t <- Test()
-				destroy t
-			}
-		`,
-		)
+		_, err := ParseAndCheck(t, `
+            attachment Test for AnyResource {}
+
+            pub fun foo() {
+                let t <- Test()
+                destroy t
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[0])
+	})
+
+	t.Run("optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract C {
+              attachment Test for AnyStruct {}
+          }
+
+          let optContractRef: &C? = &C as &C
+          let t = optContractRef?.Test()
+		`)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
