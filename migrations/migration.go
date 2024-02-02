@@ -139,6 +139,31 @@ func (m *StorageMigration) MigrateNestedValue(
 	valueMigrations []ValueMigration,
 	reporter Reporter,
 ) (newValue interpreter.Value) {
+
+	defer func() {
+		//	Here it catches the panics that may occur at the framework level,
+		// even before going to each individual migration. e.g: iterating the dictionary for elements.
+		//
+		// There is a similar recovery at the `StorageMigration.migrate()` method,
+		// which handles panics from each individual migrations (e.g: capcon migration, static type migration, etc.).
+
+		if r := recover(); r != nil {
+			switch r := r.(type) {
+			case error:
+				if reporter != nil {
+					reporter.Error(
+						storageKey,
+						storageMapKey,
+						"StorageMigration",
+						r,
+					)
+				}
+			default:
+				panic(r)
+			}
+		}
+	}()
+
 	switch value := value.(type) {
 	case *interpreter.SomeValue:
 		innerValue := value.InnerValue(m.interpreter, emptyLocationRange)
@@ -378,6 +403,11 @@ func (m *StorageMigration) migrate(
 	value interpreter.Value,
 ) (converted interpreter.Value, err error) {
 
+	// Handles panics from each individual migrations (e.g: capcon migration, static type migration, etc.).
+	// So even if one migration panics, others could still run (i.e: panics are caught inside the loop).
+	// Removing that would cause all migrations to stop for a particular value, if one of them panics.
+	// NOTE: this won't catch panics occur at the migration framework level.
+	// They are caught at `StorageMigration.MigrateNestedValue()`.
 	defer func() {
 		if r := recover(); r != nil {
 			switch r := r.(type) {
