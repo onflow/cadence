@@ -40,7 +40,7 @@ func (EntitlementsMigration) Name() string {
 	return "EntitlementsMigration"
 }
 
-// Converts its input to an entitled type according to the following rules:
+// ConvertToEntitledType converts the given type to an entitled type according to the following rules:
 // * `ConvertToEntitledType(&T) ---> auth(Entitlements(T)) &T`
 // * `ConvertToEntitledType(Capability<T>) ---> Capability<ConvertToEntitledType(T)>`
 // * `ConvertToEntitledType(T?) ---> ConvertToEntitledType(T)?
@@ -128,7 +128,7 @@ func ConvertToEntitledType(t sema.Type) (sema.Type, bool) {
 	}
 }
 
-// Converts the input value into a version compatible with the new entitlements feature,
+// ConvertValueToEntitlements converts the input value into a version compatible with the new entitlements feature,
 // with the same members/operations accessible on any references as would have been accessible in the past.
 func ConvertValueToEntitlements(
 	inter *interpreter.Interpreter,
@@ -150,13 +150,6 @@ func ConvertValueToEntitlements(
 			referenceValue.Authorization,
 			interpreter.ConvertSemaToStaticType(inter, referenceValue.BorrowedType),
 		)
-
-	case interpreter.LinkValue: //nolint:staticcheck
-		// Link values are not supposed to reach here.
-		// But it could, if the type used in the link is not migrated,
-		// then the link values would be left un-migrated.
-		// These need to be skipped specifically, otherwise `v.StaticType(inter)` will panic.
-		return nil, nil
 
 	default:
 		staticType = v.StaticType(inter)
@@ -364,14 +357,28 @@ func ConvertValueToEntitlements(
 			v.CapabilityID,
 			v.TargetPath,
 		), nil
+
+	case interpreter.PathLinkValue: //nolint:staticcheck
+		semaType := inter.MustConvertStaticToSemaType(staticType)
+		entitledType, converted := ConvertToEntitledType(semaType)
+		if !converted {
+			return nil, nil
+		}
+
+		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
+		referenceStaticType := interpreter.ConvertSemaToStaticType(inter, entitledCapabilityValue.BorrowType)
+		return interpreter.PathLinkValue{ //nolint:staticcheck
+			TargetPath: v.TargetPath,
+			Type:       referenceStaticType,
+		}, nil
 	}
 
 	return nil, nil
 }
 
 func (mig EntitlementsMigration) Migrate(
-	storageKey interpreter.StorageKey,
-	storageMapKey interpreter.StorageMapKey,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (
