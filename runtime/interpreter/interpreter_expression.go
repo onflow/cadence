@@ -1305,14 +1305,6 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 				return Nil
 			}
 
-			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			value = interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
-
-			// Failable casting is a resource invalidation
-			interpreter.invalidateResource(value)
-
-			return NewSomeValueNonCopying(interpreter, value)
-
 		case ast.OperationForceCast:
 			if !isSubType {
 				locationRange := LocationRange{
@@ -1327,12 +1319,21 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 				})
 			}
 
-			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			return interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
-
 		default:
 			panic(errors.NewUnreachableError())
 		}
+
+		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
+		value = interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
+
+		if expression.Operation == ast.OperationFailableCast {
+			// Failable casting is a resource invalidation
+			interpreter.invalidateResource(value)
+
+			value = NewSomeValueNonCopying(interpreter, value)
+		}
+
+		return value
 
 	case ast.OperationCast:
 		staticValueType := interpreter.Program.Elaboration.CastingExpressionTypes(expression).StaticValueType
