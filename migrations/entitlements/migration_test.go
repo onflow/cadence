@@ -852,6 +852,8 @@ func TestConvertToEntitledValue(t *testing.T) {
 		Name   string
 	}
 
+	testPathValue := interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test")
+
 	tests := []testCase{
 		{
 			Input:  rValue,
@@ -1148,6 +1150,22 @@ func TestConvertToEntitledValue(t *testing.T) {
 				interpreter.EmptyLocationRange,
 			),
 			Name: "&{Int: R}",
+		},
+		{
+			Input: interpreter.PathLinkValue{
+				TargetPath: testPathValue,
+				Type:       unentitledSRefStaticType,
+			},
+			Output: interpreter.PathLinkValue{
+				TargetPath: testPathValue,
+				Type:       entitledSRefStaticType,
+			},
+			Name: "PathLink<&S>(/storage/test)",
+		},
+		{
+			Input:  interpreter.AccountLinkValue{},
+			Output: interpreter.AccountLinkValue{},
+			Name:   "AccountLink()",
 		},
 	}
 

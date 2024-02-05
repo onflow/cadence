@@ -77,6 +77,16 @@ func (m *StaticTypeMigration) Migrate(
 		}
 		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType), nil
 
+	case interpreter.PathLinkValue:
+		convertedBorrowType := m.maybeConvertStaticType(value.Type)
+		if convertedBorrowType == nil {
+			return
+		}
+		return interpreter.PathLinkValue{
+			Type:       convertedBorrowType,
+			TargetPath: value.TargetPath,
+		}, nil
+
 	case *interpreter.AccountCapabilityControllerValue:
 		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
 		if convertedBorrowType == nil {
