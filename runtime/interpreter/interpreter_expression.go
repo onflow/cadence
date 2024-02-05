@@ -1145,7 +1145,9 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		HasPosition: expression.Expression,
 	}
 
-	expectedType := interpreter.Program.Elaboration.CastingExpressionTypes(expression).TargetType
+	castingExpressionTypes := interpreter.Program.Elaboration.CastingExpressionTypes(expression)
+
+	expectedType := castingExpressionTypes.TargetType
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
@@ -1191,7 +1193,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		return value
 
 	case ast.OperationCast:
-		staticValueType := interpreter.Program.Elaboration.CastingExpressionTypes(expression).StaticValueType
+		staticValueType := castingExpressionTypes.StaticValueType
 		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
 		return interpreter.ConvertAndBox(locationRange, value, staticValueType, expectedType)
 
