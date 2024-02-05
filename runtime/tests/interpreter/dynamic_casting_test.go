@@ -3962,14 +3962,20 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 				operation:       ast.OperationForceCast,
 				returnsOptional: false,
 				checkError: func(t *testing.T, err error) {
-					require.ErrorAs(t, err, &interpreter.DereferenceError{})
+					// StorageReferenceValue.ReferencedValue turns the ForceCastTypeMismatchError
+					// of the failed dereference into a DereferenceError
+					var dereferenceError interpreter.DereferenceError
+					require.ErrorAs(t, err, &dereferenceError)
+
+					assert.Equal(t, 22, dereferenceError.LocationRange.StartPosition().Line)
 				},
 			},
 			{
 				operation:       ast.OperationFailableCast,
 				returnsOptional: true,
 				checkError: func(t *testing.T, err error) {
-					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+					var mismatchError interpreter.ForceCastTypeMismatchError
+					require.ErrorAs(t, err, &mismatchError)
 				},
 			},
 		}
