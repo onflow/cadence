@@ -149,16 +149,16 @@ func BigIntSqrt(interpreter *Interpreter, value *big.Int, locationRange Location
 		})
 	}
 
-	valueFloat := new(big.Float).SetPrec(64).SetInt(value)
-	res := new(big.Float).SetPrec(64).Sqrt(valueFloat)
+	valueFloat := new(big.Float).SetPrec(256).SetInt(value)
+	res := new(big.Float).SetPrec(256).SetMode(big.ToZero).Sqrt(valueFloat)
 
 	valueGetter := func() uint64 {
-		res.Mul(res, new(big.Float).SetPrec(64).SetInt(sema.Fix64FactorBig))
+		res.Mul(res, new(big.Float).SetPrec(256).SetInt(sema.Fix64FactorBig))
 
 		resInt := new(big.Int)
 		res.Int(resInt)
 
-		if !resInt.IsUint64() || resInt.Uint64() > sema.UFix64TypeMaxInt {
+		if !resInt.IsUint64() {
 			panic(OverflowError{
 				LocationRange: locationRange,
 			})

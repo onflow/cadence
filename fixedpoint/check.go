@@ -25,6 +25,7 @@ import (
 
 const Fix64Scale = 8
 const Fix64Factor = 100_000_000
+const Fix64FactorSqrt = 10_000
 
 // Fix64
 

@@ -35,6 +35,7 @@ import (
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
 
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
@@ -15817,8 +15818,10 @@ func (v Fix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRan
 }
 
 func (v Fix64Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
-	val := new(big.Int).SetInt64(int64(v))
-	return BigIntSqrt(interpreter, val, locationRange)
+	val := new(big.Int).SetUint64(uint64(v))
+	sqrtWithFix64FactorSqrt := BigIntSqrt(interpreter, val, locationRange)
+	sqrt := sqrtWithFix64FactorSqrt / fixedpoint.Fix64FactorSqrt
+	return sqrt
 }
 
 func (v Fix64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {
@@ -16346,7 +16349,9 @@ func (v UFix64Value) Mod(interpreter *Interpreter, other NumberValue, locationRa
 
 func (v UFix64Value) Sqrt(interpreter *Interpreter, locationRange LocationRange) UFix64Value {
 	val := new(big.Int).SetUint64(uint64(v))
-	return BigIntSqrt(interpreter, val, locationRange)
+	sqrtWithFix64FactorSqrt := BigIntSqrt(interpreter, val, locationRange)
+	sqrt := sqrtWithFix64FactorSqrt / fixedpoint.Fix64FactorSqrt
+	return sqrt
 }
 
 func (v UFix64Value) Less(interpreter *Interpreter, other ComparableValue, locationRange LocationRange) BoolValue {

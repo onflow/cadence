@@ -19,6 +19,8 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -26,9 +28,15 @@ import (
 
 // SqrtFunction
 
-const sqrtFunctionDocString = `TODO`
+const mathTypeSqrtFunctionDocString = `
+Computes the square root of the value and returns it.
+Available on all Number types.
+Panics with error if the provided value is < 0.
+`
 
-var sqrtFunctionType = func() *sema.FunctionType {
+const mathTypeSqrtFunctionName = "Sqrt"
+
+var mathTypeSqrtFunctionType = func() *sema.FunctionType {
 	typeParameter := &sema.TypeParameter{
 		Name:      "T",
 		TypeBound: sema.NumberType,
@@ -55,10 +63,8 @@ var sqrtFunctionType = func() *sema.FunctionType {
 	}
 }()
 
-var SqrtFunction = NewStandardLibraryFunction(
-	"Sqrt",
-	sqrtFunctionType,
-	sqrtFunctionDocString,
+var mathSqrtFunction = interpreter.NewUnmeteredHostFunctionValue(
+	mathTypeSqrtFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		value, ok := invocation.Arguments[0].(interpreter.NumberValue)
 
@@ -69,3 +75,57 @@ var SqrtFunction = NewStandardLibraryFunction(
 		return value.Sqrt(invocation.Interpreter, invocation.LocationRange)
 	},
 )
+
+// Math Contract
+
+const MathTypeName = "Math"
+
+var MathType = func() *sema.CompositeType {
+	var t = &sema.CompositeType{
+		Identifier:         MathTypeName,
+		Kind:               common.CompositeKindContract,
+		ImportableBuiltin:  false,
+		HasComputedMembers: true,
+	}
+
+	return t
+}()
+
+func init() {
+	var members = []*sema.Member{
+		sema.NewUnmeteredFunctionMember(
+			MathType,
+			sema.PrimitiveAccess(ast.AccessAll),
+			mathTypeSqrtFunctionName,
+			mathTypeSqrtFunctionType,
+			mathTypeSqrtFunctionDocString,
+		),
+	}
+
+	MathType.Members = sema.MembersAsMap(members)
+	MathType.Fields = sema.MembersFieldNames(members)
+}
+
+var mathContractFields = map[string]interpreter.Value{
+	mathTypeSqrtFunctionName: mathSqrtFunction,
+}
+
+var MathTypeStaticType = interpreter.ConvertSemaToStaticType(nil, MathType)
+
+var mathContractValue = interpreter.NewSimpleCompositeValue(
+	nil,
+	MathType.ID(),
+	MathTypeStaticType,
+	nil,
+	mathContractFields,
+	nil,
+	nil,
+	nil,
+)
+
+var MathContract = StandardLibraryValue{
+	Name:  MathTypeName,
+	Type:  MathType,
+	Value: mathContractValue,
+	Kind:  common.DeclarationKindContract,
+}
