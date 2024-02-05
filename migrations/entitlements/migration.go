@@ -40,7 +40,7 @@ func (EntitlementsMigration) Name() string {
 	return "EntitlementsMigration"
 }
 
-// Converts its input to an entitled type according to the following rules:
+// ConvertToEntitledType converts the given type to an entitled type according to the following rules:
 // * `ConvertToEntitledType(&T) ---> auth(Entitlements(T)) &T`
 // * `ConvertToEntitledType(Capability<T>) ---> Capability<ConvertToEntitledType(T)>`
 // * `ConvertToEntitledType(T?) ---> ConvertToEntitledType(T)?
@@ -128,7 +128,7 @@ func ConvertToEntitledType(t sema.Type) (sema.Type, bool) {
 	}
 }
 
-// Converts the input value into a version compatible with the new entitlements feature,
+// ConvertValueToEntitlements converts the input value into a version compatible with the new entitlements feature,
 // with the same members/operations accessible on any references as would have been accessible in the past.
 func ConvertValueToEntitlements(
 	inter *interpreter.Interpreter,
@@ -358,7 +358,7 @@ func ConvertValueToEntitlements(
 			v.TargetPath,
 		), nil
 
-	case interpreter.PathLinkValue:
+	case interpreter.PathLinkValue: //nolint:staticcheck
 		semaType := inter.MustConvertStaticToSemaType(staticType)
 		entitledType, converted := ConvertToEntitledType(semaType)
 		if !converted {
@@ -367,7 +367,7 @@ func ConvertValueToEntitlements(
 
 		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
 		referenceStaticType := interpreter.ConvertSemaToStaticType(inter, entitledCapabilityValue.BorrowType)
-		return interpreter.PathLinkValue{
+		return interpreter.PathLinkValue{ //nolint:staticcheck
 			TargetPath: v.TargetPath,
 			Type:       referenceStaticType,
 		}, nil
@@ -377,8 +377,8 @@ func ConvertValueToEntitlements(
 }
 
 func (mig EntitlementsMigration) Migrate(
-	storageKey interpreter.StorageKey,
-	storageMapKey interpreter.StorageMapKey,
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (

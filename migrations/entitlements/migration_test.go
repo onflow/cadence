@@ -1152,19 +1152,19 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Name: "&{Int: R}",
 		},
 		{
-			Input: interpreter.PathLinkValue{
+			Input: interpreter.PathLinkValue{ //nolint:staticcheck
 				TargetPath: testPathValue,
 				Type:       unentitledSRefStaticType,
 			},
-			Output: interpreter.PathLinkValue{
+			Output: interpreter.PathLinkValue{ //nolint:staticcheck
 				TargetPath: testPathValue,
 				Type:       entitledSRefStaticType,
 			},
 			Name: "PathLink<&S>(/storage/test)",
 		},
 		{
-			Input:  interpreter.AccountLinkValue{},
-			Output: interpreter.AccountLinkValue{},
+			Input:  interpreter.AccountLinkValue{}, //nolint:staticcheck
+			Output: interpreter.AccountLinkValue{}, //nolint:staticcheck
 			Name:   "AccountLink()",
 		},
 	}

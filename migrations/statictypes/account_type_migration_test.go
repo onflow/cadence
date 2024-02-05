@@ -822,18 +822,18 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 			),
 		},
 		"path_link_value": {
-			storedValue: interpreter.PathLinkValue{
+			storedValue: interpreter.PathLinkValue{ //nolint:staticcheck
 				TargetPath: interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
 				Type:       interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
 			},
-			expectedValue: interpreter.PathLinkValue{
+			expectedValue: interpreter.PathLinkValue{ //nolint:staticcheck
 				TargetPath: interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
 				Type:       unauthorizedAccountReferenceType,
 			},
 		},
 		"account_link_value": {
-			storedValue:   interpreter.AccountLinkValue{},
-			expectedValue: interpreter.AccountLinkValue{},
+			storedValue:   interpreter.AccountLinkValue{}, //nolint:staticcheck
+			expectedValue: interpreter.AccountLinkValue{}, //nolint:staticcheck
 		},
 	}
 
