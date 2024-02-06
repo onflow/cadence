@@ -9831,31 +9831,33 @@ func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
 		attacker := []byte(fmt.Sprintf(`
         import Bar from %[1]s
 
-		pub contract Foo {
+		access(all) contract Foo {
             init() {
                 var tripled <- self.tripleVault(victim: <- Bar.createVault(balance: 100.0))
 
                 destroy tripled
             }
+
             // Fake resource that is presented to the static checker to get it to 
             // wave thru the call to "reverse"
-            pub resource FakeArray {
-                pub fun reverse(): @[Bar.Vault] { return <- [] }
+            access(all) resource FakeArray {
+                access(all) fun reverse(): @[Bar.Vault] { return <- [] }
             }
-            pub fun tripleVault(victim: @Bar.Vault): @Bar.Vault{
+
+            access(all) fun tripleVault(victim: @Bar.Vault): @Bar.Vault{
                 // Step 1: Create a storage reference to a FakeArray, first borrowing
                 //         it as &AnyResource and then performing a runtime cast to
                 //         &FakeArray. This intermediary step avoid the "dereference
                 //         failed" error later on.
 
-                Foo.account.save(<- create FakeArray(), to: /storage/flipflop)
-                let anyStructRef = Foo.account.borrow<auth &AnyResource>(from: /storage/flipflop)!
+                Foo.account.storage.save(<- create FakeArray(), to: /storage/flipflop)
+                let anyStructRef = Foo.account.storage.borrow<&AnyResource>(from: /storage/flipflop)!
                 let flipFlopStorageRef = anyStructRef as! &FakeArray
 
                 // Step 2: Ditch FakeArray and place the victim resource array
                 //         at the same path in storage
-                destroy <- Foo.account.load<@FakeArray>(from: /storage/flipflop)
-                Foo.account.save(<- [<- victim], to: /storage/flipflop)
+                destroy <- Foo.account.storage.load<@FakeArray>(from: /storage/flipflop)
+                Foo.account.storage.save(<- [<- victim], to: /storage/flipflop)
 
                 // Step 3: As static checker still thinks flipFlopStorageRef is &FakeArray
                 //         we can go ahead and call reverse() to get infinite copies of the resource
@@ -9869,7 +9871,7 @@ func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
 				
                 // Clean up our value from storage. Throw the third copy of
                 // the assets into our bounty stash for good measure
-                var arr <- Foo.account.load<@[Bar.Vault]>(from: /storage/flipflop)!
+                var arr <- Foo.account.storage.load<@[Bar.Vault]>(from: /storage/flipflop)!
                 bounty.deposit(from: <- arr.removeLast())
                 destroy arr
                 return <- bounty
@@ -9879,34 +9881,34 @@ func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
 		))
 
 		bar := []byte(`
-        pub contract Bar {
-            pub resource Vault {
+        access(all) contract Bar {
+            access(all) resource Vault {
 
                 // Balance of a user's Vault
                 // we use unsigned fixed point numbers for balances
                 // because they can represent decimals and do not allow negative values
-                pub var balance: UFix64
+                access(all) var balance: UFix64
 
                 init(balance: UFix64) {
                     self.balance = balance
                 }
 
-                pub fun withdraw(amount: UFix64): @Vault {
+                access(all) fun withdraw(amount: UFix64): @Vault {
                     self.balance = self.balance - amount
                     return <-create Vault(balance: amount)
                 }
 
-                pub fun deposit(from: @Vault) {
+                access(all) fun deposit(from: @Vault) {
                     self.balance = self.balance + from.balance
                     destroy from
                 }
             }
 
-            pub fun createEmptyVault(): @Bar.Vault {
+            access(all) fun createEmptyVault(): @Bar.Vault {
                 return <- create Bar.Vault(balance: 0.0)
             }
 
-            pub fun createVault(balance: UFix64): @Bar.Vault {
+            access(all) fun createVault(balance: UFix64): @Bar.Vault {
                 return <- create Bar.Vault(balance: balance)
             }
         }
@@ -9982,31 +9984,33 @@ func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
 		attacker := []byte(fmt.Sprintf(`
         import Bar from %[1]s
 
-		pub contract Foo {
+		access(all) contract Foo {
             init() {
                 var tripled <- self.tripleVault(victim: <- Bar.createVault(balance: 100.0))
 
                 destroy tripled
             }
+
             // Fake resource that is presented to the static checker to get it to 
             // wave thru the call to "reverse"
-            pub resource FakeArray {
-                pub fun reverse(): @[Bar.Vault] { return <- [] }
+            access(all) resource FakeArray {
+                access(all) fun reverse(): @[Bar.Vault] { return <- [] }
             }
-            pub fun tripleVault(victim: @Bar.Vault): @Bar.Vault{
+
+            access(all) fun tripleVault(victim: @Bar.Vault): @Bar.Vault{
                 // Step 1: Create a storage reference to a FakeArray, first borrowing
                 //         it as &AnyResource and then performing a runtime cast to
                 //         &FakeArray. This intermediary step avoid the "dereference
                 //         failed" error later on.
 
-                Foo.account.save(<- create FakeArray(), to: /storage/flipflop)
-                let anyStructRef = Foo.account.borrow<auth &AnyResource>(from: /storage/flipflop)!
+                Foo.account.storage.save(<- create FakeArray(), to: /storage/flipflop)
+                let anyStructRef = Foo.account.storage.borrow<&AnyResource>(from: /storage/flipflop)!
                 let flipFlopStorageRef = (anyStructRef as? &FakeArray)!
 
                 // Step 2: Ditch FakeArray and place the victim resource array
                 //         at the same path in storage
-                destroy <- Foo.account.load<@FakeArray>(from: /storage/flipflop)
-                Foo.account.save(<- [<- victim], to: /storage/flipflop)
+                destroy <- Foo.account.storage.load<@FakeArray>(from: /storage/flipflop)
+                Foo.account.storage.save(<- [<- victim], to: /storage/flipflop)
 
                 // Step 3: As static checker still thinks flipFlopStorageRef is &FakeArray
                 //         we can go ahead and call reverse() to get infinite copies of the resource
@@ -10020,7 +10024,7 @@ func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
 				
                 // Clean up our value from storage. Throw the third copy of
                 // the assets into our bounty stash for good measure
-                var arr <- Foo.account.load<@[Bar.Vault]>(from: /storage/flipflop)!
+                var arr <- Foo.account.storage.load<@[Bar.Vault]>(from: /storage/flipflop)!
                 bounty.deposit(from: <- arr.removeLast())
                 destroy arr
                 return <- bounty
@@ -10030,34 +10034,34 @@ func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
 		))
 
 		bar := []byte(`
-        pub contract Bar {
-            pub resource Vault {
+        access(all) contract Bar {
+            access(all) resource Vault {
 
                 // Balance of a user's Vault
                 // we use unsigned fixed point numbers for balances
                 // because they can represent decimals and do not allow negative values
-                pub var balance: UFix64
+                access(all) var balance: UFix64
 
                 init(balance: UFix64) {
                     self.balance = balance
                 }
 
-                pub fun withdraw(amount: UFix64): @Vault {
+                access(all) fun withdraw(amount: UFix64): @Vault {
                     self.balance = self.balance - amount
                     return <-create Vault(balance: amount)
                 }
 
-                pub fun deposit(from: @Vault) {
+                access(all) fun deposit(from: @Vault) {
                     self.balance = self.balance + from.balance
                     destroy from
                 }
             }
 
-            pub fun createEmptyVault(): @Bar.Vault {
+            access(all) fun createEmptyVault(): @Bar.Vault {
                 return <- create Bar.Vault(balance: 0.0)
             }
 
-            pub fun createVault(balance: UFix64): @Bar.Vault {
+            access(all) fun createVault(balance: UFix64): @Bar.Vault {
                 return <- create Bar.Vault(balance: balance)
             }
         }

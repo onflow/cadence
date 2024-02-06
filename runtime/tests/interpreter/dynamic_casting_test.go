@@ -3717,14 +3717,14 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("auth", func(t *testing.T) {
+	t.Run("top-level", func(t *testing.T) {
 		t.Parallel()
 
 		code := `
             fun test() {
                 let x = bar()
-                let y = &x as auth &AnyStruct
-                let z = y as! &bar{foo}
+                let y = &x as &AnyStruct
+                let z = y as! &{foo}
             }
 
             struct interface foo {}
@@ -3809,6 +3809,7 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 					t,
 					address,
 					true,
+					nil,
 					fmt.Sprintf(
 						`
                           resource FakeArray {
@@ -3818,17 +3819,17 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
                           }
 
                           fun test() {
-                              account.save(<-create FakeArray(), to: /storage/flipflop)
+                              account.storage.save(<-create FakeArray(), to: /storage/flipflop)
 
                               // Instead of borrowing as FakeArray, borrow as AnyResource
-                              let ref = account.borrow<auth &AnyResource>(from: /storage/flipflop)!
+                              let ref = account.storage.borrow<&AnyResource>(from: /storage/flipflop)!
 
                               // NOTE: dynamically cast. This succeeds as expected
                               let ref2 = ref %s &FakeArray
 
                               // replace fake array with proper array
-                              destroy <- account.load<@FakeArray>(from: /storage/flipflop)
-                              account.save(<- ([] as @[AnyResource]), to: /storage/flipflop)
+                              destroy <- account.storage.load<@FakeArray>(from: /storage/flipflop)
+                              account.storage.save(<- ([] as @[AnyResource]), to: /storage/flipflop)
 
                               // NOTE: USE the casted array. the dereference SHOULD FAIL
                               let reversed <- ref2%sreverse()

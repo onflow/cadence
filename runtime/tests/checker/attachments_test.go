@@ -1516,7 +1516,7 @@ func TestCheckAttachmentIllegalInit(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             attachment Test for AnyResource {}
 
-            pub fun foo() {
+            fun foo() {
                 let t <- Test()
                 destroy t
             }

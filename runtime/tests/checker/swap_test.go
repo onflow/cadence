@@ -404,7 +404,8 @@ func TestCheckIndexSwapWithInvalidExpression(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	require.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }

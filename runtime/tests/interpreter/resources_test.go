@@ -2759,10 +2759,6 @@ func TestInterpretNestedSwap(t *testing.T) {
                 log("Current contents of the Company (should have a High-value NFT):")
                 log(self.equity[0].name)
             }
-
-            destroy() {
-                destroy self.equity
-            }
         }
 
         access(all) resource SleightOfHand {
@@ -2813,12 +2809,6 @@ func TestInterpretNestedSwap(t *testing.T) {
                 self.company?.logContents()
                 log("Look what I pickpocketd:")
                 log(self.trashNFT.name)
-            }
-
-            destroy() {
-                destroy self.arr
-                destroy self.company
-                destroy self.trashNFT
             }
         }
 
@@ -2946,24 +2936,19 @@ func TestInterpretResourceLoss(t *testing.T) {
                 self.doMagic()
             }
 
-            access(all) fun callback(in: @R): @R {
+            access(all) fun callback(r: @R): @R {
                 var x <- dummy()
                 x <-> self.victim
 
                 // Write the victim value into self.value which will soon be overwritten
                 // (via an already-existing gettersetter)
                 self.value <-! x
-                return <- in
+                return <- r
             }
 
             access(all) fun doMagic() {
-               var out <- self.value <- self.callback(in: <- dummy())
+               var out <- self.value <- self.callback(r: <- dummy())
                destroy out
-            }
-
-            destroy() {
-                destroy self.victim
-                destroy self.value
             }
         }
 
