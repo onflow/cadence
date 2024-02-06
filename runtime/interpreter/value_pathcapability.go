@@ -152,8 +152,12 @@ func (v *PathCapabilityValue) Transfer(
 	return v
 }
 
-func (v *PathCapabilityValue) Clone(_ *Interpreter) Value {
-	panic(errors.NewUnreachableError())
+func (v *PathCapabilityValue) Clone(interpreter *Interpreter) Value {
+	return &PathCapabilityValue{
+		BorrowType: v.BorrowType,
+		Path:       v.Path.Clone(interpreter).(PathValue),
+		Address:    v.Address.Clone(interpreter).(AddressValue),
+	}
 }
 
 func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter) {
