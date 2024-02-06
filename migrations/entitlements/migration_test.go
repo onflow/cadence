@@ -1029,6 +1029,19 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Name: "Capability<&S>",
 		},
 		{
+			Input: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				Address:    interpreter.NewAddressValue(inter, testAddress),
+				Path:       testPathValue,
+				BorrowType: unentitledSRefStaticType,
+			},
+			Output: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				Address:    interpreter.NewAddressValue(inter, testAddress),
+				Path:       testPathValue,
+				BorrowType: entitledSRefStaticType,
+			},
+			Name: "PathCapability<&S>",
+		},
+		{
 			Input: interpreter.NewCapabilityValue(
 				inter,
 				0,

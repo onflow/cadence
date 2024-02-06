@@ -298,6 +298,21 @@ func ConvertValueToEntitlements(
 			capabilityStaticType,
 		), nil
 
+	case *interpreter.PathCapabilityValue: //nolint:staticcheck
+		semaType := inter.MustConvertStaticToSemaType(staticType)
+		entitledType, converted := ConvertToEntitledType(semaType)
+		if !converted {
+			return nil, nil
+		}
+
+		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
+		capabilityStaticType := interpreter.ConvertSemaToStaticType(inter, entitledCapabilityValue.BorrowType)
+		return &interpreter.PathCapabilityValue{ //nolint:staticcheck
+			Path:       v.Path,
+			Address:    v.Address,
+			BorrowType: capabilityStaticType,
+		}, nil
+
 	case interpreter.TypeValue:
 		if v.Type == nil {
 			return nil, nil
