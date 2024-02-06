@@ -934,7 +934,7 @@ func (*UnknownSpecialFunctionError) isSemanticError() {}
 func (*UnknownSpecialFunctionError) IsUserError() {}
 
 func (e *UnknownSpecialFunctionError) Error() string {
-	return "unknown special function. did you mean `init`, `destroy`, or forget the `fun` keyword?"
+	return "unknown special function. did you mean `init` or forget the `fun` keyword?"
 }
 
 func (e *UnknownSpecialFunctionError) StartPosition() ast.Position {
