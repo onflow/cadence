@@ -19,6 +19,8 @@
 package statictypes
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -107,7 +109,6 @@ func (m *StaticTypeMigration) Migrate(
 		return interpreter.NewUnmeteredAccountCapabilityControllerValue(borrowType, value.CapabilityID), nil
 
 	case *interpreter.StorageCapabilityControllerValue:
-		// Note: A storage capability with Account type shouldn't be possible theoretically.
 		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
 		if convertedBorrowType == nil {
 			return
@@ -157,21 +158,59 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.Stat
 		}
 
 	case *interpreter.IntersectionStaticType:
-		// No need to convert `staticType.Types` as they can only be interfaces.
-		legacyType := staticType.LegacyType
-		if legacyType != nil {
-			convertedLegacyType := m.maybeConvertStaticType(legacyType)
-			if convertedLegacyType != nil {
-				intersectionType := interpreter.NewIntersectionStaticType(nil, staticType.Types)
-				intersectionType.LegacyType = convertedLegacyType
-				return intersectionType
+
+		var convertedInterfaceTypes []*interpreter.InterfaceStaticType
+
+		var convertedInterfaceType bool
+
+		for _, interfaceStaticType := range staticType.Types {
+			convertedType := m.maybeConvertStaticType(interfaceStaticType)
+
+			// lazily allocate the slice
+			if convertedInterfaceTypes == nil {
+				convertedInterfaceTypes = make([]*interpreter.InterfaceStaticType, 0, len(staticType.Types))
 			}
+
+			var replacement *interpreter.InterfaceStaticType
+			if convertedType != nil {
+				var ok bool
+				replacement, ok = convertedType.(*interpreter.InterfaceStaticType)
+				if !ok {
+					panic(fmt.Errorf(
+						"invalid non-interface replacement in intersection type %s: %s replaced by %s",
+						staticType,
+						interfaceStaticType,
+						convertedType,
+					))
+				}
+
+				convertedInterfaceType = true
+			} else {
+				replacement = interfaceStaticType
+			}
+			convertedInterfaceTypes = append(convertedInterfaceTypes, replacement)
 		}
 
-		// If the set has at least two items,
-		// then force it to be re-stored/re-encoded
-		if len(staticType.Types) >= 2 {
-			return staticType
+		legacyType := staticType.LegacyType
+		var convertedLegacyType interpreter.StaticType
+		if legacyType != nil {
+			convertedLegacyType = m.maybeConvertStaticType(legacyType)
+		}
+
+		// If the interface set has at least two items,
+		// then force it to be re-stored/re-encoded,
+		// even if the interface types in the set have not changed.
+		if len(staticType.Types) >= 2 || convertedInterfaceType || convertedLegacyType != nil {
+
+			intersectionType := interpreter.NewIntersectionStaticType(nil, convertedInterfaceTypes)
+
+			if convertedLegacyType != nil {
+				intersectionType.LegacyType = convertedLegacyType
+			} else {
+				intersectionType.LegacyType = staticType.LegacyType
+			}
+
+			return intersectionType
 		}
 
 	case *interpreter.OptionalStaticType:
@@ -201,9 +240,16 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.Stat
 		// Non-storable
 
 	case *interpreter.CompositeStaticType:
-		return m.compositeTypeConverter(staticType)
+		compositeTypeConverter := m.compositeTypeConverter
+		if compositeTypeConverter != nil {
+			return compositeTypeConverter(staticType)
+		}
+
 	case *interpreter.InterfaceStaticType:
-		return m.interfaceTypeConverter(staticType)
+		interfaceTypeConverter := m.interfaceTypeConverter
+		if interfaceTypeConverter != nil {
+			return interfaceTypeConverter(staticType)
+		}
 
 	case dummyStaticType:
 		// This is for testing the migration.
