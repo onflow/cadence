@@ -34,12 +34,14 @@ type UpdateValidator interface {
 type ContractUpdateValidator struct {
 	TypeComparator
 
-	location     common.Location
-	contractName string
-	oldProgram   *ast.Program
-	newProgram   *ast.Program
-	currentDecl  ast.Declaration
-	errors       []error
+	location                     common.Location
+	contractName                 string
+	oldProgram                   *ast.Program
+	newProgram                   *ast.Program
+	currentDecl                  ast.Declaration
+	importLocations              map[ast.Identifier]common.Location
+	accountContractNamesProvider AccountContractNamesProvider
+	errors                       []error
 }
 
 // ContractUpdateValidator should implement ast.TypeEqualityChecker
@@ -51,15 +53,18 @@ var _ UpdateValidator = &ContractUpdateValidator{}
 func NewContractUpdateValidator(
 	location common.Location,
 	contractName string,
+	accountContractNamesProvider AccountContractNamesProvider,
 	oldProgram *ast.Program,
 	newProgram *ast.Program,
 ) *ContractUpdateValidator {
 
 	return &ContractUpdateValidator{
-		location:     location,
-		oldProgram:   oldProgram,
-		newProgram:   newProgram,
-		contractName: contractName,
+		location:                     location,
+		oldProgram:                   oldProgram,
+		newProgram:                   newProgram,
+		contractName:                 contractName,
+		accountContractNamesProvider: accountContractNamesProvider,
+		importLocations:              map[ast.Identifier]common.Location{},
 	}
 }
 
@@ -76,6 +81,12 @@ func (validator *ContractUpdateValidator) Validate() error {
 	}
 
 	validator.TypeComparator.RootDeclIdentifier = newRootDecl.DeclarationIdentifier()
+	validator.TypeComparator.expectedIdentifierImportLocations = validator.collectImports(validator.oldProgram)
+	validator.TypeComparator.foundIdentifierImportLocations = validator.collectImports(validator.newProgram)
+
+	if validator.hasErrors() {
+		return validator.getContractUpdateError()
+	}
 
 	validator.checkDeclarationUpdatability(oldRootDecl, newRootDecl)
 
@@ -84,6 +95,37 @@ func (validator *ContractUpdateValidator) Validate() error {
 	}
 
 	return nil
+}
+
+func (validator *ContractUpdateValidator) collectImports(program *ast.Program) map[string]common.Location {
+	importLocations := map[string]common.Location{}
+
+	imports := program.ImportDeclarations()
+
+	for _, importDecl := range imports {
+		importLocation := importDecl.Location
+
+		// if there are no identifiers given, the import covers all of them
+		if addressLocation, isAddressLocation := importLocation.(common.AddressLocation); isAddressLocation && len(importDecl.Identifiers) == 0 {
+			allLocations, err := validator.accountContractNamesProvider.GetAccountContractNames(addressLocation.Address)
+			if err != nil {
+				validator.report(err)
+			}
+			for _, identifier := range allLocations {
+				// associate the location of an identifier's import with the location it's being imported from
+				// this assumes that two imports cannot have the same name, which should be prevented by the type checker
+				importLocations[identifier] = importLocation
+			}
+		} else {
+			for _, identifier := range importDecl.Identifiers {
+				// associate the location of an identifier's import with the location it's being imported from
+				// this assumes that two imports cannot have the same name, which should be prevented by the type checker
+				importLocations[identifier.Identifier] = importLocation
+			}
+		}
+	}
+
+	return importLocations
 }
 
 func (validator *ContractUpdateValidator) getRootDeclaration(program *ast.Program) ast.Declaration {
