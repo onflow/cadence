@@ -28,11 +28,23 @@ type SuggestedFix = errors.SuggestedFix[ast.TextEdit]
 
 type TextEdit = ast.TextEdit
 
+type Severity uint8
+
+const (
+	SeverityUnknown Severity = iota
+	SeverityInfo
+	SeverityError
+	SeverityWarning
+)
+
 type Diagnostic struct {
 	Location         common.Location
 	Category         string
+	Severity         Severity
 	Message          string
 	SecondaryMessage string
+	Code             string // Diangostic code (e.g. "unused-variable")
+	DocURL           string // URL to documentation
 	SuggestedFixes   []SuggestedFix
 	ast.Range
 }
