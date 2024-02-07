@@ -41,44 +41,15 @@ func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) (_ 
 
 	// Check all cases
 
-	caseCount := len(statement.Cases)
-
-	for i, switchCase := range statement.Cases {
-		// Only one default case is allowed, as the last case
-		defaultAllowed := i == caseCount-1
-		checker.visitSwitchCase(switchCase, defaultAllowed, testType, testTypeIsValid)
-	}
-
 	checker.functionActivations.Current().WithSwitch(func() {
-		checker.checkSwitchCasesStatements(statement.Cases)
+		checker.checkSwitchCasesStatements(
+			statement.Cases,
+			testType,
+			testTypeIsValid,
+		)
 	})
 
 	return
-}
-
-func (checker *Checker) visitSwitchCase(
-	switchCase *ast.SwitchCase,
-	defaultAllowed bool,
-	testType Type,
-	testTypeIsValid bool,
-) {
-	caseExpression := switchCase.Expression
-
-	// If the case has no expression, it is a default case
-
-	if caseExpression == nil {
-
-		// Only one default case is allowed, as the last case
-		if !defaultAllowed {
-			checker.report(
-				&SwitchDefaultPositionError{
-					Range: switchCase.Range,
-				},
-			)
-		}
-	} else {
-		checker.checkSwitchCaseExpression(caseExpression, testType, testTypeIsValid)
-	}
 }
 
 func (checker *Checker) checkSwitchCaseExpression(
@@ -116,9 +87,13 @@ func (checker *Checker) checkSwitchCaseExpression(
 	}
 }
 
-func (checker *Checker) checkSwitchCasesStatements(cases []*ast.SwitchCase) {
-	caseCount := len(cases)
-	if caseCount == 0 {
+func (checker *Checker) checkSwitchCasesStatements(
+	remainingCases []*ast.SwitchCase,
+	testType Type,
+	testTypeIsValid bool,
+) {
+	remainingCaseCount := len(remainingCases)
+	if remainingCaseCount == 0 {
 		return
 	}
 
@@ -129,24 +104,53 @@ func (checker *Checker) checkSwitchCasesStatements(cases []*ast.SwitchCase) {
 	// because if a default case exists, the whole switch statement
 	// will definitely have one case which will be taken.
 
-	switchCase := cases[0]
+	switchCase := remainingCases[0]
 
-	if caseCount == 1 && switchCase.Expression == nil {
+	caseExpression := switchCase.Expression
+
+	// If the case has no expression, it is a default case
+	if caseExpression == nil {
+
+		// Only one default case is allowed, as the last case
+		defaultAllowed := remainingCaseCount == 1
+		if !defaultAllowed {
+			checker.report(
+				&SwitchDefaultPositionError{
+					Range: switchCase.Range,
+				},
+			)
+		}
+
 		currentFunctionActivation.ReturnInfo.WithNewJumpTarget(func() {
 			checker.checkSwitchCaseStatements(switchCase)
 		})
 		return
 	}
 
+	checker.checkSwitchCaseExpression(
+		caseExpression,
+		testType,
+		testTypeIsValid,
+	)
+
 	_, _ = checker.checkConditionalBranches(
 		func() Type {
+
 			currentFunctionActivation.ReturnInfo.WithNewJumpTarget(func() {
 				checker.checkSwitchCaseStatements(switchCase)
 			})
+
+			// ignored
 			return nil
 		},
 		func() Type {
-			checker.checkSwitchCasesStatements(cases[1:])
+			checker.checkSwitchCasesStatements(
+				remainingCases[1:],
+				testType,
+				testTypeIsValid,
+			)
+
+			// ignored
 			return nil
 		},
 	)

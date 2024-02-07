@@ -35,7 +35,7 @@ type Config struct {
 	// LocationHandler is used to resolve locations
 	LocationHandler LocationHandlerFunc
 	// AccessCheckMode is the mode for access control checks.
-	// It determines how access modifiers how existing and missing acess modifiers are treated
+	// It determines how access modifiers how existing and missing access modifiers are treated
 	AccessCheckMode AccessCheckMode
 	// ExtendedElaborationEnabled determines if extended elaboration information is generated
 	ExtendedElaborationEnabled bool

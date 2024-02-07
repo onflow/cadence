@@ -3559,7 +3559,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 	)
 }
 
-func TestInterpretResourceConstructorCast(t *testing.T) {
+func TestInterpretDynamicCastingResourceConstructor(t *testing.T) {
 
 	t.Parallel()
 
@@ -3586,7 +3586,7 @@ func TestInterpretResourceConstructorCast(t *testing.T) {
 	}
 }
 
-func TestInterpretFunctionTypeCasting(t *testing.T) {
+func TestInterpretDynamicCastingFunctionType(t *testing.T) {
 
 	t.Parallel()
 
@@ -3713,11 +3713,32 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 	})
 }
 
-func TestInterpretReferenceCasting(t *testing.T) {
+func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("array", func(t *testing.T) {
+	t.Run("top-level", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            fun test() {
+                let x = bar()
+                let y = &x as &AnyStruct
+                let z = y as! &{foo}
+            }
+
+            struct interface foo {}
+
+            struct bar: foo {}
+        `
+
+		inter := parseCheckAndInterpret(t, code)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("nested in array", func(t *testing.T) {
 		t.Parallel()
 
 		code := `
@@ -3740,7 +3761,7 @@ func TestInterpretReferenceCasting(t *testing.T) {
 		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})
 
-	t.Run("dictionary", func(t *testing.T) {
+	t.Run("nested in dictionary", func(t *testing.T) {
 		t.Parallel()
 
 		code := `
@@ -3761,5 +3782,91 @@ func TestInterpretReferenceCasting(t *testing.T) {
 		RequireError(t, err)
 
 		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	})
+
+	t.Run("use of storage reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		type testCase struct {
+			operation       ast.Operation
+			returnsOptional bool
+		}
+
+		test := func(testCase testCase) {
+
+			t.Run(testCase.operation.Symbol(), func(t *testing.T) {
+				t.Parallel()
+
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+				memberAccessOperation := "."
+				if testCase.returnsOptional {
+					memberAccessOperation = "?."
+				}
+
+				inter, _ := testAccount(
+					t,
+					address,
+					true,
+					nil,
+					fmt.Sprintf(
+						`
+                          resource FakeArray {
+                              fun reverse(): @[AnyResource] {
+                                  return <- []
+                              }
+                          }
+
+                          fun test() {
+                              account.storage.save(<-create FakeArray(), to: /storage/flipflop)
+
+                              // Instead of borrowing as FakeArray, borrow as AnyResource
+                              let ref = account.storage.borrow<&AnyResource>(from: /storage/flipflop)!
+
+                              // NOTE: dynamically cast. This succeeds as expected
+                              let ref2 = ref %s &FakeArray
+
+                              // replace fake array with proper array
+                              destroy <- account.storage.load<@FakeArray>(from: /storage/flipflop)
+                              account.storage.save(<- ([] as @[AnyResource]), to: /storage/flipflop)
+
+                              // NOTE: USE the casted array. the dereference SHOULD FAIL
+                              let reversed <- ref2%sreverse()
+                              destroy reversed
+                          }
+                        `,
+						testCase.operation.Symbol(),
+						memberAccessOperation,
+					),
+					sema.Config{},
+				)
+
+				_, err := inter.Invoke("test")
+				RequireError(t, err)
+
+				// StorageReferenceValue.ReferencedValue turns the ForceCastTypeMismatchError
+				// of the failed dereference into a DereferenceError
+				var dereferenceError interpreter.DereferenceError
+				require.ErrorAs(t, err, &dereferenceError)
+
+				assert.Equal(t, 22, dereferenceError.LocationRange.StartPosition().Line)
+			})
+		}
+
+		testCases := []testCase{
+			{
+				operation:       ast.OperationForceCast,
+				returnsOptional: false,
+			},
+			{
+				operation:       ast.OperationFailableCast,
+				returnsOptional: true,
+			},
+		}
+
+		for _, testCase := range testCases {
+			test(testCase)
+		}
 	})
 }

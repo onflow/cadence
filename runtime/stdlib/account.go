@@ -315,11 +315,15 @@ func NewAccountValue(
 	)
 }
 
+type AccountContractAdditionAndNamesHandler interface {
+	AccountContractAdditionHandler
+	AccountContractNamesProvider
+}
+
 type AccountContractsHandler interface {
 	AccountContractProvider
-	AccountContractAdditionHandler
+	AccountContractAdditionAndNamesHandler
 	AccountContractRemovalHandler
-	AccountContractNamesProvider
 }
 
 func newAccountContractsValue(
@@ -1391,7 +1395,7 @@ type AccountContractAdditionHandler interface {
 func newAccountContractsChangeFunction(
 	functionType *sema.FunctionType,
 	gauge common.MemoryGauge,
-	handler AccountContractAdditionHandler,
+	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
 	isUpdate bool,
 ) *interpreter.HostFunctionValue {
@@ -1406,7 +1410,7 @@ func newAccountContractsChangeFunction(
 
 func changeAccountContracts(
 	invocation interpreter.Invocation,
-	handler AccountContractAdditionHandler,
+	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
 	isUpdate bool,
 ) interpreter.Value {
@@ -1624,6 +1628,7 @@ func changeAccountContracts(
 			validator = NewContractUpdateValidator(
 				location,
 				contractName,
+				handler,
 				oldProgram,
 				program.Program,
 			)
@@ -1687,7 +1692,7 @@ func changeAccountContracts(
 func newAccountContractsTryUpdateFunction(
 	functionType *sema.FunctionType,
 	gauge common.MemoryGauge,
-	handler AccountContractAdditionHandler,
+	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
