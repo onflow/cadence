@@ -1621,6 +1621,7 @@ func changeAccountContracts(
 			validator = NewLegacyContractUpdateValidator(
 				location,
 				contractName,
+				handler,
 				oldProgram,
 				program.Program,
 				program.Elaboration,

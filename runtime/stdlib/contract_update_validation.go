@@ -37,6 +37,7 @@ type UpdateValidator interface {
 	setCurrentDeclaration(ast.Declaration)
 
 	checkField(oldField *ast.FieldDeclaration, newField *ast.FieldDeclaration)
+	getAccountContractNames(address common.Address) ([]string, error)
 }
 
 type ContractUpdateValidator struct {
@@ -84,6 +85,10 @@ func (validator *ContractUpdateValidator) setCurrentDeclaration(decl ast.Declara
 	validator.currentDecl = decl
 }
 
+func (validator *ContractUpdateValidator) getAccountContractNames(address common.Address) ([]string, error) {
+	return validator.accountContractNamesProvider.GetAccountContractNames(address)
+}
+
 // Validate validates the contract update, and returns an error if it is an invalid update.
 func (validator *ContractUpdateValidator) Validate() error {
 	oldRootDecl := getRootDeclaration(validator, validator.oldProgram)
@@ -97,8 +102,8 @@ func (validator *ContractUpdateValidator) Validate() error {
 	}
 
 	validator.TypeComparator.RootDeclIdentifier = newRootDecl.DeclarationIdentifier()
-	validator.TypeComparator.expectedIdentifierImportLocations = validator.collectImports(validator.oldProgram)
-	validator.TypeComparator.foundIdentifierImportLocations = validator.collectImports(validator.newProgram)
+	validator.TypeComparator.expectedIdentifierImportLocations = collectImports(validator, validator.oldProgram)
+	validator.TypeComparator.foundIdentifierImportLocations = collectImports(validator, validator.newProgram)
 
 	if validator.hasErrors() {
 		return validator.getContractUpdateError()
@@ -113,7 +118,7 @@ func (validator *ContractUpdateValidator) Validate() error {
 	return nil
 }
 
-func (validator *ContractUpdateValidator) collectImports(program *ast.Program) map[string]common.Location {
+func collectImports(validator UpdateValidator, program *ast.Program) map[string]common.Location {
 	importLocations := map[string]common.Location{}
 
 	imports := program.ImportDeclarations()
@@ -123,7 +128,7 @@ func (validator *ContractUpdateValidator) collectImports(program *ast.Program) m
 
 		// if there are no identifiers given, the import covers all of them
 		if addressLocation, isAddressLocation := importLocation.(common.AddressLocation); isAddressLocation && len(importDecl.Identifiers) == 0 {
-			allLocations, err := validator.accountContractNamesProvider.GetAccountContractNames(addressLocation.Address)
+			allLocations, err := validator.getAccountContractNames(addressLocation.Address)
 			if err != nil {
 				validator.report(err)
 			}

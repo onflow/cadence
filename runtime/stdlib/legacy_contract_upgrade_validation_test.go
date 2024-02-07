@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -50,7 +51,14 @@ func testContractUpdate(t *testing.T, oldCode string, newCode string) error {
 	err = checker.Check()
 	require.NoError(t, err)
 
-	upgradeValidator := stdlib.NewLegacyContractUpdateValidator(utils.TestLocation, "Test", oldProgram, newProgram, checker.Elaboration)
+	upgradeValidator := stdlib.NewLegacyContractUpdateValidator(
+		utils.TestLocation,
+		"Test",
+		// TODO: add contract name handling here once we have a way to test imported values
+		&runtime_utils.TestRuntimeInterface{},
+		oldProgram,
+		newProgram,
+		checker.Elaboration)
 	return upgradeValidator.Validate()
 }
 

@@ -42,12 +42,13 @@ type LegacyContractUpdateValidator struct {
 func NewLegacyContractUpdateValidator(
 	location common.Location,
 	contractName string,
+	provider AccountContractNamesProvider,
 	oldProgram *ast.Program,
 	newProgram *ast.Program,
 	newElaboration *sema.Elaboration,
 ) *LegacyContractUpdateValidator {
 
-	underlyingValidator := NewContractUpdateValidator(location, contractName, oldProgram, newProgram)
+	underlyingValidator := NewContractUpdateValidator(location, contractName, provider, oldProgram, newProgram)
 
 	return &LegacyContractUpdateValidator{
 		underlyingUpdateValidator: underlyingValidator,
@@ -65,6 +66,10 @@ func (validator *LegacyContractUpdateValidator) setCurrentDeclaration(decl ast.D
 	validator.underlyingUpdateValidator.setCurrentDeclaration(decl)
 }
 
+func (validator *LegacyContractUpdateValidator) getAccountContractNames(address common.Address) ([]string, error) {
+	return validator.underlyingUpdateValidator.accountContractNamesProvider.GetAccountContractNames(address)
+}
+
 // Validate validates the contract update, and returns an error if it is an invalid update.
 func (validator *LegacyContractUpdateValidator) Validate() error {
 	underlyingValidator := validator.underlyingUpdateValidator
@@ -80,8 +85,8 @@ func (validator *LegacyContractUpdateValidator) Validate() error {
 	}
 
 	validator.TypeComparator.RootDeclIdentifier = newRootDecl.DeclarationIdentifier()
-	validator.TypeComparator.expectedIdentifierImportLocations = collectImports(underlyingValidator.oldProgram)
-	validator.TypeComparator.foundIdentifierImportLocations = collectImports(underlyingValidator.newProgram)
+	validator.TypeComparator.expectedIdentifierImportLocations = collectImports(validator, underlyingValidator.oldProgram)
+	validator.TypeComparator.foundIdentifierImportLocations = collectImports(validator, underlyingValidator.newProgram)
 
 	checkDeclarationUpdatability(validator, oldRootDecl, newRootDecl)
 
