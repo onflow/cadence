@@ -1586,6 +1586,8 @@ func changeAccountContracts(
 
 	// Validate the contract update
 
+	inter := invocation.Interpreter
+
 	if isUpdate {
 		oldCode, err := handler.GetAccountContractCode(location)
 		handleContractUpdateError(err)
@@ -1624,7 +1626,7 @@ func changeAccountContracts(
 				handler,
 				oldProgram,
 				program.Program,
-				program.Elaboration,
+				inter.AllElaborations(),
 			)
 		} else {
 			validator = NewContractUpdateValidator(
@@ -1638,8 +1640,6 @@ func changeAccountContracts(
 		err = validator.Validate()
 		handleContractUpdateError(err)
 	}
-
-	inter := invocation.Interpreter
 
 	err = updateAccountContractCode(
 		handler,

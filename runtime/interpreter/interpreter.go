@@ -4607,6 +4607,24 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 	return subInterpreter.Program.Elaboration
 }
 
+func (interpreter *Interpreter) AllElaborations() (elaborations map[common.Location]*sema.Elaboration) {
+
+	elaborations = map[common.Location]*sema.Elaboration{}
+
+	// Ensure the program for this location is loaded,
+	// so its checker is available
+
+	for location, _ := range interpreter.SharedState.allInterpreters {
+		subInterpreter := interpreter.EnsureLoaded(location)
+		if subInterpreter == nil || subInterpreter.Program == nil {
+			return nil
+		}
+		elaborations[location] = subInterpreter.Program.Elaboration
+	}
+
+	return
+}
+
 // GetContractComposite gets the composite value of the contract at the address location.
 func (interpreter *Interpreter) GetContractComposite(contractLocation common.AddressLocation) (*CompositeValue, error) {
 	contractGlobal := interpreter.Globals.Get(contractLocation.Name)

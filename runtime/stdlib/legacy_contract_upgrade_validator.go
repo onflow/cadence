@@ -31,7 +31,7 @@ import (
 type LegacyContractUpdateValidator struct {
 	TypeComparator
 
-	newElaboration                           *sema.Elaboration
+	newElaborations                          map[common.Location]*sema.Elaboration
 	currentRestrictedTypeUpgradeRestrictions []*ast.NominalType
 
 	underlyingUpdateValidator *ContractUpdateValidator
@@ -45,14 +45,14 @@ func NewLegacyContractUpdateValidator(
 	provider AccountContractNamesProvider,
 	oldProgram *ast.Program,
 	newProgram *ast.Program,
-	newElaboration *sema.Elaboration,
+	newElaborations map[common.Location]*sema.Elaboration,
 ) *LegacyContractUpdateValidator {
 
 	underlyingValidator := NewContractUpdateValidator(location, contractName, provider, oldProgram, newProgram)
 
 	return &LegacyContractUpdateValidator{
 		underlyingUpdateValidator: underlyingValidator,
-		newElaboration:            newElaboration,
+		newElaborations:           newElaborations,
 	}
 }
 
@@ -101,7 +101,7 @@ func (validator *LegacyContractUpdateValidator) report(err error) {
 	validator.underlyingUpdateValidator.report(err)
 }
 
-func (validator *LegacyContractUpdateValidator) idOfQualifiedType(typ *ast.NominalType) common.TypeID {
+func (validator *LegacyContractUpdateValidator) idAndLocationOfQualifiedType(typ *ast.NominalType) (common.TypeID, common.Location) {
 
 	qualifiedString := typ.String()
 
@@ -115,18 +115,25 @@ func (validator *LegacyContractUpdateValidator) idOfQualifiedType(typ *ast.Nomin
 	// and in 1 and 2 we don't need to do anything
 	typIdentifier := typ.Identifier.Identifier
 	rootIdentifier := validator.TypeComparator.RootDeclIdentifier.Identifier
+	location := validator.underlyingUpdateValidator.location
 
 	if typIdentifier != rootIdentifier &&
 		validator.TypeComparator.foundIdentifierImportLocations[typ.Identifier.Identifier] == nil {
 		qualifiedString = fmt.Sprintf("%s.%s", rootIdentifier, qualifiedString)
+		return common.NewTypeIDFromQualifiedName(nil, location, qualifiedString), location
 
 	}
-	return common.NewTypeIDFromQualifiedName(nil, validator.underlyingUpdateValidator.location, qualifiedString)
+
+	if loc := validator.TypeComparator.foundIdentifierImportLocations[typ.Identifier.Identifier]; loc != nil {
+		location = loc
+	}
+
+	return common.NewTypeIDFromQualifiedName(nil, location, qualifiedString), location
 }
 
 func (validator *LegacyContractUpdateValidator) getEntitlementType(entitlement *ast.NominalType) *sema.EntitlementType {
-	typeID := validator.idOfQualifiedType(entitlement)
-	return validator.newElaboration.EntitlementType(typeID)
+	typeID, location := validator.idAndLocationOfQualifiedType(entitlement)
+	return validator.newElaborations[location].EntitlementType(typeID)
 }
 
 func (validator *LegacyContractUpdateValidator) getEntitlementSetAccess(entitlementSet ast.EntitlementSet) sema.EntitlementSetAccess {
@@ -145,13 +152,13 @@ func (validator *LegacyContractUpdateValidator) getEntitlementSetAccess(entitlem
 }
 
 func (validator *LegacyContractUpdateValidator) getCompositeType(composite *ast.NominalType) *sema.CompositeType {
-	typeID := validator.idOfQualifiedType(composite)
-	return validator.newElaboration.CompositeType(typeID)
+	typeID, location := validator.idAndLocationOfQualifiedType(composite)
+	return validator.newElaborations[location].CompositeType(typeID)
 }
 
 func (validator *LegacyContractUpdateValidator) getInterfaceType(intf *ast.NominalType) *sema.InterfaceType {
-	typeID := validator.idOfQualifiedType(intf)
-	return validator.newElaboration.InterfaceType(typeID)
+	typeID, location := validator.idAndLocationOfQualifiedType(intf)
+	return validator.newElaborations[location].InterfaceType(typeID)
 }
 
 func (validator *LegacyContractUpdateValidator) getIntersectedInterfaces(intersection []*ast.NominalType) (intfs []*sema.InterfaceType) {

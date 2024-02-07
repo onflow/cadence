@@ -21,6 +21,9 @@ package stdlib_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/old_parser"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
@@ -54,11 +57,71 @@ func testContractUpdate(t *testing.T, oldCode string, newCode string) error {
 	upgradeValidator := stdlib.NewLegacyContractUpdateValidator(
 		utils.TestLocation,
 		"Test",
-		// TODO: add contract name handling here once we have a way to test imported values
 		&runtime_utils.TestRuntimeInterface{},
 		oldProgram,
 		newProgram,
-		checker.Elaboration)
+		map[common.Location]*sema.Elaboration{
+			utils.TestLocation: checker.Elaboration,
+		})
+	return upgradeValidator.Validate()
+}
+
+func testContractUpdateWithImports(t *testing.T, oldCode, oldImport string, newCode, newImport string) error {
+	oldProgram, err := old_parser.ParseProgram(nil, []byte(oldCode), old_parser.Config{})
+	require.NoError(t, err)
+
+	newProgram, err := parser.ParseProgram(nil, []byte(newCode), parser.Config{})
+	require.NoError(t, err)
+
+	newImportedProgram, err := parser.ParseProgram(nil, []byte(newImport), parser.Config{})
+	require.NoError(t, err)
+
+	importedChecker, err := sema.NewChecker(
+		newImportedProgram,
+		utils.ImportedLocation,
+		nil,
+		&sema.Config{
+			AccessCheckMode:    sema.AccessCheckModeStrict,
+			AttachmentsEnabled: true,
+		},
+	)
+
+	require.NoError(t, err)
+	err = importedChecker.Check()
+	require.NoError(t, err)
+
+	checker, err := sema.NewChecker(
+		newProgram,
+		utils.TestLocation,
+		nil,
+		&sema.Config{
+			AccessCheckMode: sema.AccessCheckModeStrict,
+			ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+				return sema.ElaborationImport{
+					Elaboration: importedChecker.Elaboration,
+				}, nil
+			},
+			AttachmentsEnabled: true,
+		})
+	require.NoError(t, err)
+
+	err = checker.Check()
+	require.NoError(t, err)
+
+	upgradeValidator := stdlib.NewLegacyContractUpdateValidator(
+		utils.TestLocation,
+		"Test",
+		&runtime_utils.TestRuntimeInterface{
+			OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+				return []string{"TestImport"}, nil
+			},
+		},
+		oldProgram,
+		newProgram,
+		map[common.Location]*sema.Elaboration{
+			utils.TestLocation:     checker.Elaboration,
+			utils.ImportedLocation: importedChecker.Elaboration,
+		})
 	return upgradeValidator.Validate()
 }
 
@@ -1012,6 +1075,64 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("change field type restricted entitled reference type with qualified types with imports", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldImport = `
+			pub contract TestImport {
+				pub resource interface I {
+					pub fun foo()
+				}
+			}
+		`
+
+		const oldCode = `
+			import TestImport from "imported"
+
+            pub contract Test {
+				pub resource R:TestImport.I {
+					pub fun foo()
+				}
+
+                pub var a: Capability<&R{TestImport.I}>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		const newImport = `
+			access(all) contract TestImport {
+				access(all) entitlement E
+				access(all) resource interface I {
+					access(E) fun foo()
+				}
+			}
+		`
+
+		const newCode = `
+			import TestImport from "imported"
+
+            access(all) contract Test {
+				access(all) entitlement F
+				access(all) resource R: TestImport.I {
+					access(TestImport.E) fun foo() {}
+					access(Test.F) fun bar() {}
+				}
+
+                access(all) var a: Capability<auth(TestImport.E) &Test.R>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		err := testContractUpdateWithImports(t, oldCode, oldImport, newCode, newImport)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("change field type restricted entitled reference type with too many granted entitlements", func(t *testing.T) {
 
 		t.Parallel()
@@ -1053,6 +1174,65 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
         `
 
 		err := testContractUpdate(t, oldCode, newCode)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "E", "E, F")
+	})
+
+	t.Run("change field type restricted entitled reference type with too many granted entitlements with imports", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldImport = `
+			pub contract TestImport {
+				pub resource interface I {
+					pub fun foo()
+				}
+			}
+		`
+
+		const oldCode = `
+			import TestImport from "imported" 
+
+            pub contract Test {
+				pub resource R:TestImport.I {
+					pub fun foo()
+				}
+
+                pub var a: Capability<&R{TestImport.I}>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		const newImport = `
+			access(all) contract TestImport {
+				access(all) entitlement E
+				access(all) resource interface I {
+					access(TestImport.E) fun foo()
+				}
+			}
+		`
+
+		const newCode = `
+			import TestImport from "imported" 
+
+            access(all) contract Test {
+				access(all) entitlement F
+				access(all) resource R: TestImport.I {
+					access(TestImport.E) fun foo() {}
+					access(Test.F) fun bar() {}
+				}
+
+                access(all) var a: Capability<auth(TestImport.E, Test.F) &Test.R>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		err := testContractUpdateWithImports(t, oldCode, oldImport, newCode, newImport)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "E", "E, F")
