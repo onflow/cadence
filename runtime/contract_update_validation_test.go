@@ -930,8 +930,8 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			return []byte(fmt.Sprintf(
 				`
 				  transaction {
-					prepare(signer: AuthAccount) {
-					  let acct = AuthAccount(payer: signer)
+					prepare(signer: auth(Storage) &Account) {
+					  let acct = Account(payer: signer)
 					  acct.contracts.add(name: "%s", code: "%s".decodeHex())
 					}
 				  }
