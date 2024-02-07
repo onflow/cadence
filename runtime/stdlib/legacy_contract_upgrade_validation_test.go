@@ -862,6 +862,39 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("change field type restricted type dict with qualified names", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+				pub resource interface I {}
+				pub resource R:I {}
+
+                pub var a: @{Int: R{I}}
+                init() {
+                    self.a <- {0: <- create R()}
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+				access(all) resource interface I {}
+				access(all) resource R:I {}
+
+                access(all) var a: @{Int: Test.R}
+                init() {
+                    self.a <- {0: <- create Test.R()}
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("change field type restricted reference type", func(t *testing.T) {
 
 		t.Parallel()
@@ -926,6 +959,48 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 				}
 
                 access(all) var a: Capability<auth(E) &R>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("change field type restricted entitled reference type with qualified types", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+				pub resource interface I {
+					pub fun foo()
+				}
+				pub resource R:I {
+					pub fun foo()
+				}
+
+                pub var a: Capability<&R{I}>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+				access(all) entitlement E
+				access(all) resource interface I {
+					access(Test.E) fun foo()
+				}
+				access(all) resource R:I {
+					access(Test.E) fun foo() {}
+				}
+
+                access(all) var a: Capability<auth(Test.E) &Test.R>?
                 init() {
                     self.a = nil
                 }
