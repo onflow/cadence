@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"fmt"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -58,8 +60,15 @@ func (v PathLinkValue) Walk(_ *Interpreter, _ func(Value)) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) StaticType(_ *Interpreter) StaticType {
-	panic(errors.NewUnreachableError())
+func (v PathLinkValue) StaticType(interpreter *Interpreter) StaticType {
+	// When iterating over public/private paths,
+	// the values at these paths are PathLinkValues,
+	// placed there by the `link` function.
+	//
+	// These are loaded as links, however,
+	// for the purposes of checking their type,
+	// we treat them as capabilities
+	return NewCapabilityStaticType(interpreter, v.Type)
 }
 
 func (PathLinkValue) IsImportable(_ *Interpreter) bool {
@@ -67,11 +76,15 @@ func (PathLinkValue) IsImportable(_ *Interpreter) bool {
 }
 
 func (v PathLinkValue) String() string {
-	panic(errors.NewUnreachableError())
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v PathLinkValue) RecursiveString(_ SeenReferences) string {
-	panic(errors.NewUnreachableError())
+func (v PathLinkValue) RecursiveString(seenReferences SeenReferences) string {
+	return fmt.Sprintf(
+		"PathLink<%s>(%s)",
+		v.Type.String(),
+		v.TargetPath.RecursiveString(seenReferences),
+	)
 }
 
 func (v PathLinkValue) MeteredString(_ common.MemoryGauge, _ SeenReferences) string {
@@ -126,8 +139,11 @@ func (v PathLinkValue) Transfer(
 	return v
 }
 
-func (v PathLinkValue) Clone(_ *Interpreter) Value {
-	panic(errors.NewUnreachableError())
+func (v PathLinkValue) Clone(inter *Interpreter) Value {
+	return PathLinkValue{
+		Type:       v.Type,
+		TargetPath: v.TargetPath.Clone(inter).(PathValue),
+	}
 }
 
 func (PathLinkValue) DeepRemove(_ *Interpreter) {
@@ -168,8 +184,22 @@ func (AccountLinkValue) Walk(_ *Interpreter, _ func(Value)) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v AccountLinkValue) StaticType(_ *Interpreter) StaticType {
-	panic(errors.NewUnreachableError())
+func (v AccountLinkValue) StaticType(interpreter *Interpreter) StaticType {
+	// When iterating over public/private paths,
+	// the values at these paths are AccountLinkValues,
+	// placed there by the `linkAccount` function.
+	//
+	// These are loaded as links, however,
+	// for the purposes of checking their type,
+	// we treat them as capabilities
+	return NewCapabilityStaticType(
+		interpreter,
+		NewReferenceStaticType(
+			interpreter,
+			FullyEntitledAccountAccess,
+			PrimitiveStaticTypeAccount,
+		),
+	)
 }
 
 func (AccountLinkValue) IsImportable(_ *Interpreter) bool {
@@ -177,7 +207,7 @@ func (AccountLinkValue) IsImportable(_ *Interpreter) bool {
 }
 
 func (v AccountLinkValue) String() string {
-	panic(errors.NewUnreachableError())
+	return "AccountLink()"
 }
 
 func (v AccountLinkValue) RecursiveString(_ SeenReferences) string {

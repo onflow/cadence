@@ -852,6 +852,8 @@ func TestConvertToEntitledValue(t *testing.T) {
 		Name   string
 	}
 
+	testPathValue := interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test")
+
 	tests := []testCase{
 		{
 			Input:  rValue,
@@ -1027,6 +1029,19 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Name: "Capability<&S>",
 		},
 		{
+			Input: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				Address:    interpreter.NewAddressValue(inter, testAddress),
+				Path:       testPathValue,
+				BorrowType: unentitledSRefStaticType,
+			},
+			Output: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				Address:    interpreter.NewAddressValue(inter, testAddress),
+				Path:       testPathValue,
+				BorrowType: entitledSRefStaticType,
+			},
+			Name: "PathCapability<&S>",
+		},
+		{
 			Input: interpreter.NewCapabilityValue(
 				inter,
 				0,
@@ -1148,6 +1163,22 @@ func TestConvertToEntitledValue(t *testing.T) {
 				interpreter.EmptyLocationRange,
 			),
 			Name: "&{Int: R}",
+		},
+		{
+			Input: interpreter.PathLinkValue{ //nolint:staticcheck
+				TargetPath: testPathValue,
+				Type:       unentitledSRefStaticType,
+			},
+			Output: interpreter.PathLinkValue{ //nolint:staticcheck
+				TargetPath: testPathValue,
+				Type:       entitledSRefStaticType,
+			},
+			Name: "PathLink<&S>(/storage/test)",
+		},
+		{
+			Input:  interpreter.AccountLinkValue{}, //nolint:staticcheck
+			Output: interpreter.AccountLinkValue{}, //nolint:staticcheck
+			Name:   "AccountLink()",
 		},
 	}
 

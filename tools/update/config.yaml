@@ -9,6 +9,7 @@ repos:
 
 - repo: onflow/cadence-tools
   needsRelease: true
+  prefixPRTitle: true
   mods:
     - path: lint
       deps:
@@ -17,6 +18,7 @@ repos:
 
 - repo: onflow/flow-go
   needsRelease: false
+  branch: feature/stable-cadence
   mods:
     - path: ""
       deps:
@@ -42,6 +44,7 @@ repos:
 
 - repo: onflow/cadence-tools
   needsRelease: true
+  prefixPRTitle: true
   mods:
     - path: test
       deps:
@@ -52,6 +55,8 @@ repos:
 
 - repo: onflow/flow-cli
   needsRelease: false
+  prefixPRTitle: true
+  branch: feature/stable-cadence
   mods:
     - path: flowkit
       deps:
@@ -62,6 +67,7 @@ repos:
 
 - repo: onflow/cadence-tools
   needsRelease: true
+  prefixPRTitle: true
   mods:
     - path: languageserver
       deps:
