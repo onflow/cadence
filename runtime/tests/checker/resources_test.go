@@ -10006,3 +10006,52 @@ func TestCheckResourceSecondValueTransfer(t *testing.T) {
 		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 }
+
+func TestCheckIndexingResourceLoss(t *testing.T) {
+	t.Parallel()
+
+	t.Run("type indexing", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+           resource R {}
+
+           attachment A for R {}
+
+           fun createR(): @R {
+               return <- create R()
+           }
+
+           fun test() {
+               createR()[A]
+           }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("value indexing", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+           resource R {}
+
+           fun createArray(): @[R] {
+               return <-[
+                 <-create R(),
+                 <-create R()
+               ]
+           }
+
+           fun test() {
+               let first <- createArray()[0]
+               destroy first
+           }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[1])
+	})
+}
