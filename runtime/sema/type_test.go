@@ -384,7 +384,7 @@ func TestIntersectionType_GetMember(t *testing.T) {
 
 		require.Contains(t, actualMembers, fieldName)
 
-		actualMember := actualMembers[fieldName].Resolve(nil, fieldName, ast.Range{}, nil)
+		actualMember := actualMembers[fieldName].Resolve(nil, fieldName, ast.EmptyRange, nil)
 
 		assert.Same(t, interfaceMember, actualMember)
 	})
