@@ -3616,7 +3616,7 @@ func (*InvalidIntersectedTypeError) IsUserError() {}
 
 func (e *InvalidIntersectedTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot restrict using non-resource/structure interface type: `%s`",
+		"cannot restrict using non-resource/structure/contract interface type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
