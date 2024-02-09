@@ -3665,27 +3665,6 @@ func (e *InvalidIntersectionTypeDuplicateError) Error() string {
 	)
 }
 
-// InvalidNonConformanceIntersectionError
-
-type InvalidNonConformanceIntersectionError struct {
-	Type *InterfaceType
-	ast.Range
-}
-
-var _ SemanticError = &InvalidNonConformanceIntersectionError{}
-var _ errors.UserError = &InvalidNonConformanceIntersectionError{}
-
-func (*InvalidNonConformanceIntersectionError) isSemanticError() {}
-
-func (*InvalidNonConformanceIntersectionError) IsUserError() {}
-
-func (e *InvalidNonConformanceIntersectionError) Error() string {
-	return fmt.Sprintf(
-		"intersection type does not conform to restricting type: `%s`",
-		e.Type.QualifiedString(),
-	)
-}
-
 // IntersectionMemberClashError
 
 type IntersectionMemberClashError struct {
