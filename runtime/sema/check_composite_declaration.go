@@ -762,7 +762,18 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 		checker.enterValueScope()
 		defer checker.leaveValueScope(declaration.EndPosition, false)
 
+		// Declare nested types
+
 		checker.declareCompositeLikeNestedTypes(declaration, false)
+
+		// Declare nested types' explicit conformances
+
+		for _, nestedInterfaceDeclaration := range members.Interfaces() {
+			// resolve conformances
+			nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
+			nestedInterfaceType.ExplicitInterfaceConformances =
+				checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
+		}
 
 		// NOTE: determine initializer parameter types while nested types are in scope,
 		// and after declaring nested types as the initializer may use nested type in parameters
@@ -828,12 +839,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 				},
 			)
 		}
-		for _, nestedInterfaceDeclaration := range members.Interfaces() {
-			// resolve conformances
-			nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
-			nestedInterfaceType.ExplicitInterfaceConformances =
-				checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
-		}
+
 		for _, nestedCompositeDeclaration := range nestedComposites {
 			declareNestedComposite(nestedCompositeDeclaration)
 		}
