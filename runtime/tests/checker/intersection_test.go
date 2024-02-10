@@ -19,6 +19,7 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -440,6 +441,97 @@ func TestCheckIntersectionTypeMemberAccess(t *testing.T) {
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		assert.IsType(t, &sema.IntersectionMemberClashError{}, errs[1])
 	})
+}
+
+func TestCheckIntersectionTypeWithInheritanceMemberClash(t *testing.T) {
+
+	t.Parallel()
+
+	const firstMember = `let n: Int`
+	const secondMember = `let n: Bool`
+
+	test := func(
+		memberInA, memberInC bool,
+		firstType, secondType string,
+	) {
+
+		testName := fmt.Sprintf(
+			"memberInA: %v, memberInC: %v, firstType: %s, secondType: %s",
+			memberInA, memberInC, firstType, secondType,
+		)
+
+		t.Run(testName, func(t *testing.T) {
+			t.Parallel()
+
+			bodyA := ""
+			bodyB := ""
+			bodyC := ""
+			bodyD := ""
+
+			if memberInA {
+				bodyA = firstMember
+			} else {
+				bodyB = firstMember
+			}
+
+			if memberInC {
+				bodyC = secondMember
+			} else {
+				bodyD = secondMember
+			}
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+				      struct interface A {
+                          %s
+                      }
+
+                      struct interface B: A {
+                          %s
+                      }
+
+                      struct interface C {
+                          %s
+                      }
+
+                      struct interface D: C {
+                          %s
+                      }
+
+                      fun test(_ v: {%s, %s}) {}
+				    `,
+					bodyA,
+					bodyB,
+					bodyC,
+					bodyD,
+					firstType,
+					secondType,
+				),
+			)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.IntersectionMemberClashError{}, errs[0])
+		})
+	}
+
+	for _, memberInA := range []bool{true, false} {
+		for _, memberInC := range []bool{true, false} {
+			for _, firstType := range []string{"A", "B"} {
+				for _, secondType := range []string{"C", "D"} {
+
+					if (firstType == "A" && !memberInA) ||
+						(secondType == "C" && !memberInC) {
+
+						continue
+					}
+
+					test(memberInA, memberInC, firstType, secondType)
+				}
+			}
+		}
+	}
 }
 
 func TestCheckIntersectionTypeSubtyping(t *testing.T) {
