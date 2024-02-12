@@ -332,7 +332,7 @@ func TestIntersectionTypeMigration(t *testing.T) {
 			),
 		},
 		// interface
-		"interface": {
+		"non_intersection_interface": {
 			storedType: interpreter.NewInterfaceStaticType(
 				nil,
 				nil,
@@ -343,6 +343,39 @@ func TestIntersectionTypeMigration(t *testing.T) {
 					fooBarQualifiedIdentifier,
 				),
 			),
+			expectedType: interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticType(
+						nil,
+						nil,
+						"Foo.Bar",
+						common.NewTypeIDFromQualifiedName(
+							nil,
+							fooAddressLocation,
+							fooBarQualifiedIdentifier,
+						),
+					),
+				},
+			),
+		},
+		"intersection_interface": {
+			storedType: interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticType(
+						nil,
+						nil,
+						"Foo.Bar",
+						common.NewTypeIDFromQualifiedName(
+							nil,
+							fooAddressLocation,
+							fooBarQualifiedIdentifier,
+						),
+					),
+				},
+			),
+			expectedType: nil,
 		},
 		// composite
 		"composite": {
@@ -356,6 +389,7 @@ func TestIntersectionTypeMigration(t *testing.T) {
 					fooBarQualifiedIdentifier,
 				),
 			),
+			expectedType: nil,
 		},
 	}
 

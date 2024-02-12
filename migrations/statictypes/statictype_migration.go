@@ -66,21 +66,21 @@ func (m *StaticTypeMigration) Migrate(
 ) (newValue interpreter.Value, err error) {
 	switch value := value.(type) {
 	case interpreter.TypeValue:
-		convertedType := m.maybeConvertStaticType(value.Type)
+		convertedType := m.maybeConvertStaticType(value.Type, nil)
 		if convertedType == nil {
 			return
 		}
 		return interpreter.NewTypeValue(nil, convertedType), nil
 
 	case *interpreter.CapabilityValue:
-		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
+		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType, nil)
 		if convertedBorrowType == nil {
 			return
 		}
 		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType), nil
 
 	case *interpreter.PathCapabilityValue: //nolint:staticcheck
-		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
+		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType, nil)
 		if convertedBorrowType == nil {
 			return
 		}
@@ -91,7 +91,7 @@ func (m *StaticTypeMigration) Migrate(
 		}, nil
 
 	case interpreter.PathLinkValue: //nolint:staticcheck
-		convertedBorrowType := m.maybeConvertStaticType(value.Type)
+		convertedBorrowType := m.maybeConvertStaticType(value.Type, nil)
 		if convertedBorrowType == nil {
 			return
 		}
@@ -101,7 +101,7 @@ func (m *StaticTypeMigration) Migrate(
 		}, nil
 
 	case *interpreter.AccountCapabilityControllerValue:
-		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
+		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType, nil)
 		if convertedBorrowType == nil {
 			return
 		}
@@ -109,7 +109,7 @@ func (m *StaticTypeMigration) Migrate(
 		return interpreter.NewUnmeteredAccountCapabilityControllerValue(borrowType, value.CapabilityID), nil
 
 	case *interpreter.StorageCapabilityControllerValue:
-		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
+		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType, nil)
 		if convertedBorrowType == nil {
 			return
 		}
@@ -124,23 +124,23 @@ func (m *StaticTypeMigration) Migrate(
 	return
 }
 
-func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.StaticType) interpreter.StaticType {
+func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType interpreter.StaticType) interpreter.StaticType {
 	switch staticType := staticType.(type) {
 	case *interpreter.ConstantSizedStaticType:
-		convertedType := m.maybeConvertStaticType(staticType.Type)
+		convertedType := m.maybeConvertStaticType(staticType.Type, staticType)
 		if convertedType != nil {
 			return interpreter.NewConstantSizedStaticType(nil, convertedType, staticType.Size)
 		}
 
 	case *interpreter.VariableSizedStaticType:
-		convertedType := m.maybeConvertStaticType(staticType.Type)
+		convertedType := m.maybeConvertStaticType(staticType.Type, staticType)
 		if convertedType != nil {
 			return interpreter.NewVariableSizedStaticType(nil, convertedType)
 		}
 
 	case *interpreter.DictionaryStaticType:
-		convertedKeyType := m.maybeConvertStaticType(staticType.KeyType)
-		convertedValueType := m.maybeConvertStaticType(staticType.ValueType)
+		convertedKeyType := m.maybeConvertStaticType(staticType.KeyType, staticType)
+		convertedValueType := m.maybeConvertStaticType(staticType.ValueType, staticType)
 		if convertedKeyType != nil && convertedValueType != nil {
 			return interpreter.NewDictionaryStaticType(nil, convertedKeyType, convertedValueType)
 		}
@@ -152,7 +152,7 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.Stat
 		}
 
 	case *interpreter.CapabilityStaticType:
-		convertedBorrowType := m.maybeConvertStaticType(staticType.BorrowType)
+		convertedBorrowType := m.maybeConvertStaticType(staticType.BorrowType, staticType)
 		if convertedBorrowType != nil {
 			return interpreter.NewCapabilityStaticType(nil, convertedBorrowType)
 		}
@@ -164,7 +164,7 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.Stat
 		var convertedInterfaceType bool
 
 		for _, interfaceStaticType := range staticType.Types {
-			convertedType := m.maybeConvertStaticType(interfaceStaticType)
+			convertedType := m.maybeConvertStaticType(interfaceStaticType, staticType)
 
 			// lazily allocate the slice
 			if convertedInterfaceTypes == nil {
@@ -194,7 +194,7 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.Stat
 		legacyType := staticType.LegacyType
 		var convertedLegacyType interpreter.StaticType
 		if legacyType != nil {
-			convertedLegacyType = m.maybeConvertStaticType(legacyType)
+			convertedLegacyType = m.maybeConvertStaticType(legacyType, staticType)
 		}
 
 		// If the interface set has at least two items,
@@ -214,14 +214,14 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.Stat
 		}
 
 	case *interpreter.OptionalStaticType:
-		convertedInnerType := m.maybeConvertStaticType(staticType.Type)
+		convertedInnerType := m.maybeConvertStaticType(staticType.Type, staticType)
 		if convertedInnerType != nil {
 			return interpreter.NewOptionalStaticType(nil, convertedInnerType)
 		}
 
 	case *interpreter.ReferenceStaticType:
 		// TODO: Reference of references must not be allowed?
-		convertedReferencedType := m.maybeConvertStaticType(staticType.ReferencedType)
+		convertedReferencedType := m.maybeConvertStaticType(staticType.ReferencedType, staticType)
 		if convertedReferencedType != nil {
 			switch convertedReferencedType {
 
@@ -232,7 +232,11 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.Stat
 				return convertedReferencedType
 
 			default:
-				return interpreter.NewReferenceStaticType(nil, staticType.Authorization, convertedReferencedType)
+				return interpreter.NewReferenceStaticType(
+					nil,
+					staticType.Authorization,
+					convertedReferencedType,
+				)
 			}
 		}
 
@@ -246,16 +250,36 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.Stat
 		}
 
 	case *interpreter.InterfaceStaticType:
+		var convertedType interpreter.StaticType
 		interfaceTypeConverter := m.interfaceTypeConverter
 		if interfaceTypeConverter != nil {
-			return interfaceTypeConverter(staticType)
+			convertedType = interfaceTypeConverter(staticType)
 		}
+
+		// Interface types need to be placed in intersection types
+		if _, ok := parentType.(*interpreter.IntersectionStaticType); !ok {
+			if convertedType == nil {
+				convertedType = interpreter.NewIntersectionStaticType(
+					nil, []*interpreter.InterfaceStaticType{
+						staticType,
+					},
+				)
+			} else if convertedInterfaceType, ok := convertedType.(*interpreter.InterfaceStaticType); ok {
+				convertedType = interpreter.NewIntersectionStaticType(
+					nil, []*interpreter.InterfaceStaticType{
+						convertedInterfaceType,
+					},
+				)
+			}
+		}
+
+		return convertedType
 
 	case dummyStaticType:
 		// This is for testing the migration.
-		// i.e: wrapper was only to make it possible to use as a dictionary-key.
+		// i.e: the dummyStaticType wrapper was only introduced to make it possible to use the type as a dictionary key.
 		// Ignore the wrapper, and continue with the inner type.
-		return m.maybeConvertStaticType(staticType.PrimitiveStaticType)
+		return m.maybeConvertStaticType(staticType.PrimitiveStaticType, staticType)
 
 	case interpreter.PrimitiveStaticType:
 		// Is it safe to do so?
