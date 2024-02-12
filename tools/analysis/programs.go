@@ -54,6 +54,7 @@ func (programs Programs) load(
 		return nil
 	}
 
+	var loadError error
 	wrapError := func(err error) ParsingCheckingError {
 		return ParsingCheckingError{
 			error:    err,
@@ -72,6 +73,10 @@ func (programs Programs) load(
 		// use handler to handle the error (e.g. to report it and continue analysis)
 		// This will only be used for the entry point program (e.g not an imported program)
 		wrappedErr := wrapError(err)
+		if loadError == nil {
+			loadError = wrappedErr
+		}
+
 		if config.HandleParserError != nil && program != nil && importingLocation == nil {
 			err = config.HandleParserError(wrappedErr)
 			if err != nil {
@@ -87,6 +92,10 @@ func (programs Programs) load(
 		checker, err = programs.check(config, program, location, seenImports)
 		if err != nil {
 			wrappedErr := wrapError(err)
+			if loadError == nil {
+				loadError = wrappedErr
+			}
+
 			// If a custom error handler is set, and the error is non-fatal
 			// use handler to handle the error (e.g. to report it and continue analysis)
 			// This will only be used for the entry point program (e.g not an imported program)
@@ -102,10 +111,11 @@ func (programs Programs) load(
 	}
 
 	programs[location] = &Program{
-		Location: location,
-		Code:     code,
-		Program:  program,
-		Checker:  checker,
+		Location:  location,
+		Code:      code,
+		Program:   program,
+		Checker:   checker,
+		loadError: loadError,
 	}
 
 	return nil
@@ -164,6 +174,14 @@ func (programs Programs) check(
 					err := programs.load(config, importedLocation, location, importRange, seenImports)
 					if err != nil {
 						return nil, err
+					}
+
+					// If the imported program has a load error, return it
+					// This may happen if a program is both imported and the entry point
+					// and has an error that was handled by a custom error handler
+					// However, we still want this error in the import resolution
+					if programs[importedLocation].loadError != nil {
+						return nil, programs[importedLocation].loadError
 					}
 
 					elaboration = programs[importedLocation].Checker.Elaboration
