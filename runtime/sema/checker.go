@@ -982,11 +982,15 @@ func CheckIntersectionType(
 		// the type is ambiguous.
 
 		report(func(t *ast.IntersectionType) error {
-			return &AmbiguousIntersectionTypeError{Range: ast.NewRangeFromPositioned(memoryGauge, t)}
+			return &AmbiguousIntersectionTypeError{
+				Range: ast.NewRangeFromPositioned(memoryGauge, t),
+			}
 		})
 		return InvalidType
 
-	case common.CompositeKindResource, common.CompositeKindStructure:
+	case common.CompositeKindResource,
+		common.CompositeKindStructure,
+		common.CompositeKindContract:
 		break
 
 	default:
@@ -1011,8 +1015,7 @@ func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
 		if ok {
 			intersectedCompositeKind = intersectedInterfaceType.CompositeKind
 		}
-		if !ok || (intersectedCompositeKind != common.CompositeKindResource &&
-			intersectedCompositeKind != common.CompositeKindStructure) {
+		if !ok || !intersectedCompositeKind.SupportsInterfaces() {
 
 			if !intersectedResult.IsInvalidType() {
 				checker.report(&InvalidIntersectedTypeError{

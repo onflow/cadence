@@ -264,6 +264,109 @@ func TestCheckIntersectionType(t *testing.T) {
 
 		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	})
+
+	t.Run("contract interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            contract interface CI {}
+
+            fun test (_ c: {CI}) {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("contract", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            contract C {}
+
+            fun test (_ c: {C}) {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		// Checker is not able to infer valid composite kind based on intersection's types
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
+
+	t.Run("enum", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            enum E: UInt8 {}
+
+            fun test (_ e: {E}) {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		// Checker is not able to infer valid composite kind based on intersection's types
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
+
+	t.Run("event", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            event E()
+
+            fun test (_ e: {E}) {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		// Checker is not able to infer valid composite kind based on intersection's types
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
+
+	t.Run("attachment", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            attachment A for R {}
+
+            fun test (_ a: {A}) {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		// Checker is not able to infer valid composite kind based on intersection's types
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
+
+	t.Run("entitlement", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            fun test (_ e: {E}) {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		// Checker is not able to infer valid composite kind based on intersection's types
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
+
+	t.Run("entitlement mapping", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            fun test (_ m: {M}) {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		// Checker is not able to infer valid composite kind based on intersection's types
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
 }
 
 func TestCheckIntersectionTypeMemberAccess(t *testing.T) {
