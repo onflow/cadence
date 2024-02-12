@@ -534,6 +534,25 @@ func TestCheckIntersectionTypeWithInheritanceMemberClash(t *testing.T) {
 	}
 }
 
+func TestCheckIntersectionTypeWithInheritedMember(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  struct interface A {
+          let n: Int
+      }
+
+      struct interface B: A {}
+
+      struct interface C: A {}
+
+      fun test(_ v: {B, C}) {}
+	`)
+
+	require.NoError(t, err)
+}
+
 func TestCheckIntersectionTypeSubtyping(t *testing.T) {
 
 	t.Parallel()
