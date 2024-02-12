@@ -40,11 +40,10 @@ const (
 type Diagnostic struct {
 	Location         common.Location
 	Category         string
-	Severity         Severity
 	Message          string
 	SecondaryMessage string
 	Code             string // Diagnostic code (e.g. "unused-variable")
-	DocURL           string // URL to documentation
+	URL              string // URL to documentation
 	SuggestedFixes   []SuggestedFix
 	ast.Range
 }
