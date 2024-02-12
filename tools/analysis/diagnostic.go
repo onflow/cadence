@@ -43,7 +43,7 @@ type Diagnostic struct {
 	Severity         Severity
 	Message          string
 	SecondaryMessage string
-	Code             string // Diangostic code (e.g. "unused-variable")
+	Code             string // Diagnostic code (e.g. "unused-variable")
 	DocURL           string // URL to documentation
 	SuggestedFixes   []SuggestedFix
 	ast.Range
