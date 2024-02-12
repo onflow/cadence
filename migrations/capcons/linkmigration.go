@@ -40,7 +40,7 @@ type LinkMigrationReporter interface {
 
 // LinkValueMigration migrates all links to capability controllers.
 type LinkValueMigration struct {
-	CapabilityIDs      map[interpreter.AddressPath]interpreter.UInt64Value
+	CapabilityIDs      *CapabilityIDMapping
 	AccountIDGenerator stdlib.AccountIDGenerator
 	Reporter           LinkMigrationReporter
 }
@@ -182,8 +182,7 @@ func (m *LinkValueMigration) Migrate(
 	// Record new capability ID in source path mapping.
 	// The mapping is used later for migrating path capabilities to ID capabilities,
 	// see CapabilityMigration.
-
-	m.CapabilityIDs[addressPath] = capabilityID
+	m.CapabilityIDs.Record(addressPath, capabilityID)
 
 	if reporter != nil {
 		reporter.MigratedLink(addressPath, capabilityID)

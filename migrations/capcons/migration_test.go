@@ -476,7 +476,7 @@ func testPathCapabilityValueMigration(
 
 	migration := migrations.NewStorageMigration(inter, storage)
 
-	capabilityIDs := map[interpreter.AddressPath]interpreter.UInt64Value{}
+	capabilityIDs := &CapabilityIDMapping{}
 
 	reporter := &testMigrationReporter{}
 
@@ -1325,7 +1325,7 @@ func testLinkMigration(
 
 	migration := migrations.NewStorageMigration(inter, storage)
 
-	capabilityIDs := map[interpreter.AddressPath]interpreter.UInt64Value{}
+	capabilityIDs := &CapabilityIDMapping{}
 
 	reporter := &testMigrationReporter{}
 
