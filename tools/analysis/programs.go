@@ -50,7 +50,6 @@ func (programs Programs) load(
 	importRange ast.Range,
 	seenImports importResolutionResults,
 ) error {
-
 	if programs[location] != nil {
 		return nil
 	}
@@ -69,14 +68,36 @@ func (programs Programs) load(
 
 	program, err := parser.ParseProgram(nil, code, parser.Config{})
 	if err != nil {
-		return wrapError(err)
+		// If a parser error handler is set and the error is non-fatal
+		// use handler to handle the error (e.g. to report it and continue analysis)
+		// This will only be used for the entry point program (e.g not an imported program)
+		wrappedErr := wrapError(err)
+		if config.HandleParserError != nil && program != nil && importingLocation == nil {
+			err = config.HandleParserError(wrappedErr)
+			if err != nil {
+				return err
+			}
+		} else {
+			return wrappedErr
+		}
 	}
 
 	var checker *sema.Checker
 	if config.Mode&NeedTypes != 0 {
 		checker, err = programs.check(config, program, location, seenImports)
 		if err != nil {
-			return wrapError(err)
+			wrappedErr := wrapError(err)
+			// If a custom error handler is set, and the error is non-fatal
+			// use handler to handle the error (e.g. to report it and continue analysis)
+			// This will only be used for the entry point program (e.g not an imported program)
+			if config.HandleCheckerError != nil && checker != nil && importingLocation == nil {
+				err = config.HandleCheckerError(wrappedErr)
+				if err != nil {
+					return err
+				}
+			} else {
+				return wrappedErr
+			}
 		}
 	}
 
@@ -160,7 +181,7 @@ func (programs Programs) check(
 
 	err = checker.Check()
 	if err != nil {
-		return nil, err
+		return checker, err
 	}
 
 	return checker, nil
