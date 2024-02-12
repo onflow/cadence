@@ -302,8 +302,15 @@ func (interpreter *Interpreter) checkMemberAccess(
 		}
 	}
 
-	if _, ok := target.(*StorageReferenceValue); ok {
-		// NOTE: Storage reference value accesses are already checked in  StorageReferenceValue.dereference
+	// NOTE: accesses of (optional) storage reference values
+	// are already checked in StorageReferenceValue.dereference
+	_, isStorageReference := target.(*StorageReferenceValue)
+	if !isStorageReference {
+		if optional, ok := target.(*SomeValue); ok {
+			_, isStorageReference = optional.value.(*StorageReferenceValue)
+		}
+	}
+	if isStorageReference {
 		return
 	}
 
