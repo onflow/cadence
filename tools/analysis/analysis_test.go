@@ -380,7 +380,7 @@ func TestHandledLoadErrorImportedProgram(t *testing.T) {
 		Name:    "ContractB",
 	}
 	const contract2Code = `
-	  access(all) contract ContractA {
+	  access(all) contract ContractB {
 	    init() {
 	      X
 	    }
@@ -419,6 +419,13 @@ func TestHandledLoadErrorImportedProgram(t *testing.T) {
 	var checkerError *sema.CheckerError
 	require.ErrorAs(t, programs[contract1Location].LoadError, &checkerError)
 	require.ErrorAs(t, programs[contract2Location].LoadError, &checkerError)
+
+	loadErr := programs[contract1Location].LoadError.(analysis.ParsingCheckingError)
+	unwrapedErr := loadErr.Unwrap().(*sema.CheckerError)
+
+	var importedProgramErr *sema.ImportedProgramError
+	require.Len(t, unwrapedErr.ChildErrors(), 1)
+	require.ErrorAs(t, unwrapedErr.ChildErrors()[0], &importedProgramErr)
 }
 
 func TestStdlib(t *testing.T) {
