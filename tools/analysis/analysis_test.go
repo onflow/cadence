@@ -76,8 +76,8 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 				return []byte(contractCode), nil
 
 			default:
-				require.FailNow(t,
-					"import of unknown location: %s",
+				require.FailNowf(t,
+					"import of unknown location",
 					"location: %s",
 					location,
 				)
@@ -192,12 +192,9 @@ func TestParseError(t *testing.T) {
 			importRange ast.Range,
 		) ([]byte, error) {
 			switch location {
-			case contractLocation:
-				return []byte(contractCode), nil
-
 			default:
-				require.FailNow(t,
-					"import of unknown location: %s",
+				require.FailNowf(t,
+					"import of unknown location",
 					"location: %s",
 					location,
 				)
@@ -242,8 +239,8 @@ func TestCheckError(t *testing.T) {
 				return []byte(contractCode), nil
 
 			default:
-				require.FailNow(t,
-					"import of unknown location: %s",
+				require.FailNowf(t,
+					"import of unknown location",
 					"location: %s",
 					location,
 				)
@@ -276,6 +273,7 @@ func TestHandledParserError(t *testing.T) {
 	  }
 	`
 
+	handlerCalls := 0
 	config := &analysis.Config{
 		Mode: analysis.NeedSyntax,
 		ResolveCode: func(
@@ -288,8 +286,8 @@ func TestHandledParserError(t *testing.T) {
 				return []byte(contractCode), nil
 
 			default:
-				require.FailNow(t,
-					"import of unknown location: %s",
+				require.FailNowf(t,
+					"import of unknown location",
 					"location: %s",
 					location,
 				)
@@ -297,9 +295,13 @@ func TestHandledParserError(t *testing.T) {
 			}
 		},
 		HandleParserError: func(err analysis.ParsingCheckingError, _ *ast.Program) error {
+			require.Error(t, err)
+			handlerCalls++
 			return nil
 		},
 	}
+
+	require.Equal(t, 1, handlerCalls)
 
 	programs, err := analysis.Load(config, contractLocation)
 	require.NoError(t, err)
@@ -325,6 +327,7 @@ func TestHandledCheckerError(t *testing.T) {
 	  }
 	`
 
+	handlerCalls := 0
 	config := &analysis.Config{
 		Mode: analysis.NeedTypes,
 		ResolveCode: func(
@@ -336,8 +339,8 @@ func TestHandledCheckerError(t *testing.T) {
 			case contractLocation:
 				return []byte(contractCode), nil
 			default:
-				require.FailNow(t,
-					"import of unknown location: %s",
+				require.FailNowf(t,
+					"import of unknown location",
 					"location: %s",
 					location,
 				)
@@ -345,9 +348,13 @@ func TestHandledCheckerError(t *testing.T) {
 			}
 		},
 		HandleCheckerError: func(err analysis.ParsingCheckingError, _ *sema.Checker) error {
+			require.Error(t, err)
+			handlerCalls++
 			return nil
 		},
 	}
+
+	require.Equal(t, 1, handlerCalls)
 
 	programs, err := analysis.Load(config, contractLocation)
 	require.NoError(t, err)
@@ -387,6 +394,7 @@ func TestHandledLoadErrorImportedProgram(t *testing.T) {
 	  }
 	`
 
+	handlerCalls := 0
 	config := &analysis.Config{
 		Mode: analysis.NeedTypes,
 		ResolveCode: func(
@@ -400,8 +408,8 @@ func TestHandledLoadErrorImportedProgram(t *testing.T) {
 			case contract2Location:
 				return []byte(contract2Code), nil
 			default:
-				require.FailNow(t,
-					"import of unknown location: %s",
+				require.FailNowf(t,
+					"import of unknown location",
 					"location: %s",
 					location,
 				)
@@ -409,9 +417,13 @@ func TestHandledLoadErrorImportedProgram(t *testing.T) {
 			}
 		},
 		HandleCheckerError: func(err analysis.ParsingCheckingError, _ *sema.Checker) error {
+			require.Error(t, err)
+			handlerCalls++
 			return nil
 		},
 	}
+
+	require.Equal(t, 2, handlerCalls)
 
 	programs, err := analysis.Load(config, contract1Location)
 	require.NoError(t, err)
@@ -452,8 +464,8 @@ func TestStdlib(t *testing.T) {
 				return []byte(code), nil
 
 			default:
-				require.FailNow(t,
-					"import of unknown location: %s",
+				require.FailNowf(t,
+					"import of unknown location",
 					"location: %s",
 					location,
 				)
@@ -518,8 +530,8 @@ func TestCyclicImports(t *testing.T) {
 				return []byte(barContractCode), nil
 
 			default:
-				require.FailNow(t,
-					"import of unknown location: %s",
+				require.FailNowf(t,
+					"import of unknown location",
 					"location: %s",
 					location,
 				)
