@@ -69,16 +69,12 @@ func (programs Programs) load(
 
 	program, err := parser.ParseProgram(nil, code, parser.Config{})
 	if err != nil {
-		// If a parser error handler is set and the error is non-fatal
-		// use handler to handle the error (e.g. to report it and continue analysis)
-		// This will only be used for the entry point program (e.g not an imported program)
 		wrappedErr := wrapError(err)
-		if loadError == nil {
-			loadError = wrappedErr
-		}
+		loadError = wrappedErr
 
+		// If a custom error handler is set, use it to potentially handle the error
 		if config.HandleParserError != nil && program != nil && importingLocation == nil {
-			err = config.HandleParserError(wrappedErr)
+			err = config.HandleParserError(wrappedErr, program, importingLocation)
 			if err != nil {
 				return err
 			}
@@ -96,11 +92,9 @@ func (programs Programs) load(
 				loadError = wrappedErr
 			}
 
-			// If a custom error handler is set, and the error is non-fatal
-			// use handler to handle the error (e.g. to report it and continue analysis)
-			// This will only be used for the entry point program (e.g not an imported program)
-			if config.HandleCheckerError != nil && checker != nil && importingLocation == nil {
-				err = config.HandleCheckerError(wrappedErr)
+			// If a custom error handler is set, use it to potentially handle the error
+			if config.HandleCheckerError != nil {
+				err = config.HandleCheckerError(wrappedErr, checker, importingLocation)
 				if err != nil {
 					return err
 				}

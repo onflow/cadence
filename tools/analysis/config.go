@@ -24,6 +24,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // A Config specifies details about how programs should be loaded.
@@ -41,9 +42,9 @@ type Config struct {
 	// Mode controls the level of information returned for each program
 	Mode LoadMode
 	// HandleParserError is called when a parser error occurs instead of returning it
-	HandleParserError func(err ParsingCheckingError) error
+	HandleParserError func(err ParsingCheckingError, program *ast.Program, importingLocation common.Location) error
 	// HandleCheckerError is called when a checker error occurs instead of returning it
-	HandleCheckerError func(err ParsingCheckingError) error
+	HandleCheckerError func(err ParsingCheckingError, checker *sema.Checker, importingLocation common.Location) error
 }
 
 func NewSimpleConfig(
