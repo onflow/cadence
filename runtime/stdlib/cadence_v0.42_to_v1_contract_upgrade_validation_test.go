@@ -21,6 +21,9 @@ package stdlib_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -30,8 +33,6 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func testContractUpdate(t *testing.T, oldCode string, newCode string) error {
@@ -54,7 +55,7 @@ func testContractUpdate(t *testing.T, oldCode string, newCode string) error {
 	err = checker.Check()
 	require.NoError(t, err)
 
-	upgradeValidator := stdlib.NewLegacyContractUpdateValidator(
+	upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 		utils.TestLocation,
 		"Test",
 		&runtime_utils.TestRuntimeInterface{},
@@ -108,7 +109,7 @@ func testContractUpdateWithImports(t *testing.T, oldCode, oldImport string, newC
 	err = checker.Check()
 	require.NoError(t, err)
 
-	upgradeValidator := stdlib.NewLegacyContractUpdateValidator(
+	upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 		utils.TestLocation,
 		"Test",
 		&runtime_utils.TestRuntimeInterface{
@@ -217,7 +218,6 @@ func TestContractUpgradeFieldAccess(t *testing.T) {
         `
 
 		err := testContractUpdate(t, oldCode, newCode)
-
 		require.NoError(t, err)
 	})
 
@@ -244,7 +244,32 @@ func TestContractUpgradeFieldAccess(t *testing.T) {
         `
 
 		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
 
+	t.Run("change field access to self", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+                pub var a: Int
+                init() {
+                    self.a = 0
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(self) var a: Int
+                init() {
+                    self.a = 0
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
 		require.NoError(t, err)
 	})
 }

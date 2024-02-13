@@ -1620,7 +1620,7 @@ func changeAccountContracts(
 
 		var validator UpdateValidator
 		if legacyContractUpgrade {
-			validator = NewLegacyContractUpdateValidator(
+			validator = NewCadenceV042ToV1ContractUpdateValidator(
 				location,
 				contractName,
 				handler,

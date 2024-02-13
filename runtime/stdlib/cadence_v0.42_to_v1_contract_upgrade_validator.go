@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type LegacyContractUpdateValidator struct {
+type CadenceV042ToV1ContractUpdateValidator struct {
 	TypeComparator
 
 	newElaborations                          map[common.Location]*sema.Elaboration
@@ -37,41 +37,41 @@ type LegacyContractUpdateValidator struct {
 	underlyingUpdateValidator *ContractUpdateValidator
 }
 
-// NewContractUpdateValidator initializes and returns a validator, without performing any validation.
+// NewCadenceV042ToV1ContractUpdateValidator initializes and returns a validator, without performing any validation.
 // Invoke the `Validate()` method of the validator returned, to start validating the contract.
-func NewLegacyContractUpdateValidator(
+func NewCadenceV042ToV1ContractUpdateValidator(
 	location common.Location,
 	contractName string,
 	provider AccountContractNamesProvider,
 	oldProgram *ast.Program,
 	newProgram *ast.Program,
 	newElaborations map[common.Location]*sema.Elaboration,
-) *LegacyContractUpdateValidator {
+) *CadenceV042ToV1ContractUpdateValidator {
 
 	underlyingValidator := NewContractUpdateValidator(location, contractName, provider, oldProgram, newProgram)
 
-	return &LegacyContractUpdateValidator{
+	return &CadenceV042ToV1ContractUpdateValidator{
 		underlyingUpdateValidator: underlyingValidator,
 		newElaborations:           newElaborations,
 	}
 }
 
-var _ UpdateValidator = &LegacyContractUpdateValidator{}
+var _ UpdateValidator = &CadenceV042ToV1ContractUpdateValidator{}
 
-func (validator *LegacyContractUpdateValidator) getCurrentDeclaration() ast.Declaration {
+func (validator *CadenceV042ToV1ContractUpdateValidator) getCurrentDeclaration() ast.Declaration {
 	return validator.underlyingUpdateValidator.getCurrentDeclaration()
 }
 
-func (validator *LegacyContractUpdateValidator) setCurrentDeclaration(decl ast.Declaration) {
+func (validator *CadenceV042ToV1ContractUpdateValidator) setCurrentDeclaration(decl ast.Declaration) {
 	validator.underlyingUpdateValidator.setCurrentDeclaration(decl)
 }
 
-func (validator *LegacyContractUpdateValidator) getAccountContractNames(address common.Address) ([]string, error) {
+func (validator *CadenceV042ToV1ContractUpdateValidator) getAccountContractNames(address common.Address) ([]string, error) {
 	return validator.underlyingUpdateValidator.accountContractNamesProvider.GetAccountContractNames(address)
 }
 
 // Validate validates the contract update, and returns an error if it is an invalid update.
-func (validator *LegacyContractUpdateValidator) Validate() error {
+func (validator *CadenceV042ToV1ContractUpdateValidator) Validate() error {
 	underlyingValidator := validator.underlyingUpdateValidator
 
 	oldRootDecl := getRootDeclaration(validator, underlyingValidator.oldProgram)
@@ -97,11 +97,11 @@ func (validator *LegacyContractUpdateValidator) Validate() error {
 	return nil
 }
 
-func (validator *LegacyContractUpdateValidator) report(err error) {
+func (validator *CadenceV042ToV1ContractUpdateValidator) report(err error) {
 	validator.underlyingUpdateValidator.report(err)
 }
 
-func (validator *LegacyContractUpdateValidator) idAndLocationOfQualifiedType(typ *ast.NominalType) (common.TypeID, common.Location) {
+func (validator *CadenceV042ToV1ContractUpdateValidator) idAndLocationOfQualifiedType(typ *ast.NominalType) (common.TypeID, common.Location) {
 
 	qualifiedString := typ.String()
 
@@ -111,7 +111,7 @@ func (validator *LegacyContractUpdateValidator) idAndLocationOfQualifiedType(typ
 	// 2) type qualified by the root declaration (e.g `C.R` where `C` is the root contract or contract interface of the new contract)
 	// 3) unqualified type (e.g. `R`, but declared inside `C`)
 	//
-	// in case 3, we prepend the root declaration identifer with a `.` to the type's string to get its qualified name,
+	// in case 3, we prepend the root declaration identifier with a `.` to the type's string to get its qualified name,
 	// and in 1 and 2 we don't need to do anything
 	typIdentifier := typ.Identifier.Identifier
 	rootIdentifier := validator.TypeComparator.RootDeclIdentifier.Identifier
@@ -131,12 +131,12 @@ func (validator *LegacyContractUpdateValidator) idAndLocationOfQualifiedType(typ
 	return common.NewTypeIDFromQualifiedName(nil, location, qualifiedString), location
 }
 
-func (validator *LegacyContractUpdateValidator) getEntitlementType(entitlement *ast.NominalType) *sema.EntitlementType {
+func (validator *CadenceV042ToV1ContractUpdateValidator) getEntitlementType(entitlement *ast.NominalType) *sema.EntitlementType {
 	typeID, location := validator.idAndLocationOfQualifiedType(entitlement)
 	return validator.newElaborations[location].EntitlementType(typeID)
 }
 
-func (validator *LegacyContractUpdateValidator) getEntitlementSetAccess(entitlementSet ast.EntitlementSet) sema.EntitlementSetAccess {
+func (validator *CadenceV042ToV1ContractUpdateValidator) getEntitlementSetAccess(entitlementSet ast.EntitlementSet) sema.EntitlementSetAccess {
 	var entitlements []*sema.EntitlementType
 
 	for _, entitlement := range entitlementSet.Entitlements() {
@@ -151,24 +151,24 @@ func (validator *LegacyContractUpdateValidator) getEntitlementSetAccess(entitlem
 	return sema.NewEntitlementSetAccess(entitlements, entitlementSetKind)
 }
 
-func (validator *LegacyContractUpdateValidator) getCompositeType(composite *ast.NominalType) *sema.CompositeType {
+func (validator *CadenceV042ToV1ContractUpdateValidator) getCompositeType(composite *ast.NominalType) *sema.CompositeType {
 	typeID, location := validator.idAndLocationOfQualifiedType(composite)
 	return validator.newElaborations[location].CompositeType(typeID)
 }
 
-func (validator *LegacyContractUpdateValidator) getInterfaceType(intf *ast.NominalType) *sema.InterfaceType {
+func (validator *CadenceV042ToV1ContractUpdateValidator) getInterfaceType(intf *ast.NominalType) *sema.InterfaceType {
 	typeID, location := validator.idAndLocationOfQualifiedType(intf)
 	return validator.newElaborations[location].InterfaceType(typeID)
 }
 
-func (validator *LegacyContractUpdateValidator) getIntersectedInterfaces(intersection []*ast.NominalType) (intfs []*sema.InterfaceType) {
+func (validator *CadenceV042ToV1ContractUpdateValidator) getIntersectedInterfaces(intersection []*ast.NominalType) (intfs []*sema.InterfaceType) {
 	for _, intf := range intersection {
 		intfs = append(intfs, validator.getInterfaceType(intf))
 	}
 	return
 }
 
-func (validator *LegacyContractUpdateValidator) requirePermitsAccess(
+func (validator *CadenceV042ToV1ContractUpdateValidator) requirePermitsAccess(
 	expected sema.Access,
 	found sema.EntitlementSetAccess,
 	foundType ast.Type,
@@ -183,7 +183,7 @@ func (validator *LegacyContractUpdateValidator) requirePermitsAccess(
 	return nil
 }
 
-func (validator *LegacyContractUpdateValidator) expectedAuthorizationOfComposite(composite *ast.NominalType) sema.Access {
+func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOfComposite(composite *ast.NominalType) sema.Access {
 	// if this field is set, we are currently upgrading a formerly legacy restricted type into a reference to a composite
 	// in this case, the expected entitlements are based not on the underlying composite type,
 	// but instead the types previously in the restriction set
@@ -201,7 +201,7 @@ func (validator *LegacyContractUpdateValidator) expectedAuthorizationOfComposite
 	return sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
 }
 
-func (validator *LegacyContractUpdateValidator) expectedAuthorizationOfIntersection(intersectionTypes []*ast.NominalType) sema.Access {
+func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOfIntersection(intersectionTypes []*ast.NominalType) sema.Access {
 
 	// a reference to an intersection (or restricted) type is granted entitlements based on the intersected interfaces,
 	// ignoring the legacy restricted type, as an intersection type appearing in the new contract means it must have originally
@@ -217,7 +217,7 @@ func (validator *LegacyContractUpdateValidator) expectedAuthorizationOfIntersect
 	return sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
 }
 
-func (validator *LegacyContractUpdateValidator) checkEntitlementsUpgrade(
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkEntitlementsUpgrade(
 	oldType *ast.ReferenceType,
 	newType *ast.ReferenceType,
 ) error {
@@ -244,7 +244,7 @@ func (validator *LegacyContractUpdateValidator) checkEntitlementsUpgrade(
 	return nil
 }
 
-func (validator *LegacyContractUpdateValidator) checkTypeUpgradability(oldType ast.Type, newType ast.Type) error {
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkTypeUpgradability(oldType ast.Type, newType ast.Type) error {
 
 	switch oldType := oldType.(type) {
 	case *ast.OptionalType:
@@ -320,7 +320,7 @@ func (validator *LegacyContractUpdateValidator) checkTypeUpgradability(oldType a
 
 }
 
-func (validator *LegacyContractUpdateValidator) checkField(oldField *ast.FieldDeclaration, newField *ast.FieldDeclaration) {
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkField(oldField *ast.FieldDeclaration, newField *ast.FieldDeclaration) {
 	oldType := oldField.TypeAnnotation.Type
 	newType := newField.TypeAnnotation.Type
 

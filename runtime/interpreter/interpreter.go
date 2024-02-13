@@ -4614,7 +4614,7 @@ func (interpreter *Interpreter) AllElaborations() (elaborations map[common.Locat
 	// Ensure the program for this location is loaded,
 	// so its checker is available
 
-	for location, _ := range interpreter.SharedState.allInterpreters {
+	for location := range interpreter.SharedState.allInterpreters { //nolint:maprange
 		subInterpreter := interpreter.EnsureLoaded(location)
 		if subInterpreter == nil || subInterpreter.Program == nil {
 			return nil
