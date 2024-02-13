@@ -420,10 +420,10 @@ func TestHandledLoadErrorImportedProgram(t *testing.T) {
 	require.ErrorAs(t, programs[contract1Location].LoadError, &checkerError)
 	require.ErrorAs(t, programs[contract2Location].LoadError, &checkerError)
 
+	// Validate that parent checker receives the imported program error despite it being handled
+	var importedProgramErr *sema.ImportedProgramError
 	loadErr := programs[contract1Location].LoadError.(analysis.ParsingCheckingError)
 	unwrapedErr := loadErr.Unwrap().(*sema.CheckerError)
-
-	var importedProgramErr *sema.ImportedProgramError
 	require.Len(t, unwrapedErr.ChildErrors(), 1)
 	require.ErrorAs(t, unwrapedErr.ChildErrors()[0], &importedProgramErr)
 }
