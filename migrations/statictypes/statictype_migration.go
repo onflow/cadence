@@ -258,18 +258,30 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 
 		// Interface types need to be placed in intersection types
 		if _, ok := parentType.(*interpreter.IntersectionStaticType); !ok {
+			// If the interface type was not converted to another type,
+			// and given the parent type is not an intersection type,
+			// then the original interface type must be placed in an intersection type
 			if convertedType == nil {
 				convertedType = interpreter.NewIntersectionStaticType(
 					nil, []*interpreter.InterfaceStaticType{
 						staticType,
 					},
 				)
-			} else if convertedInterfaceType, ok := convertedType.(*interpreter.InterfaceStaticType); ok {
-				convertedType = interpreter.NewIntersectionStaticType(
-					nil, []*interpreter.InterfaceStaticType{
-						convertedInterfaceType,
-					},
-				)
+			} else {
+				// If the interface type was converted to another type,
+				// it may have been converted to
+				// - a different kind of type, e.g. a composite type,
+				//   in which case the converted type should be returned as-is
+				// - another interface type –
+				//   given the parent type is not an intersection type,
+				//   then the converted interface type must be placed in an intersection type
+				if convertedInterfaceType, ok := convertedType.(*interpreter.InterfaceStaticType); ok {
+					convertedType = interpreter.NewIntersectionStaticType(
+						nil, []*interpreter.InterfaceStaticType{
+							convertedInterfaceType,
+						},
+					)
+				}
 			}
 		}
 
