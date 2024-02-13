@@ -149,7 +149,9 @@ func (programs Programs) check(
 				importRange ast.Range,
 			) (sema.Import, error) {
 
-				var imp *sema.ElaborationImport
+				var elaboration *sema.Elaboration
+				var loadError error
+
 				switch importedLocation {
 				case stdlib.CryptoCheckerLocation:
 					cryptoChecker := stdlib.CryptoChecker()
@@ -172,16 +174,16 @@ func (programs Programs) check(
 
 					// If the imported program has a checker, use its elaboration for the import
 					if programs[importedLocation].Checker != nil {
-						elaboration := programs[importedLocation].Checker.Elaboration
-						imp = &sema.ElaborationImport{
-							Elaboration: elaboration,
-						}
+						elaboration = programs[importedLocation].Checker.Elaboration
 					}
+
+					// If the imported program had an error while loading, record it
+					loadError = programs[importedLocation].loadError
 				}
 
-				// If the imported program had an error while loading, return it
-				loadError := programs[importedLocation].loadError
-				return imp, loadError
+				return &sema.ElaborationImport{
+					Elaboration: elaboration,
+				}, loadError
 			},
 		},
 	)
