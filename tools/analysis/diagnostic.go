@@ -33,6 +33,8 @@ type Diagnostic struct {
 	Category         string
 	Message          string
 	SecondaryMessage string
+	Code             string // Diagnostic code (e.g. "unused-variable")
+	URL              string // URL to documentation
 	SuggestedFixes   []SuggestedFix
 	ast.Range
 }
