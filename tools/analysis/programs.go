@@ -180,8 +180,9 @@ func (programs Programs) check(
 					// This may happen if a program is both imported and the entry point
 					// and has an error that was handled by a custom error handler
 					// However, we still want this error in the import resolution
-					if programs[importedLocation].loadError != nil {
-						return nil, programs[importedLocation].loadError
+					loadError := programs[importedLocation].loadError
+					if loadError != nil {
+						return nil, loadError
 					}
 
 					elaboration = programs[importedLocation].Checker.Elaboration
