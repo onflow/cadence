@@ -73,8 +73,8 @@ func (programs Programs) load(
 		loadError = wrappedErr
 
 		// If a custom error handler is set, use it to potentially handle the error
-		if config.HandleParserError != nil && program != nil && importingLocation == nil {
-			err = config.HandleParserError(wrappedErr, program, importingLocation)
+		if config.HandleParserError != nil {
+			err = config.HandleParserError(wrappedErr, program)
 			if err != nil {
 				return err
 			}
@@ -94,7 +94,7 @@ func (programs Programs) load(
 
 			// If a custom error handler is set, use it to potentially handle the error
 			if config.HandleCheckerError != nil {
-				err = config.HandleCheckerError(wrappedErr, checker, importingLocation)
+				err = config.HandleCheckerError(wrappedErr, checker)
 				if err != nil {
 					return err
 				}
@@ -149,7 +149,7 @@ func (programs Programs) check(
 				importRange ast.Range,
 			) (sema.Import, error) {
 
-				var elaboration *sema.Elaboration
+				var imp *sema.ElaborationImport
 				switch importedLocation {
 				case stdlib.CryptoCheckerLocation:
 					cryptoChecker := stdlib.CryptoChecker()
@@ -170,21 +170,18 @@ func (programs Programs) check(
 						return nil, err
 					}
 
-					// If the imported program has a load error, return it
-					// This may happen if a program is both imported and the entry point
-					// and has an error that was handled by a custom error handler
-					// However, we still want this error in the import resolution
-					loadError := programs[importedLocation].loadError
-					if loadError != nil {
-						return nil, loadError
+					// If the imported program has a checker, use its elaboration for the import
+					if programs[importedLocation].Checker != nil {
+						elaboration := programs[importedLocation].Checker.Elaboration
+						imp = &sema.ElaborationImport{
+							Elaboration: elaboration,
+						}
 					}
-
-					elaboration = programs[importedLocation].Checker.Elaboration
 				}
 
-				return sema.ElaborationImport{
-					Elaboration: elaboration,
-				}, nil
+				// If the imported program had an error while loading, return it
+				loadError := programs[importedLocation].loadError
+				return imp, loadError
 			},
 		},
 	)

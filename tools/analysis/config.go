@@ -42,9 +42,9 @@ type Config struct {
 	// Mode controls the level of information returned for each program
 	Mode LoadMode
 	// HandleParserError is called when a parser error occurs instead of returning it
-	HandleParserError func(err ParsingCheckingError, program *ast.Program, importingLocation common.Location) error
+	HandleParserError func(err ParsingCheckingError, program *ast.Program) error
 	// HandleCheckerError is called when a checker error occurs instead of returning it
-	HandleCheckerError func(err ParsingCheckingError, checker *sema.Checker, importingLocation common.Location) error
+	HandleCheckerError func(err ParsingCheckingError, checker *sema.Checker) error
 }
 
 func NewSimpleConfig(
