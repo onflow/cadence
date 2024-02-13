@@ -937,40 +937,45 @@ func CheckIntersectionType(
 
 		// The intersections may not have clashing members
 
-		// TODO: also include interface conformances' members
-		//   once interfaces can have conformances
+		checkClashingMember := func(interfaceType *InterfaceType) {
+			interfaceType.Members.Foreach(func(name string, member *Member) {
 
-		interfaceType.Members.Foreach(func(name string, member *Member) {
-			if previousDeclaringInterfaceType, ok := memberSet[name]; ok {
+				if previousDeclaringInterfaceType, ok := memberSet[name]; ok {
 
-				// If there is an overlap in members, ensure the members have the same type
+					// If there is an overlap in members, ensure the members have the same type
 
-				memberType := member.TypeAnnotation.Type
+					memberType := member.TypeAnnotation.Type
 
-				prevMemberType, ok := previousDeclaringInterfaceType.Members.Get(name)
-				if !ok {
-					panic(errors.NewUnreachableError())
+					prevMemberType, ok := previousDeclaringInterfaceType.Members.Get(name)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					previousMemberType := prevMemberType.TypeAnnotation.Type
+
+					if !memberType.IsInvalidType() &&
+						!previousMemberType.IsInvalidType() &&
+						!memberType.Equal(previousMemberType) {
+
+						report(func(t *ast.IntersectionType) error {
+							return &IntersectionMemberClashError{
+								Name:                  name,
+								RedeclaringType:       interfaceType,
+								OriginalDeclaringType: previousDeclaringInterfaceType,
+								Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
+							}
+						})
+					}
+				} else {
+					memberSet[name] = interfaceType
 				}
+			})
+		}
 
-				previousMemberType := prevMemberType.TypeAnnotation.Type
+		checkClashingMember(interfaceType)
 
-				if !memberType.IsInvalidType() &&
-					!previousMemberType.IsInvalidType() &&
-					!memberType.Equal(previousMemberType) {
-
-					report(func(t *ast.IntersectionType) error {
-						return &IntersectionMemberClashError{
-							Name:                  name,
-							RedeclaringType:       interfaceType,
-							OriginalDeclaringType: previousDeclaringInterfaceType,
-							Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
-						}
-					})
-				}
-			} else {
-				memberSet[name] = interfaceType
-			}
-		})
+		interfaceType.EffectiveInterfaceConformanceSet().
+			ForEach(checkClashingMember)
 	}
 
 	// If no intersection type is given, infer `AnyResource`/`AnyStruct`
