@@ -259,9 +259,106 @@ func TestCheckError(t *testing.T) {
 	require.ErrorAs(t, err, &checkerError)
 }
 
+func TestHandledParserError(t *testing.T) {
+
+	t.Parallel()
+
+	contractAddress := common.MustBytesToAddress([]byte{0x1})
+	contractLocation := common.AddressLocation{
+		Address: contractAddress,
+		Name:    "ContractA",
+	}
+	const contractCode = `
+	  access(all) contract ContractA {
+	    init() {
+	      ???
+	    }
+	  }
+	`
+
+	config := &analysis.Config{
+		Mode: analysis.NeedSyntax,
+		ResolveCode: func(
+			location common.Location,
+			importingLocation common.Location,
+			importRange ast.Range,
+		) ([]byte, error) {
+			switch location {
+			case contractLocation:
+				return []byte(contractCode), nil
+
+			default:
+				require.FailNow(t,
+					"import of unknown location: %s",
+					"location: %s",
+					location,
+				)
+				return nil, nil
+			}
+		},
+		HandleParserError: func(err analysis.ParsingCheckingError, _ *ast.Program) error {
+			return nil
+		},
+	}
+
+	programs, err := analysis.Load(config, contractLocation)
+	require.NoError(t, err)
+
+	var parserError *parser.Error
+	require.ErrorAs(t, programs[contractLocation].LoadError, &parserError)
+}
+
+func TestHandledCheckerError(t *testing.T) {
+
+	t.Parallel()
+
+	contractAddress := common.MustBytesToAddress([]byte{0x1})
+	contractLocation := common.AddressLocation{
+		Address: contractAddress,
+		Name:    "ContractA",
+	}
+	const contractCode = `
+	  access(all) contract ContractA {
+	    init() {
+	      X
+	    }
+	  }
+	`
+
+	config := &analysis.Config{
+		Mode: analysis.NeedTypes,
+		ResolveCode: func(
+			location common.Location,
+			importingLocation common.Location,
+			importRange ast.Range,
+		) ([]byte, error) {
+			switch location {
+			case contractLocation:
+				return []byte(contractCode), nil
+			default:
+				require.FailNow(t,
+					"import of unknown location: %s",
+					"location: %s",
+					location,
+				)
+				return nil, nil
+			}
+		},
+		HandleCheckerError: func(err analysis.ParsingCheckingError, _ *sema.Checker) error {
+			return nil
+		},
+	}
+
+	programs, err := analysis.Load(config, contractLocation)
+	require.NoError(t, err)
+
+	var checkerError *sema.CheckerError
+	require.ErrorAs(t, programs[contractLocation].LoadError, &checkerError)
+}
+
 // Tests that an error handled by the custom error handler is not returned
 // However, it must set LoadError to the handled error so that checkers later importing the program can see it
-func TestHandledCheckerErrorImportedProgram(t *testing.T) {
+func TestHandledLoadErrorImportedProgram(t *testing.T) {
 
 	t.Parallel()
 
@@ -318,9 +415,6 @@ func TestHandledCheckerErrorImportedProgram(t *testing.T) {
 
 	programs, err := analysis.Load(config, contract1Location)
 	require.NoError(t, err)
-
-	require.Error(t, programs[contract1Location].LoadError)
-	require.Error(t, programs[contract2Location].LoadError)
 
 	var checkerError *sema.CheckerError
 	require.ErrorAs(t, programs[contract1Location].LoadError, &checkerError)
