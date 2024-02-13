@@ -181,9 +181,13 @@ func (programs Programs) check(
 					loadError = programs[importedLocation].LoadError
 				}
 
-				return &sema.ElaborationImport{
+				if loadError != nil {
+					return nil, loadError
+				}
+
+				return sema.ElaborationImport{
 					Elaboration: elaboration,
-				}, loadError
+				}, nil
 			},
 		},
 	)
