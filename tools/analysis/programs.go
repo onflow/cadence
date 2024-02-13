@@ -172,13 +172,16 @@ func (programs Programs) check(
 						return nil, err
 					}
 
+					program := programs[importedLocation]
+					checker := program.Checker
+
 					// If the imported program has a checker, use its elaboration for the import
-					if programs[importedLocation].Checker != nil {
-						elaboration = programs[importedLocation].Checker.Elaboration
+					if checker != nil {
+						elaboration = checker.Elaboration
 					}
 
 					// If the imported program had an error while loading, record it
-					loadError = programs[importedLocation].LoadError
+					loadError = program.LoadError
 				}
 
 				if loadError != nil {

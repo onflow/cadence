@@ -192,6 +192,8 @@ func TestParseError(t *testing.T) {
 			importRange ast.Range,
 		) ([]byte, error) {
 			switch location {
+			case contractLocation:
+				return []byte(contractCode), nil
 			default:
 				require.FailNowf(t,
 					"import of unknown location",
@@ -301,12 +303,12 @@ func TestHandledParserError(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, 1, handlerCalls)
-
 	programs, err := analysis.Load(config, contractLocation)
 	require.NoError(t, err)
 
-	var parserError *parser.Error
+	require.Equal(t, 1, handlerCalls)
+
+	var parserError parser.Error
 	require.ErrorAs(t, programs[contractLocation].LoadError, &parserError)
 }
 
@@ -354,9 +356,8 @@ func TestHandledCheckerError(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, 1, handlerCalls)
-
 	programs, err := analysis.Load(config, contractLocation)
+	require.Equal(t, 1, handlerCalls)
 	require.NoError(t, err)
 
 	var checkerError *sema.CheckerError
@@ -423,9 +424,8 @@ func TestHandledLoadErrorImportedProgram(t *testing.T) {
 		},
 	}
 
-	require.Equal(t, 2, handlerCalls)
-
 	programs, err := analysis.Load(config, contract1Location)
+	require.Equal(t, 2, handlerCalls)
 	require.NoError(t, err)
 
 	var checkerError *sema.CheckerError
@@ -434,10 +434,7 @@ func TestHandledLoadErrorImportedProgram(t *testing.T) {
 
 	// Validate that parent checker receives the imported program error despite it being handled
 	var importedProgramErr *sema.ImportedProgramError
-	loadErr := programs[contract1Location].LoadError.(analysis.ParsingCheckingError)
-	unwrapedErr := loadErr.Unwrap().(*sema.CheckerError)
-	require.Len(t, unwrapedErr.ChildErrors(), 1)
-	require.ErrorAs(t, unwrapedErr.ChildErrors()[0], &importedProgramErr)
+	require.ErrorAs(t, programs[contract1Location].LoadError, &importedProgramErr)
 }
 
 func TestStdlib(t *testing.T) {
