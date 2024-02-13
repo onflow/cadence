@@ -72,7 +72,7 @@ func (m *StaticTypeMigration) Migrate(
 		}
 		return interpreter.NewTypeValue(nil, convertedType), nil
 
-	case *interpreter.CapabilityValue:
+	case *interpreter.IDCapabilityValue:
 		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
 		if convertedBorrowType == nil {
 			return

@@ -87,7 +87,7 @@ func (m *LinkValueMigration) Migrate(
 	var borrowStaticType *interpreter.ReferenceStaticType
 
 	switch readValue := value.(type) {
-	case *interpreter.CapabilityValue:
+	case *interpreter.IDCapabilityValue:
 		// Already migrated
 		return nil, nil
 
@@ -300,7 +300,7 @@ func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 					interpreter.UnauthorizedAccess,
 					nil
 
-			case *interpreter.CapabilityValue:
+			case *interpreter.IDCapabilityValue:
 
 				// Follow ID capability values which are published in the public or private domain.
 				// This is needed for two reasons:

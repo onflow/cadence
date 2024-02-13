@@ -38,8 +38,11 @@ var _ Value = &PathCapabilityValue{}
 var _ atree.Storable = &PathCapabilityValue{}
 var _ EquatableValue = &PathCapabilityValue{}
 var _ MemberAccessibleValue = &PathCapabilityValue{}
+var _ CapabilityValue = &PathCapabilityValue{}
 
 func (*PathCapabilityValue) isValue() {}
+
+func (*PathCapabilityValue) isCapabilityValue() {}
 
 func (v *PathCapabilityValue) Accept(_ *Interpreter, _ Visitor) {
 	panic(errors.NewUnreachableError())
