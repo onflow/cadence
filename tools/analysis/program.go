@@ -31,7 +31,7 @@ type Program struct {
 	Program   *ast.Program
 	Checker   *sema.Checker
 	Code      []byte
-	loadError error
+	LoadError error
 }
 
 // Run runs the given DAG of analyzers in parallel

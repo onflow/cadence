@@ -109,7 +109,7 @@ func (programs Programs) load(
 		Code:      code,
 		Program:   program,
 		Checker:   checker,
-		loadError: loadError,
+		LoadError: loadError,
 	}
 
 	return nil
@@ -178,7 +178,7 @@ func (programs Programs) check(
 					}
 
 					// If the imported program had an error while loading, record it
-					loadError = programs[importedLocation].loadError
+					loadError = programs[importedLocation].LoadError
 				}
 
 				return &sema.ElaborationImport{
