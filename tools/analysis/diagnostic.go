@@ -28,15 +28,6 @@ type SuggestedFix = errors.SuggestedFix[ast.TextEdit]
 
 type TextEdit = ast.TextEdit
 
-type Severity uint8
-
-const (
-	SeverityUnknown Severity = iota
-	SeverityInfo
-	SeverityError
-	SeverityWarning
-)
-
 type Diagnostic struct {
 	Location         common.Location
 	Category         string
