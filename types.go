@@ -1308,7 +1308,17 @@ type FunctionPurity int
 const (
 	FunctionPurityUnspecified FunctionPurity = iota
 	FunctionPurityView
+
+	// DO NOT add item after maxFunctionPurity
+	maxFunctionPurity
 )
+
+func NewFunctionaryPurity(rawPurity int) (FunctionPurity, error) {
+	if rawPurity < 0 || rawPurity >= int(maxFunctionPurity) {
+		return FunctionPurityUnspecified, fmt.Errorf("failed to convert %d to FunctionPurity", rawPurity)
+	}
+	return FunctionPurity(rawPurity), nil
+}
 
 type FunctionType struct {
 	TypeParameters []TypeParameter

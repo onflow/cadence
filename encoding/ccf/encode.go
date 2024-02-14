@@ -1184,13 +1184,14 @@ func (e *Encoder) encodeCapability(capability cadence.Capability) error {
 //		    ]
 //	 ]
 //	 return-type: type-value
+//	 purity: int
 //
 // ]
 func (e *Encoder) encodeFunction(typ *cadence.FunctionType, visited ccfTypeIDByCadenceType) error {
-	// Encode array head of length 3.
+	// Encode array head of length 4.
 	err := e.enc.EncodeRawBytes([]byte{
-		// array, 3 items follow
-		0x83,
+		// array, 4 items follow
+		0x84,
 	})
 	if err != nil {
 		return err
@@ -1209,7 +1210,13 @@ func (e *Encoder) encodeFunction(typ *cadence.FunctionType, visited ccfTypeIDByC
 	}
 
 	// element 2: return type as type-value.
-	return e.encodeTypeValue(typ.ReturnType, visited)
+	err = e.encodeTypeValue(typ.ReturnType, visited)
+	if err != nil {
+		return err
+	}
+
+	// element 3: purity as int.
+	return e.enc.EncodeInt(int(typ.Purity))
 }
 
 // encodeTypeValue encodes cadence.Type as
