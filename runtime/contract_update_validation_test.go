@@ -2558,7 +2558,10 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
         `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
-		require.NoError(t, err)
+		RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertConformanceMismatchError(t, cause, "Foo")
 	})
 
 	t.Run("Change conformance order", func(t *testing.T) {

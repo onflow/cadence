@@ -416,29 +416,46 @@ func checkConformance(
 	newDecl *ast.CompositeDeclaration,
 ) {
 
-	// at this point the declaration kinds are known to be the same
-	if oldDecl.DeclarationKind() != common.DeclarationKindEnum {
-		return
-	}
-
 	// Here it is assumed enums will always have one and only one conformance.
 	// This is enforced by the checker.
 	// Therefore, below check for multiple conformances is only applicable
 	// for non-enum type composite declarations. i.e: structs, resources, etc.
 
-	oldConformance := oldDecl.Conformances[0]
-	newConformance := newDecl.Conformances[0]
+	oldConformances := oldDecl.Conformances
+	newConformances := newDecl.Conformances
 
-	err := oldConformance.CheckEqual(newConformance, validator)
+	// All the existing conformances must have a match. Order is not important.
+	// Having extra new conformance is OK. See: https://github.com/onflow/cadence/issues/1394
 
-	if err == nil {
-		return
+	// Note: Removing a conformance is NOT OK. That could lead to type-safety issues.
+	// e.g:
+	//  - Someone stores an array of type `[{I}]` with `T:I` objects inside.
+	//  - Later T’s conformance to `I` is removed.
+	//  - Now `[{I}]` contains objects if `T` that does not conform to `I`.
+
+	for _, oldConformance := range oldConformances {
+		found := false
+		for index, newConformance := range newConformances {
+			err := oldConformance.CheckEqual(newConformance, validator)
+			if err == nil {
+				found = true
+
+				// Remove the matched conformance, so we don't have to check it again.
+				// i.e: optimization
+				newConformances = append(newConformances[:index], newConformances[index+1:]...)
+				break
+			}
+		}
+
+		if !found {
+			validator.report(&ConformanceMismatchError{
+				DeclName: newDecl.Identifier.Identifier,
+				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+			})
+
+			return
+		}
 	}
-
-	validator.report(&ConformanceMismatchError{
-		DeclName: newDecl.Identifier.Identifier,
-		Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
-	})
 }
 
 func (validator *ContractUpdateValidator) report(err error) {
