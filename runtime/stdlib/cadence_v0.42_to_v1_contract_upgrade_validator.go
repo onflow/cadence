@@ -101,7 +101,10 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) report(err error) {
 	validator.underlyingUpdateValidator.report(err)
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) idAndLocationOfQualifiedType(typ *ast.NominalType) (common.TypeID, common.Location) {
+func (validator *CadenceV042ToV1ContractUpdateValidator) idAndLocationOfQualifiedType(typ *ast.NominalType) (
+	common.TypeID,
+	common.Location,
+) {
 
 	qualifiedString := typ.String()
 
@@ -131,12 +134,16 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) idAndLocationOfQualifie
 	return common.NewTypeIDFromQualifiedName(nil, location, qualifiedString), location
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) getEntitlementType(entitlement *ast.NominalType) *sema.EntitlementType {
+func (validator *CadenceV042ToV1ContractUpdateValidator) getEntitlementType(
+	entitlement *ast.NominalType,
+) *sema.EntitlementType {
 	typeID, location := validator.idAndLocationOfQualifiedType(entitlement)
 	return validator.newElaborations[location].EntitlementType(typeID)
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) getEntitlementSetAccess(entitlementSet ast.EntitlementSet) sema.EntitlementSetAccess {
+func (validator *CadenceV042ToV1ContractUpdateValidator) getEntitlementSetAccess(
+	entitlementSet ast.EntitlementSet,
+) sema.EntitlementSetAccess {
 	var entitlements []*sema.EntitlementType
 
 	for _, entitlement := range entitlementSet.Entitlements() {
@@ -161,9 +168,11 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) getInterfaceType(intf *
 	return validator.newElaborations[location].InterfaceType(typeID)
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) getIntersectedInterfaces(intersection []*ast.NominalType) (intfs []*sema.InterfaceType) {
-	for _, intf := range intersection {
-		intfs = append(intfs, validator.getInterfaceType(intf))
+func (validator *CadenceV042ToV1ContractUpdateValidator) getIntersectedInterfaces(
+	intersection []*ast.NominalType,
+) (interfaceTypes []*sema.InterfaceType) {
+	for _, interfaceType := range intersection {
+		interfaceTypes = append(interfaceTypes, validator.getInterfaceType(interfaceType))
 	}
 	return
 }
@@ -201,7 +210,9 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOf
 	return sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOfIntersection(intersectionTypes []*ast.NominalType) sema.Access {
+func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOfIntersection(
+	intersectionTypes []*ast.NominalType,
+) sema.Access {
 
 	// a reference to an intersection (or restricted) type is granted entitlements based on the intersected interfaces,
 	// ignoring the legacy restricted type, as an intersection type appearing in the new contract means it must have originally
