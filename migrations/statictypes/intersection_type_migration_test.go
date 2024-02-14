@@ -1221,3 +1221,272 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 		}
 	}
 }
+
+func TestIntersectionTypeMigrationWithTypeConverters(t *testing.T) {
+	t.Parallel()
+
+	migrate := func(
+		t *testing.T,
+		staticTypeMigration *StaticTypeMigration,
+		input interpreter.StaticType,
+	) interpreter.StaticType {
+
+		// Store values
+
+		ledger := NewTestLedger(nil, nil)
+		storage := runtime.NewStorage(ledger, nil)
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   false,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		const testPathDomain = common.PathDomainStorage
+		const testPathIdentifier = "test_type_value"
+
+		storeTypeValue(
+			inter,
+			testAddress,
+			testPathDomain,
+			testPathIdentifier,
+			input,
+		)
+
+		err = storage.Commit(inter, true)
+		require.NoError(t, err)
+
+		// Migrate
+
+		migration := migrations.NewStorageMigration(inter, storage)
+
+		reporter := newTestReporter()
+
+		migration.Migrate(
+			&migrations.AddressSliceIterator{
+				Addresses: []common.Address{
+					testAddress,
+				},
+			},
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				staticTypeMigration,
+			),
+		)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+
+		key := struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}{
+			StorageKey: interpreter.StorageKey{
+				Address: testAddress,
+				Key:     testPathDomain.Identifier(),
+			},
+			StorageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+		}
+
+		assert.Contains(t, reporter.migrated, key)
+
+		storageMap := storage.GetStorageMap(testAddress, testPathDomain.Identifier(), false)
+		require.NotNil(t, storageMap)
+		require.Equal(t, uint64(1), storageMap.Count())
+
+		value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(testPathIdentifier))
+		require.NotNil(t, value)
+
+		require.IsType(t, interpreter.TypeValue{}, value)
+
+		return value.(interpreter.TypeValue).Type
+	}
+
+	const fooCompositeQualifiedIdentifierA = "Foo.A"
+	const fooCompositeQualifiedIdentifierB = "Foo.B"
+
+	fooACompositeType := interpreter.NewCompositeStaticType(
+		nil,
+		fooAddressLocation,
+		fooCompositeQualifiedIdentifierA,
+		fooAddressLocation.TypeID(nil, fooCompositeQualifiedIdentifierA),
+	)
+
+	fooBCompositeType := interpreter.NewCompositeStaticType(
+		nil,
+		fooAddressLocation,
+		fooCompositeQualifiedIdentifierB,
+		fooAddressLocation.TypeID(nil, fooCompositeQualifiedIdentifierB),
+	)
+
+	const fooInterfaceQualifiedIdentifierC = "Foo.C"
+	const fooInterfaceQualifiedIdentifierD = "Foo.D"
+
+	fooCInterfaceType := interpreter.NewInterfaceStaticType(
+		nil,
+		fooAddressLocation,
+		fooInterfaceQualifiedIdentifierC,
+		fooAddressLocation.TypeID(nil, fooInterfaceQualifiedIdentifierC),
+	)
+	fooDInterfaceType := interpreter.NewInterfaceStaticType(
+		nil,
+		fooAddressLocation,
+		fooInterfaceQualifiedIdentifierD,
+		fooAddressLocation.TypeID(nil, fooInterfaceQualifiedIdentifierD),
+	)
+
+	t.Run("composite type converter", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("return non-interface", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration().
+				WithCompositeTypeConverter(func(staticType *interpreter.CompositeStaticType) interpreter.StaticType {
+					if staticType == fooACompositeType {
+						return fooBCompositeType
+					}
+					return nil
+				})
+
+			actual := migrate(t, staticTypeMigration, fooACompositeType)
+			assert.Equal(t, fooBCompositeType, actual)
+		})
+
+		t.Run("return interface", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration().
+				WithCompositeTypeConverter(func(staticType *interpreter.CompositeStaticType) interpreter.StaticType {
+					if staticType == fooACompositeType {
+						// NOTE: return interface type as-is, not wrapped in intersection type,
+						// to test if it gets wrapped properly into an intersection type
+						return fooCInterfaceType
+					}
+					return nil
+				})
+
+			actual := migrate(t, staticTypeMigration, fooACompositeType)
+			assert.Equal(t,
+				interpreter.NewIntersectionStaticType(
+					nil,
+					[]*interpreter.InterfaceStaticType{
+						fooCInterfaceType,
+					},
+				),
+				actual,
+			)
+		})
+
+		t.Run("return intersection", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration().
+				WithCompositeTypeConverter(func(staticType *interpreter.CompositeStaticType) interpreter.StaticType {
+					if staticType == fooACompositeType {
+						// NOTE: return interface type wrapped in intersection type,
+						// to test if it does not get re-wrapped into an intersection type
+						return interpreter.NewIntersectionStaticType(
+							nil,
+							[]*interpreter.InterfaceStaticType{
+								fooCInterfaceType,
+							},
+						)
+					}
+					return nil
+				})
+
+			actual := migrate(t, staticTypeMigration, fooACompositeType)
+			assert.Equal(t,
+				interpreter.NewIntersectionStaticType(
+					nil,
+					[]*interpreter.InterfaceStaticType{
+						fooCInterfaceType,
+					},
+				),
+				actual,
+			)
+
+		})
+	})
+
+	t.Run("interface type converter", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("return non-interface", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration().
+				WithInterfaceTypeConverter(func(staticType *interpreter.InterfaceStaticType) interpreter.StaticType {
+					if staticType == fooCInterfaceType {
+						return fooBCompositeType
+					}
+					return nil
+				})
+
+			actual := migrate(t, staticTypeMigration, fooCInterfaceType)
+			assert.Equal(t, fooBCompositeType, actual)
+		})
+
+		t.Run("return interface", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration().
+				WithInterfaceTypeConverter(func(staticType *interpreter.InterfaceStaticType) interpreter.StaticType {
+					if staticType == fooCInterfaceType {
+						// NOTE: return interface type as-is, not wrapped in intersection type,
+						// to test if it gets wrapped properly into an intersection type
+						return fooDInterfaceType
+					}
+					return nil
+				})
+
+			actual := migrate(t, staticTypeMigration, fooCInterfaceType)
+			assert.Equal(t,
+				interpreter.NewIntersectionStaticType(
+					nil,
+					[]*interpreter.InterfaceStaticType{
+						fooDInterfaceType,
+					},
+				),
+				actual,
+			)
+
+		})
+
+		t.Run("return intersection", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration().
+				WithInterfaceTypeConverter(func(staticType *interpreter.InterfaceStaticType) interpreter.StaticType {
+					if staticType == fooCInterfaceType {
+						// NOTE: return interface type wrapped in intersection type,
+						// to test if it does not get re-wrapped into an intersection type
+						return interpreter.NewIntersectionStaticType(
+							nil,
+							[]*interpreter.InterfaceStaticType{
+								fooDInterfaceType,
+							},
+						)
+					}
+					return nil
+				})
+
+			actual := migrate(t, staticTypeMigration, fooCInterfaceType)
+			assert.Equal(t,
+				interpreter.NewIntersectionStaticType(
+					nil,
+					[]*interpreter.InterfaceStaticType{
+						fooDInterfaceType,
+					},
+				),
+				actual,
+			)
+		})
+	})
+}

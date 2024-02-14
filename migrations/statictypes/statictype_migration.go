@@ -33,8 +33,8 @@ type StaticTypeMigration struct {
 	interfaceTypeConverter InterfaceTypeConverterFunc
 }
 
-type CompositeTypeConverterFunc func(staticType *interpreter.CompositeStaticType) interpreter.StaticType
-type InterfaceTypeConverterFunc func(staticType *interpreter.InterfaceStaticType) interpreter.StaticType
+type CompositeTypeConverterFunc func(*interpreter.CompositeStaticType) interpreter.StaticType
+type InterfaceTypeConverterFunc func(*interpreter.InterfaceStaticType) interpreter.StaticType
 
 var _ migrations.ValueMigration = &StaticTypeMigration{}
 
@@ -244,10 +244,27 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 		// Non-storable
 
 	case *interpreter.CompositeStaticType:
+		var convertedType interpreter.StaticType
 		compositeTypeConverter := m.compositeTypeConverter
 		if compositeTypeConverter != nil {
-			return compositeTypeConverter(staticType)
+			convertedType = compositeTypeConverter(staticType)
 		}
+
+		// Interface types need to be placed in intersection types.
+		// If the composite type was converted to an interface type,
+		// and if the parent type is not an intersection type,
+		// then the converted interface type must be placed in an intersection type
+		if convertedInterfaceType, ok := convertedType.(*interpreter.InterfaceStaticType); ok {
+			if _, ok := parentType.(*interpreter.IntersectionStaticType); !ok {
+				convertedType = interpreter.NewIntersectionStaticType(
+					nil, []*interpreter.InterfaceStaticType{
+						convertedInterfaceType,
+					},
+				)
+			}
+		}
+
+		return convertedType
 
 	case *interpreter.InterfaceStaticType:
 		var convertedType interpreter.StaticType
