@@ -29,7 +29,6 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckInvalidCompositeRedeclaringType(t *testing.T) {
@@ -1963,14 +1962,14 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 					firstTypeAnnotation := "A"
 					if firstIsInterface {
 						firstInterfaceKeyword = "interface"
-						firstTypeAnnotation = AsInterfaceType("A", firstKind)
+						firstTypeAnnotation = "{A}"
 					}
 
 					secondInterfaceKeyword := ""
 					secondTypeAnnotation := "B"
 					if secondIsInterface {
 						secondInterfaceKeyword = "interface"
-						secondTypeAnnotation = AsInterfaceType("B", secondKind)
+						secondTypeAnnotation = "{B}"
 					}
 
 					testName := fmt.Sprintf(

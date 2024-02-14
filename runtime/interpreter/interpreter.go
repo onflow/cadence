@@ -3393,15 +3393,6 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		sema.InterfaceTypeFunctionName,
-		NewUnmeteredHostFunctionValue(
-			sema.InterfaceTypeFunctionType,
-			interfaceTypeFunction,
-		),
-	)
-
-	defineBaseValue(
-		BaseActivation,
 		sema.FunctionTypeFunctionName,
 		NewUnmeteredHostFunctionValue(
 			sema.FunctionTypeFunctionType,
@@ -3532,27 +3523,6 @@ func compositeTypeFunction(invocation Invocation) Value {
 		NewTypeValue(
 			invocation.Interpreter,
 			ConvertSemaToStaticType(invocation.Interpreter, composite),
-		),
-	)
-}
-
-func interfaceTypeFunction(invocation Invocation) Value {
-	typeIDValue, ok := invocation.Arguments[0].(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	typeID := typeIDValue.Str
-
-	interfaceType, err := lookupInterface(invocation.Interpreter, typeID)
-	if err != nil {
-		return Nil
-	}
-
-	return NewSomeValueNonCopying(
-		invocation.Interpreter,
-		NewTypeValue(
-			invocation.Interpreter,
-			ConvertSemaToStaticType(invocation.Interpreter, interfaceType),
 		),
 	)
 }
