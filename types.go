@@ -1418,6 +1418,12 @@ func (t *FunctionType) Equal(other Type) bool {
 		}
 	}
 
+	// Purity
+
+	if t.Purity != otherType.Purity {
+		return false
+	}
+
 	return t.ReturnType.Equal(otherType.ReturnType)
 }
 
