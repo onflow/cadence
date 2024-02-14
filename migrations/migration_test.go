@@ -172,7 +172,7 @@ func (testCapMigration) Migrate(
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (interpreter.Value, error) {
-	if value, ok := value.(*interpreter.CapabilityValue); ok {
+	if value, ok := value.(*interpreter.IDCapabilityValue); ok {
 		return interpreter.NewCapabilityValue(
 			nil,
 			value.ID+10,
@@ -419,7 +419,7 @@ func TestMultipleMigrations(t *testing.T) {
 			expectedValue: interpreter.NewSomeValueNonCopying(nil, test.expectedValue),
 		})
 
-		if _, ok := test.storedValue.(*interpreter.CapabilityValue); ok {
+		if _, ok := test.storedValue.(*interpreter.IDCapabilityValue); ok {
 
 			testCases = append(testCases, testCase{
 				name:      "published_" + test.name,
@@ -428,12 +428,12 @@ func TestMultipleMigrations(t *testing.T) {
 				storedValue: interpreter.NewPublishedValue(
 					nil,
 					interpreter.AddressValue(common.ZeroAddress),
-					test.storedValue.(*interpreter.CapabilityValue),
+					test.storedValue.(*interpreter.IDCapabilityValue),
 				),
 				expectedValue: interpreter.NewPublishedValue(
 					nil,
 					interpreter.AddressValue(common.ZeroAddress),
-					test.expectedValue.(*interpreter.CapabilityValue),
+					test.expectedValue.(*interpreter.IDCapabilityValue),
 				),
 			})
 		}

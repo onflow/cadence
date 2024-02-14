@@ -61,7 +61,7 @@ type StorageCapabilityControllerValue struct {
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
 	// when the controller is loaded for borrowing/checking
-	GetCapability func(inter *Interpreter) *CapabilityValue
+	GetCapability func(inter *Interpreter) *IDCapabilityValue
 	GetTag        func(inter *Interpreter) *StringValue
 	SetTag        func(inter *Interpreter, tag *StringValue)
 	Delete        func(inter *Interpreter, locationRange LocationRange)
