@@ -282,7 +282,7 @@ func ConvertValueToEntitlements(
 			values...,
 		), nil
 
-	case *interpreter.CapabilityValue:
+	case *interpreter.IDCapabilityValue:
 		semaType := inter.MustConvertStaticToSemaType(staticType)
 		entitledType, converted := ConvertToEntitledType(semaType)
 		if !converted {

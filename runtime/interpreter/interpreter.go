@@ -2142,7 +2142,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			targetBorrowType := unwrappedTargetType.BorrowType.(*sema.ReferenceType)
 
 			switch capability := value.(type) {
-			case *CapabilityValue:
+			case *IDCapabilityValue:
 				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
 				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
 				return NewCapabilityValue(
@@ -4137,7 +4137,7 @@ func (interpreter *Interpreter) checkValue(
 	//	1) The actual stored value (storage path)
 	//	2) A capability to the value at the storage (private/public paths)
 
-	if capability, ok := value.(*CapabilityValue); ok {
+	if capability, ok := value.(*IDCapabilityValue); ok {
 		// If, the value is a capability, try to load the value at the capability target.
 		// However, borrow type is not statically known.
 		// So take the borrow type from the value itself

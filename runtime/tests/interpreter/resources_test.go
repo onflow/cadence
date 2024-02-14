@@ -2852,3 +2852,81 @@ func TestInterpretPreConditionResourceMove(t *testing.T) {
 	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
 }
+
+func TestInterpretResourceSelfSwap(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource R{}
+
+            access(all) fun main() {
+                var v: @R <- create R()
+                v <-> v
+                destroy v
+            }`,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceErr)
+	})
+
+	t.Run("optional resource", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource R{}
+
+            access(all) fun main() {
+                var v: @R? <- create R()
+                v <-> v
+                destroy v
+            }`,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceErr)
+	})
+
+	t.Run("resource array", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) fun main() {
+                var v: @[AnyResource] <- []
+                v <-> v
+                destroy v
+            }`,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceErr)
+	})
+
+	t.Run("resource dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) fun main() {
+                var v: @{String: AnyResource} <- {}
+                v <-> v
+                destroy v
+            }`,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		var invalidatedResourceErr interpreter.InvalidatedResourceError
+		require.ErrorAs(t, err, &invalidatedResourceErr)
+	})
+
+}
