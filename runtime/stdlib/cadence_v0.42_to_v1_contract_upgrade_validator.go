@@ -257,6 +257,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkEntitlementsUpgrad
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) checkTypeUpgradability(oldType ast.Type, newType ast.Type) error {
 
+typeSwitch:
 	switch oldType := oldType.(type) {
 	case *ast.OptionalType:
 		if newOptional, isOptional := newType.(*ast.OptionalType); isOptional {
@@ -282,6 +283,19 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkTypeUpgradability(
 			break
 		}
 		validator.currentRestrictedTypeUpgradeRestrictions = oldType.Types
+
+		// If the old restricted type is for AnyStruct/AnyResource,
+		// require them to drop the "restricted type".
+		// e.g: `T{I} -> {I}`
+		if restrictedNominalType, isNominal := oldType.LegacyRestrictedType.(*ast.NominalType); isNominal {
+			switch restrictedNominalType.Identifier.Identifier {
+			case "AnyStruct", "AnyResource":
+				break typeSwitch
+			}
+		}
+
+		// Otherwise require them to drop the "restriction".
+		// e.g: `T{I} -> T`
 		return validator.checkTypeUpgradability(oldType.LegacyRestrictedType, newType)
 
 	case *ast.VariableSizedType:
@@ -347,6 +361,51 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkField(oldField *as
 		Err:       err,
 		Range:     ast.NewUnmeteredRangeFromPositioned(newField.TypeAnnotation),
 	})
+}
+
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkDeclarationKindChange(
+	oldDeclaration ast.Declaration,
+	newDeclaration ast.Declaration,
+) bool {
+	// Do not allow converting between different types of composite declarations:
+	// e.g: - 'contracts' and 'contract-interfaces',
+	//      - 'structs' and 'enums'
+	//
+	// However, with the removal of type requirements, it is OK to convert a
+	// concrete type (Struct or Resource) to an interface type (StructInterface or ResourceInterface).
+	// However, resource should stay a resource interface, and cannot be a struct interface.
+
+	oldDeclKind := oldDeclaration.DeclarationKind()
+	newDeclKind := newDeclaration.DeclarationKind()
+	if oldDeclKind == newDeclKind {
+		return true
+	}
+
+	parent := validator.getCurrentDeclaration()
+
+	// If the parent is an interface, and the child is a concrete type,
+	// then it is a type requirement.
+	if parent.DeclarationKind() == common.DeclarationKindContractInterface {
+		// A struct is OK to be converted to a struct-interface
+		if oldDeclKind == common.DeclarationKindStructure &&
+			newDeclKind == common.DeclarationKindStructureInterface {
+			return true
+		}
+
+		// A resource is OK to be converted to a resource-interface
+		if oldDeclKind == common.DeclarationKindResource &&
+			newDeclKind == common.DeclarationKindResourceInterface {
+			return true
+		}
+	}
+
+	validator.report(&InvalidDeclarationKindChangeError{
+		Name:    oldDeclaration.DeclarationIdentifier().Identifier,
+		OldKind: oldDeclaration.DeclarationKind(),
+		NewKind: newDeclaration.DeclarationKind(),
+		Range:   ast.NewUnmeteredRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
+	})
+	return false
 }
 
 // AuthorizationMismatchError is reported during a contract upgrade,

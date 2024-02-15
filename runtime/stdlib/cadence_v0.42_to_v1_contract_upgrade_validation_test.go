@@ -817,6 +817,38 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		assertFieldTypeMismatchError(t, cause, "Test", "a", "R", "{I}")
 	})
 
+	t.Run("change field type AnyResource restricted type", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+                pub resource interface I {}
+                pub resource R:I {}
+
+                pub var a: @AnyResource{I}
+                init() {
+                    self.a <- create R()
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) resource interface I {}
+                access(all) resource R:I {}
+
+                access(all) var a: @{I} 
+                init() {
+                    self.a <- create R()
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
 	t.Run("change field type restricted type variable sized", func(t *testing.T) {
 
 		t.Parallel()
@@ -1261,5 +1293,102 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "E", "E, F")
+	})
+}
+
+func TestTypeRequirementRemoval(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract interface Test {
+                access(all) resource R {}
+                access(all) fun foo(r: @R)
+            }
+        `
+
+		const newCode = `
+            access(all) contract interface Test {
+                access(all) resource interface R {}
+                access(all) fun foo(r: @{R})
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("resource invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract interface Test {
+                access(all) resource R {}
+                access(all) fun foo(r: @R)
+            }
+        `
+
+		const newCode = `
+            access(all) contract interface Test {
+                access(all) struct interface R {}
+                access(all) fun foo(r: {R})
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		declKindChangeError := &stdlib.InvalidDeclarationKindChangeError{}
+		require.ErrorAs(t, cause, &declKindChangeError)
+	})
+
+	t.Run("struct valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract interface Test {
+                access(all) struct S {}
+                access(all) fun foo(r: S)
+            }
+        `
+
+		const newCode = `
+            access(all) contract interface Test {
+                access(all) struct interface S {}
+                access(all) fun foo(r: {S})
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("struct invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract interface Test {
+                access(all) struct S {}
+                access(all) fun foo(r: S)
+            }
+        `
+
+		const newCode = `
+            access(all) contract interface Test {
+                access(all) resource interface S {}
+                access(all) fun foo(r: @{S})
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		declKindChangeError := &stdlib.InvalidDeclarationKindChangeError{}
+		require.ErrorAs(t, cause, &declKindChangeError)
 	})
 }
