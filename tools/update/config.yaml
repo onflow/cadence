@@ -76,7 +76,7 @@ repos:
         - onflow/flow-emulator
         - onflow/cadence-tools/lint
         - onflow/cadence-tools/test
-        - onflow/flowkit
+        - onflow/flowkit/v2
 
 - repo: onflow/flixkit-go
   needsRelease: true
@@ -103,4 +103,4 @@ repos:
         - onflow/cadence-tools/lint
         - onflow/cadence-tools/languageserver
         - onflow/flixkit-go
-        - onflow/flowkit
+        - onflow/flowkit/v2
