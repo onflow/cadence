@@ -66,7 +66,12 @@ func (m *StaticTypeMigration) Migrate(
 ) (newValue interpreter.Value, err error) {
 	switch value := value.(type) {
 	case interpreter.TypeValue:
-		convertedType := m.maybeConvertStaticType(value.Type, nil)
+		// Type is optional. nil represents "unknown"/"invalid" type
+		ty := value.Type
+		if ty == nil {
+			return
+		}
+		convertedType := m.maybeConvertStaticType(ty, nil)
 		if convertedType == nil {
 			return
 		}
@@ -80,7 +85,12 @@ func (m *StaticTypeMigration) Migrate(
 		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType), nil
 
 	case *interpreter.PathCapabilityValue: //nolint:staticcheck
-		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType, nil)
+		// Type is optional
+		borrowType := value.BorrowType
+		if borrowType == nil {
+			return
+		}
+		convertedBorrowType := m.maybeConvertStaticType(borrowType, nil)
 		if convertedBorrowType == nil {
 			return
 		}
