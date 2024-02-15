@@ -21389,11 +21389,11 @@ func (PathValue) ChildStorables() []atree.Storable {
 type PublishedValue struct {
 	// NB: If `publish` and `claim` are ever extended to support arbitrary values, rather than just capabilities,
 	// this will need to be changed to `Value`, and more storage-related operations must be implemented for `PublishedValue`
-	Value     *CapabilityValue
+	Value     CapabilityValue
 	Recipient AddressValue
 }
 
-func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, value *CapabilityValue) *PublishedValue {
+func NewPublishedValue(memoryGauge common.MemoryGauge, recipient AddressValue, value CapabilityValue) *PublishedValue {
 	common.UseMemory(memoryGauge, common.PublishedValueMemoryUsage)
 	return &PublishedValue{
 		Recipient: recipient,
@@ -21502,7 +21502,7 @@ func (v *PublishedValue) Transfer(
 			remove,
 			nil,
 			preventTransfer,
-		).(*CapabilityValue)
+		).(*IDCapabilityValue)
 
 		addressValue := v.Recipient.Transfer(
 			interpreter,
@@ -21527,7 +21527,7 @@ func (v *PublishedValue) Transfer(
 func (v *PublishedValue) Clone(interpreter *Interpreter) Value {
 	return &PublishedValue{
 		Recipient: v.Recipient,
-		Value:     v.Value.Clone(interpreter).(*CapabilityValue),
+		Value:     v.Value.Clone(interpreter).(*IDCapabilityValue),
 	}
 }
 

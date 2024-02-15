@@ -2142,7 +2142,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			targetBorrowType := unwrappedTargetType.BorrowType.(*sema.ReferenceType)
 
 			switch capability := value.(type) {
-			case *CapabilityValue:
+			case *IDCapabilityValue:
 				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
 				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
 				return NewCapabilityValue(
@@ -3393,15 +3393,6 @@ func init() {
 
 	defineBaseValue(
 		BaseActivation,
-		sema.InterfaceTypeFunctionName,
-		NewUnmeteredHostFunctionValue(
-			sema.InterfaceTypeFunctionType,
-			interfaceTypeFunction,
-		),
-	)
-
-	defineBaseValue(
-		BaseActivation,
 		sema.FunctionTypeFunctionName,
 		NewUnmeteredHostFunctionValue(
 			sema.FunctionTypeFunctionType,
@@ -3532,27 +3523,6 @@ func compositeTypeFunction(invocation Invocation) Value {
 		NewTypeValue(
 			invocation.Interpreter,
 			ConvertSemaToStaticType(invocation.Interpreter, composite),
-		),
-	)
-}
-
-func interfaceTypeFunction(invocation Invocation) Value {
-	typeIDValue, ok := invocation.Arguments[0].(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	typeID := typeIDValue.Str
-
-	interfaceType, err := lookupInterface(invocation.Interpreter, typeID)
-	if err != nil {
-		return Nil
-	}
-
-	return NewSomeValueNonCopying(
-		invocation.Interpreter,
-		NewTypeValue(
-			invocation.Interpreter,
-			ConvertSemaToStaticType(invocation.Interpreter, interfaceType),
 		),
 	)
 }
@@ -4167,7 +4137,7 @@ func (interpreter *Interpreter) checkValue(
 	//	1) The actual stored value (storage path)
 	//	2) A capability to the value at the storage (private/public paths)
 
-	if capability, ok := value.(*CapabilityValue); ok {
+	if capability, ok := value.(*IDCapabilityValue); ok {
 		// If, the value is a capability, try to load the value at the capability target.
 		// However, borrow type is not statically known.
 		// So take the borrow type from the value itself

@@ -588,12 +588,14 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 	// Set right value to left target,
 	// and left value to right target
 
+	interpreter.checkInvalidatedResourceOrResourceReference(rightValue, swap.Right)
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: swap.Right,
 	}
 	transferredRightValue := interpreter.transferAndConvert(rightValue, rightType, leftType, locationRange)
 
+	interpreter.checkInvalidatedResourceOrResourceReference(leftValue, swap.Left)
 	locationRange = LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: swap.Left,

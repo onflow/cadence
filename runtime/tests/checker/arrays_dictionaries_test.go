@@ -30,7 +30,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckDictionary(t *testing.T) {
@@ -1464,24 +1463,18 @@ func TestCheckArraySubtyping(t *testing.T) {
 
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
-			body := "{}"
-			if kind == common.CompositeKindEvent {
-				body = "()"
-			}
-
-			interfaceType := AsInterfaceType("I", kind)
+			interfaceType := "{I}"
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s interface I %[2]s
-                      %[1]s S: I %[2]s
+                      %[1]s interface I {}
+                      %[1]s S: I {}
 
-                      let xs: %[3]s[S] %[4]s []
-                      let ys: %[3]s[%[5]s] %[4]s xs
+                      let xs: %[2]s[S] %[3]s []
+                      let ys: %[2]s[%[4]s] %[3]s xs
 	                `,
 					kind.Keyword(),
-					body,
 					kind.Annotation(),
 					kind.TransferOperator(),
 					interfaceType,
@@ -1523,8 +1516,6 @@ func TestCheckDictionarySubtyping(t *testing.T) {
 				body = "()"
 			}
 
-			interfaceType := AsInterfaceType("I", kind)
-
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
@@ -1532,13 +1523,12 @@ func TestCheckDictionarySubtyping(t *testing.T) {
                       %[1]s S: I %[2]s
 
                       let xs: %[3]s{String: S} %[4]s {}
-                      let ys: %[3]s{String: %[5]s} %[4]s xs
+                      let ys: %[3]s{String: {I}} %[4]s xs
 	                `,
 					kind.Keyword(),
 					body,
 					kind.Annotation(),
 					kind.TransferOperator(),
-					interfaceType,
 				),
 			)
 

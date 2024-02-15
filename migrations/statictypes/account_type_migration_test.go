@@ -314,7 +314,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				interpreter.NewVariableSizedStaticType(nil, authAccountReferenceType),
 			),
 		},
-		"interface": {
+		"non_intersection_interface": {
 			storedType: interpreter.NewInterfaceStaticType(
 				nil,
 				nil,
@@ -324,6 +324,38 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 					fooAddressLocation,
 					fooBarQualifiedIdentifier,
 				),
+			),
+			expectedType: interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticType(
+						nil,
+						nil,
+						fooBarQualifiedIdentifier,
+						common.NewTypeIDFromQualifiedName(
+							nil,
+							fooAddressLocation,
+							fooBarQualifiedIdentifier,
+						),
+					),
+				},
+			),
+		},
+		"intersection_interface": {
+			storedType: interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticType(
+						nil,
+						nil,
+						fooBarQualifiedIdentifier,
+						common.NewTypeIDFromQualifiedName(
+							nil,
+							fooAddressLocation,
+							fooBarQualifiedIdentifier,
+						),
+					),
+				},
 			),
 			expectedType: nil,
 		},
@@ -437,7 +469,23 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				typeValue := value.(interpreter.TypeValue)
 				if actualIntersectionType, ok := typeValue.Type.(*interpreter.IntersectionStaticType); ok {
 					expectedIntersectionType := testCase.expectedType.(*interpreter.IntersectionStaticType)
-					assert.True(t, actualIntersectionType.LegacyType.Equal(expectedIntersectionType.LegacyType))
+
+					if actualIntersectionType.LegacyType != nil {
+						assert.True(t,
+							actualIntersectionType.LegacyType.
+								Equal(expectedIntersectionType.LegacyType),
+						)
+					} else if expectedIntersectionType.LegacyType != nil {
+						assert.True(t,
+							expectedIntersectionType.LegacyType.
+								Equal(actualIntersectionType.LegacyType),
+						)
+					} else {
+						assert.Equal(t,
+							expectedIntersectionType.LegacyType,
+							actualIntersectionType.LegacyType,
+						)
+					}
 				}
 			} else {
 				expectedValue = interpreter.NewTypeValue(nil, testCase.storedType)

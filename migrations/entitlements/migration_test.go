@@ -1684,7 +1684,7 @@ func TestMigratePublishedValue(t *testing.T) {
 	require.Equal(t, inboxStorageMap.Count(), uint64(1))
 
 	cap1 := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("cap"))
-	capValue := cap1.(*interpreter.CapabilityValue)
+	capValue := cap1.(*interpreter.IDCapabilityValue)
 	require.IsType(t, &interpreter.ReferenceStaticType{}, capValue.BorrowType)
 	ref := capValue.BorrowType.(*interpreter.ReferenceStaticType)
 	require.Equal(t,
@@ -1700,8 +1700,13 @@ func TestMigratePublishedValue(t *testing.T) {
 	)
 
 	publishedValue := inboxStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("r_cap"))
+
 	require.IsType(t, &interpreter.PublishedValue{}, publishedValue)
-	capabilityValue := publishedValue.(*interpreter.PublishedValue).Value
+	publishedValueValue := publishedValue.(*interpreter.PublishedValue).Value
+
+	require.IsType(t, &interpreter.IDCapabilityValue{}, publishedValueValue)
+	capabilityValue := publishedValueValue.(*interpreter.IDCapabilityValue)
+
 	require.IsType(t, &interpreter.ReferenceStaticType{}, capabilityValue.BorrowType)
 	ref = capabilityValue.BorrowType.(*interpreter.ReferenceStaticType)
 	require.Equal(t,
@@ -1916,7 +1921,7 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
 	)
 
 	cap1 := storageMap.ReadValue(nil, interpreter.StringStorageMapKey("cap"))
-	capValue := cap1.(*interpreter.CapabilityValue)
+	capValue := cap1.(*interpreter.IDCapabilityValue)
 	require.IsType(t, &interpreter.ReferenceStaticType{}, capValue.BorrowType)
 	ref := capValue.BorrowType.(*interpreter.ReferenceStaticType)
 	require.Equal(t,
@@ -1932,8 +1937,13 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
 	)
 
 	publishedValue := inboxStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("r_cap"))
+
 	require.IsType(t, &interpreter.PublishedValue{}, publishedValue)
-	capabilityValue := publishedValue.(*interpreter.PublishedValue).Value
+	publishedValueValue := publishedValue.(*interpreter.PublishedValue).Value
+
+	require.IsType(t, &interpreter.IDCapabilityValue{}, publishedValueValue)
+	capabilityValue := publishedValueValue.(*interpreter.IDCapabilityValue)
+
 	require.IsType(t, &interpreter.ReferenceStaticType{}, capabilityValue.BorrowType)
 	ref = capabilityValue.BorrowType.(*interpreter.ReferenceStaticType)
 	require.Equal(t,
@@ -2152,8 +2162,8 @@ func TestMigrateAcrossContracts(t *testing.T) {
 
 	field := tValue.GetMember(inter, interpreter.EmptyLocationRange, "cap")
 
-	require.IsType(t, &interpreter.CapabilityValue{}, field)
-	cap := field.(*interpreter.CapabilityValue)
+	require.IsType(t, &interpreter.IDCapabilityValue{}, field)
+	cap := field.(*interpreter.IDCapabilityValue)
 	require.IsType(t, &interpreter.ReferenceStaticType{}, cap.BorrowType)
 	ref := cap.BorrowType.(*interpreter.ReferenceStaticType)
 	require.Equal(t,
@@ -2382,8 +2392,8 @@ func TestMigrateArrayOfValues(t *testing.T) {
 	)
 
 	cap1 := arrValue.Get(inter, interpreter.EmptyLocationRange, 0)
-	require.IsType(t, &interpreter.CapabilityValue{}, cap1)
-	capValue := cap1.(*interpreter.CapabilityValue)
+	require.IsType(t, &interpreter.IDCapabilityValue{}, cap1)
+	capValue := cap1.(*interpreter.IDCapabilityValue)
 	require.IsType(t, &interpreter.ReferenceStaticType{}, capValue.BorrowType)
 	ref = capValue.BorrowType.(*interpreter.ReferenceStaticType)
 	require.Equal(t,
@@ -2399,8 +2409,8 @@ func TestMigrateArrayOfValues(t *testing.T) {
 	)
 
 	cap2 := arrValue.Get(inter, interpreter.EmptyLocationRange, 1)
-	require.IsType(t, &interpreter.CapabilityValue{}, cap2)
-	capValue = cap1.(*interpreter.CapabilityValue)
+	require.IsType(t, &interpreter.IDCapabilityValue{}, cap2)
+	capValue = cap1.(*interpreter.IDCapabilityValue)
 	require.IsType(t, &interpreter.ReferenceStaticType{}, capValue.BorrowType)
 	ref = capValue.BorrowType.(*interpreter.ReferenceStaticType)
 	require.Equal(t,
@@ -2631,8 +2641,8 @@ func TestMigrateDictOfValues(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("a"),
 	)
 	require.True(t, present)
-	require.IsType(t, &interpreter.CapabilityValue{}, cap1)
-	capValue := cap1.(*interpreter.CapabilityValue)
+	require.IsType(t, &interpreter.IDCapabilityValue{}, cap1)
+	capValue := cap1.(*interpreter.IDCapabilityValue)
 	require.IsType(t, &interpreter.ReferenceStaticType{}, capValue.BorrowType)
 	ref = capValue.BorrowType.(*interpreter.ReferenceStaticType)
 	require.Equal(t,
@@ -2651,8 +2661,8 @@ func TestMigrateDictOfValues(t *testing.T) {
 		interpreter.NewUnmeteredStringValue("b"),
 	)
 	require.True(t, present)
-	require.IsType(t, &interpreter.CapabilityValue{}, cap2)
-	capValue = cap1.(*interpreter.CapabilityValue)
+	require.IsType(t, &interpreter.IDCapabilityValue{}, cap2)
+	capValue = cap1.(*interpreter.IDCapabilityValue)
 	require.IsType(t, &interpreter.ReferenceStaticType{}, capValue.BorrowType)
 	ref = capValue.BorrowType.(*interpreter.ReferenceStaticType)
 	require.Equal(t,

@@ -40,7 +40,7 @@ type LinkMigrationReporter interface {
 
 // LinkValueMigration migrates all links to capability controllers.
 type LinkValueMigration struct {
-	CapabilityIDs      map[interpreter.AddressPath]interpreter.UInt64Value
+	CapabilityIDs      *CapabilityIDMapping
 	AccountIDGenerator stdlib.AccountIDGenerator
 	Reporter           LinkMigrationReporter
 }
@@ -87,7 +87,7 @@ func (m *LinkValueMigration) Migrate(
 	var borrowStaticType *interpreter.ReferenceStaticType
 
 	switch readValue := value.(type) {
-	case *interpreter.CapabilityValue:
+	case *interpreter.IDCapabilityValue:
 		// Already migrated
 		return nil, nil
 
@@ -182,8 +182,7 @@ func (m *LinkValueMigration) Migrate(
 	// Record new capability ID in source path mapping.
 	// The mapping is used later for migrating path capabilities to ID capabilities,
 	// see CapabilityMigration.
-
-	m.CapabilityIDs[addressPath] = capabilityID
+	m.CapabilityIDs.Record(addressPath, capabilityID)
 
 	if reporter != nil {
 		reporter.MigratedLink(addressPath, capabilityID)
@@ -301,7 +300,7 @@ func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 					interpreter.UnauthorizedAccess,
 					nil
 
-			case *interpreter.CapabilityValue:
+			case *interpreter.IDCapabilityValue:
 
 				// Follow ID capability values which are published in the public or private domain.
 				// This is needed for two reasons:
