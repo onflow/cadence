@@ -345,7 +345,7 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 		}
 
 	default:
-		panic(errors.NewUnreachableError())
+		panic(errors.NewUnexpectedError("unexpected static type: %T", staticType))
 	}
 
 	return nil

@@ -306,7 +306,10 @@ func (m *StorageMigration) MigrateNestedValue(
 				)
 
 				if _, ok := oldValue.(*interpreter.SomeValue); !ok {
-					panic(errors.NewUnreachableError())
+					panic(errors.NewUnexpectedError(
+						"failed to remove old value for migrated key: %s",
+						existingKey,
+					))
 				}
 
 				keyToSet = newKey
@@ -372,8 +375,14 @@ func (m *StorageMigration) MigrateNestedValue(
 			// is the same as the owner of the old value
 			if ownedValue, ok := value.(interpreter.OwnedValue); ok {
 				if ownedConvertedValue, ok := convertedValue.(interpreter.OwnedValue); ok {
-					if ownedConvertedValue.GetOwner() != ownedValue.GetOwner() {
-						panic(errors.NewUnreachableError())
+					convertedOwner := ownedConvertedValue.GetOwner()
+					originalOwner := ownedValue.GetOwner()
+					if convertedOwner != originalOwner {
+						panic(errors.NewUnexpectedError(
+							"migrated value has different owner: expected %s, got %s",
+							originalOwner,
+							convertedOwner,
+						))
 					}
 				}
 			}
