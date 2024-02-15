@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func expectSuccess(t *testing.T, err error) {
@@ -772,7 +771,7 @@ func TestCheckAccessInterfaceFunction(t *testing.T) {
 				if compositeKind == common.CompositeKindContract {
 					identifier = "TestImpl"
 				} else {
-					interfaceType := AsInterfaceType("Test", compositeKind)
+					interfaceType := "{Test}"
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -990,7 +989,7 @@ func TestCheckAccessInterfaceFieldRead(t *testing.T) {
 				if compositeKind == common.CompositeKindContract {
 					identifier = "TestImpl"
 				} else {
-					interfaceType := AsInterfaceType("Test", compositeKind)
+					interfaceType := "{Test}"
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -1237,7 +1236,7 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 					identifier = "TestImpl"
 				} else {
 
-					interfaceType := AsInterfaceType("Test", compositeKind)
+					interfaceType := "{Test}"
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,

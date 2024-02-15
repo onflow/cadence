@@ -3616,7 +3616,7 @@ func (*InvalidIntersectedTypeError) IsUserError() {}
 
 func (e *InvalidIntersectedTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot restrict using non-resource/structure interface type: `%s`",
+		"cannot restrict using non-resource/structure/contract interface type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -3661,27 +3661,6 @@ func (*InvalidIntersectionTypeDuplicateError) IsUserError() {}
 func (e *InvalidIntersectionTypeDuplicateError) Error() string {
 	return fmt.Sprintf(
 		"duplicate intersected type: `%s`",
-		e.Type.QualifiedString(),
-	)
-}
-
-// InvalidNonConformanceIntersectionError
-
-type InvalidNonConformanceIntersectionError struct {
-	Type *InterfaceType
-	ast.Range
-}
-
-var _ SemanticError = &InvalidNonConformanceIntersectionError{}
-var _ errors.UserError = &InvalidNonConformanceIntersectionError{}
-
-func (*InvalidNonConformanceIntersectionError) isSemanticError() {}
-
-func (*InvalidNonConformanceIntersectionError) IsUserError() {}
-
-func (e *InvalidNonConformanceIntersectionError) Error() string {
-	return fmt.Sprintf(
-		"intersection type does not conform to restricting type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }

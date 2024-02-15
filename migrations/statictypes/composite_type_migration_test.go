@@ -43,7 +43,7 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 		expectedType interpreter.StaticType
 	}
 
-	newCompositeType := func() interpreter.StaticType {
+	newCompositeType := func() *interpreter.CompositeStaticType {
 		return interpreter.NewCompositeStaticType(
 			nil,
 			nil,
@@ -56,7 +56,7 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 		)
 	}
 
-	newInterfaceType := func() interpreter.StaticType {
+	newInterfaceType := func() *interpreter.InterfaceStaticType {
 		return interpreter.NewInterfaceStaticType(
 			nil,
 			nil,
@@ -72,8 +72,13 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 	testCases := map[string]testCase{
 		// base cases
 		"compositeToInterface": {
-			storedType:   newCompositeType(),
-			expectedType: newInterfaceType(),
+			storedType: newCompositeType(),
+			expectedType: interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					newInterfaceType(),
+				},
+			),
 		},
 		"interfaceToComposite": {
 			storedType:   newInterfaceType(),

@@ -207,8 +207,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 			return
 		}
 
-		targetRange := ast.NewRangeFromPositioned(checker.memoryGauge, expression.Expression)
-		member = resolver.Resolve(checker.memoryGauge, identifier, targetRange, checker.report)
+		member = resolver.Resolve(
+			checker.memoryGauge,
+			identifier,
+			expression.Expression,
+			checker.report,
+		)
 		resultingType = member.TypeAnnotation.Type
 	}
 
