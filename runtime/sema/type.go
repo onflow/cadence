@@ -7987,10 +7987,6 @@ type IntersectionType struct {
 var _ Type = &IntersectionType{}
 
 func NewIntersectionType(memoryGauge common.MemoryGauge, types []*InterfaceType) *IntersectionType {
-	if len(types) == 0 {
-		panic(errors.NewUnreachableError())
-	}
-
 	common.UseMemory(memoryGauge, common.IntersectionSemaTypeMemoryUsage)
 
 	// Also meter the cost for the `effectiveIntersectionSet` here, since ordered maps are not separately metered.
