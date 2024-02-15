@@ -134,14 +134,14 @@ func TestStaticTypeMigration(t *testing.T) {
 
 		actual := migrate(t,
 			staticTypeMigration,
-			&interpreter.PathCapabilityValue{
+			&interpreter.PathCapabilityValue{ //nolint:staticcheck
 				BorrowType: nil,
 				Path:       path,
 				Address:    interpreter.AddressValue(testAddress),
 			},
 		)
 		assert.Equal(t,
-			&interpreter.PathCapabilityValue{
+			&interpreter.PathCapabilityValue{ //nolint:staticcheck
 				BorrowType: nil,
 				Path:       path,
 				Address:    interpreter.AddressValue(testAddress),
