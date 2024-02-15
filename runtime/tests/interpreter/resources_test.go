@@ -2928,5 +2928,113 @@ func TestInterpretResourceSelfSwap(t *testing.T) {
 		var invalidatedResourceErr interpreter.InvalidatedResourceError
 		require.ErrorAs(t, err, &invalidatedResourceErr)
 	})
+}
 
+func TestInterpretInvalidatingLoopedReference(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+        // Victim code starts here:
+        access(all) resource VictimCompany {
+
+        // No one should be able to withdraw funds from this array
+        access(self) var funds: @[Vault]
+
+            access(all) view fun getBalance(): UFix64{
+                var balanceSum = 0.0
+                for v in (&self.funds as &[Vault]){
+                    balanceSum = balanceSum + v.balance
+                }
+                return balanceSum
+            }
+
+            init(incorporationEquity: @[Vault]) {
+                post {
+                    self.getBalance() >= 100.0: "Insufficient funds"
+                }
+                self.funds <- incorporationEquity
+            }
+        }
+
+        access(all) resource Vault {
+            // Had to write this version without entitlements
+            access(all) var balance: UFix64
+
+            init(balance: UFix64) {
+                self.balance = balance
+            }
+
+            access(all) fun deposit(from: @Vault): Void{
+                self.balance = self.balance + from.balance
+                destroy from
+            }
+
+            access(all) fun withdraw(amount: UFix64): @Vault{
+                pre {
+                    self.balance >= amount
+                }
+                self.balance = self.balance - amount
+                return <- create Vault(balance: amount)
+            }
+        }
+
+        access(all) fun createEmptyVault(): @Vault {
+            return <- create Vault(balance: 0.0)
+        }
+
+        // Attacker code starts from here
+        access(all) resource AttackerResource {
+            access(all) var fundsArray: @[Vault]
+            access(all) var stolenFunds: @Vault
+
+            init(fundsToRecycle: @Vault) {
+                self.fundsArray <- [<- createEmptyVault(), <- fundsToRecycle]
+                self.stolenFunds <- createEmptyVault()
+            }
+
+            access(all) fun attack(): @VictimCompany{
+                var selfRef = &self as &AttackerResource
+                var victimCompany: @VictimCompany? <- nil
+
+                // Section 1:
+                // This loop implicitly holds a reference to the atree array backing
+                // fundsArray and will keep vending us valid references to values
+                // inside it even if the array got moved.
+                for iteration, vaultRef in selfRef.fundsArray {
+                    if iteration == 0 {
+                        // Section 2:
+                        // During the first iteration, we hand over the array to
+                        // unsuspecting code while code in section 1 holds an
+                        // implicit reference
+                        var dummy: @[Vault] <- []
+                        self.fundsArray <-> dummy
+                        victimCompany <-! create VictimCompany(incorporationEquity: <- dummy)
+
+                        // Don't touch vaultRef here, it got invalidated as it
+                        // was in existence at the time of the move!
+                        // Let's hold our horses till the next iteration
+                    } else {
+                        // Section 3:
+                        // During subsequent iteration(s), we are in the clear and can
+                        // enjoy freshly minted valid references
+                        self.stolenFunds.deposit (from: <- vaultRef.withdraw(amount: vaultRef.balance))
+                    }
+                }
+                return <- victimCompany!
+            }
+        }
+
+        access(all) fun main() {
+            var fundsToRecycle <- create Vault(balance: 100.0)
+            var attacker <- create AttackerResource(fundsToRecycle: <- fundsToRecycle)
+            var victimCompany <- attacker.attack()
+            destroy attacker
+            destroy victimCompany
+        }`,
+	)
+
+	_, err := inter.Invoke("main")
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
