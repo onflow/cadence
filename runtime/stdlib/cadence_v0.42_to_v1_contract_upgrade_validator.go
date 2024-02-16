@@ -285,17 +285,22 @@ typeSwitch:
 		validator.currentRestrictedTypeUpgradeRestrictions = oldType.Types
 
 		// If the old restricted type is for AnyStruct/AnyResource,
-		// require them to drop the "restricted type".
-		// e.g: `T{I} -> {I}`
+		// and if there are atleast one restriction, require them to drop the "restricted type".
+		// e.g-1: `AnyStruct{I} -> {I}`
+		// e.g-2: `AnyResource{I} -> {I}`
+		// See: https://github.com/onflow/cadence/issues/3112
 		if restrictedNominalType, isNominal := oldType.LegacyRestrictedType.(*ast.NominalType); isNominal {
 			switch restrictedNominalType.Identifier.Identifier {
 			case "AnyStruct", "AnyResource":
-				break typeSwitch
+				if len(oldType.Types) > 0 {
+					break typeSwitch
+				}
 			}
 		}
 
-		// Otherwise require them to drop the "restriction".
-		// e.g: `T{I} -> T`
+		// Otherwise require them to drop the "restrictions".
+		// e.g-1: `T{I} -> T`
+		// e.g-2: `AnyStruct{} -> AnyStruct`
 		return validator.checkTypeUpgradability(oldType.LegacyRestrictedType, newType)
 
 	case *ast.VariableSizedType:

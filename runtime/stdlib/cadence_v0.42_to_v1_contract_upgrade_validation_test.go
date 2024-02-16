@@ -817,7 +817,7 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		assertFieldTypeMismatchError(t, cause, "Test", "a", "R", "{I}")
 	})
 
-	t.Run("change field type AnyResource restricted type", func(t *testing.T) {
+	t.Run("AnyResource restricted type, with restrictions", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -839,6 +839,36 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
                 access(all) resource R:I {}
 
                 access(all) var a: @{I} 
+                init() {
+                    self.a <- create R()
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("AnyResource restricted type, without restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+                pub resource R {}
+
+                pub var a: @AnyResource{}
+                init() {
+                    self.a <- create R()
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) resource R {}
+
+                access(all) var a: @AnyResource
                 init() {
                     self.a <- create R()
                 }
