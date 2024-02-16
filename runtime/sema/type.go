@@ -2027,6 +2027,20 @@ var (
 
 	UFix64TypeMinFractionalBig = fixedpoint.UFix64TypeMinFractionalBig
 	UFix64TypeMaxFractionalBig = fixedpoint.UFix64TypeMaxFractionalBig
+
+	// Represents the maximum value whose Sqrt can be calcuated and represented in a UFix64.
+	//
+	// Maximum value supported by a UFix64 is 184467440737.09551615.
+	// So the smallest number that overflows is 184467440737.09551616.
+	// (184467440737.09551616)^2 = 34028236692093846346337.4607431768211456
+	//
+	// We have opted of rounding mode ToZero (IEEE 754-2008 roundTowardZero).
+	// So we can support Sqrt till 34028236692093846346337 since
+	// Sqrt(34028236692093846346337) = 184467440737.09551615999875115311
+	// which gets rounded down to 184467440737.09551615
+	// Sqrt(34028236692093846346338) = 184467440737.09551616000146165854
+	// which gets rounded to 184467440737.09551616 which overflows.
+	MaxSquareIntegerBig, _ = new(big.Int).SetString("34028236692093846346337", 10)
 )
 
 // size constants (in bytes) for fixed-width numeric types
