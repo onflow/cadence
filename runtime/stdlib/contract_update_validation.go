@@ -131,8 +131,14 @@ func collectImports(validator UpdateValidator, program *ast.Program) map[string]
 	for _, importDecl := range imports {
 		importLocation := importDecl.Location
 
+		addressLocation, ok := importLocation.(common.AddressLocation)
+		if !ok {
+			// e.g: Crypto
+			continue
+		}
+
 		// if there are no identifiers given, the import covers all of them
-		if addressLocation, isAddressLocation := importLocation.(common.AddressLocation); isAddressLocation && len(importDecl.Identifiers) == 0 {
+		if len(importDecl.Identifiers) == 0 {
 			allLocations, err := validator.getAccountContractNames(addressLocation.Address)
 			if err != nil {
 				validator.report(err)
@@ -140,13 +146,20 @@ func collectImports(validator UpdateValidator, program *ast.Program) map[string]
 			for _, identifier := range allLocations {
 				// associate the location of an identifier's import with the location it's being imported from
 				// this assumes that two imports cannot have the same name, which should be prevented by the type checker
-				importLocations[identifier] = importLocation
+				importLocations[identifier] = common.AddressLocation{
+					Name:    identifier,
+					Address: addressLocation.Address,
+				}
 			}
 		} else {
 			for _, identifier := range importDecl.Identifiers {
-				// associate the location of an identifier's import with the location it's being imported from
-				// this assumes that two imports cannot have the same name, which should be prevented by the type checker
-				importLocations[identifier.Identifier] = importLocation
+				name := identifier.Identifier
+				// associate the location of an identifier's import with the location it's being imported from.
+				// This assumes that two imports cannot have the same name, which should be prevented by the type checker
+				importLocations[name] = common.AddressLocation{
+					Name:    name,
+					Address: addressLocation.Address,
+				}
 			}
 		}
 	}
