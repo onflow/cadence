@@ -160,19 +160,17 @@ func BigIntSqrt(interpreter *Interpreter, value *big.Int, locationRange Location
 	// For details, see
 	// https:	//wiki.sei.cmu.edu/confluence/display/c/FLP34-C.+Ensure+that+floating-point+conversions+are+within+range+of+the+new+type
 	res := new(big.Float).SetPrec(256).SetMode(big.ToZero).Sqrt(valueFloat)
+	res.Mul(res, new(big.Float).SetPrec(256).SetInt(sema.Fix64FactorBig))
+
+	resInt := new(big.Int)
+	res.Int(resInt)
+	if !resInt.IsUint64() {
+		panic(OverflowError{
+			LocationRange: locationRange,
+		})
+	}
 
 	valueGetter := func() uint64 {
-		res.Mul(res, new(big.Float).SetPrec(256).SetInt(sema.Fix64FactorBig))
-
-		resInt := new(big.Int)
-		res.Int(resInt)
-
-		if !resInt.IsUint64() {
-			panic(OverflowError{
-				LocationRange: locationRange,
-			})
-		}
-
 		return resInt.Uint64()
 	}
 
