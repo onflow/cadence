@@ -150,6 +150,15 @@ func BigIntSqrt(interpreter *Interpreter, value *big.Int, locationRange Location
 	}
 
 	valueFloat := new(big.Float).SetPrec(256).SetInt(value)
+	// Converting the result to a fixed-point number, we are conceptually converting it to an integer 
+	// IEEE 754 specifies different rounding modes https:	//en.wikipedia.org/wiki/IEEE_754#Rounding_rules
+	// We follow the "Rationale for International Standard -- Programming Languages -- C", Revision 5.10, April-2003:
+	//   > Section 6.3.1.5 Real floating types:
+	//   > When a finite value of real floating type is converted to an integer type other than Bool, 
+	//   > the fractional part is discarded (i.e., the value is truncated toward zero). If the value
+	//   > of the integral part cannot be represented by the integer type, the behavior is undefined.
+	// For details, see
+	// https:	//wiki.sei.cmu.edu/confluence/display/c/FLP34-C.+Ensure+that+floating-point+conversions+are+within+range+of+the+new+type
 	res := new(big.Float).SetPrec(256).SetMode(big.ToZero).Sqrt(valueFloat)
 
 	valueGetter := func() uint64 {
