@@ -528,6 +528,66 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("changing to a non-storable types", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) struct Foo {
+                    access(all) var a: Int
+                    init() {
+                        self.a = 0
+                    }
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) struct Foo {
+                    access(all) var a: &Int?
+                    init() {
+                        self.a = nil
+                    }
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("changing from a non-storable types", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) struct Foo {
+                    access(all) var a: &Int?
+                    init() {
+                        self.a = nil
+                    }
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) struct Foo {
+                    access(all) var a: Int
+                    init() {
+                        self.a = 0
+                    }
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
 }
 
 func TestContractUpgradeIntersectionAuthorization(t *testing.T) {

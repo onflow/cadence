@@ -350,8 +350,25 @@ typeSwitch:
 		}
 	}
 
+	// If the new/old type is non-storable,
+	// then changing the type of this field has no impact to the storage.
+	if isNonStorableType(oldType) || isNonStorableType(newType) {
+		return nil
+	}
+
 	return oldType.CheckEqual(newType, validator)
 
+}
+
+func isNonStorableType(typ ast.Type) bool {
+	switch typ := typ.(type) {
+	case *ast.ReferenceType, *ast.FunctionType:
+		return true
+	case *ast.OptionalType:
+		return isNonStorableType(typ.Type)
+	default:
+		return false
+	}
 }
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) checkField(oldField *ast.FieldDeclaration, newField *ast.FieldDeclaration) {
