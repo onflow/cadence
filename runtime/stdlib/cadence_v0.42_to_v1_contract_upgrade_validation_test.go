@@ -196,24 +196,24 @@ func TestContractUpgradeFieldAccess(t *testing.T) {
 
 		const oldCode = `
             access(all) contract Test {
-				access(all) resource R {
-					access(all) var a: Int
-					init() {
-						self.a = 0
-					}
-				}
+                access(all) resource R {
+                    access(all) var a: Int
+                    init() {
+                        self.a = 0
+                    }
+                }
             }
         `
 
 		const newCode = `
             access(all) contract Test {
-				access(all) entitlement E
-				access(all) resource R {
-					access(E) var a: Int
-					init() {
-						self.a = 0
-					}
-				}
+                access(all) entitlement E
+                access(all) resource R {
+                    access(E) var a: Int
+                    init() {
+                        self.a = 0
+                    }
+                }
             }
         `
 
@@ -278,7 +278,7 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("change field types illegally", func(t *testing.T) {
+	t.Run("simple invalid", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -292,12 +292,12 @@ func TestContractUpgradeFieldType(t *testing.T) {
         `
 
 		const newCode = `
-			access(all) contract Test {
-				access(all) var a: String
-				init() {
-					self.a = "hello"
-				}
-			}
+            access(all) contract Test {
+                access(all) var a: String
+                init() {
+                    self.a = "hello"
+                }
+            }
         `
 
 		err := testContractUpdate(t, oldCode, newCode)
@@ -307,15 +307,15 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 	})
 
-	t.Run("change field intersection types illegally", func(t *testing.T) {
+	t.Run("intersection types invalid", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             access(all) contract Test {
-				access(all) struct interface I {}
-				access(all) struct interface J {}
-				access(all) struct S: I, J {}
+                access(all) struct interface I {}
+                access(all) struct interface J {}
+                access(all) struct S: I, J {}
 
                 access(all) var a: {I}
                 init() {
@@ -325,16 +325,16 @@ func TestContractUpgradeFieldType(t *testing.T) {
         `
 
 		const newCode = `
-			access(all) contract Test {
-				access(all) struct interface I {}
-				access(all) struct interface J {}
-				access(all) struct S: I, J {}
+            access(all) contract Test {
+                access(all) struct interface I {}
+                access(all) struct interface J {}
+                access(all) struct S: I, J {}
 
                 access(all) var a: {I, J}
                 init() {
                     self.a = S()
                 }
-			}
+            }
         `
 
 		err := testContractUpdate(t, oldCode, newCode)
@@ -344,7 +344,7 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 	})
 
-	t.Run("change field type capability reference auth", func(t *testing.T) {
+	t.Run("capability reference auth", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -359,7 +359,7 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) entitlement E
+                access(all) entitlement E
                 access(all) var a: Capability<auth(E) &Int>?
                 init() {
                     self.a = nil
@@ -373,15 +373,15 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "all", "E")
 	})
 
-	t.Run("change field type capability reference auth allowed composite", func(t *testing.T) {
+	t.Run("capability reference auth allowed composite", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub struct S {
-					pub fun foo() {}
-				}
+                pub struct S {
+                    pub fun foo() {}
+                }
 
                 pub var a: Capability<&S>?
                 init() {
@@ -392,11 +392,11 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) entitlement E
+                access(all) entitlement E
 
-				access(all) struct S {
-					access(E) fun foo() {}
-				}
+                access(all) struct S {
+                    access(E) fun foo() {}
+                }
 
                 access(all) var a: Capability<auth(E) &S>?
                 init() {
@@ -410,15 +410,15 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("change field type capability reference auth allowed too many entitlements", func(t *testing.T) {
+	t.Run("capability reference auth allowed too many entitlements", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub struct S {
-					pub fun foo() {}
-				}
+                pub struct S {
+                    pub fun foo() {}
+                }
 
                 pub var a: Capability<&S>?
                 init() {
@@ -429,12 +429,12 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) entitlement E
-				access(all) entitlement F
+                access(all) entitlement E
+                access(all) entitlement F
 
-				access(all) struct S {
-					access(E) fun foo() {}
-				}
+                access(all) struct S {
+                    access(E) fun foo() {}
+                }
 
                 access(all) var a: Capability<auth(E, F) &S>?
                 init() {
@@ -449,16 +449,16 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "E", "E, F")
 	})
 
-	t.Run("change field type capability reference auth fewer entitlements", func(t *testing.T) {
+	t.Run("capability reference auth fewer entitlements", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub struct S {
-					pub fun foo() {}
-					pub fun bar() {}
-				}
+                pub struct S {
+                    pub fun foo() {}
+                    pub fun bar() {}
+                }
 
                 pub var a: Capability<&S>?
                 init() {
@@ -469,13 +469,13 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) entitlement E
-				access(all) entitlement F
+                access(all) entitlement E
+                access(all) entitlement F
 
-				access(all) struct S {
-					access(E) fun foo() {}
-					access(F) fun bar() {}
-				}
+                access(all) struct S {
+                    access(E) fun foo() {}
+                    access(F) fun bar() {}
+                }
 
                 access(all) var a: Capability<auth(E) &S>?
                 init() {
@@ -489,16 +489,16 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("change field type capability reference auth disjunctive entitlements", func(t *testing.T) {
+	t.Run("capability reference auth disjunctive entitlements", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub struct S {
-					pub fun foo() {}
-					pub fun bar() {}
-				}
+                pub struct S {
+                    pub fun foo() {}
+                    pub fun bar() {}
+                }
 
                 pub var a: Capability<&S>?
                 init() {
@@ -509,13 +509,13 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) entitlement E
-				access(all) entitlement F
+                access(all) entitlement E
+                access(all) entitlement F
 
-				access(all) struct S {
-					access(E) fun foo() {}
-					access(F) fun bar() {}
-				}
+                access(all) struct S {
+                    access(E) fun foo() {}
+                    access(F) fun bar() {}
+                }
 
                 access(all) var a: Capability<auth(E | F) &S>?
                 init() {
@@ -539,39 +539,39 @@ func TestContractUpgradeIntersectionAuthorization(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-			pub contract Test {
-				pub struct interface I {
-					pub fun foo()
-				}
-				pub struct S:I {
-					pub fun foo() {}
-				}
+            pub contract Test {
+                pub struct interface I {
+                    pub fun foo()
+                }
+                pub struct S:I {
+                    pub fun foo() {}
+                }
 
-				pub var a: Capability<&{I}>?
-				init() {
-					self.a = nil
-				}
-			}
-	`
+                pub var a: Capability<&{I}>?
+                init() {
+                    self.a = nil
+                }
+            }
+    `
 
 		const newCode = `
-		access(all) contract Test {
-			access(all) entitlement E
+        access(all) contract Test {
+            access(all) entitlement E
 
-			access(all) struct interface I {
-				access(E) fun foo()
-			}
+            access(all) struct interface I {
+                access(E) fun foo()
+            }
 
-			access(all) struct S:I {
-				access(E) fun foo() {}
-			}
+            access(all) struct S:I {
+                access(E) fun foo() {}
+            }
 
-			access(all) var a: Capability<auth(E) &{I}>?
-			init() {
-				self.a = nil
-			}
-		}
-	`
+            access(all) var a: Capability<auth(E) &{I}>?
+            init() {
+                self.a = nil
+            }
+        }
+    `
 
 		err := testContractUpdate(t, oldCode, newCode)
 
@@ -583,35 +583,35 @@ func TestContractUpgradeIntersectionAuthorization(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-			pub contract Test {
-				pub struct interface I {}
-				pub struct S:I {
-					pub fun foo() {}
-				}
+            pub contract Test {
+                pub struct interface I {}
+                pub struct S:I {
+                    pub fun foo() {}
+                }
 
-				pub var a: Capability<&{I}>?
-				init() {
-					self.a = nil
-				}
-			}
-	`
+                pub var a: Capability<&{I}>?
+                init() {
+                    self.a = nil
+                }
+            }
+    `
 
 		const newCode = `
-		access(all) contract Test {
-			access(all) entitlement E
+        access(all) contract Test {
+            access(all) entitlement E
 
-			access(all) struct interface I {}
+            access(all) struct interface I {}
 
-			access(all) struct S:I {
-				access(E) fun foo() {}
-			}
+            access(all) struct S:I {
+                access(E) fun foo() {}
+            }
 
-			access(all) var a: Capability<auth(E) &{I}>?
-			init() {
-				self.a = nil
-			}
-		}
-	`
+            access(all) var a: Capability<auth(E) &{I}>?
+            init() {
+                self.a = nil
+            }
+        }
+    `
 
 		err := testContractUpdate(t, oldCode, newCode)
 
@@ -624,48 +624,48 @@ func TestContractUpgradeIntersectionAuthorization(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-			pub contract Test {
-				pub struct interface I {
-					pub fun bar()
-				}
-				pub struct interface J {
-					pub fun foo()
-				}
-				pub struct S:I, J {
-					pub fun foo() {}
-					pub fun bar() {}
-				}
+            pub contract Test {
+                pub struct interface I {
+                    pub fun bar()
+                }
+                pub struct interface J {
+                    pub fun foo()
+                }
+                pub struct S:I, J {
+                    pub fun foo() {}
+                    pub fun bar() {}
+                }
 
-				pub var a: Capability<&{I, J}>?
-				init() {
-					self.a = nil
-				}
-			}
-	`
+                pub var a: Capability<&{I, J}>?
+                init() {
+                    self.a = nil
+                }
+            }
+    `
 
 		const newCode = `
-		access(all) contract Test {
-			access(all) entitlement E
-			access(all) entitlement F
+        access(all) contract Test {
+            access(all) entitlement E
+            access(all) entitlement F
 
-			access(all) struct interface I {
-				access(E) fun foo()
-			}
-			access(all) struct interface J {
-				access(F) fun bar()
-			}
+            access(all) struct interface I {
+                access(E) fun foo()
+            }
+            access(all) struct interface J {
+                access(F) fun bar()
+            }
 
-			access(all) struct S:I, J {
-				access(E) fun foo() {}
-				access(F) fun bar() {}
-			}
+            access(all) struct S:I, J {
+                access(E) fun foo() {}
+                access(F) fun bar() {}
+            }
 
-			access(all) var a: Capability<auth(E, F) &{I, J}>?
-			init() {
-				self.a = nil
-			}
-		}
-	`
+            access(all) var a: Capability<auth(E, F) &{I, J}>?
+            init() {
+                self.a = nil
+            }
+        }
+    `
 
 		err := testContractUpdate(t, oldCode, newCode)
 
@@ -677,48 +677,48 @@ func TestContractUpgradeIntersectionAuthorization(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-			pub contract Test {
-				pub struct interface I {
-					pub fun bar()
-				}
-				pub struct interface J {
-					pub fun foo()
-				}
-				pub struct S:I, J {
-					pub fun foo() {}
-					pub fun bar() {}
-				}
+            pub contract Test {
+                pub struct interface I {
+                    pub fun bar()
+                }
+                pub struct interface J {
+                    pub fun foo()
+                }
+                pub struct S:I, J {
+                    pub fun foo() {}
+                    pub fun bar() {}
+                }
 
-				pub var a: Capability<&{I, J}>?
-				init() {
-					self.a = nil
-				}
-			}
-	`
+                pub var a: Capability<&{I, J}>?
+                init() {
+                    self.a = nil
+                }
+            }
+    `
 
 		const newCode = `
-		access(all) contract Test {
-			access(all) entitlement E
-			access(all) entitlement F
+        access(all) contract Test {
+            access(all) entitlement E
+            access(all) entitlement F
 
-			access(all) struct interface I {
-				access(E) fun foo()
-			}
-			access(all) struct interface J {
-				access(F) fun bar()
-			}
+            access(all) struct interface I {
+                access(E) fun foo()
+            }
+            access(all) struct interface J {
+                access(F) fun bar()
+            }
 
-			access(all) struct S:I, J {
-				access(E) fun foo() {}
-				access(F) fun bar() {}
-			}
+            access(all) struct S:I, J {
+                access(E) fun foo() {}
+                access(F) fun bar() {}
+            }
 
-			access(all) var a: Capability<auth(E) &{I, J}>?
-			init() {
-				self.a = nil
-			}
-		}
-	`
+            access(all) var a: Capability<auth(E) &{I, J}>?
+            init() {
+                self.a = nil
+            }
+        }
+    `
 
 		err := testContractUpdate(t, oldCode, newCode)
 
@@ -730,45 +730,45 @@ func TestContractUpgradeIntersectionAuthorization(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-			pub contract Test {
-				pub struct interface I {
-					pub fun bar()
-				}
-				pub struct interface J {
-					pub fun foo()
-				}
-				pub struct S:I, J {
-					pub fun foo() {}
-					pub fun bar() {}
-				}
+            pub contract Test {
+                pub struct interface I {
+                    pub fun bar()
+                }
+                pub struct interface J {
+                    pub fun foo()
+                }
+                pub struct S:I, J {
+                    pub fun foo() {}
+                    pub fun bar() {}
+                }
 
-				pub var a: Capability<&{I, J}>?
-				init() {
-					self.a = nil
-				}
-			}
-	`
+                pub var a: Capability<&{I, J}>?
+                init() {
+                    self.a = nil
+                }
+            }
+    `
 
 		const newCode = `
-		access(all) contract Test {
-			access(all) entitlement E
-			access(all) entitlement F
+        access(all) contract Test {
+            access(all) entitlement E
+            access(all) entitlement F
 
-			access(all) struct interface I {
-				access(E) fun foo()
-			}
-			access(all) struct interface J {}
+            access(all) struct interface I {
+                access(E) fun foo()
+            }
+            access(all) struct interface J {}
 
-			access(all) struct S:I, J {
-				access(E) fun foo() {}
-			}
+            access(all) struct S:I, J {
+                access(E) fun foo() {}
+            }
 
-			access(all) var a: Capability<auth(E, F) &{I, J}>?
-			init() {
-				self.a = nil
-			}
-		}
-	`
+            access(all) var a: Capability<auth(E, F) &{I, J}>?
+            init() {
+                self.a = nil
+            }
+        }
+    `
 
 		err := testContractUpdate(t, oldCode, newCode)
 
@@ -782,14 +782,14 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("change field type restricted type", func(t *testing.T) {
+	t.Run("restricted type", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub resource interface I {}
-				pub resource R:I {}
+                pub resource interface I {}
+                pub resource R:I {}
 
                 pub var a: @R{I}
                 init() {
@@ -800,8 +800,8 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) resource interface I {}
-				access(all) resource R:I {}
+                access(all) resource interface I {}
+                access(all) resource R:I {}
 
                 access(all) var a: @{I} 
                 init() {
@@ -879,14 +879,14 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("change field type restricted type variable sized", func(t *testing.T) {
+	t.Run("restricted type variable sized", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub resource interface I {}
-				pub resource R:I {}
+                pub resource interface I {}
+                pub resource R:I {}
 
                 pub var a: @[R{I}]
                 init() {
@@ -897,8 +897,8 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) resource interface I {}
-				access(all) resource R:I {}
+                access(all) resource interface I {}
+                access(all) resource R:I {}
 
                 access(all) var a: @[R] 
                 init() {
@@ -912,14 +912,14 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("change field type restricted type constant sized", func(t *testing.T) {
+	t.Run("restricted type constant sized", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub resource interface I {}
-				pub resource R:I {}
+                pub resource interface I {}
+                pub resource R:I {}
 
                 pub var a: @[R{I}; 1]
                 init() {
@@ -930,8 +930,8 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) resource interface I {}
-				access(all) resource R:I {}
+                access(all) resource interface I {}
+                access(all) resource R:I {}
 
                 access(all) var a: @[R; 1] 
                 init() {
@@ -945,14 +945,14 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("change field type restricted type constant sized with size change", func(t *testing.T) {
+	t.Run("restricted type constant sized with size change", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub resource interface I {}
-				pub resource R:I {}
+                pub resource interface I {}
+                pub resource R:I {}
 
                 pub var a: @[R{I}; 1]
                 init() {
@@ -963,8 +963,8 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) resource interface I {}
-				access(all) resource R:I {}
+                access(all) resource interface I {}
+                access(all) resource R:I {}
 
                 access(all) var a: @[R; 2] 
                 init() {
@@ -979,14 +979,14 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		assertFieldTypeMismatchError(t, cause, "Test", "a", "[{I}; 1]", "[R; 2]")
 	})
 
-	t.Run("change field type restricted type dict", func(t *testing.T) {
+	t.Run("restricted type dict", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub resource interface I {}
-				pub resource R:I {}
+                pub resource interface I {}
+                pub resource R:I {}
 
                 pub var a: @{Int: R{I}}
                 init() {
@@ -997,8 +997,8 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) resource interface I {}
-				access(all) resource R:I {}
+                access(all) resource interface I {}
+                access(all) resource R:I {}
 
                 access(all) var a: @{Int: R}
                 init() {
@@ -1012,14 +1012,14 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("change field type restricted type dict with qualified names", func(t *testing.T) {
+	t.Run("restricted type dict with qualified names", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub resource interface I {}
-				pub resource R:I {}
+                pub resource interface I {}
+                pub resource R:I {}
 
                 pub var a: @{Int: R{I}}
                 init() {
@@ -1030,8 +1030,8 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) resource interface I {}
-				access(all) resource R:I {}
+                access(all) resource interface I {}
+                access(all) resource R:I {}
 
                 access(all) var a: @{Int: Test.R}
                 init() {
@@ -1045,14 +1045,14 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("change field type restricted reference type", func(t *testing.T) {
+	t.Run("restricted reference type", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub resource interface I {}
-				pub resource R:I {}
+                pub resource interface I {}
+                pub resource R:I {}
 
                 pub var a: Capability<&R{I}>?
                 init() {
@@ -1063,8 +1063,8 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) resource interface I {}
-				access(all) resource R:I {}
+                access(all) resource interface I {}
+                access(all) resource R:I {}
 
                 access(all) var a: Capability<&R>?
                 init() {
@@ -1078,18 +1078,18 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("change field type restricted entitled reference type", func(t *testing.T) {
+	t.Run("restricted entitled reference type", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub resource interface I {
-					pub fun foo()
-				}
-				pub resource R:I {
-					pub fun foo()
-				}
+                pub resource interface I {
+                    pub fun foo()
+                }
+                pub resource R:I {
+                    pub fun foo()
+                }
 
                 pub var a: Capability<&R{I}>?
                 init() {
@@ -1100,13 +1100,13 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) entitlement E
-				access(all) resource interface I {
-					access(E) fun foo()
-				}
-				access(all) resource R:I {
-					access(E) fun foo() {}
-				}
+                access(all) entitlement E
+                access(all) resource interface I {
+                    access(E) fun foo()
+                }
+                access(all) resource R:I {
+                    access(E) fun foo() {}
+                }
 
                 access(all) var a: Capability<auth(E) &R>?
                 init() {
@@ -1120,18 +1120,18 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("change field type restricted entitled reference type with qualified types", func(t *testing.T) {
+	t.Run("restricted entitled reference type with qualified types", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub resource interface I {
-					pub fun foo()
-				}
-				pub resource R:I {
-					pub fun foo()
-				}
+                pub resource interface I {
+                    pub fun foo()
+                }
+                pub resource R:I {
+                    pub fun foo()
+                }
 
                 pub var a: Capability<&R{I}>?
                 init() {
@@ -1142,13 +1142,13 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) entitlement E
-				access(all) resource interface I {
-					access(Test.E) fun foo()
-				}
-				access(all) resource R:I {
-					access(Test.E) fun foo() {}
-				}
+                access(all) entitlement E
+                access(all) resource interface I {
+                    access(Test.E) fun foo()
+                }
+                access(all) resource R:I {
+                    access(Test.E) fun foo() {}
+                }
 
                 access(all) var a: Capability<auth(Test.E) &Test.R>?
                 init() {
@@ -1162,25 +1162,25 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("change field type restricted entitled reference type with qualified types with imports", func(t *testing.T) {
+	t.Run("restricted entitled reference type with qualified types with imports", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldImport = `
-			pub contract TestImport {
-				pub resource interface I {
-					pub fun foo()
-				}
-			}
-		`
+            pub contract TestImport {
+                pub resource interface I {
+                    pub fun foo()
+                }
+            }
+        `
 
 		const oldCode = `
-			import TestImport from "imported"
+            import TestImport from "imported"
 
             pub contract Test {
-				pub resource R:TestImport.I {
-					pub fun foo()
-				}
+                pub resource R:TestImport.I {
+                    pub fun foo()
+                }
 
                 pub var a: Capability<&R{TestImport.I}>?
                 init() {
@@ -1190,23 +1190,23 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
         `
 
 		const newImport = `
-			access(all) contract TestImport {
-				access(all) entitlement E
-				access(all) resource interface I {
-					access(E) fun foo()
-				}
-			}
-		`
+            access(all) contract TestImport {
+                access(all) entitlement E
+                access(all) resource interface I {
+                    access(E) fun foo()
+                }
+            }
+        `
 
 		const newCode = `
-			import TestImport from "imported"
+            import TestImport from "imported"
 
             access(all) contract Test {
-				access(all) entitlement F
-				access(all) resource R: TestImport.I {
-					access(TestImport.E) fun foo() {}
-					access(Test.F) fun bar() {}
-				}
+                access(all) entitlement F
+                access(all) resource R: TestImport.I {
+                    access(TestImport.E) fun foo() {}
+                    access(Test.F) fun bar() {}
+                }
 
                 access(all) var a: Capability<auth(TestImport.E) &Test.R>?
                 init() {
@@ -1220,19 +1220,19 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("change field type restricted entitled reference type with too many granted entitlements", func(t *testing.T) {
+	t.Run("restricted entitled reference type with too many granted entitlements", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldCode = `
             pub contract Test {
-				pub resource interface I {
-					pub fun foo()
-				}
-				pub resource R:I {
-					pub fun foo()
-					pub fun bar()
-				}
+                pub resource interface I {
+                    pub fun foo()
+                }
+                pub resource R:I {
+                    pub fun foo()
+                    pub fun bar()
+                }
 
                 pub var a: Capability<&R{I}>?
                 init() {
@@ -1243,15 +1243,15 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		const newCode = `
             access(all) contract Test {
-				access(all) entitlement E
-				access(all) entitlement F
-				access(all) resource interface I {
-					access(E) fun foo()
-				}
-				access(all) resource R:I {
-					access(E) fun foo() {}
-					access(F) fun bar() {}
-				}
+                access(all) entitlement E
+                access(all) entitlement F
+                access(all) resource interface I {
+                    access(E) fun foo()
+                }
+                access(all) resource R:I {
+                    access(E) fun foo() {}
+                    access(F) fun bar() {}
+                }
 
                 access(all) var a: Capability<auth(E, F) &R>?
                 init() {
@@ -1266,25 +1266,25 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "E", "E, F")
 	})
 
-	t.Run("change field type restricted entitled reference type with too many granted entitlements with imports", func(t *testing.T) {
+	t.Run("restricted entitled reference type with too many granted entitlements with imports", func(t *testing.T) {
 
 		t.Parallel()
 
 		const oldImport = `
-			pub contract TestImport {
-				pub resource interface I {
-					pub fun foo()
-				}
-			}
-		`
+            pub contract TestImport {
+                pub resource interface I {
+                    pub fun foo()
+                }
+            }
+        `
 
 		const oldCode = `
-			import TestImport from "imported" 
+            import TestImport from "imported" 
 
             pub contract Test {
-				pub resource R:TestImport.I {
-					pub fun foo()
-				}
+                pub resource R:TestImport.I {
+                    pub fun foo()
+                }
 
                 pub var a: Capability<&R{TestImport.I}>?
                 init() {
@@ -1294,23 +1294,23 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
         `
 
 		const newImport = `
-			access(all) contract TestImport {
-				access(all) entitlement E
-				access(all) resource interface I {
-					access(TestImport.E) fun foo()
-				}
-			}
-		`
+            access(all) contract TestImport {
+                access(all) entitlement E
+                access(all) resource interface I {
+                    access(TestImport.E) fun foo()
+                }
+            }
+        `
 
 		const newCode = `
-			import TestImport from "imported" 
+            import TestImport from "imported" 
 
             access(all) contract Test {
-				access(all) entitlement F
-				access(all) resource R: TestImport.I {
-					access(TestImport.E) fun foo() {}
-					access(Test.F) fun bar() {}
-				}
+                access(all) entitlement F
+                access(all) resource R: TestImport.I {
+                    access(TestImport.E) fun foo() {}
+                    access(Test.F) fun bar() {}
+                }
 
                 access(all) var a: Capability<auth(TestImport.E, Test.F) &Test.R>?
                 init() {
@@ -1324,6 +1324,142 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "E", "E, F")
 	})
+
+	t.Run("restricted reference type", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+
+                pub resource interface I {}
+
+                pub resource R:I {
+                    access(all) var ref: &R{I}?
+
+                    init() {
+                        self.ref = nil
+                    }
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                access(all) resource interface I {
+                    access(E) fun foo()
+                }
+
+                access(all) entitlement E
+
+                access(all) resource R:I {
+                    access(all) var ref: auth(E) &R?
+
+                    init() {
+                        self.ref = nil
+                    }
+
+                    access(E) fun foo() {}
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted anystruct reference type invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+
+                pub resource interface I {}
+
+                pub resource R:I {
+                    access(all) var ref: &AnyStruct{I}?
+
+                    init() {
+                        self.ref = nil
+                    }
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                access(all) resource interface I {
+                    access(E) fun foo()
+                }
+
+                access(all) entitlement E
+
+                access(all) resource R:I {
+                    access(all) var ref: auth(E) &AnyStruct?
+
+                    init() {
+                        self.ref = nil
+                    }
+
+                    access(E) fun foo() {}
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertFieldTypeMismatchError(t, cause, "R", "ref", "{I}", "AnyStruct")
+
+	})
+
+	t.Run("restricted anystruct reference type valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+
+                pub resource interface I {}
+
+                pub resource R:I {
+                    access(all) var ref: &AnyStruct{I}?
+
+                    init() {
+                        self.ref = nil
+                    }
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                access(all) resource interface I {
+                    access(E) fun foo()
+                }
+
+                access(all) entitlement E
+
+                access(all) resource R:I {
+                    access(all) var ref: auth(E) &{I}?
+
+                    init() {
+                        self.ref = nil
+                    }
+
+                    access(E) fun foo() {}
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
 }
 
 func TestTypeRequirementRemoval(t *testing.T) {
