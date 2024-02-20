@@ -970,7 +970,6 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 
 	const fooBarQualifiedIdentifier = "Foo.Bar"
 	const fooBazQualifiedIdentifier = "Foo.Baz"
-	const fooQuxQualifiedIdentifier = "Foo.Qux"
 
 	fooBarInterfaceType := interpreter.NewInterfaceStaticType(
 		nil,
