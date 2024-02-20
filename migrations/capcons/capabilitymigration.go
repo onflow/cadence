@@ -86,9 +86,11 @@ func (m *CapabilityValueMigration) Migrate(
 			break
 		}
 
-		newBorrowType, ok := oldCapability.BorrowType.(*interpreter.ReferenceStaticType)
+		oldBorrowType := oldCapability.BorrowType
+
+		newBorrowType, ok := oldBorrowType.(*interpreter.ReferenceStaticType)
 		if !ok {
-			panic(errors.NewUnreachableError())
+			panic(errors.NewUnexpectedError("unexpected non-reference borrow type: %T", oldBorrowType))
 		}
 
 		// Convert the old AuthAccount type to the new fully-entitled Account type

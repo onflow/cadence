@@ -910,6 +910,11 @@ func TestConvertToEntitledValue(t *testing.T) {
 			Name: "[Type]",
 		},
 		{
+			Input:  interpreter.NewTypeValue(inter, nil),
+			Output: interpreter.NewTypeValue(inter, nil),
+			Name:   "Type(nil)",
+		},
+		{
 			Input: interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
@@ -1040,6 +1045,19 @@ func TestConvertToEntitledValue(t *testing.T) {
 				BorrowType: entitledSRefStaticType,
 			},
 			Name: "PathCapability<&S>",
+		},
+		{
+			Input: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				Address:    interpreter.NewAddressValue(inter, testAddress),
+				Path:       testPathValue,
+				BorrowType: nil,
+			},
+			Output: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				Address:    interpreter.NewAddressValue(inter, testAddress),
+				Path:       testPathValue,
+				BorrowType: nil,
+			},
+			Name: "PathCapability<nil>",
 		},
 		{
 			Input: interpreter.NewCapabilityValue(
@@ -1276,6 +1294,21 @@ func TestConvertToEntitledValue(t *testing.T) {
 			}
 			return true
 
+		case interpreter.TypeValue:
+			// TypeValue considers missing type "unknown"/"invalid",
+			// and "unknown"/"invalid" type values unequal.
+			// However, we want to consider those equal here for testing/asserting purposes
+			other, ok := output.(interpreter.TypeValue)
+			if !ok {
+				return false
+			}
+
+			if other.Type == nil {
+				return v.Type == nil
+			} else {
+				return other.Type.Equal(v.Type)
+			}
+
 		case *interpreter.EphemeralReferenceValue:
 			otherReference, ok := output.(*interpreter.EphemeralReferenceValue)
 			if !ok || !v.Authorization.Equal(otherReference.Authorization) {
@@ -1304,7 +1337,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 			convertedValue := convertEntireTestValue(inter, storage, testAddress, test.Input)
 			switch convertedValue := convertedValue.(type) {
 			case interpreter.EquatableValue:
-				require.True(t, referencePeekingEqual(convertedValue, test.Output))
+				require.True(t, referencePeekingEqual(convertedValue, test.Output), "expected: %s\nactual: %s", test.Output, convertedValue)
 			default:
 				require.Equal(t, convertedValue, test.Output)
 			}
