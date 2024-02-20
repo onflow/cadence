@@ -69,17 +69,53 @@ func testContractUpdate(t *testing.T, oldCode string, newCode string) error {
 
 func testContractUpdateWithImports(
 	t *testing.T,
+	contractName string,
 	oldCode string,
 	newCode string,
 	newImports map[common.Location]string,
 ) error {
-	oldProgram, err := old_parser.ParseProgram(nil, []byte(oldCode), old_parser.Config{})
+	location := common.AddressLocation{
+		Name:    contractName,
+		Address: common.MustBytesToAddress([]byte{0x1}),
+	}
+
+	oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, newImports)
+
+	upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+		location,
+		contractName,
+		&runtime_utils.TestRuntimeInterface{
+			OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+				return []string{"TestImport"}, nil
+			},
+		},
+		oldProgram,
+		newProgram,
+		elaborations,
+	)
+	return upgradeValidator.Validate()
+}
+
+func parseAndCheckPrograms(
+	t *testing.T,
+	location common.Location,
+	oldCode string,
+	newCode string,
+	newImports map[common.Location]string,
+) (
+	oldProgram *ast.Program,
+	newProgram *ast.Program,
+	elaborations map[common.Location]*sema.Elaboration,
+) {
+
+	var err error
+	oldProgram, err = old_parser.ParseProgram(nil, []byte(oldCode), old_parser.Config{})
 	require.NoError(t, err)
 
-	newProgram, err := parser.ParseProgram(nil, []byte(newCode), parser.Config{})
+	newProgram, err = parser.ParseProgram(nil, []byte(newCode), parser.Config{})
 	require.NoError(t, err)
 
-	elaborations := map[common.Location]*sema.Elaboration{}
+	elaborations = map[common.Location]*sema.Elaboration{}
 
 	for location, code := range newImports {
 		newImportedProgram, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
@@ -104,7 +140,7 @@ func testContractUpdateWithImports(
 
 	checker, err := sema.NewChecker(
 		newProgram,
-		utils.TestLocation,
+		location,
 		nil,
 		&sema.Config{
 			AccessCheckMode: sema.AccessCheckModeStrict,
@@ -138,21 +174,9 @@ func testContractUpdateWithImports(
 	err = checker.Check()
 	require.NoError(t, err)
 
-	elaborations[utils.TestLocation] = checker.Elaboration
+	elaborations[location] = checker.Elaboration
 
-	upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
-		utils.TestLocation,
-		"Test",
-		&runtime_utils.TestRuntimeInterface{
-			OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
-				return []string{"TestImport"}, nil
-			},
-		},
-		oldProgram,
-		newProgram,
-		elaborations,
-	)
-	return upgradeValidator.Validate()
+	return
 }
 
 func getSingleContractUpdateErrorCause(t *testing.T, err error, contractName string) error {
@@ -616,6 +640,155 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 		err := testContractUpdate(t, oldCode, newCode)
 		require.NoError(t, err)
+	})
+
+	t.Run("composite to interface valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            import FungibleToken from 0x02
+
+            access(all) contract Test {
+                access(all) var a: @FungibleToken.Vault?
+                init() {
+                    self.a <- nil
+                }
+            }
+        `
+
+		const newImport = `
+            access(all) contract FungibleToken {
+                access(all) resource interface Vault {}
+            }
+        `
+		const newCode = `
+            import FungibleToken from 0x02
+
+            access(all) contract Test {
+                access(all) var a: @{FungibleToken.Vault}?
+                init() {
+                    self.a <- nil
+                }
+            }
+        `
+
+		const contractName = "Test"
+		location := common.AddressLocation{
+			Name:    contractName,
+			Address: common.MustBytesToAddress([]byte{0x1}),
+		}
+
+		nftLocation := common.AddressLocation{
+			Name:    "FungibleToken",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		imports := map[common.Location]string{
+			nftLocation: newImport,
+		}
+
+		vaultResourceTypeID := common.NewTypeIDFromQualifiedName(nil, nftLocation, "FungibleToken.Vault")
+
+		vaultInterfaceTypeID := sema.FormatIntersectionTypeID([]common.TypeID{vaultResourceTypeID})
+
+		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
+
+		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+			location,
+			contractName,
+			&runtime_utils.TestRuntimeInterface{
+				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+					return []string{"TestImport"}, nil
+				},
+			},
+			oldProgram,
+			newProgram,
+			elaborations,
+		).WithUserDefinedTypeChangeChecker(
+			func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool) {
+				switch oldTypeID {
+				case vaultResourceTypeID:
+					return true, newTypeID == vaultInterfaceTypeID
+				}
+
+				return false, false
+			},
+		)
+
+		err := upgradeValidator.Validate()
+		require.NoError(t, err)
+	})
+
+	t.Run("composite to interface valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            import FungibleToken from 0x02
+
+            access(all) contract Test {
+                access(all) var a: @FungibleToken.Vault?
+                init() {
+                    self.a <- nil
+                }
+            }
+        `
+
+		const newImport = `
+            access(all) contract FungibleToken {
+                access(all) resource interface Vault {}
+            }
+        `
+		const newCode = `
+            import FungibleToken from 0x02
+
+            access(all) contract Test {
+                access(all) var a: @{FungibleToken.Vault}?
+                init() {
+                    self.a <- nil
+                }
+            }
+        `
+
+		const contractName = "Test"
+		location := common.AddressLocation{
+			Name:    contractName,
+			Address: common.MustBytesToAddress([]byte{0x1}),
+		}
+
+		nftLocation := common.AddressLocation{
+			Name:    "FungibleToken",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		imports := map[common.Location]string{
+			nftLocation: newImport,
+		}
+
+		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
+
+		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+			location,
+			contractName,
+			&runtime_utils.TestRuntimeInterface{
+				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+					return []string{"TestImport"}, nil
+				},
+			},
+			oldProgram,
+			newProgram,
+			elaborations,
+		).WithUserDefinedTypeChangeChecker(
+			func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool) {
+				return true, false
+			},
+		)
+
+		err := upgradeValidator.Validate()
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertFieldTypeMismatchError(t, cause, "Test", "a", "FungibleToken.Vault", "{FungibleToken.Vault}")
+
 	})
 }
 
@@ -1256,7 +1429,7 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            import TestImport from 0x01
+            import TestImport from 0x02
 
             pub contract Test {
                 pub resource R:TestImport.I {
@@ -1280,7 +1453,7 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
         `
 
 		const newCode = `
-            import TestImport from 0x01
+            import TestImport from 0x02
 
             access(all) contract Test {
                 access(all) entitlement F
@@ -1298,12 +1471,13 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		err := testContractUpdateWithImports(
 			t,
+			"Test",
 			oldCode,
 			newCode,
 			map[common.Location]string{
 				common.AddressLocation{
 					Name:    "TestImport",
-					Address: common.MustBytesToAddress([]byte{0x1}),
+					Address: common.MustBytesToAddress([]byte{0x2}),
 				}: newImport,
 			},
 		)
@@ -1362,7 +1536,7 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 		t.Parallel()
 
 		const oldCode = `
-            import TestImport from 0x01
+            import TestImport from 0x02
 
             pub contract Test {
                 pub resource R:TestImport.I {
@@ -1386,7 +1560,7 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
         `
 
 		const newCode = `
-            import TestImport from 0x01
+            import TestImport from 0x02
 
             access(all) contract Test {
                 access(all) entitlement F
@@ -1404,12 +1578,13 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		err := testContractUpdateWithImports(
 			t,
+			"Test",
 			oldCode,
 			newCode,
 			map[common.Location]string{
 				common.AddressLocation{
 					Name:    "TestImport",
-					Address: common.MustBytesToAddress([]byte{0x1}),
+					Address: common.MustBytesToAddress([]byte{0x2}),
 				}: newImport,
 			},
 		)
