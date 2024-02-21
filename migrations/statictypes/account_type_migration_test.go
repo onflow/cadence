@@ -374,6 +374,26 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 			),
 			expectedType: nil,
 		},
+
+		// reference to optionals
+		"reference_to_optional": {
+			storedType: interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeAccountKey, //nolint:staticcheck
+				),
+			),
+			expectedType: interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.AccountKeyStaticType,
+				),
+			),
+		},
 	}
 
 	// Store values

@@ -71,7 +71,7 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 
 	testCases := map[string]testCase{
 		// base cases
-		"compositeToInterface": {
+		"composite_to_interface": {
 			storedType: newCompositeType(),
 			expectedType: interpreter.NewIntersectionStaticType(
 				nil,
@@ -80,7 +80,7 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 				},
 			),
 		},
-		"interfaceToComposite": {
+		"interface_to_composite": {
 			storedType:   newInterfaceType(),
 			expectedType: newCompositeType(),
 		},
@@ -98,6 +98,19 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 		"dictionary": {
 			storedType:   interpreter.NewDictionaryStaticType(nil, newInterfaceType(), newInterfaceType()),
 			expectedType: interpreter.NewDictionaryStaticType(nil, newCompositeType(), newCompositeType()),
+		},
+		// reference to optional
+		"reference_to_optional": {
+			storedType: interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewOptionalStaticType(nil, newInterfaceType()),
+			),
+			expectedType: interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewOptionalStaticType(nil, newCompositeType()),
+			),
 		},
 	}
 
