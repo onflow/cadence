@@ -171,7 +171,17 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 
 		// First rewrite, then convert the rewritten type.
 
-		rewrittenType := rewriteLegacyIntersectionType(staticType, parentType)
+		var rewrittenType interpreter.StaticType = staticType
+
+		// Rewrite the intersection type,
+		// if it does not appear in a reference type.
+		//
+		// This is necessary to keep sufficient information for the entitlements migration,
+		// which will rewrite the referenced intersection type once it has added entitlements.
+
+		if _, ok := parentType.(*interpreter.ReferenceStaticType); !ok {
+			rewrittenType = RewriteLegacyIntersectionType(staticType)
+		}
 
 		// The rewritten type is either:
 		// - an intersection type (with or without legacy type)
@@ -405,17 +415,9 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 	return nil
 }
 
-func rewriteLegacyIntersectionType(
+func RewriteLegacyIntersectionType(
 	intersectionType *interpreter.IntersectionStaticType,
-	parentType interpreter.StaticType,
 ) interpreter.StaticType {
-
-	// Rewrite the intersection type,
-	// if it does not appear in a reference type.
-
-	if _, ok := parentType.(*interpreter.ReferenceStaticType); ok {
-		return intersectionType
-	}
 
 	// Rewrite rules (also enforced by contract update checker):
 	//
