@@ -18572,6 +18572,18 @@ func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
 	return MustConvertStoredValue(gauge, atreeValue)
 }
 
+func (i DictionaryIterator) Next(gauge common.MemoryGauge) (Value, Value) {
+	atreeKeyValue, atreeValue, err := i.mapIterator.Next()
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	if atreeKeyValue == nil {
+		return nil, nil
+	}
+	return MustConvertStoredValue(gauge, atreeKeyValue),
+		MustConvertStoredValue(gauge, atreeValue)
+}
+
 func (v *DictionaryValue) Iterator() DictionaryIterator {
 	mapIterator, err := v.dictionary.Iterator()
 	if err != nil {

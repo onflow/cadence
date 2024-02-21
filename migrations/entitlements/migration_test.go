@@ -19,7 +19,6 @@
 package entitlements
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,40 +42,84 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
+// TODO: improve
 func TestConvertToEntitledType(t *testing.T) {
 
 	t.Parallel()
 
-	testLocation := common.StringLocation("test")
+	inter := NewTestInterpreter(t)
+
+	elaboration := sema.NewElaboration(nil)
+
+	inter.Program = &interpreter.Program{
+		Elaboration: elaboration,
+	}
+
+	testLocation := inter.Location
+
+	// E, F, G
 
 	entitlementE := sema.NewEntitlementType(nil, testLocation, "E")
+	elaboration.SetEntitlementType(
+		entitlementE.ID(),
+		entitlementE,
+	)
+
 	entitlementF := sema.NewEntitlementType(nil, testLocation, "F")
+	elaboration.SetEntitlementType(
+		entitlementF.ID(),
+		entitlementF,
+	)
+
 	entitlementG := sema.NewEntitlementType(nil, testLocation, "G")
+	elaboration.SetEntitlementType(
+		entitlementG.ID(),
+		entitlementG,
+	)
+
+	// auth(E)
 
 	eAccess := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{entitlementE},
 		sema.Conjunction,
 	)
+
+	// auth(F)
+
 	fAccess := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{entitlementF},
 		sema.Conjunction,
 	)
+
+	// auth(E | F)
+
 	eOrFAccess := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{entitlementE, entitlementF},
 		sema.Disjunction,
 	)
+
+	// auth(E, F)
+
 	eAndFAccess := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{entitlementE, entitlementF},
 		sema.Conjunction,
 	)
+
+	// auth(E, G)
+
 	eAndGAccess := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{entitlementE, entitlementG},
 		sema.Conjunction,
 	)
+
+	// auth(E, F, G)
+
 	eFAndGAccess := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{entitlementE, entitlementF, entitlementG},
 		sema.Conjunction,
 	)
+
+	// M (map)
 
 	mapM := sema.NewEntitlementMapType(nil, testLocation, "M")
 	mapM.Relations = []sema.EntitlementRelation{
@@ -90,6 +133,12 @@ func TestConvertToEntitledType(t *testing.T) {
 		},
 	}
 	mapAccess := sema.NewEntitlementMapAccess(mapM)
+	elaboration.SetEntitlementMapType(
+		mapM.ID(),
+		mapM,
+	)
+
+	// S (compositeStructWithOnlyE)
 
 	compositeStructWithOnlyE := &sema.CompositeType{
 		Location:   testLocation,
@@ -109,6 +158,12 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetCompositeType(
+		compositeStructWithOnlyE.ID(),
+		compositeStructWithOnlyE,
+	)
+
+	// R (compositeResourceWithOnlyF)
 
 	compositeResourceWithOnlyF := &sema.CompositeType{
 		Location:   testLocation,
@@ -140,10 +195,16 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetCompositeType(
+		compositeResourceWithOnlyF.ID(),
+		compositeResourceWithOnlyF,
+	)
+
+	// R2 (compositeResourceWithEOrF)
 
 	compositeResourceWithEOrF := &sema.CompositeType{
 		Location:   testLocation,
-		Identifier: "R",
+		Identifier: "R2",
 		Kind:       common.CompositeKindResource,
 		Members:    &sema.StringMemberOrderedMap{},
 	}
@@ -159,10 +220,16 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetCompositeType(
+		compositeResourceWithEOrF.ID(),
+		compositeResourceWithEOrF,
+	)
+
+	// S2 (compositeTwoFields)
 
 	compositeTwoFields := &sema.CompositeType{
 		Location:   testLocation,
-		Identifier: "S",
+		Identifier: "S2",
 		Kind:       common.CompositeKindStructure,
 		Members:    &sema.StringMemberOrderedMap{},
 	}
@@ -190,6 +257,12 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetCompositeType(
+		compositeTwoFields.ID(),
+		compositeTwoFields,
+	)
+
+	// I (interfaceTypeWithEAndG)
 
 	interfaceTypeWithEAndG := &sema.InterfaceType{
 		Location:      testLocation,
@@ -199,8 +272,21 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	interfaceTypeWithEAndG.Members.Set(
 		"foo",
-		sema.NewFunctionMember(nil, interfaceTypeWithEAndG, eAndGAccess, "foo", &sema.FunctionType{}, ""),
+		sema.NewFunctionMember(
+			nil,
+			interfaceTypeWithEAndG,
+			eAndGAccess,
+			"foo",
+			&sema.FunctionType{},
+			"",
+		),
 	)
+	elaboration.SetInterfaceType(
+		interfaceTypeWithEAndG.ID(),
+		interfaceTypeWithEAndG,
+	)
+
+	// J (interfaceTypeInheriting)
 
 	interfaceTypeInheriting := &sema.InterfaceType{
 		Location:                      testLocation,
@@ -209,6 +295,12 @@ func TestConvertToEntitledType(t *testing.T) {
 		Members:                       &sema.StringMemberOrderedMap{},
 		ExplicitInterfaceConformances: []*sema.InterfaceType{interfaceTypeWithEAndG},
 	}
+	elaboration.SetInterfaceType(
+		interfaceTypeInheriting.ID(),
+		interfaceTypeInheriting,
+	)
+
+	// RI (compositeTypeInheriting)
 
 	compositeTypeInheriting := &sema.CompositeType{
 		Location:                      testLocation,
@@ -217,10 +309,16 @@ func TestConvertToEntitledType(t *testing.T) {
 		Members:                       &sema.StringMemberOrderedMap{},
 		ExplicitInterfaceConformances: []*sema.InterfaceType{interfaceTypeInheriting},
 	}
+	elaboration.SetCompositeType(
+		compositeTypeInheriting.ID(),
+		compositeTypeInheriting,
+	)
+
+	// RI2 (compositeTypeWithMap)
 
 	compositeTypeWithMap := &sema.CompositeType{
 		Location:   testLocation,
-		Identifier: "RI",
+		Identifier: "RI2",
 		Kind:       common.CompositeKindResource,
 		Members:    &sema.StringMemberOrderedMap{},
 	}
@@ -235,10 +333,16 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetCompositeType(
+		compositeTypeWithMap.ID(),
+		compositeTypeWithMap,
+	)
+
+	// RI3 (interfaceTypeWithMap)
 
 	interfaceTypeWithMap := &sema.InterfaceType{
 		Location:      testLocation,
-		Identifier:    "RI",
+		Identifier:    "RI3",
 		CompositeKind: common.CompositeKindResource,
 		Members:       &sema.StringMemberOrderedMap{},
 	}
@@ -253,10 +357,16 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetInterfaceType(
+		interfaceTypeWithMap.ID(),
+		interfaceTypeWithMap,
+	)
+
+	// RI4 (compositeTypeWithCapField)
 
 	compositeTypeWithCapField := &sema.CompositeType{
 		Location:   testLocation,
-		Identifier: "RI",
+		Identifier: "RI4",
 		Kind:       common.CompositeKindResource,
 		Members:    &sema.StringMemberOrderedMap{},
 	}
@@ -274,10 +384,16 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetCompositeType(
+		compositeTypeWithCapField.ID(),
+		compositeTypeWithCapField,
+	)
+
+	// RI5 (interfaceTypeWithCapField)
 
 	interfaceTypeWithCapField := &sema.InterfaceType{
 		Location:      testLocation,
-		Identifier:    "RI",
+		Identifier:    "RI5",
 		CompositeKind: common.CompositeKindResource,
 		Members:       &sema.StringMemberOrderedMap{},
 	}
@@ -295,22 +411,40 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetInterfaceType(
+		interfaceTypeWithCapField.ID(),
+		interfaceTypeWithCapField,
+	)
+
+	// J2 (interfaceTypeInheritingCapField)
 
 	interfaceTypeInheritingCapField := &sema.InterfaceType{
 		Location:                      testLocation,
-		Identifier:                    "J",
+		Identifier:                    "J2",
 		CompositeKind:                 common.CompositeKindResource,
 		Members:                       &sema.StringMemberOrderedMap{},
 		ExplicitInterfaceConformances: []*sema.InterfaceType{interfaceTypeWithCapField},
 	}
+	elaboration.SetInterfaceType(
+		interfaceTypeInheritingCapField.ID(),
+		interfaceTypeInheritingCapField,
+	)
+
+	// RI6 (compositeTypeInheritingCapField)
 
 	compositeTypeInheritingCapField := &sema.CompositeType{
-		Location:                      testLocation,
-		Identifier:                    "RI",
-		Kind:                          common.CompositeKindResource,
-		Members:                       &sema.StringMemberOrderedMap{},
-		ExplicitInterfaceConformances: []*sema.InterfaceType{interfaceTypeInheritingCapField},
+		Location:   testLocation,
+		Identifier: "RI6",
+		Kind:       common.CompositeKindResource,
+		Members:    &sema.StringMemberOrderedMap{},
+		ExplicitInterfaceConformances: []*sema.InterfaceType{
+			interfaceTypeInheritingCapField,
+		},
 	}
+	elaboration.SetCompositeType(
+		compositeTypeInheritingCapField.ID(),
+		compositeTypeInheritingCapField,
+	)
 
 	tests := []struct {
 		Input  sema.Type
@@ -319,12 +453,12 @@ func TestConvertToEntitledType(t *testing.T) {
 	}{
 		{
 			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.IntType),
-			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.IntType),
+			Output: nil,
 			Name:   "int",
 		},
 		{
 			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, &sema.FunctionType{}),
-			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, &sema.FunctionType{}),
+			Output: nil,
 			Name:   "function",
 		},
 		{
@@ -447,7 +581,9 @@ func TestConvertToEntitledType(t *testing.T) {
 			Name   string
 		}
 		capabilityTest.Input = sema.NewCapabilityType(nil, test.Input)
-		capabilityTest.Output = sema.NewCapabilityType(nil, test.Output)
+		if test.Output != nil {
+			capabilityTest.Output = sema.NewCapabilityType(nil, test.Output)
+		}
 		capabilityTest.Name = "capability " + test.Name
 
 		tests = append(tests, capabilityTest)
@@ -461,38 +597,44 @@ func TestConvertToEntitledType(t *testing.T) {
 			Name   string
 		}
 		optionalTest.Input = sema.NewOptionalType(nil, test.Input)
-		optionalTest.Output = sema.NewOptionalType(nil, test.Output)
+		if test.Output != nil {
+			optionalTest.Output = sema.NewOptionalType(nil, test.Output)
+		}
 		optionalTest.Name = "optional " + test.Name
 
 		tests = append(tests, optionalTest)
 	}
 
-	var compareTypesRecursively func(t *testing.T, expected sema.Type, actual sema.Type)
-	compareTypesRecursively = func(t *testing.T, expected sema.Type, actual sema.Type) {
-		require.IsType(t, expected, actual)
-
-		switch expected := expected.(type) {
-		case *sema.ReferenceType:
-			actual := actual.(*sema.ReferenceType)
-			require.IsType(t, expected.Authorization, actual.Authorization)
-			require.True(t, expected.Authorization.Equal(actual.Authorization))
-			compareTypesRecursively(t, expected.Type, actual.Type)
-		case *sema.OptionalType:
-			actual := actual.(*sema.OptionalType)
-			compareTypesRecursively(t, expected.Type, actual.Type)
-		case *sema.CapabilityType:
-			actual := actual.(*sema.CapabilityType)
-			compareTypesRecursively(t, expected.BorrowType, actual.BorrowType)
-		}
-	}
-
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			convertedType, _ := ConvertToEntitledType(test.Input)
-			compareTypesRecursively(t, convertedType, test.Output)
+
+			inputStaticType := interpreter.ConvertSemaToStaticType(nil, test.Input)
+			convertedType, _ := ConvertToEntitledType(inter, inputStaticType)
+
+			expectedType := interpreter.ConvertSemaToStaticType(nil, test.Output)
+
+			compareTypesRecursively(t, convertedType, expectedType)
 		})
 	}
 
+}
+
+func compareTypesRecursively(t *testing.T, expected, actual interpreter.StaticType) {
+	require.IsType(t, expected, actual)
+
+	switch expected := expected.(type) {
+	case *interpreter.ReferenceStaticType:
+		actual := actual.(*interpreter.ReferenceStaticType)
+		require.IsType(t, expected.Authorization, actual.Authorization)
+		require.True(t, expected.Authorization.Equal(actual.Authorization))
+		compareTypesRecursively(t, expected.ReferencedType, actual.ReferencedType)
+	case *interpreter.OptionalStaticType:
+		actual := actual.(*interpreter.OptionalStaticType)
+		compareTypesRecursively(t, expected.Type, actual.Type)
+	case *interpreter.CapabilityStaticType:
+		actual := actual.(*interpreter.CapabilityStaticType)
+		compareTypesRecursively(t, expected.BorrowType, actual.BorrowType)
+	}
 }
 
 type testEntitlementsMigration struct {
@@ -889,8 +1031,8 @@ func TestConvertToEntitledValue(t *testing.T) {
 			),
 		},
 		{
-			// TODO: no entitlements!
-			Name: "&R{} --> auth(E, G) &R",
+			// NOTE: NOT auth(E, G) &R!
+			Name: "&R{} --> &R",
 			Input: interpreter.NewReferenceStaticType(
 				inter,
 				interpreter.UnauthorizedAccess,
@@ -898,17 +1040,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 			),
 			Output: interpreter.NewReferenceStaticType(
 				inter,
-				interpreter.NewEntitlementSetAuthorization(
-					inter,
-					func() []common.TypeID {
-						return []common.TypeID{
-							eTypeID,
-							gTypeID,
-						}
-					},
-					2,
-					sema.Conjunction,
-				),
+				interpreter.UnauthorizedAccess,
 				rStaticType,
 			),
 		},
@@ -1156,34 +1288,38 @@ func TestConvertToEntitledValue(t *testing.T) {
 			return
 		}
 
-		name := fmt.Sprintf("%s, %s, %s", testCase.Name, valueGenerator.name, typeGenerator.name)
+		expectedValue := valueGenerator.wrap(typeGenerator.wrap(testCase.Output))
 
-		t.Run(name, func(t *testing.T) {
+		convertedValue := convertEntireTestValue(t, inter, storage, testAddress, input)
 
-			expectedValue := valueGenerator.wrap(typeGenerator.wrap(testCase.Output))
-
-			convertedValue := convertEntireTestValue(t, inter, storage, testAddress, input)
-
-			switch convertedValue := convertedValue.(type) {
-			case interpreter.EquatableValue:
-				require.True(t,
-					referencePeekingEqual(convertedValue, expectedValue),
-					"expected: %s\nactual: %s",
-					expectedValue,
-					convertedValue,
-				)
-			default:
-				require.Equal(t, convertedValue, expectedValue)
-			}
-		})
+		switch convertedValue := convertedValue.(type) {
+		case interpreter.EquatableValue:
+			require.True(t,
+				referencePeekingEqual(convertedValue, expectedValue),
+				"expected: %s\nactual: %s",
+				expectedValue,
+				convertedValue,
+			)
+		default:
+			require.Equal(t, convertedValue, expectedValue)
+		}
 	}
 
 	for _, testCase := range tests {
-		for _, valueGenerator := range valueGenerators {
-			for _, typeGenerator := range typeGenerators {
-				test(testCase, valueGenerator, typeGenerator)
+		t.Run(testCase.Name, func(t *testing.T) {
+
+			for _, valueGenerator := range valueGenerators {
+				t.Run(valueGenerator.name, func(t *testing.T) {
+
+					for _, typeGenerator := range typeGenerators {
+						t.Run(typeGenerator.name, func(t *testing.T) {
+
+							test(testCase, valueGenerator, typeGenerator)
+						})
+					}
+				})
 			}
-		}
+		})
 	}
 }
 
