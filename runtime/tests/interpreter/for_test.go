@@ -458,6 +458,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("main")
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
@@ -570,6 +571,7 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("main")
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
 	})
 
@@ -596,7 +598,8 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("main")
-		require.NoError(t, err)
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
 	})
 
 	t.Run("String ref", func(t *testing.T) {
@@ -735,6 +738,7 @@ func TestInterpretStorageReferencesInForLoop(t *testing.T) {
             }`, sema.Config{})
 
 		_, err := inter.Invoke("test")
+		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.DereferenceError{})
 	})
 }

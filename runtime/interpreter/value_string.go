@@ -88,20 +88,24 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 	common.UseMemory(inter, common.NewStringMemoryUsage(0))
 	var builder strings.Builder
 
-	argument.Iterate(inter, func(element Value) (resume bool) {
-		character := element.(CharacterValue)
-		// Construct directly instead of using NewStringMemoryUsage to avoid
-		// having to decrement by 1 due to double counting of empty string.
-		common.UseMemory(inter,
-			common.MemoryUsage{
-				Kind:   common.MemoryKindStringValue,
-				Amount: uint64(len(character.Str)),
-			},
-		)
-		builder.WriteString(character.Str)
+	argument.Iterate(
+		inter,
+		func(element Value) (resume bool) {
+			character := element.(CharacterValue)
+			// Construct directly instead of using NewStringMemoryUsage to avoid
+			// having to decrement by 1 due to double counting of empty string.
+			common.UseMemory(inter,
+				common.MemoryUsage{
+					Kind:   common.MemoryKindStringValue,
+					Amount: uint64(len(character.Str)),
+				},
+			)
+			builder.WriteString(character.Str)
 
-		return true
-	})
+			return true
+		},
+		invocation.LocationRange,
+	)
 
 	return NewUnmeteredStringValue(builder.String())
 }
@@ -131,42 +135,46 @@ func stringFunctionJoin(invocation Invocation) Value {
 	var builder strings.Builder
 	first := true
 
-	stringArray.Iterate(inter, func(element Value) (resume bool) {
+	stringArray.Iterate(
+		inter,
+		func(element Value) (resume bool) {
 
-		// Meter computation for iterating the array.
-		inter.ReportComputation(common.ComputationKindLoop, 1)
+			// Meter computation for iterating the array.
+			inter.ReportComputation(common.ComputationKindLoop, 1)
 
-		// Add separator
-		if !first {
+			// Add separator
+			if !first {
+				// Construct directly instead of using NewStringMemoryUsage to avoid
+				// having to decrement by 1 due to double counting of empty string.
+				common.UseMemory(inter,
+					common.MemoryUsage{
+						Kind:   common.MemoryKindStringValue,
+						Amount: uint64(len(separator.Str)),
+					},
+				)
+				builder.WriteString(separator.Str)
+			}
+			first = false
+
+			str, ok := element.(*StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
 			// Construct directly instead of using NewStringMemoryUsage to avoid
 			// having to decrement by 1 due to double counting of empty string.
 			common.UseMemory(inter,
 				common.MemoryUsage{
 					Kind:   common.MemoryKindStringValue,
-					Amount: uint64(len(separator.Str)),
+					Amount: uint64(len(str.Str)),
 				},
 			)
-			builder.WriteString(separator.Str)
-		}
-		first = false
+			builder.WriteString(str.Str)
 
-		str, ok := element.(*StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		// Construct directly instead of using NewStringMemoryUsage to avoid
-		// having to decrement by 1 due to double counting of empty string.
-		common.UseMemory(inter,
-			common.MemoryUsage{
-				Kind:   common.MemoryKindStringValue,
-				Amount: uint64(len(str.Str)),
-			},
-		)
-		builder.WriteString(str.Str)
-
-		return true
-	})
+			return true
+		},
+		invocation.LocationRange,
+	)
 
 	return NewUnmeteredStringValue(builder.String())
 }

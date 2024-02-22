@@ -114,7 +114,11 @@ func getNestedTypeConstructorValue(parent interpreter.Value, typeName string) *i
 	return constructor
 }
 
-func arrayValueToSlice(inter *interpreter.Interpreter, value interpreter.Value) ([]interpreter.Value, error) {
+func arrayValueToSlice(
+	inter *interpreter.Interpreter,
+	value interpreter.Value,
+	locationRange interpreter.LocationRange,
+) ([]interpreter.Value, error) {
 	array, ok := value.(*interpreter.ArrayValue)
 	if !ok {
 		return nil, errors.NewDefaultUserError("value is not an array")
@@ -122,10 +126,14 @@ func arrayValueToSlice(inter *interpreter.Interpreter, value interpreter.Value) 
 
 	result := make([]interpreter.Value, 0, array.Count())
 
-	array.Iterate(inter, func(element interpreter.Value) (resume bool) {
-		result = append(result, element)
-		return true
-	})
+	array.Iterate(
+		inter,
+		func(element interpreter.Value) (resume bool) {
+			result = append(result, element)
+			return true
+		},
+		locationRange,
+	)
 
 	return result, nil
 }
@@ -183,7 +191,11 @@ func getConstructor(inter *interpreter.Interpreter, typeName string) *interprete
 	return resultStatusConstructor
 }
 
-func addressArrayValueToSlice(inter *interpreter.Interpreter, accountsValue interpreter.Value) []common.Address {
+func addressArrayValueToSlice(
+	inter *interpreter.Interpreter,
+	accountsValue interpreter.Value,
+	locationRange interpreter.LocationRange,
+) []common.Address {
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -191,16 +203,20 @@ func addressArrayValueToSlice(inter *interpreter.Interpreter, accountsValue inte
 
 	addresses := make([]common.Address, 0)
 
-	accountsArray.Iterate(inter, func(element interpreter.Value) (resume bool) {
-		address, ok := element.(interpreter.AddressValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+	accountsArray.Iterate(
+		inter,
+		func(element interpreter.Value) (resume bool) {
+			address, ok := element.(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		addresses = append(addresses, common.Address(address))
+			addresses = append(addresses, common.Address(address))
 
-		return true
-	})
+			return true
+		},
+		locationRange,
+	)
 
 	return addresses
 }
@@ -218,18 +234,22 @@ func accountsArrayValueToSlice(
 
 	accounts := make([]*Account, 0)
 
-	accountsArray.Iterate(inter, func(element interpreter.Value) (resume bool) {
-		accountValue, ok := element.(interpreter.MemberAccessibleValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+	accountsArray.Iterate(
+		inter,
+		func(element interpreter.Value) (resume bool) {
+			accountValue, ok := element.(interpreter.MemberAccessibleValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		account := accountFromValue(inter, accountValue, locationRange)
+			account := accountFromValue(inter, accountValue, locationRange)
 
-		accounts = append(accounts, account)
+			accounts = append(accounts, account)
 
-		return true
-	})
+			return true
+		},
+		locationRange,
+	)
 
 	return accounts
 }

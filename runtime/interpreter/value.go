@@ -1841,25 +1841,55 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 	})
 }
 
-func (v *ArrayValue) Iterate(interpreter *Interpreter, f func(element Value) (resume bool)) {
-	v.iterate(interpreter, v.array.Iterate, f)
+func (v *ArrayValue) Iterate(
+	interpreter *Interpreter,
+	f func(element Value) (resume bool),
+	locationRange LocationRange,
+) {
+	v.iterate(
+		interpreter,
+		v.array.Iterate,
+		f,
+		locationRange,
+	)
 }
 
-func (v *ArrayValue) IterateLoaded(interpreter *Interpreter, f func(element Value) (resume bool)) {
-	v.iterate(interpreter, v.array.IterateLoadedValues, f)
+func (v *ArrayValue) IterateLoaded(
+	interpreter *Interpreter,
+	f func(element Value) (resume bool),
+	locationRange LocationRange,
+) {
+	v.iterate(
+		interpreter,
+		v.array.IterateLoadedValues,
+		f,
+		locationRange,
+	)
 }
 
 func (v *ArrayValue) iterate(
 	interpreter *Interpreter,
 	atreeIterate func(fn atree.ArrayIterationFunc) error,
 	f func(element Value) (resume bool),
+	locationRange LocationRange,
 ) {
 	iterate := func() {
 		err := atreeIterate(func(element atree.Value) (resume bool, err error) {
 			// atree.Array iteration provides low-level atree.Value,
 			// convert to high-level interpreter.Value
+			elementValue := MustConvertStoredValue(interpreter, element)
 
-			resume = f(MustConvertStoredValue(interpreter, element))
+			// Each element must be transferred before passing onto the function.
+			transferredElement := elementValue.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+			)
+
+			resume = f(transferredElement)
 
 			return resume, nil
 		})
@@ -1868,18 +1898,19 @@ func (v *ArrayValue) iterate(
 		}
 	}
 
-	if v.IsResourceKinded(interpreter) {
-		interpreter.withMutationPrevention(v.StorageID(), iterate)
-	} else {
-		iterate()
-	}
+	interpreter.withMutationPrevention(v.StorageID(), iterate)
 }
 
 func (v *ArrayValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
-	v.Iterate(interpreter, func(element Value) (resume bool) {
-		walkChild(element)
-		return true
-	})
+	v.Iterate(
+		interpreter,
+		func(element Value) (resume bool) {
+			walkChild(element)
+			return true
+		},
+		// TODO: Not supposed to panic with container mutation error.
+		EmptyLocationRange,
+	)
 }
 
 func (v *ArrayValue) StaticType(_ *Interpreter) StaticType {
@@ -1889,16 +1920,21 @@ func (v *ArrayValue) StaticType(_ *Interpreter) StaticType {
 
 func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
 	importable := true
-	v.Iterate(inter, func(element Value) (resume bool) {
-		if !element.IsImportable(inter) {
-			importable = false
-			// stop iteration
-			return false
-		}
+	v.Iterate(
+		inter,
+		func(element Value) (resume bool) {
+			if !element.IsImportable(inter) {
+				importable = false
+				// stop iteration
+				return false
+			}
 
-		// continue iteration
-		return true
-	})
+			// continue iteration
+			return true
+		},
+		// TODO: Not supposed to panic with container mutation error.
+		EmptyLocationRange,
+	)
 
 	return importable
 }
@@ -1946,7 +1982,7 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v)
+	interpreter.invalidateReferencedResources(v, locationRange)
 
 	v.array = nil
 }
@@ -2292,16 +2328,20 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, locationRange Location
 
 	var counter int64
 	var result bool
-	v.Iterate(interpreter, func(element Value) (resume bool) {
-		if needleEquatable.Equal(interpreter, locationRange, element) {
-			result = true
-			// stop iteration
-			return false
-		}
-		counter++
-		// continue iteration
-		return true
-	})
+	v.Iterate(
+		interpreter,
+		func(element Value) (resume bool) {
+			if needleEquatable.Equal(interpreter, locationRange, element) {
+				result = true
+				// stop iteration
+				return false
+			}
+			counter++
+			// continue iteration
+			return true
+		},
+		locationRange,
+	)
 
 	if result {
 		value := NewIntValueFromInt64(interpreter, counter)
@@ -2322,15 +2362,19 @@ func (v *ArrayValue) Contains(
 	}
 
 	var result bool
-	v.Iterate(interpreter, func(element Value) (resume bool) {
-		if needleEquatable.Equal(interpreter, locationRange, element) {
-			result = true
-			// stop iteration
-			return false
-		}
-		// continue iteration
-		return true
-	})
+	v.Iterate(
+		interpreter,
+		func(element Value) (resume bool) {
+			if needleEquatable.Equal(interpreter, locationRange, element) {
+				result = true
+				// stop iteration
+				return false
+			}
+			// continue iteration
+			return true
+		},
+		locationRange,
+	)
 
 	return AsBoolValue(result)
 }
@@ -2692,27 +2736,31 @@ func (v *ArrayValue) ConformsToStaticType(
 
 	var elementMismatch bool
 
-	v.Iterate(interpreter, func(element Value) (resume bool) {
+	v.Iterate(
+		interpreter,
+		func(element Value) (resume bool) {
 
-		if !interpreter.IsSubType(element.StaticType(interpreter), elementType) {
-			elementMismatch = true
-			// stop iteration
-			return false
-		}
+			if !interpreter.IsSubType(element.StaticType(interpreter), elementType) {
+				elementMismatch = true
+				// stop iteration
+				return false
+			}
 
-		if !element.ConformsToStaticType(
-			interpreter,
-			locationRange,
-			results,
-		) {
-			elementMismatch = true
-			// stop iteration
-			return false
-		}
+			if !element.ConformsToStaticType(
+				interpreter,
+				locationRange,
+				results,
+			) {
+				elementMismatch = true
+				// stop iteration
+				return false
+			}
 
-		// continue iteration
-		return true
-	})
+			// continue iteration
+			return true
+		},
+		locationRange,
+	)
 
 	return !elementMismatch
 }
@@ -2869,7 +2917,7 @@ func (v *ArrayValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v)
+		interpreter.invalidateReferencedResources(v, locationRange)
 
 		v.array = nil
 	}
@@ -3279,9 +3327,9 @@ func (v *ArrayValue) ForEach(
 	interpreter *Interpreter,
 	_ sema.Type,
 	function func(value Value) (resume bool),
-	_ LocationRange,
+	locationRange LocationRange,
 ) {
-	v.Iterate(interpreter, function)
+	v.Iterate(interpreter, function, locationRange)
 }
 
 func (v *ArrayValue) ToVariableSized(
@@ -16828,7 +16876,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v)
+	interpreter.invalidateReferencedResources(v, locationRange)
 
 	v.dictionary = nil
 }
@@ -17673,7 +17721,7 @@ func (v *CompositeValue) Transfer(
 		// This allows raising an error when the resource is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v)
+		interpreter.invalidateReferencedResources(v, locationRange)
 
 		v.dictionary = nil
 	}
@@ -18187,7 +18235,17 @@ func (v *CompositeValue) ForEach(
 			return
 		}
 
-		if !function(value) {
+		// Each element must be transferred before passing onto the function.
+		transferredValue := value.Transfer(
+			interpreter,
+			locationRange,
+			atree.Address{},
+			false,
+			nil,
+			nil,
+		)
+
+		if !function(transferredValue) {
 			return
 		}
 	}
@@ -18514,11 +18572,8 @@ func (v *DictionaryValue) iterateKeys(
 			panic(errors.NewExternalError(err))
 		}
 	}
-	if v.IsResourceKinded(interpreter) {
-		interpreter.withMutationPrevention(v.StorageID(), iterate)
-	} else {
-		iterate()
-	}
+
+	interpreter.withMutationPrevention(v.StorageID(), iterate)
 }
 
 func (v *DictionaryValue) Iterate(interpreter *Interpreter, f func(key, value Value) (resume bool)) {
@@ -18550,11 +18605,8 @@ func (v *DictionaryValue) iterate(
 			panic(errors.NewExternalError(err))
 		}
 	}
-	if v.IsResourceKinded(interpreter) {
-		interpreter.withMutationPrevention(v.StorageID(), iterate)
-	} else {
-		iterate()
-	}
+
+	interpreter.withMutationPrevention(v.StorageID(), iterate)
 }
 
 type DictionaryIterator struct {
@@ -18663,7 +18715,7 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 	v.isDestroyed = true
 
-	interpreter.invalidateReferencedResources(v)
+	interpreter.invalidateReferencedResources(v, locationRange)
 
 	v.dictionary = nil
 }
@@ -18707,11 +18759,7 @@ func (v *DictionaryValue) ForEachKey(
 		}
 	}
 
-	if v.IsResourceKinded(interpreter) {
-		interpreter.withMutationPrevention(v.StorageID(), iterate)
-	} else {
-		iterate()
-	}
+	interpreter.withMutationPrevention(v.StorageID(), iterate)
 }
 
 func (v *DictionaryValue) ContainsKey(
@@ -19457,7 +19505,7 @@ func (v *DictionaryValue) Transfer(
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
 
-		interpreter.invalidateReferencedResources(v)
+		interpreter.invalidateReferencedResources(v, locationRange)
 
 		v.dictionary = nil
 	}

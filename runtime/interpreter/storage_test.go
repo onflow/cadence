@@ -205,7 +205,7 @@ func TestArrayStorage(t *testing.T) {
 		require.True(t, bool(value.Contains(inter, EmptyLocationRange, element)))
 
 		// array + original composite element + new copy of composite element
-		require.Equal(t, 3, storage.BasicSlabStorage.Count())
+		require.Equal(t, 4, storage.BasicSlabStorage.Count())
 
 		retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID())
 		require.NoError(t, err)
@@ -256,7 +256,7 @@ func TestArrayStorage(t *testing.T) {
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
 
 		// array + original composite element + new copy of composite element
-		require.Equal(t, 3, storage.BasicSlabStorage.Count())
+		require.Equal(t, 4, storage.BasicSlabStorage.Count())
 
 		_, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID())
 		require.NoError(t, err)
@@ -268,7 +268,7 @@ func TestArrayStorage(t *testing.T) {
 			0,
 		)
 
-		require.Equal(t, 3, storage.BasicSlabStorage.Count())
+		require.Equal(t, 4, storage.BasicSlabStorage.Count())
 
 		retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID())
 		require.NoError(t, err)

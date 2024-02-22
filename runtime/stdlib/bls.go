@@ -57,22 +57,25 @@ func newBLSAggregatePublicKeysFunction(
 			)
 
 			publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
-			publicKeysValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
-				publicKeyValue, ok := element.(*interpreter.CompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+			publicKeysValue.Iterate(
+				inter,
+				func(element interpreter.Value) (resume bool) {
+					publicKeyValue, ok := element.(*interpreter.CompositeValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
 
-				publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
-				if err != nil {
-					panic(err)
-				}
+					publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
+					if err != nil {
+						panic(err)
+					}
 
-				publicKeys = append(publicKeys, publicKey)
+					publicKeys = append(publicKeys, publicKey)
 
-				// Continue iteration
-				return true
-			})
+					// Continue iteration
+					return true
+				},
+				locationRange)
 
 			var err error
 			var aggregatedPublicKey *PublicKey
@@ -127,22 +130,26 @@ func newBLSAggregateSignaturesFunction(
 			)
 
 			bytesArray := make([][]byte, 0, signaturesValue.Count())
-			signaturesValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
-				signature, ok := element.(*interpreter.ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+			signaturesValue.Iterate(
+				inter,
+				func(element interpreter.Value) (resume bool) {
+					signature, ok := element.(*interpreter.ArrayValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
 
-				bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature, invocation.LocationRange)
-				if err != nil {
-					panic(err)
-				}
+					bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature, invocation.LocationRange)
+					if err != nil {
+						panic(err)
+					}
 
-				bytesArray = append(bytesArray, bytes)
+					bytesArray = append(bytesArray, bytes)
 
-				// Continue iteration
-				return true
-			})
+					// Continue iteration
+					return true
+				},
+				locationRange,
+			)
 
 			var err error
 			var aggregatedSignature []byte
