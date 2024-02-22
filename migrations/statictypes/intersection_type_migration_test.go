@@ -443,6 +443,8 @@ func TestIntersectionTypeMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
+	require.Empty(t, reporter.errors)
+
 	// Check reported migrated paths
 	for identifier, test := range testCases {
 		key := struct {
@@ -611,6 +613,8 @@ func TestIntersectionTypeRehash(t *testing.T) {
 		err := migration.Commit()
 		require.NoError(t, err)
 
+		require.Empty(t, reporter.errors)
+
 		require.Equal(t,
 			map[struct {
 				interpreter.StorageKey
@@ -775,6 +779,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			err := migration.Commit()
 			require.NoError(t, err)
 
+			require.Empty(t, reporter.errors)
+
 			require.Equal(t,
 				map[struct {
 					interpreter.StorageKey
@@ -913,6 +919,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			err := migration.Commit()
 			require.NoError(t, err)
+
+			require.Empty(t, reporter.errors)
 
 			require.Equal(t,
 				map[struct {
@@ -1114,6 +1122,8 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 			err = migration.Commit()
 			require.NoError(t, err)
 
+			require.Empty(t, reporter.errors)
+
 			expectLegacyTypeConverted := convertCompositeType && legacyType != nil
 			expectInterfaceTypeConverted := convertInterfaceType && len(interfaceTypeQualifiedIdentifiers) > 0
 			expectMigration := len(interfaceTypeQualifiedIdentifiers) >= 2 ||
@@ -1281,6 +1291,8 @@ func TestIntersectionTypeMigrationWithTypeConverters(t *testing.T) {
 
 		err = migration.Commit()
 		require.NoError(t, err)
+
+		require.Empty(t, reporter.errors)
 
 		key := struct {
 			interpreter.StorageKey

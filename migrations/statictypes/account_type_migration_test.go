@@ -42,6 +42,7 @@ type testReporter struct {
 		interpreter.StorageKey
 		interpreter.StorageMapKey
 	}]struct{}
+	errors []error
 }
 
 func newTestReporter() *testReporter {
@@ -72,8 +73,9 @@ func (t *testReporter) Error(
 	_ interpreter.StorageKey,
 	_ interpreter.StorageMapKey,
 	_ string,
-	_ error,
+	err error,
 ) {
+	t.errors = append(t.errors, err)
 }
 
 func TestAccountTypeInTypeValueMigration(t *testing.T) {
@@ -423,6 +425,8 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 
 	err = migration.Commit()
 	require.NoError(t, err)
+
+	require.Empty(t, reporter.errors)
 
 	// Check reported migrated paths
 	for identifier, test := range testCases {
@@ -1079,6 +1083,8 @@ func TestAccountTypeRehash(t *testing.T) {
 
 		err := migration.Commit()
 		require.NoError(t, err)
+
+		require.Empty(t, reporter.errors)
 
 		require.Equal(t,
 			map[struct {

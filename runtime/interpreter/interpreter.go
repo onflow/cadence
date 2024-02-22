@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 	"strconv"
 	"time"
 
@@ -4581,15 +4582,26 @@ func (interpreter *Interpreter) AllElaborations() (elaborations map[common.Locat
 
 	elaborations = map[common.Location]*sema.Elaboration{}
 
-	// Ensure the program for this location is loaded,
-	// so its checker is available
+	allInterpreters := interpreter.SharedState.allInterpreters
 
-	for location := range interpreter.SharedState.allInterpreters { //nolint:maprange
-		subInterpreter := interpreter.EnsureLoaded(location)
-		if subInterpreter == nil || subInterpreter.Program == nil {
-			return nil
+	locations := make([]common.Location, 0, len(allInterpreters))
+
+	for location := range allInterpreters { //nolint:maprange
+		locations = append(locations, location)
+	}
+
+	sort.Slice(locations, func(i, j int) bool {
+		a := locations[i]
+		b := locations[j]
+		return a.ID() < b.ID()
+	})
+
+	for _, location := range locations {
+		elaboration := interpreter.getElaboration(location)
+		if elaboration == nil {
+			panic(errors.NewUnexpectedError("missing elaboration for location %s", location))
 		}
-		elaborations[location] = subInterpreter.Program.Elaboration
+		elaborations[location] = elaboration
 	}
 
 	return
