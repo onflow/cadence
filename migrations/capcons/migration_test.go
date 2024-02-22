@@ -476,7 +476,7 @@ func testPathCapabilityValueMigration(
 
 	migration := migrations.NewStorageMigration(inter, storage)
 
-	capabilityIDs := &CapabilityIDMapping{}
+	capabilityMapping := &CapabilityMapping{}
 
 	reporter := &testMigrationReporter{}
 
@@ -489,7 +489,7 @@ func testPathCapabilityValueMigration(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
-				CapabilityIDs:      capabilityIDs,
+				CapabilityMapping:  capabilityMapping,
 				AccountIDGenerator: &testAccountIDGenerator{},
 				Reporter:           reporter,
 			},
@@ -505,8 +505,8 @@ func testPathCapabilityValueMigration(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
-				CapabilityIDs: capabilityIDs,
-				Reporter:      reporter,
+				CapabilityMapping: capabilityMapping,
+				Reporter:          reporter,
 			},
 		),
 	)
@@ -1325,7 +1325,7 @@ func testLinkMigration(
 
 	migration := migrations.NewStorageMigration(inter, storage)
 
-	capabilityIDs := &CapabilityIDMapping{}
+	capabilityMapping := &CapabilityMapping{}
 
 	reporter := &testMigrationReporter{}
 
@@ -1338,7 +1338,7 @@ func testLinkMigration(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
-				CapabilityIDs:      capabilityIDs,
+				CapabilityMapping:  capabilityMapping,
 				AccountIDGenerator: &testAccountIDGenerator{},
 				Reporter:           reporter,
 			},
@@ -2035,7 +2035,7 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 
 	migration := migrations.NewStorageMigration(inter, storage)
 
-	capabilityIDs := &CapabilityIDMapping{}
+	capabilityMapping := &CapabilityMapping{}
 
 	reporter := &testMigrationReporter{}
 
@@ -2048,7 +2048,7 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
-				CapabilityIDs:      capabilityIDs,
+				CapabilityMapping:  capabilityMapping,
 				AccountIDGenerator: &testAccountIDGenerator{},
 				Reporter:           reporter,
 			},
@@ -2064,8 +2064,8 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
-				CapabilityIDs: capabilityIDs,
-				Reporter:      reporter,
+				CapabilityMapping: capabilityMapping,
+				Reporter:          reporter,
 			},
 		),
 	)
@@ -2094,6 +2094,254 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 	  fun main() {
 	      getAuthAccount<auth(ClaimInboxCapability) &Account>(0x2)
 	          .inbox.claim<&Int>("foo", provider: 0x1)!
+	  }
+	`
+
+	_, err = rt.ExecuteScript(
+		runtime.Script{
+			Source: []byte(checkScript),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+}
+
+func TestUntypedPathCapabilityValueMigration(t *testing.T) {
+
+	t.Parallel()
+
+	// Equivalent to: &Int
+	linkBorrowType := interpreter.NewReferenceStaticType(
+		nil,
+		interpreter.UnauthorizedAccess,
+		interpreter.PrimitiveStaticTypeInt,
+	)
+
+	// Equivalent to: getCapability(/public/test)
+	capabilityValue := &interpreter.PathCapabilityValue{ //nolint:staticcheck
+		// NOTE: no borrow type
+		BorrowType: nil,
+		Path: interpreter.PathValue{
+			Domain:     common.PathDomainPublic,
+			Identifier: testPathIdentifier,
+		},
+		Address: interpreter.AddressValue(testAddress),
+	}
+
+	pathLinks := []testLink{
+		// Equivalent to:
+		//   link<&Int>(/public/test, target: /private/test)
+		{
+			sourcePath: interpreter.PathValue{
+				Domain:     common.PathDomainPublic,
+				Identifier: testPathIdentifier,
+			},
+			targetPath: interpreter.PathValue{
+				Domain:     common.PathDomainPrivate,
+				Identifier: testPathIdentifier,
+			},
+			borrowType: linkBorrowType,
+		},
+		// Equivalent to:
+		//   link<&Int>(/private/test, target: /storage/test)
+		{
+			sourcePath: interpreter.PathValue{
+				Domain:     common.PathDomainPrivate,
+				Identifier: testPathIdentifier,
+			},
+			targetPath: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: testPathIdentifier,
+			},
+			borrowType: linkBorrowType,
+		},
+	}
+
+	expectedMigrations := []testMigration{
+		{
+			storageKey: interpreter.StorageKey{
+				Address: testAddress,
+				Key:     common.PathDomainPrivate.Identifier(),
+			},
+			storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+			migration:     "LinkValueMigration",
+		},
+		{
+			storageKey: interpreter.StorageKey{
+				Address: testAddress,
+				Key:     common.PathDomainPublic.Identifier(),
+			},
+			storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+			migration:     "LinkValueMigration",
+		},
+		{
+			storageKey: interpreter.StorageKey{
+				Address: testAddress,
+				Key:     common.PathDomainStorage.Identifier(),
+			},
+			storageMapKey: interpreter.StringStorageMapKey("cap"),
+			migration:     "CapabilityValueMigration",
+		},
+	}
+
+	expectedPathMigrations := []testCapConsPathCapabilityMigration{
+		{
+			accountAddress: testAddress,
+			addressPath: interpreter.AddressPath{
+				Address: testAddress,
+				Path: interpreter.NewUnmeteredPathValue(
+					common.PathDomainPublic,
+					testPathIdentifier,
+				),
+			},
+			// NOTE: link / cap con's borrow type is used
+			borrowType: linkBorrowType,
+		},
+	}
+
+	rt := NewTestInterpreterRuntime()
+
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{testAddress}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	// Setup
+
+	setupTransactionLocation := nextTransactionLocation()
+
+	environment := runtime.NewScriptInterpreterEnvironment(runtime.Config{})
+
+	// Inject the path capability value.
+	//
+	// We don't have a way to create a path capability value in a Cadence program anymore,
+	// so we have to inject it manually.
+
+	environment.DeclareValue(
+		stdlib.StandardLibraryValue{
+			Name:  "cap",
+			Type:  &sema.CapabilityType{},
+			Kind:  common.DeclarationKindConstant,
+			Value: capabilityValue,
+		},
+		setupTransactionLocation,
+	)
+
+	// Create and store path links
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	storeTestPathLinks(t, pathLinks, storage, inter)
+
+	err = storage.Commit(inter, false)
+	require.NoError(t, err)
+
+	// Save capability values into account
+
+	// language=cadence
+	setupTx := `
+      transaction {
+          prepare(signer: auth(SaveValue) &Account) {
+             signer.storage.save(42, to: /storage/test)
+             signer.storage.save(cap, to: /storage/cap)
+          }
+      }
+    `
+
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: []byte(setupTx),
+		},
+		runtime.Context{
+			Interface:   runtimeInterface,
+			Environment: environment,
+			Location:    setupTransactionLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	// Migrate
+
+	migration := migrations.NewStorageMigration(inter, storage)
+
+	capabilityMapping := &CapabilityMapping{}
+
+	reporter := &testMigrationReporter{}
+
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			&LinkValueMigration{
+				CapabilityMapping:  capabilityMapping,
+				AccountIDGenerator: &testAccountIDGenerator{},
+				Reporter:           reporter,
+			},
+		),
+	)
+
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			&CapabilityValueMigration{
+				CapabilityMapping: capabilityMapping,
+				Reporter:          reporter,
+			},
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Check migrated capabilities
+
+	assert.Equal(t,
+		expectedMigrations,
+		reporter.migrations,
+	)
+	assert.Equal(t,
+		expectedPathMigrations,
+		reporter.pathCapabilityMigrations,
+	)
+	require.Nil(t, reporter.missingCapabilityIDs)
+	require.Empty(t, reporter.errors)
+
+	// Check
+
+	// language=cadence
+	checkScript := `
+	  access(all)
+	  fun main() {
+	      let cap = getAuthAccount<auth(CopyValue) &Account>(0x1)
+	          .storage.copy<Capability>(from: /storage/cap)!
+          assert(*cap.borrow<&Int>()! == 42)
 	  }
 	`
 
