@@ -35,6 +35,8 @@ type CadenceV042ToV1ContractUpdateValidator struct {
 	currentRestrictedTypeUpgradeRestrictions []*ast.NominalType
 
 	underlyingUpdateValidator *ContractUpdateValidator
+
+	checkUserDefinedType func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool)
 }
 
 // NewCadenceV042ToV1ContractUpdateValidator initializes and returns a validator, without performing any validation.
@@ -57,6 +59,13 @@ func NewCadenceV042ToV1ContractUpdateValidator(
 }
 
 var _ UpdateValidator = &CadenceV042ToV1ContractUpdateValidator{}
+
+func (validator *CadenceV042ToV1ContractUpdateValidator) WithUserDefinedTypeChangeChecker(
+	typeChangeCheckFunc func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool),
+) *CadenceV042ToV1ContractUpdateValidator {
+	validator.checkUserDefinedType = typeChangeCheckFunc
+	return validator
+}
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) getCurrentDeclaration() ast.Declaration {
 	return validator.underlyingUpdateValidator.getCurrentDeclaration()
@@ -99,6 +108,31 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) Validate() error {
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) report(err error) {
 	validator.underlyingUpdateValidator.report(err)
+}
+
+func (validator *CadenceV042ToV1ContractUpdateValidator) typeIDFromType(typ ast.Type) (
+	common.TypeID,
+	error,
+) {
+	switch typ := typ.(type) {
+	case *ast.NominalType:
+		id, _ := validator.idAndLocationOfQualifiedType(typ)
+		return id, nil
+	case *ast.IntersectionType:
+		var interfaceTypeIDs []common.TypeID
+		for _, typ := range typ.Types {
+			typeID, err := validator.typeIDFromType(typ)
+			if err != nil {
+				return "", err
+			}
+			interfaceTypeIDs = append(interfaceTypeIDs, typeID)
+		}
+
+		return sema.FormatIntersectionTypeID[common.TypeID](interfaceTypeIDs), nil
+	default:
+		// For now, only needs to support nominal types and intersection types.
+		return "", errors.NewDefaultUserError("Unsupported type")
+	}
 }
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) idAndLocationOfQualifiedType(typ *ast.NominalType) (
@@ -348,6 +382,37 @@ typeSwitch:
 				}
 			}
 		}
+
+	case *ast.NominalType:
+		if validator.checkUserDefinedType == nil {
+			break
+		}
+
+		if _, isbuiltinType := builtinTypes[oldType.String()]; !isbuiltinType {
+			oldTypeID, err := validator.typeIDFromType(oldType)
+			if err != nil {
+				break
+			}
+
+			newTypeID, err := validator.typeIDFromType(newType)
+			if err != nil {
+				break
+			}
+
+			checked, valid := validator.checkUserDefinedType(oldTypeID, newTypeID)
+
+			// If there are no custom rules for this type,
+			// do the default type comparison.
+			if !checked {
+				break
+			}
+
+			if valid {
+				return nil
+			}
+
+			return newTypeMismatchError(oldType, newType)
+		}
 	}
 
 	// If the new/old type is non-storable,
@@ -432,6 +497,19 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkDeclarationKindCha
 		Range:   ast.NewUnmeteredRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
 	})
 	return false
+}
+
+var builtinTypes = map[string]struct{}{}
+
+func init() {
+	err := sema.BaseTypeActivation.ForEach(func(s string, _ *sema.Variable) error {
+		builtinTypes[s] = struct{}{}
+		return nil
+	})
+
+	if err != nil {
+		panic(err)
+	}
 }
 
 // AuthorizationMismatchError is reported during a contract upgrade,
