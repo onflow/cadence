@@ -120,14 +120,14 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) idAndLocationOfQualifie
 	rootIdentifier := validator.TypeComparator.RootDeclIdentifier.Identifier
 	location := validator.underlyingUpdateValidator.location
 
-	if typIdentifier != rootIdentifier &&
-		validator.TypeComparator.foundIdentifierImportLocations[typ.Identifier.Identifier] == nil {
+	foundLocations := validator.TypeComparator.foundIdentifierImportLocations
+
+	if typIdentifier != rootIdentifier && foundLocations[typIdentifier] == nil {
 		qualifiedString = fmt.Sprintf("%s.%s", rootIdentifier, qualifiedString)
 		return common.NewTypeIDFromQualifiedName(nil, location, qualifiedString), location
-
 	}
 
-	if loc := validator.TypeComparator.foundIdentifierImportLocations[typ.Identifier.Identifier]; loc != nil {
+	if loc := foundLocations[typIdentifier]; loc != nil {
 		location = loc
 	}
 
@@ -138,7 +138,11 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) getEntitlementType(
 	entitlement *ast.NominalType,
 ) *sema.EntitlementType {
 	typeID, location := validator.idAndLocationOfQualifiedType(entitlement)
-	return validator.newElaborations[location].EntitlementType(typeID)
+	elaboration, ok := validator.newElaborations[location]
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	return elaboration.EntitlementType(typeID)
 }
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) getEntitlementSetAccess(
@@ -346,8 +350,25 @@ typeSwitch:
 		}
 	}
 
+	// If the new/old type is non-storable,
+	// then changing the type of this field has no impact to the storage.
+	if isNonStorableType(oldType) || isNonStorableType(newType) {
+		return nil
+	}
+
 	return oldType.CheckEqual(newType, validator)
 
+}
+
+func isNonStorableType(typ ast.Type) bool {
+	switch typ := typ.(type) {
+	case *ast.ReferenceType, *ast.FunctionType:
+		return true
+	case *ast.OptionalType:
+		return isNonStorableType(typ.Type)
+	default:
+		return false
+	}
 }
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) checkField(oldField *ast.FieldDeclaration, newField *ast.FieldDeclaration) {

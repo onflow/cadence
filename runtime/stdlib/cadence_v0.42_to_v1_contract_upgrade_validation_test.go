@@ -67,29 +67,40 @@ func testContractUpdate(t *testing.T, oldCode string, newCode string) error {
 	return upgradeValidator.Validate()
 }
 
-func testContractUpdateWithImports(t *testing.T, oldCode, oldImport string, newCode, newImport string) error {
+func testContractUpdateWithImports(
+	t *testing.T,
+	oldCode string,
+	newCode string,
+	newImports map[common.Location]string,
+) error {
 	oldProgram, err := old_parser.ParseProgram(nil, []byte(oldCode), old_parser.Config{})
 	require.NoError(t, err)
 
 	newProgram, err := parser.ParseProgram(nil, []byte(newCode), parser.Config{})
 	require.NoError(t, err)
 
-	newImportedProgram, err := parser.ParseProgram(nil, []byte(newImport), parser.Config{})
-	require.NoError(t, err)
+	elaborations := map[common.Location]*sema.Elaboration{}
 
-	importedChecker, err := sema.NewChecker(
-		newImportedProgram,
-		utils.ImportedLocation,
-		nil,
-		&sema.Config{
-			AccessCheckMode:    sema.AccessCheckModeStrict,
-			AttachmentsEnabled: true,
-		},
-	)
+	for location, code := range newImports {
+		newImportedProgram, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
+		require.NoError(t, err)
 
-	require.NoError(t, err)
-	err = importedChecker.Check()
-	require.NoError(t, err)
+		importedChecker, err := sema.NewChecker(
+			newImportedProgram,
+			location,
+			nil,
+			&sema.Config{
+				AccessCheckMode:    sema.AccessCheckModeStrict,
+				AttachmentsEnabled: true,
+			},
+		)
+
+		require.NoError(t, err)
+		err = importedChecker.Check()
+		require.NoError(t, err)
+
+		elaborations[location] = importedChecker.Elaboration
+	}
 
 	checker, err := sema.NewChecker(
 		newProgram,
@@ -97,10 +108,28 @@ func testContractUpdateWithImports(t *testing.T, oldCode, oldImport string, newC
 		nil,
 		&sema.Config{
 			AccessCheckMode: sema.AccessCheckModeStrict,
-			ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+			ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+				importedElaboration := elaborations[location]
 				return sema.ElaborationImport{
-					Elaboration: importedChecker.Elaboration,
+					Elaboration: importedElaboration,
 				}, nil
+			},
+			LocationHandler: func(identifiers []ast.Identifier, location common.Location) (
+				locations []sema.ResolvedLocation, err error,
+			) {
+				if addressLocation, ok := location.(common.AddressLocation); ok && len(identifiers) == 1 {
+					location = common.AddressLocation{
+						Name:    identifiers[0].Identifier,
+						Address: addressLocation.Address,
+					}
+				}
+
+				locations = append(locations, sema.ResolvedLocation{
+					Location:    location,
+					Identifiers: identifiers,
+				})
+
+				return
 			},
 			AttachmentsEnabled: true,
 		})
@@ -108,6 +137,8 @@ func testContractUpdateWithImports(t *testing.T, oldCode, oldImport string, newC
 
 	err = checker.Check()
 	require.NoError(t, err)
+
+	elaborations[utils.TestLocation] = checker.Elaboration
 
 	upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 		utils.TestLocation,
@@ -119,10 +150,8 @@ func testContractUpdateWithImports(t *testing.T, oldCode, oldImport string, newC
 		},
 		oldProgram,
 		newProgram,
-		map[common.Location]*sema.Elaboration{
-			utils.TestLocation:     checker.Elaboration,
-			utils.ImportedLocation: importedChecker.Elaboration,
-		})
+		elaborations,
+	)
 	return upgradeValidator.Validate()
 }
 
@@ -526,6 +555,66 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 		err := testContractUpdate(t, oldCode, newCode)
 
+		require.NoError(t, err)
+	})
+
+	t.Run("changing to a non-storable types", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) struct Foo {
+                    access(all) var a: Int
+                    init() {
+                        self.a = 0
+                    }
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) struct Foo {
+                    access(all) var a: &Int?
+                    init() {
+                        self.a = nil
+                    }
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("changing from a non-storable types", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) struct Foo {
+                    access(all) var a: &Int?
+                    init() {
+                        self.a = nil
+                    }
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) struct Foo {
+                    access(all) var a: Int
+                    init() {
+                        self.a = 0
+                    }
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
 		require.NoError(t, err)
 	})
 }
@@ -1166,16 +1255,8 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		t.Parallel()
 
-		const oldImport = `
-            pub contract TestImport {
-                pub resource interface I {
-                    pub fun foo()
-                }
-            }
-        `
-
 		const oldCode = `
-            import TestImport from "imported"
+            import TestImport from 0x01
 
             pub contract Test {
                 pub resource R:TestImport.I {
@@ -1199,7 +1280,7 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
         `
 
 		const newCode = `
-            import TestImport from "imported"
+            import TestImport from 0x01
 
             access(all) contract Test {
                 access(all) entitlement F
@@ -1215,7 +1296,17 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
             }
         `
 
-		err := testContractUpdateWithImports(t, oldCode, oldImport, newCode, newImport)
+		err := testContractUpdateWithImports(
+			t,
+			oldCode,
+			newCode,
+			map[common.Location]string{
+				common.AddressLocation{
+					Name:    "TestImport",
+					Address: common.MustBytesToAddress([]byte{0x1}),
+				}: newImport,
+			},
+		)
 
 		require.NoError(t, err)
 	})
@@ -1270,16 +1361,8 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
 
 		t.Parallel()
 
-		const oldImport = `
-            pub contract TestImport {
-                pub resource interface I {
-                    pub fun foo()
-                }
-            }
-        `
-
 		const oldCode = `
-            import TestImport from "imported" 
+            import TestImport from 0x01
 
             pub contract Test {
                 pub resource R:TestImport.I {
@@ -1303,7 +1386,7 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
         `
 
 		const newCode = `
-            import TestImport from "imported" 
+            import TestImport from 0x01
 
             access(all) contract Test {
                 access(all) entitlement F
@@ -1319,7 +1402,17 @@ func TestContractUpgradeIntersectionFieldType(t *testing.T) {
             }
         `
 
-		err := testContractUpdateWithImports(t, oldCode, oldImport, newCode, newImport)
+		err := testContractUpdateWithImports(
+			t,
+			oldCode,
+			newCode,
+			map[common.Location]string{
+				common.AddressLocation{
+					Name:    "TestImport",
+					Address: common.MustBytesToAddress([]byte{0x1}),
+				}: newImport,
+			},
+		)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "E", "E, F")
