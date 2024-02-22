@@ -540,12 +540,44 @@ func TestConvertToEntitledType(t *testing.T) {
 			Output: sema.NewReferenceType(
 				nil,
 				eFAndGAccess,
-				sema.NewIntersectionType(nil, []*sema.InterfaceType{
-					interfaceTypeInheriting,
-					interfaceTypeWithMap,
-				}),
+				sema.NewIntersectionType(
+					nil,
+					[]*sema.InterfaceType{
+						interfaceTypeInheriting,
+						interfaceTypeWithMap,
+					}),
 			),
 			Name: "intersection",
+		},
+		{
+			Input: sema.NewReferenceType(
+				nil,
+				sema.UnauthorizedAccess,
+				sema.NewOptionalType(
+					nil,
+					sema.NewIntersectionType(
+						nil,
+						[]*sema.InterfaceType{
+							interfaceTypeInheriting,
+							interfaceTypeWithMap,
+						},
+					),
+				),
+			),
+			Output: sema.NewReferenceType(
+				nil,
+				eFAndGAccess,
+				sema.NewOptionalType(
+					nil,
+					sema.NewIntersectionType(
+						nil,
+						[]*sema.InterfaceType{
+							interfaceTypeInheriting,
+							interfaceTypeWithMap,
+						}),
+				),
+			),
+			Name: "reference to optional",
 		},
 		// no change
 		{
