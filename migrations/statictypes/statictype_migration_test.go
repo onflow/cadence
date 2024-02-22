@@ -149,4 +149,434 @@ func TestStaticTypeMigration(t *testing.T) {
 			actual,
 		)
 	})
+
+	t.Run("T{I,...} -> T, for T != AnyStruct/AnyResource", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("T{I} -> T", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration()
+
+			actual := migrate(t,
+				staticTypeMigration,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.IntersectionStaticType{
+						Types: []*interpreter.InterfaceStaticType{
+							{
+								Location:            nil,
+								QualifiedIdentifier: "I",
+								TypeID:              "I",
+							},
+						},
+						LegacyType: &interpreter.CompositeStaticType{
+							Location:            nil,
+							QualifiedIdentifier: "T",
+							TypeID:              "T",
+						},
+					},
+				),
+			)
+			assert.Equal(t,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.CompositeStaticType{
+						Location:            nil,
+						QualifiedIdentifier: "T",
+						TypeID:              "T",
+					},
+				),
+				actual,
+			)
+		})
+
+		t.Run("&T{I} -> &T{I}", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration()
+
+			actual := migrate(t,
+				staticTypeMigration,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.ReferenceStaticType{
+						Authorization: interpreter.Unauthorized{},
+						ReferencedType: &interpreter.IntersectionStaticType{
+							Types: []*interpreter.InterfaceStaticType{
+								{
+									Location:            nil,
+									QualifiedIdentifier: "I",
+									TypeID:              "I",
+								},
+							},
+							LegacyType: &interpreter.CompositeStaticType{
+								Location:            nil,
+								QualifiedIdentifier: "T",
+								TypeID:              "T",
+							},
+						},
+					},
+				),
+			)
+			assert.Equal(t,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.ReferenceStaticType{
+						Authorization: interpreter.Unauthorized{},
+						ReferencedType: &interpreter.IntersectionStaticType{
+							Types: []*interpreter.InterfaceStaticType{
+								{
+									Location:            nil,
+									QualifiedIdentifier: "I",
+									TypeID:              "I",
+								},
+							},
+							LegacyType: &interpreter.CompositeStaticType{
+								Location:            nil,
+								QualifiedIdentifier: "T",
+								TypeID:              "T",
+							},
+						},
+					},
+				),
+				actual,
+			)
+		})
+	})
+
+	t.Run("T{I,...} -> {I,...}, for T == AnyStruct/AnyResource", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("AnyStruct{I} -> {I}", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration()
+
+			actual := migrate(t,
+				staticTypeMigration,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.IntersectionStaticType{
+						Types: []*interpreter.InterfaceStaticType{
+							{
+								Location:            nil,
+								QualifiedIdentifier: "I",
+								TypeID:              "I",
+							},
+						},
+						LegacyType: interpreter.PrimitiveStaticTypeAnyStruct,
+					},
+				),
+			)
+			assert.Equal(t,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.IntersectionStaticType{
+						Types: []*interpreter.InterfaceStaticType{
+							{
+								Location:            nil,
+								QualifiedIdentifier: "I",
+								TypeID:              "I",
+							},
+						},
+					},
+				),
+				actual,
+			)
+		})
+
+		t.Run("&AnyStruct{I} -> &AnyStruct{I}", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration()
+
+			actual := migrate(t,
+				staticTypeMigration,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.ReferenceStaticType{
+						Authorization: interpreter.Unauthorized{},
+						ReferencedType: &interpreter.IntersectionStaticType{
+							Types: []*interpreter.InterfaceStaticType{
+								{
+									Location:            nil,
+									QualifiedIdentifier: "I",
+									TypeID:              "I",
+								},
+							},
+							LegacyType: interpreter.PrimitiveStaticTypeAnyStruct,
+						},
+					},
+				),
+			)
+			assert.Equal(t,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.ReferenceStaticType{
+						Authorization: interpreter.Unauthorized{},
+						ReferencedType: &interpreter.IntersectionStaticType{
+							Types: []*interpreter.InterfaceStaticType{
+								{
+									Location:            nil,
+									QualifiedIdentifier: "I",
+									TypeID:              "I",
+								},
+							},
+							LegacyType: interpreter.PrimitiveStaticTypeAnyStruct,
+						},
+					},
+				),
+				actual,
+			)
+		})
+
+		t.Run("AnyResource{I} -> {I}", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration()
+
+			actual := migrate(t,
+				staticTypeMigration,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.IntersectionStaticType{
+						Types: []*interpreter.InterfaceStaticType{
+							{
+								Location:            nil,
+								QualifiedIdentifier: "I",
+								TypeID:              "I",
+							},
+						},
+						LegacyType: interpreter.PrimitiveStaticTypeAnyResource,
+					},
+				),
+			)
+			assert.Equal(t,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.IntersectionStaticType{
+						Types: []*interpreter.InterfaceStaticType{
+							{
+								Location:            nil,
+								QualifiedIdentifier: "I",
+								TypeID:              "I",
+							},
+						},
+					},
+				),
+				actual,
+			)
+		})
+
+		t.Run("&AnyResource{I} -> &AnyResource{I}", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration()
+
+			actual := migrate(t,
+				staticTypeMigration,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.ReferenceStaticType{
+						Authorization: interpreter.Unauthorized{},
+						ReferencedType: &interpreter.IntersectionStaticType{
+							Types: []*interpreter.InterfaceStaticType{
+								{
+									Location:            nil,
+									QualifiedIdentifier: "I",
+									TypeID:              "I",
+								},
+							},
+							LegacyType: interpreter.PrimitiveStaticTypeAnyResource,
+						},
+					},
+				),
+			)
+			assert.Equal(t,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.ReferenceStaticType{
+						Authorization: interpreter.Unauthorized{},
+						ReferencedType: &interpreter.IntersectionStaticType{
+							Types: []*interpreter.InterfaceStaticType{
+								{
+									Location:            nil,
+									QualifiedIdentifier: "I",
+									TypeID:              "I",
+								},
+							},
+							LegacyType: interpreter.PrimitiveStaticTypeAnyResource,
+						},
+					},
+				),
+				actual,
+			)
+		})
+	})
+
+	t.Run("T{} -> T, for any T", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("AnyStruct{} -> AnyStruct", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration()
+
+			actual := migrate(t,
+				staticTypeMigration,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.IntersectionStaticType{
+						Types:      []*interpreter.InterfaceStaticType{},
+						LegacyType: interpreter.PrimitiveStaticTypeAnyStruct,
+					},
+				),
+			)
+			assert.Equal(t,
+				interpreter.NewUnmeteredTypeValue(
+					interpreter.PrimitiveStaticTypeAnyStruct,
+				),
+				actual,
+			)
+		})
+
+		t.Run("&AnyStruct{} -> &AnyStruct{}", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration()
+
+			actual := migrate(t,
+				staticTypeMigration,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.ReferenceStaticType{
+						Authorization: interpreter.Unauthorized{},
+						ReferencedType: &interpreter.IntersectionStaticType{
+							Types:      []*interpreter.InterfaceStaticType{},
+							LegacyType: interpreter.PrimitiveStaticTypeAnyStruct,
+						},
+					},
+				),
+			)
+			assert.Equal(t,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.ReferenceStaticType{
+						Authorization: interpreter.Unauthorized{},
+						ReferencedType: &interpreter.IntersectionStaticType{
+							Types:      []*interpreter.InterfaceStaticType{},
+							LegacyType: interpreter.PrimitiveStaticTypeAnyStruct,
+						},
+					},
+				),
+				actual,
+			)
+		})
+
+		t.Run("AnyResource{} -> AnyResource", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration()
+
+			actual := migrate(t,
+				staticTypeMigration,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.IntersectionStaticType{
+						Types:      []*interpreter.InterfaceStaticType{},
+						LegacyType: interpreter.PrimitiveStaticTypeAnyResource,
+					},
+				),
+			)
+			assert.Equal(t,
+				interpreter.NewUnmeteredTypeValue(
+					interpreter.PrimitiveStaticTypeAnyResource,
+				),
+				actual,
+			)
+		})
+
+		t.Run("&AnyResource{} -> &AnyResource{}", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration()
+
+			actual := migrate(t,
+				staticTypeMigration,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.ReferenceStaticType{
+						Authorization: interpreter.Unauthorized{},
+						ReferencedType: &interpreter.IntersectionStaticType{
+							Types:      []*interpreter.InterfaceStaticType{},
+							LegacyType: interpreter.PrimitiveStaticTypeAnyResource,
+						},
+					},
+				),
+			)
+			assert.Equal(t,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.ReferenceStaticType{
+						Authorization: interpreter.Unauthorized{},
+						ReferencedType: &interpreter.IntersectionStaticType{
+							Types:      []*interpreter.InterfaceStaticType{},
+							LegacyType: interpreter.PrimitiveStaticTypeAnyResource,
+						},
+					},
+				),
+				actual,
+			)
+		})
+
+		t.Run("T{} -> T", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration()
+
+			actual := migrate(t,
+				staticTypeMigration,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.IntersectionStaticType{
+						LegacyType: &interpreter.CompositeStaticType{
+							Location:            nil,
+							QualifiedIdentifier: "T",
+							TypeID:              "T",
+						},
+					},
+				),
+			)
+			assert.Equal(t,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.CompositeStaticType{
+						Location:            nil,
+						QualifiedIdentifier: "T",
+						TypeID:              "T",
+					},
+				),
+				actual,
+			)
+		})
+
+		t.Run("&T{} -> &T", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration()
+
+			actual := migrate(t,
+				staticTypeMigration,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.ReferenceStaticType{
+						Authorization: interpreter.Unauthorized{},
+						ReferencedType: &interpreter.IntersectionStaticType{
+							LegacyType: &interpreter.CompositeStaticType{
+								Location:            nil,
+								QualifiedIdentifier: "T",
+								TypeID:              "T",
+							},
+						},
+					},
+				),
+			)
+			assert.Equal(t,
+				interpreter.NewUnmeteredTypeValue(
+					&interpreter.ReferenceStaticType{
+						Authorization: interpreter.Unauthorized{},
+						ReferencedType: &interpreter.IntersectionStaticType{
+							LegacyType: &interpreter.CompositeStaticType{
+								Location:            nil,
+								QualifiedIdentifier: "T",
+								TypeID:              "T",
+							},
+						},
+					},
+				),
+				actual,
+			)
+		})
+
+	})
 }
