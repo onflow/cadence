@@ -101,7 +101,10 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) report(err error) {
 	validator.underlyingUpdateValidator.report(err)
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) idAndLocationOfQualifiedType(typ *ast.NominalType) (common.TypeID, common.Location) {
+func (validator *CadenceV042ToV1ContractUpdateValidator) idAndLocationOfQualifiedType(typ *ast.NominalType) (
+	common.TypeID,
+	common.Location,
+) {
 
 	qualifiedString := typ.String()
 
@@ -131,12 +134,16 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) idAndLocationOfQualifie
 	return common.NewTypeIDFromQualifiedName(nil, location, qualifiedString), location
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) getEntitlementType(entitlement *ast.NominalType) *sema.EntitlementType {
+func (validator *CadenceV042ToV1ContractUpdateValidator) getEntitlementType(
+	entitlement *ast.NominalType,
+) *sema.EntitlementType {
 	typeID, location := validator.idAndLocationOfQualifiedType(entitlement)
 	return validator.newElaborations[location].EntitlementType(typeID)
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) getEntitlementSetAccess(entitlementSet ast.EntitlementSet) sema.EntitlementSetAccess {
+func (validator *CadenceV042ToV1ContractUpdateValidator) getEntitlementSetAccess(
+	entitlementSet ast.EntitlementSet,
+) sema.EntitlementSetAccess {
 	var entitlements []*sema.EntitlementType
 
 	for _, entitlement := range entitlementSet.Entitlements() {
@@ -161,9 +168,11 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) getInterfaceType(intf *
 	return validator.newElaborations[location].InterfaceType(typeID)
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) getIntersectedInterfaces(intersection []*ast.NominalType) (intfs []*sema.InterfaceType) {
-	for _, intf := range intersection {
-		intfs = append(intfs, validator.getInterfaceType(intf))
+func (validator *CadenceV042ToV1ContractUpdateValidator) getIntersectedInterfaces(
+	intersection []*ast.NominalType,
+) (interfaceTypes []*sema.InterfaceType) {
+	for _, interfaceType := range intersection {
+		interfaceTypes = append(interfaceTypes, validator.getInterfaceType(interfaceType))
 	}
 	return
 }
@@ -201,7 +210,9 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOf
 	return sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOfIntersection(intersectionTypes []*ast.NominalType) sema.Access {
+func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOfIntersection(
+	intersectionTypes []*ast.NominalType,
+) sema.Access {
 
 	// a reference to an intersection (or restricted) type is granted entitlements based on the intersected interfaces,
 	// ignoring the legacy restricted type, as an intersection type appearing in the new contract means it must have originally
@@ -246,6 +257,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkEntitlementsUpgrad
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) checkTypeUpgradability(oldType ast.Type, newType ast.Type) error {
 
+typeSwitch:
 	switch oldType := oldType.(type) {
 	case *ast.OptionalType:
 		if newOptional, isOptional := newType.(*ast.OptionalType); isOptional {
@@ -271,6 +283,24 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkTypeUpgradability(
 			break
 		}
 		validator.currentRestrictedTypeUpgradeRestrictions = oldType.Types
+
+		// If the old restricted type is for AnyStruct/AnyResource,
+		// and if there are atleast one restriction, require them to drop the "restricted type".
+		// e.g-1: `AnyStruct{I} -> {I}`
+		// e.g-2: `AnyResource{I} -> {I}`
+		// See: https://github.com/onflow/cadence/issues/3112
+		if restrictedNominalType, isNominal := oldType.LegacyRestrictedType.(*ast.NominalType); isNominal {
+			switch restrictedNominalType.Identifier.Identifier {
+			case "AnyStruct", "AnyResource":
+				if len(oldType.Types) > 0 {
+					break typeSwitch
+				}
+			}
+		}
+
+		// Otherwise require them to drop the "restrictions".
+		// e.g-1: `T{I} -> T`
+		// e.g-2: `AnyStruct{} -> AnyStruct`
 		return validator.checkTypeUpgradability(oldType.LegacyRestrictedType, newType)
 
 	case *ast.VariableSizedType:
@@ -336,6 +366,51 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkField(oldField *as
 		Err:       err,
 		Range:     ast.NewUnmeteredRangeFromPositioned(newField.TypeAnnotation),
 	})
+}
+
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkDeclarationKindChange(
+	oldDeclaration ast.Declaration,
+	newDeclaration ast.Declaration,
+) bool {
+	// Do not allow converting between different types of composite declarations:
+	// e.g: - 'contracts' and 'contract-interfaces',
+	//      - 'structs' and 'enums'
+	//
+	// However, with the removal of type requirements, it is OK to convert a
+	// concrete type (Struct or Resource) to an interface type (StructInterface or ResourceInterface).
+	// However, resource should stay a resource interface, and cannot be a struct interface.
+
+	oldDeclKind := oldDeclaration.DeclarationKind()
+	newDeclKind := newDeclaration.DeclarationKind()
+	if oldDeclKind == newDeclKind {
+		return true
+	}
+
+	parent := validator.getCurrentDeclaration()
+
+	// If the parent is an interface, and the child is a concrete type,
+	// then it is a type requirement.
+	if parent.DeclarationKind() == common.DeclarationKindContractInterface {
+		// A struct is OK to be converted to a struct-interface
+		if oldDeclKind == common.DeclarationKindStructure &&
+			newDeclKind == common.DeclarationKindStructureInterface {
+			return true
+		}
+
+		// A resource is OK to be converted to a resource-interface
+		if oldDeclKind == common.DeclarationKindResource &&
+			newDeclKind == common.DeclarationKindResourceInterface {
+			return true
+		}
+	}
+
+	validator.report(&InvalidDeclarationKindChangeError{
+		Name:    oldDeclaration.DeclarationIdentifier().Identifier,
+		OldKind: oldDeclaration.DeclarationKind(),
+		NewKind: newDeclaration.DeclarationKind(),
+		Range:   ast.NewUnmeteredRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
+	})
+	return false
 }
 
 // AuthorizationMismatchError is reported during a contract upgrade,

@@ -38,6 +38,11 @@ type UpdateValidator interface {
 
 	checkField(oldField *ast.FieldDeclaration, newField *ast.FieldDeclaration)
 	getAccountContractNames(address common.Address) ([]string, error)
+
+	checkDeclarationKindChange(
+		oldDeclaration ast.Declaration,
+		newDeclaration ast.Declaration,
+	) bool
 }
 
 type ContractUpdateValidator struct {
@@ -187,17 +192,7 @@ func checkDeclarationUpdatability(
 	newDeclaration ast.Declaration,
 ) {
 
-	// Do not allow converting between different types of composite declarations:
-	// e.g: - 'contracts' and 'contract-interfaces',
-	//      - 'structs' and 'enums'
-	if oldDeclaration.DeclarationKind() != newDeclaration.DeclarationKind() {
-		validator.report(&InvalidDeclarationKindChangeError{
-			Name:    oldDeclaration.DeclarationIdentifier().Identifier,
-			OldKind: oldDeclaration.DeclarationKind(),
-			NewKind: newDeclaration.DeclarationKind(),
-			Range:   ast.NewUnmeteredRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
-		})
-
+	if !validator.checkDeclarationKindChange(oldDeclaration, newDeclaration) {
 		return
 	}
 
@@ -258,6 +253,27 @@ func (validator *ContractUpdateValidator) checkField(oldField *ast.FieldDeclarat
 			Range:     ast.NewUnmeteredRangeFromPositioned(newField.TypeAnnotation),
 		})
 	}
+}
+
+func (validator *ContractUpdateValidator) checkDeclarationKindChange(
+	oldDeclaration ast.Declaration,
+	newDeclaration ast.Declaration,
+) bool {
+	// Do not allow converting between different types of composite declarations:
+	// e.g: - 'contracts' and 'contract-interfaces',
+	//      - 'structs' and 'enums'
+	if oldDeclaration.DeclarationKind() != newDeclaration.DeclarationKind() {
+		validator.report(&InvalidDeclarationKindChangeError{
+			Name:    oldDeclaration.DeclarationIdentifier().Identifier,
+			OldKind: oldDeclaration.DeclarationKind(),
+			NewKind: newDeclaration.DeclarationKind(),
+			Range:   ast.NewUnmeteredRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
+		})
+
+		return false
+	}
+
+	return true
 }
 
 func checkNestedDeclarations(
@@ -329,6 +345,11 @@ func checkNestedDeclarations(
 	})
 
 	for _, declaration := range missingDeclarations {
+		// OK to remove events - they are not stored
+		if declaration.DeclarationKind() == common.DeclarationKindEvent {
+			continue
+		}
+
 		validator.report(&MissingDeclarationError{
 			Name: declaration.DeclarationIdentifier().Identifier,
 			Kind: declaration.DeclarationKind(),
