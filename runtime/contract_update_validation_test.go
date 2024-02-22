@@ -2561,7 +2561,6 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
-
 		assertConformanceMismatchError(t, cause, "Foo")
 	})
 

@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 	"strconv"
 	"time"
 
@@ -4575,6 +4576,35 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 	}
 
 	return subInterpreter.Program.Elaboration
+}
+
+func (interpreter *Interpreter) AllElaborations() (elaborations map[common.Location]*sema.Elaboration) {
+
+	elaborations = map[common.Location]*sema.Elaboration{}
+
+	allInterpreters := interpreter.SharedState.allInterpreters
+
+	locations := make([]common.Location, 0, len(allInterpreters))
+
+	for location := range allInterpreters { //nolint:maprange
+		locations = append(locations, location)
+	}
+
+	sort.Slice(locations, func(i, j int) bool {
+		a := locations[i]
+		b := locations[j]
+		return a.ID() < b.ID()
+	})
+
+	for _, location := range locations {
+		elaboration := interpreter.getElaboration(location)
+		if elaboration == nil {
+			panic(errors.NewUnexpectedError("missing elaboration for location %s", location))
+		}
+		elaborations[location] = elaboration
+	}
+
+	return
 }
 
 // GetContractComposite gets the composite value of the contract at the address location.
