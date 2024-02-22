@@ -172,6 +172,8 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
+	require.Empty(t, reporter.errors)
+
 	// Check reported migrated paths
 	for identifier, test := range testCases {
 		key := struct {
