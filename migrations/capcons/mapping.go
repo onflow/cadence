@@ -22,31 +22,46 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
-type CapabilityIDMapping struct {
-	// CapabilityIDs' maps common.Address to map[interpreter.PathValue]interpreter.UInt64Value
-	capabilityIDs sync.Map
+type CapabilityEntry struct {
+	CapabilityID interpreter.UInt64Value
+	BorrowType   *sema.ReferenceType
 }
 
-func (m *CapabilityIDMapping) Record(addressPath interpreter.AddressPath, capabilityID interpreter.UInt64Value) {
-	var accountCapabilityIDs map[interpreter.PathValue]interpreter.UInt64Value
-	rawAccountCapabilityIDs, ok := m.capabilityIDs.Load(addressPath.Address)
+type CapabilityEntryMap map[interpreter.PathValue]CapabilityEntry
+
+type CapabilityMapping struct {
+	// capabilityEntries maps common.Address to CapabilityEntryMap
+	capabilityEntries sync.Map
+}
+
+func (m *CapabilityMapping) Record(
+	addressPath interpreter.AddressPath,
+	capabilityID interpreter.UInt64Value,
+	borrowType *sema.ReferenceType,
+) {
+	var capabilityEntryMap CapabilityEntryMap
+	rawCapabilityEntryMap, ok := m.capabilityEntries.Load(addressPath.Address)
 	if ok {
-		accountCapabilityIDs = rawAccountCapabilityIDs.(map[interpreter.PathValue]interpreter.UInt64Value)
+		capabilityEntryMap = rawCapabilityEntryMap.(CapabilityEntryMap)
 	} else {
-		accountCapabilityIDs = map[interpreter.PathValue]interpreter.UInt64Value{}
-		m.capabilityIDs.Store(addressPath.Address, accountCapabilityIDs)
+		capabilityEntryMap = CapabilityEntryMap{}
+		m.capabilityEntries.Store(addressPath.Address, capabilityEntryMap)
 	}
-	accountCapabilityIDs[addressPath.Path] = capabilityID
+	capabilityEntryMap[addressPath.Path] = CapabilityEntry{
+		CapabilityID: capabilityID,
+		BorrowType:   borrowType,
+	}
 }
 
-func (m *CapabilityIDMapping) Get(addressPath interpreter.AddressPath) (interpreter.UInt64Value, bool) {
-	rawAccountCapabilityIDs, ok := m.capabilityIDs.Load(addressPath.Address)
+func (m *CapabilityMapping) Get(addressPath interpreter.AddressPath) (interpreter.UInt64Value, sema.Type, bool) {
+	rawCapabilityEntryMap, ok := m.capabilityEntries.Load(addressPath.Address)
 	if !ok {
-		return 0, false
+		return 0, nil, false
 	}
-	accountCapabilityIDs := rawAccountCapabilityIDs.(map[interpreter.PathValue]interpreter.UInt64Value)
-	capabilityID, ok := accountCapabilityIDs[addressPath.Path]
-	return capabilityID, ok
+	capabilityEntryMap := rawCapabilityEntryMap.(CapabilityEntryMap)
+	capabilityEntry, ok := capabilityEntryMap[addressPath.Path]
+	return capabilityEntry.CapabilityID, capabilityEntry.BorrowType, ok
 }
