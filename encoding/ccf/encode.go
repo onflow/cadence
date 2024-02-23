@@ -329,6 +329,7 @@ func (e *Encoder) encodeInlineTypeAndValue(value cadence.Value, tids ccfTypeIDBy
 //	  / contract-type
 //	  / event-type
 //	  / enum-type
+//	  / attachment-type
 //	  / struct-interface-type
 //	  / resource-interface-type
 //	  / contract-interface-type
@@ -344,7 +345,7 @@ func (e *Encoder) encodeTypeDefs(types []cadence.Type, tids ccfTypeIDByCadenceTy
 
 		switch typ := typ.(type) {
 		case cadence.CompositeType:
-			// Encode struct-type, resource-type, contract-type, event-type, or enum-type.
+			// Encode struct-type, resource-type, contract-type, event-type, enum-type, or attachment-type.
 			err = e.encodeCompositeType(typ, tids)
 			if err != nil {
 				return err
@@ -578,6 +579,9 @@ func (e *Encoder) encodeValue(
 
 	case cadence.Contract:
 		return e.encodeContract(v, tids)
+
+	case cadence.Attachment:
+		return e.encodeAttachment(v, tids)
 
 	case cadence.Path:
 		return e.encodePath(v)
@@ -1041,6 +1045,13 @@ func (e *Encoder) encodeEnum(v cadence.Enum, tids ccfTypeIDByCadenceType) error 
 	return e.encodeComposite(v.EnumType, v.Fields, tids)
 }
 
+// encodeAttachment encodes cadence.Attachment as
+// language=CDDL
+// composite-value = [* (field: value)]
+func (e *Encoder) encodeAttachment(v cadence.Attachment, tids ccfTypeIDByCadenceType) error {
+	return e.encodeComposite(v.AttachmentType, v.Fields, tids)
+}
+
 // encodeComposite encodes composite types as
 // language=CDDL
 // composite-value = [* (field: value)]
@@ -1233,6 +1244,7 @@ func (e *Encoder) encodeFunction(typ *cadence.FunctionType, visited ccfTypeIDByC
 //	/ contract-type-value
 //	/ event-type-value
 //	/ enum-type-value
+//	/ attachment-type-value
 //	/ struct-interface-type-value
 //	/ resource-interface-type-value
 //	/ contract-interface-type-value
@@ -1290,6 +1302,9 @@ func (e *Encoder) encodeTypeValue(typ cadence.Type, visited ccfTypeIDByCadenceTy
 
 	case *cadence.ContractType:
 		return e.encodeContractTypeValue(typ, visited)
+
+	case *cadence.AttachmentType:
+		return e.encodeAttachmentTypeValue(typ, visited)
 
 	case *cadence.InclusiveRangeType:
 		return e.encodeInclusiveRangeTypeValue(typ, visited)
@@ -1588,6 +1603,24 @@ func (e *Encoder) encodeEnumTypeValue(typ *cadence.EnumType, visited ccfTypeIDBy
 	)
 }
 
+// encodeAttachmentTypeValue encodes cadence.AttachmentType as
+// language=CDDL
+// attachment-type-value =
+//
+//	; cbor-tag-attachment-type-value
+//	#6.213(composite-type-value)
+func (e *Encoder) encodeAttachmentTypeValue(typ *cadence.AttachmentType, visited ccfTypeIDByCadenceType) error {
+	rawTagNum := []byte{0xd8, CBORTagAttachmentTypeValue}
+	return e.encodeCompositeTypeValue(
+		typ.ID(),
+		typ.BaseType,
+		typ.Fields,
+		typ.Initializers,
+		visited,
+		rawTagNum,
+	)
+}
+
 // encodeStructInterfaceTypeValue encodes cadence.StructInterfaceType as
 // language=CDDL
 // struct-interface-type-value =
@@ -1648,7 +1681,7 @@ func (e *Encoder) encodeContractInterfaceTypeValue(typ *cadence.ContractInterfac
 //
 //	id: id,
 //	cadence-type-id: cadence-type-id,
-//	; type is only used by enum type value
+//	; type is only used by enum type value (as RawType) and attachment type value (as BaseType)
 //	type: nil / type-value,
 //	fields: [
 //	    * [

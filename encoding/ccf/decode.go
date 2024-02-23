@@ -546,6 +546,9 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 	case *cadence.EnumType:
 		return d.decodeEnum(t, types)
 
+	case *cadence.AttachmentType:
+		return d.decodeAttachment(t, types)
+
 	case *cadence.ReferenceType:
 		// When static type is a reference type, encoded value is its deferenced type.
 		return d.decodeValue(t.Type, types)
@@ -1315,6 +1318,30 @@ func (d *Decoder) decodeEnum(typ *cadence.EnumType, types *cadenceTypeByCCFTypeI
 	return v.WithType(typ), nil
 }
 
+// decodeAttachment decodes encoded composite-value as
+// language=CDDL
+// composite-value = [* (field: value)]
+func (d *Decoder) decodeAttachment(typ *cadence.AttachmentType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
+	fieldValues, err := d.decodeComposite(typ.Fields, types)
+	if err != nil {
+		return nil, err
+	}
+
+	v, err := cadence.NewMeteredAttachment(
+		d.gauge,
+		len(fieldValues),
+		func() ([]cadence.Value, error) {
+			return fieldValues, nil
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// typ is already metered at creation.
+	return v.WithType(typ), nil
+}
+
 // decodeInclusiveRange decodes encoded inclusiverange-value as
 // language=CDDL
 // inclusiverange-value = [
@@ -1479,6 +1506,7 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 //	/ contract-type-value
 //	/ event-type-value
 //	/ enum-type-value
+//	/ attachment-type-value
 //	/ struct-interface-type-value
 //	/ resource-interface-type-value
 //	/ contract-interface-type-value
@@ -1543,6 +1571,9 @@ func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type
 
 	case CBORTagEnumTypeValue:
 		return d.decodeEnumTypeValue(visited)
+
+	case CBORTagAttachmentTypeValue:
+		return d.decodeAttachmentTypeValue(visited)
 
 	case CBORTagStructInterfaceTypeValue:
 		return d.decodeStructInterfaceTypeValue(visited)
@@ -1719,6 +1750,34 @@ func (d *Decoder) decodeEnumTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.
 	return d.decodeCompositeTypeValue(visited, ctr)
 }
 
+// decodeAttachmentTypeValue decodes attachment-type-value as
+// language=CDDL
+// attachment-type-value =
+//
+//	; cbor-tag-attachment-type-value
+//	#6.213(composite-type-value)
+func (d *Decoder) decodeAttachmentTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type, error) {
+	ctr := func(
+		location common.Location,
+		qualifiedIdentifier string,
+		typ cadence.Type,
+	) (cadence.Type, error) {
+		if typ == nil {
+			return nil, fmt.Errorf("encoded attachment-type-value has nil base type")
+		}
+		return cadence.NewMeteredAttachmentType(
+			d.gauge,
+			location,
+			typ,
+			qualifiedIdentifier,
+			nil,
+			nil,
+		), nil
+	}
+
+	return d.decodeCompositeTypeValue(visited, ctr)
+}
+
 // decodeStructInterfaceTypeValue decodes struct-inteface-type-value as
 // language=CDDL
 // struct-interface-type-value =
@@ -1848,16 +1907,6 @@ func (d *Decoder) decodeCompositeTypeValue(
 		return nil, errors.New("unexpected nil composite type value")
 	}
 
-	// "Deterministic CCF Encoding Requirements" in CCF specs:
-	//
-	//   "composite-type-value.id MUST be identical to the zero-based encoding order type-value."
-	if compTypeValue.ccfID != newCCFTypeIDFromUint64(uint64(visited.count())) {
-		return nil, fmt.Errorf(
-			"encoded composite-type-value's CCF type ID %d doesn't match zero-based encoding order composite-type-value",
-			compTypeValue.ccfID,
-		)
-	}
-
 	newType := visited.add(compTypeValue.ccfID, compositeType)
 	if !newType {
 		// "Valid CCF Encoding Requirements" in CCF specs:
@@ -1904,6 +1953,10 @@ func (d *Decoder) decodeCompositeTypeValue(
 		compositeType.Initializers = initializers
 
 	case *cadence.EnumType:
+		compositeType.Fields = fields
+		compositeType.Initializers = initializers
+
+	case *cadence.AttachmentType:
 		compositeType.Fields = fields
 		compositeType.Initializers = initializers
 
@@ -1960,6 +2013,18 @@ func (d *Decoder) _decodeCompositeTypeValue(visited *cadenceTypeByCCFTypeID) (*c
 	if err != nil {
 		return nil, err
 	}
+
+	// "Deterministic CCF Encoding Requirements" in CCF specs:
+	//
+	//   "composite-type-value.id MUST be identical to the zero-based encoding order type-value."
+	if !visited.isNextCCFTypeID(ccfID) {
+		return nil, fmt.Errorf(
+			"encoded composite-type-value's CCF type ID %d doesn't match zero-based encoding order composite-type-value",
+			ccfID,
+		)
+	}
+
+	visited.addCCFTypeID(ccfID)
 
 	// element 1: cadence-type-id
 	_, location, identifier, err := d.decodeCadenceTypeID()
