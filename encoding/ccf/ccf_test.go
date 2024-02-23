@@ -6730,6 +6730,311 @@ func TestEncodeEnum(t *testing.T) {
 	testAllEncodeAndDecode(t, simpleEnum)
 }
 
+func TestEncodeAttachment(t *testing.T) {
+	t.Parallel()
+
+	noFieldAttachment := encodeTest{
+		name: "no field",
+		val: func() cadence.Value {
+			attachmentType := &cadence.AttachmentType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooAttachment",
+				Fields:              []cadence.Field{},
+			}
+			return cadence.NewAttachment(
+				[]cadence.Value{},
+			).WithType(attachmentType)
+		}(),
+		expected: []byte{
+			// language=json, format=json-cdc
+			// {"value":{"id":"S.test.FooAttachment","fields":[]},"type":"Attachment"}
+			//
+			// language=edn, format=ccf
+			// 129([[165([h'', "S.test.FooAttachment", []])], [136(h''), []]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 1 items follow
+			0x81,
+			// attachment type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.FooAttachment"
+			// 0 fields
+			// tag
+			0xd8, ccf.CBORTagAttachmentType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 20 bytes follow
+			0x74,
+			// S.test.FooAttachment
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x41, 0x74, 0x74, 0x61, 0x63, 0x68, 0x6d, 0x65, 0x6e, 0x74,
+			// fields
+			// array, 0 items follow
+			0x80,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 bytes follow
+			0x40,
+			// array, 0 items follow
+			0x80,
+		},
+	}
+
+	primitiveFieldAttachment := encodeTest{
+		name: "simple",
+		val: func() cadence.Value {
+			attachmentType := &cadence.AttachmentType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooAttachment",
+				Fields: []cadence.Field{
+					{
+						Identifier: "i",
+						Type:       cadence.UInt8Type,
+					},
+				},
+			}
+			return cadence.NewAttachment(
+				[]cadence.Value{
+					cadence.NewUInt8(1),
+				},
+			).WithType(attachmentType)
+		}(),
+		expected: []byte{
+			// language=json, format=json-cdc
+			// {"value":{"id":"S.test.FooAttachment","fields":[{"value":{"value":"1","type":"UInt8"},"name":"i"}]},"type":"Attachment"}
+			//
+			// language=edn, format=ccf
+			// 129([[165([h'', "S.test.FooAttachment", [["i", 137(12)]]])], [136(h''), [1]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 1 items follow
+			0x81,
+			// attachment type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.FooAttachment"
+			// 1 fields: [["i", type(uint8)]]
+			// tag
+			0xd8, ccf.CBORTagAttachmentType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 20 bytes follow
+			0x74,
+			// S.test.FooAttachment
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x41, 0x74, 0x74, 0x61, 0x63, 0x68, 0x6d, 0x65, 0x6e, 0x74,
+			// fields
+			// array, 1 items follow
+			0x81,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// raw
+			0x69,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// UInt8 type ID (12)
+			0x0c,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 0 bytes follow
+			0x40,
+			// array, 1 items follow
+			0x81,
+			// 1
+			0x01,
+		},
+	}
+
+	structFieldAttachment := encodeTest{
+		name: "struct field",
+		val: func() cadence.Value {
+			structType := &cadence.StructType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooStruct",
+				Fields: []cadence.Field{
+					{
+						Identifier: "bar",
+						Type:       cadence.IntType,
+					},
+				},
+			}
+			attachmentType := &cadence.AttachmentType{
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooAttachment",
+				Fields: []cadence.Field{
+					{
+						Identifier: "a",
+						Type:       cadence.StringType,
+					},
+					{
+						Identifier: "b",
+						Type:       structType,
+					},
+				},
+			}
+			return cadence.NewAttachment(
+				[]cadence.Value{
+					cadence.String("foo"),
+					cadence.NewStruct(
+						[]cadence.Value{
+							cadence.NewInt(42),
+						},
+					).WithType(structType),
+				},
+			).WithType(attachmentType)
+		}(),
+		expected: []byte{
+			// language=json, format=json-cdc
+			// {"value":{"id":"S.test.FooAttachment","fields":[{"value":{"value":"foo","type":"String"},"name":"a"},{"value":{"value":{"id":"S.test.FooStruct","fields":[{"value":{"value":"42","type":"Int"},"name":"bar"}]},"type":"Struct"},"name":"b"}]},"type":"Attachment"}
+			//
+			// language=edn, format=ccf
+			// 129([[160([h'', "S.test.FooStruct", [["bar", 137(4)]]]), 165([h'01', "S.test.FooAttachment", [["a", 137(1)], ["b", 136(h'')]]])], [136(h'01'), ["foo", [42]]]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeDefAndValue,
+			// array, 2 items follow
+			0x82,
+			// element 0: type definitions
+			// array, 2 items follow
+			0x82,
+
+			// struct type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.FooStruct"
+			// fields: [["bar", int type]]
+			// tag
+			0xd8, ccf.CBORTagStructType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 0 bytes follow
+			0x40,
+			// cadence-type-id
+			// string, 16 bytes follow
+			0x70,
+			// S.test.FooStruct
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+			// fields
+			// array, 1 items follow
+			0x81,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// bar
+			0x62, 0x61, 0x72,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Int type ID (4)
+			0x04,
+
+			// attachment type:
+			// id: []byte{}
+			// cadence-type-id: "S.test.FooAttachment"
+			// 2 fields: [["a", type(int)], ["b", 136(h'')]]
+			// tag
+			0xd8, ccf.CBORTagAttachmentType,
+			// array, 3 items follow
+			0x83,
+			// id
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// cadence-type-id
+			// string, 20 bytes follow
+			0x74,
+			// S.test.FooAttachment
+			0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x41, 0x74, 0x74, 0x61, 0x63, 0x68, 0x6d, 0x65, 0x6e, 0x74,
+			// fields
+			// array, 2 items follow
+			0x82,
+			// field 0
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// a
+			0x61,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// field 1
+			// array, 2 items follow
+			0x82,
+			// text, 1 bytes follow
+			0x61,
+			// b
+			0x62,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// type reference ID (0)
+			// bytes, 0 bytes follow
+			0x40,
+
+			// element 1: type and value
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagTypeRef,
+			// bytes, 1 bytes follow
+			0x41,
+			// 1
+			0x01,
+			// array, 2 items follow
+			0x82,
+			// String, 3 bytes follow
+			0x63,
+			// foo
+			0x66, 0x6f, 0x6f,
+			// array, 1 items follow
+			0x81,
+			// tag (big number)
+			0xc2,
+			// bytes, 1 byte follow
+			0x41,
+			// 42
+			0x2a,
+		},
+	}
+
+	testAllEncodeAndDecode(
+		t,
+		noFieldAttachment,
+		primitiveFieldAttachment,
+		structFieldAttachment,
+	)
+}
+
 func TestEncodeValueOfIntersectionType(t *testing.T) {
 
 	t.Parallel()
@@ -9337,6 +9642,245 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// String type ID (1)
 				0x01,
+				// fields
+				// array, 1 element follows
+				0x81,
+				// array, 2 elements follow
+				0x82,
+				// string, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// Int type (4)
+				0x04,
+				// initializers
+				// array, 1 elements follow
+				0x81,
+				// array, 2 element follows
+				0x82,
+				// array, 3 elements follow
+				0x83,
+				// string, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+				// string, 3 bytes follow
+				0x63,
+				// bar
+				0x62, 0x61, 0x72,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// Int type (4)
+				0x04,
+				// array, 3 elements follow
+				0x83,
+				// string, 3 bytes follow
+				0x63,
+				// qux
+				0x71, 0x75, 0x78,
+				// string, 3 bytes follow
+				0x63,
+				// bax
+				0x62, 0x61, 0x7a,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// String type (1)
+				0x01,
+			},
+		)
+	})
+
+	t.Run("with static attachment of simple base type", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.AttachmentType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "A",
+					BaseType:            cadence.StringType,
+					Fields: []cadence.Field{
+						{Identifier: "foo", Type: cadence.IntType},
+					},
+					Initializers: [][]cadence.Parameter{
+						{
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
+						},
+					},
+				},
+			},
+			[]byte{
+				// language=json, format=json-cdc
+				// Not supported yet
+				//
+				// language=edn, format=ccf
+				// 130([137(41), 213([h'', "S.test.A", 185(1), [["foo", 185(4)]], [[["foo", "bar", 185(4)], ["qux", "baz", 185(1)]]]])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagAttachmentTypeValue,
+				// array, 5 elements follow
+				0x85,
+				// bytes, 0 bytes follow
+				0x40,
+				// string, 8 bytes follow
+				0x68,
+				// S.test.A
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x41,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// String type ID (1)
+				0x01,
+				// fields
+				// array, 1 element follows
+				0x81,
+				// array, 2 elements follow
+				0x82,
+				// string, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// Int type (4)
+				0x04,
+				// initializers
+				// array, 1 elements follow
+				0x81,
+				// array, 2 element follows
+				0x82,
+				// array, 3 elements follow
+				0x83,
+				// string, 3 bytes follow
+				0x63,
+				// foo
+				0x66, 0x6f, 0x6f,
+				// string, 3 bytes follow
+				0x63,
+				// bar
+				0x62, 0x61, 0x72,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// Int type (4)
+				0x04,
+				// array, 3 elements follow
+				0x83,
+				// string, 3 bytes follow
+				0x63,
+				// qux
+				0x71, 0x75, 0x78,
+				// string, 3 bytes follow
+				0x63,
+				// bax
+				0x62, 0x61, 0x7a,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// String type (1)
+				0x01,
+			},
+		)
+	})
+
+	t.Run("with static attachment of resource base type", func(t *testing.T) {
+		t.Parallel()
+
+		baseType := &cadence.ResourceType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: "FooBase",
+			Fields: []cadence.Field{
+				{Identifier: "bar", Type: cadence.StringType},
+			},
+			Initializers: [][]cadence.Parameter{},
+		}
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.AttachmentType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "A",
+					BaseType:            baseType,
+					Fields: []cadence.Field{
+						{Identifier: "foo", Type: cadence.IntType},
+					},
+					Initializers: [][]cadence.Parameter{
+						{
+							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
+							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
+						},
+					},
+				},
+			},
+			[]byte{
+				// language=json, format=json-cdc
+				// Not supported yet
+				//
+				// language=edn, format=ccf
+				// 130([137(41), 213([h'', "S.test.A", 209([h'01', "S.test.FooBase", null, [["bar", 185(1)]], []]), [["foo", 185(4)]], [[["foo", "bar", 185(4)], ["qux", "baz", 185(1)]]]])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagAttachmentTypeValue,
+				// array, 5 elements follow
+				0x85,
+				// bytes, 0 bytes follow
+				0x40,
+				// string, 8 bytes follow
+				0x68,
+				// S.test.A
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x41,
+				// base type
+				// tag
+				0xd8, ccf.CBORTagResourceTypeValue,
+				// array, 5 elements follow
+				0x85,
+				// bytes, 1 bytes follow
+				0x41,
+				// 1
+				0x01,
+				// string, 14 bytes follow
+				0x6e,
+				// S.test.FooBase
+				0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f, 0x42, 0x61, 0x73, 0x65,
+				// null
+				0xf6,
+				// fields
+				// array, 1 element follow
+				0x81,
+				// field 0 ["bar", string]
+				// array, 2 element follow
+				0x82,
+				// string, 3 bytes follow
+				0x63,
+				// bar
+				0x62, 0x61, 0x72,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// string type
+				0x01,
+				// initializers
+				// array, 0 element follow
+				0x80,
 				// fields
 				// array, 1 element follows
 				0x81,

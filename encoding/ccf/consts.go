@@ -86,7 +86,7 @@ const (
 	CBORTagEventType
 	CBORTagContractType
 	CBORTagEnumType
-	_
+	CBORTagAttachmentType
 	_
 	_
 	_
@@ -141,7 +141,7 @@ const (
 	CBORTagEventTypeValue
 	CBORTagContractTypeValue
 	CBORTagEnumTypeValue
-	_
+	CBORTagAttachmentTypeValue
 	_
 	_
 	_

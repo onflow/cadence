@@ -116,6 +116,10 @@ func (ct *compositeTypes) traverseValue(v cadence.Value) {
 			ct.traverseValue(field)
 		}
 
+	case cadence.Attachment:
+		for _, field := range v.Fields {
+			ct.traverseValue(field)
+		}
 	}
 }
 
@@ -152,7 +156,7 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		}
 		return check
 
-	case cadence.CompositeType: // struct, resource, event, contract, enum
+	case cadence.CompositeType: // struct, resource, event, contract, enum, attachment
 		newType := ct.add(typ)
 		if !newType {
 			return ct.abstractTypes[typ.ID()]
