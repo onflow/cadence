@@ -997,26 +997,9 @@ func TestDictionaryDelete(t *testing.T) {
 		nil,
 		nil,
 	)
-	emptyIntersectionType.LegacyType = interpreter.PrimitiveStaticTypeAnyResource
+	emptyIntersectionType.LegacyType = interpreter.PrimitiveStaticTypeAnyStruct
 
 	storageMapKey := interpreter.StringStorageMapKey("test")
-
-	const fieldName = "bar"
-
-	compositeValue := interpreter.NewCompositeValue(
-		inter,
-		emptyLocationRange,
-		utils.TestLocation,
-		rQualifiedIdentifier,
-		common.CompositeKindResource,
-		[]interpreter.CompositeField{
-			{
-				Name:  fieldName,
-				Value: interpreter.NewUnmeteredInt8Value(5),
-			},
-		},
-		testAddress,
-	)
 
 	dictionaryKey := interpreter.NewUnmeteredStringValue("foo")
 
@@ -1029,8 +1012,15 @@ func TestDictionaryDelete(t *testing.T) {
 			emptyIntersectionType,
 		),
 		testAddress,
+	)
+
+	// NOTE: insert the value into the dictionary,
+	// but use the unchecked variant to avoid type loading
+	dictionaryValue.InsertUnchecked( // nolint:staticcheck
+		inter,
+		emptyLocationRange,
 		dictionaryKey,
-		compositeValue,
+		interpreter.NewUnmeteredInt8Value(5),
 	)
 
 	storageMap.WriteValue(
@@ -1081,12 +1071,8 @@ func TestDictionaryDelete(t *testing.T) {
 	migratedChildValue, ok := migratedDictionaryValue.Get(inter, emptyLocationRange, dictionaryKey)
 	require.True(t, ok)
 
-	require.IsType(t, &interpreter.CompositeValue{}, migratedChildValue)
-	migratedCompositeValue := migratedChildValue.(*interpreter.CompositeValue)
-
-	migratedIntegerValue := migratedCompositeValue.GetField(inter, emptyLocationRange, fieldName)
-	require.IsType(t, interpreter.Int8Value(0), migratedIntegerValue)
-	migratedIntegerValueInt8 := migratedIntegerValue.(interpreter.Int8Value)
+	require.IsType(t, interpreter.Int8Value(0), migratedChildValue)
+	migratedIntegerValueInt8 := migratedChildValue.(interpreter.Int8Value)
 
 	require.Equal(
 		t,
