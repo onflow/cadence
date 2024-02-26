@@ -539,7 +539,8 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 		err := testContractUpdate(t, oldCode, newCode)
 
-		require.NoError(t, err)
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "E, F", "E")
 	})
 
 	t.Run("capability reference auth disjunctive entitlements", func(t *testing.T) {
@@ -579,7 +580,8 @@ func TestContractUpgradeFieldType(t *testing.T) {
 
 		err := testContractUpdate(t, oldCode, newCode)
 
-		require.NoError(t, err)
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "E, F", "E | F")
 	})
 
 	t.Run("changing to a non-storable types", func(t *testing.T) {
@@ -934,7 +936,7 @@ func TestContractUpgradeIntersectionAuthorization(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("change field type capability reference auth allowed multiple intersected fewer entitlements", func(t *testing.T) {
+	t.Run("change field type capability reference auth disallowed multiple intersected fewer entitlements", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -984,7 +986,8 @@ func TestContractUpgradeIntersectionAuthorization(t *testing.T) {
 
 		err := testContractUpdate(t, oldCode, newCode)
 
-		require.NoError(t, err)
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertFieldAuthorizationMismatchError(t, cause, "Test", "a", "E, F", "E")
 	})
 
 	t.Run("change field type capability reference auth multiple intersected with too many entitlements", func(t *testing.T) {
