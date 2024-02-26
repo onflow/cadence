@@ -1599,6 +1599,158 @@ func TestTypeEquality(t *testing.T) {
 			assert.False(t, source.Equal(target))
 		})
 
+		t.Run("different auth conjunction set", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Conjunction,
+					Entitlements: []common.TypeID{
+						"foo",
+					},
+				},
+			}
+			target := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Conjunction,
+					Entitlements: []common.TypeID{
+						"bar",
+					},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different auth disjunction set", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Disjunction,
+					Entitlements: []common.TypeID{
+						"foo",
+					},
+				},
+			}
+			target := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Disjunction,
+					Entitlements: []common.TypeID{
+						"bar",
+					},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different auth conjunction set", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Conjunction,
+					Entitlements: []common.TypeID{
+						"foo",
+						"bar",
+					},
+				},
+			}
+			target := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Conjunction,
+					Entitlements: []common.TypeID{
+						"bar",
+						"baz",
+					},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different auth disjunction set", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Disjunction,
+					Entitlements: []common.TypeID{
+						"foo",
+						"bar",
+					},
+				},
+			}
+			target := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Disjunction,
+					Entitlements: []common.TypeID{
+						"bar",
+						"baz",
+					},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different auth conjunction set order", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Conjunction,
+					Entitlements: []common.TypeID{
+						"foo",
+						"bar",
+					},
+				},
+			}
+			target := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Conjunction,
+					Entitlements: []common.TypeID{
+						"bar",
+						"foo",
+					},
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different auth disjunction set order", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Disjunction,
+					Entitlements: []common.TypeID{
+						"foo",
+						"bar",
+					},
+				},
+			}
+			target := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Disjunction,
+					Entitlements: []common.TypeID{
+						"bar",
+						"foo",
+					},
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
 		t.Run("auth vs non-auth", func(t *testing.T) {
 			t.Parallel()
 

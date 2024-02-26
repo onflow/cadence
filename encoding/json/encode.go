@@ -680,7 +680,7 @@ func prepareAuthorization(auth cadence.Authorization) jsonAuthorization {
 				TypeID: string(auth.TypeID),
 			},
 		}
-	case cadence.EntitlementSetAuthorization:
+	case *cadence.EntitlementSetAuthorization:
 		for _, entitlement := range auth.Entitlements {
 			entitlements = append(entitlements, jsonNominalType{
 				Kind:   "Entitlement",
