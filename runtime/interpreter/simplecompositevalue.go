@@ -71,7 +71,7 @@ func NewSimpleCompositeValue(
 
 func (*SimpleCompositeValue) isValue() {}
 
-func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitSimpleCompositeValue(interpreter, v)
 }
 
@@ -90,7 +90,7 @@ func (v *SimpleCompositeValue) ForEachField(
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed fields and functions!
-func (v *SimpleCompositeValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *SimpleCompositeValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
 	v.ForEachField(func(_ string, fieldValue Value) (resume bool) {
 		walkChild(fieldValue)
 

@@ -45,11 +45,11 @@ func (f placeholderValue) MeteredString(_ common.MemoryGauge, _ SeenReferences) 
 	return ""
 }
 
-func (f placeholderValue) Accept(_ *Interpreter, _ Visitor) {
+func (f placeholderValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
 	// NO-OP
 }
 
-func (f placeholderValue) Walk(_ *Interpreter, _ func(Value)) {
+func (f placeholderValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 

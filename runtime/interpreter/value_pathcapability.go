@@ -44,11 +44,11 @@ func (*PathCapabilityValue) isValue() {}
 
 func (*PathCapabilityValue) isCapabilityValue() {}
 
-func (v *PathCapabilityValue) Accept(_ *Interpreter, _ Visitor) {
+func (v *PathCapabilityValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v *PathCapabilityValue) Walk(_ *Interpreter, _ func(Value)) {
+func (v *PathCapabilityValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 

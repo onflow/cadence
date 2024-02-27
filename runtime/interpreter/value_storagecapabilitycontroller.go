@@ -109,11 +109,11 @@ func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *Ref
 	return v.BorrowType
 }
 
-func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitStorageCapabilityControllerValue(interpreter, v)
 }
 
-func (v *StorageCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *StorageCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
 	walkChild(v.TargetPath)
 	walkChild(v.CapabilityID)
 }

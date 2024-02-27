@@ -467,17 +467,22 @@ func validateArgumentParams(
 		}
 
 		// Ensure static type info is available for all values
-		interpreter.InspectValue(inter, arg, func(value interpreter.Value) bool {
-			if value == nil {
+		interpreter.InspectValue(
+			inter,
+			arg,
+			func(value interpreter.Value) bool {
+				if value == nil {
+					return true
+				}
+
+				if !hasValidStaticType(inter, value) {
+					panic(errors.NewUnexpectedError("invalid static type for argument: %d", parameterIndex))
+				}
+
 				return true
-			}
-
-			if !hasValidStaticType(inter, value) {
-				panic(errors.NewUnexpectedError("invalid static type for argument: %d", parameterIndex))
-			}
-
-			return true
-		})
+			},
+			locationRange,
+		)
 
 		argumentValues[parameterIndex] = arg
 	}

@@ -77,11 +77,11 @@ func (*IDCapabilityValue) isValue() {}
 
 func (*IDCapabilityValue) isCapabilityValue() {}
 
-func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitCapabilityValue(interpreter, v)
 }
 
-func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
 	walkChild(v.ID)
 	walkChild(v.Address)
 }
