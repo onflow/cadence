@@ -7836,20 +7836,18 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			// is a subtype of a type `V`:
 
 			legacyType := typedSubType.LegacyType
-			if legacyType != nil {
-				switch legacyType {
-				case AnyResourceType, AnyStructType, AnyType:
-					// When `T == AnyResource || T == AnyStruct || T == Any`: not statically.
-					return false
-				}
+			switch legacyType {
+			case nil, AnyResourceType, AnyStructType, AnyType:
+				// When `T == AnyResource || T == AnyStruct || T == Any`: not statically.
+				return false
+			}
 
-				if intersectionSubType, ok := legacyType.(*CompositeType); ok {
-					// When `T != AnyResource && T != AnyStruct`: if `T == V`.
-					//
-					// The owner may freely unrestrict.
+			if intersectionSubType, ok := legacyType.(*CompositeType); ok {
+				// When `T != AnyResource && T != AnyStruct`: if `T == V`.
+				//
+				// The owner may freely unrestrict.
 
-					return intersectionSubType == typedSuperType
-				}
+				return intersectionSubType == typedSuperType
 			}
 
 		case *CompositeType:
