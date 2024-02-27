@@ -118,10 +118,10 @@ func TestInterpretArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindArrayValueBase))
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
-		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
+		assert.Equal(t, uint64(26), meter.getMemory(common.MemoryKindArrayValueBase))
+		assert.Equal(t, uint64(22), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
 
 		// 4 Int8: 1 for type, 3 for values
@@ -442,7 +442,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindDictionaryValueBase))
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindDictionaryValueBase))
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
 
 		// 4 Int8: 1 for type, 3 for values
@@ -677,7 +677,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindCompositeValueBase))
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(18), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(480), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
