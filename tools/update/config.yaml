@@ -87,7 +87,7 @@ repos:
         - onflow/cadence
         - onflow/flow-go-sdk
         - onflow/flow-go
-        - onflow/flow-emulator
+        - onflow/flowkit/v2
 
 - repo: onflow/flow-cli
   needsRelease: true
@@ -104,3 +104,13 @@ repos:
         - onflow/cadence-tools/languageserver
         - onflow/flixkit-go
         - onflow/flowkit/v2
+
+- repo: onflow/flow-evm-gateway
+  needsRelease: false
+  branch: main
+  mods:
+    - path: ""
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
