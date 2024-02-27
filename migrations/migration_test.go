@@ -1050,6 +1050,7 @@ func TestEmptyIntersectionTypeMigration(t *testing.T) {
 		Elaboration: elaboration,
 	}
 
+	// NOTE: create an empty intersection type with a legacy type: AnyStruct{}
 	emptyIntersectionType := interpreter.NewIntersectionStaticType(
 		nil,
 		nil,
