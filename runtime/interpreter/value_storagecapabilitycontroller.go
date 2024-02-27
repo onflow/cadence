@@ -122,7 +122,7 @@ func (v *StorageCapabilityControllerValue) StaticType(_ *Interpreter) StaticType
 	return PrimitiveStaticTypeStorageCapabilityController
 }
 
-func (*StorageCapabilityControllerValue) IsImportable(_ *Interpreter) bool {
+func (*StorageCapabilityControllerValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 

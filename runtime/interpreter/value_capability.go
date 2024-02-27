@@ -93,7 +93,7 @@ func (v *IDCapabilityValue) StaticType(inter *Interpreter) StaticType {
 	)
 }
 
-func (v *IDCapabilityValue) IsImportable(_ *Interpreter) bool {
+func (v *IDCapabilityValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 

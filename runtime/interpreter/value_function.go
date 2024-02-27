@@ -107,7 +107,7 @@ func (f *InterpretedFunctionValue) StaticType(interpreter *Interpreter) StaticTy
 	return ConvertSemaToStaticType(interpreter, f.Type)
 }
 
-func (*InterpretedFunctionValue) IsImportable(_ *Interpreter) bool {
+func (*InterpretedFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -237,7 +237,7 @@ func (f *HostFunctionValue) StaticType(interpreter *Interpreter) StaticType {
 	return ConvertSemaToStaticType(interpreter, f.Type)
 }
 
-func (*HostFunctionValue) IsImportable(_ *Interpreter) bool {
+func (*HostFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -390,7 +390,7 @@ func (f BoundFunctionValue) StaticType(inter *Interpreter) StaticType {
 	return f.Function.StaticType(inter)
 }
 
-func (BoundFunctionValue) IsImportable(_ *Interpreter) bool {
+func (BoundFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 

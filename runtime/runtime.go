@@ -436,7 +436,7 @@ func validateArgumentParams(
 		// Ensure the argument is of an importable type
 		argType := arg.StaticType(inter)
 
-		if !arg.IsImportable(inter) {
+		if !arg.IsImportable(inter, locationRange) {
 			return nil, &ArgumentNotImportableError{
 				Type: argType,
 			}

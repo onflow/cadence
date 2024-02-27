@@ -59,7 +59,7 @@ func (v *PathCapabilityValue) StaticType(inter *Interpreter) StaticType {
 	)
 }
 
-func (v *PathCapabilityValue) IsImportable(_ *Interpreter) bool {
+func (v *PathCapabilityValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	panic(errors.NewUnreachableError())
 }
 

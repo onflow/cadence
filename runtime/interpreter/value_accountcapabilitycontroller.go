@@ -100,7 +100,7 @@ func (v *AccountCapabilityControllerValue) StaticType(_ *Interpreter) StaticType
 	return PrimitiveStaticTypeAccountCapabilityController
 }
 
-func (*AccountCapabilityControllerValue) IsImportable(_ *Interpreter) bool {
+func (*AccountCapabilityControllerValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 

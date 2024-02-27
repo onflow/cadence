@@ -57,7 +57,7 @@ func (f placeholderValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeNever
 }
 
-func (placeholderValue) IsImportable(_ *Interpreter) bool {
+func (placeholderValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 

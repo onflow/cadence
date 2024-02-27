@@ -141,7 +141,7 @@ type Value interface {
 	// NOTE: not used by interpreter, but used externally (e.g. state migration)
 	// NOTE: memory metering is unnecessary for Clone methods
 	Clone(interpreter *Interpreter) Value
-	IsImportable(interpreter *Interpreter) bool
+	IsImportable(interpreter *Interpreter, locationRange LocationRange) bool
 }
 
 // ValueIndexableValue
@@ -350,7 +350,7 @@ func (TypeValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeMetaType)
 }
 
-func (TypeValue) IsImportable(_ *Interpreter) bool {
+func (TypeValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return sema.MetaType.Importable
 }
 
@@ -558,7 +558,7 @@ func (VoidValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeVoid)
 }
 
-func (VoidValue) IsImportable(_ *Interpreter) bool {
+func (VoidValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return sema.VoidType.Importable
 }
 
@@ -667,7 +667,7 @@ func (BoolValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeBool)
 }
 
-func (BoolValue) IsImportable(_ *Interpreter) bool {
+func (BoolValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return sema.BoolType.Importable
 }
 
@@ -857,7 +857,7 @@ func (CharacterValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeCharacter)
 }
 
-func (CharacterValue) IsImportable(_ *Interpreter) bool {
+func (CharacterValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return sema.CharacterType.Importable
 }
 
@@ -1090,7 +1090,7 @@ func (*StringValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeString)
 }
 
-func (*StringValue) IsImportable(_ *Interpreter) bool {
+func (*StringValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return sema.StringType.Importable
 }
 
@@ -1946,12 +1946,12 @@ func (v *ArrayValue) StaticType(_ *Interpreter) StaticType {
 	return v.Type
 }
 
-func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
+func (v *ArrayValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
 	importable := true
 	v.Iterate(
 		inter,
 		func(element Value) (resume bool) {
-			if !element.IsImportable(inter) {
+			if !element.IsImportable(inter, locationRange) {
 				importable = false
 				// stop iteration
 				return false
@@ -1961,8 +1961,7 @@ func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
 			return true
 		},
 		false,
-		// TODO: Not supposed to panic with container mutation error.
-		EmptyLocationRange,
+		locationRange,
 	)
 
 	return importable
@@ -3705,7 +3704,7 @@ func (IntValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt)
 }
 
-func (IntValue) IsImportable(_ *Interpreter) bool {
+func (IntValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -4266,7 +4265,7 @@ func (Int8Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt8)
 }
 
-func (Int8Value) IsImportable(_ *Interpreter) bool {
+func (Int8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -4907,7 +4906,7 @@ func (Int16Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt16)
 }
 
-func (Int16Value) IsImportable(_ *Interpreter) bool {
+func (Int16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -5549,7 +5548,7 @@ func (Int32Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt32)
 }
 
-func (Int32Value) IsImportable(_ *Interpreter) bool {
+func (Int32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -6189,7 +6188,7 @@ func (Int64Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt64)
 }
 
-func (Int64Value) IsImportable(_ *Interpreter) bool {
+func (Int64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -6840,7 +6839,7 @@ func (Int128Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt128)
 }
 
-func (Int128Value) IsImportable(_ *Interpreter) bool {
+func (Int128Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -7584,7 +7583,7 @@ func (Int256Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt256)
 }
 
-func (Int256Value) IsImportable(_ *Interpreter) bool {
+func (Int256Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -8366,7 +8365,7 @@ func (UIntValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt)
 }
 
-func (v UIntValue) IsImportable(_ *Interpreter) bool {
+func (v UIntValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -8937,7 +8936,7 @@ func (UInt8Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt8)
 }
 
-func (UInt8Value) IsImportable(_ *Interpreter) bool {
+func (UInt8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -9523,7 +9522,7 @@ func (UInt16Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt16)
 }
 
-func (UInt16Value) IsImportable(_ *Interpreter) bool {
+func (UInt16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -10064,7 +10063,7 @@ func (UInt32Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt32)
 }
 
-func (UInt32Value) IsImportable(_ *Interpreter) bool {
+func (UInt32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -10612,7 +10611,7 @@ func (UInt64Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt64)
 }
 
-func (UInt64Value) IsImportable(_ *Interpreter) bool {
+func (UInt64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -11194,7 +11193,7 @@ func (UInt128Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt128)
 }
 
-func (UInt128Value) IsImportable(_ *Interpreter) bool {
+func (UInt128Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -11869,7 +11868,7 @@ func (UInt256Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt256)
 }
 
-func (UInt256Value) IsImportable(_ *Interpreter) bool {
+func (UInt256Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -12528,7 +12527,7 @@ func (Word8Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord8)
 }
 
-func (Word8Value) IsImportable(_ *Interpreter) bool {
+func (Word8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -12965,7 +12964,7 @@ func (Word16Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord16)
 }
 
-func (Word16Value) IsImportable(_ *Interpreter) bool {
+func (Word16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -13403,7 +13402,7 @@ func (Word32Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord32)
 }
 
-func (Word32Value) IsImportable(_ *Interpreter) bool {
+func (Word32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -13848,7 +13847,7 @@ func (Word64Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord64)
 }
 
-func (Word64Value) IsImportable(_ *Interpreter) bool {
+func (Word64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -14322,7 +14321,7 @@ func (Word128Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord128)
 }
 
-func (Word128Value) IsImportable(_ *Interpreter) bool {
+func (Word128Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -14902,7 +14901,7 @@ func (Word256Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord256)
 }
 
-func (Word256Value) IsImportable(_ *Interpreter) bool {
+func (Word256Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -15497,7 +15496,7 @@ func (Fix64Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeFix64)
 }
 
-func (Fix64Value) IsImportable(_ *Interpreter) bool {
+func (Fix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -16068,7 +16067,7 @@ func (UFix64Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUFix64)
 }
 
-func (UFix64Value) IsImportable(_ *Interpreter) bool {
+func (UFix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -16791,7 +16790,7 @@ func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
 	return v.staticType
 }
 
-func (v *CompositeValue) IsImportable(inter *Interpreter) bool {
+func (v *CompositeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
 	// Check type is importable
 	staticType := v.StaticType(inter)
 	semaType := inter.MustConvertStaticToSemaType(staticType)
@@ -16802,7 +16801,7 @@ func (v *CompositeValue) IsImportable(inter *Interpreter) bool {
 	// Check all field values are importable
 	importable := true
 	v.ForEachField(inter, func(_ string, value Value) (resume bool) {
-		if !value.IsImportable(inter) {
+		if !value.IsImportable(inter, locationRange) {
 			importable = false
 			// stop iteration
 			return false
@@ -18707,10 +18706,10 @@ func (v *DictionaryValue) StaticType(_ *Interpreter) StaticType {
 	return v.Type
 }
 
-func (v *DictionaryValue) IsImportable(inter *Interpreter) bool {
+func (v *DictionaryValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
 	importable := true
 	v.Iterate(inter, func(key, value Value) (resume bool) {
-		if !key.IsImportable(inter) || !value.IsImportable(inter) {
+		if !key.IsImportable(inter, locationRange) || !value.IsImportable(inter, locationRange) {
 			importable = false
 			// stop iteration
 			return false
@@ -19750,7 +19749,7 @@ func (NilValue) StaticType(interpreter *Interpreter) StaticType {
 	)
 }
 
-func (NilValue) IsImportable(_ *Interpreter) bool {
+func (NilValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -19931,8 +19930,8 @@ func (v *SomeValue) StaticType(inter *Interpreter) StaticType {
 	)
 }
 
-func (v *SomeValue) IsImportable(inter *Interpreter) bool {
-	return v.value.IsImportable(inter)
+func (v *SomeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
+	return v.value.IsImportable(inter, locationRange)
 }
 
 func (*SomeValue) isOptionalValue() {}
@@ -20319,7 +20318,7 @@ func (v *StorageReferenceValue) GetAuthorization() Authorization {
 	return v.Authorization
 }
 
-func (*StorageReferenceValue) IsImportable(_ *Interpreter) bool {
+func (*StorageReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -20752,7 +20751,7 @@ func (v *EphemeralReferenceValue) GetAuthorization() Authorization {
 	return v.Authorization
 }
 
-func (*EphemeralReferenceValue) IsImportable(_ *Interpreter) bool {
+func (*EphemeralReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -21056,7 +21055,7 @@ func (AddressValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeAddress)
 }
 
-func (AddressValue) IsImportable(_ *Interpreter) bool {
+func (AddressValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -21293,7 +21292,7 @@ func (v PathValue) StaticType(interpreter *Interpreter) StaticType {
 	}
 }
 
-func (v PathValue) IsImportable(_ *Interpreter) bool {
+func (v PathValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	switch v.Domain {
 	case common.PathDomainStorage:
 		return sema.StoragePathType.Importable
@@ -21531,7 +21530,7 @@ func (v *PublishedValue) StaticType(interpreter *Interpreter) StaticType {
 	return v.Value.StaticType(interpreter)
 }
 
-func (*PublishedValue) IsImportable(_ *Interpreter) bool {
+func (*PublishedValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
