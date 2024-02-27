@@ -51,7 +51,9 @@ func ByteArrayValueToByteSlice(interpreter *Interpreter, value Value, locationRa
 
 				return true
 			},
-			locationRange)
+			false,
+			locationRange,
+		)
 		if err != nil {
 			return nil, err
 		}

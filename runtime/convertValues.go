@@ -335,7 +335,9 @@ func exportArrayValue(
 					)
 					return true
 				},
-				locationRange)
+				false,
+				locationRange,
+			)
 
 			if err != nil {
 				return nil, err

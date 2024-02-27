@@ -241,6 +241,7 @@ type IterableValue interface {
 		interpreter *Interpreter,
 		elementType sema.Type,
 		function func(value Value) (resume bool),
+		transferElements bool,
 		locationRange LocationRange,
 	)
 }
@@ -1612,6 +1613,7 @@ func (v *StringValue) ForEach(
 	interpreter *Interpreter,
 	_ sema.Type,
 	function func(value Value) (resume bool),
+	transferElements bool,
 	locationRange LocationRange,
 ) {
 	iterator := v.Iterator(interpreter, locationRange)
@@ -1619,6 +1621,17 @@ func (v *StringValue) ForEach(
 		value := iterator.Next(interpreter, locationRange)
 		if value == nil {
 			return
+		}
+
+		if transferElements {
+			value = value.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+			)
 		}
 
 		if !function(value) {
@@ -1844,12 +1857,14 @@ func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
 func (v *ArrayValue) Iterate(
 	interpreter *Interpreter,
 	f func(element Value) (resume bool),
+	transferElements bool,
 	locationRange LocationRange,
 ) {
 	v.iterate(
 		interpreter,
 		v.array.Iterate,
 		f,
+		transferElements,
 		locationRange,
 	)
 }
@@ -1859,10 +1874,13 @@ func (v *ArrayValue) IterateLoaded(
 	f func(element Value) (resume bool),
 	locationRange LocationRange,
 ) {
+	const transferElements = false
+
 	v.iterate(
 		interpreter,
 		v.array.IterateLoadedValues,
 		f,
+		transferElements,
 		locationRange,
 	)
 }
@@ -1871,6 +1889,7 @@ func (v *ArrayValue) iterate(
 	interpreter *Interpreter,
 	atreeIterate func(fn atree.ArrayIterationFunc) error,
 	f func(element Value) (resume bool),
+	transferElements bool,
 	locationRange LocationRange,
 ) {
 	iterate := func() {
@@ -1879,17 +1898,19 @@ func (v *ArrayValue) iterate(
 			// convert to high-level interpreter.Value
 			elementValue := MustConvertStoredValue(interpreter, element)
 
-			// Each element must be transferred before passing onto the function.
-			transferredElement := elementValue.Transfer(
-				interpreter,
-				locationRange,
-				atree.Address{},
-				false,
-				nil,
-				nil,
-			)
+			if transferElements {
+				// Each element must be transferred before passing onto the function.
+				elementValue = elementValue.Transfer(
+					interpreter,
+					locationRange,
+					atree.Address{},
+					false,
+					nil,
+					nil,
+				)
+			}
 
-			resume = f(transferredElement)
+			resume = f(elementValue)
 
 			return resume, nil
 		})
@@ -1908,6 +1929,7 @@ func (v *ArrayValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
 			walkChild(element)
 			return true
 		},
+		false,
 		// TODO: Not supposed to panic with container mutation error.
 		EmptyLocationRange,
 	)
@@ -1932,6 +1954,7 @@ func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
 			// continue iteration
 			return true
 		},
+		false,
 		// TODO: Not supposed to panic with container mutation error.
 		EmptyLocationRange,
 	)
@@ -2340,6 +2363,7 @@ func (v *ArrayValue) FirstIndex(interpreter *Interpreter, locationRange Location
 			// continue iteration
 			return true
 		},
+		false,
 		locationRange,
 	)
 
@@ -2373,6 +2397,7 @@ func (v *ArrayValue) Contains(
 			// continue iteration
 			return true
 		},
+		false,
 		locationRange,
 	)
 
@@ -2759,6 +2784,7 @@ func (v *ArrayValue) ConformsToStaticType(
 			// continue iteration
 			return true
 		},
+		false,
 		locationRange,
 	)
 
@@ -3327,9 +3353,10 @@ func (v *ArrayValue) ForEach(
 	interpreter *Interpreter,
 	_ sema.Type,
 	function func(value Value) (resume bool),
+	transferElements bool,
 	locationRange LocationRange,
 ) {
-	v.Iterate(interpreter, function, locationRange)
+	v.Iterate(interpreter, function, transferElements, locationRange)
 }
 
 func (v *ArrayValue) ToVariableSized(
@@ -18226,6 +18253,7 @@ func (v *CompositeValue) ForEach(
 	interpreter *Interpreter,
 	_ sema.Type,
 	function func(value Value) (resume bool),
+	transferElements bool,
 	locationRange LocationRange,
 ) {
 	iterator := v.Iterator(interpreter, locationRange)
@@ -18235,17 +18263,19 @@ func (v *CompositeValue) ForEach(
 			return
 		}
 
-		// Each element must be transferred before passing onto the function.
-		transferredValue := value.Transfer(
-			interpreter,
-			locationRange,
-			atree.Address{},
-			false,
-			nil,
-			nil,
-		)
+		if transferElements {
+			// Each element must be transferred before passing onto the function.
+			value = value.Transfer(
+				interpreter,
+				locationRange,
+				atree.Address{},
+				false,
+				nil,
+				nil,
+			)
+		}
 
-		if !function(transferredValue) {
+		if !function(value) {
 			return
 		}
 	}
@@ -20543,6 +20573,7 @@ func (v *StorageReferenceValue) ForEach(
 	interpreter *Interpreter,
 	elementType sema.Type,
 	function func(value Value) (resume bool),
+	_ bool,
 	locationRange LocationRange,
 ) {
 	referencedValue := v.mustReferencedValue(interpreter, locationRange)
@@ -20582,10 +20613,15 @@ func forEachReference(
 		referencedElementType = referenceType.Type
 	}
 
+	// Do not transfer the inner referenced elements.
+	// We only take a references to them, but never move them out.
+	const transferElements = false
+
 	referencedIterable.ForEach(
 		interpreter,
 		referencedElementType,
 		updatedFunction,
+		transferElements,
 		locationRange,
 	)
 }
@@ -20907,6 +20943,7 @@ func (v *EphemeralReferenceValue) ForEach(
 	interpreter *Interpreter,
 	elementType sema.Type,
 	function func(value Value) (resume bool),
+	_ bool,
 	locationRange LocationRange,
 ) {
 	forEachReference(

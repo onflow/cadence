@@ -311,10 +311,14 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 		return
 	}
 
+	// Transfer the elements before pass onto the loop-body.
+	const transferElements = true
+
 	iterable.ForEach(
 		interpreter,
 		forStmtTypes.ValueVariableType,
 		executeBody,
+		transferElements,
 		locationRange,
 	)
 

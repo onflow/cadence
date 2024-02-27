@@ -132,6 +132,7 @@ func arrayValueToSlice(
 			result = append(result, element)
 			return true
 		},
+		false,
 		locationRange,
 	)
 
@@ -215,6 +216,7 @@ func addressArrayValueToSlice(
 
 			return true
 		},
+		false,
 		locationRange,
 	)
 
@@ -248,6 +250,7 @@ func accountsArrayValueToSlice(
 
 			return true
 		},
+		false,
 		locationRange,
 	)
 

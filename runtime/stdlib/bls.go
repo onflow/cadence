@@ -75,7 +75,9 @@ func newBLSAggregatePublicKeysFunction(
 					// Continue iteration
 					return true
 				},
-				locationRange)
+				false,
+				locationRange,
+			)
 
 			var err error
 			var aggregatedPublicKey *PublicKey
@@ -148,6 +150,7 @@ func newBLSAggregateSignaturesFunction(
 					// Continue iteration
 					return true
 				},
+				false,
 				locationRange,
 			)
 

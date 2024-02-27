@@ -641,6 +641,37 @@ func TestInterpretEphemeralReferencesInForLoop(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("Resource array, use after loop", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo{
+                fun bar() {}
+            }
+
+            fun main() {
+                let array <- [ <- create Foo(), <- create Foo()]
+
+                // Take a reference to an element.
+                let arrayElementRef = &array[0] as &Foo
+
+                let arrayRef = &array as &[Foo]
+                for element in arrayRef {
+                    let e: &Foo = element
+                }
+
+                // Reference should stay valid, even after looping.
+                // i.e: Loop should not move-out the elements.
+                arrayElementRef.bar()
+
+                destroy array
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
 }
 
 func TestInterpretStorageReferencesInForLoop(t *testing.T) {

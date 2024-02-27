@@ -104,6 +104,7 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 
 			return true
 		},
+		false,
 		invocation.LocationRange,
 	)
 
@@ -173,6 +174,7 @@ func stringFunctionJoin(invocation Invocation) Value {
 
 			return true
 		},
+		false,
 		invocation.LocationRange,
 	)
 

@@ -595,6 +595,7 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 				index++
 				return true
 			},
+			false,
 			interpreter.EmptyLocationRange,
 		)
 	})

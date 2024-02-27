@@ -3484,6 +3484,7 @@ func referenceTypeFunction(invocation Invocation) Value {
 
 						return true
 					},
+					false,
 					invocation.LocationRange,
 				)
 				return entitlements
@@ -3564,6 +3565,7 @@ func functionTypeFunction(invocation Invocation) Value {
 				// Continue iteration
 				return true
 			},
+			false,
 			invocation.LocationRange,
 		)
 	}
@@ -3616,6 +3618,7 @@ func intersectionTypeFunction(invocation Invocation) Value {
 				// Continue iteration
 				return true
 			},
+			false,
 			invocation.LocationRange,
 		)
 
