@@ -703,7 +703,7 @@ func TestMigrationError(t *testing.T) {
 		map[struct {
 			interpreter.StorageKey
 			interpreter.StorageMapKey
-		}][]string{
+		}][]error{
 			{
 				StorageKey: interpreter.StorageKey{
 					Address: account,
@@ -711,7 +711,7 @@ func TestMigrationError(t *testing.T) {
 				},
 				StorageMapKey: interpreter.StringStorageMapKey("int8_value"),
 			}: {
-				"testInt8Migration",
+				errors.New("error occurred while migrating int8"),
 			},
 		},
 		reporter.errors,
