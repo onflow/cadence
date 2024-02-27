@@ -1313,7 +1313,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 		},
 	}
 
-	test := func(testCase testCase, valueGenerator valueGenerator, typeGenerator typeGenerator) {
+	test := func(t *testing.T, testCase testCase, valueGenerator valueGenerator, typeGenerator typeGenerator) {
 
 		input := valueGenerator.wrap(typeGenerator.wrap(testCase.Input))
 		if input == nil {
@@ -1346,7 +1346,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 					for _, typeGenerator := range typeGenerators {
 						t.Run(typeGenerator.name, func(t *testing.T) {
 
-							test(testCase, valueGenerator, typeGenerator)
+							test(t, testCase, valueGenerator, typeGenerator)
 						})
 					}
 				})
