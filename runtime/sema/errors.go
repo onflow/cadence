@@ -2795,6 +2795,42 @@ func (e *NonReferenceTypeReferenceError) SecondaryError() string {
 	)
 }
 
+// ReferenceToAnOptionalError
+
+type ReferenceToAnOptionalError struct {
+	ReferencedOptionalType *OptionalType
+	ast.Range
+}
+
+var _ SemanticError = &ReferenceToAnOptionalError{}
+var _ errors.UserError = &ReferenceToAnOptionalError{}
+var _ errors.SecondaryError = &ReferenceToAnOptionalError{}
+
+func (*ReferenceToAnOptionalError) isSemanticError() {}
+
+func (*ReferenceToAnOptionalError) IsUserError() {}
+
+func (e *ReferenceToAnOptionalError) Error() string {
+	return "cannot create reference"
+}
+
+func (e *ReferenceToAnOptionalError) SecondaryError() string {
+	return fmt.Sprintf(
+		"expected non-optional type, got `%s`. Consider taking a reference with type `%s`",
+		e.ReferencedOptionalType.QualifiedString(),
+
+		// Suggest taking the optional out of the reference type.
+		NewOptionalType(
+			nil,
+			NewReferenceType(
+				nil,
+				UnauthorizedAccess,
+				e.ReferencedOptionalType.Type,
+			),
+		),
+	)
+}
+
 // InvalidResourceCreationError
 
 type InvalidResourceCreationError struct {

@@ -3206,20 +3206,4 @@ func TestInterpretOptionalReference(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 	})
-
-	t.Run("reference to nested optional", func(t *testing.T) {
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-            fun main() {
-                var dict: {String: Foo?} = {}
-                var ref: &(Foo??) = &dict["foo"] as &(Foo??)
-            }
-
-            struct Foo {}
-        `)
-
-		_, err := inter.Invoke("main")
-		require.NoError(t, err)
-	})
 }

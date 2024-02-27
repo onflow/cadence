@@ -3823,6 +3823,22 @@ func TestCheckOptionalReference(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("reference to optional", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                var dict: {String: Foo} = {}
+                var ref: &(Foo?) = &dict["foo"] as &(Foo?)
+            }
+
+            struct Foo {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[0])
+	})
+
 	t.Run("reference to nested optional", func(t *testing.T) {
 		t.Parallel()
 
@@ -3835,6 +3851,7 @@ func TestCheckOptionalReference(t *testing.T) {
             struct Foo {}
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[0])
 	})
 }
