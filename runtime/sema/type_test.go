@@ -2253,7 +2253,7 @@ func TestMapType(t *testing.T) {
 			for _, i := range typ.Types {
 				interfaces = append(interfaces, &InterfaceType{Identifier: i.Identifier + "f"})
 			}
-			return NewIntersectionType(nil, interfaces)
+			return NewIntersectionType(nil, nil, interfaces)
 		}
 		return ty
 	}
@@ -2312,12 +2312,14 @@ func TestMapType(t *testing.T) {
 
 		original := NewIntersectionType(
 			nil,
+			nil,
 			[]*InterfaceType{
 				{Identifier: "foo"},
 				{Identifier: "bar"},
 			},
 		)
 		mapped := NewIntersectionType(
+			nil,
 			nil,
 			[]*InterfaceType{
 				{Identifier: "foof"},
@@ -2647,6 +2649,7 @@ func TestIntersectionType_ID(t *testing.T) {
 
 		intersectionType := NewIntersectionType(
 			nil,
+			nil,
 			[]*InterfaceType{
 				{
 					Location:   testLocation,
@@ -2664,6 +2667,7 @@ func TestIntersectionType_ID(t *testing.T) {
 		t.Parallel()
 
 		intersectionType := NewIntersectionType(
+			nil,
 			nil,
 			[]*InterfaceType{
 				// NOTE: order
@@ -2701,6 +2705,7 @@ func TestIntersectionType_ID(t *testing.T) {
 
 		intersectionType := NewIntersectionType(
 			nil,
+			nil,
 			[]*InterfaceType{
 				// NOTE: order
 				interfaceType2,
@@ -2725,6 +2730,7 @@ func TestIntersectionType_String(t *testing.T) {
 
 		intersectionType := NewIntersectionType(
 			nil,
+			nil,
 			[]*InterfaceType{
 				{
 					Location:   testLocation,
@@ -2742,6 +2748,7 @@ func TestIntersectionType_String(t *testing.T) {
 		t.Parallel()
 
 		intersectionType := NewIntersectionType(
+			nil,
 			nil,
 			[]*InterfaceType{
 				// NOTE: order
@@ -2778,6 +2785,7 @@ func TestIntersectionType_QualifiedString(t *testing.T) {
 
 		intersectionType := NewIntersectionType(
 			nil,
+			nil,
 			[]*InterfaceType{
 				{
 					Location:   testLocation,
@@ -2795,6 +2803,7 @@ func TestIntersectionType_QualifiedString(t *testing.T) {
 		t.Parallel()
 
 		intersectionType := NewIntersectionType(
+			nil,
 			nil,
 			[]*InterfaceType{
 				// NOTE: order
@@ -2831,6 +2840,7 @@ func TestIntersectionType_QualifiedString(t *testing.T) {
 		interfaceType2.SetContainerType(containerType)
 
 		intersectionType := NewIntersectionType(
+			nil,
 			nil,
 			[]*InterfaceType{
 				// NOTE: order

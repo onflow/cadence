@@ -3321,7 +3321,7 @@ func lookupEntitlement(interpreter *Interpreter, typeID string) (*sema.Entitleme
 		return nil, err
 	}
 
-	typ, err := interpreter.getEntitlement(common.TypeID(typeID))
+	typ, err := interpreter.GetEntitlementType(common.TypeID(typeID))
 	if err != nil {
 		return nil, err
 	}
@@ -4458,7 +4458,7 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 	)
 }
 
-func (interpreter *Interpreter) getEntitlement(typeID common.TypeID) (*sema.EntitlementType, error) {
+func (interpreter *Interpreter) GetEntitlementType(typeID common.TypeID) (*sema.EntitlementType, error) {
 	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(typeID))
 	if err != nil {
 		return nil, err
@@ -4492,7 +4492,7 @@ func (interpreter *Interpreter) getEntitlement(typeID common.TypeID) (*sema.Enti
 	return ty, nil
 }
 
-func (interpreter *Interpreter) getEntitlementMapType(typeID common.TypeID) (*sema.EntitlementMapType, error) {
+func (interpreter *Interpreter) GetEntitlementMapType(typeID common.TypeID) (*sema.EntitlementMapType, error) {
 	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(typeID))
 	if err != nil {
 		return nil, err
@@ -4531,10 +4531,7 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 	return ConvertStaticToSemaType(
 		config.MemoryGauge,
 		staticType,
-		interpreter.GetInterfaceType,
-		interpreter.GetCompositeType,
-		interpreter.getEntitlement,
-		interpreter.getEntitlementMapType,
+		interpreter,
 	)
 }
 
@@ -4554,8 +4551,7 @@ func (interpreter *Interpreter) MustConvertStaticAuthorizationToSemaAccess(auth 
 	access, err := ConvertStaticAuthorizationToSemaAccess(
 		interpreter,
 		auth,
-		interpreter.getEntitlement,
-		interpreter.getEntitlementMapType,
+		interpreter,
 	)
 	if err != nil {
 		panic(err)

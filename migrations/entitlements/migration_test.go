@@ -531,6 +531,7 @@ func TestConvertToEntitledType(t *testing.T) {
 				sema.UnauthorizedAccess,
 				sema.NewIntersectionType(
 					nil,
+					nil,
 					[]*sema.InterfaceType{
 						interfaceTypeInheriting,
 						interfaceTypeWithMap,
@@ -541,6 +542,7 @@ func TestConvertToEntitledType(t *testing.T) {
 				nil,
 				eFAndGAccess,
 				sema.NewIntersectionType(
+					nil,
 					nil,
 					[]*sema.InterfaceType{
 						interfaceTypeInheriting,
@@ -557,6 +559,7 @@ func TestConvertToEntitledType(t *testing.T) {
 					nil,
 					sema.NewIntersectionType(
 						nil,
+						nil,
 						[]*sema.InterfaceType{
 							interfaceTypeInheriting,
 							interfaceTypeWithMap,
@@ -570,6 +573,7 @@ func TestConvertToEntitledType(t *testing.T) {
 				sema.NewOptionalType(
 					nil,
 					sema.NewIntersectionType(
+						nil,
 						nil,
 						[]*sema.InterfaceType{
 							interfaceTypeInheriting,
