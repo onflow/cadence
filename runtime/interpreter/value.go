@@ -19124,21 +19124,6 @@ func (v *DictionaryValue) Insert(
 	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
 	interpreter.checkContainerMutation(v.Type.ValueType, value, locationRange)
 
-	return v.InsertUnchecked(
-		interpreter,
-		locationRange,
-		keyValue,
-		value,
-	)
-}
-
-// Deprecated: Use Insert instead
-func (v *DictionaryValue) InsertUnchecked(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	keyValue, value Value,
-) OptionalValue {
-
 	// length increases by 1
 	dataSlabs, metaDataSlabs := common.AdditionalAtreeMemoryUsage(v.dictionary.Count(), v.elementSize, false)
 	common.UseMemory(interpreter, common.AtreeMapElementOverhead)
