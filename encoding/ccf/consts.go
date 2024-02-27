@@ -65,8 +65,8 @@ const (
 	CBORTagIntersectionType
 	CBORTagCapabilityType
 	CBORTagInclusiveRangeType
-	_
-	_
+	CBORTagEntitlementSetAuthorizationAccessType
+	CBORTagEntitlementMapAuthorizationAccessType
 	_
 	_
 	_
@@ -121,8 +121,8 @@ const (
 	CBORTagCapabilityTypeValue
 	CBORTagFunctionTypeValue
 	CBORTagInclusiveRangeTypeValue // InclusiveRange is stored as a composite value.
-	_
-	_
+	CBORTagEntitlementSetAuthorizationAccessTypeValue
+	CBORTagEntitlementMapAuthorizationAccessTypeValue
 	_
 	_
 	_

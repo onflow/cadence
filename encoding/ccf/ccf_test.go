@@ -44,11 +44,13 @@ import (
 var deterministicEncMode, _ = ccf.EncOptions{
 	SortCompositeFields:   ccf.SortBytewiseLexical,
 	SortIntersectionTypes: ccf.SortBytewiseLexical,
+	SortEntitlementTypes:  ccf.SortBytewiseLexical,
 }.EncMode()
 
 var deterministicDecMode, _ = ccf.DecOptions{
 	EnforceSortCompositeFields:   ccf.EnforceSortBytewiseLexical,
 	EnforceSortIntersectionTypes: ccf.EnforceSortBytewiseLexical,
+	EnforceSortEntitlementTypes:  ccf.EnforceSortBytewiseLexical,
 }.DecMode()
 
 type encodeTest struct {
@@ -7499,7 +7501,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// {"value":[{"value":"a","type":"String"},{"value":"b","type":"String"}],"type":"Array"}
 			//
 			// language=edn, format=ccf
-			// 130([139(142([false, 137(1)])), ["a", "b"]])
+			// 130([139(142([nil, 137(1)])), ["a", "b"]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -7533,6 +7535,230 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 		},
 	}
 
+	// ["a", "b"] with static type []&String
+	entitlementConjunctionSetReferenceToSimpleType := encodeTest{
+		name: "array of reference to string (entitlement conjuction set)",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.String("a"),
+			cadence.String("b"),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(
+				cadence.NewEntitlementSetAuthorization(
+					nil,
+					[]common.TypeID{"foo", "bar"},
+					cadence.Conjunction,
+				),
+				cadence.StringType,
+			),
+		)),
+		expectedVal: cadence.NewArray([]cadence.Value{
+			cadence.String("a"),
+			cadence.String("b"),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(
+				cadence.NewEntitlementSetAuthorization(
+					nil,
+					[]common.TypeID{"bar", "foo"},
+					cadence.Conjunction,
+				),
+				cadence.StringType,
+			),
+		)),
+		expected: []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":"a","type":"String"},{"value":"b","type":"String"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(142([146([0, ["bar", "foo"]]), 137(1)])), ["a", "b"]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// type []&String
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagReferenceType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessType,
+			// array, 2 items follow
+			0x82,
+			// element 0: kind (Conjunction)
+			0x00,
+			// element 1: entitlements
+			// array, 2 items follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// "bar"
+			0x62, 0x61, 0x72,
+			// text, 3 bytes follow
+			0x63,
+			// "foo"
+			0x66, 0x6f, 0x6f,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// array data without inlined type
+			// array, 2 items follow
+			0x82,
+			// text, 1 byte follow
+			0x61,
+			// "a"
+			0x61,
+			// text, 1 byte follow
+			0x61,
+			// "b"
+			0x62,
+		},
+	}
+
+	// ["a", "b"] with static type []&String
+	entitlementDisjunctionSetReferenceToSimpleType := encodeTest{
+		name: "array of reference to string (entitlement disjuction set)",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.String("a"),
+			cadence.String("b"),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(
+				cadence.NewEntitlementSetAuthorization(
+					nil,
+					[]common.TypeID{"foo", "bar"},
+					cadence.Disjunction,
+				),
+				cadence.StringType,
+			),
+		)),
+		expectedVal: cadence.NewArray([]cadence.Value{
+			cadence.String("a"),
+			cadence.String("b"),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(
+				cadence.NewEntitlementSetAuthorization(
+					nil,
+					[]common.TypeID{"bar", "foo"},
+					cadence.Disjunction,
+				),
+				cadence.StringType,
+			),
+		)),
+		expected: []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":"a","type":"String"},{"value":"b","type":"String"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(142([146([1, ["bar", "foo"]]), 137(1)])), ["a", "b"]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// type []&String
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagReferenceType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessType,
+			// array, 2 items follow
+			0x82,
+			// element 0: kind (Disjunction)
+			0x01,
+			// element 1: entitlements
+			// array, 2 items follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// "bar"
+			0x62, 0x61, 0x72,
+			// text, 3 bytes follow
+			0x63,
+			// "foo"
+			0x66, 0x6f, 0x6f,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// array data without inlined type
+			// array, 2 items follow
+			0x82,
+			// text, 1 byte follow
+			0x61,
+			// "a"
+			0x61,
+			// text, 1 byte follow
+			0x61,
+			// "b"
+			0x62,
+		},
+	}
+
+	// ["a", "b"] with static type []&String
+	entitlementMapReferenceToSimpleType := encodeTest{
+		name: "array of reference to string (entitlement map)",
+		val: cadence.NewArray([]cadence.Value{
+			cadence.String("a"),
+			cadence.String("b"),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(
+				cadence.NewEntitlementMapAuthorization(
+					nil,
+					common.TypeID("foo"),
+				),
+				cadence.StringType,
+			),
+		)),
+		expected: []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":"a","type":"String"},{"value":"b","type":"String"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(142([147("foo"), 137(1)])), ["a", "b"]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// type []&String
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagReferenceType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagEntitlementMapAuthorizationAccessType,
+			// text, 3 bytes follow
+			0x63,
+			// "foo"
+			0x66, 0x6f, 0x6f,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// array data without inlined type
+			// array, 2 items follow
+			0x82,
+			// text, 1 byte follow
+			0x61,
+			// "a"
+			0x61,
+			// text, 1 byte follow
+			0x61,
+			// "b"
+			0x62,
+		},
+	}
+
 	// ["a", nil] with static type []&String?
 	referenceToOptionalSimpleType := encodeTest{
 		name: "array of reference to optional string",
@@ -7547,7 +7773,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// {"value":[{"value":{"value":"a","type":"String"},"type":"Optional"},{"value":null,"type":"Optional"}],"type":"Array"}
 			//
 			// language=edn, format=ccf
-			// 130([139(142([false, 138(137(1))])), ["a", null]])
+			// 130([139(142([nil, 138(137(1))])), ["a", null]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -7615,7 +7841,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// {"value":[{"key":{"value":"one","type":"String"},"value":{"value":{"value":"7456","type":"Int128"},"type":"Optional"}}],"type":"Dictionary"}
 			//
 			// language=edn, format=ccf
-			// 130([141([137(1), 138(142([false, 137(9)]))]), ["one", 7456]])
+			// 130([141([137(1), 138(142([nil, 137(9)]))]), ["one", 7456]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -7673,7 +7899,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// {"value":[{"value":"a","type":"String"},{"value":"1","type":"UInt8"}],"type":"Array"}
 			//
 			// language=edn, format=ccf
-			// 130([139(142([false, 137(39)])), [130([137(1), "a"]), 130([137(12), 1])]])
+			// 130([139(142([nil, 137(39)])), [130([137(1), "a"]), 130([137(12), 1])]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -7742,7 +7968,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// {"value":[{"value":{"id":"S.test.Foo","fields":[{"value":{"value":"a","type":"String"},"name":"a"}]},"type":"Struct"},{"value":{"id":"S.test.Foo","fields":[{"value":{"value":"b","type":"String"},"name":"a"}]},"type":"Struct"}],"type":"Array"}
 			//
 			// language=edn, format=ccf
-			// 129([[160([h'', "S.test.Foo", [["a", 137(1)]]])], [139(142([false, 136(h'')])), [["a"], ["b"]]]])
+			// 129([[160([h'', "S.test.Foo", [["a", 137(1)]]])], [139(142([nil, 136(h'')])), [["a"], ["b"]]]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -7835,7 +8061,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// {"value":[{"value":"a","type":"String"},{"value":{"id":"S.test.Foo","fields":[{"value":{"value":"1","type":"Int"},"name":"a"}]},"type":"Struct"}],"type":"Array"}
 			//
 			// language=edn, format=ccf
-			// 129([[160([h'', "S.test.Foo", [["a", 137(1)]]])], [139(142([false, 137(39)])), [130([137(1), "a"]), 130([136(h''), ["b"]])]]])
+			// 129([[160([h'', "S.test.Foo", [["a", 137(1)]]])], [139(142([nil, 137(39)])), [130([137(1), "a"]), 130([136(h''), ["b"]])]]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -7940,7 +8166,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// {"value":[{"value":{"value":"a","type":"String"},"type":"Optional"},{"value":{"value":{"value":"b","type":"String"},"type":"Optional"},"type":"Optional"},{"value":null,"type":"Optional"}],"type":"Array"}
 			//
 			// language=edn, format=ccf
-			// 130([139(142([false, 138(137(39))])), [130([137(1), "a"]), 130([138(137(1)), "b"]), null]])
+			// 130([139(142([nil, 138(137(39))])), [130([137(1), "a"]), 130([138(137(1)), "b"]), null]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -8012,7 +8238,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			// {"value":[{"value":{"value":"a","type":"String"},"type":"Optional"},{"value":{"value":{"value":"b","type":"String"},"type":"Optional"},"type":"Optional"},{"value":null,"type":"Optional"}],"type":"Array"}
 			//
 			// language=edn, format=ccf
-			// 130([139(138(142([false, 137(39)]))), [130([137(1), "a"]), 130([138(137(1)), "b"]), null]])
+			// 130([139(138(142([nil, 137(39)]))), [130([137(1), "a"]), 130([138(137(1)), "b"]), null]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -8085,7 +8311,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 			//  {"value":[{"value":{"value":{"value":"a","type":"String"},"type":"Optional"},"type":"Optional"},{"value":{"value":{"value":{"value":"b","type":"String"},"type":"Optional"},"type":"Optional"},"type":"Optional"},{"value":null,"type":"Optional"}],"type":"Array"}
 			//
 			// language=edn, format=ccf
-			// 130([139(138(142([false, 138(137(39))]))), [130([137(1), "a"]), 130([138(137(1)), "b"]), null]])
+			// 130([139(138(142([nil, 138(137(39))]))), [130([137(1), "a"]), 130([138(137(1)), "b"]), null]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -8145,6 +8371,9 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 	testAllEncodeAndDecode(t,
 		referenceToSimpleType,
 		referenceToOptionalSimpleType,
+		entitlementConjunctionSetReferenceToSimpleType,
+		entitlementDisjunctionSetReferenceToSimpleType,
+		entitlementMapReferenceToSimpleType,
 		referenceToStructType,
 		referenceToAnyStructWithSimpleTypes,
 		referenceToAnyStructWithStructType,
@@ -9947,7 +10176,7 @@ func TestEncodeType(t *testing.T) {
 				// {"type":"Type","value":{"staticType":{"kind":"Reference", "type" : {"kind" : "Int"}, "authorized" : false}}}`
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 190([false, 185(4)])])
+				// 130([137(41), 190([nil, 185(4)])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -9964,6 +10193,190 @@ func TestEncodeType(t *testing.T) {
 				0x82,
 				// nil
 				0xf6,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// Int type ID (4)
+				0x04,
+			},
+		)
+
+	})
+
+	t.Run("with static &int (entitlement conjunction set)", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeAndDecodeEx(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.ReferenceType{
+					Authorization: cadence.EntitlementSetAuthorization{
+						Kind:         cadence.Conjunction,
+						Entitlements: []common.TypeID{"foo", "bar"},
+					},
+					Type: cadence.IntType,
+				},
+			},
+			[]byte{
+				// language=json, format=json-cdc
+				// {"value":{"staticType":{"type":{"kind":"Int"},"kind":"Reference","authorization":{"kind":"EntitlementConjunctionSet","entitlements":[{"type":null,"kind":"Entitlement","typeID":"foo","fields":null,"initializers":null},{"type":null,"kind":"Entitlement","typeID":"bar","fields":null,"initializers":null}]}}},"type":"Type"}
+				//
+				// language=edn, format=ccf
+				// 130([137(41), 190([195([0, ["bar", "foo"]]), 185(4)])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagReferenceTypeValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue,
+				// array, 2 elements follow
+				0x82,
+				// element 0: kind (conjuction)
+				0x00,
+				// array, 2 elements follow
+				0x82,
+				// text, 3 bytes follow
+				0x63,
+				// "bar"
+				0x62, 0x61, 0x72,
+				// text, 3 bytes follow
+				0x63,
+				// "foo"
+				0x66, 0x6f, 0x6f,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// Int type ID (4)
+				0x04,
+			},
+			cadence.TypeValue{
+				StaticType: &cadence.ReferenceType{
+					Authorization: cadence.EntitlementSetAuthorization{
+						Kind:         cadence.Conjunction,
+						Entitlements: []common.TypeID{"bar", "foo"},
+					},
+					Type: cadence.IntType,
+				},
+			},
+		)
+
+	})
+
+	t.Run("with static &int (entitlement disjunction set)", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeAndDecodeEx(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.ReferenceType{
+					Authorization: cadence.EntitlementSetAuthorization{
+						Kind:         cadence.Disjunction,
+						Entitlements: []common.TypeID{"foo", "bar"},
+					},
+					Type: cadence.IntType,
+				},
+			},
+			[]byte{
+				// language=json, format=json-cdc
+				// {"value":{"staticType":{"type":{"kind":"Int"},"kind":"Reference","authorization":{"kind":"EntitlementDisjunctionSet","entitlements":[{"type":null,"kind":"Entitlement","typeID":"foo","fields":null,"initializers":null},{"type":null,"kind":"Entitlement","typeID":"bar","fields":null,"initializers":null}]}}},"type":"Type"}
+				//
+				// language=edn, format=ccf
+				// 130([137(41), 190([195([1, ["bar", "foo"]]), 185(4)])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagReferenceTypeValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue,
+				// array, 2 elements follow
+				0x82,
+				// element 0: kind (disjuction)
+				0x01,
+				// array, 2 elements follow
+				0x82,
+				// text, 3 bytes follow
+				0x63,
+				// "bar"
+				0x62, 0x61, 0x72,
+				// text, 3 bytes follow
+				0x63,
+				// "foo"
+				0x66, 0x6f, 0x6f,
+				// tag
+				0xd8, ccf.CBORTagSimpleTypeValue,
+				// Int type ID (4)
+				0x04,
+			},
+			cadence.TypeValue{
+				StaticType: &cadence.ReferenceType{
+					Authorization: cadence.EntitlementSetAuthorization{
+						Kind:         cadence.Disjunction,
+						Entitlements: []common.TypeID{"bar", "foo"},
+					},
+					Type: cadence.IntType,
+				},
+			},
+		)
+
+	})
+
+	t.Run("with static &int (entitlement map)", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.ReferenceType{
+					Authorization: cadence.EntitlementMapAuthorization{
+						TypeID: "foo",
+					},
+					Type: cadence.IntType,
+				},
+			},
+			[]byte{
+				// language=json, format=json-cdc
+				// {"value":{"staticType":{"type":{"kind":"Int"},"kind":"Reference","authorization":{"kind":"EntitlementMapAuthorization","entitlements":[{"type":null,"kind":"EntitlementMap","typeID":"foo","fields":null,"initializers":null}]}}},"type":"Type"}
+				//
+				// language=edn, format=ccf
+				// 130([137(41), 190([196("foo"), 185(4)])])
+				//
+				// language=cbor, format=ccf
+				// tag
+				0xd8, ccf.CBORTagTypeAndValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagSimpleType,
+				// Meta type ID (41)
+				0x18, 0x29,
+				// tag
+				0xd8, ccf.CBORTagReferenceTypeValue,
+				// array, 2 elements follow
+				0x82,
+				// tag
+				0xd8, ccf.CBORTagEntitlementMapAuthorizationAccessTypeValue,
+				// text, 3 bytes follow
+				0x63,
+				// "foo"
+				0x66, 0x6f, 0x6f,
 				// tag
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type ID (4)
@@ -15331,6 +15744,350 @@ func TestCyclicReferenceValue(t *testing.T) {
 	})
 }
 
+func TestSortEntitlementSet(t *testing.T) {
+
+	t.Parallel()
+
+	sortEntitlementTypesEncMode, err := ccf.EncOptions{
+		SortEntitlementTypes: ccf.SortBytewiseLexical,
+	}.EncMode()
+	require.NoError(t, err)
+
+	enforceSortedEntitlementTypesDecMode, err := ccf.DecOptions{
+		EnforceSortEntitlementTypes: ccf.EnforceSortBytewiseLexical,
+	}.DecMode()
+	require.NoError(t, err)
+
+	t.Run("don't sort type", func(t *testing.T) {
+
+		val := cadence.NewArray([]cadence.Value{
+			cadence.String("a"),
+			cadence.String("b"),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(
+				cadence.NewEntitlementSetAuthorization(
+					nil,
+					[]common.TypeID{"foo", "bar"},
+					cadence.Conjunction,
+				),
+				cadence.StringType,
+			),
+		))
+
+		expectedCBOR := []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":"a","type":"String"},{"value":"b","type":"String"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(142([146([0, ["foo", "bar"]]), 137(1)])), ["a", "b"]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// type []&String
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagReferenceType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessType,
+			// array, 2 items follow
+			0x82,
+			// element 0: kind (Conjunction)
+			0x00,
+			// element 1: entitlements
+			// array, 2 items follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// "foo"
+			0x66, 0x6f, 0x6f,
+			// text, 3 bytes follow
+			0x63,
+			// "bar"
+			0x62, 0x61, 0x72,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// array data without inlined type
+			// array, 2 items follow
+			0x82,
+			// text, 1 byte follow
+			0x61,
+			// "a"
+			0x61,
+			// text, 1 byte follow
+			0x61,
+			// "b"
+			0x62,
+		}
+
+		// Encode value without sorting.
+		actualCBOR, err := ccf.Encode(val)
+		require.NoError(t, err)
+		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+
+		// Decode value without enforcing sorting.
+		decodedVal, err := ccf.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+		assert.Equal(t, val, decodedVal)
+
+		// Decode value enforcing sorting of entitlement types should return error.
+		_, err = enforceSortedEntitlementTypesDecMode.Decode(nil, actualCBOR)
+		require.Error(t, err)
+	})
+
+	t.Run("sort type", func(t *testing.T) {
+
+		val := cadence.NewArray([]cadence.Value{
+			cadence.String("a"),
+			cadence.String("b"),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(
+				cadence.NewEntitlementSetAuthorization(
+					nil,
+					[]common.TypeID{"foo", "bar"},
+					cadence.Conjunction,
+				),
+				cadence.StringType,
+			),
+		))
+
+		expectedVal := cadence.NewArray([]cadence.Value{
+			cadence.String("a"),
+			cadence.String("b"),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(
+				cadence.NewEntitlementSetAuthorization(
+					nil,
+					[]common.TypeID{"bar", "foo"},
+					cadence.Conjunction,
+				),
+				cadence.StringType,
+			),
+		))
+
+		expectedCBOR := []byte{
+			// language=json, format=json-cdc
+			// {"value":[{"value":"a","type":"String"},{"value":"b","type":"String"}],"type":"Array"}
+			//
+			// language=edn, format=ccf
+			// 130([139(142([146([0, ["bar", "foo"]]), 137(1)])), ["a", "b"]])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 items follow
+			0x82,
+			// type []&String
+			// tag
+			0xd8, ccf.CBORTagVarsizedArrayType,
+			// tag
+			0xd8, ccf.CBORTagReferenceType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessType,
+			// array, 2 items follow
+			0x82,
+			// element 0: kind (Conjunction)
+			0x00,
+			// element 1: entitlements
+			// array, 2 items follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// "bar"
+			0x62, 0x61, 0x72,
+			// text, 3 bytes follow
+			0x63,
+			// "foo"
+			0x66, 0x6f, 0x6f,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// String type ID (1)
+			0x01,
+			// array data without inlined type
+			// array, 2 items follow
+			0x82,
+			// text, 1 byte follow
+			0x61,
+			// "a"
+			0x61,
+			// text, 1 byte follow
+			0x61,
+			// "b"
+			0x62,
+		}
+
+		// Encode value with sorted entitlement types.
+		actualCBOR, err := sortEntitlementTypesEncMode.Encode(val)
+		require.NoError(t, err)
+		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+
+		// Decode value enforcing sorting of composite fields.
+		decodedVal, err := enforceSortedEntitlementTypesDecMode.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+		assert.Equal(t, expectedVal, decodedVal)
+
+		// Decode value without enforcing sorting should return no error.
+		decodedVal, err = ccf.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+		assert.Equal(t, expectedVal, decodedVal)
+	})
+
+	t.Run("don't sort type value", func(t *testing.T) {
+
+		val := cadence.NewTypeValue(cadence.NewReferenceType(
+			cadence.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"foo", "bar"},
+				cadence.Conjunction,
+			),
+			cadence.StringType,
+		))
+
+		expectedCBOR := []byte{
+			// language=json, format=json-cdc
+			// {"value":{"staticType":{"type":{"kind":"String"},"kind":"Reference","authorization":{"kind":"EntitlementConjunctionSet","entitlements":[{"type":null,"kind":"Entitlement","typeID":"foo","fields":null,"initializers":null},{"type":null,"kind":"Entitlement","typeID":"bar","fields":null,"initializers":null}]}}},"type":"Type"}
+			//
+			// language=edn, format=ccf
+			// 130([137(41), 190([195([0, ["foo", "bar"]]), 185(1)])])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 elements follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Meta type ID (41)
+			0x18, 0x29,
+			// tag
+			0xd8, ccf.CBORTagReferenceTypeValue,
+			// array, 2 elements follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue,
+			// array, 2 elements follow
+			0x82,
+			// element 0: kind (conjuction)
+			0x00,
+			// array, 2 elements follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// "foo"
+			0x66, 0x6f, 0x6f,
+			// text, 3 bytes follow
+			0x63,
+			// "bar"
+			0x62, 0x61, 0x72,
+			// tag
+			0xd8, ccf.CBORTagSimpleTypeValue,
+			// String type ID (1)
+			0x01,
+		}
+
+		// Encode value without sorting.
+		actualCBOR, err := ccf.Encode(val)
+		require.NoError(t, err)
+		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+
+		// Decode value without enforcing sorting.
+		decodedVal, err := ccf.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+		assert.Equal(t, val, decodedVal)
+
+		// Decode value enforcing sorting of entitlement types should return error.
+		_, err = enforceSortedEntitlementTypesDecMode.Decode(nil, actualCBOR)
+		require.Error(t, err)
+	})
+
+	t.Run("sort type value", func(t *testing.T) {
+
+		val := cadence.NewTypeValue(cadence.NewReferenceType(
+			cadence.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"foo", "bar"},
+				cadence.Conjunction,
+			),
+			cadence.StringType,
+		))
+
+		expectedVal := cadence.NewTypeValue(cadence.NewReferenceType(
+			cadence.NewEntitlementSetAuthorization(
+				nil,
+				[]common.TypeID{"bar", "foo"},
+				cadence.Conjunction,
+			),
+			cadence.StringType,
+		))
+
+		expectedCBOR := []byte{
+			// language=json, format=json-cdc
+			// {"value":{"staticType":{"type":{"kind":"String"},"kind":"Reference","authorization":{"kind":"EntitlementConjunctionSet","entitlements":[{"type":null,"kind":"Entitlement","typeID":"foo","fields":null,"initializers":null},{"type":null,"kind":"Entitlement","typeID":"bar","fields":null,"initializers":null}]}}},"type":"Type"}
+			//
+			// language=edn, format=ccf
+			// 130([137(41), 190([195([0, ["bar", "foo"]]), 185(1)])])
+			//
+			// language=cbor, format=ccf
+			// tag
+			0xd8, ccf.CBORTagTypeAndValue,
+			// array, 2 elements follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagSimpleType,
+			// Meta type ID (41)
+			0x18, 0x29,
+			// tag
+			0xd8, ccf.CBORTagReferenceTypeValue,
+			// array, 2 elements follow
+			0x82,
+			// tag
+			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue,
+			// array, 2 elements follow
+			0x82,
+			// element 0: kind (conjuction)
+			0x00,
+			// array, 2 elements follow
+			0x82,
+			// text, 3 bytes follow
+			0x63,
+			// "bar"
+			0x62, 0x61, 0x72,
+			// text, 3 bytes follow
+			0x63,
+			// "foo"
+			0x66, 0x6f, 0x6f,
+			// tag
+			0xd8, ccf.CBORTagSimpleTypeValue,
+			// String type ID (1)
+			0x01,
+		}
+
+		// Encode value with sorting.
+		actualCBOR, err := sortEntitlementTypesEncMode.Encode(val)
+		require.NoError(t, err)
+		utils.AssertEqualWithDiff(t, expectedCBOR, actualCBOR)
+
+		// Decode value without enforcing sorting.
+		decodedVal, err := ccf.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+		assert.Equal(t, expectedVal, decodedVal)
+
+		// Decode value enforcing sorting of entitlement types.
+		decodedVal, err = enforceSortedEntitlementTypesDecMode.Decode(nil, actualCBOR)
+		require.NoError(t, err)
+		assert.Equal(t, expectedVal, decodedVal)
+	})
+}
+
 func TestSortOptions(t *testing.T) {
 	// Test sorting of:
 	// - composite fields ("count", "sum")
@@ -16169,6 +16926,12 @@ func TestInvalidEncodingOptions(t *testing.T) {
 	}
 	_, err = opts.EncMode()
 	require.Error(t, err)
+
+	opts = ccf.EncOptions{
+		SortEntitlementTypes: 100,
+	}
+	_, err = opts.EncMode()
+	require.Error(t, err)
 }
 
 func TestInvalidDecodingOptions(t *testing.T) {
@@ -16180,6 +16943,12 @@ func TestInvalidDecodingOptions(t *testing.T) {
 
 	opts = ccf.DecOptions{
 		EnforceSortIntersectionTypes: 100,
+	}
+	_, err = opts.DecMode()
+	require.Error(t, err)
+
+	opts = ccf.DecOptions{
+		EnforceSortEntitlementTypes: 100,
 	}
 	_, err = opts.DecMode()
 	require.Error(t, err)

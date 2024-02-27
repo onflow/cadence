@@ -143,6 +143,9 @@ type DecOptions struct {
 	// EnforceSortIntersectionTypes specifies how decoder should enforce sort order of restricted types.
 	EnforceSortIntersectionTypes EnforceSortMode
 
+	// EnforceSortEntitlementTypes specifies how decoder should enforce sort order of entitlement types.
+	EnforceSortEntitlementTypes EnforceSortMode
+
 	// CBORDecMode will default to defaultCBORDecMode if nil.  The decoding mode contains
 	// immutable decoding options (cbor.DecOptions) and is safe for concurrent use.
 	CBORDecMode cbor.DecMode
@@ -151,15 +154,17 @@ type DecOptions struct {
 // EventsDecMode is CCF decoding mode for events which contains
 // immutable CCF decoding options.  It is safe for concurrent use.
 var EventsDecMode = &decMode{
-	enforceSortCompositeFields: EnforceSortNone,
-	enforceSortRestrictedTypes: EnforceSortNone,
-	cborDecMode:                defaultCBORDecMode,
+	enforceSortCompositeFields:  EnforceSortNone,
+	enforceSortRestrictedTypes:  EnforceSortNone,
+	enforceSortEntitlementTypes: EnforceSortNone,
+	cborDecMode:                 defaultCBORDecMode,
 }
 
 type decMode struct {
-	enforceSortCompositeFields EnforceSortMode
-	enforceSortRestrictedTypes EnforceSortMode
-	cborDecMode                cbor.DecMode
+	enforceSortCompositeFields  EnforceSortMode
+	enforceSortRestrictedTypes  EnforceSortMode
+	enforceSortEntitlementTypes EnforceSortMode
+	cborDecMode                 cbor.DecMode
 }
 
 // DecMode returns CCF decoding mode which contains immutable decoding options.
@@ -168,16 +173,23 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 	if !opts.EnforceSortCompositeFields.valid() {
 		return nil, fmt.Errorf("ccf: invalid EnforceSortCompositeFields %d", opts.EnforceSortCompositeFields)
 	}
+
 	if !opts.EnforceSortIntersectionTypes.valid() {
 		return nil, fmt.Errorf("ccf: invalid EnforceSortRestrictedTypes %d", opts.EnforceSortIntersectionTypes)
 	}
+
+	if !opts.EnforceSortEntitlementTypes.valid() {
+		return nil, fmt.Errorf("ccf: invalid EnforceSortEntitlementTypes %d", opts.EnforceSortEntitlementTypes)
+	}
+
 	if opts.CBORDecMode == nil {
 		opts.CBORDecMode = defaultCBORDecMode
 	}
 	return &decMode{
-		enforceSortCompositeFields: opts.EnforceSortCompositeFields,
-		enforceSortRestrictedTypes: opts.EnforceSortIntersectionTypes,
-		cborDecMode:                opts.CBORDecMode,
+		enforceSortCompositeFields:  opts.EnforceSortCompositeFields,
+		enforceSortRestrictedTypes:  opts.EnforceSortIntersectionTypes,
+		enforceSortEntitlementTypes: opts.EnforceSortEntitlementTypes,
+		cborDecMode:                 opts.CBORDecMode,
 	}, nil
 }
 
@@ -1549,7 +1561,7 @@ func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type
 		return d.decodeCapabilityType(visited, d.decodeNullableTypeValue)
 
 	case CBORTagReferenceTypeValue:
-		return d.decodeReferenceType(visited, d.decodeTypeValue)
+		return d.decodeReferenceType(visited, d.decodeTypeValue, false)
 
 	case CBORTagIntersectionTypeValue:
 		return d.decodeIntersectionType(visited, d.decodeTypeValue)

@@ -96,6 +96,9 @@ type EncOptions struct {
 
 	// SortIntersectionTypes specifies sort order of Cadence intersection types.
 	SortIntersectionTypes SortMode
+
+	// SortEntitlementTypes specifies sort order of Cadence entitlement types.
+	SortEntitlementTypes SortMode
 }
 
 // EventsEncMode is CCF encoding mode for events which contains
@@ -103,11 +106,13 @@ type EncOptions struct {
 var EventsEncMode = &encMode{
 	sortCompositeFields:   SortNone,
 	sortIntersectionTypes: SortNone,
+	sortEntitlementTypes:  SortNone,
 }
 
 type encMode struct {
 	sortCompositeFields   SortMode
 	sortIntersectionTypes SortMode
+	sortEntitlementTypes  SortMode
 }
 
 // EncMode returns CCF encoding mode, which contains immutable encoding options
@@ -119,9 +124,15 @@ func (opts EncOptions) EncMode() (EncMode, error) {
 	if !opts.SortIntersectionTypes.valid() {
 		return nil, fmt.Errorf("ccf: invalid SortIntersectionTypes %d", opts.SortIntersectionTypes)
 	}
+
+	if !opts.SortEntitlementTypes.valid() {
+		return nil, fmt.Errorf("ccf: invalid SortEntitlementTypes %d", opts.SortEntitlementTypes)
+	}
+
 	return &encMode{
 		sortCompositeFields:   opts.SortCompositeFields,
 		sortIntersectionTypes: opts.SortIntersectionTypes,
+		sortEntitlementTypes:  opts.SortEntitlementTypes,
 	}, nil
 }
 
@@ -1460,7 +1471,7 @@ func (e *Encoder) encodeInclusiveRangeTypeValue(typ *cadence.InclusiveRangeType,
 //
 //	; cbor-tag-reference-type-value
 //	#6.190([
-//	  authorized: bool,
+//	  authorized: authorization-type,
 //	  type: type-value,
 //	])
 func (e *Encoder) encodeReferenceTypeValue(typ *cadence.ReferenceType, visited ccfTypeIDByCadenceType) error {
@@ -1470,6 +1481,7 @@ func (e *Encoder) encodeReferenceTypeValue(typ *cadence.ReferenceType, visited c
 		visited,
 		e.encodeTypeValue,
 		rawTagNum,
+		false,
 	)
 }
 
