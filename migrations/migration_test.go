@@ -949,7 +949,43 @@ func TestContractMigration(t *testing.T) {
 	)
 }
 
-func TestDictionaryDelete(t *testing.T) {
+// testCompositeValueMigration
+
+type testCompositeValueMigration struct {
+}
+
+var _ ValueMigration = testCompositeValueMigration{}
+
+func (testCompositeValueMigration) Name() string {
+	return "testCompositeValueMigration"
+}
+
+func (m testCompositeValueMigration) Migrate(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	inter *interpreter.Interpreter,
+) (
+	interpreter.Value,
+	error,
+) {
+	compositeValue, ok := value.(*interpreter.CompositeValue)
+	if !ok {
+		return nil, nil
+	}
+
+	return interpreter.NewCompositeValue(
+		inter,
+		emptyLocationRange,
+		utils.TestLocation,
+		"S2",
+		common.CompositeKindStructure,
+		nil,
+		common.Address(compositeValue.StorageAddress()),
+	), nil
+}
+
+func TestEmptyIntersectionTypeMigration(t *testing.T) {
 
 	t.Parallel()
 
@@ -977,16 +1013,37 @@ func TestDictionaryDelete(t *testing.T) {
 
 	elaboration := sema.NewElaboration(nil)
 
-	const rQualifiedIdentifier = "R"
+	const s1QualifiedIdentifier = "S1"
+	const s2QualifiedIdentifier = "S2"
 
 	elaboration.SetCompositeType(
-		utils.TestLocation.TypeID(nil, rQualifiedIdentifier),
+		utils.TestLocation.TypeID(nil, s1QualifiedIdentifier),
 		&sema.CompositeType{
 			Location:   utils.TestLocation,
 			Members:    &sema.StringMemberOrderedMap{},
-			Identifier: rQualifiedIdentifier,
-			Kind:       common.CompositeKindResource,
+			Identifier: s1QualifiedIdentifier,
+			Kind:       common.CompositeKindStructure,
 		},
+	)
+
+	elaboration.SetCompositeType(
+		utils.TestLocation.TypeID(nil, s2QualifiedIdentifier),
+		&sema.CompositeType{
+			Location:   utils.TestLocation,
+			Members:    &sema.StringMemberOrderedMap{},
+			Identifier: s2QualifiedIdentifier,
+			Kind:       common.CompositeKindStructure,
+		},
+	)
+
+	compositeValue := interpreter.NewCompositeValue(
+		inter,
+		emptyLocationRange,
+		utils.TestLocation,
+		s1QualifiedIdentifier,
+		common.CompositeKindStructure,
+		nil,
+		testAddress,
 	)
 
 	inter.Program = &interpreter.Program{
@@ -1014,13 +1071,11 @@ func TestDictionaryDelete(t *testing.T) {
 		testAddress,
 	)
 
-	// NOTE: insert the value into the dictionary,
-	// but use the unchecked variant to avoid type loading
-	dictionaryValue.InsertUnchecked( // nolint:staticcheck
+	dictionaryValue.Insert(
 		inter,
 		emptyLocationRange,
 		dictionaryKey,
-		interpreter.NewUnmeteredInt8Value(5),
+		compositeValue,
 	)
 
 	storageMap.WriteValue(
@@ -1043,7 +1098,7 @@ func TestDictionaryDelete(t *testing.T) {
 		},
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
-			testInt8Migration{},
+			testCompositeValueMigration{},
 		),
 	)
 
@@ -1071,12 +1126,12 @@ func TestDictionaryDelete(t *testing.T) {
 	migratedChildValue, ok := migratedDictionaryValue.Get(inter, emptyLocationRange, dictionaryKey)
 	require.True(t, ok)
 
-	require.IsType(t, interpreter.Int8Value(0), migratedChildValue)
-	migratedIntegerValueInt8 := migratedChildValue.(interpreter.Int8Value)
+	require.IsType(t, &interpreter.CompositeValue{}, migratedChildValue)
+	migratedCompositeValue := migratedChildValue.(*interpreter.CompositeValue)
 
 	require.Equal(
 		t,
-		interpreter.NewUnmeteredInt8Value(15),
-		migratedIntegerValueInt8,
+		s2QualifiedIdentifier,
+		migratedCompositeValue.QualifiedIdentifier,
 	)
 }
