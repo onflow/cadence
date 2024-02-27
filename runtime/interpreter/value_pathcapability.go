@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"fmt"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -62,13 +64,26 @@ func (v *PathCapabilityValue) StaticType(inter *Interpreter) StaticType {
 func (v *PathCapabilityValue) IsImportable(_ *Interpreter) bool {
 	panic(errors.NewUnreachableError())
 }
-
 func (v *PathCapabilityValue) String() string {
-	panic(errors.NewUnreachableError())
+	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *PathCapabilityValue) RecursiveString(_ SeenReferences) string {
-	panic(errors.NewUnreachableError())
+func (v *PathCapabilityValue) RecursiveString(seenReferences SeenReferences) string {
+	borrowType := v.BorrowType
+	if borrowType == nil {
+		return fmt.Sprintf(
+			"Capability(address: %s, path: %s)",
+			v.Address.RecursiveString(seenReferences),
+			v.Path.RecursiveString(seenReferences),
+		)
+	} else {
+		return fmt.Sprintf(
+			"Capability<%s>(address: %s, path: %s)",
+			borrowType.String(),
+			v.Address.RecursiveString(seenReferences),
+			v.Path.RecursiveString(seenReferences),
+		)
+	}
 }
 
 func (v *PathCapabilityValue) MeteredString(_ common.MemoryGauge, _ SeenReferences) string {
