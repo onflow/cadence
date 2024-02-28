@@ -316,23 +316,28 @@ func exportArrayValue(
 			values := make([]cadence.Value, 0, v.Count())
 
 			var err error
-			v.Iterate(inter, func(value interpreter.Value) (resume bool) {
-				var exportedValue cadence.Value
-				exportedValue, err = exportValueWithInterpreter(
-					value,
-					inter,
-					locationRange,
-					seenReferences,
-				)
-				if err != nil {
-					return false
-				}
-				values = append(
-					values,
-					exportedValue,
-				)
-				return true
-			})
+			v.Iterate(
+				inter,
+				func(value interpreter.Value) (resume bool) {
+					var exportedValue cadence.Value
+					exportedValue, err = exportValueWithInterpreter(
+						value,
+						inter,
+						locationRange,
+						seenReferences,
+					)
+					if err != nil {
+						return false
+					}
+					values = append(
+						values,
+						exportedValue,
+					)
+					return true
+				},
+				false,
+				locationRange,
+			)
 
 			if err != nil {
 				return nil, err

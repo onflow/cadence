@@ -1656,7 +1656,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 
                   transaction {
                       prepare(acc: &Account) {
-                          let hello = acc.contracts.borrow<&HelloInterface>(name: "Hello")
+                          let hello = acc.contracts.borrow<&{HelloInterface}>(name: "Hello")
                           assert(hello?.hello() == "Hello!")
                       }
                   }
@@ -1747,7 +1747,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 
                   transaction {
                       prepare(acc: &Account) {
-                          let hello = acc.contracts.borrow<&HelloInterface>(name: "Hello")
+                          let hello = acc.contracts.borrow<&{HelloInterface}>(name: "Hello")
                           assert(hello == nil)
                       }
                   }

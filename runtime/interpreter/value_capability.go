@@ -77,11 +77,11 @@ func (*IDCapabilityValue) isValue() {}
 
 func (*IDCapabilityValue) isCapabilityValue() {}
 
-func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitCapabilityValue(interpreter, v)
 }
 
-func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
 	walkChild(v.ID)
 	walkChild(v.Address)
 }
@@ -93,7 +93,7 @@ func (v *IDCapabilityValue) StaticType(inter *Interpreter) StaticType {
 	)
 }
 
-func (v *IDCapabilityValue) IsImportable(_ *Interpreter) bool {
+func (v *IDCapabilityValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 

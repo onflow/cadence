@@ -110,20 +110,6 @@ var CompositeTypeFunctionType = NewSimpleFunctionType(
 	OptionalMetaTypeAnnotation,
 )
 
-const InterfaceTypeFunctionName = "InterfaceType"
-
-var InterfaceTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "identifier",
-			TypeAnnotation: StringTypeAnnotation,
-		},
-	},
-	OptionalMetaTypeAnnotation,
-)
-
 const FunctionTypeFunctionName = "FunctionType"
 
 var FunctionTypeFunctionType = NewSimpleFunctionType(
@@ -243,13 +229,6 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 		Value: CompositeTypeFunctionType,
 		DocString: `Creates a run-time type representing the composite type associated with the given type identifier.
 		Returns nil if the identifier does not correspond to any composite type.`,
-	},
-
-	{
-		Name:  InterfaceTypeFunctionName,
-		Value: InterfaceTypeFunctionType,
-		DocString: `Creates a run-time type representing the interface type associated with the given type identifier.
-		Returns nil if the identifier does not correspond to any interface type.`,
 	},
 
 	{

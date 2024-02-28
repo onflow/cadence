@@ -19,7 +19,6 @@
 package statictypes
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/onflow/atree"
@@ -38,13 +37,6 @@ const fooBarQualifiedIdentifier = "Foo.Bar"
 const fooBazQualifiedIdentifier = "Foo.Baz"
 
 var fooAddressLocation = common.NewAddressLocation(nil, testAddress, "Foo")
-
-func newIntersectionStaticTypeWithoutInterfaces() *interpreter.IntersectionStaticType {
-	return interpreter.NewIntersectionStaticType(
-		nil,
-		[]*interpreter.InterfaceStaticType{},
-	)
-}
 
 func newIntersectionStaticTypeWithOneInterface() *interpreter.IntersectionStaticType {
 	return interpreter.NewIntersectionStaticType(
@@ -138,28 +130,13 @@ func TestIntersectionTypeMigration(t *testing.T) {
 			storedType:   stringType,
 			expectedType: nil,
 		},
-		"intersection_without_interfaces": {
-			storedType:   newIntersectionStaticTypeWithoutInterfaces(),
-			expectedType: nil,
-		},
 		"intersection_with_one_interface": {
 			storedType:   newIntersectionStaticTypeWithOneInterface(),
-			expectedType: nil,
-		},
-		"intersection_with_two_interfaces": {
-			storedType:   newIntersectionStaticTypeWithTwoInterfaces(),
-			expectedType: newIntersectionStaticTypeWithTwoInterfaces(),
+			expectedType: newIntersectionStaticTypeWithOneInterface(),
 		},
 		// optional
 		"optional_primitive": {
 			storedType:   interpreter.NewOptionalStaticType(nil, stringType),
-			expectedType: nil,
-		},
-		"optional_intersection_without_interfaces": {
-			storedType: interpreter.NewOptionalStaticType(
-				nil,
-				newIntersectionStaticTypeWithoutInterfaces(),
-			),
 			expectedType: nil,
 		},
 		"optional_intersection_with_one_interface": {
@@ -167,7 +144,10 @@ func TestIntersectionTypeMigration(t *testing.T) {
 				nil,
 				newIntersectionStaticTypeWithOneInterface(),
 			),
-			expectedType: nil,
+			expectedType: interpreter.NewOptionalStaticType(
+				nil,
+				newIntersectionStaticTypeWithOneInterface(),
+			),
 		},
 		"optional_intersection_with_two_interfaces": {
 			storedType: interpreter.NewOptionalStaticType(
@@ -184,21 +164,17 @@ func TestIntersectionTypeMigration(t *testing.T) {
 			storedType:   interpreter.NewConstantSizedStaticType(nil, stringType, 3),
 			expectedType: nil,
 		},
-		"constant_sized_array_of_intersection_without_interfaces": {
-			storedType: interpreter.NewConstantSizedStaticType(
-				nil,
-				newIntersectionStaticTypeWithoutInterfaces(),
-				3,
-			),
-			expectedType: nil,
-		},
 		"constant_sized_array_of_intersection_with_one_interface": {
 			storedType: interpreter.NewConstantSizedStaticType(
 				nil,
 				newIntersectionStaticTypeWithOneInterface(),
 				3,
 			),
-			expectedType: nil,
+			expectedType: interpreter.NewConstantSizedStaticType(
+				nil,
+				newIntersectionStaticTypeWithOneInterface(),
+				3,
+			),
 		},
 		"constant_sized_array_of_intersection_with_two_interfaces": {
 			storedType: interpreter.NewConstantSizedStaticType(
@@ -217,19 +193,15 @@ func TestIntersectionTypeMigration(t *testing.T) {
 			storedType:   interpreter.NewVariableSizedStaticType(nil, stringType),
 			expectedType: nil,
 		},
-		"variable_sized_array_of_intersection_without_interfaces": {
-			storedType: interpreter.NewVariableSizedStaticType(
-				nil,
-				newIntersectionStaticTypeWithoutInterfaces(),
-			),
-			expectedType: nil,
-		},
 		"variable_sized_array_of_intersection_with_one_interface": {
 			storedType: interpreter.NewVariableSizedStaticType(
 				nil,
 				newIntersectionStaticTypeWithOneInterface(),
 			),
-			expectedType: nil,
+			expectedType: interpreter.NewVariableSizedStaticType(
+				nil,
+				newIntersectionStaticTypeWithOneInterface(),
+			),
 		},
 		"variable_sized_array_of_intersection_with_two_interfaces": {
 			storedType: interpreter.NewVariableSizedStaticType(
@@ -246,29 +218,17 @@ func TestIntersectionTypeMigration(t *testing.T) {
 			storedType:   interpreter.NewDictionaryStaticType(nil, stringType, stringType),
 			expectedType: nil,
 		},
-		"dictionary_of_intersection_without_interfaces_key": {
-			storedType: interpreter.NewDictionaryStaticType(
-				nil,
-				newIntersectionStaticTypeWithoutInterfaces(),
-				stringType,
-			),
-			expectedType: nil,
-		},
-		"dictionary_of_intersection_without_interfaces_value": {
-			storedType: interpreter.NewDictionaryStaticType(
-				nil,
-				stringType,
-				newIntersectionStaticTypeWithoutInterfaces(),
-			),
-			expectedType: nil,
-		},
 		"dictionary_of_intersection_with_one_interface_key": {
 			storedType: interpreter.NewDictionaryStaticType(
 				nil,
 				newIntersectionStaticTypeWithOneInterface(),
 				stringType,
 			),
-			expectedType: nil,
+			expectedType: interpreter.NewDictionaryStaticType(
+				nil,
+				newIntersectionStaticTypeWithOneInterface(),
+				stringType,
+			),
 		},
 		"dictionary_of_intersection_with_one_interface_value": {
 			storedType: interpreter.NewDictionaryStaticType(
@@ -276,7 +236,11 @@ func TestIntersectionTypeMigration(t *testing.T) {
 				stringType,
 				newIntersectionStaticTypeWithOneInterface(),
 			),
-			expectedType: nil,
+			expectedType: interpreter.NewDictionaryStaticType(
+				nil,
+				stringType,
+				newIntersectionStaticTypeWithOneInterface(),
+			),
 		},
 		"dictionary_of_intersection_with_two_interfaces_key": {
 			storedType: interpreter.NewDictionaryStaticType(
@@ -307,19 +271,15 @@ func TestIntersectionTypeMigration(t *testing.T) {
 			storedType:   interpreter.NewCapabilityStaticType(nil, stringType),
 			expectedType: nil,
 		},
-		"capability_intersection_without_interfaces": {
-			storedType: interpreter.NewCapabilityStaticType(
-				nil,
-				newIntersectionStaticTypeWithoutInterfaces(),
-			),
-			expectedType: nil,
-		},
 		"capability_intersection_with_one_interface": {
 			storedType: interpreter.NewCapabilityStaticType(
 				nil,
 				newIntersectionStaticTypeWithOneInterface(),
 			),
-			expectedType: nil,
+			expectedType: interpreter.NewCapabilityStaticType(
+				nil,
+				newIntersectionStaticTypeWithOneInterface(),
+			),
 		},
 		"capability_intersection_with_two_interfaces": {
 			storedType: interpreter.NewCapabilityStaticType(
@@ -332,7 +292,7 @@ func TestIntersectionTypeMigration(t *testing.T) {
 			),
 		},
 		// interface
-		"interface": {
+		"non_intersection_interface": {
 			storedType: interpreter.NewInterfaceStaticType(
 				nil,
 				nil,
@@ -342,6 +302,53 @@ func TestIntersectionTypeMigration(t *testing.T) {
 					fooAddressLocation,
 					fooBarQualifiedIdentifier,
 				),
+			),
+			expectedType: interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticType(
+						nil,
+						nil,
+						"Foo.Bar",
+						common.NewTypeIDFromQualifiedName(
+							nil,
+							fooAddressLocation,
+							fooBarQualifiedIdentifier,
+						),
+					),
+				},
+			),
+		},
+		"intersection_interface": {
+			storedType: interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticType(
+						nil,
+						nil,
+						"Foo.Bar",
+						common.NewTypeIDFromQualifiedName(
+							nil,
+							fooAddressLocation,
+							fooBarQualifiedIdentifier,
+						),
+					),
+				},
+			),
+			expectedType: interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticType(
+						nil,
+						nil,
+						"Foo.Bar",
+						common.NewTypeIDFromQualifiedName(
+							nil,
+							fooAddressLocation,
+							fooBarQualifiedIdentifier,
+						),
+					),
+				},
 			),
 		},
 		// composite
@@ -356,6 +363,7 @@ func TestIntersectionTypeMigration(t *testing.T) {
 					fooBarQualifiedIdentifier,
 				),
 			),
+			expectedType: nil,
 		},
 	}
 
@@ -409,25 +417,7 @@ func TestIntersectionTypeMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
-	// Check reported migrated paths
-	for identifier, test := range testCases {
-		key := struct {
-			interpreter.StorageKey
-			interpreter.StorageMapKey
-		}{
-			StorageKey: interpreter.StorageKey{
-				Address: testAddress,
-				Key:     pathDomain.Identifier(),
-			},
-			StorageMapKey: interpreter.StringStorageMapKey(identifier),
-		}
-
-		if test.expectedType == nil {
-			assert.NotContains(t, reporter.migrated, key)
-		} else {
-			assert.Contains(t, reporter.migrated, key)
-		}
-	}
+	require.Empty(t, reporter.errors)
 
 	// Assert the migrated values.
 	// Traverse through the storage and see if the values are updated now.
@@ -444,6 +434,23 @@ func TestIntersectionTypeMigration(t *testing.T) {
 		t.Run(identifier, func(t *testing.T) {
 			testCase, ok := testCases[identifier]
 			require.True(t, ok)
+
+			key := struct {
+				interpreter.StorageKey
+				interpreter.StorageMapKey
+			}{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress,
+					Key:     pathDomain.Identifier(),
+				},
+				StorageMapKey: interpreter.StringStorageMapKey(identifier),
+			}
+
+			if testCase.expectedType == nil {
+				assert.NotContains(t, reporter.migrated, key)
+			} else {
+				assert.Contains(t, reporter.migrated, key)
+			}
 
 			var expectedValue interpreter.Value
 			if testCase.expectedType != nil {
@@ -576,6 +583,8 @@ func TestIntersectionTypeRehash(t *testing.T) {
 
 		err := migration.Commit()
 		require.NoError(t, err)
+
+		require.Empty(t, reporter.errors)
 
 		require.Equal(t,
 			map[struct {
@@ -741,6 +750,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			err := migration.Commit()
 			require.NoError(t, err)
 
+			require.Empty(t, reporter.errors)
+
 			require.Equal(t,
 				map[struct {
 					interpreter.StorageKey
@@ -880,6 +891,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			err := migration.Commit()
 			require.NoError(t, err)
 
+			require.Empty(t, reporter.errors)
+
 			require.Equal(t,
 				map[struct {
 					interpreter.StorageKey
@@ -955,235 +968,682 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 		fooAddressLocation.TypeID(nil, fooCompositeQualifiedIdentifierB),
 	)
 
-	const fooQuxQualifiedIdentifier = "Foo.Qux"
+	const fooBarQualifiedIdentifier = "Foo.Bar"
+	const fooBazQualifiedIdentifier = "Foo.Baz"
 
-	fooQuxInterfaceType := interpreter.NewInterfaceStaticType(
+	fooBarInterfaceType := interpreter.NewInterfaceStaticType(
 		nil,
 		fooAddressLocation,
-		fooQuxQualifiedIdentifier,
-		fooAddressLocation.TypeID(nil, fooQuxQualifiedIdentifier),
+		fooBarQualifiedIdentifier,
+		fooAddressLocation.TypeID(nil, fooBarQualifiedIdentifier),
+	)
+	fooBazInterfaceType := interpreter.NewInterfaceStaticType(
+		nil,
+		fooAddressLocation,
+		fooBazQualifiedIdentifier,
+		fooAddressLocation.TypeID(nil, fooBazQualifiedIdentifier),
 	)
 
 	test := func(
-		interfaceTypeQualifiedIdentifiers []string,
-		legacyType interpreter.StaticType,
+		t *testing.T,
+		inputType interpreter.StaticType,
 		convertCompositeType bool,
 		convertInterfaceType bool,
+		expectedType interpreter.StaticType,
 	) {
-		var legacyTypeQualifiedIdentifier string
-		if legacyType != nil {
-			if compositeLegacyType, ok := legacyType.(*interpreter.CompositeStaticType); ok {
-				legacyTypeQualifiedIdentifier = compositeLegacyType.QualifiedIdentifier
-			} else {
-				legacyTypeQualifiedIdentifier = legacyType.String()
-			}
-		}
 
-		testName := fmt.Sprintf(
-			"%v, %v, %v, %v",
-			interfaceTypeQualifiedIdentifiers,
-			legacyTypeQualifiedIdentifier,
-			convertCompositeType,
-			convertInterfaceType,
+		// Store values
+
+		ledger := NewTestLedger(nil, nil)
+		storage := runtime.NewStorage(ledger, nil)
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   false,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		const testPathDomain = common.PathDomainStorage
+		const testPathIdentifier = "test_type_value"
+
+		storeTypeValue(
+			inter,
+			testAddress,
+			testPathDomain,
+			testPathIdentifier,
+			inputType,
 		)
 
-		t.Run(testName, func(t *testing.T) {
+		err = storage.Commit(inter, true)
+		require.NoError(t, err)
+
+		// Migrate
+
+		migration := migrations.NewStorageMigration(inter, storage)
+
+		reporter := newTestReporter()
+
+		staticTypeMigration := NewStaticTypeMigration()
+		if convertCompositeType {
+			staticTypeMigration.WithCompositeTypeConverter(
+				func(staticType *interpreter.CompositeStaticType) interpreter.StaticType {
+					if staticType == fooACompositeType {
+						return fooBCompositeType
+					}
+					return nil
+				},
+			)
+		}
+		if convertInterfaceType {
+			staticTypeMigration.WithInterfaceTypeConverter(
+				func(staticType *interpreter.InterfaceStaticType) interpreter.StaticType {
+					if staticType.ID() == fooBarInterfaceType.ID() {
+						return fooBazInterfaceType
+					}
+					return nil
+				},
+			)
+		}
+
+		migration.Migrate(
+			&migrations.AddressSliceIterator{
+				Addresses: []common.Address{
+					testAddress,
+				},
+			},
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				staticTypeMigration,
+			),
+		)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+
+		require.Empty(t, reporter.errors)
+
+		// Assert the migrated value.
+
+		storageMap := storage.GetStorageMap(testAddress, testPathDomain.Identifier(), false)
+		require.NotNil(t, storageMap)
+		require.Equal(t, uint64(1), storageMap.Count())
+
+		value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(testPathIdentifier))
+		assert.NotNil(t, value)
+
+		expectedValue := interpreter.NewTypeValue(nil, expectedType)
+
+		assert.Equal(t, value, expectedValue)
+	}
+
+	t.Run("A{}", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			&interpreter.IntersectionStaticType{
+				LegacyType: fooACompositeType,
+			},
+			false,
+			false,
+			fooACompositeType,
+		)
+	})
+
+	t.Run("A{}, convert composite", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			&interpreter.IntersectionStaticType{
+				LegacyType: fooACompositeType,
+			},
+			true,
+			false,
+			fooBCompositeType,
+		)
+	})
+
+	t.Run("A{Bar}", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			&interpreter.IntersectionStaticType{
+				LegacyType: fooACompositeType,
+				Types: []*interpreter.InterfaceStaticType{
+					fooBarInterfaceType,
+				},
+			},
+			false,
+			false,
+			fooACompositeType,
+		)
+	})
+
+	t.Run("A{Bar}, convert interface", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			&interpreter.IntersectionStaticType{
+				LegacyType: fooACompositeType,
+				Types: []*interpreter.InterfaceStaticType{
+					fooBarInterfaceType,
+				},
+			},
+			false,
+			true,
+			fooACompositeType,
+		)
+	})
+
+	t.Run("A{Bar}, convert composite, convert interface", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			&interpreter.IntersectionStaticType{
+				LegacyType: fooACompositeType,
+				Types: []*interpreter.InterfaceStaticType{
+					fooBarInterfaceType,
+				},
+			},
+			true,
+			true,
+			fooBCompositeType,
+		)
+
+	})
+
+	t.Run("{Bar}", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			&interpreter.IntersectionStaticType{
+				Types: []*interpreter.InterfaceStaticType{
+					fooBarInterfaceType,
+				},
+			},
+			false,
+			false,
+			&interpreter.IntersectionStaticType{
+				Types: []*interpreter.InterfaceStaticType{
+					fooBarInterfaceType,
+				},
+			},
+		)
+
+	})
+
+	t.Run("{Bar}, convert interface", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			&interpreter.IntersectionStaticType{
+				Types: []*interpreter.InterfaceStaticType{
+					fooBarInterfaceType,
+				},
+			},
+			false,
+			true,
+			&interpreter.IntersectionStaticType{
+				Types: []*interpreter.InterfaceStaticType{
+					fooBazInterfaceType,
+				},
+			},
+		)
+	})
+
+	t.Run("&A{}", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					LegacyType: fooACompositeType,
+				},
+			},
+			false,
+			false,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					LegacyType: fooACompositeType,
+				},
+			},
+		)
+	})
+
+	t.Run("&A{}, convert composite", func(t *testing.T) {
+		t.Parallel()
+
+		test(
+			t,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					LegacyType: fooACompositeType,
+				},
+			},
+			true,
+			false,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					LegacyType: fooBCompositeType,
+				},
+			},
+		)
+	})
+
+	t.Run("&A{Bar}", func(t *testing.T) {
+		t.Parallel()
+
+		test(
+			t,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					LegacyType: fooACompositeType,
+					Types: []*interpreter.InterfaceStaticType{
+						fooBarInterfaceType,
+					},
+				},
+			},
+			false,
+			false,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					LegacyType: fooACompositeType,
+					Types: []*interpreter.InterfaceStaticType{
+						fooBarInterfaceType,
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("&A{Bar}, convert interface", func(t *testing.T) {
+		t.Parallel()
+
+		test(
+			t,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					LegacyType: fooACompositeType,
+					Types: []*interpreter.InterfaceStaticType{
+						fooBarInterfaceType,
+					},
+				},
+			},
+			false,
+			true,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					LegacyType: fooACompositeType,
+					Types: []*interpreter.InterfaceStaticType{
+						fooBazInterfaceType,
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("&A{Bar}, convert composite, convert interface", func(t *testing.T) {
+		t.Parallel()
+
+		test(
+			t,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					LegacyType: fooACompositeType,
+					Types: []*interpreter.InterfaceStaticType{
+						fooBarInterfaceType,
+					},
+				},
+			},
+			true,
+			true,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					LegacyType: fooBCompositeType,
+					Types: []*interpreter.InterfaceStaticType{
+						fooBazInterfaceType,
+					},
+				},
+			},
+		)
+
+	})
+
+	t.Run("&{Bar}", func(t *testing.T) {
+		t.Parallel()
+
+		test(
+			t,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					Types: []*interpreter.InterfaceStaticType{
+						fooBarInterfaceType,
+					},
+				},
+			},
+			false,
+			false,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					Types: []*interpreter.InterfaceStaticType{
+						fooBarInterfaceType,
+					},
+				},
+			},
+		)
+
+	})
+
+	t.Run("&{Bar}, convert interface", func(t *testing.T) {
+		t.Parallel()
+
+		test(
+			t,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					Types: []*interpreter.InterfaceStaticType{
+						fooBarInterfaceType,
+					},
+				},
+			},
+			false,
+			true,
+			&interpreter.ReferenceStaticType{
+				Authorization: interpreter.Unauthorized{},
+				ReferencedType: &interpreter.IntersectionStaticType{
+					Types: []*interpreter.InterfaceStaticType{
+						fooBazInterfaceType,
+					},
+				},
+			},
+		)
+	})
+}
+
+func TestIntersectionTypeMigrationWithTypeConverters(t *testing.T) {
+	t.Parallel()
+
+	migrate := func(
+		t *testing.T,
+		staticTypeMigration *StaticTypeMigration,
+		input interpreter.StaticType,
+	) interpreter.StaticType {
+
+		// Store values
+
+		ledger := NewTestLedger(nil, nil)
+		storage := runtime.NewStorage(ledger, nil)
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   false,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		const testPathDomain = common.PathDomainStorage
+		const testPathIdentifier = "test_type_value"
+
+		storeTypeValue(
+			inter,
+			testAddress,
+			testPathDomain,
+			testPathIdentifier,
+			input,
+		)
+
+		err = storage.Commit(inter, true)
+		require.NoError(t, err)
+
+		// Migrate
+
+		migration := migrations.NewStorageMigration(inter, storage)
+
+		reporter := newTestReporter()
+
+		migration.Migrate(
+			&migrations.AddressSliceIterator{
+				Addresses: []common.Address{
+					testAddress,
+				},
+			},
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				staticTypeMigration,
+			),
+		)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+
+		require.Empty(t, reporter.errors)
+
+		key := struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}{
+			StorageKey: interpreter.StorageKey{
+				Address: testAddress,
+				Key:     testPathDomain.Identifier(),
+			},
+			StorageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+		}
+
+		assert.Contains(t, reporter.migrated, key)
+
+		storageMap := storage.GetStorageMap(testAddress, testPathDomain.Identifier(), false)
+		require.NotNil(t, storageMap)
+		require.Equal(t, uint64(1), storageMap.Count())
+
+		value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(testPathIdentifier))
+		require.NotNil(t, value)
+
+		require.IsType(t, interpreter.TypeValue{}, value)
+
+		return value.(interpreter.TypeValue).Type
+	}
+
+	const fooCompositeQualifiedIdentifierA = "Foo.A"
+	const fooCompositeQualifiedIdentifierB = "Foo.B"
+
+	fooACompositeType := interpreter.NewCompositeStaticType(
+		nil,
+		fooAddressLocation,
+		fooCompositeQualifiedIdentifierA,
+		fooAddressLocation.TypeID(nil, fooCompositeQualifiedIdentifierA),
+	)
+
+	fooBCompositeType := interpreter.NewCompositeStaticType(
+		nil,
+		fooAddressLocation,
+		fooCompositeQualifiedIdentifierB,
+		fooAddressLocation.TypeID(nil, fooCompositeQualifiedIdentifierB),
+	)
+
+	const fooInterfaceQualifiedIdentifierC = "Foo.C"
+	const fooInterfaceQualifiedIdentifierD = "Foo.D"
+
+	fooCInterfaceType := interpreter.NewInterfaceStaticType(
+		nil,
+		fooAddressLocation,
+		fooInterfaceQualifiedIdentifierC,
+		fooAddressLocation.TypeID(nil, fooInterfaceQualifiedIdentifierC),
+	)
+	fooDInterfaceType := interpreter.NewInterfaceStaticType(
+		nil,
+		fooAddressLocation,
+		fooInterfaceQualifiedIdentifierD,
+		fooAddressLocation.TypeID(nil, fooInterfaceQualifiedIdentifierD),
+	)
+
+	t.Run("composite type converter", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("return non-interface", func(t *testing.T) {
 			t.Parallel()
 
-			interfaceTypes := make([]*interpreter.InterfaceStaticType, 0, len(interfaceTypeQualifiedIdentifiers))
+			staticTypeMigration := NewStaticTypeMigration().
+				WithCompositeTypeConverter(func(staticType *interpreter.CompositeStaticType) interpreter.StaticType {
+					if staticType == fooACompositeType {
+						return fooBCompositeType
+					}
+					return nil
+				})
 
-			for _, qualifiedIdentifier := range interfaceTypeQualifiedIdentifiers {
-				interfaceTypes = append(
-					interfaceTypes,
-					interpreter.NewInterfaceStaticType(
-						nil,
-						fooAddressLocation,
-						qualifiedIdentifier,
-						fooAddressLocation.TypeID(nil, qualifiedIdentifier),
-					),
-				)
-			}
+			actual := migrate(t, staticTypeMigration, fooACompositeType)
+			assert.Equal(t, fooBCompositeType, actual)
+		})
 
-			input := interpreter.NewIntersectionStaticType(nil, interfaceTypes)
-			input.LegacyType = legacyType
+		t.Run("return interface", func(t *testing.T) {
+			t.Parallel()
 
-			// Store values
+			staticTypeMigration := NewStaticTypeMigration().
+				WithCompositeTypeConverter(func(staticType *interpreter.CompositeStaticType) interpreter.StaticType {
+					if staticType == fooACompositeType {
+						// NOTE: return interface type as-is, not wrapped in intersection type,
+						// to test if it gets wrapped properly into an intersection type
+						return fooCInterfaceType
+					}
+					return nil
+				})
 
-			ledger := NewTestLedger(nil, nil)
-			storage := runtime.NewStorage(ledger, nil)
-
-			inter, err := interpreter.NewInterpreter(
-				nil,
-				utils.TestLocation,
-				&interpreter.Config{
-					Storage:                       storage,
-					AtreeValueValidationEnabled:   false,
-					AtreeStorageValidationEnabled: true,
-				},
-			)
-			require.NoError(t, err)
-
-			const testPathDomain = common.PathDomainStorage
-			const testPathIdentifier = "test_type_value"
-
-			storeTypeValue(
-				inter,
-				testAddress,
-				testPathDomain,
-				testPathIdentifier,
-				input,
-			)
-
-			err = storage.Commit(inter, true)
-			require.NoError(t, err)
-
-			// Migrate
-
-			migration := migrations.NewStorageMigration(inter, storage)
-
-			reporter := newTestReporter()
-
-			staticTypeMigration := NewStaticTypeMigration()
-			if convertCompositeType {
-				staticTypeMigration.WithCompositeTypeConverter(
-					func(staticType *interpreter.CompositeStaticType) interpreter.StaticType {
-						if staticType == fooACompositeType {
-							return fooBCompositeType
-						}
-						return nil
+			actual := migrate(t, staticTypeMigration, fooACompositeType)
+			assert.Equal(t,
+				interpreter.NewIntersectionStaticType(
+					nil,
+					[]*interpreter.InterfaceStaticType{
+						fooCInterfaceType,
 					},
-				)
-			}
-			if convertInterfaceType {
-				staticTypeMigration.WithInterfaceTypeConverter(
-					func(staticType *interpreter.InterfaceStaticType) interpreter.StaticType {
-						if staticType.QualifiedIdentifier == fooBarQualifiedIdentifier {
-							return fooQuxInterfaceType
-						}
-						return nil
-					},
-				)
-			}
-
-			migration.Migrate(
-				&migrations.AddressSliceIterator{
-					Addresses: []common.Address{
-						testAddress,
-					},
-				},
-				migration.NewValueMigrationsPathMigrator(
-					reporter,
-					staticTypeMigration,
 				),
+				actual,
 			)
+		})
 
-			err = migration.Commit()
-			require.NoError(t, err)
+		t.Run("return intersection", func(t *testing.T) {
+			t.Parallel()
 
-			expectLegacyTypeConverted := convertCompositeType && legacyType != nil
-			expectInterfaceTypeConverted := convertInterfaceType && len(interfaceTypeQualifiedIdentifiers) > 0
-			expectMigration := len(interfaceTypeQualifiedIdentifiers) >= 2 ||
-				expectLegacyTypeConverted ||
-				expectInterfaceTypeConverted
-
-			key := struct {
-				interpreter.StorageKey
-				interpreter.StorageMapKey
-			}{
-				StorageKey: interpreter.StorageKey{
-					Address: testAddress,
-					Key:     testPathDomain.Identifier(),
-				},
-				StorageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
-			}
-
-			if expectMigration {
-				assert.Contains(t, reporter.migrated, key)
-			} else {
-				assert.NotContains(t, reporter.migrated, key)
-			}
-
-			// Assert the migrated value.
-
-			storageMap := storage.GetStorageMap(testAddress, testPathDomain.Identifier(), false)
-			require.NotNil(t, storageMap)
-			require.Equal(t, uint64(1), storageMap.Count())
-
-			value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(testPathIdentifier))
-			assert.NotNil(t, value)
-
-			var expectedType *interpreter.IntersectionStaticType
-			if expectMigration {
-				expectedInterfaceTypes :=
-					make([]*interpreter.InterfaceStaticType, 0, len(interfaceTypeQualifiedIdentifiers))
-
-				for _, interfaceTypeQualifiedIdentifier := range interfaceTypeQualifiedIdentifiers {
-					if convertInterfaceType && interfaceTypeQualifiedIdentifier == fooBarQualifiedIdentifier {
-						interfaceTypeQualifiedIdentifier = fooQuxQualifiedIdentifier
-					}
-
-					expectedInterfaceTypes = append(
-						expectedInterfaceTypes,
-						interpreter.NewInterfaceStaticType(
+			staticTypeMigration := NewStaticTypeMigration().
+				WithCompositeTypeConverter(func(staticType *interpreter.CompositeStaticType) interpreter.StaticType {
+					if staticType == fooACompositeType {
+						// NOTE: return interface type wrapped in intersection type,
+						// to test if it does not get re-wrapped into an intersection type
+						return interpreter.NewIntersectionStaticType(
 							nil,
-							fooAddressLocation,
-							interfaceTypeQualifiedIdentifier,
-							fooAddressLocation.TypeID(nil, interfaceTypeQualifiedIdentifier),
-						),
-					)
-				}
-
-				expectedType = interpreter.NewIntersectionStaticType(nil, expectedInterfaceTypes)
-				expectedType.LegacyType = legacyType
-				if convertCompositeType && legacyType == fooACompositeType {
-					expectedType.LegacyType = fooBCompositeType
-				}
-			}
-
-			var expectedValue interpreter.Value
-			if expectedType != nil {
-				expectedValue = interpreter.NewTypeValue(nil, expectedType)
-
-				// `IntersectionType.LegacyType` is not considered in the `IntersectionType.Equal` method.
-				// Therefore, check for the legacy type equality manually.
-				typeValue := value.(interpreter.TypeValue)
-				if actualIntersectionType, ok := typeValue.Type.(*interpreter.IntersectionStaticType); ok {
-
-					if actualIntersectionType.LegacyType == nil {
-						assert.Nil(t, expectedType.LegacyType)
-					} else {
-						assert.True(t, actualIntersectionType.LegacyType.Equal(expectedType.LegacyType))
+							[]*interpreter.InterfaceStaticType{
+								fooCInterfaceType,
+							},
+						)
 					}
-				}
-			} else {
-				expectedValue = interpreter.NewTypeValue(nil, input)
-			}
+					return nil
+				})
 
-			utils.AssertValuesEqual(t, inter, expectedValue, value)
+			actual := migrate(t, staticTypeMigration, fooACompositeType)
+			assert.Equal(t,
+				interpreter.NewIntersectionStaticType(
+					nil,
+					[]*interpreter.InterfaceStaticType{
+						fooCInterfaceType,
+					},
+				),
+				actual,
+			)
 
 		})
-	}
+	})
 
-	for _, interfaceTypeQualifiedIdentifiers := range [][]string{
-		{},
-		{fooBarQualifiedIdentifier},
-		// NOTE: intentionally in reverse order
-		{fooBazQualifiedIdentifier, fooBarQualifiedIdentifier},
-	} {
-		for _, legacyType := range []interpreter.StaticType{
-			nil,
-			fooACompositeType,
-		} {
-			for _, convertCompositeType := range []bool{false, true} {
-				for _, convertInterfaceType := range []bool{false, true} {
-					test(
-						interfaceTypeQualifiedIdentifiers,
-						legacyType,
-						convertCompositeType,
-						convertInterfaceType,
-					)
-				}
-			}
-		}
-	}
+	t.Run("interface type converter", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("return non-interface", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration().
+				WithInterfaceTypeConverter(func(staticType *interpreter.InterfaceStaticType) interpreter.StaticType {
+					if staticType == fooCInterfaceType {
+						return fooBCompositeType
+					}
+					return nil
+				})
+
+			actual := migrate(t, staticTypeMigration, fooCInterfaceType)
+			assert.Equal(t, fooBCompositeType, actual)
+		})
+
+		t.Run("return interface", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration().
+				WithInterfaceTypeConverter(func(staticType *interpreter.InterfaceStaticType) interpreter.StaticType {
+					if staticType == fooCInterfaceType {
+						// NOTE: return interface type as-is, not wrapped in intersection type,
+						// to test if it gets wrapped properly into an intersection type
+						return fooDInterfaceType
+					}
+					return nil
+				})
+
+			actual := migrate(t, staticTypeMigration, fooCInterfaceType)
+			assert.Equal(t,
+				interpreter.NewIntersectionStaticType(
+					nil,
+					[]*interpreter.InterfaceStaticType{
+						fooDInterfaceType,
+					},
+				),
+				actual,
+			)
+
+		})
+
+		t.Run("return intersection", func(t *testing.T) {
+			t.Parallel()
+
+			staticTypeMigration := NewStaticTypeMigration().
+				WithInterfaceTypeConverter(func(staticType *interpreter.InterfaceStaticType) interpreter.StaticType {
+					if staticType == fooCInterfaceType {
+						// NOTE: return interface type wrapped in intersection type,
+						// to test if it does not get re-wrapped into an intersection type
+						return interpreter.NewIntersectionStaticType(
+							nil,
+							[]*interpreter.InterfaceStaticType{
+								fooDInterfaceType,
+							},
+						)
+					}
+					return nil
+				})
+
+			actual := migrate(t, staticTypeMigration, fooCInterfaceType)
+			assert.Equal(t,
+				interpreter.NewIntersectionStaticType(
+					nil,
+					[]*interpreter.InterfaceStaticType{
+						fooDInterfaceType,
+					},
+				),
+				actual,
+			)
+		})
+	})
 }

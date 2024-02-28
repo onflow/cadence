@@ -49,7 +49,7 @@ func (id ccfTypeID) next() ccfTypeID {
 	if id == math.MaxUint64 {
 		panic(fmt.Errorf("failed to create next CCF type id: reached max limit for id"))
 	}
-	return ccfTypeID(id + 1)
+	return id + 1
 }
 
 // ccfTypeIDByCadenceType maps a Cadence type ID to a CCF type ID
@@ -115,10 +115,6 @@ func (ids *cadenceTypeByCCFTypeID) typ(id ccfTypeID) (cadence.Type, error) {
 func (ids *cadenceTypeByCCFTypeID) has(id ccfTypeID) bool {
 	_, ok := ids.types[id]
 	return ok
-}
-
-func (ids *cadenceTypeByCCFTypeID) count() int {
-	return len(ids.types)
 }
 
 func (ids *cadenceTypeByCCFTypeID) hasUnreferenced() bool {

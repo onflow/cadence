@@ -252,7 +252,15 @@ func (m *StorageMigration) MigrateNestedValue(
 		// Read the keys first, so the iteration wouldn't be affected
 		// by the modification of the nested values.
 		var existingKeysAndValues []keyValuePair
-		dictionary.Iterate(m.interpreter, func(key, value interpreter.Value) (resume bool) {
+
+		iterator := dictionary.Iterator()
+
+		for {
+			key, value := iterator.Next(nil)
+			if key == nil {
+				break
+			}
+
 			existingKeysAndValues = append(
 				existingKeysAndValues,
 				keyValuePair{
@@ -260,10 +268,7 @@ func (m *StorageMigration) MigrateNestedValue(
 					value: value,
 				},
 			)
-
-			// continue iteration
-			return true
-		})
+		}
 
 		for _, existingKeyAndValue := range existingKeysAndValues {
 			existingKey := existingKeyAndValue.key
@@ -306,7 +311,10 @@ func (m *StorageMigration) MigrateNestedValue(
 				)
 
 				if _, ok := oldValue.(*interpreter.SomeValue); !ok {
-					panic(errors.NewUnreachableError())
+					panic(errors.NewUnexpectedError(
+						"failed to remove old value for migrated key: %s",
+						existingKey,
+					))
 				}
 
 				keyToSet = newKey
@@ -372,8 +380,14 @@ func (m *StorageMigration) MigrateNestedValue(
 			// is the same as the owner of the old value
 			if ownedValue, ok := value.(interpreter.OwnedValue); ok {
 				if ownedConvertedValue, ok := convertedValue.(interpreter.OwnedValue); ok {
-					if ownedConvertedValue.GetOwner() != ownedValue.GetOwner() {
-						panic(errors.NewUnreachableError())
+					convertedOwner := ownedConvertedValue.GetOwner()
+					originalOwner := ownedValue.GetOwner()
+					if convertedOwner != originalOwner {
+						panic(errors.NewUnexpectedError(
+							"migrated value has different owner: expected %s, got %s",
+							originalOwner,
+							convertedOwner,
+						))
 					}
 				}
 			}

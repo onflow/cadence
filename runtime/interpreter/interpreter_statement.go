@@ -19,8 +19,6 @@
 package interpreter
 
 import (
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -281,16 +279,12 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 	}
 
 	value := interpreter.evalExpression(statement.Value)
-	transferredValue := value.Transfer(
-		interpreter,
-		locationRange,
-		atree.Address{},
-		false,
-		nil,
-		nil,
-	)
 
-	iterable, ok := transferredValue.(IterableValue)
+	// Do not transfer the iterable value.
+	// Instead, transfer each iterating element.
+	// This is done in `ForEach` method.
+
+	iterable, ok := value.(IterableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -317,10 +311,14 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (
 		return
 	}
 
+	// Transfer the elements before pass onto the loop-body.
+	const transferElements = true
+
 	iterable.ForEach(
 		interpreter,
 		forStmtTypes.ValueVariableType,
 		executeBody,
+		transferElements,
 		locationRange,
 	)
 

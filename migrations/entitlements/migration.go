@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/migrations"
+	"github.com/onflow/cadence/migrations/statictypes"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -41,91 +42,179 @@ func (EntitlementsMigration) Name() string {
 }
 
 // ConvertToEntitledType converts the given type to an entitled type according to the following rules:
-// * `ConvertToEntitledType(&T) ---> auth(Entitlements(T)) &T`
-// * `ConvertToEntitledType(Capability<T>) ---> Capability<ConvertToEntitledType(T)>`
-// * `ConvertToEntitledType(T?) ---> ConvertToEntitledType(T)?
-// * `ConvertToEntitledType(T) ---> T`
-// where Entitlements(I) is defined as the result of T.SupportedEntitlements()
-func ConvertToEntitledType(t sema.Type) (sema.Type, bool) {
+//   - ConvertToEntitledType(&T)            --> auth(Entitlements(T)) &T
+//   - ConvertToEntitledType(Capability<T>) --> Capability<ConvertToEntitledType(T)>
+//   - ConvertToEntitledType(T?)            --> ConvertToEntitledType(T)?
+//   - ConvertToEntitledType([T])           --> [ConvertToEntitledType(T)]
+//   - ConvertToEntitledType([T; N])        --> [ConvertToEntitledType(T); N]
+//   - ConvertToEntitledType({K: V})        --> {ConvertToEntitledType(K): ConvertToEntitledType(V)}
+//   - ConvertToEntitledType(T)             --> T
+//
+// where `Entitlements(I)` is defined as the result of `T.SupportedEntitlements()`
+//
+// TODO: functions?
+func ConvertToEntitledType(
+	inter *interpreter.Interpreter,
+	staticType interpreter.StaticType,
+) (
+	interpreter.StaticType,
+	error,
+) {
+	if staticType == nil {
+		return nil, nil
+	}
 
-	switch t := t.(type) {
-	case *sema.ReferenceType:
+	if staticType.IsDeprecated() {
+		return nil, fmt.Errorf("cannot migrate deprecated type: %s", staticType)
+	}
 
-		// Do NOT add authorization for sema types
-		// that were converted from deprecated primitive static types
-		switch t.Type {
+	switch t := staticType.(type) {
+	case *interpreter.ReferenceStaticType:
 
-		case sema.AccountType,
-			sema.Account_ContractsType,
-			sema.Account_KeysType,
-			sema.Account_InboxType,
-			sema.Account_StorageCapabilitiesType,
-			sema.Account_AccountCapabilitiesType,
-			sema.Account_CapabilitiesType,
-			sema.AccountKeyType:
+		referencedType := t.ReferencedType
 
-			return t, false
+		convertedReferencedType, err := ConvertToEntitledType(inter, referencedType)
+		if err != nil {
+			return nil, err
 		}
 
-		switch t.Authorization {
-		case sema.UnauthorizedAccess:
-			innerType, convertedInner := ConvertToEntitledType(t.Type)
-			auth := sema.UnauthorizedAccess
-			if entitlementSupportingType, ok := innerType.(sema.EntitlementSupportingType); ok {
-				supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
-				if supportedEntitlements.Len() > 0 {
-					auth = sema.EntitlementSetAccess{
-						SetKind:      sema.Conjunction,
-						Entitlements: supportedEntitlements,
+		var returnNew bool
+
+		if convertedReferencedType != nil {
+			referencedType = convertedReferencedType
+			returnNew = true
+		}
+
+		// Determine the authorization (entitlements) from the referenced type,
+		// based on the supported entitlements of the referenced type
+
+		auth := t.Authorization
+
+		// If the referenced type is an empty intersection type,
+		// do not add an authorization
+
+		intersectionType, isIntersection := referencedType.(*interpreter.IntersectionStaticType)
+		isEmptyIntersection := isIntersection && len(intersectionType.Types) == 0
+
+		if !isEmptyIntersection {
+			referencedSemaType := inter.MustConvertStaticToSemaType(referencedType)
+
+			if entitlementSupportingType, ok := referencedSemaType.(sema.EntitlementSupportingType); ok {
+
+				switch entitlementSupportingType {
+
+				// Do NOT add authorization for sema types
+				// that were converted from deprecated primitive static types
+				case sema.AccountType,
+					sema.Account_ContractsType,
+					sema.Account_KeysType,
+					sema.Account_InboxType,
+					sema.Account_StorageCapabilitiesType,
+					sema.Account_AccountCapabilitiesType,
+					sema.Account_CapabilitiesType,
+					sema.AccountKeyType:
+
+					// NO-OP
+					break
+
+				default:
+					newAuth := sema.UnauthorizedAccess
+					supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
+					if supportedEntitlements.Len() > 0 {
+						newAuth = sema.EntitlementSetAccess{
+							SetKind:      sema.Conjunction,
+							Entitlements: supportedEntitlements,
+						}
 					}
+					auth = interpreter.ConvertSemaAccessToStaticAuthorization(inter, newAuth)
+					returnNew = true
 				}
 			}
-			if auth.Equal(sema.UnauthorizedAccess) && !convertedInner {
-				return t, false
+		}
+
+		if isIntersection {
+			// Rewrite the intersection type to remove the potential legacy restricted type
+			referencedType = statictypes.RewriteLegacyIntersectionType(intersectionType)
+			returnNew = true
+		}
+
+		if returnNew {
+			return interpreter.NewReferenceStaticType(nil, auth, referencedType), nil
+		}
+
+	case *interpreter.CapabilityStaticType:
+		convertedBorrowType, err := ConvertToEntitledType(inter, t.BorrowType)
+		if err != nil {
+			return nil, err
+		}
+
+		if convertedBorrowType != nil {
+			return interpreter.NewCapabilityStaticType(nil, convertedBorrowType), nil
+		}
+
+	case *interpreter.VariableSizedStaticType:
+		elementType := t.Type
+
+		convertedElementType, err := ConvertToEntitledType(inter, elementType)
+		if err != nil {
+			return nil, err
+		}
+
+		if convertedElementType != nil {
+			return interpreter.NewVariableSizedStaticType(nil, convertedElementType), nil
+		}
+
+	case *interpreter.ConstantSizedStaticType:
+		elementType := t.Type
+
+		convertedElementType, err := ConvertToEntitledType(inter, elementType)
+		if err != nil {
+			return nil, err
+		}
+
+		if convertedElementType != nil {
+			return interpreter.NewConstantSizedStaticType(nil, convertedElementType, t.Size), nil
+		}
+
+	case *interpreter.DictionaryStaticType:
+		keyType := t.KeyType
+
+		convertedKeyType, err := ConvertToEntitledType(inter, keyType)
+		if err != nil {
+			return nil, err
+		}
+
+		valueType := t.ValueType
+
+		convertedValueType, err := ConvertToEntitledType(inter, valueType)
+		if err != nil {
+			return nil, err
+		}
+
+		if convertedKeyType != nil {
+			if convertedValueType != nil {
+				return interpreter.NewDictionaryStaticType(nil, convertedKeyType, convertedValueType), nil
+			} else {
+				return interpreter.NewDictionaryStaticType(nil, convertedKeyType, valueType), nil
 			}
-			return sema.NewReferenceType(
-				nil,
-				auth,
-				innerType,
-			), true
-		// type is already entitled
-		default:
-			return t, false
+		} else if convertedValueType != nil {
+			return interpreter.NewDictionaryStaticType(nil, keyType, convertedValueType), nil
 		}
-	case *sema.OptionalType:
-		ty, converted := ConvertToEntitledType(t.Type)
-		if !converted {
-			return t, false
+
+	case *interpreter.OptionalStaticType:
+		innerType := t.Type
+
+		convertedInnerType, err := ConvertToEntitledType(inter, innerType)
+		if err != nil {
+			return nil, err
 		}
-		return sema.NewOptionalType(nil, ty), true
-	case *sema.CapabilityType:
-		ty, converted := ConvertToEntitledType(t.BorrowType)
-		if !converted {
-			return t, false
+
+		if convertedInnerType != nil {
+			return interpreter.NewOptionalStaticType(nil, convertedInnerType), nil
 		}
-		return sema.NewCapabilityType(nil, ty), true
-	case *sema.VariableSizedType:
-		ty, converted := ConvertToEntitledType(t.Type)
-		if !converted {
-			return t, false
-		}
-		return sema.NewVariableSizedType(nil, ty), true
-	case *sema.ConstantSizedType:
-		ty, converted := ConvertToEntitledType(t.Type)
-		if !converted {
-			return t, false
-		}
-		return sema.NewConstantSizedType(nil, ty, t.Size), true
-	case *sema.DictionaryType:
-		keyTy, convertedKey := ConvertToEntitledType(t.KeyType)
-		valueTy, convertedValue := ConvertToEntitledType(t.ValueType)
-		if !convertedKey && !convertedValue {
-			return t, false
-		}
-		return sema.NewDictionaryType(nil, keyTy, valueTy), true
-	default:
-		return t, false
 	}
+
+	return nil, nil
 }
 
 // ConvertValueToEntitlements converts the input value into a version compatible with the new entitlements feature,
@@ -138,114 +227,25 @@ func ConvertValueToEntitlements(
 	error,
 ) {
 
-	var staticType interpreter.StaticType
-	switch referenceValue := v.(type) {
-
-	case *interpreter.EphemeralReferenceValue:
-		// during a real migration this case will not be hit, because ephemeral references are not storable,
-		// but they are here for easier testing for reference types, we want to use the borrow type,
-		// rather than the type of the referenced value
-		staticType = interpreter.NewReferenceStaticType(
-			inter,
-			referenceValue.Authorization,
-			interpreter.ConvertSemaToStaticType(inter, referenceValue.BorrowedType),
-		)
-
-	default:
-		staticType = v.StaticType(inter)
-	}
-
-	if staticType.IsDeprecated() {
-		return nil, fmt.Errorf("cannot migrate deprecated type: %s", staticType)
-	}
-
-	// if the static type contains a legacy restricted type, convert it to a new type according to some rules:
-	// &T{I} -> auth(SupportedEntitlements(I)) &T
-	// Capability<&T{I}> -> Capability<auth(SupportedEntitlements(I)) &T>
-	var convertLegacyStaticType func(interpreter.StaticType)
-	convertLegacyStaticType = func(staticType interpreter.StaticType) {
-		switch t := staticType.(type) {
-		case *interpreter.ReferenceStaticType:
-			switch referencedType := t.ReferencedType.(type) {
-			case *interpreter.IntersectionStaticType:
-				if referencedType.LegacyType != nil {
-					t.ReferencedType = referencedType.LegacyType
-					intersectionSemaType := inter.MustConvertStaticToSemaType(referencedType).(*sema.IntersectionType)
-					auth := sema.UnauthorizedAccess
-					supportedEntitlements := intersectionSemaType.SupportedEntitlements()
-					if supportedEntitlements.Len() > 0 {
-						auth = sema.EntitlementSetAccess{
-							SetKind:      sema.Conjunction,
-							Entitlements: supportedEntitlements,
-						}
-					}
-					t.Authorization = interpreter.ConvertSemaAccessToStaticAuthorization(inter, auth)
-				}
-			}
-		case *interpreter.CapabilityStaticType:
-			convertLegacyStaticType(t.BorrowType)
-		case *interpreter.VariableSizedStaticType:
-			convertLegacyStaticType(t.Type)
-		case *interpreter.ConstantSizedStaticType:
-			convertLegacyStaticType(t.Type)
-		case *interpreter.DictionaryStaticType:
-			convertLegacyStaticType(t.KeyType)
-			convertLegacyStaticType(t.ValueType)
-		case *interpreter.OptionalStaticType:
-			convertLegacyStaticType(t.Type)
-		}
-	}
-
-	convertLegacyStaticType(staticType)
-
 	switch v := v.(type) {
-	case *interpreter.EphemeralReferenceValue:
-		// during a real migration this case will not be hit,
-		// but it is here for easier testing
 
-		semaType := inter.MustConvertStaticToSemaType(staticType)
-		entitledType, converted := ConvertToEntitledType(semaType)
-		if !converted {
-			return nil, nil
-		}
+	case *interpreter.ArrayValue:
+		elementType := v.Type
 
-		entitledReferenceType := entitledType.(*sema.ReferenceType)
-		staticAuthorization := interpreter.ConvertSemaAccessToStaticAuthorization(
-			inter,
-			entitledReferenceType.Authorization,
-		)
-		convertedValue, err := ConvertValueToEntitlements(inter, v.Value)
+		entitledElementType, err := ConvertToEntitledType(inter, elementType)
 		if err != nil {
 			return nil, err
 		}
 
-		// if the underlying value did not change, we still want to use the old value in the newly created reference
-		if convertedValue == nil {
-			convertedValue = v.Value
-		}
-		return interpreter.NewEphemeralReferenceValue(
-			inter,
-			staticAuthorization,
-			convertedValue,
-			entitledReferenceType.Type,
-			interpreter.EmptyLocationRange,
-		), nil
-
-	case *interpreter.ArrayValue:
-		semaType := inter.MustConvertStaticToSemaType(staticType)
-		entitledType, converted := ConvertToEntitledType(semaType)
-		if !converted {
+		if entitledElementType == nil {
 			return nil, nil
 		}
-
-		entitledArrayType := entitledType.(sema.ArrayType)
-		arrayStaticType := interpreter.ConvertSemaArrayTypeToStaticArrayType(inter, entitledArrayType)
 
 		iterator := v.Iterator(inter, interpreter.EmptyLocationRange)
 
 		return interpreter.NewArrayValueWithIterator(
 			inter,
-			arrayStaticType,
+			entitledElementType.(interpreter.ArrayStaticType),
 			v.GetOwner(),
 			uint64(v.Count()),
 			func() interpreter.Value {
@@ -254,138 +254,128 @@ func ConvertValueToEntitlements(
 		), nil
 
 	case *interpreter.DictionaryValue:
-		semaType := inter.MustConvertStaticToSemaType(staticType)
-		entitledType, converted := ConvertToEntitledType(semaType)
-		if !converted {
-			return nil, nil
+		elementType := v.Type
+
+		entitledElementType, err := ConvertToEntitledType(inter, elementType)
+		if err != nil {
+			return nil, err
 		}
 
-		entitledDictionaryType := entitledType.(*sema.DictionaryType)
-		dictionaryStaticType := interpreter.ConvertSemaDictionaryTypeToStaticDictionaryType(
-			inter,
-			entitledDictionaryType,
-		)
+		if entitledElementType != nil {
+			var keysAndValues []interpreter.Value
 
-		var values []interpreter.Value
+			iterator := v.Iterator()
+			for {
+				keyValue, value := iterator.Next(inter)
+				if keyValue == nil {
+					break
+				}
 
-		v.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
-			values = append(values, key)
-			values = append(values, value)
-			return true
-		})
+				keysAndValues = append(keysAndValues, keyValue)
+				keysAndValues = append(keysAndValues, value)
+			}
 
-		return interpreter.NewDictionaryValueWithAddress(
-			inter,
-			interpreter.EmptyLocationRange,
-			dictionaryStaticType,
-			v.GetOwner(),
-			values...,
-		), nil
+			return interpreter.NewDictionaryValueWithAddress(
+				inter,
+				interpreter.EmptyLocationRange,
+				entitledElementType.(*interpreter.DictionaryStaticType),
+				v.GetOwner(),
+				keysAndValues...,
+			), nil
+		}
 
 	case *interpreter.IDCapabilityValue:
-		semaType := inter.MustConvertStaticToSemaType(staticType)
-		entitledType, converted := ConvertToEntitledType(semaType)
-		if !converted {
-			return nil, nil
+		borrowType := v.BorrowType
+
+		entitledBorrowType, err := ConvertToEntitledType(inter, borrowType)
+		if err != nil {
+			return nil, err
 		}
 
-		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
-		capabilityStaticType := interpreter.ConvertSemaToStaticType(inter, entitledCapabilityValue.BorrowType)
-		return interpreter.NewCapabilityValue(
-			inter,
-			v.ID,
-			v.Address,
-			capabilityStaticType,
-		), nil
+		if entitledBorrowType != nil {
+			return interpreter.NewCapabilityValue(
+				inter,
+				v.ID,
+				v.Address,
+				entitledBorrowType,
+			), nil
+		}
 
 	case *interpreter.PathCapabilityValue: //nolint:staticcheck
-		semaType := inter.MustConvertStaticToSemaType(staticType)
-		entitledType, converted := ConvertToEntitledType(semaType)
-		if !converted {
-			return nil, nil
+		borrowType := v.BorrowType
+
+		entitledBorrowType, err := ConvertToEntitledType(inter, borrowType)
+		if err != nil {
+			return nil, err
 		}
 
-		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
-		capabilityStaticType := interpreter.ConvertSemaToStaticType(inter, entitledCapabilityValue.BorrowType)
-		return &interpreter.PathCapabilityValue{ //nolint:staticcheck
-			Path:       v.Path,
-			Address:    v.Address,
-			BorrowType: capabilityStaticType,
-		}, nil
+		if entitledBorrowType != nil {
+			return &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				Path:       v.Path,
+				Address:    v.Address,
+				BorrowType: entitledBorrowType,
+			}, nil
+		}
 
 	case interpreter.TypeValue:
-		if v.Type == nil {
-			return nil, nil
+		ty := v.Type
+
+		entitledType, err := ConvertToEntitledType(inter, ty)
+		if err != nil {
+			return nil, err
 		}
 
-		convertedType, converted := ConvertToEntitledType(
-			inter.MustConvertStaticToSemaType(v.Type),
-		)
-
-		if !converted {
-			return nil, nil
+		if entitledType != nil {
+			return interpreter.NewTypeValue(inter, entitledType), nil
 		}
-
-		entitledStaticType := interpreter.ConvertSemaToStaticType(
-			inter,
-			convertedType,
-		)
-		return interpreter.NewTypeValue(inter, entitledStaticType), nil
 
 	case *interpreter.AccountCapabilityControllerValue:
-		convertedType, converted := ConvertToEntitledType(
-			inter.MustConvertStaticToSemaType(v.BorrowType),
-		)
+		borrowType := v.BorrowType
 
-		if !converted {
-			return nil, nil
+		entitledBorrowType, err := ConvertToEntitledType(inter, borrowType)
+		if err != nil {
+			return nil, err
 		}
 
-		entitledStaticType := interpreter.ConvertSemaToStaticType(
-			inter,
-			convertedType,
-		)
-		entitledBorrowType := entitledStaticType.(*interpreter.ReferenceStaticType)
-		return interpreter.NewAccountCapabilityControllerValue(
-			inter,
-			entitledBorrowType,
-			v.CapabilityID,
-		), nil
+		if entitledBorrowType != nil {
+			return interpreter.NewAccountCapabilityControllerValue(
+				inter,
+				entitledBorrowType.(*interpreter.ReferenceStaticType),
+				v.CapabilityID,
+			), nil
+		}
 
 	case *interpreter.StorageCapabilityControllerValue:
-		convertedType, converted := ConvertToEntitledType(
-			inter.MustConvertStaticToSemaType(v.BorrowType),
-		)
+		borrowType := v.BorrowType
 
-		if !converted {
-			return nil, nil
+		entitledBorrowType, err := ConvertToEntitledType(inter, borrowType)
+		if err != nil {
+			return nil, err
 		}
 
-		entitledStaticType := interpreter.ConvertSemaToStaticType(
-			inter,
-			convertedType,
-		)
-		entitledBorrowType := entitledStaticType.(*interpreter.ReferenceStaticType)
-		return interpreter.NewStorageCapabilityControllerValue(
-			inter,
-			entitledBorrowType,
-			v.CapabilityID,
-			v.TargetPath,
-		), nil
+		if entitledBorrowType != nil {
+			return interpreter.NewStorageCapabilityControllerValue(
+				inter,
+				entitledBorrowType.(*interpreter.ReferenceStaticType),
+				v.CapabilityID,
+				v.TargetPath,
+			), nil
+		}
 
 	case interpreter.PathLinkValue: //nolint:staticcheck
-		semaType := inter.MustConvertStaticToSemaType(staticType)
-		entitledType, converted := ConvertToEntitledType(semaType)
-		if !converted {
-			return nil, nil
+		borrowType := v.Type
+
+		entitledBorrowType, err := ConvertToEntitledType(inter, borrowType)
+		if err != nil {
+			return nil, err
 		}
 
-		entitledCapabilityValue := entitledType.(*sema.CapabilityType)
-		referenceStaticType := interpreter.ConvertSemaToStaticType(inter, entitledCapabilityValue.BorrowType)
-		return interpreter.PathLinkValue{ //nolint:staticcheck
-			TargetPath: v.TargetPath,
-			Type:       referenceStaticType,
-		}, nil
+		if entitledBorrowType != nil {
+			return interpreter.PathLinkValue{ //nolint:staticcheck
+				TargetPath: v.TargetPath,
+				Type:       entitledBorrowType,
+			}, nil
+		}
 	}
 
 	return nil, nil

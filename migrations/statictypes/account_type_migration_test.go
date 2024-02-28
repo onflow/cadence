@@ -42,6 +42,7 @@ type testReporter struct {
 		interpreter.StorageKey
 		interpreter.StorageMapKey
 	}]struct{}
+	errors []error
 }
 
 func newTestReporter() *testReporter {
@@ -72,8 +73,9 @@ func (t *testReporter) Error(
 	_ interpreter.StorageKey,
 	_ interpreter.StorageMapKey,
 	_ string,
-	_ error,
+	err error,
 ) {
+	t.errors = append(t.errors, err)
 }
 
 func TestAccountTypeInTypeValueMigration(t *testing.T) {
@@ -244,24 +246,46 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 					),
 				},
 			),
-			expectedType: nil,
-		},
-		"empty intersection": {
-			storedType: interpreter.NewIntersectionStaticType(
+			expectedType: interpreter.NewIntersectionStaticType(
 				nil,
-				[]*interpreter.InterfaceStaticType{},
+				[]*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticType(
+						nil,
+						nil,
+						fooBarQualifiedIdentifier,
+						common.NewTypeIDFromQualifiedName(
+							nil,
+							fooAddressLocation,
+							fooBarQualifiedIdentifier,
+						),
+					),
+				},
 			),
-			expectedType: nil,
 		},
 		"intersection_with_legacy_type": {
 			storedType: &interpreter.IntersectionStaticType{
-				Types:      []*interpreter.InterfaceStaticType{},
-				LegacyType: publicAccountType,
+				Types: []*interpreter.InterfaceStaticType{},
+				LegacyType: interpreter.NewCompositeStaticType(
+					nil,
+					nil,
+					fooBarQualifiedIdentifier,
+					common.NewTypeIDFromQualifiedName(
+						nil,
+						fooAddressLocation,
+						fooBarQualifiedIdentifier,
+					),
+				),
 			},
-			expectedType: &interpreter.IntersectionStaticType{
-				Types:      []*interpreter.InterfaceStaticType{},
-				LegacyType: unauthorizedAccountReferenceType,
-			},
+			expectedType: interpreter.NewCompositeStaticType(
+				nil,
+				nil,
+				fooBarQualifiedIdentifier,
+				common.NewTypeIDFromQualifiedName(
+					nil,
+					fooAddressLocation,
+					fooBarQualifiedIdentifier,
+				),
+			),
 		},
 		"public_account_reference": {
 			storedType: interpreter.NewReferenceStaticType(
@@ -314,7 +338,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				interpreter.NewVariableSizedStaticType(nil, authAccountReferenceType),
 			),
 		},
-		"interface": {
+		"non_intersection_interface": {
 			storedType: interpreter.NewInterfaceStaticType(
 				nil,
 				nil,
@@ -325,7 +349,53 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 					fooBarQualifiedIdentifier,
 				),
 			),
-			expectedType: nil,
+			expectedType: interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticType(
+						nil,
+						nil,
+						fooBarQualifiedIdentifier,
+						common.NewTypeIDFromQualifiedName(
+							nil,
+							fooAddressLocation,
+							fooBarQualifiedIdentifier,
+						),
+					),
+				},
+			),
+		},
+		"intersection_interface": {
+			storedType: interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticType(
+						nil,
+						nil,
+						fooBarQualifiedIdentifier,
+						common.NewTypeIDFromQualifiedName(
+							nil,
+							fooAddressLocation,
+							fooBarQualifiedIdentifier,
+						),
+					),
+				},
+			),
+			expectedType: interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticType(
+						nil,
+						nil,
+						fooBarQualifiedIdentifier,
+						common.NewTypeIDFromQualifiedName(
+							nil,
+							fooAddressLocation,
+							fooBarQualifiedIdentifier,
+						),
+					),
+				},
+			),
 		},
 		"composite": {
 			storedType: interpreter.NewCompositeStaticType(
@@ -340,93 +410,111 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 			),
 			expectedType: nil,
 		},
-	}
 
-	// Store values
-
-	ledger := NewTestLedger(nil, nil)
-	storage := runtime.NewStorage(ledger, nil)
-
-	inter, err := interpreter.NewInterpreter(
-		nil,
-		utils.TestLocation,
-		&interpreter.Config{
-			Storage:                       storage,
-			AtreeValueValidationEnabled:   false,
-			AtreeStorageValidationEnabled: true,
+		// reference to optionals
+		"reference_to_optional": {
+			storedType: interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeAccountKey, //nolint:staticcheck
+				),
+			),
+			expectedType: interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewOptionalStaticType(
+					nil,
+					interpreter.AccountKeyStaticType,
+				),
+			),
 		},
-	)
-	require.NoError(t, err)
-
-	for name, testCase := range testCases {
-		storeTypeValue(
-			inter,
-			account,
-			pathDomain,
-			name,
-			testCase.storedType,
-		)
 	}
 
-	err = storage.Commit(inter, true)
-	require.NoError(t, err)
+	test := func(name string, testCase testCase) {
 
-	// Migrate
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	migration := migrations.NewStorageMigration(inter, storage)
+			// Store values
 
-	reporter := newTestReporter()
+			ledger := NewTestLedger(nil, nil)
+			storage := runtime.NewStorage(ledger, nil)
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
+			inter, err := interpreter.NewInterpreter(
+				nil,
+				utils.TestLocation,
+				&interpreter.Config{
+					Storage:                       storage,
+					AtreeValueValidationEnabled:   false,
+					AtreeStorageValidationEnabled: true,
+				},
+			)
+			require.NoError(t, err)
+
+			storeTypeValue(
+				inter,
 				account,
-			},
-		},
-		migration.NewValueMigrationsPathMigrator(
-			reporter,
-			NewStaticTypeMigration(),
-		),
-	)
+				pathDomain,
+				name,
+				testCase.storedType,
+			)
 
-	err = migration.Commit()
-	require.NoError(t, err)
+			err = storage.Commit(inter, true)
+			require.NoError(t, err)
 
-	// Check reported migrated paths
-	for identifier, test := range testCases {
-		key := struct {
-			interpreter.StorageKey
-			interpreter.StorageMapKey
-		}{
-			StorageKey: interpreter.StorageKey{
-				Address: account,
-				Key:     pathDomain.Identifier(),
-			},
-			StorageMapKey: interpreter.StringStorageMapKey(identifier),
-		}
+			// Migrate
 
-		if test.expectedType == nil {
-			assert.NotContains(t, reporter.migrated, key)
-		} else {
-			assert.Contains(t, reporter.migrated, key)
-		}
-	}
+			migration := migrations.NewStorageMigration(inter, storage)
 
-	// Assert the migrated values.
-	// Traverse through the storage and see if the values are updated now.
+			reporter := newTestReporter()
 
-	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
-	require.NotNil(t, storageMap)
-	require.Greater(t, storageMap.Count(), uint64(0))
+			migration.Migrate(
+				&migrations.AddressSliceIterator{
+					Addresses: []common.Address{
+						account,
+					},
+				},
+				migration.NewValueMigrationsPathMigrator(
+					reporter,
+					NewStaticTypeMigration(),
+				),
+			)
 
-	iterator := storageMap.Iterator(inter)
+			err = migration.Commit()
+			require.NoError(t, err)
 
-	for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
-		identifier := string(key.(interpreter.StringAtreeValue))
+			require.Empty(t, reporter.errors)
 
-		t.Run(identifier, func(t *testing.T) {
-			testCase, ok := testCases[identifier]
-			require.True(t, ok)
+			storageMapKey := interpreter.StringStorageMapKey(name)
+
+			if testCase.expectedType == nil {
+				assert.Empty(t, reporter.migrated)
+			} else {
+				assert.Equal(t,
+					map[struct {
+						interpreter.StorageKey
+						interpreter.StorageMapKey
+					}]struct{}{
+						{
+							StorageKey: interpreter.StorageKey{
+								Address: account,
+								Key:     pathDomain.Identifier(),
+							},
+							StorageMapKey: storageMapKey,
+						}: {},
+					},
+					reporter.migrated)
+			}
+
+			// Assert the migrated values.
+
+			storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
+			require.NotNil(t, storageMap)
+			require.Equal(t, storageMap.Count(), uint64(1))
+
+			value := storageMap.ReadValue(nil, storageMapKey)
 
 			var expectedValue interpreter.Value
 			if testCase.expectedType != nil {
@@ -437,7 +525,23 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				typeValue := value.(interpreter.TypeValue)
 				if actualIntersectionType, ok := typeValue.Type.(*interpreter.IntersectionStaticType); ok {
 					expectedIntersectionType := testCase.expectedType.(*interpreter.IntersectionStaticType)
-					assert.True(t, actualIntersectionType.LegacyType.Equal(expectedIntersectionType.LegacyType))
+
+					if actualIntersectionType.LegacyType != nil {
+						assert.True(t,
+							actualIntersectionType.LegacyType.
+								Equal(expectedIntersectionType.LegacyType),
+						)
+					} else if expectedIntersectionType.LegacyType != nil {
+						assert.True(t,
+							expectedIntersectionType.LegacyType.
+								Equal(actualIntersectionType.LegacyType),
+						)
+					} else {
+						assert.Equal(t,
+							expectedIntersectionType.LegacyType,
+							actualIntersectionType.LegacyType,
+						)
+					}
 				}
 			} else {
 				expectedValue = interpreter.NewTypeValue(nil, testCase.storedType)
@@ -445,6 +549,10 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 
 			utils.AssertValuesEqual(t, inter, expectedValue, value)
 		})
+	}
+
+	for name, testCase := range testCases {
+		test(name, testCase)
 	}
 }
 
@@ -1031,6 +1139,8 @@ func TestAccountTypeRehash(t *testing.T) {
 
 		err := migration.Commit()
 		require.NoError(t, err)
+
+		require.Empty(t, reporter.errors)
 
 		require.Equal(t,
 			map[struct {

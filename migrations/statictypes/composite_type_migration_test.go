@@ -43,7 +43,7 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 		expectedType interpreter.StaticType
 	}
 
-	newCompositeType := func() interpreter.StaticType {
+	newCompositeType := func() *interpreter.CompositeStaticType {
 		return interpreter.NewCompositeStaticType(
 			nil,
 			nil,
@@ -56,7 +56,7 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 		)
 	}
 
-	newInterfaceType := func() interpreter.StaticType {
+	newInterfaceType := func() *interpreter.InterfaceStaticType {
 		return interpreter.NewInterfaceStaticType(
 			nil,
 			nil,
@@ -71,11 +71,16 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 
 	testCases := map[string]testCase{
 		// base cases
-		"compositeToInterface": {
-			storedType:   newCompositeType(),
-			expectedType: newInterfaceType(),
+		"composite_to_interface": {
+			storedType: newCompositeType(),
+			expectedType: interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					newInterfaceType(),
+				},
+			),
 		},
-		"interfaceToComposite": {
+		"interface_to_composite": {
 			storedType:   newInterfaceType(),
 			expectedType: newCompositeType(),
 		},
@@ -93,6 +98,19 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 		"dictionary": {
 			storedType:   interpreter.NewDictionaryStaticType(nil, newInterfaceType(), newInterfaceType()),
 			expectedType: interpreter.NewDictionaryStaticType(nil, newCompositeType(), newCompositeType()),
+		},
+		// reference to optional
+		"reference_to_optional": {
+			storedType: interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewOptionalStaticType(nil, newInterfaceType()),
+			),
+			expectedType: interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewOptionalStaticType(nil, newCompositeType()),
+			),
 		},
 	}
 
@@ -166,6 +184,8 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 
 	err = migration.Commit()
 	require.NoError(t, err)
+
+	require.Empty(t, reporter.errors)
 
 	// Check reported migrated paths
 	for identifier, test := range testCases {

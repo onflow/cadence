@@ -3097,7 +3097,7 @@ func testResourceNesting(
 
 		innerTypeAnnotation := "T"
 		if innerIsInterface {
-			innerTypeAnnotation = AsInterfaceType("T", innerCompositeKind)
+			innerTypeAnnotation = "{T}"
 		}
 
 		// Prepare the initializer, if needed.

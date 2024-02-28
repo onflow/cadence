@@ -33,8 +33,8 @@ type StaticTypeMigration struct {
 	interfaceTypeConverter InterfaceTypeConverterFunc
 }
 
-type CompositeTypeConverterFunc func(staticType *interpreter.CompositeStaticType) interpreter.StaticType
-type InterfaceTypeConverterFunc func(staticType *interpreter.InterfaceStaticType) interpreter.StaticType
+type CompositeTypeConverterFunc func(*interpreter.CompositeStaticType) interpreter.StaticType
+type InterfaceTypeConverterFunc func(*interpreter.InterfaceStaticType) interpreter.StaticType
 
 var _ migrations.ValueMigration = &StaticTypeMigration{}
 
@@ -66,21 +66,31 @@ func (m *StaticTypeMigration) Migrate(
 ) (newValue interpreter.Value, err error) {
 	switch value := value.(type) {
 	case interpreter.TypeValue:
-		convertedType := m.maybeConvertStaticType(value.Type)
+		// Type is optional. nil represents "unknown"/"invalid" type
+		ty := value.Type
+		if ty == nil {
+			return
+		}
+		convertedType := m.maybeConvertStaticType(ty, nil)
 		if convertedType == nil {
 			return
 		}
 		return interpreter.NewTypeValue(nil, convertedType), nil
 
 	case *interpreter.IDCapabilityValue:
-		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
+		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType, nil)
 		if convertedBorrowType == nil {
 			return
 		}
 		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType), nil
 
 	case *interpreter.PathCapabilityValue: //nolint:staticcheck
-		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
+		// Type is optional
+		borrowType := value.BorrowType
+		if borrowType == nil {
+			return
+		}
+		convertedBorrowType := m.maybeConvertStaticType(borrowType, nil)
 		if convertedBorrowType == nil {
 			return
 		}
@@ -91,7 +101,7 @@ func (m *StaticTypeMigration) Migrate(
 		}, nil
 
 	case interpreter.PathLinkValue: //nolint:staticcheck
-		convertedBorrowType := m.maybeConvertStaticType(value.Type)
+		convertedBorrowType := m.maybeConvertStaticType(value.Type, nil)
 		if convertedBorrowType == nil {
 			return
 		}
@@ -101,7 +111,7 @@ func (m *StaticTypeMigration) Migrate(
 		}, nil
 
 	case *interpreter.AccountCapabilityControllerValue:
-		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
+		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType, nil)
 		if convertedBorrowType == nil {
 			return
 		}
@@ -109,7 +119,7 @@ func (m *StaticTypeMigration) Migrate(
 		return interpreter.NewUnmeteredAccountCapabilityControllerValue(borrowType, value.CapabilityID), nil
 
 	case *interpreter.StorageCapabilityControllerValue:
-		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType)
+		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType, nil)
 		if convertedBorrowType == nil {
 			return
 		}
@@ -124,23 +134,23 @@ func (m *StaticTypeMigration) Migrate(
 	return
 }
 
-func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.StaticType) interpreter.StaticType {
+func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType interpreter.StaticType) interpreter.StaticType {
 	switch staticType := staticType.(type) {
 	case *interpreter.ConstantSizedStaticType:
-		convertedType := m.maybeConvertStaticType(staticType.Type)
+		convertedType := m.maybeConvertStaticType(staticType.Type, staticType)
 		if convertedType != nil {
 			return interpreter.NewConstantSizedStaticType(nil, convertedType, staticType.Size)
 		}
 
 	case *interpreter.VariableSizedStaticType:
-		convertedType := m.maybeConvertStaticType(staticType.Type)
+		convertedType := m.maybeConvertStaticType(staticType.Type, staticType)
 		if convertedType != nil {
 			return interpreter.NewVariableSizedStaticType(nil, convertedType)
 		}
 
 	case *interpreter.DictionaryStaticType:
-		convertedKeyType := m.maybeConvertStaticType(staticType.KeyType)
-		convertedValueType := m.maybeConvertStaticType(staticType.ValueType)
+		convertedKeyType := m.maybeConvertStaticType(staticType.KeyType, staticType)
+		convertedValueType := m.maybeConvertStaticType(staticType.ValueType, staticType)
 		if convertedKeyType != nil && convertedValueType != nil {
 			return interpreter.NewDictionaryStaticType(nil, convertedKeyType, convertedValueType)
 		}
@@ -152,76 +162,130 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.Stat
 		}
 
 	case *interpreter.CapabilityStaticType:
-		convertedBorrowType := m.maybeConvertStaticType(staticType.BorrowType)
+		convertedBorrowType := m.maybeConvertStaticType(staticType.BorrowType, staticType)
 		if convertedBorrowType != nil {
 			return interpreter.NewCapabilityStaticType(nil, convertedBorrowType)
 		}
 
 	case *interpreter.IntersectionStaticType:
 
-		var convertedInterfaceTypes []*interpreter.InterfaceStaticType
+		// First rewrite, then convert the rewritten type.
 
-		var convertedInterfaceType bool
+		var rewrittenType interpreter.StaticType = staticType
 
-		for _, interfaceStaticType := range staticType.Types {
-			convertedType := m.maybeConvertStaticType(interfaceStaticType)
+		// Rewrite the intersection type,
+		// if it does not appear in a reference type.
+		//
+		// This is necessary to keep sufficient information for the entitlements migration,
+		// which will rewrite the referenced intersection type once it has added entitlements.
 
-			// lazily allocate the slice
-			if convertedInterfaceTypes == nil {
-				convertedInterfaceTypes = make([]*interpreter.InterfaceStaticType, 0, len(staticType.Types))
-			}
+		if _, ok := parentType.(*interpreter.ReferenceStaticType); !ok {
+			rewrittenType = RewriteLegacyIntersectionType(staticType)
+		}
 
-			var replacement *interpreter.InterfaceStaticType
-			if convertedType != nil {
-				var ok bool
-				replacement, ok = convertedType.(*interpreter.InterfaceStaticType)
-				if !ok {
-					panic(fmt.Errorf(
-						"invalid non-interface replacement in intersection type %s: %s replaced by %s",
-						staticType,
-						interfaceStaticType,
-						convertedType,
-					))
+		// The rewritten type is either:
+		// - an intersection type (with or without legacy type)
+		// - a legacy type
+
+		if rewrittenIntersectionType, ok := rewrittenType.(*interpreter.IntersectionStaticType); ok {
+
+			// Convert all interface types in the intersection type
+
+			var convertedInterfaceTypes []*interpreter.InterfaceStaticType
+
+			var convertedInterfaceType bool
+
+			for _, interfaceStaticType := range rewrittenIntersectionType.Types {
+				convertedType := m.maybeConvertStaticType(interfaceStaticType, rewrittenIntersectionType)
+
+				// lazily allocate the slice
+				if convertedInterfaceTypes == nil {
+					convertedInterfaceTypes = make([]*interpreter.InterfaceStaticType, 0, len(rewrittenIntersectionType.Types))
 				}
 
-				convertedInterfaceType = true
-			} else {
-				replacement = interfaceStaticType
+				var replacement *interpreter.InterfaceStaticType
+				if convertedType != nil {
+					var ok bool
+					replacement, ok = convertedType.(*interpreter.InterfaceStaticType)
+					if !ok {
+						panic(fmt.Errorf(
+							"invalid non-interface replacement in intersection type %s: %s replaced by %s",
+							rewrittenIntersectionType,
+							interfaceStaticType,
+							convertedType,
+						))
+					}
+
+					convertedInterfaceType = true
+				} else {
+					replacement = interfaceStaticType
+				}
+				convertedInterfaceTypes = append(convertedInterfaceTypes, replacement)
 			}
-			convertedInterfaceTypes = append(convertedInterfaceTypes, replacement)
-		}
 
-		legacyType := staticType.LegacyType
-		var convertedLegacyType interpreter.StaticType
-		if legacyType != nil {
-			convertedLegacyType = m.maybeConvertStaticType(legacyType)
-		}
+			// Convert the legacy type
 
-		// If the interface set has at least two items,
-		// then force it to be re-stored/re-encoded,
-		// even if the interface types in the set have not changed.
-		if len(staticType.Types) >= 2 || convertedInterfaceType || convertedLegacyType != nil {
+			legacyType := rewrittenIntersectionType.LegacyType
 
-			intersectionType := interpreter.NewIntersectionStaticType(nil, convertedInterfaceTypes)
+			var convertedLegacyType interpreter.StaticType
+			if legacyType != nil {
+				convertedLegacyType = m.maybeConvertStaticType(legacyType, rewrittenIntersectionType)
+				switch convertedLegacyType.(type) {
+				case nil,
+					*interpreter.CompositeStaticType,
+					interpreter.PrimitiveStaticType:
+					// valid
+					break
 
+				default:
+					panic(fmt.Errorf(
+						"invalid non-composite/primitive replacement for legacy type in intersection type %s:"+
+							" %s replaced by %s",
+						rewrittenIntersectionType,
+						legacyType,
+						convertedLegacyType,
+					))
+				}
+			}
+
+			// Construct the new intersection type, if needed
+
+			// If the interface set has at least two items,
+			// then force it to be re-stored/re-encoded,
+			// even if the interface types in the set have not changed.
+			if len(rewrittenIntersectionType.Types) >= 2 || convertedInterfaceType || convertedLegacyType != nil {
+
+				result := interpreter.NewIntersectionStaticType(nil, convertedInterfaceTypes)
+
+				if convertedLegacyType != nil {
+					result.LegacyType = convertedLegacyType
+				} else {
+					result.LegacyType = legacyType
+				}
+
+				return result
+			}
+
+		} else {
+			convertedLegacyType := m.maybeConvertStaticType(rewrittenType, parentType)
 			if convertedLegacyType != nil {
-				intersectionType.LegacyType = convertedLegacyType
-			} else {
-				intersectionType.LegacyType = staticType.LegacyType
+				return convertedLegacyType
 			}
+		}
 
-			return intersectionType
+		if rewrittenType != staticType {
+			return rewrittenType
 		}
 
 	case *interpreter.OptionalStaticType:
-		convertedInnerType := m.maybeConvertStaticType(staticType.Type)
+		convertedInnerType := m.maybeConvertStaticType(staticType.Type, staticType)
 		if convertedInnerType != nil {
 			return interpreter.NewOptionalStaticType(nil, convertedInnerType)
 		}
 
 	case *interpreter.ReferenceStaticType:
 		// TODO: Reference of references must not be allowed?
-		convertedReferencedType := m.maybeConvertStaticType(staticType.ReferencedType)
+		convertedReferencedType := m.maybeConvertStaticType(staticType.ReferencedType, staticType)
 		if convertedReferencedType != nil {
 			switch convertedReferencedType {
 
@@ -232,7 +296,11 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.Stat
 				return convertedReferencedType
 
 			default:
-				return interpreter.NewReferenceStaticType(nil, staticType.Authorization, convertedReferencedType)
+				return interpreter.NewReferenceStaticType(
+					nil,
+					staticType.Authorization,
+					convertedReferencedType,
+				)
 			}
 		}
 
@@ -240,22 +308,71 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.Stat
 		// Non-storable
 
 	case *interpreter.CompositeStaticType:
+		var convertedType interpreter.StaticType
 		compositeTypeConverter := m.compositeTypeConverter
 		if compositeTypeConverter != nil {
-			return compositeTypeConverter(staticType)
+			convertedType = compositeTypeConverter(staticType)
 		}
 
+		// Interface types need to be placed in intersection types.
+		// If the composite type was converted to an interface type,
+		// and if the parent type is not an intersection type,
+		// then the converted interface type must be placed in an intersection type
+		if convertedInterfaceType, ok := convertedType.(*interpreter.InterfaceStaticType); ok {
+			if _, ok := parentType.(*interpreter.IntersectionStaticType); !ok {
+				convertedType = interpreter.NewIntersectionStaticType(
+					nil, []*interpreter.InterfaceStaticType{
+						convertedInterfaceType,
+					},
+				)
+			}
+		}
+
+		return convertedType
+
 	case *interpreter.InterfaceStaticType:
+		var convertedType interpreter.StaticType
 		interfaceTypeConverter := m.interfaceTypeConverter
 		if interfaceTypeConverter != nil {
-			return interfaceTypeConverter(staticType)
+			convertedType = interfaceTypeConverter(staticType)
 		}
+
+		// Interface types need to be placed in intersection types
+		if _, ok := parentType.(*interpreter.IntersectionStaticType); !ok {
+			// If the interface type was not converted to another type,
+			// and given the parent type is not an intersection type,
+			// then the original interface type must be placed in an intersection type
+			if convertedType == nil {
+				convertedType = interpreter.NewIntersectionStaticType(
+					nil, []*interpreter.InterfaceStaticType{
+						staticType,
+					},
+				)
+			} else {
+				// If the interface type was converted to another type,
+				// it may have been converted to
+				// - a different kind of type, e.g. a composite type,
+				//   in which case the converted type should be returned as-is
+				// - another interface type –
+				//   given the parent type is not an intersection type,
+				//   then the converted interface type must be placed in an intersection type
+				if convertedInterfaceType, ok := convertedType.(*interpreter.InterfaceStaticType); ok {
+					convertedType = interpreter.NewIntersectionStaticType(
+						nil, []*interpreter.InterfaceStaticType{
+							convertedInterfaceType,
+						},
+					)
+				}
+			}
+		}
+
+		return convertedType
 
 	case dummyStaticType:
 		// This is for testing the migration.
-		// i.e: wrapper was only to make it possible to use as a dictionary-key.
+		// i.e: the dummyStaticType wrapper was only introduced to make it possible to use the type as a dictionary key.
 		// Ignore the wrapper, and continue with the inner type.
-		return m.maybeConvertStaticType(staticType.PrimitiveStaticType)
+		return m.maybeConvertStaticType(staticType.PrimitiveStaticType, staticType)
 
 	case interpreter.PrimitiveStaticType:
 		// Is it safe to do so?
@@ -292,10 +409,58 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType interpreter.Stat
 		}
 
 	default:
-		panic(errors.NewUnreachableError())
+		panic(errors.NewUnexpectedError("unexpected static type: %T", staticType))
 	}
 
 	return nil
+}
+
+func RewriteLegacyIntersectionType(
+	intersectionType *interpreter.IntersectionStaticType,
+) interpreter.StaticType {
+
+	// Rewrite rules (also enforced by contract update checker):
+	//
+	// - T{} / Any*{} -> T/Any*
+	//
+	//   If the intersection type has no interface types,
+	//   then return the legacy type as-is.
+	//
+	//   This prevents the migration from creating an intersection type with no interface types,
+	//   as static to sema type conversion ignores the legacy type.
+	//
+	// - Any*{A,...}  -> {A,...}
+	//
+	//   If the intersection type has no or an AnyStruct/AnyResource legacy type,
+	//   and has at least one interface type,
+	//   then return the intersection type without the legacy type.
+	//
+	// - T{A,...}    -> T
+	//
+	//   If the intersection type has a legacy type,
+	//   and has at least one interface type,
+	//   then return the legacy type as-is.
+
+	legacyType := intersectionType.LegacyType
+
+	if len(intersectionType.Types) > 0 {
+		switch legacyType {
+		case nil,
+			interpreter.PrimitiveStaticTypeAnyStruct,
+			interpreter.PrimitiveStaticTypeAnyResource:
+
+			// Drop the legacy type, keep the interface types
+			return interpreter.NewIntersectionStaticType(nil, intersectionType.Types)
+		}
+	}
+
+	if legacyType == nil {
+		panic(errors.NewUnexpectedError(
+			"invalid intersection type with no interface types and no legacy type: %s",
+			intersectionType,
+		))
+	}
+	return legacyType
 }
 
 var authAccountEntitlements = []common.TypeID{
