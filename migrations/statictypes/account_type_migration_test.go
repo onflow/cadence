@@ -1007,6 +1007,13 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
 					),
 				),
+				interpreter.NewUnmeteredStringValue("key"),
+				interpreter.NewCapabilityValue(
+					nil,
+					interpreter.NewUnmeteredUInt64Value(1234),
+					interpreter.NewAddressValue(nil, common.Address{}),
+					interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+				),
 			),
 			expectedValue: interpreter.NewDictionaryValue(
 				inter,
@@ -1018,6 +1025,13 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 						nil,
 						unauthorizedAccountReferenceType,
 					),
+				),
+				interpreter.NewUnmeteredStringValue("key"),
+				interpreter.NewCapabilityValue(
+					nil,
+					interpreter.NewUnmeteredUInt64Value(1234),
+					interpreter.NewAddressValue(nil, common.Address{}),
+					unauthorizedAccountReferenceType,
 				),
 			),
 		},
