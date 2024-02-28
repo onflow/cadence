@@ -10209,7 +10209,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: &cadence.ReferenceType{
-					Authorization: cadence.EntitlementSetAuthorization{
+					Authorization: &cadence.EntitlementSetAuthorization{
 						Kind:         cadence.Conjunction,
 						Entitlements: []common.TypeID{"foo", "bar"},
 					},
@@ -10259,7 +10259,7 @@ func TestEncodeType(t *testing.T) {
 			},
 			cadence.TypeValue{
 				StaticType: &cadence.ReferenceType{
-					Authorization: cadence.EntitlementSetAuthorization{
+					Authorization: &cadence.EntitlementSetAuthorization{
 						Kind:         cadence.Conjunction,
 						Entitlements: []common.TypeID{"bar", "foo"},
 					},
@@ -10277,7 +10277,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: &cadence.ReferenceType{
-					Authorization: cadence.EntitlementSetAuthorization{
+					Authorization: &cadence.EntitlementSetAuthorization{
 						Kind:         cadence.Disjunction,
 						Entitlements: []common.TypeID{"foo", "bar"},
 					},
@@ -10327,7 +10327,7 @@ func TestEncodeType(t *testing.T) {
 			},
 			cadence.TypeValue{
 				StaticType: &cadence.ReferenceType{
-					Authorization: cadence.EntitlementSetAuthorization{
+					Authorization: &cadence.EntitlementSetAuthorization{
 						Kind:         cadence.Disjunction,
 						Entitlements: []common.TypeID{"bar", "foo"},
 					},
@@ -15774,6 +15774,20 @@ func TestSortEntitlementSet(t *testing.T) {
 			),
 		))
 
+		expectedVal := cadence.NewArray([]cadence.Value{
+			cadence.String("a"),
+			cadence.String("b"),
+		}).WithType(cadence.NewVariableSizedArrayType(
+			cadence.NewReferenceType(
+				cadence.NewEntitlementSetAuthorization(
+					nil,
+					[]common.TypeID{"foo", "bar"},
+					cadence.Conjunction,
+				),
+				cadence.StringType,
+			),
+		))
+
 		expectedCBOR := []byte{
 			// language=json, format=json-cdc
 			// {"value":[{"value":"a","type":"String"},{"value":"b","type":"String"}],"type":"Array"}
@@ -15835,7 +15849,7 @@ func TestSortEntitlementSet(t *testing.T) {
 		// Decode value without enforcing sorting.
 		decodedVal, err := ccf.Decode(nil, actualCBOR)
 		require.NoError(t, err)
-		assert.Equal(t, val, decodedVal)
+		assert.Equal(t, expectedVal, decodedVal)
 
 		// Decode value enforcing sorting of entitlement types should return error.
 		_, err = enforceSortedEntitlementTypesDecMode.Decode(nil, actualCBOR)

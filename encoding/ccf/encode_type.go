@@ -413,7 +413,7 @@ func (e *Encoder) encodeAuthorization(
 	case cadence.Unauthorized:
 		return e.enc.EncodeNil()
 
-	case cadence.EntitlementSetAuthorization:
+	case *cadence.EntitlementSetAuthorization:
 		var rawTagNum []byte
 		if isType {
 			rawTagNum = []byte{0xd8, CBORTagEntitlementSetAuthorizationAccessType}
@@ -456,7 +456,7 @@ func (e *Encoder) encodeAuthorization(
 //	    entitlements: +[string]
 //	])
 func (e *Encoder) encodeEntitlementSetAuthorizationWithRawTag(
-	auth cadence.EntitlementSetAuthorization,
+	auth *cadence.EntitlementSetAuthorization,
 	rawTagNum []byte,
 ) error {
 	// Encode CBOR tag number.
