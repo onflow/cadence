@@ -880,6 +880,46 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 	require.NoError(t, err)
 
 	testCases := map[string]testCase{
+		"dictionary_value": {
+			storedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+				),
+			),
+			expectedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					unauthorizedAccountReferenceType,
+				),
+			),
+		},
+		"array_value": {
+			storedValue: interpreter.NewArrayValue(
+				inter,
+				locationRange,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+				),
+				common.Address{},
+			),
+			expectedValue: interpreter.NewArrayValue(
+				inter,
+				locationRange,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					unauthorizedAccountReferenceType,
+				),
+				common.Address{},
+			),
+		},
 		"account_capability_value": {
 			storedValue: interpreter.NewUnmeteredCapabilityValue(
 				123,
@@ -954,6 +994,32 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 				Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
 				BorrowType: unauthorizedAccountReferenceType,
 			},
+		},
+		"capability_dictionary": {
+			storedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+					),
+				),
+			),
+			expectedValue: interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						unauthorizedAccountReferenceType,
+					),
+				),
+			),
 		},
 	}
 
