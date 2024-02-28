@@ -9475,14 +9475,15 @@ func TestEncodeType(t *testing.T) {
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 					},
 					ReturnType: cadence.IntType,
+					Purity:     cadence.FunctionPurityView,
 				},
 			},
 			[]byte{
 				// language=json, format=json-cdc
-				// {"value":{"staticType":{"kind":"Function","typeParameters":[{"name":"T","typeBound":{"kind":"AnyStruct"}}],"parameters":[{"type":{"kind":"String"},"label":"qux","id":"baz"}],"return":{"kind":"Int"}}},"type":"Type"}
+				// {"value":{"staticType":{"kind":"Function","typeParameters":[{"name":"T","typeBound":{"kind":"AnyStruct"}}],"parameters":[{"type":{"kind":"String"},"label":"qux","id":"baz"}],"return":{"kind":"Int"},"purity":"view"}},"type":"Type"}
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 193([[["T", 185(39)]], [["qux", "baz", 185(1)]], 185(4)])])
+				// 130([137(41), 193([[["T", 185(39)]], [["qux", "baz", 185(1)]], 185(4), 1])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -9495,8 +9496,8 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagFunctionTypeValue,
-				// array, 3 elements follow
-				0x83,
+				// array, 4 elements follow
+				0x84,
 				// array, 1 elements follow
 				0x81,
 				// array, 2 elements follow
@@ -9529,6 +9530,8 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type ID (4)
 				0x04,
+				// Purity 1
+				0x01,
 			},
 		)
 	})
@@ -9554,7 +9557,7 @@ func TestEncodeType(t *testing.T) {
 				// {"value":{"staticType":{"kind":"Function","typeParameters":[{"name":"T","typeBound":null}],"parameters":[{"type":{"kind":"String"},"label":"qux","id":"baz"}],"return":{"kind":"Int"}}},"type":"Type"}
 				//
 				// language=edn, format=ccf
-				// 130([137(41), 193([[["T", null]], [["qux", "baz", 185(1)]], 185(4)])])
+				// 130([137(41), 193([[["T", null]], [["qux", "baz", 185(1)]], 185(4), 0])])
 				//
 				// language=cbor, format=ccf
 				// tag
@@ -9567,8 +9570,8 @@ func TestEncodeType(t *testing.T) {
 				0x18, 0x29,
 				// tag
 				0xd8, ccf.CBORTagFunctionTypeValue,
-				// array, 3 elements follow
-				0x83,
+				// array, 4 elements follow
+				0x84,
 				// array, 1 elements follow
 				0x81,
 				// array, 2 elements follow
@@ -9599,6 +9602,8 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagSimpleTypeValue,
 				// Int type ID (4)
 				0x04,
+				// purity 0
+				0x00,
 			},
 		)
 	})
@@ -12182,14 +12187,15 @@ func TestExportFunctionValue(t *testing.T) {
 			FunctionType: &cadence.FunctionType{
 				Parameters: []cadence.Parameter{},
 				ReturnType: cadence.VoidType,
+				Purity:     cadence.FunctionPurityView,
 			},
 		},
 		[]byte{
 			// language=json, format=json-cdc
-			// {"value":{"functionType":{"kind":"Function","typeParameters":[],"parameters":[],"return":{"kind":"Void"}}},"type":"Function"}
+			// {"value":{"functionType":{"kind":"Function","typeParameters":[],"parameters":[],"return":{"kind":"Void"},"purity":"view"}},"type":"Function"}
 			//
 			// language=edn, format=ccf
-			// 130([137(51), [[], [], 185(50)]])
+			// 130([137(51), [[], [], 185(50), 1]])
 			//
 			// language=cbor, format=ccf
 			// tag
@@ -12200,8 +12206,8 @@ func TestExportFunctionValue(t *testing.T) {
 			0xd8, ccf.CBORTagSimpleType,
 			// Function type ID (51)
 			0x18, 0x33,
-			// array, 3 elements follow
-			0x83,
+			// array, 4 elements follow
+			0x84,
 			// element 0: type parameters
 			0x80,
 			// element 1: parameters
@@ -12212,6 +12218,8 @@ func TestExportFunctionValue(t *testing.T) {
 			0xd8, ccf.CBORTagSimpleTypeValue,
 			// Void type ID (50)
 			0x18, 0x32,
+			// element 3: purity
+			0x01,
 		},
 	)
 }
@@ -15660,4 +15668,50 @@ func TestHasMsgPrefix(t *testing.T) {
 			require.Equal(t, tc.expected, ccf.HasMsgPrefix(tc.msg))
 		})
 	}
+}
+
+// TestDecodeFunctionTypeBackwardCompatibility tests decoding of FunctionType
+// without Purity encoded.
+func TestDecodeFunctionTypeBackwardCompatibility(t *testing.T) {
+
+	val := cadence.TypeValue{
+		StaticType: &cadence.FunctionType{
+			TypeParameters: []cadence.TypeParameter{},
+			Parameters:     []cadence.Parameter{},
+			ReturnType:     cadence.VoidType,
+			Purity:         cadence.FunctionPurityUnspecified,
+		},
+	}
+
+	data := []byte{
+		// language=edn, format=ccf
+		// 130([137(41), 193([[], [], 185(50)])])
+		//
+		// language=cbor, format=ccf
+		// tag
+		0xd8, ccf.CBORTagTypeAndValue,
+		// array, 2 elements follow
+		0x82,
+		// tag
+		0xd8, ccf.CBORTagSimpleType,
+		// Meta type ID (41)
+		0x18, 0x29,
+		// tag
+		0xd8, ccf.CBORTagFunctionTypeValue,
+		// array, 3 elements follow
+		0x83,
+		// element 0: type parameters
+		// array, 0 element
+		0x80,
+		// element 1: parameters
+		// array, 0 element
+		0x80,
+		// element 2: return type
+		// tag
+		0xd8, ccf.CBORTagSimpleTypeValue,
+		// Void type ID (50)
+		0x18, 0x32,
+	}
+
+	testDecode(t, data, val)
 }

@@ -2227,13 +2227,18 @@ func (d *Decoder) decodeParameterTypeValue(visited *cadenceTypeByCCFTypeID) (cad
 //	    ]
 //	]
 //	return-type: type-value
+//	purity: int (optional)
 //
 // ]
 func (d *Decoder) decodeFunctionTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type, error) {
-	// Decode array head of length 3
-	err := decodeCBORArrayWithKnownSize(d.dec, 3)
+	// Decode array head for element count
+	c, err := d.dec.DecodeArrayHead()
 	if err != nil {
 		return nil, err
+	}
+
+	if c != 3 && c != 4 {
+		return nil, fmt.Errorf("CBOR array of function-value has %d elements (expected 3 or 4 elements)", c)
 	}
 
 	// element 0: type parameters
@@ -2258,8 +2263,20 @@ func (d *Decoder) decodeFunctionTypeValue(visited *cadenceTypeByCCFTypeID) (cade
 		return nil, errors.New("unexpected nil function return type")
 	}
 
-	// TODO:
 	purity := cadence.FunctionPurityUnspecified
+
+	// optional element 3: purity
+	if c == 4 {
+		rawPurity, err := d.dec.DecodeInt64()
+		if err != nil {
+			return nil, err
+		}
+
+		purity, err = cadence.NewFunctionaryPurity(int(rawPurity))
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return cadence.NewMeteredFunctionType(
 		d.gauge,
