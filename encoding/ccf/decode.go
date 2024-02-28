@@ -2286,6 +2286,11 @@ func (d *Decoder) decodeParameterTypeValue(visited *cadenceTypeByCCFTypeID) (cad
 	return cadence.NewParameter(label, identifier, t), nil
 }
 
+const (
+	functionTypeArrayCount           = 3
+	functionTypeWithPurityArrayCount = 4
+)
+
 // decodeFunctionTypeValue decodes encoded function-value as
 // language=CDDL
 // function-value = [
@@ -2314,7 +2319,7 @@ func (d *Decoder) decodeFunctionTypeValue(visited *cadenceTypeByCCFTypeID) (cade
 		return nil, err
 	}
 
-	if c != 3 && c != 4 {
+	if c != functionTypeArrayCount && c != functionTypeWithPurityArrayCount {
 		return nil, fmt.Errorf("CBOR array of function-value has %d elements (expected 3 or 4 elements)", c)
 	}
 
@@ -2343,7 +2348,7 @@ func (d *Decoder) decodeFunctionTypeValue(visited *cadenceTypeByCCFTypeID) (cade
 	purity := cadence.FunctionPurityUnspecified
 
 	// optional element 3: purity
-	if c == 4 {
+	if c == functionTypeWithPurityArrayCount {
 		rawPurity, err := d.dec.DecodeInt64()
 		if err != nil {
 			return nil, err
