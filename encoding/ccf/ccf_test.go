@@ -7537,7 +7537,7 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 
 	// ["a", "b"] with static type []&String
 	entitlementConjunctionSetReferenceToSimpleType := encodeTest{
-		name: "array of reference to string (entitlement conjuction set)",
+		name: "array of reference to string (entitlement conjunction set)",
 		val: cadence.NewArray([]cadence.Value{
 			cadence.String("a"),
 			cadence.String("b"),
@@ -10240,7 +10240,7 @@ func TestEncodeType(t *testing.T) {
 				0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue,
 				// array, 2 elements follow
 				0x82,
-				// element 0: kind (conjuction)
+				// element 0: kind (conjunction)
 				0x00,
 				// array, 2 elements follow
 				0x82,
@@ -15976,7 +15976,7 @@ func TestSortEntitlementSet(t *testing.T) {
 			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue,
 			// array, 2 elements follow
 			0x82,
-			// element 0: kind (conjuction)
+			// element 0: kind (conjunction)
 			0x00,
 			// array, 2 elements follow
 			0x82,
@@ -16053,7 +16053,7 @@ func TestSortEntitlementSet(t *testing.T) {
 			0xd8, ccf.CBORTagEntitlementSetAuthorizationAccessTypeValue,
 			// array, 2 elements follow
 			0x82,
-			// element 0: kind (conjuction)
+			// element 0: kind (conjunction)
 			0x00,
 			// array, 2 elements follow
 			0x82,

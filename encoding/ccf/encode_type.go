@@ -19,6 +19,7 @@
 package ccf
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/onflow/cadence"
@@ -471,7 +472,12 @@ func (e *Encoder) encodeEntitlementSetAuthorizationWithRawTag(
 	}
 
 	// element 0: kind
-	err = e.enc.EncodeUint(uint(auth.Kind))
+	kindRawValue, exist := entitlementSetKindRawValueByCadenceType(auth.Kind)
+	if !exist {
+		return fmt.Errorf("unexpected entitlement set kind %v for Authorization type", auth.Kind)
+	}
+
+	err = e.enc.EncodeUint64(uint64(kindRawValue))
 	if err != nil {
 		return err
 	}

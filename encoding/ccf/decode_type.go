@@ -471,14 +471,8 @@ func (d *Decoder) decodeEntitlementSetAuthorization() (cadence.Authorization, er
 		return nil, err
 	}
 
-	var kind cadence.EntitlementSetKind
-
-	switch rawKind {
-	case uint64(cadence.Conjunction):
-		kind = cadence.Conjunction
-	case uint64(cadence.Disjunction):
-		kind = cadence.Disjunction
-	default:
+	kind, exist := entitlementSetKindCadenceTypeByRawValue(entitlementSetKind(rawKind))
+	if !exist {
 		return nil, fmt.Errorf("unexpected entitlement set kind %d for Authorization type", rawKind)
 	}
 
