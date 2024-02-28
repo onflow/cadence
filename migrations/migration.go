@@ -138,7 +138,7 @@ func (m *StorageMigration) MigrateNestedValue(
 	value interpreter.Value,
 	valueMigrations []ValueMigration,
 	reporter Reporter,
-) (newValue interpreter.Value) {
+) (migratedValue interpreter.Value) {
 
 	defer func() {
 		//	Here it catches the panics that may occur at the framework level,
@@ -164,9 +164,11 @@ func (m *StorageMigration) MigrateNestedValue(
 		}
 	}()
 
-	switch value := value.(type) {
+	// Visit the children first, and migrate them.
+	// i.e: depth-first traversal
+	switch typedValue := value.(type) {
 	case *interpreter.SomeValue:
-		innerValue := value.InnerValue(m.interpreter, emptyLocationRange)
+		innerValue := typedValue.InnerValue(m.interpreter, emptyLocationRange)
 		newInnerValue := m.MigrateNestedValue(
 			storageKey,
 			storageMapKey,
@@ -175,13 +177,14 @@ func (m *StorageMigration) MigrateNestedValue(
 			reporter,
 		)
 		if newInnerValue != nil {
-			return interpreter.NewSomeValueNonCopying(m.interpreter, newInnerValue)
+			migratedValue = interpreter.NewSomeValueNonCopying(m.interpreter, newInnerValue)
+
+			// chain the migrations
+			value = migratedValue
 		}
 
-		return
-
 	case *interpreter.ArrayValue:
-		array := value
+		array := typedValue
 
 		// Migrate array elements
 		count := array.Count()
@@ -205,7 +208,7 @@ func (m *StorageMigration) MigrateNestedValue(
 		}
 
 	case *interpreter.CompositeValue:
-		composite := value
+		composite := typedValue
 
 		// Read the field names first, so the iteration wouldn't be affected
 		// by the modification of the nested values.
@@ -243,7 +246,7 @@ func (m *StorageMigration) MigrateNestedValue(
 		}
 
 	case *interpreter.DictionaryValue:
-		dictionary := value
+		dictionary := typedValue
 
 		type keyValuePair struct {
 			key, value interpreter.Value
@@ -336,23 +339,30 @@ func (m *StorageMigration) MigrateNestedValue(
 		}
 
 	case *interpreter.PublishedValue:
-		innerValue := value.Value
+		publishedValue := typedValue
 		newInnerValue := m.MigrateNestedValue(
 			storageKey,
 			storageMapKey,
-			innerValue,
+			publishedValue.Value,
 			valueMigrations,
 			reporter,
 		)
 		if newInnerValue != nil {
 			newInnerCapability := newInnerValue.(*interpreter.IDCapabilityValue)
-			return interpreter.NewPublishedValue(
+			migratedValue = interpreter.NewPublishedValue(
 				m.interpreter,
-				value.Recipient,
+				publishedValue.Recipient,
 				newInnerCapability,
 			)
+
+			// chain the migrations
+			value = migratedValue
 		}
 	}
+
+	// Once the children are migrated, then migrate the current/wrapper value.
+	// Result of each migration is passed as the input to the next migration.
+	// i.e: A single value is migrated by all the migrations, before moving onto the next value.
 
 	for _, migration := range valueMigrations {
 		convertedValue, err := m.migrate(
@@ -395,7 +405,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			// Chain the migrations.
 			value = convertedValue
 
-			newValue = convertedValue
+			migratedValue = convertedValue
 
 			if reporter != nil {
 				reporter.Migrated(
