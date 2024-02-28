@@ -1149,3 +1149,52 @@ func TestInterpretMemberAccess(t *testing.T) {
 		}
 	})
 }
+
+func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("indexing", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            fun test() {
+                let r <- create R()
+                let arrayRef = &[&r as &R] as &[AnyStruct]
+                let ref: &AnyStruct = arrayRef[0]  // <--- run-time error here
+                destroy r
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            struct Container {
+                let value: AnyStruct
+            
+                init(value: AnyStruct) {
+                    self.value = value
+                }
+            }
+            
+            fun test() {
+                let r <- create R()
+                let containerRef = &Container(value: &r as &R) as &Container
+                let ref: &AnyStruct = containerRef.value  // <--- run-time error here
+                destroy r
+            }        
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+}
