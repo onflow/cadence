@@ -157,6 +157,7 @@ func (m *StaticTypeMigration) Migrate(
 		var keysAndValues []interpreter.Value
 
 		iterator := value.Iterator()
+
 		for {
 			keyValue, value := iterator.Next(inter)
 			if keyValue == nil {
