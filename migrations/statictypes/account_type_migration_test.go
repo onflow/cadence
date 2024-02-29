@@ -485,6 +485,9 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 			err = migration.Commit()
 			require.NoError(t, err)
 
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
 			require.Empty(t, reporter.errors)
 
 			storageMapKey := interpreter.StringStorageMapKey(name)
@@ -812,6 +815,8 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 
 	migration := migrations.NewStorageMigration(inter, storage)
 
+	reporter := newTestReporter()
+
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
@@ -819,13 +824,18 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 			},
 		},
 		migration.NewValueMigrationsPathMigrator(
-			nil,
+			reporter,
 			NewStaticTypeMigration(),
 		),
 	)
 
 	err = migration.Commit()
 	require.NoError(t, err)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	require.Empty(t, reporter.errors)
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 
@@ -1064,6 +1074,8 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 
 	migration := migrations.NewStorageMigration(inter, storage)
 
+	reporter := newTestReporter()
+
 	migration.Migrate(
 		&migrations.AddressSliceIterator{
 			Addresses: []common.Address{
@@ -1071,13 +1083,18 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 			},
 		},
 		migration.NewValueMigrationsPathMigrator(
-			nil,
+			reporter,
 			NewStaticTypeMigration(),
 		),
 	)
 
 	err = migration.Commit()
 	require.NoError(t, err)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	require.Empty(t, reporter.errors)
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 
@@ -1218,6 +1235,9 @@ func TestAccountTypeRehash(t *testing.T) {
 		)
 
 		err := migration.Commit()
+		require.NoError(t, err)
+
+		err = storage.CheckHealth()
 		require.NoError(t, err)
 
 		require.Empty(t, reporter.errors)

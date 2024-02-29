@@ -719,9 +719,12 @@ func convertEntireTestValue(
 	err := migration.Commit()
 	require.NoError(t, err)
 
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	assert.Empty(t, reporter.errors)
 
 	if migratedValue == nil {
 		return v
@@ -1313,8 +1316,12 @@ func TestConvertToEntitledValue(t *testing.T) {
 		},
 	}
 
-	test := func(testCase testCase, valueGenerator valueGenerator, typeGenerator typeGenerator) {
-
+	test := func(
+		t *testing.T,
+		testCase testCase,
+		valueGenerator valueGenerator,
+		typeGenerator typeGenerator,
+	) {
 		input := valueGenerator.wrap(typeGenerator.wrap(testCase.Input))
 		if input == nil {
 			return
@@ -1323,6 +1330,9 @@ func TestConvertToEntitledValue(t *testing.T) {
 		expectedValue := valueGenerator.wrap(typeGenerator.wrap(testCase.Output))
 
 		convertedValue := convertEntireTestValue(t, inter, storage, testAddress, input)
+
+		err := storage.CheckHealth()
+		require.NoError(t, err)
 
 		switch convertedValue := convertedValue.(type) {
 		case interpreter.EquatableValue:
@@ -1346,7 +1356,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 					for _, typeGenerator := range typeGenerators {
 						t.Run(typeGenerator.name, func(t *testing.T) {
 
-							test(testCase, valueGenerator, typeGenerator)
+							test(t, testCase, valueGenerator, typeGenerator)
 						})
 					}
 				})
@@ -1517,7 +1527,10 @@ func TestMigrateSimpleContract(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	assert.Empty(t, reporter.errors)
 
 	storageMap := storage.GetStorageMap(account, storageIdentifier, false)
 	require.NotNil(t, storageMap)
@@ -1701,7 +1714,11 @@ func TestMigratePublishedValue(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	assert.Empty(t, reporter.errors)
+
 	assert.Equal(t,
 		map[struct {
 			interpreter.StorageKey
@@ -1955,7 +1972,11 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	assert.Empty(t, reporter.errors)
+
 	assert.Equal(t,
 		map[struct {
 			interpreter.StorageKey
@@ -2404,7 +2425,11 @@ func TestMigrateArrayOfValues(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	assert.Empty(t, reporter.errors)
+
 	assert.Equal(t,
 		map[struct {
 			interpreter.StorageKey
@@ -2651,7 +2676,11 @@ func TestMigrateDictOfValues(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	assert.Empty(t, reporter.errors)
+
 	assert.Equal(t,
 		map[struct {
 			interpreter.StorageKey
@@ -2970,7 +2999,10 @@ func TestMigrateCapConsAcrossTwoAccounts(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	assert.Empty(t, reporter.errors)
 	assert.Len(t, reporter.migrated, 1)
 
 	// TODO: assert
@@ -3150,6 +3182,9 @@ func TestRehash(t *testing.T) {
 
 		err := storage.Commit(inter, false)
 		require.NoError(t, err)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
 	})
 
 	t.Run("migrate", func(t *testing.T) {
@@ -3196,6 +3231,11 @@ func TestRehash(t *testing.T) {
 		err := migration.Commit()
 		require.NoError(t, err)
 
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		assert.Empty(t, reporter.errors)
+
 		require.Equal(t,
 			map[struct {
 				interpreter.StorageKey
@@ -3216,6 +3256,9 @@ func TestRehash(t *testing.T) {
 	t.Run("load", func(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
+
+		err := storage.CheckHealth()
+		require.NoError(t, err)
 
 		storageMap := storage.GetStorageMap(
 			testAddress,

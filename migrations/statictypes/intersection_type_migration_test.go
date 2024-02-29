@@ -417,6 +417,9 @@ func TestIntersectionTypeMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	require.Empty(t, reporter.errors)
 
 	// Assert the migrated values.
@@ -582,6 +585,9 @@ func TestIntersectionTypeRehash(t *testing.T) {
 		)
 
 		err := migration.Commit()
+		require.NoError(t, err)
+
+		err = storage.CheckHealth()
 		require.NoError(t, err)
 
 		require.Empty(t, reporter.errors)
@@ -750,6 +756,9 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			err := migration.Commit()
 			require.NoError(t, err)
 
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
 			require.Empty(t, reporter.errors)
 
 			require.Equal(t,
@@ -889,6 +898,9 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			)
 
 			err := migration.Commit()
+			require.NoError(t, err)
+
+			err = storage.CheckHealth()
 			require.NoError(t, err)
 
 			require.Empty(t, reporter.errors)
@@ -1063,6 +1075,9 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 		)
 
 		err = migration.Commit()
+		require.NoError(t, err)
+
+		err = storage.CheckHealth()
 		require.NoError(t, err)
 
 		require.Empty(t, reporter.errors)
@@ -1435,6 +1450,9 @@ func TestIntersectionTypeMigrationWithTypeConverters(t *testing.T) {
 		)
 
 		err = migration.Commit()
+		require.NoError(t, err)
+
+		err = storage.CheckHealth()
 		require.NoError(t, err)
 
 		require.Empty(t, reporter.errors)

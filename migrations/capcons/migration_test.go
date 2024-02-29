@@ -514,6 +514,9 @@ func testPathCapabilityValueMigration(
 	err = migration.Commit()
 	require.NoError(t, err)
 
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	// Check migrated capabilities
 
 	assert.Equal(t,
@@ -1348,13 +1351,16 @@ func testLinkMigration(
 	err = migration.Commit()
 	require.NoError(t, err)
 
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	// Assert
 
 	assert.Equal(t,
 		expectedMigrations,
 		reporter.migrations,
 	)
-	assert.Empty(t,
+	assert.Equal(t,
 		expectedErrors,
 		reporter.errors,
 	)
@@ -2073,6 +2079,9 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	// Check migrated capabilities
 
 	assert.Equal(t,
@@ -2320,18 +2329,21 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	// Check migrated capabilities
 
 	assert.Equal(t,
 		expectedMigrations,
 		reporter.migrations,
 	)
+	assert.Empty(t, reporter.errors)
 	assert.Equal(t,
 		expectedPathMigrations,
 		reporter.pathCapabilityMigrations,
 	)
 	require.Nil(t, reporter.missingCapabilityIDs)
-	require.Empty(t, reporter.errors)
 
 	// Check
 

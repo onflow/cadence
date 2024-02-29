@@ -518,6 +518,11 @@ func TestMultipleMigrations(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	assert.Empty(t, reporter.errored)
+
 	// Assert: Traverse through the storage and see if the values are updated now.
 
 	for _, testCase := range testCases {
@@ -659,6 +664,25 @@ func TestMigrationError(t *testing.T) {
 
 	err = migration.Commit()
 	require.NoError(t, err)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}][]string{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: account,
+					Key:     pathDomain.Identifier(),
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("int8_value"),
+			}: {"testInt8Migration"},
+		},
+		reporter.errored,
+	)
 
 	// Assert: Traverse through the storage and see if the values are updated now.
 
@@ -804,9 +828,12 @@ func TestCapConMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	// Assert
 
-	assert.Len(t, reporter.errored, 0)
+	assert.Empty(t, reporter.errored)
 	assert.Len(t, reporter.migrated, 2)
 
 	storageMap = storage.GetStorageMap(
@@ -919,9 +946,12 @@ func TestContractMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	// Assert
 
-	assert.Len(t, reporter.errored, 0)
+	assert.Empty(t, reporter.errored)
 	assert.Len(t, reporter.migrated, 1)
 
 	value, err := rt.ExecuteScript(

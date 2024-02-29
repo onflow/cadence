@@ -93,7 +93,10 @@ func TestStaticTypeMigration(t *testing.T) {
 		err = migration.Commit()
 		require.NoError(t, err)
 
-		require.Empty(t, reporter.errors)
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		assert.Empty(t, reporter.errors)
 
 		storageMap := storage.GetStorageMap(
 			testAddress,
@@ -639,7 +642,10 @@ func TestMigratingNestedContainers(t *testing.T) {
 		err = migration.Commit()
 		require.NoError(t, err)
 
-		require.Empty(t, reporter.errors)
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		assert.Empty(t, reporter.errors)
 
 		storageMap := storage.GetStorageMap(
 			testAddress,
