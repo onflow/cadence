@@ -278,7 +278,7 @@ func (v AccountLinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) 
 }
 
 func (v AccountLinkValue) ChildStorables() []atree.Storable {
-	panic(errors.NewUnreachableError())
+	return nil
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
