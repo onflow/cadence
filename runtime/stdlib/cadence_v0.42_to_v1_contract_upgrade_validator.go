@@ -215,12 +215,12 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) getIntersectedInterface
 	return
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) requirePermitsAccess(
+func (validator *CadenceV042ToV1ContractUpdateValidator) requireEqualAccess(
 	expected sema.Access,
 	found sema.EntitlementSetAccess,
 	foundType ast.Type,
 ) error {
-	if !found.PermitsAccess(expected) {
+	if !found.Equal(expected) {
 		return &AuthorizationMismatchError{
 			FoundAuthorization:    found,
 			ExpectedAuthorization: expected,
@@ -283,11 +283,11 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkEntitlementsUpgrad
 	// a lone nominal type must be a composite
 	case *ast.NominalType:
 		expectedAccess := validator.expectedAuthorizationOfComposite(newReferencedType)
-		return validator.requirePermitsAccess(expectedAccess, foundEntitlementSet, newReferencedType)
+		return validator.requireEqualAccess(expectedAccess, foundEntitlementSet, newReferencedType)
 
 	case *ast.IntersectionType:
 		expectedAccess := validator.expectedAuthorizationOfIntersection(newReferencedType.Types)
-		return validator.requirePermitsAccess(expectedAccess, foundEntitlementSet, newReferencedType)
+		return validator.requireEqualAccess(expectedAccess, foundEntitlementSet, newReferencedType)
 	}
 
 	return nil

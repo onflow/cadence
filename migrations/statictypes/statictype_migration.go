@@ -62,7 +62,7 @@ func (m *StaticTypeMigration) Migrate(
 	_ interpreter.StorageKey,
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
-	_ *interpreter.Interpreter,
+	inter *interpreter.Interpreter,
 ) (newValue interpreter.Value, err error) {
 	switch value := value.(type) {
 	case interpreter.TypeValue:
@@ -128,6 +128,52 @@ func (m *StaticTypeMigration) Migrate(
 			borrowType,
 			value.CapabilityID,
 			value.TargetPath,
+		), nil
+
+	case *interpreter.ArrayValue:
+		convertedElementType := m.maybeConvertStaticType(value.Type, nil)
+		if convertedElementType == nil {
+			return
+		}
+
+		iterator := value.Iterator(inter, interpreter.EmptyLocationRange)
+
+		return interpreter.NewArrayValueWithIterator(
+			inter,
+			convertedElementType.(interpreter.ArrayStaticType),
+			value.GetOwner(),
+			uint64(value.Count()),
+			func() interpreter.Value {
+				return iterator.Next(inter, interpreter.EmptyLocationRange)
+			},
+		), nil
+
+	case *interpreter.DictionaryValue:
+		convertedElementType := m.maybeConvertStaticType(value.Type, nil)
+		if convertedElementType == nil {
+			return
+		}
+
+		var keysAndValues []interpreter.Value
+
+		iterator := value.Iterator()
+
+		for {
+			keyValue, value := iterator.Next(inter)
+			if keyValue == nil {
+				break
+			}
+
+			keysAndValues = append(keysAndValues, keyValue)
+			keysAndValues = append(keysAndValues, value)
+		}
+
+		return interpreter.NewDictionaryValueWithAddress(
+			inter,
+			interpreter.EmptyLocationRange,
+			convertedElementType.(*interpreter.DictionaryStaticType),
+			value.GetOwner(),
+			keysAndValues...,
 		), nil
 	}
 

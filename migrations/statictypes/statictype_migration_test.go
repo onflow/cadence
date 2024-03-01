@@ -24,6 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
@@ -578,5 +580,183 @@ func TestStaticTypeMigration(t *testing.T) {
 			)
 		})
 
+	})
+}
+
+func TestMigratingNestedContainers(t *testing.T) {
+	t.Parallel()
+
+	migrate := func(
+		t *testing.T,
+		staticTypeMigration *StaticTypeMigration,
+		storage *runtime.Storage,
+		inter *interpreter.Interpreter,
+		value interpreter.Value,
+	) interpreter.Value {
+
+		// Store values
+
+		storageMapKey := interpreter.StringStorageMapKey("test_type_value")
+		storageDomain := common.PathDomainStorage.Identifier()
+
+		value = value.Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address(testAddress),
+			false,
+			nil,
+			nil,
+		)
+
+		inter.WriteStored(
+			testAddress,
+			storageDomain,
+			storageMapKey,
+			value,
+		)
+
+		err := storage.Commit(inter, true)
+		require.NoError(t, err)
+
+		// Migrate
+
+		migration := migrations.NewStorageMigration(inter, storage)
+
+		reporter := newTestReporter()
+
+		migration.Migrate(
+			&migrations.AddressSliceIterator{
+				Addresses: []common.Address{
+					testAddress,
+				},
+			},
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				staticTypeMigration,
+			),
+		)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+
+		require.Empty(t, reporter.errors)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			storageDomain,
+			false,
+		)
+		require.NotNil(t, storageMap)
+		require.Equal(t, uint64(1), storageMap.Count())
+
+		result := storageMap.ReadValue(nil, storageMapKey)
+		require.NotNil(t, value)
+
+		return result
+	}
+
+	t.Run("nested dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		staticTypeMigration := NewStaticTypeMigration()
+
+		locationRange := interpreter.EmptyLocationRange
+
+		ledger := NewTestLedger(nil, nil)
+		storage := runtime.NewStorage(ledger, nil)
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   false,
+				AtreeStorageValidationEnabled: false,
+			},
+		)
+		require.NoError(t, err)
+
+		storedValue := interpreter.NewDictionaryValue(
+			inter,
+			locationRange,
+			interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeString,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+					),
+				),
+			),
+			interpreter.NewUnmeteredStringValue("key"),
+			interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+					),
+				),
+				interpreter.NewUnmeteredStringValue("key"),
+				interpreter.NewCapabilityValue(
+					nil,
+					interpreter.NewUnmeteredUInt64Value(1234),
+					interpreter.NewAddressValue(nil, common.ZeroAddress),
+					interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+				),
+			),
+		)
+
+		actual := migrate(t,
+			staticTypeMigration,
+			storage,
+			inter,
+			storedValue,
+		)
+
+		expected := interpreter.NewDictionaryValue(
+			inter,
+			locationRange,
+			interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeString,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						unauthorizedAccountReferenceType,
+					),
+				),
+			),
+			interpreter.NewUnmeteredStringValue("key"),
+			interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						unauthorizedAccountReferenceType,
+					),
+				),
+				interpreter.NewUnmeteredStringValue("key"),
+				interpreter.NewCapabilityValue(
+					nil,
+					interpreter.NewUnmeteredUInt64Value(1234),
+					interpreter.NewAddressValue(nil, common.Address{}),
+					unauthorizedAccountReferenceType,
+				),
+			),
+		)
+
+		utils.AssertValuesEqual(t, inter, expected, actual)
 	})
 }
