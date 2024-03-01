@@ -86,11 +86,26 @@ var _ Value = CompositeValue{}
 
 func (CompositeValue) isValue() {}
 
+// SomeValue
+
+type SomeValue struct {
+	Type  any   `json:"type"`
+	Value Value `json:"value"`
+}
+
+var _ Value = SomeValue{}
+
+func (SomeValue) isValue() {}
+
 // prepareValue
 
 var pathLinkValueFieldNames = []string{"targetPath", "type"}
 var publishedValueFieldNames = []string{"recipient", "type"}
 
+// TODO:
+//   - AccountCapabilityControllerValue
+//   - StorageCapabilityControllerValue
+//   - PathCapabilityValue
 func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Value, error) {
 	ty := prepareType(value, inter)
 
@@ -125,13 +140,13 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Valu
 		var err error
 
 		value.IterateKeys(inter, func(key interpreter.Value) (resume bool) {
-			var preparedValue Value
-			preparedValue, err = prepareValue(key, inter)
+			var preparedKey Value
+			preparedKey, err = prepareValue(key, inter)
 			if err != nil {
 				return false
 			}
 
-			keys = append(keys, preparedValue)
+			keys = append(keys, preparedKey)
 
 			return true
 		})
@@ -197,11 +212,18 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Valu
 			Count: value.Count(),
 		}, nil
 
-		// TODO:
-		//   - AccountCapabilityControllerValue
-		//   - StorageCapabilityControllerValue
-		//   - PathCapabilityValue
-		//   - SomeValue
+	case *interpreter.SomeValue:
+		innerValue := value.InnerValue(inter, interpreter.EmptyLocationRange)
+
+		preparedInnerValue, err := prepareValue(innerValue, inter)
+		if err != nil {
+			return nil, err
+		}
+
+		return SomeValue{
+			Type:  ty,
+			Value: preparedInnerValue,
+		}, nil
 
 	default:
 		return FallbackValue{
