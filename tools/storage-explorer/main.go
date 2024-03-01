@@ -28,11 +28,18 @@ import (
 	"sort"
 	"time"
 
+	"github.com/gorilla/mux"
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/flow-go/cmd/util/ledger/util"
 	"github.com/rs/zerolog"
-
-	"github.com/onflow/cadence/runtime/common"
 )
+
+type StorageMapResponse struct {
+	Exists bool     `json:"exists"`
+	Keys   []string `json:"keys"`
+}
 
 func main() {
 
@@ -48,12 +55,12 @@ func main() {
 
 	payloadsPath := *payloadsFlag
 	if payloadsPath == "" {
-		panic("missing payloads")
+		log.Fatal().Msg("missing payloads")
 	}
 
 	_, payloads, err := util.ReadPayloadFile(log, payloadsPath)
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err)
 	}
 
 	log.Info().Msgf("read %d payloads", len(payloads))
@@ -62,53 +69,128 @@ func main() {
 
 	payloadSnapshot, err := util.NewPayloadSnapshot(payloads)
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err)
 	}
 
-	log.Info().Msg("formatting addresses ...")
+	log.Info().Msg("creating storage ...")
 
-	addressesJSON, err := addressesJSON(payloadSnapshot)
-	if err != nil {
-		panic(err)
+	ledger := PayloadSnapshotLedger{
+		PayloadSnapshot: payloadSnapshot,
 	}
 
-	http.HandleFunc("/accounts", func(w http.ResponseWriter, r *http.Request) {
-		_, err = w.Write(addressesJSON)
-		if err != nil {
-			panic(err)
-		}
-	})
+	storage := runtime.NewStorage(ledger, nil)
+
+	r := mux.NewRouter()
+
+	r.HandleFunc(
+		"/accounts",
+		NewAccountsHandler(payloadSnapshot, log),
+	)
+
+	r.HandleFunc(
+		"/accounts/{address:[0-9A-Fa-f]{16}}/{domain:.+}",
+		NewAccountStorageMapHandler(storage, log),
+	)
+
+	r.HandleFunc("/known_storage_maps", NewKnownStorageMapsHandler(log))
+
+	http.Handle("/", r)
 
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", *portFlag))
 	if err != nil {
-		panic(err)
+		log.Fatal().Err(err)
 	}
 	log.Info().Msgf("Listening on http://%s/", ln.Addr().String())
 	var srv http.Server
 	_ = srv.Serve(ln)
 }
 
-func addressesJSON(payloadSnapshot *util.PayloadSnapshot) ([]byte, error) {
-	addressSet := map[string]struct{}{}
-	for registerID := range payloadSnapshot.Payloads {
-		owner := registerID.Owner
-		if len(owner) > 0 {
-			address := common.Address([]byte(owner)).HexWithPrefix()
-			addressSet[address] = struct{}{}
+func NewKnownStorageMapsHandler(log zerolog.Logger) func(w http.ResponseWriter, r *http.Request) {
+	knownStorageMapsJSON := knownStorageMapsJSON()
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write(knownStorageMapsJSON)
+		if err != nil {
+			log.Fatal().Err(err)
 		}
 	}
+}
 
-	addresses := make([]string, 0, len(addressSet))
-	for address := range addressSet {
-		addresses = append(addresses, address)
-	}
+func NewAccountsHandler(
+	payloadSnapshot *util.PayloadSnapshot,
+	log zerolog.Logger,
+) func(w http.ResponseWriter, r *http.Request) {
+	log.Info().Msg("formatting addresses ...")
 
-	sort.Strings(addresses)
-
-	encoded, err := json.Marshal(addresses)
+	addressesJSON, err := addressesJSON(payloadSnapshot)
 	if err != nil {
-		return nil, err
+		log.Fatal().Err(err)
 	}
 
-	return encoded, nil
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write(addressesJSON)
+		if err != nil {
+			log.Fatal().Err(err)
+		}
+	}
+}
+
+func NewAccountStorageMapHandler(
+	storage *runtime.Storage,
+	log zerolog.Logger,
+) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+
+		address, err := common.HexToAddress(vars["address"])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		storageMapDomain := vars["domain"]
+		knownStorageMap, ok := knownStorageMaps[storageMapDomain]
+		if !ok {
+			http.Error(w, "unknown storage map domain", http.StatusInternalServerError)
+			return
+		}
+
+		storageMap := storage.GetStorageMap(address, storageMapDomain, false)
+
+		var keys []string
+		exists := storageMap != nil
+		if exists {
+			keys = storageMapKeys(storageMap, knownStorageMap)
+		}
+
+		response := StorageMapResponse{
+			Exists: exists,
+			Keys:   keys,
+		}
+
+		err = json.NewEncoder(w).Encode(response)
+		if err != nil {
+			log.Fatal().Err(err)
+		}
+	}
+}
+
+func storageMapKeys(storageMap *interpreter.StorageMap, knownStorageMap KnownStorageMap) []string {
+	keys := make([]string, 0, storageMap.Count())
+	iterator := storageMap.Iterator(nil)
+	for {
+		key := iterator.NextKey()
+		if key == nil {
+			break
+		}
+
+		keys = append(
+			keys,
+			knownStorageMap.KeyAsString(key),
+		)
+	}
+
+	sort.Strings(keys)
+
+	return keys
 }
