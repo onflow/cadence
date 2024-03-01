@@ -19,8 +19,11 @@
 package main
 
 import (
+	"encoding/json"
 	"sort"
 
+	jsoncdc "github.com/onflow/cadence/encoding/json"
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
@@ -30,46 +33,25 @@ type Value interface {
 
 // TypeOnlyValue
 
-type TypeOnlyValue struct {
-	Type any `json:"type"`
+type FallbackValue struct {
+	Type        any    `json:"type"`
+	Description string `json:"description"`
 }
 
-var _ Value = TypeOnlyValue{}
+var _ Value = FallbackValue{}
 
-func (TypeOnlyValue) isValue() {}
+func (FallbackValue) isValue() {}
 
-// BoolValue
+// SimpleValue
 
-type BoolValue struct {
-	Type  any  `json:"type"`
-	Value bool `json:"value"`
+type PrimitiveValue struct {
+	Type  any             `json:"type"`
+	Value json.RawMessage `json:"value"`
 }
 
-var _ Value = BoolValue{}
+var _ Value = PrimitiveValue{}
 
-func (BoolValue) isValue() {}
-
-// NumberValue
-
-type NumberValue struct {
-	Type  any    `json:"type"`
-	Value string `json:"value"`
-}
-
-var _ Value = NumberValue{}
-
-func (NumberValue) isValue() {}
-
-// StringValue
-
-type StringValue struct {
-	Type  any    `json:"type"`
-	Value string `json:"value"`
-}
-
-var _ Value = StringValue{}
-
-func (StringValue) isValue() {}
+func (PrimitiveValue) isValue() {}
 
 // DictionaryValue
 
@@ -81,6 +63,17 @@ type DictionaryValue struct {
 var _ Value = DictionaryValue{}
 
 func (DictionaryValue) isValue() {}
+
+// ArrayValue
+
+type ArrayValue struct {
+	Type  any `json:"type"`
+	Count int `json:"count"`
+}
+
+var _ Value = ArrayValue{}
+
+func (ArrayValue) isValue() {}
 
 // CompositeValue
 
@@ -95,47 +88,62 @@ func (CompositeValue) isValue() {}
 
 // prepareValue
 
-func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) Value {
+var pathLinkValueFieldNames = []string{"targetPath", "type"}
+var publishedValueFieldNames = []string{"recipient", "type"}
+
+func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Value, error) {
 	ty := prepareType(value, inter)
 
 	switch value := value.(type) {
-	case interpreter.BoolValue:
-		return BoolValue{
-			Type:  ty,
-			Value: bool(value),
+	case interpreter.BoolValue,
+		interpreter.NumberValue,
+		*interpreter.StringValue,
+		interpreter.CharacterValue,
+		interpreter.AddressValue,
+		interpreter.PathValue,
+		interpreter.TypeValue,
+		*interpreter.IDCapabilityValue:
+
+		exported, err := runtime.ExportValue(value, inter, interpreter.EmptyLocationRange)
+		if err != nil {
+			return nil, err
 		}
 
-	case interpreter.NumberValue:
-		return NumberValue{
-			Type:  ty,
-			Value: value.String(),
+		exportedJSON, err := jsoncdc.Encode(exported)
+		if err != nil {
+			return nil, err
 		}
 
-	case *interpreter.StringValue:
-		return StringValue{
+		return PrimitiveValue{
 			Type:  ty,
-			Value: value.Str,
-		}
-
-	case *interpreter.CharacterValue:
-		return StringValue{
-			Type:  ty,
-			Value: value.Str,
-		}
+			Value: exportedJSON,
+		}, nil
 
 	case *interpreter.DictionaryValue:
 		keys := make([]Value, 0, value.Count())
 
+		var err error
+
 		value.IterateKeys(inter, func(key interpreter.Value) (resume bool) {
-			keys = append(keys, prepareValue(key, inter))
+			var preparedValue Value
+			preparedValue, err = prepareValue(key, inter)
+			if err != nil {
+				return false
+			}
+
+			keys = append(keys, preparedValue)
 
 			return true
 		})
 
+		if err != nil {
+			return nil, err
+		}
+
 		return DictionaryValue{
 			Type: ty,
 			Keys: keys,
-		}
+		}, nil
 
 	case *interpreter.CompositeValue:
 		fields := make([]string, 0, value.FieldCount())
@@ -151,27 +159,54 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) Value
 		return CompositeValue{
 			Type:   ty,
 			Fields: fields,
-		}
+		}, nil
+
+	case *interpreter.SimpleCompositeValue:
+		fieldNames := value.FieldNames
+
+		fields := make([]string, 0, len(fieldNames))
+		copy(fields, fieldNames)
+
+		sort.Strings(fields)
+
+		return CompositeValue{
+			Type:   ty,
+			Fields: fields,
+		}, nil
+
+	case interpreter.PathLinkValue: //nolint:staticcheck
+		return CompositeValue{
+			Type:   ty,
+			Fields: pathLinkValueFieldNames,
+		}, nil
+
+	case interpreter.AccountLinkValue: //nolint:staticcheck
+		return CompositeValue{
+			Type: ty,
+		}, nil
+
+	case *interpreter.PublishedValue:
+		return CompositeValue{
+			Type:   ty,
+			Fields: publishedValueFieldNames,
+		}, nil
+
+	case *interpreter.ArrayValue:
+		return ArrayValue{
+			Type:  ty,
+			Count: value.Count(),
+		}, nil
 
 		// TODO:
 		//   - AccountCapabilityControllerValue
-		//   - AccountLinkValue
-		//   - AddressValue
-		//   - ArrayValue
-		//   - CapabilityControllerValue
-		//   - IDCapabilityValue
-		//   - PathCapabilityValue
-		//   - PathLinkValue
-		//   - PathValue
-		//   - PublishedValue
-		//   - SimpleCompositeValue
-		//   - SomeValue
 		//   - StorageCapabilityControllerValue
-		//   - TypeValue
+		//   - PathCapabilityValue
+		//   - SomeValue
 
 	default:
-		return TypeOnlyValue{
-			Type: ty,
-		}
+		return FallbackValue{
+			Type:        ty,
+			Description: value.String(),
+		}, nil
 	}
 }

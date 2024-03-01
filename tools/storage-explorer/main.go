@@ -291,7 +291,11 @@ func NewAccountStorageMapIdentifierHandler(
 			return
 		}
 
-		preparedValue := prepareValue(value, inter)
+		preparedValue, err := prepareValue(value, inter)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		w.Header().Add("Content-Type", "application/json")
 
