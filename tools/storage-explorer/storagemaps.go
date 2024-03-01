@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package main
 
 import (
@@ -22,6 +23,7 @@ import (
 	"strconv"
 
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"

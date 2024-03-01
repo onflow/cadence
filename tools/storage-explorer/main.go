@@ -37,45 +37,13 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/rs/zerolog"
 
-	"github.com/onflow/cadence"
-	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
 type StorageMapResponse struct {
 	Keys []string `json:"keys"`
-}
-
-type Value struct {
-	Type any `json:"type"`
-}
-
-type BoolValue struct {
-	Type  any  `json:"type"`
-	Value bool `json:"value"`
-}
-
-type NumberValue struct {
-	Type  any    `json:"type"`
-	Value string `json:"value"`
-}
-
-type StringValue struct {
-	Type  any    `json:"type"`
-	Value string `json:"value"`
-}
-
-type DictionaryValue struct {
-	Type any   `json:"type"`
-	Keys []any `json:"keys"`
-}
-
-type CompositeValue struct {
-	Type   any      `json:"type"`
-	Fields []string `json:"fields"`
 }
 
 type migrationTransactionPreparer struct {
@@ -352,110 +320,4 @@ func storageMapKeys(storageMap *interpreter.StorageMap, knownStorageMap KnownSto
 	sort.Strings(keys)
 
 	return keys
-}
-
-func prepareType(value interpreter.Value, inter *interpreter.Interpreter) (result any) {
-	staticType := value.StaticType(inter)
-
-	defer func() {
-		if recover() != nil {
-			result = staticType.ID()
-		}
-	}()
-
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err != nil {
-		return staticType.ID()
-	}
-
-	cadenceType := runtime.ExportType(
-		semaType,
-		map[sema.TypeID]cadence.Type{},
-	)
-
-	return jsoncdc.PrepareType(
-		cadenceType,
-		jsoncdc.TypePreparationResults{},
-	)
-}
-
-func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) any {
-	ty := prepareType(value, inter)
-
-	switch value := value.(type) {
-	case interpreter.BoolValue:
-		return BoolValue{
-			Type:  ty,
-			Value: bool(value),
-		}
-
-	case interpreter.NumberValue:
-		return NumberValue{
-			Type:  ty,
-			Value: value.String(),
-		}
-
-	case *interpreter.StringValue:
-		return StringValue{
-			Type:  ty,
-			Value: value.Str,
-		}
-
-	case *interpreter.CharacterValue:
-		return StringValue{
-			Type:  ty,
-			Value: value.Str,
-		}
-
-	case *interpreter.DictionaryValue:
-		keys := make([]any, 0, value.Count())
-
-		value.IterateKeys(inter, func(key interpreter.Value) (resume bool) {
-			keys = append(keys, prepareValue(key, inter))
-
-			return true
-		})
-
-		return DictionaryValue{
-			Type: ty,
-			Keys: keys,
-		}
-
-	case *interpreter.CompositeValue:
-		fields := make([]string, 0, value.FieldCount())
-
-		value.ForEachFieldName(func(field string) (resume bool) {
-			fields = append(fields, field)
-
-			return true
-		})
-
-		sort.Strings(fields)
-
-		return CompositeValue{
-			Type:   ty,
-			Fields: fields,
-		}
-
-		// TODO:
-		//   - AccountCapabilityControllerValue
-		//   - AccountLinkValue
-		//   - AddressValue
-		//   - ArrayValue
-		//   - CapabilityControllerValue
-		//   - IDCapabilityValue
-		//   - PathCapabilityValue
-		//   - PathLinkValue
-		//   - PathValue
-		//   - PublishedValue
-		//   - SimpleCompositeValue
-		//   - SomeValue
-		//   - StorageCapabilityControllerValue
-		//   - TypeValue
-
-	default:
-		return Value{
-			Type: ty,
-		}
-	}
 }
