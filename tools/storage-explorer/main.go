@@ -195,6 +195,7 @@ func NewKnownStorageMapsHandler(log zerolog.Logger) func(w http.ResponseWriter, 
 	knownStorageMapsJSON := knownStorageMapsJSON()
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
 		_, err := w.Write(knownStorageMapsJSON)
 		if err != nil {
 			log.Fatal().Err(err)
@@ -214,6 +215,7 @@ func NewAccountsHandler(
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
 		_, err := w.Write(addressesJSON)
 		if err != nil {
 			log.Fatal().Err(err)
@@ -256,6 +258,8 @@ func NewAccountStorageMapHandler(
 		response := StorageMapResponse{
 			Keys: keys,
 		}
+
+		w.Header().Add("Content-Type", "application/json")
 
 		err = json.NewEncoder(w).Encode(response)
 		if err != nil {
@@ -311,6 +315,7 @@ func NewAccountStorageMapIdentifierHandler(
 
 		preparedValue := prepareValue(value, inter)
 
+		w.Header().Add("Content-Type", "application/json")
 
 		err = json.NewEncoder(w).Encode(preparedValue)
 		if err != nil {
