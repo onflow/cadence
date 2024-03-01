@@ -29,18 +29,32 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/onflow/flow-go/cmd/util/ledger/util"
+	"github.com/onflow/flow-go/fvm/environment"
+	"github.com/onflow/flow-go/fvm/storage/derived"
+	"github.com/onflow/flow-go/fvm/storage/state"
+	"github.com/onflow/flow-go/fvm/tracing"
+	"github.com/onflow/flow-go/model/flow"
+	"github.com/rs/zerolog"
+
+	"github.com/onflow/cadence"
+	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/flow-go/cmd/util/ledger/util"
-	"github.com/rs/zerolog"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 type StorageMapResponse struct {
 	Keys []string `json:"keys"`
 }
 type ValueResponse struct {
-	Type string `json:"type"`
+	Type any `json:"type"`
+}
+
+type migrationTransactionPreparer struct {
+	state.NestedTransactionPreparer
+	derived.DerivedTransactionPreparer
 }
 
 func main() {
@@ -76,15 +90,57 @@ func main() {
 
 	log.Info().Msg("creating storage ...")
 
-	runtimeInterface := ReadOnlyRuntimeInterface{
-		PayloadSnapshot: payloadSnapshot,
+	transactionState := state.NewTransactionState(payloadSnapshot, state.DefaultParameters())
+	accounts := environment.NewAccounts(transactionState)
+
+	accountsAtreeLedger := util.NewAccountsAtreeLedger(accounts)
+	runtimeStorage := runtime.NewStorage(accountsAtreeLedger, util.NopMemoryGauge{})
+
+	derivedChainData, err := derived.NewDerivedChainData(derived.DefaultDerivedDataCacheSize)
+	if err != nil {
+		log.Fatal().Err(err)
 	}
 
-	rt := runtime.NewInterpreterRuntime(runtime.Config{})
+	// The current block ID does not matter here, it is only for keeping a cross-block cache, which is not needed here.
+	derivedTransactionData := derivedChainData.
+		NewDerivedBlockDataForScript(flow.Identifier{}).
+		NewSnapshotReadDerivedTransactionData()
 
-	storage, inter, err := rt.Storage(runtime.Context{
-		Interface: runtimeInterface,
+	runtimeInterface := &util.MigrationRuntimeInterface{
+		Accounts: accounts,
+		Programs: environment.NewPrograms(
+			tracing.NewTracerSpan(),
+			util.NopMeter{},
+			environment.NoopMetricsReporter{},
+			migrationTransactionPreparer{
+				NestedTransactionPreparer:  transactionState,
+				DerivedTransactionPreparer: derivedTransactionData,
+			},
+			accounts,
+		),
+		ProgramErrors: map[common.Location]error{},
+	}
+
+	env := runtime.NewBaseInterpreterEnvironment(runtime.Config{
+		// Attachments are enabled everywhere except for Mainnet
+		AttachmentsEnabled: true,
 	})
+
+	env.Configure(
+		runtimeInterface,
+		runtime.NewCodesAndPrograms(),
+		runtimeStorage,
+		nil,
+	)
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		nil,
+		env.InterpreterConfig,
+	)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
 
 	r := mux.NewRouter()
 
@@ -101,11 +157,11 @@ func main() {
 	const accountDomainPattern = "/accounts/{address:[0-9A-Fa-f]{16}}/{domain:.+}"
 
 	r.PathPrefix(accountDomainPattern + "/{identifier:.+}").
-		HandlerFunc(NewAccountStorageMapIdentifierHandler(storage, inter, log))
+		HandlerFunc(NewAccountStorageMapIdentifierHandler(runtimeStorage, inter, log))
 
 	r.HandleFunc(
 		accountDomainPattern,
-		NewAccountStorageMapHandler(storage, log),
+		NewAccountStorageMapHandler(runtimeStorage, log),
 	)
 
 	http.Handle("/", r)
@@ -239,8 +295,24 @@ func NewAccountStorageMapIdentifierHandler(
 
 		staticType := value.StaticType(inter)
 
+		var ty any
+		semaType, err := inter.ConvertStaticToSemaType(staticType)
+		if err == nil {
+			cadenceType := runtime.ExportType(
+				semaType,
+				map[sema.TypeID]cadence.Type{},
+			)
+
+			ty = jsoncdc.PrepareType(
+				cadenceType,
+				jsoncdc.TypePreparationResults{},
+			)
+		} else {
+			ty = staticType.ID()
+		}
+
 		response := ValueResponse{
-			Type: staticType.String(),
+			Type: ty,
 		}
 
 		err = json.NewEncoder(w).Encode(response)
