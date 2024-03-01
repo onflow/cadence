@@ -37,8 +37,10 @@ import (
 )
 
 type StorageMapResponse struct {
-	Exists bool     `json:"exists"`
-	Keys   []string `json:"keys"`
+	Keys []string `json:"keys"`
+}
+type ValueResponse struct {
+	Type string `json:"type"`
 }
 
 func main() {
@@ -74,11 +76,15 @@ func main() {
 
 	log.Info().Msg("creating storage ...")
 
-	ledger := PayloadSnapshotLedger{
+	runtimeInterface := ReadOnlyRuntimeInterface{
 		PayloadSnapshot: payloadSnapshot,
 	}
 
-	storage := runtime.NewStorage(ledger, nil)
+	rt := runtime.NewInterpreterRuntime(runtime.Config{})
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
 
 	r := mux.NewRouter()
 
@@ -88,11 +94,19 @@ func main() {
 	)
 
 	r.HandleFunc(
-		"/accounts/{address:[0-9A-Fa-f]{16}}/{domain:.+}",
-		NewAccountStorageMapHandler(storage, log),
+		"/known_storage_maps",
+		NewKnownStorageMapsHandler(log),
 	)
 
-	r.HandleFunc("/known_storage_maps", NewKnownStorageMapsHandler(log))
+	const accountDomainPattern = "/accounts/{address:[0-9A-Fa-f]{16}}/{domain:.+}"
+
+	r.PathPrefix(accountDomainPattern + "/{identifier:.+}").
+		HandlerFunc(NewAccountStorageMapIdentifierHandler(storage, inter, log))
+
+	r.HandleFunc(
+		accountDomainPattern,
+		NewAccountStorageMapHandler(storage, log),
+	)
 
 	http.Handle("/", r)
 
@@ -151,21 +165,82 @@ func NewAccountStorageMapHandler(
 		storageMapDomain := vars["domain"]
 		knownStorageMap, ok := knownStorageMaps[storageMapDomain]
 		if !ok {
-			http.Error(w, "unknown storage map domain", http.StatusInternalServerError)
+			http.Error(
+				w,
+				fmt.Sprintf("unknown storage map domain: %s", storageMapDomain),
+				http.StatusInternalServerError,
+			)
 			return
 		}
 
 		storageMap := storage.GetStorageMap(address, storageMapDomain, false)
-
-		var keys []string
-		exists := storageMap != nil
-		if exists {
-			keys = storageMapKeys(storageMap, knownStorageMap)
+		if storageMap == nil {
+			http.Error(w, "storage map does not exist", http.StatusNotFound)
+			return
 		}
 
+		keys := storageMapKeys(storageMap, knownStorageMap)
+
 		response := StorageMapResponse{
-			Exists: exists,
-			Keys:   keys,
+			Keys: keys,
+		}
+
+		err = json.NewEncoder(w).Encode(response)
+		if err != nil {
+			log.Fatal().Err(err)
+		}
+	}
+}
+
+func NewAccountStorageMapIdentifierHandler(
+	storage *runtime.Storage,
+	inter *interpreter.Interpreter,
+	log zerolog.Logger,
+) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+
+		address, err := common.HexToAddress(vars["address"])
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		storageMapDomain := vars["domain"]
+		knownStorageMap, ok := knownStorageMaps[storageMapDomain]
+		if !ok {
+			http.Error(
+				w,
+				fmt.Sprintf("unknown storage map domain: %s", storageMapDomain),
+				http.StatusInternalServerError,
+			)
+			return
+		}
+
+		storageMap := storage.GetStorageMap(address, storageMapDomain, false)
+		if storageMap == nil {
+			http.Error(w, "storage map does not exist", http.StatusNotFound)
+			return
+		}
+
+		identifier := vars["identifier"]
+
+		key, err := knownStorageMap.StringAsKey(identifier)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		value := storageMap.ReadValue(nil, key)
+		if value == nil {
+			http.Error(w, "value does not exist", http.StatusNotFound)
+			return
+		}
+
+		staticType := value.StaticType(inter)
+
+		response := ValueResponse{
+			Type: staticType.String(),
 		}
 
 		err = json.NewEncoder(w).Encode(response)

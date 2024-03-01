@@ -31,6 +31,7 @@ import (
 type KnownStorageMap struct {
 	Domain      string
 	KeyAsString func(key atree.Value) string
+	StringAsKey func(identifier string) (interpreter.StorageMapKey, error)
 }
 
 var knownStorageMaps = map[string]KnownStorageMap{}
@@ -43,8 +44,20 @@ func StringAtreeValueAsString(key atree.Value) string {
 	return string(key.(interpreter.StringAtreeValue))
 }
 
+func StringAsStringAtreeValue(identifier string) (interpreter.StorageMapKey, error) {
+	return interpreter.StringStorageMapKey(identifier), nil
+}
+
 func Uint64AtreeValueAsString(key atree.Value) string {
 	return strconv.FormatUint(uint64(key.(interpreter.Uint64AtreeValue)), 10)
+}
+
+func StringAsUint64AtreeValue(identifier string) (interpreter.StorageMapKey, error) {
+	num, err := strconv.ParseUint(identifier, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return interpreter.Uint64StorageMapKey(num), nil
 }
 
 func init() {
@@ -52,22 +65,26 @@ func init() {
 		addKnownStorageMap(KnownStorageMap{
 			Domain:      domain.Identifier(),
 			KeyAsString: StringAtreeValueAsString,
+			StringAsKey: StringAsStringAtreeValue,
 		})
 	}
 
 	addKnownStorageMap(KnownStorageMap{
 		Domain:      stdlib.InboxStorageDomain,
 		KeyAsString: StringAtreeValueAsString,
+		StringAsKey: StringAsStringAtreeValue,
 	})
 
 	addKnownStorageMap(KnownStorageMap{
 		Domain:      runtime.StorageDomainContract,
 		KeyAsString: StringAtreeValueAsString,
+		StringAsKey: StringAsStringAtreeValue,
 	})
 
 	addKnownStorageMap(KnownStorageMap{
 		Domain:      stdlib.CapabilityControllerStorageDomain,
 		KeyAsString: Uint64AtreeValueAsString,
+		StringAsKey: StringAsUint64AtreeValue,
 	})
 }
 
