@@ -63,9 +63,19 @@ type NumberValue struct {
 	Value string `json:"value"`
 }
 
+type StringValue struct {
+	Type  any    `json:"type"`
+	Value string `json:"value"`
+}
+
 type DictionaryValue struct {
 	Type any   `json:"type"`
 	Keys []any `json:"keys"`
+}
+
+type CompositeValue struct {
+	Type   any      `json:"type"`
+	Fields []string `json:"fields"`
 }
 
 type migrationTransactionPreparer struct {
@@ -344,24 +354,33 @@ func storageMapKeys(storageMap *interpreter.StorageMap, knownStorageMap KnownSto
 	return keys
 }
 
-func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) any {
+func prepareType(value interpreter.Value, inter *interpreter.Interpreter) (result any) {
 	staticType := value.StaticType(inter)
 
-	var ty any
-	semaType, err := inter.ConvertStaticToSemaType(staticType)
-	if err == nil {
-		cadenceType := runtime.ExportType(
-			semaType,
-			map[sema.TypeID]cadence.Type{},
-		)
+	defer func() {
+		if recover() != nil {
+			result = staticType.ID()
+		}
+	}()
 
-		ty = jsoncdc.PrepareType(
-			cadenceType,
-			jsoncdc.TypePreparationResults{},
-		)
-	} else {
-		ty = staticType.ID()
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err != nil {
+		return staticType.ID()
 	}
+
+	cadenceType := runtime.ExportType(
+		semaType,
+		map[sema.TypeID]cadence.Type{},
+	)
+
+	return jsoncdc.PrepareType(
+		cadenceType,
+		jsoncdc.TypePreparationResults{},
+	)
+}
+
+func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) any {
+	ty := prepareType(value, inter)
 
 	switch value := value.(type) {
 	case interpreter.BoolValue:
@@ -374,6 +393,18 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) any {
 		return NumberValue{
 			Type:  ty,
 			Value: value.String(),
+		}
+
+	case *interpreter.StringValue:
+		return StringValue{
+			Type:  ty,
+			Value: value.Str,
+		}
+
+	case *interpreter.CharacterValue:
+		return StringValue{
+			Type:  ty,
+			Value: value.Str,
 		}
 
 	case *interpreter.DictionaryValue:
@@ -389,6 +420,38 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) any {
 			Type: ty,
 			Keys: keys,
 		}
+
+	case *interpreter.CompositeValue:
+		fields := make([]string, 0, value.FieldCount())
+
+		value.ForEachFieldName(func(field string) (resume bool) {
+			fields = append(fields, field)
+
+			return true
+		})
+
+		sort.Strings(fields)
+
+		return CompositeValue{
+			Type:   ty,
+			Fields: fields,
+		}
+
+		// TODO:
+		//   - AccountCapabilityControllerValue
+		//   - AccountLinkValue
+		//   - AddressValue
+		//   - ArrayValue
+		//   - CapabilityControllerValue
+		//   - IDCapabilityValue
+		//   - PathCapabilityValue
+		//   - PathLinkValue
+		//   - PathValue
+		//   - PublishedValue
+		//   - SimpleCompositeValue
+		//   - SomeValue
+		//   - StorageCapabilityControllerValue
+		//   - TypeValue
 
 	default:
 		return Value{
