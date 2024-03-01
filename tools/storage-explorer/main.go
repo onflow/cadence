@@ -48,8 +48,24 @@ import (
 type StorageMapResponse struct {
 	Keys []string `json:"keys"`
 }
-type ValueResponse struct {
+
+type Value struct {
 	Type any `json:"type"`
+}
+
+type BoolValue struct {
+	Type  any  `json:"type"`
+	Value bool `json:"value"`
+}
+
+type NumberValue struct {
+	Type  any    `json:"type"`
+	Value string `json:"value"`
+}
+
+type DictionaryValue struct {
+	Type any   `json:"type"`
+	Keys []any `json:"keys"`
 }
 
 type migrationTransactionPreparer struct {
@@ -293,29 +309,10 @@ func NewAccountStorageMapIdentifierHandler(
 			return
 		}
 
-		staticType := value.StaticType(inter)
+		preparedValue := prepareValue(value, inter)
 
-		var ty any
-		semaType, err := inter.ConvertStaticToSemaType(staticType)
-		if err == nil {
-			cadenceType := runtime.ExportType(
-				semaType,
-				map[sema.TypeID]cadence.Type{},
-			)
 
-			ty = jsoncdc.PrepareType(
-				cadenceType,
-				jsoncdc.TypePreparationResults{},
-			)
-		} else {
-			ty = staticType.ID()
-		}
-
-		response := ValueResponse{
-			Type: ty,
-		}
-
-		err = json.NewEncoder(w).Encode(response)
+		err = json.NewEncoder(w).Encode(preparedValue)
 		if err != nil {
 			log.Fatal().Err(err)
 		}
@@ -340,4 +337,57 @@ func storageMapKeys(storageMap *interpreter.StorageMap, knownStorageMap KnownSto
 	sort.Strings(keys)
 
 	return keys
+}
+
+func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) any {
+	staticType := value.StaticType(inter)
+
+	var ty any
+	semaType, err := inter.ConvertStaticToSemaType(staticType)
+	if err == nil {
+		cadenceType := runtime.ExportType(
+			semaType,
+			map[sema.TypeID]cadence.Type{},
+		)
+
+		ty = jsoncdc.PrepareType(
+			cadenceType,
+			jsoncdc.TypePreparationResults{},
+		)
+	} else {
+		ty = staticType.ID()
+	}
+
+	switch value := value.(type) {
+	case interpreter.BoolValue:
+		return BoolValue{
+			Type:  ty,
+			Value: bool(value),
+		}
+
+	case interpreter.NumberValue:
+		return NumberValue{
+			Type:  ty,
+			Value: value.String(),
+		}
+
+	case *interpreter.DictionaryValue:
+		keys := make([]any, 0, value.Count())
+
+		value.IterateKeys(inter, func(key interpreter.Value) (resume bool) {
+			keys = append(keys, prepareValue(key, inter))
+
+			return true
+		})
+
+		return DictionaryValue{
+			Type: ty,
+			Keys: keys,
+		}
+
+	default:
+		return Value{
+			Type: ty,
+		}
+	}
 }
