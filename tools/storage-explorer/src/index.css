@@ -1,0 +1,57 @@
+* {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+    font-family: system-ui;
+    font-size: 0.9rem;
+}
+
+main {
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+    padding: 0.6em;
+    gap: 1em;
+}
+
+#account-and-storage-map {
+    gap: 1em;
+}
+
+.list, .value {
+    display: flex;
+    flex-direction: column;
+}
+
+#account-and-storage-map .list {
+    flex: 1;
+}
+
+#accounts.list {
+    flex: 4;
+}
+
+.value {
+    height: 100%;
+}
+
+pre {
+    overflow: scroll;
+}
+
+select, pre {
+    flex: 1;
+    border: 1px solid #999;
+}
+
+option, pre {
+    padding: 0.3em 0.2em;
+    font-family: monospace;
+}
+
+h2 {
+    display: block;
+    font-size: 1.2em;
+    padding: 0.3em 0.2em;
+    white-space: nowrap;
+}

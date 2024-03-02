@@ -42,10 +42,6 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-type StorageMapResponse struct {
-	Keys []string `json:"keys"`
-}
-
 type migrationTransactionPreparer struct {
 	state.NestedTransactionPreparer
 	derived.DerivedTransactionPreparer
@@ -158,6 +154,8 @@ func main() {
 		NewAccountStorageMapHandler(runtimeStorage, log),
 	)
 
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./dist/")))
+
 	http.Handle("/", r)
 
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", *portFlag))
@@ -210,7 +208,7 @@ func NewAccountStorageMapHandler(
 
 		address, err := common.HexToAddress(vars["address"])
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -220,26 +218,22 @@ func NewAccountStorageMapHandler(
 			http.Error(
 				w,
 				fmt.Sprintf("unknown storage map domain: %s", storageMapDomain),
-				http.StatusInternalServerError,
+				http.StatusBadRequest,
 			)
 			return
 		}
 
+		var keys []string
 		storageMap := storage.GetStorageMap(address, storageMapDomain, false)
 		if storageMap == nil {
-			http.Error(w, "storage map does not exist", http.StatusNotFound)
-			return
-		}
-
-		keys := storageMapKeys(storageMap, knownStorageMap)
-
-		response := StorageMapResponse{
-			Keys: keys,
+			keys = make([]string, 0)
+		} else {
+			keys = storageMapKeys(storageMap, knownStorageMap)
 		}
 
 		w.Header().Add("Content-Type", "application/json")
 
-		err = json.NewEncoder(w).Encode(response)
+		err = json.NewEncoder(w).Encode(keys)
 		if err != nil {
 			log.Fatal().Err(err)
 		}
@@ -256,7 +250,7 @@ func NewAccountStorageMapIdentifierHandler(
 
 		address, err := common.HexToAddress(vars["address"])
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
@@ -266,7 +260,7 @@ func NewAccountStorageMapIdentifierHandler(
 			http.Error(
 				w,
 				fmt.Sprintf("unknown storage map domain: %s", storageMapDomain),
-				http.StatusInternalServerError,
+				http.StatusBadRequest,
 			)
 			return
 		}
@@ -281,20 +275,19 @@ func NewAccountStorageMapIdentifierHandler(
 
 		key, err := knownStorageMap.StringAsKey(identifier)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+
+		var preparedValue Value
 
 		value := storageMap.ReadValue(nil, key)
-		if value == nil {
-			http.Error(w, "value does not exist", http.StatusNotFound)
-			return
-		}
-
-		preparedValue, err := prepareValue(value, inter)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		if value != nil {
+			preparedValue, err = prepareValue(value, inter)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 
 		w.Header().Add("Content-Type", "application/json")
