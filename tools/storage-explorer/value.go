@@ -42,7 +42,18 @@ var _ Value = FallbackValue{}
 
 func (FallbackValue) isValue() {}
 
-// SimpleValue
+func (v FallbackValue) MarshalJSON() ([]byte, error) {
+	type Alias FallbackValue
+	return json.Marshal(&struct {
+		Kind string `json:"kind"`
+		Alias
+	}{
+		Kind:  "fallback",
+		Alias: (Alias)(v),
+	})
+}
+
+// PrimitiveValue
 
 type PrimitiveValue struct {
 	Type  any             `json:"type"`
@@ -52,6 +63,17 @@ type PrimitiveValue struct {
 var _ Value = PrimitiveValue{}
 
 func (PrimitiveValue) isValue() {}
+
+func (v PrimitiveValue) MarshalJSON() ([]byte, error) {
+	type Alias PrimitiveValue
+	return json.Marshal(&struct {
+		Kind string `json:"kind"`
+		Alias
+	}{
+		Kind:  "primitive",
+		Alias: (Alias)(v),
+	})
+}
 
 // DictionaryValue
 
@@ -64,6 +86,17 @@ var _ Value = DictionaryValue{}
 
 func (DictionaryValue) isValue() {}
 
+func (v DictionaryValue) MarshalJSON() ([]byte, error) {
+	type Alias DictionaryValue
+	return json.Marshal(&struct {
+		Kind string `json:"kind"`
+		Alias
+	}{
+		Kind:  "dictionary",
+		Alias: (Alias)(v),
+	})
+}
+
 // ArrayValue
 
 type ArrayValue struct {
@@ -74,6 +107,17 @@ type ArrayValue struct {
 var _ Value = ArrayValue{}
 
 func (ArrayValue) isValue() {}
+
+func (v ArrayValue) MarshalJSON() ([]byte, error) {
+	type Alias ArrayValue
+	return json.Marshal(&struct {
+		Kind string `json:"kind"`
+		Alias
+	}{
+		Kind:  "array",
+		Alias: (Alias)(v),
+	})
+}
 
 // CompositeValue
 
@@ -86,6 +130,17 @@ var _ Value = CompositeValue{}
 
 func (CompositeValue) isValue() {}
 
+func (v CompositeValue) MarshalJSON() ([]byte, error) {
+	type Alias CompositeValue
+	return json.Marshal(&struct {
+		Kind string `json:"kind"`
+		Alias
+	}{
+		Kind:  "composite",
+		Alias: (Alias)(v),
+	})
+}
+
 // SomeValue
 
 type SomeValue struct {
@@ -96,6 +151,17 @@ type SomeValue struct {
 var _ Value = SomeValue{}
 
 func (SomeValue) isValue() {}
+
+func (v SomeValue) MarshalJSON() ([]byte, error) {
+	type Alias SomeValue
+	return json.Marshal(&struct {
+		Kind string `json:"kind"`
+		Alias
+	}{
+		Kind:  "some",
+		Alias: (Alias)(v),
+	})
+}
 
 // prepareValue
 

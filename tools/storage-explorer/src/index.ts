@@ -1,3 +1,9 @@
+import { createRoot } from 'react-dom/client'
+import {createElement, ReactNode} from "react"
+import CompositeValue from "./composite.tsx";
+import {Value} from "./value.ts";
+import DictionaryValue from "./dictionary.tsx";
+
 function request(url: string) {
     return fetch(url, {
         method: 'GET',
@@ -125,18 +131,32 @@ class StorageMapKeysView {
 
 class ValueView {
 
-    constructor(keyPath: string[], value: any, parentElement: HTMLElement) {
+    constructor(keyPath: string[], value: Value, parentElement: HTMLElement) {
         const valueElement = document.createElement('div')
         valueElement.classList.add('value')
         parentElement.appendChild(valueElement)
 
-        const headingElement = document.createElement('h2')
-        headingElement.textContent = keyPath[keyPath.length - 1]
-        valueElement.appendChild(headingElement)
+        let valueComponent: ReactNode | null
+        switch (value.kind) {
+            case "composite":
+                valueComponent = createElement(CompositeValue, {keyPath, value})
+                break
+            case "dictionary":
+                valueComponent = createElement(DictionaryValue, {keyPath, value})
+                break
+        }
 
-        const contentsElement = document.createElement('pre')
-        contentsElement.innerText = JSON.stringify(value, null, '  ')
-        valueElement.appendChild(contentsElement)
+        if (valueComponent) {
+            createRoot(valueElement).render(valueComponent)
+        }
+
+        // const headingElement = document.createElement('h2')
+        // headingElement.textContent = keyPath[keyPath.length - 1]
+        // valueElement.appendChild(headingElement)
+        //
+        // const contentsElement = document.createElement('pre')
+        // contentsElement.innerText = JSON.stringify(value, null, '  ')
+        // valueElement.appendChild(contentsElement)
     }
 }
 
