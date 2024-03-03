@@ -26,18 +26,21 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func prepareType(value interpreter.Value, inter *interpreter.Interpreter) (result any) {
+func prepareType(value interpreter.Value, inter *interpreter.Interpreter) (result any, description string) {
 	staticType := value.StaticType(inter)
 
 	defer func() {
 		if recover() != nil {
-			result = staticType.ID()
+			typeID := staticType.ID()
+			result = typeID
+			description = string(typeID)
 		}
 	}()
 
 	semaType, err := inter.ConvertStaticToSemaType(staticType)
 	if err != nil {
-		return staticType.ID()
+		typeID := staticType.ID()
+		return typeID, string(typeID)
 	}
 
 	cadenceType := runtime.ExportType(
@@ -48,5 +51,5 @@ func prepareType(value interpreter.Value, inter *interpreter.Interpreter) (resul
 	return jsoncdc.PrepareType(
 		cadenceType,
 		jsoncdc.TypePreparationResults{},
-	)
+	), semaType.QualifiedString()
 }

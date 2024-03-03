@@ -1,35 +1,47 @@
-import { createRoot } from 'react-dom/client'
+import {createRoot} from 'react-dom/client'
 import {createElement, ReactNode} from "react"
-import CompositeValue from "./composite.tsx";
+import CompositeValue from "./composite.tsx"
+import DictionaryValue from "./dictionary.tsx"
+import PrimitiveValue from "./primitive.tsx";
 import {Value} from "./value.ts";
-import DictionaryValue from "./dictionary.tsx";
+import ArrayValue from "./array.tsx";
+import FallbackValue from "./fallback.tsx";
 
-function request(url: string) {
+function request(url: string, method: string = 'GET', body?: BodyInit) {
     return fetch(url, {
-        method: 'GET',
+        method,
         headers: {
             'Content-Type': 'application/json'
-        }
+        },
+        body
     })
 }
 
 class AccountsView {
-    private storageMapKeysView: StorageMapKeysView
-    private selectElement: HTMLSelectElement
+    private readonly storageMapKeysView: StorageMapKeysView
+    private readonly selectElement: HTMLSelectElement
 
     constructor(storageMapKeysView: StorageMapKeysView) {
         this.storageMapKeysView = storageMapKeysView
         this.selectElement = document.querySelector('#accounts select')!
-        this.load().then(() => {
+
+        this.addKeyboardEventListeners()
+
+        this.load().then(addresses => {
             this.selectElement.addEventListener('change', this.onChange.bind(this))
+
+            if (addresses.length) {
+                this.selectElement.value = addresses[0]
+                this.onChange()
+            }
         })
     }
 
-    onChange() {
+    private onChange() {
         this.storageMapKeysView.address = this.selectElement.value
     }
 
-    async load() {
+    private async load(): Promise<string[]> {
         const response = await request('/accounts')
         const addresses = await response.json()
         for (const address of addresses) {
@@ -38,26 +50,43 @@ class AccountsView {
             option.textContent = address
             this.selectElement.appendChild(option)
         }
+        return addresses
+    }
+
+    private addKeyboardEventListeners() {
+        document.addEventListener('keydown', event => {
+            if (event.key === 'ArrowRight') {
+                event.preventDefault()
+                this.storageMapKeysView.focus()
+            }
+        })
+    }
+
+    focus() {
+        this.selectElement.focus()
     }
 }
 
 class StorageMapsView {
-    private storageMapKeysView: StorageMapKeysView
-    private selectElement: HTMLSelectElement
+    private readonly storageMapKeysView: StorageMapKeysView
+    private readonly selectElement: HTMLSelectElement
 
     constructor(storageMapKeysView: StorageMapKeysView) {
         this.storageMapKeysView = storageMapKeysView
         this.selectElement = document.querySelector('#storage-maps select')!
+
         this.load().then(() => {
             this.selectElement.addEventListener('change', this.onChange.bind(this))
+            this.selectElement.value = 'storage'
+            this.onChange()
         })
     }
 
-    onChange() {
+    private onChange() {
         this.storageMapKeysView.domain = this.selectElement.value
     }
 
-    async load() {
+    private async load() {
         const response = await request('/known_storage_maps')
         const domains = await response.json()
         for (const domain of domains) {
@@ -69,25 +98,58 @@ class StorageMapsView {
     }
 }
 
+class KeyPath {
+    constructor(
+        public address: string,
+        public domain: string,
+        public key: string,
+        public nested: any[]
+    ) {}
+
+    with(nested: any): KeyPath {
+        const newNested = this.nested.slice()
+        newNested.push(nested)
+        return new KeyPath(
+            this.address,
+            this.domain,
+            this.key,
+            newNested
+        )
+    }
+}
+
 class StorageMapKeysView {
-    private selectElement: HTMLSelectElement
-    private valuesElement: HTMLDivElement
+    private readonly headingElement: HTMLHeadingElement
+    private readonly selectElement: HTMLSelectElement
+    private readonly valuesElement: HTMLDivElement
     private _address: string | null = null
     private _domain: string | null = null
+    accountsView: AccountsView | null = null
+    private valueView: ValueView | null = null
 
     constructor() {
+        this.headingElement = document.querySelector('#storage-map-keys h2')!
         this.selectElement = document.querySelector('#storage-map-keys select')!
         this.selectElement.addEventListener('change', this.onChange.bind(this))
         this.valuesElement = document.querySelector('#values')!
+
+        this.addKeyboardEventListeners()
     }
 
-    async onChange() {
+    private async onChange() {
         const key = this.selectElement.value
         this.valuesElement.innerHTML = ""
 
-        const response = await request(`/accounts/${this.address}/${this.domain}/${key}`)
-        const value = await response.json()
-        new ValueView([key], value, this.valuesElement)
+        const address = this.address
+        const domain = this.domain
+        if (!address || !domain) {
+            return
+        }
+
+        this.valueView = new ValueView(
+            new KeyPath(address, domain, key, []),
+            this.valuesElement
+        )
     }
 
     get address(): string | null {
@@ -108,7 +170,7 @@ class StorageMapKeysView {
         this.update()
     }
 
-    async update() {
+    private async update() {
         this.valuesElement.innerHTML = ""
 
         const address = this.address
@@ -116,6 +178,8 @@ class StorageMapKeysView {
         if (!address || !domain) {
             return
         }
+
+        this.headingElement.textContent = `${address}/${domain}`
 
         const response = await request(`/accounts/${address}/${domain}`)
         const keys = await response.json()
@@ -127,41 +191,157 @@ class StorageMapKeysView {
             this.selectElement.appendChild(option)
         }
     }
+
+    focus() {
+        const select = this.selectElement
+        const options = select.options
+
+        if (!select.value && options.length) {
+            select.value = options[0].value
+            this.onChange()
+        }
+
+        select.focus()
+    }
+
+    private addKeyboardEventListeners() {
+        document.addEventListener('keydown', event => {
+            switch (event.key) {
+                case 'ArrowLeft':
+                    event.preventDefault()
+                    this.accountsView?.focus()
+                    break
+                case 'ArrowRight':
+                    event.preventDefault()
+                    this.valueView?.focus()
+                    break
+            }
+        })
+    }
 }
 
 class ValueView {
+    private readonly keyPath: KeyPath
+    private readonly valueElement: HTMLDivElement
+    private readonly parentElement: HTMLElement
 
-    constructor(keyPath: string[], value: Value, parentElement: HTMLElement) {
-        const valueElement = document.createElement('div')
-        valueElement.classList.add('value')
-        parentElement.appendChild(valueElement)
+    constructor(keyPath: KeyPath, parentElement: HTMLElement) {
+        this.keyPath = keyPath
+
+        this.valueElement = document.createElement('div')
+        this.valueElement.classList.add('value')
+        parentElement.appendChild(this.valueElement)
+
+        this.parentElement = parentElement
+
+        this.load()
+    }
+
+    async load() {
+        const {address, domain, key, nested} = this.keyPath
+        const response = await request(
+            `/accounts/${address}/${domain}/${key}`,
+            'POST',
+            JSON.stringify(nested)
+        )
+        const value: Value = await response.json()
 
         let valueComponent: ReactNode | null
         switch (value.kind) {
             case "composite":
-                valueComponent = createElement(CompositeValue, {keyPath, value})
+                valueComponent = createElement(
+                    CompositeValue,
+                    {
+                        value,
+                        onChange: this.onChange.bind(this)
+                    }
+                )
                 break
+
             case "dictionary":
-                valueComponent = createElement(DictionaryValue, {keyPath, value})
+                valueComponent = createElement(
+                    DictionaryValue,
+                    {
+                        value,
+                        onChange: this.onChange.bind(this)
+                    }
+                )
+                break
+
+            case "array":
+                valueComponent = createElement(
+                    ArrayValue,
+                    {
+                        value,
+                        onChange: this.onChange.bind(this)
+                    }
+                )
+                break
+
+            case "primitive":
+                valueComponent = createElement(
+                    PrimitiveValue,
+                    {
+                        value
+                    }
+                )
+                break
+
+            case "fallback":
+                valueComponent = createElement(
+                    FallbackValue,
+                    {
+                        value
+                    }
+                )
                 break
         }
 
         if (valueComponent) {
-            createRoot(valueElement).render(valueComponent)
+            createRoot(this.valueElement).render(valueComponent)
+        } else {
+            const contentsElement = document.createElement('pre')
+            contentsElement.innerText = JSON.stringify(value, null, '  ')
+            this.valueElement.appendChild(contentsElement)
+        }
+    }
+
+    private onChange(nested: any) {
+        // clear trailing value views
+        while (true) {
+            const lastChild = this.parentElement.lastChild
+            if (lastChild === this.valueElement) {
+                break
+            }
+            lastChild?.remove()
         }
 
-        // const headingElement = document.createElement('h2')
-        // headingElement.textContent = keyPath[keyPath.length - 1]
-        // valueElement.appendChild(headingElement)
-        //
-        // const contentsElement = document.createElement('pre')
-        // contentsElement.innerText = JSON.stringify(value, null, '  ')
-        // valueElement.appendChild(contentsElement)
+        // append new value view
+        new ValueView(
+            this.keyPath.with(nested),
+            this.parentElement
+        )
+    }
+
+    focus() {
+        const select = this.valueElement.querySelector("select")
+        if (!select) {
+            return
+        }
+
+        const options = select.options
+
+        if (!select.value && options.length) {
+            select.value = options[0].value
+        }
+
+        select.focus()
     }
 }
 
 document.addEventListener("DOMContentLoaded", function () {
     const storageMapKeysView = new StorageMapKeysView()
-    new AccountsView(storageMapKeysView)
+    const accountsView = new AccountsView(storageMapKeysView)
+    storageMapKeysView.accountsView = accountsView
     new StorageMapsView(storageMapKeysView)
 })

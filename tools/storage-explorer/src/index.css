@@ -2,25 +2,46 @@
     box-sizing: border-box;
     padding: 0;
     margin: 0;
-    font-family: system-ui;
     font-size: 0.9rem;
+    font-family: "Inter", sans-serif;
+    font-optical-sizing: auto;
+    color: #505c6f;
+}
+
+:focus {
+    outline: none;
+}
+
+html, body {
+    overscroll-behavior-x: none;
 }
 
 main {
-    display: flex;
-    flex-direction: row;
     height: 100vh;
     padding: 0.6em;
-    gap: 1em;
+    background-color: hsl(210, 40%, 96%);
 }
 
 #account-and-storage-map {
+    display: flex;
+    flex-direction: column;
     gap: 1em;
 }
 
 .list, .value {
+    padding: 0.4rem 0.8rem;
     display: flex;
     flex-direction: column;
+    gap: 0.5em;
+    border-radius: 6px;
+    background-color: white;
+    box-shadow: rgb(255, 255, 255) 0 0 0 0,
+        rgb(229, 231, 235) 0 0 0 1px,
+        rgba(0, 0, 0, 0.1) 0 1px 3px 0,
+        rgba(0, 0, 0, 0.1) 0 1px 2px -1px;
+    animation: fadeIn ease-out 100ms;
+    animation-iteration-count: 1;
+    animation-fill-mode: forwards;
 }
 
 #account-and-storage-map .list {
@@ -31,27 +52,55 @@ main {
     flex: 4;
 }
 
+#storage-map-keys h2 {
+    font-family: monospace;
+}
+
+main, #values {
+    flex-direction: row;
+    display: flex;
+    gap: 1em;
+}
+
 .value {
     height: 100%;
+    padding-top: 0.6em;
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
 }
 
 pre {
     overflow: scroll;
 }
 
+select {
+    border: none;
+}
+
 select, pre {
     flex: 1;
-    border: 1px solid #999;
 }
 
 option, pre {
-    padding: 0.3em 0.2em;
+    padding: 0.2em 0.4em;
     font-family: monospace;
+}
+
+option {
+    border-radius: 6px;
 }
 
 h2 {
     display: block;
-    font-size: 1.2em;
-    padding: 0.3em 0.2em;
+    padding: .3em .4em;
     white-space: nowrap;
+    color: rgb(17, 24, 39);
+    font-weight: 600;
 }

@@ -35,6 +35,7 @@ type Value interface {
 
 type FallbackValue struct {
 	Type        any    `json:"type"`
+	TypeString  string `json:"typeString"`
 	Description string `json:"description"`
 }
 
@@ -56,8 +57,10 @@ func (v FallbackValue) MarshalJSON() ([]byte, error) {
 // PrimitiveValue
 
 type PrimitiveValue struct {
-	Type  any             `json:"type"`
-	Value json.RawMessage `json:"value"`
+	Type        any             `json:"type"`
+	TypeString  string          `json:"typeString"`
+	Value       json.RawMessage `json:"value"`
+	Description string          `json:"description"`
 }
 
 var _ Value = PrimitiveValue{}
@@ -78,8 +81,9 @@ func (v PrimitiveValue) MarshalJSON() ([]byte, error) {
 // DictionaryValue
 
 type DictionaryValue struct {
-	Type any     `json:"type"`
-	Keys []Value `json:"keys"`
+	Type       any             `json:"type"`
+	TypeString string          `json:"typeString"`
+	Keys       []DictionaryKey `json:"keys"`
 }
 
 var _ Value = DictionaryValue{}
@@ -97,11 +101,17 @@ func (v DictionaryValue) MarshalJSON() ([]byte, error) {
 	})
 }
 
+type DictionaryKey struct {
+	Description string `json:"description"`
+	Value       Value  `json:"value"`
+}
+
 // ArrayValue
 
 type ArrayValue struct {
-	Type  any `json:"type"`
-	Count int `json:"count"`
+	Type       any    `json:"type"`
+	TypeString string `json:"typeString"`
+	Count      int    `json:"count"`
 }
 
 var _ Value = ArrayValue{}
@@ -122,8 +132,9 @@ func (v ArrayValue) MarshalJSON() ([]byte, error) {
 // CompositeValue
 
 type CompositeValue struct {
-	Type   any      `json:"type"`
-	Fields []string `json:"fields"`
+	Type       any      `json:"type"`
+	TypeString string   `json:"typeString"`
+	Fields     []string `json:"fields"`
 }
 
 var _ Value = CompositeValue{}
@@ -144,8 +155,9 @@ func (v CompositeValue) MarshalJSON() ([]byte, error) {
 // SomeValue
 
 type SomeValue struct {
-	Type  any   `json:"type"`
-	Value Value `json:"value"`
+	Type       any    `json:"type"`
+	TypeString string `json:"typeString"`
+	Value      Value  `json:"value"`
 }
 
 var _ Value = SomeValue{}
@@ -172,8 +184,9 @@ var publishedValueFieldNames = []string{"recipient", "type"}
 //   - AccountCapabilityControllerValue
 //   - StorageCapabilityControllerValue
 //   - PathCapabilityValue
+//   - IDCapabilityValue
 func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Value, error) {
-	ty := prepareType(value, inter)
+	ty, typeString := prepareType(value, inter)
 
 	switch value := value.(type) {
 	case interpreter.BoolValue,
@@ -182,8 +195,7 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Valu
 		interpreter.CharacterValue,
 		interpreter.AddressValue,
 		interpreter.PathValue,
-		interpreter.TypeValue,
-		*interpreter.IDCapabilityValue:
+		interpreter.TypeValue:
 
 		exported, err := runtime.ExportValue(value, inter, interpreter.EmptyLocationRange)
 		if err != nil {
@@ -196,12 +208,14 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Valu
 		}
 
 		return PrimitiveValue{
-			Type:  ty,
-			Value: exportedJSON,
+			Type:        ty,
+			TypeString:  typeString,
+			Value:       exportedJSON,
+			Description: value.String(),
 		}, nil
 
 	case *interpreter.DictionaryValue:
-		keys := make([]Value, 0, value.Count())
+		keys := make([]DictionaryKey, 0, value.Count())
 
 		var err error
 
@@ -212,7 +226,10 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Valu
 				return false
 			}
 
-			keys = append(keys, preparedKey)
+			keys = append(keys, DictionaryKey{
+				Description: key.String(),
+				Value:       preparedKey,
+			})
 
 			return true
 		})
@@ -222,8 +239,9 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Valu
 		}
 
 		return DictionaryValue{
-			Type: ty,
-			Keys: keys,
+			Type:       ty,
+			TypeString: typeString,
+			Keys:       keys,
 		}, nil
 
 	case *interpreter.CompositeValue:
@@ -238,8 +256,9 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Valu
 		sort.Strings(fields)
 
 		return CompositeValue{
-			Type:   ty,
-			Fields: fields,
+			Type:       ty,
+			TypeString: typeString,
+			Fields:     fields,
 		}, nil
 
 	case *interpreter.SimpleCompositeValue:
@@ -251,31 +270,36 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Valu
 		sort.Strings(fields)
 
 		return CompositeValue{
-			Type:   ty,
-			Fields: fields,
+			Type:       ty,
+			TypeString: typeString,
+			Fields:     fields,
 		}, nil
 
 	case interpreter.PathLinkValue: //nolint:staticcheck
 		return CompositeValue{
-			Type:   ty,
-			Fields: pathLinkValueFieldNames,
+			Type:       ty,
+			TypeString: typeString,
+			Fields:     pathLinkValueFieldNames,
 		}, nil
 
 	case interpreter.AccountLinkValue: //nolint:staticcheck
 		return CompositeValue{
-			Type: ty,
+			Type:       ty,
+			TypeString: typeString,
 		}, nil
 
 	case *interpreter.PublishedValue:
 		return CompositeValue{
-			Type:   ty,
-			Fields: publishedValueFieldNames,
+			Type:       ty,
+			TypeString: typeString,
+			Fields:     publishedValueFieldNames,
 		}, nil
 
 	case *interpreter.ArrayValue:
 		return ArrayValue{
-			Type:  ty,
-			Count: value.Count(),
+			Type:       ty,
+			TypeString: typeString,
+			Count:      value.Count(),
 		}, nil
 
 	case *interpreter.SomeValue:
@@ -287,13 +311,15 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Valu
 		}
 
 		return SomeValue{
-			Type:  ty,
-			Value: preparedInnerValue,
+			Type:       ty,
+			TypeString: typeString,
+			Value:      preparedInnerValue,
 		}, nil
 
 	default:
 		return FallbackValue{
 			Type:        ty,
+			TypeString:  typeString,
 			Description: value.String(),
 		}, nil
 	}

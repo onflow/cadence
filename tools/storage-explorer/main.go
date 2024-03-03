@@ -37,6 +37,7 @@ import (
 	"github.com/onflow/flow-go/model/flow"
 	"github.com/rs/zerolog"
 
+	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -147,11 +148,11 @@ func main() {
 	const accountDomainPattern = "/accounts/{address:[0-9A-Fa-f]{16}}/{domain:.+}"
 
 	r.PathPrefix(accountDomainPattern + "/{identifier:.+}").
-		HandlerFunc(NewAccountStorageMapIdentifierHandler(runtimeStorage, inter, log))
+		HandlerFunc(NewAccountStorageMapValueHandler(runtimeStorage, inter, log))
 
 	r.HandleFunc(
 		accountDomainPattern,
-		NewAccountStorageMapHandler(runtimeStorage, log),
+		NewAccountStorageMapKeysHandler(runtimeStorage, log),
 	)
 
 	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./dist/")))
@@ -199,7 +200,7 @@ func NewAccountsHandler(
 	}
 }
 
-func NewAccountStorageMapHandler(
+func NewAccountStorageMapKeysHandler(
 	storage *runtime.Storage,
 	log zerolog.Logger,
 ) func(w http.ResponseWriter, r *http.Request) {
@@ -240,7 +241,7 @@ func NewAccountStorageMapHandler(
 	}
 }
 
-func NewAccountStorageMapIdentifierHandler(
+func NewAccountStorageMapValueHandler(
 	storage *runtime.Storage,
 	inter *interpreter.Interpreter,
 	log zerolog.Logger,
@@ -282,6 +283,20 @@ func NewAccountStorageMapIdentifierHandler(
 		var preparedValue Value
 
 		value := storageMap.ReadValue(nil, key)
+
+		var nested []any
+		err = json.NewDecoder(r.Body).Decode(&nested)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		value, err = getNested(inter, value, nested)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
 		if value != nil {
 			preparedValue, err = prepareValue(value, inter)
 			if err != nil {
@@ -297,6 +312,47 @@ func NewAccountStorageMapIdentifierHandler(
 			log.Fatal().Err(err)
 		}
 	}
+}
+
+func getNested(inter *interpreter.Interpreter, value interpreter.Value, nested []any) (interpreter.Value, error) {
+	decoder := &jsoncdc.Decoder{}
+
+	for index, n := range nested {
+		switch n := n.(type) {
+		case string:
+			memberAccessibleValue, ok := value.(interpreter.MemberAccessibleValue)
+			if !ok {
+				return nil, fmt.Errorf("value for index %d is not member accessible", index)
+			}
+			value = memberAccessibleValue.GetMember(inter, interpreter.EmptyLocationRange, n)
+
+		case map[string]any:
+			valueIndexableValue, ok := value.(interpreter.ValueIndexableValue)
+			if !ok {
+				return nil, fmt.Errorf("value for index %d is not value indexable", index)
+			}
+
+			decoded := decoder.DecodeJSON(n)
+			imported, err := runtime.ImportValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				nil,
+				decoded,
+				nil,
+			)
+			if err != nil {
+				return nil, fmt.Errorf("value for index %d is not importable: %w", index, err)
+			}
+
+			value = valueIndexableValue.GetKey(inter, interpreter.EmptyLocationRange, imported)
+			if _, ok := valueIndexableValue.(*interpreter.DictionaryValue); ok {
+				if someValue := value.(*interpreter.SomeValue); ok {
+					value = someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+				}
+			}
+		}
+	}
+	return value, nil
 }
 
 func storageMapKeys(storageMap *interpreter.StorageMap, knownStorageMap KnownStorageMap) []string {

@@ -1,22 +1,24 @@
-import React from "react"
-import {DictionaryValue, Value} from "./value.ts"
+import React, {ReactNode} from "react"
+import { ArrayValue } from "./value.ts"
 import Type from "./type.tsx"
 
 interface Props {
-    value: DictionaryValue,
-    onChange?: (value: Value) => void
+    value: ArrayValue,
+    onChange?: (index: number) => void
 }
 
-export default function DictionaryValue({
+export default function ArrayValue({
     value,
     onChange
 }: Props) {
     function _onChange(event: React.ChangeEvent<HTMLSelectElement>) {
         const index = Number(event.target.value)
-        const key = value.keys[index].value
-        if (key.kind === "primitive") {
-            onChange?.(key.value)
-        }
+        onChange?.(index)
+    }
+
+    const options: ReactNode[] = Array.from({ length: value.count })
+    for (let i = 0; i < value.count; i++) {
+        options.push(<option key={i} value={i}>{i}</option>)
     }
 
     return (
@@ -27,9 +29,7 @@ export default function DictionaryValue({
                 description={value.typeString}
             />
             <select size={2} onChange={_onChange}>
-                {value.keys.map((key, index) => (
-                    <option key={index} value={index}>{key.description}</option>
-                ))}
+                {options}
             </select>
         </>
     )

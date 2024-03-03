@@ -1,21 +1,30 @@
 import React from "react"
 import { CompositeValue } from "./value.ts"
+import Type from "./type.tsx"
 
 interface Props {
-    keyPath: string[]
     value: CompositeValue
+    onChange?: (field: string) => void
 }
 
 export default function CompositeValue({
-    keyPath,
-    value
+    value,
+    onChange
 }: Props) {
-    const key = keyPath[keyPath.length - 1]
+
+    function _onChange(event: React.ChangeEvent<HTMLSelectElement>) {
+        const field = event.target.value
+        onChange?.(field)
+    }
 
     return (
         <>
-            <h2>{key}</h2>
-            <select size={2}>
+            <Type
+                kind={value.kind}
+                type={value.type}
+                description={value.typeString}
+            />
+            <select size={2} onChange={_onChange}>
                 {value.fields.map(field => (
                     <option key={field} value={field}>{field}</option>
                 ))}
