@@ -2,7 +2,7 @@ access(all)
 contract WebAssembly {
 
     /// Compile WebAssembly binary code into a Module
-    /// and instantiate it with the given imports.
+    /// and instantiate it. Imports are not supported.
     access(all)
     view fun compileAndInstantiate(bytes: [UInt8]): &WebAssembly.InstantiatedSource
 
