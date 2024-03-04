@@ -531,6 +531,7 @@ func TestConvertToEntitledType(t *testing.T) {
 				sema.UnauthorizedAccess,
 				sema.NewIntersectionType(
 					nil,
+					nil,
 					[]*sema.InterfaceType{
 						interfaceTypeInheriting,
 						interfaceTypeWithMap,
@@ -541,6 +542,7 @@ func TestConvertToEntitledType(t *testing.T) {
 				nil,
 				eFAndGAccess,
 				sema.NewIntersectionType(
+					nil,
 					nil,
 					[]*sema.InterfaceType{
 						interfaceTypeInheriting,
@@ -557,6 +559,7 @@ func TestConvertToEntitledType(t *testing.T) {
 					nil,
 					sema.NewIntersectionType(
 						nil,
+						nil,
 						[]*sema.InterfaceType{
 							interfaceTypeInheriting,
 							interfaceTypeWithMap,
@@ -570,6 +573,7 @@ func TestConvertToEntitledType(t *testing.T) {
 				sema.NewOptionalType(
 					nil,
 					sema.NewIntersectionType(
+						nil,
 						nil,
 						[]*sema.InterfaceType{
 							interfaceTypeInheriting,
@@ -1313,7 +1317,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 		},
 	}
 
-	test := func(testCase testCase, valueGenerator valueGenerator, typeGenerator typeGenerator) {
+	test := func(t *testing.T, testCase testCase, valueGenerator valueGenerator, typeGenerator typeGenerator) {
 
 		input := valueGenerator.wrap(typeGenerator.wrap(testCase.Input))
 		if input == nil {
@@ -1346,7 +1350,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 					for _, typeGenerator := range typeGenerators {
 						t.Run(typeGenerator.name, func(t *testing.T) {
 
-							test(testCase, valueGenerator, typeGenerator)
+							test(t, testCase, valueGenerator, typeGenerator)
 						})
 					}
 				})

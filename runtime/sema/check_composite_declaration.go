@@ -2356,7 +2356,7 @@ func (checker *Checker) declareBaseValue(fnAccess Access, baseType Type, attachm
 	if typedBaseType, ok := baseType.(*InterfaceType); ok {
 		// we can't actually have a value of an interface type I, so instead we create a value of {I}
 		// to be referenced by `base`
-		baseType = NewIntersectionType(checker.memoryGauge, []*InterfaceType{typedBaseType})
+		baseType = NewIntersectionType(checker.memoryGauge, nil, []*InterfaceType{typedBaseType})
 	}
 	// the `base` value in an attachment is entitled to the same entitlements required by the containing function
 	base := NewReferenceType(checker.memoryGauge, fnAccess, baseType)

@@ -968,9 +968,9 @@ func TestParseFunctionDeclaration(t *testing.T) {
 	t.Run("without space after return type", func(t *testing.T) {
 
 		// A brace after the return type is ambiguous:
-		// It could be the start of a intersection type.
+		// It could be the start of an intersection type.
 		// However, if there is space after the brace, which is most common
-		// in function declarations, we consider it not a intersection type
+		// in function declarations, we consider it not an intersection type
 
 		t.Parallel()
 
