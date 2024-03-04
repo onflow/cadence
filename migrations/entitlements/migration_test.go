@@ -1494,11 +1494,20 @@ func TestMigrateSimpleContract(t *testing.T) {
 	}
 
 	for name, testCase := range testCases {
+		transferredValue := testCase.storedValue.Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address(account),
+			false,
+			nil,
+			nil,
+		)
+
 		inter.WriteStored(
 			account,
 			storageIdentifier,
 			interpreter.StringStorageMapKey(name),
-			testCase.storedValue,
+			transferredValue,
 		)
 	}
 
