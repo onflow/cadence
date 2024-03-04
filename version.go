@@ -21,4 +21,4 @@
 
 package cadence
 
-const Version = "v1.0.0-M8"
+const Version = "v1.0.0-M9"
