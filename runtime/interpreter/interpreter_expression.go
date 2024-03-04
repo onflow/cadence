@@ -278,10 +278,11 @@ func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.T
 		// However, we need to make sure that this reference is actually a subtype of the resultType,
 		// since the checker may not be aware that we are "short-circuiting" in this case
 
-		if !interpreter.IsSubTypeOfSemaType(value.StaticType(interpreter), resultType) {
+		staticType := value.StaticType(interpreter)
+		if !interpreter.IsSubTypeOfSemaType(staticType, resultType) {
 			panic(InvalidMemberReferenceError{
 				ExpectedType:  resultType,
-				ActualType:    interpreter.MustSemaTypeOfValue(value),
+				ActualType:    interpreter.MustConvertStaticToSemaType(staticType),
 				LocationRange: locationRange,
 			})
 		}
