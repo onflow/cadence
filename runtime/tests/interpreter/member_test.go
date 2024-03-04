@@ -1169,7 +1169,7 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
 	})
 
 	t.Run("field", func(t *testing.T) {
@@ -1195,6 +1195,6 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
         `)
 
 		_, err := inter.Invoke("test")
-		require.NoError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
 	})
 }
