@@ -22,8 +22,9 @@ import (
 	"encoding/json"
 	"sort"
 
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/flow-go/cmd/util/ledger/util"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func addressesJSON(payloadSnapshot *util.PayloadSnapshot) ([]byte, error) {

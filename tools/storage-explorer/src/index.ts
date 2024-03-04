@@ -1,11 +1,11 @@
-import {createRoot} from 'react-dom/client'
-import {createElement, ReactNode} from "react"
+import { createRoot } from 'react-dom/client'
+import React, { createElement, ReactNode } from "react"
 import CompositeValue from "./composite.tsx"
 import DictionaryValue from "./dictionary.tsx"
-import PrimitiveValue from "./primitive.tsx";
-import {Value} from "./value.ts";
-import ArrayValue from "./array.tsx";
-import FallbackValue from "./fallback.tsx";
+import PrimitiveValue from "./primitive.tsx"
+import { Value } from "./value.ts"
+import ArrayValue from "./array.tsx"
+import FallbackValue from "./fallback.tsx"
 
 function request(url: string, method: string = 'GET', body?: BodyInit) {
     return fetch(url, {
@@ -54,7 +54,7 @@ class AccountsView {
     }
 
     private addKeyboardEventListeners() {
-        document.addEventListener('keydown', event => {
+        this.selectElement.addEventListener('keydown', event => {
             if (event.key === 'ArrowRight') {
                 event.preventDefault()
                 this.storageMapKeysView.focus()
@@ -118,7 +118,11 @@ class KeyPath {
     }
 }
 
-class StorageMapKeysView {
+interface FocusableView {
+    focus(): void
+}
+
+class StorageMapKeysView implements FocusableView {
     private readonly headingElement: HTMLHeadingElement
     private readonly selectElement: HTMLSelectElement
     private readonly valuesElement: HTMLDivElement
@@ -148,7 +152,8 @@ class StorageMapKeysView {
 
         this.valueView = new ValueView(
             new KeyPath(address, domain, key, []),
-            this.valuesElement
+            this.valuesElement,
+            this
         )
     }
 
@@ -205,7 +210,7 @@ class StorageMapKeysView {
     }
 
     private addKeyboardEventListeners() {
-        document.addEventListener('keydown', event => {
+        this.selectElement.addEventListener('keydown', event => {
             switch (event.key) {
                 case 'ArrowLeft':
                     event.preventDefault()
@@ -220,13 +225,16 @@ class StorageMapKeysView {
     }
 }
 
-class ValueView {
+class ValueView implements FocusableView {
     private readonly keyPath: KeyPath
     private readonly valueElement: HTMLDivElement
     private readonly parentElement: HTMLElement
+    private nextValueView: ValueView | null = null
+    private previousElement: FocusableView
 
-    constructor(keyPath: KeyPath, parentElement: HTMLElement) {
+    constructor(keyPath: KeyPath, parentElement: HTMLElement, previousElement: FocusableView) {
         this.keyPath = keyPath
+        this.previousElement = previousElement
 
         this.valueElement = document.createElement('div')
         this.valueElement.classList.add('value')
@@ -253,7 +261,8 @@ class ValueView {
                     CompositeValue,
                     {
                         value,
-                        onChange: this.onChange.bind(this)
+                        onChange: this.onChange.bind(this),
+                        onKeyDown: this.onKeyDown.bind(this)
                     }
                 )
                 break
@@ -263,7 +272,8 @@ class ValueView {
                     DictionaryValue,
                     {
                         value,
-                        onChange: this.onChange.bind(this)
+                        onChange: this.onChange.bind(this),
+                        onKeyDown: this.onKeyDown.bind(this)
                     }
                 )
                 break
@@ -273,7 +283,8 @@ class ValueView {
                     ArrayValue,
                     {
                         value,
-                        onChange: this.onChange.bind(this)
+                        onChange: this.onChange.bind(this),
+                        onKeyDown: this.onKeyDown.bind(this)
                     }
                 )
                 break
@@ -317,10 +328,24 @@ class ValueView {
         }
 
         // append new value view
-        new ValueView(
+        this.nextValueView = new ValueView(
             this.keyPath.with(nested),
-            this.parentElement
+            this.parentElement,
+            this
         )
+    }
+
+    private onKeyDown(event: React.KeyboardEvent) {
+        switch (event.key) {
+            case 'ArrowLeft':
+                event.preventDefault()
+                this.previousElement.focus()
+                break
+            case 'ArrowRight':
+                event.preventDefault()
+                this.nextValueView?.focus()
+                break
+        }
     }
 
     focus() {
@@ -344,4 +369,5 @@ document.addEventListener("DOMContentLoaded", function () {
     const accountsView = new AccountsView(storageMapKeysView)
     storageMapKeysView.accountsView = accountsView
     new StorageMapsView(storageMapKeysView)
+    accountsView.focus()
 })

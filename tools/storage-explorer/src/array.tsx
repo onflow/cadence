@@ -4,16 +4,20 @@ import Type from "./type.tsx"
 
 interface Props {
     value: ArrayValue,
-    onChange?: (index: number) => void
+    onChange?: (index: number) => void,
+    onKeyDown?: (event: React.KeyboardEvent<HTMLSelectElement>) => void
 }
 
 export default function ArrayValue({
     value,
-    onChange
+    onChange,
+    onKeyDown
 }: Props) {
+
     function _onChange(event: React.ChangeEvent<HTMLSelectElement>) {
         const index = Number(event.target.value)
-        onChange?.(index)
+        if (index < value.count)
+            onChange?.(index)
     }
 
     const options: ReactNode[] = Array.from({ length: value.count })
@@ -28,7 +32,12 @@ export default function ArrayValue({
                 type={value.type}
                 description={value.typeString}
             />
-            <select size={2} onChange={_onChange}>
+            <select
+                size={2}
+                onChange={_onChange}
+                onFocus={_onChange}
+                onKeyDown={onKeyDown}
+            >
                 {options}
             </select>
         </>
