@@ -252,7 +252,7 @@ func (m *StorageMigration) MigrateNestedValue(
 				continue
 			}
 
-			composite.SetMember(
+			composite.SetMemberWithoutTransfer(
 				m.interpreter,
 				emptyLocationRange,
 				fieldName,

@@ -1204,6 +1204,19 @@ func (testContainerMigration) Migrate(
 		)
 
 		return value.NewWithType(inter, emptyLocationRange, newType), nil
+
+	case *interpreter.CompositeValue:
+		if value.QualifiedIdentifier == "Inner" {
+			return interpreter.NewCompositeValue(
+				inter,
+				emptyLocationRange,
+				utils.TestLocation,
+				"Inner2",
+				common.CompositeKindStructure,
+				nil,
+				value.GetOwner(),
+			), nil
+		}
 	}
 
 	return nil, nil
@@ -1439,6 +1452,85 @@ func TestMigratingNestedContainers(t *testing.T) {
 				common.ZeroAddress,
 				interpreter.NewUnmeteredStringValue("abc"),
 			),
+		)
+
+		utils.AssertValuesEqual(t, inter, expected, actual)
+	})
+
+	t.Run("nested composite", func(t *testing.T) {
+		t.Parallel()
+
+		locationRange := interpreter.EmptyLocationRange
+
+		ledger := NewTestLedger(nil, nil)
+		storage := runtime.NewStorage(ledger, nil)
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                     storage,
+				AtreeValueValidationEnabled: true,
+				// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+				AtreeStorageValidationEnabled: false,
+			},
+		)
+		require.NoError(t, err)
+
+		// Outer(Inner())
+
+		storedValue := interpreter.NewCompositeValue(
+			inter,
+			locationRange,
+			utils.TestLocation,
+			"Outer",
+			common.CompositeKindStructure,
+			[]interpreter.CompositeField{
+				{
+					Name: "inner",
+					Value: interpreter.NewCompositeValue(
+						inter,
+						locationRange,
+						utils.TestLocation,
+						"Inner",
+						common.CompositeKindStructure,
+						nil,
+						common.ZeroAddress,
+					),
+				},
+			},
+			common.ZeroAddress,
+		)
+
+		actual := migrate(t,
+			storage,
+			inter,
+			storedValue,
+		)
+
+		// Outer(Inner2())
+
+		expected := interpreter.NewCompositeValue(
+			inter,
+			locationRange,
+			utils.TestLocation,
+			"Outer",
+			common.CompositeKindStructure,
+			[]interpreter.CompositeField{
+				{
+					Name: "inner",
+					Value: interpreter.NewCompositeValue(
+						inter,
+						locationRange,
+						utils.TestLocation,
+						"Inner2",
+						common.CompositeKindStructure,
+						nil,
+						common.ZeroAddress,
+					),
+				},
+			},
+			common.ZeroAddress,
 		)
 
 		utils.AssertValuesEqual(t, inter, expected, actual)
