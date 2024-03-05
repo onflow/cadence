@@ -185,10 +185,12 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
-	err = storage.CheckHealth()
-	require.NoError(t, err)
+	// Assert
 
 	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	// Check reported migrated paths
 	for identifier, test := range testCases {

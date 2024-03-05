@@ -514,18 +514,11 @@ func testPathCapabilityValueMigration(
 	err = migration.Commit()
 	require.NoError(t, err)
 
-	err = storage.CheckHealth()
-	require.NoError(t, err)
-
-	// Check migrated capabilities
+	// Assert
 
 	assert.Equal(t,
 		expectedMigrations,
 		reporter.migrations,
-	)
-	assert.Equal(t,
-		expectedErrors,
-		reporter.errors,
 	)
 	assert.Equal(t,
 		expectedPathMigrations,
@@ -535,6 +528,13 @@ func testPathCapabilityValueMigration(
 		expectedMissingCapabilityIDs,
 		reporter.missingCapabilityIDs,
 	)
+	require.Equal(t,
+		expectedErrors,
+		reporter.errors,
+	)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	if len(expectedMissingCapabilityIDs) == 0 {
 
@@ -1351,18 +1351,11 @@ func testLinkMigration(
 	err = migration.Commit()
 	require.NoError(t, err)
 
-	err = storage.CheckHealth()
-	require.NoError(t, err)
-
 	// Assert
 
 	assert.Equal(t,
 		expectedMigrations,
 		reporter.migrations,
-	)
-	assert.Equal(t,
-		expectedErrors,
-		reporter.errors,
 	)
 	assert.Equal(t,
 		expectedLinkMigrations,
@@ -1376,6 +1369,13 @@ func testLinkMigration(
 		expectedMissingTargets,
 		reporter.missingTargets,
 	)
+	require.Equal(t,
+		expectedErrors,
+		reporter.errors,
+	)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 }
 
 func TestLinkMigration(t *testing.T) {
@@ -2079,23 +2079,22 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
-	err = storage.CheckHealth()
-	require.NoError(t, err)
-
-	// Check migrated capabilities
+	// Assert
 
 	assert.Equal(t,
 		expectedMigrations,
 		reporter.migrations,
 	)
-	assert.Empty(t, reporter.errors)
 	assert.Equal(t,
 		expectedPathMigrations,
 		reporter.pathCapabilityMigrations,
 	)
 	require.Nil(t, reporter.missingCapabilityIDs)
 
-	// Check
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	// language=cadence
 	checkScript := `
@@ -2329,21 +2328,22 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
-	err = storage.CheckHealth()
-	require.NoError(t, err)
-
-	// Check migrated capabilities
+	// Assert
 
 	assert.Equal(t,
 		expectedMigrations,
 		reporter.migrations,
 	)
-	assert.Empty(t, reporter.errors)
 	assert.Equal(t,
 		expectedPathMigrations,
 		reporter.pathCapabilityMigrations,
 	)
 	require.Nil(t, reporter.missingCapabilityIDs)
+
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	// Check
 

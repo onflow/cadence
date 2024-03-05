@@ -719,12 +719,12 @@ func convertEntireTestValue(
 	err := migration.Commit()
 	require.NoError(t, err)
 
-	err = storage.CheckHealth()
-	require.NoError(t, err)
-
 	// Assert
 
-	assert.Empty(t, reporter.errors)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	if migratedValue == nil {
 		return v
@@ -1536,10 +1536,10 @@ func TestMigrateSimpleContract(t *testing.T) {
 
 	// Assert
 
+	require.Empty(t, reporter.errors)
+
 	err = storage.CheckHealth()
 	require.NoError(t, err)
-
-	assert.Empty(t, reporter.errors)
 
 	storageMap := storage.GetStorageMap(account, storageIdentifier, false)
 	require.NotNil(t, storageMap)
@@ -1723,10 +1723,10 @@ func TestMigratePublishedValue(t *testing.T) {
 
 	// Assert
 
+	require.Empty(t, reporter.errors)
+
 	err = storage.CheckHealth()
 	require.NoError(t, err)
-
-	assert.Empty(t, reporter.errors)
 
 	assert.Equal(t,
 		map[struct {
@@ -1981,10 +1981,10 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
 
 	// Assert
 
+	require.Empty(t, reporter.errors)
+
 	err = storage.CheckHealth()
 	require.NoError(t, err)
-
-	assert.Empty(t, reporter.errors)
 
 	assert.Equal(t,
 		map[struct {
@@ -2434,10 +2434,10 @@ func TestMigrateArrayOfValues(t *testing.T) {
 
 	// Assert
 
+	require.Empty(t, reporter.errors)
+
 	err = storage.CheckHealth()
 	require.NoError(t, err)
-
-	assert.Empty(t, reporter.errors)
 
 	assert.Equal(t,
 		map[struct {
@@ -2685,10 +2685,10 @@ func TestMigrateDictOfValues(t *testing.T) {
 
 	// Assert
 
+	require.Empty(t, reporter.errors)
+
 	err = storage.CheckHealth()
 	require.NoError(t, err)
-
-	assert.Empty(t, reporter.errors)
 
 	assert.Equal(t,
 		map[struct {
@@ -3008,10 +3008,11 @@ func TestMigrateCapConsAcrossTwoAccounts(t *testing.T) {
 
 	// Assert
 
+	require.Empty(t, reporter.errors)
+
 	err = storage.CheckHealth()
 	require.NoError(t, err)
 
-	assert.Empty(t, reporter.errors)
 	assert.Len(t, reporter.migrated, 1)
 
 	// TODO: assert
@@ -3240,6 +3241,8 @@ func TestRehash(t *testing.T) {
 
 		err := migration.Commit()
 		require.NoError(t, err)
+
+		// Assert
 
 		err = storage.CheckHealth()
 		require.NoError(t, err)

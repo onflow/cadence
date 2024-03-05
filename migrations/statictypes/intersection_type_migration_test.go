@@ -417,10 +417,12 @@ func TestIntersectionTypeMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
-	err = storage.CheckHealth()
-	require.NoError(t, err)
+	// Assert
 
 	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	// Assert the migrated values.
 	// Traverse through the storage and see if the values are updated now.
@@ -587,10 +589,12 @@ func TestIntersectionTypeRehash(t *testing.T) {
 		err := migration.Commit()
 		require.NoError(t, err)
 
-		err = storage.CheckHealth()
-		require.NoError(t, err)
+		// Assert
 
 		require.Empty(t, reporter.errors)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
 
 		require.Equal(t,
 			map[struct {
@@ -756,10 +760,12 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			err := migration.Commit()
 			require.NoError(t, err)
 
-			err = storage.CheckHealth()
-			require.NoError(t, err)
+			// Assert
 
 			require.Empty(t, reporter.errors)
+
+			err = storage.CheckHealth()
+			require.NoError(t, err)
 
 			require.Equal(t,
 				map[struct {
@@ -900,10 +906,12 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			err := migration.Commit()
 			require.NoError(t, err)
 
-			err = storage.CheckHealth()
-			require.NoError(t, err)
+			// Assert
 
 			require.Empty(t, reporter.errors)
+
+			err = storage.CheckHealth()
+			require.NoError(t, err)
 
 			require.Equal(t,
 				map[struct {
@@ -1077,10 +1085,12 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 		err = migration.Commit()
 		require.NoError(t, err)
 
-		err = storage.CheckHealth()
-		require.NoError(t, err)
+		// Assert
 
 		require.Empty(t, reporter.errors)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
 
 		// Assert the migrated value.
 
@@ -1452,10 +1462,12 @@ func TestIntersectionTypeMigrationWithTypeConverters(t *testing.T) {
 		err = migration.Commit()
 		require.NoError(t, err)
 
-		err = storage.CheckHealth()
-		require.NoError(t, err)
+		// Assert
 
 		require.Empty(t, reporter.errors)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
 
 		key := struct {
 			interpreter.StorageKey
