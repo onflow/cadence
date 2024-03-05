@@ -17271,7 +17271,7 @@ func (v *CompositeValue) RemoveMember(
 		)
 }
 
-func (v *CompositeValue) SetMember(
+func (v *CompositeValue) SetMemberWithoutTransfer(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	name string,
@@ -17299,19 +17299,6 @@ func (v *CompositeValue) SetMember(
 		}()
 	}
 
-	address := v.StorageAddress()
-
-	value = value.Transfer(
-		interpreter,
-		locationRange,
-		address,
-		true,
-		nil,
-		map[atree.StorageID]struct{}{
-			v.StorageID(): {},
-		},
-	)
-
 	existingStorable, err := v.dictionary.Set(
 		StringAtreeValueComparator,
 		StringAtreeValueHashInput,
@@ -17333,6 +17320,33 @@ func (v *CompositeValue) SetMember(
 	}
 
 	return false
+}
+
+func (v *CompositeValue) SetMember(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	name string,
+	value Value,
+) bool {
+	address := v.StorageAddress()
+
+	value = value.Transfer(
+		interpreter,
+		locationRange,
+		address,
+		true,
+		nil,
+		map[atree.StorageID]struct{}{
+			v.StorageID(): {},
+		},
+	)
+
+	return v.SetMemberWithoutTransfer(
+		interpreter,
+		locationRange,
+		name,
+		value,
+	)
 }
 
 func (v *CompositeValue) String() string {
