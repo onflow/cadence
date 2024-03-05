@@ -21,8 +21,11 @@ package entitlements
 import (
 	"fmt"
 
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/migrations/statictypes"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -261,28 +264,61 @@ func ConvertValueToEntitlements(
 			return nil, err
 		}
 
-		if entitledElementType != nil {
-			var keysAndValues []interpreter.Value
+		if entitledElementType == nil {
+			return nil, nil
+		}
 
-			iterator := v.Iterator()
-			for {
-				keyValue, value := iterator.Next(inter)
-				if keyValue == nil {
-					break
-				}
+		newDictionary := interpreter.NewDictionaryValueWithAddress(
+			inter,
+			interpreter.EmptyLocationRange,
+			entitledElementType.(*interpreter.DictionaryStaticType),
+			v.GetOwner(),
+		)
 
-				keysAndValues = append(keysAndValues, keyValue)
-				keysAndValues = append(keysAndValues, value)
+		var keys []atree.Value
+
+		iterator := v.Iterator()
+
+		for {
+			key := iterator.NextKeyUnconverted()
+			if key == nil {
+				break
 			}
 
-			return interpreter.NewDictionaryValueWithAddress(
+			keys = append(keys, key)
+		}
+
+		storage := inter.Storage()
+
+		for _, key := range keys {
+			existingKeyStorable, existingValueStorable := v.RemoveWithoutTransfer(
 				inter,
 				interpreter.EmptyLocationRange,
-				entitledElementType.(*interpreter.DictionaryStaticType),
-				v.GetOwner(),
-				keysAndValues...,
-			), nil
+				key,
+			)
+			if existingKeyStorable == nil || existingValueStorable == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			newKey, err := existingKeyStorable.StoredValue(storage)
+			if err != nil {
+				panic(err)
+			}
+
+			newValue, err := existingValueStorable.StoredValue(storage)
+			if err != nil {
+				panic(err)
+			}
+
+			newDictionary.InsertWithoutTransfer(
+				inter,
+				interpreter.EmptyLocationRange,
+				newKey,
+				newValue,
+			)
 		}
+
+		return newDictionary, nil
 
 	case *interpreter.IDCapabilityValue:
 		borrowType := v.BorrowType
