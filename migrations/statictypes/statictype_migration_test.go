@@ -619,7 +619,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		// Store values
 
-		storageMapKey := interpreter.StringStorageMapKey("test_type_value")
+		storageMapKey := interpreter.StringStorageMapKey("test_value")
 		storageDomain := common.PathDomainStorage.Identifier()
 
 		value = value.Transfer(

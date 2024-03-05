@@ -1169,3 +1169,279 @@ func TestEmptyIntersectionTypeMigration(t *testing.T) {
 		migratedCompositeValue.QualifiedIdentifier,
 	)
 }
+
+// testContainerMigration
+
+type testContainerMigration struct{}
+
+var _ ValueMigration = testContainerMigration{}
+
+func (testContainerMigration) Name() string {
+	return "testContainerMigration"
+}
+
+func (testContainerMigration) Migrate(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	inter *interpreter.Interpreter,
+) (interpreter.Value, error) {
+
+	switch value := value.(type) {
+	case *interpreter.DictionaryValue:
+
+		newType := interpreter.NewDictionaryStaticType(nil,
+			interpreter.PrimitiveStaticTypeAnyStruct,
+			interpreter.PrimitiveStaticTypeAnyStruct,
+		)
+
+		return value.NewWithType(inter, emptyLocationRange, newType), nil
+
+	case *interpreter.ArrayValue:
+
+		newType := interpreter.NewVariableSizedStaticType(nil,
+			interpreter.PrimitiveStaticTypeAnyStruct,
+		)
+
+		return value.NewWithType(inter, emptyLocationRange, newType), nil
+	}
+
+	return nil, nil
+}
+
+func TestMigratingNestedContainers(t *testing.T) {
+	t.Parallel()
+
+	var testAddress = common.Address{0x42}
+
+	migrate := func(
+		t *testing.T,
+		storage *runtime.Storage,
+		inter *interpreter.Interpreter,
+		value interpreter.Value,
+	) interpreter.Value {
+
+		// Store values
+
+		storageMapKey := interpreter.StringStorageMapKey("test_value")
+		storageDomain := common.PathDomainStorage.Identifier()
+
+		value = value.Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address(testAddress),
+			false,
+			nil,
+			nil,
+		)
+
+		inter.WriteStored(
+			testAddress,
+			storageDomain,
+			storageMapKey,
+			value,
+		)
+
+		err := storage.Commit(inter, true)
+		require.NoError(t, err)
+
+		// Migrate
+
+		migration := NewStorageMigration(inter, storage)
+
+		reporter := newTestReporter()
+
+		migration.Migrate(
+			&AddressSliceIterator{
+				Addresses: []common.Address{
+					testAddress,
+				},
+			},
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				testContainerMigration{},
+			),
+		)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+
+		// Assert
+
+		require.Empty(t, reporter.errors)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			storageDomain,
+			false,
+		)
+		require.NotNil(t, storageMap)
+		require.Equal(t, uint64(1), storageMap.Count())
+
+		result := storageMap.ReadValue(nil, storageMapKey)
+		require.NotNil(t, value)
+
+		return result
+	}
+
+	t.Run("nested dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		locationRange := interpreter.EmptyLocationRange
+
+		ledger := NewTestLedger(nil, nil)
+		storage := runtime.NewStorage(ledger, nil)
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                     storage,
+				AtreeValueValidationEnabled: true,
+				// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+				AtreeStorageValidationEnabled: false,
+			},
+		)
+		require.NoError(t, err)
+
+		// {String: {String: Int}}
+
+		storedValue := interpreter.NewDictionaryValue(
+			inter,
+			locationRange,
+			interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeString,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+			),
+			interpreter.NewUnmeteredStringValue("key1"),
+			interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+				interpreter.NewUnmeteredStringValue("key2"),
+				interpreter.NewUnmeteredIntValueFromInt64(1234),
+			),
+		)
+
+		actual := migrate(t,
+			storage,
+			inter,
+			storedValue,
+		)
+
+		// {AnyStruct: AnyStruct} with {AnyStruct: AnyStruct}
+
+		expected := interpreter.NewDictionaryValue(
+			inter,
+			locationRange,
+			interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeAnyStruct,
+				interpreter.PrimitiveStaticTypeAnyStruct,
+			),
+			interpreter.NewUnmeteredStringValue("key1"),
+			interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeAnyStruct,
+					interpreter.PrimitiveStaticTypeAnyStruct,
+				),
+				interpreter.NewUnmeteredStringValue("key2"),
+				interpreter.NewUnmeteredIntValueFromInt64(1234),
+			),
+		)
+
+		utils.AssertValuesEqual(t, inter, expected, actual)
+	})
+
+	t.Run("nested arrays", func(t *testing.T) {
+		t.Parallel()
+
+		locationRange := interpreter.EmptyLocationRange
+
+		ledger := NewTestLedger(nil, nil)
+		storage := runtime.NewStorage(ledger, nil)
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                     storage,
+				AtreeValueValidationEnabled: true,
+				// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+				AtreeStorageValidationEnabled: false,
+			},
+		)
+		require.NoError(t, err)
+
+		// [[String]]
+
+		storedValue := interpreter.NewArrayValue(
+			inter,
+			locationRange,
+			interpreter.NewVariableSizedStaticType(
+				nil,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+				),
+			),
+			common.ZeroAddress,
+			interpreter.NewArrayValue(
+				inter,
+				locationRange,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("abc"),
+			),
+		)
+
+		actual := migrate(t,
+			storage,
+			inter,
+			storedValue,
+		)
+
+		// [AnyStruct] with [AnyStruct]
+
+		expected := interpreter.NewArrayValue(
+			inter,
+			locationRange,
+			interpreter.NewVariableSizedStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeAnyStruct,
+			),
+			common.ZeroAddress,
+			interpreter.NewArrayValue(
+				inter,
+				locationRange,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeAnyStruct,
+				),
+				common.ZeroAddress,
+				interpreter.NewUnmeteredStringValue("abc"),
+			),
+		)
+
+		utils.AssertValuesEqual(t, inter, expected, actual)
+	})
+
+}
