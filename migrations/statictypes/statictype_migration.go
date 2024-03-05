@@ -136,16 +136,10 @@ func (m *StaticTypeMigration) Migrate(
 			return
 		}
 
-		iterator := value.Iterator(inter, interpreter.EmptyLocationRange)
-
-		return interpreter.NewArrayValueWithIterator(
+		return value.NewWithType(
 			inter,
+			interpreter.EmptyLocationRange,
 			convertedElementType.(interpreter.ArrayStaticType),
-			value.GetOwner(),
-			uint64(value.Count()),
-			func() interpreter.Value {
-				return iterator.Next(inter, interpreter.EmptyLocationRange)
-			},
 		), nil
 
 	case *interpreter.DictionaryValue:

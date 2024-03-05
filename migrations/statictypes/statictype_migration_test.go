@@ -788,4 +788,105 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		utils.AssertValuesEqual(t, inter, expected, actual)
 	})
+
+	t.Run("nested arrays", func(t *testing.T) {
+		t.Parallel()
+
+		staticTypeMigration := NewStaticTypeMigration()
+
+		locationRange := interpreter.EmptyLocationRange
+
+		ledger := NewTestLedger(nil, nil)
+		storage := runtime.NewStorage(ledger, nil)
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                     storage,
+				AtreeValueValidationEnabled: true,
+				// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+				AtreeStorageValidationEnabled: false,
+			},
+		)
+		require.NoError(t, err)
+
+		storedValue := interpreter.NewArrayValue(
+			inter,
+			locationRange,
+			interpreter.NewVariableSizedStaticType(
+				nil,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+					),
+				),
+			),
+			common.ZeroAddress,
+			interpreter.NewArrayValue(
+				inter,
+				locationRange,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+					),
+				),
+				common.ZeroAddress,
+				interpreter.NewCapabilityValue(
+					nil,
+					interpreter.NewUnmeteredUInt64Value(1234),
+					interpreter.NewAddressValue(nil, common.ZeroAddress),
+					interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+				),
+			),
+		)
+
+		actual := migrate(t,
+			staticTypeMigration,
+			storage,
+			inter,
+			storedValue,
+		)
+
+		expected := interpreter.NewArrayValue(
+			inter,
+			locationRange,
+			interpreter.NewVariableSizedStaticType(
+				nil,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						unauthorizedAccountReferenceType,
+					),
+				),
+			),
+			common.ZeroAddress,
+			interpreter.NewArrayValue(
+				inter,
+				locationRange,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						unauthorizedAccountReferenceType,
+					),
+				),
+				common.ZeroAddress,
+				interpreter.NewCapabilityValue(
+					nil,
+					interpreter.NewUnmeteredUInt64Value(1234),
+					interpreter.NewAddressValue(nil, common.Address{}),
+					unauthorizedAccountReferenceType,
+				),
+			),
+		)
+
+		utils.AssertValuesEqual(t, inter, expected, actual)
+	})
+
 }

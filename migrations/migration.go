@@ -189,7 +189,9 @@ func (m *StorageMigration) MigrateNestedValue(
 		// Migrate array elements
 		count := array.Count()
 		for index := 0; index < count; index++ {
+
 			element := array.Get(m.interpreter, emptyLocationRange, index)
+
 			newElement := m.MigrateNestedValue(
 				storageKey,
 				storageMapKey,
@@ -197,14 +199,27 @@ func (m *StorageMigration) MigrateNestedValue(
 				valueMigrations,
 				reporter,
 			)
-			if newElement != nil {
-				array.Set(
-					m.interpreter,
-					emptyLocationRange,
-					index,
-					newElement,
-				)
+
+			if newElement == nil {
+				continue
 			}
+
+			existingStorable := array.RemoveWithoutTransfer(
+				m.interpreter,
+				emptyLocationRange,
+				index,
+			)
+
+			interpreter.StoredValue(m.interpreter, existingStorable, m.storage).
+				DeepRemove(m.interpreter)
+			m.interpreter.RemoveReferencedSlab(existingStorable)
+
+			array.InsertWithoutTransfer(
+				m.interpreter,
+				emptyLocationRange,
+				index,
+				newElement,
+			)
 		}
 
 	case *interpreter.CompositeValue:
