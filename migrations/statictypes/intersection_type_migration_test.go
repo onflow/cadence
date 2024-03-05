@@ -295,8 +295,8 @@ func TestIntersectionTypeMigration(t *testing.T) {
 		"non_intersection_interface": {
 			storedType: interpreter.NewInterfaceStaticType(
 				nil,
-				nil,
-				"Foo.Bar",
+				fooAddressLocation,
+				fooBarQualifiedIdentifier,
 				common.NewTypeIDFromQualifiedName(
 					nil,
 					fooAddressLocation,
@@ -308,8 +308,8 @@ func TestIntersectionTypeMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
-						"Foo.Bar",
+						fooAddressLocation,
+						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
 							fooAddressLocation,
@@ -325,8 +325,8 @@ func TestIntersectionTypeMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
-						"Foo.Bar",
+						fooAddressLocation,
+						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
 							fooAddressLocation,
@@ -340,8 +340,8 @@ func TestIntersectionTypeMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
-						"Foo.Bar",
+						fooAddressLocation,
+						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
 							fooAddressLocation,
@@ -355,7 +355,7 @@ func TestIntersectionTypeMigration(t *testing.T) {
 		"composite": {
 			storedType: interpreter.NewCompositeStaticType(
 				nil,
-				nil,
+				fooAddressLocation,
 				"Foo.Bar",
 				common.NewTypeIDFromQualifiedName(
 					nil,
@@ -377,7 +377,7 @@ func TestIntersectionTypeMigration(t *testing.T) {
 		utils.TestLocation,
 		&interpreter.Config{
 			Storage:                       storage,
-			AtreeValueValidationEnabled:   false,
+			AtreeValueValidationEnabled:   true,
 			AtreeStorageValidationEnabled: true,
 		},
 	)
@@ -503,7 +503,7 @@ func TestIntersectionTypeRehash(t *testing.T) {
 			utils.TestLocation,
 			&interpreter.Config{
 				Storage:                       storage,
-				AtreeValueValidationEnabled:   false,
+				AtreeValueValidationEnabled:   true,
 				AtreeStorageValidationEnabled: true,
 			},
 		)
@@ -659,7 +659,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			utils.TestLocation,
 			&interpreter.Config{
 				Storage:                       storage,
-				AtreeValueValidationEnabled:   false,
+				AtreeValueValidationEnabled:   true,
 				AtreeStorageValidationEnabled: true,
 			},
 		)
@@ -1014,7 +1014,7 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 			utils.TestLocation,
 			&interpreter.Config{
 				Storage:                       storage,
-				AtreeValueValidationEnabled:   false,
+				AtreeValueValidationEnabled:   true,
 				AtreeStorageValidationEnabled: true,
 			},
 		)
@@ -1411,7 +1411,7 @@ func TestIntersectionTypeMigrationWithTypeConverters(t *testing.T) {
 			utils.TestLocation,
 			&interpreter.Config{
 				Storage:                       storage,
-				AtreeValueValidationEnabled:   false,
+				AtreeValueValidationEnabled:   true,
 				AtreeStorageValidationEnabled: true,
 			},
 		)

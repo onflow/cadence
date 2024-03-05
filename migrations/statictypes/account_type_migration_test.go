@@ -236,7 +236,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
+						fooAddressLocation,
 						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
@@ -251,7 +251,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
+						fooAddressLocation,
 						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
@@ -267,7 +267,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				Types: []*interpreter.InterfaceStaticType{},
 				LegacyType: interpreter.NewCompositeStaticType(
 					nil,
-					nil,
+					fooAddressLocation,
 					fooBarQualifiedIdentifier,
 					common.NewTypeIDFromQualifiedName(
 						nil,
@@ -278,7 +278,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 			},
 			expectedType: interpreter.NewCompositeStaticType(
 				nil,
-				nil,
+				fooAddressLocation,
 				fooBarQualifiedIdentifier,
 				common.NewTypeIDFromQualifiedName(
 					nil,
@@ -341,7 +341,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 		"non_intersection_interface": {
 			storedType: interpreter.NewInterfaceStaticType(
 				nil,
-				nil,
+				fooAddressLocation,
 				fooBarQualifiedIdentifier,
 				common.NewTypeIDFromQualifiedName(
 					nil,
@@ -354,7 +354,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
+						fooAddressLocation,
 						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
@@ -371,7 +371,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
+						fooAddressLocation,
 						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
@@ -386,7 +386,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
+						fooAddressLocation,
 						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
@@ -400,7 +400,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 		"composite": {
 			storedType: interpreter.NewCompositeStaticType(
 				nil,
-				nil,
+				fooAddressLocation,
 				fooBarQualifiedIdentifier,
 				common.NewTypeIDFromQualifiedName(
 					nil,
@@ -447,7 +447,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				utils.TestLocation,
 				&interpreter.Config{
 					Storage:                       storage,
-					AtreeValueValidationEnabled:   false,
+					AtreeValueValidationEnabled:   true,
 					AtreeStorageValidationEnabled: true,
 				},
 			)
@@ -1142,7 +1142,8 @@ func TestAccountTypeRehash(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			&interpreter.Config{
-				Storage:                       storage,
+				Storage: storage,
+				// NOTE: atree value validation is disabled
 				AtreeValueValidationEnabled:   false,
 				AtreeStorageValidationEnabled: true,
 			},

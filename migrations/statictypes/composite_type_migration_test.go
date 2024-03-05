@@ -46,8 +46,8 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 	newCompositeType := func() *interpreter.CompositeStaticType {
 		return interpreter.NewCompositeStaticType(
 			nil,
-			nil,
-			"Bar",
+			fooAddressLocation,
+			fooBarQualifiedIdentifier,
 			common.NewTypeIDFromQualifiedName(
 				nil,
 				fooAddressLocation,
@@ -59,8 +59,8 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 	newInterfaceType := func() *interpreter.InterfaceStaticType {
 		return interpreter.NewInterfaceStaticType(
 			nil,
-			nil,
-			"Baz",
+			fooAddressLocation,
+			fooBazQualifiedIdentifier,
 			common.NewTypeIDFromQualifiedName(
 				nil,
 				fooAddressLocation,
@@ -124,7 +124,7 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 		utils.TestLocation,
 		&interpreter.Config{
 			Storage:                       storage,
-			AtreeValueValidationEnabled:   false,
+			AtreeValueValidationEnabled:   true,
 			AtreeStorageValidationEnabled: true,
 		},
 	)

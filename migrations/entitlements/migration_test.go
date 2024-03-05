@@ -3100,7 +3100,8 @@ func TestRehash(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			&interpreter.Config{
-				Storage:                       storage,
+				Storage: storage,
+				// NOTE: disabled, because encoded and decoded values are expected to not match
 				AtreeValueValidationEnabled:   false,
 				AtreeStorageValidationEnabled: true,
 			},

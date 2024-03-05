@@ -53,9 +53,10 @@ func TestStringNormalizingMigration(t *testing.T) {
 		nil,
 		utils.TestLocation,
 		&interpreter.Config{
-			Storage:                       storage,
+			Storage: storage,
+			// NOTE: disabled, because encoded and decoded values are expected to not match
 			AtreeValueValidationEnabled:   false,
-			AtreeStorageValidationEnabled: false,
+			AtreeStorageValidationEnabled: true,
 		},
 	)
 	require.NoError(t, err)
@@ -329,7 +330,8 @@ func TestStringValueRehash(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			&interpreter.Config{
-				Storage:                       storage,
+				Storage: storage,
+				// NOTE: disabled, because encoded and decoded values are expected to not match
 				AtreeValueValidationEnabled:   false,
 				AtreeStorageValidationEnabled: true,
 			},
@@ -470,7 +472,8 @@ func TestCharacterValueRehash(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			&interpreter.Config{
-				Storage:                       storage,
+				Storage: storage,
+				// NOTE: disabled, because encoded and decoded values are expected to not match
 				AtreeValueValidationEnabled:   false,
 				AtreeStorageValidationEnabled: true,
 			},

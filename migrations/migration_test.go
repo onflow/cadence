@@ -242,8 +242,8 @@ func TestMultipleMigrations(t *testing.T) {
 		utils.TestLocation,
 		&interpreter.Config{
 			Storage:                       storage,
-			AtreeValueValidationEnabled:   false,
-			AtreeStorageValidationEnabled: false,
+			AtreeValueValidationEnabled:   true,
+			AtreeStorageValidationEnabled: true,
 		},
 	)
 	require.NoError(t, err)
@@ -597,8 +597,8 @@ func TestMigrationError(t *testing.T) {
 		utils.TestLocation,
 		&interpreter.Config{
 			Storage:                       storage,
-			AtreeValueValidationEnabled:   false,
-			AtreeStorageValidationEnabled: false,
+			AtreeValueValidationEnabled:   true,
+			AtreeStorageValidationEnabled: true,
 		},
 	)
 	require.NoError(t, err)
