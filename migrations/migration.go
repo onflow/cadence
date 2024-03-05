@@ -303,23 +303,6 @@ func (m *StorageMigration) MigrateNestedValue(
 			if newKey == nil {
 				keyToSet = existingKey
 			} else {
-				// Key was migrated.
-				// Remove the old value at the old key.
-				// This old value will be inserted again with the new key, unless the value is also migrated.
-				existingKey = legacyKey(existingKey)
-				oldValue := dictionary.Remove(
-					m.interpreter,
-					emptyLocationRange,
-					existingKey,
-				)
-
-				if _, ok := oldValue.(*interpreter.SomeValue); !ok {
-					panic(errors.NewUnexpectedError(
-						"failed to remove old value for migrated key: %s",
-						existingKey,
-					))
-				}
-
 				keyToSet = newKey
 			}
 
@@ -330,7 +313,25 @@ func (m *StorageMigration) MigrateNestedValue(
 				valueToSet = newValue
 			}
 
-			dictionary.Insert(
+			existingKey = legacyKey(existingKey)
+			existingKeyStorable, existingValueStorable := dictionary.RemoveWithoutTransfer(
+				m.interpreter,
+				emptyLocationRange,
+				existingKey,
+			)
+
+			if existingKeyStorable == nil {
+				panic(errors.NewUnexpectedError(
+					"failed to remove old value for migrated key: %s",
+					existingKey,
+				))
+			}
+
+			interpreter.StoredValue(m.interpreter, existingValueStorable, m.storage).
+				DeepRemove(m.interpreter)
+			m.interpreter.RemoveReferencedSlab(existingValueStorable)
+
+			dictionary.InsertWithoutTransfer(
 				m.interpreter,
 				emptyLocationRange,
 				keyToSet,
