@@ -2260,8 +2260,12 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationR
 	v.Insert(interpreter, locationRange, index, value)
 }
 
-func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
-
+func (v *ArrayValue) InsertWithoutTransfer(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	index int,
+	element atree.Value,
+) {
 	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
@@ -2285,19 +2289,6 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 	common.UseMemory(interpreter, metaDataSlabs)
 	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
 
-	interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
-
-	element = element.Transfer(
-		interpreter,
-		locationRange,
-		v.array.Address(),
-		true,
-		nil,
-		map[atree.StorageID]struct{}{
-			v.StorageID(): {},
-		},
-	)
-
 	err := v.array.Insert(uint64(index), element)
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, locationRange)
@@ -2307,12 +2298,43 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 	interpreter.maybeValidateAtreeValue(v.array)
 }
 
+func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
+
+	address := v.array.Address()
+
+	preventTransfer := map[atree.StorageID]struct{}{
+		v.StorageID(): {},
+	}
+
+	element = element.Transfer(
+		interpreter,
+		locationRange,
+		address,
+		true,
+		nil,
+		preventTransfer,
+	)
+
+	interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
+
+	v.InsertWithoutTransfer(
+		interpreter,
+		locationRange,
+		index,
+		element,
+	)
+}
+
 func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt(locationRange)
 	return v.Remove(interpreter, locationRange, index)
 }
 
-func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
+func (v *ArrayValue) RemoveWithoutTransfer(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	index int,
+) atree.Storable {
 
 	interpreter.validateMutation(v.StorageID(), locationRange)
 
@@ -2334,6 +2356,12 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
+
+	return storable
+}
+
+func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
+	storable := v.RemoveWithoutTransfer(interpreter, locationRange, index)
 
 	value := StoredValue(interpreter, storable, interpreter.Storage())
 
