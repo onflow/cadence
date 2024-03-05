@@ -3345,7 +3345,7 @@ func TestCheckInvalidResourceInterfaceUseAsType(t *testing.T) {
 }
 
 // TestCheckResourceInterfaceUseAsType test if a resource
-// is a subtype of a intersection AnyResource type.
+// is a subtype of an intersection AnyResource type.
 func TestCheckResourceInterfaceUseAsType(t *testing.T) {
 
 	t.Parallel()

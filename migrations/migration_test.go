@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -42,10 +43,10 @@ type testReporter struct {
 		interpreter.StorageKey
 		interpreter.StorageMapKey
 	}][]string
-	errored map[struct {
+	errors map[struct {
 		interpreter.StorageKey
 		interpreter.StorageMapKey
-	}][]string
+	}][]error
 }
 
 var _ Reporter = &testReporter{}
@@ -56,10 +57,10 @@ func newTestReporter() *testReporter {
 			interpreter.StorageKey
 			interpreter.StorageMapKey
 		}][]string{},
-		errored: map[struct {
+		errors: map[struct {
 			interpreter.StorageKey
 			interpreter.StorageMapKey
-		}][]string{},
+		}][]error{},
 	}
 }
 
@@ -85,8 +86,8 @@ func (t *testReporter) Migrated(
 func (t *testReporter) Error(
 	storageKey interpreter.StorageKey,
 	storageMapKey interpreter.StorageMapKey,
-	migration string,
-	_ error,
+	_ string,
+	err error,
 ) {
 	key := struct {
 		interpreter.StorageKey
@@ -96,9 +97,9 @@ func (t *testReporter) Error(
 		StorageMapKey: storageMapKey,
 	}
 
-	t.errored[key] = append(
-		t.errored[key],
-		migration,
+	t.errors[key] = append(
+		t.errors[key],
+		err,
 	)
 }
 
@@ -520,7 +521,7 @@ func TestMultipleMigrations(t *testing.T) {
 
 	// Assert
 
-	require.Empty(t, reporter.errored)
+	require.Empty(t, reporter.errors)
 
 	err = storage.CheckHealth()
 	require.NoError(t, err)
@@ -669,16 +670,18 @@ func TestMigrationError(t *testing.T) {
 		map[struct {
 			interpreter.StorageKey
 			interpreter.StorageMapKey
-		}][]string{
+		}][]error{
 			{
 				StorageKey: interpreter.StorageKey{
 					Address: account,
 					Key:     pathDomain.Identifier(),
 				},
 				StorageMapKey: interpreter.StringStorageMapKey("int8_value"),
-			}: {"testInt8Migration"},
+			}: {
+				errors.New("error occurred while migrating int8"),
+			},
 		},
-		reporter.errored,
+		reporter.errors,
 	)
 
 	err = storage.CheckHealth()
@@ -726,7 +729,7 @@ func TestMigrationError(t *testing.T) {
 		map[struct {
 			interpreter.StorageKey
 			interpreter.StorageMapKey
-		}][]string{
+		}][]error{
 			{
 				StorageKey: interpreter.StorageKey{
 					Address: account,
@@ -734,10 +737,10 @@ func TestMigrationError(t *testing.T) {
 				},
 				StorageMapKey: interpreter.StringStorageMapKey("int8_value"),
 			}: {
-				"testInt8Migration",
+				errors.New("error occurred while migrating int8"),
 			},
 		},
-		reporter.errored,
+		reporter.errors,
 	)
 }
 
@@ -828,13 +831,14 @@ func TestCapConMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
-	err = storage.CheckHealth()
-	require.NoError(t, err)
-
 	// Assert
 
-	assert.Empty(t, reporter.errored)
 	assert.Len(t, reporter.migrated, 2)
+
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	storageMap = storage.GetStorageMap(
 		testAddress,
@@ -947,13 +951,12 @@ func TestContractMigration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Assert
+	assert.Len(t, reporter.migrated, 1)
 
-	require.Empty(t, reporter.errored)
+	require.Empty(t, reporter.errors)
 
 	err = storage.CheckHealth()
 	require.NoError(t, err)
-
-	assert.Len(t, reporter.migrated, 1)
 
 	value, err := rt.ExecuteScript(
 		runtime.Script{
@@ -976,5 +979,193 @@ func TestContractMigration(t *testing.T) {
 	require.Equal(t,
 		cadence.String("updated_bar"),
 		value,
+	)
+}
+
+// testCompositeValueMigration
+
+type testCompositeValueMigration struct {
+}
+
+var _ ValueMigration = testCompositeValueMigration{}
+
+func (testCompositeValueMigration) Name() string {
+	return "testCompositeValueMigration"
+}
+
+func (m testCompositeValueMigration) Migrate(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	inter *interpreter.Interpreter,
+) (
+	interpreter.Value,
+	error,
+) {
+	compositeValue, ok := value.(*interpreter.CompositeValue)
+	if !ok {
+		return nil, nil
+	}
+
+	return interpreter.NewCompositeValue(
+		inter,
+		emptyLocationRange,
+		utils.TestLocation,
+		"S2",
+		common.CompositeKindStructure,
+		nil,
+		common.Address(compositeValue.StorageAddress()),
+	), nil
+}
+
+func TestEmptyIntersectionTypeMigration(t *testing.T) {
+
+	t.Parallel()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
+	rt := NewTestInterpreterRuntime()
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+	}
+
+	// Prepare
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Location:  utils.TestLocation,
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	storageMap := storage.GetStorageMap(
+		testAddress,
+		common.PathDomainStorage.Identifier(),
+		true,
+	)
+
+	elaboration := sema.NewElaboration(nil)
+
+	const s1QualifiedIdentifier = "S1"
+	const s2QualifiedIdentifier = "S2"
+
+	elaboration.SetCompositeType(
+		utils.TestLocation.TypeID(nil, s1QualifiedIdentifier),
+		&sema.CompositeType{
+			Location:   utils.TestLocation,
+			Members:    &sema.StringMemberOrderedMap{},
+			Identifier: s1QualifiedIdentifier,
+			Kind:       common.CompositeKindStructure,
+		},
+	)
+
+	elaboration.SetCompositeType(
+		utils.TestLocation.TypeID(nil, s2QualifiedIdentifier),
+		&sema.CompositeType{
+			Location:   utils.TestLocation,
+			Members:    &sema.StringMemberOrderedMap{},
+			Identifier: s2QualifiedIdentifier,
+			Kind:       common.CompositeKindStructure,
+		},
+	)
+
+	compositeValue := interpreter.NewCompositeValue(
+		inter,
+		emptyLocationRange,
+		utils.TestLocation,
+		s1QualifiedIdentifier,
+		common.CompositeKindStructure,
+		nil,
+		testAddress,
+	)
+
+	inter.Program = &interpreter.Program{
+		Elaboration: elaboration,
+	}
+
+	// NOTE: create an empty intersection type with a legacy type: AnyStruct{}
+	emptyIntersectionType := interpreter.NewIntersectionStaticType(
+		nil,
+		nil,
+	)
+	emptyIntersectionType.LegacyType = interpreter.PrimitiveStaticTypeAnyStruct
+
+	storageMapKey := interpreter.StringStorageMapKey("test")
+
+	dictionaryKey := interpreter.NewUnmeteredStringValue("foo")
+
+	dictionaryValue := interpreter.NewDictionaryValueWithAddress(
+		inter,
+		emptyLocationRange,
+		interpreter.NewDictionaryStaticType(
+			nil,
+			interpreter.PrimitiveStaticTypeString,
+			emptyIntersectionType,
+		),
+		testAddress,
+	)
+
+	dictionaryValue.Insert(
+		inter,
+		emptyLocationRange,
+		dictionaryKey,
+		compositeValue,
+	)
+
+	storageMap.WriteValue(
+		inter,
+		storageMapKey,
+		dictionaryValue,
+	)
+
+	// Migrate
+
+	reporter := newTestReporter()
+
+	migration := NewStorageMigration(inter, storage)
+
+	migration.Migrate(
+		&AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testCompositeValueMigration{},
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Len(t, reporter.errors, 0)
+	assert.Len(t, reporter.migrated, 1)
+
+	storageMap = storage.GetStorageMap(
+		testAddress,
+		common.PathDomainStorage.Identifier(),
+		false,
+	)
+
+	assert.Equal(t, uint64(1), storageMap.Count())
+
+	migratedValue := storageMap.ReadValue(nil, storageMapKey)
+
+	require.IsType(t, &interpreter.DictionaryValue{}, migratedValue)
+	migratedDictionaryValue := migratedValue.(*interpreter.DictionaryValue)
+
+	migratedChildValue, ok := migratedDictionaryValue.Get(inter, emptyLocationRange, dictionaryKey)
+	require.True(t, ok)
+
+	require.IsType(t, &interpreter.CompositeValue{}, migratedChildValue)
+	migratedCompositeValue := migratedChildValue.(*interpreter.CompositeValue)
+
+	require.Equal(
+		t,
+		s2QualifiedIdentifier,
+		migratedCompositeValue.QualifiedIdentifier,
 	)
 }

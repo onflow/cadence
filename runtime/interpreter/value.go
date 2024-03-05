@@ -2417,7 +2417,7 @@ func (v *ArrayValue) Contains(
 	return AsBoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(interpreter, int64(v.Count()))
@@ -2484,6 +2484,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				v.SemaType(interpreter).ElementType(false),
 			),
 			func(invocation Invocation) Value {
+				inter := invocation.Interpreter
+				locationRange := invocation.LocationRange
+
 				indexValue, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -2493,8 +2496,8 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				element := invocation.Arguments[1]
 
 				v.Insert(
-					invocation.Interpreter,
-					invocation.LocationRange,
+					inter,
+					locationRange,
 					index,
 					element,
 				)
@@ -2509,6 +2512,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				v.SemaType(interpreter).ElementType(false),
 			),
 			func(invocation Invocation) Value {
+				inter := invocation.Interpreter
+				locationRange := invocation.LocationRange
+
 				indexValue, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -2516,8 +2522,8 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				index := indexValue.ToInt(locationRange)
 
 				return v.Remove(
-					invocation.Interpreter,
-					invocation.LocationRange,
+					inter,
+					locationRange,
 					index,
 				)
 			},
@@ -20005,7 +20011,7 @@ func (v *SomeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences
 	return v.value.MeteredString(memoryGauge, seenReferences)
 }
 
-func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		return NewHostFunctionValue(
@@ -21141,7 +21147,7 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -21150,9 +21156,12 @@ func (v AddressValue) GetMember(interpreter *Interpreter, locationRange Location
 			sema.ToStringFunctionType,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
+				locationRange := invocation.LocationRange
+
 				memoryUsage := common.NewStringMemoryUsage(
 					safeMul(common.AddressLength, 2, locationRange),
 				)
+
 				return NewStringValue(
 					interpreter,
 					memoryUsage,
