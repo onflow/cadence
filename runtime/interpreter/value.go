@@ -18659,11 +18659,16 @@ type DictionaryIterator struct {
 	mapIterator *atree.MapIterator
 }
 
-func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
+func (i DictionaryIterator) NextKeyUnconverted() atree.Value {
 	atreeValue, err := i.mapIterator.NextKey()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+	return atreeValue
+}
+
+func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
+	atreeValue := i.NextKeyUnconverted()
 	if atreeValue == nil {
 		return nil
 	}
@@ -19149,11 +19154,14 @@ func (v *DictionaryValue) RemoveKey(
 	return v.Remove(interpreter, locationRange, key)
 }
 
-func (v *DictionaryValue) Remove(
+func (v *DictionaryValue) RemoveWithoutTransfer(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	keyValue Value,
-) OptionalValue {
+	keyValue atree.Value,
+) (
+	existingKeyStorable,
+	existingValueStorable atree.Storable,
+) {
 
 	interpreter.validateMutation(v.StorageID(), locationRange)
 
@@ -19162,7 +19170,8 @@ func (v *DictionaryValue) Remove(
 
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
-	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
+	var err error
+	existingKeyStorable, existingValueStorable, err = v.dictionary.Remove(
 		valueComparator,
 		hashInputProvider,
 		keyValue,
@@ -19170,11 +19179,26 @@ func (v *DictionaryValue) Remove(
 	if err != nil {
 		var keyNotFoundError *atree.KeyNotFoundError
 		if goerrors.As(err, &keyNotFoundError) {
-			return NilOptionalValue
+			return nil, nil
 		}
 		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+
+	return existingKeyStorable, existingValueStorable
+}
+
+func (v *DictionaryValue) Remove(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	keyValue Value,
+) OptionalValue {
+
+	existingKeyStorable, existingValueStorable := v.RemoveWithoutTransfer(interpreter, locationRange, keyValue)
+
+	if existingKeyStorable == nil {
+		return NilOptionalValue
+	}
 
 	storage := interpreter.Storage()
 
@@ -19207,11 +19231,11 @@ func (v *DictionaryValue) InsertKey(
 	v.SetKey(interpreter, locationRange, key, value)
 }
 
-func (v *DictionaryValue) Insert(
+func (v *DictionaryValue) InsertWithoutTransfer(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	keyValue, value Value,
-) OptionalValue {
+	keyValue, value atree.Value,
+) (existingValueStorable atree.Storable) {
 
 	interpreter.validateMutation(v.StorageID(), locationRange)
 
@@ -19221,8 +19245,31 @@ func (v *DictionaryValue) Insert(
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
 
-	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
-	interpreter.checkContainerMutation(v.Type.ValueType, value, locationRange)
+	valueComparator := newValueComparator(interpreter, locationRange)
+	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+
+	// atree only calls Storable() on keyValue if needed,
+	// i.e., if the key is a new key
+	var err error
+	existingValueStorable, err = v.dictionary.Set(
+		valueComparator,
+		hashInputProvider,
+		keyValue,
+		value,
+	)
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	interpreter.maybeValidateAtreeValue(v.dictionary)
+
+	return existingValueStorable
+}
+
+func (v *DictionaryValue) Insert(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	keyValue, value Value,
+) OptionalValue {
 
 	address := v.dictionary.Address()
 
@@ -19248,21 +19295,10 @@ func (v *DictionaryValue) Insert(
 		preventTransfer,
 	)
 
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
+	interpreter.checkContainerMutation(v.Type.ValueType, value, locationRange)
 
-	// atree only calls Storable() on keyValue if needed,
-	// i.e., if the key is a new key
-	existingValueStorable, err := v.dictionary.Set(
-		valueComparator,
-		hashInputProvider,
-		keyValue,
-		value,
-	)
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-	interpreter.maybeValidateAtreeValue(v.dictionary)
+	existingValueStorable := v.InsertWithoutTransfer(interpreter, locationRange, keyValue, value)
 
 	if existingValueStorable == nil {
 		return NilOptionalValue
