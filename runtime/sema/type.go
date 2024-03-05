@@ -8398,13 +8398,14 @@ func (t *IntersectionType) initializeMemberResolvers() {
 	})
 }
 
-func (t *IntersectionType) SupportedEntitlements() (set *EntitlementOrderedSet) {
+func (t *IntersectionType) SupportedEntitlements() *EntitlementOrderedSet {
 	t.supportedEntitlementsOnce.Do(func() {
 		// an intersection type supports all the entitlements of its interfaces
-		set = orderedmap.New[EntitlementOrderedSet](t.EffectiveIntersectionSet().Len())
+		set := orderedmap.New[EntitlementOrderedSet](t.EffectiveIntersectionSet().Len())
 		t.EffectiveIntersectionSet().ForEach(func(it *InterfaceType) {
 			set.SetAll(it.SupportedEntitlements())
 		})
+		t.supportedEntitlements = set
 	})
 
 	return t.supportedEntitlements
