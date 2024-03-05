@@ -18574,6 +18574,64 @@ func newDictionaryValueFromAtreeMap(
 	}
 }
 
+func (v *DictionaryValue) NewWithType(
+	inter *Interpreter,
+	locationRange LocationRange,
+	newType *DictionaryStaticType,
+) *DictionaryValue {
+	newDictionary := NewDictionaryValueWithAddress(
+		inter,
+		locationRange,
+		newType,
+		v.GetOwner(),
+	)
+
+	var keys []atree.Value
+
+	iterator := v.Iterator()
+
+	for {
+		key := iterator.NextKeyUnconverted()
+		if key == nil {
+			break
+		}
+
+		keys = append(keys, key)
+	}
+
+	storage := inter.Storage()
+
+	for _, key := range keys {
+		existingKeyStorable, existingValueStorable := v.RemoveWithoutTransfer(
+			inter,
+			locationRange,
+			key,
+		)
+		if existingKeyStorable == nil || existingValueStorable == nil {
+			panic(errors.NewUnreachableError())
+		}
+
+		newKey, err := existingKeyStorable.StoredValue(storage)
+		if err != nil {
+			panic(err)
+		}
+
+		newValue, err := existingValueStorable.StoredValue(storage)
+		if err != nil {
+			panic(err)
+		}
+
+		newDictionary.InsertWithoutTransfer(
+			inter,
+			locationRange,
+			newKey,
+			newValue,
+		)
+	}
+
+	return newDictionary
+}
+
 var _ Value = &DictionaryValue{}
 var _ atree.Value = &DictionaryValue{}
 var _ EquatableValue = &DictionaryValue{}

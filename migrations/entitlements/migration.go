@@ -21,11 +21,8 @@ package entitlements
 import (
 	"fmt"
 
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/migrations/statictypes"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -268,57 +265,11 @@ func ConvertValueToEntitlements(
 			return nil, nil
 		}
 
-		newDictionary := interpreter.NewDictionaryValueWithAddress(
+		return v.NewWithType(
 			inter,
 			interpreter.EmptyLocationRange,
 			entitledElementType.(*interpreter.DictionaryStaticType),
-			v.GetOwner(),
-		)
-
-		var keys []atree.Value
-
-		iterator := v.Iterator()
-
-		for {
-			key := iterator.NextKeyUnconverted()
-			if key == nil {
-				break
-			}
-
-			keys = append(keys, key)
-		}
-
-		storage := inter.Storage()
-
-		for _, key := range keys {
-			existingKeyStorable, existingValueStorable := v.RemoveWithoutTransfer(
-				inter,
-				interpreter.EmptyLocationRange,
-				key,
-			)
-			if existingKeyStorable == nil || existingValueStorable == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			newKey, err := existingKeyStorable.StoredValue(storage)
-			if err != nil {
-				panic(err)
-			}
-
-			newValue, err := existingValueStorable.StoredValue(storage)
-			if err != nil {
-				panic(err)
-			}
-
-			newDictionary.InsertWithoutTransfer(
-				inter,
-				interpreter.EmptyLocationRange,
-				newKey,
-				newValue,
-			)
-		}
-
-		return newDictionary, nil
+		), nil
 
 	case *interpreter.IDCapabilityValue:
 		borrowType := v.BorrowType
