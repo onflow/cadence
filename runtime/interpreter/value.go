@@ -3518,6 +3518,57 @@ func (v *ArrayValue) ToConstantSized(
 	)
 }
 
+func (v *ArrayValue) NewWithType(
+	inter *Interpreter,
+	locationRange LocationRange,
+	newType ArrayStaticType,
+) *ArrayValue {
+
+	newArray := NewArrayValue(
+		inter,
+		locationRange,
+		newType,
+		v.GetOwner(),
+	)
+
+	storage := inter.Storage()
+
+	count := v.Count()
+
+	for index := 0; index < count; index++ {
+
+		storable := v.RemoveWithoutTransfer(
+			inter,
+			locationRange,
+			// NOTE: always removing first element,
+			// until original array is empty
+			0,
+		)
+
+		if storable == nil {
+			panic(errors.NewUnreachableError())
+		}
+
+		if v.Count() != count-index-1 {
+			panic(errors.NewUnreachableError())
+		}
+
+		newValue, err := storable.StoredValue(storage)
+		if err != nil {
+			panic(err)
+		}
+
+		newArray.InsertWithoutTransfer(
+			inter,
+			locationRange,
+			index,
+			newValue,
+		)
+	}
+
+	return newArray
+}
+
 // NumberValue
 type NumberValue interface {
 	ComparableValue
@@ -18607,6 +18658,7 @@ func (v *DictionaryValue) NewWithType(
 	locationRange LocationRange,
 	newType *DictionaryStaticType,
 ) *DictionaryValue {
+
 	newDictionary := NewDictionaryValueWithAddress(
 		inter,
 		locationRange,

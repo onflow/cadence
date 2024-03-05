@@ -4231,3 +4231,42 @@ func TestDictionaryValue_NewWithType(t *testing.T) {
 			),
 	)
 }
+
+func TestArrayValue_NewWithType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	address := common.Address{0x1}
+
+	newArrayValue := func(arrayType ArrayStaticType) *ArrayValue {
+		return NewArrayValue(
+			inter,
+			EmptyLocationRange,
+			arrayType,
+			address,
+			NewUnmeteredStringValue("a"),
+			NewUnmeteredStringValue("b"),
+			NewUnmeteredStringValue("c"),
+		)
+	}
+
+	oldType := &VariableSizedStaticType{
+		Type: PrimitiveStaticTypeAnyStruct,
+	}
+
+	newType := &VariableSizedStaticType{
+		Type: PrimitiveStaticTypeString,
+	}
+
+	require.True(t,
+		newArrayValue(oldType).
+			NewWithType(inter, EmptyLocationRange, newType).
+			Equal(
+				inter,
+				EmptyLocationRange,
+				newArrayValue(newType),
+			),
+	)
+}
