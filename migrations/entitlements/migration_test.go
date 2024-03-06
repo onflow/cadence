@@ -3029,10 +3029,7 @@ type testReporter struct {
 		interpreter.StorageKey
 		interpreter.StorageMapKey
 	}]struct{}
-	errors map[struct {
-		interpreter.StorageKey
-		interpreter.StorageMapKey
-	}][]error
+	errors []error
 }
 
 func newTestReporter() *testReporter {
@@ -3041,10 +3038,6 @@ func newTestReporter() *testReporter {
 			interpreter.StorageKey
 			interpreter.StorageMapKey
 		}]struct{}{},
-		errors: map[struct {
-			interpreter.StorageKey
-			interpreter.StorageMapKey
-		}][]error{},
 	}
 }
 
@@ -3062,24 +3055,8 @@ func (t *testReporter) Migrated(
 	}] = struct{}{}
 }
 
-func (t *testReporter) Error(
-	storageKey interpreter.StorageKey,
-	storageMapKey interpreter.StorageMapKey,
-	_ string,
-	err error,
-) {
-	key := struct {
-		interpreter.StorageKey
-		interpreter.StorageMapKey
-	}{
-		StorageKey:    storageKey,
-		StorageMapKey: storageMapKey,
-	}
-
-	t.errors[key] = append(
-		t.errors[key],
-		err,
-	)
+func (t *testReporter) Error(err error) {
+	t.errors = append(t.errors, err)
 }
 
 func TestRehash(t *testing.T) {

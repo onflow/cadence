@@ -19,7 +19,8 @@
 package migrations
 
 import (
-	goRuntime "runtime"
+	"fmt"
+	"runtime/debug"
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
@@ -143,28 +144,28 @@ func (m *StorageMigration) MigrateNestedValue(
 ) (migratedValue interpreter.Value) {
 
 	defer func() {
-		//	Here it catches the panics that may occur at the framework level,
+		// Here it catches the panics that may occur at the framework level,
 		// even before going to each individual migration. e.g: iterating the dictionary for elements.
 		//
 		// There is a similar recovery at the `StorageMigration.migrate()` method,
 		// which handles panics from each individual migrations (e.g: capcon migration, static type migration, etc.).
 
 		if r := recover(); r != nil {
-			switch r := r.(type) {
-			case goRuntime.Error:
-				panic(r)
+			err, ok := r.(error)
+			if !ok {
+				err = fmt.Errorf("%v", r)
+			}
 
-			case error:
-				if reporter != nil {
-					reporter.Error(
-						storageKey,
-						storageMapKey,
-						"StorageMigration",
-						r,
-					)
-				}
-			default:
-				panic(r)
+			err = StorageMigrationError{
+				StorageKey:    storageKey,
+				StorageMapKey: storageMapKey,
+				Migration:     "StorageMigration",
+				Err:           err,
+				Stack:         debug.Stack(),
+			}
+
+			if reporter != nil {
+				reporter.Error(err)
 			}
 		}
 	}()
@@ -395,12 +396,16 @@ func (m *StorageMigration) MigrateNestedValue(
 
 		if err != nil {
 			if reporter != nil {
-				reporter.Error(
-					storageKey,
-					storageMapKey,
-					migration.Name(),
-					err,
-				)
+				if _, ok := err.(StorageMigrationError); !ok {
+					err = StorageMigrationError{
+						StorageKey:    storageKey,
+						StorageMapKey: storageMapKey,
+						Migration:     migration.Name(),
+						Err:           err,
+					}
+				}
+
+				reporter.Error(err)
 			}
 			continue
 		}
@@ -441,12 +446,34 @@ func (m *StorageMigration) MigrateNestedValue(
 
 }
 
+type StorageMigrationError struct {
+	StorageKey    interpreter.StorageKey
+	StorageMapKey interpreter.StorageMapKey
+	Migration     string
+	Err           error
+	Stack         []byte
+}
+
+func (e StorageMigrationError) Error() string {
+	return fmt.Sprintf(
+		"failed to perform migration %s for %s, %s: %s\n%s",
+		e.Migration,
+		e.StorageKey,
+		e.StorageMapKey,
+		e.Err.Error(),
+		e.Stack,
+	)
+}
+
 func (m *StorageMigration) migrate(
 	migration ValueMigration,
 	storageKey interpreter.StorageKey,
 	storageMapKey interpreter.StorageMapKey,
 	value interpreter.Value,
-) (converted interpreter.Value, err error) {
+) (
+	converted interpreter.Value,
+	err error,
+) {
 
 	// Handles panics from each individual migrations (e.g: capcon migration, static type migration, etc.).
 	// So even if one migration panics, others could still run (i.e: panics are caught inside the loop).
@@ -455,15 +482,18 @@ func (m *StorageMigration) migrate(
 	// They are caught at `StorageMigration.MigrateNestedValue()`.
 	defer func() {
 		if r := recover(); r != nil {
-			switch r := r.(type) {
-			case goRuntime.Error:
-				panic(r)
+			var ok bool
+			err, ok = r.(error)
+			if !ok {
+				err = fmt.Errorf("%v", r)
+			}
 
-			case error:
-				err = r
-
-			default:
-				panic(r)
+			err = StorageMigrationError{
+				StorageKey:    storageKey,
+				StorageMapKey: storageMapKey,
+				Migration:     migration.Name(),
+				Err:           err,
+				Stack:         debug.Stack(),
 			}
 		}
 	}()

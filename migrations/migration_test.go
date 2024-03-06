@@ -43,10 +43,7 @@ type testReporter struct {
 		interpreter.StorageKey
 		interpreter.StorageMapKey
 	}][]string
-	errors map[struct {
-		interpreter.StorageKey
-		interpreter.StorageMapKey
-	}][]error
+	errors []error
 }
 
 var _ Reporter = &testReporter{}
@@ -57,10 +54,6 @@ func newTestReporter() *testReporter {
 			interpreter.StorageKey
 			interpreter.StorageMapKey
 		}][]string{},
-		errors: map[struct {
-			interpreter.StorageKey
-			interpreter.StorageMapKey
-		}][]error{},
 	}
 }
 
@@ -83,24 +76,8 @@ func (t *testReporter) Migrated(
 	)
 }
 
-func (t *testReporter) Error(
-	storageKey interpreter.StorageKey,
-	storageMapKey interpreter.StorageMapKey,
-	_ string,
-	err error,
-) {
-	key := struct {
-		interpreter.StorageKey
-		interpreter.StorageMapKey
-	}{
-		StorageKey:    storageKey,
-		StorageMapKey: storageMapKey,
-	}
-
-	t.errors[key] = append(
-		t.errors[key],
-		err,
-	)
+func (t *testReporter) Error(err error) {
+	t.errors = append(t.errors, err)
 }
 
 // testStringMigration
@@ -726,18 +703,15 @@ func TestMigrationError(t *testing.T) {
 	)
 
 	require.Equal(t,
-		map[struct {
-			interpreter.StorageKey
-			interpreter.StorageMapKey
-		}][]error{
-			{
+		[]error{
+			StorageMigrationError{
 				StorageKey: interpreter.StorageKey{
 					Address: account,
 					Key:     pathDomain.Identifier(),
 				},
 				StorageMapKey: interpreter.StringStorageMapKey("int8_value"),
-			}: {
-				errors.New("error occurred while migrating int8"),
+				Migration:     "testInt8Migration",
+				Err:           errors.New("error occurred while migrating int8"),
 			},
 		},
 		reporter.errors,
@@ -1654,7 +1628,7 @@ func (m testPanicMigration) Migrate(
 func TestMigrationPanic(t *testing.T) {
 	t.Parallel()
 
-	account := common.Address{0x42}
+	testAddress := common.Address{0x42}
 
 	ledger := NewTestLedger(nil, nil)
 	storage := runtime.NewStorage(ledger, nil)
@@ -1677,7 +1651,7 @@ func TestMigrationPanic(t *testing.T) {
 	storageMapKey := interpreter.StringStorageMapKey("test_value")
 
 	inter.WriteStored(
-		account,
+		testAddress,
 		storagePathDomain,
 		storageMapKey,
 		interpreter.NewUnmeteredUInt8Value(42),
@@ -1692,24 +1666,50 @@ func TestMigrationPanic(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migrator := migration.NewValueMigrationsPathMigrator(
-		reporter,
-		testPanicMigration{},
+	migration.Migrate(
+		&AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testPanicMigration{},
+		),
 	)
 
-	addressIterator := &AddressSliceIterator{
-		Addresses: []common.Address{
-			account,
-		},
-	}
+	err = migration.Commit()
+	require.NoError(t, err)
 
-	assert.PanicsWithError(t,
-		"runtime error: index out of range [0] with length 0",
-		func() {
-			migration.Migrate(
-				addressIterator,
-				migrator,
-			)
+	// Assert
+
+	assert.Len(t, reporter.errors, 1)
+
+	var migrationError StorageMigrationError
+	require.ErrorAs(t, reporter.errors[0], &migrationError)
+
+	assert.Equal(
+		t,
+		interpreter.StorageKey{
+			Address: testAddress,
+			Key:     storagePathDomain,
 		},
+		migrationError.StorageKey,
 	)
+	assert.Equal(
+		t,
+		storageMapKey,
+		migrationError.StorageMapKey,
+	)
+	assert.Equal(
+		t,
+		"testPanicMigration",
+		migrationError.Migration,
+	)
+	assert.ErrorContains(
+		t,
+		migrationError,
+		"index out of range",
+	)
+	assert.NotEmpty(t, migrationError.Stack)
 }

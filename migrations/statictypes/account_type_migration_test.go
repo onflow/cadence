@@ -69,12 +69,7 @@ func (t *testReporter) Migrated(
 	t.migrated[key] = struct{}{}
 }
 
-func (t *testReporter) Error(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	_ string,
-	err error,
-) {
+func (t *testReporter) Error(err error) {
 	t.errors = append(t.errors, err)
 }
 
