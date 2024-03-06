@@ -643,19 +643,16 @@ func TestMigrationError(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		map[struct {
-			interpreter.StorageKey
-			interpreter.StorageMapKey
-		}][]error{
-			{
+	require.Equal(t,
+		[]error{
+			StorageMigrationError{
 				StorageKey: interpreter.StorageKey{
 					Address: account,
 					Key:     pathDomain.Identifier(),
 				},
 				StorageMapKey: interpreter.StringStorageMapKey("int8_value"),
-			}: {
-				errors.New("error occurred while migrating int8"),
+				Migration:     "testInt8Migration",
+				Err:           errors.New("error occurred while migrating int8"),
 			},
 		},
 		reporter.errors,
@@ -700,21 +697,6 @@ func TestMigrationError(t *testing.T) {
 			},
 		},
 		reporter.migrated,
-	)
-
-	require.Equal(t,
-		[]error{
-			StorageMigrationError{
-				StorageKey: interpreter.StorageKey{
-					Address: account,
-					Key:     pathDomain.Identifier(),
-				},
-				StorageMapKey: interpreter.StringStorageMapKey("int8_value"),
-				Migration:     "testInt8Migration",
-				Err:           errors.New("error occurred while migrating int8"),
-			},
-		},
-		reporter.errors,
 	)
 }
 
