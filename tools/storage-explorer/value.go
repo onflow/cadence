@@ -25,6 +25,7 @@ import (
 	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 type Value interface {
@@ -177,14 +178,36 @@ func (v SomeValue) MarshalJSON() ([]byte, error) {
 
 // prepareValue
 
-var pathLinkValueFieldNames = []string{"targetPath", "type"}
-var publishedValueFieldNames = []string{"recipient", "type"}
+var pathLinkValueFieldNames = []string{
+	"targetPath",
+	"type",
+}
 
-// TODO:
-//   - AccountCapabilityControllerValue
-//   - StorageCapabilityControllerValue
-//   - PathCapabilityValue
-//   - IDCapabilityValue
+var publishedValueFieldNames = []string{
+	"recipient",
+	"type",
+}
+
+var pathCapabilityValueFieldNames = []string{
+	"address",
+	"path",
+}
+
+var idCapabilityValueFieldNames = []string{
+	sema.CapabilityTypeAddressFieldName,
+	sema.CapabilityTypeIDFieldName,
+}
+
+var accountCapabilityControllerValueFieldNames = []string{
+	sema.AccountCapabilityControllerTypeCapabilityIDFieldName,
+	sema.AccountCapabilityControllerTypeBorrowTypeFieldName,
+}
+
+var storageCapabilityControllerValueFieldNames = []string{
+	sema.StorageCapabilityControllerTypeCapabilityIDFieldName,
+	sema.StorageCapabilityControllerTypeBorrowTypeFieldName,
+}
+
 func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Value, error) {
 	ty, typeString := prepareType(value, inter)
 
@@ -286,6 +309,34 @@ func prepareValue(value interpreter.Value, inter *interpreter.Interpreter) (Valu
 		return CompositeValue{
 			Type:       ty,
 			TypeString: typeString,
+		}, nil
+
+	case *interpreter.PathCapabilityValue: //nolint:staticcheck
+		return CompositeValue{
+			Type:       ty,
+			TypeString: typeString,
+			Fields:     pathCapabilityValueFieldNames,
+		}, nil
+
+	case *interpreter.IDCapabilityValue:
+		return CompositeValue{
+			Type:       ty,
+			TypeString: typeString,
+			Fields:     idCapabilityValueFieldNames,
+		}, nil
+
+	case *interpreter.AccountCapabilityControllerValue:
+		return CompositeValue{
+			Type:       ty,
+			TypeString: typeString,
+			Fields:     accountCapabilityControllerValueFieldNames,
+		}, nil
+
+	case *interpreter.StorageCapabilityControllerValue:
+		return CompositeValue{
+			Type:       ty,
+			TypeString: typeString,
+			Fields:     storageCapabilityControllerValueFieldNames,
 		}, nil
 
 	case *interpreter.PublishedValue:
