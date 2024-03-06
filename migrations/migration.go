@@ -321,13 +321,6 @@ func (m *StorageMigration) MigrateNestedValue(
 				keyToSet = newKey
 			}
 
-			if newValue == nil {
-				valueToSet = existingValue
-			} else {
-				// Value was migrated
-				valueToSet = newValue
-			}
-
 			existingKey = legacyKey(existingKey)
 			existingKeyStorable, existingValueStorable := dictionary.RemoveWithoutTransfer(
 				m.interpreter,
@@ -342,9 +335,16 @@ func (m *StorageMigration) MigrateNestedValue(
 				))
 			}
 
-			interpreter.StoredValue(m.interpreter, existingValueStorable, m.storage).
-				DeepRemove(m.interpreter)
-			m.interpreter.RemoveReferencedSlab(existingValueStorable)
+			if newValue == nil {
+				valueToSet = existingValue
+			} else {
+				// Value was migrated
+				valueToSet = newValue
+
+				interpreter.StoredValue(m.interpreter, existingValueStorable, m.storage).
+					DeepRemove(m.interpreter)
+				m.interpreter.RemoveReferencedSlab(existingValueStorable)
+			}
 
 			dictionary.InsertWithoutTransfer(
 				m.interpreter,

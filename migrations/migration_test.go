@@ -1229,6 +1229,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 	migrate := func(
 		t *testing.T,
+		valueMigration ValueMigration,
 		storage *runtime.Storage,
 		inter *interpreter.Interpreter,
 		value interpreter.Value,
@@ -1272,7 +1273,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 			},
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
-				testContainerMigration{},
+				valueMigration,
 			),
 		)
 
@@ -1300,7 +1301,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 		return result
 	}
 
-	t.Run("nested dictionary", func(t *testing.T) {
+	t.Run("nested dictionary, value migrated", func(t *testing.T) {
 		t.Parallel()
 
 		locationRange := interpreter.EmptyLocationRange
@@ -1320,7 +1321,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		// {String: {String: Int}}
+		// {"key1": {"key2": 1234}}: {String: {String: Int}}
 
 		storedValue := interpreter.NewDictionaryValue(
 			inter,
@@ -1349,6 +1350,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 		)
 
 		actual := migrate(t,
+			testContainerMigration{},
 			storage,
 			inter,
 			storedValue,
@@ -1381,6 +1383,92 @@ func TestMigratingNestedContainers(t *testing.T) {
 		utils.AssertValuesEqual(t, inter, expected, actual)
 	})
 
+	t.Run("nested dictionary, key migrated", func(t *testing.T) {
+		t.Parallel()
+
+		locationRange := interpreter.EmptyLocationRange
+
+		ledger := NewTestLedger(nil, nil)
+		storage := runtime.NewStorage(ledger, nil)
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                     storage,
+				AtreeValueValidationEnabled: true,
+				// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+				AtreeStorageValidationEnabled: false,
+			},
+		)
+		require.NoError(t, err)
+
+		// {"key1": {"key2": 1234}}: {String: {String: Int}}
+
+		storedValue := interpreter.NewDictionaryValue(
+			inter,
+			locationRange,
+			interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeString,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+			),
+			interpreter.NewUnmeteredStringValue("key1"),
+			interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+				interpreter.NewUnmeteredStringValue("key2"),
+				interpreter.NewUnmeteredIntValueFromInt64(1234),
+			),
+		)
+
+		actual := migrate(t,
+			testStringMigration{},
+			storage,
+			inter,
+			storedValue,
+		)
+
+		// {"updated_key1": {"updated_key2": 1234}}: {String: {String: Int}}
+
+		expected := interpreter.NewDictionaryValue(
+			inter,
+			locationRange,
+			interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeString,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+			),
+			interpreter.NewUnmeteredStringValue("updated_key1"),
+			interpreter.NewDictionaryValue(
+				inter,
+				locationRange,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeString,
+					interpreter.PrimitiveStaticTypeInt,
+				),
+				interpreter.NewUnmeteredStringValue("updated_key2"),
+				interpreter.NewUnmeteredIntValueFromInt64(1234),
+			),
+		)
+
+		utils.AssertValuesEqual(t, inter, expected, actual)
+	})
+
 	t.Run("nested arrays", func(t *testing.T) {
 		t.Parallel()
 
@@ -1401,7 +1489,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		// [[String]]
+		// [["abc"]]: [[String]]
 
 		storedValue := interpreter.NewArrayValue(
 			inter,
@@ -1427,6 +1515,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 		)
 
 		actual := migrate(t,
+			testContainerMigration{},
 			storage,
 			inter,
 			storedValue,
@@ -1503,6 +1592,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 		)
 
 		actual := migrate(t,
+			testContainerMigration{},
 			storage,
 			inter,
 			storedValue,
