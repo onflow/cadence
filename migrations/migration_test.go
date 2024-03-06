@@ -43,10 +43,7 @@ type testReporter struct {
 		interpreter.StorageKey
 		interpreter.StorageMapKey
 	}][]string
-	errors map[struct {
-		interpreter.StorageKey
-		interpreter.StorageMapKey
-	}][]error
+	errors []error
 }
 
 var _ Reporter = &testReporter{}
@@ -57,10 +54,6 @@ func newTestReporter() *testReporter {
 			interpreter.StorageKey
 			interpreter.StorageMapKey
 		}][]string{},
-		errors: map[struct {
-			interpreter.StorageKey
-			interpreter.StorageMapKey
-		}][]error{},
 	}
 }
 
@@ -83,24 +76,8 @@ func (t *testReporter) Migrated(
 	)
 }
 
-func (t *testReporter) Error(
-	storageKey interpreter.StorageKey,
-	storageMapKey interpreter.StorageMapKey,
-	_ string,
-	err error,
-) {
-	key := struct {
-		interpreter.StorageKey
-		interpreter.StorageMapKey
-	}{
-		StorageKey:    storageKey,
-		StorageMapKey: storageMapKey,
-	}
-
-	t.errors[key] = append(
-		t.errors[key],
-		err,
-	)
+func (t *testReporter) Error(err error) {
+	t.errors = append(t.errors, err)
 }
 
 // testStringMigration
@@ -666,19 +643,16 @@ func TestMigrationError(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		map[struct {
-			interpreter.StorageKey
-			interpreter.StorageMapKey
-		}][]error{
-			{
+	require.Equal(t,
+		[]error{
+			StorageMigrationError{
 				StorageKey: interpreter.StorageKey{
 					Address: account,
 					Key:     pathDomain.Identifier(),
 				},
 				StorageMapKey: interpreter.StringStorageMapKey("int8_value"),
-			}: {
-				errors.New("error occurred while migrating int8"),
+				Migration:     "testInt8Migration",
+				Err:           errors.New("error occurred while migrating int8"),
 			},
 		},
 		reporter.errors,
@@ -723,24 +697,6 @@ func TestMigrationError(t *testing.T) {
 			},
 		},
 		reporter.migrated,
-	)
-
-	require.Equal(t,
-		map[struct {
-			interpreter.StorageKey
-			interpreter.StorageMapKey
-		}][]error{
-			{
-				StorageKey: interpreter.StorageKey{
-					Address: account,
-					Key:     pathDomain.Identifier(),
-				},
-				StorageMapKey: interpreter.StringStorageMapKey("int8_value"),
-			}: {
-				errors.New("error occurred while migrating int8"),
-			},
-		},
-		reporter.errors,
 	)
 }
 
@@ -1223,6 +1179,7 @@ func (testContainerMigration) Migrate(
 }
 
 func TestMigratingNestedContainers(t *testing.T) {
+
 	t.Parallel()
 
 	var testAddress = common.Address{0x42}
@@ -1625,5 +1582,116 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		utils.AssertValuesEqual(t, inter, expected, actual)
 	})
+}
 
+// testPanicMigration
+
+type testPanicMigration struct{}
+
+var _ ValueMigration = testInt8Migration{}
+
+func (testPanicMigration) Name() string {
+	return "testPanicMigration"
+}
+
+func (m testPanicMigration) Migrate(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	_ interpreter.Value,
+	_ *interpreter.Interpreter,
+) (interpreter.Value, error) {
+
+	// NOTE: out-of-bounds access, panic
+	_ = []int{}[0]
+
+	return nil, nil
+}
+
+func TestMigrationPanic(t *testing.T) {
+	t.Parallel()
+
+	testAddress := common.Address{0x42}
+
+	ledger := NewTestLedger(nil, nil)
+	storage := runtime.NewStorage(ledger, nil)
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage:                       storage,
+			AtreeValueValidationEnabled:   true,
+			AtreeStorageValidationEnabled: true,
+		},
+	)
+	require.NoError(t, err)
+
+	// Store value
+
+	storagePathDomain := common.PathDomainStorage.Identifier()
+
+	storageMapKey := interpreter.StringStorageMapKey("test_value")
+
+	inter.WriteStored(
+		testAddress,
+		storagePathDomain,
+		storageMapKey,
+		interpreter.NewUnmeteredUInt8Value(42),
+	)
+
+	err = storage.Commit(inter, true)
+	require.NoError(t, err)
+
+	// Migrate
+
+	migration := NewStorageMigration(inter, storage)
+
+	reporter := newTestReporter()
+
+	migration.Migrate(
+		&AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testPanicMigration{},
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Len(t, reporter.errors, 1)
+
+	var migrationError StorageMigrationError
+	require.ErrorAs(t, reporter.errors[0], &migrationError)
+
+	assert.Equal(
+		t,
+		interpreter.StorageKey{
+			Address: testAddress,
+			Key:     storagePathDomain,
+		},
+		migrationError.StorageKey,
+	)
+	assert.Equal(
+		t,
+		storageMapKey,
+		migrationError.StorageMapKey,
+	)
+	assert.Equal(
+		t,
+		"testPanicMigration",
+		migrationError.Migration,
+	)
+	assert.ErrorContains(
+		t,
+		migrationError,
+		"index out of range",
+	)
+	assert.NotEmpty(t, migrationError.Stack)
 }

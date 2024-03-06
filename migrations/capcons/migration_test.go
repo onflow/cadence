@@ -70,16 +70,9 @@ type testMigration struct {
 	migration     string
 }
 
-type testMigrationError struct {
-	storageKey    interpreter.StorageKey
-	storageMapKey interpreter.StorageMapKey
-	migration     string
-	err           error
-}
-
 type testMigrationReporter struct {
 	migrations               []testMigration
-	errors                   []testMigrationError
+	errors                   []error
 	linkMigrations           []testCapConsLinkMigration
 	pathCapabilityMigrations []testCapConsPathCapabilityMigration
 	missingCapabilityIDs     []testCapConsMissingCapabilityID
@@ -106,21 +99,8 @@ func (t *testMigrationReporter) Migrated(
 	)
 }
 
-func (t *testMigrationReporter) Error(
-	storageKey interpreter.StorageKey,
-	storageMapKey interpreter.StorageMapKey,
-	migration string,
-	err error,
-) {
-	t.errors = append(
-		t.errors,
-		testMigrationError{
-			storageKey:    storageKey,
-			storageMapKey: storageMapKey,
-			migration:     migration,
-			err:           err,
-		},
-	)
+func (t *testMigrationReporter) Error(err error) {
+	t.errors = append(t.errors, err)
 }
 func (t *testMigrationReporter) MigratedLink(
 	accountAddressPath interpreter.AddressPath,
@@ -252,7 +232,7 @@ func testPathCapabilityValueMigration(
 	pathLinks []testLink,
 	accountLinks []interpreter.PathValue,
 	expectedMigrations []testMigration,
-	expectedErrors []testMigrationError,
+	expectedErrors []error,
 	expectedPathMigrations []testCapConsPathCapabilityMigration,
 	expectedMissingCapabilityIDs []testCapConsMissingCapabilityID,
 	setupFunction, checkFunction string,
@@ -583,7 +563,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		pathLinks                    []testLink
 		accountLinks                 []interpreter.PathValue
 		expectedMigrations           []testMigration
-		expectedErrors               []testMigrationError
+		expectedErrors               []error
 		expectedPathMigrations       []testCapConsPathCapabilityMigration
 		expectedMissingCapabilityIDs []testCapConsMissingCapabilityID
 		borrowShouldFail             bool
@@ -1240,7 +1220,7 @@ func testLinkMigration(
 	pathLinks []testLink,
 	accountLinks []interpreter.PathValue,
 	expectedMigrations []testMigration,
-	expectedErrors []testMigrationError,
+	expectedErrors []error,
 	expectedLinkMigrations []testCapConsLinkMigration,
 	expectedCyclicLinkErrors []CyclicLinkError,
 	expectedMissingTargets []interpreter.AddressPath,
@@ -1387,7 +1367,7 @@ func TestLinkMigration(t *testing.T) {
 		pathLinks                []testLink
 		accountLinks             []interpreter.PathValue
 		expectedMigrations       []testMigration
-		expectedErrors           []testMigrationError
+		expectedErrors           []error
 		expectedLinkMigrations   []testCapConsLinkMigration
 		expectedCyclicLinkErrors []CyclicLinkError
 		expectedMissingTargets   []interpreter.AddressPath
