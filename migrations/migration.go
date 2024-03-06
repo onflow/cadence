@@ -19,6 +19,8 @@
 package migrations
 
 import (
+	goRuntime "runtime"
+
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -149,6 +151,9 @@ func (m *StorageMigration) MigrateNestedValue(
 
 		if r := recover(); r != nil {
 			switch r := r.(type) {
+			case goRuntime.Error:
+				panic(r)
+
 			case error:
 				if reporter != nil {
 					reporter.Error(
@@ -451,8 +456,12 @@ func (m *StorageMigration) migrate(
 	defer func() {
 		if r := recover(); r != nil {
 			switch r := r.(type) {
+			case goRuntime.Error:
+				panic(r)
+
 			case error:
 				err = r
+
 			default:
 				panic(r)
 			}

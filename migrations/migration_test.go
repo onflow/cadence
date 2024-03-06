@@ -1223,6 +1223,7 @@ func (testContainerMigration) Migrate(
 }
 
 func TestMigratingNestedContainers(t *testing.T) {
+
 	t.Parallel()
 
 	var testAddress = common.Address{0x42}
@@ -1625,5 +1626,90 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		utils.AssertValuesEqual(t, inter, expected, actual)
 	})
+}
 
+// testPanicMigration
+
+type testPanicMigration struct{}
+
+var _ ValueMigration = testInt8Migration{}
+
+func (testPanicMigration) Name() string {
+	return "testPanicMigration"
+}
+
+func (m testPanicMigration) Migrate(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	_ interpreter.Value,
+	_ *interpreter.Interpreter,
+) (interpreter.Value, error) {
+
+	// NOTE: out-of-bounds access, panic
+	_ = []int{}[0]
+
+	return nil, nil
+}
+
+func TestMigrationPanic(t *testing.T) {
+	t.Parallel()
+
+	account := common.Address{0x42}
+
+	ledger := NewTestLedger(nil, nil)
+	storage := runtime.NewStorage(ledger, nil)
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage:                       storage,
+			AtreeValueValidationEnabled:   true,
+			AtreeStorageValidationEnabled: true,
+		},
+	)
+	require.NoError(t, err)
+
+	// Store value
+
+	storagePathDomain := common.PathDomainStorage.Identifier()
+
+	storageMapKey := interpreter.StringStorageMapKey("test_value")
+
+	inter.WriteStored(
+		account,
+		storagePathDomain,
+		storageMapKey,
+		interpreter.NewUnmeteredUInt8Value(42),
+	)
+
+	err = storage.Commit(inter, true)
+	require.NoError(t, err)
+
+	// Migrate
+
+	migration := NewStorageMigration(inter, storage)
+
+	reporter := newTestReporter()
+
+	migrator := migration.NewValueMigrationsPathMigrator(
+		reporter,
+		testPanicMigration{},
+	)
+
+	addressIterator := &AddressSliceIterator{
+		Addresses: []common.Address{
+			account,
+		},
+	}
+
+	assert.PanicsWithError(t,
+		"runtime error: index out of range [0] with length 0",
+		func() {
+			migration.Migrate(
+				addressIterator,
+				migrator,
+			)
+		},
+	)
 }
