@@ -1240,6 +1240,18 @@ func TestCommonSuperType(t *testing.T) {
 	t.Run("References types", func(t *testing.T) {
 		t.Parallel()
 
+		testLocation := common.StringLocation("test")
+
+		entitlementE := NewEntitlementType(nil, testLocation, "E")
+		entitlementF := NewEntitlementType(nil, testLocation, "F")
+		entitlementG := NewEntitlementType(nil, testLocation, "G")
+
+		entitlementsEOnly := NewEntitlementSetAccess([]*EntitlementType{entitlementE}, Conjunction)
+		entitlementsEAndF := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementF}, Conjunction)
+		entitlementsEAndFAndG := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementG, entitlementF}, Conjunction)
+		entitlementsEOrFOrG := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementF, entitlementG}, Disjunction)
+		entitlementsEOrG := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementG}, Disjunction)
+
 		tests := []testCase{
 			{
 				name: "homogenous references",
@@ -1313,8 +1325,95 @@ func TestCommonSuperType(t *testing.T) {
 						Authorization: EntitlementSetAccess{},
 					},
 				},
-				// maybe have this be unauthorized instead of anystruct?
-				expectedSuperType: AnyStructType,
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: UnauthorizedAccess,
+				},
+			},
+			{
+				name: "E and (E, F)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOnly,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEAndF,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOnly,
+				},
+			},
+			{
+				name: "E and (E | G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOnly,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOrG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrG,
+				},
+			},
+			{
+				name: "(E, F) and (E | G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEAndF,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOrG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrG,
+				},
+			},
+			{
+				name: "(E, F) and (E, F, G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEAndF,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEAndFAndG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEAndF,
+				},
+			},
+			{
+				name: "(E | G) and (E | F | G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOrG,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOrFOrG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrFOrG,
+				},
 			},
 		}
 
