@@ -189,7 +189,9 @@ func (m *StorageMigration) MigrateNestedValue(
 		// Migrate array elements
 		count := array.Count()
 		for index := 0; index < count; index++ {
+
 			element := array.Get(m.interpreter, emptyLocationRange, index)
+
 			newElement := m.MigrateNestedValue(
 				storageKey,
 				storageMapKey,
@@ -197,14 +199,27 @@ func (m *StorageMigration) MigrateNestedValue(
 				valueMigrations,
 				reporter,
 			)
-			if newElement != nil {
-				array.Set(
-					m.interpreter,
-					emptyLocationRange,
-					index,
-					newElement,
-				)
+
+			if newElement == nil {
+				continue
 			}
+
+			existingStorable := array.RemoveWithoutTransfer(
+				m.interpreter,
+				emptyLocationRange,
+				index,
+			)
+
+			interpreter.StoredValue(m.interpreter, existingStorable, m.storage).
+				DeepRemove(m.interpreter)
+			m.interpreter.RemoveReferencedSlab(existingStorable)
+
+			array.InsertWithoutTransfer(
+				m.interpreter,
+				emptyLocationRange,
+				index,
+				newElement,
+			)
 		}
 
 	case *interpreter.CompositeValue:
@@ -237,7 +252,7 @@ func (m *StorageMigration) MigrateNestedValue(
 				continue
 			}
 
-			composite.SetMember(
+			composite.SetMemberWithoutTransfer(
 				m.interpreter,
 				emptyLocationRange,
 				fieldName,
@@ -303,24 +318,21 @@ func (m *StorageMigration) MigrateNestedValue(
 			if newKey == nil {
 				keyToSet = existingKey
 			} else {
-				// Key was migrated.
-				// Remove the old value at the old key.
-				// This old value will be inserted again with the new key, unless the value is also migrated.
-				existingKey = legacyKey(existingKey)
-				oldValue := dictionary.Remove(
-					m.interpreter,
-					emptyLocationRange,
-					existingKey,
-				)
-
-				if _, ok := oldValue.(*interpreter.SomeValue); !ok {
-					panic(errors.NewUnexpectedError(
-						"failed to remove old value for migrated key: %s",
-						existingKey,
-					))
-				}
-
 				keyToSet = newKey
+			}
+
+			existingKey = legacyKey(existingKey)
+			existingKeyStorable, existingValueStorable := dictionary.RemoveWithoutTransfer(
+				m.interpreter,
+				emptyLocationRange,
+				existingKey,
+			)
+
+			if existingKeyStorable == nil {
+				panic(errors.NewUnexpectedError(
+					"failed to remove old value for migrated key: %s",
+					existingKey,
+				))
 			}
 
 			if newValue == nil {
@@ -328,9 +340,13 @@ func (m *StorageMigration) MigrateNestedValue(
 			} else {
 				// Value was migrated
 				valueToSet = newValue
+
+				interpreter.StoredValue(m.interpreter, existingValueStorable, m.storage).
+					DeepRemove(m.interpreter)
+				m.interpreter.RemoveReferencedSlab(existingValueStorable)
 			}
 
-			dictionary.Insert(
+			dictionary.InsertWithoutTransfer(
 				m.interpreter,
 				emptyLocationRange,
 				keyToSet,

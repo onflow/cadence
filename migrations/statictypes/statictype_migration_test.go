@@ -41,6 +41,7 @@ func TestStaticTypeMigration(t *testing.T) {
 		t *testing.T,
 		staticTypeMigration *StaticTypeMigration,
 		value interpreter.Value,
+		atreeValueValidationEnabled bool,
 	) interpreter.Value {
 
 		// Store values
@@ -53,7 +54,7 @@ func TestStaticTypeMigration(t *testing.T) {
 			utils.TestLocation,
 			&interpreter.Config{
 				Storage:                       storage,
-				AtreeValueValidationEnabled:   false,
+				AtreeValueValidationEnabled:   atreeValueValidationEnabled,
 				AtreeStorageValidationEnabled: true,
 			},
 		)
@@ -93,7 +94,12 @@ func TestStaticTypeMigration(t *testing.T) {
 		err = migration.Commit()
 		require.NoError(t, err)
 
+		// Assert
+
 		require.Empty(t, reporter.errors)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
 
 		storageMap := storage.GetStorageMap(
 			testAddress,
@@ -117,6 +123,10 @@ func TestStaticTypeMigration(t *testing.T) {
 		actual := migrate(t,
 			staticTypeMigration,
 			interpreter.NewTypeValue(nil, nil),
+			// NOTE: atree value validation is disabled,
+			// because the type value has a nil type (which indicates an invalid or unknown type),
+			// and invalid unknown types are always unequal
+			false,
 		)
 		assert.Equal(t,
 			interpreter.NewTypeValue(nil, nil),
@@ -141,6 +151,7 @@ func TestStaticTypeMigration(t *testing.T) {
 				Path:       path,
 				Address:    interpreter.AddressValue(testAddress),
 			},
+			true,
 		)
 		assert.Equal(t,
 			&interpreter.PathCapabilityValue{ //nolint:staticcheck
@@ -178,6 +189,7 @@ func TestStaticTypeMigration(t *testing.T) {
 						},
 					},
 				),
+				true,
 			)
 			assert.Equal(t,
 				interpreter.NewUnmeteredTypeValue(
@@ -217,6 +229,7 @@ func TestStaticTypeMigration(t *testing.T) {
 						},
 					},
 				),
+				true,
 			)
 			assert.Equal(t,
 				interpreter.NewUnmeteredTypeValue(
@@ -265,6 +278,7 @@ func TestStaticTypeMigration(t *testing.T) {
 						LegacyType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 				),
+				true,
 			)
 			assert.Equal(t,
 				interpreter.NewUnmeteredTypeValue(
@@ -304,6 +318,7 @@ func TestStaticTypeMigration(t *testing.T) {
 						},
 					},
 				),
+				true,
 			)
 			assert.Equal(t,
 				interpreter.NewUnmeteredTypeValue(
@@ -344,6 +359,7 @@ func TestStaticTypeMigration(t *testing.T) {
 						LegacyType: interpreter.PrimitiveStaticTypeAnyResource,
 					},
 				),
+				true,
 			)
 			assert.Equal(t,
 				interpreter.NewUnmeteredTypeValue(
@@ -383,6 +399,7 @@ func TestStaticTypeMigration(t *testing.T) {
 						},
 					},
 				),
+				true,
 			)
 			assert.Equal(t,
 				interpreter.NewUnmeteredTypeValue(
@@ -421,6 +438,7 @@ func TestStaticTypeMigration(t *testing.T) {
 						LegacyType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 				),
+				true,
 			)
 			assert.Equal(t,
 				interpreter.NewUnmeteredTypeValue(
@@ -446,6 +464,7 @@ func TestStaticTypeMigration(t *testing.T) {
 						},
 					},
 				),
+				true,
 			)
 			assert.Equal(t,
 				interpreter.NewUnmeteredTypeValue(
@@ -474,6 +493,7 @@ func TestStaticTypeMigration(t *testing.T) {
 						LegacyType: interpreter.PrimitiveStaticTypeAnyResource,
 					},
 				),
+				true,
 			)
 			assert.Equal(t,
 				interpreter.NewUnmeteredTypeValue(
@@ -499,6 +519,7 @@ func TestStaticTypeMigration(t *testing.T) {
 						},
 					},
 				),
+				true,
 			)
 			assert.Equal(t,
 				interpreter.NewUnmeteredTypeValue(
@@ -530,6 +551,7 @@ func TestStaticTypeMigration(t *testing.T) {
 						},
 					},
 				),
+				true,
 			)
 			assert.Equal(t,
 				interpreter.NewUnmeteredTypeValue(
@@ -562,6 +584,7 @@ func TestStaticTypeMigration(t *testing.T) {
 						},
 					},
 				),
+				true,
 			)
 			assert.Equal(t,
 				interpreter.NewUnmeteredTypeValue(
@@ -596,7 +619,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		// Store values
 
-		storageMapKey := interpreter.StringStorageMapKey("test_type_value")
+		storageMapKey := interpreter.StringStorageMapKey("test_value")
 		storageDomain := common.PathDomainStorage.Identifier()
 
 		value = value.Transfer(
@@ -639,7 +662,12 @@ func TestMigratingNestedContainers(t *testing.T) {
 		err = migration.Commit()
 		require.NoError(t, err)
 
+		// Assert
+
 		require.Empty(t, reporter.errors)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
 
 		storageMap := storage.GetStorageMap(
 			testAddress,
@@ -669,8 +697,9 @@ func TestMigratingNestedContainers(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			&interpreter.Config{
-				Storage:                       storage,
-				AtreeValueValidationEnabled:   false,
+				Storage:                     storage,
+				AtreeValueValidationEnabled: true,
+				// NOTE: disabled, as storage is not expected to be always valid _during_ migration
 				AtreeStorageValidationEnabled: false,
 			},
 		)
@@ -759,4 +788,105 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		utils.AssertValuesEqual(t, inter, expected, actual)
 	})
+
+	t.Run("nested arrays", func(t *testing.T) {
+		t.Parallel()
+
+		staticTypeMigration := NewStaticTypeMigration()
+
+		locationRange := interpreter.EmptyLocationRange
+
+		ledger := NewTestLedger(nil, nil)
+		storage := runtime.NewStorage(ledger, nil)
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                     storage,
+				AtreeValueValidationEnabled: true,
+				// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+				AtreeStorageValidationEnabled: false,
+			},
+		)
+		require.NoError(t, err)
+
+		storedValue := interpreter.NewArrayValue(
+			inter,
+			locationRange,
+			interpreter.NewVariableSizedStaticType(
+				nil,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+					),
+				),
+			),
+			common.ZeroAddress,
+			interpreter.NewArrayValue(
+				inter,
+				locationRange,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+					),
+				),
+				common.ZeroAddress,
+				interpreter.NewCapabilityValue(
+					nil,
+					interpreter.NewUnmeteredUInt64Value(1234),
+					interpreter.NewAddressValue(nil, common.ZeroAddress),
+					interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+				),
+			),
+		)
+
+		actual := migrate(t,
+			staticTypeMigration,
+			storage,
+			inter,
+			storedValue,
+		)
+
+		expected := interpreter.NewArrayValue(
+			inter,
+			locationRange,
+			interpreter.NewVariableSizedStaticType(
+				nil,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						unauthorizedAccountReferenceType,
+					),
+				),
+			),
+			common.ZeroAddress,
+			interpreter.NewArrayValue(
+				inter,
+				locationRange,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.NewCapabilityStaticType(
+						nil,
+						unauthorizedAccountReferenceType,
+					),
+				),
+				common.ZeroAddress,
+				interpreter.NewCapabilityValue(
+					nil,
+					interpreter.NewUnmeteredUInt64Value(1234),
+					interpreter.NewAddressValue(nil, common.Address{}),
+					unauthorizedAccountReferenceType,
+				),
+			),
+		)
+
+		utils.AssertValuesEqual(t, inter, expected, actual)
+	})
+
 }

@@ -53,9 +53,10 @@ func TestStringNormalizingMigration(t *testing.T) {
 		nil,
 		utils.TestLocation,
 		&interpreter.Config{
-			Storage:                       storage,
+			Storage: storage,
+			// NOTE: disabled, because encoded and decoded values are expected to not match
 			AtreeValueValidationEnabled:   false,
-			AtreeStorageValidationEnabled: false,
+			AtreeStorageValidationEnabled: true,
 		},
 	)
 	require.NoError(t, err)
@@ -277,6 +278,9 @@ func TestStringNormalizingMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	// Assert: Traverse through the storage and see if the values are updated now.
 
 	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
@@ -326,7 +330,8 @@ func TestStringValueRehash(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			&interpreter.Config{
-				Storage:                       storage,
+				Storage: storage,
+				// NOTE: disabled, because encoded and decoded values are expected to not match
 				AtreeValueValidationEnabled:   false,
 				AtreeStorageValidationEnabled: true,
 			},
@@ -415,6 +420,9 @@ func TestStringValueRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
+		err := storage.CheckHealth()
+		require.NoError(t, err)
+
 		storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
 		storedValue := storageMap.ReadValue(inter, storageMapKey)
 
@@ -464,7 +472,8 @@ func TestCharacterValueRehash(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			&interpreter.Config{
-				Storage:                       storage,
+				Storage: storage,
+				// NOTE: disabled, because encoded and decoded values are expected to not match
 				AtreeValueValidationEnabled:   false,
 				AtreeStorageValidationEnabled: true,
 			},
@@ -553,6 +562,9 @@ func TestCharacterValueRehash(t *testing.T) {
 	t.Run("load", func(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
+
+		err := storage.CheckHealth()
+		require.NoError(t, err)
 
 		storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
 		storedValue := storageMap.ReadValue(inter, storageMapKey)

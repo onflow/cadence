@@ -295,8 +295,8 @@ func TestIntersectionTypeMigration(t *testing.T) {
 		"non_intersection_interface": {
 			storedType: interpreter.NewInterfaceStaticType(
 				nil,
-				nil,
-				"Foo.Bar",
+				fooAddressLocation,
+				fooBarQualifiedIdentifier,
 				common.NewTypeIDFromQualifiedName(
 					nil,
 					fooAddressLocation,
@@ -308,8 +308,8 @@ func TestIntersectionTypeMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
-						"Foo.Bar",
+						fooAddressLocation,
+						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
 							fooAddressLocation,
@@ -325,8 +325,8 @@ func TestIntersectionTypeMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
-						"Foo.Bar",
+						fooAddressLocation,
+						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
 							fooAddressLocation,
@@ -340,8 +340,8 @@ func TestIntersectionTypeMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
-						"Foo.Bar",
+						fooAddressLocation,
+						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
 							fooAddressLocation,
@@ -355,7 +355,7 @@ func TestIntersectionTypeMigration(t *testing.T) {
 		"composite": {
 			storedType: interpreter.NewCompositeStaticType(
 				nil,
-				nil,
+				fooAddressLocation,
 				"Foo.Bar",
 				common.NewTypeIDFromQualifiedName(
 					nil,
@@ -377,7 +377,7 @@ func TestIntersectionTypeMigration(t *testing.T) {
 		utils.TestLocation,
 		&interpreter.Config{
 			Storage:                       storage,
-			AtreeValueValidationEnabled:   false,
+			AtreeValueValidationEnabled:   true,
 			AtreeStorageValidationEnabled: true,
 		},
 	)
@@ -417,7 +417,12 @@ func TestIntersectionTypeMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
+	// Assert
+
 	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	// Assert the migrated values.
 	// Traverse through the storage and see if the values are updated now.
@@ -500,7 +505,7 @@ func TestIntersectionTypeRehash(t *testing.T) {
 			utils.TestLocation,
 			&interpreter.Config{
 				Storage:                       storage,
-				AtreeValueValidationEnabled:   false,
+				AtreeValueValidationEnabled:   true,
 				AtreeStorageValidationEnabled: true,
 			},
 		)
@@ -584,7 +589,12 @@ func TestIntersectionTypeRehash(t *testing.T) {
 		err := migration.Commit()
 		require.NoError(t, err)
 
+		// Assert
+
 		require.Empty(t, reporter.errors)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
 
 		require.Equal(t,
 			map[struct {
@@ -653,7 +663,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			utils.TestLocation,
 			&interpreter.Config{
 				Storage:                       storage,
-				AtreeValueValidationEnabled:   false,
+				AtreeValueValidationEnabled:   true,
 				AtreeStorageValidationEnabled: true,
 			},
 		)
@@ -750,7 +760,12 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			err := migration.Commit()
 			require.NoError(t, err)
 
+			// Assert
+
 			require.Empty(t, reporter.errors)
+
+			err = storage.CheckHealth()
+			require.NoError(t, err)
 
 			require.Equal(t,
 				map[struct {
@@ -891,7 +906,12 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 			err := migration.Commit()
 			require.NoError(t, err)
 
+			// Assert
+
 			require.Empty(t, reporter.errors)
+
+			err = storage.CheckHealth()
+			require.NoError(t, err)
 
 			require.Equal(t,
 				map[struct {
@@ -1002,7 +1022,7 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 			utils.TestLocation,
 			&interpreter.Config{
 				Storage:                       storage,
-				AtreeValueValidationEnabled:   false,
+				AtreeValueValidationEnabled:   true,
 				AtreeStorageValidationEnabled: true,
 			},
 		)
@@ -1065,7 +1085,12 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 		err = migration.Commit()
 		require.NoError(t, err)
 
+		// Assert
+
 		require.Empty(t, reporter.errors)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
 
 		// Assert the migrated value.
 
@@ -1396,7 +1421,7 @@ func TestIntersectionTypeMigrationWithTypeConverters(t *testing.T) {
 			utils.TestLocation,
 			&interpreter.Config{
 				Storage:                       storage,
-				AtreeValueValidationEnabled:   false,
+				AtreeValueValidationEnabled:   true,
 				AtreeStorageValidationEnabled: true,
 			},
 		)
@@ -1437,7 +1462,12 @@ func TestIntersectionTypeMigrationWithTypeConverters(t *testing.T) {
 		err = migration.Commit()
 		require.NoError(t, err)
 
+		// Assert
+
 		require.Empty(t, reporter.errors)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
 
 		key := struct {
 			interpreter.StorageKey

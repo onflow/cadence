@@ -4187,3 +4187,86 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 	})
 
 }
+
+func TestDictionaryValue_NewWithType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	address := common.Address{0x1}
+
+	newDictionaryValue := func(dictionaryType *DictionaryStaticType) *DictionaryValue {
+		return NewDictionaryValueWithAddress(
+			inter,
+			EmptyLocationRange,
+			dictionaryType,
+			address,
+			NewUnmeteredStringValue("a"),
+			NewUnmeteredIntValueFromInt64(1),
+			NewUnmeteredStringValue("b"),
+			NewUnmeteredIntValueFromInt64(2),
+			NewUnmeteredStringValue("c"),
+			NewUnmeteredIntValueFromInt64(3),
+		)
+	}
+
+	oldType := &DictionaryStaticType{
+		KeyType:   PrimitiveStaticTypeString,
+		ValueType: PrimitiveStaticTypeAnyStruct,
+	}
+
+	newType := &DictionaryStaticType{
+		KeyType:   PrimitiveStaticTypeString,
+		ValueType: PrimitiveStaticTypeInt,
+	}
+
+	require.True(t,
+		newDictionaryValue(oldType).
+			NewWithType(inter, EmptyLocationRange, newType).
+			Equal(
+				inter,
+				EmptyLocationRange,
+				newDictionaryValue(newType),
+			),
+	)
+}
+
+func TestArrayValue_NewWithType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newTestInterpreter(t)
+
+	address := common.Address{0x1}
+
+	newArrayValue := func(arrayType ArrayStaticType) *ArrayValue {
+		return NewArrayValue(
+			inter,
+			EmptyLocationRange,
+			arrayType,
+			address,
+			NewUnmeteredStringValue("a"),
+			NewUnmeteredStringValue("b"),
+			NewUnmeteredStringValue("c"),
+		)
+	}
+
+	oldType := &VariableSizedStaticType{
+		Type: PrimitiveStaticTypeAnyStruct,
+	}
+
+	newType := &VariableSizedStaticType{
+		Type: PrimitiveStaticTypeString,
+	}
+
+	require.True(t,
+		newArrayValue(oldType).
+			NewWithType(inter, EmptyLocationRange, newType).
+			Equal(
+				inter,
+				EmptyLocationRange,
+				newArrayValue(newType),
+			),
+	)
+}

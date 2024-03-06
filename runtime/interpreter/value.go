@@ -2260,8 +2260,12 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationR
 	v.Insert(interpreter, locationRange, index, value)
 }
 
-func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
-
+func (v *ArrayValue) InsertWithoutTransfer(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	index int,
+	element atree.Value,
+) {
 	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
@@ -2285,19 +2289,6 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 	common.UseMemory(interpreter, metaDataSlabs)
 	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
 
-	interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
-
-	element = element.Transfer(
-		interpreter,
-		locationRange,
-		v.array.Address(),
-		true,
-		nil,
-		map[atree.StorageID]struct{}{
-			v.StorageID(): {},
-		},
-	)
-
 	err := v.array.Insert(uint64(index), element)
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, locationRange)
@@ -2307,12 +2298,43 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 	interpreter.maybeValidateAtreeValue(v.array)
 }
 
+func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
+
+	address := v.array.Address()
+
+	preventTransfer := map[atree.StorageID]struct{}{
+		v.StorageID(): {},
+	}
+
+	element = element.Transfer(
+		interpreter,
+		locationRange,
+		address,
+		true,
+		nil,
+		preventTransfer,
+	)
+
+	interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
+
+	v.InsertWithoutTransfer(
+		interpreter,
+		locationRange,
+		index,
+		element,
+	)
+}
+
 func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt(locationRange)
 	return v.Remove(interpreter, locationRange, index)
 }
 
-func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
+func (v *ArrayValue) RemoveWithoutTransfer(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	index int,
+) atree.Storable {
 
 	interpreter.validateMutation(v.StorageID(), locationRange)
 
@@ -2334,6 +2356,12 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
+
+	return storable
+}
+
+func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
+	storable := v.RemoveWithoutTransfer(interpreter, locationRange, index)
 
 	value := StoredValue(interpreter, storable, interpreter.Storage())
 
@@ -3488,6 +3516,57 @@ func (v *ArrayValue) ToConstantSized(
 			)
 		},
 	)
+}
+
+func (v *ArrayValue) NewWithType(
+	inter *Interpreter,
+	locationRange LocationRange,
+	newType ArrayStaticType,
+) *ArrayValue {
+
+	newArray := NewArrayValue(
+		inter,
+		locationRange,
+		newType,
+		v.GetOwner(),
+	)
+
+	storage := inter.Storage()
+
+	count := v.Count()
+
+	for index := 0; index < count; index++ {
+
+		storable := v.RemoveWithoutTransfer(
+			inter,
+			locationRange,
+			// NOTE: always removing first element,
+			// until original array is empty
+			0,
+		)
+
+		if storable == nil {
+			panic(errors.NewUnreachableError())
+		}
+
+		if v.Count() != count-index-1 {
+			panic(errors.NewUnreachableError())
+		}
+
+		newValue, err := storable.StoredValue(storage)
+		if err != nil {
+			panic(err)
+		}
+
+		newArray.InsertWithoutTransfer(
+			inter,
+			locationRange,
+			index,
+			newValue,
+		)
+	}
+
+	return newArray
 }
 
 // NumberValue
@@ -17192,7 +17271,7 @@ func (v *CompositeValue) RemoveMember(
 		)
 }
 
-func (v *CompositeValue) SetMember(
+func (v *CompositeValue) SetMemberWithoutTransfer(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	name string,
@@ -17220,19 +17299,6 @@ func (v *CompositeValue) SetMember(
 		}()
 	}
 
-	address := v.StorageAddress()
-
-	value = value.Transfer(
-		interpreter,
-		locationRange,
-		address,
-		true,
-		nil,
-		map[atree.StorageID]struct{}{
-			v.StorageID(): {},
-		},
-	)
-
 	existingStorable, err := v.dictionary.Set(
 		StringAtreeValueComparator,
 		StringAtreeValueHashInput,
@@ -17254,6 +17320,33 @@ func (v *CompositeValue) SetMember(
 	}
 
 	return false
+}
+
+func (v *CompositeValue) SetMember(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	name string,
+	value Value,
+) bool {
+	address := v.StorageAddress()
+
+	value = value.Transfer(
+		interpreter,
+		locationRange,
+		address,
+		true,
+		nil,
+		map[atree.StorageID]struct{}{
+			v.StorageID(): {},
+		},
+	)
+
+	return v.SetMemberWithoutTransfer(
+		interpreter,
+		locationRange,
+		name,
+		value,
+	)
 }
 
 func (v *CompositeValue) String() string {
@@ -18574,6 +18667,65 @@ func newDictionaryValueFromAtreeMap(
 	}
 }
 
+func (v *DictionaryValue) NewWithType(
+	inter *Interpreter,
+	locationRange LocationRange,
+	newType *DictionaryStaticType,
+) *DictionaryValue {
+
+	newDictionary := NewDictionaryValueWithAddress(
+		inter,
+		locationRange,
+		newType,
+		v.GetOwner(),
+	)
+
+	var keys []atree.Value
+
+	iterator := v.Iterator()
+
+	for {
+		key := iterator.NextKeyUnconverted()
+		if key == nil {
+			break
+		}
+
+		keys = append(keys, key)
+	}
+
+	storage := inter.Storage()
+
+	for _, key := range keys {
+		existingKeyStorable, existingValueStorable := v.RemoveWithoutTransfer(
+			inter,
+			locationRange,
+			key,
+		)
+		if existingKeyStorable == nil || existingValueStorable == nil {
+			panic(errors.NewUnreachableError())
+		}
+
+		newKey, err := existingKeyStorable.StoredValue(storage)
+		if err != nil {
+			panic(err)
+		}
+
+		newValue, err := existingValueStorable.StoredValue(storage)
+		if err != nil {
+			panic(err)
+		}
+
+		newDictionary.InsertWithoutTransfer(
+			inter,
+			locationRange,
+			newKey,
+			newValue,
+		)
+	}
+
+	return newDictionary
+}
+
 var _ Value = &DictionaryValue{}
 var _ atree.Value = &DictionaryValue{}
 var _ EquatableValue = &DictionaryValue{}
@@ -18665,11 +18817,16 @@ type DictionaryIterator struct {
 	mapIterator *atree.MapIterator
 }
 
-func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
+func (i DictionaryIterator) NextKeyUnconverted() atree.Value {
 	atreeValue, err := i.mapIterator.NextKey()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+	return atreeValue
+}
+
+func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
+	atreeValue := i.NextKeyUnconverted()
 	if atreeValue == nil {
 		return nil
 	}
@@ -19155,11 +19312,14 @@ func (v *DictionaryValue) RemoveKey(
 	return v.Remove(interpreter, locationRange, key)
 }
 
-func (v *DictionaryValue) Remove(
+func (v *DictionaryValue) RemoveWithoutTransfer(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	keyValue Value,
-) OptionalValue {
+	keyValue atree.Value,
+) (
+	existingKeyStorable,
+	existingValueStorable atree.Storable,
+) {
 
 	interpreter.validateMutation(v.StorageID(), locationRange)
 
@@ -19168,7 +19328,8 @@ func (v *DictionaryValue) Remove(
 
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
-	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
+	var err error
+	existingKeyStorable, existingValueStorable, err = v.dictionary.Remove(
 		valueComparator,
 		hashInputProvider,
 		keyValue,
@@ -19176,11 +19337,26 @@ func (v *DictionaryValue) Remove(
 	if err != nil {
 		var keyNotFoundError *atree.KeyNotFoundError
 		if goerrors.As(err, &keyNotFoundError) {
-			return NilOptionalValue
+			return nil, nil
 		}
 		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+
+	return existingKeyStorable, existingValueStorable
+}
+
+func (v *DictionaryValue) Remove(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	keyValue Value,
+) OptionalValue {
+
+	existingKeyStorable, existingValueStorable := v.RemoveWithoutTransfer(interpreter, locationRange, keyValue)
+
+	if existingKeyStorable == nil {
+		return NilOptionalValue
+	}
 
 	storage := interpreter.Storage()
 
@@ -19213,11 +19389,11 @@ func (v *DictionaryValue) InsertKey(
 	v.SetKey(interpreter, locationRange, key, value)
 }
 
-func (v *DictionaryValue) Insert(
+func (v *DictionaryValue) InsertWithoutTransfer(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	keyValue, value Value,
-) OptionalValue {
+	keyValue, value atree.Value,
+) (existingValueStorable atree.Storable) {
 
 	interpreter.validateMutation(v.StorageID(), locationRange)
 
@@ -19227,8 +19403,31 @@ func (v *DictionaryValue) Insert(
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
 
-	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
-	interpreter.checkContainerMutation(v.Type.ValueType, value, locationRange)
+	valueComparator := newValueComparator(interpreter, locationRange)
+	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+
+	// atree only calls Storable() on keyValue if needed,
+	// i.e., if the key is a new key
+	var err error
+	existingValueStorable, err = v.dictionary.Set(
+		valueComparator,
+		hashInputProvider,
+		keyValue,
+		value,
+	)
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	interpreter.maybeValidateAtreeValue(v.dictionary)
+
+	return existingValueStorable
+}
+
+func (v *DictionaryValue) Insert(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	keyValue, value Value,
+) OptionalValue {
 
 	address := v.dictionary.Address()
 
@@ -19254,21 +19453,10 @@ func (v *DictionaryValue) Insert(
 		preventTransfer,
 	)
 
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
+	interpreter.checkContainerMutation(v.Type.ValueType, value, locationRange)
 
-	// atree only calls Storable() on keyValue if needed,
-	// i.e., if the key is a new key
-	existingValueStorable, err := v.dictionary.Set(
-		valueComparator,
-		hashInputProvider,
-		keyValue,
-		value,
-	)
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-	interpreter.maybeValidateAtreeValue(v.dictionary)
+	existingValueStorable := v.InsertWithoutTransfer(interpreter, locationRange, keyValue, value)
 
 	if existingValueStorable == nil {
 		return NilOptionalValue

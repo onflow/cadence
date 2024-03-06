@@ -241,16 +241,10 @@ func ConvertValueToEntitlements(
 			return nil, nil
 		}
 
-		iterator := v.Iterator(inter, interpreter.EmptyLocationRange)
-
-		return interpreter.NewArrayValueWithIterator(
+		return v.NewWithType(
 			inter,
+			interpreter.EmptyLocationRange,
 			entitledElementType.(interpreter.ArrayStaticType),
-			v.GetOwner(),
-			uint64(v.Count()),
-			func() interpreter.Value {
-				return iterator.Next(inter, interpreter.EmptyLocationRange)
-			},
 		), nil
 
 	case *interpreter.DictionaryValue:
@@ -261,28 +255,15 @@ func ConvertValueToEntitlements(
 			return nil, err
 		}
 
-		if entitledElementType != nil {
-			var keysAndValues []interpreter.Value
-
-			iterator := v.Iterator()
-			for {
-				keyValue, value := iterator.Next(inter)
-				if keyValue == nil {
-					break
-				}
-
-				keysAndValues = append(keysAndValues, keyValue)
-				keysAndValues = append(keysAndValues, value)
-			}
-
-			return interpreter.NewDictionaryValueWithAddress(
-				inter,
-				interpreter.EmptyLocationRange,
-				entitledElementType.(*interpreter.DictionaryStaticType),
-				v.GetOwner(),
-				keysAndValues...,
-			), nil
+		if entitledElementType == nil {
+			return nil, nil
 		}
+
+		return v.NewWithType(
+			inter,
+			interpreter.EmptyLocationRange,
+			entitledElementType.(*interpreter.DictionaryStaticType),
+		), nil
 
 	case *interpreter.IDCapabilityValue:
 		borrowType := v.BorrowType
