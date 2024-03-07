@@ -744,7 +744,7 @@ func leastCommonAccess(accessA, accessB Access) Access {
 			// are all equally valid least common supertypes of (A, B)` and `(C, D)`.
 			//
 			// To get a more consistent behavior here,
-			// the possible least common supertypes from the previous step,
+			// we take the least common supertype of all the possible least common supertypes from the previous step,
 			// which luckily here is just the union of the elements of the conjunctions converted to a disjunction.
 			// e.g. the least common supertype of E and F is `(E | F)`
 			// and the least common supertype of `(A, B)` and `(C, D)` is `(A | B | C | D)`
