@@ -803,7 +803,7 @@ func commonSuperTypeOfReferences(types []Type) Type {
 
 		referenceType, ok := typ.(*ReferenceType)
 		if !ok {
-			return getSuperTypeOfDerivedTypes(types)
+			return commonSuperTypeOfHeterogeneousTypes(types)
 		}
 
 		references = append(references, referenceType)
@@ -814,12 +814,12 @@ func commonSuperTypeOfReferences(types []Type) Type {
 		}
 
 		if !referenceType.Type.Equal(prevReferenceType.Type) {
-			return getSuperTypeOfDerivedTypes(types)
+			return commonSuperTypeOfHeterogeneousTypes(types)
 		}
 	}
 
 	if len(references) == 0 {
-		return getSuperTypeOfDerivedTypes(types)
+		return commonSuperTypeOfHeterogeneousTypes(types)
 	}
 
 	referencedType := references[0].Type
