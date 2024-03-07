@@ -19,6 +19,7 @@
 package sema
 
 import (
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -671,9 +672,9 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 		return commonSuperTypeOfVariableSizedArrays(types)
 	case dictionaryTypeMask:
 		return commonSuperTypeOfDictionaries(types)
-	case referenceTypeMask,
-		genericTypeMask:
-
+	case referenceTypeMask:
+		return commonSuperTypeOfReferences(types)
+	case genericTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
 	default:
 		// not homogenous. Return nil and continue on advanced checks.
@@ -716,6 +717,107 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 
 	default:
 		return nil
+	}
+}
+
+func leastCommonAccess(accessA, accessB Access) Access {
+	setAccessA, isSetAccessA := accessA.(EntitlementSetAccess)
+	setAccessB, isSetAccessB := accessB.(EntitlementSetAccess)
+
+	if !isSetAccessA || !isSetAccessB {
+		return UnauthorizedAccess
+	}
+
+	switch setAccessA.SetKind {
+	case Conjunction:
+		switch setAccessB.SetKind {
+		case Conjunction:
+			// least common access of two non-disjoint conjunctions is their intersection
+			// e.g. the least common access of (E, F) and (E, G)  is just E
+			intersection := orderedmap.KeySetIntersection(setAccessA.Entitlements, setAccessB.Entitlements)
+			if intersection.Len() != 0 {
+				return NewAccessFromEntitlementSet(intersection, Conjunction)
+			}
+			// if the intersection is completely empty (i.e. the two sets are totally disjoint)
+			// the least common access is the union of the sets converted to a disjunction
+			// e.g. the least common access of E and F is `(E | F)`
+			// and the least common access of `(A, B)` and `(C, D)` is `(A | B | C | D)`
+			union := orderedmap.KeySetUnion(setAccessA.Entitlements, setAccessB.Entitlements)
+			return NewAccessFromEntitlementSet(union, Disjunction)
+
+		case Disjunction:
+		}
+	case Disjunction:
+		switch setAccessB.SetKind {
+		case Conjunction:
+			// symmetric with the other case where A is a conjunction and B is a disjunction
+			return leastCommonAccess(accessB, accessA)
+		case Disjunction:
+			// least common access of two disjunctions is their union
+			// e.g. the least common access of (E | F) and (E | G) is (E | F | G)
+			union := orderedmap.KeySetUnion(setAccessA.Entitlements, setAccessB.Entitlements)
+			return NewAccessFromEntitlementSet(union, Disjunction)
+		}
+	}
+
+	return UnauthorizedAccess
+}
+
+func commonSuperTypeOfReferences(types []Type) Type {
+	var references []*ReferenceType
+
+	// check that all the referenced types are equal
+	// before computing authorization supertype
+	var prevReferenceType *ReferenceType
+	for _, typ := range types {
+		// 'Never' type doesn't affect the supertype.
+		// Hence, ignore them
+		if typ == NeverType {
+			continue
+		}
+
+		referenceType, ok := typ.(*ReferenceType)
+		if !ok {
+			return getSuperTypeOfDerivedTypes(types)
+		}
+
+		references = append(references, referenceType)
+
+		if prevReferenceType == nil {
+			prevReferenceType = referenceType
+			continue
+		}
+
+		if !referenceType.Type.Equal(prevReferenceType.Type) {
+			return getSuperTypeOfDerivedTypes(types)
+		}
+	}
+
+	if len(references) == 0 {
+		return getSuperTypeOfDerivedTypes(types)
+	}
+
+	referencedType := references[0].Type
+
+	// compute the least common authorization of the list of references
+	// the "supertype" operation for access is commutative and associative,
+	// so we can just apply the operation by reducing the list
+	var superAuthorization Access
+	for _, refTyp := range references {
+		if superAuthorization == nil {
+			superAuthorization = refTyp.Authorization
+			continue
+		}
+		// this is the "top" access, so if we are already here, just end the loop early
+		if superAuthorization == UnauthorizedAccess {
+			break
+		}
+		superAuthorization = leastCommonAccess(superAuthorization, refTyp.Authorization)
+	}
+
+	return &ReferenceType{
+		Type:          referencedType,
+		Authorization: superAuthorization,
 	}
 }
 

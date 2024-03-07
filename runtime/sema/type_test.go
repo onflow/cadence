@@ -649,10 +649,9 @@ func TestCommonSuperType(t *testing.T) {
 	testLeastCommonSuperType := func(t *testing.T, tests []testCase) {
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				assert.Equal(
+				assert.True(
 					t,
-					test.expectedSuperType,
-					LeastCommonSuperType(test.types...),
+					test.expectedSuperType.Equal(LeastCommonSuperType(test.types...)),
 				)
 			})
 		}
@@ -1237,7 +1236,7 @@ func TestCommonSuperType(t *testing.T) {
 		testLeastCommonSuperType(t, tests)
 	})
 
-	t.Run("References types", func(t *testing.T) {
+	t.Run("Reference types", func(t *testing.T) {
 		t.Parallel()
 
 		testLocation := common.StringLocation("test")
@@ -1245,12 +1244,18 @@ func TestCommonSuperType(t *testing.T) {
 		entitlementE := NewEntitlementType(nil, testLocation, "E")
 		entitlementF := NewEntitlementType(nil, testLocation, "F")
 		entitlementG := NewEntitlementType(nil, testLocation, "G")
+		entitlementM := NewEntitlementMapType(nil, testLocation, "E")
 
 		entitlementsEOnly := NewEntitlementSetAccess([]*EntitlementType{entitlementE}, Conjunction)
 		entitlementsEAndF := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementF}, Conjunction)
+		entitlementsEAndG := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementG}, Conjunction)
+		entitlementsFAndG := NewEntitlementSetAccess([]*EntitlementType{entitlementF, entitlementG}, Conjunction)
 		entitlementsEAndFAndG := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementG, entitlementF}, Conjunction)
 		entitlementsEOrFOrG := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementF, entitlementG}, Disjunction)
 		entitlementsEOrG := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementG}, Disjunction)
+		entitlementsEOrF := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementF}, Disjunction)
+		entitlementsFOrG := NewEntitlementSetAccess([]*EntitlementType{entitlementG, entitlementF}, Disjunction)
+		entitlementsM := NewEntitlementMapAccess(entitlementM)
 
 		tests := []testCase{
 			{
@@ -1348,6 +1353,23 @@ func TestCommonSuperType(t *testing.T) {
 				},
 			},
 			{
+				name: "E and (F, G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOnly,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsFAndG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrFOrG,
+				},
+			},
+			{
 				name: "E and (E | G)",
 				types: []Type{
 					&ReferenceType{
@@ -1362,6 +1384,40 @@ func TestCommonSuperType(t *testing.T) {
 				expectedSuperType: &ReferenceType{
 					Type:          Int8Type,
 					Authorization: entitlementsEOrG,
+				},
+			},
+			{
+				name: "E and (F | G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOnly,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsFOrG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrFOrG,
+				},
+			},
+			{
+				name: "(F | G) and E",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsFOrG,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOnly,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrFOrG,
 				},
 			},
 			{
@@ -1382,6 +1438,23 @@ func TestCommonSuperType(t *testing.T) {
 				},
 			},
 			{
+				name: "(E, F) and (E, G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEAndF,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEAndG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOnly,
+				},
+			},
+			{
 				name: "(E, F) and (E, F, G)",
 				types: []Type{
 					&ReferenceType{
@@ -1399,6 +1472,23 @@ func TestCommonSuperType(t *testing.T) {
 				},
 			},
 			{
+				name: "(E | G) and (E | F)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOrG,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOrF,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrFOrG,
+				},
+			},
+			{
 				name: "(E | G) and (E | F | G)",
 				types: []Type{
 					&ReferenceType{
@@ -1413,6 +1503,23 @@ func TestCommonSuperType(t *testing.T) {
 				expectedSuperType: &ReferenceType{
 					Type:          Int8Type,
 					Authorization: entitlementsEOrFOrG,
+				},
+			},
+			{
+				name: "M and E",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOnly,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsM,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: UnauthorizedAccess,
 				},
 			},
 		}

@@ -254,6 +254,27 @@ func (om *OrderedMap[K, V]) KeySetIsDisjointFrom(other *OrderedMap[K, V]) bool {
 	return isDisjoint
 }
 
+// KeySetIntersection returns a map containing the intersection of the keys in the two maps
+// this is only well defined for sets (i.e. maps without meaningful values)
+func KeySetIntersection[K comparable, V any](om *OrderedMap[K, V], other *OrderedMap[K, V]) *OrderedMap[K, V] {
+	intersection := New[OrderedMap[K, V]](len(om.pairs))
+	om.Foreach(func(key K, value V) {
+		if other.Contains(key) {
+			intersection.Set(key, value)
+		}
+	})
+	return intersection
+}
+
+// KeySetUnion returns a map containing the union of the keys in the two maps
+// this is only well defined for sets (i.e. maps without meaningful values)
+func KeySetUnion[K comparable, V any](om *OrderedMap[K, V], other *OrderedMap[K, V]) *OrderedMap[K, V] {
+	union := New[OrderedMap[K, V]](len(om.pairs))
+	union.SetAll(om)
+	union.SetAll(other)
+	return union
+}
+
 // Pair is an entry in an OrderedMap
 type Pair[K any, V any] struct {
 	Key   K
