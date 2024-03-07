@@ -739,7 +739,13 @@ func leastCommonAccess(accessA, accessB Access) Access {
 				return NewAccessFromEntitlementSet(intersection, Conjunction)
 			}
 			// if the intersection is completely empty (i.e. the two sets are totally disjoint)
-			// the least common supertype is the union of the sets converted to a disjunction
+			// the least common supertype is the union of one element arbitrarily chosen from each conjunction.
+			// E.g., `(A | C)`, `(A | D)`, `(B | C)`, and `(B | D)`
+			// are all equally valid least common supertypes of (A, B)` and `(C, D)`.
+			//
+			// To get a more consistent behavior here,
+			// the possible least common supertypes from the previous step,
+			// which luckily here is just the union of the elements of the conjunctions converted to a disjunction.
 			// e.g. the least common supertype of E and F is `(E | F)`
 			// and the least common supertype of `(A, B)` and `(C, D)` is `(A | B | C | D)`
 			union := orderedmap.KeySetUnion(setAccessA.Entitlements, setAccessB.Entitlements)
