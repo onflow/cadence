@@ -2647,3 +2647,24 @@ func TestCheckResourceArrayToConstantSizedInvalid(t *testing.T) {
 
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
 }
+
+func TestCheckArrayReferenceTypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		entitlement E
+		entitlement F 
+		entitlement G
+
+		fun test(): [auth(E) &Int] {
+			let ef = &1 as auth(E, F) &Int
+			let eg = &1 as auth(E, G) &Int
+			let arr = [ef, eg]
+			return arr
+		}
+	
+	`)
+
+	require.NoError(t, err)
+}
