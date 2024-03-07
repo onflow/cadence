@@ -733,20 +733,39 @@ func leastCommonAccess(accessA, accessB Access) Access {
 		switch setAccessB.SetKind {
 		case Conjunction:
 			// least common access of two non-disjoint conjunctions is their intersection
-			// e.g. the least common access of (E, F) and (E, G)  is just E
+			// e.g. the least common supertype of (E, F) and (E, G)  is just E
 			intersection := orderedmap.KeySetIntersection(setAccessA.Entitlements, setAccessB.Entitlements)
 			if intersection.Len() != 0 {
 				return NewAccessFromEntitlementSet(intersection, Conjunction)
 			}
 			// if the intersection is completely empty (i.e. the two sets are totally disjoint)
-			// the least common access is the union of the sets converted to a disjunction
-			// e.g. the least common access of E and F is `(E | F)`
-			// and the least common access of `(A, B)` and `(C, D)` is `(A | B | C | D)`
+			// the least common supertype is the union of the sets converted to a disjunction
+			// e.g. the least common supertype of E and F is `(E | F)`
+			// and the least common supertype of `(A, B)` and `(C, D)` is `(A | B | C | D)`
 			union := orderedmap.KeySetUnion(setAccessA.Entitlements, setAccessB.Entitlements)
 			return NewAccessFromEntitlementSet(union, Disjunction)
 
 		case Disjunction:
+			// least common supertype of a non-disjoint conjunction and a disjunction is
+			// just the disjunction. This is because, in this case, the disjunction is
+			// already a supertype of the conjunction
+			// e.g. the least common access of `(E, F)` and `(E | G)` is `(E | G)`
+			if setAccessB.PermitsAccess(setAccessA) {
+				return setAccessB
+			}
+
+			// if the conjunction and disjunction are completely disjoint, their least common supertype
+			// is the union of the disjunction and an arbitrary element chosen from the conjunction.
+			// E.g. `(E | G | H)` and `(F | G | H)` are both valid least common supertypes of `(E, F)` and `(G | H)`
+			//
+			// In order to have a consistent behavior here,
+			// we take the least common supertype of all the possible least common supertypes from the previous step,
+			// which luckily here is just the union of the elements of the disjunction and the conjunction.
+			// E.g. our computed supertype of `(E, F)` and `(G | H)` is `(E | F | G | H)`
+			union := orderedmap.KeySetUnion(setAccessA.Entitlements, setAccessB.Entitlements)
+			return NewAccessFromEntitlementSet(union, Disjunction)
 		}
+
 	case Disjunction:
 		switch setAccessB.SetKind {
 		case Conjunction:
@@ -754,7 +773,7 @@ func leastCommonAccess(accessA, accessB Access) Access {
 			return leastCommonAccess(accessB, accessA)
 		case Disjunction:
 			// least common access of two disjunctions is their union
-			// e.g. the least common access of (E | F) and (E | G) is (E | F | G)
+			// e.g. the least common supertype of (E | F) and (E | G) is (E | F | G)
 			union := orderedmap.KeySetUnion(setAccessA.Entitlements, setAccessB.Entitlements)
 			return NewAccessFromEntitlementSet(union, Disjunction)
 		}
