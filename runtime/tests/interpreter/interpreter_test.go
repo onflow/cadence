@@ -107,8 +107,6 @@ func parseCheckAndInterpretWithLogs(
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(logFunction)
 
-	baseValueActivation.DeclareValue(stdlib.PanicFunction)
-
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, logFunction)
 
