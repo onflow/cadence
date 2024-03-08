@@ -37,6 +37,12 @@ type ValueMigration interface {
 		value interpreter.Value,
 		interpreter *interpreter.Interpreter,
 	) (newValue interpreter.Value, err error)
+	CanSkip(
+		storageKey interpreter.StorageKey,
+		storageMapKey interpreter.StorageMapKey,
+		value interpreter.Value,
+		interpreter *interpreter.Interpreter,
+	) bool
 }
 
 type DomainMigration interface {
@@ -169,6 +175,21 @@ func (m *StorageMigration) MigrateNestedValue(
 			}
 		}
 	}()
+
+	// skip the migration of the value,
+	// if all value migrations agree
+
+	canSkip := true
+	for _, migration := range valueMigrations {
+		if !migration.CanSkip(storageKey, storageMapKey, value, m.interpreter) {
+			canSkip = false
+			break
+		}
+	}
+
+	if canSkip {
+		return
+	}
 
 	// Visit the children first, and migrate them.
 	// i.e: depth-first traversal
