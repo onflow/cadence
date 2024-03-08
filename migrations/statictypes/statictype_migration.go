@@ -136,11 +136,9 @@ func (m *StaticTypeMigration) Migrate(
 			return
 		}
 
-		return value.NewWithType(
-			inter,
-			interpreter.EmptyLocationRange,
+		value.SetType(
 			convertedElementType.(interpreter.ArrayStaticType),
-		), nil
+		)
 
 	case *interpreter.DictionaryValue:
 		convertedElementType := m.maybeConvertStaticType(value.Type, nil)
@@ -148,11 +146,9 @@ func (m *StaticTypeMigration) Migrate(
 			return
 		}
 
-		return value.NewWithType(
-			inter,
-			interpreter.EmptyLocationRange,
+		value.SetType(
 			convertedElementType.(*interpreter.DictionaryStaticType),
-		), nil
+		)
 	}
 
 	return
