@@ -51,6 +51,16 @@ func (*LinkValueMigration) Name() string {
 	return "LinkValueMigration"
 }
 
+func (m *LinkValueMigration) CanSkip(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	interpreter *interpreter.Interpreter,
+) bool {
+	// Link values have a capability static type
+	return CanSkipCapabilityValueMigration(value.StaticType(interpreter))
+}
+
 func (m *LinkValueMigration) Migrate(
 	storageKey interpreter.StorageKey,
 	storageMapKey interpreter.StorageMapKey,

@@ -123,3 +123,58 @@ func (m *CapabilityValueMigration) Migrate(
 
 	return nil, nil
 }
+
+func (m *CapabilityValueMigration) CanSkip(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	interpreter *interpreter.Interpreter,
+) bool {
+	return CanSkipCapabilityValueMigration(value.StaticType(interpreter))
+}
+
+func CanSkipCapabilityValueMigration(valueType interpreter.StaticType) bool {
+	switch valueType := valueType.(type) {
+	case *interpreter.DictionaryStaticType:
+		return CanSkipCapabilityValueMigration(valueType.KeyType) &&
+			CanSkipCapabilityValueMigration(valueType.ValueType)
+
+	case interpreter.ArrayStaticType:
+		return CanSkipCapabilityValueMigration(valueType.ElementType())
+
+	case *interpreter.OptionalStaticType:
+		return CanSkipCapabilityValueMigration(valueType.Type)
+
+	case *interpreter.CapabilityStaticType:
+		return false
+
+	case interpreter.PrimitiveStaticType:
+
+		switch valueType {
+		case interpreter.PrimitiveStaticTypeCapability:
+			return false
+
+		case interpreter.PrimitiveStaticTypeBool,
+			interpreter.PrimitiveStaticTypeVoid,
+			interpreter.PrimitiveStaticTypeAddress,
+			interpreter.PrimitiveStaticTypeMetaType,
+			interpreter.PrimitiveStaticTypeBlock,
+			interpreter.PrimitiveStaticTypeString,
+			interpreter.PrimitiveStaticTypeCharacter:
+
+			return true
+		}
+
+		if !valueType.IsDeprecated() { //nolint:staticcheck
+			semaType := valueType.SemaType()
+
+			if sema.IsSubType(semaType, sema.NumberType) ||
+				sema.IsSubType(semaType, sema.PathType) {
+
+				return true
+			}
+		}
+	}
+
+	return false
+}
