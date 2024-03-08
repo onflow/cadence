@@ -785,7 +785,7 @@ func leastCommonAccess(accessA, accessB Access) Access {
 		}
 	}
 
-	return UnauthorizedAccess
+	panic(errors.NewUnreachableError())
 }
 
 func commonSuperTypeOfReferences(types []Type) Type {
@@ -803,7 +803,7 @@ func commonSuperTypeOfReferences(types []Type) Type {
 
 		referenceType, ok := typ.(*ReferenceType)
 		if !ok {
-			return commonSuperTypeOfHeterogeneousTypes(types)
+			panic(errors.NewUnreachableError())
 		}
 
 		references = append(references, referenceType)
