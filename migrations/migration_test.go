@@ -1151,7 +1151,7 @@ func (testContainerMigration) Migrate(
 			interpreter.PrimitiveStaticTypeAnyStruct,
 		)
 
-		return value.NewWithType(inter, emptyLocationRange, newType), nil
+		value.SetType(newType)
 
 	case *interpreter.ArrayValue:
 
@@ -1159,7 +1159,7 @@ func (testContainerMigration) Migrate(
 			interpreter.PrimitiveStaticTypeAnyStruct,
 		)
 
-		return value.NewWithType(inter, emptyLocationRange, newType), nil
+		value.SetType(newType)
 
 	case *interpreter.CompositeValue:
 		if value.QualifiedIdentifier == "Inner" {

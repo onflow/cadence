@@ -241,11 +241,9 @@ func ConvertValueToEntitlements(
 			return nil, nil
 		}
 
-		return v.NewWithType(
-			inter,
-			interpreter.EmptyLocationRange,
+		v.SetType(
 			entitledElementType.(interpreter.ArrayStaticType),
-		), nil
+		)
 
 	case *interpreter.DictionaryValue:
 		elementType := v.Type
@@ -259,11 +257,9 @@ func ConvertValueToEntitlements(
 			return nil, nil
 		}
 
-		return v.NewWithType(
-			inter,
-			interpreter.EmptyLocationRange,
+		v.SetType(
 			entitledElementType.(*interpreter.DictionaryStaticType),
-		), nil
+		)
 
 	case *interpreter.IDCapabilityValue:
 		borrowType := v.BorrowType
