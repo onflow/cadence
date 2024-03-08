@@ -21,6 +21,7 @@ package string_normalization
 import (
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 type StringNormalizingMigration struct{}
@@ -50,4 +51,55 @@ func (StringNormalizingMigration) Migrate(
 	}
 
 	return nil, nil
+}
+
+func (m StringNormalizingMigration) CanSkip(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	interpreter *interpreter.Interpreter,
+) bool {
+	return CanSkipStringNormalizingMigration(value.StaticType(interpreter))
+}
+
+func CanSkipStringNormalizingMigration(valueType interpreter.StaticType) bool {
+	switch ty := valueType.(type) {
+	case *interpreter.DictionaryStaticType:
+		return CanSkipStringNormalizingMigration(ty.KeyType) &&
+			CanSkipStringNormalizingMigration(ty.ValueType)
+
+	case interpreter.ArrayStaticType:
+		return CanSkipStringNormalizingMigration(ty.ElementType())
+
+	case *interpreter.OptionalStaticType:
+		return CanSkipStringNormalizingMigration(ty.Type)
+
+	case *interpreter.CapabilityStaticType:
+		return true
+
+	case interpreter.PrimitiveStaticType:
+
+		switch ty {
+		case interpreter.PrimitiveStaticTypeBool,
+			interpreter.PrimitiveStaticTypeVoid,
+			interpreter.PrimitiveStaticTypeAddress,
+			interpreter.PrimitiveStaticTypeMetaType,
+			interpreter.PrimitiveStaticTypeBlock,
+			interpreter.PrimitiveStaticTypeCapability:
+
+			return true
+		}
+
+		if !ty.IsDeprecated() { //nolint:staticcheck
+			semaType := ty.SemaType()
+
+			if sema.IsSubType(semaType, sema.NumberType) ||
+				sema.IsSubType(semaType, sema.PathType) {
+
+				return true
+			}
+		}
+	}
+
+	return false
 }
