@@ -3518,55 +3518,12 @@ func (v *ArrayValue) ToConstantSized(
 	)
 }
 
-func (v *ArrayValue) NewWithType(
-	inter *Interpreter,
-	locationRange LocationRange,
-	newType ArrayStaticType,
-) *ArrayValue {
-
-	newArray := NewArrayValue(
-		inter,
-		locationRange,
-		newType,
-		v.GetOwner(),
-	)
-
-	storage := inter.Storage()
-
-	count := v.Count()
-
-	for index := 0; index < count; index++ {
-
-		storable := v.RemoveWithoutTransfer(
-			inter,
-			locationRange,
-			// NOTE: always removing first element,
-			// until original array is empty
-			0,
-		)
-
-		if storable == nil {
-			panic(errors.NewUnreachableError())
-		}
-
-		if v.Count() != count-index-1 {
-			panic(errors.NewUnreachableError())
-		}
-
-		newValue, err := storable.StoredValue(storage)
-		if err != nil {
-			panic(err)
-		}
-
-		newArray.InsertWithoutTransfer(
-			inter,
-			locationRange,
-			index,
-			newValue,
-		)
+func (v *ArrayValue) SetType(staticType ArrayStaticType) {
+	v.Type = staticType
+	err := v.array.SetType(staticType)
+	if err != nil {
+		panic(errors.NewExternalError(err))
 	}
-
-	return newArray
 }
 
 // NumberValue
@@ -18667,65 +18624,6 @@ func newDictionaryValueFromAtreeMap(
 	}
 }
 
-func (v *DictionaryValue) NewWithType(
-	inter *Interpreter,
-	locationRange LocationRange,
-	newType *DictionaryStaticType,
-) *DictionaryValue {
-
-	newDictionary := NewDictionaryValueWithAddress(
-		inter,
-		locationRange,
-		newType,
-		v.GetOwner(),
-	)
-
-	var keys []atree.Value
-
-	iterator := v.Iterator()
-
-	for {
-		key := iterator.NextKeyUnconverted()
-		if key == nil {
-			break
-		}
-
-		keys = append(keys, key)
-	}
-
-	storage := inter.Storage()
-
-	for _, key := range keys {
-		existingKeyStorable, existingValueStorable := v.RemoveWithoutTransfer(
-			inter,
-			locationRange,
-			key,
-		)
-		if existingKeyStorable == nil || existingValueStorable == nil {
-			panic(errors.NewUnreachableError())
-		}
-
-		newKey, err := existingKeyStorable.StoredValue(storage)
-		if err != nil {
-			panic(err)
-		}
-
-		newValue, err := existingValueStorable.StoredValue(storage)
-		if err != nil {
-			panic(err)
-		}
-
-		newDictionary.InsertWithoutTransfer(
-			inter,
-			locationRange,
-			newKey,
-			newValue,
-		)
-	}
-
-	return newDictionary
-}
-
 var _ Value = &DictionaryValue{}
 var _ atree.Value = &DictionaryValue{}
 var _ EquatableValue = &DictionaryValue{}
@@ -19901,6 +19799,14 @@ func (v *DictionaryValue) IsResourceKinded(interpreter *Interpreter) bool {
 		v.isResourceKinded = &isResourceKinded
 	}
 	return *v.isResourceKinded
+}
+
+func (v *DictionaryValue) SetType(staticType *DictionaryStaticType) {
+	v.Type = staticType
+	err := v.dictionary.SetType(staticType)
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
 }
 
 // OptionalValue
