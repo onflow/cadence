@@ -369,3 +369,7 @@ func (mig EntitlementsMigration) Migrate(
 ) {
 	return ConvertValueToEntitlements(mig.Interpreter, value)
 }
+
+func (mig EntitlementsMigration) CanSkip(valueType interpreter.StaticType) bool {
+	return statictypes.CanSkipStaticTypeMigration(valueType)
+}

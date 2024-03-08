@@ -695,6 +695,10 @@ func (m testEntitlementsMigration) Migrate(
 	return ConvertValueToEntitlements(m.inter, value)
 }
 
+func (m testEntitlementsMigration) CanSkip(_ interpreter.StaticType) bool {
+	return false
+}
+
 func convertEntireTestValue(
 	t *testing.T,
 	inter *interpreter.Interpreter,
