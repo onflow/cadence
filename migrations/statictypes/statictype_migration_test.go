@@ -890,3 +890,118 @@ func TestMigratingNestedContainers(t *testing.T) {
 	})
 
 }
+
+func TestCanSkipStaticTypeMigration(t *testing.T) {
+
+	t.Parallel()
+
+	testCases := map[interpreter.StaticType]bool{
+
+		// Primitive types, like Bool and Address
+
+		interpreter.PrimitiveStaticTypeBool:    true,
+		interpreter.PrimitiveStaticTypeAddress: true,
+
+		// Number and Path types, like UInt8 and StoragePath
+
+		interpreter.PrimitiveStaticTypeUInt8:       true,
+		interpreter.PrimitiveStaticTypeStoragePath: true,
+
+		// Capability types
+
+		// Untyped capability, can skip
+		interpreter.PrimitiveStaticTypeCapability: true,
+		// Typed capabilities, cannot skip
+		&interpreter.CapabilityStaticType{
+			BorrowType: interpreter.PrimitiveStaticTypeString,
+		}: false,
+		&interpreter.CapabilityStaticType{
+			BorrowType: interpreter.PrimitiveStaticTypeCharacter,
+		}: false,
+
+		// Existential types, like AnyStruct and AnyResource
+
+		interpreter.PrimitiveStaticTypeAnyStruct:   false,
+		interpreter.PrimitiveStaticTypeAnyResource: false,
+	}
+
+	test := func(ty interpreter.StaticType, expected bool) {
+
+		t.Run(ty.String(), func(t *testing.T) {
+
+			t.Parallel()
+
+			t.Run("base", func(t *testing.T) {
+
+				t.Parallel()
+
+				actual := CanSkipStaticTypeMigration(ty)
+				assert.Equal(t, expected, actual)
+
+			})
+
+			t.Run("optional", func(t *testing.T) {
+
+				t.Parallel()
+
+				optionalType := interpreter.NewOptionalStaticType(nil, ty)
+
+				actual := CanSkipStaticTypeMigration(optionalType)
+				assert.Equal(t, expected, actual)
+			})
+
+			t.Run("variable-sized", func(t *testing.T) {
+
+				t.Parallel()
+
+				arrayType := interpreter.NewVariableSizedStaticType(nil, ty)
+
+				actual := CanSkipStaticTypeMigration(arrayType)
+				assert.Equal(t, expected, actual)
+			})
+
+			t.Run("constant-sized", func(t *testing.T) {
+
+				t.Parallel()
+
+				arrayType := interpreter.NewConstantSizedStaticType(nil, ty, 2)
+
+				actual := CanSkipStaticTypeMigration(arrayType)
+				assert.Equal(t, expected, actual)
+			})
+
+			t.Run("dictionary key", func(t *testing.T) {
+
+				t.Parallel()
+
+				dictionaryType := interpreter.NewDictionaryStaticType(
+					nil,
+					ty,
+					interpreter.PrimitiveStaticTypeInt,
+				)
+
+				actual := CanSkipStaticTypeMigration(dictionaryType)
+				assert.Equal(t, expected, actual)
+
+			})
+
+			t.Run("dictionary value", func(t *testing.T) {
+
+				t.Parallel()
+
+				dictionaryType := interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeInt,
+					ty,
+				)
+
+				actual := CanSkipStaticTypeMigration(dictionaryType)
+				assert.Equal(t, expected, actual)
+			})
+		})
+	}
+
+	for ty, expected := range testCases {
+		test(ty, expected)
+	}
+}

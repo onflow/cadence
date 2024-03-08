@@ -516,3 +516,58 @@ var unauthorizedAccountReferenceType = interpreter.NewReferenceStaticType(
 	interpreter.UnauthorizedAccess,
 	interpreter.PrimitiveStaticTypeAccount,
 )
+
+func (m *StaticTypeMigration) CanSkip(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	interpreter *interpreter.Interpreter,
+) bool {
+	return CanSkipStaticTypeMigration(value.StaticType(interpreter))
+}
+
+func CanSkipStaticTypeMigration(valueType interpreter.StaticType) bool {
+
+	switch valueType := valueType.(type) {
+	case *interpreter.DictionaryStaticType:
+		return CanSkipStaticTypeMigration(valueType.KeyType) &&
+			CanSkipStaticTypeMigration(valueType.ValueType)
+
+	case interpreter.ArrayStaticType:
+		return CanSkipStaticTypeMigration(valueType.ElementType())
+
+	case *interpreter.OptionalStaticType:
+		return CanSkipStaticTypeMigration(valueType.Type)
+
+	case *interpreter.CapabilityStaticType:
+		// Typed capability, cannot skip
+		return false
+
+	case interpreter.PrimitiveStaticType:
+
+		switch valueType {
+		case interpreter.PrimitiveStaticTypeBool,
+			interpreter.PrimitiveStaticTypeVoid,
+			interpreter.PrimitiveStaticTypeAddress,
+			interpreter.PrimitiveStaticTypeBlock,
+			interpreter.PrimitiveStaticTypeString,
+			interpreter.PrimitiveStaticTypeCharacter,
+			// Untyped capability, can skip
+			interpreter.PrimitiveStaticTypeCapability:
+
+			return true
+		}
+
+		if !valueType.IsDeprecated() { //nolint:staticcheck
+			semaType := valueType.SemaType()
+
+			if sema.IsSubType(semaType, sema.NumberType) ||
+				sema.IsSubType(semaType, sema.PathType) {
+
+				return true
+			}
+		}
+	}
+
+	return false
+}
