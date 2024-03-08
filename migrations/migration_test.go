@@ -103,6 +103,15 @@ func (testStringMigration) Migrate(
 	return nil, nil
 }
 
+func (testStringMigration) CanSkip(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	_ interpreter.Value,
+	_ *interpreter.Interpreter,
+) bool {
+	return false
+}
+
 // testInt8Migration
 
 type testInt8Migration struct {
@@ -133,9 +142,27 @@ func (m testInt8Migration) Migrate(
 	return interpreter.NewUnmeteredInt8Value(int8(int8Value) + 10), nil
 }
 
+func (testInt8Migration) CanSkip(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	_ interpreter.Value,
+	_ *interpreter.Interpreter,
+) bool {
+	return false
+}
+
 // testCapMigration
 
 type testCapMigration struct{}
+
+func (m testCapMigration) CanSkip(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	_ interpreter.Value,
+	_ *interpreter.Interpreter,
+) bool {
+	return false
+}
 
 var _ ValueMigration = testCapMigration{}
 
@@ -196,6 +223,15 @@ func (testCapConMigration) Migrate(
 	}
 
 	return nil, nil
+}
+
+func (testCapConMigration) CanSkip(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	_ interpreter.Value,
+	_ *interpreter.Interpreter,
+) bool {
+	return false
 }
 
 func TestMultipleMigrations(t *testing.T) {
@@ -974,6 +1010,15 @@ func (m testCompositeValueMigration) Migrate(
 	), nil
 }
 
+func (testCompositeValueMigration) CanSkip(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	_ interpreter.Value,
+	_ *interpreter.Interpreter,
+) bool {
+	return false
+}
+
 func TestEmptyIntersectionTypeMigration(t *testing.T) {
 
 	t.Parallel()
@@ -1176,6 +1221,15 @@ func (testContainerMigration) Migrate(
 	}
 
 	return nil, nil
+}
+
+func (m testContainerMigration) CanSkip(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	_ interpreter.Value,
+	_ *interpreter.Interpreter,
+) bool {
+	return false
 }
 
 func TestMigratingNestedContainers(t *testing.T) {
@@ -1607,6 +1661,15 @@ func (m testPanicMigration) Migrate(
 	return nil, nil
 }
 
+func (m testPanicMigration) CanSkip(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	_ interpreter.Value,
+	_ *interpreter.Interpreter,
+) bool {
+	return false
+}
+
 func TestMigrationPanic(t *testing.T) {
 	t.Parallel()
 
@@ -1694,4 +1757,281 @@ func TestMigrationPanic(t *testing.T) {
 		"index out of range",
 	)
 	assert.NotEmpty(t, migrationError.Stack)
+}
+
+type testSkipMigration struct {
+	migrationCalls []interpreter.Value
+	canSkip        func(valueType interpreter.StaticType) bool
+}
+
+var _ ValueMigration = &testSkipMigration{}
+
+func (*testSkipMigration) Name() string {
+	return "testSkipMigration"
+}
+
+func (m *testSkipMigration) Migrate(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) (interpreter.Value, error) {
+
+	m.migrationCalls = append(m.migrationCalls, value)
+
+	// Do not actually migrate anything
+
+	return nil, nil
+}
+
+func (m *testSkipMigration) CanSkip(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	inter *interpreter.Interpreter,
+) bool {
+	return m.canSkip(value.StaticType(inter))
+}
+
+func TestSkip(t *testing.T) {
+	t.Parallel()
+
+	testAddress := common.Address{0x42}
+
+	migrate := func(
+		t *testing.T,
+		valueFactory func(interpreter *interpreter.Interpreter) interpreter.Value,
+		canSkip func(valueType interpreter.StaticType) bool,
+	) (
+		migrationCalls []interpreter.Value,
+		inter *interpreter.Interpreter,
+	) {
+
+		ledger := NewTestLedger(nil, nil)
+
+		storage := runtime.NewStorage(ledger, nil)
+
+		var err error
+		inter, err = interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   true,
+				AtreeStorageValidationEnabled: false,
+			},
+		)
+		require.NoError(t, err)
+
+		// Store value
+
+		storagePathDomain := common.PathDomainStorage.Identifier()
+		storageMapKey := interpreter.StringStorageMapKey("test_value")
+
+		value := valueFactory(inter)
+
+		inter.WriteStored(
+			testAddress,
+			storagePathDomain,
+			storageMapKey,
+			value,
+		)
+
+		// Migrate
+
+		migration := NewStorageMigration(inter, storage)
+
+		reporter := newTestReporter()
+
+		valueMigration := &testSkipMigration{
+			canSkip: canSkip,
+		}
+
+		migration.Migrate(
+			&AddressSliceIterator{
+				Addresses: []common.Address{
+					testAddress,
+				},
+			},
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				valueMigration,
+			),
+		)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+
+		// Assert
+
+		require.Empty(t, reporter.errors)
+
+		return valueMigration.migrationCalls, inter
+	}
+
+	t.Run("skip non-string values", func(t *testing.T) {
+		t.Parallel()
+
+		var canSkip func(valueType interpreter.StaticType) bool
+		canSkip = func(valueType interpreter.StaticType) bool {
+			switch ty := valueType.(type) {
+			case *interpreter.DictionaryStaticType:
+				return canSkip(ty.KeyType) &&
+					canSkip(ty.ValueType)
+
+			case interpreter.ArrayStaticType:
+				return canSkip(ty.ElementType())
+
+			case *interpreter.OptionalStaticType:
+				return canSkip(ty.Type)
+
+			case *interpreter.CapabilityStaticType:
+				return true
+
+			case interpreter.PrimitiveStaticType:
+
+				switch ty {
+				case interpreter.PrimitiveStaticTypeBool,
+					interpreter.PrimitiveStaticTypeVoid,
+					interpreter.PrimitiveStaticTypeAddress,
+					interpreter.PrimitiveStaticTypeMetaType,
+					interpreter.PrimitiveStaticTypeBlock,
+					interpreter.PrimitiveStaticTypeCharacter,
+					interpreter.PrimitiveStaticTypeCapability:
+
+					return true
+				}
+
+				if !ty.IsDeprecated() { //nolint:staticcheck
+					semaType := ty.SemaType()
+
+					if sema.IsSubType(semaType, sema.NumberType) ||
+						sema.IsSubType(semaType, sema.PathType) {
+
+						return true
+					}
+				}
+			}
+
+			return false
+		}
+
+		t.Run("[{Int: Bool}]", func(t *testing.T) {
+
+			t.Parallel()
+
+			migrationCalls, _ := migrate(
+				t,
+				func(inter *interpreter.Interpreter) interpreter.Value {
+
+					dictionaryStaticType := interpreter.NewDictionaryStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeInt,
+						interpreter.PrimitiveStaticTypeBool,
+					)
+
+					return interpreter.NewArrayValue(
+						inter,
+						interpreter.EmptyLocationRange,
+						interpreter.NewVariableSizedStaticType(
+							nil,
+							dictionaryStaticType,
+						),
+						testAddress,
+						interpreter.NewDictionaryValueWithAddress(
+							inter,
+							interpreter.EmptyLocationRange,
+							dictionaryStaticType,
+							testAddress,
+							interpreter.NewUnmeteredIntValueFromInt64(42),
+							interpreter.BoolValue(true),
+						),
+					)
+				},
+				canSkip,
+			)
+
+			require.Empty(t, migrationCalls)
+		})
+
+		t.Run("[{Int: AnyStruct}]", func(t *testing.T) {
+
+			t.Parallel()
+
+			dictionaryStaticType := interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeInt,
+				interpreter.PrimitiveStaticTypeAnyStruct,
+			)
+
+			newStringValue := func() *interpreter.StringValue {
+				return interpreter.NewUnmeteredStringValue("abc")
+			}
+
+			newDictionaryValue := func(inter *interpreter.Interpreter) *interpreter.DictionaryValue {
+				return interpreter.NewDictionaryValueWithAddress(
+					inter,
+					interpreter.EmptyLocationRange,
+					dictionaryStaticType,
+					testAddress,
+					interpreter.NewUnmeteredIntValueFromInt64(42),
+					newStringValue(),
+				)
+			}
+
+			newArrayValue := func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(
+						nil,
+						dictionaryStaticType,
+					),
+					testAddress,
+					newDictionaryValue(inter),
+				)
+			}
+
+			migrationCalls, inter := migrate(
+				t,
+				func(inter *interpreter.Interpreter) interpreter.Value {
+					return newArrayValue(inter)
+				},
+				canSkip,
+			)
+
+			// NOTE: the integer value, the key of the dictionary, is skipped!
+			require.Len(t, migrationCalls, 3)
+
+			// first
+
+			first := migrationCalls[0]
+			require.IsType(t, &interpreter.StringValue{}, first)
+
+			assert.True(t,
+				first.(*interpreter.StringValue).
+					Equal(inter, emptyLocationRange, newStringValue()),
+			)
+
+			// second
+
+			second := migrationCalls[1]
+			require.IsType(t, &interpreter.DictionaryValue{}, second)
+
+			assert.True(t,
+				second.(*interpreter.DictionaryValue).
+					Equal(inter, emptyLocationRange, newDictionaryValue(inter)),
+			)
+
+			// third
+
+			third := migrationCalls[2]
+			require.IsType(t, &interpreter.ArrayValue{}, third)
+
+			assert.True(t,
+				third.(*interpreter.ArrayValue).
+					Equal(inter, emptyLocationRange, newArrayValue(inter)),
+			)
+		})
+	})
 }
