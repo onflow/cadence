@@ -2033,5 +2033,70 @@ func TestSkip(t *testing.T) {
 					Equal(inter, emptyLocationRange, newArrayValue(inter)),
 			)
 		})
+
+		t.Run("S(foo: {Int: Bool})", func(t *testing.T) {
+
+			t.Parallel()
+
+			dictionaryStaticType := interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeInt,
+				interpreter.PrimitiveStaticTypeBool,
+			)
+
+			newDictionaryValue := func(inter *interpreter.Interpreter) *interpreter.DictionaryValue {
+				return interpreter.NewDictionaryValueWithAddress(
+					inter,
+					interpreter.EmptyLocationRange,
+					dictionaryStaticType,
+					testAddress,
+					interpreter.NewUnmeteredIntValueFromInt64(42),
+					interpreter.BoolValue(true),
+				)
+			}
+
+			newCompositeValue := func(inter *interpreter.Interpreter) *interpreter.CompositeValue {
+				compositeValue := interpreter.NewCompositeValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					utils.TestLocation,
+					"S",
+					common.CompositeKindStructure,
+					nil,
+					testAddress,
+				)
+
+				compositeValue.SetMemberWithoutTransfer(
+					inter,
+					emptyLocationRange,
+					"foo",
+					newDictionaryValue(inter),
+				)
+
+				return compositeValue
+			}
+
+			migrationCalls, inter := migrate(
+				t,
+				func(inter *interpreter.Interpreter) interpreter.Value {
+					return newCompositeValue(inter)
+				},
+				canSkip,
+			)
+
+			// NOTE: the dictionary value and its children are skipped!
+			require.Len(t, migrationCalls, 1)
+
+			// first
+
+			first := migrationCalls[0]
+			require.IsType(t, &interpreter.CompositeValue{}, first)
+
+			assert.True(t,
+				first.(*interpreter.CompositeValue).
+					Equal(inter, emptyLocationRange, newCompositeValue(inter)),
+			)
+		})
+
 	})
 }
