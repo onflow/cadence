@@ -76,7 +76,7 @@ func (d *Decoder) decodeInlineType(types *cadenceTypeByCCFTypeID) (cadence.Type,
 		return d.decodeInclusiveRangeType(types, d.decodeInlineType)
 
 	case CBORTagReferenceType:
-		return d.decodeReferenceType(types, d.decodeInlineType)
+		return d.decodeReferenceType(types, d.decodeInlineType, true)
 
 	case CBORTagIntersectionType:
 		return d.decodeIntersectionType(types, d.decodeInlineType)
@@ -347,9 +347,212 @@ func (d *Decoder) decodeCapabilityType(
 	return cadence.NewMeteredCapabilityType(d.gauge, borrowType), nil
 }
 
-func (d *Decoder) decodeAuthorization() (cadence.Authorization, error) {
-	err := d.dec.DecodeNil()
-	return cadence.UnauthorizedAccess, err
+// decodeAuthorization decodes auth-type or auth-type-value as
+// language=CDDL
+// authorization-type =
+//
+//	unauthorized-type
+//	/ entitlement-set-authorization-type
+//	/ entitlement-map-authorization-type
+//
+// unauthorized-type = nil
+//
+// entitlement-set-authorization-type =
+//
+//	; cbor-tag-entitlement-set-authorization-type
+//	#6.146([
+//	    kind: uint8,
+//	    entitlements: +[string]
+//	])
+//
+// entitlement-map-authorization-type =
+//
+//	; cbor-tag-entitlement-map-authorization-type
+//	#6.147(entitlement: string)
+//
+// authorization-type-value =
+//
+//	unauthorized-type-value
+//	/ entitlement-set-authorization-type-value
+//	/ entitlement-map-authorization-type-value
+//
+// unauthorized-type-value = nil
+//
+// entitlement-set-authorization-type-value =
+//
+//	; cbor-tag-entitlement-set-authorization-type-value
+//	#6.195([
+//	    kind: uint8,
+//	    entitlements: +[string]
+//	])
+//
+// entitlement-map-authorization-type-value =
+//
+//	; cbor-tag-entitlement-map-authorization-type-value
+//	#6.196(entitlement: string)
+func (d *Decoder) decodeAuthorization(isType bool) (cadence.Authorization, error) {
+	nt, err := d.dec.NextType()
+	if err != nil {
+		return nil, err
+	}
+
+	switch nt {
+	case cbor.NilType:
+		err = d.dec.DecodeNil()
+		if err != nil {
+			return nil, err
+		}
+		return cadence.UnauthorizedAccess, nil
+
+	case cbor.TagType:
+		tagNum, err := d.dec.DecodeTagNumber()
+		if err != nil {
+			return nil, err
+		}
+
+		if isType {
+
+			switch tagNum {
+			case CBORTagEntitlementSetAuthorizationAccessType:
+				return d.decodeEntitlementSetAuthorization()
+
+			case CBORTagEntitlementMapAuthorizationAccessType:
+				return d.decodeEntitlementMapAuthorization()
+
+			default:
+				return nil, fmt.Errorf("unexpected CBOR tag number %d as Authorization type", tagNum)
+			}
+
+		} else {
+
+			switch tagNum {
+			case CBORTagEntitlementSetAuthorizationAccessTypeValue:
+				return d.decodeEntitlementSetAuthorization()
+
+			case CBORTagEntitlementMapAuthorizationAccessTypeValue:
+				return d.decodeEntitlementMapAuthorization()
+
+			default:
+				return nil, fmt.Errorf("unexpected CBOR tag number %d as Authorization type value", tagNum)
+			}
+
+		}
+
+	default:
+		return nil, fmt.Errorf("unexpected CBOR type %s as Authorization type", nt.String())
+	}
+}
+
+const entitlementSetAuthorizationArraySize = 2
+
+// decodeEntitlementSetAuthorization decodes
+// - entitlement-set-authorization-type, or
+// - entitlement-set-authorization-type-value
+// without CBOR tag as
+// language=CDDL
+// entitlement-set-authorization-type =
+//
+//	; cbor-tag-entitlement-set-authorization-type
+//	#6.146([
+//	    kind: uint8,
+//	    entitlements: +[string]
+//	])
+func (d *Decoder) decodeEntitlementSetAuthorization() (cadence.Authorization, error) {
+
+	// Decode array head of known length.
+	err := decodeCBORArrayWithKnownSize(d.dec, entitlementSetAuthorizationArraySize)
+	if err != nil {
+		return nil, err
+	}
+
+	// element 0: kind
+	rawKind, err := d.dec.DecodeUint64()
+	if err != nil {
+		return nil, err
+	}
+
+	kind, exist := entitlementSetKindCadenceTypeByRawValue(entitlementSetKind(rawKind))
+	if !exist {
+		return nil, fmt.Errorf("unexpected entitlement set kind %d for Authorization type", rawKind)
+	}
+
+	// element 1: array of entitlements
+	entitlementCount, err := d.dec.DecodeArrayHead()
+	if err != nil {
+		return nil, err
+	}
+
+	switch entitlementCount {
+	case 0:
+		return nil, fmt.Errorf("unexpected 0 element entitlement set for Authorization type")
+
+	case 1:
+		typeID, err := d.dec.DecodeString()
+		if err != nil {
+			return nil, err
+		}
+		auth := cadence.NewEntitlementSetAuthorization(
+			d.gauge,
+			[]common.TypeID{common.TypeID(typeID)},
+			kind,
+		)
+		return auth, nil
+
+	default:
+		entitlements := make([]common.TypeID, entitlementCount)
+		entitlementsSet := make(map[string]struct{}, entitlementCount)
+		var previousEntitlement string
+
+		for i := 0; i < int(entitlementCount); i++ {
+			typeID, err := d.dec.DecodeString()
+			if err != nil {
+				return nil, err
+			}
+
+			// "Valid CCF Encoding Requirements" in CCF specs:
+			//
+			//   "Elements MUST be unique in entitlement-set-authorization-type.entitlements."
+			//   "Elements MUST be unique in entitlement-set-authorization-type-value.entitlements."
+			if _, ok := entitlementsSet[typeID]; ok {
+				return nil, fmt.Errorf("found duplicate entitlement %s in entitlement set", typeID)
+			}
+
+			if d.dm.enforceSortEntitlementTypes == EnforceSortBytewiseLexical {
+				// "Deterministic CCF Encoding Requirements" in CCF specs:
+				//
+				//   "Elements in entitlement-set-authorization-type.entitlements MUST be sorted"
+				//   "Elements in entitlement-set-authorization-type-value.entitlements MUST be sorted"
+				if !stringsAreSortedBytewise(previousEntitlement, typeID) {
+					return nil, fmt.Errorf("entitlements are not sorted in entitlement set (%s, %s)", previousEntitlement, typeID)
+				}
+			}
+
+			entitlementsSet[typeID] = struct{}{}
+			previousEntitlement = typeID
+			entitlements[i] = common.TypeID(typeID)
+		}
+
+		auth := cadence.NewEntitlementSetAuthorization(d.gauge, entitlements, kind)
+		return auth, nil
+	}
+}
+
+// decodeEntitlementMapAuthorization decodes
+// - entitlement-map-authorization-type, or
+// - entitlement-map-authorization-type-value
+// without CBOR tag as
+// language=CDDL
+// entitlement-map-authorization-type =
+//
+//	; cbor-tag-entitlement-map-authorization-type
+//	#6.147(string)
+func (d *Decoder) decodeEntitlementMapAuthorization() (cadence.Authorization, error) {
+	typeID, err := d.dec.DecodeString()
+	if err != nil {
+		return nil, err
+	}
+
+	return cadence.NewEntitlementMapAuthorization(d.gauge, common.TypeID(typeID)), nil
 }
 
 // decodeReferenceType decodes reference-type or reference-type-value as
@@ -358,7 +561,7 @@ func (d *Decoder) decodeAuthorization() (cadence.Authorization, error) {
 //
 //	; cbor-tag-reference-type
 //	#6.142([
-//	  authorized: bool,
+//	  authorized: authorization-type,
 //	  type: inline-type,
 //	])
 //
@@ -366,7 +569,7 @@ func (d *Decoder) decodeAuthorization() (cadence.Authorization, error) {
 //
 //	; cbor-tag-reference-type-value
 //	#6.190([
-//	  authorized: bool,
+//	  authorized: authorization-type,
 //	  type: type-value,
 //	])
 //
@@ -374,6 +577,7 @@ func (d *Decoder) decodeAuthorization() (cadence.Authorization, error) {
 func (d *Decoder) decodeReferenceType(
 	types *cadenceTypeByCCFTypeID,
 	decodeTypeFn decodeTypeFn,
+	isType bool,
 ) (cadence.Type, error) {
 	// Decode array head of length 2
 	err := decodeCBORArrayWithKnownSize(d.dec, 2)
@@ -382,7 +586,7 @@ func (d *Decoder) decodeReferenceType(
 	}
 
 	// element 0: authorization
-	authorization, err := d.decodeAuthorization()
+	authorization, err := d.decodeAuthorization(isType)
 	if err != nil {
 		return nil, err
 	}

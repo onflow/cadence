@@ -70,16 +70,9 @@ type testMigration struct {
 	migration     string
 }
 
-type testMigrationError struct {
-	storageKey    interpreter.StorageKey
-	storageMapKey interpreter.StorageMapKey
-	migration     string
-	err           error
-}
-
 type testMigrationReporter struct {
 	migrations               []testMigration
-	errors                   []testMigrationError
+	errors                   []error
 	linkMigrations           []testCapConsLinkMigration
 	pathCapabilityMigrations []testCapConsPathCapabilityMigration
 	missingCapabilityIDs     []testCapConsMissingCapabilityID
@@ -106,21 +99,8 @@ func (t *testMigrationReporter) Migrated(
 	)
 }
 
-func (t *testMigrationReporter) Error(
-	storageKey interpreter.StorageKey,
-	storageMapKey interpreter.StorageMapKey,
-	migration string,
-	err error,
-) {
-	t.errors = append(
-		t.errors,
-		testMigrationError{
-			storageKey:    storageKey,
-			storageMapKey: storageMapKey,
-			migration:     migration,
-			err:           err,
-		},
-	)
+func (t *testMigrationReporter) Error(err error) {
+	t.errors = append(t.errors, err)
 }
 func (t *testMigrationReporter) MigratedLink(
 	accountAddressPath interpreter.AddressPath,
@@ -252,7 +232,7 @@ func testPathCapabilityValueMigration(
 	pathLinks []testLink,
 	accountLinks []interpreter.PathValue,
 	expectedMigrations []testMigration,
-	expectedErrors []testMigrationError,
+	expectedErrors []error,
 	expectedPathMigrations []testCapConsPathCapabilityMigration,
 	expectedMissingCapabilityIDs []testCapConsMissingCapabilityID,
 	setupFunction, checkFunction string,
@@ -476,7 +456,7 @@ func testPathCapabilityValueMigration(
 
 	migration := migrations.NewStorageMigration(inter, storage)
 
-	capabilityIDs := &CapabilityIDMapping{}
+	capabilityMapping := &CapabilityMapping{}
 
 	reporter := &testMigrationReporter{}
 
@@ -489,7 +469,7 @@ func testPathCapabilityValueMigration(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
-				CapabilityIDs:      capabilityIDs,
+				CapabilityMapping:  capabilityMapping,
 				AccountIDGenerator: &testAccountIDGenerator{},
 				Reporter:           reporter,
 			},
@@ -505,8 +485,8 @@ func testPathCapabilityValueMigration(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
-				CapabilityIDs: capabilityIDs,
-				Reporter:      reporter,
+				CapabilityMapping: capabilityMapping,
+				Reporter:          reporter,
 			},
 		),
 	)
@@ -514,15 +494,11 @@ func testPathCapabilityValueMigration(
 	err = migration.Commit()
 	require.NoError(t, err)
 
-	// Check migrated capabilities
+	// Assert
 
 	assert.Equal(t,
 		expectedMigrations,
 		reporter.migrations,
-	)
-	assert.Equal(t,
-		expectedErrors,
-		reporter.errors,
 	)
 	assert.Equal(t,
 		expectedPathMigrations,
@@ -532,6 +508,13 @@ func testPathCapabilityValueMigration(
 		expectedMissingCapabilityIDs,
 		reporter.missingCapabilityIDs,
 	)
+	require.Equal(t,
+		expectedErrors,
+		reporter.errors,
+	)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	if len(expectedMissingCapabilityIDs) == 0 {
 
@@ -580,7 +563,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		pathLinks                    []testLink
 		accountLinks                 []interpreter.PathValue
 		expectedMigrations           []testMigration
-		expectedErrors               []testMigrationError
+		expectedErrors               []error
 		expectedPathMigrations       []testCapConsPathCapabilityMigration
 		expectedMissingCapabilityIDs []testCapConsMissingCapabilityID
 		borrowShouldFail             bool
@@ -1237,7 +1220,7 @@ func testLinkMigration(
 	pathLinks []testLink,
 	accountLinks []interpreter.PathValue,
 	expectedMigrations []testMigration,
-	expectedErrors []testMigrationError,
+	expectedErrors []error,
 	expectedLinkMigrations []testCapConsLinkMigration,
 	expectedCyclicLinkErrors []CyclicLinkError,
 	expectedMissingTargets []interpreter.AddressPath,
@@ -1325,7 +1308,7 @@ func testLinkMigration(
 
 	migration := migrations.NewStorageMigration(inter, storage)
 
-	capabilityIDs := &CapabilityIDMapping{}
+	capabilityMapping := &CapabilityMapping{}
 
 	reporter := &testMigrationReporter{}
 
@@ -1338,7 +1321,7 @@ func testLinkMigration(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
-				CapabilityIDs:      capabilityIDs,
+				CapabilityMapping:  capabilityMapping,
 				AccountIDGenerator: &testAccountIDGenerator{},
 				Reporter:           reporter,
 			},
@@ -1354,10 +1337,6 @@ func testLinkMigration(
 		expectedMigrations,
 		reporter.migrations,
 	)
-	assert.Empty(t,
-		expectedErrors,
-		reporter.errors,
-	)
 	assert.Equal(t,
 		expectedLinkMigrations,
 		reporter.linkMigrations,
@@ -1370,6 +1349,13 @@ func testLinkMigration(
 		expectedMissingTargets,
 		reporter.missingTargets,
 	)
+	require.Equal(t,
+		expectedErrors,
+		reporter.errors,
+	)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 }
 
 func TestLinkMigration(t *testing.T) {
@@ -1381,7 +1367,7 @@ func TestLinkMigration(t *testing.T) {
 		pathLinks                []testLink
 		accountLinks             []interpreter.PathValue
 		expectedMigrations       []testMigration
-		expectedErrors           []testMigrationError
+		expectedErrors           []error
 		expectedLinkMigrations   []testCapConsLinkMigration
 		expectedCyclicLinkErrors []CyclicLinkError
 		expectedMissingTargets   []interpreter.AddressPath
@@ -2035,7 +2021,7 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 
 	migration := migrations.NewStorageMigration(inter, storage)
 
-	capabilityIDs := &CapabilityIDMapping{}
+	capabilityMapping := &CapabilityMapping{}
 
 	reporter := &testMigrationReporter{}
 
@@ -2048,7 +2034,7 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
-				CapabilityIDs:      capabilityIDs,
+				CapabilityMapping:  capabilityMapping,
 				AccountIDGenerator: &testAccountIDGenerator{},
 				Reporter:           reporter,
 			},
@@ -2064,8 +2050,8 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
-				CapabilityIDs: capabilityIDs,
-				Reporter:      reporter,
+				CapabilityMapping: capabilityMapping,
+				Reporter:          reporter,
 			},
 		),
 	)
@@ -2073,20 +2059,22 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
-	// Check migrated capabilities
+	// Assert
 
 	assert.Equal(t,
 		expectedMigrations,
 		reporter.migrations,
 	)
-	assert.Empty(t, reporter.errors)
 	assert.Equal(t,
 		expectedPathMigrations,
 		reporter.pathCapabilityMigrations,
 	)
 	require.Nil(t, reporter.missingCapabilityIDs)
 
-	// Check
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	// language=cadence
 	checkScript := `
@@ -2108,4 +2096,369 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+}
+
+func TestUntypedPathCapabilityValueMigration(t *testing.T) {
+
+	t.Parallel()
+
+	// Equivalent to: &Int
+	linkBorrowType := interpreter.NewReferenceStaticType(
+		nil,
+		interpreter.UnauthorizedAccess,
+		interpreter.PrimitiveStaticTypeInt,
+	)
+
+	// Equivalent to: getCapability(/public/test)
+	capabilityValue := &interpreter.PathCapabilityValue{ //nolint:staticcheck
+		// NOTE: no borrow type
+		BorrowType: nil,
+		Path: interpreter.PathValue{
+			Domain:     common.PathDomainPublic,
+			Identifier: testPathIdentifier,
+		},
+		Address: interpreter.AddressValue(testAddress),
+	}
+
+	pathLinks := []testLink{
+		// Equivalent to:
+		//   link<&Int>(/public/test, target: /private/test)
+		{
+			sourcePath: interpreter.PathValue{
+				Domain:     common.PathDomainPublic,
+				Identifier: testPathIdentifier,
+			},
+			targetPath: interpreter.PathValue{
+				Domain:     common.PathDomainPrivate,
+				Identifier: testPathIdentifier,
+			},
+			borrowType: linkBorrowType,
+		},
+		// Equivalent to:
+		//   link<&Int>(/private/test, target: /storage/test)
+		{
+			sourcePath: interpreter.PathValue{
+				Domain:     common.PathDomainPrivate,
+				Identifier: testPathIdentifier,
+			},
+			targetPath: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: testPathIdentifier,
+			},
+			borrowType: linkBorrowType,
+		},
+	}
+
+	expectedMigrations := []testMigration{
+		{
+			storageKey: interpreter.StorageKey{
+				Address: testAddress,
+				Key:     common.PathDomainPrivate.Identifier(),
+			},
+			storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+			migration:     "LinkValueMigration",
+		},
+		{
+			storageKey: interpreter.StorageKey{
+				Address: testAddress,
+				Key:     common.PathDomainPublic.Identifier(),
+			},
+			storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+			migration:     "LinkValueMigration",
+		},
+		{
+			storageKey: interpreter.StorageKey{
+				Address: testAddress,
+				Key:     common.PathDomainStorage.Identifier(),
+			},
+			storageMapKey: interpreter.StringStorageMapKey("cap"),
+			migration:     "CapabilityValueMigration",
+		},
+	}
+
+	expectedPathMigrations := []testCapConsPathCapabilityMigration{
+		{
+			accountAddress: testAddress,
+			addressPath: interpreter.AddressPath{
+				Address: testAddress,
+				Path: interpreter.NewUnmeteredPathValue(
+					common.PathDomainPublic,
+					testPathIdentifier,
+				),
+			},
+			// NOTE: link / cap con's borrow type is used
+			borrowType: linkBorrowType,
+		},
+	}
+
+	rt := NewTestInterpreterRuntime()
+
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{testAddress}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	// Setup
+
+	setupTransactionLocation := nextTransactionLocation()
+
+	environment := runtime.NewScriptInterpreterEnvironment(runtime.Config{})
+
+	// Inject the path capability value.
+	//
+	// We don't have a way to create a path capability value in a Cadence program anymore,
+	// so we have to inject it manually.
+
+	environment.DeclareValue(
+		stdlib.StandardLibraryValue{
+			Name:  "cap",
+			Type:  &sema.CapabilityType{},
+			Kind:  common.DeclarationKindConstant,
+			Value: capabilityValue,
+		},
+		setupTransactionLocation,
+	)
+
+	// Create and store path links
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	storeTestPathLinks(t, pathLinks, storage, inter)
+
+	err = storage.Commit(inter, false)
+	require.NoError(t, err)
+
+	// Save capability values into account
+
+	// language=cadence
+	setupTx := `
+      transaction {
+          prepare(signer: auth(SaveValue) &Account) {
+             signer.storage.save(42, to: /storage/test)
+             signer.storage.save(cap, to: /storage/cap)
+          }
+      }
+    `
+
+	err = rt.ExecuteTransaction(
+		runtime.Script{
+			Source: []byte(setupTx),
+		},
+		runtime.Context{
+			Interface:   runtimeInterface,
+			Environment: environment,
+			Location:    setupTransactionLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	// Migrate
+
+	migration := migrations.NewStorageMigration(inter, storage)
+
+	capabilityMapping := &CapabilityMapping{}
+
+	reporter := &testMigrationReporter{}
+
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			&LinkValueMigration{
+				CapabilityMapping:  capabilityMapping,
+				AccountIDGenerator: &testAccountIDGenerator{},
+				Reporter:           reporter,
+			},
+		),
+	)
+
+	migration.Migrate(
+		&migrations.AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			&CapabilityValueMigration{
+				CapabilityMapping: capabilityMapping,
+				Reporter:          reporter,
+			},
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Equal(t,
+		expectedMigrations,
+		reporter.migrations,
+	)
+	assert.Equal(t,
+		expectedPathMigrations,
+		reporter.pathCapabilityMigrations,
+	)
+	require.Nil(t, reporter.missingCapabilityIDs)
+
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	// Check
+
+	// language=cadence
+	checkScript := `
+	  access(all)
+	  fun main() {
+	      let cap = getAuthAccount<auth(CopyValue) &Account>(0x1)
+	          .storage.copy<Capability>(from: /storage/cap)!
+          assert(*cap.borrow<&Int>()! == 42)
+	  }
+	`
+
+	_, err = rt.ExecuteScript(
+		runtime.Script{
+			Source: []byte(checkScript),
+		},
+		runtime.Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+}
+
+func TestCanSkipCapabilityValueMigration(t *testing.T) {
+
+	t.Parallel()
+
+	testCases := map[interpreter.StaticType]bool{
+
+		// Primitive types, like Bool and Address
+
+		interpreter.PrimitiveStaticTypeBool:    true,
+		interpreter.PrimitiveStaticTypeAddress: true,
+
+		// Number and Path types, like UInt8 and StoragePath
+
+		interpreter.PrimitiveStaticTypeUInt8:       true,
+		interpreter.PrimitiveStaticTypeStoragePath: true,
+
+		// Capability types
+
+		interpreter.PrimitiveStaticTypeCapability: false,
+		&interpreter.CapabilityStaticType{
+			BorrowType: interpreter.PrimitiveStaticTypeString,
+		}: false,
+		&interpreter.CapabilityStaticType{
+			BorrowType: interpreter.PrimitiveStaticTypeCharacter,
+		}: false,
+
+		// Existential types, like AnyStruct and AnyResource
+
+		interpreter.PrimitiveStaticTypeAnyStruct:   false,
+		interpreter.PrimitiveStaticTypeAnyResource: false,
+	}
+
+	test := func(ty interpreter.StaticType, expected bool) {
+
+		t.Run(ty.String(), func(t *testing.T) {
+
+			t.Parallel()
+
+			t.Run("base", func(t *testing.T) {
+
+				t.Parallel()
+
+				actual := CanSkipCapabilityValueMigration(ty)
+				assert.Equal(t, expected, actual)
+
+			})
+
+			t.Run("optional", func(t *testing.T) {
+
+				t.Parallel()
+
+				optionalType := interpreter.NewOptionalStaticType(nil, ty)
+
+				actual := CanSkipCapabilityValueMigration(optionalType)
+				assert.Equal(t, expected, actual)
+			})
+
+			t.Run("variable-sized", func(t *testing.T) {
+
+				t.Parallel()
+
+				arrayType := interpreter.NewVariableSizedStaticType(nil, ty)
+
+				actual := CanSkipCapabilityValueMigration(arrayType)
+				assert.Equal(t, expected, actual)
+			})
+
+			t.Run("constant-sized", func(t *testing.T) {
+
+				t.Parallel()
+
+				arrayType := interpreter.NewConstantSizedStaticType(nil, ty, 2)
+
+				actual := CanSkipCapabilityValueMigration(arrayType)
+				assert.Equal(t, expected, actual)
+			})
+
+			t.Run("dictionary key", func(t *testing.T) {
+
+				t.Parallel()
+
+				dictionaryType := interpreter.NewDictionaryStaticType(
+					nil,
+					ty,
+					interpreter.PrimitiveStaticTypeInt,
+				)
+
+				actual := CanSkipCapabilityValueMigration(dictionaryType)
+				assert.Equal(t, expected, actual)
+
+			})
+
+			t.Run("dictionary value", func(t *testing.T) {
+
+				t.Parallel()
+
+				dictionaryType := interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeInt,
+					ty,
+				)
+
+				actual := CanSkipCapabilityValueMigration(dictionaryType)
+				assert.Equal(t, expected, actual)
+			})
+		})
+	}
+
+	for ty, expected := range testCases {
+		test(ty, expected)
+	}
 }

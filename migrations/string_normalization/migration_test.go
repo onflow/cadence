@@ -53,9 +53,10 @@ func TestStringNormalizingMigration(t *testing.T) {
 		nil,
 		utils.TestLocation,
 		&interpreter.Config{
-			Storage:                       storage,
+			Storage: storage,
+			// NOTE: disabled, because encoded and decoded values are expected to not match
 			AtreeValueValidationEnabled:   false,
-			AtreeStorageValidationEnabled: false,
+			AtreeStorageValidationEnabled: true,
 		},
 	)
 	require.NoError(t, err)
@@ -277,6 +278,9 @@ func TestStringNormalizingMigration(t *testing.T) {
 	err = migration.Commit()
 	require.NoError(t, err)
 
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	// Assert: Traverse through the storage and see if the values are updated now.
 
 	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
@@ -326,7 +330,8 @@ func TestStringValueRehash(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			&interpreter.Config{
-				Storage:                       storage,
+				Storage: storage,
+				// NOTE: disabled, because encoded and decoded values are expected to not match
 				AtreeValueValidationEnabled:   false,
 				AtreeStorageValidationEnabled: true,
 			},
@@ -415,6 +420,9 @@ func TestStringValueRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
+		err := storage.CheckHealth()
+		require.NoError(t, err)
+
 		storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
 		storedValue := storageMap.ReadValue(inter, storageMapKey)
 
@@ -464,7 +472,8 @@ func TestCharacterValueRehash(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			&interpreter.Config{
-				Storage:                       storage,
+				Storage: storage,
+				// NOTE: disabled, because encoded and decoded values are expected to not match
 				AtreeValueValidationEnabled:   false,
 				AtreeStorageValidationEnabled: true,
 			},
@@ -554,6 +563,9 @@ func TestCharacterValueRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
+		err := storage.CheckHealth()
+		require.NoError(t, err)
+
 		storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
 		storedValue := storageMap.ReadValue(inter, storageMapKey)
 
@@ -577,4 +589,122 @@ func TestCharacterValueRehash(t *testing.T) {
 			value.(interpreter.IntValue),
 		)
 	})
+}
+
+func TestCanSkipStringNormalizingMigration(t *testing.T) {
+
+	t.Parallel()
+
+	testCases := map[interpreter.StaticType]bool{
+
+		// Primitive types, like Bool and Address
+
+		interpreter.PrimitiveStaticTypeBool:    true,
+		interpreter.PrimitiveStaticTypeAddress: true,
+
+		// Number and Path types, like UInt8 and StoragePath
+
+		interpreter.PrimitiveStaticTypeUInt8:       true,
+		interpreter.PrimitiveStaticTypeStoragePath: true,
+
+		// Capability types
+
+		interpreter.PrimitiveStaticTypeCapability: true,
+		&interpreter.CapabilityStaticType{
+			BorrowType: interpreter.PrimitiveStaticTypeString,
+		}: true,
+		&interpreter.CapabilityStaticType{
+			BorrowType: interpreter.PrimitiveStaticTypeCharacter,
+		}: true,
+
+		// String and Character
+
+		interpreter.PrimitiveStaticTypeString:    false,
+		interpreter.PrimitiveStaticTypeCharacter: false,
+
+		// Existential types, like AnyStruct and AnyResource
+
+		interpreter.PrimitiveStaticTypeAnyStruct:   false,
+		interpreter.PrimitiveStaticTypeAnyResource: false,
+	}
+
+	test := func(ty interpreter.StaticType, expected bool) {
+
+		t.Run(ty.String(), func(t *testing.T) {
+
+			t.Parallel()
+
+			t.Run("base", func(t *testing.T) {
+
+				t.Parallel()
+
+				actual := CanSkipStringNormalizingMigration(ty)
+				assert.Equal(t, expected, actual)
+
+			})
+
+			t.Run("optional", func(t *testing.T) {
+
+				t.Parallel()
+
+				optionalType := interpreter.NewOptionalStaticType(nil, ty)
+
+				actual := CanSkipStringNormalizingMigration(optionalType)
+				assert.Equal(t, expected, actual)
+			})
+
+			t.Run("variable-sized", func(t *testing.T) {
+
+				t.Parallel()
+
+				arrayType := interpreter.NewVariableSizedStaticType(nil, ty)
+
+				actual := CanSkipStringNormalizingMigration(arrayType)
+				assert.Equal(t, expected, actual)
+			})
+
+			t.Run("constant-sized", func(t *testing.T) {
+
+				t.Parallel()
+
+				arrayType := interpreter.NewConstantSizedStaticType(nil, ty, 2)
+
+				actual := CanSkipStringNormalizingMigration(arrayType)
+				assert.Equal(t, expected, actual)
+			})
+
+			t.Run("dictionary key", func(t *testing.T) {
+
+				t.Parallel()
+
+				dictionaryType := interpreter.NewDictionaryStaticType(
+					nil,
+					ty,
+					interpreter.PrimitiveStaticTypeInt,
+				)
+
+				actual := CanSkipStringNormalizingMigration(dictionaryType)
+				assert.Equal(t, expected, actual)
+
+			})
+
+			t.Run("dictionary value", func(t *testing.T) {
+
+				t.Parallel()
+
+				dictionaryType := interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeInt,
+					ty,
+				)
+
+				actual := CanSkipStringNormalizingMigration(dictionaryType)
+				assert.Equal(t, expected, actual)
+			})
+		})
+	}
+
+	for ty, expected := range testCases {
+		test(ty, expected)
+	}
 }

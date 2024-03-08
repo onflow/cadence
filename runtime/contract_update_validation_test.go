@@ -2319,6 +2319,27 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			assertMissingDeclarationError(t, childErrors[1], "B")
 		}
 	})
+
+	t.Run("Remove event", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) event Foo()
+                access(all) event Bar()
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) event Bar()
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		require.NoError(t, err)
+	})
 }
 
 func assertContractRemovalError(t *testing.T, err error, name string) {
@@ -2561,7 +2582,6 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
-
 		assertConformanceMismatchError(t, cause, "Foo")
 	})
 

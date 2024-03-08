@@ -4768,8 +4768,9 @@ type CompositeType struct {
 	ConstructorPurity                    FunctionPurity
 	HasComputedMembers                   bool
 	// Only applicable for native composite types
-	ImportableBuiltin     bool
-	supportedEntitlements *EntitlementOrderedSet
+	ImportableBuiltin         bool
+	supportedEntitlementsOnce sync.Once
+	supportedEntitlements     *EntitlementOrderedSet
 }
 
 var _ Type = &CompositeType{}
@@ -4956,35 +4957,32 @@ func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
 	return t.Members
 }
 
-func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
-	supportedEntitlements := t.supportedEntitlements
-	if supportedEntitlements != nil {
-		return supportedEntitlements
-	}
+func (t *CompositeType) SupportedEntitlements() *EntitlementOrderedSet {
+	t.supportedEntitlementsOnce.Do(func() {
+		set := orderedmap.New[EntitlementOrderedSet](t.Members.Len())
+		t.Members.Foreach(func(_ string, member *Member) {
+			switch access := member.Access.(type) {
+			case *EntitlementMapAccess:
+				set.SetAll(access.Domain().Entitlements)
+			case EntitlementSetAccess:
+				set.SetAll(access.Entitlements)
+			}
+		})
+		t.EffectiveInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
+			set.SetAll(it.SupportedEntitlements())
+		})
 
-	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
-	t.Members.Foreach(func(_ string, member *Member) {
-		switch access := member.Access.(type) {
-		case *EntitlementMapAccess:
-			set.SetAll(access.Domain().Entitlements)
-		case EntitlementSetAccess:
-			set.SetAll(access.Entitlements)
+		// attachments support at least the entitlements supported by their base,
+		// and we must ensure there is no recursive case
+		if entitlementSupportingBase, isEntitlementSupportingBase :=
+			t.GetBaseType().(EntitlementSupportingType); isEntitlementSupportingBase && entitlementSupportingBase != t {
+
+			set.SetAll(entitlementSupportingBase.SupportedEntitlements())
 		}
+
+		t.supportedEntitlements = set
 	})
-	t.EffectiveInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
-		set.SetAll(it.SupportedEntitlements())
-	})
-
-	// attachments support at least the entitlements supported by their base,
-	// and we must ensure there is no recursive case
-	if entitlementSupportingBase, isEntitlementSupportingBase :=
-		t.GetBaseType().(EntitlementSupportingType); isEntitlementSupportingBase && entitlementSupportingBase != t {
-
-		set.SetAll(entitlementSupportingBase.SupportedEntitlements())
-	}
-
-	t.supportedEntitlements = set
-	return set
+	return t.supportedEntitlements
 }
 
 func (t *CompositeType) IsResourceType() bool {
@@ -5659,6 +5657,7 @@ type InterfaceType struct {
 	ExplicitInterfaceConformances    []*InterfaceType
 	effectiveInterfaceConformances   []Conformance
 	effectiveInterfaceConformanceSet *InterfaceSet
+	supportedEntitlementsOnce        sync.Once
 	supportedEntitlements            *EntitlementOrderedSet
 
 	DefaultDestroyEvent *CompositeType
@@ -5768,32 +5767,29 @@ func (t *InterfaceType) MemberMap() *StringMemberOrderedMap {
 	return t.Members
 }
 
-func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
-	supportedEntitlements := t.supportedEntitlements
-	if supportedEntitlements != nil {
-		return supportedEntitlements
-	}
+func (t *InterfaceType) SupportedEntitlements() *EntitlementOrderedSet {
+	t.supportedEntitlementsOnce.Do(func() {
+		set := orderedmap.New[EntitlementOrderedSet](t.Members.Len())
+		t.Members.Foreach(func(_ string, member *Member) {
+			switch access := member.Access.(type) {
+			case *EntitlementMapAccess:
+				access.Domain().Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+					set.Set(entitlement, struct{}{})
+				})
+			case EntitlementSetAccess:
+				access.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
+					set.Set(entitlement, struct{}{})
+				})
+			}
+		})
 
-	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
-	t.Members.Foreach(func(_ string, member *Member) {
-		switch access := member.Access.(type) {
-		case *EntitlementMapAccess:
-			access.Domain().Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
-				set.Set(entitlement, struct{}{})
-			})
-		case EntitlementSetAccess:
-			access.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
-				set.Set(entitlement, struct{}{})
-			})
-		}
+		t.EffectiveInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
+			set.SetAll(it.SupportedEntitlements())
+		})
+
+		t.supportedEntitlements = set
 	})
-
-	t.EffectiveInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
-		set.SetAll(it.SupportedEntitlements())
-	})
-
-	t.supportedEntitlements = set
-	return set
+	return t.supportedEntitlements
 }
 
 func (t *InterfaceType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
@@ -7659,21 +7655,164 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		return true
 
 	case *IntersectionType:
-		switch typedSubType := subType.(type) {
-		case *IntersectionType:
 
-			// A intersection type `{Us}` is a subtype of a intersection type `{Vs}` / `{Vs}` / `{Vs}`:
-			// when `Vs` is a subset of `Us`.
+		// TODO: replace with
+		//
+		//switch typedSubType := subType.(type) {
+		//case *IntersectionType:
+		//
+		//	// An intersection type `{Us}` is a subtype of an intersection type `{Vs}` / `{Vs}` / `{Vs}`:
+		//	// when `Vs` is a subset of `Us`.
+		//
+		//	return typedSuperType.EffectiveIntersectionSet().
+		//		IsSubsetOf(typedSubType.EffectiveIntersectionSet())
+		//
+		//case *CompositeType:
+		//	// A type `T` is a subtype of an intersection type `{Us}` / `{Us}` / `{Us}`:
+		//	// when `T` conforms to `Us`.
+		//
+		//	return typedSuperType.EffectiveIntersectionSet().
+		//		IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
+		//}
 
-			return typedSuperType.EffectiveIntersectionSet().
-				IsSubsetOf(typedSubType.EffectiveIntersectionSet())
+		intersectionSuperType := typedSuperType.LegacyType //nolint:staticcheck
 
-		case *CompositeType:
-			// A type `T` is a subtype of a intersection type `{Us}` / `{Us}` / `{Us}`:
-			// when `T` conforms to `Us`.
+		switch intersectionSuperType {
+		case nil, AnyResourceType, AnyStructType, AnyType:
 
-			return typedSuperType.EffectiveIntersectionSet().
-				IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
+			switch subType {
+			case AnyResourceType:
+				// `AnyResource` is a subtype of an intersection type
+				// - `AnyResource{Us}`: not statically;
+				// - `AnyStruct{Us}`: never.
+				// - `Any{Us}`: not statically;
+
+				return false
+
+			case AnyStructType:
+				// `AnyStruct` is a subtype of an intersection type
+				// - `AnyStruct{Us}`: not statically.
+				// - `AnyResource{Us}`: never;
+				// - `Any{Us}`: not statically.
+
+				return false
+
+			case AnyType:
+				// `Any` is a subtype of an intersection type
+				// - `Any{Us}: not statically.`
+				// - `AnyStruct{Us}`: never;
+				// - `AnyResource{Us}`: never;
+
+				return false
+			}
+
+			switch typedSubType := subType.(type) {
+			case *IntersectionType:
+
+				// An intersection type `T{Us}`
+				// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+
+				intersectionSubtype := typedSubType.LegacyType //nolint:staticcheck
+				switch intersectionSubtype {
+				case nil:
+					// An intersection type `{Us}` is a subtype of an intersection type `{Vs}` / `{Vs}` / `{Vs}`:
+					// when `Vs` is a subset of `Us`.
+
+					return typedSuperType.EffectiveIntersectionSet().
+						IsSubsetOf(typedSubType.EffectiveIntersectionSet())
+
+				case AnyResourceType, AnyStructType, AnyType:
+					// When `T == AnyResource || T == AnyStruct || T == Any`:
+					// if the intersection type of the subtype
+					// is a subtype of the intersection supertype,
+					// and `Vs` is a subset of `Us`.
+
+					if intersectionSuperType != nil &&
+						!IsSubType(intersectionSubtype, intersectionSuperType) {
+
+						return false
+					}
+
+					return typedSuperType.EffectiveIntersectionSet().
+						IsSubsetOf(typedSubType.EffectiveIntersectionSet())
+				}
+
+				if intersectionSubtype, ok := intersectionSubtype.(*CompositeType); ok {
+					// When `T != AnyResource && T != AnyStruct && T != Any`:
+					// if the intersection type of the subtype
+					// is a subtype of the intersection supertype,
+					// and `T` conforms to `Vs`.
+					// `Us` and `Vs` do *not* have to be subsets.
+
+					if intersectionSuperType != nil &&
+						!IsSubType(intersectionSubtype, intersectionSuperType) {
+
+						return false
+					}
+
+					return typedSuperType.EffectiveIntersectionSet().
+						IsSubsetOf(intersectionSubtype.EffectiveInterfaceConformanceSet())
+				}
+
+			case *CompositeType:
+				// A type `T`
+				// is a subtype of an intersection type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
+				// if `T` is a subtype of the intersection supertype,
+				// and `T` conforms to `Us`.
+
+				if intersectionSuperType != nil &&
+					!IsSubType(typedSubType, intersectionSuperType) {
+
+					return false
+				}
+
+				return typedSuperType.EffectiveIntersectionSet().
+					IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
+			}
+
+		default:
+			// Supertype (intersection) has a non-Any* legacy type
+
+			switch typedSubType := subType.(type) {
+			case *IntersectionType:
+
+				// An intersection type `T{Us}`
+				// is a subtype of an intersection type `V{Ws}`:
+
+				intersectionSubType := typedSubType.LegacyType //nolint:staticcheck
+				switch intersectionSubType {
+				case nil, AnyResourceType, AnyStructType, AnyType:
+					// When `T == AnyResource || T == AnyStruct || T == Any`:
+					// not statically.
+					return false
+				}
+
+				if intersectionSubType, ok := intersectionSubType.(*CompositeType); ok {
+					// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
+					//
+					// `Us` and `Ws` do *not* have to be subsets:
+					// The owner may freely restrict and unrestrict.
+
+					return intersectionSubType == intersectionSuperType
+				}
+
+			case *CompositeType:
+				// A type `T`
+				// is a subtype of an intersection type `U{Vs}`: if `T <: U`.
+				//
+				// The owner may freely restrict.
+
+				return IsSubType(typedSubType, intersectionSuperType)
+			}
+
+			switch subType {
+			case AnyResourceType, AnyStructType, AnyType:
+				// A type `T`
+				// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+				// not statically.
+
+				return false
+			}
 		}
 
 	case *CompositeType:
@@ -7681,11 +7820,31 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// NOTE: type equality case (composite type `T` is subtype of composite type `U`)
 		// is already handled at beginning of function
 
-		switch subType.(type) {
+		switch typedSubType := subType.(type) {
 		case *IntersectionType:
 
-			// A intersection type `{Us}` is never a subtype of a type `V`:
-			return false
+			// TODO: bring back once legacy type is removed
+			// An intersection type `{Us}` is never a subtype of a type `V`:
+			//return false
+
+			// TODO: remove support for legacy type
+			// An intersection type `T{Us}`
+			// is a subtype of a type `V`:
+
+			legacyType := typedSubType.LegacyType
+			switch legacyType {
+			case nil, AnyResourceType, AnyStructType, AnyType:
+				// When `T == AnyResource || T == AnyStruct || T == Any`: not statically.
+				return false
+			}
+
+			if intersectionSubType, ok := legacyType.(*CompositeType); ok {
+				// When `T != AnyResource && T != AnyStruct`: if `T == V`.
+				//
+				// The owner may freely unrestrict.
+
+				return intersectionSubType == typedSuperType
+			}
 
 		case *CompositeType:
 			// Non-equal composite types are never subtypes of each other
@@ -7697,7 +7856,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		switch typedSubType := subType.(type) {
 		case *CompositeType:
 
-			// A composite type `T` is a subtype of a interface type `V`:
+			// A composite type `T` is a subtype of an interface type `V`:
 			// if `T` conforms to `V`, and `V` and `T` are of the same kind
 
 			if typedSubType.Kind != typedSuperType.CompositeKind {
@@ -7707,15 +7866,17 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return typedSubType.EffectiveInterfaceConformanceSet().
 				Contains(typedSuperType)
 
-		// An interface type is a supertype of a intersection type if at least one value
+		// An interface type is a supertype of an intersection type if at least one value
 		// in the intersection set is a subtype of the interface supertype.
-
-		// This particular case comes up when checking attachment access; enabling the following expression to typechecking:
-		// resource interface I { /* ... */ }
-		// attachment A for I { /* ... */ }
-
-		// let i : {I} = ... // some operation constructing `i`
-		// let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that {I} <: I
+		//
+		// This particular case comes up when checking attachment access;
+		// enabling the following expression to type-checking:
+		//
+		//   resource interface I { /* ... */ }
+		//   attachment A for I { /* ... */ }
+		//
+		//   let i : {I} = ... // some operation constructing `i`
+		//   let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that {I} <: I
 		case *IntersectionType:
 			return typedSubType.EffectiveIntersectionSet().Contains(typedSuperType)
 
@@ -7981,13 +8142,17 @@ type IntersectionType struct {
 	effectiveIntersectionSetOnce sync.Once
 	memberResolvers              map[string]MemberResolver
 	memberResolversOnce          sync.Once
+	supportedEntitlementsOnce    sync.Once
 	supportedEntitlements        *EntitlementOrderedSet
+	// Deprecated
+	LegacyType Type
 }
 
 var _ Type = &IntersectionType{}
 
-func NewIntersectionType(memoryGauge common.MemoryGauge, types []*InterfaceType) *IntersectionType {
-	if len(types) == 0 {
+// TODO: remove `legacyType` once all uses of it are removed
+func NewIntersectionType(memoryGauge common.MemoryGauge, legacyType Type, types []*InterfaceType) *IntersectionType {
+	if len(types) == 0 && legacyType == nil {
 		panic(errors.NewUnreachableError())
 	}
 
@@ -8000,7 +8165,8 @@ func NewIntersectionType(memoryGauge common.MemoryGauge, types []*InterfaceType)
 	common.UseMemory(memoryGauge, entriesUsage)
 
 	return &IntersectionType{
-		Types: types,
+		Types:      types,
+		LegacyType: legacyType, //nolint:staticcheck
 	}
 }
 
@@ -8201,6 +8367,7 @@ func (t *IntersectionType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeP
 
 	return f(NewIntersectionType(
 		gauge,
+		t.LegacyType, //nolint:staticcheck
 		intersectionTypes,
 	))
 }
@@ -8215,8 +8382,8 @@ func (t *IntersectionType) initializeMemberResolvers() {
 
 		memberResolvers := map[string]MemberResolver{}
 
-		// Return the members of all typs.
-		// The invariant that typs may not have overlapping members is not checked here,
+		// Return the members of all types.
+		// The invariant that types may not have overlapping members is not checked here,
 		// but implicitly when the resource declaration's conformances are checked.
 
 		for _, typ := range t.Types {
@@ -8231,19 +8398,17 @@ func (t *IntersectionType) initializeMemberResolvers() {
 	})
 }
 
-func (t *IntersectionType) SupportedEntitlements() (set *EntitlementOrderedSet) {
-	if t.supportedEntitlements != nil {
-		return t.supportedEntitlements
-	}
-
-	// an intersection type supports all the entitlements of its interfaces
-	set = orderedmap.New[EntitlementOrderedSet](t.EffectiveIntersectionSet().Len())
-	t.EffectiveIntersectionSet().ForEach(func(it *InterfaceType) {
-		set.SetAll(it.SupportedEntitlements())
+func (t *IntersectionType) SupportedEntitlements() *EntitlementOrderedSet {
+	t.supportedEntitlementsOnce.Do(func() {
+		// an intersection type supports all the entitlements of its interfaces
+		set := orderedmap.New[EntitlementOrderedSet](t.EffectiveIntersectionSet().Len())
+		t.EffectiveIntersectionSet().ForEach(func(it *InterfaceType) {
+			set.SetAll(it.SupportedEntitlements())
+		})
+		t.supportedEntitlements = set
 	})
 
-	t.supportedEntitlements = set
-	return set
+	return t.supportedEntitlements
 }
 
 func (*IntersectionType) Unify(
@@ -8262,11 +8427,14 @@ func (t *IntersectionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-// intersection types must be type indexable, because this is how we handle access control for attachments.
+// Intersection types must be type indexable, because this is how we handle access control for attachments.
 // Specifically, because in `v[A]`, `v` must be a subtype of `A`'s declared base,
-// if `v` is a intersection type `{I}`, only attachments declared for `I` or a supertype can be accessed on `v`.
+// if `v` is an intersection type `{I}`, only attachments declared for `I` or a supertype can be accessed on `v`.
+//
 // Attachments declared for concrete types implementing `I` cannot be accessed.
-// A good elucidating example here is that an attachment declared for `Vault` cannot be accessed on a value of type `&{Provider}`
+//
+// A good elucidating example here is that an attachment declared for `Vault`
+// cannot be accessed on a value of type `&{Provider}`
 func (t *IntersectionType) isTypeIndexableType() bool {
 	// resources and structs only can be indexed for attachments, but all intersection types
 	// are necessarily structs and resources, we return true

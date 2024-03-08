@@ -42,40 +42,84 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
+// TODO: improve
 func TestConvertToEntitledType(t *testing.T) {
 
 	t.Parallel()
 
-	testLocation := common.StringLocation("test")
+	inter := NewTestInterpreter(t)
+
+	elaboration := sema.NewElaboration(nil)
+
+	inter.Program = &interpreter.Program{
+		Elaboration: elaboration,
+	}
+
+	testLocation := inter.Location
+
+	// E, F, G
 
 	entitlementE := sema.NewEntitlementType(nil, testLocation, "E")
+	elaboration.SetEntitlementType(
+		entitlementE.ID(),
+		entitlementE,
+	)
+
 	entitlementF := sema.NewEntitlementType(nil, testLocation, "F")
+	elaboration.SetEntitlementType(
+		entitlementF.ID(),
+		entitlementF,
+	)
+
 	entitlementG := sema.NewEntitlementType(nil, testLocation, "G")
+	elaboration.SetEntitlementType(
+		entitlementG.ID(),
+		entitlementG,
+	)
+
+	// auth(E)
 
 	eAccess := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{entitlementE},
 		sema.Conjunction,
 	)
+
+	// auth(F)
+
 	fAccess := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{entitlementF},
 		sema.Conjunction,
 	)
+
+	// auth(E | F)
+
 	eOrFAccess := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{entitlementE, entitlementF},
 		sema.Disjunction,
 	)
+
+	// auth(E, F)
+
 	eAndFAccess := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{entitlementE, entitlementF},
 		sema.Conjunction,
 	)
+
+	// auth(E, G)
+
 	eAndGAccess := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{entitlementE, entitlementG},
 		sema.Conjunction,
 	)
+
+	// auth(E, F, G)
+
 	eFAndGAccess := sema.NewEntitlementSetAccess(
 		[]*sema.EntitlementType{entitlementE, entitlementF, entitlementG},
 		sema.Conjunction,
 	)
+
+	// M (map)
 
 	mapM := sema.NewEntitlementMapType(nil, testLocation, "M")
 	mapM.Relations = []sema.EntitlementRelation{
@@ -89,6 +133,12 @@ func TestConvertToEntitledType(t *testing.T) {
 		},
 	}
 	mapAccess := sema.NewEntitlementMapAccess(mapM)
+	elaboration.SetEntitlementMapType(
+		mapM.ID(),
+		mapM,
+	)
+
+	// S (compositeStructWithOnlyE)
 
 	compositeStructWithOnlyE := &sema.CompositeType{
 		Location:   testLocation,
@@ -108,6 +158,12 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetCompositeType(
+		compositeStructWithOnlyE.ID(),
+		compositeStructWithOnlyE,
+	)
+
+	// R (compositeResourceWithOnlyF)
 
 	compositeResourceWithOnlyF := &sema.CompositeType{
 		Location:   testLocation,
@@ -139,10 +195,16 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetCompositeType(
+		compositeResourceWithOnlyF.ID(),
+		compositeResourceWithOnlyF,
+	)
+
+	// R2 (compositeResourceWithEOrF)
 
 	compositeResourceWithEOrF := &sema.CompositeType{
 		Location:   testLocation,
-		Identifier: "R",
+		Identifier: "R2",
 		Kind:       common.CompositeKindResource,
 		Members:    &sema.StringMemberOrderedMap{},
 	}
@@ -158,10 +220,16 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetCompositeType(
+		compositeResourceWithEOrF.ID(),
+		compositeResourceWithEOrF,
+	)
+
+	// S2 (compositeTwoFields)
 
 	compositeTwoFields := &sema.CompositeType{
 		Location:   testLocation,
-		Identifier: "S",
+		Identifier: "S2",
 		Kind:       common.CompositeKindStructure,
 		Members:    &sema.StringMemberOrderedMap{},
 	}
@@ -189,6 +257,12 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetCompositeType(
+		compositeTwoFields.ID(),
+		compositeTwoFields,
+	)
+
+	// I (interfaceTypeWithEAndG)
 
 	interfaceTypeWithEAndG := &sema.InterfaceType{
 		Location:      testLocation,
@@ -198,8 +272,21 @@ func TestConvertToEntitledType(t *testing.T) {
 	}
 	interfaceTypeWithEAndG.Members.Set(
 		"foo",
-		sema.NewFunctionMember(nil, interfaceTypeWithEAndG, eAndGAccess, "foo", &sema.FunctionType{}, ""),
+		sema.NewFunctionMember(
+			nil,
+			interfaceTypeWithEAndG,
+			eAndGAccess,
+			"foo",
+			&sema.FunctionType{},
+			"",
+		),
 	)
+	elaboration.SetInterfaceType(
+		interfaceTypeWithEAndG.ID(),
+		interfaceTypeWithEAndG,
+	)
+
+	// J (interfaceTypeInheriting)
 
 	interfaceTypeInheriting := &sema.InterfaceType{
 		Location:                      testLocation,
@@ -208,6 +295,12 @@ func TestConvertToEntitledType(t *testing.T) {
 		Members:                       &sema.StringMemberOrderedMap{},
 		ExplicitInterfaceConformances: []*sema.InterfaceType{interfaceTypeWithEAndG},
 	}
+	elaboration.SetInterfaceType(
+		interfaceTypeInheriting.ID(),
+		interfaceTypeInheriting,
+	)
+
+	// RI (compositeTypeInheriting)
 
 	compositeTypeInheriting := &sema.CompositeType{
 		Location:                      testLocation,
@@ -216,10 +309,16 @@ func TestConvertToEntitledType(t *testing.T) {
 		Members:                       &sema.StringMemberOrderedMap{},
 		ExplicitInterfaceConformances: []*sema.InterfaceType{interfaceTypeInheriting},
 	}
+	elaboration.SetCompositeType(
+		compositeTypeInheriting.ID(),
+		compositeTypeInheriting,
+	)
+
+	// RI2 (compositeTypeWithMap)
 
 	compositeTypeWithMap := &sema.CompositeType{
 		Location:   testLocation,
-		Identifier: "RI",
+		Identifier: "RI2",
 		Kind:       common.CompositeKindResource,
 		Members:    &sema.StringMemberOrderedMap{},
 	}
@@ -234,10 +333,16 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetCompositeType(
+		compositeTypeWithMap.ID(),
+		compositeTypeWithMap,
+	)
+
+	// RI3 (interfaceTypeWithMap)
 
 	interfaceTypeWithMap := &sema.InterfaceType{
 		Location:      testLocation,
-		Identifier:    "RI",
+		Identifier:    "RI3",
 		CompositeKind: common.CompositeKindResource,
 		Members:       &sema.StringMemberOrderedMap{},
 	}
@@ -252,10 +357,16 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetInterfaceType(
+		interfaceTypeWithMap.ID(),
+		interfaceTypeWithMap,
+	)
+
+	// RI4 (compositeTypeWithCapField)
 
 	compositeTypeWithCapField := &sema.CompositeType{
 		Location:   testLocation,
-		Identifier: "RI",
+		Identifier: "RI4",
 		Kind:       common.CompositeKindResource,
 		Members:    &sema.StringMemberOrderedMap{},
 	}
@@ -273,10 +384,16 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetCompositeType(
+		compositeTypeWithCapField.ID(),
+		compositeTypeWithCapField,
+	)
+
+	// RI5 (interfaceTypeWithCapField)
 
 	interfaceTypeWithCapField := &sema.InterfaceType{
 		Location:      testLocation,
-		Identifier:    "RI",
+		Identifier:    "RI5",
 		CompositeKind: common.CompositeKindResource,
 		Members:       &sema.StringMemberOrderedMap{},
 	}
@@ -294,22 +411,40 @@ func TestConvertToEntitledType(t *testing.T) {
 			"",
 		),
 	)
+	elaboration.SetInterfaceType(
+		interfaceTypeWithCapField.ID(),
+		interfaceTypeWithCapField,
+	)
+
+	// J2 (interfaceTypeInheritingCapField)
 
 	interfaceTypeInheritingCapField := &sema.InterfaceType{
 		Location:                      testLocation,
-		Identifier:                    "J",
+		Identifier:                    "J2",
 		CompositeKind:                 common.CompositeKindResource,
 		Members:                       &sema.StringMemberOrderedMap{},
 		ExplicitInterfaceConformances: []*sema.InterfaceType{interfaceTypeWithCapField},
 	}
+	elaboration.SetInterfaceType(
+		interfaceTypeInheritingCapField.ID(),
+		interfaceTypeInheritingCapField,
+	)
+
+	// RI6 (compositeTypeInheritingCapField)
 
 	compositeTypeInheritingCapField := &sema.CompositeType{
-		Location:                      testLocation,
-		Identifier:                    "RI",
-		Kind:                          common.CompositeKindResource,
-		Members:                       &sema.StringMemberOrderedMap{},
-		ExplicitInterfaceConformances: []*sema.InterfaceType{interfaceTypeInheritingCapField},
+		Location:   testLocation,
+		Identifier: "RI6",
+		Kind:       common.CompositeKindResource,
+		Members:    &sema.StringMemberOrderedMap{},
+		ExplicitInterfaceConformances: []*sema.InterfaceType{
+			interfaceTypeInheritingCapField,
+		},
 	}
+	elaboration.SetCompositeType(
+		compositeTypeInheritingCapField.ID(),
+		compositeTypeInheritingCapField,
+	)
 
 	tests := []struct {
 		Input  sema.Type
@@ -318,12 +453,12 @@ func TestConvertToEntitledType(t *testing.T) {
 	}{
 		{
 			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.IntType),
-			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, sema.IntType),
+			Output: nil,
 			Name:   "int",
 		},
 		{
 			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, &sema.FunctionType{}),
-			Output: sema.NewReferenceType(nil, sema.UnauthorizedAccess, &sema.FunctionType{}),
+			Output: nil,
 			Name:   "function",
 		},
 		{
@@ -396,6 +531,7 @@ func TestConvertToEntitledType(t *testing.T) {
 				sema.UnauthorizedAccess,
 				sema.NewIntersectionType(
 					nil,
+					nil,
 					[]*sema.InterfaceType{
 						interfaceTypeInheriting,
 						interfaceTypeWithMap,
@@ -405,12 +541,47 @@ func TestConvertToEntitledType(t *testing.T) {
 			Output: sema.NewReferenceType(
 				nil,
 				eFAndGAccess,
-				sema.NewIntersectionType(nil, []*sema.InterfaceType{
-					interfaceTypeInheriting,
-					interfaceTypeWithMap,
-				}),
+				sema.NewIntersectionType(
+					nil,
+					nil,
+					[]*sema.InterfaceType{
+						interfaceTypeInheriting,
+						interfaceTypeWithMap,
+					}),
 			),
 			Name: "intersection",
+		},
+		{
+			Input: sema.NewReferenceType(
+				nil,
+				sema.UnauthorizedAccess,
+				sema.NewOptionalType(
+					nil,
+					sema.NewIntersectionType(
+						nil,
+						nil,
+						[]*sema.InterfaceType{
+							interfaceTypeInheriting,
+							interfaceTypeWithMap,
+						},
+					),
+				),
+			),
+			Output: sema.NewReferenceType(
+				nil,
+				eFAndGAccess,
+				sema.NewOptionalType(
+					nil,
+					sema.NewIntersectionType(
+						nil,
+						nil,
+						[]*sema.InterfaceType{
+							interfaceTypeInheriting,
+							interfaceTypeWithMap,
+						}),
+				),
+			),
+			Name: "reference to optional",
 		},
 		// no change
 		{
@@ -446,7 +617,9 @@ func TestConvertToEntitledType(t *testing.T) {
 			Name   string
 		}
 		capabilityTest.Input = sema.NewCapabilityType(nil, test.Input)
-		capabilityTest.Output = sema.NewCapabilityType(nil, test.Output)
+		if test.Output != nil {
+			capabilityTest.Output = sema.NewCapabilityType(nil, test.Output)
+		}
 		capabilityTest.Name = "capability " + test.Name
 
 		tests = append(tests, capabilityTest)
@@ -460,38 +633,44 @@ func TestConvertToEntitledType(t *testing.T) {
 			Name   string
 		}
 		optionalTest.Input = sema.NewOptionalType(nil, test.Input)
-		optionalTest.Output = sema.NewOptionalType(nil, test.Output)
+		if test.Output != nil {
+			optionalTest.Output = sema.NewOptionalType(nil, test.Output)
+		}
 		optionalTest.Name = "optional " + test.Name
 
 		tests = append(tests, optionalTest)
 	}
 
-	var compareTypesRecursively func(t *testing.T, expected sema.Type, actual sema.Type)
-	compareTypesRecursively = func(t *testing.T, expected sema.Type, actual sema.Type) {
-		require.IsType(t, expected, actual)
-
-		switch expected := expected.(type) {
-		case *sema.ReferenceType:
-			actual := actual.(*sema.ReferenceType)
-			require.IsType(t, expected.Authorization, actual.Authorization)
-			require.True(t, expected.Authorization.Equal(actual.Authorization))
-			compareTypesRecursively(t, expected.Type, actual.Type)
-		case *sema.OptionalType:
-			actual := actual.(*sema.OptionalType)
-			compareTypesRecursively(t, expected.Type, actual.Type)
-		case *sema.CapabilityType:
-			actual := actual.(*sema.CapabilityType)
-			compareTypesRecursively(t, expected.BorrowType, actual.BorrowType)
-		}
-	}
-
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			convertedType, _ := ConvertToEntitledType(test.Input)
-			compareTypesRecursively(t, convertedType, test.Output)
+
+			inputStaticType := interpreter.ConvertSemaToStaticType(nil, test.Input)
+			convertedType, _ := ConvertToEntitledType(inter, inputStaticType)
+
+			expectedType := interpreter.ConvertSemaToStaticType(nil, test.Output)
+
+			compareTypesRecursively(t, convertedType, expectedType)
 		})
 	}
 
+}
+
+func compareTypesRecursively(t *testing.T, expected, actual interpreter.StaticType) {
+	require.IsType(t, expected, actual)
+
+	switch expected := expected.(type) {
+	case *interpreter.ReferenceStaticType:
+		actual := actual.(*interpreter.ReferenceStaticType)
+		require.IsType(t, expected.Authorization, actual.Authorization)
+		require.True(t, expected.Authorization.Equal(actual.Authorization))
+		compareTypesRecursively(t, expected.ReferencedType, actual.ReferencedType)
+	case *interpreter.OptionalStaticType:
+		actual := actual.(*interpreter.OptionalStaticType)
+		compareTypesRecursively(t, expected.Type, actual.Type)
+	case *interpreter.CapabilityStaticType:
+		actual := actual.(*interpreter.CapabilityStaticType)
+		compareTypesRecursively(t, expected.BorrowType, actual.BorrowType)
+	}
 }
 
 type testEntitlementsMigration struct {
@@ -516,32 +695,59 @@ func (m testEntitlementsMigration) Migrate(
 	return ConvertValueToEntitlements(m.inter, value)
 }
 
+func (m testEntitlementsMigration) CanSkip(_ interpreter.StaticType) bool {
+	return false
+}
+
 func convertEntireTestValue(
+	t *testing.T,
 	inter *interpreter.Interpreter,
 	storage *runtime.Storage,
 	address common.Address,
 	v interpreter.Value,
 ) interpreter.Value {
 
-	migratedValue := migrations.NewStorageMigration(inter, storage).
-		MigrateNestedValue(
-			interpreter.StorageKey{
-				Key:     common.PathDomainStorage.Identifier(),
-				Address: address,
-			},
-			interpreter.StringStorageMapKey("test"),
-			v,
-			[]migrations.ValueMigration{
-				testEntitlementsMigration{inter: inter},
-			},
-			nil,
-		)
+	reporter := newTestReporter()
+
+	migration := migrations.NewStorageMigration(inter, storage)
+
+	migratedValue := migration.MigrateNestedValue(
+		interpreter.StorageKey{
+			Key:     common.PathDomainStorage.Identifier(),
+			Address: address,
+		},
+		interpreter.StringStorageMapKey("test"),
+		v,
+		[]migrations.ValueMigration{
+			testEntitlementsMigration{inter: inter},
+		},
+		reporter,
+	)
+
+	err := migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	if migratedValue == nil {
 		return v
 	} else {
 		return migratedValue
 	}
+}
+
+func newIntersectionStaticTypeWithLegacyType(
+	legacyType interpreter.StaticType,
+	interfaceTypes []*interpreter.InterfaceStaticType,
+) *interpreter.IntersectionStaticType {
+	intersectionType := interpreter.NewIntersectionStaticType(nil, interfaceTypes)
+	intersectionType.LegacyType = legacyType
+	return intersectionType
 }
 
 func TestConvertToEntitledValue(t *testing.T) {
@@ -564,7 +770,7 @@ func TestConvertToEntitledValue(t *testing.T) {
             F -> G
         }
 
-        access(all)  struct S {
+        access(all) struct S {
             access(E) let eField: Int
             access(F) let fField: String
             init() {
@@ -585,42 +791,25 @@ func TestConvertToEntitledValue(t *testing.T) {
             access(E) let eField: Int
             access(G) let gField: Int
             access(E, G) let egField: Int
+
             init() {
                 self.egField = 0
                 self.eField = 1
                 self.gField = 2
             }
         }
-
-        access(all) resource Nested {
-            access(E | F) let efField: @R
-            init() {
-                self.efField <- create R()
-            }
-        }
-
-        access(all) fun makeS(): S {
-            return S()
-        }
-
-        access(all) fun makeR(): @R {
-            return <- create R()
-        }
-
-        access(all) fun makeNested(): @Nested {
-            return <- create Nested()
-        }
     `
 	checker, err := checkerUtils.ParseAndCheckWithOptions(t,
 		code,
 		checkerUtils.ParseAndCheckOptions{},
 	)
-
 	require.NoError(t, err)
+
+	location := checker.Location
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
-		checker.Location,
+		location,
 		&interpreter.Config{
 			Storage: storage,
 			UUIDHandler: func() (uint64, error) {
@@ -635,598 +824,269 @@ func TestConvertToEntitledValue(t *testing.T) {
 	err = inter.Interpret()
 	require.NoError(t, err)
 
-	rValue, err := inter.Invoke("makeR")
-	require.NoError(t, err)
-	sValue, err := inter.Invoke("makeS")
-	require.NoError(t, err)
-	nestedValue, err := inter.Invoke("makeNested")
-	require.NoError(t, err)
+	// E, F, G
 
-	// &S
+	eTypeID := location.TypeID(nil, "E")
+	fTypeID := location.TypeID(nil, "F")
+	gTypeID := location.TypeID(nil, "G")
 
-	unentitledSRef := interpreter.NewEphemeralReferenceValue(
-		inter,
-		interpreter.UnauthorizedAccess,
-		sValue,
-		inter.MustSemaTypeOfValue(sValue),
-		interpreter.EmptyLocationRange,
-	)
-	unentitledSRefStaticType := unentitledSRef.StaticType(inter)
+	// S
 
-	entitledSRef := interpreter.NewEphemeralReferenceValue(
-		inter,
-		interpreter.NewEntitlementSetAuthorization(
-			inter,
-			func() []common.TypeID {
-				return []common.TypeID{"S.test.E", "S.test.F"}
-			},
-			2,
-			sema.Conjunction,
-		),
-		sValue,
-		inter.MustSemaTypeOfValue(sValue),
-		interpreter.EmptyLocationRange,
-	)
-	entitledSRefStaticType := entitledSRef.StaticType(inter)
+	const sQualifiedIdentifier = "S"
+	sTypeID := location.TypeID(nil, sQualifiedIdentifier)
+	sStaticType := &interpreter.CompositeStaticType{
+		Location:            location,
+		QualifiedIdentifier: sQualifiedIdentifier,
+		TypeID:              sTypeID,
+	}
 
-	// &R
+	// R
 
-	unentitledRRef := interpreter.NewEphemeralReferenceValue(
-		inter,
-		interpreter.UnauthorizedAccess,
-		rValue,
-		inter.MustSemaTypeOfValue(rValue),
-		interpreter.EmptyLocationRange,
-	)
-	unentitledRRefStaticType := unentitledRRef.StaticType(inter)
+	const rQualifiedIdentifier = "R"
+	rTypeID := location.TypeID(nil, rQualifiedIdentifier)
+	rStaticType := &interpreter.CompositeStaticType{
+		Location:            location,
+		QualifiedIdentifier: rQualifiedIdentifier,
+		TypeID:              rTypeID,
+	}
 
-	entitledRRef := interpreter.NewEphemeralReferenceValue(
-		inter,
-		interpreter.NewEntitlementSetAuthorization(
-			inter,
-			func() []common.TypeID {
-				return []common.TypeID{"S.test.E", "S.test.G"}
-			},
-			2,
-			sema.Conjunction,
-		),
-		rValue,
-		inter.MustSemaTypeOfValue(rValue),
-		interpreter.EmptyLocationRange,
-	)
-	entitledRRefStaticType := entitledRRef.StaticType(inter)
+	// I
 
-	// &{I}
+	iTypeID := location.TypeID(nil, "I")
+	iStaticType := &interpreter.InterfaceStaticType{
+		Location:            location,
+		QualifiedIdentifier: "I",
+		TypeID:              iTypeID,
+	}
 
-	intersectionIType := sema.NewIntersectionType(
-		inter,
-		[]*sema.InterfaceType{
-			checker.Elaboration.InterfaceType("S.test.I"),
-		},
-	)
-	unentitledIRef := interpreter.NewEphemeralReferenceValue(
-		inter,
-		interpreter.UnauthorizedAccess,
-		rValue,
-		intersectionIType,
-		interpreter.EmptyLocationRange,
-	)
+	// J
 
-	entitledIRef := interpreter.NewEphemeralReferenceValue(
-		inter,
-		interpreter.NewEntitlementSetAuthorization(
-			inter,
-			func() []common.TypeID {
-				return []common.TypeID{"S.test.E"}
-			},
-			1,
-			sema.Conjunction,
-		),
-		rValue,
-		intersectionIType,
-		interpreter.EmptyLocationRange,
-	)
-
-	// legacy Capability<&R{I}>
-
-	legacyIntersectionType :=
-		interpreter.ConvertSemaToStaticType(inter, intersectionIType).(*interpreter.IntersectionStaticType)
-	legacyIntersectionType.LegacyType = rValue.StaticType(inter)
-	unentitledLegacyReferenceStaticType := interpreter.NewReferenceStaticType(
-		inter,
-		interpreter.UnauthorizedAccess,
-		legacyIntersectionType,
-	)
-
-	unentitledLegacyCapability := interpreter.NewCapabilityValue(
-		inter,
-		0,
-		interpreter.NewAddressValue(inter, testAddress),
-		unentitledLegacyReferenceStaticType,
-	)
-
-	unentitledLegacyCapabilityArray := interpreter.NewArrayValue(
-		inter,
-		interpreter.EmptyLocationRange,
-		interpreter.NewVariableSizedStaticType(inter, unentitledLegacyCapability.StaticType(inter)),
-		testAddress,
-		unentitledLegacyCapability,
-	)
-
-	unentitledLegacyCapabilityOptionalArray :=
-		interpreter.NewSomeValueNonCopying(inter, unentitledLegacyCapabilityArray)
-
-	entitledConvertedLegacyReferenceStaticType := interpreter.NewReferenceStaticType(
-		inter,
-		interpreter.NewEntitlementSetAuthorization(
-			inter,
-			func() []common.TypeID {
-				return []common.TypeID{"S.test.E"}
-			},
-			1,
-			sema.Conjunction,
-		),
-		rValue.StaticType(inter),
-	)
-
-	entitledLegacyConvertedCapability := interpreter.NewCapabilityValue(
-		inter,
-		0,
-		interpreter.NewAddressValue(inter, testAddress),
-		entitledConvertedLegacyReferenceStaticType,
-	)
-
-	entitledLegacyConvertedCapabilityArray := interpreter.NewArrayValue(
-		inter,
-		interpreter.EmptyLocationRange,
-		interpreter.NewVariableSizedStaticType(inter, entitledLegacyConvertedCapability.StaticType(inter)),
-		testAddress,
-		entitledLegacyConvertedCapability,
-	)
-
-	entitledLegacyConvertedCapabilityOptionalArray :=
-		interpreter.NewSomeValueNonCopying(inter, entitledLegacyConvertedCapabilityArray)
-
-	// &{I, J}
-
-	intersectionIJType := sema.NewIntersectionType(
-		inter,
-		[]*sema.InterfaceType{
-			checker.Elaboration.InterfaceType("S.test.I"),
-			checker.Elaboration.InterfaceType("S.test.J"),
-		},
-	)
-	unentitledIJRef := interpreter.NewEphemeralReferenceValue(
-		inter,
-		interpreter.UnauthorizedAccess,
-		rValue,
-		intersectionIJType,
-		interpreter.EmptyLocationRange,
-	)
-
-	entitledIJRef := interpreter.NewEphemeralReferenceValue(
-		inter,
-		interpreter.NewEntitlementSetAuthorization(
-			inter,
-			func() []common.TypeID {
-				return []common.TypeID{"S.test.E", "S.test.G"}
-			},
-			2,
-			sema.Conjunction,
-		),
-		rValue,
-		intersectionIJType,
-		interpreter.EmptyLocationRange,
-	)
-
-	// &Nested
-
-	unentitledNestedRef := interpreter.NewEphemeralReferenceValue(
-		inter,
-		interpreter.UnauthorizedAccess,
-		nestedValue,
-		inter.MustSemaTypeOfValue(nestedValue),
-		interpreter.EmptyLocationRange,
-	)
-	unentitledNestedRefStaticType := unentitledNestedRef.StaticType(inter)
-
-	entitledNestedRef := interpreter.NewEphemeralReferenceValue(
-		inter,
-		interpreter.NewEntitlementSetAuthorization(
-			inter,
-			func() []common.TypeID {
-				return []common.TypeID{"S.test.E", "S.test.F"}
-			},
-			2,
-			sema.Conjunction,
-		),
-		nestedValue,
-		inter.MustSemaTypeOfValue(nestedValue),
-		interpreter.EmptyLocationRange,
-	)
-	entitledNestedRefStaticType := entitledNestedRef.StaticType(inter)
+	jTypeID := location.TypeID(nil, "J")
+	jStaticType := &interpreter.InterfaceStaticType{
+		Location:            location,
+		QualifiedIdentifier: "J",
+		TypeID:              jTypeID,
+	}
 
 	type testCase struct {
-		Input  interpreter.Value
-		Output interpreter.Value
+		Input  interpreter.StaticType
+		Output interpreter.StaticType
 		Name   string
 	}
 
-	testPathValue := interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test")
-
 	tests := []testCase{
 		{
-			Input:  rValue,
-			Output: rValue,
-			Name:   "R",
+			Name:   "R --> R",
+			Input:  rStaticType,
+			Output: rStaticType,
 		},
 		{
-			Input:  sValue,
-			Output: sValue,
-			Name:   "S",
+			Name:   "S --> S",
+			Input:  sStaticType,
+			Output: sStaticType,
 		},
 		{
-			Input:  nestedValue,
-			Output: nestedValue,
-			Name:   "Nested",
-		},
-		{
-			Input:  unentitledSRef,
-			Output: entitledSRef,
-			Name:   "&S",
-		},
-		{
-			Input: interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, unentitledSRefStaticType),
-				testAddress,
-				unentitledSRef,
-			),
-			Output: interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, entitledSRefStaticType),
-				testAddress,
-				entitledSRef,
-			),
-			Name: "[&S]",
-		},
-		{
-			Input: interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeMetaType),
-				testAddress,
-				interpreter.NewTypeValue(inter, unentitledSRefStaticType),
-			),
-			Output: interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeMetaType),
-				testAddress,
-				interpreter.NewTypeValue(inter, entitledSRefStaticType),
-			),
-			Name: "[Type]",
-		},
-		{
-			Input: interpreter.NewDictionaryValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewDictionaryStaticType(
-					inter,
-					interpreter.PrimitiveStaticTypeInt,
-					unentitledSRefStaticType,
-				),
-				interpreter.NewIntValueFromInt64(inter, 0),
-				unentitledSRef,
-			),
-			Output: interpreter.NewDictionaryValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewDictionaryStaticType(
-					inter,
-					interpreter.PrimitiveStaticTypeInt,
-					entitledSRefStaticType,
-				),
-				interpreter.NewIntValueFromInt64(inter, 0),
-				entitledSRef,
-			),
-			Name: "{Int: &S}",
-		},
-		{
-			Input: interpreter.NewDictionaryValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewDictionaryStaticType(
-					inter,
-					interpreter.PrimitiveStaticTypeInt,
-					interpreter.PrimitiveStaticTypeMetaType,
-				),
-				interpreter.NewIntValueFromInt64(inter, 0),
-				interpreter.NewTypeValue(inter, unentitledSRefStaticType),
-			),
-			Output: interpreter.NewDictionaryValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewDictionaryStaticType(
-					inter,
-					interpreter.PrimitiveStaticTypeInt,
-					interpreter.PrimitiveStaticTypeMetaType,
-				),
-				interpreter.NewIntValueFromInt64(inter, 0),
-				interpreter.NewTypeValue(inter, entitledSRefStaticType),
-			),
-			Name: "{Int: Type}",
-		},
-		{
-			Input:  unentitledRRef,
-			Output: entitledRRef,
-			Name:   "&R",
-		},
-		{
-			Input:  unentitledIRef,
-			Output: entitledIRef,
-			Name:   "&{I}",
-		},
-		{
-			Input:  unentitledIJRef,
-			Output: entitledIJRef,
-			Name:   "&{I, J}",
-		},
-		{
-			Input: interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, unentitledRRefStaticType),
-				testAddress,
-				unentitledRRef,
-			),
-			Output: interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, entitledRRefStaticType),
-				testAddress,
-				entitledRRef,
-			),
-			Name: "[&R]",
-		},
-		{
-			Input:  unentitledNestedRef,
-			Output: entitledNestedRef,
-			Name:   "&Nested",
-		},
-		{
-			Input: interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, unentitledNestedRefStaticType),
-				testAddress,
-				unentitledNestedRef,
-			),
-			Output: interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, entitledNestedRefStaticType),
-				testAddress,
-				entitledNestedRef,
-			),
-			Name: "[&Nested]",
-		},
-		{
-			Input: interpreter.NewCapabilityValue(
-				inter,
-				0,
-				interpreter.NewAddressValue(inter, testAddress),
-				unentitledSRefStaticType,
-			),
-			Output: interpreter.NewCapabilityValue(
-				inter,
-				0,
-				interpreter.NewAddressValue(inter, testAddress),
-				entitledSRefStaticType,
-			),
-			Name: "Capability<&S>",
-		},
-		{
-			Input: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				Address:    interpreter.NewAddressValue(inter, testAddress),
-				Path:       testPathValue,
-				BorrowType: unentitledSRefStaticType,
-			},
-			Output: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				Address:    interpreter.NewAddressValue(inter, testAddress),
-				Path:       testPathValue,
-				BorrowType: entitledSRefStaticType,
-			},
-			Name: "PathCapability<&S>",
-		},
-		{
-			Input: interpreter.NewCapabilityValue(
-				inter,
-				0,
-				interpreter.NewAddressValue(inter, testAddress),
-				unentitledRRefStaticType,
-			),
-			Output: interpreter.NewCapabilityValue(
-				inter,
-				0,
-				interpreter.NewAddressValue(inter, testAddress),
-				entitledRRefStaticType,
-			),
-			Name: "Capability<&R>",
-		},
-		{
-			Input: interpreter.NewPublishedValue(
-				nil,
-				interpreter.NewAddressValue(nil, common.Address{}),
-				interpreter.NewCapabilityValue(
-					inter,
-					0,
-					interpreter.NewAddressValue(inter, testAddress),
-					unentitledRRefStaticType,
-				),
-			),
-			Output: interpreter.NewPublishedValue(
-				nil,
-				interpreter.NewAddressValue(nil, common.Address{}),
-				interpreter.NewCapabilityValue(
-					inter,
-					0,
-					interpreter.NewAddressValue(inter, testAddress),
-					entitledRRefStaticType,
-				),
-			),
-			Name: "PublishedValue(Capability<&R>)",
-		},
-		{
-			Input:  unentitledLegacyCapabilityOptionalArray.Clone(inter),
-			Output: entitledLegacyConvertedCapabilityOptionalArray.Clone(inter),
-			Name:   "[Capability<&R{I}>]? -> [Capability<auth(E) &R>]?",
-		},
-		{
-			Input: interpreter.NewEphemeralReferenceValue(
+			Name: "&S --> auth(E, F) &S",
+			Input: interpreter.NewReferenceStaticType(
 				inter,
 				interpreter.UnauthorizedAccess,
-				interpreter.NewArrayValue(
-					inter,
-					interpreter.EmptyLocationRange,
-					interpreter.NewVariableSizedStaticType(inter, rValue.StaticType(inter)),
-					testAddress,
-					rValue.Clone(inter),
-				),
-				sema.NewVariableSizedType(inter, inter.MustSemaTypeOfValue(rValue)),
-				interpreter.EmptyLocationRange,
+				sStaticType,
 			),
-			Output: interpreter.NewEphemeralReferenceValue(
+			Output: interpreter.NewReferenceStaticType(
 				inter,
 				interpreter.NewEntitlementSetAuthorization(
 					inter,
 					func() []common.TypeID {
-						return []common.TypeID{"Mutate", "Insert", "Remove"}
+						return []common.TypeID{
+							eTypeID,
+							fTypeID,
+						}
 					},
-					3,
+					2,
 					sema.Conjunction,
 				),
-				interpreter.NewArrayValue(
-					inter,
-					interpreter.EmptyLocationRange,
-					interpreter.NewVariableSizedStaticType(inter, rValue.StaticType(inter)),
-					testAddress,
-					rValue.Clone(inter),
-				),
-				sema.NewVariableSizedType(inter, inter.MustSemaTypeOfValue(rValue)),
-				interpreter.EmptyLocationRange,
+				sStaticType,
 			),
-			Name: "&[R]",
 		},
 		{
-			Input: interpreter.NewEphemeralReferenceValue(
+			Name: "&R --> auth(E, G) &R",
+			Input: interpreter.NewReferenceStaticType(
 				inter,
 				interpreter.UnauthorizedAccess,
-				interpreter.NewDictionaryValue(
-					inter,
-					interpreter.EmptyLocationRange,
-					interpreter.NewDictionaryStaticType(
-						inter,
-						interpreter.PrimitiveStaticTypeInt,
-						rValue.StaticType(inter),
-					),
-					interpreter.NewIntValueFromInt64(inter, 0),
-					rValue.Clone(inter),
-				),
-				sema.NewDictionaryType(inter, sema.IntType, inter.MustSemaTypeOfValue(rValue)),
-				interpreter.EmptyLocationRange,
+				rStaticType,
 			),
-			Output: interpreter.NewEphemeralReferenceValue(
+			Output: interpreter.NewReferenceStaticType(
 				inter,
 				interpreter.NewEntitlementSetAuthorization(
 					inter,
 					func() []common.TypeID {
-						return []common.TypeID{"Mutate", "Insert", "Remove"}
+						return []common.TypeID{
+							eTypeID,
+							gTypeID,
+						}
 					},
-					3,
+					2,
 					sema.Conjunction,
 				),
-				interpreter.NewDictionaryValue(
+				rStaticType,
+			),
+		},
+		{
+			Name: "&{I} --> auth(E) &{I}",
+			Input: interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewIntersectionStaticType(
 					inter,
-					interpreter.EmptyLocationRange,
-					interpreter.NewDictionaryStaticType(
-						inter,
-						interpreter.PrimitiveStaticTypeInt,
-						rValue.StaticType(inter),
-					),
-					interpreter.NewIntValueFromInt64(inter, 0),
-					rValue.Clone(inter),
+					[]*interpreter.InterfaceStaticType{
+						iStaticType,
+					},
 				),
-				sema.NewDictionaryType(inter, sema.IntType, inter.MustSemaTypeOfValue(rValue)),
-				interpreter.EmptyLocationRange,
 			),
-			Name: "&{Int: R}",
+			Output: interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.NewEntitlementSetAuthorization(
+					inter,
+					func() []common.TypeID {
+						return []common.TypeID{
+							eTypeID,
+						}
+					},
+					1,
+					sema.Conjunction,
+				),
+				interpreter.NewIntersectionStaticType(
+					inter,
+					[]*interpreter.InterfaceStaticType{
+						iStaticType,
+					},
+				),
+			),
 		},
 		{
-			Input: interpreter.PathLinkValue{ //nolint:staticcheck
-				TargetPath: testPathValue,
-				Type:       unentitledSRefStaticType,
-			},
-			Output: interpreter.PathLinkValue{ //nolint:staticcheck
-				TargetPath: testPathValue,
-				Type:       entitledSRefStaticType,
-			},
-			Name: "PathLink<&S>(/storage/test)",
+			Name: "&{I, J} --> auth(E, G) &{I, J}",
+			Input: interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewIntersectionStaticType(
+					inter,
+					[]*interpreter.InterfaceStaticType{
+						iStaticType,
+						jStaticType,
+					},
+				),
+			),
+			Output: interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.NewEntitlementSetAuthorization(
+					inter,
+					func() []common.TypeID {
+						return []common.TypeID{
+							eTypeID,
+							gTypeID,
+						}
+					},
+					2,
+					sema.Conjunction,
+				),
+				interpreter.NewIntersectionStaticType(
+					inter,
+					[]*interpreter.InterfaceStaticType{
+						iStaticType,
+						jStaticType,
+					},
+				),
+			),
 		},
 		{
-			Input:  interpreter.AccountLinkValue{}, //nolint:staticcheck
-			Output: interpreter.AccountLinkValue{}, //nolint:staticcheck
-			Name:   "AccountLink()",
+			Name: "&AnyStruct{I} --> auth(E) &{I}",
+			Input: interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.UnauthorizedAccess,
+				newIntersectionStaticTypeWithLegacyType(
+					interpreter.PrimitiveStaticTypeAnyStruct,
+					[]*interpreter.InterfaceStaticType{
+						iStaticType,
+					},
+				),
+			),
+			Output: interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.NewEntitlementSetAuthorization(
+					inter,
+					func() []common.TypeID {
+						return []common.TypeID{
+							eTypeID,
+						}
+					},
+					1,
+					sema.Conjunction,
+				),
+				interpreter.NewIntersectionStaticType(
+					inter,
+					[]*interpreter.InterfaceStaticType{
+						iStaticType,
+					},
+				),
+			),
 		},
-	}
-
-	getStaticType := func(v interpreter.Value) interpreter.StaticType {
-		// for reference types, we want to use the borrow type, rather than the type of the referenced value
-		if referenceValue, isReferenceValue := v.(*interpreter.EphemeralReferenceValue); isReferenceValue {
-			return interpreter.NewReferenceStaticType(
+		{
+			Name: "&AnyStruct{} --> &AnyStruct",
+			Input: interpreter.NewReferenceStaticType(
 				inter,
-				referenceValue.Authorization,
-				interpreter.ConvertSemaToStaticType(inter, referenceValue.BorrowedType),
-			)
-		} else {
-			return v.StaticType(inter)
-		}
-	}
-
-	for _, test := range tests {
-		tests = append(tests, testCase{
-			Input:  interpreter.NewTypeValue(inter, getStaticType(test.Input.Clone(inter))),
-			Output: interpreter.NewTypeValue(inter, getStaticType(test.Output.Clone(inter))),
-			Name:   "runtime type " + test.Name,
-		})
-	}
-
-	for _, test := range tests {
-		tests = append(tests, testCase{
-			Input:  interpreter.NewSomeValueNonCopying(inter, test.Input.Clone(inter)),
-			Output: interpreter.NewSomeValueNonCopying(inter, test.Output.Clone(inter)),
-			Name:   "optional " + test.Name,
-		})
-
-		tests = append(tests, testCase{
-			Input: interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
-				common.ZeroAddress,
-				test.Input.Clone(inter),
+				interpreter.UnauthorizedAccess,
+				newIntersectionStaticTypeWithLegacyType(
+					interpreter.PrimitiveStaticTypeAnyStruct,
+					nil,
+				),
 			),
-			Output: interpreter.NewArrayValue(
+			Output: interpreter.NewReferenceStaticType(
 				inter,
-				interpreter.EmptyLocationRange,
-				interpreter.NewVariableSizedStaticType(inter, interpreter.PrimitiveStaticTypeAnyStruct),
-				common.ZeroAddress,
-				test.Output.Clone(inter),
+				interpreter.UnauthorizedAccess,
+				interpreter.PrimitiveStaticTypeAnyStruct,
 			),
-			Name: "array " + test.Name,
-		})
+		},
+		{
+			Name: "&R{I} --> auth(E) &R",
+			Input: interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.UnauthorizedAccess,
+				newIntersectionStaticTypeWithLegacyType(
+					rStaticType,
+					[]*interpreter.InterfaceStaticType{
+						iStaticType,
+					},
+				),
+			),
+			Output: interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.NewEntitlementSetAuthorization(
+					inter,
+					func() []common.TypeID {
+						return []common.TypeID{
+							eTypeID,
+						}
+					},
+					1,
+					sema.Conjunction,
+				),
+				rStaticType,
+			),
+		},
+		{
+			// NOTE: NOT auth(E, G) &R!
+			Name: "&R{} --> &R",
+			Input: interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.UnauthorizedAccess,
+				newIntersectionStaticTypeWithLegacyType(rStaticType, nil),
+			),
+			Output: interpreter.NewReferenceStaticType(
+				inter,
+				interpreter.UnauthorizedAccess,
+				rStaticType,
+			),
+		},
 	}
 
 	var referencePeekingEqual func(interpreter.EquatableValue, interpreter.Value) bool
@@ -1234,6 +1094,9 @@ func TestConvertToEntitledValue(t *testing.T) {
 	// equality that peeks inside references to use structural equality for their values
 	referencePeekingEqual = func(input interpreter.EquatableValue, output interpreter.Value) bool {
 		switch v := input.(type) {
+
+		// TODO: support more types (e.g. dictionaries)
+
 		case *interpreter.SomeValue:
 			otherSome, ok := output.(*interpreter.SomeValue)
 			if !ok {
@@ -1253,6 +1116,10 @@ func TestConvertToEntitledValue(t *testing.T) {
 		case *interpreter.ArrayValue:
 			otherArray, ok := output.(*interpreter.ArrayValue)
 			if !ok {
+				return false
+			}
+
+			if v.Count() != otherArray.Count() {
 				return false
 			}
 
@@ -1276,37 +1143,231 @@ func TestConvertToEntitledValue(t *testing.T) {
 			}
 			return true
 
-		case *interpreter.EphemeralReferenceValue:
-			otherReference, ok := output.(*interpreter.EphemeralReferenceValue)
-			if !ok || !v.Authorization.Equal(otherReference.Authorization) {
+		case interpreter.TypeValue:
+			// TypeValue considers missing type "unknown"/"invalid",
+			// and "unknown"/"invalid" type values unequal.
+			// However, we want to consider those equal here for testing/asserting purposes
+			other, ok := output.(interpreter.TypeValue)
+			if !ok {
 				return false
 			}
 
-			if v.BorrowedType == nil && otherReference.BorrowedType != nil {
-				return false
-			} else if !v.BorrowedType.Equal(otherReference.BorrowedType) {
-				return false
-			}
-
-			switch innerValue := v.Value.(type) {
-			case interpreter.EquatableValue:
-				return innerValue.Equal(inter, interpreter.EmptyLocationRange, otherReference.Value)
-			default:
-				return innerValue == otherReference.Value
+			if other.Type == nil {
+				return v.Type == nil
+			} else {
+				return other.Type.Equal(v.Type)
 			}
 		}
 
 		return input.Equal(inter, interpreter.EmptyLocationRange, output)
 	}
 
-	for _, test := range tests {
-		t.Run(test.Name, func(t *testing.T) {
-			convertedValue := convertEntireTestValue(inter, storage, testAddress, test.Input)
-			switch convertedValue := convertedValue.(type) {
-			case interpreter.EquatableValue:
-				require.True(t, referencePeekingEqual(convertedValue, test.Output))
-			default:
-				require.Equal(t, convertedValue, test.Output)
+	type valueGenerator struct {
+		name string
+		wrap func(interpreter.StaticType) interpreter.Value
+	}
+
+	valueGenerators := []valueGenerator{
+		{
+			name: "runtime type value",
+			wrap: func(staticType interpreter.StaticType) interpreter.Value {
+				return interpreter.NewTypeValue(nil, staticType)
+			},
+		},
+		{
+			name: "variable-sized array value",
+			wrap: func(staticType interpreter.StaticType) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(nil, staticType),
+					common.ZeroAddress,
+				)
+			},
+		},
+		{
+			name: "constant-sized array value",
+			wrap: func(staticType interpreter.StaticType) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewConstantSizedStaticType(nil, staticType, 1),
+					common.ZeroAddress,
+				)
+			},
+		},
+		{
+			name: "dictionary value",
+			wrap: func(staticType interpreter.StaticType) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(nil, interpreter.PrimitiveStaticTypeInt, staticType),
+				)
+			},
+		},
+		{
+			name: "ID capability value",
+			wrap: func(staticType interpreter.StaticType) interpreter.Value {
+				return interpreter.NewCapabilityValue(
+					nil,
+					0,
+					interpreter.AddressValue{},
+					staticType,
+				)
+			},
+		},
+		{
+			name: "path capability value",
+			wrap: func(staticType interpreter.StaticType) interpreter.Value {
+				return &interpreter.PathCapabilityValue{ //nolint:staticcheck
+					BorrowType: staticType,
+					Address:    interpreter.AddressValue{},
+					Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+				}
+			},
+		},
+		{
+			name: "published capability value",
+			wrap: func(staticType interpreter.StaticType) interpreter.Value {
+				return interpreter.NewPublishedValue(
+					nil,
+					interpreter.AddressValue{},
+					interpreter.NewCapabilityValue(
+						nil,
+						0,
+						interpreter.AddressValue{},
+						staticType,
+					),
+				)
+			},
+		},
+		{
+			name: "path-link value",
+			wrap: func(staticType interpreter.StaticType) interpreter.Value {
+				return interpreter.PathLinkValue{ //nolint:staticcheck
+					Type: staticType,
+					TargetPath: interpreter.NewUnmeteredPathValue(
+						common.PathDomainStorage,
+						"test",
+					),
+				}
+			},
+		},
+		{
+			name: "storage capability controller value",
+			wrap: func(staticType interpreter.StaticType) interpreter.Value {
+				referenceStaticType, ok := staticType.(*interpreter.ReferenceStaticType)
+				if !ok {
+					return nil
+				}
+				return &interpreter.StorageCapabilityControllerValue{
+					BorrowType: referenceStaticType,
+				}
+			},
+		},
+		{
+			name: "account capability controller value",
+			wrap: func(staticType interpreter.StaticType) interpreter.Value {
+				referenceStaticType, ok := staticType.(*interpreter.ReferenceStaticType)
+				if !ok {
+					return nil
+				}
+				return &interpreter.AccountCapabilityControllerValue{
+					BorrowType: referenceStaticType,
+				}
+			},
+		},
+	}
+
+	type typeGenerator struct {
+		name string
+		wrap func(staticType interpreter.StaticType) interpreter.StaticType
+	}
+
+	typeGenerators := []typeGenerator{
+		{
+			name: "as-is",
+			wrap: func(staticType interpreter.StaticType) interpreter.StaticType {
+				return staticType
+			},
+		},
+		{
+			name: "variable-sized array type",
+			wrap: func(staticType interpreter.StaticType) interpreter.StaticType {
+				return interpreter.NewVariableSizedStaticType(nil, staticType)
+			},
+		},
+		{
+			name: "constant-sized array type",
+			wrap: func(staticType interpreter.StaticType) interpreter.StaticType {
+				return interpreter.NewConstantSizedStaticType(nil, staticType, 1)
+			},
+		},
+		{
+			name: "dictionary type",
+			wrap: func(staticType interpreter.StaticType) interpreter.StaticType {
+				return interpreter.NewDictionaryStaticType(nil, interpreter.PrimitiveStaticTypeInt, staticType)
+			},
+		},
+		{
+			name: "optional type",
+			wrap: func(staticType interpreter.StaticType) interpreter.StaticType {
+				return interpreter.NewOptionalStaticType(nil, staticType)
+			},
+		},
+		{
+			name: "capability type",
+			wrap: func(staticType interpreter.StaticType) interpreter.StaticType {
+				return interpreter.NewCapabilityStaticType(nil, staticType)
+			},
+		},
+	}
+
+	test := func(
+		t *testing.T,
+		testCase testCase,
+		valueGenerator valueGenerator,
+		typeGenerator typeGenerator,
+	) {
+		input := valueGenerator.wrap(typeGenerator.wrap(testCase.Input))
+		if input == nil {
+			return
+		}
+
+		expectedValue := valueGenerator.wrap(typeGenerator.wrap(testCase.Output))
+
+		convertedValue := convertEntireTestValue(t, inter, storage, testAddress, input)
+
+		err := storage.CheckHealth()
+		require.NoError(t, err)
+
+		switch convertedValue := convertedValue.(type) {
+		case interpreter.EquatableValue:
+			require.True(t,
+				referencePeekingEqual(convertedValue, expectedValue),
+				"expected: %s\nactual: %s",
+				expectedValue,
+				convertedValue,
+			)
+		default:
+			require.Equal(t, convertedValue, expectedValue)
+		}
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.Name, func(t *testing.T) {
+
+			for _, valueGenerator := range valueGenerators {
+				t.Run(valueGenerator.name, func(t *testing.T) {
+
+					for _, typeGenerator := range typeGenerators {
+						t.Run(typeGenerator.name, func(t *testing.T) {
+
+							test(t, testCase, valueGenerator, typeGenerator)
+						})
+					}
+				})
 			}
 		})
 	}
@@ -1441,11 +1502,20 @@ func TestMigrateSimpleContract(t *testing.T) {
 	}
 
 	for name, testCase := range testCases {
+		transferredValue := testCase.storedValue.Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address(account),
+			false,
+			nil,
+			nil,
+		)
+
 		inter.WriteStored(
 			account,
 			storageIdentifier,
 			interpreter.StringStorageMapKey(name),
-			testCase.storedValue,
+			transferredValue,
 		)
 	}
 
@@ -1474,7 +1544,10 @@ func TestMigrateSimpleContract(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errored, 0)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	storageMap := storage.GetStorageMap(account, storageIdentifier, false)
 	require.NotNil(t, storageMap)
@@ -1494,6 +1567,29 @@ func TestMigrateSimpleContract(t *testing.T) {
 			AssertValuesEqual(t, inter, expectedStoredValue, value)
 		})
 	}
+}
+
+func TestNilTypeValue(t *testing.T) {
+	t.Parallel()
+
+	result, err := ConvertValueToEntitlements(nil, interpreter.NewTypeValue(nil, nil))
+	require.NoError(t, err)
+	require.Nil(t, result)
+}
+
+func TestNilPathCapabilityValue(t *testing.T) {
+	t.Parallel()
+
+	result, err := ConvertValueToEntitlements(
+		NewTestInterpreter(t),
+		&interpreter.PathCapabilityValue{ //nolint:staticcheck
+			Address:    interpreter.NewAddressValue(nil, common.MustBytesToAddress([]byte{0x1})),
+			Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+			BorrowType: nil,
+		},
+	)
+	require.NoError(t, err)
+	require.Nil(t, result)
 }
 
 func TestMigratePublishedValue(t *testing.T) {
@@ -1635,7 +1731,11 @@ func TestMigratePublishedValue(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errored, 0)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	assert.Equal(t,
 		map[struct {
 			interpreter.StorageKey
@@ -1889,7 +1989,11 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errored, 0)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	assert.Equal(t,
 		map[struct {
 			interpreter.StorageKey
@@ -2130,7 +2234,7 @@ func TestMigrateAcrossContracts(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errored, 0)
+	assert.Len(t, reporter.errors, 0)
 	assert.Equal(t,
 		map[struct {
 			interpreter.StorageKey
@@ -2338,7 +2442,11 @@ func TestMigrateArrayOfValues(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errored, 0)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	assert.Equal(t,
 		map[struct {
 			interpreter.StorageKey
@@ -2585,7 +2693,11 @@ func TestMigrateDictOfValues(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errored, 0)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	assert.Equal(t,
 		map[struct {
 			interpreter.StorageKey
@@ -2904,7 +3016,11 @@ func TestMigrateCapConsAcrossTwoAccounts(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errored, 0)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	assert.Len(t, reporter.migrated, 1)
 
 	// TODO: assert
@@ -2917,10 +3033,7 @@ type testReporter struct {
 		interpreter.StorageKey
 		interpreter.StorageMapKey
 	}]struct{}
-	errored map[struct {
-		interpreter.StorageKey
-		interpreter.StorageMapKey
-	}][]string
+	errors []error
 }
 
 func newTestReporter() *testReporter {
@@ -2946,24 +3059,8 @@ func (t *testReporter) Migrated(
 	}] = struct{}{}
 }
 
-func (t *testReporter) Error(
-	storageKey interpreter.StorageKey,
-	storageMapKey interpreter.StorageMapKey,
-	migration string,
-	_ error,
-) {
-	key := struct {
-		interpreter.StorageKey
-		interpreter.StorageMapKey
-	}{
-		StorageKey:    storageKey,
-		StorageMapKey: storageMapKey,
-	}
-
-	t.errored[key] = append(
-		t.errored[key],
-		migration,
-	)
+func (t *testReporter) Error(err error) {
+	t.errors = append(t.errors, err)
 }
 
 func TestRehash(t *testing.T) {
@@ -2989,7 +3086,8 @@ func TestRehash(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			&interpreter.Config{
-				Storage:                       storage,
+				Storage: storage,
+				// NOTE: disabled, because encoded and decoded values are expected to not match
 				AtreeValueValidationEnabled:   false,
 				AtreeStorageValidationEnabled: true,
 			},
@@ -3080,6 +3178,9 @@ func TestRehash(t *testing.T) {
 
 		err := storage.Commit(inter, false)
 		require.NoError(t, err)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
 	})
 
 	t.Run("migrate", func(t *testing.T) {
@@ -3126,6 +3227,13 @@ func TestRehash(t *testing.T) {
 		err := migration.Commit()
 		require.NoError(t, err)
 
+		// Assert
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		assert.Empty(t, reporter.errors)
+
 		require.Equal(t,
 			map[struct {
 				interpreter.StorageKey
@@ -3146,6 +3254,9 @@ func TestRehash(t *testing.T) {
 	t.Run("load", func(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
+
+		err := storage.CheckHealth()
+		require.NoError(t, err)
 
 		storageMap := storage.GetStorageMap(
 			testAddress,
