@@ -517,13 +517,8 @@ var unauthorizedAccountReferenceType = interpreter.NewReferenceStaticType(
 	interpreter.PrimitiveStaticTypeAccount,
 )
 
-func (m *StaticTypeMigration) CanSkip(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	value interpreter.Value,
-	interpreter *interpreter.Interpreter,
-) bool {
-	return CanSkipStaticTypeMigration(value.StaticType(interpreter))
+func (m *StaticTypeMigration) CanSkip(valueType interpreter.StaticType) bool {
+	return CanSkipStaticTypeMigration(valueType)
 }
 
 func CanSkipStaticTypeMigration(valueType interpreter.StaticType) bool {

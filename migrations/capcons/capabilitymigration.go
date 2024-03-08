@@ -124,13 +124,8 @@ func (m *CapabilityValueMigration) Migrate(
 	return nil, nil
 }
 
-func (m *CapabilityValueMigration) CanSkip(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	value interpreter.Value,
-	interpreter *interpreter.Interpreter,
-) bool {
-	return CanSkipCapabilityValueMigration(value.StaticType(interpreter))
+func (m *CapabilityValueMigration) CanSkip(valueType interpreter.StaticType) bool {
+	return CanSkipCapabilityValueMigration(valueType)
 }
 
 func CanSkipCapabilityValueMigration(valueType interpreter.StaticType) bool {

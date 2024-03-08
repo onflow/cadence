@@ -103,12 +103,7 @@ func (testStringMigration) Migrate(
 	return nil, nil
 }
 
-func (testStringMigration) CanSkip(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	_ interpreter.Value,
-	_ *interpreter.Interpreter,
-) bool {
+func (testStringMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 
@@ -142,12 +137,7 @@ func (m testInt8Migration) Migrate(
 	return interpreter.NewUnmeteredInt8Value(int8(int8Value) + 10), nil
 }
 
-func (testInt8Migration) CanSkip(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	_ interpreter.Value,
-	_ *interpreter.Interpreter,
-) bool {
+func (testInt8Migration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 
@@ -155,12 +145,7 @@ func (testInt8Migration) CanSkip(
 
 type testCapMigration struct{}
 
-func (m testCapMigration) CanSkip(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	_ interpreter.Value,
-	_ *interpreter.Interpreter,
-) bool {
+func (m testCapMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 
@@ -225,12 +210,7 @@ func (testCapConMigration) Migrate(
 	return nil, nil
 }
 
-func (testCapConMigration) CanSkip(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	_ interpreter.Value,
-	_ *interpreter.Interpreter,
-) bool {
+func (testCapConMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 
@@ -1010,12 +990,7 @@ func (m testCompositeValueMigration) Migrate(
 	), nil
 }
 
-func (testCompositeValueMigration) CanSkip(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	_ interpreter.Value,
-	_ *interpreter.Interpreter,
-) bool {
+func (testCompositeValueMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 
@@ -1223,12 +1198,7 @@ func (testContainerMigration) Migrate(
 	return nil, nil
 }
 
-func (m testContainerMigration) CanSkip(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	_ interpreter.Value,
-	_ *interpreter.Interpreter,
-) bool {
+func (m testContainerMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 
@@ -1661,12 +1631,7 @@ func (m testPanicMigration) Migrate(
 	return nil, nil
 }
 
-func (m testPanicMigration) CanSkip(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	_ interpreter.Value,
-	_ *interpreter.Interpreter,
-) bool {
+func (m testPanicMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 
@@ -1784,13 +1749,8 @@ func (m *testSkipMigration) Migrate(
 	return nil, nil
 }
 
-func (m *testSkipMigration) CanSkip(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	value interpreter.Value,
-	inter *interpreter.Interpreter,
-) bool {
-	return m.canSkip(value.StaticType(inter))
+func (m *testSkipMigration) CanSkip(valueType interpreter.StaticType) bool {
+	return m.canSkip(valueType)
 }
 
 func TestSkip(t *testing.T) {

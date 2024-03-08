@@ -374,11 +374,6 @@ func (mig EntitlementsMigration) Migrate(
 	return ConvertValueToEntitlements(mig.Interpreter, value)
 }
 
-func (mig EntitlementsMigration) CanSkip(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	value interpreter.Value,
-	interpreter *interpreter.Interpreter,
-) bool {
-	return statictypes.CanSkipStaticTypeMigration(value.StaticType(interpreter))
+func (mig EntitlementsMigration) CanSkip(valueType interpreter.StaticType) bool {
+	return statictypes.CanSkipStaticTypeMigration(valueType)
 }

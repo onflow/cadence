@@ -695,12 +695,7 @@ func (m testEntitlementsMigration) Migrate(
 	return ConvertValueToEntitlements(m.inter, value)
 }
 
-func (m testEntitlementsMigration) CanSkip(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	_ interpreter.Value,
-	_ *interpreter.Interpreter,
-) bool {
+func (m testEntitlementsMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 

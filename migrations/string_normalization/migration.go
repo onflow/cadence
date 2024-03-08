@@ -53,13 +53,8 @@ func (StringNormalizingMigration) Migrate(
 	return nil, nil
 }
 
-func (m StringNormalizingMigration) CanSkip(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	value interpreter.Value,
-	interpreter *interpreter.Interpreter,
-) bool {
-	return CanSkipStringNormalizingMigration(value.StaticType(interpreter))
+func (m StringNormalizingMigration) CanSkip(valueType interpreter.StaticType) bool {
+	return CanSkipStringNormalizingMigration(valueType)
 }
 
 func CanSkipStringNormalizingMigration(valueType interpreter.StaticType) bool {

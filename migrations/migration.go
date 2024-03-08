@@ -37,12 +37,7 @@ type ValueMigration interface {
 		value interpreter.Value,
 		interpreter *interpreter.Interpreter,
 	) (newValue interpreter.Value, err error)
-	CanSkip(
-		storageKey interpreter.StorageKey,
-		storageMapKey interpreter.StorageMapKey,
-		value interpreter.Value,
-		interpreter *interpreter.Interpreter,
-	) bool
+	CanSkip(valueType interpreter.StaticType) bool
 }
 
 type DomainMigration interface {
@@ -176,12 +171,15 @@ func (m *StorageMigration) MigrateNestedValue(
 		}
 	}()
 
+	inter := m.interpreter
+
 	// skip the migration of the value,
 	// if all value migrations agree
 
 	canSkip := true
+	staticType := value.StaticType(inter)
 	for _, migration := range valueMigrations {
-		if !migration.CanSkip(storageKey, storageMapKey, value, m.interpreter) {
+		if !migration.CanSkip(staticType) {
 			canSkip = false
 			break
 		}
@@ -195,7 +193,7 @@ func (m *StorageMigration) MigrateNestedValue(
 	// i.e: depth-first traversal
 	switch typedValue := value.(type) {
 	case *interpreter.SomeValue:
-		innerValue := typedValue.InnerValue(m.interpreter, emptyLocationRange)
+		innerValue := typedValue.InnerValue(inter, emptyLocationRange)
 		newInnerValue := m.MigrateNestedValue(
 			storageKey,
 			storageMapKey,
@@ -204,7 +202,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			reporter,
 		)
 		if newInnerValue != nil {
-			migratedValue = interpreter.NewSomeValueNonCopying(m.interpreter, newInnerValue)
+			migratedValue = interpreter.NewSomeValueNonCopying(inter, newInnerValue)
 
 			// chain the migrations
 			value = migratedValue
@@ -217,7 +215,7 @@ func (m *StorageMigration) MigrateNestedValue(
 		count := array.Count()
 		for index := 0; index < count; index++ {
 
-			element := array.Get(m.interpreter, emptyLocationRange, index)
+			element := array.Get(inter, emptyLocationRange, index)
 
 			newElement := m.MigrateNestedValue(
 				storageKey,
@@ -232,17 +230,17 @@ func (m *StorageMigration) MigrateNestedValue(
 			}
 
 			existingStorable := array.RemoveWithoutTransfer(
-				m.interpreter,
+				inter,
 				emptyLocationRange,
 				index,
 			)
 
-			interpreter.StoredValue(m.interpreter, existingStorable, m.storage).
-				DeepRemove(m.interpreter)
-			m.interpreter.RemoveReferencedSlab(existingStorable)
+			interpreter.StoredValue(inter, existingStorable, m.storage).
+				DeepRemove(inter)
+			inter.RemoveReferencedSlab(existingStorable)
 
 			array.InsertWithoutTransfer(
-				m.interpreter,
+				inter,
 				emptyLocationRange,
 				index,
 				newElement,
@@ -262,7 +260,7 @@ func (m *StorageMigration) MigrateNestedValue(
 
 		for _, fieldName := range fieldNames {
 			existingValue := composite.GetField(
-				m.interpreter,
+				inter,
 				emptyLocationRange,
 				fieldName,
 			)
@@ -280,7 +278,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			}
 
 			composite.SetMemberWithoutTransfer(
-				m.interpreter,
+				inter,
 				emptyLocationRange,
 				fieldName,
 				migratedValue,
@@ -350,7 +348,7 @@ func (m *StorageMigration) MigrateNestedValue(
 
 			existingKey = legacyKey(existingKey)
 			existingKeyStorable, existingValueStorable := dictionary.RemoveWithoutTransfer(
-				m.interpreter,
+				inter,
 				emptyLocationRange,
 				existingKey,
 			)
@@ -368,13 +366,13 @@ func (m *StorageMigration) MigrateNestedValue(
 				// Value was migrated
 				valueToSet = newValue
 
-				interpreter.StoredValue(m.interpreter, existingValueStorable, m.storage).
-					DeepRemove(m.interpreter)
-				m.interpreter.RemoveReferencedSlab(existingValueStorable)
+				interpreter.StoredValue(inter, existingValueStorable, m.storage).
+					DeepRemove(inter)
+				inter.RemoveReferencedSlab(existingValueStorable)
 			}
 
 			dictionary.InsertWithoutTransfer(
-				m.interpreter,
+				inter,
 				emptyLocationRange,
 				keyToSet,
 				valueToSet,
@@ -393,7 +391,7 @@ func (m *StorageMigration) MigrateNestedValue(
 		if newInnerValue != nil {
 			newInnerCapability := newInnerValue.(*interpreter.IDCapabilityValue)
 			migratedValue = interpreter.NewPublishedValue(
-				m.interpreter,
+				inter,
 				publishedValue.Recipient,
 				newInnerCapability,
 			)
