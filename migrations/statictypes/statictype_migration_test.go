@@ -604,6 +604,93 @@ func TestStaticTypeMigration(t *testing.T) {
 		})
 
 	})
+
+	t.Run("merge converted legacy type when intersection", func(t *testing.T) {
+
+		t.Parallel()
+
+		const compositeQualifiedIdentifier = "S"
+		compositeType := interpreter.NewCompositeStaticType(
+			nil,
+			utils.TestLocation,
+			compositeQualifiedIdentifier,
+			utils.TestLocation.TypeID(nil, compositeQualifiedIdentifier),
+		)
+
+		const interface1QualifiedIdentifier = "SI1"
+		interfaceType1 := interpreter.NewInterfaceStaticType(
+			nil,
+			utils.TestLocation,
+			interface1QualifiedIdentifier,
+			utils.TestLocation.TypeID(nil, interface1QualifiedIdentifier),
+		)
+
+		const interface2QualifiedIdentifier = "SI2"
+		interfaceType2 := interpreter.NewInterfaceStaticType(
+			nil,
+			utils.TestLocation,
+			interface2QualifiedIdentifier,
+			utils.TestLocation.TypeID(nil, interface2QualifiedIdentifier),
+		)
+
+		intersectionType := interpreter.NewIntersectionStaticType(
+			nil,
+			[]*interpreter.InterfaceStaticType{
+				interfaceType1,
+			},
+		)
+		// NOTE: the legacy type is a composite type,
+		// but it will get rewritten to an intersection type
+
+		intersectionType.LegacyType = compositeType
+
+		staticTypeMigration := NewStaticTypeMigration().WithCompositeTypeConverter(
+			func(staticType *interpreter.CompositeStaticType) interpreter.StaticType {
+				if staticType.TypeID != compositeType.TypeID {
+					return nil
+				}
+
+				return interpreter.NewIntersectionStaticType(
+					nil,
+					[]*interpreter.InterfaceStaticType{
+						interfaceType2,
+					},
+				)
+			},
+		)
+
+		storedValue := interpreter.NewTypeValue(
+			nil,
+			interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				intersectionType,
+			),
+		)
+
+		actual := migrate(t,
+			staticTypeMigration,
+			storedValue,
+			true,
+		)
+
+		expected := interpreter.NewTypeValue(
+			nil,
+			interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewIntersectionStaticType(
+					nil,
+					[]*interpreter.InterfaceStaticType{
+						interfaceType1,
+						interfaceType2,
+					},
+				),
+			),
+		)
+
+		assert.Equal(t, expected, actual)
+	})
 }
 
 func TestMigratingNestedContainers(t *testing.T) {

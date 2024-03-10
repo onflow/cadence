@@ -247,15 +247,30 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 
 			legacyType := rewrittenIntersectionType.LegacyType
 
+			var mergedIntersections bool
+
 			var convertedLegacyType interpreter.StaticType
 			if legacyType != nil {
 				convertedLegacyType = m.maybeConvertStaticType(legacyType, rewrittenIntersectionType)
-				switch convertedLegacyType.(type) {
+				switch ty := convertedLegacyType.(type) {
 				case nil,
 					*interpreter.CompositeStaticType,
 					interpreter.PrimitiveStaticType:
 					// valid
 					break
+
+				case *interpreter.IntersectionStaticType:
+					// If the legacy type was converted to an intersection type,
+					// then merge it into the resulting intersection type
+
+					legacyType = nil
+					convertedLegacyType = nil
+
+					convertedInterfaceTypes = append(
+						convertedInterfaceTypes,
+						ty.Types...,
+					)
+					mergedIntersections = true
 
 				default:
 					panic(fmt.Errorf(
@@ -273,13 +288,16 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 			// If the interface set has at least two items,
 			// then force it to be re-stored/re-encoded,
 			// even if the interface types in the set have not changed.
-			if len(rewrittenIntersectionType.Types) >= 2 || convertedInterfaceType || convertedLegacyType != nil {
+			if len(rewrittenIntersectionType.Types) >= 2 ||
+				convertedInterfaceType ||
+				convertedLegacyType != nil ||
+				mergedIntersections {
 
 				result := interpreter.NewIntersectionStaticType(nil, convertedInterfaceTypes)
 
 				if convertedLegacyType != nil {
 					result.LegacyType = convertedLegacyType
-				} else {
+				} else if legacyType != nil {
 					result.LegacyType = legacyType
 				}
 
