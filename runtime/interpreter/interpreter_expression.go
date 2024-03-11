@@ -1413,14 +1413,14 @@ func (interpreter *Interpreter) createReference(
 		}
 
 		// Case (4): target type is non-optional, actual value is also non-optional.
-		return interpreter.makeReference(value, typ, hasPosition)
+		return interpreter.newEphemeralReference(value, typ, hasPosition)
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
 }
 
-func (interpreter *Interpreter) makeReference(
+func (interpreter *Interpreter) newEphemeralReference(
 	value Value,
 	typ *sema.ReferenceType,
 	hasPosition ast.HasPosition,
