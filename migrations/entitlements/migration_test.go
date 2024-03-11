@@ -3187,7 +3187,10 @@ func TestRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
-		inter.SharedState.Config.CompositeTypeHandler = func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+		inter.SharedState.Config.CompositeTypeHandler = func(
+			location common.Location,
+			typeID interpreter.TypeID,
+		) *sema.CompositeType {
 
 			compositeType := &sema.CompositeType{
 				Location:   fooAddressLocation,
@@ -3291,5 +3294,191 @@ func TestRehash(t *testing.T) {
 			newTestValue(),
 			value.(*interpreter.StringValue),
 		)
+	})
+}
+
+func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
+
+	t.Parallel()
+
+	testAddress := common.Address{0x42}
+
+	const interface1QualifiedIdentifier = "SI1"
+	interfaceType1 := interpreter.NewInterfaceStaticType(
+		nil,
+		utils.TestLocation,
+		interface1QualifiedIdentifier,
+		utils.TestLocation.TypeID(nil, interface1QualifiedIdentifier),
+	)
+
+	const interface2QualifiedIdentifier = "SI2"
+	interfaceType2 := interpreter.NewInterfaceStaticType(
+		nil,
+		utils.TestLocation,
+		interface2QualifiedIdentifier,
+		utils.TestLocation.TypeID(nil, interface2QualifiedIdentifier),
+	)
+
+	ledger := NewTestLedger(nil, nil)
+
+	storageMapKey := interpreter.StringStorageMapKey("dict")
+
+	newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
+		storage := runtime.NewStorage(ledger, nil)
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage: storage,
+				// NOTE: disabled, because encoded and decoded values are expected to not match
+				AtreeValueValidationEnabled:   false,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		return storage, inter
+	}
+
+	t.Run("prepare", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		expectedIntersection := interpreter.NewIntersectionStaticType(
+			nil,
+			[]*interpreter.InterfaceStaticType{
+				interfaceType1,
+			},
+		)
+		// NOTE: setting the legacy type to an intersection type
+		expectedIntersection.LegacyType = interpreter.NewIntersectionStaticType(
+			nil,
+			[]*interpreter.InterfaceStaticType{
+				interfaceType2,
+			},
+		)
+
+		storedValue := interpreter.NewTypeValue(
+			nil,
+			interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				expectedIntersection,
+			),
+		)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			true,
+		)
+
+		storageMap.SetValue(inter,
+			storageMapKey,
+			storedValue,
+		)
+
+		err := storage.Commit(inter, false)
+		require.NoError(t, err)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+	})
+
+	t.Run("migrate", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		inter.SharedState.Config.InterfaceTypeHandler = func(
+			location common.Location,
+			typeID interpreter.TypeID,
+		) *sema.InterfaceType {
+
+			_, qualifiedIdentifier, err := common.DecodeTypeID(nil, string(typeID))
+			require.NoError(t, err)
+
+			return &sema.InterfaceType{
+				Location:      TestLocation,
+				Identifier:    qualifiedIdentifier,
+				CompositeKind: common.CompositeKindStructure,
+				Members:       &sema.StringMemberOrderedMap{},
+			}
+		}
+
+		migration := migrations.NewStorageMigration(inter, storage)
+
+		reporter := newTestReporter()
+
+		migration.Migrate(
+			&migrations.AddressSliceIterator{
+				Addresses: []common.Address{
+					testAddress,
+				},
+			},
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				NewEntitlementsMigration(inter),
+			),
+		)
+
+		err := migration.Commit()
+		require.NoError(t, err)
+
+		// Assert
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		assert.Empty(t, reporter.errors)
+
+		require.Equal(t,
+			map[struct {
+				interpreter.StorageKey
+				interpreter.StorageMapKey
+			}]struct{}{
+				{
+					StorageKey: interpreter.StorageKey{
+						Address: testAddress,
+						Key:     common.PathDomainStorage.Identifier(),
+					},
+					StorageMapKey: storageMapKey,
+				}: {},
+			},
+			reporter.migrated,
+		)
+	})
+
+	t.Run("load", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		err := storage.CheckHealth()
+		require.NoError(t, err)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			false,
+		)
+
+		storedValue := storageMap.ReadValue(inter, storageMapKey)
+
+		require.IsType(t, interpreter.TypeValue{}, storedValue)
+
+		typeValue := storedValue.(interpreter.TypeValue)
+
+		expectedType := interpreter.NewReferenceStaticType(
+			nil,
+			interpreter.UnauthorizedAccess,
+			interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					// NOTE: this is the legacy type
+					interfaceType2,
+				},
+			),
+		)
+
+		require.Equal(t, expectedType, typeValue.Type)
 	})
 }

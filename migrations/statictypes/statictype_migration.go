@@ -247,12 +247,10 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 
 			legacyType := rewrittenIntersectionType.LegacyType
 
-			var mergedIntersections bool
-
 			var convertedLegacyType interpreter.StaticType
 			if legacyType != nil {
 				convertedLegacyType = m.maybeConvertStaticType(legacyType, rewrittenIntersectionType)
-				switch ty := convertedLegacyType.(type) {
+				switch convertedLegacyType.(type) {
 				case nil,
 					*interpreter.CompositeStaticType,
 					interpreter.PrimitiveStaticType:
@@ -260,17 +258,20 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 					break
 
 				case *interpreter.IntersectionStaticType:
-					// If the legacy type was converted to an intersection type,
-					// then merge it into the resulting intersection type
-
-					legacyType = nil
-					convertedLegacyType = nil
-
-					convertedInterfaceTypes = append(
-						convertedInterfaceTypes,
-						ty.Types...,
-					)
-					mergedIntersections = true
+					// also valid, temporarily:
+					//
+					// Given an intersection type T{Us}, where T is a legacy type, and Us are interface types,
+					// and given T is converted to intersection type V,
+					// then the resulting type is V{Us} (e.g. when V is {Ws}, {Ws}{Us}).
+					//
+					// The resulting type is expected to be ("temporarily") invalid.
+					// The entitlements migrations will handle such cases,
+					// i.e. rewrite the type to a valid type (V/{Ws}).
+					//
+					// It is important to not merge the intersection types, e.g. into {Us, Ws},
+					// to ensure that the entitlement migration does not infer entitlements for this type,
+					// which would incorrectly also add entitlements for the legacy type (which was restricted).
+					break
 
 				default:
 					panic(fmt.Errorf(
@@ -290,8 +291,7 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 			// even if the interface types in the set have not changed.
 			if len(rewrittenIntersectionType.Types) >= 2 ||
 				convertedInterfaceType ||
-				convertedLegacyType != nil ||
-				mergedIntersections {
+				convertedLegacyType != nil {
 
 				result := interpreter.NewIntersectionStaticType(nil, convertedInterfaceTypes)
 

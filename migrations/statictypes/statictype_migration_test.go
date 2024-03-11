@@ -605,7 +605,7 @@ func TestStaticTypeMigration(t *testing.T) {
 
 	})
 
-	t.Run("merge converted legacy type when intersection", func(t *testing.T) {
+	t.Run("legacy type gets converted intersection", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -674,18 +674,29 @@ func TestStaticTypeMigration(t *testing.T) {
 			true,
 		)
 
+		// NOTE: the expected type {S2}{S1} is expected to be ("temporarily") invalid.
+		// The entitlements migrations will handle such cases, i.e. rewrite the type to a valid type ({S2}).
+		// This is important to ensure that the entitlement migration does not infer entitlements for {S1, S2}.
+
+		expectedIntersection := interpreter.NewIntersectionStaticType(
+			nil,
+			[]*interpreter.InterfaceStaticType{
+				interfaceType1,
+			},
+		)
+		expectedIntersection.LegacyType = interpreter.NewIntersectionStaticType(
+			nil,
+			[]*interpreter.InterfaceStaticType{
+				interfaceType2,
+			},
+		)
+
 		expected := interpreter.NewTypeValue(
 			nil,
 			interpreter.NewReferenceStaticType(
 				nil,
 				interpreter.UnauthorizedAccess,
-				interpreter.NewIntersectionStaticType(
-					nil,
-					[]*interpreter.InterfaceStaticType{
-						interfaceType1,
-						interfaceType2,
-					},
-				),
+				expectedIntersection,
 			),
 		)
 
