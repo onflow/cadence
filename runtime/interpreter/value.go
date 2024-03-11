@@ -108,8 +108,8 @@ type Value interface {
 	// NOTE: important, error messages rely on values to implement String
 	fmt.Stringer
 	isValue()
-	Accept(interpreter *Interpreter, visitor Visitor)
-	Walk(interpreter *Interpreter, walkChild func(Value))
+	Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange)
+	Walk(interpreter *Interpreter, walkChild func(Value), locationRange LocationRange)
 	StaticType(interpreter *Interpreter) StaticType
 	// ConformsToStaticType returns true if the value (i.e. its dynamic type)
 	// conforms to its own static type.
@@ -141,7 +141,7 @@ type Value interface {
 	// NOTE: not used by interpreter, but used externally (e.g. state migration)
 	// NOTE: memory metering is unnecessary for Clone methods
 	Clone(interpreter *Interpreter) Value
-	IsImportable(interpreter *Interpreter) bool
+	IsImportable(interpreter *Interpreter, locationRange LocationRange) bool
 }
 
 // ValueIndexableValue
@@ -338,11 +338,11 @@ func NewTypeValue(
 
 func (TypeValue) isValue() {}
 
-func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitTypeValue(interpreter, v)
 }
 
-func (TypeValue) Walk(_ *Interpreter, _ func(Value)) {
+func (TypeValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -350,7 +350,7 @@ func (TypeValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeMetaType)
 }
 
-func (TypeValue) IsImportable(_ *Interpreter) bool {
+func (TypeValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return sema.MetaType.Importable
 }
 
@@ -546,11 +546,11 @@ var _ EquatableValue = VoidValue{}
 
 func (VoidValue) isValue() {}
 
-func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitVoidValue(interpreter, v)
 }
 
-func (VoidValue) Walk(_ *Interpreter, _ func(Value)) {
+func (VoidValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -558,7 +558,7 @@ func (VoidValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeVoid)
 }
 
-func (VoidValue) IsImportable(_ *Interpreter) bool {
+func (VoidValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return sema.VoidType.Importable
 }
 
@@ -655,11 +655,11 @@ func AsBoolValue(v bool) BoolValue {
 
 func (BoolValue) isValue() {}
 
-func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitBoolValue(interpreter, v)
 }
 
-func (BoolValue) Walk(_ *Interpreter, _ func(Value)) {
+func (BoolValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -667,7 +667,7 @@ func (BoolValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeBool)
 }
 
-func (BoolValue) IsImportable(_ *Interpreter) bool {
+func (BoolValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return sema.BoolType.Importable
 }
 
@@ -845,11 +845,11 @@ var _ MemberAccessibleValue = CharacterValue{}
 
 func (CharacterValue) isValue() {}
 
-func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v CharacterValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitCharacterValue(interpreter, v)
 }
 
-func (CharacterValue) Walk(_ *Interpreter, _ func(Value)) {
+func (CharacterValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -857,7 +857,7 @@ func (CharacterValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeCharacter)
 }
 
-func (CharacterValue) IsImportable(_ *Interpreter) bool {
+func (CharacterValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return sema.CharacterType.Importable
 }
 
@@ -1078,11 +1078,11 @@ func (v *StringValue) prepareGraphemes() {
 
 func (*StringValue) isValue() {}
 
-func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitStringValue(interpreter, v)
 }
 
-func (*StringValue) Walk(_ *Interpreter, _ func(Value)) {
+func (*StringValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -1090,7 +1090,7 @@ func (*StringValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeString)
 }
 
-func (*StringValue) IsImportable(_ *Interpreter) bool {
+func (*StringValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return sema.StringType.Importable
 }
 
@@ -1843,15 +1843,18 @@ var _ IterableValue = &ArrayValue{}
 
 func (*ArrayValue) isValue() {}
 
-func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitArrayValue(interpreter, v)
 	if !descend {
 		return
 	}
 
-	v.Walk(interpreter, func(element Value) {
-		element.Accept(interpreter, visitor)
-	})
+	v.Walk(
+		interpreter, func(element Value) {
+			element.Accept(interpreter, visitor, locationRange)
+		},
+		locationRange,
+	)
 }
 
 func (v *ArrayValue) Iterate(
@@ -1922,7 +1925,11 @@ func (v *ArrayValue) iterate(
 	interpreter.withMutationPrevention(v.StorageID(), iterate)
 }
 
-func (v *ArrayValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+func (v *ArrayValue) Walk(
+	interpreter *Interpreter,
+	walkChild func(Value),
+	locationRange LocationRange,
+) {
 	v.Iterate(
 		interpreter,
 		func(element Value) (resume bool) {
@@ -1930,8 +1937,7 @@ func (v *ArrayValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
 			return true
 		},
 		false,
-		// TODO: Not supposed to panic with container mutation error.
-		EmptyLocationRange,
+		locationRange,
 	)
 }
 
@@ -1940,12 +1946,12 @@ func (v *ArrayValue) StaticType(_ *Interpreter) StaticType {
 	return v.Type
 }
 
-func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
+func (v *ArrayValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
 	importable := true
 	v.Iterate(
 		inter,
 		func(element Value) (resume bool) {
-			if !element.IsImportable(inter) {
+			if !element.IsImportable(inter, locationRange) {
 				importable = false
 				// stop iteration
 				return false
@@ -1955,8 +1961,7 @@ func (v *ArrayValue) IsImportable(inter *Interpreter) bool {
 			return true
 		},
 		false,
-		// TODO: Not supposed to panic with container mutation error.
-		EmptyLocationRange,
+		locationRange,
 	)
 
 	return importable
@@ -1997,9 +2002,13 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		storageID,
 		locationRange,
 		func() {
-			v.Walk(interpreter, func(element Value) {
-				maybeDestroy(interpreter, locationRange, element)
-			})
+			v.Walk(
+				interpreter,
+				func(element Value) {
+					maybeDestroy(interpreter, locationRange, element)
+				},
+				locationRange,
+			)
 		},
 	)
 
@@ -2237,9 +2246,13 @@ func (v *ArrayValue) Append(interpreter *Interpreter, locationRange LocationRang
 }
 
 func (v *ArrayValue) AppendAll(interpreter *Interpreter, locationRange LocationRange, other *ArrayValue) {
-	other.Walk(interpreter, func(value Value) {
-		v.Append(interpreter, locationRange, value)
-	})
+	other.Walk(
+		interpreter,
+		func(value Value) {
+			v.Append(interpreter, locationRange, value)
+		},
+		locationRange,
+	)
 }
 
 func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
@@ -2247,8 +2260,12 @@ func (v *ArrayValue) InsertKey(interpreter *Interpreter, locationRange LocationR
 	v.Insert(interpreter, locationRange, index, value)
 }
 
-func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
-
+func (v *ArrayValue) InsertWithoutTransfer(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	index int,
+	element atree.Value,
+) {
 	interpreter.validateMutation(v.StorageID(), locationRange)
 
 	// We only need to check the lower bound before converting from `int` (signed) to `uint64` (unsigned).
@@ -2272,19 +2289,6 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 	common.UseMemory(interpreter, metaDataSlabs)
 	common.UseMemory(interpreter, common.AtreeArrayElementOverhead)
 
-	interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
-
-	element = element.Transfer(
-		interpreter,
-		locationRange,
-		v.array.Address(),
-		true,
-		nil,
-		map[atree.StorageID]struct{}{
-			v.StorageID(): {},
-		},
-	)
-
 	err := v.array.Insert(uint64(index), element)
 	if err != nil {
 		v.handleIndexOutOfBoundsError(err, index, locationRange)
@@ -2294,12 +2298,43 @@ func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRang
 	interpreter.maybeValidateAtreeValue(v.array)
 }
 
+func (v *ArrayValue) Insert(interpreter *Interpreter, locationRange LocationRange, index int, element Value) {
+
+	address := v.array.Address()
+
+	preventTransfer := map[atree.StorageID]struct{}{
+		v.StorageID(): {},
+	}
+
+	element = element.Transfer(
+		interpreter,
+		locationRange,
+		address,
+		true,
+		nil,
+		preventTransfer,
+	)
+
+	interpreter.checkContainerMutation(v.Type.ElementType(), element, locationRange)
+
+	v.InsertWithoutTransfer(
+		interpreter,
+		locationRange,
+		index,
+		element,
+	)
+}
+
 func (v *ArrayValue) RemoveKey(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
 	index := key.(NumberValue).ToInt(locationRange)
 	return v.Remove(interpreter, locationRange, index)
 }
 
-func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
+func (v *ArrayValue) RemoveWithoutTransfer(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	index int,
+) atree.Storable {
 
 	interpreter.validateMutation(v.StorageID(), locationRange)
 
@@ -2321,6 +2356,12 @@ func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRang
 		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.array)
+
+	return storable
+}
+
+func (v *ArrayValue) Remove(interpreter *Interpreter, locationRange LocationRange, index int) Value {
+	storable := v.RemoveWithoutTransfer(interpreter, locationRange, index)
 
 	value := StoredValue(interpreter, storable, interpreter.Storage())
 
@@ -2404,7 +2445,7 @@ func (v *ArrayValue) Contains(
 	return AsBoolValue(result)
 }
 
-func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case "length":
 		return NewIntValueFromInt64(interpreter, int64(v.Count()))
@@ -2471,6 +2512,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				v.SemaType(interpreter).ElementType(false),
 			),
 			func(invocation Invocation) Value {
+				inter := invocation.Interpreter
+				locationRange := invocation.LocationRange
+
 				indexValue, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -2480,8 +2524,8 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				element := invocation.Arguments[1]
 
 				v.Insert(
-					invocation.Interpreter,
-					invocation.LocationRange,
+					inter,
+					locationRange,
 					index,
 					element,
 				)
@@ -2496,6 +2540,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				v.SemaType(interpreter).ElementType(false),
 			),
 			func(invocation Invocation) Value {
+				inter := invocation.Interpreter
+				locationRange := invocation.LocationRange
+
 				indexValue, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -2503,8 +2550,8 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, locationRange LocationR
 				index := indexValue.ToInt(locationRange)
 
 				return v.Remove(
-					invocation.Interpreter,
-					invocation.LocationRange,
+					inter,
+					locationRange,
 					index,
 				)
 			},
@@ -3471,6 +3518,14 @@ func (v *ArrayValue) ToConstantSized(
 	)
 }
 
+func (v *ArrayValue) SetType(staticType ArrayStaticType) {
+	v.Type = staticType
+	err := v.array.SetType(staticType)
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+}
+
 // NumberValue
 type NumberValue interface {
 	ComparableValue
@@ -3679,11 +3734,11 @@ var _ MemberAccessibleValue = IntValue{}
 
 func (IntValue) isValue() {}
 
-func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitIntValue(interpreter, v)
 }
 
-func (IntValue) Walk(_ *Interpreter, _ func(Value)) {
+func (IntValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -3691,7 +3746,7 @@ func (IntValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt)
 }
 
-func (IntValue) IsImportable(_ *Interpreter) bool {
+func (IntValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -4240,11 +4295,11 @@ var _ HashableValue = Int8Value(0)
 
 func (Int8Value) isValue() {}
 
-func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInt8Value(interpreter, v)
 }
 
-func (Int8Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int8Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -4252,7 +4307,7 @@ func (Int8Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt8)
 }
 
-func (Int8Value) IsImportable(_ *Interpreter) bool {
+func (Int8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -4881,11 +4936,11 @@ var _ MemberAccessibleValue = Int16Value(0)
 
 func (Int16Value) isValue() {}
 
-func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInt16Value(interpreter, v)
 }
 
-func (Int16Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int16Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -4893,7 +4948,7 @@ func (Int16Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt16)
 }
 
-func (Int16Value) IsImportable(_ *Interpreter) bool {
+func (Int16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -5523,11 +5578,11 @@ var _ MemberAccessibleValue = Int32Value(0)
 
 func (Int32Value) isValue() {}
 
-func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInt32Value(interpreter, v)
 }
 
-func (Int32Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int32Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -5535,7 +5590,7 @@ func (Int32Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt32)
 }
 
-func (Int32Value) IsImportable(_ *Interpreter) bool {
+func (Int32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -6163,11 +6218,11 @@ var _ MemberAccessibleValue = Int64Value(0)
 
 func (Int64Value) isValue() {}
 
-func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInt64Value(interpreter, v)
 }
 
-func (Int64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -6175,7 +6230,7 @@ func (Int64Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt64)
 }
 
-func (Int64Value) IsImportable(_ *Interpreter) bool {
+func (Int64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -6814,11 +6869,11 @@ var _ MemberAccessibleValue = Int128Value{}
 
 func (Int128Value) isValue() {}
 
-func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInt128Value(interpreter, v)
 }
 
-func (Int128Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int128Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -6826,7 +6881,7 @@ func (Int128Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt128)
 }
 
-func (Int128Value) IsImportable(_ *Interpreter) bool {
+func (Int128Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -7558,11 +7613,11 @@ var _ MemberAccessibleValue = Int256Value{}
 
 func (Int256Value) isValue() {}
 
-func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInt256Value(interpreter, v)
 }
 
-func (Int256Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Int256Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -7570,7 +7625,7 @@ func (Int256Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeInt256)
 }
 
-func (Int256Value) IsImportable(_ *Interpreter) bool {
+func (Int256Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -8340,11 +8395,11 @@ var _ MemberAccessibleValue = UIntValue{}
 
 func (UIntValue) isValue() {}
 
-func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUIntValue(interpreter, v)
 }
 
-func (UIntValue) Walk(_ *Interpreter, _ func(Value)) {
+func (UIntValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -8352,7 +8407,7 @@ func (UIntValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt)
 }
 
-func (v UIntValue) IsImportable(_ *Interpreter) bool {
+func (v UIntValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -8911,11 +8966,11 @@ func NewUnmeteredUInt8Value(value uint8) UInt8Value {
 
 func (UInt8Value) isValue() {}
 
-func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUInt8Value(interpreter, v)
 }
 
-func (UInt8Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt8Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -8923,7 +8978,7 @@ func (UInt8Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt8)
 }
 
-func (UInt8Value) IsImportable(_ *Interpreter) bool {
+func (UInt8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -9497,11 +9552,11 @@ func NewUnmeteredUInt16Value(value uint16) UInt16Value {
 
 func (UInt16Value) isValue() {}
 
-func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUInt16Value(interpreter, v)
 }
 
-func (UInt16Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt16Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -9509,7 +9564,7 @@ func (UInt16Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt16)
 }
 
-func (UInt16Value) IsImportable(_ *Interpreter) bool {
+func (UInt16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -10038,11 +10093,11 @@ var _ MemberAccessibleValue = UInt32Value(0)
 
 func (UInt32Value) isValue() {}
 
-func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUInt32Value(interpreter, v)
 }
 
-func (UInt32Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt32Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -10050,7 +10105,7 @@ func (UInt32Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt32)
 }
 
-func (UInt32Value) IsImportable(_ *Interpreter) bool {
+func (UInt32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -10586,11 +10641,11 @@ func NewUnmeteredUInt64Value(value uint64) UInt64Value {
 
 func (UInt64Value) isValue() {}
 
-func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUInt64Value(interpreter, v)
 }
 
-func (UInt64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -10598,7 +10653,7 @@ func (UInt64Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt64)
 }
 
-func (UInt64Value) IsImportable(_ *Interpreter) bool {
+func (UInt64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -11168,11 +11223,11 @@ var _ MemberAccessibleValue = UInt128Value{}
 
 func (UInt128Value) isValue() {}
 
-func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUInt128Value(interpreter, v)
 }
 
-func (UInt128Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt128Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -11180,7 +11235,7 @@ func (UInt128Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt128)
 }
 
-func (UInt128Value) IsImportable(_ *Interpreter) bool {
+func (UInt128Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -11843,11 +11898,11 @@ var _ MemberAccessibleValue = UInt256Value{}
 
 func (UInt256Value) isValue() {}
 
-func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUInt256Value(interpreter, v)
 }
 
-func (UInt256Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UInt256Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -11855,7 +11910,7 @@ func (UInt256Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUInt256)
 }
 
-func (UInt256Value) IsImportable(_ *Interpreter) bool {
+func (UInt256Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -12502,11 +12557,11 @@ func NewUnmeteredWord8Value(value uint8) Word8Value {
 
 func (Word8Value) isValue() {}
 
-func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitWord8Value(interpreter, v)
 }
 
-func (Word8Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word8Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -12514,7 +12569,7 @@ func (Word8Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord8)
 }
 
-func (Word8Value) IsImportable(_ *Interpreter) bool {
+func (Word8Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -12939,11 +12994,11 @@ func NewUnmeteredWord16Value(value uint16) Word16Value {
 
 func (Word16Value) isValue() {}
 
-func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitWord16Value(interpreter, v)
 }
 
-func (Word16Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word16Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -12951,7 +13006,7 @@ func (Word16Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord16)
 }
 
-func (Word16Value) IsImportable(_ *Interpreter) bool {
+func (Word16Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -13377,11 +13432,11 @@ func NewUnmeteredWord32Value(value uint32) Word32Value {
 
 func (Word32Value) isValue() {}
 
-func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitWord32Value(interpreter, v)
 }
 
-func (Word32Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word32Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -13389,7 +13444,7 @@ func (Word32Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord32)
 }
 
-func (Word32Value) IsImportable(_ *Interpreter) bool {
+func (Word32Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -13822,11 +13877,11 @@ var _ BigNumberValue = Word64Value(0)
 
 func (Word64Value) isValue() {}
 
-func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitWord64Value(interpreter, v)
 }
 
-func (Word64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -13834,7 +13889,7 @@ func (Word64Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord64)
 }
 
-func (Word64Value) IsImportable(_ *Interpreter) bool {
+func (Word64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -14296,11 +14351,11 @@ var _ MemberAccessibleValue = Word128Value{}
 
 func (Word128Value) isValue() {}
 
-func (v Word128Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word128Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitWord128Value(interpreter, v)
 }
 
-func (Word128Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word128Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -14308,7 +14363,7 @@ func (Word128Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord128)
 }
 
-func (Word128Value) IsImportable(_ *Interpreter) bool {
+func (Word128Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -14876,11 +14931,11 @@ var _ MemberAccessibleValue = Word256Value{}
 
 func (Word256Value) isValue() {}
 
-func (v Word256Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Word256Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitWord256Value(interpreter, v)
 }
 
-func (Word256Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Word256Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -14888,7 +14943,7 @@ func (Word256Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeWord256)
 }
 
-func (Word256Value) IsImportable(_ *Interpreter) bool {
+func (Word256Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -15471,11 +15526,11 @@ var _ MemberAccessibleValue = Fix64Value(0)
 
 func (Fix64Value) isValue() {}
 
-func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitFix64Value(interpreter, v)
 }
 
-func (Fix64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (Fix64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -15483,7 +15538,7 @@ func (Fix64Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeFix64)
 }
 
-func (Fix64Value) IsImportable(_ *Interpreter) bool {
+func (Fix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -16042,11 +16097,11 @@ var _ MemberAccessibleValue = UFix64Value(0)
 
 func (UFix64Value) isValue() {}
 
-func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitUFix64Value(interpreter, v)
 }
 
-func (UFix64Value) Walk(_ *Interpreter, _ func(Value)) {
+func (UFix64Value) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -16054,7 +16109,7 @@ func (UFix64Value) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeUFix64)
 }
 
-func (UFix64Value) IsImportable(_ *Interpreter) bool {
+func (UFix64Value) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -16738,14 +16793,14 @@ var _ ContractValue = &CompositeValue{}
 
 func (*CompositeValue) isValue() {}
 
-func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitCompositeValue(interpreter, v)
 	if !descend {
 		return
 	}
 
 	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
-		value.Accept(interpreter, visitor)
+		value.Accept(interpreter, visitor, locationRange)
 
 		// continue iteration
 		return true
@@ -16754,7 +16809,7 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed field or functions!
-func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+func (v *CompositeValue) Walk(interpreter *Interpreter, walkChild func(Value), _ LocationRange) {
 	v.ForEachField(interpreter, func(_ string, value Value) (resume bool) {
 		walkChild(value)
 
@@ -16777,7 +16832,7 @@ func (v *CompositeValue) StaticType(interpreter *Interpreter) StaticType {
 	return v.staticType
 }
 
-func (v *CompositeValue) IsImportable(inter *Interpreter) bool {
+func (v *CompositeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
 	// Check type is importable
 	staticType := v.StaticType(inter)
 	semaType := inter.MustConvertStaticToSemaType(staticType)
@@ -16788,7 +16843,7 @@ func (v *CompositeValue) IsImportable(inter *Interpreter) bool {
 	// Check all field values are importable
 	importable := true
 	v.ForEachField(inter, func(_ string, value Value) (resume bool) {
-		if !value.IsImportable(inter) {
+		if !value.IsImportable(inter, locationRange) {
 			importable = false
 			// stop iteration
 			return false
@@ -17173,7 +17228,7 @@ func (v *CompositeValue) RemoveMember(
 		)
 }
 
-func (v *CompositeValue) SetMember(
+func (v *CompositeValue) SetMemberWithoutTransfer(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	name string,
@@ -17201,19 +17256,6 @@ func (v *CompositeValue) SetMember(
 		}()
 	}
 
-	address := v.StorageAddress()
-
-	value = value.Transfer(
-		interpreter,
-		locationRange,
-		address,
-		true,
-		nil,
-		map[atree.StorageID]struct{}{
-			v.StorageID(): {},
-		},
-	)
-
 	existingStorable, err := v.dictionary.Set(
 		StringAtreeValueComparator,
 		StringAtreeValueHashInput,
@@ -17235,6 +17277,33 @@ func (v *CompositeValue) SetMember(
 	}
 
 	return false
+}
+
+func (v *CompositeValue) SetMember(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	name string,
+	value Value,
+) bool {
+	address := v.StorageAddress()
+
+	value = value.Transfer(
+		interpreter,
+		locationRange,
+		address,
+		true,
+		nil,
+		map[atree.StorageID]struct{}{
+			v.StorageID(): {},
+		},
+	)
+
+	return v.SetMemberWithoutTransfer(
+		interpreter,
+		locationRange,
+		name,
+		value,
+	)
 }
 
 func (v *CompositeValue) String() string {
@@ -18564,15 +18633,18 @@ var _ ReferenceTrackedResourceKindedValue = &DictionaryValue{}
 
 func (*DictionaryValue) isValue() {}
 
-func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitDictionaryValue(interpreter, v)
 	if !descend {
 		return
 	}
 
-	v.Walk(interpreter, func(value Value) {
-		value.Accept(interpreter, visitor)
-	})
+	v.Walk(
+		interpreter, func(value Value) {
+			value.Accept(interpreter, visitor, locationRange)
+		},
+		locationRange,
+	)
 }
 
 func (v *DictionaryValue) IterateKeys(
@@ -18643,11 +18715,16 @@ type DictionaryIterator struct {
 	mapIterator *atree.MapIterator
 }
 
-func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
+func (i DictionaryIterator) NextKeyUnconverted() atree.Value {
 	atreeValue, err := i.mapIterator.NextKey()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+	return atreeValue
+}
+
+func (i DictionaryIterator) NextKey(gauge common.MemoryGauge) Value {
+	atreeValue := i.NextKeyUnconverted()
 	if atreeValue == nil {
 		return nil
 	}
@@ -18677,7 +18754,7 @@ func (v *DictionaryValue) Iterator() DictionaryIterator {
 	}
 }
 
-func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
+func (v *DictionaryValue) Walk(interpreter *Interpreter, walkChild func(Value), _ LocationRange) {
 	v.Iterate(interpreter, func(key, value Value) (resume bool) {
 		walkChild(key)
 		walkChild(value)
@@ -18690,10 +18767,10 @@ func (v *DictionaryValue) StaticType(_ *Interpreter) StaticType {
 	return v.Type
 }
 
-func (v *DictionaryValue) IsImportable(inter *Interpreter) bool {
+func (v *DictionaryValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
 	importable := true
 	v.Iterate(inter, func(key, value Value) (resume bool) {
-		if !key.IsImportable(inter) || !value.IsImportable(inter) {
+		if !key.IsImportable(inter, locationRange) || !value.IsImportable(inter, locationRange) {
 			importable = false
 			// stop iteration
 			return false
@@ -19133,11 +19210,14 @@ func (v *DictionaryValue) RemoveKey(
 	return v.Remove(interpreter, locationRange, key)
 }
 
-func (v *DictionaryValue) Remove(
+func (v *DictionaryValue) RemoveWithoutTransfer(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	keyValue Value,
-) OptionalValue {
+	keyValue atree.Value,
+) (
+	existingKeyStorable,
+	existingValueStorable atree.Storable,
+) {
 
 	interpreter.validateMutation(v.StorageID(), locationRange)
 
@@ -19146,7 +19226,8 @@ func (v *DictionaryValue) Remove(
 
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
-	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
+	var err error
+	existingKeyStorable, existingValueStorable, err = v.dictionary.Remove(
 		valueComparator,
 		hashInputProvider,
 		keyValue,
@@ -19154,11 +19235,26 @@ func (v *DictionaryValue) Remove(
 	if err != nil {
 		var keyNotFoundError *atree.KeyNotFoundError
 		if goerrors.As(err, &keyNotFoundError) {
-			return NilOptionalValue
+			return nil, nil
 		}
 		panic(errors.NewExternalError(err))
 	}
 	interpreter.maybeValidateAtreeValue(v.dictionary)
+
+	return existingKeyStorable, existingValueStorable
+}
+
+func (v *DictionaryValue) Remove(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	keyValue Value,
+) OptionalValue {
+
+	existingKeyStorable, existingValueStorable := v.RemoveWithoutTransfer(interpreter, locationRange, keyValue)
+
+	if existingKeyStorable == nil {
+		return NilOptionalValue
+	}
 
 	storage := interpreter.Storage()
 
@@ -19191,11 +19287,11 @@ func (v *DictionaryValue) InsertKey(
 	v.SetKey(interpreter, locationRange, key, value)
 }
 
-func (v *DictionaryValue) Insert(
+func (v *DictionaryValue) InsertWithoutTransfer(
 	interpreter *Interpreter,
 	locationRange LocationRange,
-	keyValue, value Value,
-) OptionalValue {
+	keyValue, value atree.Value,
+) (existingValueStorable atree.Storable) {
 
 	interpreter.validateMutation(v.StorageID(), locationRange)
 
@@ -19205,8 +19301,31 @@ func (v *DictionaryValue) Insert(
 	common.UseMemory(interpreter, dataSlabs)
 	common.UseMemory(interpreter, metaDataSlabs)
 
-	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
-	interpreter.checkContainerMutation(v.Type.ValueType, value, locationRange)
+	valueComparator := newValueComparator(interpreter, locationRange)
+	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+
+	// atree only calls Storable() on keyValue if needed,
+	// i.e., if the key is a new key
+	var err error
+	existingValueStorable, err = v.dictionary.Set(
+		valueComparator,
+		hashInputProvider,
+		keyValue,
+		value,
+	)
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+	interpreter.maybeValidateAtreeValue(v.dictionary)
+
+	return existingValueStorable
+}
+
+func (v *DictionaryValue) Insert(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	keyValue, value Value,
+) OptionalValue {
 
 	address := v.dictionary.Address()
 
@@ -19232,21 +19351,10 @@ func (v *DictionaryValue) Insert(
 		preventTransfer,
 	)
 
-	valueComparator := newValueComparator(interpreter, locationRange)
-	hashInputProvider := newHashInputProvider(interpreter, locationRange)
+	interpreter.checkContainerMutation(v.Type.KeyType, keyValue, locationRange)
+	interpreter.checkContainerMutation(v.Type.ValueType, value, locationRange)
 
-	// atree only calls Storable() on keyValue if needed,
-	// i.e., if the key is a new key
-	existingValueStorable, err := v.dictionary.Set(
-		valueComparator,
-		hashInputProvider,
-		keyValue,
-		value,
-	)
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-	interpreter.maybeValidateAtreeValue(v.dictionary)
+	existingValueStorable := v.InsertWithoutTransfer(interpreter, locationRange, keyValue, value)
 
 	if existingValueStorable == nil {
 		return NilOptionalValue
@@ -19693,6 +19801,14 @@ func (v *DictionaryValue) IsResourceKinded(interpreter *Interpreter) bool {
 	return *v.isResourceKinded
 }
 
+func (v *DictionaryValue) SetType(staticType *DictionaryStaticType) {
+	v.Type = staticType
+	err := v.dictionary.SetType(staticType)
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
+}
+
 // OptionalValue
 
 type OptionalValue interface {
@@ -19718,11 +19834,11 @@ var _ OptionalValue = NilValue{}
 
 func (NilValue) isValue() {}
 
-func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitNilValue(interpreter, v)
 }
 
-func (NilValue) Walk(_ *Interpreter, _ func(Value)) {
+func (NilValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -19733,7 +19849,7 @@ func (NilValue) StaticType(interpreter *Interpreter) StaticType {
 	)
 }
 
-func (NilValue) IsImportable(_ *Interpreter) bool {
+func (NilValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -19887,15 +20003,15 @@ var _ OptionalValue = &SomeValue{}
 
 func (*SomeValue) isValue() {}
 
-func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor, locationRange LocationRange) {
 	descend := visitor.VisitSomeValue(interpreter, v)
 	if !descend {
 		return
 	}
-	v.value.Accept(interpreter, visitor)
+	v.value.Accept(interpreter, visitor, locationRange)
 }
 
-func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *SomeValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
 	walkChild(v.value)
 }
 
@@ -19914,8 +20030,8 @@ func (v *SomeValue) StaticType(inter *Interpreter) StaticType {
 	)
 }
 
-func (v *SomeValue) IsImportable(inter *Interpreter) bool {
-	return v.value.IsImportable(inter)
+func (v *SomeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
+	return v.value.IsImportable(inter, locationRange)
 }
 
 func (*SomeValue) isOptionalValue() {}
@@ -19953,7 +20069,7 @@ func (v *SomeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences
 	return v.value.MeteredString(memoryGauge, seenReferences)
 }
 
-func (v *SomeValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
 		return NewHostFunctionValue(
@@ -20261,11 +20377,11 @@ func NewStorageReferenceValue(
 
 func (*StorageReferenceValue) isValue() {}
 
-func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitStorageReferenceValue(interpreter, v)
 }
 
-func (*StorageReferenceValue) Walk(_ *Interpreter, _ func(Value)) {
+func (*StorageReferenceValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
@@ -20302,7 +20418,7 @@ func (v *StorageReferenceValue) GetAuthorization() Authorization {
 	return v.Authorization
 }
 
-func (*StorageReferenceValue) IsImportable(_ *Interpreter) bool {
+func (*StorageReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -20591,6 +20707,7 @@ func (v *StorageReferenceValue) ForEach(
 	referencedValue := v.mustReferencedValue(interpreter, locationRange)
 	forEachReference(
 		interpreter,
+		v,
 		referencedValue,
 		elementType,
 		function,
@@ -20600,6 +20717,7 @@ func (v *StorageReferenceValue) ForEach(
 
 func forEachReference(
 	interpreter *Interpreter,
+	reference ReferenceValue,
 	referencedValue Value,
 	elementType sema.Type,
 	function func(value Value) (resume bool),
@@ -20613,6 +20731,11 @@ func forEachReference(
 	referenceType, isResultReference := sema.MaybeReferenceType(elementType)
 
 	updatedFunction := func(value Value) (resume bool) {
+		// The loop dereference the reference once, and hold onto that referenced-value.
+		// But the reference could get invalidated during the iteration, making that referenced-value invalid.
+		// So check the validity of the reference, before each iteration.
+		interpreter.checkInvalidatedResourceOrResourceReference(reference, locationRange)
+
 		if isResultReference {
 			value = interpreter.getReferenceValue(value, elementType, locationRange)
 		}
@@ -20694,11 +20817,11 @@ func NewEphemeralReferenceValue(
 
 func (*EphemeralReferenceValue) isValue() {}
 
-func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitEphemeralReferenceValue(interpreter, v)
 }
 
-func (*EphemeralReferenceValue) Walk(_ *Interpreter, _ func(Value)) {
+func (*EphemeralReferenceValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 	// NOTE: *not* walking referenced value!
 }
@@ -20735,7 +20858,7 @@ func (v *EphemeralReferenceValue) GetAuthorization() Authorization {
 	return v.Authorization
 }
 
-func (*EphemeralReferenceValue) IsImportable(_ *Interpreter) bool {
+func (*EphemeralReferenceValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -20960,6 +21083,7 @@ func (v *EphemeralReferenceValue) ForEach(
 ) {
 	forEachReference(
 		interpreter,
+		v,
 		v.Value,
 		elementType,
 		function,
@@ -21027,11 +21151,11 @@ var _ MemberAccessibleValue = AddressValue{}
 
 func (AddressValue) isValue() {}
 
-func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitAddressValue(interpreter, v)
 }
 
-func (AddressValue) Walk(_ *Interpreter, _ func(Value)) {
+func (AddressValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -21039,7 +21163,7 @@ func (AddressValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewPrimitiveStaticType(interpreter, PrimitiveStaticTypeAddress)
 }
 
-func (AddressValue) IsImportable(_ *Interpreter) bool {
+func (AddressValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return true
 }
 
@@ -21089,7 +21213,7 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
-func (v AddressValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
+func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 
 	case sema.ToStringFunctionName:
@@ -21098,9 +21222,12 @@ func (v AddressValue) GetMember(interpreter *Interpreter, locationRange Location
 			sema.ToStringFunctionType,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
+				locationRange := invocation.LocationRange
+
 				memoryUsage := common.NewStringMemoryUsage(
 					safeMul(common.AddressLength, 2, locationRange),
 				)
+
 				return NewStringValue(
 					interpreter,
 					memoryUsage,
@@ -21255,11 +21382,11 @@ var _ MemberAccessibleValue = PathValue{}
 
 func (PathValue) isValue() {}
 
-func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitPathValue(interpreter, v)
 }
 
-func (PathValue) Walk(_ *Interpreter, _ func(Value)) {
+func (PathValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -21276,7 +21403,7 @@ func (v PathValue) StaticType(interpreter *Interpreter) StaticType {
 	}
 }
 
-func (v PathValue) IsImportable(_ *Interpreter) bool {
+func (v PathValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	switch v.Domain {
 	case common.PathDomainStorage:
 		return sema.StoragePathType.Importable
@@ -21504,7 +21631,7 @@ var _ EquatableValue = &PublishedValue{}
 
 func (*PublishedValue) isValue() {}
 
-func (v *PublishedValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *PublishedValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitPublishedValue(interpreter, v)
 }
 
@@ -21514,7 +21641,7 @@ func (v *PublishedValue) StaticType(interpreter *Interpreter) StaticType {
 	return v.Value.StaticType(interpreter)
 }
 
-func (*PublishedValue) IsImportable(_ *Interpreter) bool {
+func (*PublishedValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -21540,7 +21667,7 @@ func (v *PublishedValue) MeteredString(memoryGauge common.MemoryGauge, seenRefer
 	)
 }
 
-func (v *PublishedValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *PublishedValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
 	walkChild(v.Recipient)
 	walkChild(v.Value)
 }

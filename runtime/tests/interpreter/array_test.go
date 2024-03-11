@@ -22,6 +22,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 func TestInterpretArrayFunctionEntitlements(t *testing.T) {
@@ -131,4 +133,27 @@ func TestInterpretArrayFunctionEntitlements(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.NoError(t, err)
 	})
+}
+
+func TestCheckArrayReferenceTypeInferenceWithDowncasting(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		entitlement E
+		entitlement F 
+		entitlement G
+
+		fun test() {
+			let ef = &1 as auth(E, F) &Int
+			let eg = &1 as auth(E, G) &Int
+			let arr = [ef, eg]
+			let ref = arr[0]
+            let downcastRef = ref as! auth(E, F) &Int
+		}
+	
+	`)
+
+	_, err := inter.Invoke("test")
+	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 }

@@ -69,12 +69,7 @@ func (t *testReporter) Migrated(
 	t.migrated[key] = struct{}{}
 }
 
-func (t *testReporter) Error(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
-	_ string,
-	err error,
-) {
+func (t *testReporter) Error(err error) {
 	t.errors = append(t.errors, err)
 }
 
@@ -236,7 +231,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
+						fooAddressLocation,
 						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
@@ -251,7 +246,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
+						fooAddressLocation,
 						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
@@ -267,7 +262,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				Types: []*interpreter.InterfaceStaticType{},
 				LegacyType: interpreter.NewCompositeStaticType(
 					nil,
-					nil,
+					fooAddressLocation,
 					fooBarQualifiedIdentifier,
 					common.NewTypeIDFromQualifiedName(
 						nil,
@@ -278,7 +273,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 			},
 			expectedType: interpreter.NewCompositeStaticType(
 				nil,
-				nil,
+				fooAddressLocation,
 				fooBarQualifiedIdentifier,
 				common.NewTypeIDFromQualifiedName(
 					nil,
@@ -341,7 +336,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 		"non_intersection_interface": {
 			storedType: interpreter.NewInterfaceStaticType(
 				nil,
-				nil,
+				fooAddressLocation,
 				fooBarQualifiedIdentifier,
 				common.NewTypeIDFromQualifiedName(
 					nil,
@@ -354,7 +349,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
+						fooAddressLocation,
 						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
@@ -371,7 +366,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
+						fooAddressLocation,
 						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
@@ -386,7 +381,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				[]*interpreter.InterfaceStaticType{
 					interpreter.NewInterfaceStaticType(
 						nil,
-						nil,
+						fooAddressLocation,
 						fooBarQualifiedIdentifier,
 						common.NewTypeIDFromQualifiedName(
 							nil,
@@ -400,7 +395,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 		"composite": {
 			storedType: interpreter.NewCompositeStaticType(
 				nil,
-				nil,
+				fooAddressLocation,
 				fooBarQualifiedIdentifier,
 				common.NewTypeIDFromQualifiedName(
 					nil,
@@ -447,7 +442,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 				utils.TestLocation,
 				&interpreter.Config{
 					Storage:                       storage,
-					AtreeValueValidationEnabled:   false,
+					AtreeValueValidationEnabled:   true,
 					AtreeStorageValidationEnabled: true,
 				},
 			)
@@ -485,7 +480,12 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 			err = migration.Commit()
 			require.NoError(t, err)
 
+			// Assert
+
 			require.Empty(t, reporter.errors)
+
+			err = storage.CheckHealth()
+			require.NoError(t, err)
 
 			storageMapKey := interpreter.StringStorageMapKey(name)
 
@@ -578,277 +578,327 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 	pathDomain := common.PathDomainPublic
 
 	type testCase struct {
-		storedValue   interpreter.Value
-		expectedValue interpreter.Value
+		storedValue   func(inter *interpreter.Interpreter) interpreter.Value
+		expectedValue func(inter *interpreter.Interpreter) interpreter.Value
+		validateValue bool
 	}
 
 	storedAccountTypeValue := interpreter.NewTypeValue(nil, interpreter.PrimitiveStaticTypePublicAccount) //nolint:staticcheck
 	expectedAccountTypeValue := interpreter.NewTypeValue(nil, unauthorizedAccountReferenceType)
 	stringTypeValue := interpreter.NewTypeValue(nil, interpreter.PrimitiveStaticTypeString)
 
-	ledger := NewTestLedger(nil, nil)
-	storage := runtime.NewStorage(ledger, nil)
-	locationRange := interpreter.EmptyLocationRange
-
-	inter, err := interpreter.NewInterpreter(
-		nil,
-		utils.TestLocation,
-		&interpreter.Config{
-			Storage:                       storage,
-			AtreeValueValidationEnabled:   false,
-			AtreeStorageValidationEnabled: false,
-		},
-	)
-	require.NoError(t, err)
-
 	fooAddressLocation := common.NewAddressLocation(nil, account, "Foo")
 	const fooBarQualifiedIdentifier = "Foo.Bar"
 
 	testCases := map[string]testCase{
 		"account_some_value": {
-			storedValue:   interpreter.NewUnmeteredSomeValueNonCopying(storedAccountTypeValue),
-			expectedValue: interpreter.NewUnmeteredSomeValueNonCopying(expectedAccountTypeValue),
+			storedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredSomeValueNonCopying(storedAccountTypeValue)
+			},
+			expectedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredSomeValueNonCopying(expectedAccountTypeValue)
+			},
+			validateValue: true,
 		},
 		"int8_some_value": {
-			storedValue: interpreter.NewUnmeteredSomeValueNonCopying(stringTypeValue),
+			storedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredSomeValueNonCopying(stringTypeValue)
+			},
+			expectedValue: nil,
+			validateValue: true,
 		},
 		"account_array": {
-			storedValue: interpreter.NewArrayValue(
-				inter,
-				locationRange,
-				interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
-				common.ZeroAddress,
-				stringTypeValue,
-				storedAccountTypeValue,
-				stringTypeValue,
-				stringTypeValue,
-				storedAccountTypeValue,
-			),
-			expectedValue: interpreter.NewArrayValue(
-				inter,
-				locationRange,
-				interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
-				common.ZeroAddress,
-				stringTypeValue,
-				expectedAccountTypeValue,
-				stringTypeValue,
-				stringTypeValue,
-				expectedAccountTypeValue,
-			),
+			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
+					common.ZeroAddress,
+					stringTypeValue,
+					storedAccountTypeValue,
+					stringTypeValue,
+					stringTypeValue,
+					storedAccountTypeValue,
+				)
+			},
+			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
+					common.ZeroAddress,
+					stringTypeValue,
+					expectedAccountTypeValue,
+					stringTypeValue,
+					stringTypeValue,
+					expectedAccountTypeValue,
+				)
+			},
+			validateValue: true,
 		},
 		"non_account_array": {
-			storedValue: interpreter.NewArrayValue(
-				inter,
-				locationRange,
-				interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
-				common.ZeroAddress,
-				stringTypeValue,
-				stringTypeValue,
-				stringTypeValue,
-			),
+			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(nil, interpreter.PrimitiveStaticTypeAnyStruct),
+					common.ZeroAddress,
+					stringTypeValue,
+					stringTypeValue,
+					stringTypeValue,
+				)
+			},
+			expectedValue: nil,
+			validateValue: true,
 		},
 		"dictionary_with_account_type_value": {
-			storedValue: interpreter.NewDictionaryValue(
-				inter,
-				locationRange,
-				interpreter.NewDictionaryStaticType(
-					nil,
-					interpreter.PrimitiveStaticTypeInt8,
-					interpreter.PrimitiveStaticTypeAnyStruct,
-				),
-				interpreter.NewUnmeteredInt8Value(4),
-				storedAccountTypeValue,
-				interpreter.NewUnmeteredInt8Value(5),
-				interpreter.NewUnmeteredStringValue("hello"),
-			),
-			expectedValue: interpreter.NewDictionaryValue(
-				inter,
-				locationRange,
-				interpreter.NewDictionaryStaticType(
-					nil,
-					interpreter.PrimitiveStaticTypeInt8,
-					interpreter.PrimitiveStaticTypeAnyStruct,
-				),
-				interpreter.NewUnmeteredInt8Value(4),
-				expectedAccountTypeValue,
-				interpreter.NewUnmeteredInt8Value(5),
-				interpreter.NewUnmeteredStringValue("hello"),
-			),
+			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeInt8,
+						interpreter.PrimitiveStaticTypeAnyStruct,
+					),
+					interpreter.NewUnmeteredInt8Value(4),
+					storedAccountTypeValue,
+					interpreter.NewUnmeteredInt8Value(5),
+					interpreter.NewUnmeteredStringValue("hello"),
+				)
+			},
+			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeInt8,
+						interpreter.PrimitiveStaticTypeAnyStruct,
+					),
+					interpreter.NewUnmeteredInt8Value(4),
+					expectedAccountTypeValue,
+					interpreter.NewUnmeteredInt8Value(5),
+					interpreter.NewUnmeteredStringValue("hello"),
+				)
+			},
+			validateValue: true,
 		},
 		"dictionary_with_optional_account_type_value": {
-			storedValue: interpreter.NewDictionaryValue(
-				inter,
-				locationRange,
-				interpreter.NewDictionaryStaticType(
-					nil,
-					interpreter.PrimitiveStaticTypeInt8,
-					interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeMetaType),
-				),
-				interpreter.NewUnmeteredInt8Value(4),
-				interpreter.NewUnmeteredSomeValueNonCopying(storedAccountTypeValue),
-			),
-			expectedValue: interpreter.NewDictionaryValue(
-				inter,
-				locationRange,
-				interpreter.NewDictionaryStaticType(
-					nil,
-					interpreter.PrimitiveStaticTypeInt8,
-					interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeMetaType),
-				),
-				interpreter.NewUnmeteredInt8Value(4),
-				interpreter.NewUnmeteredSomeValueNonCopying(expectedAccountTypeValue),
-			),
+			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeInt8,
+						interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeMetaType),
+					),
+					interpreter.NewUnmeteredInt8Value(4),
+					interpreter.NewUnmeteredSomeValueNonCopying(storedAccountTypeValue),
+				)
+			},
+			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeInt8,
+						interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeMetaType),
+					),
+					interpreter.NewUnmeteredInt8Value(4),
+					interpreter.NewUnmeteredSomeValueNonCopying(expectedAccountTypeValue),
+				)
+			},
+			validateValue: true,
 		},
 		"dictionary_with_account_type_key": {
-			storedValue: interpreter.NewDictionaryValue(
-				inter,
-				locationRange,
-				interpreter.NewDictionaryStaticType(
-					nil,
-					interpreter.PrimitiveStaticTypeMetaType,
-					interpreter.PrimitiveStaticTypeInt8,
-				),
-				interpreter.NewTypeValue(
-					nil,
-					dummyStaticType{
-						PrimitiveStaticType: interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
-					},
-				),
-				interpreter.NewUnmeteredInt8Value(4),
-			),
-			expectedValue: interpreter.NewDictionaryValue(
-				inter,
-				locationRange,
-				interpreter.NewDictionaryStaticType(
-					nil,
-					interpreter.PrimitiveStaticTypeMetaType,
-					interpreter.PrimitiveStaticTypeInt8,
-				),
-				expectedAccountTypeValue,
-				interpreter.NewUnmeteredInt8Value(4),
-			),
+			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeMetaType,
+						interpreter.PrimitiveStaticTypeInt8,
+					),
+					interpreter.NewTypeValue(
+						nil,
+						dummyStaticType{
+							PrimitiveStaticType: interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+						},
+					),
+					interpreter.NewUnmeteredInt8Value(4),
+				)
+			},
+			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeMetaType,
+						interpreter.PrimitiveStaticTypeInt8,
+					),
+					expectedAccountTypeValue,
+					interpreter.NewUnmeteredInt8Value(4),
+				)
+			},
+			validateValue: false,
 		},
 		"dictionary_with_account_type_key_and_value": {
-			storedValue: interpreter.NewDictionaryValue(
-				inter,
-				locationRange,
-				interpreter.NewDictionaryStaticType(
-					nil,
-					interpreter.PrimitiveStaticTypeMetaType,
-					interpreter.PrimitiveStaticTypeMetaType,
-				),
-				interpreter.NewTypeValue(
-					nil,
-					dummyStaticType{
-						PrimitiveStaticType: interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
-					},
-				),
-				storedAccountTypeValue,
-			),
-			expectedValue: interpreter.NewDictionaryValue(
-				inter,
-				locationRange,
-				interpreter.NewDictionaryStaticType(
-					nil,
-					interpreter.PrimitiveStaticTypeMetaType,
-					interpreter.PrimitiveStaticTypeMetaType,
-				),
-				expectedAccountTypeValue,
-				expectedAccountTypeValue,
-			),
+			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeMetaType,
+						interpreter.PrimitiveStaticTypeMetaType,
+					),
+					interpreter.NewTypeValue(
+						nil,
+						dummyStaticType{
+							PrimitiveStaticType: interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+						},
+					),
+					storedAccountTypeValue,
+				)
+			},
+			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeMetaType,
+						interpreter.PrimitiveStaticTypeMetaType,
+					),
+					expectedAccountTypeValue,
+					expectedAccountTypeValue,
+				)
+			},
+			validateValue: false,
 		},
 		"composite_with_account_type": {
-			storedValue: interpreter.NewCompositeValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				fooAddressLocation,
-				fooBarQualifiedIdentifier,
-				common.CompositeKindResource,
-				[]interpreter.CompositeField{
-					interpreter.NewUnmeteredCompositeField("field1", storedAccountTypeValue),
-					interpreter.NewUnmeteredCompositeField("field2", interpreter.NewUnmeteredStringValue("hello")),
-				},
-				common.Address{},
-			),
-			expectedValue: interpreter.NewCompositeValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				fooAddressLocation,
-				fooBarQualifiedIdentifier,
-				common.CompositeKindResource,
-				[]interpreter.CompositeField{
-					interpreter.NewUnmeteredCompositeField("field1", expectedAccountTypeValue),
-					interpreter.NewUnmeteredCompositeField("field2", interpreter.NewUnmeteredStringValue("hello")),
-				},
-				common.Address{},
-			),
+			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewCompositeValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					fooAddressLocation,
+					fooBarQualifiedIdentifier,
+					common.CompositeKindResource,
+					[]interpreter.CompositeField{
+						interpreter.NewUnmeteredCompositeField("field1", storedAccountTypeValue),
+						interpreter.NewUnmeteredCompositeField("field2", interpreter.NewUnmeteredStringValue("hello")),
+					},
+					common.Address{},
+				)
+			},
+			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewCompositeValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					fooAddressLocation,
+					fooBarQualifiedIdentifier,
+					common.CompositeKindResource,
+					[]interpreter.CompositeField{
+						interpreter.NewUnmeteredCompositeField("field1", expectedAccountTypeValue),
+						interpreter.NewUnmeteredCompositeField("field2", interpreter.NewUnmeteredStringValue("hello")),
+					},
+					common.Address{},
+				)
+			},
+			validateValue: true,
 		},
 	}
 
 	// Store values
 
-	for name, testCase := range testCases {
-		transferredValue := testCase.storedValue.Transfer(
-			inter,
-			locationRange,
-			atree.Address(account),
-			false,
-			nil,
-			nil,
-		)
+	test := func(name string, testCase testCase) {
 
-		inter.WriteStored(
-			account,
-			pathDomain.Identifier(),
-			interpreter.StringStorageMapKey(name),
-			transferredValue,
-		)
-	}
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	err = storage.Commit(inter, true)
-	require.NoError(t, err)
+			ledger := NewTestLedger(nil, nil)
+			storage := runtime.NewStorage(ledger, nil)
 
-	// Migrate
+			inter, err := interpreter.NewInterpreter(
+				nil,
+				utils.TestLocation,
+				&interpreter.Config{
+					Storage:                       storage,
+					AtreeValueValidationEnabled:   testCase.validateValue,
+					AtreeStorageValidationEnabled: true,
+				},
+			)
+			require.NoError(t, err)
 
-	migration := migrations.NewStorageMigration(inter, storage)
+			transferredValue := testCase.storedValue(inter).Transfer(
+				inter,
+				interpreter.EmptyLocationRange,
+				atree.Address(account),
+				false,
+				nil,
+				nil,
+			)
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
+			inter.WriteStored(
 				account,
-			},
-		},
-		migration.NewValueMigrationsPathMigrator(
-			nil,
-			NewStaticTypeMigration(),
-		),
-	)
+				pathDomain.Identifier(),
+				interpreter.StringStorageMapKey(name),
+				transferredValue,
+			)
 
-	err = migration.Commit()
-	require.NoError(t, err)
+			err = storage.Commit(inter, true)
+			require.NoError(t, err)
 
-	// Assert: Traverse through the storage and see if the values are updated now.
+			// Migrate
 
-	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
-	require.NotNil(t, storageMap)
-	require.Greater(t, storageMap.Count(), uint64(0))
+			migration := migrations.NewStorageMigration(inter, storage)
 
-	iterator := storageMap.Iterator(inter)
+			reporter := newTestReporter()
 
-	for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
-		identifier := string(key.(interpreter.StringAtreeValue))
+			migration.Migrate(
+				&migrations.AddressSliceIterator{
+					Addresses: []common.Address{
+						account,
+					},
+				},
+				migration.NewValueMigrationsPathMigrator(
+					reporter,
+					NewStaticTypeMigration(),
+				),
+			)
 
-		t.Run(identifier, func(t *testing.T) {
-			testCase, ok := testCases[identifier]
-			require.True(t, ok)
+			err = migration.Commit()
+			require.NoError(t, err)
+
+			// Assert
+
+			require.Empty(t, reporter.errors)
+
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
+			require.NotNil(t, storageMap)
+			require.Equal(t, uint64(1), storageMap.Count())
+
+			value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(name))
 
 			expectedStoredValue := testCase.expectedValue
 			if expectedStoredValue == nil {
 				expectedStoredValue = testCase.storedValue
 			}
 
-			utils.AssertValuesEqual(t, inter, expectedStoredValue, value)
+			utils.AssertValuesEqual(t, inter, expectedStoredValue(inter), value)
 		})
+	}
+
+	for name, testCase := range testCases {
+		test(name, testCase)
 	}
 }
 
@@ -860,167 +910,305 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 	pathDomain := common.PathDomainPublic
 
 	type testCase struct {
-		storedValue   interpreter.Value
-		expectedValue interpreter.Value
+		storedValue     func(inter *interpreter.Interpreter) interpreter.Value
+		expectedValue   func(inter *interpreter.Interpreter) interpreter.Value
+		validateStorage bool
 	}
-
-	ledger := NewTestLedger(nil, nil)
-	storage := runtime.NewStorage(ledger, nil)
-	locationRange := interpreter.EmptyLocationRange
-
-	inter, err := interpreter.NewInterpreter(
-		nil,
-		utils.TestLocation,
-		&interpreter.Config{
-			Storage:                       storage,
-			AtreeValueValidationEnabled:   false,
-			AtreeStorageValidationEnabled: false,
-		},
-	)
-	require.NoError(t, err)
 
 	testCases := map[string]testCase{
+		"dictionary_value": {
+			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeString,
+						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+					),
+				)
+			},
+			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeString,
+						unauthorizedAccountReferenceType,
+					),
+				)
+			},
+			// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+			validateStorage: false,
+		},
+		"array_value": {
+			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+					),
+					common.Address{},
+				)
+			},
+			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewVariableSizedStaticType(
+						nil,
+						unauthorizedAccountReferenceType,
+					),
+					common.Address{},
+				)
+			},
+			// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+			validateStorage: false,
+		},
 		"account_capability_value": {
-			storedValue: interpreter.NewUnmeteredCapabilityValue(
-				123,
-				interpreter.NewAddressValue(nil, common.Address{0x42}),
-				interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
-			),
-			expectedValue: interpreter.NewUnmeteredCapabilityValue(
-				123,
-				interpreter.NewAddressValue(nil, common.Address{0x42}),
-				unauthorizedAccountReferenceType,
-			),
+			storedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredCapabilityValue(
+					123,
+					interpreter.NewAddressValue(nil, common.Address{0x42}),
+					interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+				)
+			},
+			expectedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredCapabilityValue(
+					123,
+					interpreter.NewAddressValue(nil, common.Address{0x42}),
+					unauthorizedAccountReferenceType,
+				)
+			},
+			validateStorage: true,
 		},
 		"string_capability_value": {
-			storedValue: interpreter.NewUnmeteredCapabilityValue(
-				123,
-				interpreter.NewAddressValue(nil, common.Address{0x42}),
-				interpreter.PrimitiveStaticTypeString,
-			),
+			storedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredCapabilityValue(
+					123,
+					interpreter.NewAddressValue(nil, common.Address{0x42}),
+					interpreter.PrimitiveStaticTypeString,
+				)
+			},
+			validateStorage: true,
 		},
 		"account_capability_controller": {
-			storedValue: interpreter.NewUnmeteredAccountCapabilityControllerValue(
-				interpreter.NewReferenceStaticType(
-					nil,
-					interpreter.UnauthorizedAccess,
-					interpreter.PrimitiveStaticTypeAuthAccount, //nolint:staticcheck,
-				),
-				1234,
-			),
-			expectedValue: interpreter.NewUnmeteredAccountCapabilityControllerValue(
-				authAccountReferenceType,
-				1234,
-			),
+			storedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredAccountCapabilityControllerValue(
+					interpreter.NewReferenceStaticType(
+						nil,
+						interpreter.UnauthorizedAccess,
+						interpreter.PrimitiveStaticTypeAuthAccount, //nolint:staticcheck,
+					),
+					1234,
+				)
+			},
+			expectedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredAccountCapabilityControllerValue(
+					authAccountReferenceType,
+					1234,
+				)
+			},
+			validateStorage: true,
 		},
 		"storage_capability_controller": {
-			storedValue: interpreter.NewUnmeteredStorageCapabilityControllerValue(
-				interpreter.NewReferenceStaticType(
-					nil,
-					interpreter.UnauthorizedAccess,
-					interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck,
-				),
-				1234,
-				interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
-			),
-			expectedValue: interpreter.NewUnmeteredStorageCapabilityControllerValue(
-				unauthorizedAccountReferenceType,
-				1234,
-				interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
-			),
+			storedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredStorageCapabilityControllerValue(
+					interpreter.NewReferenceStaticType(
+						nil,
+						interpreter.UnauthorizedAccess,
+						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck,
+					),
+					1234,
+					interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
+				)
+			},
+			expectedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredStorageCapabilityControllerValue(
+					unauthorizedAccountReferenceType,
+					1234,
+					interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
+				)
+			},
+			validateStorage: true,
 		},
 		"path_link_value": {
-			storedValue: interpreter.PathLinkValue{ //nolint:staticcheck
-				TargetPath: interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
-				Type:       interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+			storedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.PathLinkValue{ //nolint:staticcheck
+					TargetPath: interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
+					Type:       interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+				}
 			},
-			expectedValue: interpreter.PathLinkValue{ //nolint:staticcheck
-				TargetPath: interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
-				Type:       unauthorizedAccountReferenceType,
+			expectedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.PathLinkValue{ //nolint:staticcheck
+					TargetPath: interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
+					Type:       unauthorizedAccountReferenceType,
+				}
 			},
+			validateStorage: true,
 		},
 		"account_link_value": {
-			storedValue:   interpreter.AccountLinkValue{}, //nolint:staticcheck
-			expectedValue: interpreter.AccountLinkValue{}, //nolint:staticcheck
+			storedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.AccountLinkValue{} //nolint:staticcheck
+			},
+			expectedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.AccountLinkValue{} //nolint:staticcheck
+			},
+			validateStorage: true,
 		},
 		"path_capability_value": {
-			storedValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				Address:    interpreter.NewAddressValue(nil, common.Address{0x42}),
-				Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
-				BorrowType: interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+			storedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return &interpreter.PathCapabilityValue{ //nolint:staticcheck
+					Address:    interpreter.NewAddressValue(nil, common.Address{0x42}),
+					Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
+					BorrowType: interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+				}
 			},
-			expectedValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				Address:    interpreter.NewAddressValue(nil, common.Address{0x42}),
-				Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
-				BorrowType: unauthorizedAccountReferenceType,
+			expectedValue: func(_ *interpreter.Interpreter) interpreter.Value {
+				return &interpreter.PathCapabilityValue{ //nolint:staticcheck
+					Address:    interpreter.NewAddressValue(nil, common.Address{0x42}),
+					Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
+					BorrowType: unauthorizedAccountReferenceType,
+				}
 			},
+			validateStorage: true,
+		},
+		"capability_dictionary": {
+			storedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeString,
+						interpreter.NewCapabilityStaticType(
+							nil,
+							interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+						),
+					),
+					interpreter.NewUnmeteredStringValue("key"),
+					interpreter.NewCapabilityValue(
+						nil,
+						interpreter.NewUnmeteredUInt64Value(1234),
+						interpreter.NewAddressValue(nil, common.Address{}),
+						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+					),
+				)
+			},
+			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					interpreter.NewDictionaryStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeString,
+						interpreter.NewCapabilityStaticType(
+							nil,
+							unauthorizedAccountReferenceType,
+						),
+					),
+					interpreter.NewUnmeteredStringValue("key"),
+					interpreter.NewCapabilityValue(
+						nil,
+						interpreter.NewUnmeteredUInt64Value(1234),
+						interpreter.NewAddressValue(nil, common.Address{}),
+						unauthorizedAccountReferenceType,
+					),
+				)
+			},
+			// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+			validateStorage: false,
 		},
 	}
 
-	// Store values
+	test := func(name string, testCase testCase) {
 
-	for name, testCase := range testCases {
-		transferredValue := testCase.storedValue.Transfer(
-			inter,
-			locationRange,
-			atree.Address(account),
-			false,
-			nil,
-			nil,
-		)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-		inter.WriteStored(
-			account,
-			pathDomain.Identifier(),
-			interpreter.StringStorageMapKey(name),
-			transferredValue,
-		)
-	}
+			ledger := NewTestLedger(nil, nil)
+			storage := runtime.NewStorage(ledger, nil)
 
-	err = storage.Commit(inter, true)
-	require.NoError(t, err)
+			inter, err := interpreter.NewInterpreter(
+				nil,
+				utils.TestLocation,
+				&interpreter.Config{
+					Storage:                       storage,
+					AtreeValueValidationEnabled:   true,
+					AtreeStorageValidationEnabled: testCase.validateStorage,
+				},
+			)
+			require.NoError(t, err)
 
-	// Migrate
+			// Store values
 
-	migration := migrations.NewStorageMigration(inter, storage)
+			transferredValue := testCase.storedValue(inter).Transfer(
+				inter,
+				interpreter.EmptyLocationRange,
+				atree.Address(account),
+				false,
+				nil,
+				nil,
+			)
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
+			inter.WriteStored(
 				account,
-			},
-		},
-		migration.NewValueMigrationsPathMigrator(
-			nil,
-			NewStaticTypeMigration(),
-		),
-	)
+				pathDomain.Identifier(),
+				interpreter.StringStorageMapKey(name),
+				transferredValue,
+			)
 
-	err = migration.Commit()
-	require.NoError(t, err)
+			err = storage.Commit(inter, true)
+			require.NoError(t, err)
 
-	// Assert: Traverse through the storage and see if the values are updated now.
+			// Migrate
 
-	storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
-	require.NotNil(t, storageMap)
-	require.Greater(t, storageMap.Count(), uint64(0))
+			migration := migrations.NewStorageMigration(inter, storage)
 
-	iterator := storageMap.Iterator(inter)
+			reporter := newTestReporter()
 
-	for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
-		identifier := string(key.(interpreter.StringAtreeValue))
+			migration.Migrate(
+				&migrations.AddressSliceIterator{
+					Addresses: []common.Address{
+						account,
+					},
+				},
+				migration.NewValueMigrationsPathMigrator(
+					reporter,
+					NewStaticTypeMigration(),
+				),
+			)
 
-		t.Run(identifier, func(t *testing.T) {
-			testCase, ok := testCases[identifier]
-			require.True(t, ok)
+			err = migration.Commit()
+			require.NoError(t, err)
+
+			// Assert
+
+			require.Empty(t, reporter.errors)
+
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
+			require.NotNil(t, storageMap)
+			require.Equal(t, uint64(1), storageMap.Count())
+
+			value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(name))
 
 			expectedStoredValue := testCase.expectedValue
 			if expectedStoredValue == nil {
 				expectedStoredValue = testCase.storedValue
 			}
 
-			utils.AssertValuesEqual(t, inter, expectedStoredValue, value)
+			utils.AssertValuesEqual(t, inter, expectedStoredValue(inter), value)
 		})
+	}
+
+	for name, testCase := range testCases {
+		test(name, testCase)
 	}
 }
 
@@ -1045,7 +1233,8 @@ func TestAccountTypeRehash(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			&interpreter.Config{
-				Storage:                       storage,
+				Storage: storage,
+				// NOTE: atree value validation is disabled
 				AtreeValueValidationEnabled:   false,
 				AtreeStorageValidationEnabled: true,
 			},
@@ -1140,7 +1329,12 @@ func TestAccountTypeRehash(t *testing.T) {
 		err := migration.Commit()
 		require.NoError(t, err)
 
+		// Assert
+
 		require.Empty(t, reporter.errors)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
 
 		require.Equal(t,
 			map[struct {

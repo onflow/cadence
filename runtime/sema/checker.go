@@ -1002,7 +1002,7 @@ func CheckIntersectionType(
 		panic(errors.NewUnreachableError())
 	}
 
-	return NewIntersectionType(memoryGauge, types)
+	return NewIntersectionType(memoryGauge, nil, types)
 }
 
 func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {

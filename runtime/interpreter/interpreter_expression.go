@@ -275,6 +275,18 @@ func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.T
 	case NilValue, ReferenceValue:
 		// Reference to a nil, should return a nil.
 		// If the value is already a reference then return the same reference.
+		// However, we need to make sure that this reference is actually a subtype of the resultType,
+		// since the checker may not be aware that we are "short-circuiting" in this case
+
+		staticType := value.StaticType(interpreter)
+		if !interpreter.IsSubTypeOfSemaType(staticType, resultType) {
+			panic(InvalidMemberReferenceError{
+				ExpectedType:  resultType,
+				ActualType:    interpreter.MustConvertStaticToSemaType(staticType),
+				LocationRange: locationRange,
+			})
+		}
+
 		return value
 	case *SomeValue:
 		innerValue := interpreter.getReferenceValue(value.value, resultType, locationRange)
@@ -1030,6 +1042,7 @@ func (interpreter *Interpreter) maybeGetReference(
 	memberValue Value,
 ) Value {
 	indexExpressionTypes := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
+
 	if indexExpressionTypes.ReturnReference {
 		expectedType := indexExpressionTypes.ResultType
 
@@ -1037,6 +1050,7 @@ func (interpreter *Interpreter) maybeGetReference(
 			Location:    interpreter.Location,
 			HasPosition: expression,
 		}
+
 		// Get a reference to the value
 		memberValue = interpreter.getReferenceValue(memberValue, expectedType, locationRange)
 	}

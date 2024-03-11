@@ -241,17 +241,9 @@ func ConvertValueToEntitlements(
 			return nil, nil
 		}
 
-		iterator := v.Iterator(inter, interpreter.EmptyLocationRange)
-
-		return interpreter.NewArrayValueWithIterator(
-			inter,
+		v.SetType(
 			entitledElementType.(interpreter.ArrayStaticType),
-			v.GetOwner(),
-			uint64(v.Count()),
-			func() interpreter.Value {
-				return iterator.Next(inter, interpreter.EmptyLocationRange)
-			},
-		), nil
+		)
 
 	case *interpreter.DictionaryValue:
 		elementType := v.Type
@@ -261,28 +253,13 @@ func ConvertValueToEntitlements(
 			return nil, err
 		}
 
-		if entitledElementType != nil {
-			var keysAndValues []interpreter.Value
-
-			iterator := v.Iterator()
-			for {
-				keyValue, value := iterator.Next(inter)
-				if keyValue == nil {
-					break
-				}
-
-				keysAndValues = append(keysAndValues, keyValue)
-				keysAndValues = append(keysAndValues, value)
-			}
-
-			return interpreter.NewDictionaryValueWithAddress(
-				inter,
-				interpreter.EmptyLocationRange,
-				entitledElementType.(*interpreter.DictionaryStaticType),
-				v.GetOwner(),
-				keysAndValues...,
-			), nil
+		if entitledElementType == nil {
+			return nil, nil
 		}
+
+		v.SetType(
+			entitledElementType.(*interpreter.DictionaryStaticType),
+		)
 
 	case *interpreter.IDCapabilityValue:
 		borrowType := v.BorrowType
@@ -391,4 +368,8 @@ func (mig EntitlementsMigration) Migrate(
 	error,
 ) {
 	return ConvertValueToEntitlements(mig.Interpreter, value)
+}
+
+func (mig EntitlementsMigration) CanSkip(valueType interpreter.StaticType) bool {
+	return statictypes.CanSkipStaticTypeMigration(valueType)
 }

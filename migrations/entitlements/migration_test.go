@@ -531,6 +531,7 @@ func TestConvertToEntitledType(t *testing.T) {
 				sema.UnauthorizedAccess,
 				sema.NewIntersectionType(
 					nil,
+					nil,
 					[]*sema.InterfaceType{
 						interfaceTypeInheriting,
 						interfaceTypeWithMap,
@@ -541,6 +542,7 @@ func TestConvertToEntitledType(t *testing.T) {
 				nil,
 				eFAndGAccess,
 				sema.NewIntersectionType(
+					nil,
 					nil,
 					[]*sema.InterfaceType{
 						interfaceTypeInheriting,
@@ -557,6 +559,7 @@ func TestConvertToEntitledType(t *testing.T) {
 					nil,
 					sema.NewIntersectionType(
 						nil,
+						nil,
 						[]*sema.InterfaceType{
 							interfaceTypeInheriting,
 							interfaceTypeWithMap,
@@ -570,6 +573,7 @@ func TestConvertToEntitledType(t *testing.T) {
 				sema.NewOptionalType(
 					nil,
 					sema.NewIntersectionType(
+						nil,
 						nil,
 						[]*sema.InterfaceType{
 							interfaceTypeInheriting,
@@ -691,6 +695,10 @@ func (m testEntitlementsMigration) Migrate(
 	return ConvertValueToEntitlements(m.inter, value)
 }
 
+func (m testEntitlementsMigration) CanSkip(_ interpreter.StaticType) bool {
+	return false
+}
+
 func convertEntireTestValue(
 	t *testing.T,
 	inter *interpreter.Interpreter,
@@ -721,7 +729,10 @@ func convertEntireTestValue(
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	if migratedValue == nil {
 		return v
@@ -1313,8 +1324,12 @@ func TestConvertToEntitledValue(t *testing.T) {
 		},
 	}
 
-	test := func(testCase testCase, valueGenerator valueGenerator, typeGenerator typeGenerator) {
-
+	test := func(
+		t *testing.T,
+		testCase testCase,
+		valueGenerator valueGenerator,
+		typeGenerator typeGenerator,
+	) {
 		input := valueGenerator.wrap(typeGenerator.wrap(testCase.Input))
 		if input == nil {
 			return
@@ -1323,6 +1338,9 @@ func TestConvertToEntitledValue(t *testing.T) {
 		expectedValue := valueGenerator.wrap(typeGenerator.wrap(testCase.Output))
 
 		convertedValue := convertEntireTestValue(t, inter, storage, testAddress, input)
+
+		err := storage.CheckHealth()
+		require.NoError(t, err)
 
 		switch convertedValue := convertedValue.(type) {
 		case interpreter.EquatableValue:
@@ -1346,7 +1364,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 					for _, typeGenerator := range typeGenerators {
 						t.Run(typeGenerator.name, func(t *testing.T) {
 
-							test(testCase, valueGenerator, typeGenerator)
+							test(t, testCase, valueGenerator, typeGenerator)
 						})
 					}
 				})
@@ -1484,11 +1502,20 @@ func TestMigrateSimpleContract(t *testing.T) {
 	}
 
 	for name, testCase := range testCases {
+		transferredValue := testCase.storedValue.Transfer(
+			inter,
+			interpreter.EmptyLocationRange,
+			atree.Address(account),
+			false,
+			nil,
+			nil,
+		)
+
 		inter.WriteStored(
 			account,
 			storageIdentifier,
 			interpreter.StringStorageMapKey(name),
-			testCase.storedValue,
+			transferredValue,
 		)
 	}
 
@@ -1517,7 +1544,10 @@ func TestMigrateSimpleContract(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	storageMap := storage.GetStorageMap(account, storageIdentifier, false)
 	require.NotNil(t, storageMap)
@@ -1701,7 +1731,11 @@ func TestMigratePublishedValue(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	assert.Equal(t,
 		map[struct {
 			interpreter.StorageKey
@@ -1955,7 +1989,11 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	assert.Equal(t,
 		map[struct {
 			interpreter.StorageKey
@@ -2404,7 +2442,11 @@ func TestMigrateArrayOfValues(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	assert.Equal(t,
 		map[struct {
 			interpreter.StorageKey
@@ -2651,7 +2693,11 @@ func TestMigrateDictOfValues(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	assert.Equal(t,
 		map[struct {
 			interpreter.StorageKey
@@ -2970,7 +3016,11 @@ func TestMigrateCapConsAcrossTwoAccounts(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 0)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
 	assert.Len(t, reporter.migrated, 1)
 
 	// TODO: assert
@@ -2983,10 +3033,7 @@ type testReporter struct {
 		interpreter.StorageKey
 		interpreter.StorageMapKey
 	}]struct{}
-	errors map[struct {
-		interpreter.StorageKey
-		interpreter.StorageMapKey
-	}][]error
+	errors []error
 }
 
 func newTestReporter() *testReporter {
@@ -2995,10 +3042,6 @@ func newTestReporter() *testReporter {
 			interpreter.StorageKey
 			interpreter.StorageMapKey
 		}]struct{}{},
-		errors: map[struct {
-			interpreter.StorageKey
-			interpreter.StorageMapKey
-		}][]error{},
 	}
 }
 
@@ -3016,24 +3059,8 @@ func (t *testReporter) Migrated(
 	}] = struct{}{}
 }
 
-func (t *testReporter) Error(
-	storageKey interpreter.StorageKey,
-	storageMapKey interpreter.StorageMapKey,
-	_ string,
-	err error,
-) {
-	key := struct {
-		interpreter.StorageKey
-		interpreter.StorageMapKey
-	}{
-		StorageKey:    storageKey,
-		StorageMapKey: storageMapKey,
-	}
-
-	t.errors[key] = append(
-		t.errors[key],
-		err,
-	)
+func (t *testReporter) Error(err error) {
+	t.errors = append(t.errors, err)
 }
 
 func TestRehash(t *testing.T) {
@@ -3059,7 +3086,8 @@ func TestRehash(t *testing.T) {
 			nil,
 			utils.TestLocation,
 			&interpreter.Config{
-				Storage:                       storage,
+				Storage: storage,
+				// NOTE: disabled, because encoded and decoded values are expected to not match
 				AtreeValueValidationEnabled:   false,
 				AtreeStorageValidationEnabled: true,
 			},
@@ -3150,6 +3178,9 @@ func TestRehash(t *testing.T) {
 
 		err := storage.Commit(inter, false)
 		require.NoError(t, err)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
 	})
 
 	t.Run("migrate", func(t *testing.T) {
@@ -3196,6 +3227,13 @@ func TestRehash(t *testing.T) {
 		err := migration.Commit()
 		require.NoError(t, err)
 
+		// Assert
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		assert.Empty(t, reporter.errors)
+
 		require.Equal(t,
 			map[struct {
 				interpreter.StorageKey
@@ -3216,6 +3254,9 @@ func TestRehash(t *testing.T) {
 	t.Run("load", func(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
+
+		err := storage.CheckHealth()
+		require.NoError(t, err)
 
 		storageMap := storage.GetStorageMap(
 			testAddress,

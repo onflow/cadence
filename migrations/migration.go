@@ -19,6 +19,9 @@
 package migrations
 
 import (
+	"fmt"
+	"runtime/debug"
+
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -34,6 +37,7 @@ type ValueMigration interface {
 		value interpreter.Value,
 		interpreter *interpreter.Interpreter,
 	) (newValue interpreter.Value, err error)
+	CanSkip(valueType interpreter.StaticType) bool
 }
 
 type DomainMigration interface {
@@ -138,35 +142,58 @@ func (m *StorageMigration) MigrateNestedValue(
 	value interpreter.Value,
 	valueMigrations []ValueMigration,
 	reporter Reporter,
-) (newValue interpreter.Value) {
+) (migratedValue interpreter.Value) {
 
 	defer func() {
-		//	Here it catches the panics that may occur at the framework level,
+		// Here it catches the panics that may occur at the framework level,
 		// even before going to each individual migration. e.g: iterating the dictionary for elements.
 		//
 		// There is a similar recovery at the `StorageMigration.migrate()` method,
 		// which handles panics from each individual migrations (e.g: capcon migration, static type migration, etc.).
 
 		if r := recover(); r != nil {
-			switch r := r.(type) {
-			case error:
-				if reporter != nil {
-					reporter.Error(
-						storageKey,
-						storageMapKey,
-						"StorageMigration",
-						r,
-					)
-				}
-			default:
-				panic(r)
+			err, ok := r.(error)
+			if !ok {
+				err = fmt.Errorf("%v", r)
+			}
+
+			err = StorageMigrationError{
+				StorageKey:    storageKey,
+				StorageMapKey: storageMapKey,
+				Migration:     "StorageMigration",
+				Err:           err,
+				Stack:         debug.Stack(),
+			}
+
+			if reporter != nil {
+				reporter.Error(err)
 			}
 		}
 	}()
 
-	switch value := value.(type) {
+	inter := m.interpreter
+
+	// skip the migration of the value,
+	// if all value migrations agree
+
+	canSkip := true
+	staticType := value.StaticType(inter)
+	for _, migration := range valueMigrations {
+		if !migration.CanSkip(staticType) {
+			canSkip = false
+			break
+		}
+	}
+
+	if canSkip {
+		return
+	}
+
+	// Visit the children first, and migrate them.
+	// i.e: depth-first traversal
+	switch typedValue := value.(type) {
 	case *interpreter.SomeValue:
-		innerValue := value.InnerValue(m.interpreter, emptyLocationRange)
+		innerValue := typedValue.InnerValue(inter, emptyLocationRange)
 		newInnerValue := m.MigrateNestedValue(
 			storageKey,
 			storageMapKey,
@@ -175,18 +202,21 @@ func (m *StorageMigration) MigrateNestedValue(
 			reporter,
 		)
 		if newInnerValue != nil {
-			return interpreter.NewSomeValueNonCopying(m.interpreter, newInnerValue)
+			migratedValue = interpreter.NewSomeValueNonCopying(inter, newInnerValue)
+
+			// chain the migrations
+			value = migratedValue
 		}
 
-		return
-
 	case *interpreter.ArrayValue:
-		array := value
+		array := typedValue
 
 		// Migrate array elements
 		count := array.Count()
 		for index := 0; index < count; index++ {
-			element := array.Get(m.interpreter, emptyLocationRange, index)
+
+			element := array.Get(inter, emptyLocationRange, index)
+
 			newElement := m.MigrateNestedValue(
 				storageKey,
 				storageMapKey,
@@ -194,18 +224,31 @@ func (m *StorageMigration) MigrateNestedValue(
 				valueMigrations,
 				reporter,
 			)
-			if newElement != nil {
-				array.Set(
-					m.interpreter,
-					emptyLocationRange,
-					index,
-					newElement,
-				)
+
+			if newElement == nil {
+				continue
 			}
+
+			existingStorable := array.RemoveWithoutTransfer(
+				inter,
+				emptyLocationRange,
+				index,
+			)
+
+			interpreter.StoredValue(inter, existingStorable, m.storage).
+				DeepRemove(inter)
+			inter.RemoveReferencedSlab(existingStorable)
+
+			array.InsertWithoutTransfer(
+				inter,
+				emptyLocationRange,
+				index,
+				newElement,
+			)
 		}
 
 	case *interpreter.CompositeValue:
-		composite := value
+		composite := typedValue
 
 		// Read the field names first, so the iteration wouldn't be affected
 		// by the modification of the nested values.
@@ -217,7 +260,7 @@ func (m *StorageMigration) MigrateNestedValue(
 
 		for _, fieldName := range fieldNames {
 			existingValue := composite.GetField(
-				m.interpreter,
+				inter,
 				emptyLocationRange,
 				fieldName,
 			)
@@ -234,8 +277,8 @@ func (m *StorageMigration) MigrateNestedValue(
 				continue
 			}
 
-			composite.SetMember(
-				m.interpreter,
+			composite.SetMemberWithoutTransfer(
+				inter,
 				emptyLocationRange,
 				fieldName,
 				migratedValue,
@@ -243,7 +286,7 @@ func (m *StorageMigration) MigrateNestedValue(
 		}
 
 	case *interpreter.DictionaryValue:
-		dictionary := value
+		dictionary := typedValue
 
 		type keyValuePair struct {
 			key, value interpreter.Value
@@ -300,24 +343,21 @@ func (m *StorageMigration) MigrateNestedValue(
 			if newKey == nil {
 				keyToSet = existingKey
 			} else {
-				// Key was migrated.
-				// Remove the old value at the old key.
-				// This old value will be inserted again with the new key, unless the value is also migrated.
-				existingKey = legacyKey(existingKey)
-				oldValue := dictionary.Remove(
-					m.interpreter,
-					emptyLocationRange,
-					existingKey,
-				)
-
-				if _, ok := oldValue.(*interpreter.SomeValue); !ok {
-					panic(errors.NewUnexpectedError(
-						"failed to remove old value for migrated key: %s",
-						existingKey,
-					))
-				}
-
 				keyToSet = newKey
+			}
+
+			existingKey = legacyKey(existingKey)
+			existingKeyStorable, existingValueStorable := dictionary.RemoveWithoutTransfer(
+				inter,
+				emptyLocationRange,
+				existingKey,
+			)
+
+			if existingKeyStorable == nil {
+				panic(errors.NewUnexpectedError(
+					"failed to remove old value for migrated key: %s",
+					existingKey,
+				))
 			}
 
 			if newValue == nil {
@@ -325,10 +365,14 @@ func (m *StorageMigration) MigrateNestedValue(
 			} else {
 				// Value was migrated
 				valueToSet = newValue
+
+				interpreter.StoredValue(inter, existingValueStorable, m.storage).
+					DeepRemove(inter)
+				inter.RemoveReferencedSlab(existingValueStorable)
 			}
 
-			dictionary.Insert(
-				m.interpreter,
+			dictionary.InsertWithoutTransfer(
+				inter,
 				emptyLocationRange,
 				keyToSet,
 				valueToSet,
@@ -336,23 +380,30 @@ func (m *StorageMigration) MigrateNestedValue(
 		}
 
 	case *interpreter.PublishedValue:
-		innerValue := value.Value
+		publishedValue := typedValue
 		newInnerValue := m.MigrateNestedValue(
 			storageKey,
 			storageMapKey,
-			innerValue,
+			publishedValue.Value,
 			valueMigrations,
 			reporter,
 		)
 		if newInnerValue != nil {
 			newInnerCapability := newInnerValue.(*interpreter.IDCapabilityValue)
-			return interpreter.NewPublishedValue(
-				m.interpreter,
-				value.Recipient,
+			migratedValue = interpreter.NewPublishedValue(
+				inter,
+				publishedValue.Recipient,
 				newInnerCapability,
 			)
+
+			// chain the migrations
+			value = migratedValue
 		}
 	}
+
+	// Once the children are migrated, then migrate the current/wrapper value.
+	// Result of each migration is passed as the input to the next migration.
+	// i.e: A single value is migrated by all the migrations, before moving onto the next value.
 
 	for _, migration := range valueMigrations {
 		convertedValue, err := m.migrate(
@@ -364,12 +415,16 @@ func (m *StorageMigration) MigrateNestedValue(
 
 		if err != nil {
 			if reporter != nil {
-				reporter.Error(
-					storageKey,
-					storageMapKey,
-					migration.Name(),
-					err,
-				)
+				if _, ok := err.(StorageMigrationError); !ok {
+					err = StorageMigrationError{
+						StorageKey:    storageKey,
+						StorageMapKey: storageMapKey,
+						Migration:     migration.Name(),
+						Err:           err,
+					}
+				}
+
+				reporter.Error(err)
 			}
 			continue
 		}
@@ -395,7 +450,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			// Chain the migrations.
 			value = convertedValue
 
-			newValue = convertedValue
+			migratedValue = convertedValue
 
 			if reporter != nil {
 				reporter.Migrated(
@@ -410,12 +465,34 @@ func (m *StorageMigration) MigrateNestedValue(
 
 }
 
+type StorageMigrationError struct {
+	StorageKey    interpreter.StorageKey
+	StorageMapKey interpreter.StorageMapKey
+	Migration     string
+	Err           error
+	Stack         []byte
+}
+
+func (e StorageMigrationError) Error() string {
+	return fmt.Sprintf(
+		"failed to perform migration %s for %s, %s: %s\n%s",
+		e.Migration,
+		e.StorageKey,
+		e.StorageMapKey,
+		e.Err.Error(),
+		e.Stack,
+	)
+}
+
 func (m *StorageMigration) migrate(
 	migration ValueMigration,
 	storageKey interpreter.StorageKey,
 	storageMapKey interpreter.StorageMapKey,
 	value interpreter.Value,
-) (converted interpreter.Value, err error) {
+) (
+	converted interpreter.Value,
+	err error,
+) {
 
 	// Handles panics from each individual migrations (e.g: capcon migration, static type migration, etc.).
 	// So even if one migration panics, others could still run (i.e: panics are caught inside the loop).
@@ -424,11 +501,18 @@ func (m *StorageMigration) migrate(
 	// They are caught at `StorageMigration.MigrateNestedValue()`.
 	defer func() {
 		if r := recover(); r != nil {
-			switch r := r.(type) {
-			case error:
-				err = r
-			default:
-				panic(r)
+			var ok bool
+			err, ok = r.(error)
+			if !ok {
+				err = fmt.Errorf("%v", r)
+			}
+
+			err = StorageMigrationError{
+				StorageKey:    storageKey,
+				StorageMapKey: storageMapKey,
+				Migration:     migration.Name(),
+				Err:           err,
+				Stack:         debug.Stack(),
 			}
 		}
 	}()
