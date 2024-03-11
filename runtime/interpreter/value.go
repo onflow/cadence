@@ -20707,6 +20707,7 @@ func (v *StorageReferenceValue) ForEach(
 	referencedValue := v.mustReferencedValue(interpreter, locationRange)
 	forEachReference(
 		interpreter,
+		v,
 		referencedValue,
 		elementType,
 		function,
@@ -20716,6 +20717,7 @@ func (v *StorageReferenceValue) ForEach(
 
 func forEachReference(
 	interpreter *Interpreter,
+	reference ReferenceValue,
 	referencedValue Value,
 	elementType sema.Type,
 	function func(value Value) (resume bool),
@@ -20729,6 +20731,11 @@ func forEachReference(
 	referenceType, isResultReference := sema.MaybeReferenceType(elementType)
 
 	updatedFunction := func(value Value) (resume bool) {
+		// The loop dereference the reference once, and hold onto that referenced-value.
+		// But the reference could get invalidated during the iteration, making that referenced-value invalid.
+		// So check the validity of the reference, before each iteration.
+		interpreter.checkInvalidatedResourceOrResourceReference(reference, locationRange)
+
 		if isResultReference {
 			value = interpreter.getReferenceValue(value, elementType, locationRange)
 		}
@@ -21076,6 +21083,7 @@ func (v *EphemeralReferenceValue) ForEach(
 ) {
 	forEachReference(
 		interpreter,
+		v,
 		v.Value,
 		elementType,
 		function,
