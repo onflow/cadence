@@ -160,6 +160,9 @@ type UUIDHandlerFunc func() (uint64, error)
 // CompositeTypeHandlerFunc is a function that loads composite types.
 type CompositeTypeHandlerFunc func(location common.Location, typeID TypeID) *sema.CompositeType
 
+// InterfaceTypeHandlerFunc is a function that loads interface types.
+type InterfaceTypeHandlerFunc func(location common.Location, typeID TypeID) *sema.InterfaceType
+
 // CompositeValueFunctionsHandlerFunc is a function that loads composite value functions.
 type CompositeValueFunctionsHandlerFunc func(
 	inter *Interpreter,
@@ -4767,7 +4770,18 @@ func (interpreter *Interpreter) GetInterfaceType(
 	typeID TypeID,
 ) (*sema.InterfaceType, error) {
 	if location == nil {
-		return nil, InterfaceMissingLocationError{QualifiedIdentifier: qualifiedIdentifier}
+		return nil, InterfaceMissingLocationError{
+			QualifiedIdentifier: qualifiedIdentifier,
+		}
+	}
+
+	config := interpreter.SharedState.Config
+	interfaceTypeHandler := config.InterfaceTypeHandler
+	if interfaceTypeHandler != nil {
+		interfaceType := interfaceTypeHandler(location, typeID)
+		if interfaceType != nil {
+			return interfaceType, nil
+		}
 	}
 
 	elaboration := interpreter.getElaboration(location)
