@@ -18208,19 +18208,45 @@ func attachmentBaseAndSelfValues(
 	return
 }
 
-func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRange LocationRange, f func(*CompositeValue)) {
-	iterator, err := v.dictionary.Iterator()
+func (v *CompositeValue) forEachAttachment(
+	interpreter *Interpreter,
+	locationRange LocationRange,
+	f func(*CompositeValue),
+) {
+	// The attachment iteration creates an implicit reference to the composite, and holds onto that referenced-value.
+	// But the reference could get invalidated during the iteration, making that referenced-value invalid.
+	// We create a reference here for the purposes of tracking it during iteration.
+	vType := interpreter.MustSemaTypeOfValue(v)
+	compositeReference := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, v, vType, locationRange)
+	interpreter.maybeTrackReferencedResourceKindedValue(compositeReference)
+	forEachAttachment(interpreter, compositeReference, locationRange, f)
+}
+
+func forEachAttachment(
+	interpreter *Interpreter,
+	compositeReference *EphemeralReferenceValue,
+	locationRange LocationRange,
+	f func(*CompositeValue),
+) {
+	composite, ok := compositeReference.Value.(*CompositeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	iterator, err := composite.dictionary.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	oldSharedState := interpreter.SharedState.inAttachmentIteration(v)
-	interpreter.SharedState.setAttachmentIteration(v, true)
+	oldSharedState := interpreter.SharedState.inAttachmentIteration(composite)
+	interpreter.SharedState.setAttachmentIteration(composite, true)
 	defer func() {
-		interpreter.SharedState.setAttachmentIteration(v, oldSharedState)
+		interpreter.SharedState.setAttachmentIteration(composite, oldSharedState)
 	}()
 
 	for {
+		// Check that the implicit composite reference was not invalidated during iteration
+		interpreter.checkInvalidatedResourceOrResourceReference(compositeReference, locationRange)
 		key, value, err := iterator.Next()
 		if err != nil {
 			panic(errors.NewExternalError(err))
@@ -18237,7 +18263,7 @@ func (v *CompositeValue) forEachAttachment(interpreter *Interpreter, locationRan
 			// attachments is added that takes a `fun (&Attachment): Void` callback, the `f` provided here
 			// should convert the provided attachment value into a reference before passing it to the user
 			// callback
-			attachment.setBaseValue(interpreter, v)
+			attachment.setBaseValue(interpreter, composite)
 			f(attachment)
 		}
 	}

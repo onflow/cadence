@@ -3038,3 +3038,99 @@ func TestInterpretInvalidatingLoopedReference(t *testing.T) {
 	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
+
+func TestInterpretInvalidatingAttachmentLoopedReference(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		// Victim code starts
+		access(all) resource Vault {
+			access(all) var balance: UFix64
+			init(balance: UFix64) {
+				self.balance = balance
+			}
+			access(all) fun withdraw(amount: UFix64): @Vault {
+				self.balance = self.balance - amount
+				return <-create Vault(balance: amount)
+			}
+			access(all) fun deposit(from: @Vault) {
+				self.balance = self.balance + from.balance
+				destroy from
+			}
+		}
+		access(all) resource NFT {}
+		access(all) resource VictimSwapResource {
+			access(self) var flowTokens: @Vault?
+			access(self) var nft: @NFT?
+			access(self) var price: UFix64
+			init(nft: @NFT, price: UFix64) {
+				self.nft <- nft
+				self.flowTokens <- nil
+				self.price = price
+			}
+			access(all) fun swapVaultForNFT(vault: @Vault): @NFT{
+				self.flowTokens <-! vault
+				var nft <- self.nft <- nil
+				return <- nft!
+			}
+		}
+		access(all) fun createEmptyVault(): @Vault {
+			return  <- create Vault(balance: 0.0)
+		}
+		// Attacker code starts
+		access(all) attachment B for Vault{
+			access(all) fun getBase(): &Vault { return base }
+		}
+		access(all) attachment A for Vault {
+			access(all) fun getBase(): &Vault { return base }
+		}
+		access(all) resource AttackerResource {
+			access(all) var r: @Vault
+			access(all) var stolenFunds: @Vault
+			access(all) var nft: @NFT?
+			access(all) var victimSwap: @VictimSwapResource
+			init(recycledFunds: @Vault, victimSwap: @VictimSwapResource) {
+				self.r <- attach B() to <- attach A() to <- recycledFunds
+				self.victimSwap <- victimSwap
+				self.nft <- nil
+				self.stolenFunds <- createEmptyVault()
+				self.attack()
+			}
+			access(all) fun attack() {
+				var selfRef = &self as &AttackerResource
+				var counter = 0
+				self.r.forEachAttachment(fun(a: &AnyResourceAttachment): Void {
+					if (counter == 0) {
+						selfRef.doMove()
+					} else if (counter == 1) {
+						// Our reference to the second attachment (and its base Vault) is valid despite 
+						// the Vault having been moved into VictimSwapResource. We try a cast to both A
+						// and B to avoid depending on iteration order (which seemed flaky)
+						var postSwapRef: &Vault = (a as? &A)?.getBase() ?? ((a as? &B)?.getBase()!)
+						selfRef.stolenFunds.deposit(from: <- postSwapRef.withdraw(amount: postSwapRef.balance))
+					} 
+					counter = counter + 1
+				})
+			}
+			access(all) fun doMove() {
+				var fundsWithHeldImplicitReference <- self.r <- createEmptyVault()
+				// We hand over the Vault to the victim code while forEachAttachment internals in attack()
+				// implicitly hold a reference to it and will create an ephemeral reference for us
+				// on next iteration.
+				var nft <- self.victimSwap.swapVaultForNFT(vault: <- fundsWithHeldImplicitReference)
+				self.nft <-! nft
+			}
+		}
+		access(all) fun main() {
+			var swap <- create VictimSwapResource(nft: <- create NFT(), price: 100.0)
+			var recycledFunds <- create Vault(balance: 100.0)
+			var a <- create AttackerResource(recycledFunds: <- recycledFunds, victimSwap: <- swap)
+			destroy a
+		}`,
+	)
+
+	_, err := inter.Invoke("main")
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+}
