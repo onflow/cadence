@@ -699,6 +699,10 @@ func (m testEntitlementsMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 
+func (testEntitlementsMigration) Domains() map[string]struct{} {
+	return nil
+}
+
 func convertEntireTestValue(
 	t *testing.T,
 	inter *interpreter.Interpreter,

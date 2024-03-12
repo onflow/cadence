@@ -107,6 +107,10 @@ func (testStringMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 
+func (testStringMigration) Domains() map[string]struct{} {
+	return nil
+}
+
 // testInt8Migration
 
 type testInt8Migration struct {
@@ -141,13 +145,13 @@ func (testInt8Migration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 
+func (testInt8Migration) Domains() map[string]struct{} {
+	return nil
+}
+
 // testCapMigration
 
 type testCapMigration struct{}
-
-func (m testCapMigration) CanSkip(_ interpreter.StaticType) bool {
-	return false
-}
 
 var _ ValueMigration = testCapMigration{}
 
@@ -171,6 +175,14 @@ func (testCapMigration) Migrate(
 	}
 
 	return nil, nil
+}
+
+func (testCapMigration) CanSkip(_ interpreter.StaticType) bool {
+	return false
+}
+
+func (testCapMigration) Domains() map[string]struct{} {
+	return nil
 }
 
 // testCapConMigration
@@ -212,6 +224,10 @@ func (testCapConMigration) Migrate(
 
 func (testCapConMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
+}
+
+func (testCapConMigration) Domains() map[string]struct{} {
+	return nil
 }
 
 func TestMultipleMigrations(t *testing.T) {
@@ -978,6 +994,10 @@ func (testCompositeValueMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 
+func (testCompositeValueMigration) Domains() map[string]struct{} {
+	return nil
+}
+
 func TestEmptyIntersectionTypeMigration(t *testing.T) {
 
 	t.Parallel()
@@ -1178,8 +1198,12 @@ func (testContainerMigration) Migrate(
 	return nil, nil
 }
 
-func (m testContainerMigration) CanSkip(_ interpreter.StaticType) bool {
+func (testContainerMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
+}
+
+func (testContainerMigration) Domains() map[string]struct{} {
+	return nil
 }
 
 func TestMigratingNestedContainers(t *testing.T) {
@@ -1607,8 +1631,12 @@ func (m testPanicMigration) Migrate(
 	return nil, nil
 }
 
-func (m testPanicMigration) CanSkip(_ interpreter.StaticType) bool {
+func (testPanicMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
+}
+
+func (testPanicMigration) Domains() map[string]struct{} {
+	return nil
 }
 
 func TestMigrationPanic(t *testing.T) {
@@ -1723,6 +1751,10 @@ func (m *testSkipMigration) Migrate(
 
 func (m *testSkipMigration) CanSkip(valueType interpreter.StaticType) bool {
 	return m.canSkip(valueType)
+}
+
+func (*testSkipMigration) Domains() map[string]struct{} {
+	return nil
 }
 
 func TestSkip(t *testing.T) {
@@ -2057,6 +2089,10 @@ func (testPublishedValueMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 
+func (testPublishedValueMigration) Domains() map[string]struct{} {
+	return nil
+}
+
 func TestPublishedValueMigration(t *testing.T) {
 
 	t.Parallel()
@@ -2124,4 +2160,140 @@ func TestPublishedValueMigration(t *testing.T) {
 
 	assert.Len(t, reporter.errors, 0)
 	assert.Len(t, reporter.migrated, 1)
+}
+
+// testDomainsMigration
+
+type testDomainsMigration struct {
+	domains map[string]struct{}
+}
+
+var _ ValueMigration = testDomainsMigration{}
+
+func (testDomainsMigration) Name() string {
+	return "testDomainsMigration"
+}
+
+func (m testDomainsMigration) Migrate(
+	storageKey interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	_ interpreter.Value,
+	_ *interpreter.Interpreter,
+) (interpreter.Value, error) {
+
+	if m.domains != nil {
+		_, ok := m.domains[storageKey.Key]
+		if !ok {
+			panic("invalid domain")
+		}
+	}
+
+	return interpreter.NewUnmeteredStringValue("42"), nil
+}
+
+func (testDomainsMigration) CanSkip(_ interpreter.StaticType) bool {
+	return false
+}
+
+func (m testDomainsMigration) Domains() map[string]struct{} {
+	return m.domains
+}
+
+func TestDomainsMigration(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, migratorDomains map[string]struct{}) {
+
+		testAddress := common.MustBytesToAddress([]byte{0x1})
+
+		ledger := NewTestLedger(nil, nil)
+		storage := runtime.NewStorage(ledger, nil)
+
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   true,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		storageMapKey := interpreter.StringStorageMapKey("test")
+
+		storedDomains := []string{
+			common.PathDomainStorage.Identifier(),
+			common.PathDomainPublic.Identifier(),
+			common.PathDomainPrivate.Identifier(),
+			stdlib.InboxStorageDomain,
+		}
+
+		for _, domain := range storedDomains {
+
+			storageMap := storage.GetStorageMap(
+				testAddress,
+				domain,
+				true,
+			)
+			require.NotNil(t, storageMap)
+
+			storageMap.WriteValue(
+				inter,
+				storageMapKey,
+				interpreter.NewUnmeteredInt8Value(42),
+			)
+		}
+
+		// Migrate
+
+		reporter := newTestReporter()
+
+		migration := NewStorageMigration(inter, storage)
+
+		migration.MigrateAccount(
+			testAddress,
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				testDomainsMigration{
+					domains: migratorDomains,
+				},
+			),
+		)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+
+		// Assert
+
+		assert.Len(t, reporter.errors, 0)
+
+		expectedMigrated := len(migratorDomains)
+		if migratorDomains == nil {
+			expectedMigrated = len(storedDomains)
+		}
+		assert.Len(t, reporter.migrated, expectedMigrated)
+	}
+
+	t.Run("no domains", func(t *testing.T) {
+		test(t, nil)
+	})
+
+	t.Run("only storage", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, map[string]struct{}{
+			common.PathDomainStorage.Identifier(): {},
+		})
+	})
+
+	t.Run("only storage and inbox", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, map[string]struct{}{
+			common.PathDomainStorage.Identifier(): {},
+			stdlib.InboxStorageDomain:             {},
+		})
+	})
 }

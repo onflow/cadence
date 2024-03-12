@@ -51,6 +51,10 @@ func (*CapabilityValueMigration) Name() string {
 	return "CapabilityValueMigration"
 }
 
+func (*CapabilityValueMigration) Domains() map[string]struct{} {
+	return nil
+}
+
 var fullyEntitledAccountReferenceStaticType = interpreter.ConvertSemaReferenceTypeToStaticReferenceType(
 	nil,
 	sema.FullyEntitledAccountReferenceType,

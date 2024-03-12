@@ -501,6 +501,10 @@ func RewriteLegacyIntersectionType(
 	return legacyType
 }
 
+func (*StaticTypeMigration) Domains() map[string]struct{} {
+	return nil
+}
+
 var authAccountEntitlements = []common.TypeID{
 	sema.StorageType.ID(),
 	sema.ContractsType.ID(),
