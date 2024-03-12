@@ -1349,24 +1349,14 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	result := interpreter.evalExpression(referenceExpression.Expression)
 
-	makeReference := func(value Value, typ *sema.ReferenceType) *EphemeralReferenceValue {
-		// if we are currently interpretering a function that was declared with mapped entitlement access, any appearances
-		// of that mapped access in the body of the function should be replaced with the computed output of the map
-		auth := interpreter.getEffectiveAuthorization(typ)
+	return interpreter.createReference(borrowType, result, referenceExpression)
+}
 
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: referenceExpression,
-		}
-
-		return NewEphemeralReferenceValue(
-			interpreter,
-			auth,
-			value,
-			typ.Type,
-			locationRange,
-		)
-	}
+func (interpreter *Interpreter) createReference(
+	borrowType sema.Type,
+	value Value,
+	hasPosition ast.HasPosition,
+) Value {
 
 	// There are four potential cases:
 	// 1) Target type is optional, actual value is also optional (nil/SomeValue)
@@ -1376,13 +1366,10 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	switch typ := borrowType.(type) {
 	case *sema.OptionalType:
-		innerBorrowType, ok := typ.Type.(*sema.ReferenceType)
-		// we enforce this in the checker
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
 
-		switch result := result.(type) {
+		innerType := typ.Type
+
+		switch value := value.(type) {
 		case *SomeValue:
 			// Case (1):
 			// References to optionals are transformed into optional references,
@@ -1390,15 +1377,15 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 			locationRange := LocationRange{
 				Location:    interpreter.Location,
-				HasPosition: referenceExpression.Expression,
+				HasPosition: hasPosition,
 			}
 
-			innerValue := result.InnerValue(interpreter, locationRange)
+			innerValue := value.InnerValue(interpreter, locationRange)
 
-			return NewSomeValueNonCopying(
-				interpreter,
-				makeReference(innerValue, innerBorrowType),
-			)
+			referenceValue := interpreter.createReference(innerType, innerValue, hasPosition)
+
+			// Wrap the reference with an optional (since an optional is expected).
+			return NewSomeValueNonCopying(interpreter, referenceValue)
 
 		case NilValue:
 			return Nil
@@ -1406,41 +1393,54 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 		default:
 			// Case (2):
 			// If the referenced value is non-optional,
-			// but the target type is optional,
-			// then box the reference properly
+			// but the target type is optional.
+			referenceValue := interpreter.createReference(innerType, value, hasPosition)
 
-			locationRange := LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: referenceExpression,
-			}
-
-			return interpreter.BoxOptional(
-				locationRange,
-				makeReference(result, innerBorrowType),
-				borrowType,
-			)
+			// Wrap the reference with an optional (since an optional is expected).
+			return NewSomeValueNonCopying(interpreter, referenceValue)
 		}
 
 	case *sema.ReferenceType:
 		// Case (3): target type is non-optional, actual value is optional.
-		// This path shouldn't be reachable. This is only a defensive step
-		// to ensure references are properly created/tracked.
-		if someValue, ok := result.(*SomeValue); ok {
+		if someValue, ok := value.(*SomeValue); ok {
 			locationRange := LocationRange{
 				Location:    interpreter.Location,
-				HasPosition: referenceExpression.Expression,
+				HasPosition: hasPosition,
 			}
 			innerValue := someValue.InnerValue(interpreter, locationRange)
 
-			auth := interpreter.getEffectiveAuthorization(typ)
-			return NewEphemeralReferenceValue(interpreter, auth, innerValue, typ.Type, locationRange)
+			return interpreter.createReference(typ, innerValue, hasPosition)
 		}
 
-		// Case (4): target type is non-optional, actual value is also non-optional
-		return makeReference(result, typ)
+		// Case (4): target type is non-optional, actual value is also non-optional.
+		return interpreter.newEphemeralReference(value, typ, hasPosition)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (interpreter *Interpreter) newEphemeralReference(
+	value Value,
+	typ *sema.ReferenceType,
+	hasPosition ast.HasPosition,
+) *EphemeralReferenceValue {
+	// If we are currently interpreting a function that was declared with mapped entitlement access, any appearances
+	// of that mapped access in the body of the function should be replaced with the computed output of the map
+	auth := interpreter.getEffectiveAuthorization(typ)
+
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: hasPosition,
 	}
 
-	panic(errors.NewUnreachableError())
+	return NewEphemeralReferenceValue(
+		interpreter,
+		auth,
+		value,
+		typ.Type,
+		locationRange,
+	)
 }
 
 func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpression) Value {
