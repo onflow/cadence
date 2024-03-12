@@ -389,7 +389,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			reporter,
 		)
 		if newInnerValue != nil {
-			newInnerCapability := newInnerValue.(*interpreter.IDCapabilityValue)
+			newInnerCapability := newInnerValue.(interpreter.CapabilityValue)
 			migratedValue = interpreter.NewPublishedValue(
 				inter,
 				publishedValue.Recipient,

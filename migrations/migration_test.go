@@ -2060,3 +2060,104 @@ func TestSkip(t *testing.T) {
 
 	})
 }
+
+// testPublishedValueMigration
+
+type testPublishedValueMigration struct{}
+
+var _ ValueMigration = testPublishedValueMigration{}
+
+func (testPublishedValueMigration) Name() string {
+	return "testPublishedValueMigration"
+}
+
+func (testPublishedValueMigration) Migrate(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) (interpreter.Value, error) {
+
+	if pathCap, ok := value.(*interpreter.PathCapabilityValue); ok {
+		return pathCap, nil
+	}
+
+	return nil, nil
+}
+
+func (testPublishedValueMigration) CanSkip(_ interpreter.StaticType) bool {
+	return false
+}
+
+func TestPublishedValueMigration(t *testing.T) {
+
+	t.Parallel()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+
+	ledger := NewTestLedger(nil, nil)
+	storage := runtime.NewStorage(ledger, nil)
+
+	storageMap := storage.GetStorageMap(
+		testAddress,
+		stdlib.InboxStorageDomain,
+		true,
+	)
+	require.NotNil(t, storageMap)
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage:                       storage,
+			AtreeValueValidationEnabled:   true,
+			AtreeStorageValidationEnabled: true,
+		},
+	)
+	require.NoError(t, err)
+
+	storageMapKey := interpreter.StringStorageMapKey("test")
+
+	storageMap.WriteValue(
+		inter,
+		storageMapKey,
+		interpreter.NewPublishedValue(
+			nil,
+			interpreter.AddressValue(testAddress),
+			&interpreter.PathCapabilityValue{
+				BorrowType: nil,
+				Path: interpreter.PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "foo",
+				},
+				Address: interpreter.AddressValue{0x2},
+			},
+		),
+	)
+
+	// Migrate
+
+	reporter := newTestReporter()
+
+	migration := NewStorageMigration(inter, storage)
+
+	migration.Migrate(
+		&AddressSliceIterator{
+			Addresses: []common.Address{
+				testAddress,
+			},
+		},
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testPublishedValueMigration{},
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	assert.Len(t, reporter.errors, 0)
+	assert.Len(t, reporter.migrated, 1)
+}
