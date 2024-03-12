@@ -122,7 +122,8 @@ func (m *StorageMigration) NewValueMigrationsPathMigrator(
 			if allDomains == nil {
 				allDomains = make(map[string]struct{})
 			}
-			for domain := range migrationDomains {
+			// Safe to iterate, as the order does not matter
+			for domain := range migrationDomains { //nolint:maprangecheck
 				allDomains[domain] = struct{}{}
 			}
 		}
