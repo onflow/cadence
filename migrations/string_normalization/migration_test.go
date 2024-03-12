@@ -34,6 +34,48 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
+type testReporter struct {
+	migrated map[struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}][]string
+	errors []error
+}
+
+var _ migrations.Reporter = &testReporter{}
+
+func newTestReporter() *testReporter {
+	return &testReporter{
+		migrated: map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}][]string{},
+	}
+}
+
+func (t *testReporter) Migrated(
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
+	migration string,
+) {
+	key := struct {
+		interpreter.StorageKey
+		interpreter.StorageMapKey
+	}{
+		StorageKey:    storageKey,
+		StorageMapKey: storageMapKey,
+	}
+
+	t.migrated[key] = append(
+		t.migrated[key],
+		migration,
+	)
+}
+
+func (t *testReporter) Error(err error) {
+	t.errors = append(t.errors, err)
+}
+
 func TestStringNormalizingMigration(t *testing.T) {
 	t.Parallel()
 
@@ -263,16 +305,20 @@ func TestStringNormalizingMigration(t *testing.T) {
 
 	migration := migrations.NewStorageMigration(inter, storage)
 
+	reporter := newTestReporter()
+
 	migration.MigrateAccount(
 		account,
 		migration.NewValueMigrationsPathMigrator(
-			nil,
+			reporter,
 			NewStringNormalizingMigration(),
 		),
 	)
 
 	err = migration.Commit()
 	require.NoError(t, err)
+
+	require.Empty(t, reporter.errors)
 
 	err = storage.CheckHealth()
 	require.NoError(t, err)
@@ -396,16 +442,20 @@ func TestStringValueRehash(t *testing.T) {
 
 		migration := migrations.NewStorageMigration(inter, storage)
 
+		reporter := newTestReporter()
+
 		migration.MigrateAccount(
 			testAddress,
 			migration.NewValueMigrationsPathMigrator(
-				nil,
+				reporter,
 				NewStringNormalizingMigration(),
 			),
 		)
 
 		err := migration.Commit()
 		require.NoError(t, err)
+
+		require.Empty(t, reporter.errors)
 	})
 
 	t.Run("load", func(t *testing.T) {
@@ -535,16 +585,20 @@ func TestCharacterValueRehash(t *testing.T) {
 
 		migration := migrations.NewStorageMigration(inter, storage)
 
+		reporter := newTestReporter()
+
 		migration.MigrateAccount(
 			testAddress,
 			migration.NewValueMigrationsPathMigrator(
-				nil,
+				reporter,
 				NewStringNormalizingMigration(),
 			),
 		)
 
 		err := migration.Commit()
 		require.NoError(t, err)
+
+		require.Empty(t, reporter.errors)
 	})
 
 	t.Run("load", func(t *testing.T) {
