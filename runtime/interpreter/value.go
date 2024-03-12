@@ -18148,7 +18148,6 @@ func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange 
 }
 
 func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, locationRange LocationRange) Value {
-
 	return NewHostFunctionValue(
 		interpreter,
 		sema.CompositeForEachAttachmentFunctionType(interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType).GetCompositeKind()),
