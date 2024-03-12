@@ -1527,12 +1527,8 @@ func TestMigrateSimpleContract(t *testing.T) {
 	reporter := newTestReporter()
 
 	migration := migrations.NewStorageMigration(inter, storage)
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				account,
-			},
-		},
+	migration.MigrateAccount(
+		account,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			NewEntitlementsMigration(inter),
@@ -1714,12 +1710,8 @@ func TestMigratePublishedValue(t *testing.T) {
 	require.NoError(t, err)
 
 	migration := migrations.NewStorageMigration(inter, storage)
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			NewEntitlementsMigration(inter),
@@ -1971,18 +1963,17 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
 	reporter := newTestReporter()
 
 	migration := migrations.NewStorageMigration(inter, storage)
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress1,
-				testAddress2,
-			},
-		},
-		migration.NewValueMigrationsPathMigrator(
-			reporter,
-			NewEntitlementsMigration(inter),
-		),
+	migrator := migration.NewValueMigrationsPathMigrator(
+		reporter,
+		NewEntitlementsMigration(inter),
 	)
+
+	for _, address := range []common.Address{
+		testAddress1,
+		testAddress2,
+	} {
+		migration.MigrateAccount(address, migrator)
+	}
 
 	err = migration.Commit()
 	require.NoError(t, err)
@@ -2219,18 +2210,16 @@ func TestMigrateAcrossContracts(t *testing.T) {
 	reporter := newTestReporter()
 
 	migration := migrations.NewStorageMigration(inter, storage)
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress1,
-				testAddress2,
-			},
-		},
-		migration.NewValueMigrationsPathMigrator(
-			reporter,
-			NewEntitlementsMigration(inter),
-		),
+	migrator := migration.NewValueMigrationsPathMigrator(
+		reporter,
+		NewEntitlementsMigration(inter),
 	)
+	for _, address := range []common.Address{
+		testAddress1,
+		testAddress2,
+	} {
+		migration.MigrateAccount(address, migrator)
+	}
 
 	// Assert
 
@@ -2424,18 +2413,16 @@ func TestMigrateArrayOfValues(t *testing.T) {
 	reporter := newTestReporter()
 
 	migration := migrations.NewStorageMigration(inter, storage)
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress1,
-				testAddress2,
-			},
-		},
-		migration.NewValueMigrationsPathMigrator(
-			reporter,
-			NewEntitlementsMigration(inter),
-		),
+	migrator := migration.NewValueMigrationsPathMigrator(
+		reporter,
+		NewEntitlementsMigration(inter),
 	)
+	for _, address := range []common.Address{
+		testAddress1,
+		testAddress2,
+	} {
+		migration.MigrateAccount(address, migrator)
+	}
 
 	err = migration.Commit()
 	require.NoError(t, err)
@@ -2675,18 +2662,16 @@ func TestMigrateDictOfValues(t *testing.T) {
 	reporter := newTestReporter()
 
 	migration := migrations.NewStorageMigration(inter, storage)
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress1,
-				testAddress2,
-			},
-		},
-		migration.NewValueMigrationsPathMigrator(
-			reporter,
-			NewEntitlementsMigration(inter),
-		),
+	migrator := migration.NewValueMigrationsPathMigrator(
+		reporter,
+		NewEntitlementsMigration(inter),
 	)
+	for _, address := range []common.Address{
+		testAddress1,
+		testAddress2,
+	} {
+		migration.MigrateAccount(address, migrator)
+	}
 
 	err = migration.Commit()
 	require.NoError(t, err)
@@ -2998,18 +2983,16 @@ func TestMigrateCapConsAcrossTwoAccounts(t *testing.T) {
 	reporter := newTestReporter()
 
 	migration := migrations.NewStorageMigration(inter, storage)
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress1,
-				testAddress2,
-			},
-		},
-		migration.NewValueMigrationsPathMigrator(
-			reporter,
-			NewEntitlementsMigration(inter),
-		),
+	migrator := migration.NewValueMigrationsPathMigrator(
+		reporter,
+		NewEntitlementsMigration(inter),
 	)
+	for _, address := range []common.Address{
+		testAddress1,
+		testAddress2,
+	} {
+		migration.MigrateAccount(address, migrator)
+	}
 
 	err = migration.Commit()
 	require.NoError(t, err)
@@ -3215,12 +3198,8 @@ func TestRehash(t *testing.T) {
 
 		reporter := newTestReporter()
 
-		migration.Migrate(
-			&migrations.AddressSliceIterator{
-				Addresses: []common.Address{
-					testAddress,
-				},
-			},
+		migration.MigrateAccount(
+			testAddress,
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				NewEntitlementsMigration(inter),
@@ -3409,12 +3388,8 @@ func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
 
 		reporter := newTestReporter()
 
-		migration.Migrate(
-			&migrations.AddressSliceIterator{
-				Addresses: []common.Address{
-					testAddress,
-				},
-			},
+		migration.MigrateAccount(
+			testAddress,
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				NewEntitlementsMigration(inter),

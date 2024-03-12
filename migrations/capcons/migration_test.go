@@ -460,12 +460,8 @@ func testPathCapabilityValueMigration(
 
 	reporter := &testMigrationReporter{}
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
@@ -476,12 +472,8 @@ func testPathCapabilityValueMigration(
 		),
 	)
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
@@ -1312,12 +1304,8 @@ func testLinkMigration(
 
 	reporter := &testMigrationReporter{}
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
@@ -2025,12 +2013,8 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 
 	reporter := &testMigrationReporter{}
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
@@ -2041,12 +2025,8 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 		),
 	)
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
@@ -2274,12 +2254,8 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 
 	reporter := &testMigrationReporter{}
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
@@ -2290,12 +2266,8 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 		),
 	)
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{

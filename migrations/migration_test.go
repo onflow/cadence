@@ -495,12 +495,8 @@ func TestMultipleMigrations(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration.Migrate(
-		&AddressSliceIterator{
-			Addresses: []common.Address{
-				account,
-			},
-		},
+	migration.MigrateAccount(
+		account,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testStringMigration{},
@@ -639,12 +635,8 @@ func TestMigrationError(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration.Migrate(
-		&AddressSliceIterator{
-			Addresses: []common.Address{
-				account,
-			},
-		},
+	migration.MigrateAccount(
+		account,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testStringMigration{},
@@ -788,12 +780,8 @@ func TestCapConMigration(t *testing.T) {
 
 	migration := NewStorageMigration(inter, storage)
 
-	migration.Migrate(
-		&AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testCapConMigration{},
@@ -907,12 +895,8 @@ func TestContractMigration(t *testing.T) {
 
 	migration := NewStorageMigration(inter, storage)
 
-	migration.Migrate(
-		&AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testStringMigration{},
@@ -1100,12 +1084,8 @@ func TestEmptyIntersectionTypeMigration(t *testing.T) {
 
 	migration := NewStorageMigration(inter, storage)
 
-	migration.Migrate(
-		&AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testCompositeValueMigration{},
@@ -1246,12 +1226,8 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		reporter := newTestReporter()
 
-		migration.Migrate(
-			&AddressSliceIterator{
-				Addresses: []common.Address{
-					testAddress,
-				},
-			},
+		migration.MigrateAccount(
+			testAddress,
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				valueMigration,
@@ -1676,12 +1652,8 @@ func TestMigrationPanic(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration.Migrate(
-		&AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testPanicMigration{},
@@ -1807,12 +1779,8 @@ func TestSkip(t *testing.T) {
 			canSkip: canSkip,
 		}
 
-		migration.Migrate(
-			&AddressSliceIterator{
-				Addresses: []common.Address{
-					testAddress,
-				},
-			},
+		migration.MigrateAccount(
+			testAddress,
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				valueMigration,
@@ -2141,12 +2109,8 @@ func TestPublishedValueMigration(t *testing.T) {
 
 	migration := NewStorageMigration(inter, storage)
 
-	migration.Migrate(
-		&AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testPublishedValueMigration{},

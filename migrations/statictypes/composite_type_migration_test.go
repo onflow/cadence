@@ -152,12 +152,8 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 	barStaticType := newCompositeType()
 	bazStaticType := newInterfaceType()
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			NewStaticTypeMigration().

@@ -263,12 +263,8 @@ func TestStringNormalizingMigration(t *testing.T) {
 
 	migration := migrations.NewStorageMigration(inter, storage)
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				account,
-			},
-		},
+	migration.MigrateAccount(
+		account,
 		migration.NewValueMigrationsPathMigrator(
 			nil,
 			NewStringNormalizingMigration(),
@@ -400,12 +396,8 @@ func TestStringValueRehash(t *testing.T) {
 
 		migration := migrations.NewStorageMigration(inter, storage)
 
-		migration.Migrate(
-			&migrations.AddressSliceIterator{
-				Addresses: []common.Address{
-					testAddress,
-				},
-			},
+		migration.MigrateAccount(
+			testAddress,
 			migration.NewValueMigrationsPathMigrator(
 				nil,
 				NewStringNormalizingMigration(),
@@ -543,12 +535,8 @@ func TestCharacterValueRehash(t *testing.T) {
 
 		migration := migrations.NewStorageMigration(inter, storage)
 
-		migration.Migrate(
-			&migrations.AddressSliceIterator{
-				Addresses: []common.Address{
-					testAddress,
-				},
-			},
+		migration.MigrateAccount(
+			testAddress,
 			migration.NewValueMigrationsPathMigrator(
 				nil,
 				NewStringNormalizingMigration(),

@@ -62,20 +62,6 @@ func NewStorageMigration(
 	}
 }
 
-func (m *StorageMigration) Migrate(
-	addressIterator AddressIterator,
-	migrate StorageMapKeyMigrator,
-) {
-	for {
-		address := addressIterator.NextAddress()
-		if address == common.ZeroAddress {
-			break
-		}
-
-		m.MigrateAccount(address, migrate)
-	}
-}
-
 func (m *StorageMigration) Commit() error {
 	return m.storage.Commit(m.interpreter, false)
 }

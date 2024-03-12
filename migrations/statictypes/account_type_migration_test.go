@@ -465,12 +465,8 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 
 			reporter := newTestReporter()
 
-			migration.Migrate(
-				&migrations.AddressSliceIterator{
-					Addresses: []common.Address{
-						account,
-					},
-				},
+			migration.MigrateAccount(
+				account,
 				migration.NewValueMigrationsPathMigrator(
 					reporter,
 					NewStaticTypeMigration(),
@@ -860,12 +856,8 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 
 			reporter := newTestReporter()
 
-			migration.Migrate(
-				&migrations.AddressSliceIterator{
-					Addresses: []common.Address{
-						account,
-					},
-				},
+			migration.MigrateAccount(
+				account,
 				migration.NewValueMigrationsPathMigrator(
 					reporter,
 					NewStaticTypeMigration(),
@@ -1170,12 +1162,8 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 
 			reporter := newTestReporter()
 
-			migration.Migrate(
-				&migrations.AddressSliceIterator{
-					Addresses: []common.Address{
-						account,
-					},
-				},
+			migration.MigrateAccount(
+				account,
 				migration.NewValueMigrationsPathMigrator(
 					reporter,
 					NewStaticTypeMigration(),
@@ -1314,12 +1302,8 @@ func TestAccountTypeRehash(t *testing.T) {
 
 		reporter := newTestReporter()
 
-		migration.Migrate(
-			&migrations.AddressSliceIterator{
-				Addresses: []common.Address{
-					testAddress,
-				},
-			},
+		migration.MigrateAccount(
+			testAddress,
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				NewStaticTypeMigration(),
