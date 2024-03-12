@@ -2078,7 +2078,7 @@ func (testPublishedValueMigration) Migrate(
 	_ *interpreter.Interpreter,
 ) (interpreter.Value, error) {
 
-	if pathCap, ok := value.(*interpreter.PathCapabilityValue); ok {
+	if pathCap, ok := value.(*interpreter.PathCapabilityValue); ok {  //nolint:staticcheck
 		return pathCap, nil
 	}
 
@@ -2128,7 +2128,7 @@ func TestPublishedValueMigration(t *testing.T) {
 		interpreter.NewPublishedValue(
 			nil,
 			interpreter.AddressValue(testAddress),
-			&interpreter.PathCapabilityValue{
+			&interpreter.PathCapabilityValue{  //nolint:staticcheck
 				BorrowType: nil,
 				Path: interpreter.PathValue{
 					Domain:     common.PathDomainStorage,
