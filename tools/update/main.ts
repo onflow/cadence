@@ -96,8 +96,8 @@ class Updater {
 
         const [owner, repoName] = fullRepoName.split('/')
 
-        const repoResponse = await this.octokit.rest.repos.get({owner, repo: repoName})
-        const defaultBranch = repoResponse.data.default_branch
+        const defaultBranch = repo.branch ||
+            (await this.octokit.rest.repos.get({owner, repo: repoName})).data.default_branch
         console.log(`> Default branch of repo ${fullRepoName}: ${defaultBranch}`)
 
         const defaultRefResponse = await this.octokit.rest.git.getRef({
