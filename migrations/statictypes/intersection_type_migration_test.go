@@ -402,12 +402,8 @@ func TestIntersectionTypeMigration(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			NewStaticTypeMigration(),
@@ -574,12 +570,8 @@ func TestIntersectionTypeRehash(t *testing.T) {
 
 		reporter := newTestReporter()
 
-		migration.Migrate(
-			&migrations.AddressSliceIterator{
-				Addresses: []common.Address{
-					testAddress,
-				},
-			},
+		migration.MigrateAccount(
+			testAddress,
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				NewStaticTypeMigration(),
@@ -745,12 +737,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			reporter := newTestReporter()
 
-			migration.Migrate(
-				&migrations.AddressSliceIterator{
-					Addresses: []common.Address{
-						testAddress,
-					},
-				},
+			migration.MigrateAccount(
+				testAddress,
 				migration.NewValueMigrationsPathMigrator(
 					reporter,
 					NewStaticTypeMigration(),
@@ -891,12 +879,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			reporter := newTestReporter()
 
-			migration.Migrate(
-				&migrations.AddressSliceIterator{
-					Addresses: []common.Address{
-						testAddress,
-					},
-				},
+			migration.MigrateAccount(
+				testAddress,
 				migration.NewValueMigrationsPathMigrator(
 					reporter,
 					NewStaticTypeMigration(),
@@ -1070,12 +1054,8 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 			)
 		}
 
-		migration.Migrate(
-			&migrations.AddressSliceIterator{
-				Addresses: []common.Address{
-					testAddress,
-				},
-			},
+		migration.MigrateAccount(
+			testAddress,
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				staticTypeMigration,
@@ -1447,12 +1427,8 @@ func TestIntersectionTypeMigrationWithTypeConverters(t *testing.T) {
 
 		reporter := newTestReporter()
 
-		migration.Migrate(
-			&migrations.AddressSliceIterator{
-				Addresses: []common.Address{
-					testAddress,
-				},
-			},
+		migration.MigrateAccount(
+			testAddress,
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				staticTypeMigration,

@@ -53,6 +53,10 @@ func (StringNormalizingMigration) Migrate(
 	return nil, nil
 }
 
+func (StringNormalizingMigration) Domains() map[string]struct{} {
+	return nil
+}
+
 func (m StringNormalizingMigration) CanSkip(valueType interpreter.StaticType) bool {
 	return CanSkipStringNormalizingMigration(valueType)
 }

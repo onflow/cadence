@@ -41,6 +41,10 @@ func (EntitlementsMigration) Name() string {
 	return "EntitlementsMigration"
 }
 
+func (EntitlementsMigration) Domains() map[string]struct{} {
+	return nil
+}
+
 // ConvertToEntitledType converts the given type to an entitled type according to the following rules:
 //   - ConvertToEntitledType(&T)            --> auth(Entitlements(T)) &T
 //   - ConvertToEntitledType(Capability<T>) --> Capability<ConvertToEntitledType(T)>

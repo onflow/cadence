@@ -79,12 +79,8 @@ func TestStaticTypeMigration(t *testing.T) {
 
 		reporter := newTestReporter()
 
-		migration.Migrate(
-			&migrations.AddressSliceIterator{
-				Addresses: []common.Address{
-					testAddress,
-				},
-			},
+		migration.MigrateAccount(
+			testAddress,
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				staticTypeMigration,
@@ -745,12 +741,8 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		reporter := newTestReporter()
 
-		migration.Migrate(
-			&migrations.AddressSliceIterator{
-				Addresses: []common.Address{
-					testAddress,
-				},
-			},
+		migration.MigrateAccount(
+			testAddress,
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				staticTypeMigration,

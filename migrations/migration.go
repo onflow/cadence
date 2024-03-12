@@ -38,6 +38,7 @@ type ValueMigration interface {
 		interpreter *interpreter.Interpreter,
 	) (newValue interpreter.Value, err error)
 	CanSkip(valueType interpreter.StaticType) bool
+	Domains() map[string]struct{}
 }
 
 type DomainMigration interface {
@@ -62,27 +63,13 @@ func NewStorageMigration(
 	}
 }
 
-func (m *StorageMigration) Migrate(
-	addressIterator AddressIterator,
-	migrate StorageMapKeyMigrator,
-) {
-	for {
-		address := addressIterator.NextAddress()
-		if address == common.ZeroAddress {
-			break
-		}
-
-		m.MigrateAccount(address, migrate)
-	}
-}
-
 func (m *StorageMigration) Commit() error {
 	return m.storage.Commit(m.interpreter, false)
 }
 
 func (m *StorageMigration) MigrateAccount(
 	address common.Address,
-	migrate StorageMapKeyMigrator,
+	migrator StorageMapKeyMigrator,
 ) {
 	accountStorage := NewAccountStorage(m.storage, address)
 
@@ -90,26 +77,26 @@ func (m *StorageMigration) MigrateAccount(
 		accountStorage.MigrateStringKeys(
 			m.interpreter,
 			domain.Identifier(),
-			migrate,
+			migrator,
 		)
 	}
 
 	accountStorage.MigrateStringKeys(
 		m.interpreter,
 		stdlib.InboxStorageDomain,
-		migrate,
+		migrator,
 	)
 
 	accountStorage.MigrateStringKeys(
 		m.interpreter,
 		runtime.StorageDomainContract,
-		migrate,
+		migrator,
 	)
 
 	accountStorage.MigrateUint64Keys(
 		m.interpreter,
 		stdlib.CapabilityControllerStorageDomain,
-		migrate,
+		migrator,
 	)
 }
 
@@ -117,7 +104,33 @@ func (m *StorageMigration) NewValueMigrationsPathMigrator(
 	reporter Reporter,
 	valueMigrations ...ValueMigration,
 ) StorageMapKeyMigrator {
+
+	// Gather all domains that have to be migrated
+	// from all value migrations
+
+	var allDomains map[string]struct{}
+
+	if len(valueMigrations) == 1 {
+		// Optimization: Avoid allocating a new map
+		allDomains = valueMigrations[0].Domains()
+	} else {
+		for _, valueMigration := range valueMigrations {
+			migrationDomains := valueMigration.Domains()
+			if migrationDomains == nil {
+				continue
+			}
+			if allDomains == nil {
+				allDomains = make(map[string]struct{})
+			}
+			// Safe to iterate, as the order does not matter
+			for domain := range migrationDomains { //nolint:maprange
+				allDomains[domain] = struct{}{}
+			}
+		}
+	}
+
 	return NewValueConverterPathMigrator(
+		allDomains,
 		func(
 			storageKey interpreter.StorageKey,
 			storageMapKey interpreter.StorageMapKey,
@@ -389,7 +402,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			reporter,
 		)
 		if newInnerValue != nil {
-			newInnerCapability := newInnerValue.(*interpreter.IDCapabilityValue)
+			newInnerCapability := newInnerValue.(interpreter.CapabilityValue)
 			migratedValue = interpreter.NewPublishedValue(
 				inter,
 				publishedValue.Recipient,

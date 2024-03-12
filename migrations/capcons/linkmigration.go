@@ -56,6 +56,15 @@ func (m *LinkValueMigration) CanSkip(valueType interpreter.StaticType) bool {
 	return CanSkipCapabilityValueMigration(valueType)
 }
 
+var linkValueMigrationDomains = map[string]struct{}{
+	common.PathDomainPublic.Identifier():  {},
+	common.PathDomainPrivate.Identifier(): {},
+}
+
+func (m *LinkValueMigration) Domains() map[string]struct{} {
+	return linkValueMigrationDomains
+}
+
 func (m *LinkValueMigration) Migrate(
 	storageKey interpreter.StorageKey,
 	storageMapKey interpreter.StorageMapKey,
