@@ -19,6 +19,8 @@
 package string_normalization
 
 import (
+	"golang.org/x/text/unicode/norm"
+
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -41,13 +43,30 @@ func (StringNormalizingMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) (interpreter.Value, error) {
+) (
+	interpreter.Value,
+	error,
+) {
+
+	// Normalize strings and characters to NFC.
+	// If the value is already in NFC, skip the migration.
+
 	switch value := value.(type) {
 	case *interpreter.StringValue:
-		return interpreter.NewUnmeteredStringValue(value.Str), nil
+		unnormalizedStr := value.UnnormalizedStr
+		normalizedStr := norm.NFC.String(unnormalizedStr)
+		if normalizedStr == unnormalizedStr {
+			return nil, nil
+		}
+		return interpreter.NewStringValue_Unsafe(normalizedStr, unnormalizedStr), nil //nolint:staticcheck
 
 	case interpreter.CharacterValue:
-		return interpreter.NewUnmeteredCharacterValue(value.Str), nil
+		unnormalizedStr := value.UnnormalizedStr
+		normalizedStr := norm.NFC.String(unnormalizedStr)
+		if normalizedStr == unnormalizedStr {
+			return nil, nil
+		}
+		return interpreter.NewCharacterValue_Unsafe(normalizedStr, unnormalizedStr), nil //nolint:staticcheck
 	}
 
 	return nil, nil
