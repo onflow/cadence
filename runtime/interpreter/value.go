@@ -817,10 +817,21 @@ type CharacterValue struct {
 	UnnormalizedStr string
 }
 
-func NewUnmeteredCharacterValue(r string) CharacterValue {
+func NewUnmeteredCharacterValue(str string) CharacterValue {
 	return CharacterValue{
-		Str:             norm.NFC.String(r),
-		UnnormalizedStr: r,
+		Str:             norm.NFC.String(str),
+		UnnormalizedStr: str,
+	}
+}
+
+// Deprecated: NewStringValue_UnsafeNewCharacterValue_Unsafe creates a new character value
+// from the given normalized and unnormalized string.
+// NOTE: this function is unsafe, as it does not normalize the string.
+// It should only be used for e.g. migration purposes.
+func NewCharacterValue_Unsafe(normalizedStr, unnormalizedStr string) CharacterValue {
+	return CharacterValue{
+		Str:             normalizedStr,
+		UnnormalizedStr: unnormalizedStr,
 	}
 }
 
@@ -1040,6 +1051,19 @@ func NewUnmeteredStringValue(str string) *StringValue {
 	return &StringValue{
 		Str:             norm.NFC.String(str),
 		UnnormalizedStr: str,
+		// a negative value indicates the length has not been initialized, see Length()
+		length: -1,
+	}
+}
+
+// Deprecated: NewStringValue_Unsafe creates a new string value
+// from the given normalized and unnormalized string.
+// NOTE: this function is unsafe, as it does not normalize the string.
+// It should only be used for e.g. migration purposes.
+func NewStringValue_Unsafe(normalizedStr, unnormalizedStr string) *StringValue {
+	return &StringValue{
+		Str:             normalizedStr,
+		UnnormalizedStr: unnormalizedStr,
 		// a negative value indicates the length has not been initialized, see Length()
 		length: -1,
 	}
