@@ -98,6 +98,12 @@ repos:
         - onflow/cadence
         - onflow/flow-go-sdk
         - onflow/flow-go
+    - path: integration
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+        - onflow/flow-emulator
 
 - repo: onflow/flow-cli
   needsRelease: true
