@@ -9859,3 +9859,82 @@ func TestCheckOptionalBindingElseBranch(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
+
+func TestCheckResourceSecondValueTransfer(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            access(all) fun main() {
+                let vaults: @[AnyResource] <- []
+                let old <- vaults[0] <- vaults
+                destroy old
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R{}
+
+            access(all) fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
+                arrRef.append(<- copy2!)
+                return <- create R()
+            }
+            
+            access(all) fun main() {
+                var victim: @R? <- create R()
+                var arr: @[R] <- []
+            
+                // In the optional binding below, the 'victim' must be invalidated
+                // before evaluation of the collect() call
+                let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R])
+            
+                // Panics when trying to destroy
+                destroy copy1
+                destroy arr    
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R{}
+
+            access(all) fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
+                arrRef.append(<- copy2!)
+                return <- create R()
+            }
+            
+            access(all) fun main() {
+                var victim: @R? <- create R()
+                var arr: @[R] <- []
+            
+                if let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R]) {
+
+                    // Using 'victim' is not allowed, but it should?
+                    var ignore = &victim as &R?
+                
+                    arr.append(<- copy1)
+                } else {
+                    destroy victim // Never executed
+                } 
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
