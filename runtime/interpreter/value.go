@@ -1198,6 +1198,10 @@ func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue, locat
 
 	memoryUsage := common.NewStringMemoryUsage(newLength)
 
+	// Meter computation as if the two strings were iterated.
+	length := len(v.Str) + len(other.Str)
+	interpreter.ReportComputation(common.ComputationKindLoop, uint(length))
+
 	return NewStringValue(
 		interpreter,
 		memoryUsage,
@@ -1430,6 +1434,9 @@ func (v *StringValue) Length() int {
 
 func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 
+	// Meter computation as if the string was iterated.
+	interpreter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)))
+
 	// Over-estimate resulting string length,
 	// as an uppercase character may be converted to several lower-case characters, e.g İ => [i, ̇]
 	// see https://stackoverflow.com/questions/28683805/is-there-a-unicode-string-which-gets-longer-when-converted-to-lowercase
@@ -1454,7 +1461,12 @@ func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 	)
 }
 
-func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, separator string) Value {
+func (v *StringValue) Split(inter *Interpreter, _ LocationRange, separator string) Value {
+
+	// Meter computation as if the string was iterated.
+	// i.e: linear search to find the split points. This is an estimate.
+	inter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)))
+
 	split := strings.Split(v.Str, separator)
 
 	var index int
@@ -1483,13 +1495,17 @@ func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, sep
 	)
 }
 
-func (v *StringValue) ReplaceAll(inter *Interpreter, locationRange LocationRange, of string, with string) *StringValue {
+func (v *StringValue) ReplaceAll(inter *Interpreter, _ LocationRange, of string, with string) *StringValue {
 	// Over-estimate the resulting string length.
 	// In the worst case, `of` can be empty in which case, `with` will be added at every index.
 	// e.g. `of` = "", `v` = "ABC", `with` = "1": result = "1A1B1C1".
-	lengthOverEstimate := (2*len(v.Str) + 1) * len(with)
+	strLen := len(v.Str)
+	lengthOverEstimate := (2*strLen + 1) * len(with)
 
 	memoryUsage := common.NewStringMemoryUsage(lengthOverEstimate)
+
+	// Meter computation as if the string was iterated.
+	inter.ReportComputation(common.ComputationKindLoop, uint(strLen))
 
 	return NewStringValue(
 		inter,
@@ -2045,6 +2061,9 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 		common.ZeroAddress,
 		v.array.Count()+other.array.Count(),
 		func() Value {
+
+			// Meter computation for iterating the two arrays.
+			interpreter.ReportComputation(common.ComputationKindLoop, 1)
 
 			var value Value
 
@@ -3174,13 +3193,15 @@ func (v *ArrayValue) Slice(
 		uint64(toIndex-fromIndex),
 		func() Value {
 
-			var value Value
+			// Meter computation for iterating the array.
+			interpreter.ReportComputation(common.ComputationKindLoop, 1)
 
 			atreeValue, err := iterator.Next()
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
 
+			var value Value
 			if atreeValue != nil {
 				value = MustConvertStoredValue(interpreter, atreeValue)
 			}
