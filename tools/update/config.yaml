@@ -7,15 +7,6 @@ repos:
       deps:
         - onflow/cadence
 
-- repo: onflow/cadence-tools
-  needsRelease: true
-  prefixPRTitle: true
-  mods:
-    - path: lint
-      deps:
-        - onflow/cadence
-        - onflow/flow-go-sdk
-
 - repo: onflow/flow-go
   needsRelease: false
   branch: feature/stable-cadence
@@ -32,6 +23,15 @@ repos:
       deps:
         - onflow/flow-go-sdk
         - onflow/cadence
+
+- repo: onflow/cadence-tools
+  needsRelease: true
+  prefixPRTitle: true
+  mods:
+    - path: lint
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
 
 - repo: onflow/flow-emulator
   needsRelease: true
