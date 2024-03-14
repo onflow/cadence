@@ -9864,16 +9864,80 @@ func TestCheckResourceSecondValueTransfer(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("basic", func(t *testing.T) {
+	t.Run("basic array invalid", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
             resource R {}
 
             access(all) fun main() {
-                let vaults: @[AnyResource] <- []
+                let vaults: @[AnyResource] <- [<-[]]
                 let old <- vaults[0] <- vaults
                 destroy old
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("basic array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            access(all) fun main() {
+                let vaults: @[AnyResource] <- [<-[]]
+                let bar <- create R()
+                let old <- vaults[0] <- bar
+                destroy old
+                destroy vaults
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("basic function call invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            access(all) fun foo(_ r: @R): @R {
+                return <-r 
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                let r2 <- r <- foo(<-r)
+                destroy r2
+                // note that r is still "valid" after the two value transfer so we must destroy it
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("basic function call valid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            access(all) fun foo(_ r: @R): @R {
+                return <-r 
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var bar <- create R()
+                let r2 <- r <- foo(<-bar)
+                destroy r2
+                destroy r
             }
         `)
 
@@ -9902,13 +9966,15 @@ func TestCheckResourceSecondValueTransfer(t *testing.T) {
                 // Panics when trying to destroy
                 destroy copy1
                 destroy arr    
+                destroy victim
             }
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 
-	t.Run("valid", func(t *testing.T) {
+	t.Run("regression", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -9924,17 +9990,19 @@ func TestCheckResourceSecondValueTransfer(t *testing.T) {
                 var arr: @[R] <- []
             
                 if let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R]) {
-
-                    // Using 'victim' is not allowed, but it should?
                     var ignore = &victim as &R?
-                
                     arr.append(<- copy1)
+                    destroy victim
                 } else {
                     destroy victim // Never executed
-                } 
+                }
+                
+                destroy arr
             }
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		// we'd like to only report one error here (i.e. in `copy2: <- victim`, not `&victim as &R?`)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 	})
 }
