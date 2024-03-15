@@ -723,6 +723,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // standalone values doesn't have a parent container.
 		)
 
 		inter.WriteStored(
