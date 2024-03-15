@@ -1643,9 +1643,9 @@ func TestStaticTypeConversion(t *testing.T) {
 
 			// Test static to sema
 
-			getInterface := test.getInterface
-			if getInterface == nil {
-				getInterface = func(
+			getInterfaceType := test.getInterface
+			if getInterfaceType == nil {
+				getInterfaceType = func(
 					_ *testing.T,
 					_ common.Location,
 					_ string,
@@ -1656,40 +1656,48 @@ func TestStaticTypeConversion(t *testing.T) {
 				}
 			}
 
-			getComposite := test.getComposite
-			if getComposite == nil {
-				getComposite = func(
+			getCompositeType := test.getComposite
+			if getCompositeType == nil {
+				getCompositeType = func(
 					_ *testing.T,
 					_ common.Location,
 					_ string,
 					_ TypeID,
 				) (*sema.CompositeType, error) {
-					require.FailNow(t, "getComposite should not be called")
+					require.FailNow(t, "getCompositeType should not be called")
 					return nil, nil
 				}
 			}
 
-			getEntitlement := func(_ common.TypeID) (*sema.EntitlementType, error) {
-				require.FailNow(t, "getComposite should not be called")
-				return nil, nil
-			}
-
-			getEntitlementMap := func(_ common.TypeID) (*sema.EntitlementMapType, error) {
-				require.FailNow(t, "getComposite should not be called")
-				return nil, nil
+			handler := staticTypeConversionHandler{
+				getInterfaceType: func(
+					location common.Location,
+					qualifiedIdentifier string,
+					typeID TypeID,
+				) (*sema.InterfaceType, error) {
+					return getInterfaceType(t, location, qualifiedIdentifier, typeID)
+				},
+				getCompositeType: func(
+					location common.Location,
+					qualifiedIdentifier string,
+					typeID TypeID,
+				) (*sema.CompositeType, error) {
+					return getCompositeType(t, location, qualifiedIdentifier, typeID)
+				},
+				getEntitlementType: func(_ common.TypeID) (*sema.EntitlementType, error) {
+					require.FailNow(t, "getEntitlementType should not be called")
+					return nil, nil
+				},
+				getEntitlementMapType: func(_ common.TypeID) (*sema.EntitlementMapType, error) {
+					require.FailNow(t, "getEntitlementMapType should not be called")
+					return nil, nil
+				},
 			}
 
 			convertedSemaType, err := ConvertStaticToSemaType(
 				nil,
 				test.staticType,
-				func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error) {
-					return getInterface(t, location, qualifiedIdentifier, typeID)
-				},
-				func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error) {
-					return getComposite(t, location, qualifiedIdentifier, typeID)
-				},
-				getEntitlement,
-				getEntitlementMap,
+				handler,
 			)
 			require.NoError(t, err)
 			require.Equal(t,
@@ -1715,6 +1723,39 @@ func TestStaticTypeConversion(t *testing.T) {
 		}
 	}
 
+}
+
+type staticTypeConversionHandler struct {
+	getInterfaceType      func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error)
+	getCompositeType      func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error)
+	getEntitlementType    func(typeID common.TypeID) (*sema.EntitlementType, error)
+	getEntitlementMapType func(typeID common.TypeID) (*sema.EntitlementMapType, error)
+}
+
+var _ StaticTypeConversionHandler = staticTypeConversionHandler{}
+
+func (s staticTypeConversionHandler) GetInterfaceType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID TypeID,
+) (*sema.InterfaceType, error) {
+	return s.getInterfaceType(location, qualifiedIdentifier, typeID)
+}
+
+func (s staticTypeConversionHandler) GetCompositeType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID TypeID,
+) (*sema.CompositeType, error) {
+	return s.getCompositeType(location, qualifiedIdentifier, typeID)
+}
+
+func (s staticTypeConversionHandler) GetEntitlementType(typeID TypeID) (*sema.EntitlementType, error) {
+	return s.getEntitlementType(typeID)
+}
+
+func (s staticTypeConversionHandler) GetEntitlementMapType(typeID TypeID) (*sema.EntitlementMapType, error) {
+	return s.getEntitlementMapType(typeID)
 }
 
 func TestIntersectionStaticType_ID(t *testing.T) {

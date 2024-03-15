@@ -824,7 +824,7 @@ const (
 	encodedCapabilityValueLength = 3
 )
 
-// Encode encodes CapabilityValue as
+// Encode encodes IDCapabilityValue as
 //
 //	cbor.Tag{
 //				Number: CBORTagCapabilityValue,
@@ -834,7 +834,7 @@ const (
 //						encodedCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
 //					},
 //	}
-func (v *CapabilityValue) Encode(e *atree.Encoder) error {
+func (v *IDCapabilityValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number

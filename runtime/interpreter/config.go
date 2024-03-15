@@ -49,6 +49,8 @@ type Config struct {
 	UUIDHandler UUIDHandlerFunc
 	// CompositeTypeHandler is used to load composite types
 	CompositeTypeHandler CompositeTypeHandlerFunc
+	// InterfaceTypeHandler is used to load interface types
+	InterfaceTypeHandler InterfaceTypeHandlerFunc
 	// CompositeValueFunctionsHandler is used to load composite value functions
 	CompositeValueFunctionsHandler CompositeValueFunctionsHandlerFunc
 	BaseActivationHandler          func(location common.Location) *VariableActivation

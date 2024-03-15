@@ -27,10 +27,11 @@ import (
 )
 
 type Program struct {
-	Location common.Location
-	Program  *ast.Program
-	Checker  *sema.Checker
-	Code     []byte
+	Location  common.Location
+	Program   *ast.Program
+	Checker   *sema.Checker
+	Code      []byte
+	LoadError error
 }
 
 // Run runs the given DAG of analyzers in parallel

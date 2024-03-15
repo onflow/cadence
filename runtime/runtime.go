@@ -436,7 +436,7 @@ func validateArgumentParams(
 		// Ensure the argument is of an importable type
 		argType := arg.StaticType(inter)
 
-		if !arg.IsImportable(inter) {
+		if !arg.IsImportable(inter, locationRange) {
 			return nil, &ArgumentNotImportableError{
 				Type: argType,
 			}
@@ -467,17 +467,22 @@ func validateArgumentParams(
 		}
 
 		// Ensure static type info is available for all values
-		interpreter.InspectValue(inter, arg, func(value interpreter.Value) bool {
-			if value == nil {
+		interpreter.InspectValue(
+			inter,
+			arg,
+			func(value interpreter.Value) bool {
+				if value == nil {
+					return true
+				}
+
+				if !hasValidStaticType(inter, value) {
+					panic(errors.NewUnexpectedError("invalid static type for argument: %d", parameterIndex))
+				}
+
 				return true
-			}
-
-			if !hasValidStaticType(inter, value) {
-				panic(errors.NewUnexpectedError("invalid static type for argument: %d", parameterIndex))
-			}
-
-			return true
-		})
+			},
+			locationRange,
+		)
 
 		argumentValues[parameterIndex] = arg
 	}

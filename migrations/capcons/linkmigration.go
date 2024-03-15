@@ -40,7 +40,7 @@ type LinkMigrationReporter interface {
 
 // LinkValueMigration migrates all links to capability controllers.
 type LinkValueMigration struct {
-	CapabilityIDs      map[interpreter.AddressPath]interpreter.UInt64Value
+	CapabilityMapping  *CapabilityMapping
 	AccountIDGenerator stdlib.AccountIDGenerator
 	Reporter           LinkMigrationReporter
 }
@@ -49,6 +49,20 @@ var _ migrations.ValueMigration = &LinkValueMigration{}
 
 func (*LinkValueMigration) Name() string {
 	return "LinkValueMigration"
+}
+
+func (m *LinkValueMigration) CanSkip(valueType interpreter.StaticType) bool {
+	// Link values have a capability static type
+	return CanSkipCapabilityValueMigration(valueType)
+}
+
+var linkValueMigrationDomains = map[string]struct{}{
+	common.PathDomainPublic.Identifier():  {},
+	common.PathDomainPrivate.Identifier(): {},
+}
+
+func (m *LinkValueMigration) Domains() map[string]struct{} {
+	return linkValueMigrationDomains
 }
 
 func (m *LinkValueMigration) Migrate(
@@ -87,15 +101,16 @@ func (m *LinkValueMigration) Migrate(
 	var borrowStaticType *interpreter.ReferenceStaticType
 
 	switch readValue := value.(type) {
-	case *interpreter.CapabilityValue:
+	case *interpreter.IDCapabilityValue:
 		// Already migrated
 		return nil, nil
 
 	case interpreter.PathLinkValue: //nolint:staticcheck
 		var ok bool
-		borrowStaticType, ok = readValue.Type.(*interpreter.ReferenceStaticType)
+		borrowType := readValue.Type
+		borrowStaticType, ok = borrowType.(*interpreter.ReferenceStaticType)
 		if !ok {
-			panic(errors.NewUnreachableError())
+			panic(errors.NewUnexpectedError("unexpected non-reference borrow type: %T", borrowType))
 		}
 
 	case interpreter.AccountLinkValue: //nolint:staticcheck
@@ -106,12 +121,13 @@ func (m *LinkValueMigration) Migrate(
 		)
 
 	default:
-		panic(errors.NewUnreachableError())
+		panic(errors.NewUnexpectedError("unexpected value type: %T", value))
 	}
 
-	borrowType, ok := inter.MustConvertStaticToSemaType(borrowStaticType).(*sema.ReferenceType)
+	convertedBorrowStaticType := inter.MustConvertStaticToSemaType(borrowStaticType)
+	borrowType, ok := convertedBorrowStaticType.(*sema.ReferenceType)
 	if !ok {
-		panic(errors.NewUnreachableError())
+		panic(errors.NewUnexpectedError("unexpected non-reference borrow type: %T", borrowType))
 	}
 
 	// Get target
@@ -176,14 +192,13 @@ func (m *LinkValueMigration) Migrate(
 		)
 
 	default:
-		panic(errors.NewUnreachableError())
+		panic(errors.NewUnexpectedError("unexpected target type: %T", target))
 	}
 
 	// Record new capability ID in source path mapping.
 	// The mapping is used later for migrating path capabilities to ID capabilities,
 	// see CapabilityMigration.
-
-	m.CapabilityIDs[addressPath] = capabilityID
+	m.CapabilityMapping.Record(addressPath, capabilityID, borrowType)
 
 	if reporter != nil {
 		reporter.MigratedLink(addressPath, capabilityID)
@@ -301,7 +316,7 @@ func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 					interpreter.UnauthorizedAccess,
 					nil
 
-			case *interpreter.CapabilityValue:
+			case *interpreter.IDCapabilityValue:
 
 				// Follow ID capability values which are published in the public or private domain.
 				// This is needed for two reasons:
@@ -311,9 +326,13 @@ func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 				//    so it's possible that a capability value is encountered when determining the final target,
 				//    when a part of the full link chain was already previously migrated.
 
-				capabilityBorrowType, ok := inter.MustConvertStaticToSemaType(value.BorrowType).(*sema.ReferenceType)
+				convertedBorrowType := inter.MustConvertStaticToSemaType(value.BorrowType)
+				capabilityBorrowType, ok := convertedBorrowType.(*sema.ReferenceType)
 				if !ok {
-					panic(errors.NewUnreachableError())
+					panic(errors.NewUnexpectedError(
+						"unexpected non-reference borrow type: %T",
+						convertedBorrowType,
+					))
 				}
 
 				// Do not borrow final target (i.e. do not require target to exist),
@@ -350,7 +369,7 @@ func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 				}
 
 			default:
-				panic(errors.NewUnreachableError())
+				panic(errors.NewUnexpectedError("unexpected value type: %T", value))
 			}
 		}
 	}

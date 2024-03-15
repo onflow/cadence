@@ -2583,7 +2583,7 @@ func TestCheckAttachmentAnyAttachmentTypes(t *testing.T) {
 			},
 			{
 				setupCode:       "contract interface CI {}",
-				subType:         "CI",
+				subType:         "{CI}",
 				expectedSuccess: false,
 			},
 		}

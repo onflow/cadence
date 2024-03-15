@@ -50,6 +50,11 @@ import (
 //	; cbor-tag-enum-type
 //	#6.164(composite-type)
 //
+// attachment-type =
+//
+//	; cbor-tag-attachment-type
+//	#6.165(composite-type)
+//
 // composite-type = [
 //
 //	id: id,
@@ -85,6 +90,9 @@ func (e *Encoder) encodeCompositeType(typ cadence.CompositeType, tids ccfTypeIDB
 
 	case *cadence.EnumType:
 		cborTagNum = CBORTagEnumType
+
+	case *cadence.AttachmentType:
+		cborTagNum = CBORTagAttachmentType
 
 	default:
 		panic(cadenceErrors.NewUnexpectedError("unexpected composite type %s (%T)", typ.ID(), typ))

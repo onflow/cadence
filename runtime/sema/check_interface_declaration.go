@@ -398,7 +398,9 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 
 	compositeKind := declaration.Kind()
 
-	eventMembers := orderedmap.New[StringMemberOrderedMap](len(declaration.Members.Composites()))
+	declarationMembers := declaration.Members
+
+	eventMembers := orderedmap.New[StringMemberOrderedMap](len(declarationMembers.Composites()))
 
 	(func() { // Activate new scope for nested declarations
 
@@ -412,10 +414,18 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 
 		checker.declareInterfaceNestedTypes(declaration)
 
+		// Declare nested types' explicit conformances
+		for _, nestedInterfaceDeclaration := range declarationMembers.Interfaces() {
+			// resolve conformances
+			nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
+			nestedInterfaceType.ExplicitInterfaceConformances =
+				checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
+		}
+
 		// Declare members
 
 		members, fields, origins := checker.defaultMembersAndOrigins(
-			declaration.Members,
+			declarationMembers,
 			interfaceType,
 			ContainerKindInterface,
 			declaration.DeclarationKind(),
@@ -434,21 +444,16 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 		// NOTE: determine initializer parameter types while nested types are in scope,
 		// and after declaring nested types as the initializer may use nested type in parameters
 
-		initializers := declaration.Members.Initializers()
+		initializers := declarationMembers.Initializers()
 		interfaceType.InitializerParameters = checker.initializerParameters(initializers)
 		interfaceType.InitializerPurity = checker.initializerPurity(compositeKind, initializers)
 
 		// Declare nested declarations' members
-		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
-			// resolve conformances
-			nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
-			nestedInterfaceType.ExplicitInterfaceConformances =
-				checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
-
+		for _, nestedInterfaceDeclaration := range declarationMembers.Interfaces() {
 			checker.declareInterfaceMembersAndValue(nestedInterfaceDeclaration)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+		for _, nestedCompositeDeclaration := range declarationMembers.Composites() {
 			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
 				if nestedCompositeDeclaration.IsResourceDestructionDefaultEvent() {
 

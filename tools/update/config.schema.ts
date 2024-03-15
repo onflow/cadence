@@ -18,6 +18,10 @@ export interface Repo {
    */
   repo: string;
   /**
+   * The branch name
+   */
+  branch?: string;
+  /**
    * The modules of the repository
    */
   mods: Mod[];
@@ -26,6 +30,10 @@ export interface Repo {
    */
   needsRelease: boolean;
   updateLabels?: string[];
+  /**
+   * Prefix the PR title with the mod(s)
+   */
+  prefixPRTitle?: boolean;
 }
 export interface Mod {
   /**

@@ -28,6 +28,10 @@
           "type": "string",
           "description": "The repository name"
         },
+        "branch": {
+          "type": "string",
+          "description": "The branch name"
+        },
         "mods": {
           "type": "array",
           "items": {
@@ -44,6 +48,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "prefixPRTitle": {
+          "type": "boolean",
+          "description": "Prefix the PR title with the mod(s)"
         }
       },
       "additionalProperties": false,

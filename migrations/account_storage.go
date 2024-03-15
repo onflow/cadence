@@ -39,12 +39,15 @@ func NewAccountStorage(storage *runtime.Storage, address common.Address) Account
 	}
 }
 
-type StorageMapKeyMigrator func(
-	inter *interpreter.Interpreter,
-	storageKey interpreter.StorageKey,
-	storageMap *interpreter.StorageMap,
-	storageMapKey interpreter.StorageMapKey,
-)
+type StorageMapKeyMigrator interface {
+	Migrate(
+		inter *interpreter.Interpreter,
+		storageKey interpreter.StorageKey,
+		storageMap *interpreter.StorageMap,
+		storageMapKey interpreter.StorageMapKey,
+	)
+	Domains() map[string]struct{}
+}
 
 type ValueConverter func(
 	storageKey interpreter.StorageKey,
@@ -52,37 +55,56 @@ type ValueConverter func(
 	value interpreter.Value,
 ) interpreter.Value
 
-func NewValueConverterPathMigrator(convertValue ValueConverter) StorageMapKeyMigrator {
-	return func(
-		inter *interpreter.Interpreter,
-		storageKey interpreter.StorageKey,
-		storageMap *interpreter.StorageMap,
-		storageMapKey interpreter.StorageMapKey,
-	) {
-		value := storageMap.ReadValue(nil, storageMapKey)
+type ValueConverterPathMigrator struct {
+	domains      map[string]struct{}
+	ConvertValue ValueConverter
+}
 
-		newValue := convertValue(storageKey, storageMapKey, value)
-		if newValue != nil {
-			// If the converter returns a new value,
-			// then replace the existing value with the new one.
-			storageMap.SetValue(
-				inter,
-				storageMapKey,
-				newValue,
-			)
-		}
+var _ StorageMapKeyMigrator = ValueConverterPathMigrator{}
+
+func NewValueConverterPathMigrator(
+	domains map[string]struct{},
+	convertValue ValueConverter,
+) StorageMapKeyMigrator {
+	return ValueConverterPathMigrator{
+		domains:      domains,
+		ConvertValue: convertValue,
 	}
+}
+
+func (m ValueConverterPathMigrator) Migrate(
+	inter *interpreter.Interpreter,
+	storageKey interpreter.StorageKey,
+	storageMap *interpreter.StorageMap,
+	storageMapKey interpreter.StorageMapKey,
+) {
+	value := storageMap.ReadValue(nil, storageMapKey)
+
+	newValue := m.ConvertValue(storageKey, storageMapKey, value)
+	if newValue != nil {
+		// If the converter returns a new value,
+		// then replace the existing value with the new one.
+		storageMap.SetValue(
+			inter,
+			storageMapKey,
+			newValue,
+		)
+	}
+}
+
+func (m ValueConverterPathMigrator) Domains() map[string]struct{} {
+	return m.domains
 }
 
 func (i *AccountStorage) MigrateStringKeys(
 	inter *interpreter.Interpreter,
 	key string,
-	migrate StorageMapKeyMigrator,
+	migrator StorageMapKeyMigrator,
 ) {
 	i.MigrateStorageMap(
 		inter,
 		key,
-		migrate,
+		migrator,
 		func(key atree.Value) interpreter.StorageMapKey {
 			return interpreter.StringStorageMapKey(key.(interpreter.StringAtreeValue))
 		},
@@ -92,12 +114,12 @@ func (i *AccountStorage) MigrateStringKeys(
 func (i *AccountStorage) MigrateUint64Keys(
 	inter *interpreter.Interpreter,
 	key string,
-	migrate StorageMapKeyMigrator,
+	migrator StorageMapKeyMigrator,
 ) {
 	i.MigrateStorageMap(
 		inter,
 		key,
-		migrate,
+		migrator,
 		func(key atree.Value) interpreter.StorageMapKey {
 			return interpreter.Uint64StorageMapKey(key.(interpreter.Uint64AtreeValue))
 		},
@@ -107,10 +129,16 @@ func (i *AccountStorage) MigrateUint64Keys(
 func (i *AccountStorage) MigrateStorageMap(
 	inter *interpreter.Interpreter,
 	domain string,
-	migrate StorageMapKeyMigrator,
+	migrator StorageMapKeyMigrator,
 	atreeKeyToStorageMapKey func(atree.Value) interpreter.StorageMapKey,
 ) {
 	address := i.address
+
+	if domains := migrator.Domains(); domains != nil {
+		if _, ok := domains[domain]; !ok {
+			return
+		}
+	}
 
 	storageMap := i.storage.GetStorageMap(address, domain, false)
 	if storageMap == nil || storageMap.Count() == 0 {
@@ -131,7 +159,7 @@ func (i *AccountStorage) MigrateStorageMap(
 
 	for _, storageMapKey := range keys {
 
-		migrate(
+		migrator.Migrate(
 			inter,
 			storageKey,
 			storageMap,

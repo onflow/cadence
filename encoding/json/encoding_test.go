@@ -2458,7 +2458,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: &cadence.ReferenceType{
-					Authorization: cadence.EntitlementSetAuthorization{
+					Authorization: &cadence.EntitlementSetAuthorization{
 						Kind:         cadence.Conjunction,
 						Entitlements: []common.TypeID{"X", "Y"},
 					},
@@ -2507,7 +2507,7 @@ func TestEncodeType(t *testing.T) {
 			t,
 			cadence.TypeValue{
 				StaticType: &cadence.ReferenceType{
-					Authorization: cadence.EntitlementSetAuthorization{
+					Authorization: &cadence.EntitlementSetAuthorization{
 						Kind:         cadence.Disjunction,
 						Entitlements: []common.TypeID{"X", "Y"},
 					},

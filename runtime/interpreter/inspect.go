@@ -28,6 +28,11 @@ func (f valueInspector) WalkValue(_ *Interpreter, value Value) ValueWalker {
 	return nil
 }
 
-func InspectValue(interpreter *Interpreter, value Value, f func(Value) bool) {
-	WalkValue(interpreter, valueInspector(f), value)
+func InspectValue(interpreter *Interpreter, value Value, f func(Value) bool, locationRange LocationRange) {
+	WalkValue(
+		interpreter,
+		valueInspector(f),
+		value,
+		locationRange,
+	)
 }

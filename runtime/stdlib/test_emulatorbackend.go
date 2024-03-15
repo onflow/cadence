@@ -266,7 +266,11 @@ func (t *testEmulatorBackendType) newExecuteScriptFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			args, err := arrayValueToSlice(inter, invocation.Arguments[1])
+			args, err := arrayValueToSlice(
+				inter,
+				invocation.Arguments[1],
+				invocation.LocationRange,
+			)
 			if err != nil {
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
@@ -429,7 +433,7 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 				testTransactionTypeAuthorizersFieldName,
 			)
 
-			authorizers := addressArrayValueToSlice(inter, authorizerValue)
+			authorizers := addressArrayValueToSlice(inter, authorizerValue, locationRange)
 
 			// Get signers
 			signersValue := transactionValue.GetMember(
@@ -450,7 +454,7 @@ func (t *testEmulatorBackendType) newAddTransactionFunction(
 				locationRange,
 				testTransactionTypeArgumentsFieldName,
 			)
-			args, err := arrayValueToSlice(inter, argsValue)
+			args, err := arrayValueToSlice(inter, argsValue, locationRange)
 			if err != nil {
 				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
@@ -552,7 +556,11 @@ func (t *testEmulatorBackendType) newDeployContractFunction(
 			}
 
 			// Contract init arguments
-			args, err := arrayValueToSlice(inter, invocation.Arguments[2])
+			args, err := arrayValueToSlice(
+				inter,
+				invocation.Arguments[2],
+				invocation.LocationRange,
+			)
 			if err != nil {
 				panic(err)
 			}

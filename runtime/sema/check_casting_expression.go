@@ -204,15 +204,15 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 
 		switch typedSubType := subType.(type) {
 		case *IntersectionType:
-			// A intersection type `{Us}`
-			// is a subtype of a intersection type `{Vs}`:
+			// An intersection type `{Us}`
+			// is a subtype of an intersection type `{Vs}`:
 			// if the run-time type conforms to `Vs`
 			// `Us` and `Vs` do *not* have to be subsets.
 			return true
 
 		case *CompositeType:
 
-			// A type `T` is a subtype of a intersection type `{Us}`:
+			// A type `T` is a subtype of an intersection type `{Us}`:
 			//
 			// When `T != AnyResource && T != AnyStruct && T != Any`:
 			// if `T` conforms to `Us`.
@@ -224,7 +224,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 
 		switch subType {
 		case AnyResourceType, AnyStructType, AnyType:
-			// A type `T` is a subtype of a intersection type `{Us}`:
+			// A type `T` is a subtype of an intersection type `{Us}`:
 			// if the run-time type conforms to `Vs`
 
 			return true
@@ -234,7 +234,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 		switch subType.(type) {
 		case *IntersectionType:
 
-			// A intersection type `{Us}` is a subtype of a type `V`:
+			// An intersection type `{Us}` is a subtype of a type `V`:
 			// if the run-time type is V.
 			return true
 		}
@@ -244,7 +244,7 @@ func FailableCastCanSucceed(subType, superType Type) bool {
 	switch superType {
 	case AnyResourceType, AnyStructType:
 
-		// A intersection type `{Us}` or a type `T` s a subtype of the type `AnyResource` / `AnyStruct`:
+		// An intersection type `{Us}` or a type `T` s a subtype of the type `AnyResource` / `AnyStruct`:
 		// if `T` is `AnyType`, or `T` is a subtype of `AnyResource` / `AnyStruct`, or if `Us` are subtypes of `AnyResource` / `AnyStruct`
 
 		innerSubtype := subType

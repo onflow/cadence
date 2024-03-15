@@ -45,6 +45,7 @@ type rawFieldsWithCCFTypeID struct {
 //		  / contract-type
 //		  / event-type
 //		  / enum-type
+//		  / attachment-type
 //		  / struct-interface-type
 //		  / resource-interface-type
 //		  / contract-interface-type
@@ -169,6 +170,11 @@ func (d *Decoder) decodeTypeDefs() (*cadenceTypeByCCFTypeID, error) {
 //	; cbor-tag-enum-type
 //	#6.164(composite-type)
 //
+// attachment-type =
+//
+//	; cbor-tag-attachment-type
+//	#6.165(composite-type)
+//
 // struct-interface-type =
 //
 //	; cbor-tag-struct-interface-type
@@ -252,6 +258,19 @@ func (d *Decoder) decodeTypeDef(
 				location,
 				identifier,
 				nil,
+				nil,
+				nil,
+			)
+		}
+		return d.decodeCompositeType(types, ctr)
+
+	case CBORTagAttachmentType:
+		ctr := func(location common.Location, identifier string) cadence.Type {
+			return cadence.NewMeteredAttachmentType(
+				d.gauge,
+				location,
+				nil,
+				identifier,
 				nil,
 				nil,
 			)

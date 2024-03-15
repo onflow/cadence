@@ -429,63 +429,6 @@ func TestCheckCompositeTypeConstructor(t *testing.T) {
 	}
 }
 
-func TestCheckInterfaceTypeConstructor(t *testing.T) {
-
-	t.Parallel()
-
-	cases := []struct {
-		name          string
-		code          string
-		expectedError error
-	}{
-		{
-			name: "R",
-			code: `
-              let result = InterfaceType("R")
-            `,
-			expectedError: nil,
-		},
-		{
-			name: "type mismatch",
-			code: `
-              let result = InterfaceType(3)
-            `,
-			expectedError: &sema.TypeMismatchError{},
-		},
-		{
-			name: "too many args",
-			code: `
-              let result = InterfaceType("", 3)
-            `,
-			expectedError: &sema.ExcessiveArgumentsError{},
-		},
-		{
-			name: "no args",
-			code: `
-              let result = InterfaceType()
-            `,
-			expectedError: &sema.InsufficientArgumentsError{},
-		},
-	}
-
-	for _, testCase := range cases {
-		t.Run(testCase.name, func(t *testing.T) {
-			checker, err := ParseAndCheck(t, testCase.code)
-
-			if testCase.expectedError == nil {
-				require.NoError(t, err)
-				assert.Equal(t,
-					&sema.OptionalType{Type: sema.MetaType},
-					RequireGlobalValue(t, checker.Elaboration, "result"),
-				)
-			} else {
-				errs := RequireCheckerErrors(t, err, 1)
-				assert.IsType(t, testCase.expectedError, errs[0])
-			}
-		})
-	}
-}
-
 func TestCheckFunctionTypeConstructor(t *testing.T) {
 
 	t.Parallel()

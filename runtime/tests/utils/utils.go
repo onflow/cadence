@@ -79,16 +79,6 @@ func AssertEqualWithDiff(t *testing.T, expected, actual any) {
 			s.String(),
 		)
 	}
-
-}
-
-func AsInterfaceType(name string, kind common.CompositeKind) string {
-	switch kind {
-	case common.CompositeKindResource, common.CompositeKindStructure:
-		return fmt.Sprintf("{%s}", name)
-	default:
-		return name
-	}
 }
 
 func DeploymentTransaction(name string, contract []byte) []byte {

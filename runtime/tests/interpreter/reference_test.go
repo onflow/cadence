@@ -3144,3 +3144,66 @@ func TestInterpretDereference(t *testing.T) {
 
 	})
 }
+
+func TestInterpretOptionalReference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("present", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+          fun present(): &Int {
+              let x: Int? = 1
+              let y = &x as &Int?
+              return y!
+          }
+        `)
+
+		value, err := inter.Invoke("present")
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			&interpreter.EphemeralReferenceValue{
+				Value:         interpreter.NewUnmeteredIntValueFromInt64(1),
+				BorrowedType:  sema.IntType,
+				Authorization: interpreter.UnauthorizedAccess,
+			},
+			value,
+		)
+
+	})
+
+	t.Run("absent", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun absent(): &Int {
+              let x: Int? = nil
+              let y = &x as &Int?
+              return y!
+          }
+        `)
+
+		_, err := inter.Invoke("absent")
+		RequireError(t, err)
+
+		var forceNilError interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
+	})
+
+	t.Run("nested optional reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                var dict: {String: Foo?} = {}
+                var ref: (&Foo)?? = &dict["foo"] as &Foo??
+            }
+
+            struct Foo {}
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+}

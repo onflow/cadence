@@ -589,16 +589,21 @@ func TestInterpretRandomArrayOperations(t *testing.T) {
 		require.Equal(t, testArray.Count(), len(elements))
 
 		index := 0
-		testArray.Iterate(inter, func(element interpreter.Value) (resume bool) {
-			orgElement := elements[index]
-			utils.AssertValuesEqual(t, inter, orgElement, element)
+		testArray.Iterate(
+			inter,
+			func(element interpreter.Value) (resume bool) {
+				orgElement := elements[index]
+				utils.AssertValuesEqual(t, inter, orgElement, element)
 
-			elementByIndex := testArray.Get(inter, interpreter.EmptyLocationRange, index)
-			utils.AssertValuesEqual(t, inter, element, elementByIndex)
+				elementByIndex := testArray.Get(inter, interpreter.EmptyLocationRange, index)
+				utils.AssertValuesEqual(t, inter, element, elementByIndex)
 
-			index++
-			return true
-		})
+				index++
+				return true
+			},
+			false,
+			interpreter.EmptyLocationRange,
+		)
 	})
 
 	t.Run("deep copy", func(t *testing.T) {

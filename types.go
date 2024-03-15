@@ -1308,7 +1308,17 @@ type FunctionPurity int
 const (
 	FunctionPurityUnspecified FunctionPurity = iota
 	FunctionPurityView
+
+	// DO NOT add item after maxFunctionPurity
+	maxFunctionPurity
 )
+
+func NewFunctionaryPurity(rawPurity int) (FunctionPurity, error) {
+	if rawPurity < 0 || rawPurity >= int(maxFunctionPurity) {
+		return FunctionPurityUnspecified, fmt.Errorf("failed to convert %d to FunctionPurity", rawPurity)
+	}
+	return FunctionPurity(rawPurity), nil
+}
 
 type FunctionType struct {
 	TypeParameters []TypeParameter
@@ -1418,6 +1428,12 @@ func (t *FunctionType) Equal(other Type) bool {
 		}
 	}
 
+	// Purity
+
+	if t.Purity != otherType.Purity {
+		return false
+	}
+
 	return t.ReturnType.Equal(otherType.ReturnType)
 }
 
@@ -1450,30 +1466,32 @@ const Conjunction = sema.Conjunction
 const Disjunction = sema.Disjunction
 
 type EntitlementSetAuthorization struct {
-	Entitlements []common.TypeID
-	Kind         EntitlementSetKind
+	Entitlements       []common.TypeID
+	Kind               EntitlementSetKind
+	entitlementSet     map[common.TypeID]struct{}
+	entitlementSetOnce sync.Once
 }
 
-var _ Authorization = EntitlementSetAuthorization{}
+var _ Authorization = &EntitlementSetAuthorization{}
 
 func NewEntitlementSetAuthorization(
 	gauge common.MemoryGauge,
 	entitlements []common.TypeID,
 	kind EntitlementSetKind,
-) EntitlementSetAuthorization {
+) *EntitlementSetAuthorization {
 	common.UseMemory(gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceEntitlementSetAccess,
 		Amount: uint64(len(entitlements)),
 	})
-	return EntitlementSetAuthorization{
+	return &EntitlementSetAuthorization{
 		Entitlements: entitlements,
 		Kind:         kind,
 	}
 }
 
-func (EntitlementSetAuthorization) isAuthorization() {}
+func (*EntitlementSetAuthorization) isAuthorization() {}
 
-func (e EntitlementSetAuthorization) ID() string {
+func (e *EntitlementSetAuthorization) ID() string {
 	entitlementTypeIDs := make([]string, 0, len(e.Entitlements))
 	for _, typeID := range e.Entitlements {
 		entitlementTypeIDs = append(
@@ -1486,21 +1504,38 @@ func (e EntitlementSetAuthorization) ID() string {
 	return sema.FormatEntitlementSetTypeID(entitlementTypeIDs, e.Kind)
 }
 
-func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
+func (e *EntitlementSetAuthorization) Equal(auth Authorization) bool {
 	switch auth := auth.(type) {
-	case EntitlementSetAuthorization:
+	case *EntitlementSetAuthorization:
 		if len(e.Entitlements) != len(auth.Entitlements) {
 			return false
 		}
 
-		for i, entitlement := range e.Entitlements {
-			if auth.Entitlements[i] != entitlement {
+		// sets are equivalent if they contain the same elements, regardless of order
+		otherEntitlementSet := auth.getEntitlementSet()
+
+		for _, entitlement := range e.Entitlements {
+			if _, exist := otherEntitlementSet[entitlement]; !exist {
 				return false
 			}
 		}
 		return e.Kind == auth.Kind
 	}
 	return false
+}
+
+func (t *EntitlementSetAuthorization) initializeEntitlementSet() {
+	t.entitlementSetOnce.Do(func() {
+		t.entitlementSet = make(map[common.TypeID]struct{}, len(t.Entitlements))
+		for _, e := range t.Entitlements {
+			t.entitlementSet[e] = struct{}{}
+		}
+	})
+}
+
+func (t *EntitlementSetAuthorization) getEntitlementSet() map[common.TypeID]struct{} {
+	t.initializeEntitlementSet()
+	return t.entitlementSet
 }
 
 type EntitlementMapAuthorization struct {

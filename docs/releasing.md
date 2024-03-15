@@ -60,10 +60,10 @@ base branch (`master` in this case).
   ```
   mkdir tmp
   ```
-- Download contracts for **mainnet**, by running the batch-script tool.
+- Download contracts for **mainnet**, by running the `get-contracts` tool.
   ```
-  cd ./tools/batch-script
-  go run ./cmd/get_contracts/main.go --chain=flow-mainnet --u=access.mainnet.nodes.onflow.org:9000 > ../../tmp/mainnet_contracts.csv
+  cd ./tools/get-contracts
+  go run . --chain=mainnet --apiKey=FILL_ME_IN > ../../tmp/mainnet_contracts.csv
   cd ../..
   ```
 - Navigate to the `compatibility-check` tool and update it to use the Cadence branch from which the new release
@@ -92,8 +92,8 @@ base branch (`master` in this case).
   go run ./cmd/check_diff/main.go ../../tmp/output-old.txt ../../tmp/output-new.txt
   ```
 - If there is a difference in the errors reported, then there are potential breaking changes.
-- Repeat the same steps for **testnet** as well. Use `--chain=flow-testnet --u=access.testnet.nodes.onflow.org:9000`
-  flags when running the `go run ./cmd/get_contracts/main.go` command.
+- Repeat the same steps for **testnet** as well. Use `--chain=testnet`
+  flags when running the `go run .` command.
 
 If it is deemed that there are no breaking changes, proceed to the [Releasing](#releasing-1) steps.
 

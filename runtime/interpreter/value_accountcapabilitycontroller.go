@@ -45,7 +45,7 @@ type AccountCapabilityControllerValue struct {
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
 	// when the controller is loaded for borrowing/checking
-	GetCapability func(inter *Interpreter) *CapabilityValue
+	GetCapability func(inter *Interpreter) *IDCapabilityValue
 	GetTag        func(inter *Interpreter) *StringValue
 	SetTag        func(inter *Interpreter, tag *StringValue)
 	Delete        func(inter *Interpreter, locationRange LocationRange)
@@ -88,11 +88,11 @@ func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() *Ref
 	return v.BorrowType
 }
 
-func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
+func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitAccountCapabilityControllerValue(interpreter, v)
 }
 
-func (v *AccountCapabilityControllerValue) Walk(_ *Interpreter, _ LocationRange, walkChild func(Value)) {
+func (v *AccountCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
 	walkChild(v.CapabilityID)
 }
 
@@ -100,7 +100,7 @@ func (v *AccountCapabilityControllerValue) StaticType(_ *Interpreter) StaticType
 	return PrimitiveStaticTypeAccountCapabilityController
 }
 
-func (*AccountCapabilityControllerValue) IsImportable(_ *Interpreter) bool {
+func (*AccountCapabilityControllerValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 

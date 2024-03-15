@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 	"strconv"
 	"time"
 
@@ -158,6 +159,9 @@ type UUIDHandlerFunc func() (uint64, error)
 
 // CompositeTypeHandlerFunc is a function that loads composite types.
 type CompositeTypeHandlerFunc func(location common.Location, typeID TypeID) *sema.CompositeType
+
+// InterfaceTypeHandlerFunc is a function that loads interface types.
+type InterfaceTypeHandlerFunc func(location common.Location, typeID TypeID) *sema.InterfaceType
 
 // CompositeValueFunctionsHandlerFunc is a function that loads composite value functions.
 type CompositeValueFunctionsHandlerFunc func(
@@ -2146,7 +2150,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			targetBorrowType := unwrappedTargetType.BorrowType.(*sema.ReferenceType)
 
 			switch capability := value.(type) {
-			case *CapabilityValue:
+			case *IDCapabilityValue:
 				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
 				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
 				return NewCapabilityValue(
@@ -3324,7 +3328,7 @@ func lookupEntitlement(interpreter *Interpreter, typeID string) (*sema.Entitleme
 		return nil, err
 	}
 
-	typ, err := interpreter.getEntitlement(common.TypeID(typeID))
+	typ, err := interpreter.GetEntitlementType(common.TypeID(typeID))
 	if err != nil {
 		return nil, err
 	}
@@ -3392,15 +3396,6 @@ func init() {
 		NewUnmeteredHostFunctionValue(
 			sema.ReferenceTypeFunctionType,
 			referenceTypeFunction,
-		),
-	)
-
-	defineBaseValue(
-		BaseActivation,
-		sema.InterfaceTypeFunctionName,
-		NewUnmeteredHostFunctionValue(
-			sema.InterfaceTypeFunctionType,
-			interfaceTypeFunction,
 		),
 	)
 
@@ -3479,22 +3474,27 @@ func referenceTypeFunction(invocation Invocation) Value {
 			invocation.Interpreter,
 			func() []common.TypeID {
 				entitlements := make([]common.TypeID, 0, entitlementsCount)
-				entitlementValues.Iterate(invocation.Interpreter, func(element Value) (resume bool) {
-					entitlementString, isString := element.(*StringValue)
-					if !isString {
-						errInIteration = true
-						return false
-					}
+				entitlementValues.Iterate(
+					invocation.Interpreter,
+					func(element Value) (resume bool) {
+						entitlementString, isString := element.(*StringValue)
+						if !isString {
+							errInIteration = true
+							return false
+						}
 
-					_, err := lookupEntitlement(invocation.Interpreter, entitlementString.Str)
-					if err != nil {
-						errInIteration = true
-						return false
-					}
-					entitlements = append(entitlements, common.TypeID(entitlementString.Str))
+						_, err := lookupEntitlement(invocation.Interpreter, entitlementString.Str)
+						if err != nil {
+							errInIteration = true
+							return false
+						}
+						entitlements = append(entitlements, common.TypeID(entitlementString.Str))
 
-					return true
-				})
+						return true
+					},
+					false,
+					invocation.LocationRange,
+				)
 				return entitlements
 			},
 			entitlementsCount,
@@ -3540,27 +3540,6 @@ func compositeTypeFunction(invocation Invocation) Value {
 	)
 }
 
-func interfaceTypeFunction(invocation Invocation) Value {
-	typeIDValue, ok := invocation.Arguments[0].(*StringValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	typeID := typeIDValue.Str
-
-	interfaceType, err := lookupInterface(invocation.Interpreter, typeID)
-	if err != nil {
-		return Nil
-	}
-
-	return NewSomeValueNonCopying(
-		invocation.Interpreter,
-		NewTypeValue(
-			invocation.Interpreter,
-			ConvertSemaToStaticType(invocation.Interpreter, interfaceType),
-		),
-	)
-}
-
 func functionTypeFunction(invocation Invocation) Value {
 	interpreter := invocation.Interpreter
 
@@ -3580,18 +3559,23 @@ func functionTypeFunction(invocation Invocation) Value {
 	parameterCount := parameters.Count()
 	if parameterCount > 0 {
 		parameterTypes = make([]sema.Parameter, 0, parameterCount)
-		parameters.Iterate(interpreter, func(param Value) bool {
-			semaType := interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
-			parameterTypes = append(
-				parameterTypes,
-				sema.Parameter{
-					TypeAnnotation: sema.NewTypeAnnotation(semaType),
-				},
-			)
+		parameters.Iterate(
+			interpreter,
+			func(param Value) bool {
+				semaType := interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
+				parameterTypes = append(
+					parameterTypes,
+					sema.Parameter{
+						TypeAnnotation: sema.NewTypeAnnotation(semaType),
+					},
+				)
 
-			// Continue iteration
-			return true
-		})
+				// Continue iteration
+				return true
+			},
+			false,
+			invocation.LocationRange,
+		)
 	}
 	functionStaticType := NewFunctionStaticType(
 		interpreter,
@@ -3619,27 +3603,32 @@ func intersectionTypeFunction(invocation Invocation) Value {
 		semaIntersections = make([]*sema.InterfaceType, 0, count)
 
 		var invalidIntersectionID bool
-		intersectionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
-			typeIDValue, ok := typeID.(*StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+		intersectionIDs.Iterate(
+			invocation.Interpreter,
+			func(typeID Value) bool {
+				typeIDValue, ok := typeID.(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
-			intersectedInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
-			if err != nil {
-				invalidIntersectionID = true
+				intersectedInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
+				if err != nil {
+					invalidIntersectionID = true
+					return true
+				}
+
+				staticIntersections = append(
+					staticIntersections,
+					ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(*InterfaceStaticType),
+				)
+				semaIntersections = append(semaIntersections, intersectedInterface)
+
+				// Continue iteration
 				return true
-			}
-
-			staticIntersections = append(
-				staticIntersections,
-				ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(*InterfaceStaticType),
-			)
-			semaIntersections = append(semaIntersections, intersectedInterface)
-
-			// Continue iteration
-			return true
-		})
+			},
+			false,
+			invocation.LocationRange,
+		)
 
 		// If there are any invalid interfaces,
 		// then return nil
@@ -4171,7 +4160,7 @@ func (interpreter *Interpreter) checkValue(
 	//	1) The actual stored value (storage path)
 	//	2) A capability to the value at the storage (private/public paths)
 
-	if capability, ok := value.(*CapabilityValue); ok {
+	if capability, ok := value.(*IDCapabilityValue); ok {
 		// If, the value is a capability, try to load the value at the capability target.
 		// However, borrow type is not statically known.
 		// So take the borrow type from the value itself
@@ -4493,7 +4482,7 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 	)
 }
 
-func (interpreter *Interpreter) getEntitlement(typeID common.TypeID) (*sema.EntitlementType, error) {
+func (interpreter *Interpreter) GetEntitlementType(typeID common.TypeID) (*sema.EntitlementType, error) {
 	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(typeID))
 	if err != nil {
 		return nil, err
@@ -4527,7 +4516,7 @@ func (interpreter *Interpreter) getEntitlement(typeID common.TypeID) (*sema.Enti
 	return ty, nil
 }
 
-func (interpreter *Interpreter) getEntitlementMapType(typeID common.TypeID) (*sema.EntitlementMapType, error) {
+func (interpreter *Interpreter) GetEntitlementMapType(typeID common.TypeID) (*sema.EntitlementMapType, error) {
 	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(typeID))
 	if err != nil {
 		return nil, err
@@ -4566,10 +4555,7 @@ func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (
 	return ConvertStaticToSemaType(
 		config.MemoryGauge,
 		staticType,
-		interpreter.GetInterfaceType,
-		interpreter.GetCompositeType,
-		interpreter.getEntitlement,
-		interpreter.getEntitlementMapType,
+		interpreter,
 	)
 }
 
@@ -4589,8 +4575,7 @@ func (interpreter *Interpreter) MustConvertStaticAuthorizationToSemaAccess(auth 
 	access, err := ConvertStaticAuthorizationToSemaAccess(
 		interpreter,
 		auth,
-		interpreter.getEntitlement,
-		interpreter.getEntitlementMapType,
+		interpreter,
 	)
 	if err != nil {
 		panic(err)
@@ -4611,6 +4596,35 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 	}
 
 	return subInterpreter.Program.Elaboration
+}
+
+func (interpreter *Interpreter) AllElaborations() (elaborations map[common.Location]*sema.Elaboration) {
+
+	elaborations = map[common.Location]*sema.Elaboration{}
+
+	allInterpreters := interpreter.SharedState.allInterpreters
+
+	locations := make([]common.Location, 0, len(allInterpreters))
+
+	for location := range allInterpreters { //nolint:maprange
+		locations = append(locations, location)
+	}
+
+	sort.Slice(locations, func(i, j int) bool {
+		a := locations[i]
+		b := locations[j]
+		return a.ID() < b.ID()
+	})
+
+	for _, location := range locations {
+		elaboration := interpreter.getElaboration(location)
+		if elaboration == nil {
+			panic(errors.NewUnexpectedError("missing elaboration for location %s", location))
+		}
+		elaborations[location] = elaboration
+	}
+
+	return
 }
 
 // GetContractComposite gets the composite value of the contract at the address location.
@@ -4763,7 +4777,18 @@ func (interpreter *Interpreter) GetInterfaceType(
 	typeID TypeID,
 ) (*sema.InterfaceType, error) {
 	if location == nil {
-		return nil, InterfaceMissingLocationError{QualifiedIdentifier: qualifiedIdentifier}
+		return nil, InterfaceMissingLocationError{
+			QualifiedIdentifier: qualifiedIdentifier,
+		}
+	}
+
+	config := interpreter.SharedState.Config
+	interfaceTypeHandler := config.InterfaceTypeHandler
+	if interfaceTypeHandler != nil {
+		interfaceType := interfaceTypeHandler(location, typeID)
+		if interfaceType != nil {
+			return interfaceType, nil
+		}
 	}
 
 	elaboration := interpreter.getElaboration(location)
@@ -5203,7 +5228,10 @@ func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 }
 
 // TODO: Remove the `destroyed` flag
-func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
+func (interpreter *Interpreter) invalidateReferencedResources(
+	value Value,
+	locationRange LocationRange,
+) {
 	// skip non-resource typed values
 	if !value.IsResourceKinded(interpreter) {
 		return
@@ -5216,7 +5244,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 		value.ForEachLoadedField(
 			interpreter,
 			func(_ string, fieldValue Value) (resume bool) {
-				interpreter.invalidateReferencedResources(fieldValue)
+				interpreter.invalidateReferencedResources(fieldValue, locationRange)
 				// continue iteration
 				return true
 			},
@@ -5227,7 +5255,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 		value.IterateLoaded(
 			interpreter,
 			func(_, value Value) (resume bool) {
-				interpreter.invalidateReferencedResources(value)
+				interpreter.invalidateReferencedResources(value, locationRange)
 				return true
 			},
 		)
@@ -5237,14 +5265,15 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 		value.IterateLoaded(
 			interpreter,
 			func(element Value) (resume bool) {
-				interpreter.invalidateReferencedResources(element)
+				interpreter.invalidateReferencedResources(element, locationRange)
 				return true
 			},
+			locationRange,
 		)
 		valueID = value.ValueID()
 
 	case *SomeValue:
-		interpreter.invalidateReferencedResources(value.value)
+		interpreter.invalidateReferencedResources(value.value, locationRange)
 		return
 
 	default:

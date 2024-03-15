@@ -26,10 +26,5 @@ type Reporter interface {
 		storageMapKey interpreter.StorageMapKey,
 		migration string,
 	)
-	Error(
-		storageKey interpreter.StorageKey,
-		storageMapKey interpreter.StorageMapKey,
-		migration string,
-		err error,
-	)
+	Error(err error)
 }
