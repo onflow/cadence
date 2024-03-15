@@ -19,8 +19,11 @@
 package string_normalization
 
 import (
+	"golang.org/x/text/unicode/norm"
+
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 type StringNormalizingMigration struct{}
@@ -40,14 +43,81 @@ func (StringNormalizingMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) (interpreter.Value, error) {
+) (
+	interpreter.Value,
+	error,
+) {
+
+	// Normalize strings and characters to NFC.
+	// If the value is already in NFC, skip the migration.
+
 	switch value := value.(type) {
 	case *interpreter.StringValue:
-		return interpreter.NewUnmeteredStringValue(value.Str), nil
+		unnormalizedStr := value.UnnormalizedStr
+		normalizedStr := norm.NFC.String(unnormalizedStr)
+		if normalizedStr == unnormalizedStr {
+			return nil, nil
+		}
+		return interpreter.NewStringValue_Unsafe(normalizedStr, unnormalizedStr), nil //nolint:staticcheck
 
 	case interpreter.CharacterValue:
-		return interpreter.NewUnmeteredCharacterValue(value.Str), nil
+		unnormalizedStr := value.UnnormalizedStr
+		normalizedStr := norm.NFC.String(unnormalizedStr)
+		if normalizedStr == unnormalizedStr {
+			return nil, nil
+		}
+		return interpreter.NewCharacterValue_Unsafe(normalizedStr, unnormalizedStr), nil //nolint:staticcheck
 	}
 
 	return nil, nil
+}
+
+func (StringNormalizingMigration) Domains() map[string]struct{} {
+	return nil
+}
+
+func (m StringNormalizingMigration) CanSkip(valueType interpreter.StaticType) bool {
+	return CanSkipStringNormalizingMigration(valueType)
+}
+
+func CanSkipStringNormalizingMigration(valueType interpreter.StaticType) bool {
+	switch ty := valueType.(type) {
+	case *interpreter.DictionaryStaticType:
+		return CanSkipStringNormalizingMigration(ty.KeyType) &&
+			CanSkipStringNormalizingMigration(ty.ValueType)
+
+	case interpreter.ArrayStaticType:
+		return CanSkipStringNormalizingMigration(ty.ElementType())
+
+	case *interpreter.OptionalStaticType:
+		return CanSkipStringNormalizingMigration(ty.Type)
+
+	case *interpreter.CapabilityStaticType:
+		return true
+
+	case interpreter.PrimitiveStaticType:
+
+		switch ty {
+		case interpreter.PrimitiveStaticTypeBool,
+			interpreter.PrimitiveStaticTypeVoid,
+			interpreter.PrimitiveStaticTypeAddress,
+			interpreter.PrimitiveStaticTypeMetaType,
+			interpreter.PrimitiveStaticTypeBlock,
+			interpreter.PrimitiveStaticTypeCapability:
+
+			return true
+		}
+
+		if !ty.IsDeprecated() { //nolint:staticcheck
+			semaType := ty.SemaType()
+
+			if sema.IsSubType(semaType, sema.NumberType) ||
+				sema.IsSubType(semaType, sema.PathType) {
+
+				return true
+			}
+		}
+	}
+
+	return false
 }

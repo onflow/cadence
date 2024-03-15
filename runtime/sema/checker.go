@@ -937,40 +937,45 @@ func CheckIntersectionType(
 
 		// The intersections may not have clashing members
 
-		// TODO: also include interface conformances' members
-		//   once interfaces can have conformances
+		checkClashingMember := func(interfaceType *InterfaceType) {
+			interfaceType.Members.Foreach(func(name string, member *Member) {
 
-		interfaceType.Members.Foreach(func(name string, member *Member) {
-			if previousDeclaringInterfaceType, ok := memberSet[name]; ok {
+				if previousDeclaringInterfaceType, ok := memberSet[name]; ok {
 
-				// If there is an overlap in members, ensure the members have the same type
+					// If there is an overlap in members, ensure the members have the same type
 
-				memberType := member.TypeAnnotation.Type
+					memberType := member.TypeAnnotation.Type
 
-				prevMemberType, ok := previousDeclaringInterfaceType.Members.Get(name)
-				if !ok {
-					panic(errors.NewUnreachableError())
+					prevMemberType, ok := previousDeclaringInterfaceType.Members.Get(name)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					previousMemberType := prevMemberType.TypeAnnotation.Type
+
+					if !memberType.IsInvalidType() &&
+						!previousMemberType.IsInvalidType() &&
+						!memberType.Equal(previousMemberType) {
+
+						report(func(t *ast.IntersectionType) error {
+							return &IntersectionMemberClashError{
+								Name:                  name,
+								RedeclaringType:       interfaceType,
+								OriginalDeclaringType: previousDeclaringInterfaceType,
+								Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
+							}
+						})
+					}
+				} else {
+					memberSet[name] = interfaceType
 				}
+			})
+		}
 
-				previousMemberType := prevMemberType.TypeAnnotation.Type
+		checkClashingMember(interfaceType)
 
-				if !memberType.IsInvalidType() &&
-					!previousMemberType.IsInvalidType() &&
-					!memberType.Equal(previousMemberType) {
-
-					report(func(t *ast.IntersectionType) error {
-						return &IntersectionMemberClashError{
-							Name:                  name,
-							RedeclaringType:       interfaceType,
-							OriginalDeclaringType: previousDeclaringInterfaceType,
-							Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
-						}
-					})
-				}
-			} else {
-				memberSet[name] = interfaceType
-			}
-		})
+		interfaceType.EffectiveInterfaceConformanceSet().
+			ForEach(checkClashingMember)
 	}
 
 	// If no intersection type is given, infer `AnyResource`/`AnyStruct`
@@ -982,18 +987,22 @@ func CheckIntersectionType(
 		// the type is ambiguous.
 
 		report(func(t *ast.IntersectionType) error {
-			return &AmbiguousIntersectionTypeError{Range: ast.NewRangeFromPositioned(memoryGauge, t)}
+			return &AmbiguousIntersectionTypeError{
+				Range: ast.NewRangeFromPositioned(memoryGauge, t),
+			}
 		})
 		return InvalidType
 
-	case common.CompositeKindResource, common.CompositeKindStructure:
+	case common.CompositeKindResource,
+		common.CompositeKindStructure,
+		common.CompositeKindContract:
 		break
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
 
-	return NewIntersectionType(memoryGauge, types)
+	return NewIntersectionType(memoryGauge, nil, types)
 }
 
 func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
@@ -1011,8 +1020,7 @@ func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
 		if ok {
 			intersectedCompositeKind = intersectedInterfaceType.CompositeKind
 		}
-		if !ok || (intersectedCompositeKind != common.CompositeKindResource &&
-			intersectedCompositeKind != common.CompositeKindStructure) {
+		if !ok || !intersectedCompositeKind.SupportsInterfaces() {
 
 			if !intersectedResult.IsInvalidType() {
 				checker.report(&InvalidIntersectedTypeError{
@@ -2119,8 +2127,9 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 						)
 					}
 				}
-				result = PrimitiveAccess(ast.AccessNotSpecified)
-				return
+				// construct a new "entitlement" type from the nominal type in the AST, but mark it as invalid for better error messages
+				entitlementType = NewEntitlementType(checker.memoryGauge, checker.Location, entitlement.Identifier.Identifier)
+				entitlementType.isInvalid = true
 			}
 			semanticEntitlements = append(semanticEntitlements, entitlementType)
 		}

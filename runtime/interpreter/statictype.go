@@ -1011,10 +1011,17 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 			}
 		}
 
-		return NewIntersectionStaticType(
+		intersectionType := NewIntersectionStaticType(
 			memoryGauge,
 			intersectedTypes,
 		)
+
+		legacyType := t.LegacyType //nolint:staticcheck
+		if legacyType != nil {
+			intersectionType.LegacyType = ConvertSemaToStaticType(memoryGauge, legacyType)
+		}
+
+		return intersectionType
 
 	case *sema.ReferenceType:
 		return ConvertSemaReferenceTypeToStaticReferenceType(memoryGauge, t)
@@ -1147,14 +1154,18 @@ func ConvertSemaInterfaceTypeToStaticInterfaceType(
 func ConvertStaticAuthorizationToSemaAccess(
 	memoryGauge common.MemoryGauge,
 	auth Authorization,
-	getEntitlement func(typeID common.TypeID) (*sema.EntitlementType, error),
-	getEntitlementMapType func(typeID common.TypeID) (*sema.EntitlementMapType, error),
-) (sema.Access, error) {
+	handler StaticAuthorizationConversionHandler,
+) (
+	sema.Access,
+	error,
+) {
+
 	switch auth := auth.(type) {
 	case Unauthorized:
 		return sema.UnauthorizedAccess, nil
+
 	case EntitlementMapAuthorization:
-		entitlement, err := getEntitlementMapType(auth.TypeID)
+		entitlement, err := handler.GetEntitlementMapType(auth.TypeID)
 		if err != nil {
 			return nil, err
 		}
@@ -1163,7 +1174,7 @@ func ConvertStaticAuthorizationToSemaAccess(
 	case EntitlementSetAuthorization:
 		var entitlements []*sema.EntitlementType
 		err := auth.Entitlements.ForeachWithError(func(id common.TypeID, value struct{}) error {
-			entitlement, err := getEntitlement(id)
+			entitlement, err := handler.GetEntitlementType(id)
 			if err != nil {
 				return err
 			}
@@ -1179,29 +1190,42 @@ func ConvertStaticAuthorizationToSemaAccess(
 	panic(errors.NewUnreachableError())
 }
 
+type StaticAuthorizationConversionHandler interface {
+	GetEntitlementType(typeID TypeID) (*sema.EntitlementType, error)
+	GetEntitlementMapType(typeID TypeID) (*sema.EntitlementMapType, error)
+}
+
+type StaticTypeConversionHandler interface {
+	StaticAuthorizationConversionHandler
+	GetInterfaceType(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error)
+	GetCompositeType(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error)
+}
+
 func ConvertStaticToSemaType(
 	memoryGauge common.MemoryGauge,
 	typ StaticType,
-	getInterface func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error),
-	getComposite func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error),
-	getEntitlement func(typeID TypeID) (*sema.EntitlementType, error),
-	getEntitlementMapType func(typeID TypeID) (*sema.EntitlementMapType, error),
+	handler StaticTypeConversionHandler,
 ) (_ sema.Type, err error) {
 	switch t := typ.(type) {
 	case *CompositeStaticType:
-		return getComposite(t.Location, t.QualifiedIdentifier, t.TypeID)
+		return handler.GetCompositeType(
+			t.Location,
+			t.QualifiedIdentifier,
+			t.TypeID,
+		)
 
 	case *InterfaceStaticType:
-		return getInterface(t.Location, t.QualifiedIdentifier, t.TypeID)
+		return handler.GetInterfaceType(
+			t.Location,
+			t.QualifiedIdentifier,
+			t.TypeID,
+		)
 
 	case *VariableSizedStaticType:
 		ty, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.Type,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 		if err != nil {
 			return nil, err
@@ -1212,10 +1236,7 @@ func ConvertStaticToSemaType(
 		ty, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.Type,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 		if err != nil {
 			return nil, err
@@ -1231,10 +1252,7 @@ func ConvertStaticToSemaType(
 		keyType, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.KeyType,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 		if err != nil {
 			return nil, err
@@ -1243,10 +1261,7 @@ func ConvertStaticToSemaType(
 		valueType, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.ValueType,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 		if err != nil {
 			return nil, err
@@ -1262,10 +1277,7 @@ func ConvertStaticToSemaType(
 		elementType, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.ElementType,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 		if err != nil {
 			return nil, err
@@ -1280,10 +1292,7 @@ func ConvertStaticToSemaType(
 		ty, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.Type,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 		if err != nil {
 			return nil, err
@@ -1291,6 +1300,19 @@ func ConvertStaticToSemaType(
 		return sema.NewOptionalType(memoryGauge, ty), err
 
 	case *IntersectionStaticType:
+		var convertedLegacyType sema.Type
+		legacyType := t.LegacyType
+		if legacyType != nil {
+			convertedLegacyType, err = ConvertStaticToSemaType(
+				memoryGauge,
+				legacyType,
+				handler,
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		var intersectedTypes []*sema.InterfaceType
 
 		typeCount := len(t.Types)
@@ -1298,7 +1320,11 @@ func ConvertStaticToSemaType(
 			intersectedTypes = make([]*sema.InterfaceType, typeCount)
 
 			for i, typ := range t.Types {
-				intersectedTypes[i], err = getInterface(typ.Location, typ.QualifiedIdentifier, typ.TypeID)
+				intersectedTypes[i], err = handler.GetInterfaceType(
+					typ.Location,
+					typ.QualifiedIdentifier,
+					typ.TypeID,
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -1307,6 +1333,7 @@ func ConvertStaticToSemaType(
 
 		return sema.NewIntersectionType(
 			memoryGauge,
+			convertedLegacyType,
 			intersectedTypes,
 		), nil
 
@@ -1314,10 +1341,7 @@ func ConvertStaticToSemaType(
 		ty, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.ReferencedType,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 		if err != nil {
 			return nil, err
@@ -1326,8 +1350,7 @@ func ConvertStaticToSemaType(
 		access, err := ConvertStaticAuthorizationToSemaAccess(
 			memoryGauge,
 			t.Authorization,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 
 		if err != nil {
@@ -1342,10 +1365,7 @@ func ConvertStaticToSemaType(
 			borrowType, err = ConvertStaticToSemaType(
 				memoryGauge,
 				t.BorrowType,
-				getInterface,
-				getComposite,
-				getEntitlement,
-				getEntitlementMapType,
+				handler,
 			)
 			if err != nil {
 				return nil, err

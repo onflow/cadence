@@ -762,7 +762,18 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 		checker.enterValueScope()
 		defer checker.leaveValueScope(declaration.EndPosition, false)
 
+		// Declare nested types
+
 		checker.declareCompositeLikeNestedTypes(declaration, false)
+
+		// Declare nested types' explicit conformances
+
+		for _, nestedInterfaceDeclaration := range members.Interfaces() {
+			// resolve conformances
+			nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
+			nestedInterfaceType.ExplicitInterfaceConformances =
+				checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
+		}
 
 		// NOTE: determine initializer parameter types while nested types are in scope,
 		// and after declaring nested types as the initializer may use nested type in parameters
@@ -828,12 +839,7 @@ func (checker *Checker) declareCompositeLikeMembersAndValue(
 				},
 			)
 		}
-		for _, nestedInterfaceDeclaration := range members.Interfaces() {
-			// resolve conformances
-			nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
-			nestedInterfaceType.ExplicitInterfaceConformances =
-				checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
-		}
+
 		for _, nestedCompositeDeclaration := range nestedComposites {
 			declareNestedComposite(nestedCompositeDeclaration)
 		}
@@ -2350,7 +2356,7 @@ func (checker *Checker) declareBaseValue(fnAccess Access, baseType Type, attachm
 	if typedBaseType, ok := baseType.(*InterfaceType); ok {
 		// we can't actually have a value of an interface type I, so instead we create a value of {I}
 		// to be referenced by `base`
-		baseType = NewIntersectionType(checker.memoryGauge, []*InterfaceType{typedBaseType})
+		baseType = NewIntersectionType(checker.memoryGauge, nil, []*InterfaceType{typedBaseType})
 	}
 	// the `base` value in an attachment is entitled to the same entitlements required by the containing function
 	base := NewReferenceType(checker.memoryGauge, fnAccess, baseType)

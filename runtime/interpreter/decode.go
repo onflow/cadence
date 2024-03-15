@@ -1026,7 +1026,7 @@ func (d StorableDecoder) decodePath() (PathValue, error) {
 	), nil
 }
 
-func (d StorableDecoder) decodeCapability() (*CapabilityValue, error) {
+func (d StorableDecoder) decodeCapability() (*IDCapabilityValue, error) {
 
 	const expectedLength = encodedCapabilityValueLength
 
@@ -1273,7 +1273,7 @@ func (d StorableDecoder) decodePublishedValue() (*PublishedValue, error) {
 		return nil, errors.NewUnexpectedError("invalid published value value encoding: %w", err)
 	}
 
-	capabilityValue, ok := value.(*CapabilityValue)
+	capabilityValue, ok := value.(CapabilityValue)
 	if !ok {
 		return nil, errors.NewUnexpectedError(
 			"invalid published value value encoding: expected capability, got %T",

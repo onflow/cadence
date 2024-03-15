@@ -71,7 +71,7 @@ func NewSimpleCompositeValue(
 
 func (*SimpleCompositeValue) isValue() {}
 
-func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
+func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitSimpleCompositeValue(interpreter, v)
 }
 
@@ -90,7 +90,7 @@ func (v *SimpleCompositeValue) ForEachField(
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed fields and functions!
-func (v *SimpleCompositeValue) Walk(_ *Interpreter, _ LocationRange, walkChild func(Value)) {
+func (v *SimpleCompositeValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
 	v.ForEachField(func(_ string, fieldValue Value) (resume bool) {
 		walkChild(fieldValue)
 
@@ -103,7 +103,7 @@ func (v *SimpleCompositeValue) StaticType(_ *Interpreter) StaticType {
 	return v.staticType
 }
 
-func (v *SimpleCompositeValue) IsImportable(inter *Interpreter) bool {
+func (v *SimpleCompositeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
 	// Check type is importable
 	staticType := v.StaticType(inter)
 	semaType := inter.MustConvertStaticToSemaType(staticType)
@@ -114,7 +114,7 @@ func (v *SimpleCompositeValue) IsImportable(inter *Interpreter) bool {
 	// Check all field values are importable
 	importable := true
 	v.ForEachField(func(_ string, value Value) (resume bool) {
-		if !value.IsImportable(inter) {
+		if !value.IsImportable(inter, locationRange) {
 			importable = false
 			// stop iteration
 			return false

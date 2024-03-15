@@ -320,10 +320,10 @@ func defineReferenceType() {
 func defineIntersectionOrDictionaryType() {
 
 	// For the null denotation it is not clear after the start
-	// if it is a intersection type or a dictionary type.
+	// if it is an intersection type or a dictionary type.
 	//
 	// If a colon is seen it is a dictionary type.
-	// If no colon is seen it is a intersection type.
+	// If no colon is seen it is an intersection type.
 
 	setTypeNullDenotation(
 		lexer.TokenBraceOpen,

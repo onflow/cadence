@@ -45,11 +45,11 @@ func (f placeholderValue) MeteredString(_ common.MemoryGauge, _ SeenReferences) 
 	return ""
 }
 
-func (f placeholderValue) Accept(_ *Interpreter, _ LocationRange, _ Visitor) {
+func (f placeholderValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
 	// NO-OP
 }
 
-func (f placeholderValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
+func (f placeholderValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -57,7 +57,7 @@ func (f placeholderValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeNever
 }
 
-func (placeholderValue) IsImportable(_ *Interpreter) bool {
+func (placeholderValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
