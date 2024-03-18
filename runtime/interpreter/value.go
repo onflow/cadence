@@ -20309,6 +20309,7 @@ func (v *SomeValue) Transfer(
 		// then mark the resource array as invalidated, by unsetting the backing array.
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
+		interpreter.invalidateReferencedResources(v, locationRange)
 		v.value = nil
 	}
 
