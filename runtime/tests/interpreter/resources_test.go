@@ -3134,3 +3134,103 @@ func TestInterpretInvalidatingAttachmentLoopedReference(t *testing.T) {
 	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
+
+func TestInterpretResourceReferenceInvalidation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("caught at runtime", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			access(all) resource R {
+				access(all) fun zombieFunction() {}
+			}
+			access(all) fun caughtAtRuntime() {
+				// Simple "use ref after transferring value to an array" test case as a comparison
+				// We stash the ref to an array to blind the static checker and see runtime behavior
+				// Works as expected, caught at runtime and produces InvalidatedResourceReferenceError
+				var r <- create R()
+				var rArray: @[R] <- []
+				var refArray: [&R] = []
+				refArray.append(&r as &R)
+				rArray.append(<- r)
+				refArray[0].zombieFunction()
+				destroy rArray
+			}
+			access(all) fun main() {
+				caughtAtRuntime()
+			}
+		`,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("not caught at runtime", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			access(all) resource R {
+				access(all) fun zombieFunction() {}
+			}
+			access(all) fun notCaughtAtRuntime() {
+				// This variant is essentially the same as caughtAtRuntime()
+				// but is not caught at runtime
+				var refArray: [&AnyResource?] = []
+				var anyresarray: @[AnyResource] <- []
+				var r <- create R()
+				var opt1: @R? <- r
+				// Take a reference
+				refArray.append(&opt1 as &R?)
+				// Transfer the value
+				anyresarray.append(<- opt1)
+				var ref = (refArray[0]!) as! (&R)
+				ref.zombieFunction()
+				destroy anyresarray
+			}
+			access(all) fun main() {
+				notCaughtAtRuntime()
+			}
+		`,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("not caught 2", func(t *testing.T) {
+		t.Parallel()
+
+		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+			access(all) resource R {
+				access(all) fun zombieFunction() {}
+			}
+			access(all) fun crashesAtRuntime() {
+				// This variant crashes with nil pointer exception
+				var refArray: [&AnyResource] = []
+				var anyresarray: @[AnyResource] <- []
+				var r <- create R()
+				var opt1: @R? <- r
+				var opt1disguised: @AnyResource <- opt1 as @AnyResource
+				refArray.append(&(opt1disguised) as &AnyResource)
+				anyresarray.append(<- opt1disguised)
+				// Trying to use the reference crashes
+				log(refArray)
+				destroy anyresarray
+			}
+			access(all) fun main() {
+				crashesAtRuntime()
+			}
+		`,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+}
