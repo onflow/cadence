@@ -3225,13 +3225,41 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
-	t.Run("optional indirection with upcasting", func(t *testing.T) {
+	t.Run("indirection in array", func(t *testing.T) {
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-			access(all) resource R {
-				access(all) fun zombieFunction() {}
+		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+			access(all) resource R {}
+
+			access(all) fun main() {
+				var refArray: [&R] = []
+
+				var r <- create R()
+
+				refArray.append(&r as &R)
+
+				// destroy the value
+				destroy r
+
+				// Use the reference
+				log(refArray)
+				
 			}
+		`,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("optional indirection in array", func(t *testing.T) {
+		t.Parallel()
+
+		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+			access(all) resource R {}
+			
 			access(all) fun main() {
 				var refArray: [&AnyResource] = []
 				var anyresarray: @[AnyResource] <- []
@@ -3239,20 +3267,21 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 				var opt1: @R? <- r
 
 				// Cast and take a reference
-				var opt1disguised: @AnyResource <- opt1 as @AnyResource
+				var opt1disguised: @AnyResource <- opt1
 				refArray.append(&(opt1disguised) as &AnyResource)
 
 				// Transfer the value
 				anyresarray.append(<- opt1disguised)
 
 				// Use the reference
-				refArray.length
+				log(refArray)
 				destroy anyresarray
 			}
 		`,
 		)
+		require.NoError(t, err)
 
-		_, err := inter.Invoke("main")
+		_, err = inter.Invoke("main")
 		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
