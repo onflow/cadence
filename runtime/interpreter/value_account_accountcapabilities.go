@@ -50,10 +50,10 @@ func NewAccountAccountCapabilitiesValue(
 	}
 
 	var str string
-	stringer := func(interpreter *Interpreter, seenReferences SeenReferences) string {
+	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
 			common.UseMemory(interpreter, common.AccountAccountCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(interpreter, seenReferences)
+			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.AccountCapabilities(%s)", addressStr)
 		}
 		return str

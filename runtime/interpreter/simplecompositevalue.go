@@ -35,7 +35,7 @@ type SimpleCompositeValue struct {
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
-	stringer func(*Interpreter, SeenReferences) string
+	stringer func(*Interpreter, SeenReferences, LocationRange) string
 	TypeID   sema.TypeID
 	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
 	FieldNames []string
@@ -52,7 +52,7 @@ func NewSimpleCompositeValue(
 	fields map[string]Value,
 	computeField func(name string, interpreter *Interpreter, locationRange LocationRange) Value,
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string,
-	stringer func(*Interpreter, SeenReferences) string,
+	stringer func(*Interpreter, SeenReferences, LocationRange) string,
 ) *SimpleCompositeValue {
 
 	common.UseMemory(gauge, common.SimpleCompositeValueBaseMemoryUsage)
@@ -163,13 +163,13 @@ func (v *SimpleCompositeValue) String() string {
 }
 
 func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(nil, seenReferences)
+	return v.MeteredString(nil, seenReferences, EmptyLocationRange)
 }
 
-func (v *SimpleCompositeValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences) string {
+func (v *SimpleCompositeValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
 
 	if v.stringer != nil {
-		return v.stringer(interpreter, seenReferences)
+		return v.stringer(interpreter, seenReferences, locationRange)
 	}
 
 	var fields []struct {
@@ -189,7 +189,7 @@ func (v *SimpleCompositeValue) MeteredString(interpreter *Interpreter, seenRefer
 			}
 		}
 		if value == "" {
-			value = fieldValue.MeteredString(interpreter, seenReferences)
+			value = fieldValue.MeteredString(interpreter, seenReferences, locationRange)
 		}
 
 		fields = append(fields, struct {

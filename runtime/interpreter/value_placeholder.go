@@ -39,7 +39,7 @@ func (f placeholderValue) RecursiveString(_ SeenReferences) string {
 	return ""
 }
 
-func (f placeholderValue) MeteredString(_ *Interpreter, _ SeenReferences) string {
+func (f placeholderValue) MeteredString(_ *Interpreter, _ SeenReferences, _ LocationRange) string {
 	return ""
 }
 

@@ -118,12 +118,13 @@ func (v *AccountCapabilityControllerValue) RecursiveString(seenReferences SeenRe
 func (v *AccountCapabilityControllerValue) MeteredString(
 	interpreter *Interpreter,
 	seenReferences SeenReferences,
+	locationRange LocationRange,
 ) string {
 	common.UseMemory(interpreter, common.AccountCapabilityControllerValueStringMemoryUsage)
 
 	return format.AccountCapabilityController(
 		v.BorrowType.MeteredString(interpreter),
-		v.CapabilityID.MeteredString(interpreter, seenReferences),
+		v.CapabilityID.MeteredString(interpreter, seenReferences, locationRange),
 	)
 }
 

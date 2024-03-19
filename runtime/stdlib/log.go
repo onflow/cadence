@@ -54,8 +54,8 @@ func NewLogFunction(logger Logger) StandardLibraryValue {
 			value := invocation.Arguments[0]
 			locationRange := invocation.LocationRange
 
-			memoryGauge := invocation.Interpreter
-			message := value.MeteredString(memoryGauge, interpreter.SeenReferences{})
+			inter := invocation.Interpreter
+			message := value.MeteredString(inter, interpreter.SeenReferences{}, locationRange)
 
 			var err error
 			errors.WrapPanic(func() {
