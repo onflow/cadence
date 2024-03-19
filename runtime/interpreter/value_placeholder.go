@@ -20,8 +20,6 @@ package interpreter
 
 import (
 	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/runtime/common"
 )
 
 // placeholderValue
@@ -41,7 +39,7 @@ func (f placeholderValue) RecursiveString(_ SeenReferences) string {
 	return ""
 }
 
-func (f placeholderValue) MeteredString(_ common.MemoryGauge, _ SeenReferences) string {
+func (f placeholderValue) MeteredString(_ *Interpreter, _ SeenReferences) string {
 	return ""
 }
 

@@ -98,7 +98,7 @@ func parseCheckAndInterpretWithLogs(
 		},
 		``,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			message := invocation.Arguments[0].String()
+			message := invocation.Arguments[0].MeteredString(invocation.Interpreter, interpreter.SeenReferences{})
 			logs = append(logs, message)
 			return interpreter.Void
 		},

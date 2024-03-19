@@ -139,15 +139,15 @@ func (v *StorageCapabilityControllerValue) RecursiveString(seenReferences SeenRe
 }
 
 func (v *StorageCapabilityControllerValue) MeteredString(
-	memoryGauge common.MemoryGauge,
+	interpreter *Interpreter,
 	seenReferences SeenReferences,
 ) string {
-	common.UseMemory(memoryGauge, common.StorageCapabilityControllerValueStringMemoryUsage)
+	common.UseMemory(interpreter, common.StorageCapabilityControllerValueStringMemoryUsage)
 
 	return format.StorageCapabilityController(
-		v.BorrowType.MeteredString(memoryGauge),
-		v.CapabilityID.MeteredString(memoryGauge, seenReferences),
-		v.TargetPath.MeteredString(memoryGauge, seenReferences),
+		v.BorrowType.MeteredString(interpreter),
+		v.CapabilityID.MeteredString(interpreter, seenReferences),
+		v.TargetPath.MeteredString(interpreter, seenReferences),
 	)
 }
 

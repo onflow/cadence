@@ -104,10 +104,10 @@ func NewAccountValue(
 	}
 
 	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	stringer := func(interpreter *Interpreter, seenReferences SeenReferences) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AccountValueStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, seenReferences)
+			common.UseMemory(interpreter, common.AccountValueStringMemoryUsage)
+			addressStr := address.MeteredString(interpreter, seenReferences)
 			str = fmt.Sprintf("Account(%s)", addressStr)
 		}
 		return str

@@ -86,7 +86,7 @@ func (v *PathCapabilityValue) RecursiveString(seenReferences SeenReferences) str
 	}
 }
 
-func (v *PathCapabilityValue) MeteredString(_ common.MemoryGauge, _ SeenReferences) string {
+func (v *PathCapabilityValue) MeteredString(_ *Interpreter, _ SeenReferences) string {
 	panic(errors.NewUnreachableError())
 }
 
