@@ -3225,7 +3225,7 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
-	t.Run("indirection in array", func(t *testing.T) {
+	t.Run("invalid reference logged in array", func(t *testing.T) {
 		t.Parallel()
 
 		inter, _, err := parseCheckAndInterpretWithLogs(t, `
@@ -3243,7 +3243,6 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 
 				// Use the reference
 				log(refArray)
-				
 			}
 		`,
 		)
@@ -3254,12 +3253,12 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
-	t.Run("optional indirection in array", func(t *testing.T) {
+	t.Run("invalid optional reference logged in array", func(t *testing.T) {
 		t.Parallel()
 
 		inter, _, err := parseCheckAndInterpretWithLogs(t, `
 			access(all) resource R {}
-			
+
 			access(all) fun main() {
 				var refArray: [&AnyResource] = []
 				var anyresarray: @[AnyResource] <- []

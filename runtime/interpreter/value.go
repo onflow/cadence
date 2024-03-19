@@ -20309,7 +20309,12 @@ func (v *SomeValue) Transfer(
 		// then mark the resource array as invalidated, by unsetting the backing array.
 		// This allows raising an error when the resource array is attempted
 		// to be transferred/moved again (see beginning of this function)
-		interpreter.invalidateReferencedResources(v, locationRange)
+
+		// we don't need to invalidate referenced resources if this resource was moved
+		// to storage, as the earlier transfer will have done this already
+		if !needsStoreTo {
+			interpreter.invalidateReferencedResources(v.value, locationRange)
+		}
 		v.value = nil
 	}
 
@@ -20336,7 +20341,7 @@ func (v *SomeValue) InnerValue(_ *Interpreter, _ LocationRange) Value {
 	return v.value
 }
 
-func (v *SomeValue) isInvalidatedResource(_ *Interpreter) bool {
+func (v *SomeValue) isInvalidatedResource(interpreter *Interpreter) bool {
 	return v.value == nil || v.IsDestroyed()
 }
 
