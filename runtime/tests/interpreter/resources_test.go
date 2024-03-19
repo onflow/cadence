@@ -3284,4 +3284,63 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
+
+	t.Run("invalid reference logged in dict", func(t *testing.T) {
+		t.Parallel()
+
+		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+			access(all) resource R {}
+
+			access(all) fun main() {
+				var r <- create R()
+
+				var refDict: {String: &R} = {"": &r as &R}
+
+				// destroy the value
+				destroy r
+
+				// Use the reference
+				log(refDict)
+			}
+		`,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("invalid reference logged in composite", func(t *testing.T) {
+		t.Parallel()
+
+		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+			access(all) struct S {
+				access(all) let foo: &R
+				init(_ ref: &R) {
+					self.foo = ref
+				}
+			}
+
+			access(all) resource R {}
+
+			access(all) fun main() {
+				var r <- create R()
+
+				var s = S(&r as &R)
+
+				// destroy the value
+				destroy r
+
+				// Use the reference
+				log(s)
+			}
+		`,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
 }
