@@ -97,7 +97,12 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) Validate() error {
 	validator.TypeComparator.expectedIdentifierImportLocations = collectImports(validator, underlyingValidator.oldProgram)
 	validator.TypeComparator.foundIdentifierImportLocations = collectImports(validator, underlyingValidator.newProgram)
 
-	checkDeclarationUpdatability(validator, oldRootDecl, newRootDecl)
+	checkDeclarationUpdatability(
+		validator,
+		oldRootDecl,
+		newRootDecl,
+		validator.checkConformanceV1,
+	)
 
 	if underlyingValidator.hasErrors() {
 		return underlyingValidator.getContractUpdateError()
@@ -231,7 +236,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) requireEqualAccess(
 }
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOfComposite(composite *ast.NominalType) sema.Access {
-	// if this field is set, we are currently upgrading a formerly legacy restricted type into a reference to a composite
+	// If this field is set, we are currently upgrading a former legacy restricted type into a reference to a composite
 	// in this case, the expected entitlements are based not on the underlying composite type,
 	// but instead the types previously in the restriction set
 	if validator.currentRestrictedTypeUpgradeRestrictions != nil {
@@ -497,6 +502,85 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkDeclarationKindCha
 		Range:   ast.NewUnmeteredRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
 	})
 	return false
+}
+
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkConformanceV1(
+	oldDecl *ast.CompositeDeclaration,
+	newDecl *ast.CompositeDeclaration,
+) {
+
+	// Here it is assumed enums will always have one and only one conformance.
+	// This is enforced by the checker.
+	// Therefore, below check for multiple conformances is only applicable
+	// for non-enum type composite declarations. i.e: structs, resources, etc.
+
+	oldConformances := oldDecl.Conformances
+
+	location := validator.underlyingUpdateValidator.location
+
+	elaboration := validator.newElaborations[location]
+	newDeclType := elaboration.CompositeDeclarationType(newDecl)
+
+	// A conformance may not be explicitly defined in the current declaration,
+	// but they could be available via inheritance.
+	newConformances := newDeclType.EffectiveInterfaceConformances()
+
+	// All the existing conformances must have a match. Order is not important.
+	// Having extra new conformance is OK. See: https://github.com/onflow/cadence/issues/1394
+
+	// Note: Removing a conformance is NOT OK. That could lead to type-safety issues.
+	// e.g:
+	//  - Someone stores an array of type `[{I}]` with `T:I` objects inside.
+	//  - Later T’s conformance to `I` is removed.
+	//  - Now `[{I}]` contains objects if `T` that does not conform to `I`.
+
+	for _, oldConformance := range oldConformances {
+		found := false
+		for index, newConformance := range newConformances {
+			nominalType := semaConformanceToASTNominalType(newConformance)
+
+			err := oldConformance.CheckEqual(nominalType, validator)
+			if err == nil {
+				found = true
+
+				// Remove the matched conformance, so we don't have to check it again.
+				// i.e: optimization
+				newConformances = append(newConformances[:index], newConformances[index+1:]...)
+				break
+			}
+		}
+
+		if !found {
+			validator.report(&ConformanceMismatchError{
+				DeclName: newDecl.Identifier.Identifier,
+				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+			})
+
+			return
+		}
+	}
+}
+
+func semaConformanceToASTNominalType(newConformance sema.Conformance) *ast.NominalType {
+	interfaceType := newConformance.InterfaceType
+	containerType := interfaceType.GetContainerType()
+
+	identifier := ast.Identifier{
+		Identifier: interfaceType.Identifier,
+	}
+
+	if containerType == nil {
+		return ast.NewNominalType(nil, identifier, nil)
+	}
+
+	return ast.NewNominalType(
+		nil,
+		ast.Identifier{
+			Identifier: containerType.String(),
+		},
+		[]ast.Identifier{identifier},
+	)
+
 }
 
 var builtinTypes = map[string]struct{}{}

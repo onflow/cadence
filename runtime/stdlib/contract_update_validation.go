@@ -45,6 +45,11 @@ type UpdateValidator interface {
 	) bool
 }
 
+type checkConformanceFunc func(
+	oldDecl *ast.CompositeDeclaration,
+	newDecl *ast.CompositeDeclaration,
+)
+
 type ContractUpdateValidator struct {
 	TypeComparator
 
@@ -114,7 +119,12 @@ func (validator *ContractUpdateValidator) Validate() error {
 		return validator.getContractUpdateError()
 	}
 
-	checkDeclarationUpdatability(validator, oldRootDecl, newRootDecl)
+	checkDeclarationUpdatability(
+		validator,
+		oldRootDecl,
+		newRootDecl,
+		validator.checkConformance,
+	)
 
 	if validator.hasErrors() {
 		return validator.getContractUpdateError()
@@ -203,6 +213,7 @@ func checkDeclarationUpdatability(
 	validator UpdateValidator,
 	oldDeclaration ast.Declaration,
 	newDeclaration ast.Declaration,
+	checkConformance checkConformanceFunc,
 ) {
 
 	if !validator.checkDeclarationKindChange(oldDeclaration, newDeclaration) {
@@ -217,11 +228,11 @@ func checkDeclarationUpdatability(
 
 	checkFields(validator, oldDeclaration, newDeclaration)
 
-	checkNestedDeclarations(validator, oldDeclaration, newDeclaration)
+	checkNestedDeclarations(validator, oldDeclaration, newDeclaration, checkConformance)
 
 	if newDecl, ok := newDeclaration.(*ast.CompositeDeclaration); ok {
 		if oldDecl, ok := oldDeclaration.(*ast.CompositeDeclaration); ok {
-			checkConformance(validator, oldDecl, newDecl)
+			checkConformance(oldDecl, newDecl)
 		}
 	}
 }
@@ -293,6 +304,7 @@ func checkNestedDeclarations(
 	validator UpdateValidator,
 	oldDeclaration ast.Declaration,
 	newDeclaration ast.Declaration,
+	checkConformance checkConformanceFunc,
 ) {
 
 	oldNominalTypeDecls := getNestedNominalTypeDecls(oldDeclaration)
@@ -306,7 +318,7 @@ func checkNestedDeclarations(
 			continue
 		}
 
-		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl)
+		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl, checkConformance)
 
 		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
@@ -321,7 +333,7 @@ func checkNestedDeclarations(
 			continue
 		}
 
-		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl)
+		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl, checkConformance)
 
 		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
@@ -336,7 +348,7 @@ func checkNestedDeclarations(
 			continue
 		}
 
-		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl)
+		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl, checkConformance)
 
 		// If there's a matching new decl, then remove the old one from the map.
 		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
@@ -444,8 +456,7 @@ func checkEnumCases(
 	}
 }
 
-func checkConformance(
-	validator UpdateValidator,
+func (validator *ContractUpdateValidator) checkConformance(
 	oldDecl *ast.CompositeDeclaration,
 	newDecl *ast.CompositeDeclaration,
 ) {

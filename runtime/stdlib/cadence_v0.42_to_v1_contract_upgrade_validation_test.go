@@ -1829,3 +1829,81 @@ func TestTypeRequirementRemoval(t *testing.T) {
 		require.ErrorAs(t, cause, &declKindChangeError)
 	})
 }
+
+func TestInterfaceConformanceChange(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("local inherited interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+                pub resource interface A {}
+
+                pub resource R: A {}
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) resource interface A {}
+                access(all) resource interface B: A {}
+
+                // Also conforms to 'A' via inheritance.
+                // Therefore, existing conformance is not removed.
+                access(all) resource R: B {}
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("imported inherited interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            import TestImport from 0x02
+
+            pub contract Test {
+                pub resource R: TestImport.A {}
+            }
+        `
+
+		const newImport = `
+            access(all) contract TestImport {
+                access(all) resource interface A {}
+
+                access(all) resource interface B: A {}
+            }
+        `
+
+		const newCode = `
+            import TestImport from 0x02
+
+            access(all) contract Test {
+                // Also conforms to 'TestImport.A' via inheritance.
+                // Therefore, existing conformance is not removed.
+                access(all) resource R: TestImport.B {}
+            }
+        `
+
+		err := testContractUpdateWithImports(
+			t,
+			"Test",
+			oldCode,
+			newCode,
+			map[common.Location]string{
+				common.AddressLocation{
+					Name:    "TestImport",
+					Address: common.MustBytesToAddress([]byte{0x2}),
+				}: newImport,
+			},
+		)
+
+		require.NoError(t, err)
+	})
+}
