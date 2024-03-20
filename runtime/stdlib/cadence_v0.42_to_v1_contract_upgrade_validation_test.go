@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/old_parser"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
@@ -55,12 +56,14 @@ func testContractUpdate(t *testing.T, oldCode string, newCode string) error {
 	err = checker.Check()
 	require.NoError(t, err)
 
+	program := interpreter.ProgramFromChecker(checker)
+
 	upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 		utils.TestLocation,
 		"Test",
 		&runtime_utils.TestRuntimeInterface{},
 		oldProgram,
-		newProgram,
+		program,
 		map[common.Location]*sema.Elaboration{
 			utils.TestLocation: checker.Elaboration,
 		})
@@ -104,7 +107,7 @@ func parseAndCheckPrograms(
 	newImports map[common.Location]string,
 ) (
 	oldProgram *ast.Program,
-	newProgram *ast.Program,
+	newProgram *interpreter.Program,
 	elaborations map[common.Location]*sema.Elaboration,
 ) {
 
@@ -112,7 +115,7 @@ func parseAndCheckPrograms(
 	oldProgram, err = old_parser.ParseProgram(nil, []byte(oldCode), old_parser.Config{})
 	require.NoError(t, err)
 
-	newProgram, err = parser.ParseProgram(nil, []byte(newCode), parser.Config{})
+	program, err := parser.ParseProgram(nil, []byte(newCode), parser.Config{})
 	require.NoError(t, err)
 
 	elaborations = map[common.Location]*sema.Elaboration{}
@@ -139,7 +142,7 @@ func parseAndCheckPrograms(
 	}
 
 	checker, err := sema.NewChecker(
-		newProgram,
+		program,
 		location,
 		nil,
 		&sema.Config{
@@ -174,7 +177,7 @@ func parseAndCheckPrograms(
 	err = checker.Check()
 	require.NoError(t, err)
 
-	elaborations[location] = checker.Elaboration
+	newProgram = interpreter.ProgramFromChecker(checker)
 
 	return
 }
@@ -759,13 +762,13 @@ func TestContractUpgradeFieldType(t *testing.T) {
 			Address: common.MustBytesToAddress([]byte{0x1}),
 		}
 
-		nftLocation := common.AddressLocation{
+		ftLocation := common.AddressLocation{
 			Name:    "FungibleToken",
 			Address: common.MustBytesToAddress([]byte{0x2}),
 		}
 
 		imports := map[common.Location]string{
-			nftLocation: newImport,
+			ftLocation: newImport,
 		}
 
 		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
@@ -1827,5 +1830,239 @@ func TestTypeRequirementRemoval(t *testing.T) {
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		declKindChangeError := &stdlib.InvalidDeclarationKindChangeError{}
 		require.ErrorAs(t, cause, &declKindChangeError)
+	})
+}
+
+func TestInterfaceConformanceChange(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("local inherited interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+                pub resource interface A {}
+
+                pub resource R: A {}
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) resource interface A {}
+                access(all) resource interface B: A {}
+
+                // Also conforms to 'A' via inheritance.
+                // Therefore, existing conformance is not removed.
+                access(all) resource R: B {}
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("imported inherited interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            import TestImport from 0x02
+
+            pub contract Test {
+                pub resource R: TestImport.A {}
+            }
+        `
+
+		const newImport = `
+            access(all) contract TestImport {
+                access(all) resource interface A {}
+
+                access(all) resource interface B: A {}
+            }
+        `
+
+		const newCode = `
+            import TestImport from 0x02
+
+            access(all) contract Test {
+                // Also conforms to 'TestImport.A' via inheritance.
+                // Therefore, existing conformance is not removed.
+                access(all) resource R: TestImport.B {}
+            }
+        `
+
+		err := testContractUpdateWithImports(
+			t,
+			"Test",
+			oldCode,
+			newCode,
+			map[common.Location]string{
+				common.AddressLocation{
+					Name:    "TestImport",
+					Address: common.MustBytesToAddress([]byte{0x2}),
+				}: newImport,
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("with custom rules", func(t *testing.T) {
+		t.Parallel()
+
+		const oldCode = `
+            import NonFungibleToken from 0x02
+
+            pub contract Test {
+                pub resource R: NonFungibleToken.INFT {}
+            }
+        `
+
+		const newImport = `
+            access(all) contract NonFungibleToken {
+                access(all) resource interface NFT {}
+            }
+        `
+
+		const newCode = `
+            import NonFungibleToken from 0x02
+
+            access(all) contract Test {
+                access(all) resource R: NonFungibleToken.NFT {}
+            }
+        `
+
+		nftLocation := common.AddressLocation{
+			Name:    "NonFungibleToken",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		imports := map[common.Location]string{
+			nftLocation: newImport,
+		}
+
+		const contractName = "Test"
+		location := common.AddressLocation{
+			Name:    contractName,
+			Address: common.MustBytesToAddress([]byte{0x1}),
+		}
+
+		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
+
+		inftTypeID := common.NewTypeIDFromQualifiedName(nil, nftLocation, "NonFungibleToken.INFT")
+		nftTypeID := common.NewTypeIDFromQualifiedName(nil, nftLocation, "NonFungibleToken.NFT")
+
+		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+			location,
+			contractName,
+			&runtime_utils.TestRuntimeInterface{
+				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+					return []string{"TestImport"}, nil
+				},
+			},
+			oldProgram,
+			newProgram,
+			elaborations,
+		).WithUserDefinedTypeChangeChecker(
+			func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool) {
+				switch oldTypeID {
+				case inftTypeID:
+					return true, newTypeID == nftTypeID
+				}
+
+				return false, false
+			},
+		)
+
+		err := upgradeValidator.Validate()
+		require.NoError(t, err)
+	})
+
+	t.Run("with custom rules and changed import", func(t *testing.T) {
+		t.Parallel()
+
+		const oldCode = `
+            import MetadataViews from 0x02
+
+            pub contract Test {
+                pub resource R: MetadataViews.Resolver {}
+            }
+        `
+
+		const newImport = `
+            access(all) contract ViewResolver {
+                access(all) resource interface Resolver {}
+            }
+        `
+
+		const newCode = `
+            import ViewResolver from 0x02
+
+            access(all) contract Test {
+                access(all) resource R: ViewResolver.Resolver {}
+            }
+        `
+
+		viewResolverLocation := common.AddressLocation{
+			Name:    "ViewResolver",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		metadatViewsLocation := common.AddressLocation{
+			Name:    "MetadataViews",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		imports := map[common.Location]string{
+			viewResolverLocation: newImport,
+		}
+
+		const contractName = "Test"
+		location := common.AddressLocation{
+			Name:    contractName,
+			Address: common.MustBytesToAddress([]byte{0x1}),
+		}
+
+		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
+
+		metadataViewsResolverTypeID := common.NewTypeIDFromQualifiedName(
+			nil,
+			metadatViewsLocation,
+			"MetadataViews.Resolver",
+		)
+
+		viewResolverResolverTypeID := common.NewTypeIDFromQualifiedName(
+			nil,
+			viewResolverLocation,
+			"ViewResolver.Resolver",
+		)
+
+		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+			location,
+			contractName,
+			&runtime_utils.TestRuntimeInterface{
+				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+					return []string{"TestImport"}, nil
+				},
+			},
+			oldProgram,
+			newProgram,
+			elaborations,
+		).WithUserDefinedTypeChangeChecker(
+			func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool) {
+				switch oldTypeID {
+				case metadataViewsResolverTypeID:
+					return true, newTypeID == viewResolverResolverTypeID
+				}
+
+				return false, false
+			},
+		)
+
+		err := upgradeValidator.Validate()
+		require.NoError(t, err)
 	})
 }
