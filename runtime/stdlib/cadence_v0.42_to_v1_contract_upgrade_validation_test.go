@@ -759,13 +759,13 @@ func TestContractUpgradeFieldType(t *testing.T) {
 			Address: common.MustBytesToAddress([]byte{0x1}),
 		}
 
-		nftLocation := common.AddressLocation{
+		ftLocation := common.AddressLocation{
 			Name:    "FungibleToken",
 			Address: common.MustBytesToAddress([]byte{0x2}),
 		}
 
 		imports := map[common.Location]string{
-			nftLocation: newImport,
+			ftLocation: newImport,
 		}
 
 		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
@@ -1904,6 +1904,77 @@ func TestInterfaceConformanceChange(t *testing.T) {
 			},
 		)
 
+		require.NoError(t, err)
+	})
+
+	t.Run("with custom rules", func(t *testing.T) {
+		t.Parallel()
+
+		const oldCode = `
+            import NonFungibleToken from 0x02
+
+            pub contract Test {
+                pub resource R: NonFungibleToken.INFT {}
+            }
+        `
+
+		const newImport = `
+            access(all) contract NonFungibleToken {
+                access(all) resource interface NFT {}
+            }
+        `
+
+		const newCode = `
+            import NonFungibleToken from 0x02
+
+            access(all) contract Test {
+                access(all) resource R: NonFungibleToken.NFT {}
+            }
+        `
+
+		nftLocation := common.AddressLocation{
+			Name:    "NonFungibleToken",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		imports := map[common.Location]string{
+			nftLocation: newImport,
+		}
+
+		const contractName = "Test"
+		location := common.AddressLocation{
+			Name:    contractName,
+			Address: common.MustBytesToAddress([]byte{0x1}),
+		}
+
+		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
+
+		inftTypeID := common.NewTypeIDFromQualifiedName(nil, nftLocation, "NonFungibleToken.INFT")
+		nftTypeID := common.NewTypeIDFromQualifiedName(nil, nftLocation, "NonFungibleToken.NFT")
+
+		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+			location,
+			contractName,
+			&runtime_utils.TestRuntimeInterface{
+				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+					return []string{"TestImport"}, nil
+				},
+			},
+			oldProgram,
+			newProgram,
+			elaborations,
+		).WithUserDefinedTypeChangeChecker(
+			func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool) {
+				switch oldTypeID {
+				case inftTypeID:
+					return true, newTypeID == nftTypeID
+				}
+
+				return false, false
+			},
+		)
+
+		err := upgradeValidator.Validate()
 		require.NoError(t, err)
 	})
 }

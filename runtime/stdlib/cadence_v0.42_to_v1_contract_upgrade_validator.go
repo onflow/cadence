@@ -394,17 +394,7 @@ typeSwitch:
 		}
 
 		if _, isbuiltinType := builtinTypes[oldType.String()]; !isbuiltinType {
-			oldTypeID, err := validator.typeIDFromType(oldType)
-			if err != nil {
-				break
-			}
-
-			newTypeID, err := validator.typeIDFromType(newType)
-			if err != nil {
-				break
-			}
-
-			checked, valid := validator.checkUserDefinedType(oldTypeID, newTypeID)
+			checked, valid := validator.checkUserDefinedTypeCustomRules(oldType, newType)
 
 			// If there are no custom rules for this type,
 			// do the default type comparison.
@@ -428,6 +418,24 @@ typeSwitch:
 
 	return oldType.CheckEqual(newType, validator)
 
+}
+
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkUserDefinedTypeCustomRules(
+	oldType ast.Type,
+	newType ast.Type,
+) (checked, valid bool) {
+
+	oldTypeID, err := validator.typeIDFromType(oldType)
+	if err != nil {
+		return false, false
+	}
+
+	newTypeID, err := validator.typeIDFromType(newType)
+	if err != nil {
+		return false, false
+	}
+
+	return validator.checkUserDefinedType(oldTypeID, newTypeID)
 }
 
 func isNonStorableType(typ ast.Type) bool {
@@ -537,10 +545,17 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkConformanceV1(
 	for _, oldConformance := range oldConformances {
 		found := false
 		for index, newConformance := range newConformances {
-			nominalType := semaConformanceToASTNominalType(newConformance)
+			newConformanceNominalType := semaConformanceToASTNominalType(newConformance)
 
-			err := oldConformance.CheckEqual(nominalType, validator)
-			if err == nil {
+			err := oldConformance.CheckEqual(newConformanceNominalType, validator)
+
+			var customRuleChecked, customRuleValid bool
+			if err != nil {
+				customRuleChecked, customRuleValid =
+					validator.checkUserDefinedTypeCustomRules(oldConformance, newConformanceNominalType)
+			}
+
+			if err == nil || (customRuleChecked && customRuleValid) {
 				found = true
 
 				// Remove the matched conformance, so we don't have to check it again.
