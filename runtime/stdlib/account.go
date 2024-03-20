@@ -1625,7 +1625,7 @@ func changeAccountContracts(
 				contractName,
 				handler,
 				oldProgram,
-				program.Program,
+				program,
 				inter.AllElaborations(),
 			)
 		} else {

@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -46,11 +47,20 @@ func NewCadenceV042ToV1ContractUpdateValidator(
 	contractName string,
 	provider AccountContractNamesProvider,
 	oldProgram *ast.Program,
-	newProgram *ast.Program,
+	newProgram *interpreter.Program,
 	newElaborations map[common.Location]*sema.Elaboration,
 ) *CadenceV042ToV1ContractUpdateValidator {
 
-	underlyingValidator := NewContractUpdateValidator(location, contractName, provider, oldProgram, newProgram)
+	underlyingValidator := NewContractUpdateValidator(
+		location,
+		contractName,
+		provider,
+		oldProgram,
+		newProgram.Program,
+	)
+
+	// Also add the elaboration of the current program.
+	newElaborations[location] = newProgram.Elaboration
 
 	return &CadenceV042ToV1ContractUpdateValidator{
 		underlyingUpdateValidator: underlyingValidator,
@@ -157,17 +167,24 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) idAndLocationOfQualifie
 	// and in 1 and 2 we don't need to do anything
 	typIdentifier := typ.Identifier.Identifier
 	rootIdentifier := validator.TypeComparator.RootDeclIdentifier.Identifier
-	location := validator.underlyingUpdateValidator.location
 
-	foundLocations := validator.TypeComparator.foundIdentifierImportLocations
+	newImportLocations := validator.TypeComparator.foundIdentifierImportLocations
+	oldImportLocations := validator.TypeComparator.expectedIdentifierImportLocations
 
-	if typIdentifier != rootIdentifier && foundLocations[typIdentifier] == nil {
-		qualifiedString = fmt.Sprintf("%s.%s", rootIdentifier, qualifiedString)
-		return common.NewTypeIDFromQualifiedName(nil, location, qualifiedString), location
+	// Here we only need to find the qualified type ID.
+	// So check in both old imports as well as in new imports.
+	location, wasImported := newImportLocations[typIdentifier]
+	if !wasImported {
+		location, wasImported = oldImportLocations[typIdentifier]
 	}
 
-	if loc := foundLocations[typIdentifier]; loc != nil {
-		location = loc
+	if !wasImported {
+		location = validator.underlyingUpdateValidator.location
+	}
+
+	if typIdentifier != rootIdentifier && !wasImported {
+		qualifiedString = fmt.Sprintf("%s.%s", rootIdentifier, qualifiedString)
+		return common.NewTypeIDFromQualifiedName(nil, location, qualifiedString), location
 	}
 
 	return common.NewTypeIDFromQualifiedName(nil, location, qualifiedString), location
@@ -424,6 +441,10 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkUserDefinedTypeCus
 	oldType ast.Type,
 	newType ast.Type,
 ) (checked, valid bool) {
+
+	if validator.checkUserDefinedType == nil {
+		return false, false
+	}
 
 	oldTypeID, err := validator.typeIDFromType(oldType)
 	if err != nil {
