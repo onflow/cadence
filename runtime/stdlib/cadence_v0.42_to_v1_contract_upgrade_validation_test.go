@@ -2066,3 +2066,140 @@ func TestInterfaceConformanceChange(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestEnumUpdates(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("update as is", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("change enum type", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+
+                access(all) var x: Foo
+
+                init() {
+                    self.x = Foo.up
+                }
+
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                access(all) var x: Foo
+
+                init() {
+                    self.x = Foo.up
+                }
+
+                access(all) enum Foo: UInt128 {
+                    access(all) case up
+                    access(all) case down
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		utils.RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		var conformanceMismatchError *stdlib.ConformanceMismatchError
+		require.ErrorAs(t, cause, &conformanceMismatchError)
+
+		assert.Equal(t, "Foo", conformanceMismatchError.DeclName)
+	})
+
+	t.Run("remove case", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		utils.RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		var missingEnumCasesError *stdlib.MissingEnumCasesError
+		require.ErrorAs(t, cause, &missingEnumCasesError)
+
+		assert.Equal(t, "Foo", missingEnumCasesError.DeclName)
+		assert.Equal(t, 2, missingEnumCasesError.Expected)
+		assert.Equal(t, 1, missingEnumCasesError.Found)
+	})
+
+	t.Run("add case", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                    access(all) case left
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+}
