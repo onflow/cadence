@@ -510,7 +510,9 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkDeclarationKindCha
 
 	// If the parent is an interface, and the child is a concrete type,
 	// then it is a type requirement.
-	if parent.DeclarationKind() == common.DeclarationKindContractInterface {
+	if parent != nil &&
+		parent.DeclarationKind() == common.DeclarationKindContractInterface {
+
 		// A struct is OK to be converted to a struct-interface
 		if oldDeclKind == common.DeclarationKindStructure &&
 			newDeclKind == common.DeclarationKindStructureInterface {
