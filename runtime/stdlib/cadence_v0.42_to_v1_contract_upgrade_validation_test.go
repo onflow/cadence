@@ -725,7 +725,7 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("composite to interface valid", func(t *testing.T) {
+	t.Run("composite to interface invalid", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -794,6 +794,94 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "Test", "a", "FungibleToken.Vault", "{FungibleToken.Vault}")
 
+	})
+
+	t.Run("custom rule not followed", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            import Import from 0x02
+
+            access(all) contract Test {
+                access(all) var a: @Import.Foo?
+                init() {
+                    self.a <- nil
+                }
+            }
+        `
+
+		const newImport = `
+            access(all) contract Import {
+                access(all) resource Foo {}
+                access(all) resource Bar {}
+            }
+        `
+		const newCode = `
+            import Import from 0x02
+
+            access(all) contract Test {
+                access(all) var a: @Import.Foo?
+                init() {
+                    self.a <- nil
+                }
+            }
+        `
+
+		const contractName = "Test"
+		location := common.AddressLocation{
+			Name:    contractName,
+			Address: common.MustBytesToAddress([]byte{0x1}),
+		}
+
+		importLocation := common.AddressLocation{
+			Name:    "Import",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		imports := map[common.Location]string{
+			importLocation: newImport,
+		}
+
+		barTypeID := sema.FormatIntersectionTypeID(
+			[]common.TypeID{
+				common.NewTypeIDFromQualifiedName(nil, importLocation, "Import.Bar"),
+			},
+		)
+
+		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
+
+		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+			location,
+			contractName,
+			&runtime_utils.TestRuntimeInterface{
+				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+					return []string{"TestImport"}, nil
+				},
+			},
+			oldProgram,
+			newProgram,
+			elaborations,
+		).WithUserDefinedTypeChangeChecker(
+			func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool) {
+				switch oldTypeID {
+				case oldTypeID:
+					return true, newTypeID == barTypeID
+				}
+
+				return false, false
+			},
+		)
+
+		err := upgradeValidator.Validate()
+
+		// This should be an error.
+		// If there are custom rules, they MUST be followed.
+		utils.RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		var fieldMismatchError *stdlib.FieldMismatchError
+		require.ErrorAs(t, cause, &fieldMismatchError)
 	})
 }
 
@@ -1923,6 +2011,7 @@ func TestInterfaceConformanceChange(t *testing.T) {
 
 		const newImport = `
             access(all) contract NonFungibleToken {
+                access(all) resource interface INFT {}
                 access(all) resource interface NFT {}
             }
         `
@@ -2064,5 +2153,87 @@ func TestInterfaceConformanceChange(t *testing.T) {
 
 		err := upgradeValidator.Validate()
 		require.NoError(t, err)
+	})
+
+	t.Run("with custom rule, not applied", func(t *testing.T) {
+		t.Parallel()
+
+		const oldCode = `
+            import NonFungibleToken from 0x02
+
+            pub contract Test {
+                pub resource R: NonFungibleToken.INFT {}
+            }
+        `
+
+		const newImport = `
+            access(all) contract NonFungibleToken {
+                access(all) resource interface INFT {}
+                access(all) resource interface NFT {}
+            }
+        `
+
+		const newCode = `
+            import NonFungibleToken from 0x02
+
+            access(all) contract Test {
+                // Chose not to change the type.
+                // However, the custom rule mandates changing
+                access(all) resource R: NonFungibleToken.INFT {}
+            }
+        `
+
+		nftLocation := common.AddressLocation{
+			Name:    "NonFungibleToken",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		imports := map[common.Location]string{
+			nftLocation: newImport,
+		}
+
+		const contractName = "Test"
+		location := common.AddressLocation{
+			Name:    contractName,
+			Address: common.MustBytesToAddress([]byte{0x1}),
+		}
+
+		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
+
+		inftTypeID := common.NewTypeIDFromQualifiedName(nil, nftLocation, "NonFungibleToken.INFT")
+		nftTypeID := common.NewTypeIDFromQualifiedName(nil, nftLocation, "NonFungibleToken.NFT")
+
+		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+			location,
+			contractName,
+			&runtime_utils.TestRuntimeInterface{
+				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+					return []string{"TestImport"}, nil
+				},
+			},
+			oldProgram,
+			newProgram,
+			elaborations,
+		).WithUserDefinedTypeChangeChecker(
+			func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool) {
+				switch oldTypeID {
+				case inftTypeID:
+					// The rules here says, the new conformance should be `NonFungibleToken.NFT`.
+					return true, newTypeID == nftTypeID
+				}
+
+				return false, false
+			},
+		)
+
+		err := upgradeValidator.Validate()
+
+		// This should be an error.
+		// If there are custom rules, they MUST be followed.
+		utils.RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		var conformanceMismatchError *stdlib.ConformanceMismatchError
+		require.ErrorAs(t, cause, &conformanceMismatchError)
 	})
 }
