@@ -12156,7 +12156,7 @@ func TestInterpretOptionalAddressInConditional(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
       fun test(ok: Bool): Address? {
-         return ok ? Address(0x1) : nil
+         return ok ? 0x1 : nil
       }
     `)
 
