@@ -2094,7 +2094,6 @@ func TestContractUpgradeRemoveEnum(t *testing.T) {
 
 		err := testContractUpdate(t, oldCode, newCode)
 
-		// This is not allowed because `@R{I}` is converted to `@R`, not `@{I}`
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertMissingDeclarationError(t, cause, "E")
 	})
