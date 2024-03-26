@@ -461,7 +461,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 
 			// Migrate
 
-			migration := migrations.NewStorageMigration(inter, storage)
+			migration := migrations.NewStorageMigration(inter, storage, "test")
 
 			reporter := newTestReporter()
 
@@ -852,7 +852,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 
 			// Migrate
 
-			migration := migrations.NewStorageMigration(inter, storage)
+			migration := migrations.NewStorageMigration(inter, storage, "test")
 
 			reporter := newTestReporter()
 
@@ -1158,7 +1158,7 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 
 			// Migrate
 
-			migration := migrations.NewStorageMigration(inter, storage)
+			migration := migrations.NewStorageMigration(inter, storage, "test")
 
 			reporter := newTestReporter()
 
@@ -1298,7 +1298,7 @@ func TestAccountTypeRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
