@@ -21200,6 +21200,10 @@ func NewAddressValueFromConstructor(
 }
 
 func ConvertAddress(memoryGauge common.MemoryGauge, value Value, locationRange LocationRange) AddressValue {
+	if address, ok := value.(AddressValue); ok {
+		return address
+	}
+
 	converter := func() (result common.Address) {
 		uint64Value := ConvertUInt64(memoryGauge, value, locationRange)
 
