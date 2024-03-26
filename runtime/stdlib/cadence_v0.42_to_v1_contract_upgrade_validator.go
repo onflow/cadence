@@ -568,17 +568,21 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkConformanceV1(
 		for index, newConformance := range newConformances {
 			newConformanceNominalType := semaConformanceToASTNominalType(newConformance)
 
-			err := oldConformance.CheckEqual(newConformanceNominalType, validator)
+			// First check whether there are any custom type-change rules.
+			customRuleChecked, customRuleValid :=
+				validator.checkUserDefinedTypeCustomRules(oldConformance, newConformanceNominalType)
 
-			var customRuleChecked, customRuleValid bool
-			if err != nil {
-				customRuleChecked, customRuleValid =
-					validator.checkUserDefinedTypeCustomRules(oldConformance, newConformanceNominalType)
+			if customRuleChecked {
+				// If exists, take its result.
+				// DO NOT fall back to the default type equality check, even if the rule did not satisfy.
+				found = customRuleValid
+			} else {
+				// If no custom rule exist, then use the default type equality check.
+				err := oldConformance.CheckEqual(newConformanceNominalType, validator)
+				found = err == nil
 			}
 
-			if err == nil || (customRuleChecked && customRuleValid) {
-				found = true
-
+			if found {
 				// Remove the matched conformance, so we don't have to check it again.
 				// i.e: optimization
 				newConformances = append(newConformances[:index], newConformances[index+1:]...)
