@@ -107,7 +107,7 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 		}
 	}()
 
-	value = d.decodeJSON(jsonMap)
+	value = d.DecodeJSON(jsonMap)
 	return value, nil
 }
 
@@ -145,7 +145,7 @@ const (
 	stepKey              = "step"
 )
 
-func (d *Decoder) decodeJSON(v any) cadence.Value {
+func (d *Decoder) DecodeJSON(v any) cadence.Value {
 	obj := toObject(v)
 
 	typeStr := obj.GetString(typeKey)
@@ -260,7 +260,7 @@ func (d *Decoder) decodeOptional(valueJSON any) cadence.Optional {
 		return cadence.NewMeteredOptional(d.gauge, nil)
 	}
 
-	return cadence.NewMeteredOptional(d.gauge, d.decodeJSON(valueJSON))
+	return cadence.NewMeteredOptional(d.gauge, d.DecodeJSON(valueJSON))
 }
 
 func (d *Decoder) decodeBool(valueJSON any) cadence.Bool {
@@ -646,7 +646,7 @@ func (d *Decoder) decodeArray(valueJSON any) cadence.Array {
 		func() ([]cadence.Value, error) {
 			values := make([]cadence.Value, len(v))
 			for i, val := range v {
-				values[i] = d.decodeJSON(val)
+				values[i] = d.DecodeJSON(val)
 			}
 			return values, nil
 		},
@@ -1370,7 +1370,7 @@ func (obj jsonObject) GetSlice(key string) []any {
 
 func (obj jsonObject) GetValue(d *Decoder, key string) cadence.Value {
 	v := obj.Get(key)
-	return d.decodeJSON(v)
+	return d.DecodeJSON(v)
 }
 
 // JSON conversion helpers
