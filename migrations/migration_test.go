@@ -507,7 +507,7 @@ func TestMultipleMigrations(t *testing.T) {
 
 	// Migrate
 
-	migration := NewStorageMigration(inter, storage)
+	migration := NewStorageMigration(inter, storage, "test")
 
 	reporter := newTestReporter()
 
@@ -647,7 +647,7 @@ func TestMigrationError(t *testing.T) {
 
 	// Migrate
 
-	migration := NewStorageMigration(inter, storage)
+	migration := NewStorageMigration(inter, storage, "test")
 
 	reporter := newTestReporter()
 
@@ -794,7 +794,7 @@ func TestCapConMigration(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := NewStorageMigration(inter, storage)
+	migration := NewStorageMigration(inter, storage, "test")
 
 	migration.MigrateAccount(
 		testAddress,
@@ -909,7 +909,7 @@ func TestContractMigration(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := NewStorageMigration(inter, storage)
+	migration := NewStorageMigration(inter, storage, "test")
 
 	migration.MigrateAccount(
 		testAddress,
@@ -1102,7 +1102,7 @@ func TestEmptyIntersectionTypeMigration(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := NewStorageMigration(inter, storage)
+	migration := NewStorageMigration(inter, storage, "test")
 
 	migration.MigrateAccount(
 		testAddress,
@@ -1246,7 +1246,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		// Migrate
 
-		migration := NewStorageMigration(inter, storage)
+		migration := NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
@@ -1676,7 +1676,7 @@ func TestMigrationPanic(t *testing.T) {
 
 	// Migrate
 
-	migration := NewStorageMigration(inter, storage)
+	migration := NewStorageMigration(inter, storage, "test")
 
 	reporter := newTestReporter()
 
@@ -1803,7 +1803,7 @@ func TestSkip(t *testing.T) {
 
 		// Migrate
 
-		migration := NewStorageMigration(inter, storage)
+		migration := NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
@@ -2143,7 +2143,7 @@ func TestPublishedValueMigration(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := NewStorageMigration(inter, storage)
+	migration := NewStorageMigration(inter, storage, "test")
 
 	migration.MigrateAccount(
 		testAddress,
@@ -2250,7 +2250,7 @@ func TestDomainsMigration(t *testing.T) {
 
 		reporter := newTestReporter()
 
-		migration := NewStorageMigration(inter, storage)
+		migration := NewStorageMigration(inter, storage, "test")
 
 		migration.MigrateAccount(
 			testAddress,

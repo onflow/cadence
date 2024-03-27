@@ -482,6 +482,58 @@ func TestInterpretArrayFunctionsComputationMetering(t *testing.T) {
 
 		assert.Equal(t, uint(6), computationMeteredValues[common.ComputationKindLoop])
 	})
+
+	t.Run("slice", func(t *testing.T) {
+		t.Parallel()
+
+		computationMeteredValues := make(map[common.ComputationKind]uint)
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            fun main() {
+                let x = [1, 2, 3, 4, 5, 6]
+                let y = x.slice(from: 1, upTo: 4)
+            }`,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
+						computationMeteredValues[compKind] += intensity
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint(4), computationMeteredValues[common.ComputationKindLoop])
+	})
+
+	t.Run("concat", func(t *testing.T) {
+		t.Parallel()
+
+		computationMeteredValues := make(map[common.ComputationKind]uint)
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            fun main() {
+                let x = [1, 2, 3]
+                let y = x.concat([4, 5, 6])
+            }`,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
+						computationMeteredValues[compKind] += intensity
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		// Computation is (arrayLength +1). It's an overestimate.
+		// The last one is for checking the end of array.
+		assert.Equal(t, uint(7), computationMeteredValues[common.ComputationKindLoop])
+	})
 }
 
 func TestInterpretStdlibComputationMetering(t *testing.T) {
@@ -510,5 +562,101 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, uint(4), computationMeteredValues[common.ComputationKindLoop])
+	})
+
+	t.Run("string concat", func(t *testing.T) {
+		t.Parallel()
+
+		computationMeteredValues := make(map[common.ComputationKind]uint)
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            fun main() {
+                let s = "a b c".concat("1 2 3")
+            }`,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
+						computationMeteredValues[compKind] += intensity
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint(10), computationMeteredValues[common.ComputationKindLoop])
+	})
+
+	t.Run("string replace all", func(t *testing.T) {
+		t.Parallel()
+
+		computationMeteredValues := make(map[common.ComputationKind]uint)
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            fun main() {
+                let s = "abcadeaf".replaceAll(of: "a", with: "z")
+            }`,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
+						computationMeteredValues[compKind] += intensity
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint(8), computationMeteredValues[common.ComputationKindLoop])
+	})
+
+	t.Run("string to lower", func(t *testing.T) {
+		t.Parallel()
+
+		computationMeteredValues := make(map[common.ComputationKind]uint)
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            fun main() {
+                let s = "ABCdef".toLower()
+            }`,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
+						computationMeteredValues[compKind] += intensity
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint(6), computationMeteredValues[common.ComputationKindLoop])
+	})
+
+	t.Run("string split", func(t *testing.T) {
+		t.Parallel()
+
+		computationMeteredValues := make(map[common.ComputationKind]uint)
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            fun main() {
+                let s = "abc/d/ef//".split(separator: "/")
+            }`,
+			ParseCheckAndInterpretOptions{
+				Config: &interpreter.Config{
+					OnMeterComputation: func(compKind common.ComputationKind, intensity uint) {
+						computationMeteredValues[compKind] += intensity
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t, uint(10), computationMeteredValues[common.ComputationKindLoop])
 	})
 }

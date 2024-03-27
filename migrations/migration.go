@@ -51,15 +51,18 @@ type DomainMigration interface {
 type StorageMigration struct {
 	storage     *runtime.Storage
 	interpreter *interpreter.Interpreter
+	name        string
 }
 
 func NewStorageMigration(
 	interpreter *interpreter.Interpreter,
 	storage *runtime.Storage,
+	name string,
 ) *StorageMigration {
 	return &StorageMigration{
 		storage:     storage,
 		interpreter: interpreter,
+		name:        name,
 	}
 }
 
@@ -173,7 +176,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			err = StorageMigrationError{
 				StorageKey:    storageKey,
 				StorageMapKey: storageMapKey,
-				Migration:     "StorageMigration",
+				Migration:     m.name,
 				Err:           err,
 				Stack:         debug.Stack(),
 			}

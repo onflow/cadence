@@ -75,7 +75,7 @@ func TestStaticTypeMigration(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
@@ -118,14 +118,34 @@ func TestStaticTypeMigration(t *testing.T) {
 
 		actual := migrate(t,
 			staticTypeMigration,
-			interpreter.NewTypeValue(nil, nil),
+			interpreter.NewUnmeteredTypeValue(nil),
 			// NOTE: atree value validation is disabled,
 			// because the type value has a nil type (which indicates an invalid or unknown type),
 			// and invalid unknown types are always unequal
 			false,
 		)
 		assert.Equal(t,
-			interpreter.NewTypeValue(nil, nil),
+			interpreter.NewUnmeteredTypeValue(nil),
+			actual,
+		)
+	})
+
+	t.Run("TypeValue with unparameterized Capability type", func(t *testing.T) {
+		t.Parallel()
+
+		staticTypeMigration := NewStaticTypeMigration()
+
+		actual := migrate(t,
+			staticTypeMigration,
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewCapabilityStaticType(nil, nil),
+			),
+			true,
+		)
+		assert.Equal(t,
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewCapabilityStaticType(nil, nil),
+			),
 			actual,
 		)
 	})
@@ -737,7 +757,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 

@@ -182,9 +182,12 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 		}
 
 	case *interpreter.CapabilityStaticType:
-		convertedBorrowType := m.maybeConvertStaticType(staticType.BorrowType, staticType)
-		if convertedBorrowType != nil {
-			return interpreter.NewCapabilityStaticType(nil, convertedBorrowType)
+		borrowType := staticType.BorrowType
+		if borrowType != nil {
+			convertedBorrowType := m.maybeConvertStaticType(borrowType, staticType)
+			if convertedBorrowType != nil {
+				return interpreter.NewCapabilityStaticType(nil, convertedBorrowType)
+			}
 		}
 
 	case *interpreter.IntersectionStaticType:
