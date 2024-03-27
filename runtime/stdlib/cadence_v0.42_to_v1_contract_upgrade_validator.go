@@ -533,6 +533,27 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkDeclarationKindCha
 	return false
 }
 
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkNestedDeclarationRemoval(
+	nestedDeclaration ast.Declaration,
+	oldContainingDeclaration ast.Declaration,
+	newContainingDeclaration ast.Declaration,
+) {
+
+	// enums can be removed from contract interfaces, as they have no interface equivalent and are not
+	// actually used in field type annotations in any contracts
+	if oldContainingDeclaration.DeclarationKind() == common.DeclarationKindContractInterface &&
+		newContainingDeclaration.DeclarationKind() == common.DeclarationKindContractInterface &&
+		nestedDeclaration.DeclarationKind() == common.DeclarationKindEnum {
+		return
+	}
+
+	validator.underlyingUpdateValidator.checkNestedDeclarationRemoval(
+		nestedDeclaration,
+		oldContainingDeclaration,
+		newContainingDeclaration,
+	)
+}
+
 func (validator *CadenceV042ToV1ContractUpdateValidator) checkConformanceV1(
 	oldDecl *ast.CompositeDeclaration,
 	newDecl *ast.CompositeDeclaration,

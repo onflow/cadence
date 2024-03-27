@@ -37,6 +37,11 @@ type UpdateValidator interface {
 	setCurrentDeclaration(ast.Declaration)
 
 	checkField(oldField *ast.FieldDeclaration, newField *ast.FieldDeclaration)
+	checkNestedDeclarationRemoval(
+		nestedDeclaration ast.Declaration,
+		oldContainingDeclaration ast.Declaration,
+		newContainingDeclaration ast.Declaration,
+	)
 	getAccountContractNames(address common.Address) ([]string, error)
 
 	checkDeclarationKindChange(
@@ -300,6 +305,25 @@ func (validator *ContractUpdateValidator) checkDeclarationKindChange(
 	return true
 }
 
+func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
+	nestedDeclaration ast.Declaration,
+	_ ast.Declaration,
+	newContainingDeclaration ast.Declaration,
+) {
+	// OK to remove events - they are not stored
+	if nestedDeclaration.DeclarationKind() == common.DeclarationKindEvent {
+		return
+	}
+
+	validator.report(&MissingDeclarationError{
+		Name: nestedDeclaration.DeclarationIdentifier().Identifier,
+		Kind: nestedDeclaration.DeclarationKind(),
+		Range: ast.NewUnmeteredRangeFromPositioned(
+			newContainingDeclaration.DeclarationIdentifier(),
+		),
+	})
+}
+
 func checkNestedDeclarations(
 	validator UpdateValidator,
 	oldDeclaration ast.Declaration,
@@ -370,18 +394,7 @@ func checkNestedDeclarations(
 	})
 
 	for _, declaration := range missingDeclarations {
-		// OK to remove events - they are not stored
-		if declaration.DeclarationKind() == common.DeclarationKindEvent {
-			continue
-		}
-
-		validator.report(&MissingDeclarationError{
-			Name: declaration.DeclarationIdentifier().Identifier,
-			Kind: declaration.DeclarationKind(),
-			Range: ast.NewUnmeteredRangeFromPositioned(
-				newDeclaration.DeclarationIdentifier(),
-			),
-		})
+		validator.checkNestedDeclarationRemoval(declaration, oldDeclaration, newDeclaration)
 	}
 
 	// Check enum-cases, if there are any.
