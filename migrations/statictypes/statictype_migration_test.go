@@ -75,7 +75,7 @@ func TestStaticTypeMigration(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
@@ -757,7 +757,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
