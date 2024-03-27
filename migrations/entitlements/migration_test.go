@@ -3124,6 +3124,7 @@ func TestRehash(t *testing.T) {
 			interpreter.UnauthorizedAccess,
 			newCompositeType(),
 		)
+		refType.HasLegacyIsAuthorized = true
 		refType.LegacyIsAuthorized = true
 
 		legacyRefType := &migrations.LegacyReferenceType{

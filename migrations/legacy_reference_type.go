@@ -35,6 +35,11 @@ type LegacyReferenceType struct {
 var _ interpreter.StaticType = &LegacyReferenceType{}
 
 func (t *LegacyReferenceType) ID() common.TypeID {
+	if !t.HasLegacyIsAuthorized {
+		// Encode as a regular reference type
+		return t.ReferenceStaticType.ID()
+	}
+
 	borrowedType := t.ReferencedType
 	return common.TypeID(
 		formatReferenceType(
@@ -58,6 +63,14 @@ func formatReferenceType(
 }
 
 func (t *LegacyReferenceType) Encode(e *cbor.StreamEncoder) error {
+	if !t.HasLegacyIsAuthorized {
+		// Encode as a regular reference type
+		return t.ReferenceStaticType.Encode(e)
+	}
+
+	// Has legacy isAuthorized flag,
+	// encode as a legacy reference type
+
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
