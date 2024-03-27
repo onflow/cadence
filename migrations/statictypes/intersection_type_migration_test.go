@@ -398,7 +398,7 @@ func TestIntersectionTypeMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 
 	reporter := newTestReporter()
 
@@ -566,7 +566,7 @@ func TestIntersectionTypeRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
@@ -733,7 +733,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			storage, inter := newStorageAndInterpreter(t, ledger)
 
-			migration := migrations.NewStorageMigration(inter, storage)
+			migration := migrations.NewStorageMigration(inter, storage, "test")
 
 			reporter := newTestReporter()
 
@@ -875,7 +875,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			storage, inter := newStorageAndInterpreter(t, ledger)
 
-			migration := migrations.NewStorageMigration(inter, storage)
+			migration := migrations.NewStorageMigration(inter, storage, "test")
 
 			reporter := newTestReporter()
 
@@ -1028,7 +1028,7 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
@@ -1423,7 +1423,7 @@ func TestIntersectionTypeMigrationWithTypeConverters(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 

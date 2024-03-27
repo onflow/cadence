@@ -189,6 +189,13 @@ func getSingleContractUpdateErrorCause(t *testing.T, err error, contractName str
 	return updateErr.Errors[0]
 }
 
+func assertMissingDeclarationError(t *testing.T, err error, declName string) bool {
+	var missingDeclError *stdlib.MissingDeclarationError
+	require.ErrorAs(t, err, &missingDeclError)
+
+	return assert.Equal(t, declName, missingDeclError.Name)
+}
+
 func getContractUpdateError(t *testing.T, err error, contractName string) *stdlib.ContractUpdateError {
 	require.Error(t, err)
 
@@ -2241,6 +2248,47 @@ func TestInterfaceConformanceChange(t *testing.T) {
 func TestEnumUpdates(t *testing.T) {
 
 	t.Parallel()
+
+	t.Run("remove from contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+                pub enum E: UInt {}
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {}
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertMissingDeclarationError(t, cause, "E")
+	})
+
+	t.Run("remove from contract interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract interface Test {
+                pub enum E: UInt {}
+            }
+        `
+
+		const newCode = `
+            access(all) contract interface Test {
+              
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+
+		require.NoError(t, err)
+	})
 
 	t.Run("update as is", func(t *testing.T) {
 
