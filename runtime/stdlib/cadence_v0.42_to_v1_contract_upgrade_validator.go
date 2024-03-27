@@ -684,24 +684,19 @@ type AuthorizationMismatchError struct {
 }
 
 var _ errors.UserError = &AuthorizationMismatchError{}
-var _ errors.SecondaryError = &AuthorizationMismatchError{}
 
 func (*AuthorizationMismatchError) IsUserError() {}
 
 func (e *AuthorizationMismatchError) Error() string {
-	return "mismatching authorization"
-}
-
-func (e *AuthorizationMismatchError) SecondaryError() string {
 	if e.ExpectedAuthorization == sema.PrimitiveAccess(ast.AccessAll) {
 		return fmt.Sprintf(
-			"The entitlements migration would not grant this value any entitlements, but the annotation present is `%s`",
+			"mismatching authorization: the entitlements migration would not grant this value any entitlements, but the annotation present is `%s`",
 			e.FoundAuthorization.QualifiedString(),
 		)
 	}
 
 	return fmt.Sprintf(
-		"The entitlements migration would only grant this value `%s`, but the annotation present is `%s`",
+		"mismatching authorization: the entitlements migration would only grant this value `%s`, but the annotation present is `%s`",
 		e.ExpectedAuthorization.QualifiedString(),
 		e.FoundAuthorization.QualifiedString(),
 	)
