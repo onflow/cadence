@@ -2393,7 +2393,7 @@ func TestBlockchain(t *testing.T) {
                 // timeDelta is the representation of 35 days,
                 // in the form of seconds.
                 let timeDelta = Fix64(35 * 24 * 60 * 60)
-                Test.moveTime(by: timeDelta)
+                Test.moveTime(by: timeDelta + 0.5)
             }
         `
 
@@ -2402,9 +2402,9 @@ func TestBlockchain(t *testing.T) {
 		testFramework := &mockedTestFramework{
 			emulatorBackend: func() Blockchain {
 				return &mockedBlockchain{
-					moveTime: func(timeDelta int64) {
+					moveTime: func(timeDelta float64) {
 						moveTimeInvoked = true
-						assert.Equal(t, int64(3024000), timeDelta)
+						assert.Equal(t, 3024000.5, timeDelta)
 					},
 				}
 			},
@@ -2439,9 +2439,9 @@ func TestBlockchain(t *testing.T) {
 		testFramework := &mockedTestFramework{
 			emulatorBackend: func() Blockchain {
 				return &mockedBlockchain{
-					moveTime: func(timeDelta int64) {
+					moveTime: func(timeDelta float64) {
 						moveTimeInvoked = true
-						assert.Equal(t, int64(-3024000), timeDelta)
+						assert.Equal(t, -3024000.0, timeDelta)
 					},
 				}
 			},
@@ -2473,7 +2473,7 @@ func TestBlockchain(t *testing.T) {
 		testFramework := &mockedTestFramework{
 			emulatorBackend: func() Blockchain {
 				return &mockedBlockchain{
-					moveTime: func(timeDelta int64) {
+					moveTime: func(timeDelta float64) {
 						moveTimeInvoked = true
 					},
 				}
@@ -2903,7 +2903,7 @@ type mockedBlockchain struct {
 	serviceAccount     func() (*Account, error)
 	events             func(inter *interpreter.Interpreter, eventType interpreter.StaticType) interpreter.Value
 	reset              func(uint64)
-	moveTime           func(int64)
+	moveTime           func(float64)
 	createSnapshot     func(string) error
 	loadSnapshot       func(string) error
 }
@@ -3016,7 +3016,7 @@ func (m mockedBlockchain) Reset(height uint64) {
 	m.reset(height)
 }
 
-func (m mockedBlockchain) MoveTime(timeDelta int64) {
+func (m mockedBlockchain) MoveTime(timeDelta float64) {
 	if m.moveTime == nil {
 		panic("'SetTimestamp' is not implemented")
 	}
