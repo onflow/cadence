@@ -448,8 +448,8 @@ func TestCheckSaturatedArithmeticFunctions(t *testing.T) {
 	}
 
 	for _, ty := range common.Concat(
-		sema.AllSignedIntegerTypes,
-		sema.AllSignedFixedPointTypes,
+		sema.AllLeafSignedIntegerTypes,
+		sema.AllLeafSignedFixedPointTypes,
 	) {
 
 		if ty == sema.IntType {
@@ -466,8 +466,8 @@ func TestCheckSaturatedArithmeticFunctions(t *testing.T) {
 	}
 
 	for _, ty := range common.Concat(
-		sema.AllUnsignedIntegerTypes,
-		sema.AllUnsignedFixedPointTypes,
+		sema.AllLeafUnsignedIntegerTypes,
+		sema.AllLeafUnsignedFixedPointTypes,
 	) {
 
 		if ty == sema.UIntType || strings.HasPrefix(ty.String(), "Word") {

@@ -40,7 +40,9 @@ const inclusiveRangeConstructorFunctionDocString = `
 var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 	typeParameter := &sema.TypeParameter{
 		Name:      "T",
-		TypeBound: sema.IntegerType,
+		TypeBound: sema.SubtypeTypeBound{
+			Type: sema.IntegerType,
+		},
 	}
 
 	typeAnnotation := sema.NewTypeAnnotation(

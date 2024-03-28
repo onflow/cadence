@@ -39,7 +39,9 @@ Follow best practices to prevent security issues when using this function
 var revertibleRandomFunctionType = func() *sema.FunctionType {
 	typeParameter := &sema.TypeParameter{
 		Name:      "T",
-		TypeBound: sema.FixedSizeUnsignedIntegerType,
+		TypeBound: sema.SubtypeTypeBound{
+			Type: sema.FixedSizeUnsignedIntegerType,
+		},
 	}
 
 	typeAnnotation := sema.NewTypeAnnotation(

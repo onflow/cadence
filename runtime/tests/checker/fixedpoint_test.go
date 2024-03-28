@@ -122,12 +122,7 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 		return RequireGlobalValue(t, checker.Elaboration, "x")
 	}
 
-	for _, ty := range sema.AllFixedPointTypes {
-		// Only test leaf types
-		switch ty {
-		case sema.FixedPointType, sema.SignedFixedPointType:
-			continue
-		}
+	for _, ty := range sema.AllLeafFixedPointTypes {
 
 		t.Run(ty.String(), func(t *testing.T) {
 
@@ -553,7 +548,7 @@ func TestCheckSignedFixedPointNegate(t *testing.T) {
 
 	t.Parallel()
 
-	for _, ty := range sema.AllSignedFixedPointTypes {
+	for _, ty := range sema.AllLeafSignedFixedPointTypes {
 		name := ty.String()
 
 		t.Run(name, func(t *testing.T) {
@@ -576,7 +571,7 @@ func TestCheckInvalidUnsignedFixedPointNegate(t *testing.T) {
 
 	t.Parallel()
 
-	for _, ty := range sema.AllUnsignedFixedPointTypes {
+	for _, ty := range sema.AllLeafUnsignedFixedPointTypes {
 
 		t.Run(ty.String(), func(t *testing.T) {
 
@@ -600,7 +595,7 @@ func TestCheckInvalidNegativeZeroUnsignedFixedPoint(t *testing.T) {
 
 	t.Parallel()
 
-	for _, ty := range sema.AllUnsignedFixedPointTypes {
+	for _, ty := range sema.AllLeafUnsignedFixedPointTypes {
 
 		t.Run(ty.String(), func(t *testing.T) {
 
@@ -623,12 +618,7 @@ func TestCheckFixedPointLiteralScales(t *testing.T) {
 
 	t.Parallel()
 
-	for _, ty := range sema.AllFixedPointTypes {
-		// Only test leaf types
-		switch ty {
-		case sema.FixedPointType, sema.SignedFixedPointType:
-			continue
-		}
+	for _, ty := range sema.AllLeafFixedPointTypes {
 
 		t.Run(ty.String(), func(t *testing.T) {
 
@@ -697,12 +687,8 @@ func TestCheckFixedPointMinMax(t *testing.T) {
 		)
 	}
 
-	for _, ty := range sema.AllFixedPointTypes {
-		// Only test leaf types
-		switch ty {
-		case sema.FixedPointType, sema.SignedFixedPointType:
-			continue
-		}
+	for _, ty := range sema.AllLeafFixedPointTypes {
+
 
 		t.Run(ty.String(), func(t *testing.T) {
 			test(t, ty)

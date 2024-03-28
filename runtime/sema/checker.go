@@ -41,8 +41,10 @@ const ResultIdentifier = "result"
 var beforeType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
-		Name:      "T",
-		TypeBound: AnyStructType,
+		Name: "T",
+		TypeBound: SubtypeTypeBound{
+			Type: AnyStructType,
+		},
 	}
 
 	typeAnnotation := NewTypeAnnotation(
@@ -1378,11 +1380,14 @@ func (checker *Checker) typeParameters(typeParameterList *ast.TypeParameterList)
 		for i, typeParameter := range typeParameterList.TypeParameters {
 
 			typeBoundAnnotation := typeParameter.TypeBound
-			var convertedTypeBound Type
+			var convertedTypeBound TypeBound
 			if typeBoundAnnotation != nil {
+				// TODO: for now, the syntax only supports subtype type bounds
 				convertedTypeBoundAnnotation := checker.ConvertTypeAnnotation(typeBoundAnnotation)
 				checker.checkTypeAnnotation(convertedTypeBoundAnnotation, typeBoundAnnotation)
-				convertedTypeBound = convertedTypeBoundAnnotation.Type
+				convertedTypeBound = SubtypeTypeBound{
+					Type: convertedTypeBoundAnnotation.Type,
+				}
 			}
 
 			typeParameters[i] = &TypeParameter{

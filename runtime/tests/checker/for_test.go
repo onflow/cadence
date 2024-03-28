@@ -120,15 +120,7 @@ func TestCheckForInclusiveRange(t *testing.T) {
 		})
 	}
 
-	for _, typ := range sema.AllIntegerTypes {
-		// Only test leaf integer types
-		switch typ {
-		case sema.IntegerType,
-			sema.SignedIntegerType,
-			sema.FixedSizeUnsignedIntegerType:
-			continue
-		}
-
+	for _, typ := range sema.AllLeafIntegerTypes {
 		test(typ)
 	}
 

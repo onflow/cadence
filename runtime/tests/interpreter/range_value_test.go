@@ -529,14 +529,7 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 		})
 	}
 
-	for _, integerType := range sema.AllIntegerTypes {
-		// Only test leaf types
-		switch integerType {
-		case sema.IntegerType,
-			sema.SignedIntegerType,
-			sema.FixedSizeUnsignedIntegerType:
-			continue
-		}
+	for _, integerType := range sema.AllLeafIntegerTypes {
 
 		typeString := integerType.String()
 
@@ -560,12 +553,7 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 	}
 
 	// Additional invalid cases for signed integer types
-	for _, integerType := range sema.AllSignedIntegerTypes {
-		// Only test leaf types
-		switch integerType {
-		case sema.SignedIntegerType:
-			continue
-		}
+	for _, integerType := range sema.AllLeafSignedIntegerTypes {
 
 		typeString := integerType.String()
 
@@ -582,12 +570,7 @@ func TestInclusiveRangeConstructionInvalid(t *testing.T) {
 	}
 
 	// Additional invalid cases for unsigned integer types
-	for _, integerType := range sema.AllUnsignedIntegerTypes {
-		// Only test leaf types
-		switch integerType {
-		case sema.IntegerType:
-			continue
-		}
+	for _, integerType := range sema.AllLeafUnsignedIntegerTypes {
 
 		typeString := integerType.String()
 

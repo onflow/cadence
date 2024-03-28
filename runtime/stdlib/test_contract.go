@@ -233,9 +233,11 @@ const testTypeExpectFunctionName = "expect"
 
 func newTestTypeExpectFunctionType(matcherType *sema.CompositeType) *sema.FunctionType {
 	typeParameter := &sema.TypeParameter{
-		TypeBound: sema.AnyStructType,
-		Name:      "T",
-		Optional:  true,
+		TypeBound: sema.SubtypeTypeBound{
+			Type: sema.AnyStructType,
+		},
+		Name:     "T",
+		Optional: true,
 	}
 
 	return &sema.FunctionType{
@@ -399,9 +401,11 @@ const testTypeNewMatcherFunctionName = "newMatcher"
 
 func newTestTypeNewMatcherFunctionType(matcherType *sema.CompositeType) *sema.FunctionType {
 	typeParameter := &sema.TypeParameter{
-		TypeBound: sema.AnyStructType,
-		Name:      "T",
-		Optional:  true,
+		TypeBound: sema.SubtypeTypeBound{
+			Type: sema.AnyStructType,
+		},
+		Name:     "T",
+		Optional: true,
 	}
 
 	return &sema.FunctionType{
@@ -467,9 +471,11 @@ Returns a matcher that succeeds if the tested value is equal to the given value.
 
 func newTestTypeEqualFunctionType(matcherType *sema.CompositeType) *sema.FunctionType {
 	typeParameter := &sema.TypeParameter{
-		TypeBound: sema.AnyStructType,
-		Name:      "T",
-		Optional:  true,
+		TypeBound: sema.SubtypeTypeBound{
+			Type: sema.AnyStructType,
+		},
+		Name:     "T",
+		Optional: true,
 	}
 
 	return &sema.FunctionType{

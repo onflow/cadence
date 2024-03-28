@@ -409,7 +409,7 @@ func TestCheckSignedIntegerNegate(t *testing.T) {
 
 	t.Parallel()
 
-	for _, ty := range sema.AllSignedIntegerTypes {
+	for _, ty := range sema.AllLeafSignedIntegerTypes {
 		name := ty.String()
 		t.Run(name, func(t *testing.T) {
 
@@ -431,7 +431,7 @@ func TestCheckInvalidUnsignedIntegerNegate(t *testing.T) {
 
 	t.Parallel()
 
-	for _, ty := range sema.AllUnsignedIntegerTypes {
+	for _, ty := range sema.AllLeafUnsignedIntegerTypes {
 		name := ty.String()
 		t.Run(name, func(t *testing.T) {
 
@@ -485,12 +485,7 @@ func TestCheckFixedPointToIntegerConversion(t *testing.T) {
 
 	t.Parallel()
 
-	for _, ty := range sema.AllIntegerTypes {
-		// Only test leaf types
-		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
-			continue
-		}
+	for _, ty := range sema.AllLeafIntegerTypes {
 
 		t.Run(ty.String(), func(t *testing.T) {
 
@@ -565,12 +560,7 @@ func TestCheckIntegerMinMax(t *testing.T) {
 		)
 	}
 
-	for _, ty := range sema.AllIntegerTypes {
-		// Only test leaf types
-		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
-			continue
-		}
+	for _, ty := range sema.AllLeafIntegerTypes {
 
 		t.Run(ty.String(), func(t *testing.T) {
 			numericType := ty.(*sema.NumericType)

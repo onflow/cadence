@@ -3284,7 +3284,7 @@ func TestCheckEntitlementTypeAnnotation(t *testing.T) {
 
 		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
 		// entitlements are not storable either
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		require.IsType(t, &sema.TypeBoundError{}, errs[1])
 	})
 
 	t.Run("intersection", func(t *testing.T) {
@@ -3526,7 +3526,7 @@ func TestCheckEntitlementMappingTypeAnnotation(t *testing.T) {
 
 		require.IsType(t, &sema.DirectEntitlementAnnotationError{}, errs[0])
 		// entitlements are not storable either
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		require.IsType(t, &sema.TypeBoundError{}, errs[1])
 	})
 
 	t.Run("intersection", func(t *testing.T) {

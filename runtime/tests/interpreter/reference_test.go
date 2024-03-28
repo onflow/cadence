@@ -1893,12 +1893,7 @@ func TestInterpretDereference(t *testing.T) {
 			sema.Int256Type:  interpreter.NewUnmeteredInt256ValueFromInt64(42),
 		}
 
-		for _, typ := range sema.AllIntegerTypes {
-			// Only test leaf types
-			switch typ {
-			case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
-				continue
-			}
+		for _, typ := range sema.AllLeafIntegerTypes {
 
 			integerType := typ
 			typString := typ.QualifiedString()
@@ -1930,12 +1925,7 @@ func TestInterpretDereference(t *testing.T) {
 			sema.Fix64Type:  interpreter.NewUnmeteredFix64Value(4224_000_000),
 		}
 
-		for _, typ := range sema.AllFixedPointTypes {
-			// Only test leaf types
-			switch typ {
-			case sema.FixedPointType, sema.SignedFixedPointType:
-				continue
-			}
+		for _, typ := range sema.AllLeafFixedPointTypes {
 
 			fixedPointType := typ
 			typString := typ.QualifiedString()
@@ -1962,12 +1952,7 @@ func TestInterpretDereference(t *testing.T) {
 	t.Run("Variable-sized array of integers", func(t *testing.T) {
 		t.Parallel()
 
-		for _, typ := range sema.AllIntegerTypes {
-			// Only test leaf types
-			switch typ {
-			case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
-				continue
-			}
+		for _, typ := range sema.AllLeafIntegerTypes {
 
 			integerType := typ
 			typString := typ.QualifiedString()
@@ -2379,12 +2364,7 @@ func TestInterpretDereference(t *testing.T) {
 	t.Run("Constant-sized array of integers", func(t *testing.T) {
 		t.Parallel()
 
-		for _, typ := range sema.AllIntegerTypes {
-			// Only test leaf types
-			switch typ {
-			case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
-				continue
-			}
+		for _, typ := range sema.AllLeafIntegerTypes {
 
 			integerType := typ
 			typString := typ.QualifiedString()

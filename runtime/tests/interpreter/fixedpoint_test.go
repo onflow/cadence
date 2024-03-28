@@ -59,12 +59,7 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 		"UFix64": interpreter.NewUnmeteredUFix64Value(123000000),
 	}
 
-	for _, fixedPointType := range sema.AllFixedPointTypes {
-		// Only test leaf types
-		switch fixedPointType {
-		case sema.FixedPointType, sema.SignedFixedPointType:
-			continue
-		}
+	for _, fixedPointType := range sema.AllLeafFixedPointTypes {
 
 		if _, ok := tests[fixedPointType.String()]; !ok {
 			panic(fmt.Sprintf("broken test: missing %s", fixedPointType))
@@ -117,13 +112,7 @@ var testFixedPointValues = map[string]interpreter.Value{
 }
 
 func init() {
-	for _, fixedPointType := range sema.AllFixedPointTypes {
-		// Only test leaf types
-		switch fixedPointType {
-		case sema.FixedPointType, sema.SignedFixedPointType:
-			continue
-		}
-
+	for _, fixedPointType := range sema.AllLeafFixedPointTypes {
 		if _, ok := testFixedPointValues[fixedPointType.String()]; !ok {
 			panic(fmt.Sprintf("broken test: missing fixed-point type: %s", fixedPointType))
 		}
@@ -354,7 +343,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 	t.Run("invalid negative integer to UFix64", func(t *testing.T) {
 
-		for _, integerType := range sema.AllSignedIntegerTypes {
+		for _, integerType := range sema.AllLeafSignedIntegerTypes {
 
 			t.Run(integerType.String(), func(t *testing.T) {
 
@@ -500,7 +489,7 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 		const testedValue = sema.Fix64TypeMinInt - 1
 		testValueBig := big.NewInt(testedValue)
 
-		for _, integerType := range sema.AllSignedIntegerTypes {
+		for _, integerType := range sema.AllLeafSignedIntegerTypes {
 
 			// Only test for integer types that can hold testedValue
 
@@ -579,13 +568,7 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 		},
 	}
 
-	for _, ty := range sema.AllFixedPointTypes {
-		// Only test leaf types
-		switch ty {
-		case sema.FixedPointType, sema.SignedFixedPointType:
-			continue
-		}
-
+	for _, ty := range sema.AllLeafFixedPointTypes {
 		if _, ok := testCases[ty]; !ok {
 			require.Fail(t, "missing type: %s", ty.String())
 		}

@@ -54,7 +54,7 @@ func TestRandomBasicUniformityWithModulo(t *testing.T) {
 	}
 
 	testTypes := func(t *testing.T, testType func(*testing.T, sema.Type)) {
-		for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
+		for _, ty := range sema.AllLeafFixedSizeUnsignedIntegerTypes {
 			tyCopy := ty
 			t.Run(ty.String(), func(t *testing.T) {
 				t.Parallel()

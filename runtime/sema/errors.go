@@ -333,6 +333,35 @@ func (e *TypeMismatchWithDescriptionError) SecondaryError() string {
 	)
 }
 
+// TypeBoundError
+
+type TypeBoundError struct {
+	ExpectedTypeBound TypeBound
+	ActualType        Type
+	Expression        ast.Expression
+	ast.Range
+}
+
+var _ SemanticError = &TypeBoundError{}
+var _ errors.UserError = &TypeBoundError{}
+var _ errors.SecondaryError = &TypeBoundError{}
+
+func (*TypeBoundError) isSemanticError() {}
+
+func (*TypeBoundError) IsUserError() {}
+
+func (e *TypeBoundError) Error() string {
+	return "type bound unsatisfied"
+}
+
+func (e *TypeBoundError) SecondaryError() string {
+	return fmt.Sprintf(
+		"expected type satisfying %s, got `%s`",
+		e.ExpectedTypeBound,
+		e.ActualType.QualifiedString(),
+	)
+}
+
 // NotIndexableTypeError
 
 type NotIndexableTypeError struct {

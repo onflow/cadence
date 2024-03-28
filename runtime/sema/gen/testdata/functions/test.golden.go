@@ -117,9 +117,11 @@ const TestTypeTypeParamWithBoundFunctionName = "typeParamWithBound"
 
 var TestTypeTypeParamWithBoundFunctionTypeParameterT = &sema.TypeParameter{
 	Name: "T",
-	TypeBound: &sema.ReferenceType{
-		Type:          sema.AnyType,
-		Authorization: sema.UnauthorizedAccess,
+	TypeBound: sema.SubtypeTypeBound{
+		Type: &sema.ReferenceType{
+			Type:          sema.AnyType,
+			Authorization: sema.UnauthorizedAccess,
+		},
 	},
 }
 

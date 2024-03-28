@@ -2272,7 +2272,7 @@ func TestTypeInclusions(t *testing.T) {
 	t.Run("SignedInteger", func(t *testing.T) {
 		t.Parallel()
 
-		for _, typ := range AllSignedIntegerTypes {
+		for _, typ := range AllLeafSignedIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
 				assert.True(t, SignedIntegerTypeTag.ContainsAny(typ.Tag()))
 			})
@@ -2282,7 +2282,7 @@ func TestTypeInclusions(t *testing.T) {
 	t.Run("UnsignedInteger", func(t *testing.T) {
 		t.Parallel()
 
-		for _, typ := range AllUnsignedIntegerTypes {
+		for _, typ := range AllLeafUnsignedIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
 				assert.True(t, UnsignedIntegerTypeTag.ContainsAny(typ.Tag()))
 			})
@@ -2292,7 +2292,7 @@ func TestTypeInclusions(t *testing.T) {
 	t.Run("FixedSizeUnsignedInteger", func(t *testing.T) {
 		t.Parallel()
 
-		for _, typ := range AllFixedSizeUnsignedIntegerTypes {
+		for _, typ := range AllLeafFixedSizeUnsignedIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
 				assert.True(t, FixedSizeUnsignedIntegerTypeTag.ContainsAny(typ.Tag()))
 			})
@@ -2312,7 +2312,7 @@ func TestTypeInclusions(t *testing.T) {
 	t.Run("SignedFixedPoint", func(t *testing.T) {
 		t.Parallel()
 
-		for _, typ := range AllSignedFixedPointTypes {
+		for _, typ := range AllLeafSignedFixedPointTypes {
 			t.Run(typ.String(), func(t *testing.T) {
 				assert.True(t, SignedFixedPointTypeTag.ContainsAny(typ.Tag()))
 			})
@@ -2322,7 +2322,7 @@ func TestTypeInclusions(t *testing.T) {
 	t.Run("UnsignedFixedPoint", func(t *testing.T) {
 		t.Parallel()
 
-		for _, typ := range AllUnsignedFixedPointTypes {
+		for _, typ := range AllLeafUnsignedFixedPointTypes {
 			t.Run(typ.String(), func(t *testing.T) {
 				assert.True(t, UnsignedFixedPointTypeTag.ContainsAny(typ.Tag()))
 			})
@@ -2538,10 +2538,13 @@ func TestMapType(t *testing.T) {
 
 	t.Run("map function type", func(t *testing.T) {
 		t.Parallel()
+
 		originalTypeParam := &TypeParameter{
-			TypeBound: Int64Type,
-			Name:      "X",
-			Optional:  true,
+			TypeBound: SubtypeTypeBound{
+				Type: Int64Type,
+			},
+			Name:     "X",
+			Optional: true,
 		}
 		original := NewSimpleFunctionType(
 			FunctionPurityView,
@@ -2566,9 +2569,11 @@ func TestMapType(t *testing.T) {
 		original.TypeParameters = []*TypeParameter{originalTypeParam}
 
 		mappedTypeParam := &TypeParameter{
-			TypeBound: StringType,
-			Name:      "X",
-			Optional:  true,
+			TypeBound: SubtypeTypeBound{
+				Type: StringType,
+			},
+			Name:     "X",
+			Optional: true,
 		}
 		mapped := NewSimpleFunctionType(
 			FunctionPurityView,
@@ -2600,7 +2605,10 @@ func TestMapType(t *testing.T) {
 
 		require.Equal(t, mapped, outputFunction)
 		require.IsType(t, &GenericType{}, outputFunction.Parameters[0].TypeAnnotation.Type)
-		require.True(t, outputFunction.Parameters[0].TypeAnnotation.Type.(*GenericType).TypeParameter == outputFunction.TypeParameters[0])
+		require.Same(t,
+			outputFunction.Parameters[0].TypeAnnotation.Type.(*GenericType).TypeParameter,
+			outputFunction.TypeParameters[0],
+		)
 	})
 }
 

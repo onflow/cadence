@@ -567,8 +567,10 @@ func TestCheckGenericFunctionInvocation(t *testing.T) {
 		t.Parallel()
 
 		typeParameter := &sema.TypeParameter{
-			Name:      "T",
-			TypeBound: sema.NumberType,
+			Name: "T",
+			TypeBound: sema.SubtypeTypeBound{
+				Type: sema.NumberType,
+			},
 		}
 
 		checker, err := parseAndCheckWithTestValue(t,
@@ -605,8 +607,10 @@ func TestCheckGenericFunctionInvocation(t *testing.T) {
 		t.Parallel()
 
 		typeParameter := &sema.TypeParameter{
-			Name:      "T",
-			TypeBound: sema.NumberType,
+			Name: "T",
+			TypeBound: sema.SubtypeTypeBound{
+				Type: sema.NumberType,
+			},
 		}
 
 		_, err := parseAndCheckWithTestValue(t,
@@ -623,7 +627,7 @@ func TestCheckGenericFunctionInvocation(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeBoundError{}, errs[0])
 	})
 
 	t.Run("invalid: one type parameter with type bound, no type argument, one parameter, one argument: bound not satisfied", func(t *testing.T) {
@@ -631,8 +635,10 @@ func TestCheckGenericFunctionInvocation(t *testing.T) {
 		t.Parallel()
 
 		typeParameter := &sema.TypeParameter{
-			Name:      "T",
-			TypeBound: sema.NumberType,
+			Name: "T",
+			TypeBound: sema.SubtypeTypeBound{
+				Type: sema.NumberType,
+			},
 		}
 
 		_, err := parseAndCheckWithTestValue(t,
@@ -660,7 +666,7 @@ func TestCheckGenericFunctionInvocation(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeBoundError{}, errs[0])
 	})
 
 	t.Run("valid: one type parameter, one type argument, no parameters, no arguments, generic return type", func(t *testing.T) {
@@ -712,8 +718,10 @@ func TestCheckGenericFunctionInvocation(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 
 				typeParameter := &sema.TypeParameter{
-					Name:      "T",
-					TypeBound: sema.NumberType,
+					Name: "T",
+					TypeBound: sema.SubtypeTypeBound{
+						Type: sema.NumberType,
+					},
 				}
 
 				checker, err := parseAndCheckWithTestValue(t,
@@ -802,8 +810,10 @@ func TestCheckGenericFunctionInvocation(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 
 				typeParameter := &sema.TypeParameter{
-					Name:      "T",
-					TypeBound: sema.NumberType,
+					Name: "T",
+					TypeBound: sema.SubtypeTypeBound{
+						Type: sema.NumberType,
+					},
 				}
 
 				checker, err := parseAndCheckWithTestValue(t,
@@ -1115,6 +1125,6 @@ func TestCheckGenericFunctionDeclaration(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.IsType(t, &sema.TypeBoundError{}, errs[0])
 	})
 }

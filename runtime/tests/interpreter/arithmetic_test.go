@@ -725,8 +725,8 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 	// Verify all test cases exist
 
 	for _, ty := range common.Concat(
-		sema.AllSignedIntegerTypes,
-		sema.AllSignedFixedPointTypes,
+		sema.AllLeafSignedIntegerTypes,
+		sema.AllLeafSignedFixedPointTypes,
 	) {
 
 		testCase, ok := testCases[ty]
@@ -751,8 +751,8 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 	}
 
 	for _, ty := range common.Concat(
-		sema.AllUnsignedIntegerTypes,
-		sema.AllUnsignedFixedPointTypes,
+		sema.AllLeafUnsignedIntegerTypes,
+		sema.AllLeafUnsignedFixedPointTypes,
 	) {
 
 		if strings.HasPrefix(ty.String(), "Word") {

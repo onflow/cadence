@@ -3388,7 +3388,7 @@ func TestNegativeMod(t *testing.T) {
 			},
 		}
 
-		for _, integerType := range sema.AllSignedIntegerTypes {
+		for _, integerType := range sema.AllLeafSignedIntegerTypes {
 			if _, ok := tests[integerType.String()]; !ok {
 				panic(fmt.Sprintf("broken test: missing %s", integerType))
 			}
@@ -3414,7 +3414,7 @@ func TestNegativeMod(t *testing.T) {
 			},
 		}
 
-		for _, integerType := range sema.AllSignedFixedPointTypes {
+		for _, integerType := range sema.AllLeafSignedFixedPointTypes {
 			if _, ok := tests[integerType.String()]; !ok {
 				panic(fmt.Sprintf("broken test: missing %s", integerType))
 			}
