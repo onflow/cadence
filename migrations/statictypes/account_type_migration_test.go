@@ -1353,7 +1353,7 @@ func TestAccountTypeRehash(t *testing.T) {
 			existingKeys = append(existingKeys, key)
 			// continue iteration
 			return true
-		})
+		}, interpreter.EmptyLocationRange)
 
 		for _, key := range existingKeys {
 			actual := dictValue.Remove(

@@ -35,7 +35,7 @@ type SimpleCompositeValue struct {
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
-	stringer func(common.MemoryGauge, SeenReferences) string
+	stringer func(*Interpreter, SeenReferences, LocationRange) string
 	TypeID   sema.TypeID
 	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
 	FieldNames []string
@@ -52,7 +52,7 @@ func NewSimpleCompositeValue(
 	fields map[string]Value,
 	computeField func(name string, interpreter *Interpreter, locationRange LocationRange) Value,
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string,
-	stringer func(common.MemoryGauge, SeenReferences) string,
+	stringer func(*Interpreter, SeenReferences, LocationRange) string,
 ) *SimpleCompositeValue {
 
 	common.UseMemory(gauge, common.SimpleCompositeValueBaseMemoryUsage)
@@ -163,13 +163,13 @@ func (v *SimpleCompositeValue) String() string {
 }
 
 func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(nil, seenReferences)
+	return v.MeteredString(nil, seenReferences, EmptyLocationRange)
 }
 
-func (v *SimpleCompositeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+func (v *SimpleCompositeValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
 
 	if v.stringer != nil {
-		return v.stringer(memoryGauge, seenReferences)
+		return v.stringer(interpreter, seenReferences, locationRange)
 	}
 
 	var fields []struct {
@@ -185,11 +185,11 @@ func (v *SimpleCompositeValue) MeteredString(memoryGauge common.MemoryGauge, see
 		var value string
 		if v.fieldFormatters != nil {
 			if fieldFormatter, ok := v.fieldFormatters[fieldName]; ok {
-				value = fieldFormatter(memoryGauge, fieldValue, seenReferences)
+				value = fieldFormatter(interpreter, fieldValue, seenReferences)
 			}
 		}
 		if value == "" {
-			value = fieldValue.MeteredString(memoryGauge, seenReferences)
+			value = fieldValue.MeteredString(interpreter, seenReferences, locationRange)
 		}
 
 		fields = append(fields, struct {
@@ -215,7 +215,7 @@ func (v *SimpleCompositeValue) MeteredString(memoryGauge common.MemoryGauge, see
 	// Value of each field is metered separately.
 	strLen = strLen + len(typeId) + len(fields)*4
 
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(strLen))
 
 	return format.Composite(typeId, fields)
 }

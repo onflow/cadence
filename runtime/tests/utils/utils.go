@@ -245,7 +245,7 @@ func DictionaryKeyValues(inter *interpreter.Interpreter, dict *interpreter.Dicti
 		i++
 
 		return true
-	})
+	}, interpreter.EmptyLocationRange)
 	return result
 }
 
@@ -289,7 +289,7 @@ func DictionaryEntries[K, V any](
 			Value: value,
 		}
 		return iterStatus
-	})
+	}, interpreter.EmptyLocationRange)
 
 	return res, iterStatus
 }

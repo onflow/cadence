@@ -5232,13 +5232,13 @@ func (interpreter *Interpreter) invalidateReferencedResources(
 			interpreter.invalidateReferencedResources(fieldValue, locationRange)
 			// continue iteration
 			return true
-		})
+		}, locationRange)
 		storageID = value.StorageID()
 	case *DictionaryValue:
 		value.IterateLoaded(interpreter, func(_, value Value) (resume bool) {
 			interpreter.invalidateReferencedResources(value, locationRange)
 			return true
-		})
+		}, locationRange)
 		storageID = value.StorageID()
 	case *ArrayValue:
 		value.IterateLoaded(
@@ -5491,6 +5491,10 @@ func (interpreter *Interpreter) validateMutation(storageID atree.StorageID, loca
 }
 
 func (interpreter *Interpreter) withMutationPrevention(storageID atree.StorageID, f func()) {
+	if interpreter == nil {
+		f()
+		return
+	}
 	oldIteration, present := interpreter.SharedState.containerValueIteration[storageID]
 	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
 
