@@ -1559,16 +1559,19 @@ func (checker *Checker) recordResourceInvalidation(
 	switch expression.(type) {
 	case *ast.MemberExpression:
 
-		if accessedSelfMember == nil ||
-			!checker.allowSelfResourceFieldInvalidation {
+		if (accessedSelfMember == nil ||
+			!checker.allowSelfResourceFieldInvalidation) &&
+			invalidationKind != ResourceInvalidationKindMoveTemporary {
 
 			reportInvalidNestedMove()
 			return nil
 		}
 
 	case *ast.IndexExpression:
-		reportInvalidNestedMove()
-		return nil
+		if invalidationKind != ResourceInvalidationKindMoveTemporary {
+			reportInvalidNestedMove()
+			return nil
+		}
 	}
 
 	invalidation := ResourceInvalidation{

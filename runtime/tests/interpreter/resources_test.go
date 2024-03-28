@@ -2736,7 +2736,7 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
 
 	t.Parallel()
 
-	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+	inter, err := parseCheckAndInterpretWithOptions(t, `
         access(all) resource R{}
 
         access(all) fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
@@ -2755,8 +2755,14 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
             }
 
             destroy arr // This crashes
+			destroy victim
         }
-    `)
+    `, ParseCheckAndInterpretOptions{
+		HandleCheckerError: func(err error) {
+			errs := checker.RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+		},
+	})
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("main")
@@ -2774,7 +2780,7 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 
 	t.Parallel()
 
-	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+	inter, err := parseCheckAndInterpretWithOptions(t, `
         access(all) resource R{}
 
         access(all) fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
@@ -2792,8 +2798,14 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 
             destroy copy1
             destroy arr
+			destroy victim
         }
-    `)
+    `, ParseCheckAndInterpretOptions{
+		HandleCheckerError: func(err error) {
+			errs := checker.RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+		},
+	})
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("main")

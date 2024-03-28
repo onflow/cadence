@@ -156,6 +156,32 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 				)
 			}
 
+			// Given a variable declaration with a second value transfer of the form
+			// 				`let x <- e1 <- e2`
+			//
+			// the interpreter will evaluate this in the following order:
+			//  - evaluating `e1` to some value `v1` (which is necessarily either a variable, an index expression, or a member expression)
+			//  - moving the value stored in `v1` into the newly declared variable `x`
+			//  - evaluating `e2` to some value `v2`
+			//  - evaluate `e1` again to some value `v1'` (as `e1` may produce a different value after `e2`'s execution)
+			//  - lastly moving the value `v2` into the "variable" denoted by `v1'`
+			//
+			// This means that while at the end of the execution of the entire statement,
+			// `v1` is still a valid resource (having had the result of `e2` moved into it),
+			// specifically during the execution of `e2` it is invalid.
+			// In order to reflect this, we temporarily invalidate `v1` before evaluating `e2` and checking the assignment,
+			// and then re-validate `v1` afterwards.
+			// We also re-check `e1` again as well, since it is evaluated a second time by the interpreter.
+			// Note that while typechecking the same expression twice is not safe in general,
+			// in this case it is permissible for a specific reason:
+			// `e1` is necessarily an identifier, index or member expression, which may not have side effects
+
+			recordedResourceInvalidation := checker.recordResourceInvalidation(
+				declaration.Value,
+				declarationType,
+				ResourceInvalidationKindMoveTemporary,
+			)
+
 			// Check the assignment of the second value to the first expression
 
 			// The check of the assignment of the second value to the first also:
@@ -173,6 +199,11 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 				declaration.SecondTransfer,
 				true,
 			)
+
+			if recordedResourceInvalidation != nil {
+				checker.resources.RemoveTemporaryMoveInvalidation(recordedResourceInvalidation.resource, recordedResourceInvalidation.invalidation)
+			}
+			checker.VisitExpression(declaration.Value, expectedValueType)
 		}
 	}
 

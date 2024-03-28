@@ -9859,3 +9859,150 @@ func TestCheckOptionalBindingElseBranch(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
+
+func TestCheckResourceSecondValueTransfer(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic array invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            access(all) fun main() {
+                let vaults: @[AnyResource] <- [<-[]]
+                let old <- vaults[0] <- vaults
+                destroy old
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("basic array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            access(all) fun main() {
+                let vaults: @[AnyResource] <- [<-[]]
+                let bar <- create R()
+                let old <- vaults[0] <- bar
+                destroy old
+                destroy vaults
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("basic function call invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            access(all) fun foo(_ r: @R): @R {
+                return <-r 
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                let r2 <- r <- foo(<-r)
+                destroy r2
+                // note that r is still "valid" after the two value transfer so we must destroy it
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("basic function call valid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            access(all) fun foo(_ r: @R): @R {
+                return <-r 
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var bar <- create R()
+                let r2 <- r <- foo(<-bar)
+                destroy r2
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R{}
+
+            access(all) fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
+                arrRef.append(<- copy2!)
+                return <- create R()
+            }
+            
+            access(all) fun main() {
+                var victim: @R? <- create R()
+                var arr: @[R] <- []
+            
+                // In the optional binding below, the 'victim' must be invalidated
+                // before evaluation of the collect() call
+                let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R])
+            
+                // Panics when trying to destroy
+                destroy copy1
+                destroy arr    
+                destroy victim
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("regression", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R{}
+
+            access(all) fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
+                arrRef.append(<- copy2!)
+                return <- create R()
+            }
+            
+            access(all) fun main() {
+                var victim: @R? <- create R()
+                var arr: @[R] <- []
+            
+                if let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R]) {
+                    var ignore = &victim as &R?
+                    arr.append(<- copy1)
+                    destroy victim
+                } else {
+                    destroy victim // Never executed
+                }
+                
+                destroy arr
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		// we'd like to only report one error here (i.e. in `copy2: <- victim`, not `&victim as &R?`)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+}
