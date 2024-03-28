@@ -236,6 +236,13 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               }
 
               access(all)
+              fun testNever() {
+                  let path = /public/r
+                  assert(self.account.capabilities.get<Never>(path) == nil)
+                  assert(self.account.capabilities.exists(path))
+              }
+
+              access(all)
               fun testSwap(): Int {
                  let ref = self.account.capabilities.get<&R>(/public/r)!.borrow()!
 
@@ -302,6 +309,11 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
 		t.Run("testNonExistent", func(t *testing.T) {
 			_, err := invoke("testNonExistent")
+			require.NoError(t, err)
+		})
+
+		t.Run("testNever", func(t *testing.T) {
+			_, err := invoke("testNever")
 			require.NoError(t, err)
 		})
 
