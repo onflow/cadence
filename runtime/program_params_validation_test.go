@@ -450,6 +450,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 			label         string
 			typeSignature string
 			expectErrors  bool
+			isResource    bool
 		}
 
 		var argumentPassingTests []*argumentPassingTest
@@ -496,11 +497,19 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 				expectErrors = true
 			}
 
+			isResource := typ.IsResourceType()
+
+			typeSignature := typeName + "?"
+			if isResource {
+				typeSignature = "@" + typeSignature
+			}
+
 			testCase := &argumentPassingTest{
 				label:         typeName,
-				typeSignature: typeName + "?",
+				typeSignature: typeSignature,
 				argument:      cadence.NewOptional(value),
 				expectErrors:  expectErrors,
+				isResource:    isResource,
 			}
 
 			argumentPassingTests = append(argumentPassingTests, testCase)
@@ -511,10 +520,17 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 			t.Run(test.label, func(t *testing.T) {
 				t.Parallel()
 
+				var body string
+				if test.isResource {
+					body = "destroy arg"
+				}
+
 				script := fmt.Sprintf(`
                     access(all) fun main(arg: %s) {
+                        %s
                     }`,
 					test.typeSignature,
+					body,
 				)
 
 				err := executeScript(t, script, test.argument)
@@ -543,7 +559,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
           struct Foo {
 
               access(all)
-              var nonImportableField: Account.Keys?
+              var nonImportableField: Block?
 
               init() {
                   self.nonImportableField = nil
@@ -565,7 +581,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
           access(all)
           struct Foo: Bar {
               access(all)
-              var nonImportableField: Account.Keys?
+              var nonImportableField: Block?
 
               init() {
                   self.nonImportableField = nil
@@ -584,9 +600,8 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		t.Parallel()
 
 		script := `
-                access(all) fun main(arg: AnyStruct) {
-                }
-            `
+          access(all) fun main(arg: AnyStruct) {}
+        `
 
 		err := executeScript(t, script, newPublicAccountKeys())
 		RequireError(t, err)
@@ -682,9 +697,9 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		}
 	}
 
-	newPublicAccountKeys := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: &cadence.StructType{
+	newAccountKeysValue := func() cadence.Resource {
+		return cadence.Resource{
+			ResourceType: &cadence.ResourceType{
 				QualifiedIdentifier: "Account.Keys",
 				Fields:              []cadence.Field{},
 			},
@@ -1009,6 +1024,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			label         string
 			typeSignature string
 			expectErrors  bool
+			isResource    bool
 		}
 
 		var argumentPassingTests []*argumentPassingTest
@@ -1055,11 +1071,19 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				expectErrors = true
 			}
 
+			isResource := typ.IsResourceType()
+
+			typeSignature := typeName + "?"
+			if isResource {
+				typeSignature = "@" + typeSignature
+			}
+
 			testCase := &argumentPassingTest{
 				label:         typeName,
-				typeSignature: typeName + "?",
+				typeSignature: typeSignature,
 				argument:      cadence.NewOptional(value),
 				expectErrors:  expectErrors,
+				isResource:    isResource,
 			}
 
 			argumentPassingTests = append(argumentPassingTests, testCase)
@@ -1081,9 +1105,16 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 				if test.expectErrors {
 
-					errs := checker.RequireCheckerErrors(t, err, 1)
+					if test.isResource {
+						errs := checker.RequireCheckerErrors(t, err, 2)
 
-					require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
+						require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
+						require.IsType(t, &sema.ResourceLossError{}, errs[1])
+					} else {
+						errs := checker.RequireCheckerErrors(t, err, 1)
+
+						require.IsType(t, &sema.InvalidNonImportableTransactionParameterTypeError{}, errs[0])
+					}
 				} else {
 					assert.NoError(t, err)
 				}
@@ -1163,7 +1194,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
           transaction(arg: AnyStruct) {}
         `
 
-		err := executeTransaction(t, script, nil, newPublicAccountKeys())
+		err := executeTransaction(t, script, nil, newAccountKeysValue())
 		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "cannot import value of type Account.Keys")
@@ -1180,7 +1211,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			script,
 			nil,
 			cadence.NewArray([]cadence.Value{
-				newPublicAccountKeys(),
+				newAccountKeysValue(),
 			}),
 		)
 		RequireError(t, err)

@@ -33,11 +33,16 @@ func TestCheckStorageCapabilityController(t *testing.T) {
 
 	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
 		baseActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-		baseActivation.DeclareValue(stdlib.StandardLibraryValue{
-			Name: "controller",
-			Type: sema.StorageCapabilityControllerType,
-			Kind: common.DeclarationKindConstant,
-		})
+		baseActivation.DeclareValue(
+			stdlib.StandardLibraryValue{
+				Name: "controller",
+				Type: &sema.ReferenceType{
+					Authorization: sema.UnauthorizedAccess,
+					Type:          sema.StorageCapabilityControllerType,
+				},
+				Kind: common.DeclarationKindConstant,
+			},
+		)
 
 		return ParseAndCheckWithOptions(
 			t,
@@ -58,15 +63,14 @@ func TestCheckStorageCapabilityController(t *testing.T) {
           let equal = controller == controller
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("in scope", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-          let typ = Type<StorageCapabilityController>()
+          let typ = Type<@StorageCapabilityController>()
         `)
 		require.NoError(t, err)
 	})
@@ -98,7 +102,10 @@ func TestCheckAccountCapabilityController(t *testing.T) {
 		baseActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseActivation.DeclareValue(stdlib.StandardLibraryValue{
 			Name: "controller",
-			Type: sema.AccountCapabilityControllerType,
+			Type: &sema.ReferenceType{
+				Authorization: sema.UnauthorizedAccess,
+				Type:          sema.AccountCapabilityControllerType,
+			},
 			Kind: common.DeclarationKindConstant,
 		})
 
@@ -121,15 +128,14 @@ func TestCheckAccountCapabilityController(t *testing.T) {
           let equal = controller == controller
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		require.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("in scope", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := parseAndCheck(t, `
-          let typ = Type<AccountCapabilityController>()
+          let typ = Type<@AccountCapabilityController>()
         `)
 		require.NoError(t, err)
 	})
