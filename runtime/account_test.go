@@ -485,6 +485,14 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
                    hashAlgorithm: HashAlgorithm.SHA3_256,
                    weight: 100.0
                )
+               acct.keys.add(
+                   publicKey: PublicKey(
+                       publicKey: publicKey,
+                       signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+                   ),
+                   hashAlgorithm: HashAlgorithm.SHA2_256,
+                   weight: 0.0
+               )
            }
        }
    `
@@ -507,19 +515,31 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	assert.Len(t, storage.keys, 1)
+	assert.Len(t, storage.keys, 2)
 
-	require.Len(t, storage.events, 2)
+	require.Len(t, storage.events, 3)
 
 	assert.EqualValues(t,
 		stdlib.AccountCreatedEventType.ID(),
 		storage.events[0].Type().ID(),
 	)
 
+	key0AddedEvent := storage.events[1]
+	key1AddedEvent := storage.events[2]
+
 	assert.EqualValues(t,
 		stdlib.AccountKeyAddedFromPublicKeyEventType.ID(),
-		storage.events[1].Type().ID(),
+		key0AddedEvent.Type().ID(),
 	)
+
+	assert.EqualValues(t, cadence.NewInt(100), key0AddedEvent.Fields[2])
+	assert.EqualValues(t, cadence.NewInt(0), key1AddedEvent.Fields[2])
+
+	assert.EqualValues(t, sema.HashAlgorithmSHA3_256, key0AddedEvent.Fields[3].(cadence.Enum).Fields[0])
+	assert.EqualValues(t, sema.HashAlgorithmSHA2_256, key1AddedEvent.Fields[3].(cadence.Enum).Fields[0])
+
+	assert.EqualValues(t, cadence.NewInt(0), key0AddedEvent.Fields[4])
+	assert.EqualValues(t, cadence.NewInt(1), key1AddedEvent.Fields[4])
 }
 
 func TestRuntimePublicAccountKeys(t *testing.T) {

@@ -209,6 +209,21 @@ var AccountEventContractParameter = sema.Parameter{
 	TypeAnnotation: sema.StringTypeAnnotation,
 }
 
+var AccountEventHashAlgorithmParameter = sema.Parameter{
+	Identifier:     "hashAlgorithm",
+	TypeAnnotation: sema.UInt8TypeAnnotation,
+}
+
+var AccountEventKeyWeightParameter = sema.Parameter{
+	Identifier:     "weight",
+	TypeAnnotation: sema.UInt8TypeAnnotation,
+}
+
+var AccountEventKeyIndexParameter = sema.Parameter{
+	Identifier:     "keyIndex",
+	TypeAnnotation: sema.IntTypeAnnotation,
+}
+
 var AccountCreatedEventType = newFlowEventType(
 	"AccountCreated",
 	AccountEventAddressParameter,
@@ -218,6 +233,9 @@ var AccountKeyAddedFromPublicKeyEventType = newFlowEventType(
 	"AccountKeyAdded",
 	AccountEventAddressParameter,
 	AccountEventPublicKeyParameterAsCompositeType,
+	AccountEventKeyWeightParameter,
+	AccountEventHashAlgorithmParameter,
+	AccountEventKeyIndexParameter,
 )
 
 var AccountKeyRemovedFromPublicKeyIndexEventType = newFlowEventType(
