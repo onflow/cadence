@@ -22,6 +22,7 @@ import (
 	"math/big"
 
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func SignedBigIntToBigEndianBytes(bigInt *big.Int) []byte {
@@ -139,4 +140,47 @@ func BigEndianBytesToSignedBigInt(b []byte) *big.Int {
 
 func BigEndianBytesToUnsignedBigInt(b []byte) *big.Int {
 	return new(big.Int).SetBytes(b)
+}
+
+func BigIntSqrt(interpreter *Interpreter, value *big.Int, locationRange LocationRange) UFix64Value {
+	if value.Sign() < 0 {
+		panic(UnderflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	if value.Cmp(sema.MaxSquareIntegerBig) == 1 {
+		panic(OverflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	// Once we reach here, Cadence integer values are guaranteed to fit into
+	// floating-point values with 256 bit precision _without_ truncation.
+	// This is because of the above check with sema.MaxSquareIntegerBig.
+	valueFloat := new(big.Float).SetPrec(256).SetInt(value)
+	res := new(big.Float).SetPrec(256).SetMode(big.ToZero).Sqrt(valueFloat)
+	res.Mul(res, new(big.Float).SetPrec(256).SetInt(sema.Fix64FactorBig))
+
+	// Converting the result to a fixed-point number, we are conceptually converting it to an integer
+	// IEEE 754 specifies different rounding modes https:	//en.wikipedia.org/wiki/IEEE_754#Rounding_rules
+	// We follow the "Rationale for International Standard -- Programming Languages -- C", Revision 5.10, April-2003:
+	//   > Section 6.3.1.5 Real floating types:
+	//   > When a finite value of real floating type is converted to an integer type other than Bool,
+	//   > the fractional part is discarded (i.e., the value is truncated toward zero). If the value
+	//   > of the integral part cannot be represented by the integer type, the behavior is undefined.
+	// For details, see
+	// https:	//wiki.sei.cmu.edu/confluence/display/c/FLP34-C.+Ensure+that+floating-point+conversions+are+within+range+of+the+new+type
+	resInt := new(big.Int)
+	res.Int(resInt)
+	if !resInt.IsUint64() {
+		// We checked for overflow above, so we shouldn't hit this.
+		panic(errors.NewUnreachableError())
+	}
+
+	valueGetter := func() uint64 {
+		return resInt.Uint64()
+	}
+
+	return NewUFix64Value(interpreter, valueGetter)
 }
