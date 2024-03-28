@@ -216,7 +216,7 @@ var AccountEventHashAlgorithmParameter = sema.Parameter{
 
 var AccountEventKeyWeightParameter = sema.Parameter{
 	Identifier:     "weight",
-	TypeAnnotation: sema.UInt8TypeAnnotation,
+	TypeAnnotation: sema.IntTypeAnnotation,
 }
 
 var AccountEventKeyIndexParameter = sema.Parameter{
