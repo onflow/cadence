@@ -3592,8 +3592,13 @@ func newAccountCapabilitiesGetFunction(
 
 			// Get borrow type type argument
 
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			wantedBorrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
+			typeParameterPairValue := invocation.TypeParameterTypes.Oldest().Value
+			// `Never` is never a supertype of any stored value
+			if typeParameterPairValue.Equal(sema.NeverType) {
+				return interpreter.Nil
+			}
+
+			wantedBorrowType, ok := typeParameterPairValue.(*sema.ReferenceType)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
