@@ -150,6 +150,41 @@ func TestStaticTypeMigration(t *testing.T) {
 		)
 	})
 
+	t.Run("TypeValue with reference to AuthAccount", func(t *testing.T) {
+		t.Parallel()
+
+		staticTypeMigration := NewStaticTypeMigration()
+
+		actual := migrate(t,
+			staticTypeMigration,
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewDictionaryStaticType(nil,
+					interpreter.PrimitiveStaticTypeAddress,
+					interpreter.NewCapabilityStaticType(nil,
+						interpreter.NewReferenceStaticType(
+							nil,
+							interpreter.UnauthorizedAccess,
+							interpreter.PrimitiveStaticTypeAuthAccount,
+						),
+					),
+				),
+			),
+			true,
+		)
+		assert.Equal(t,
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewDictionaryStaticType(nil,
+					interpreter.PrimitiveStaticTypeAddress,
+					interpreter.NewCapabilityStaticType(nil,
+						// NOTE: NOT reference to reference type
+						authAccountReferenceType,
+					),
+				),
+			),
+			actual,
+		)
+	})
+
 	t.Run("PathCapabilityValue with nil borrow type", func(t *testing.T) {
 		t.Parallel()
 
