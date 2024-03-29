@@ -211,12 +211,12 @@ var AccountEventContractParameter = sema.Parameter{
 
 var AccountEventHashAlgorithmParameter = sema.Parameter{
 	Identifier:     "hashAlgorithm",
-	TypeAnnotation: sema.UInt8TypeAnnotation,
+	TypeAnnotation: sema.HashAlgorithmTypeAnnotation,
 }
 
 var AccountEventKeyWeightParameter = sema.Parameter{
 	Identifier:     "weight",
-	TypeAnnotation: sema.IntTypeAnnotation,
+	TypeAnnotation: sema.UFix64TypeAnnotation,
 }
 
 var AccountEventKeyIndexParameter = sema.Parameter{

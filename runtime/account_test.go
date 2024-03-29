@@ -532,13 +532,24 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 		key0AddedEvent.Type().ID(),
 	)
 
-	assert.EqualValues(t, cadence.NewInt(100), key0AddedEvent.Fields[2])
-	assert.EqualValues(t, cadence.NewInt(0), key1AddedEvent.Fields[2])
+	// key weight
+	key0Weight, err := cadence.NewUFix64("100.0")
+	require.NoError(t, err)
+	key1Weight, err := cadence.NewUFix64("0.0")
+	require.NoError(t, err)
 
+	assert.EqualValues(t, key0Weight, key0AddedEvent.Fields[2])
+	assert.EqualValues(t, sema.UFix64Type.ID(), key0AddedEvent.Fields[2].Type().ID())
+	assert.EqualValues(t, key1Weight, key1AddedEvent.Fields[2])
+
+	// key hash algorithm
 	assert.EqualValues(t, sema.HashAlgorithmSHA3_256, key0AddedEvent.Fields[3].(cadence.Enum).Fields[0])
+	assert.EqualValues(t, sema.HashAlgorithmType.ID(), key0AddedEvent.Fields[3].Type().ID())
 	assert.EqualValues(t, sema.HashAlgorithmSHA2_256, key1AddedEvent.Fields[3].(cadence.Enum).Fields[0])
 
+	// key index
 	assert.EqualValues(t, cadence.NewInt(0), key0AddedEvent.Fields[4])
+	assert.EqualValues(t, sema.IntType.ID(), key0AddedEvent.Fields[4].Type().ID())
 	assert.EqualValues(t, cadence.NewInt(1), key1AddedEvent.Fields[4])
 }
 
