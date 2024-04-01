@@ -77,11 +77,9 @@ func init() {
 				panic(errors.NewUnreachableError())
 			}
 			if typeArg == NeverType {
-				errorRange := invocationRange
-
 				report(&InvalidTypeArgumentError{
 					TypeArgumentName: Account_CapabilitiesTypeGetFunctionTypeParameterT.Name,
-					Range:            ast.NewRangeFromPositioned(memoryGauge, errorRange),
+					Range:            ast.NewRangeFromPositioned(memoryGauge, invocationRange),
 					Details: fmt.Sprintf(
 						"Type argument for `%s` cannot be `%s`",
 						Account_CapabilitiesTypeGetFunctionName,
