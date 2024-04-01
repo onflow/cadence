@@ -59,3 +59,10 @@ func (t *LegacyIntersectionType) ID() common.TypeID {
 	result.WriteByte('}')
 	return common.TypeID(result.String())
 }
+
+func (t *LegacyIntersectionType) Equal(other interpreter.StaticType) bool {
+	if otherLegacy, ok := other.(*LegacyIntersectionType); ok {
+		other = otherLegacy.IntersectionStaticType
+	}
+	return t.IntersectionStaticType.Equal(other)
+}
