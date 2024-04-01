@@ -1087,7 +1087,7 @@ func TestEmptyIntersectionTypeMigration(t *testing.T) {
 		testAddress,
 	)
 
-	dictionaryValue.Insert(
+	dictionaryValue.InsertWithoutTransfer(
 		inter,
 		emptyLocationRange,
 		dictionaryKey,
@@ -1121,6 +1121,9 @@ func TestEmptyIntersectionTypeMigration(t *testing.T) {
 
 	assert.Len(t, reporter.errors, 0)
 	assert.Len(t, reporter.migrated, 1)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 
 	storageMap = storage.GetStorageMap(
 		testAddress,
@@ -1828,6 +1831,9 @@ func TestSkip(t *testing.T) {
 
 		require.Empty(t, reporter.errors)
 
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
 		return valueMigration.migrationCalls, inter
 	}
 
@@ -1892,7 +1898,7 @@ func TestSkip(t *testing.T) {
 						interpreter.PrimitiveStaticTypeBool,
 					)
 
-					return interpreter.NewArrayValue(
+					array := interpreter.NewArrayValue(
 						inter,
 						interpreter.EmptyLocationRange,
 						interpreter.NewVariableSizedStaticType(
@@ -1900,6 +1906,12 @@ func TestSkip(t *testing.T) {
 							dictionaryStaticType,
 						),
 						testAddress,
+					)
+
+					array.InsertWithoutTransfer(
+						inter,
+						interpreter.EmptyLocationRange,
+						0,
 						interpreter.NewDictionaryValueWithAddress(
 							inter,
 							interpreter.EmptyLocationRange,
@@ -1909,6 +1921,8 @@ func TestSkip(t *testing.T) {
 							interpreter.BoolValue(true),
 						),
 					)
+
+					return array
 				},
 				canSkip,
 			)
@@ -1942,7 +1956,7 @@ func TestSkip(t *testing.T) {
 			}
 
 			newArrayValue := func(inter *interpreter.Interpreter) *interpreter.ArrayValue {
-				return interpreter.NewArrayValue(
+				array := interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
 					interpreter.NewVariableSizedStaticType(
@@ -1950,8 +1964,16 @@ func TestSkip(t *testing.T) {
 						dictionaryStaticType,
 					),
 					testAddress,
+				)
+
+				array.InsertWithoutTransfer(
+					inter,
+					interpreter.EmptyLocationRange,
+					0,
 					newDictionaryValue(inter),
 				)
+
+				return array
 			}
 
 			migrationCalls, inter := migrate(
@@ -2162,6 +2184,9 @@ func TestPublishedValueMigration(t *testing.T) {
 
 	assert.Len(t, reporter.errors, 0)
 	assert.Len(t, reporter.migrated, 1)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 }
 
 // testDomainsMigration
