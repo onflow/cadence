@@ -1698,7 +1698,7 @@ func TestMigrationPanic(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.errors, 1)
+	require.Len(t, reporter.errors, 1)
 
 	var migrationError StorageMigrationError
 	require.ErrorAs(t, reporter.errors[0], &migrationError)
@@ -2550,8 +2550,8 @@ func TestDictionaryKeyConflict(t *testing.T) {
 		return storage, inter
 	}
 
-	t.Run("prepare", func(t *testing.T) {
-
+	// Prepare
+	(func() {
 		storage, inter := newStorageAndInterpreter(t)
 
 		storageMap := storage.GetStorageMap(
@@ -2693,9 +2693,10 @@ func TestDictionaryKeyConflict(t *testing.T) {
 
 		err = storage.CheckHealth()
 		require.NoError(t, err)
-	})
+	})()
 
-	t.Run("migrate", func(t *testing.T) {
+	// Migrate
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -2716,7 +2717,7 @@ func TestDictionaryKeyConflict(t *testing.T) {
 
 		// Assert
 
-		assert.Len(t, reporter.errors, 1)
+		require.Len(t, reporter.errors, 1)
 
 		var migrationError StorageMigrationError
 		require.ErrorAs(t, reporter.errors[0], &migrationError)
@@ -2747,5 +2748,5 @@ func TestDictionaryKeyConflict(t *testing.T) {
 		// as one of the arrays is still stored, but no longer referenced
 		err = storage.CheckHealth()
 		require.ErrorContains(t, err, "slabs not referenced from account Storage: [0x1.3]")
-	})
+	})()
 }
