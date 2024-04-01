@@ -2490,3 +2490,262 @@ func TestLegacyReferenceType(t *testing.T) {
 		)
 	})
 }
+
+// testTypeMigration
+
+type testTypeMigration struct{}
+
+var _ ValueMigration = testTypeMigration{}
+
+func (testTypeMigration) Name() string {
+	return "testTypeMigration"
+}
+
+func (m testTypeMigration) Migrate(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) (interpreter.Value, error) {
+	typeValue, ok := value.(interpreter.TypeValue)
+	if !ok {
+		return nil, nil
+	}
+
+	return typeValue, nil
+}
+
+func (testTypeMigration) CanSkip(_ interpreter.StaticType) bool {
+	return false
+}
+
+func (testTypeMigration) Domains() map[string]struct{} {
+	return nil
+}
+
+func TestDictionaryKeyConflict(t *testing.T) {
+
+	t.Parallel()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+	storagePathDomain := common.PathDomainStorage.Identifier()
+	storageMapKey := interpreter.StringStorageMapKey("test")
+
+	ledger := NewTestLedger(nil, nil)
+
+	newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
+		storage := runtime.NewStorage(ledger, nil)
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                     storage,
+				AtreeValueValidationEnabled: true,
+				// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+				AtreeStorageValidationEnabled: false,
+			},
+		)
+		require.NoError(t, err)
+
+		return storage, inter
+	}
+
+	t.Run("prepare", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			storagePathDomain,
+			true,
+		)
+
+		fooQualifiedIdentifier := "Test.Foo"
+		fooType := &interpreter.InterfaceStaticType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: fooQualifiedIdentifier,
+			TypeID:              utils.TestLocation.TypeID(nil, fooQualifiedIdentifier),
+		}
+
+		barQualifiedIdentifier := "Test.Bar"
+		barType := &interpreter.InterfaceStaticType{
+			Location:            utils.TestLocation,
+			QualifiedIdentifier: barQualifiedIdentifier,
+			TypeID:              utils.TestLocation.TypeID(nil, barQualifiedIdentifier),
+		}
+
+		// Intersection types only differ in order of interfaces
+
+		intersectionType1 := interpreter.NewIntersectionStaticType(
+			nil,
+			[]*interpreter.InterfaceStaticType{
+				fooType,
+				barType,
+			},
+		)
+
+		intersectionType2 := interpreter.NewIntersectionStaticType(
+			nil,
+			[]*interpreter.InterfaceStaticType{
+				barType,
+				fooType,
+			},
+		)
+
+		dictionaryKey1 := interpreter.NewTypeValue(inter, intersectionType1)
+		dictionaryKey2 := interpreter.NewTypeValue(inter, intersectionType2)
+
+		// {Type: [Int]}
+		// Value is an array to ensure slabs are created
+		arrayType := interpreter.NewVariableSizedStaticType(nil,
+			interpreter.PrimitiveStaticTypeInt,
+		)
+
+		dictionaryValue := interpreter.NewDictionaryValueWithAddress(
+			inter,
+			emptyLocationRange,
+			interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeMetaType,
+				arrayType,
+			),
+			testAddress,
+		)
+
+		// Write the dictionary value to storage before inserting values into dictionary,
+		// as the insertion of values into the dictionary triggers a storage health check,
+		// which fails if the dictionary value is not yet stored (unreferenced slabs)
+
+		storageMap.WriteValue(
+			inter,
+			storageMapKey,
+			dictionaryValue,
+		)
+
+		// NOTE: use legacyKey to ensure the key is encoded in old format
+
+		dictionaryValue.InsertWithoutTransfer(
+			inter,
+			emptyLocationRange,
+			legacyKey(dictionaryKey1),
+			interpreter.NewArrayValue(
+				inter,
+				emptyLocationRange,
+				arrayType,
+				testAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+			),
+		)
+
+		dictionaryValue.InsertWithoutTransfer(
+			inter,
+			emptyLocationRange,
+			legacyKey(dictionaryKey2),
+			interpreter.NewArrayValue(
+				inter,
+				emptyLocationRange,
+				arrayType,
+				testAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+		)
+
+		oldValue1, ok := dictionaryValue.Get(
+			inter,
+			emptyLocationRange,
+			legacyKey(dictionaryKey1),
+		)
+		require.True(t, ok)
+
+		utils.AssertValuesEqual(t,
+			inter,
+			oldValue1,
+			interpreter.NewArrayValue(
+				inter,
+				emptyLocationRange,
+				arrayType,
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(1),
+			),
+		)
+
+		oldValue2, ok := dictionaryValue.Get(
+			inter,
+			emptyLocationRange,
+			legacyKey(dictionaryKey2),
+		)
+		require.True(t, ok)
+
+		utils.AssertValuesEqual(t,
+			inter,
+			oldValue2,
+			interpreter.NewArrayValue(
+				inter,
+				emptyLocationRange,
+				arrayType,
+				common.ZeroAddress,
+				interpreter.NewUnmeteredIntValueFromInt64(2),
+			),
+		)
+
+		err := storage.Commit(inter, false)
+		require.NoError(t, err)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+	})
+
+	t.Run("migrate", func(t *testing.T) {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		reporter := newTestReporter()
+
+		migration := NewStorageMigration(inter, storage, "test")
+
+		migration.MigrateAccount(
+			testAddress,
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				testTypeMigration{},
+			),
+		)
+
+		err := migration.Commit()
+		require.NoError(t, err)
+
+		// Assert
+
+		assert.Len(t, reporter.errors, 1)
+
+		var migrationError StorageMigrationError
+		require.ErrorAs(t, reporter.errors[0], &migrationError)
+
+		assert.Equal(
+			t,
+			interpreter.StorageKey{
+				Address: testAddress,
+				Key:     storagePathDomain,
+			},
+			migrationError.StorageKey,
+		)
+		assert.Equal(
+			t,
+			storageMapKey,
+			migrationError.StorageMapKey,
+		)
+		assert.ErrorContains(
+			t,
+			migrationError,
+			"dictionary contains new key after removal of old key (conflict)",
+		)
+		assert.NotEmpty(t, migrationError.Stack)
+
+		assert.Len(t, reporter.migrated, 1)
+
+		// Health check is expected to fail,
+		// as one of the arrays is still stored, but no longer referenced
+		err = storage.CheckHealth()
+		require.ErrorContains(t, err, "slabs not referenced from account Storage: [0x1.3]")
+	})
+}
