@@ -235,7 +235,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 						newLegacyStringValue("Cafe\u0301"),
 					),
 				},
-				common.Address{},
+				common.ZeroAddress,
 			),
 			expectedValue: interpreter.NewCompositeValue(
 				inter,
@@ -249,7 +249,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 						interpreter.NewUnmeteredStringValue("Caf\u00E9"),
 					),
 				},
-				common.Address{},
+				common.ZeroAddress,
 			),
 		},
 		"dictionary_with_un-normalized_character_key": {

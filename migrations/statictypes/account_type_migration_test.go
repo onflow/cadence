@@ -789,7 +789,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 						interpreter.NewUnmeteredCompositeField("field1", storedAccountTypeValue),
 						interpreter.NewUnmeteredCompositeField("field2", interpreter.NewUnmeteredStringValue("hello")),
 					},
-					common.Address{},
+					common.ZeroAddress,
 				)
 			},
 			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
@@ -803,7 +803,7 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 						interpreter.NewUnmeteredCompositeField("field1", expectedAccountTypeValue),
 						interpreter.NewUnmeteredCompositeField("field2", interpreter.NewUnmeteredStringValue("hello")),
 					},
-					common.Address{},
+					common.ZeroAddress,
 				)
 			},
 			validateValue: true,
@@ -943,7 +943,7 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 						nil,
 						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
 					),
-					common.Address{},
+					common.ZeroAddress,
 				)
 			},
 			expectedValue: func(inter *interpreter.Interpreter) interpreter.Value {
@@ -954,7 +954,7 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 						nil,
 						unauthorizedAccountReferenceType,
 					),
-					common.Address{},
+					common.ZeroAddress,
 				)
 			},
 			// NOTE: disabled, as storage is not expected to be always valid _during_ migration
@@ -1085,7 +1085,7 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 					interpreter.NewCapabilityValue(
 						nil,
 						interpreter.NewUnmeteredUInt64Value(1234),
-						interpreter.NewAddressValue(nil, common.Address{}),
+						interpreter.NewAddressValue(nil, common.ZeroAddress),
 						interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
 					),
 				)
@@ -1106,7 +1106,7 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 					interpreter.NewCapabilityValue(
 						nil,
 						interpreter.NewUnmeteredUInt64Value(1234),
-						interpreter.NewAddressValue(nil, common.Address{}),
+						interpreter.NewAddressValue(nil, common.ZeroAddress),
 						unauthorizedAccountReferenceType,
 					),
 				)
