@@ -102,9 +102,11 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 	return getterSetter{
 		target: target,
 		get: func(_ bool) Value {
+			interpreter.checkInvalidatedResourceOrResourceReference(target, indexExpression)
 			return target.GetTypeKey(interpreter, locationRange, attachmentType)
 		},
 		set: func(_ Value) {
+			interpreter.checkInvalidatedResourceOrResourceReference(target, indexExpression)
 			// writing to composites with indexing syntax is not supported
 			panic(errors.NewUnreachableError())
 		},
@@ -194,12 +196,14 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 
 	if isNestedResourceMove {
 		get = func(_ bool) Value {
+			interpreter.checkInvalidatedResourceOrResourceReference(target, targetExpression)
 			value := target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
 			target.InsertKey(interpreter, locationRange, transferredIndexingValue, placeholder)
 			return value
 		}
 	} else {
 		get = func(_ bool) Value {
+			interpreter.checkInvalidatedResourceOrResourceReference(target, targetExpression)
 			value := target.GetKey(interpreter, locationRange, transferredIndexingValue)
 
 			// If the indexing value is a reference, then return a reference for the resulting value.
@@ -211,6 +215,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 		target: target,
 		get:    get,
 		set: func(value Value) {
+			interpreter.checkInvalidatedResourceOrResourceReference(target, targetExpression)
 			target.SetKey(interpreter, locationRange, transferredIndexingValue, value)
 		},
 	}
@@ -348,6 +353,9 @@ func (interpreter *Interpreter) checkMemberAccess(
 	target Value,
 	locationRange LocationRange,
 ) {
+
+	interpreter.checkInvalidatedResourceOrResourceReference(target, memberExpression)
+
 	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
