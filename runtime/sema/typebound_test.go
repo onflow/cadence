@@ -185,6 +185,40 @@ func TestTypeBoundSerialization(t *testing.T) {
 			bound:    NewSubtypeTypeBound(IntType).Or(NewEqualTypeBound(StringType)),
 			expected: "(<=: Int) || (= String)",
 		},
+		{
+			name: "triple conjunction",
+			bound: NewSubtypeTypeBound(IntType).
+				And(NewEqualTypeBound(StringType)).
+				And(NewStrictSupertypeTypeBound(BoolType)),
+			expected: "(<=: Int) && (= String) && (>: Bool)",
+		},
+		{
+			name:     "Capabilities.get",
+			bound:    Account_CapabilitiesTypeGetFunctionTypeParameterT.TypeBound,
+			expected: "(<=: &Any) && (>: Never)",
+		},
+		{
+			name:     "InclusiveRange",
+			bound:    InclusiveRangeConstructorFunctionTypeParameter.TypeBound,
+			expected: "(((= UInt) || (= Int)) || (<: FixedSizeUnsignedInteger)) || (<: SignedInteger)",
+		},
+		{
+			name: "triple disjunction",
+			bound: NewSubtypeTypeBound(IntType).
+				Or(NewEqualTypeBound(StringType)).
+				Or(NewStrictSupertypeTypeBound(BoolType)),
+			expected: "((<=: Int) || (= String)) || (>: Bool)",
+		},
+		{
+			name: "conjunction of disjunctions",
+			bound: NewSubtypeTypeBound(IntType).
+				Or(NewEqualTypeBound(StringType)).
+				And(
+					NewStrictSupertypeTypeBound(BoolType).
+						Or(NewSupertypeTypeBound(AnyStructType)),
+				),
+			expected: "((<=: Int) || (= String)) && ((>: Bool) || (>=: AnyStruct))",
+		},
 	}
 
 	test := func(test testCase) {
