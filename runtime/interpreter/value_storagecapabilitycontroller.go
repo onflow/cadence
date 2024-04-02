@@ -61,7 +61,7 @@ type StorageCapabilityControllerValue struct {
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
 	// when the controller is loaded for borrowing/checking
-	GetCapability func(inter *Interpreter) *CapabilityValue
+	GetCapability func(inter *Interpreter) *IDCapabilityValue
 	GetTag        func(inter *Interpreter) *StringValue
 	SetTag        func(inter *Interpreter, tag *StringValue)
 	Delete        func(inter *Interpreter, locationRange LocationRange)
@@ -109,11 +109,11 @@ func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *Ref
 	return v.BorrowType
 }
 
-func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitStorageCapabilityControllerValue(interpreter, v)
 }
 
-func (v *StorageCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *StorageCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
 	walkChild(v.TargetPath)
 	walkChild(v.CapabilityID)
 }
@@ -122,7 +122,7 @@ func (v *StorageCapabilityControllerValue) StaticType(_ *Interpreter) StaticType
 	return PrimitiveStaticTypeStorageCapabilityController
 }
 
-func (*StorageCapabilityControllerValue) IsImportable(_ *Interpreter) bool {
+func (*StorageCapabilityControllerValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 

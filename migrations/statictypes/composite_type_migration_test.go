@@ -43,11 +43,11 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 		expectedType interpreter.StaticType
 	}
 
-	newCompositeType := func() interpreter.StaticType {
+	newCompositeType := func() *interpreter.CompositeStaticType {
 		return interpreter.NewCompositeStaticType(
 			nil,
-			nil,
-			"Bar",
+			fooAddressLocation,
+			fooBarQualifiedIdentifier,
 			common.NewTypeIDFromQualifiedName(
 				nil,
 				fooAddressLocation,
@@ -56,11 +56,11 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 		)
 	}
 
-	newInterfaceType := func() interpreter.StaticType {
+	newInterfaceType := func() *interpreter.InterfaceStaticType {
 		return interpreter.NewInterfaceStaticType(
 			nil,
-			nil,
-			"Baz",
+			fooAddressLocation,
+			fooBazQualifiedIdentifier,
 			common.NewTypeIDFromQualifiedName(
 				nil,
 				fooAddressLocation,
@@ -71,11 +71,16 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 
 	testCases := map[string]testCase{
 		// base cases
-		"compositeToInterface": {
-			storedType:   newCompositeType(),
-			expectedType: newInterfaceType(),
+		"composite_to_interface": {
+			storedType: newCompositeType(),
+			expectedType: interpreter.NewIntersectionStaticType(
+				nil,
+				[]*interpreter.InterfaceStaticType{
+					newInterfaceType(),
+				},
+			),
 		},
-		"interfaceToComposite": {
+		"interface_to_composite": {
 			storedType:   newInterfaceType(),
 			expectedType: newCompositeType(),
 		},
@@ -94,6 +99,19 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 			storedType:   interpreter.NewDictionaryStaticType(nil, newInterfaceType(), newInterfaceType()),
 			expectedType: interpreter.NewDictionaryStaticType(nil, newCompositeType(), newCompositeType()),
 		},
+		// reference to optional
+		"reference_to_optional": {
+			storedType: interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewOptionalStaticType(nil, newInterfaceType()),
+			),
+			expectedType: interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				interpreter.NewOptionalStaticType(nil, newCompositeType()),
+			),
+		},
 	}
 
 	// Store values
@@ -106,7 +124,7 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 		utils.TestLocation,
 		&interpreter.Config{
 			Storage:                       storage,
-			AtreeValueValidationEnabled:   false,
+			AtreeValueValidationEnabled:   true,
 			AtreeStorageValidationEnabled: true,
 		},
 	)
@@ -127,19 +145,15 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 
 	reporter := newTestReporter()
 
 	barStaticType := newCompositeType()
 	bazStaticType := newInterfaceType()
 
-	migration.Migrate(
-		&migrations.AddressSliceIterator{
-			Addresses: []common.Address{
-				testAddress,
-			},
-		},
+	migration.MigrateAccount(
+		testAddress,
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			NewStaticTypeMigration().
@@ -165,6 +179,13 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 	)
 
 	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
 	require.NoError(t, err)
 
 	// Check reported migrated paths

@@ -401,6 +401,30 @@ func (e TypeMismatchError) Error() string {
 	)
 }
 
+// InvalidMemberReferenceError
+type InvalidMemberReferenceError struct {
+	ExpectedType sema.Type
+	ActualType   sema.Type
+	LocationRange
+}
+
+var _ errors.UserError = InvalidMemberReferenceError{}
+
+func (InvalidMemberReferenceError) IsUserError() {}
+
+func (e InvalidMemberReferenceError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
+	return fmt.Sprintf(
+		"cannot create reference: expected `%s`, got `%s`",
+		expected,
+		actual,
+	)
+}
+
 // InvalidPathDomainError
 type InvalidPathDomainError struct {
 	LocationRange

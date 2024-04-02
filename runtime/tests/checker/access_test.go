@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func expectSuccess(t *testing.T, err error) {
@@ -772,7 +771,7 @@ func TestCheckAccessInterfaceFunction(t *testing.T) {
 				if compositeKind == common.CompositeKindContract {
 					identifier = "TestImpl"
 				} else {
-					interfaceType := AsInterfaceType("Test", compositeKind)
+					interfaceType := "{Test}"
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -990,7 +989,7 @@ func TestCheckAccessInterfaceFieldRead(t *testing.T) {
 				if compositeKind == common.CompositeKindContract {
 					identifier = "TestImpl"
 				} else {
-					interfaceType := AsInterfaceType("Test", compositeKind)
+					interfaceType := "{Test}"
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -1237,7 +1236,7 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 					identifier = "TestImpl"
 				} else {
 
-					interfaceType := AsInterfaceType("Test", compositeKind)
+					interfaceType := "{Test}"
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -1850,7 +1849,7 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 		},
 	)
 
-	errs := RequireCheckerErrors(t, err, 5)
+	errs := RequireCheckerErrors(t, err, 7)
 
 	require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	assert.Equal(t,
@@ -1868,11 +1867,15 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 
 	require.IsType(t, &sema.ResourceCapturingError{}, errs[3])
 
-	require.IsType(t, &sema.AssignmentToConstantError{}, errs[4])
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[4])
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[5])
 	assert.Equal(t,
 		"y",
-		errs[4].(*sema.AssignmentToConstantError).Name,
+		errs[5].(*sema.AssignmentToConstantError).Name,
 	)
+
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[6])
 }
 
 func TestCheckContractNestedDeclarationPrivateAccess(t *testing.T) {

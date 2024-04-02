@@ -2795,6 +2795,42 @@ func (e *NonReferenceTypeReferenceError) SecondaryError() string {
 	)
 }
 
+// ReferenceToAnOptionalError
+
+type ReferenceToAnOptionalError struct {
+	ReferencedOptionalType *OptionalType
+	ast.Range
+}
+
+var _ SemanticError = &ReferenceToAnOptionalError{}
+var _ errors.UserError = &ReferenceToAnOptionalError{}
+var _ errors.SecondaryError = &ReferenceToAnOptionalError{}
+
+func (*ReferenceToAnOptionalError) isSemanticError() {}
+
+func (*ReferenceToAnOptionalError) IsUserError() {}
+
+func (e *ReferenceToAnOptionalError) Error() string {
+	return "cannot create reference"
+}
+
+func (e *ReferenceToAnOptionalError) SecondaryError() string {
+	return fmt.Sprintf(
+		"expected non-optional type, got `%s`. Consider taking a reference with type `%s`",
+		e.ReferencedOptionalType.QualifiedString(),
+
+		// Suggest taking the optional out of the reference type.
+		NewOptionalType(
+			nil,
+			NewReferenceType(
+				nil,
+				UnauthorizedAccess,
+				e.ReferencedOptionalType.Type,
+			),
+		),
+	)
+}
+
 // InvalidResourceCreationError
 
 type InvalidResourceCreationError struct {
@@ -3616,7 +3652,7 @@ func (*InvalidIntersectedTypeError) IsUserError() {}
 
 func (e *InvalidIntersectedTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot restrict using non-resource/structure interface type: `%s`",
+		"cannot restrict using non-resource/structure/contract interface type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
@@ -3661,27 +3697,6 @@ func (*InvalidIntersectionTypeDuplicateError) IsUserError() {}
 func (e *InvalidIntersectionTypeDuplicateError) Error() string {
 	return fmt.Sprintf(
 		"duplicate intersected type: `%s`",
-		e.Type.QualifiedString(),
-	)
-}
-
-// InvalidNonConformanceIntersectionError
-
-type InvalidNonConformanceIntersectionError struct {
-	Type *InterfaceType
-	ast.Range
-}
-
-var _ SemanticError = &InvalidNonConformanceIntersectionError{}
-var _ errors.UserError = &InvalidNonConformanceIntersectionError{}
-
-func (*InvalidNonConformanceIntersectionError) isSemanticError() {}
-
-func (*InvalidNonConformanceIntersectionError) IsUserError() {}
-
-func (e *InvalidNonConformanceIntersectionError) Error() string {
-	return fmt.Sprintf(
-		"intersection type does not conform to restricting type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }

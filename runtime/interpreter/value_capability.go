@@ -29,7 +29,16 @@ import (
 
 // CapabilityValue
 
-type CapabilityValue struct {
+// TODO: remove once migration to Cadence 1.0 / ID capabilities is complete
+type CapabilityValue interface {
+	EquatableValue
+	atree.Storable
+	isCapabilityValue()
+}
+
+// IDCapabilityValue
+
+type IDCapabilityValue struct {
 	BorrowType StaticType
 	Address    AddressValue
 	ID         UInt64Value
@@ -39,8 +48,8 @@ func NewUnmeteredCapabilityValue(
 	id UInt64Value,
 	address AddressValue,
 	borrowType StaticType,
-) *CapabilityValue {
-	return &CapabilityValue{
+) *IDCapabilityValue {
+	return &IDCapabilityValue{
 		ID:         id,
 		Address:    address,
 		BorrowType: borrowType,
@@ -52,44 +61,47 @@ func NewCapabilityValue(
 	id UInt64Value,
 	address AddressValue,
 	borrowType StaticType,
-) *CapabilityValue {
+) *IDCapabilityValue {
 	// Constant because its constituents are already metered.
 	common.UseMemory(memoryGauge, common.CapabilityValueMemoryUsage)
 	return NewUnmeteredCapabilityValue(id, address, borrowType)
 }
 
-var _ Value = &CapabilityValue{}
-var _ atree.Storable = &CapabilityValue{}
-var _ EquatableValue = &CapabilityValue{}
-var _ MemberAccessibleValue = &CapabilityValue{}
+var _ Value = &IDCapabilityValue{}
+var _ atree.Storable = &IDCapabilityValue{}
+var _ EquatableValue = &IDCapabilityValue{}
+var _ MemberAccessibleValue = &IDCapabilityValue{}
+var _ CapabilityValue = &IDCapabilityValue{}
 
-func (*CapabilityValue) isValue() {}
+func (*IDCapabilityValue) isValue() {}
 
-func (v *CapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (*IDCapabilityValue) isCapabilityValue() {}
+
+func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitCapabilityValue(interpreter, v)
 }
 
-func (v *CapabilityValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
 	walkChild(v.ID)
 	walkChild(v.Address)
 }
 
-func (v *CapabilityValue) StaticType(inter *Interpreter) StaticType {
+func (v *IDCapabilityValue) StaticType(inter *Interpreter) StaticType {
 	return NewCapabilityStaticType(
 		inter,
 		v.BorrowType,
 	)
 }
 
-func (v *CapabilityValue) IsImportable(_ *Interpreter) bool {
+func (v *IDCapabilityValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
-func (v *CapabilityValue) String() string {
+func (v *IDCapabilityValue) String() string {
 	return v.RecursiveString(SeenReferences{})
 }
 
-func (v *CapabilityValue) RecursiveString(seenReferences SeenReferences) string {
+func (v *IDCapabilityValue) RecursiveString(seenReferences SeenReferences) string {
 	return format.Capability(
 		v.BorrowType.String(),
 		v.Address.RecursiveString(seenReferences),
@@ -97,7 +109,7 @@ func (v *CapabilityValue) RecursiveString(seenReferences SeenReferences) string 
 	)
 }
 
-func (v *CapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+func (v *IDCapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
 	common.UseMemory(memoryGauge, common.CapabilityValueStringMemoryUsage)
 
 	return format.Capability(
@@ -107,7 +119,7 @@ func (v *CapabilityValue) MeteredString(memoryGauge common.MemoryGauge, seenRefe
 	)
 }
 
-func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (v *IDCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.CapabilityTypeBorrowFunctionName:
 		// this function will panic already if this conversion fails
@@ -129,17 +141,17 @@ func (v *CapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, n
 	return nil
 }
 
-func (*CapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
+func (*IDCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
 	// Capabilities have no removable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (*CapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
+func (*IDCapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) bool {
 	// Capabilities have no settable members (fields / functions)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *CapabilityValue) ConformsToStaticType(
+func (v *IDCapabilityValue) ConformsToStaticType(
 	_ *Interpreter,
 	_ LocationRange,
 	_ TypeConformanceResults,
@@ -147,8 +159,8 @@ func (v *CapabilityValue) ConformsToStaticType(
 	return true
 }
 
-func (v *CapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
-	otherCapability, ok := other.(*CapabilityValue)
+func (v *IDCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
+	otherCapability, ok := other.(*IDCapabilityValue)
 	if !ok {
 		return false
 	}
@@ -158,11 +170,11 @@ func (v *CapabilityValue) Equal(interpreter *Interpreter, locationRange Location
 		otherCapability.BorrowType.Equal(v.BorrowType)
 }
 
-func (*CapabilityValue) IsStorable() bool {
+func (*IDCapabilityValue) IsStorable() bool {
 	return true
 }
 
-func (v *CapabilityValue) Storable(
+func (v *IDCapabilityValue) Storable(
 	storage atree.SlabStorage,
 	address atree.Address,
 	maxInlineSize uint64,
@@ -175,15 +187,15 @@ func (v *CapabilityValue) Storable(
 	)
 }
 
-func (*CapabilityValue) NeedsStoreTo(_ atree.Address) bool {
+func (*IDCapabilityValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
 
-func (*CapabilityValue) IsResourceKinded(_ *Interpreter) bool {
+func (*IDCapabilityValue) IsResourceKinded(_ *Interpreter) bool {
 	return false
 }
 
-func (v *CapabilityValue) Transfer(
+func (v *IDCapabilityValue) Transfer(
 	interpreter *Interpreter,
 	_ LocationRange,
 	_ atree.Address,
@@ -198,7 +210,7 @@ func (v *CapabilityValue) Transfer(
 	return v
 }
 
-func (v *CapabilityValue) Clone(interpreter *Interpreter) Value {
+func (v *IDCapabilityValue) Clone(interpreter *Interpreter) Value {
 	return NewUnmeteredCapabilityValue(
 		v.ID,
 		v.Address.Clone(interpreter).(AddressValue),
@@ -206,19 +218,19 @@ func (v *CapabilityValue) Clone(interpreter *Interpreter) Value {
 	)
 }
 
-func (v *CapabilityValue) DeepRemove(interpreter *Interpreter) {
+func (v *IDCapabilityValue) DeepRemove(interpreter *Interpreter) {
 	v.Address.DeepRemove(interpreter)
 }
 
-func (v *CapabilityValue) ByteSize() uint32 {
+func (v *IDCapabilityValue) ByteSize() uint32 {
 	return mustStorableSize(v)
 }
 
-func (v *CapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
+func (v *IDCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
-func (v *CapabilityValue) ChildStorables() []atree.Storable {
+func (v *IDCapabilityValue) ChildStorables() []atree.Storable {
 	return []atree.Storable{
 		v.Address,
 	}

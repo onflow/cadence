@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -925,7 +926,7 @@ func newAccountInboxPublishFunction(
 		gauge,
 		sema.Account_InboxTypePublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			value, ok := invocation.Arguments[0].(*interpreter.CapabilityValue)
+			value, ok := invocation.Arguments[0].(interpreter.CapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -1586,6 +1587,8 @@ func changeAccountContracts(
 
 	// Validate the contract update
 
+	inter := invocation.Interpreter
+
 	if isUpdate {
 		oldCode, err := handler.GetAccountContractCode(location)
 		handleContractUpdateError(err)
@@ -1593,22 +1596,24 @@ func changeAccountContracts(
 		memoryGauge := invocation.Interpreter.SharedState.Config.MemoryGauge
 		legacyUpgradeEnabled := invocation.Interpreter.SharedState.Config.LegacyContractUpgradeEnabled
 
-		oldProgram, err := parser.ParseProgram(
-			memoryGauge,
-			oldCode,
-			parser.Config{
-				IgnoreLeadingIdentifierEnabled: true,
-			},
-		)
+		var oldProgram *ast.Program
 
-		var legacyContractUpgrade bool
-		// if we are allowing legacy contract upgrades, fall back to the old parser when the new one fails
-		if !ignoreUpdatedProgramParserError(err) && legacyUpgradeEnabled {
-			legacyContractUpgrade = true
+		// It is not always possible to determine whether the old code is pre-1.0 or not,
+		// only based on the parser errors. Therefore, always rely on the flag only.
+		// If the legacy contract upgrades are enabled, then use the old parser.
+		if legacyUpgradeEnabled {
 			oldProgram, err = old_parser.ParseProgram(
 				memoryGauge,
 				oldCode,
 				old_parser.Config{},
+			)
+		} else {
+			oldProgram, err = parser.ParseProgram(
+				memoryGauge,
+				oldCode,
+				parser.Config{
+					IgnoreLeadingIdentifierEnabled: true,
+				},
 			)
 		}
 
@@ -1617,12 +1622,14 @@ func changeAccountContracts(
 		}
 
 		var validator UpdateValidator
-		if legacyContractUpgrade {
-			validator = NewLegacyContractUpdateValidator(
+		if legacyUpgradeEnabled {
+			validator = NewCadenceV042ToV1ContractUpdateValidator(
 				location,
 				contractName,
+				handler,
 				oldProgram,
-				program.Program,
+				program,
+				inter.AllElaborations(),
 			)
 		} else {
 			validator = NewContractUpdateValidator(
@@ -1636,8 +1643,6 @@ func changeAccountContracts(
 		err = validator.Validate()
 		handleContractUpdateError(err)
 	}
-
-	inter := invocation.Interpreter
 
 	err = updateAccountContractCode(
 		handler,
@@ -2560,7 +2565,7 @@ func checkAndIssueStorageCapabilityControllerWithType(
 	address common.Address,
 	targetPathValue interpreter.PathValue,
 	ty sema.Type,
-) *interpreter.CapabilityValue {
+) *interpreter.IDCapabilityValue {
 
 	borrowType, ok := ty.(*sema.ReferenceType)
 	if !ok {
@@ -2711,7 +2716,7 @@ func checkAndIssueAccountCapabilityControllerWithType(
 	idGenerator AccountIDGenerator,
 	address common.Address,
 	ty sema.Type,
-) *interpreter.CapabilityValue {
+) *interpreter.IDCapabilityValue {
 
 	// Get and check borrow type
 
@@ -3272,11 +3277,11 @@ func newAccountCapabilitiesPublishFunction(
 
 			// Get capability argument
 
-			var capabilityValue *interpreter.CapabilityValue
+			var capabilityValue *interpreter.IDCapabilityValue
 
 			firstValue := invocation.Arguments[0]
 			switch firstValue := firstValue.(type) {
-			case *interpreter.CapabilityValue:
+			case *interpreter.IDCapabilityValue:
 				capabilityValue = firstValue
 
 			default:
@@ -3325,7 +3330,7 @@ func newAccountCapabilitiesPublishFunction(
 				true,
 				nil,
 				nil,
-			).(*interpreter.CapabilityValue)
+			).(*interpreter.IDCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -3376,9 +3381,9 @@ func newAccountCapabilitiesUnpublishFunction(
 				return interpreter.Nil
 			}
 
-			var capabilityValue *interpreter.CapabilityValue
+			var capabilityValue *interpreter.IDCapabilityValue
 			switch readValue := readValue.(type) {
-			case *interpreter.CapabilityValue:
+			case *interpreter.IDCapabilityValue:
 				capabilityValue = readValue
 
 			default:
@@ -3392,7 +3397,7 @@ func newAccountCapabilitiesUnpublishFunction(
 				true,
 				nil,
 				nil,
-			).(*interpreter.CapabilityValue)
+			).(*interpreter.IDCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -3590,8 +3595,13 @@ func newAccountCapabilitiesGetFunction(
 
 			// Get borrow type type argument
 
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			wantedBorrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
+			typeParameterPairValue := invocation.TypeParameterTypes.Oldest().Value
+			// `Never` is never a supertype of any stored value
+			if typeParameterPairValue.Equal(sema.NeverType) {
+				return interpreter.Nil
+			}
+
+			wantedBorrowType, ok := typeParameterPairValue.(*sema.ReferenceType)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -3605,10 +3615,10 @@ func newAccountCapabilitiesGetFunction(
 				return interpreter.Nil
 			}
 
-			var readCapabilityValue *interpreter.CapabilityValue
+			var readCapabilityValue *interpreter.IDCapabilityValue
 
 			switch readValue := readValue.(type) {
-			case *interpreter.CapabilityValue:
+			case *interpreter.IDCapabilityValue:
 				readCapabilityValue = readValue
 
 			default:
@@ -4001,13 +4011,13 @@ func getCapabilityControllerTag(
 func newCapabilityControllerGetCapabilityFunction(
 	address common.Address,
 	controller interpreter.CapabilityControllerValue,
-) func(inter *interpreter.Interpreter) *interpreter.CapabilityValue {
+) func(inter *interpreter.Interpreter) *interpreter.IDCapabilityValue {
 
 	addressValue := interpreter.AddressValue(address)
 	capabilityID := controller.ControllerCapabilityID()
 	borrowType := controller.CapabilityControllerBorrowType()
 
-	return func(inter *interpreter.Interpreter) *interpreter.CapabilityValue {
+	return func(inter *interpreter.Interpreter) *interpreter.IDCapabilityValue {
 		return interpreter.NewCapabilityValue(
 			inter,
 			capabilityID,

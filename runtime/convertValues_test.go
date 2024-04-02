@@ -1267,7 +1267,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		{
 			label: "Entitlement Set Reference",
 			actual: &cadence.ReferenceType{
-				Authorization: cadence.EntitlementSetAuthorization{
+				Authorization: &cadence.EntitlementSetAuthorization{
 					Kind:         cadence.Conjunction,
 					Entitlements: []common.TypeID{"E", "F"},
 				},
@@ -1286,7 +1286,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		{
 			label: "Reference",
 			actual: &cadence.ReferenceType{
-				Authorization: cadence.EntitlementSetAuthorization{
+				Authorization: &cadence.EntitlementSetAuthorization{
 					Kind:         cadence.Disjunction,
 					Entitlements: []common.TypeID{"E", "F"},
 				},

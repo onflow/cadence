@@ -7,15 +7,6 @@ repos:
       deps:
         - onflow/cadence
 
-- repo: onflow/cadence-tools
-  needsRelease: true
-  prefixPRTitle: true
-  mods:
-    - path: lint
-      deps:
-        - onflow/cadence
-        - onflow/flow-go-sdk
-
 - repo: onflow/flow-go
   needsRelease: false
   branch: feature/stable-cadence
@@ -32,6 +23,15 @@ repos:
       deps:
         - onflow/flow-go-sdk
         - onflow/cadence
+
+- repo: onflow/cadence-tools
+  needsRelease: true
+  prefixPRTitle: true
+  mods:
+    - path: lint
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
 
 - repo: onflow/flow-emulator
   needsRelease: true
@@ -53,12 +53,11 @@ repos:
         - onflow/flow-go
         - onflow/flow-emulator
 
-- repo: onflow/flow-cli
+- repo: onflow/flowkit
   needsRelease: false
-  prefixPRTitle: true
   branch: feature/stable-cadence
   mods:
-    - path: flowkit
+    - path: ""
       deps:
         - onflow/cadence
         - onflow/flow-go-sdk
@@ -77,10 +76,38 @@ repos:
         - onflow/flow-emulator
         - onflow/cadence-tools/lint
         - onflow/cadence-tools/test
-        - onflow/flow-cli/flowkit
+        - onflow/flowkit/v2
+
+- repo: onflow/flixkit-go
+  needsRelease: true
+  branch: feature/stable-cadence
+  mods:
+    - path: ""
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+        - onflow/flowkit/v2
+
+- repo: onflow/flow-evm-gateway
+  needsRelease: false
+  branch: main
+  mods:
+    - path: ""
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+    - path: integration
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+        - onflow/flow-emulator
 
 - repo: onflow/flow-cli
   needsRelease: true
+  branch: feature/stable-cadence
   mods:
     - path: ""
       deps:
@@ -91,3 +118,6 @@ repos:
         - onflow/cadence-tools/test
         - onflow/cadence-tools/lint
         - onflow/cadence-tools/languageserver
+        - onflow/flixkit-go
+        - onflow/flowkit/v2
+        - onflow/flow-evm-gateway

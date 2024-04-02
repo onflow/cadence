@@ -3973,7 +3973,7 @@ func TestInterpretInterfaceConformanceNoRequirements(t *testing.T) {
 			continue
 		}
 
-		interfaceType := AsInterfaceType("Test", compositeKind)
+		interfaceType := "{Test}"
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
@@ -4017,7 +4017,7 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 		if compositeKind == common.CompositeKindContract {
 			identifier = "TestImpl"
 		} else {
-			interfaceType := AsInterfaceType("Test", compositeKind)
+			interfaceType := "{Test}"
 
 			setupCode = fmt.Sprintf(
 				`access(all) let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -4097,7 +4097,7 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 		if compositeKind == common.CompositeKindContract {
 			identifier = "TestImpl"
 		} else {
-			interfaceType := AsInterfaceType("Test", compositeKind)
+			interfaceType := "{Test}"
 
 			setupCode = fmt.Sprintf(
 				`access(all) let test: %[1]s %[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -11514,53 +11514,6 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 	})
 }
 
-func TestInterpretOptionalReference(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("present", func(t *testing.T) {
-
-		inter := parseCheckAndInterpret(t, `
-          fun present(): &Int {
-              let x: Int? = 1
-              let y = &x as &Int?
-              return y!
-          }
-        `)
-
-		value, err := inter.Invoke("present")
-		require.NoError(t, err)
-		require.Equal(
-			t,
-			&interpreter.EphemeralReferenceValue{
-				Value:         interpreter.NewUnmeteredIntValueFromInt64(1),
-				BorrowedType:  sema.IntType,
-				Authorization: interpreter.UnauthorizedAccess,
-			},
-			value,
-		)
-
-	})
-
-	t.Run("absent", func(t *testing.T) {
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-          fun absent(): &Int {
-              let x: Int? = nil
-              let y = &x as &Int?
-              return y!
-          }
-        `)
-
-		_, err := inter.Invoke("absent")
-		RequireError(t, err)
-
-		var forceNilError interpreter.ForceNilError
-		require.ErrorAs(t, err, &forceNilError)
-	})
-}
-
 func TestInterpretCastingBoxing(t *testing.T) {
 
 	t.Parallel()
@@ -12213,4 +12166,27 @@ func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
 
 		require.Empty(t, getEvents())
 	})
+}
+
+func TestInterpretOptionalAddressInConditional(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(ok: Bool): Address? {
+         return ok ? 0x1 : nil
+      }
+    `)
+
+	value, err := inter.Invoke("test", interpreter.TrueValue)
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewSomeValueNonCopying(nil,
+			interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+		),
+		value,
+	)
 }

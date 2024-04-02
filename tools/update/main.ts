@@ -96,8 +96,8 @@ class Updater {
 
         const [owner, repoName] = fullRepoName.split('/')
 
-        const repoResponse = await this.octokit.rest.repos.get({owner, repo: repoName})
-        const defaultBranch = repoResponse.data.default_branch
+        const defaultBranch = repo.branch ||
+            (await this.octokit.rest.repos.get({owner, repo: repoName})).data.default_branch
         console.log(`> Default branch of repo ${fullRepoName}: ${defaultBranch}`)
 
         const defaultRefResponse = await this.octokit.rest.git.getRef({
@@ -165,7 +165,7 @@ class Updater {
 
                 const version = versionAnswer.version.trim()
 
-                await new Releaser(fullRepoName, mod.path, version, this.octokit, this.protocol).release()
+                await new Releaser(fullRepoName, defaultBranch, mod.path, version, this.octokit, this.protocol).release()
             }
         }
     }
@@ -465,6 +465,7 @@ class Releaser {
 
     constructor(
         public repo: string,
+        public branch: string | undefined,
         public modPath: string,
         public version: string,
         public octokit: Octokit,
@@ -494,8 +495,7 @@ class Releaser {
         const dir = await mkdtemp(path.join(os.tmpdir(), `${owner}-${repoName}`))
 
         console.log(`Cloning ${this.repo} ...`)
-        // TODO: add support for different branches
-        await gitClone(this.protocol, this.repo, dir, 'master')
+        await gitClone(this.protocol, this.repo, dir, this.branch || 'master')
         process.chdir(dir)
 
         console.log(`Tagging ${this.repo} version ${this.version} ...`)
@@ -587,6 +587,11 @@ class Releaser {
                     describe: 'The repo name',
                     demandOption: true
                 },
+                'branch': {
+                    alias: 'b',
+                    type: 'string',
+                    describe: 'The branch name',
+                },
                 'mod': {
                     alias: 'm',
                     type: 'string',
@@ -600,7 +605,7 @@ class Releaser {
             },
             async (args) => {
                 const protocol = args.useSSH ? Protocol.SSH : Protocol.HTTPS
-                await new Releaser(args.repo, args.mod || '', args.version, octokit, protocol).release()
+                await new Releaser(args.repo, args.branch, args.mod || '', args.version, octokit, protocol).release()
             }
         )
         .parse()

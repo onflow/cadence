@@ -52,11 +52,11 @@ func (PathLinkValue) isValue() {}
 
 func (PathLinkValue) isLinkValue() {}
 
-func (v PathLinkValue) Accept(_ *Interpreter, _ Visitor) {
+func (v PathLinkValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Walk(_ *Interpreter, _ func(Value)) {
+func (v PathLinkValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -71,7 +71,7 @@ func (v PathLinkValue) StaticType(interpreter *Interpreter) StaticType {
 	return NewCapabilityStaticType(interpreter, v.Type)
 }
 
-func (PathLinkValue) IsImportable(_ *Interpreter) bool {
+func (PathLinkValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -176,11 +176,11 @@ func (AccountLinkValue) isValue() {}
 
 func (AccountLinkValue) isLinkValue() {}
 
-func (v AccountLinkValue) Accept(_ *Interpreter, _ Visitor) {
+func (v AccountLinkValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
-func (AccountLinkValue) Walk(_ *Interpreter, _ func(Value)) {
+func (AccountLinkValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -202,7 +202,7 @@ func (v AccountLinkValue) StaticType(interpreter *Interpreter) StaticType {
 	)
 }
 
-func (AccountLinkValue) IsImportable(_ *Interpreter) bool {
+func (AccountLinkValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	panic(errors.NewUnreachableError())
 }
 
@@ -278,7 +278,7 @@ func (v AccountLinkValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) 
 }
 
 func (v AccountLinkValue) ChildStorables() []atree.Storable {
-	panic(errors.NewUnreachableError())
+	return nil
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64

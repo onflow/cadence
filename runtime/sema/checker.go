@@ -937,40 +937,45 @@ func CheckIntersectionType(
 
 		// The intersections may not have clashing members
 
-		// TODO: also include interface conformances' members
-		//   once interfaces can have conformances
+		checkClashingMember := func(interfaceType *InterfaceType) {
+			interfaceType.Members.Foreach(func(name string, member *Member) {
 
-		interfaceType.Members.Foreach(func(name string, member *Member) {
-			if previousDeclaringInterfaceType, ok := memberSet[name]; ok {
+				if previousDeclaringInterfaceType, ok := memberSet[name]; ok {
 
-				// If there is an overlap in members, ensure the members have the same type
+					// If there is an overlap in members, ensure the members have the same type
 
-				memberType := member.TypeAnnotation.Type
+					memberType := member.TypeAnnotation.Type
 
-				prevMemberType, ok := previousDeclaringInterfaceType.Members.Get(name)
-				if !ok {
-					panic(errors.NewUnreachableError())
+					prevMemberType, ok := previousDeclaringInterfaceType.Members.Get(name)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					previousMemberType := prevMemberType.TypeAnnotation.Type
+
+					if !memberType.IsInvalidType() &&
+						!previousMemberType.IsInvalidType() &&
+						!memberType.Equal(previousMemberType) {
+
+						report(func(t *ast.IntersectionType) error {
+							return &IntersectionMemberClashError{
+								Name:                  name,
+								RedeclaringType:       interfaceType,
+								OriginalDeclaringType: previousDeclaringInterfaceType,
+								Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
+							}
+						})
+					}
+				} else {
+					memberSet[name] = interfaceType
 				}
+			})
+		}
 
-				previousMemberType := prevMemberType.TypeAnnotation.Type
+		checkClashingMember(interfaceType)
 
-				if !memberType.IsInvalidType() &&
-					!previousMemberType.IsInvalidType() &&
-					!memberType.Equal(previousMemberType) {
-
-					report(func(t *ast.IntersectionType) error {
-						return &IntersectionMemberClashError{
-							Name:                  name,
-							RedeclaringType:       interfaceType,
-							OriginalDeclaringType: previousDeclaringInterfaceType,
-							Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
-						}
-					})
-				}
-			} else {
-				memberSet[name] = interfaceType
-			}
-		})
+		interfaceType.EffectiveInterfaceConformanceSet().
+			ForEach(checkClashingMember)
 	}
 
 	// If no intersection type is given, infer `AnyResource`/`AnyStruct`
@@ -982,18 +987,22 @@ func CheckIntersectionType(
 		// the type is ambiguous.
 
 		report(func(t *ast.IntersectionType) error {
-			return &AmbiguousIntersectionTypeError{Range: ast.NewRangeFromPositioned(memoryGauge, t)}
+			return &AmbiguousIntersectionTypeError{
+				Range: ast.NewRangeFromPositioned(memoryGauge, t),
+			}
 		})
 		return InvalidType
 
-	case common.CompositeKindResource, common.CompositeKindStructure:
+	case common.CompositeKindResource,
+		common.CompositeKindStructure,
+		common.CompositeKindContract:
 		break
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
 
-	return NewIntersectionType(memoryGauge, types)
+	return NewIntersectionType(memoryGauge, nil, types)
 }
 
 func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
@@ -1011,8 +1020,7 @@ func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
 		if ok {
 			intersectedCompositeKind = intersectedInterfaceType.CompositeKind
 		}
-		if !ok || (intersectedCompositeKind != common.CompositeKindResource &&
-			intersectedCompositeKind != common.CompositeKindStructure) {
+		if !ok || !intersectedCompositeKind.SupportsInterfaces() {
 
 			if !intersectedResult.IsInvalidType() {
 				checker.report(&InvalidIntersectedTypeError{
@@ -1548,19 +1556,27 @@ func (checker *Checker) recordResourceInvalidation(
 
 	accessedSelfMember := checker.accessedSelfMember(expression)
 
+	// Normally a field members cannot be invalidated,
+	// and this check typically prevents invalidations of this kind.
+	// However, during second value transfers we would like to be able to invalidate member and index
+	// expressions purely for the duration of checking the second value expression in the transfer.
+	// To enable this, nested move errors are not reported when the move kind of the invalidation is `Temporary`.
 	switch expression.(type) {
 	case *ast.MemberExpression:
 
-		if accessedSelfMember == nil ||
-			!checker.allowSelfResourceFieldInvalidation {
+		if (accessedSelfMember == nil ||
+			!checker.allowSelfResourceFieldInvalidation) &&
+			invalidationKind != ResourceInvalidationKindMoveTemporary {
 
 			reportInvalidNestedMove()
 			return nil
 		}
 
 	case *ast.IndexExpression:
-		reportInvalidNestedMove()
-		return nil
+		if invalidationKind != ResourceInvalidationKindMoveTemporary {
+			reportInvalidNestedMove()
+			return nil
+		}
 	}
 
 	invalidation := ResourceInvalidation{

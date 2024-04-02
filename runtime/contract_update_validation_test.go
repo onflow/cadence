@@ -82,8 +82,11 @@ func newContractRemovalTransaction(contractName string) string {
 	)
 }
 
-func newContractDeploymentTransactor(t *testing.T) func(code string) error {
-	rt := NewTestInterpreterRuntimeWithAttachments()
+func newContractDeploymentTransactor(t *testing.T, withC1Upgrade bool) func(code string) error {
+	config := DefaultTestInterpreterConfig
+	config.AttachmentsEnabled = true
+	config.LegacyContractUpgradeEnabled = withC1Upgrade
+	rt := NewTestInterpreterRuntimeWithConfig(config)
 
 	accountCodes := map[Location][]byte{}
 	var events []cadence.Event
@@ -130,8 +133,8 @@ func newContractDeploymentTransactor(t *testing.T) func(code string) error {
 
 // testDeployAndUpdate deploys a contract in one transaction,
 // then updates the contract in another transaction
-func testDeployAndUpdate(t *testing.T, name string, oldCode string, newCode string) error {
-	executeTransaction := newContractDeploymentTransactor(t)
+func testDeployAndUpdate(t *testing.T, name string, oldCode string, newCode string, withC1Upgrade bool) error {
+	executeTransaction := newContractDeploymentTransactor(t, withC1Upgrade)
 	err := executeTransaction(newContractAddTransaction(name, oldCode))
 	require.NoError(t, err)
 
@@ -140,21 +143,36 @@ func testDeployAndUpdate(t *testing.T, name string, oldCode string, newCode stri
 
 // testDeployAndRemove deploys a contract in one transaction,
 // then removes the contract in another transaction
-func testDeployAndRemove(t *testing.T, name string, code string) error {
-	executeTransaction := newContractDeploymentTransactor(t)
+func testDeployAndRemove(t *testing.T, name string, code string, withC1Upgrade bool) error {
+	executeTransaction := newContractDeploymentTransactor(t, withC1Upgrade)
 	err := executeTransaction(newContractAddTransaction(name, code))
 	require.NoError(t, err)
 
 	return executeTransaction(newContractRemovalTransaction(name))
 }
 
+func testWithValidators(t *testing.T, name string, testFunc func(t *testing.T, withC1Upgrade bool)) {
+	for _, withC1Upgrade := range []bool{true, false} {
+		withC1Upgrade := withC1Upgrade
+		name := name
+
+		if withC1Upgrade {
+			name = fmt.Sprintf("%s (with c1 validator)", name)
+		}
+
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			testFunc(t, withC1Upgrade)
+		})
+	}
+}
+
 func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("change field type", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "change field type", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -174,16 +192,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "Test", "a", "String", "Int")
 	})
 
-	t.Run("add field", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "add field", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -207,16 +223,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertExtraneousFieldError(t, cause, "Test", "b")
 	})
 
-	t.Run("remove field", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "remove field", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -240,13 +254,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		require.NoError(t, err)
 	})
 
-	t.Run("change nested decl field type", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "change nested decl field type", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -288,16 +300,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "TestResource", "b", "Int", "String")
 	})
 
-	t.Run("add field to nested decl", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "add field to nested decl", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -341,16 +351,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertExtraneousFieldError(t, cause, "TestResource", "c")
 	})
 
-	t.Run("change indirect field type", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "change indirect field type", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -394,16 +402,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "TestStruct", "b", "Int", "String")
 	})
 
-	t.Run("circular types refs", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "circular types refs", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -471,16 +477,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "Bar", "d", "Bar?", "String")
 	})
 
-	t.Run("qualified vs unqualified nominal type", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "qualified vs unqualified nominal type", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -524,13 +528,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		require.NoError(t, err)
 	})
 
-	t.Run("change imported nominal type to local", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "change imported nominal type to local", func(t *testing.T, withC1Upgrade bool) {
 
 		const importCode = `
     	    	    access(all) contract TestImport {
@@ -547,7 +549,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		executeTransaction := newContractDeploymentTransactor(t)
+		executeTransaction := newContractDeploymentTransactor(t, withC1Upgrade)
 
 		err := executeTransaction(newContractAddTransaction("TestImport", importCode))
 		require.NoError(t, err)
@@ -596,9 +598,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertFieldTypeMismatchError(t, cause, "Test", "x", "TestImport.TestStruct", "TestStruct")
 	})
 
-	t.Run("change imported field nominal type location", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "change imported field nominal type location", func(t *testing.T, withC1Upgrade bool) {
 
 		runtime := NewTestInterpreterRuntime()
 
@@ -762,9 +762,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertFieldTypeMismatchError(t, cause, "Test", "x", "TestImport.TestStruct", "TestImport.TestStruct")
 	})
 
-	t.Run("change imported non-field nominal type location", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "change imported non-field nominal type location", func(t *testing.T, withC1Upgrade bool) {
 
 		runtime := NewTestInterpreterRuntime()
 
@@ -772,7 +770,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			return []byte(fmt.Sprintf(
 				`
 				  transaction {
-					prepare(signer: auth(BorrowValue) &Account) {
+					prepare(signer: auth(Storage) &Account) {
 					  let acct = Account(payer: signer)
 					  acct.contracts.add(name: "%s", code: "%s".decodeHex())
 					}
@@ -920,9 +918,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("change imported field nominal type location implicitly", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "change imported field nominal type location implicitly", func(t *testing.T, withC1Upgrade bool) {
 
 		runtime := NewTestInterpreterRuntime()
 
@@ -930,7 +926,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			return []byte(fmt.Sprintf(
 				`
 				  transaction {
-					prepare(signer: auth(BorrowValue) &Account) {
+					prepare(signer: auth(Storage) &Account) {
 					  let acct = Account(payer: signer)
 					  acct.contracts.add(name: "%s", code: "%s".decodeHex())
 					}
@@ -1109,9 +1105,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertFieldTypeMismatchError(t, cause, "Test", "x", "TestImport.TestStruct", "TestImport.TestStruct")
 	})
 
-	t.Run("contract interface update", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "contract interface update", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract interface Test {
@@ -1127,16 +1121,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "Test", "a", "String", "Int")
 	})
 
-	t.Run("convert interface to contract", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "convert interface to contract", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract interface Test {
@@ -1160,7 +1152,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -1173,9 +1165,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		)
 	})
 
-	t.Run("convert contract to interface", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "convert contract to interface", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1199,7 +1189,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -1212,9 +1202,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		)
 	})
 
-	t.Run("change non stored", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "change non stored", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1290,7 +1278,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 
 		// Changing unused public composite types should also fail, since those could be
 		// referred by anyone in the chain, and may cause data inconsistency.
@@ -1300,9 +1288,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertFieldTypeMismatchError(t, cause, "UnusedStruct", "a", "Int", "String")
 	})
 
-	t.Run("change enum type", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "change enum type", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1336,16 +1322,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertConformanceMismatchError(t, cause, "Foo")
 	})
 
-	t.Run("change nested interface", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "change nested interface", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1379,16 +1363,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
        `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "TestStruct", "a", "String", "Int")
 	})
 
-	t.Run("change nested interface to struct", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "change nested interface to struct", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1410,7 +1392,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -1423,9 +1405,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		)
 	})
 
-	t.Run("adding a nested struct", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "adding a nested struct", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1444,13 +1424,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
        `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		require.NoError(t, err)
 	})
 
-	t.Run("removing a nested struct", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "removing a nested struct", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1469,16 +1447,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertMissingDeclarationError(t, cause, "TestStruct")
 	})
 
-	t.Run("add and remove field", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "add and remove field", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1498,16 +1474,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertExtraneousFieldError(t, cause, "Test", "b")
 	})
 
-	t.Run("multiple errors", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "multiple errors", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1543,7 +1517,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		updateErr := getContractUpdateError(t, err, "Test")
@@ -1563,9 +1537,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		)
 	})
 
-	t.Run("check error messages", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "check error messages", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1601,7 +1573,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		const expectedError = "error: mismatching field `a` in `Test`\n" +
@@ -1625,9 +1597,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.Contains(t, err.Error(), expectedError)
 	})
 
-	t.Run("Test reference types", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "Test reference types", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1667,13 +1637,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		require.NoError(t, err)
 	})
 
-	t.Run("Test function type", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "Test function type", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1709,15 +1677,13 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "error: field add has non-storable type: fun(Int, Int): Int")
 	})
 
-	t.Run("Test conformance", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "Test conformance", func(t *testing.T, withC1Upgrade bool) {
 
 		const importCode = `
     	    	    access(all) contract TestImport {
@@ -1727,7 +1693,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		executeTransaction := newContractDeploymentTransactor(t)
+		executeTransaction := newContractDeploymentTransactor(t, withC1Upgrade)
 		err := executeTransaction(newContractAddTransaction("TestImport", importCode))
 		require.NoError(t, err)
 
@@ -1843,7 +1809,6 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		const newCode = `
             access(all) contract Test {
 
-
                 // function type
                 access(all) var i: Capability<&fun(Int, Int): Int>?
 
@@ -1897,13 +1862,125 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, false)
 		require.NoError(t, err)
 	})
 
-	t.Run("Test intersection types", func(t *testing.T) {
+	t.Run("Test all types (with c1 validator)", func(t *testing.T) {
+		// The corresponding test with the "default validator" uses a contract code
+		// that is not compatible with the old parser.
+		// Therefore, run the same test with an adjusted code.
 
 		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                // simple nominal type
+                access(all) var a: TestStruct
+
+                // qualified nominal type
+                access(all) var b: Test.TestStruct
+
+                // optional type
+                access(all) var c: Int?
+
+                // variable sized type
+                access(all) var d: [Int]
+
+                // constant sized type
+                access(all) var e: [Int; 2]
+
+                // dictionary type
+                access(all) var f: {Int: String}
+
+                // intersection type
+                access(all) var g: {TestInterface}
+
+                // instantiation and reference types
+                access(all) var h:  Capability<&TestStruct>?
+
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = Test.TestStruct()
+                    self.c = 123
+                    self.d = [123]
+                    self.e = [123, 456]
+                    self.f = {1: "Hello"}
+                    self.g = TestStruct()
+                    self.h = nil
+                }
+
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                // instantiation and reference types
+                access(all) var h:  Capability<&TestStruct>?
+
+                // intersection type
+                access(all) var g: {TestInterface}
+
+                // dictionary type
+                access(all) var f: {Int: String}
+
+                // constant sized type
+                access(all) var e: [Int; 2]
+
+                // variable sized type
+                access(all) var d: [Int]
+
+                // optional type
+                access(all) var c: Int?
+
+                // qualified nominal type
+                access(all) var b: Test.TestStruct
+
+                // simple nominal type
+                access(all) var a: TestStruct
+
+                init() {
+                    var count: Int = 567
+                    self.a = TestStruct()
+                    self.b = Test.TestStruct()
+                    self.c = 123
+                    self.d = [123]
+                    self.e = [123, 456]
+                    self.f = {1: "Hello"}
+                    self.g = TestStruct()
+                    self.h = nil
+                }
+
+                access(all) struct TestStruct:TestInterface {
+                    access(all) let a: Int
+                    init() {
+                        self.a = 123
+                    }
+                }
+
+                access(all) struct interface TestInterface {
+                    access(all) let a: Int
+                }
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, true)
+		require.NoError(t, err)
+	})
+
+	testWithValidators(t, "Test intersection types", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1963,13 +2040,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		require.NoError(t, err)
 	})
 
-	t.Run("Test invalid intersection types change", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "Test invalid intersection types change", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2021,7 +2096,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "access(all) var a: {TestInterface}"+
@@ -2033,9 +2108,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			"incompatible type annotations. expected `{TestInterface}`, found `TestStruct`")
 	})
 
-	t.Run("enum valid", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "enum valid", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2055,13 +2128,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		require.NoError(t, err)
 	})
 
-	t.Run("enum remove case", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "enum remove case", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2080,16 +2151,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertMissingEnumCasesError(t, cause, "Foo", 2, 1)
 	})
 
-	t.Run("enum add case", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "enum add case", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2110,13 +2179,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		require.NoError(t, err)
 	})
 
-	t.Run("enum swap cases", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "enum swap cases", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2138,7 +2205,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		updateErr := getContractUpdateError(t, err, "Test")
@@ -2152,9 +2219,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertEnumCaseMismatchError(t, childErrors[2], "left", "up")
 	})
 
-	t.Run("Remove and add struct", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "Remove and add struct", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
     	    	    access(all) contract Test {
@@ -2176,7 +2241,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		executeTransaction := newContractDeploymentTransactor(t)
+		executeTransaction := newContractDeploymentTransactor(t, withC1Upgrade)
 
 		err := executeTransaction(newContractAddTransaction("Test", oldCode))
 		require.NoError(t, err)
@@ -2207,9 +2272,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertFieldTypeMismatchError(t, cause, "TestStruct", "a", "Int", "String")
 	})
 
-	t.Run("Rename struct", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "Rename struct", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
     	    	    access(all) contract Test {
@@ -2241,16 +2304,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertMissingDeclarationError(t, cause, "TestStruct")
 	})
 
-	t.Run("Remove contract with enum", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "Remove contract with enum", func(t *testing.T, withC1Upgrade bool) {
 
 		const code = `
     	    	    access(all) contract Test {
@@ -2259,15 +2320,13 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		err := testDeployAndRemove(t, "Test", code)
+		err := testDeployAndRemove(t, "Test", code, withC1Upgrade)
 		RequireError(t, err)
 
 		assertContractRemovalError(t, err, "Test")
 	})
 
-	t.Run("Remove contract without enum", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "Remove contract without enum", func(t *testing.T, withC1Upgrade bool) {
 
 		const code = `
     	    	    access(all) contract Test {
@@ -2281,13 +2340,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		err := testDeployAndRemove(t, "Test", code)
+		err := testDeployAndRemove(t, "Test", code, withC1Upgrade)
 		require.NoError(t, err)
 	})
 
-	t.Run("removing multiple nested structs", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "removing multiple nested structs", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
     	    	    access(all) contract Test {
@@ -2305,7 +2362,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 		for i := 0; i < 1000; i++ {
 
-			err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 			RequireError(t, err)
 
 			updateErr := getContractUpdateError(t, err, "Test")
@@ -2318,6 +2375,25 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			}
 			assertMissingDeclarationError(t, childErrors[1], "B")
 		}
+	})
+
+	testWithValidators(t, "Remove event", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) event Foo()
+                access(all) event Bar()
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) event Bar()
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		require.NoError(t, err)
 	})
 }
 
@@ -2432,9 +2508,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("Adding conformance", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "Adding conformance", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2471,13 +2545,11 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		require.NoError(t, err)
 	})
 
-	t.Run("Adding conformance with new fields", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "Adding conformance with new fields", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2513,7 +2585,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -2521,9 +2593,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		assertExtraneousFieldError(t, cause, "Foo", "name")
 	})
 
-	t.Run("Removing conformance", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "Removing conformance", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2557,17 +2627,14 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
-
 		assertConformanceMismatchError(t, cause, "Foo")
 	})
 
-	t.Run("Change conformance order", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "Change conformance order", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2607,13 +2674,11 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		require.NoError(t, err)
 	})
 
-	t.Run("missing comma in parameter list of old contract", func(t *testing.T) {
-
-		t.Parallel()
+	testWithValidators(t, "missing comma in parameter list of old contract", func(t *testing.T, withC1Upgrade bool) {
 
 		address := common.MustBytesToAddress([]byte{0x42})
 

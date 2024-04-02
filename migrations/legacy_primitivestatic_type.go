@@ -33,7 +33,9 @@ type LegacyPrimitiveStaticType struct {
 var _ interpreter.StaticType = LegacyPrimitiveStaticType{}
 
 func (t LegacyPrimitiveStaticType) ID() common.TypeID {
-	switch t.PrimitiveStaticType {
+	primitiveStaticType := t.PrimitiveStaticType
+
+	switch primitiveStaticType {
 	case interpreter.PrimitiveStaticTypeAuthAccount: //nolint:staticcheck
 		return "AuthAccount"
 	case interpreter.PrimitiveStaticTypePublicAccount: //nolint:staticcheck
@@ -59,7 +61,13 @@ func (t LegacyPrimitiveStaticType) ID() common.TypeID {
 	case interpreter.PrimitiveStaticTypeAccountKey: //nolint:staticcheck
 		return "AccountKey"
 	default:
-		panic(errors.NewUnreachableError())
-
+		panic(errors.NewUnexpectedError("unexpected non-legacy primitive static type: %s", primitiveStaticType))
 	}
+}
+
+func (t LegacyPrimitiveStaticType) Equal(other interpreter.StaticType) bool {
+	if otherLegacy, ok := other.(LegacyPrimitiveStaticType); ok {
+		other = otherLegacy.PrimitiveStaticType
+	}
+	return t.PrimitiveStaticType.Equal(other)
 }
