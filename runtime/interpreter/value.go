@@ -20368,8 +20368,10 @@ type AuthorizedValue interface {
 
 type ReferenceValue interface {
 	Value
+	AuthorizedValue
 	isReference()
 	ReferencedValue(interpreter *Interpreter, locationRange LocationRange, errorOnFailedDereference bool) *Value
+	BorrowType() sema.Type
 }
 
 func DereferenceValue(
@@ -20829,6 +20831,10 @@ func forEachReference(
 	)
 }
 
+func (v *StorageReferenceValue) BorrowType() sema.Type {
+	return v.BorrowedType
+}
+
 // EphemeralReferenceValue
 
 type EphemeralReferenceValue struct {
@@ -21157,6 +21163,10 @@ func (v *EphemeralReferenceValue) ForEach(
 		function,
 		locationRange,
 	)
+}
+
+func (v *EphemeralReferenceValue) BorrowType() sema.Type {
+	return v.BorrowedType
 }
 
 // AddressValue

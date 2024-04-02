@@ -2150,44 +2150,62 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		}
 
 	case *sema.ReferenceType:
-		if !valueType.Equal(unwrappedTargetType) {
-			// transferring a reference at runtime does not change its entitlements; this is so that an upcast reference
-			// can later be downcast back to its original entitlement set
-
-			// check defensively that we never create a runtime mapped entitlement value
-			if _, isMappedAuth := unwrappedTargetType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
-				panic(UnexpectedMappedEntitlementError{
-					Type:          unwrappedTargetType,
-					LocationRange: locationRange,
-				})
-			}
-
-			switch ref := value.(type) {
-			case *EphemeralReferenceValue:
+		targetAuthorization := ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization)
+		switch ref := value.(type) {
+		case *EphemeralReferenceValue:
+			if interpreter.shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+				checkMappedEntitlements(unwrappedTargetType, locationRange)
 				return NewEphemeralReferenceValue(
 					interpreter,
-					ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
+					targetAuthorization,
 					ref.Value,
 					unwrappedTargetType.Type,
 					locationRange,
 				)
+			}
 
-			case *StorageReferenceValue:
+		case *StorageReferenceValue:
+			if interpreter.shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+				checkMappedEntitlements(unwrappedTargetType, locationRange)
 				return NewStorageReferenceValue(
 					interpreter,
-					ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
+					targetAuthorization,
 					ref.TargetStorageAddress,
 					ref.TargetPath,
 					unwrappedTargetType.Type,
 				)
-
-			default:
-				panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
 			}
+
+		default:
+			panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
 		}
 	}
 
 	return value
+}
+
+func (interpreter *Interpreter) shouldConvertReference(
+	ref ReferenceValue,
+	valueType sema.Type,
+	unwrappedTargetType *sema.ReferenceType,
+	targetAuthorization Authorization,
+) bool {
+	if !valueType.Equal(unwrappedTargetType) {
+		return true
+	}
+
+	return !ref.BorrowType().Equal(unwrappedTargetType.Type) ||
+		!ref.GetAuthorization().Equal(targetAuthorization)
+}
+
+func checkMappedEntitlements(unwrappedTargetType *sema.ReferenceType, locationRange LocationRange) {
+	// check defensively that we never create a runtime mapped entitlement value
+	if _, isMappedAuth := unwrappedTargetType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
+		panic(UnexpectedMappedEntitlementError{
+			Type:          unwrappedTargetType,
+			LocationRange: locationRange,
+		})
+	}
 }
 
 // BoxOptional boxes a value in optionals, if necessary
