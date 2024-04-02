@@ -235,7 +235,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 						newLegacyStringValue("Cafe\u0301"),
 					),
 				},
-				common.Address{},
+				common.ZeroAddress,
 			),
 			expectedValue: interpreter.NewCompositeValue(
 				inter,
@@ -249,7 +249,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 						interpreter.NewUnmeteredStringValue("Caf\u00E9"),
 					),
 				},
-				common.Address{},
+				common.ZeroAddress,
 			),
 		},
 		"dictionary_with_un-normalized_character_key": {
@@ -383,7 +383,8 @@ func TestStringValueRehash(t *testing.T) {
 		return storage, inter
 	}
 
-	t.Run("prepare", func(t *testing.T) {
+	// Prepare
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -434,9 +435,10 @@ func TestStringValueRehash(t *testing.T) {
 
 		err := storage.Commit(inter, false)
 		require.NoError(t, err)
-	})
+	})()
 
-	t.Run("migrate", func(t *testing.T) {
+	// Migrate
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -456,9 +458,10 @@ func TestStringValueRehash(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Empty(t, reporter.errors)
-	})
+	})()
 
-	t.Run("load", func(t *testing.T) {
+	// Load
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -487,7 +490,7 @@ func TestStringValueRehash(t *testing.T) {
 			newTestValue(),
 			value.(interpreter.IntValue),
 		)
-	})
+	})()
 }
 
 // TestCharacterValueRehash stores a dictionary in storage,
@@ -525,8 +528,8 @@ func TestCharacterValueRehash(t *testing.T) {
 		return storage, inter
 	}
 
-	t.Run("prepare", func(t *testing.T) {
-
+	// Prepare
+	(func() {
 		storage, inter := newStorageAndInterpreter(t)
 
 		dictionaryStaticType := interpreter.NewDictionaryStaticType(
@@ -577,9 +580,10 @@ func TestCharacterValueRehash(t *testing.T) {
 
 		err := storage.Commit(inter, false)
 		require.NoError(t, err)
-	})
+	})()
 
-	t.Run("migrate", func(t *testing.T) {
+	// Migrate
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -599,9 +603,10 @@ func TestCharacterValueRehash(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Empty(t, reporter.errors)
-	})
+	})()
 
-	t.Run("load", func(t *testing.T) {
+	// Load
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -630,7 +635,7 @@ func TestCharacterValueRehash(t *testing.T) {
 			newTestValue(),
 			value.(interpreter.IntValue),
 		)
-	})
+	})()
 }
 
 func TestCanSkipStringNormalizingMigration(t *testing.T) {

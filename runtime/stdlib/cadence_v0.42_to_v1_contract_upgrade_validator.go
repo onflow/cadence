@@ -510,7 +510,9 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkDeclarationKindCha
 
 	// If the parent is an interface, and the child is a concrete type,
 	// then it is a type requirement.
-	if parent.DeclarationKind() == common.DeclarationKindContractInterface {
+	if parent != nil &&
+		parent.DeclarationKind() == common.DeclarationKindContractInterface {
+
 		// A struct is OK to be converted to a struct-interface
 		if oldDeclKind == common.DeclarationKindStructure &&
 			newDeclKind == common.DeclarationKindStructureInterface {
@@ -559,12 +561,27 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkConformanceV1(
 	newDecl *ast.CompositeDeclaration,
 ) {
 
-	// Here it is assumed enums will always have one and only one conformance.
-	// This is enforced by the checker.
-	// Therefore, below check for multiple conformances is only applicable
-	// for non-enum type composite declarations. i.e: structs, resources, etc.
-
 	oldConformances := oldDecl.Conformances
+
+	// NOTE 1: Here it is assumed enums will always have one and only one conformance.
+	// This is enforced by the checker.
+	//
+	// NOTE 2: If one declaration is an enum, then other is also an enum at this stage.
+	// This is enforced by the validator (in `checkDeclarationUpdatability`), before calling this function.
+	if newDecl.Kind() == common.CompositeKindEnum {
+		err := oldConformances[0].CheckEqual(newDecl.Conformances[0], validator)
+		if err != nil {
+			validator.report(&ConformanceMismatchError{
+				DeclName: newDecl.Identifier.Identifier,
+				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+			})
+		}
+
+		return
+	}
+
+	// Below check for multiple conformances is only applicable
+	// for non-enum type composite declarations. i.e: structs, resources, etc.
 
 	location := validator.underlyingUpdateValidator.location
 
@@ -667,24 +684,19 @@ type AuthorizationMismatchError struct {
 }
 
 var _ errors.UserError = &AuthorizationMismatchError{}
-var _ errors.SecondaryError = &AuthorizationMismatchError{}
 
 func (*AuthorizationMismatchError) IsUserError() {}
 
 func (e *AuthorizationMismatchError) Error() string {
-	return "mismatching authorization"
-}
-
-func (e *AuthorizationMismatchError) SecondaryError() string {
 	if e.ExpectedAuthorization == sema.PrimitiveAccess(ast.AccessAll) {
 		return fmt.Sprintf(
-			"The entitlements migration would not grant this value any entitlements, but the annotation present is `%s`",
+			"mismatching authorization: the entitlements migration would not grant this value any entitlements, but the annotation present is `%s`",
 			e.FoundAuthorization.QualifiedString(),
 		)
 	}
 
 	return fmt.Sprintf(
-		"The entitlements migration would only grant this value `%s`, but the annotation present is `%s`",
+		"mismatching authorization: the entitlements migration would only grant this value `%s`, but the annotation present is `%s`",
 		e.ExpectedAuthorization.QualifiedString(),
 		e.FoundAuthorization.QualifiedString(),
 	)
