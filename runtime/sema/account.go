@@ -61,12 +61,8 @@ func init() {
 	// TODO: if we add support for arbitrary logical type bounds to the source language, move this
 	// into the generator
 	Account_CapabilitiesTypeGetFunctionType.TypeParameters[0].TypeBound =
-		NewConjunctionTypeBound(
-			[]TypeBound{
-				Account_CapabilitiesTypeGetFunctionType.TypeParameters[0].TypeBound,
-				NewStrictSupertypeTypeBound(NeverType),
-			},
-		)
+		Account_CapabilitiesTypeGetFunctionType.TypeParameters[0].TypeBound.
+			And(NewStrictSupertypeTypeBound(NeverType))
 
 	addToBaseActivation(AccountMappingType)
 	addToBaseActivation(CapabilitiesMappingType)

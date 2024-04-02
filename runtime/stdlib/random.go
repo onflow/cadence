@@ -41,12 +41,8 @@ const revertibleRandomFunctionName = "revertibleRandom"
 var revertibleRandomFunctionType = func() *sema.FunctionType {
 	typeParameter := &sema.TypeParameter{
 		Name: "T",
-		TypeBound: sema.NewConjunctionTypeBound(
-			[]sema.TypeBound{
-				sema.NewStrictSubtypeTypeBound(sema.FixedSizeUnsignedIntegerType),
-				sema.NewStrictSupertypeTypeBound(sema.NeverType),
-			},
-		),
+		TypeBound: sema.NewStrictSubtypeTypeBound(sema.FixedSizeUnsignedIntegerType).
+			And(sema.NewStrictSupertypeTypeBound(sema.NeverType)),
 	}
 
 	typeAnnotation := sema.NewTypeAnnotation(

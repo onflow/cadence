@@ -42,6 +42,10 @@ type TypeBound interface {
 	) TypeBound
 	TypeAnnotationState() TypeAnnotationState
 	RewriteWithIntersectionTypes() (result TypeBound, rewritten bool)
+
+	And(TypeBound) TypeBound
+	Or(TypeBound) TypeBound
+	Not() TypeBound
 }
 
 // SubtypeTypeBound(T) expresses the requirement that
@@ -107,6 +111,18 @@ func (b SubtypeTypeBound) RewriteWithIntersectionTypes() (result TypeBound, rewr
 	return b, false
 }
 
+func (b SubtypeTypeBound) And(bound TypeBound) TypeBound {
+	return NewConjunctionTypeBound([]TypeBound{b, bound})
+}
+
+func (b SubtypeTypeBound) Or(bound TypeBound) TypeBound {
+	return NewDisjunctionTypeBound([]TypeBound{b, bound})
+}
+
+func (b SubtypeTypeBound) Not() TypeBound {
+	return NewNegationTypeBound(b)
+}
+
 // EqualTypeBound expresses the requirement that
 // ∀U, U = T
 
@@ -170,6 +186,18 @@ func (b EqualTypeBound) RewriteWithIntersectionTypes() (result TypeBound, rewrit
 	return b, false
 }
 
+func (b EqualTypeBound) And(bound TypeBound) TypeBound {
+	return NewConjunctionTypeBound([]TypeBound{b, bound})
+}
+
+func (b EqualTypeBound) Or(bound TypeBound) TypeBound {
+	return NewDisjunctionTypeBound([]TypeBound{b, bound})
+}
+
+func (b EqualTypeBound) Not() TypeBound {
+	return NewNegationTypeBound(b)
+}
+
 // NegationTypeBound(B) expresses the requirement that
 // ∀U, !B(U)
 
@@ -231,6 +259,19 @@ func (b NegationTypeBound) RewriteWithIntersectionTypes() (result TypeBound, rew
 		}, true
 	}
 	return b, false
+}
+
+func (b NegationTypeBound) And(bound TypeBound) TypeBound {
+	return NewConjunctionTypeBound([]TypeBound{b, bound})
+}
+
+func (b NegationTypeBound) Or(bound TypeBound) TypeBound {
+	return NewDisjunctionTypeBound([]TypeBound{b, bound})
+}
+
+func (b NegationTypeBound) Not() TypeBound {
+	// !!b = b
+	return b.NegatedBound
 }
 
 // ConjunctionTypeBound(B1, ..., Bn) expresses the requirement that
@@ -343,6 +384,18 @@ func (b ConjunctionTypeBound) RewriteWithIntersectionTypes() (result TypeBound, 
 	}
 }
 
+func (b ConjunctionTypeBound) And(bound TypeBound) TypeBound {
+	return NewConjunctionTypeBound(append(b.TypeBounds, bound))
+}
+
+func (b ConjunctionTypeBound) Or(bound TypeBound) TypeBound {
+	return NewDisjunctionTypeBound([]TypeBound{b, bound})
+}
+
+func (b ConjunctionTypeBound) Not() TypeBound {
+	return NewNegationTypeBound(b)
+}
+
 // Any other kinds of type bounds we might wish to express can be
 // written as the composition of `<=`, `=`, `!` and `&`. Technically, `=` is not
 // really even necessary, as `U = T` is equivalent to `U <= T & T <= U`, but for
@@ -351,25 +404,25 @@ func (b ConjunctionTypeBound) RewriteWithIntersectionTypes() (result TypeBound, 
 // `U <= T && !(T = U) ==> U < T`
 func NewStrictSubtypeTypeBound(ty Type) TypeBound {
 	subtypeBound := NewSubtypeTypeBound(ty)
-	nonEqualBound := NewNegationTypeBound(NewEqualTypeBound(ty))
-	return NewConjunctionTypeBound([]TypeBound{subtypeBound, nonEqualBound})
+	nonEqualBound := NewEqualTypeBound(ty).Not()
+	return subtypeBound.And(nonEqualBound)
 }
 
 // `!(U <= T) ==> U > T`
 func NewStrictSupertypeTypeBound(ty Type) TypeBound {
-	return NewNegationTypeBound(NewSubtypeTypeBound(ty))
+	return NewSubtypeTypeBound(ty).Not()
 }
 
 // `!(U < T) ==> U >= T`
 func NewSupertypeTypeBound(ty Type) TypeBound {
-	return NewNegationTypeBound(NewStrictSubtypeTypeBound(ty))
+	return NewStrictSubtypeTypeBound(ty).Not()
 }
 
 // `!(!B1 & ... & !Bn) ==> B1 || ... || Bn`
 func NewDisjunctionTypeBound(typeBounds []TypeBound) TypeBound {
 	var negatedTypeBounds []TypeBound
 	for _, bound := range typeBounds {
-		negatedTypeBounds = append(negatedTypeBounds, NewNegationTypeBound(bound))
+		negatedTypeBounds = append(negatedTypeBounds, bound.Not())
 	}
-	return NewNegationTypeBound(NewConjunctionTypeBound(negatedTypeBounds))
+	return NewConjunctionTypeBound(negatedTypeBounds).Not()
 }
