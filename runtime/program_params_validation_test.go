@@ -348,7 +348,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		require.ErrorAs(t, err, &checkerError)
 
 		errs := checker.RequireCheckerErrors(t, checkerError, 1)
-		assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+		assert.IsType(t, &sema.TypeBoundError{}, errs[0])
 	})
 
 	t.Run("Invalid InclusiveRange<Int16> with mixed value types", func(t *testing.T) {
@@ -387,7 +387,7 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		require.ErrorAs(t, err, &checkerError)
 
 		errs := checker.RequireCheckerErrors(t, checkerError, 1)
-		assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+		assert.IsType(t, &sema.TypeBoundError{}, errs[0])
 	})
 
 	t.Run("Capability", func(t *testing.T) {

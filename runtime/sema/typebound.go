@@ -365,7 +365,11 @@ func NewSupertypeTypeBound(ty Type) TypeBound {
 	return NewNegationTypeBound(NewStrictSubtypeTypeBound(ty))
 }
 
-// `!(B1 & ... & Bn) ==> B1 || ... || Bn`
+// `!(!B1 & ... & !Bn) ==> B1 || ... || Bn`
 func NewDisjunctionTypeBound(typeBounds []TypeBound) TypeBound {
-	return NewNegationTypeBound(NewConjunctionTypeBound(typeBounds))
+	var negatedTypeBounds []TypeBound
+	for _, bound := range typeBounds {
+		negatedTypeBounds = append(negatedTypeBounds, NewNegationTypeBound(bound))
+	}
+	return NewNegationTypeBound(NewConjunctionTypeBound(negatedTypeBounds))
 }

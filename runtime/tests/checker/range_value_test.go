@@ -389,7 +389,7 @@ func TestCheckInclusiveRangeConstructionInvalid(t *testing.T) {
 			let b: Integer = Int16(10)
 			let r = InclusiveRange(a, b)
 		`,
-		[]error{&sema.InvalidTypeArgumentError{}},
+		[]error{&sema.TypeBoundError{}},
 	)
 	runInvalidCase(
 		t,
@@ -400,7 +400,7 @@ func TestCheckInclusiveRangeConstructionInvalid(t *testing.T) {
 			let s: Integer = UInt16(2)
 			let r = InclusiveRange(a, b, step: s)
 		`,
-		[]error{&sema.InvalidTypeArgumentError{}},
+		[]error{&sema.TypeBoundError{}},
 	)
 }
 
@@ -432,7 +432,7 @@ func TestInclusiveRangeNonLeafIntegerTypes(t *testing.T) {
 			`, ty), newOptions())
 
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+			assert.IsType(t, &sema.TypeBoundError{}, errs[0])
 		})
 
 		t.Run(fmt.Sprintf("InclusiveRange<%s> infer from lhs", ty), func(t *testing.T) {
@@ -446,8 +446,8 @@ func TestInclusiveRangeNonLeafIntegerTypes(t *testing.T) {
 
 			// One for the invocation and another for the type.
 			errs := RequireCheckerErrors(t, err, 2)
-			assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
-			assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[1])
+			assert.IsType(t, &sema.TypeBoundError{}, errs[0])
+			assert.IsType(t, &sema.TypeBoundError{}, errs[1])
 		})
 
 		t.Run(fmt.Sprintf("InclusiveRange<%s> assignment", ty), func(t *testing.T) {
@@ -459,7 +459,7 @@ func TestInclusiveRangeNonLeafIntegerTypes(t *testing.T) {
 			`, ty), newOptions())
 
 			errs := RequireCheckerErrors(t, err, 1)
-			assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+			assert.IsType(t, &sema.TypeBoundError{}, errs[0])
 		})
 	}
 

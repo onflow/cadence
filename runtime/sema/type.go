@@ -6698,15 +6698,9 @@ func (t *InclusiveRangeType) Instantiate(
 	}
 	paramAstRange := ast.NewRangeFromPositioned(memoryGauge, astTypeArguments[0])
 
-	// memberType must only be a leaf integer type.
-	for _, ty := range AllNonLeafIntegerTypes {
-		if memberType == ty {
-			report(&InvalidTypeArgumentError{
-				TypeArgumentName: inclusiveRangeTypeParameter.Name,
-				Range:            paramAstRange,
-				Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
-			})
-		}
+	err := InclusiveRangeConstructorFunctionTypeParameter.checkTypeBound(memberType, memoryGauge, paramAstRange)
+	if err != nil {
+		report(err)
 	}
 
 	return &InclusiveRangeType{
@@ -6761,6 +6755,18 @@ const InclusiveRangeTypeContainsFunctionName = "contains"
 const inclusiveRangeTypeContainsFunctionDocString = `
 Returns true if the given integer is in the InclusiveRange sequence
 `
+
+var InclusiveRangeConstructorFunctionTypeParameter = &TypeParameter{
+	Name: "T",
+	TypeBound: NewDisjunctionTypeBound(
+		[]TypeBound{
+			NewEqualTypeBound(UIntType),
+			NewEqualTypeBound(IntType),
+			NewStrictSubtypeTypeBound(FixedSizeUnsignedIntegerType),
+			NewStrictSubtypeTypeBound(SignedIntegerType),
+		},
+	),
+}
 
 func (t *InclusiveRangeType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()

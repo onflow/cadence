@@ -110,7 +110,8 @@ func TestTypeBound_Satisfies(t *testing.T) {
 		})
 
 		assert.True(t, typeBound.Satisfies(FixedSizeUnsignedIntegerType))
-		assert.True(t, typeBound.Satisfies(NeverType))
+		assert.True(t, typeBound.Satisfies(AnyStructType))
+		assert.False(t, typeBound.Satisfies(NeverType))
 
 		for _, integerType := range AllLeafFixedSizeUnsignedIntegerTypes {
 			assert.True(t, typeBound.Satisfies(integerType))
