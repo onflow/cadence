@@ -1,24 +1,27 @@
 /*
- * Cadence - The resource-oriented smart contract programming language
- *
- * Copyright Dapper Labs, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+* Cadence - The resource-oriented smart contract programming language
+*
+* Copyright Dapper Labs, Inc.
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*   http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
  */
 
 package sema
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -46,6 +49,9 @@ type TypeBound interface {
 	And(TypeBound) TypeBound
 	Or(TypeBound) TypeBound
 	Not() TypeBound
+
+	withPrettyString(string) TypeBound
+	String() string
 }
 
 // SubtypeTypeBound(T) expresses the requirement that
@@ -123,6 +129,14 @@ func (b SubtypeTypeBound) Not() TypeBound {
 	return NewNegationTypeBound(b)
 }
 
+func (b SubtypeTypeBound) String() string {
+	return fmt.Sprintf("<=: %s", b.Type.String())
+}
+
+func (b SubtypeTypeBound) withPrettyString(_ string) TypeBound {
+	return b
+}
+
 // EqualTypeBound expresses the requirement that
 // ∀U, U = T
 
@@ -198,14 +212,23 @@ func (b EqualTypeBound) Not() TypeBound {
 	return NewNegationTypeBound(b)
 }
 
+func (b EqualTypeBound) String() string {
+	return fmt.Sprintf("= %s", b.Type.String())
+}
+
+func (b EqualTypeBound) withPrettyString(_ string) TypeBound {
+	return b
+}
+
 // NegationTypeBound(B) expresses the requirement that
 // ∀U, !B(U)
 
 type NegationTypeBound struct {
 	NegatedBound TypeBound
+	prettyString *string
 }
 
-var _ TypeBound = NegationTypeBound{}
+var _ TypeBound = &NegationTypeBound{}
 
 func NewNegationTypeBound(bound TypeBound) TypeBound {
 	return NegationTypeBound{NegatedBound: bound}
@@ -242,7 +265,7 @@ func (b NegationTypeBound) Map(
 	typeParamMap map[*TypeParameter]*TypeParameter,
 	f func(Type) Type,
 ) TypeBound {
-	return NegationTypeBound{
+	return &NegationTypeBound{
 		NegatedBound: b.NegatedBound.Map(gauge, typeParamMap, f),
 	}
 }
@@ -254,7 +277,7 @@ func (b NegationTypeBound) TypeAnnotationState() TypeAnnotationState {
 func (b NegationTypeBound) RewriteWithIntersectionTypes() (result TypeBound, rewritten bool) {
 	rewrittenBound, rewritten := b.NegatedBound.RewriteWithIntersectionTypes()
 	if rewritten {
-		return NegationTypeBound{
+		return &NegationTypeBound{
 			NegatedBound: rewrittenBound,
 		}, true
 	}
@@ -274,11 +297,24 @@ func (b NegationTypeBound) Not() TypeBound {
 	return b.NegatedBound
 }
 
+func (b NegationTypeBound) String() string {
+	if b.prettyString != nil {
+		return *b.prettyString
+	}
+	return fmt.Sprintf("!(%s)", b.NegatedBound.String())
+}
+
+func (b NegationTypeBound) withPrettyString(prettyString string) TypeBound {
+	b.prettyString = &prettyString
+	return b
+}
+
 // ConjunctionTypeBound(B1, ..., Bn) expresses the requirement that
 // ∀U, B1(U) & ... & Bn(U)
 
 type ConjunctionTypeBound struct {
-	TypeBounds []TypeBound
+	TypeBounds   []TypeBound
+	prettyString *string
 }
 
 var _ TypeBound = ConjunctionTypeBound{}
@@ -396,6 +432,23 @@ func (b ConjunctionTypeBound) Not() TypeBound {
 	return NewNegationTypeBound(b)
 }
 
+func (b ConjunctionTypeBound) String() string {
+	if b.prettyString != nil {
+		return *b.prettyString
+	}
+
+	var strs []string
+	for _, bound := range b.TypeBounds {
+		strs = append(strs, fmt.Sprintf("(%s)", bound.String()))
+	}
+	return strings.Join(strs[:], " && ")
+}
+
+func (b ConjunctionTypeBound) withPrettyString(prettyString string) TypeBound {
+	b.prettyString = &prettyString
+	return b
+}
+
 // Any other kinds of type bounds we might wish to express can be
 // written as the composition of `<=`, `=`, `!` and `&`. Technically, `=` is not
 // really even necessary, as `U = T` is equivalent to `U <= T & T <= U`, but for
@@ -405,24 +458,35 @@ func (b ConjunctionTypeBound) Not() TypeBound {
 func NewStrictSubtypeTypeBound(ty Type) TypeBound {
 	subtypeBound := NewSubtypeTypeBound(ty)
 	nonEqualBound := NewEqualTypeBound(ty).Not()
-	return subtypeBound.And(nonEqualBound)
+	return subtypeBound.
+		And(nonEqualBound).
+		withPrettyString(fmt.Sprintf("<: %s", ty.String()))
 }
 
 // `!(U <= T) ==> U > T`
 func NewStrictSupertypeTypeBound(ty Type) TypeBound {
-	return NewSubtypeTypeBound(ty).Not()
+	return NewSubtypeTypeBound(ty).
+		Not().
+		withPrettyString(fmt.Sprintf(">: %s", ty.String()))
 }
 
 // `!(U < T) ==> U >= T`
 func NewSupertypeTypeBound(ty Type) TypeBound {
-	return NewStrictSubtypeTypeBound(ty).Not()
+	return NewStrictSubtypeTypeBound(ty).
+		Not().
+		withPrettyString(fmt.Sprintf(">=: %s", ty.String()))
 }
 
 // `!(!B1 & ... & !Bn) ==> B1 || ... || Bn`
 func NewDisjunctionTypeBound(typeBounds []TypeBound) TypeBound {
 	var negatedTypeBounds []TypeBound
+	var strs []string
 	for _, bound := range typeBounds {
 		negatedTypeBounds = append(negatedTypeBounds, bound.Not())
+		strs = append(strs, fmt.Sprintf("(%s)", bound.String()))
 	}
-	return NewConjunctionTypeBound(negatedTypeBounds).Not()
+
+	return NewConjunctionTypeBound(negatedTypeBounds).
+		Not().
+		withPrettyString(strings.Join(strs[:], " || "))
 }

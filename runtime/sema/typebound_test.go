@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTypeBound_Satisfies(t *testing.T) {
@@ -119,6 +120,86 @@ func TestTypeBound_Satisfies(t *testing.T) {
 	})
 }
 
+func TestTypeBoundSerialization(t *testing.T) {
+	t.Parallel()
+
+	type testCase struct {
+		name     string
+		bound    TypeBound
+		expected string
+	}
+
+	tests := []testCase{
+		{
+			name:     "basic subtype",
+			bound:    NewSubtypeTypeBound(IntType),
+			expected: "<=: Int",
+		},
+		{
+			name:     "basic equal",
+			bound:    NewEqualTypeBound(IntType),
+			expected: "= Int",
+		},
+		{
+			name:     "basic not subtype",
+			bound:    NewSubtypeTypeBound(IntType).Not(),
+			expected: "!(<=: Int)",
+		},
+		{
+			name:     "basic not equal",
+			bound:    NewEqualTypeBound(IntType).Not(),
+			expected: "!(= Int)",
+		},
+		{
+			name:     "basic conjunction",
+			bound:    NewSubtypeTypeBound(IntType).And(NewEqualTypeBound(StringType)),
+			expected: "(<=: Int) && (= String)",
+		},
+		{
+			name:     "conjunction of negations",
+			bound:    NewSubtypeTypeBound(IntType).Not().And(NewEqualTypeBound(StringType).Not()),
+			expected: "(!(<=: Int)) && (!(= String))",
+		},
+		{
+			name:     "flattened double negative",
+			bound:    NewSubtypeTypeBound(IntType).Not().Not(),
+			expected: "<=: Int",
+		},
+		{
+			name:     "strict subtype",
+			bound:    NewStrictSubtypeTypeBound(IntType),
+			expected: "<: Int",
+		},
+		{
+			name:     "strict supertype",
+			bound:    NewStrictSupertypeTypeBound(IntType),
+			expected: ">: Int",
+		},
+		{
+			name:     "supertype",
+			bound:    NewSupertypeTypeBound(IntType),
+			expected: ">=: Int",
+		},
+		{
+			name:     "basic disjunction",
+			bound:    NewSubtypeTypeBound(IntType).Or(NewEqualTypeBound(StringType)),
+			expected: "(<=: Int) || (= String)",
+		},
+	}
+
+	test := func(test testCase) {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			require.Equal(t, test.bound.String(), test.expected)
+		})
+	}
+
+	for _, testCase := range tests {
+		test(testCase)
+	}
+}
+
 func TestTypeBound_HasInvalid(t *testing.T) {
 	t.Parallel()
 
@@ -159,19 +240,19 @@ func TestTypeBound_HasInvalid(t *testing.T) {
 		t.Parallel()
 
 		assert.False(t,
-			ConjunctionTypeBound{
+			(&ConjunctionTypeBound{
 				TypeBounds: []TypeBound{
 					SubtypeTypeBound{Type: IntegerType},
 				},
-			}.HasInvalidType(),
+			}).HasInvalidType(),
 		)
 
 		assert.True(t,
-			ConjunctionTypeBound{
+			(&ConjunctionTypeBound{
 				TypeBounds: []TypeBound{
 					SubtypeTypeBound{Type: InvalidType},
 				},
-			}.HasInvalidType(),
+			}).HasInvalidType(),
 		)
 	})
 }

@@ -184,7 +184,7 @@ func TestRuntimeStoreAccountAPITypes(t *testing.T) {
 
 		RequireError(t, err)
 
-		assert.Contains(t, err.Error(), "expected type satisfying {Storable}")
+		assert.Contains(t, err.Error(), "expected type satisfying <=: Storable")
 	}
 }
 

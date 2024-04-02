@@ -1740,7 +1740,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		require.IsType(t, &sema.TypeBoundError{}, errs[0])
-		require.Equal(t, errs[0].(errors.SecondaryError).SecondaryError(), "expected type satisfying {[{&Any} {{Never}}]}, got `Never`")
+		require.Equal(t, errs[0].(errors.SecondaryError).SecondaryError(), "expected type satisfying (<=: &Any) && (>: Never), got `Never`")
 	})
 }
 
