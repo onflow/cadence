@@ -426,6 +426,7 @@ func (t PrimitiveStaticType) MeteredString(memoryGauge common.MemoryGauge) strin
 
 func (t PrimitiveStaticType) ID() TypeID {
 
+	// Handle deprecated types specially, because they do not have a sema type equivalent anymore
 	switch t {
 	case PrimitiveStaticTypeAuthAccount: //nolint:staticcheck
 		return "AuthAccount"

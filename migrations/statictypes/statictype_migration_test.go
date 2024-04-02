@@ -832,7 +832,7 @@ func TestStaticTypeMigration(t *testing.T) {
 			}
 
 			for ty := interpreter.PrimitiveStaticTypeUnknown + 1; ty < interpreter.PrimitiveStaticType_Count; ty++ {
-				if !ty.IsDefined() || ty.IsDeprecated() { //nolin:staticcheck
+				if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 					continue
 				}
 
@@ -1124,7 +1124,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 }
 
-func TestCanSkipprimitivestatictypeauthStaticTypeMigration(t *testing.T) {
+func TestCanSkipStaticTypeMigration(t *testing.T) {
 
 	t.Parallel()
 
