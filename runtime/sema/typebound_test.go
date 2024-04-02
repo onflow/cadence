@@ -31,7 +31,7 @@ func TestTypeBound_Satisfies(t *testing.T) {
 
 		t.Parallel()
 
-		typeBound := SubtypeTypeBound{Type: IntegerType}
+		typeBound := NewSubtypeTypeBound(IntegerType)
 
 		assert.True(t, typeBound.Satisfies(IntegerType))
 		assert.True(t, typeBound.Satisfies(NeverType))
@@ -45,7 +45,7 @@ func TestTypeBound_Satisfies(t *testing.T) {
 
 		t.Parallel()
 
-		typeBound := StrictSubtypeTypeBound{Type: IntegerType}
+		typeBound := NewStrictSubtypeTypeBound(IntegerType)
 
 		assert.False(t, typeBound.Satisfies(IntegerType))
 		assert.True(t, typeBound.Satisfies(NeverType))
@@ -59,7 +59,7 @@ func TestTypeBound_Satisfies(t *testing.T) {
 
 		t.Parallel()
 
-		typeBound := SupertypeTypeBound{Type: NeverType}
+		typeBound := NewSupertypeTypeBound(NeverType)
 
 		assert.True(t, typeBound.Satisfies(NeverType))
 		assert.True(t, typeBound.Satisfies(IntegerType))
@@ -73,7 +73,7 @@ func TestTypeBound_Satisfies(t *testing.T) {
 
 		t.Parallel()
 
-		typeBound := StrictSupertypeTypeBound{Type: NeverType}
+		typeBound := NewStrictSupertypeTypeBound(NeverType)
 
 		assert.False(t, typeBound.Satisfies(NeverType))
 		assert.True(t, typeBound.Satisfies(IntegerType))
@@ -87,19 +87,30 @@ func TestTypeBound_Satisfies(t *testing.T) {
 
 		t.Parallel()
 
-		typeBound := ConjunctionTypeBound{
-			TypeBounds: []TypeBound{
-				StrictSupertypeTypeBound{
-					Type: NeverType,
-				},
-				StrictSubtypeTypeBound{
-					Type: FixedSizeUnsignedIntegerType,
-				},
-			},
-		}
+		typeBound := NewConjunctionTypeBound([]TypeBound{
+			NewStrictSupertypeTypeBound(NeverType),
+			NewStrictSubtypeTypeBound(FixedSizeUnsignedIntegerType),
+		})
 
 		assert.False(t, typeBound.Satisfies(FixedSizeUnsignedIntegerType))
 		assert.False(t, typeBound.Satisfies(NeverType))
+
+		for _, integerType := range AllLeafFixedSizeUnsignedIntegerTypes {
+			assert.True(t, typeBound.Satisfies(integerType))
+		}
+	})
+
+	t.Run("disjunction", func(t *testing.T) {
+
+		t.Parallel()
+
+		typeBound := NewDisjunctionTypeBound([]TypeBound{
+			NewStrictSupertypeTypeBound(NeverType),
+			NewStrictSubtypeTypeBound(NeverType),
+		})
+
+		assert.True(t, typeBound.Satisfies(FixedSizeUnsignedIntegerType))
+		assert.True(t, typeBound.Satisfies(NeverType))
 
 		for _, integerType := range AllLeafFixedSizeUnsignedIntegerTypes {
 			assert.True(t, typeBound.Satisfies(integerType))
@@ -114,32 +125,32 @@ func TestTypeBound_HasInvalid(t *testing.T) {
 
 		t.Parallel()
 
-		assert.False(t, SubtypeTypeBound{Type: IntegerType}.HasInvalidType())
-		assert.True(t, SubtypeTypeBound{Type: InvalidType}.HasInvalidType())
+		assert.False(t, NewSubtypeTypeBound(IntegerType).HasInvalidType())
+		assert.True(t, NewSubtypeTypeBound(InvalidType).HasInvalidType())
 	})
 
 	t.Run("strict subtype", func(t *testing.T) {
 
 		t.Parallel()
 
-		assert.False(t, StrictSubtypeTypeBound{Type: IntegerType}.HasInvalidType())
-		assert.True(t, StrictSubtypeTypeBound{Type: InvalidType}.HasInvalidType())
+		assert.False(t, NewStrictSubtypeTypeBound(IntegerType).HasInvalidType())
+		assert.True(t, NewStrictSubtypeTypeBound(InvalidType).HasInvalidType())
 	})
 
 	t.Run("supertype", func(t *testing.T) {
 
 		t.Parallel()
 
-		assert.False(t, SupertypeTypeBound{Type: IntegerType}.HasInvalidType())
-		assert.True(t, SupertypeTypeBound{Type: InvalidType}.HasInvalidType())
+		assert.False(t, NewSupertypeTypeBound(IntegerType).HasInvalidType())
+		assert.True(t, NewSupertypeTypeBound(InvalidType).HasInvalidType())
 	})
 
 	t.Run("strict supertype", func(t *testing.T) {
 
 		t.Parallel()
 
-		assert.False(t, StrictSupertypeTypeBound{Type: IntegerType}.HasInvalidType())
-		assert.True(t, StrictSupertypeTypeBound{Type: InvalidType}.HasInvalidType())
+		assert.False(t, NewStrictSupertypeTypeBound(IntegerType).HasInvalidType())
+		assert.True(t, NewStrictSupertypeTypeBound(InvalidType).HasInvalidType())
 	})
 
 	t.Run("conjunction", func(t *testing.T) {

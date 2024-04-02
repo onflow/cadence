@@ -118,7 +118,7 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 		// ```
 
 		if expectedType == nil ||
-			(leftType != expectedType && IsStrictSubType(leftType, expectedType)) {
+			(leftType != expectedType && IsProperSubType(leftType, expectedType)) {
 
 			expectedType = leftType
 		}

@@ -7419,11 +7419,11 @@ func IsSameTypeKind(subType Type, superType Type) bool {
 	return IsSubType(subType, superType)
 }
 
-// IsStrictSubType is similar to IsSubType,
+// IsProperSubType is similar to IsSubType,
 // i.e. it determines if the given subtype is a subtype
 // of the given supertype, but returns false
 // if the subtype and supertype refer to the same type.
-func IsStrictSubType(subType Type, superType Type) bool {
+func IsProperSubType(subType Type, superType Type) bool {
 
 	if subType.Equal(superType) {
 		return false

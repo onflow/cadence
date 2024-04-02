@@ -44,13 +44,18 @@ type TypeBound interface {
 	RewriteWithIntersectionTypes() (result TypeBound, rewritten bool)
 }
 
-// SubtypeTypeBound
+// SubtypeTypeBound(T) expresses the requirement that
+// ∀U, U <= T
 
 type SubtypeTypeBound struct {
 	Type Type
 }
 
 var _ TypeBound = SubtypeTypeBound{}
+
+func NewSubtypeTypeBound(ty Type) TypeBound {
+	return SubtypeTypeBound{Type: ty}
+}
 
 func (SubtypeTypeBound) isTypeBound() {}
 
@@ -102,33 +107,38 @@ func (b SubtypeTypeBound) RewriteWithIntersectionTypes() (result TypeBound, rewr
 	return b, false
 }
 
-// StrictSubtypeTypeBound
+// EqualTypeBound expresses the requirement that
+// ∀U, U = T
 
-type StrictSubtypeTypeBound struct {
+type EqualTypeBound struct {
 	Type Type
 }
 
-var _ TypeBound = StrictSubtypeTypeBound{}
+var _ TypeBound = EqualTypeBound{}
 
-func (StrictSubtypeTypeBound) isTypeBound() {}
-
-func (b StrictSubtypeTypeBound) Satisfies(ty Type) bool {
-	return IsStrictSubType(ty, b.Type)
+func NewEqualTypeBound(ty Type) TypeBound {
+	return EqualTypeBound{Type: ty}
 }
 
-func (b StrictSubtypeTypeBound) HasInvalidType() bool {
+func (EqualTypeBound) isTypeBound() {}
+
+func (b EqualTypeBound) Satisfies(ty Type) bool {
+	return ty.Equal(b.Type)
+}
+
+func (b EqualTypeBound) HasInvalidType() bool {
 	return b.Type.IsInvalidType()
 }
 
-func (b StrictSubtypeTypeBound) Equal(bound TypeBound) bool {
-	other, ok := bound.(StrictSubtypeTypeBound)
+func (b EqualTypeBound) Equal(bound TypeBound) bool {
+	other, ok := bound.(EqualTypeBound)
 	if !ok {
 		return false
 	}
 	return b.Type.Equal(other.Type)
 }
 
-func (b StrictSubtypeTypeBound) CheckInstantiated(
+func (b EqualTypeBound) CheckInstantiated(
 	pos ast.HasPosition,
 	memoryGauge common.MemoryGauge,
 	report func(err error),
@@ -136,37 +146,105 @@ func (b StrictSubtypeTypeBound) CheckInstantiated(
 	b.Type.CheckInstantiated(pos, memoryGauge, report)
 }
 
-func (b StrictSubtypeTypeBound) Map(
+func (b EqualTypeBound) Map(
 	gauge common.MemoryGauge,
 	typeParamMap map[*TypeParameter]*TypeParameter,
 	f func(Type) Type,
 ) TypeBound {
-	return SubtypeTypeBound{
+	return EqualTypeBound{
 		Type: b.Type.Map(gauge, typeParamMap, f),
 	}
 }
 
-func (b StrictSubtypeTypeBound) TypeAnnotationState() TypeAnnotationState {
+func (b EqualTypeBound) TypeAnnotationState() TypeAnnotationState {
 	return b.Type.TypeAnnotationState()
 }
 
-func (b StrictSubtypeTypeBound) RewriteWithIntersectionTypes() (result TypeBound, rewritten bool) {
+func (b EqualTypeBound) RewriteWithIntersectionTypes() (result TypeBound, rewritten bool) {
 	rewrittenType, rewritten := b.Type.RewriteWithIntersectionTypes()
 	if rewritten {
-		return StrictSubtypeTypeBound{
+		return EqualTypeBound{
 			Type: rewrittenType,
 		}, true
 	}
 	return b, false
 }
 
-// ConjunctionTypeBound
+// NegationTypeBound(B) expresses the requirement that
+// ∀U, !B(U)
+
+type NegationTypeBound struct {
+	NegatedBound TypeBound
+}
+
+var _ TypeBound = NegationTypeBound{}
+
+func NewNegationTypeBound(bound TypeBound) TypeBound {
+	return NegationTypeBound{NegatedBound: bound}
+}
+
+func (NegationTypeBound) isTypeBound() {}
+
+func (b NegationTypeBound) Satisfies(ty Type) bool {
+	return !b.NegatedBound.Satisfies(ty)
+}
+
+func (b NegationTypeBound) HasInvalidType() bool {
+	return b.NegatedBound.HasInvalidType()
+}
+
+func (b NegationTypeBound) Equal(bound TypeBound) bool {
+	other, ok := bound.(NegationTypeBound)
+	if !ok {
+		return false
+	}
+	return b.NegatedBound.Equal(other.NegatedBound)
+}
+
+func (b NegationTypeBound) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+) {
+	b.NegatedBound.CheckInstantiated(pos, memoryGauge, report)
+}
+
+func (b NegationTypeBound) Map(
+	gauge common.MemoryGauge,
+	typeParamMap map[*TypeParameter]*TypeParameter,
+	f func(Type) Type,
+) TypeBound {
+	return NegationTypeBound{
+		NegatedBound: b.NegatedBound.Map(gauge, typeParamMap, f),
+	}
+}
+
+func (b NegationTypeBound) TypeAnnotationState() TypeAnnotationState {
+	return b.NegatedBound.TypeAnnotationState()
+}
+
+func (b NegationTypeBound) RewriteWithIntersectionTypes() (result TypeBound, rewritten bool) {
+	rewrittenBound, rewritten := b.NegatedBound.RewriteWithIntersectionTypes()
+	if rewritten {
+		return NegationTypeBound{
+			NegatedBound: rewrittenBound,
+		}, true
+	}
+	return b, false
+}
+
+// ConjunctionTypeBound(B1, ..., Bn) expresses the requirement that
+// ∀U, B1(U) & ... & Bn(U)
 
 type ConjunctionTypeBound struct {
 	TypeBounds []TypeBound
 }
 
 var _ TypeBound = ConjunctionTypeBound{}
+
+func NewConjunctionTypeBound(typeBounds []TypeBound) TypeBound {
+	return ConjunctionTypeBound{TypeBounds: typeBounds}
+}
 
 func (ConjunctionTypeBound) isTypeBound() {}
 
@@ -265,118 +343,29 @@ func (b ConjunctionTypeBound) RewriteWithIntersectionTypes() (result TypeBound, 
 	}
 }
 
-// SupertypeTypeBound
+// Any other kinds of type bounds we might wish to express can be
+// written as the composition of `<=`, `=`, `!` and `&`. Technically, `=` is not
+// really even necessary, as `U = T` is equivalent to `U <= T & T <= U`, but for
+// performance reasons we give it its own basic bound
 
-type SupertypeTypeBound struct {
-	Type Type
+// `U <= T && !(T = U) ==> U < T`
+func NewStrictSubtypeTypeBound(ty Type) TypeBound {
+	subtypeBound := NewSubtypeTypeBound(ty)
+	nonEqualBound := NewNegationTypeBound(NewEqualTypeBound(ty))
+	return NewConjunctionTypeBound([]TypeBound{subtypeBound, nonEqualBound})
 }
 
-var _ TypeBound = SupertypeTypeBound{}
-
-func (SupertypeTypeBound) isTypeBound() {}
-
-func (b SupertypeTypeBound) Satisfies(ty Type) bool {
-	return IsSubType(b.Type, ty)
+// `!(U <= T) ==> U > T`
+func NewStrictSupertypeTypeBound(ty Type) TypeBound {
+	return NewNegationTypeBound(NewSubtypeTypeBound(ty))
 }
 
-func (b SupertypeTypeBound) HasInvalidType() bool {
-	return b.Type.IsInvalidType()
+// `!(U < T) ==> U >= T`
+func NewSupertypeTypeBound(ty Type) TypeBound {
+	return NewNegationTypeBound(NewStrictSubtypeTypeBound(ty))
 }
 
-func (b SupertypeTypeBound) Equal(bound TypeBound) bool {
-	other, ok := bound.(SupertypeTypeBound)
-	if !ok {
-		return false
-	}
-	return b.Type.Equal(other.Type)
-}
-
-func (b SupertypeTypeBound) CheckInstantiated(
-	pos ast.HasPosition,
-	memoryGauge common.MemoryGauge,
-	report func(err error),
-) {
-	b.Type.CheckInstantiated(pos, memoryGauge, report)
-}
-
-func (b SupertypeTypeBound) Map(
-	gauge common.MemoryGauge,
-	typeParamMap map[*TypeParameter]*TypeParameter,
-	f func(Type) Type,
-) TypeBound {
-	return SupertypeTypeBound{
-		Type: b.Type.Map(gauge, typeParamMap, f),
-	}
-}
-
-func (b SupertypeTypeBound) TypeAnnotationState() TypeAnnotationState {
-	return b.Type.TypeAnnotationState()
-}
-
-func (b SupertypeTypeBound) RewriteWithIntersectionTypes() (result TypeBound, rewritten bool) {
-	rewrittenType, rewritten := b.Type.RewriteWithIntersectionTypes()
-	if rewritten {
-		return SupertypeTypeBound{
-			Type: rewrittenType,
-		}, true
-	}
-	return b, false
-}
-
-// StrictSupertypeTypeBound
-
-type StrictSupertypeTypeBound struct {
-	Type Type
-}
-
-var _ TypeBound = StrictSupertypeTypeBound{}
-
-func (StrictSupertypeTypeBound) isTypeBound() {}
-
-func (b StrictSupertypeTypeBound) Satisfies(ty Type) bool {
-	return IsStrictSubType(b.Type, ty)
-}
-
-func (b StrictSupertypeTypeBound) HasInvalidType() bool {
-	return b.Type.IsInvalidType()
-}
-
-func (b StrictSupertypeTypeBound) Equal(bound TypeBound) bool {
-	other, ok := bound.(StrictSupertypeTypeBound)
-	if !ok {
-		return false
-	}
-	return b.Type.Equal(other.Type)
-}
-
-func (b StrictSupertypeTypeBound) CheckInstantiated(
-	pos ast.HasPosition,
-	memoryGauge common.MemoryGauge,
-	report func(err error),
-) {
-	b.Type.CheckInstantiated(pos, memoryGauge, report)
-}
-
-func (b StrictSupertypeTypeBound) Map(
-	gauge common.MemoryGauge,
-	typeParamMap map[*TypeParameter]*TypeParameter,
-	f func(Type) Type,
-) TypeBound {
-	return StrictSupertypeTypeBound{
-		Type: b.Type.Map(gauge, typeParamMap, f),
-	}
-}
-
-func (b StrictSupertypeTypeBound) TypeAnnotationState() TypeAnnotationState {
-	return b.Type.TypeAnnotationState()
-}
-
-func (b StrictSupertypeTypeBound) RewriteWithIntersectionTypes() (result TypeBound, rewritten bool) {
-	rewrittenType, rewritten := b.Type.RewriteWithIntersectionTypes()
-	if rewritten {
-		return StrictSupertypeTypeBound{
-			Type: rewrittenType,
-		}, true
-	}
-	return b, false
+// `!(B1 & ... & Bn) ==> B1 || ... || Bn`
+func NewDisjunctionTypeBound(typeBounds []TypeBound) TypeBound {
+	return NewNegationTypeBound(NewConjunctionTypeBound(typeBounds))
 }
