@@ -456,10 +456,9 @@ func (b ConjunctionTypeBound) withPrettyString(prettyString string) TypeBound {
 
 // `U <= T && !(T = U) ==> U < T`
 func NewStrictSubtypeTypeBound(ty Type) TypeBound {
-	subtypeBound := NewSubtypeTypeBound(ty)
-	nonEqualBound := NewEqualTypeBound(ty).Not()
-	return subtypeBound.
-		And(nonEqualBound).
+	return NewEqualTypeBound(ty).
+		Not().
+		And(NewSubtypeTypeBound(ty)).
 		withPrettyString(fmt.Sprintf("<: %s", ty.String()))
 }
 
