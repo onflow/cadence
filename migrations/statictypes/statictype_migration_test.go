@@ -1124,7 +1124,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 }
 
-func TestCanSkipprimitivestatictypeauthStaticTypeMigration(t *testing.T) {
+func TestCanSkipStaticTypeMigration(t *testing.T) {
 
 	t.Parallel()
 
