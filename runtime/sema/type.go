@@ -6758,10 +6758,12 @@ Returns true if the given integer is in the InclusiveRange sequence
 
 var InclusiveRangeConstructorFunctionTypeParameter = &TypeParameter{
 	Name: "T",
-	TypeBound: NewEqualTypeBound(UIntType).
-		Or(NewEqualTypeBound(IntType)).
-		Or(NewStrictSubtypeTypeBound(FixedSizeUnsignedIntegerType)).
-		Or(NewStrictSubtypeTypeBound(SignedIntegerType)),
+	TypeBound: NewDisjunctionTypeBound([]TypeBound{
+		NewEqualTypeBound(UIntType),
+		NewEqualTypeBound(IntType),
+		NewStrictSubtypeTypeBound(FixedSizeUnsignedIntegerType),
+		NewStrictSubtypeTypeBound(SignedIntegerType),
+	}),
 }
 
 func (t *InclusiveRangeType) GetMembers() map[string]MemberResolver {

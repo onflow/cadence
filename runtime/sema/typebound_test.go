@@ -200,7 +200,7 @@ func TestTypeBoundSerialization(t *testing.T) {
 		{
 			name:     "InclusiveRange",
 			bound:    InclusiveRangeConstructorFunctionTypeParameter.TypeBound,
-			expected: "(((= UInt) || (= Int)) || (<: FixedSizeUnsignedInteger)) || (<: SignedInteger)",
+			expected: "(= UInt) || (= Int) || (<: FixedSizeUnsignedInteger) || (<: SignedInteger)",
 		},
 		{
 			name: "triple disjunction",
