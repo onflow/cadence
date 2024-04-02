@@ -355,6 +355,18 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 			convertedType = compositeTypeConverter(staticType)
 		}
 
+		// Convert built-in types in composite type form to primitive type
+		if convertedType == nil && staticType.Location == nil {
+			primitiveStaticType := interpreter.PrimitiveStaticTypeFromTypeID(staticType.TypeID)
+			if primitiveStaticType != interpreter.PrimitiveStaticTypeUnknown {
+				convertedPrimitiveStaticType := m.maybeConvertStaticType(primitiveStaticType, parentType)
+				if convertedPrimitiveStaticType != nil {
+					return convertedPrimitiveStaticType
+				}
+				return primitiveStaticType
+			}
+		}
+
 		// Interface types need to be placed in intersection types.
 		// If the composite type was converted to an interface type,
 		// and if the parent type is not an intersection type,
