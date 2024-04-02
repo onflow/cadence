@@ -648,11 +648,31 @@ func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType
 	)
 }
 
-func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) *interpreter.CompositeStaticType {
-	return interpreter.NewCompositeStaticTypeComputeTypeID(
+func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) interpreter.StaticType {
+	location := t.CompositeTypeLocation()
+	qualifiedIdentifier := t.CompositeTypeQualifiedIdentifier()
+
+	typeID := common.NewTypeIDFromQualifiedName(
 		memoryGauge,
-		t.CompositeTypeLocation(),
-		t.CompositeTypeQualifiedIdentifier(),
+		location,
+		qualifiedIdentifier,
+	)
+
+	if location == nil {
+		primitiveStaticType := interpreter.PrimitiveStaticTypeFromTypeID(typeID)
+
+		if primitiveStaticType != interpreter.PrimitiveStaticTypeUnknown &&
+			!primitiveStaticType.IsDeprecated() {
+
+			return primitiveStaticType
+		}
+	}
+
+	return interpreter.NewCompositeStaticType(
+		memoryGauge,
+		location,
+		qualifiedIdentifier,
+		typeID,
 	)
 }
 

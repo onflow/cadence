@@ -900,322 +900,52 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 	t.Parallel()
 
 	type importTest struct {
-		expected interpreter.StaticType
-		actual   cadence.Type
 		label    string
+		expected interpreter.StaticType
+		input    cadence.Type
 	}
 
 	test := func(tt importTest) {
 		t.Run(tt.label, func(t *testing.T) {
 			t.Parallel()
-			actual := ImportType(nil, tt.actual)
+			actual := ImportType(nil, tt.input)
 			assert.Equal(t, tt.expected, actual)
 
 		})
 	}
 
-	for _, tt := range []importTest{
-		{
-			label:    "Any",
-			actual:   cadence.AnyType,
-			expected: interpreter.PrimitiveStaticTypeAny,
-		},
-		{
-			label:    "AnyStruct",
-			actual:   cadence.AnyStructType,
-			expected: interpreter.PrimitiveStaticTypeAnyStruct,
-		},
-		{
-			label:    "HashableStruct",
-			actual:   cadence.HashableStructType,
-			expected: interpreter.PrimitiveStaticTypeHashableStruct,
-		},
-		{
-			label:    "AnyResource",
-			actual:   cadence.AnyResourceType,
-			expected: interpreter.PrimitiveStaticTypeAnyResource,
-		},
-		{
-			label:    "MetaType",
-			actual:   cadence.MetaType,
-			expected: interpreter.PrimitiveStaticTypeMetaType,
-		},
-		{
-			label:    "Void",
-			actual:   cadence.VoidType,
-			expected: interpreter.PrimitiveStaticTypeVoid,
-		},
-		{
-			label:    "Never",
-			actual:   cadence.NeverType,
-			expected: interpreter.PrimitiveStaticTypeNever,
-		},
-		{
-			label:    "Bool",
-			actual:   cadence.BoolType,
-			expected: interpreter.PrimitiveStaticTypeBool,
-		},
-		{
-			label:    "String",
-			actual:   cadence.StringType,
-			expected: interpreter.PrimitiveStaticTypeString,
-		},
-		{
-			label:    "Character",
-			actual:   cadence.CharacterType,
-			expected: interpreter.PrimitiveStaticTypeCharacter,
-		},
-		{
-			label:    "Address",
-			actual:   cadence.AddressType,
-			expected: interpreter.PrimitiveStaticTypeAddress,
-		},
-		{
-			label:    "Number",
-			actual:   cadence.NumberType,
-			expected: interpreter.PrimitiveStaticTypeNumber,
-		},
-		{
-			label:    "SignedNumber",
-			actual:   cadence.SignedNumberType,
-			expected: interpreter.PrimitiveStaticTypeSignedNumber,
-		},
-		{
-			label:    "Integer",
-			actual:   cadence.IntegerType,
-			expected: interpreter.PrimitiveStaticTypeInteger,
-		},
-		{
-			label:    "SignedInteger",
-			actual:   cadence.SignedIntegerType,
-			expected: interpreter.PrimitiveStaticTypeSignedInteger,
-		},
-		{
-			label:    "FixedSizeUnsignedInteger",
-			actual:   cadence.FixedSizeUnsignedIntegerType,
-			expected: interpreter.PrimitiveStaticTypeFixedSizeUnsignedInteger,
-		},
-		{
-			label:    "FixedPoint",
-			actual:   cadence.FixedPointType,
-			expected: interpreter.PrimitiveStaticTypeFixedPoint,
-		},
-		{
-			label:    "SignedFixedPoint",
-			actual:   cadence.SignedFixedPointType,
-			expected: interpreter.PrimitiveStaticTypeSignedFixedPoint,
-		},
-		{
-			label:    "Int",
-			actual:   cadence.IntType,
-			expected: interpreter.PrimitiveStaticTypeInt,
-		},
-		{
-			label:    "Int8",
-			actual:   cadence.Int8Type,
-			expected: interpreter.PrimitiveStaticTypeInt8,
-		},
-		{
-			label:    "Int16",
-			actual:   cadence.Int16Type,
-			expected: interpreter.PrimitiveStaticTypeInt16,
-		},
-		{
-			label:    "Int32",
-			actual:   cadence.Int32Type,
-			expected: interpreter.PrimitiveStaticTypeInt32,
-		},
-		{
-			label:    "Int64",
-			actual:   cadence.Int64Type,
-			expected: interpreter.PrimitiveStaticTypeInt64,
-		},
-		{
-			label:    "Int128",
-			actual:   cadence.Int128Type,
-			expected: interpreter.PrimitiveStaticTypeInt128,
-		},
-		{
-			label:    "Int256",
-			actual:   cadence.Int256Type,
-			expected: interpreter.PrimitiveStaticTypeInt256,
-		},
-		{
-			label:    "UInt",
-			actual:   cadence.UIntType,
-			expected: interpreter.PrimitiveStaticTypeUInt,
-		},
-		{
-			label:    "UInt8",
-			actual:   cadence.UInt8Type,
-			expected: interpreter.PrimitiveStaticTypeUInt8,
-		},
-		{
-			label:    "UInt16",
-			actual:   cadence.UInt16Type,
-			expected: interpreter.PrimitiveStaticTypeUInt16,
-		},
-		{
-			label:    "UInt32",
-			actual:   cadence.UInt32Type,
-			expected: interpreter.PrimitiveStaticTypeUInt32,
-		},
-		{
-			label:    "UInt64",
-			actual:   cadence.UInt64Type,
-			expected: interpreter.PrimitiveStaticTypeUInt64,
-		},
-		{
-			label:    "UInt128",
-			actual:   cadence.UInt128Type,
-			expected: interpreter.PrimitiveStaticTypeUInt128,
-		},
-		{
-			label:    "UInt256",
-			actual:   cadence.UInt256Type,
-			expected: interpreter.PrimitiveStaticTypeUInt256,
-		},
-		{
-			label:    "Word8",
-			actual:   cadence.Word8Type,
-			expected: interpreter.PrimitiveStaticTypeWord8,
-		},
-		{
-			label:    "Word16",
-			actual:   cadence.Word16Type,
-			expected: interpreter.PrimitiveStaticTypeWord16,
-		},
-		{
-			label:    "Word32",
-			actual:   cadence.Word32Type,
-			expected: interpreter.PrimitiveStaticTypeWord32,
-		},
-		{
-			label:    "Word64",
-			actual:   cadence.Word64Type,
-			expected: interpreter.PrimitiveStaticTypeWord64,
-		},
-		{
-			label:    "Word128",
-			actual:   cadence.Word128Type,
-			expected: interpreter.PrimitiveStaticTypeWord128,
-		},
-		{
-			label:    "Word256",
-			actual:   cadence.Word256Type,
-			expected: interpreter.PrimitiveStaticTypeWord256,
-		},
-		{
-			label:    "Fix64",
-			actual:   cadence.Fix64Type,
-			expected: interpreter.PrimitiveStaticTypeFix64,
-		},
-		{
-			label:    "UFix64",
-			actual:   cadence.UFix64Type,
-			expected: interpreter.PrimitiveStaticTypeUFix64,
-		},
-		{
-			label:    "Block",
-			actual:   cadence.BlockType,
-			expected: interpreter.PrimitiveStaticTypeBlock,
-		},
-		{
-			label:    "CapabilityPath",
-			actual:   cadence.CapabilityPathType,
-			expected: interpreter.PrimitiveStaticTypeCapabilityPath,
-		},
-		{
-			label:    "StoragePath",
-			actual:   cadence.StoragePathType,
-			expected: interpreter.PrimitiveStaticTypeStoragePath,
-		},
-		{
-			label:    "PublicPath",
-			actual:   cadence.PublicPathType,
-			expected: interpreter.PrimitiveStaticTypePublicPath,
-		},
-		{
-			label:    "PrivatePath",
-			actual:   cadence.PrivatePathType,
-			expected: interpreter.PrimitiveStaticTypePrivatePath,
-		},
-		{
-			label:    "Account",
-			actual:   cadence.AccountType,
-			expected: interpreter.PrimitiveStaticTypeAccount,
-		},
-		{
-			label:    "DeployedContract",
-			actual:   cadence.DeployedContractType,
-			expected: interpreter.PrimitiveStaticTypeDeployedContract,
-		},
-		{
-			label:    "Account.Storage",
-			actual:   cadence.Account_StorageType,
-			expected: interpreter.PrimitiveStaticTypeAccount_Storage,
-		},
-		{
-			label:    "Account.Keys",
-			actual:   cadence.Account_KeysType,
-			expected: interpreter.PrimitiveStaticTypeAccount_Keys,
-		},
-		{
-			label:    "Account.Contracts",
-			actual:   cadence.Account_ContractsType,
-			expected: interpreter.PrimitiveStaticTypeAccount_Contracts,
-		},
-		{
-			label:    "Account.Inbox",
-			actual:   cadence.Account_InboxType,
-			expected: interpreter.PrimitiveStaticTypeAccount_Inbox,
-		},
-		{
-			label:    "Account.Capabilities",
-			actual:   cadence.Account_CapabilitiesType,
-			expected: interpreter.PrimitiveStaticTypeAccount_Capabilities,
-		},
-		{
-			label:    "Account.StorageCapabilities",
-			actual:   cadence.Account_StorageCapabilitiesType,
-			expected: interpreter.PrimitiveStaticTypeAccount_StorageCapabilities,
-		},
-		{
-			label:    "Account.AccountCapabilities",
-			actual:   cadence.Account_AccountCapabilitiesType,
-			expected: interpreter.PrimitiveStaticTypeAccount_AccountCapabilities,
-		},
+	tests := []importTest{
 		{
 			label: "AccountKey",
-			actual: &cadence.StructType{
+			input: &cadence.StructType{
 				QualifiedIdentifier: "AccountKey",
 			},
 			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "AccountKey"),
 		},
 		{
 			label: "PublicKey",
-			actual: &cadence.StructType{
+			input: &cadence.StructType{
 				QualifiedIdentifier: "PublicKey",
 			},
 			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "PublicKey"),
 		},
 		{
 			label: "HashAlgorithm",
-			actual: &cadence.StructType{
+			input: &cadence.StructType{
 				QualifiedIdentifier: "HashAlgorithm",
 			},
 			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "HashAlgorithm"),
 		},
 		{
 			label: "SignatureAlgorithm",
-			actual: &cadence.StructType{
+			input: &cadence.StructType{
 				QualifiedIdentifier: "SignatureAlgorithm",
 			},
 			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "SignatureAlgorithm"),
 		},
 		{
 			label: "Optional",
-			actual: &cadence.OptionalType{
+			input: &cadence.OptionalType{
 				Type: cadence.IntType,
 			},
 			expected: &interpreter.OptionalStaticType{
@@ -1224,7 +954,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "VariableSizedArray",
-			actual: &cadence.VariableSizedArrayType{
+			input: &cadence.VariableSizedArrayType{
 				ElementType: cadence.IntType,
 			},
 			expected: &interpreter.VariableSizedStaticType{
@@ -1233,7 +963,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "ConstantSizedArray",
-			actual: &cadence.ConstantSizedArrayType{
+			input: &cadence.ConstantSizedArrayType{
 				ElementType: cadence.IntType,
 				Size:        3,
 			},
@@ -1244,7 +974,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "Dictionary",
-			actual: &cadence.DictionaryType{
+			input: &cadence.DictionaryType{
 				ElementType: cadence.IntType,
 				KeyType:     cadence.StringType,
 			},
@@ -1255,7 +985,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "Unauthorized Reference",
-			actual: &cadence.ReferenceType{
+			input: &cadence.ReferenceType{
 				Authorization: cadence.UnauthorizedAccess,
 				Type:          cadence.IntType,
 			},
@@ -1266,7 +996,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "Entitlement Set Reference",
-			actual: &cadence.ReferenceType{
+			input: &cadence.ReferenceType{
 				Authorization: &cadence.EntitlementSetAuthorization{
 					Kind:         cadence.Conjunction,
 					Entitlements: []common.TypeID{"E", "F"},
@@ -1285,7 +1015,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "Reference",
-			actual: &cadence.ReferenceType{
+			input: &cadence.ReferenceType{
 				Authorization: &cadence.EntitlementSetAuthorization{
 					Kind:         cadence.Disjunction,
 					Entitlements: []common.TypeID{"E", "F"},
@@ -1303,7 +1033,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "Entitlement Map Reference",
-			actual: &cadence.ReferenceType{
+			input: &cadence.ReferenceType{
 				Authorization: cadence.EntitlementMapAuthorization{
 					TypeID: "M",
 				},
@@ -1318,7 +1048,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "Capability",
-			actual: &cadence.CapabilityType{
+			input: &cadence.CapabilityType{
 				BorrowType: cadence.IntType,
 			},
 			expected: &interpreter.CapabilityStaticType{
@@ -1327,7 +1057,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "Struct",
-			actual: &cadence.StructType{
+			input: &cadence.StructType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
@@ -1335,7 +1065,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "Resource",
-			actual: &cadence.ResourceType{
+			input: &cadence.ResourceType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
@@ -1343,7 +1073,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "Contract",
-			actual: &cadence.ContractType{
+			input: &cadence.ContractType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
@@ -1351,7 +1081,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "Event",
-			actual: &cadence.EventType{
+			input: &cadence.EventType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
@@ -1359,7 +1089,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "Enum",
-			actual: &cadence.EnumType{
+			input: &cadence.EnumType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
@@ -1367,7 +1097,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "StructInterface",
-			actual: &cadence.StructInterfaceType{
+			input: &cadence.StructInterfaceType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
@@ -1375,7 +1105,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "ResourceInterface",
-			actual: &cadence.ResourceInterfaceType{
+			input: &cadence.ResourceInterfaceType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
@@ -1383,7 +1113,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "ContractInterface",
-			actual: &cadence.ContractInterfaceType{
+			input: &cadence.ContractInterfaceType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
@@ -1391,7 +1121,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "IntersectionType",
-			actual: &cadence.IntersectionType{
+			input: &cadence.IntersectionType{
 				Types: []cadence.Type{
 					&cadence.StructInterfaceType{
 						Location:            TestLocation,
@@ -1407,14 +1137,52 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		},
 		{
 			label: "InclusiveRange",
-			actual: &cadence.InclusiveRangeType{
+			input: &cadence.InclusiveRangeType{
 				ElementType: cadence.IntType,
 			},
 			expected: interpreter.InclusiveRangeStaticType{
 				ElementType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-	} {
+	}
+
+	for ty := interpreter.PrimitiveStaticTypeUnknown + 1; ty < interpreter.PrimitiveStaticType_Count; ty++ {
+		if !ty.IsDefined() {
+			continue
+		}
+
+		tests = append(tests, importTest{
+			label:    fmt.Sprintf("%s (primitive)", ty),
+			input:    cadence.PrimitiveType(ty),
+			expected: ty,
+		})
+
+		typeID := ty.ID()
+		qualifiedIdentifier := string(typeID)
+
+		var expectedForComposite interpreter.StaticType
+		if ty.IsDeprecated() {
+			expectedForComposite = interpreter.NewCompositeStaticType(
+				nil,
+				nil,
+				qualifiedIdentifier,
+				typeID,
+			)
+		} else {
+			expectedForComposite = ty
+		}
+
+		tests = append(tests, importTest{
+			label: fmt.Sprintf("%s (composite)", ty),
+			input: &cadence.StructType{
+				Location:            nil,
+				QualifiedIdentifier: qualifiedIdentifier,
+			},
+			expected: expectedForComposite,
+		})
+	}
+
+	for _, tt := range tests {
 		test(tt)
 	}
 }
