@@ -1556,6 +1556,11 @@ func (checker *Checker) recordResourceInvalidation(
 
 	accessedSelfMember := checker.accessedSelfMember(expression)
 
+	// Normally a field members cannot be invalidated,
+	// and this check typically prevents invalidations of this kind.
+	// However, during second value transfers we would like to be able to invalidate member and index
+	// expressions purely for the duration of checking the second value expression in the transfer.
+	// To enable this, nested move errors are not reported when the move kind of the invalidation is `Temporary`.
 	switch expression.(type) {
 	case *ast.MemberExpression:
 
