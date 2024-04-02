@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -1725,6 +1726,21 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		require.IsType(t, &sema.InvalidAccessError{}, errors[0])
 		require.IsType(t, &sema.InvalidAccessError{}, errors[1])
+	})
+
+	t.Run("never type arg", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(capabilities: &Account.Capabilities) {
+              capabilities.get<Never>(/public/foo)!
+          }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(errors.SecondaryError).SecondaryError(), "Type argument for `get` cannot be `Never`")
 	})
 }
 

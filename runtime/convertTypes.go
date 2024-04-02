@@ -588,7 +588,7 @@ func exportAuthorization(
 		access.Entitlements.Foreach(func(key *sema.EntitlementType, _ struct{}) {
 			entitlements = append(entitlements, key.ID())
 		})
-		return cadence.EntitlementSetAuthorization{
+		return &cadence.EntitlementSetAuthorization{
 			Entitlements: entitlements,
 			Kind:         access.SetKind,
 		}
@@ -667,7 +667,7 @@ func importAuthorization(memoryGauge common.MemoryGauge, auth cadence.Authorizat
 		return interpreter.UnauthorizedAccess
 	case cadence.EntitlementMapAuthorization:
 		return interpreter.NewEntitlementMapAuthorization(memoryGauge, auth.TypeID)
-	case cadence.EntitlementSetAuthorization:
+	case *cadence.EntitlementSetAuthorization:
 		return interpreter.NewEntitlementSetAuthorization(
 			memoryGauge,
 			func() []common.TypeID { return auth.Entitlements },

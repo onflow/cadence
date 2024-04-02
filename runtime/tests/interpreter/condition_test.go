@@ -620,7 +620,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 		if compositeKind == common.CompositeKindContract {
 			identifier = "TestImpl"
 		} else {
-			interfaceType := AsInterfaceType("Test", compositeKind)
+			interfaceType := "{Test}"
 
 			setupCode = fmt.Sprintf(
 				`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -839,7 +839,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					       }
                         `
 					} else {
-						interfaceType := AsInterfaceType("Test", compositeKind)
+						interfaceType := "{Test}"
 
 						testFunction =
 							fmt.Sprintf(

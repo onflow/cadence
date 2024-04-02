@@ -29,7 +29,6 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckInvalidCompositeRedeclaringType(t *testing.T) {
@@ -1963,14 +1962,14 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 					firstTypeAnnotation := "A"
 					if firstIsInterface {
 						firstInterfaceKeyword = "interface"
-						firstTypeAnnotation = AsInterfaceType("A", firstKind)
+						firstTypeAnnotation = "{A}"
 					}
 
 					secondInterfaceKeyword := ""
 					secondTypeAnnotation := "B"
 					if secondIsInterface {
 						secondInterfaceKeyword = "interface"
-						secondTypeAnnotation = AsInterfaceType("B", secondKind)
+						secondTypeAnnotation = "{B}"
 					}
 
 					testName := fmt.Sprintf(
@@ -2235,4 +2234,36 @@ func TestCheckNativeFieldDeclaration(t *testing.T) {
 	assert.IsType(t, &sema.InvalidNativeModifierError{}, errs[0])
 	// TODO: native fields need no initializer
 	assert.IsType(t, &sema.MissingInitializerError{}, errs[1])
+}
+
+func TestCheckKeywordsAsFieldNames(t *testing.T) {
+
+	t.Parallel()
+
+	for _, keyword := range []string{
+		"event",
+		"contract",
+		"default",
+	} {
+		keyword := keyword
+
+		t.Run(keyword, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+                    contract C {
+                        let %[1]s: Int
+
+                        init() {
+                            self.%[1]s = 5
+                        }
+                    }`,
+					keyword,
+				),
+			)
+
+			require.NoError(t, err)
+		})
+	}
 }

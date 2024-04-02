@@ -716,6 +716,9 @@ func TestRuntimeLegacyContractUpdate(t *testing.T) {
 		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
+		OnGetAccountContractNames: func(_ Address) ([]string, error) {
+			return []string{"Foo"}, nil
+		},
 		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil

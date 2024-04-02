@@ -281,7 +281,7 @@ func TestCheckInterfaceUse(t *testing.T) {
 			body = "()"
 		}
 
-		annotationType := AsInterfaceType("Test", kind)
+		annotationType := "{Test}"
 
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -320,7 +320,7 @@ func TestCheckInterfaceConformanceNoRequirements(t *testing.T) {
 			body = "()"
 		}
 
-		annotationType := AsInterfaceType("Test", compositeKind)
+		annotationType := "{Test}"
 
 		var useCode string
 		if compositeKind != common.CompositeKindContract {
@@ -386,7 +386,7 @@ func TestCheckInvalidInterfaceConformanceIncompatibleCompositeKinds(t *testing.T
 				secondBody = "()"
 			}
 
-			firstKindInterfaceType := AsInterfaceType("Test", firstKind)
+			firstKindInterfaceType := "{Test}"
 
 			// NOTE: type mismatch is only tested when both kinds are not contracts
 			// (which can not be passed by value)
@@ -455,7 +455,7 @@ func TestCheckInvalidInterfaceConformanceUndeclared(t *testing.T) {
 			continue
 		}
 
-		interfaceType := AsInterfaceType("Test", compositeKind)
+		interfaceType := "{Test}"
 
 		var useCode string
 		if compositeKind != common.CompositeKindContract {
@@ -557,7 +557,7 @@ func TestCheckInterfaceFieldUse(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			interfaceType := AsInterfaceType("Test", compositeKind)
+			interfaceType := "{Test}"
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
@@ -602,7 +602,7 @@ func TestCheckInvalidInterfaceUndeclaredFieldUse(t *testing.T) {
 			continue
 		}
 
-		interfaceType := AsInterfaceType("Test", compositeKind)
+		interfaceType := "{Test}"
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
@@ -648,7 +648,7 @@ func TestCheckInterfaceFunctionUse(t *testing.T) {
 		if compositeKind != common.CompositeKindContract {
 			identifier = "test"
 
-			interfaceType := AsInterfaceType("Test", compositeKind)
+			interfaceType := "{Test}"
 
 			setupCode = fmt.Sprintf(
 				`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -704,7 +704,7 @@ func TestCheckInvalidInterfaceUndeclaredFunctionUse(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			interfaceType := AsInterfaceType("Test", compositeKind)
+			interfaceType := "{Test}"
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
@@ -3697,7 +3697,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
             contract S: B {}
 
-            fun foo(a: [S]): [A] {
+            fun foo(a: [S]): [{A}] {
                 return a   // must be covariant
             }
         `)
@@ -3716,7 +3716,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
             contract S: B {}
 
-            fun foo(a: [B]): [A] {
+            fun foo(a: [{B}]): [{A}] {
                 return a  // must be covariant
             }
         `)

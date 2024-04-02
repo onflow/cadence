@@ -42,6 +42,7 @@ type Response struct {
 func main() {
 
 	portFlag := flag.Int("port", 3000, "port")
+	flag.Parse()
 
 	http.HandleFunc("/api", func(w http.ResponseWriter, r *http.Request) {
 		var req Request

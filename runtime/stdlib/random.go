@@ -20,8 +20,10 @@ package stdlib
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math/big"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -35,6 +37,8 @@ NOTE: The use of this function is unsafe if not used correctly.
 
 Follow best practices to prevent security issues when using this function
 `
+
+const revertibleRandomFunctionName = "revertibleRandom"
 
 var revertibleRandomFunctionType = func() *sema.FunctionType {
 	typeParameter := &sema.TypeParameter{
@@ -59,6 +63,29 @@ var revertibleRandomFunctionType = func() *sema.FunctionType {
 				Identifier:     "modulo",
 				TypeAnnotation: typeAnnotation,
 			},
+		},
+		TypeArgumentsCheck: func(
+			memoryGauge common.MemoryGauge,
+			typeArguments *sema.TypeParameterTypeOrderedMap,
+			_ []*ast.TypeAnnotation,
+			invocationRange ast.HasPosition,
+			report func(err error)) {
+			typeArg, ok := typeArguments.Get(typeParameter)
+			if !ok || typeArg == nil {
+				// checker should prevent this
+				panic(errors.NewUnreachableError())
+			}
+			if typeArg == sema.NeverType || typeArg == sema.FixedSizeUnsignedIntegerType {
+				report(&sema.InvalidTypeArgumentError{
+					TypeArgumentName: typeParameter.Name,
+					Range:            ast.NewRangeFromPositioned(memoryGauge, invocationRange),
+					Details: fmt.Sprintf(
+						"Type argument for `%s` cannot be `%s`",
+						revertibleRandomFunctionName,
+						typeArg,
+					),
+				})
+			}
 		},
 		ReturnTypeAnnotation: typeAnnotation,
 		// `modulo` parameter is optional
@@ -86,7 +113,7 @@ var ZeroModuloError = errors.NewDefaultUserError("modulo argument cannot be zero
 
 func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue {
 	return NewStandardLibraryFunction(
-		"revertibleRandom",
+		revertibleRandomFunctionName,
 		revertibleRandomFunctionType,
 		revertibleRandomFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {

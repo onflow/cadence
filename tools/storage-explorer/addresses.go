@@ -16,21 +16,38 @@
  * limitations under the License.
  */
 
-package capcons
+package main
 
 import (
+	"encoding/json"
+	"sort"
+
+	"github.com/onflow/flow-go/cmd/util/ledger/util"
+
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-func ClearPrivateDomain(
-	inter *interpreter.Interpreter,
-	storageKey interpreter.StorageKey,
-	storageMap *interpreter.StorageMap,
-	storageMapKey interpreter.StorageMapKey,
-) {
-	domain := common.PathDomainFromIdentifier(storageKey.Key)
-	if domain == common.PathDomainPrivate {
-		storageMap.RemoveValue(inter, storageMapKey)
+func addressesJSON(payloadSnapshot *util.PayloadSnapshot) ([]byte, error) {
+	addressSet := map[string]struct{}{}
+	for registerID := range payloadSnapshot.Payloads {
+		owner := registerID.Owner
+		if len(owner) > 0 {
+			address := common.Address([]byte(owner)).Hex()
+			addressSet[address] = struct{}{}
+		}
 	}
+
+	addresses := make([]string, 0, len(addressSet))
+	for address := range addressSet {
+		addresses = append(addresses, address)
+	}
+
+	sort.Strings(addresses)
+
+	encoded, err := json.Marshal(addresses)
+	if err != nil {
+		return nil, err
+	}
+
+	return encoded, nil
 }
