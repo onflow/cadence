@@ -890,7 +890,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 				interpreter.NewCapabilityValue(
 					nil,
 					interpreter.NewUnmeteredUInt64Value(1234),
-					interpreter.NewAddressValue(nil, common.Address{}),
+					interpreter.NewAddressValue(nil, common.ZeroAddress),
 					unauthorizedAccountReferenceType,
 				),
 			),

@@ -3108,7 +3108,8 @@ func TestRehash(t *testing.T) {
 		sema.Conjunction,
 	)
 
-	t.Run("prepare", func(t *testing.T) {
+	// Prepare
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -3169,9 +3170,10 @@ func TestRehash(t *testing.T) {
 
 		err = storage.CheckHealth()
 		require.NoError(t, err)
-	})
+	})()
 
-	t.Run("migrate", func(t *testing.T) {
+	// Migrate
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -3236,9 +3238,10 @@ func TestRehash(t *testing.T) {
 			},
 			reporter.migrated,
 		)
-	})
+	})()
 
-	t.Run("load", func(t *testing.T) {
+	// Load
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -3278,7 +3281,7 @@ func TestRehash(t *testing.T) {
 			newTestValue(),
 			value.(*interpreter.StringValue),
 		)
-	})
+	})()
 }
 
 func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
@@ -3324,7 +3327,8 @@ func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
 		return storage, inter
 	}
 
-	t.Run("prepare", func(t *testing.T) {
+	// Prepare
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -3367,9 +3371,10 @@ func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
 
 		err = storage.CheckHealth()
 		require.NoError(t, err)
-	})
+	})()
 
-	t.Run("migrate", func(t *testing.T) {
+	// Migrate
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -3426,9 +3431,10 @@ func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
 			},
 			reporter.migrated,
 		)
-	})
+	})()
 
-	t.Run("load", func(t *testing.T) {
+	// Load
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -3460,5 +3466,5 @@ func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
 		)
 
 		require.Equal(t, expectedType, typeValue.Type)
-	})
+	})()
 }

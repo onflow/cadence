@@ -387,6 +387,13 @@ func (m *StorageMigration) MigrateNestedValue(
 				inter.RemoveReferencedSlab(existingValueStorable)
 			}
 
+			if dictionary.ContainsKey(inter, emptyLocationRange, keyToSet) {
+				panic(errors.NewUnexpectedError(
+					"dictionary contains new key after removal of old key (conflict): %s",
+					keyToSet,
+				))
+			}
+
 			dictionary.InsertWithoutTransfer(
 				inter,
 				emptyLocationRange,
