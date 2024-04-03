@@ -2557,7 +2557,7 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: &cadence.FunctionType{
 					TypeParameters: []cadence.TypeParameter{
-						{Name: "T", TypeBound: cadence.AnyStructType},
+						{Name: "T", TypeBound: cadence.NewSubtypeTypeBound(cadence.AnyStructType)},
 					},
 					Parameters: []cadence.Parameter{
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType},
@@ -2581,8 +2581,12 @@ func TestEncodeType(t *testing.T) {
                       {
                         "name": "T",
                         "typeBound": {
-                          "kind": "AnyStruct"
-                        }
+							"kind": "subtype",
+							"type": {
+							  "kind": "AnyStruct"
+							},
+							"bounds": null
+						  }
                       }
                     ],
                     "parameters": [
@@ -2594,6 +2598,165 @@ func TestEncodeType(t *testing.T) {
                         }
                       }
                     ]
+                  }
+                }
+              }
+            `,
+		)
+
+	})
+
+	t.Run("with equal type bound", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.FunctionType{
+					TypeParameters: []cadence.TypeParameter{
+						{Name: "T", TypeBound: cadence.NewEqualTypeBound(cadence.AnyStructType)},
+					},
+					Parameters: []cadence.Parameter{},
+					ReturnType: cadence.IntType,
+				},
+			},
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Function",
+					"purity": "",
+                    "typeID": "fun<T>():Int",
+                    "return": {
+                      "kind": "Int"
+                    },
+                    "typeParameters": [
+                      {
+                        "name": "T",
+                        "typeBound": {
+                          "kind": "equal",
+						  "type": {
+							"kind": "AnyStruct"
+						  },
+						  "bounds": null
+                        }
+                      }
+                    ],
+                    "parameters": []
+                  }
+                }
+              }
+            `,
+		)
+
+	})
+
+	t.Run("with negated type bound", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.FunctionType{
+					TypeParameters: []cadence.TypeParameter{
+						{Name: "T", TypeBound: cadence.NewNegationTypeBound(cadence.NewEqualTypeBound(cadence.AnyStructType))},
+					},
+					Parameters: []cadence.Parameter{},
+					ReturnType: cadence.IntType,
+				},
+			},
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Function",
+					"purity": "",
+                    "typeID": "fun<T>():Int",
+                    "return": {
+                      "kind": "Int"
+                    },
+                    "typeParameters": [
+                      {
+                        "name": "T",
+                        "typeBound": {
+                          "kind": "negation",
+						  "type": null,
+						  "bounds": [
+							{
+								"kind": "equal",
+								"type": {
+								  "kind": "AnyStruct"
+								},
+								"bounds": null
+							  }
+						  ]
+                        }
+                      }
+                    ],
+                    "parameters": []
+                  }
+                }
+              }
+            `,
+		)
+	})
+
+	t.Run("with conjunction type bound", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.FunctionType{
+					TypeParameters: []cadence.TypeParameter{
+						{Name: "T", TypeBound: cadence.NewConjunctionTypeBound([]cadence.TypeBound{
+							cadence.NewEqualTypeBound(cadence.AnyStructType),
+							cadence.NewSubtypeTypeBound(cadence.AnyResourceType),
+						})},
+					},
+					Parameters: []cadence.Parameter{},
+					ReturnType: cadence.IntType,
+				},
+			},
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Function",
+					"purity": "",
+                    "typeID": "fun<T>():Int",
+                    "return": {
+                      "kind": "Int"
+                    },
+                    "typeParameters": [
+                      {
+                        "name": "T",
+                        "typeBound": {
+                          "kind": "conjunction",
+						  "type": null,
+						  "bounds": [
+							{
+								"kind": "equal",
+								"type": {
+								  "kind": "AnyStruct"
+								},
+								"bounds": null
+							},
+							{
+								"kind": "subtype",
+								"type": {
+								  "kind": "AnyResource"
+								},
+								"bounds": null
+							}
+						  ]
+                        }
+                      }
+                    ],
+                    "parameters": []
                   }
                 }
               }

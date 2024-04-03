@@ -10426,7 +10426,7 @@ func TestEncodeType(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: &cadence.FunctionType{
 					TypeParameters: []cadence.TypeParameter{
-						{Name: "T", TypeBound: cadence.AnyStructType},
+						{Name: "T", TypeBound: cadence.NewSubtypeTypeBound(cadence.AnyStructType)},
 					},
 					Parameters: []cadence.Parameter{
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType},

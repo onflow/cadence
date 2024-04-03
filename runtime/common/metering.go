@@ -235,6 +235,11 @@ var (
 	CadenceStructTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceStructType)
 	CadenceAttachmentTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceAttachmentType)
 
+	CadenceSubtypeBoundMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceSubtypeBound)
+	CadenceEqualBoundMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadenceEqualBound)
+	CadenceNegationBoundMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceNegationBound)
+	CadenceConjunctionBoundMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceConjunctionBound)
+
 	// Following are the known memory usage amounts for string representation of interpreter values.
 	// Same as `len(format.X)`. However, values are hard-coded to avoid the circular dependency.
 

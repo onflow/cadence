@@ -133,6 +133,11 @@ const (
 	MemoryKindCadenceCapabilityType
 	MemoryKindCadenceEnumType
 
+	MemoryKindCadenceSubtypeBound
+	MemoryKindCadenceEqualBound
+	MemoryKindCadenceNegationBound
+	MemoryKindCadenceConjunctionBound
+
 	// Misc
 
 	MemoryKindRawString

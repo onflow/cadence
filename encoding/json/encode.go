@@ -189,8 +189,14 @@ type jsonIntersectionType struct {
 }
 
 type jsonTypeParameter struct {
-	Name      string    `json:"name"`
-	TypeBound jsonValue `json:"typeBound"`
+	Name      string        `json:"name"`
+	TypeBound jsonTypeBound `json:"typeBound"`
+}
+
+type jsonTypeBound struct {
+	Kind   string          `json:"kind"`
+	Type   jsonValue       `json:"type"`
+	Bounds []jsonTypeBound `json:"bounds"`
 }
 
 type jsonParameterType struct {
@@ -710,11 +716,48 @@ func preparePath(x cadence.Path) jsonValue {
 	}
 }
 
+func prepareTypeBound(typeBound cadence.TypeBound, results TypePreparationResults) jsonTypeBound {
+	switch bound := typeBound.(type) {
+	case cadence.SubtypeTypeBound:
+		preparedType := PrepareType(bound.Type, results)
+		return jsonTypeBound{
+			Kind: "subtype",
+			Type: preparedType,
+		}
+	case cadence.EqualTypeBound:
+		preparedType := PrepareType(bound.Type, results)
+		return jsonTypeBound{
+			Kind: "equal",
+			Type: preparedType,
+		}
+	case cadence.NegationTypeBound:
+		preparedBound := prepareTypeBound(bound.NegatedBound, results)
+		return jsonTypeBound{
+			Kind:   "negation",
+			Bounds: []jsonTypeBound{preparedBound},
+		}
+	case cadence.ConjunctionTypeBound:
+		var preparedBounds []jsonTypeBound
+
+		for _, typeBound := range bound.TypeBounds {
+			preparedBounds = append(preparedBounds, prepareTypeBound(typeBound, results))
+
+		}
+
+		return jsonTypeBound{
+			Kind:   "conjunction",
+			Bounds: preparedBounds,
+		}
+	}
+
+	panic(fmt.Errorf("failed to prepare type: unsupported type bound: %T", typeBound))
+}
+
 func prepareTypeParameter(typeParameter cadence.TypeParameter, results TypePreparationResults) jsonTypeParameter {
 	typeBound := typeParameter.TypeBound
-	var preparedTypeBound jsonValue
+	var preparedTypeBound jsonTypeBound
 	if typeBound != nil {
-		preparedTypeBound = PrepareType(typeBound, results)
+		preparedTypeBound = prepareTypeBound(typeBound, results)
 	}
 	return jsonTypeParameter{
 		Name:      typeParameter.Name,

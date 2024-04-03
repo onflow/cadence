@@ -21,6 +21,7 @@ package cadence
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -674,12 +675,12 @@ func NewParameter(
 
 type TypeParameter struct {
 	Name      string
-	TypeBound Type
+	TypeBound TypeBound
 }
 
 func NewTypeParameter(
 	name string,
-	typeBound Type,
+	typeBound TypeBound,
 ) TypeParameter {
 	return TypeParameter{
 		Name:      name,
@@ -1812,4 +1813,125 @@ func (t *EnumType) Equal(other Type) bool {
 
 	return t.Location == otherType.Location &&
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
+}
+
+type TypeBound interface {
+	isTypeBound()
+	ID() string
+	Equal(other TypeBound) bool
+}
+
+type SubtypeTypeBound struct {
+	Type Type
+}
+
+var _ TypeBound = SubtypeTypeBound{}
+
+func NewSubtypeTypeBound(ty Type) SubtypeTypeBound {
+	return SubtypeTypeBound{Type: ty}
+}
+
+func (SubtypeTypeBound) isTypeBound() {}
+
+func (b SubtypeTypeBound) ID() string {
+	return fmt.Sprintf("<=: %s", b.Type.ID())
+}
+
+func (b SubtypeTypeBound) Equal(other TypeBound) bool {
+	otherBound, ok := other.(SubtypeTypeBound)
+	if !ok {
+		return false
+	}
+
+	return b.Type.Equal(otherBound.Type)
+}
+
+type EqualTypeBound struct {
+	Type Type
+}
+
+var _ TypeBound = EqualTypeBound{}
+
+func NewEqualTypeBound(ty Type) EqualTypeBound {
+	return EqualTypeBound{Type: ty}
+}
+
+func (EqualTypeBound) isTypeBound() {}
+
+func (b EqualTypeBound) ID() string {
+	return fmt.Sprintf("= %s", b.Type.ID())
+}
+
+func (b EqualTypeBound) Equal(other TypeBound) bool {
+	otherBound, ok := other.(EqualTypeBound)
+	if !ok {
+		return false
+	}
+
+	return b.Type.Equal(otherBound.Type)
+}
+
+type NegationTypeBound struct {
+	NegatedBound TypeBound
+}
+
+var _ TypeBound = NegationTypeBound{}
+
+func NewNegationTypeBound(bound TypeBound) NegationTypeBound {
+	return NegationTypeBound{NegatedBound: bound}
+}
+
+func (NegationTypeBound) isTypeBound() {}
+
+func (b NegationTypeBound) ID() string {
+	return fmt.Sprintf("!(%s)", b.NegatedBound.ID())
+}
+
+func (b NegationTypeBound) Equal(other TypeBound) bool {
+	otherBound, ok := other.(NegationTypeBound)
+	if !ok {
+		return false
+	}
+
+	return b.NegatedBound.Equal(otherBound.NegatedBound)
+}
+
+type ConjunctionTypeBound struct {
+	TypeBounds []TypeBound
+}
+
+var _ TypeBound = ConjunctionTypeBound{}
+
+func NewConjunctionTypeBound(bounds []TypeBound) ConjunctionTypeBound {
+	return ConjunctionTypeBound{TypeBounds: bounds}
+}
+
+func (ConjunctionTypeBound) isTypeBound() {}
+
+func (b ConjunctionTypeBound) ID() string {
+	var strs []string
+	for _, bound := range b.TypeBounds {
+		strs = append(strs, fmt.Sprintf("(%s)", bound.ID()))
+	}
+	return strings.Join(strs[:], " && ")
+}
+
+func (b ConjunctionTypeBound) Equal(bound TypeBound) bool {
+	other, ok := bound.(ConjunctionTypeBound)
+	if !ok {
+		return false
+	}
+
+	if len(b.TypeBounds) != len(other.TypeBounds) {
+		return false
+	}
+
+	for i, typeBound := range b.TypeBounds {
+		otherTypeBound := other.TypeBounds[i]
+		if !typeBound.Equal(otherTypeBound) {
+			return false
+		}
+	}
+
+	return true
 }
