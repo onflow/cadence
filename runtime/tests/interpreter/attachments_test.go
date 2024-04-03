@@ -29,7 +29,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -1987,107 +1986,6 @@ func TestInterpretAttachmentSelfAccessMembers(t *testing.T) {
 
 	_, err := inter.Invoke("main")
 	require.NoError(t, err)
-}
-
-func TestInterpretAttachmentMappedMembers(t *testing.T) {
-
-	t.Parallel()
-
-	t.Run("mapped self cast", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
-            entitlement E
-            entitlement F
-            entitlement G
-            entitlement mapping M {
-                E -> F
-            }
-
-            access(all) resource R {
-                access(E) fun foo() {}
-                access(F) fun bar() {}
-            }
-            access(all) attachment A for R {
-                access(F) let x: Int
-                init() {
-                    self.x = 3
-                }
-                access(mapping M) fun foo(): auth(mapping M) &Int {
-                    if let concreteSelf = self as? auth(F) &A {
-                        return &concreteSelf.x
-                    } 
-                    return &1
-                }
-            }
-            fun test(): &Int {
-                let r <- attach A() to <- create R()
-                let a = r[A]!
-                let i = a.foo()
-                destroy r
-                return i
-            }
-        `, ParseCheckAndInterpretOptions{
-			HandleCheckerError: func(err error) {
-				errs := checker.RequireCheckerErrors(t, err, 1)
-				require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
-			},
-			CheckerConfig: &sema.Config{
-				AttachmentsEnabled: true,
-			},
-		})
-
-		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
-	})
-
-	t.Run("mapped base cast", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter, _ := parseCheckAndInterpretWithOptions(t, `
-            entitlement E
-            entitlement F
-            entitlement mapping M {
-                E -> F
-            }
-
-            access(all) resource R {
-                access(F) let x: Int
-                init() {
-                    self.x = 3
-                }
-                access(E) fun bar() {}
-            }
-            access(all) attachment A for R {
-                access(mapping M) fun foo(): auth(mapping M) &Int {
-                    if let concreteBase = base as? auth(F) &R {
-                        return &concreteBase.x
-                    } 
-                    return &1
-                }
-            }
-            fun test(): &Int {
-                let r <- attach A() to <- create R()
-                let a = r[A]!
-                let i = a.foo()
-                destroy r
-                return i
-            }
-        `, ParseCheckAndInterpretOptions{
-			HandleCheckerError: func(err error) {
-				errs := checker.RequireCheckerErrors(t, err, 1)
-				require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
-			},
-			CheckerConfig: &sema.Config{
-				AttachmentsEnabled: true,
-			},
-		})
-
-		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
-	})
 }
 
 func TestInterpretForEachAttachment(t *testing.T) {

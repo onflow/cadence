@@ -2732,6 +2732,110 @@ func TestInterpretVariableDeclarationEvaluationOrder(t *testing.T) {
 	)
 }
 
+func TestInterpretNestedSwap(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+        access(all) resource NFT {
+            access(all) var name: String
+            init(name: String) {
+                self.name = name
+            }
+        }
+
+        access(all) resource Company {
+            access(self) var equity: @[NFT]
+
+            init(incorporationEquityCollection: @[NFT]) {
+                pre {
+                    // We make sure the incorporation collection has at least one high-value NFT
+                    incorporationEquityCollection[0].name == "High-value NFT"
+                }
+                self.equity <- incorporationEquityCollection
+            }
+
+            access(all) fun logContents() {
+                log("Current contents of the Company (should have a High-value NFT):")
+                log(self.equity[0].name)
+            }
+        }
+
+        access(all) resource SleightOfHand {
+            access(all) var arr: @[NFT];
+            access(all) var company: @Company?
+            access(all) var trashNFT: @NFT
+
+            init() {
+                self.arr <- [ <- create NFT(name: "High-value NFT")]
+                self.company <- nil
+                self.trashNFT <- create NFT(name: "Trash NFT")
+                self.doMagic()
+            }
+
+            access(all) fun callback(): Int {
+                var x: @[NFT] <- []
+
+                log("before inner")
+                log(&self.arr as &AnyResource)
+                log(&x as &AnyResource)
+
+                self.arr <-> x
+
+                log("after inner")
+                log(&self.arr as &AnyResource)
+                log(&x as &AnyResource)
+
+                // We hand over the array to the Company object after the swap
+                // has already been "scheduled"
+                self.company <-! create Company(incorporationEquityCollection: <- x)
+
+                log("end callback")
+
+                return 0
+            }
+
+            access(all) fun doMagic() {
+                log("before outer")
+                log(&self.arr as &AnyResource)
+                log(&self.trashNFT as &AnyResource)
+
+                self.trashNFT <-> self.arr[self.callback()]
+
+                log("after outer")
+                log(&self.arr as &AnyResource)
+                log(&self.trashNFT as &AnyResource)
+
+                self.company?.logContents()
+                log("Look what I pickpocketd:")
+                log(self.trashNFT.name)
+            }
+        }
+
+        access(all) fun main() {
+            let a <- create SleightOfHand()
+            destroy a
+        }
+    `)
+
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	RequireError(t, err)
+
+	assert.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
+
+	assert.Equal(t,
+		[]string{
+			`"before outer"`,
+			`[S.test.NFT(uuid: 2, name: "High-value NFT")]`,
+			`S.test.NFT(name: "Trash NFT", uuid: 3)`,
+			`"before inner"`,
+		},
+		getLogs(),
+	)
+}
+
 func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
 
 	t.Parallel()
@@ -2817,6 +2921,60 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
 	assert.Equal(t, 15, errorStartPos.Line)
 	assert.Equal(t, 53, errorStartPos.Column)
+}
+
+func TestInterpretResourceLoss(t *testing.T) {
+
+	t.Parallel()
+
+	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+        access(all) resource R {
+            access(all) let id: String
+
+            init(_ id: String) {
+                self.id = id
+            }
+        }
+
+        access(all) fun dummy(): @R { return <- create R("dummy") }
+
+        access(all) resource ResourceLoser {
+            access(self) var victim: @R
+            access(self) var value: @R?
+
+            init(victim: @R) {
+                self.victim <- victim
+                self.value <- dummy()
+                self.doMagic()
+            }
+
+            access(all) fun callback(r: @R): @R {
+                var x <- dummy()
+                x <-> self.victim
+
+                // Write the victim value into self.value which will soon be overwritten
+                // (via an already-existing gettersetter)
+                self.value <-! x
+                return <- r
+            }
+
+            access(all) fun doMagic() {
+               var out <- self.value <- self.callback(r: <- dummy())
+               destroy out
+            }
+        }
+
+        access(all) fun main(): Void {
+           var victim <- create R("victim resource")
+           var rl <- create ResourceLoser(victim: <- victim)
+           destroy rl
+        }
+    `)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.ResourceLossError{})
 }
 
 func TestInterpretPreConditionResourceMove(t *testing.T) {

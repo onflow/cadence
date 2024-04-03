@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -204,7 +206,9 @@ func TestCheckEmitEvent(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("ValidEvent", func(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             event Transfer(to: Int, from: Int)
 
@@ -216,7 +220,9 @@ func TestCheckEmitEvent(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("MissingEmitStatement", func(t *testing.T) {
+	t.Run("missing emit statement", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             event Transfer(to: Int, from: Int)
 
@@ -230,7 +236,28 @@ func TestCheckEmitEvent(t *testing.T) {
 		require.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
 	})
 
-	t.Run("EmitNonEvent", func(t *testing.T) {
+	t.Run("missing emit statement, optional chaining", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract C {
+                event Transfer(to: Int, from: Int)
+            }
+
+            fun test() {
+                let optContractRef: &C? = &C as &C
+                optContractRef?.Transfer(to: 1, from: 2)
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
+	})
+
+	t.Run("emit non-event", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             fun notAnEvent(): Int { return 1 }
 
@@ -244,7 +271,9 @@ func TestCheckEmitEvent(t *testing.T) {
 		require.IsType(t, &sema.EmitNonEventError{}, errs[0])
 	})
 
-	t.Run("EmitNotDeclared", func(t *testing.T) {
+	t.Run("emit not-declared", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             fun test() {
               emit notAnEvent()
@@ -256,7 +285,8 @@ func TestCheckEmitEvent(t *testing.T) {
 		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 
-	t.Run("EmitImported", func(t *testing.T) {
+	t.Run("emit imported", func(t *testing.T) {
+		t.Parallel()
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`

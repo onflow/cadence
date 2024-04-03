@@ -494,17 +494,17 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	// If the resource was not moved out of the container,
 	// its contents get deleted.
 
-	getterSetter := interpreter.assignmentGetterSetter(declaration.Value)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: declaration.Value,
+	}
+
+	getterSetter := interpreter.assignmentGetterSetter(declaration.Value, locationRange)
 
 	const allowMissing = false
 	result := getterSetter.get(allowMissing)
 	if result == nil {
 		panic(errors.NewUnreachableError())
-	}
-
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: declaration.Value,
 	}
 
 	if isOptionalBinding {
@@ -545,7 +545,12 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 	target := assignment.Target
 	value := assignment.Value
 
-	getterSetter := interpreter.assignmentGetterSetter(target)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: target,
+	}
+
+	getterSetter := interpreter.assignmentGetterSetter(target, locationRange)
 
 	interpreter.visitAssignment(
 		assignment.Transfer.Operation,
@@ -567,11 +572,21 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 
 	// Evaluate the left side (target and key)
 
-	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left)
+	leftLocationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: swap.Left,
+	}
+
+	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left, leftLocationRange)
 
 	// Evaluate the right side (target and key)
 
-	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right)
+	rightLocationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: swap.Right,
+	}
+
+	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right, rightLocationRange)
 
 	// Get left and right values
 
@@ -587,18 +602,10 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 	// and left value to right target
 
 	interpreter.checkInvalidatedResourceOrResourceReference(rightValue, swap.Right)
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: swap.Right,
-	}
-	transferredRightValue := interpreter.transferAndConvert(rightValue, rightType, leftType, locationRange)
+	transferredRightValue := interpreter.transferAndConvert(rightValue, rightType, leftType, rightLocationRange)
 
 	interpreter.checkInvalidatedResourceOrResourceReference(leftValue, swap.Left)
-	locationRange = LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: swap.Left,
-	}
-	transferredLeftValue := interpreter.transferAndConvert(leftValue, leftType, rightType, locationRange)
+	transferredLeftValue := interpreter.transferAndConvert(leftValue, leftType, rightType, leftLocationRange)
 
 	leftGetterSetter.set(transferredRightValue)
 	rightGetterSetter.set(transferredLeftValue)
