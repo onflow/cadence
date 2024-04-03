@@ -83,8 +83,8 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) Ty
 						),
 					},
 				)
-				return InvalidType
 			}
+			return InvalidType
 		}
 
 		innerType := referenceType.Type

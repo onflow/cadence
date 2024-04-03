@@ -3546,6 +3546,27 @@ func TestCheckDereference(t *testing.T) {
             `,
 		)
 	})
+
+	runInvalidTestCase(
+		t,
+		"non-reference",
+		`
+          fun test(foo: Int): AnyStruct {
+              return *foo
+          }
+        `,
+	)
+
+	t.Run("invalid type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let x = *y
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
 }
 
 func TestCheckReferenceRequiredTypeAnnotation(t *testing.T) {
