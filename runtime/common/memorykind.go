@@ -134,6 +134,7 @@ const (
 	MemoryKindCadenceEnumType
 
 	MemoryKindCadenceSubtypeBound
+	MemoryKindCadenceSupertypeBound
 	MemoryKindCadenceEqualBound
 	MemoryKindCadenceNegationBound
 	MemoryKindCadenceConjunctionBound

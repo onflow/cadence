@@ -730,6 +730,12 @@ func prepareTypeBound(typeBound cadence.TypeBound, results TypePreparationResult
 			Kind: "equal",
 			Type: preparedType,
 		}
+	case cadence.SupertypeTypeBound:
+		preparedType := PrepareType(bound.Type, results)
+		return jsonTypeBound{
+			Kind: "supertype",
+			Type: preparedType,
+		}
 	case cadence.NegationTypeBound:
 		preparedBound := prepareTypeBound(bound.NegatedBound, results)
 		return jsonTypeBound{

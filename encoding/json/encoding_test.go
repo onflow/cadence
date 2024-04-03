@@ -2652,6 +2652,52 @@ func TestEncodeType(t *testing.T) {
 
 	})
 
+	t.Run("with supertype type bound", func(t *testing.T) {
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: &cadence.FunctionType{
+					TypeParameters: []cadence.TypeParameter{
+						{Name: "T", TypeBound: cadence.NewSupertypeTypeBound(cadence.AnyStructType)},
+					},
+					Parameters: []cadence.Parameter{},
+					ReturnType: cadence.IntType,
+				},
+			},
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Function",
+					"purity": "",
+                    "typeID": "fun<T>():Int",
+                    "return": {
+                      "kind": "Int"
+                    },
+                    "typeParameters": [
+                      {
+                        "name": "T",
+                        "typeBound": {
+                          "kind": "supertype",
+						  "type": {
+							"kind": "AnyStruct"
+						  },
+						  "bounds": null
+                        }
+                      }
+                    ],
+                    "parameters": []
+                  }
+                }
+              }
+            `,
+		)
+
+	})
+
 	t.Run("with negated type bound", func(t *testing.T) {
 
 		testEncodeAndDecode(

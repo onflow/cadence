@@ -237,6 +237,7 @@ var (
 
 	CadenceSubtypeBoundMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceSubtypeBound)
 	CadenceEqualBoundMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadenceEqualBound)
+	CadenceSupertypeBoundMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceSupertypeBound)
 	CadenceNegationBoundMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceNegationBound)
 	CadenceConjunctionBoundMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceConjunctionBound)
 

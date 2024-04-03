@@ -1846,6 +1846,31 @@ func (b SubtypeTypeBound) Equal(other TypeBound) bool {
 	return b.Type.Equal(otherBound.Type)
 }
 
+type SupertypeTypeBound struct {
+	Type Type
+}
+
+var _ TypeBound = SupertypeTypeBound{}
+
+func NewSupertypeTypeBound(ty Type) SupertypeTypeBound {
+	return SupertypeTypeBound{Type: ty}
+}
+
+func (SupertypeTypeBound) isTypeBound() {}
+
+func (b SupertypeTypeBound) ID() string {
+	return fmt.Sprintf(">=: %s", b.Type.ID())
+}
+
+func (b SupertypeTypeBound) Equal(other TypeBound) bool {
+	otherBound, ok := other.(SupertypeTypeBound)
+	if !ok {
+		return false
+	}
+
+	return b.Type.Equal(otherBound.Type)
+}
+
 type EqualTypeBound struct {
 	Type Type
 }

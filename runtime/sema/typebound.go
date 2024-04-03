@@ -137,6 +137,89 @@ func (b SubtypeTypeBound) withPrettyString(_ string) TypeBound {
 	return b
 }
 
+// SupertypeTypeBound(T) expresses the requirement that
+// ∀U, U >= T
+
+type SupertypeTypeBound struct {
+	Type Type
+}
+
+var _ TypeBound = SubtypeTypeBound{}
+
+func NewSupertypeTypeBound(ty Type) TypeBound {
+	return SupertypeTypeBound{Type: ty}
+}
+
+func (SupertypeTypeBound) isTypeBound() {}
+
+func (b SupertypeTypeBound) Satisfies(ty Type) bool {
+	return IsSubType(b.Type, ty)
+}
+
+func (b SupertypeTypeBound) HasInvalidType() bool {
+	return b.Type.IsInvalidType()
+}
+
+func (b SupertypeTypeBound) Equal(bound TypeBound) bool {
+	other, ok := bound.(SupertypeTypeBound)
+	if !ok {
+		return false
+	}
+	return b.Type.Equal(other.Type)
+}
+
+func (b SupertypeTypeBound) CheckInstantiated(
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+) {
+	b.Type.CheckInstantiated(pos, memoryGauge, report)
+}
+
+func (b SupertypeTypeBound) Map(
+	gauge common.MemoryGauge,
+	typeParamMap map[*TypeParameter]*TypeParameter,
+	f func(Type) Type,
+) TypeBound {
+	return SupertypeTypeBound{
+		Type: b.Type.Map(gauge, typeParamMap, f),
+	}
+}
+
+func (b SupertypeTypeBound) TypeAnnotationState() TypeAnnotationState {
+	return b.Type.TypeAnnotationState()
+}
+
+func (b SupertypeTypeBound) RewriteWithIntersectionTypes() (result TypeBound, rewritten bool) {
+	rewrittenType, rewritten := b.Type.RewriteWithIntersectionTypes()
+	if rewritten {
+		return SupertypeTypeBound{
+			Type: rewrittenType,
+		}, true
+	}
+	return b, false
+}
+
+func (b SupertypeTypeBound) And(bound TypeBound) TypeBound {
+	return NewConjunctionTypeBound([]TypeBound{b, bound})
+}
+
+func (b SupertypeTypeBound) Or(bound TypeBound) TypeBound {
+	return NewDisjunctionTypeBound([]TypeBound{b, bound})
+}
+
+func (b SupertypeTypeBound) Not() TypeBound {
+	return NewNegationTypeBound(b)
+}
+
+func (b SupertypeTypeBound) String() string {
+	return fmt.Sprintf(">=: %s", b.Type.QualifiedString())
+}
+
+func (b SupertypeTypeBound) withPrettyString(_ string) TypeBound {
+	return b
+}
+
 // EqualTypeBound expresses the requirement that
 // ∀U, U = T
 
@@ -450,9 +533,9 @@ func (b ConjunctionTypeBound) withPrettyString(prettyString string) TypeBound {
 }
 
 // Any other kinds of type bounds we might wish to express can be
-// written as the composition of `<=`, `=`, `!` and `&`. Technically, `=` is not
-// really even necessary, as `U = T` is equivalent to `U <= T & T <= U`, but for
-// performance reasons we give it its own basic bound
+// written as the composition of `<=`, `>=`, `=`, `!` and `&&`. Technically, `=` is not
+// really even necessary, as `U = T` is equivalent to `U <= T && U >= T`, but for
+// performance reasons we give it its own basic bound.
 
 // `U <= T && !(T = U) ==> U < T`
 func NewStrictSubtypeTypeBound(ty Type) TypeBound {
@@ -462,21 +545,15 @@ func NewStrictSubtypeTypeBound(ty Type) TypeBound {
 		withPrettyString(fmt.Sprintf("<: %s", ty.String()))
 }
 
-// `!(U <= T) ==> U > T`
+// `U >= T && !(T = U) ==> U > T`
 func NewStrictSupertypeTypeBound(ty Type) TypeBound {
-	return NewSubtypeTypeBound(ty).
+	return NewEqualTypeBound(ty).
 		Not().
+		And(NewSupertypeTypeBound(ty)).
 		withPrettyString(fmt.Sprintf(">: %s", ty.String()))
 }
 
-// `!(U < T) ==> U >= T`
-func NewSupertypeTypeBound(ty Type) TypeBound {
-	return NewStrictSubtypeTypeBound(ty).
-		Not().
-		withPrettyString(fmt.Sprintf(">=: %s", ty.String()))
-}
-
-// `!(!B1 & ... & !Bn) ==> B1 || ... || Bn`
+// `!(!B1 && ... && !Bn) ==> B1 || ... || Bn`
 func NewDisjunctionTypeBound(typeBounds []TypeBound) TypeBound {
 	var negatedTypeBounds []TypeBound
 	var strs []string

@@ -938,6 +938,10 @@ func (d *Decoder) decodeTypeBound(valueJSON any, results typeDecodingResults) ca
 		ty := obj.Get("type")
 		decodedType := d.decodeType(ty, results)
 		return cadence.NewSubtypeTypeBound(decodedType)
+	case "supertype":
+		ty := obj.Get("type")
+		decodedType := d.decodeType(ty, results)
+		return cadence.NewSupertypeTypeBound(decodedType)
 	case "equal":
 		ty := obj.Get("type")
 		decodedType := d.decodeType(ty, results)

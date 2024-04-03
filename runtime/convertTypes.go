@@ -506,6 +506,10 @@ func exportTypeBound(
 		common.UseMemory(gauge, common.CadenceSubtypeBoundMemoryUsage)
 		ty := ExportMeteredType(gauge, bound.Type, results)
 		return cadence.NewSubtypeTypeBound(ty)
+	case sema.SupertypeTypeBound:
+		common.UseMemory(gauge, common.CadenceEqualBoundMemoryUsage)
+		ty := ExportMeteredType(gauge, bound.Type, results)
+		return cadence.NewSupertypeTypeBound(ty)
 	case sema.EqualTypeBound:
 		common.UseMemory(gauge, common.CadenceEqualBoundMemoryUsage)
 		ty := ExportMeteredType(gauge, bound.Type, results)

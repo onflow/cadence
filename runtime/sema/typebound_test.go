@@ -136,7 +136,8 @@ func TestTypeBound_Satisfies(t *testing.T) {
 			NewSupertypeTypeBound(IntType),
 		})
 
-		assert.True(t, typeBound.Satisfies(FixedSizeUnsignedIntegerType))
+		assert.False(t, typeBound.Satisfies(FixedSizeUnsignedIntegerType))
+		assert.True(t, typeBound.Satisfies(IntegerType))
 		assert.True(t, typeBound.Satisfies(AnyStructType))
 		assert.True(t, typeBound.Satisfies(IntType))
 		assert.False(t, typeBound.Satisfies(StringType))
