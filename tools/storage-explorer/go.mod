@@ -3,6 +3,8 @@ module github.com/onflow/cadence/tools/storage-explorer
 go 1.20
 
 require (
+	github.com/gorilla/mux v1.8.1
+	github.com/onflow/atree v0.6.1-0.20240308163425-dc825c20b1a2
 	github.com/onflow/cadence v1.0.0-M8
 	github.com/onflow/flow-go v0.34.0-crescendo-preview.5.0.20240229164931-a67398875618
 	github.com/rs/zerolog v1.32.0
@@ -39,7 +41,6 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -84,7 +85,6 @@ require (
 	github.com/multiformats/go-multihash v0.2.3 // indirect
 	github.com/multiformats/go-multistream v0.5.0 // indirect
 	github.com/multiformats/go-varint v0.0.7 // indirect
-	github.com/onflow/atree v0.6.1-0.20230711151834-86040b30171f // indirect
 	github.com/onflow/crypto v0.25.0 // indirect
 	github.com/onflow/flow-core-contracts/lib/go/contracts v0.15.2-0.20240227190927-0e6ce7e3222b // indirect
 	github.com/onflow/flow-core-contracts/lib/go/templates v0.15.2-0.20240227190927-0e6ce7e3222b // indirect
