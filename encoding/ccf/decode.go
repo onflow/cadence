@@ -2182,9 +2182,15 @@ func (d *Decoder) decodeTypeParameterTypeValue(visited *cadenceTypeByCCFTypeID) 
 		return cadence.TypeParameter{}, err
 	}
 
+	var typeBound cadence.TypeBound
+	if t != nil {
+		typeBound = cadence.NewSubtypeTypeBound(t)
+	}
+
 	// Unmetered because decodeTypeParamTypeValue is metered in decodeTypeParamTypeValues and called nowhere else
 	// Type is metered.
-	return cadence.NewTypeParameter(name, t), nil
+	// TODO: implement this for generalized bounds
+	return cadence.NewTypeParameter(name, typeBound), nil
 }
 
 // decodeParameterTypeValues decodes composite initializer parameter types as
