@@ -12153,3 +12153,26 @@ func TestInterpretSwapDictionaryKeysWithSideEffects(t *testing.T) {
 		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 3), events[2].event.GetField(inter, interpreter.EmptyLocationRange, "value"))
 	})
 }
+
+func TestInterpretOptionalAddressInConditional(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(ok: Bool): Address? {
+         return ok ? 0x1 : nil
+      }
+    `)
+
+	value, err := inter.Invoke("test", interpreter.TrueValue)
+	require.NoError(t, err)
+
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewSomeValueNonCopying(nil,
+			interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+		),
+		value,
+	)
+}

@@ -3651,7 +3651,7 @@ func TestSimpleTypes(t *testing.T) {
 		t.Run(semaType.QualifiedString(), func(t *testing.T) {
 			t.Parallel()
 
-			prepared := prepareType(cadenceType, typePreparationResults{})
+			prepared := PrepareType(cadenceType, TypePreparationResults{})
 			require.IsType(t, jsonSimpleType{}, prepared)
 
 			encoded, err := Encode(cadence.NewTypeValue(cadenceType))

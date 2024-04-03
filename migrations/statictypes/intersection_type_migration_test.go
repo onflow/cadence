@@ -398,7 +398,7 @@ func TestIntersectionTypeMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 
 	reporter := newTestReporter()
 
@@ -510,7 +510,8 @@ func TestIntersectionTypeRehash(t *testing.T) {
 		return storage, inter
 	}
 
-	t.Run("prepare", func(t *testing.T) {
+	// Prepare
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -560,13 +561,14 @@ func TestIntersectionTypeRehash(t *testing.T) {
 
 		err := storage.Commit(inter, false)
 		require.NoError(t, err)
-	})
+	})()
 
-	t.Run("migrate", func(t *testing.T) {
+	// Migrate
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
@@ -603,9 +605,10 @@ func TestIntersectionTypeRehash(t *testing.T) {
 			},
 			reporter.migrated,
 		)
-	})
+	})()
 
-	t.Run("load", func(t *testing.T) {
+	// Load
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -633,7 +636,7 @@ func TestIntersectionTypeRehash(t *testing.T) {
 			newTestValue(),
 			value.(*interpreter.StringValue),
 		)
-	})
+	})()
 }
 
 // TestRehashNestedIntersectionType stores a dictionary in storage,
@@ -669,7 +672,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 		ledger := NewTestLedger(nil, nil)
 
-		t.Run("prepare", func(t *testing.T) {
+		// Prepare
+		(func() {
 
 			storage, inter := newStorageAndInterpreter(t, ledger)
 
@@ -727,13 +731,14 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			err := storage.Commit(inter, false)
 			require.NoError(t, err)
-		})
+		})()
 
-		t.Run("migrate", func(t *testing.T) {
+		// Migrate
+		(func() {
 
 			storage, inter := newStorageAndInterpreter(t, ledger)
 
-			migration := migrations.NewStorageMigration(inter, storage)
+			migration := migrations.NewStorageMigration(inter, storage, "test")
 
 			reporter := newTestReporter()
 
@@ -770,9 +775,10 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 				},
 				reporter.migrated,
 			)
-		})
+		})()
 
-		t.Run("load", func(t *testing.T) {
+		// Load
+		(func() {
 
 			storage, inter := newStorageAndInterpreter(t, ledger)
 
@@ -802,7 +808,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 				newTestValue(),
 				value.(*interpreter.StringValue),
 			)
-		})
+		})()
 	})
 
 	t.Run("dictionary type", func(t *testing.T) {
@@ -810,7 +816,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 		ledger := NewTestLedger(nil, nil)
 
-		t.Run("prepare", func(t *testing.T) {
+		//
+		(func() {
 
 			storage, inter := newStorageAndInterpreter(t, ledger)
 
@@ -869,13 +876,14 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			err := storage.Commit(inter, false)
 			require.NoError(t, err)
-		})
+		})()
 
-		t.Run("migrate", func(t *testing.T) {
+		// Migrate
+		(func() {
 
 			storage, inter := newStorageAndInterpreter(t, ledger)
 
-			migration := migrations.NewStorageMigration(inter, storage)
+			migration := migrations.NewStorageMigration(inter, storage, "test")
 
 			reporter := newTestReporter()
 
@@ -912,10 +920,10 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 				},
 				reporter.migrated,
 			)
-		})
+		})()
 
-		t.Run("load", func(t *testing.T) {
-
+		// Load
+		(func() {
 			storage, inter := newStorageAndInterpreter(t, ledger)
 
 			storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
@@ -948,7 +956,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 				newTestValue(),
 				value.(*interpreter.StringValue),
 			)
-		})
+		})()
 	})
 }
 
@@ -1028,7 +1036,7 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
@@ -1423,7 +1431,7 @@ func TestIntersectionTypeMigrationWithTypeConverters(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 

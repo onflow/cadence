@@ -1849,7 +1849,7 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 		},
 	)
 
-	errs := RequireCheckerErrors(t, err, 5)
+	errs := RequireCheckerErrors(t, err, 7)
 
 	require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	assert.Equal(t,
@@ -1867,11 +1867,15 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 
 	require.IsType(t, &sema.ResourceCapturingError{}, errs[3])
 
-	require.IsType(t, &sema.AssignmentToConstantError{}, errs[4])
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[4])
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[5])
 	assert.Equal(t,
 		"y",
-		errs[4].(*sema.AssignmentToConstantError).Name,
+		errs[5].(*sema.AssignmentToConstantError).Name,
 	)
+
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[6])
 }
 
 func TestCheckContractNestedDeclarationPrivateAccess(t *testing.T) {

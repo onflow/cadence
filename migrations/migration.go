@@ -51,15 +51,18 @@ type DomainMigration interface {
 type StorageMigration struct {
 	storage     *runtime.Storage
 	interpreter *interpreter.Interpreter
+	name        string
 }
 
 func NewStorageMigration(
 	interpreter *interpreter.Interpreter,
 	storage *runtime.Storage,
+	name string,
 ) *StorageMigration {
 	return &StorageMigration{
 		storage:     storage,
 		interpreter: interpreter,
+		name:        name,
 	}
 }
 
@@ -173,7 +176,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			err = StorageMigrationError{
 				StorageKey:    storageKey,
 				StorageMapKey: storageMapKey,
-				Migration:     "StorageMigration",
+				Migration:     m.name,
 				Err:           err,
 				Stack:         debug.Stack(),
 			}
@@ -382,6 +385,13 @@ func (m *StorageMigration) MigrateNestedValue(
 				interpreter.StoredValue(inter, existingValueStorable, m.storage).
 					DeepRemove(inter)
 				inter.RemoveReferencedSlab(existingValueStorable)
+			}
+
+			if dictionary.ContainsKey(inter, emptyLocationRange, keyToSet) {
+				panic(errors.NewUnexpectedError(
+					"dictionary contains new key after removal of old key (conflict): %s",
+					keyToSet,
+				))
 			}
 
 			dictionary.InsertWithoutTransfer(

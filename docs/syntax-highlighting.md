@@ -1,7 +1,7 @@
 # Syntax Highlighting Cadence
 
 There are currently several options to highlight Cadence code.
-Currently those options are integrated into the projects they are used in, but they could be extracted and made generally useable (please let us know e.g. by creating a feature request issue).
+Currently, those options are integrated into the projects they are used in, but they could be extracted and made generally useable (please let us know e.g. by creating a feature request issue).
 
 ## HTML output
 
