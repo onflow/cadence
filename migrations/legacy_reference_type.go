@@ -94,3 +94,10 @@ func (t *LegacyReferenceType) Encode(e *cbor.StreamEncoder) error {
 	// Encode type at array index encodedReferenceStaticTypeTypeFieldKey
 	return t.ReferencedType.Encode(e)
 }
+
+func (t *LegacyReferenceType) Equal(other interpreter.StaticType) bool {
+	if otherLegacy, ok := other.(*LegacyReferenceType); ok {
+		other = otherLegacy.ReferenceStaticType
+	}
+	return t.ReferenceStaticType.Equal(other)
+}

@@ -64,3 +64,10 @@ func (t LegacyPrimitiveStaticType) ID() common.TypeID {
 		panic(errors.NewUnexpectedError("unexpected non-legacy primitive static type: %s", primitiveStaticType))
 	}
 }
+
+func (t LegacyPrimitiveStaticType) Equal(other interpreter.StaticType) bool {
+	if otherLegacy, ok := other.(LegacyPrimitiveStaticType); ok {
+		other = otherLegacy.PrimitiveStaticType
+	}
+	return t.PrimitiveStaticType.Equal(other)
+}
