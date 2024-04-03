@@ -3146,3 +3146,213 @@ func TestInterpretInvalidatingAttachmentLoopedReference(t *testing.T) {
 	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
+
+func TestInterpretResourceReferenceInvalidation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple use after invalidation", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			access(all) resource R {
+				access(all) fun zombieFunction() {}
+			}
+			access(all) fun main() {
+				var r <- create R()
+				var rArray: @[R] <- []
+				var refArray: [&R] = []
+				refArray.append(&r as &R)
+				rArray.append(<- r)
+				refArray[0].zombieFunction()
+				destroy rArray
+			}
+		`,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("incomplete optional indirection", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			access(all) resource R {
+				access(all) fun zombieFunction() {}
+			}
+			access(all) fun main() {
+				var refArray: [&AnyResource?] = []
+				var anyresarray: @[AnyResource] <- []
+				var r <- create R()
+				var opt1: @R <- r
+
+				// Take a reference
+				refArray.append(&opt1 as &R)
+
+				// Transfer the value
+				anyresarray.append(<- opt1)
+				var ref = (refArray[0]!) as! (&R)
+
+				ref.zombieFunction()
+				destroy anyresarray
+			}
+		`,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("optional indirection", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			access(all) resource R {
+				access(all) fun zombieFunction() {}
+			}
+			access(all) fun main() {
+				var refArray: [&AnyResource?] = []
+				var anyresarray: @[AnyResource] <- []
+				var r <- create R()
+				var opt1: @R? <- r
+
+				// Take a reference
+				refArray.append(&opt1 as &R?)
+
+				// Transfer the value
+				anyresarray.append(<- opt1)
+
+				var ref = (refArray[0]!) as! (&R)
+				ref.zombieFunction()
+				destroy anyresarray
+			}
+		`,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("invalid reference logged in array", func(t *testing.T) {
+		t.Parallel()
+
+		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+			access(all) resource R {}
+
+			access(all) fun main() {
+				var refArray: [&R] = []
+
+				var r <- create R()
+
+				refArray.append(&r as &R)
+
+				// destroy the value
+				destroy r
+
+				// Use the reference
+				log(refArray)
+			}
+		`,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("invalid optional reference logged in array", func(t *testing.T) {
+		t.Parallel()
+
+		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+			access(all) resource R {}
+
+			access(all) fun main() {
+				var refArray: [&AnyResource] = []
+				var anyresarray: @[AnyResource] <- []
+				var r <- create R()
+				var opt1: @R? <- r
+
+				// Cast and take a reference
+				var opt1disguised: @AnyResource <- opt1
+				refArray.append(&(opt1disguised) as &AnyResource)
+
+				// Transfer the value
+				anyresarray.append(<- opt1disguised)
+
+				// Use the reference
+				log(refArray)
+				destroy anyresarray
+			}
+		`,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("invalid reference logged in dict", func(t *testing.T) {
+		t.Parallel()
+
+		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+			access(all) resource R {}
+
+			access(all) fun main() {
+				var r <- create R()
+
+				var refDict: {String: &R} = {"": &r as &R}
+
+				// destroy the value
+				destroy r
+
+				// Use the reference
+				log(refDict)
+			}
+		`,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("invalid reference logged in composite", func(t *testing.T) {
+		t.Parallel()
+
+		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+			access(all) struct S {
+				access(all) let foo: &R
+				init(_ ref: &R) {
+					self.foo = ref
+				}
+			}
+
+			access(all) resource R {}
+
+			access(all) fun main() {
+				var r <- create R()
+
+				var s = S(&r as &R)
+
+				// destroy the value
+				destroy r
+
+				// Use the reference
+				log(s)
+			}
+		`,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+}

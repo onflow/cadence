@@ -1347,7 +1347,7 @@ func TestAccountTypeRehash(t *testing.T) {
 					existingKeys = append(existingKeys, key)
 					// continue iteration
 					return true
-				})
+				}, interpreter.EmptyLocationRange)
 
 				require.Len(t, existingKeys, 1)
 

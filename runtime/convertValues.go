@@ -593,7 +593,7 @@ func exportDictionaryValue(
 				)
 
 				return true
-			})
+			}, locationRange)
 
 			if err != nil {
 				return nil, err

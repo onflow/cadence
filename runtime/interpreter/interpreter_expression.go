@@ -382,6 +382,10 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 }
 
 func (interpreter *Interpreter) checkInvalidatedResourceOrResourceReference(value Value, hasPosition ast.HasPosition) {
+	if interpreter == nil {
+		return
+	}
+
 	// Unwrap SomeValue, to access references wrapped inside optionals.
 	someValue, isSomeValue := value.(*SomeValue)
 	for isSomeValue && someValue.value != nil {
