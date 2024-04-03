@@ -3398,27 +3398,25 @@ type TypeParameter struct {
 	Optional  bool
 }
 
-func (p TypeParameter) string(typeFormatter func(Type) string) string {
+func (p TypeParameter) String() string {
 	var builder strings.Builder
 	builder.WriteString(p.Name)
 	if p.TypeBound != nil {
-		builder.WriteString(": ")
-		// TODO:
-		builder.WriteString(typeFormatter(p.TypeBound.(SubtypeTypeBound).Type))
+		// so as not to be confusing, existing subtype bounds will continue to be printed the normal way,
+		// and we only use special printing for the cases where there are more general bounds
+		if subtypeBound, isSubtypeBound := p.TypeBound.(SubtypeTypeBound); isSubtypeBound {
+			builder.WriteString(": ")
+			builder.WriteString(subtypeBound.Type.String())
+		} else {
+			builder.WriteString(" ")
+			builder.WriteString(p.TypeBound.String())
+		}
 	}
 	return builder.String()
 }
 
-func (p TypeParameter) String() string {
-	return p.string(func(t Type) string {
-		return t.String()
-	})
-}
-
 func (p TypeParameter) QualifiedString() string {
-	return p.string(func(t Type) string {
-		return t.QualifiedString()
-	})
+	return p.String()
 }
 
 func (p TypeParameter) Equal(other *TypeParameter) bool {

@@ -130,7 +130,7 @@ func (b SubtypeTypeBound) Not() TypeBound {
 }
 
 func (b SubtypeTypeBound) String() string {
-	return fmt.Sprintf("<=: %s", b.Type.String())
+	return fmt.Sprintf("<=: %s", b.Type.QualifiedString())
 }
 
 func (b SubtypeTypeBound) withPrettyString(_ string) TypeBound {
@@ -213,7 +213,7 @@ func (b EqualTypeBound) Not() TypeBound {
 }
 
 func (b EqualTypeBound) String() string {
-	return fmt.Sprintf("= %s", b.Type.String())
+	return fmt.Sprintf("= %s", b.Type.QualifiedString())
 }
 
 func (b EqualTypeBound) withPrettyString(_ string) TypeBound {
