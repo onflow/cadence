@@ -127,8 +127,10 @@ All storage paths of this account.
 const Account_StorageTypeSaveFunctionName = "save"
 
 var Account_StorageTypeSaveFunctionTypeParameterT = &TypeParameter{
-	Name:      "T",
-	TypeBound: SubtypeTypeBound{Type: StorableType},
+	Name: "T",
+	TypeBound: SubtypeTypeBound{
+		Type: StorableType,
+	},
 }
 
 var Account_StorageTypeSaveFunctionType = &FunctionType{
@@ -193,8 +195,10 @@ The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is al
 const Account_StorageTypeLoadFunctionName = "load"
 
 var Account_StorageTypeLoadFunctionTypeParameterT = &TypeParameter{
-	Name:      "T",
-	TypeBound: SubtypeTypeBound{Type: StorableType},
+	Name: "T",
+	TypeBound: SubtypeTypeBound{
+		Type: StorableType,
+	},
 }
 
 var Account_StorageTypeLoadFunctionType = &FunctionType{
@@ -236,8 +240,10 @@ The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is al
 const Account_StorageTypeCopyFunctionName = "copy"
 
 var Account_StorageTypeCopyFunctionTypeParameterT = &TypeParameter{
-	Name:      "T",
-	TypeBound: SubtypeTypeBound{Type: AnyStructType},
+	Name: "T",
+	TypeBound: SubtypeTypeBound{
+		Type: AnyStructType,
+	},
 }
 
 var Account_StorageTypeCopyFunctionType = &FunctionType{
@@ -279,8 +285,10 @@ The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is al
 const Account_StorageTypeCheckFunctionName = "check"
 
 var Account_StorageTypeCheckFunctionTypeParameterT = &TypeParameter{
-	Name:      "T",
-	TypeBound: SubtypeTypeBound{Type: AnyType},
+	Name: "T",
+	TypeBound: SubtypeTypeBound{
+		Type: AnyType,
+	},
 }
 
 var Account_StorageTypeCheckFunctionType = &FunctionType{
