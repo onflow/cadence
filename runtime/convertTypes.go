@@ -662,7 +662,7 @@ func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType
 		primitiveStaticType := interpreter.PrimitiveStaticTypeFromTypeID(typeID)
 
 		if primitiveStaticType != interpreter.PrimitiveStaticTypeUnknown &&
-			!primitiveStaticType.IsDeprecated() {
+			!primitiveStaticType.IsDeprecated() { //nolint:staticcheck
 
 			return primitiveStaticType
 		}

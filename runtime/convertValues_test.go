@@ -1161,7 +1161,7 @@ func TestRuntimeImportRuntimeType(t *testing.T) {
 		qualifiedIdentifier := string(typeID)
 
 		var expectedForComposite interpreter.StaticType
-		if ty.IsDeprecated() {
+		if ty.IsDeprecated() { //nolint:staticcheck
 			expectedForComposite = interpreter.NewCompositeStaticType(
 				nil,
 				nil,
