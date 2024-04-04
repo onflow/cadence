@@ -2061,7 +2061,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 			array := arrayValue.array
 
-			iterator, err := array.Iterator()
+			iterator, err := array.ReadOnlyIterator()
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
@@ -2102,10 +2102,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 			dictionary := dictValue.dictionary
 
-			valueComparator := newValueComparator(interpreter, locationRange)
-			hashInputProvider := newHashInputProvider(interpreter, locationRange)
-
-			iterator, err := dictionary.Iterator(valueComparator, hashInputProvider)
+			iterator, err := dictionary.ReadOnlyIterator()
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}

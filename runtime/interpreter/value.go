@@ -1973,12 +1973,14 @@ func (v *ArrayValue) Concat(interpreter *Interpreter, locationRange LocationRang
 
 	first := true
 
-	firstIterator, err := v.array.Iterator()
+	// Use ReadOnlyIterator here because new ArrayValue is created with elements copied (not removed) from original value.
+	firstIterator, err := v.array.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	secondIterator, err := other.array.Iterator()
+	// Use ReadOnlyIterator here because new ArrayValue is created with elements copied (not removed) from original value.
+	secondIterator, err := other.array.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -3075,7 +3077,8 @@ func (v *ArrayValue) Slice(
 		})
 	}
 
-	iterator, err := v.array.RangeIterator(uint64(fromIndex), uint64(toIndex))
+	// Use ReadOnlyIterator here because new ArrayValue is created from elements copied (not removed) from original ArrayValue.
+	iterator, err := v.array.ReadOnlyRangeIterator(uint64(fromIndex), uint64(toIndex))
 	if err != nil {
 
 		var sliceOutOfBoundsError *atree.SliceOutOfBoundsError
@@ -3192,6 +3195,7 @@ func (v *ArrayValue) Filter(
 		return invocation
 	}
 
+	// TODO: Use ReadOnlyIterator here if procedure doesn't change array elements.
 	iterator, err := v.array.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -3293,6 +3297,7 @@ func (v *ArrayValue) Map(
 		panic(errors.NewUnreachableError())
 	}
 
+	// TODO: Use ReadOnlyIterator here if procedure doesn't change map values.
 	iterator, err := v.array.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
@@ -3357,7 +3362,8 @@ func (v *ArrayValue) ToVariableSized(
 		panic(errors.NewUnreachableError())
 	}
 
-	iterator, err := v.array.Iterator()
+	// Use ReadOnlyIterator here because ArrayValue elements are copied (not removed) from original ArrayValue.
+	iterator, err := v.array.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -3417,7 +3423,8 @@ func (v *ArrayValue) ToConstantSized(
 		panic(errors.NewUnreachableError())
 	}
 
-	iterator, err := v.array.Iterator()
+	// Use ReadOnlyIterator here because ArrayValue elements are copied (not removed) from original ArrayValue.
+	iterator, err := v.array.ReadOnlyIterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -17936,6 +17943,9 @@ func (v *CompositeValue) ForEachFieldName(
 	f func(fieldName string) (resume bool),
 ) {
 	iterate := func(fn atree.MapElementIterationFunc) error {
+		// Use NonReadOnlyIterator because we are not sure if it's guaranteed that
+		// all uses of CompositeValue.ForEachFieldName are only read-only.
+		// TODO: determine if all uses of CompositeValue.ForEachFieldName are read-only.
 		return v.dictionary.IterateKeys(
 			StringAtreeValueComparator,
 			StringAtreeValueHashInput,
@@ -18636,6 +18646,9 @@ func (v *DictionaryValue) IterateKeys(
 	valueComparator := newValueComparator(interpreter, locationRange)
 	hashInputProvider := newHashInputProvider(interpreter, locationRange)
 	iterate := func(fn atree.MapElementIterationFunc) error {
+		// Use NonReadOnlyIterator because we are not sure if f in
+		// all uses of DictionaryValue.IterateKeys are always read-only.
+		// TODO: determine if all uses of f are read-only.
 		return v.dictionary.IterateKeys(
 			valueComparator,
 			hashInputProvider,
@@ -19110,10 +19123,8 @@ func (v *DictionaryValue) GetMember(
 
 	case "values":
 
-		valueComparator := newValueComparator(interpreter, locationRange)
-		hashInputProvider := newHashInputProvider(interpreter, locationRange)
-
-		iterator, err := v.dictionary.Iterator(valueComparator, hashInputProvider)
+		// Use ReadOnlyIterator here because new ArrayValue is created with copied elements (not removed) from original.
+		iterator, err := v.dictionary.ReadOnlyIterator()
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
