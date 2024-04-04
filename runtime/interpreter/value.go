@@ -17943,7 +17943,12 @@ func (v *CompositeValue) ForEachFieldName(
 	f func(fieldName string) (resume bool),
 ) {
 	iterate := func(fn atree.MapElementIterationFunc) error {
-		return v.dictionary.IterateReadOnlyKeys(
+		// Use NonReadOnlyIterator because we are not sure if it's guaranteed that
+		// all uses of CompositeValue.ForEachFieldName are only read-only.
+		// TODO: determine if all uses of CompositeValue.ForEachFieldName are read-only.
+		return v.dictionary.IterateKeys(
+			StringAtreeValueComparator,
+			StringAtreeValueHashInput,
 			fn,
 		)
 	}
@@ -18638,8 +18643,15 @@ func (v *DictionaryValue) IterateKeys(
 	locationRange LocationRange,
 	f func(key Value) (resume bool),
 ) {
+	valueComparator := newValueComparator(interpreter, locationRange)
+	hashInputProvider := newHashInputProvider(interpreter, locationRange)
 	iterate := func(fn atree.MapElementIterationFunc) error {
-		return v.dictionary.IterateReadOnlyKeys(
+		// Use NonReadOnlyIterator because we are not sure if f in
+		// all uses of DictionaryValue.IterateKeys are always read-only.
+		// TODO: determine if all uses of f are read-only.
+		return v.dictionary.IterateKeys(
+			valueComparator,
+			hashInputProvider,
 			fn,
 		)
 	}
