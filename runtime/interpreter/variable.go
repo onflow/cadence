@@ -33,7 +33,11 @@ func (v *Variable) GetValue() Value {
 	return v.value
 }
 
-func (v *Variable) SetValue(value Value) {
+func (v *Variable) SetValue(interpreter *Interpreter, locationRange LocationRange, value Value) {
+	existingValue := v.value
+	if existingValue != nil {
+		interpreter.checkResourceLoss(existingValue, locationRange)
+	}
 	v.getter = nil
 	v.value = value
 }
