@@ -19856,19 +19856,45 @@ func (v *DictionaryValue) DeepRemove(interpreter *Interpreter) {
 
 	storage := v.dictionary.Storage
 
-	err := v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
+	(func() {
 
-		key := StoredValue(interpreter, keyStorable, storage)
-		key.DeepRemove(interpreter)
-		interpreter.RemoveReferencedSlab(keyStorable)
+		// Ignore slab not found errors when deep removing
+		defer func() {
+			r := recover()
+			if r == nil {
+				return
+			}
 
-		value := StoredValue(interpreter, valueStorable, storage)
-		value.DeepRemove(interpreter)
-		interpreter.RemoveReferencedSlab(valueStorable)
-	})
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
+			err, ok := r.(error)
+			if !ok {
+				panic(r)
+			}
+
+			var slabNotFoundError *atree.SlabNotFoundError
+			if !goerrors.As(err, &slabNotFoundError) {
+				panic(err)
+			}
+
+			// ignore the slab not found error
+
+			// TODO: remove all slabs of the whole dictionary/ordered map
+		}()
+
+		err := v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
+
+			key := StoredValue(interpreter, keyStorable, storage)
+			key.DeepRemove(interpreter)
+			interpreter.RemoveReferencedSlab(keyStorable)
+
+			value := StoredValue(interpreter, valueStorable, storage)
+			value.DeepRemove(interpreter)
+			interpreter.RemoveReferencedSlab(valueStorable)
+		})
+		if err != nil {
+			panic(errors.NewExternalError(err))
+		}
+	})()
+
 	interpreter.maybeValidateAtreeValue(v.dictionary)
 }
 

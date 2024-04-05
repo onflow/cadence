@@ -20,6 +20,9 @@ package migrations
 
 import (
 	"bytes"
+	_ "embed"
+	"encoding/csv"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"testing"
@@ -2749,4 +2752,141 @@ func TestDictionaryKeyConflict(t *testing.T) {
 		err = storage.CheckHealth()
 		require.ErrorContains(t, err, "slabs not referenced from account Storage: [0x1.3]")
 	})()
+}
+
+//go:embed testdata/missing-slabs-payloads.csv
+var missingSlabsPayloadsData []byte
+
+// '$' + 8 byte index
+const slabKeyLength = 9
+
+func isSlabStorageKey(key []byte) bool {
+	return len(key) == slabKeyLength && key[0] == '$'
+}
+
+// testNoopMigration
+
+type testNoopMigration struct{}
+
+var _ ValueMigration = testNoopMigration{}
+
+func (testNoopMigration) Name() string {
+	return "testNoopMigration"
+}
+
+func (m testNoopMigration) Migrate(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	_ interpreter.Value,
+	_ *interpreter.Interpreter,
+) (interpreter.Value, error) {
+	return nil, nil
+}
+
+func (testNoopMigration) CanSkip(_ interpreter.StaticType) bool {
+	return false
+}
+
+func (testNoopMigration) Domains() map[string]struct{} {
+	return nil
+}
+
+func TestMissingSlabsInEnumKeyedDictionary(t *testing.T) {
+
+	// Read CSV file with test data
+
+	reader := csv.NewReader(bytes.NewReader(missingSlabsPayloadsData))
+
+	// account, key, value
+	reader.FieldsPerRecord = 3
+
+	records, err := reader.ReadAll()
+	require.NoError(t, err)
+
+	// Load data into ledger. Skip header
+
+	ledger := NewTestLedger(nil, nil)
+
+	for _, record := range records[1:] {
+		account, err := hex.DecodeString(record[0])
+		require.NoError(t, err)
+
+		key, err := hex.DecodeString(record[1])
+		require.NoError(t, err)
+
+		value, err := hex.DecodeString(record[2])
+		require.NoError(t, err)
+
+		err = ledger.SetValue(account, key, value)
+		require.NoError(t, err)
+	}
+
+	storage := runtime.NewStorage(ledger, nil)
+
+	// Check health.
+	// Retrieve all slabs before migration
+
+	err = ledger.ForEach(func(owner, key, value []byte) error {
+
+		if !isSlabStorageKey(key) {
+			return nil
+		}
+
+		// Convert the owner/key to a storage ID.
+
+		storageID := atree.StorageID{
+			Address: atree.Address(owner),
+		}
+		copy(storageID.Index[:], key[1:])
+
+		// Retrieve the slab.
+		_, _, err = storage.Retrieve(storageID)
+		require.NoError(t, err)
+
+		return nil
+	})
+	require.NoError(t, err)
+
+	err = storage.CheckHealth()
+	require.Error(t, err)
+
+	require.ErrorContains(t, err, "slab (0x0.49) not found: slab not found during slab iteration")
+
+	// Migrate
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage:                          storage,
+			DangerouslySkipResourceLossCheck: true,
+		},
+	)
+	require.NoError(t, err)
+
+	reporter := newTestReporter()
+
+	account, err := common.HexToAddress("5d63c34d7f05e5a4")
+	require.NoError(t, err)
+
+	migration := NewStorageMigration(inter, storage, "test")
+	migration.MigrateAccount(
+		account,
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testNoopMigration{},
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	require.Empty(t, reporter.errors)
+
+	// Re-run health check. This time it should pass.
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 }

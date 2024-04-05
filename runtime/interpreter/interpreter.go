@@ -5538,6 +5538,10 @@ func (interpreter *Interpreter) withResourceDestruction(
 }
 
 func (interpreter *Interpreter) checkResourceLoss(value Value, locationRange LocationRange) {
+	if interpreter.SharedState.Config.DangerouslySkipResourceLossCheck {
+		return
+	}
+
 	if !value.IsResourceKinded(interpreter) {
 		return
 	}

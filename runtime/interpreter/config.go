@@ -72,4 +72,8 @@ type Config struct {
 	CapabilityBorrowHandler CapabilityBorrowHandlerFunc
 	// LegacyContractUpgradeEnabled specifies whether to fall back to the old parser when attempting a contract upgrade
 	LegacyContractUpgradeEnabled bool
+	// DangerouslySkipResourceLossCheck specifies whether to skip the resource loss check.
+	// DO NOT USE THIS UNLESS YOU KNOW WHAT YOU ARE DOING!
+	// For example, this might be needed in a state migration
+	DangerouslySkipResourceLossCheck bool
 }

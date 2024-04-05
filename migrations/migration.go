@@ -19,8 +19,12 @@
 package migrations
 
 import (
+	goerrors "errors"
 	"fmt"
 	"runtime/debug"
+	"strings"
+
+	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
@@ -314,8 +318,33 @@ func (m *StorageMigration) MigrateNestedValue(
 
 		iterator := dictionary.Iterator()
 
+		var slabNotFoundErr *atree.SlabNotFoundError
+
 		for {
-			key, value := iterator.Next(nil)
+			var key, value interpreter.Value
+
+			// Handles panics from the iterator.Next() call,
+			// for example, if the dictionary refers to a non-existent slab.
+			(func() {
+				defer func() {
+					r := recover()
+					if r == nil {
+						return
+					}
+
+					err, ok := r.(error)
+					if !ok {
+						panic(r)
+					}
+
+					if !goerrors.As(err, &slabNotFoundErr) {
+						panic(err)
+					}
+
+					return
+				}()
+				key, value = iterator.Next(nil)
+			})()
 			if key == nil {
 				break
 			}
@@ -329,77 +358,112 @@ func (m *StorageMigration) MigrateNestedValue(
 			)
 		}
 
-		for _, existingKeyAndValue := range existingKeysAndValues {
-			existingKey := existingKeyAndValue.key
-			existingValue := existingKeyAndValue.value
+		migrateChildren := true
 
-			newKey := m.MigrateNestedValue(
-				storageKey,
-				storageMapKey,
-				existingKey,
-				valueMigrations,
-				reporter,
-			)
+		if slabNotFoundErr != nil {
+			// If a slab is not found, this might be due to the bug fixed in
+			// https://github.com/onflow/cadence/pull/1565:
+			// when a dictionary was keyed by enums, the keys were not transferred to the account properly,
+			// leaving references to temporary slabs (account 0x0) in the dictionary.
+			//
+			// In this case, do not migrate the children, as the dictionary is in an inconsistent state.
+			// Instead, replace the dictionary with an empty one.
 
-			newValue := m.MigrateNestedValue(
-				storageKey,
-				storageMapKey,
-				existingValue,
-				valueMigrations,
-				reporter,
-			)
+			dictionaryStaticType := dictionary.Type
 
-			if newKey == nil && newValue == nil {
-				continue
+			if !IsSlabNotFoundInEnumKeyedDictionary(slabNotFoundErr, dictionaryStaticType) {
+				panic(slabNotFoundErr)
 			}
 
-			// We only reach here at least one of key or value has been migrated.
-			var keyToSet, valueToSet interpreter.Value
+			// Create a new dictionary value with the same type and owner
 
-			if newKey == nil {
-				keyToSet = existingKey
-			} else {
-				keyToSet = newKey
-			}
-
-			existingKey = legacyKey(existingKey)
-			existingKeyStorable, existingValueStorable := dictionary.RemoveWithoutTransfer(
+			migratedValue = interpreter.NewDictionaryValueWithAddress(
 				inter,
 				emptyLocationRange,
-				existingKey,
+				dictionaryStaticType,
+				dictionary.GetOwner(),
 			)
 
-			if existingKeyStorable == nil {
-				panic(errors.NewUnexpectedError(
-					"failed to remove old value for migrated key: %s",
+			// chain the migrations
+			value = migratedValue
+
+			migrateChildren = false
+		}
+
+		if migrateChildren {
+
+			for _, existingKeyAndValue := range existingKeysAndValues {
+				existingKey := existingKeyAndValue.key
+				existingValue := existingKeyAndValue.value
+
+				newKey := m.MigrateNestedValue(
+					storageKey,
+					storageMapKey,
 					existingKey,
-				))
-			}
+					valueMigrations,
+					reporter,
+				)
 
-			if newValue == nil {
-				valueToSet = existingValue
-			} else {
-				// Value was migrated
-				valueToSet = newValue
+				newValue := m.MigrateNestedValue(
+					storageKey,
+					storageMapKey,
+					existingValue,
+					valueMigrations,
+					reporter,
+				)
 
-				interpreter.StoredValue(inter, existingValueStorable, m.storage).
-					DeepRemove(inter)
-				inter.RemoveReferencedSlab(existingValueStorable)
-			}
+				if newKey == nil && newValue == nil {
+					continue
+				}
 
-			if dictionary.ContainsKey(inter, emptyLocationRange, keyToSet) {
-				panic(errors.NewUnexpectedError(
-					"dictionary contains new key after removal of old key (conflict): %s",
+				// We only reach here at least one of key or value has been migrated.
+				var keyToSet, valueToSet interpreter.Value
+
+				if newKey == nil {
+					keyToSet = existingKey
+				} else {
+					keyToSet = newKey
+				}
+
+				existingKey = legacyKey(existingKey)
+				existingKeyStorable, existingValueStorable := dictionary.RemoveWithoutTransfer(
+					inter,
+					emptyLocationRange,
+					existingKey,
+				)
+
+				if existingKeyStorable == nil {
+					panic(errors.NewUnexpectedError(
+						"failed to remove old value for migrated key: %s",
+						existingKey,
+					))
+				}
+
+				if newValue == nil {
+					valueToSet = existingValue
+				} else {
+					// Value was migrated
+					valueToSet = newValue
+
+					interpreter.StoredValue(inter, existingValueStorable, m.storage).
+						DeepRemove(inter)
+					inter.RemoveReferencedSlab(existingValueStorable)
+				}
+
+				if dictionary.ContainsKey(inter, emptyLocationRange, keyToSet) {
+					panic(errors.NewUnexpectedError(
+						"dictionary contains new key after removal of old key (conflict): %s",
+						keyToSet,
+					))
+				}
+
+				dictionary.InsertWithoutTransfer(
+					inter,
+					emptyLocationRange,
 					keyToSet,
-				))
+					valueToSet,
+				)
 			}
-
-			dictionary.InsertWithoutTransfer(
-				inter,
-				emptyLocationRange,
-				keyToSet,
-				valueToSet,
-			)
 		}
 
 	case *interpreter.PublishedValue:
@@ -648,4 +712,21 @@ func legacyType(staticType interpreter.StaticType) interpreter.StaticType {
 	}
 
 	return nil
+}
+
+func IsSlabNotFoundInEnumKeyedDictionary(
+	err *atree.SlabNotFoundError,
+	dictionaryType *interpreter.DictionaryStaticType,
+) bool {
+	// TODO: export atree.SlabNotFoundError.storageID and use it here
+	if !strings.Contains(err.Error(), "0x0.") {
+		return false
+	}
+
+	if dictionaryType == nil || dictionaryType.KeyType == nil {
+		return false
+	}
+
+	_, ok := dictionaryType.KeyType.(*interpreter.CompositeStaticType)
+	return ok
 }
