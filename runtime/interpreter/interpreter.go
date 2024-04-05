@@ -1388,11 +1388,8 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 					// NOTE: set the variable value immediately, as the contract value
 					// needs to be available for nested declarations
 
-					variable.SetValue(
-						interpreter,
-						locationRange,
-						value,
-					)
+					variable.getter = nil
+					variable.value = value
 
 					// Also, immediately set the nested values,
 					// as the initializer of the contract may use nested declarations
@@ -1433,7 +1430,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 		variable.SetValue(
 			declarationInterpreter,
 			LocationRange{
-				Location: location,
+				Location:    location,
 				HasPosition: declaration,
 			},
 			constructor,

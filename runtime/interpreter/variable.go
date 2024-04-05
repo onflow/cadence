@@ -34,7 +34,7 @@ func (v *Variable) GetValue() Value {
 }
 
 func (v *Variable) SetValue(interpreter *Interpreter, locationRange LocationRange, value Value) {
-	existingValue := v.value
+	existingValue := v.GetValue()
 	if existingValue != nil {
 		interpreter.checkResourceLoss(existingValue, locationRange)
 	}
