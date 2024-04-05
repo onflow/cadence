@@ -7342,13 +7342,16 @@ func (t *AddressType) initializeMemberResolvers() {
 	})
 }
 
-func IsPrimitiveOrNonResourceContainer(referencedType Type) bool {
+func IsPrimitiveOrContainerOfPrimitive(referencedType Type) bool {
 	switch ty := referencedType.(type) {
-	case ArrayType:
-		return !ty.IsResourceType()
+	case *VariableSizedType:
+		return IsPrimitiveOrContainerOfPrimitive(ty.Type)
+
+	case *ConstantSizedType:
+		return IsPrimitiveOrContainerOfPrimitive(ty.Type)
 
 	case *DictionaryType:
-		return !ty.IsResourceType()
+		return IsPrimitiveOrContainerOfPrimitive(ty.ValueType)
 
 	default:
 		return ty.IsPrimitiveType()
