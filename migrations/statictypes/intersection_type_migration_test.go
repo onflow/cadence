@@ -398,12 +398,10 @@ func TestIntersectionTypeMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
-
+	migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
 	reporter := newTestReporter()
 
-	migration.MigrateAccount(
-		testAddress,
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			NewStaticTypeMigration(),
@@ -568,12 +566,10 @@ func TestIntersectionTypeRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
-		migration := migrations.NewStorageMigration(inter, storage, "test")
-
+		migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
 		reporter := newTestReporter()
 
-		migration.MigrateAccount(
-			testAddress,
+		migration.Migrate(
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				NewStaticTypeMigration(),
@@ -738,12 +734,10 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			storage, inter := newStorageAndInterpreter(t, ledger)
 
-			migration := migrations.NewStorageMigration(inter, storage, "test")
-
+			migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
 			reporter := newTestReporter()
 
-			migration.MigrateAccount(
-				testAddress,
+			migration.Migrate(
 				migration.NewValueMigrationsPathMigrator(
 					reporter,
 					NewStaticTypeMigration(),
@@ -883,12 +877,10 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			storage, inter := newStorageAndInterpreter(t, ledger)
 
-			migration := migrations.NewStorageMigration(inter, storage, "test")
-
+			migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
 			reporter := newTestReporter()
 
-			migration.MigrateAccount(
-				testAddress,
+			migration.Migrate(
 				migration.NewValueMigrationsPathMigrator(
 					reporter,
 					NewStaticTypeMigration(),
@@ -1036,8 +1028,7 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage, "test")
-
+		migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
 		reporter := newTestReporter()
 
 		staticTypeMigration := NewStaticTypeMigration()
@@ -1062,8 +1053,7 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 			)
 		}
 
-		migration.MigrateAccount(
-			testAddress,
+		migration.Migrate(
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				staticTypeMigration,
@@ -1431,12 +1421,10 @@ func TestIntersectionTypeMigrationWithTypeConverters(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage, "test")
-
+		migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
 		reporter := newTestReporter()
 
-		migration.MigrateAccount(
-			testAddress,
+		migration.Migrate(
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				staticTypeMigration,

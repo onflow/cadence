@@ -49,20 +49,25 @@ type DomainMigration interface {
 }
 
 type StorageMigration struct {
-	storage     *runtime.Storage
-	interpreter *interpreter.Interpreter
-	name        string
+	storage                *runtime.Storage
+	interpreter            *interpreter.Interpreter
+	name                   string
+	address                common.Address
+	dictionaryKeyConflicts int
 }
 
 func NewStorageMigration(
 	interpreter *interpreter.Interpreter,
 	storage *runtime.Storage,
 	name string,
+	address common.Address,
 ) *StorageMigration {
 	return &StorageMigration{
-		storage:     storage,
-		interpreter: interpreter,
-		name:        name,
+		storage:                storage,
+		interpreter:            interpreter,
+		name:                   name,
+		address:                address,
+		dictionaryKeyConflicts: 0,
 	}
 }
 
@@ -70,11 +75,8 @@ func (m *StorageMigration) Commit() error {
 	return m.storage.Commit(m.interpreter, false)
 }
 
-func (m *StorageMigration) MigrateAccount(
-	address common.Address,
-	migrator StorageMapKeyMigrator,
-) {
-	accountStorage := NewAccountStorage(m.storage, address)
+func (m *StorageMigration) Migrate(migrator StorageMapKeyMigrator) {
+	accountStorage := NewAccountStorage(m.storage, m.address)
 
 	for _, domain := range common.AllPathDomains {
 		accountStorage.MigrateStringKeys(
@@ -362,13 +364,14 @@ func (m *StorageMigration) MigrateNestedValue(
 				keyToSet = newKey
 			}
 
+			// Remove the old key-value pair
+
 			existingKey = legacyKey(existingKey)
 			existingKeyStorable, existingValueStorable := dictionary.RemoveWithoutTransfer(
 				inter,
 				emptyLocationRange,
 				existingKey,
 			)
-
 			if existingKeyStorable == nil {
 				panic(errors.NewUnexpectedError(
 					"failed to remove old value for migrated key: %s",
@@ -387,12 +390,47 @@ func (m *StorageMigration) MigrateNestedValue(
 				inter.RemoveReferencedSlab(existingValueStorable)
 			}
 
-			if dictionary.ContainsKey(inter, emptyLocationRange, keyToSet) {
-				panic(errors.NewUnexpectedError(
-					"dictionary contains new key after removal of old key (conflict): %s",
+			// Before inserting the new key-value pair, check if the key already exists.
+			// If it still exists, even after we removed the old key,
+			// then there's a conflict, before the migration, some value was already stored with the new key.
+			// Move the key-value pair into a new dictionary under a new unique storage path, and report it
+
+			existingKeyStorable, _ = dictionary.RemoveWithoutTransfer(
+				inter,
+				emptyLocationRange,
+				keyToSet,
+			)
+			if existingKeyStorable != nil {
+				owner := dictionary.GetOwner()
+
+				storageMap := m.storage.GetStorageMap(owner, common.PathDomainStorage.Identifier(), true)
+				conflictDictionary := interpreter.NewDictionaryValueWithAddress(
+					inter,
+					emptyLocationRange,
+					dictionary.Type,
+					owner,
+				)
+				conflictDictionary.InsertWithoutTransfer(
+					inter,
+					emptyLocationRange,
 					keyToSet,
-				))
+					// NOTE: move the *existing* value to the conflict dictionary,
+					// NOT the value that was just removed – the removed value is the value to set
+					existingValue,
+				)
+
+				conflictStorageMapKey := m.nextDictionaryKeyConflictStorageMapKey()
+
+				storageMap.SetValue(
+					inter,
+					conflictStorageMapKey,
+					conflictDictionary,
+				)
+
+				reporter.DictionaryKeyConflict(conflictStorageMapKey)
 			}
+
+			// Finally, insert the new key-value pair
 
 			dictionary.InsertWithoutTransfer(
 				inter,
@@ -486,6 +524,18 @@ func (m *StorageMigration) MigrateNestedValue(
 	}
 	return
 
+}
+
+func (m *StorageMigration) nextDictionaryKeyConflictStorageMapKey() interpreter.StringStorageMapKey {
+	m.dictionaryKeyConflicts++
+	return DictionaryKeyConflictStorageMapKey(m.dictionaryKeyConflicts)
+}
+
+func DictionaryKeyConflictStorageMapKey(index int) interpreter.StringStorageMapKey {
+	return interpreter.StringStorageMapKey(fmt.Sprintf(
+		"cadence_1_migration_dictionary_key_conflict_%d",
+		index,
+	))
 }
 
 type StorageMigrationError struct {

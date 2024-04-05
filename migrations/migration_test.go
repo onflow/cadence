@@ -82,6 +82,11 @@ func (t *testReporter) Error(err error) {
 	t.errors = append(t.errors, err)
 }
 
+func (t *testReporter) DictionaryKeyConflict(key interpreter.StringStorageMapKey) {
+	// For testing purposes, record the conflict as an error
+	t.errors = append(t.errors, fmt.Errorf("dictionary key conflict: %s", key))
+}
+
 // testStringMigration
 
 type testStringMigration struct{}
@@ -509,12 +514,16 @@ func TestMultipleMigrations(t *testing.T) {
 
 	// Migrate
 
-	migration := NewStorageMigration(inter, storage, "test")
-
 	reporter := newTestReporter()
 
-	migration.MigrateAccount(
+	migration := NewStorageMigration(
+		inter,
+		storage,
+		"test",
 		account,
+	)
+
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testStringMigration{},
@@ -649,12 +658,10 @@ func TestMigrationError(t *testing.T) {
 
 	// Migrate
 
-	migration := NewStorageMigration(inter, storage, "test")
-
+	migration := NewStorageMigration(inter, storage, "test", account)
 	reporter := newTestReporter()
 
-	migration.MigrateAccount(
-		account,
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testStringMigration{},
@@ -794,12 +801,10 @@ func TestCapConMigration(t *testing.T) {
 
 	// Migrate
 
+	migration := NewStorageMigration(inter, storage, "test", testAddress)
 	reporter := newTestReporter()
 
-	migration := NewStorageMigration(inter, storage, "test")
-
-	migration.MigrateAccount(
-		testAddress,
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testCapConMigration{},
@@ -909,12 +914,10 @@ func TestContractMigration(t *testing.T) {
 
 	// Migrate
 
+	migration := NewStorageMigration(inter, storage, "test", testAddress)
 	reporter := newTestReporter()
 
-	migration := NewStorageMigration(inter, storage, "test")
-
-	migration.MigrateAccount(
-		testAddress,
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testStringMigration{},
@@ -1102,12 +1105,10 @@ func TestEmptyIntersectionTypeMigration(t *testing.T) {
 
 	// Migrate
 
+	migration := NewStorageMigration(inter, storage, "test", testAddress)
 	reporter := newTestReporter()
 
-	migration := NewStorageMigration(inter, storage, "test")
-
-	migration.MigrateAccount(
-		testAddress,
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testCompositeValueMigration{},
@@ -1251,12 +1252,10 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		// Migrate
 
-		migration := NewStorageMigration(inter, storage, "test")
-
+		migration := NewStorageMigration(inter, storage, "test", testAddress)
 		reporter := newTestReporter()
 
-		migration.MigrateAccount(
-			testAddress,
+		migration.Migrate(
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				valueMigration,
@@ -1681,12 +1680,10 @@ func TestMigrationPanic(t *testing.T) {
 
 	// Migrate
 
-	migration := NewStorageMigration(inter, storage, "test")
-
+	migration := NewStorageMigration(inter, storage, "test", testAddress)
 	reporter := newTestReporter()
 
-	migration.MigrateAccount(
-		testAddress,
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testPanicMigration{},
@@ -1808,16 +1805,14 @@ func TestSkip(t *testing.T) {
 
 		// Migrate
 
-		migration := NewStorageMigration(inter, storage, "test")
-
+		migration := NewStorageMigration(inter, storage, "test", testAddress)
 		reporter := newTestReporter()
 
 		valueMigration := &testSkipMigration{
 			canSkip: canSkip,
 		}
 
-		migration.MigrateAccount(
-			testAddress,
+		migration.Migrate(
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				valueMigration,
@@ -2164,13 +2159,10 @@ func TestPublishedValueMigration(t *testing.T) {
 	)
 
 	// Migrate
-
+	migration := NewStorageMigration(inter, storage, "test", testAddress)
 	reporter := newTestReporter()
 
-	migration := NewStorageMigration(inter, storage, "test")
-
-	migration.MigrateAccount(
-		testAddress,
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			testPublishedValueMigration{},
@@ -2275,12 +2267,10 @@ func TestDomainsMigration(t *testing.T) {
 
 		// Migrate
 
+		migration := NewStorageMigration(inter, storage, "test", testAddress)
 		reporter := newTestReporter()
 
-		migration := NewStorageMigration(inter, storage, "test")
-
-		migration.MigrateAccount(
-			testAddress,
+		migration.Migrate(
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				testDomainsMigration{
@@ -2491,35 +2481,44 @@ func TestLegacyReferenceType(t *testing.T) {
 	})
 }
 
-// testTypeMigration
+// testDictionaryKeyConflictMigration
 
-type testTypeMigration struct{}
-
-var _ ValueMigration = testTypeMigration{}
-
-func (testTypeMigration) Name() string {
-	return "testTypeMigration"
+type testDictionaryKeyConflictMigration struct {
+	migrateValue bool
 }
 
-func (m testTypeMigration) Migrate(
+var _ ValueMigration = testDictionaryKeyConflictMigration{}
+
+func (testDictionaryKeyConflictMigration) Name() string {
+	return "testDictionaryKeyConflictMigration"
+}
+
+func (m testDictionaryKeyConflictMigration) Migrate(
 	_ interpreter.StorageKey,
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 ) (interpreter.Value, error) {
 	typeValue, ok := value.(interpreter.TypeValue)
-	if !ok {
-		return nil, nil
+	if ok {
+		return typeValue, nil
 	}
 
-	return typeValue, nil
+	if m.migrateValue {
+		intValue, ok := value.(interpreter.IntValue)
+		if ok {
+			return interpreter.NewUnmeteredIntValueFromInt64(int64(intValue.ToInt(emptyLocationRange)) + 10), nil
+		}
+	}
+
+	return nil, nil
 }
 
-func (testTypeMigration) CanSkip(_ interpreter.StaticType) bool {
+func (testDictionaryKeyConflictMigration) CanSkip(_ interpreter.StaticType) bool {
 	return false
 }
 
-func (testTypeMigration) Domains() map[string]struct{} {
+func (testDictionaryKeyConflictMigration) Domains() map[string]struct{} {
 	return nil
 }
 
@@ -2527,38 +2526,30 @@ func TestDictionaryKeyConflict(t *testing.T) {
 
 	t.Parallel()
 
-	testAddress := common.MustBytesToAddress([]byte{0x1})
-	storagePathDomain := common.PathDomainStorage.Identifier()
-	storageMapKey := interpreter.StringStorageMapKey("test")
+	test := func(t *testing.T, migrateValue bool) {
 
-	ledger := NewTestLedger(nil, nil)
+		testAddress := common.MustBytesToAddress([]byte{0x1})
+		storagePathDomain := common.PathDomainStorage.Identifier()
+		storageMapKey := interpreter.StringStorageMapKey("test")
 
-	newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
-		storage := runtime.NewStorage(ledger, nil)
-		inter, err := interpreter.NewInterpreter(
-			nil,
-			utils.TestLocation,
-			&interpreter.Config{
-				Storage:                     storage,
-				AtreeValueValidationEnabled: true,
-				// NOTE: disabled, as storage is not expected to be always valid _during_ migration
-				AtreeStorageValidationEnabled: false,
-			},
-		)
-		require.NoError(t, err)
+		ledger := NewTestLedger(nil, nil)
 
-		return storage, inter
-	}
+		newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
+			storage := runtime.NewStorage(ledger, nil)
+			inter, err := interpreter.NewInterpreter(
+				nil,
+				utils.TestLocation,
+				&interpreter.Config{
+					Storage:                     storage,
+					AtreeValueValidationEnabled: true,
+					// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+					AtreeStorageValidationEnabled: false,
+				},
+			)
+			require.NoError(t, err)
 
-	// Prepare
-	(func() {
-		storage, inter := newStorageAndInterpreter(t)
-
-		storageMap := storage.GetStorageMap(
-			testAddress,
-			storagePathDomain,
-			true,
-		)
+			return storage, inter
+		}
 
 		fooQualifiedIdentifier := "Test.Foo"
 		fooType := &interpreter.InterfaceStaticType{
@@ -2592,8 +2583,8 @@ func TestDictionaryKeyConflict(t *testing.T) {
 			},
 		)
 
-		dictionaryKey1 := interpreter.NewTypeValue(inter, intersectionType1)
-		dictionaryKey2 := interpreter.NewTypeValue(inter, intersectionType2)
+		dictionaryKey1 := interpreter.NewTypeValue(nil, intersectionType1)
+		dictionaryKey2 := interpreter.NewTypeValue(nil, intersectionType2)
 
 		// {Type: [Int]}
 		// Value is an array to ensure slabs are created
@@ -2601,152 +2592,218 @@ func TestDictionaryKeyConflict(t *testing.T) {
 			interpreter.PrimitiveStaticTypeInt,
 		)
 
-		dictionaryValue := interpreter.NewDictionaryValueWithAddress(
-			inter,
-			emptyLocationRange,
-			interpreter.NewDictionaryStaticType(
-				nil,
-				interpreter.PrimitiveStaticTypeMetaType,
-				arrayType,
-			),
-			testAddress,
-		)
+		// Prepare
+		(func() {
+			storage, inter := newStorageAndInterpreter(t)
 
-		// Write the dictionary value to storage before inserting values into dictionary,
-		// as the insertion of values into the dictionary triggers a storage health check,
-		// which fails if the dictionary value is not yet stored (unreferenced slabs)
-
-		storageMap.WriteValue(
-			inter,
-			storageMapKey,
-			dictionaryValue,
-		)
-
-		// NOTE: use legacyKey to ensure the key is encoded in old format
-
-		dictionaryValue.InsertWithoutTransfer(
-			inter,
-			emptyLocationRange,
-			legacyKey(dictionaryKey1),
-			interpreter.NewArrayValue(
-				inter,
-				emptyLocationRange,
-				arrayType,
+			storageMap := storage.GetStorageMap(
 				testAddress,
-				interpreter.NewUnmeteredIntValueFromInt64(1),
-			),
-		)
+				storagePathDomain,
+				true,
+			)
 
-		dictionaryValue.InsertWithoutTransfer(
-			inter,
-			emptyLocationRange,
-			legacyKey(dictionaryKey2),
-			interpreter.NewArrayValue(
+			dictionaryValue := interpreter.NewDictionaryValueWithAddress(
 				inter,
 				emptyLocationRange,
-				arrayType,
+				interpreter.NewDictionaryStaticType(
+					nil,
+					interpreter.PrimitiveStaticTypeMetaType,
+					arrayType,
+				),
 				testAddress,
-				interpreter.NewUnmeteredIntValueFromInt64(2),
-			),
-		)
+			)
 
-		oldValue1, ok := dictionaryValue.Get(
-			inter,
-			emptyLocationRange,
-			legacyKey(dictionaryKey1),
-		)
-		require.True(t, ok)
+			// Write the dictionary value to storage before inserting values into dictionary,
+			// as the insertion of values into the dictionary triggers a storage health check,
+			// which fails if the dictionary value is not yet stored (unreferenced slabs)
 
-		utils.AssertValuesEqual(t,
-			inter,
-			oldValue1,
-			interpreter.NewArrayValue(
+			storageMap.WriteValue(
+				inter,
+				storageMapKey,
+				dictionaryValue,
+			)
+
+			// NOTE: use legacyKey to ensure the key is encoded in old format
+
+			dictionaryValue.InsertWithoutTransfer(
 				inter,
 				emptyLocationRange,
-				arrayType,
-				common.ZeroAddress,
-				interpreter.NewUnmeteredIntValueFromInt64(1),
-			),
-		)
+				legacyKey(dictionaryKey1),
+				interpreter.NewArrayValue(
+					inter,
+					emptyLocationRange,
+					arrayType,
+					testAddress,
+					interpreter.NewUnmeteredIntValueFromInt64(1),
+				),
+			)
 
-		oldValue2, ok := dictionaryValue.Get(
-			inter,
-			emptyLocationRange,
-			legacyKey(dictionaryKey2),
-		)
-		require.True(t, ok)
-
-		utils.AssertValuesEqual(t,
-			inter,
-			oldValue2,
-			interpreter.NewArrayValue(
+			dictionaryValue.InsertWithoutTransfer(
 				inter,
 				emptyLocationRange,
-				arrayType,
-				common.ZeroAddress,
-				interpreter.NewUnmeteredIntValueFromInt64(2),
-			),
-		)
+				legacyKey(dictionaryKey2),
+				interpreter.NewArrayValue(
+					inter,
+					emptyLocationRange,
+					arrayType,
+					testAddress,
+					interpreter.NewUnmeteredIntValueFromInt64(2),
+				),
+			)
 
-		err := storage.Commit(inter, false)
-		require.NoError(t, err)
+			oldValue1, ok := dictionaryValue.Get(
+				inter,
+				emptyLocationRange,
+				legacyKey(dictionaryKey1),
+			)
+			require.True(t, ok)
 
-		err = storage.CheckHealth()
-		require.NoError(t, err)
-	})()
+			utils.AssertValuesEqual(t,
+				inter,
+				oldValue1,
+				interpreter.NewArrayValue(
+					inter,
+					emptyLocationRange,
+					arrayType,
+					common.ZeroAddress,
+					interpreter.NewUnmeteredIntValueFromInt64(1),
+				),
+			)
 
-	// Migrate
-	(func() {
+			oldValue2, ok := dictionaryValue.Get(
+				inter,
+				emptyLocationRange,
+				legacyKey(dictionaryKey2),
+			)
+			require.True(t, ok)
 
-		storage, inter := newStorageAndInterpreter(t)
+			utils.AssertValuesEqual(t,
+				inter,
+				oldValue2,
+				interpreter.NewArrayValue(
+					inter,
+					emptyLocationRange,
+					arrayType,
+					common.ZeroAddress,
+					interpreter.NewUnmeteredIntValueFromInt64(2),
+				),
+			)
 
-		reporter := newTestReporter()
+			err := storage.Commit(inter, false)
+			require.NoError(t, err)
 
-		migration := NewStorageMigration(inter, storage, "test")
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+		})()
 
-		migration.MigrateAccount(
-			testAddress,
-			migration.NewValueMigrationsPathMigrator(
-				reporter,
-				testTypeMigration{},
-			),
-		)
+		// Migrate
+		(func() {
 
-		err := migration.Commit()
-		require.NoError(t, err)
+			storage, inter := newStorageAndInterpreter(t)
 
-		// Assert
+			migration := NewStorageMigration(inter, storage, "test", testAddress)
+			reporter := newTestReporter()
 
-		require.Len(t, reporter.errors, 1)
+			migration.Migrate(
+				migration.NewValueMigrationsPathMigrator(
+					reporter,
+					testDictionaryKeyConflictMigration{
+						migrateValue: migrateValue,
+					},
+				),
+			)
 
-		var migrationError StorageMigrationError
-		require.ErrorAs(t, reporter.errors[0], &migrationError)
+			err := migration.Commit()
+			require.NoError(t, err)
 
-		assert.Equal(
-			t,
-			interpreter.StorageKey{
-				Address: testAddress,
-				Key:     storagePathDomain,
-			},
-			migrationError.StorageKey,
-		)
-		assert.Equal(
-			t,
-			storageMapKey,
-			migrationError.StorageMapKey,
-		)
-		assert.ErrorContains(
-			t,
-			migrationError,
-			"dictionary contains new key after removal of old key (conflict)",
-		)
-		assert.NotEmpty(t, migrationError.Stack)
+			// Assert
 
-		assert.Len(t, reporter.migrated, 1)
+			require.Len(t, reporter.errors, 1)
+			assert.ErrorContains(
+				t,
+				reporter.errors[0],
+				"dictionary key conflict",
+			)
 
-		// Health check is expected to fail,
-		// as one of the arrays is still stored, but no longer referenced
-		err = storage.CheckHealth()
-		require.ErrorContains(t, err, "slabs not referenced from account Storage: [0x1.3]")
-	})()
+			assert.Len(t, reporter.migrated, 1)
+
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			// Check storage map
+
+			storageMap := storage.GetStorageMap(testAddress, storagePathDomain, false)
+			require.NotNil(t, storageMap)
+			require.Equal(t, uint64(2), storageMap.Count())
+
+			// Check existing migrated dictionary
+
+			migratedValue := storageMap.ReadValue(nil, storageMapKey)
+			require.NotNil(t, migratedValue)
+
+			require.IsType(t, &interpreter.DictionaryValue{}, migratedValue)
+			migratedDict := migratedValue.(*interpreter.DictionaryValue)
+
+			value, _ := migratedDict.Get(inter, emptyLocationRange, dictionaryKey2)
+			require.NotNil(t, value)
+
+			expectedInt2 := interpreter.NewUnmeteredIntValueFromInt64(2)
+			if migrateValue {
+				expectedInt2 = interpreter.NewUnmeteredIntValueFromInt64(12)
+			}
+
+			utils.RequireValuesEqual(t,
+				inter,
+				interpreter.NewArrayValue(
+					inter,
+					emptyLocationRange,
+					arrayType,
+					common.ZeroAddress,
+					expectedInt2,
+				),
+				value,
+			)
+
+			// Check newly created conflict dictionary
+
+			conflictValue := storageMap.ReadValue(nil, DictionaryKeyConflictStorageMapKey(1))
+			require.NotNil(t, conflictValue)
+
+			require.IsType(t, &interpreter.DictionaryValue{}, conflictValue)
+			conflictDict := conflictValue.(*interpreter.DictionaryValue)
+
+			value, _ = conflictDict.Get(inter, emptyLocationRange, dictionaryKey1)
+			require.NotNil(t, value)
+
+			expectedInt1 := interpreter.NewUnmeteredIntValueFromInt64(1)
+			if migrateValue {
+				expectedInt1 = interpreter.NewUnmeteredIntValueFromInt64(11)
+			}
+
+			utils.RequireValuesEqual(t,
+				inter,
+				interpreter.NewArrayValue(
+					inter,
+					emptyLocationRange,
+					arrayType,
+					common.ZeroAddress,
+					expectedInt1,
+				),
+				value,
+			)
+		})()
+	}
+
+	t.Run("value migrated", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, true)
+	})
+
+	t.Run("value not migrated", func(t *testing.T) {
+		t.Parallel()
+
+		test(t, false)
+	})
+
 }
