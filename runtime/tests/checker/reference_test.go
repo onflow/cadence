@@ -3305,27 +3305,6 @@ func TestCheckDereference(t *testing.T) {
 				},
 				initializer: `[{1: "abc", 2: "def"}]`,
 			},
-			{
-				ty: &sema.VariableSizedType{
-					Type: &sema.CompositeType{
-						Kind:       common.CompositeKindStructure,
-						Location:   utils.TestLocation,
-						Identifier: "S",
-					},
-				},
-				initializer: `[S(), S()]`,
-			},
-			{
-				ty: &sema.ConstantSizedType{
-					Type: &sema.CompositeType{
-						Kind:       common.CompositeKindStructure,
-						Location:   utils.TestLocation,
-						Identifier: "S",
-					},
-					Size: 2,
-				},
-				initializer: `[S(), S()]`,
-			},
 		} {
 			runValidTestCase(
 				t,
@@ -3344,6 +3323,55 @@ func TestCheckDereference(t *testing.T) {
 				testCase.ty,
 			)
 		}
+
+		// Arrays of structs cannot be dereferenced.
+		runInvalidTestCase(
+			t,
+			"[Struct]",
+			`
+				struct S {}
+
+				let value: [S] = [S(), S()]
+				let ref: &[S] = &value
+				let deref: [S] = *ref
+            `,
+		)
+
+		runInvalidTestCase(
+			t,
+			"[Struct; 2]",
+			`
+				struct S {}
+
+				let value: [S; 2] = [S(), S()]
+				let ref: &[S; 2] = &value
+				let deref: [S; 2] = *ref
+            `,
+		)
+
+		runInvalidTestCase(
+			t,
+			"[AnyStruct]",
+			`
+				struct S {}
+
+				let value: [AnyStruct] = [S(), S()]
+				let ref: &[AnyStruct] = &value
+				let deref: [AnyStruct] = *ref
+            `,
+		)
+
+		runInvalidTestCase(
+			t,
+			"[AnyStruct; 2]",
+			`
+				struct S {}
+
+				let value: [AnyStruct; 2] = [S(), S()]
+				let ref: &[AnyStruct; 2] = &value
+				let deref: [AnyStruct; 2] = *ref
+            `,
+		)
 
 		// Arrays of resources cannot be dereferenced.
 		runInvalidTestCase(
@@ -3415,17 +3443,6 @@ func TestCheckDereference(t *testing.T) {
 				},
 				initializer: `{"123": [1, 2, 3], "456": [4, 5, 6]}`,
 			},
-			{
-				ty: &sema.DictionaryType{
-					KeyType: sema.IntType,
-					ValueType: &sema.CompositeType{
-						Kind:       common.CompositeKindStructure,
-						Location:   utils.TestLocation,
-						Identifier: "S",
-					},
-				},
-				initializer: `{1: S(), 2: S()}`,
-			},
 		} {
 			runValidTestCase(
 				t,
@@ -3444,6 +3461,37 @@ func TestCheckDereference(t *testing.T) {
 				testCase.ty,
 			)
 		}
+
+		// Dictionaries of structs cannot be dereferenced.
+		runInvalidTestCase(
+			t,
+			"{Int: S}",
+			`
+				struct S {}
+
+				let dict: {Int: S} = {
+					1: S() ,
+					2: S()
+				}
+				let ref: &{Int: S} = &dict
+				let deref: {Int: S} = *ref
+            `,
+		)
+
+		runInvalidTestCase(
+			t,
+			"{Int: AnyStruct}",
+			`
+				struct S {}
+
+				let dict: {Int: AnyStruct} = {
+					1: S() ,
+					2: S()
+				}
+				let ref: &{Int: AnyStruct} = &dict
+				let deref: {Int: AnyStruct} = *ref
+            `,
+		)
 
 		// Dictionaries of resources cannot be dereferenced.
 		runInvalidTestCase(
