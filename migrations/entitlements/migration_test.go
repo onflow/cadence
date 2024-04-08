@@ -713,7 +713,7 @@ func convertEntireTestValue(
 
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 
 	migratedValue := migration.MigrateNestedValue(
 		interpreter.StorageKey{
@@ -1531,7 +1531,7 @@ func TestMigrateSimpleContract(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 	migration.MigrateAccount(
 		account,
 		migration.NewValueMigrationsPathMigrator(
@@ -1714,7 +1714,7 @@ func TestMigratePublishedValue(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 	migration.MigrateAccount(
 		testAddress,
 		migration.NewValueMigrationsPathMigrator(
@@ -1967,7 +1967,7 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 	migrator := migration.NewValueMigrationsPathMigrator(
 		reporter,
 		NewEntitlementsMigration(inter),
@@ -2214,7 +2214,7 @@ func TestMigrateAcrossContracts(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 	migrator := migration.NewValueMigrationsPathMigrator(
 		reporter,
 		NewEntitlementsMigration(inter),
@@ -2417,7 +2417,7 @@ func TestMigrateArrayOfValues(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 	migrator := migration.NewValueMigrationsPathMigrator(
 		reporter,
 		NewEntitlementsMigration(inter),
@@ -2666,7 +2666,7 @@ func TestMigrateDictOfValues(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 	migrator := migration.NewValueMigrationsPathMigrator(
 		reporter,
 		NewEntitlementsMigration(inter),
@@ -2987,7 +2987,7 @@ func TestMigrateCapConsAcrossTwoAccounts(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 	migrator := migration.NewValueMigrationsPathMigrator(
 		reporter,
 		NewEntitlementsMigration(inter),
@@ -3109,7 +3109,8 @@ func TestRehash(t *testing.T) {
 		sema.Conjunction,
 	)
 
-	t.Run("prepare", func(t *testing.T) {
+	// Prepare
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -3125,6 +3126,7 @@ func TestRehash(t *testing.T) {
 			interpreter.UnauthorizedAccess,
 			newCompositeType(),
 		)
+		refType.HasLegacyIsAuthorized = true
 		refType.LegacyIsAuthorized = true
 
 		legacyRefType := &migrations.LegacyReferenceType{
@@ -3170,9 +3172,10 @@ func TestRehash(t *testing.T) {
 
 		err = storage.CheckHealth()
 		require.NoError(t, err)
-	})
+	})()
 
-	t.Run("migrate", func(t *testing.T) {
+	// Migrate
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -3200,7 +3203,7 @@ func TestRehash(t *testing.T) {
 			return compositeType
 		}
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
@@ -3237,9 +3240,10 @@ func TestRehash(t *testing.T) {
 			},
 			reporter.migrated,
 		)
-	})
+	})()
 
-	t.Run("load", func(t *testing.T) {
+	// Load
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -3279,7 +3283,7 @@ func TestRehash(t *testing.T) {
 			newTestValue(),
 			value.(*interpreter.StringValue),
 		)
-	})
+	})()
 }
 
 func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
@@ -3325,7 +3329,8 @@ func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
 		return storage, inter
 	}
 
-	t.Run("prepare", func(t *testing.T) {
+	// Prepare
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -3368,9 +3373,10 @@ func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
 
 		err = storage.CheckHealth()
 		require.NoError(t, err)
-	})
+	})()
 
-	t.Run("migrate", func(t *testing.T) {
+	// Migrate
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -3390,7 +3396,7 @@ func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
 			}
 		}
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
@@ -3427,9 +3433,10 @@ func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
 			},
 			reporter.migrated,
 		)
-	})
+	})()
 
-	t.Run("load", func(t *testing.T) {
+	// Load
+	(func() {
 
 		storage, inter := newStorageAndInterpreter(t)
 
@@ -3461,5 +3468,5 @@ func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
 		)
 
 		require.Equal(t, expectedType, typeValue.Type)
-	})
+	})()
 }

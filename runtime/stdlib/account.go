@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -1598,22 +1599,24 @@ func changeAccountContracts(
 		memoryGauge := invocation.Interpreter.SharedState.Config.MemoryGauge
 		legacyUpgradeEnabled := invocation.Interpreter.SharedState.Config.LegacyContractUpgradeEnabled
 
-		oldProgram, err := parser.ParseProgram(
-			memoryGauge,
-			oldCode,
-			parser.Config{
-				IgnoreLeadingIdentifierEnabled: true,
-			},
-		)
+		var oldProgram *ast.Program
 
-		var legacyContractUpgrade bool
-		// if we are allowing legacy contract upgrades, fall back to the old parser when the new one fails
-		if !ignoreUpdatedProgramParserError(err) && legacyUpgradeEnabled {
-			legacyContractUpgrade = true
+		// It is not always possible to determine whether the old code is pre-1.0 or not,
+		// only based on the parser errors. Therefore, always rely on the flag only.
+		// If the legacy contract upgrades are enabled, then use the old parser.
+		if legacyUpgradeEnabled {
 			oldProgram, err = old_parser.ParseProgram(
 				memoryGauge,
 				oldCode,
 				old_parser.Config{},
+			)
+		} else {
+			oldProgram, err = parser.ParseProgram(
+				memoryGauge,
+				oldCode,
+				parser.Config{
+					IgnoreLeadingIdentifierEnabled: true,
+				},
 			)
 		}
 
@@ -1622,13 +1625,13 @@ func changeAccountContracts(
 		}
 
 		var validator UpdateValidator
-		if legacyContractUpgrade {
+		if legacyUpgradeEnabled {
 			validator = NewCadenceV042ToV1ContractUpdateValidator(
 				location,
 				contractName,
 				handler,
 				oldProgram,
-				program.Program,
+				program,
 				inter.AllElaborations(),
 			)
 		} else {
@@ -3597,8 +3600,13 @@ func newAccountCapabilitiesGetFunction(
 
 			// Get borrow type type argument
 
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			wantedBorrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
+			typeParameterPairValue := invocation.TypeParameterTypes.Oldest().Value
+			// `Never` is never a supertype of any stored value
+			if typeParameterPairValue.Equal(sema.NeverType) {
+				return interpreter.Nil
+			}
+
+			wantedBorrowType, ok := typeParameterPairValue.(*sema.ReferenceType)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}

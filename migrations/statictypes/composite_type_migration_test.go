@@ -145,7 +145,7 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 
 	reporter := newTestReporter()
 

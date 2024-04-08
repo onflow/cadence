@@ -26,29 +26,51 @@ import (
 func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) Type {
 	ty := checker.checkInvocationExpression(invocationExpression)
 
-	if compositeType, ok := ty.(*CompositeType); ok {
+	if !checker.checkInvokedExpression(ty, invocationExpression) {
+		return InvalidType
+	}
+
+	return ty
+}
+
+func (checker *Checker) checkInvokedExpression(ty Type, pos ast.HasPosition) bool {
+
+	// Check if the invoked expression can be invoked.
+	// Composite types cannot be invoked directly,
+	// only through respective statements (emit, attach).
+	//
+	// If the invoked expression is an optional type,
+	// for example in the case of optional chaining,
+	// then check the wrapped type.
+
+	maybeCompositeType := ty
+	if optionalType, ok := ty.(*OptionalType); ok {
+		maybeCompositeType = optionalType.Type
+	}
+
+	if compositeType, ok := maybeCompositeType.(*CompositeType); ok {
 		switch compositeType.Kind {
 		// Events cannot be invoked without an emit statement
 		case common.CompositeKindEvent:
 			checker.report(
 				&InvalidEventUsageError{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, invocationExpression),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 				},
 			)
-			return InvalidType
+			return false
 
 		// Attachments cannot be constructed without an attach statement
 		case common.CompositeKindAttachment:
 			checker.report(
 				&InvalidAttachmentUsageError{
-					Range: ast.NewRangeFromPositioned(checker.memoryGauge, invocationExpression),
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, pos),
 				},
 			)
-			return InvalidType
+			return false
 		}
 	}
 
-	return ty
+	return true
 }
 
 func (checker *Checker) checkInvocationExpression(invocationExpression *ast.InvocationExpression) Type {

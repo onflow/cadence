@@ -75,7 +75,7 @@ func TestStaticTypeMigration(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
@@ -118,14 +118,112 @@ func TestStaticTypeMigration(t *testing.T) {
 
 		actual := migrate(t,
 			staticTypeMigration,
-			interpreter.NewTypeValue(nil, nil),
+			interpreter.NewUnmeteredTypeValue(nil),
 			// NOTE: atree value validation is disabled,
 			// because the type value has a nil type (which indicates an invalid or unknown type),
 			// and invalid unknown types are always unequal
 			false,
 		)
 		assert.Equal(t,
-			interpreter.NewTypeValue(nil, nil),
+			interpreter.NewUnmeteredTypeValue(nil),
+			actual,
+		)
+	})
+
+	t.Run("TypeValue with unparameterized Capability type", func(t *testing.T) {
+		t.Parallel()
+
+		staticTypeMigration := NewStaticTypeMigration()
+
+		actual := migrate(t,
+			staticTypeMigration,
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewCapabilityStaticType(nil, nil),
+			),
+			true,
+		)
+		assert.Equal(t,
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewCapabilityStaticType(nil, nil),
+			),
+			actual,
+		)
+	})
+
+	t.Run("TypeValue with reference to AuthAccount (as primitive)", func(t *testing.T) {
+		t.Parallel()
+
+		staticTypeMigration := NewStaticTypeMigration()
+
+		actual := migrate(t,
+			staticTypeMigration,
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewDictionaryStaticType(nil,
+					interpreter.PrimitiveStaticTypeAddress,
+					interpreter.NewCapabilityStaticType(nil,
+						interpreter.NewReferenceStaticType(
+							nil,
+							interpreter.UnauthorizedAccess,
+							interpreter.PrimitiveStaticTypeAuthAccount, //nolint:staticcheck
+						),
+					),
+				),
+			),
+			true,
+		)
+		assert.Equal(t,
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewDictionaryStaticType(nil,
+					interpreter.PrimitiveStaticTypeAddress,
+					interpreter.NewCapabilityStaticType(nil,
+						// NOTE: NOT reference to reference type
+						authAccountReferenceType,
+					),
+				),
+			),
+			actual,
+		)
+	})
+
+	t.Run("TypeValue with reference to AuthAccount (as composite)", func(t *testing.T) {
+		t.Parallel()
+
+		staticTypeMigration := NewStaticTypeMigration()
+
+		authAccountTypeID := interpreter.PrimitiveStaticTypeAuthAccount.ID() //nolint:staticcheck
+
+		actual := migrate(t,
+			staticTypeMigration,
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewDictionaryStaticType(nil,
+					interpreter.PrimitiveStaticTypeAddress,
+					interpreter.NewCapabilityStaticType(nil,
+						interpreter.NewReferenceStaticType(
+							nil,
+							interpreter.UnauthorizedAccess,
+							// NOTE: AuthAccount as composite type
+							interpreter.NewCompositeStaticType(
+								nil,
+								nil,
+								string(authAccountTypeID),
+								authAccountTypeID,
+							),
+						),
+					),
+				),
+			),
+			true,
+		)
+		assert.Equal(t,
+			interpreter.NewUnmeteredTypeValue(
+				interpreter.NewDictionaryStaticType(nil,
+					interpreter.PrimitiveStaticTypeAddress,
+					interpreter.NewCapabilityStaticType(nil,
+						// NOTE: NOT reference to reference type
+						authAccountReferenceType,
+					),
+				),
+			),
 			actual,
 		)
 	})
@@ -698,6 +796,51 @@ func TestStaticTypeMigration(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+
+	t.Run(
+		"composite types of (non-deprecated) built-in types are converted to primitive static types",
+		func(t *testing.T) {
+			t.Parallel()
+
+			test := func(t *testing.T, ty interpreter.PrimitiveStaticType) {
+
+				typeID := ty.ID()
+
+				t.Run(string(typeID), func(t *testing.T) {
+					t.Parallel()
+
+					staticTypeMigration := NewStaticTypeMigration()
+
+					actual := migrate(t,
+						staticTypeMigration,
+						interpreter.NewUnmeteredTypeValue(
+							// NOTE: AuthAccount as composite type
+							interpreter.NewCompositeStaticType(
+								nil,
+								nil,
+								string(typeID),
+								typeID,
+							),
+						),
+						true,
+					)
+					assert.Equal(t,
+						interpreter.NewUnmeteredTypeValue(ty),
+						actual,
+					)
+				})
+			}
+
+			for ty := interpreter.PrimitiveStaticTypeUnknown + 1; ty < interpreter.PrimitiveStaticType_Count; ty++ {
+				if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
+					continue
+				}
+
+				test(t, ty)
+			}
+		},
+	)
+
 }
 
 func TestMigratingNestedContainers(t *testing.T) {
@@ -738,7 +881,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage)
+		migration := migrations.NewStorageMigration(inter, storage, "test")
 
 		reporter := newTestReporter()
 
@@ -871,7 +1014,7 @@ func TestMigratingNestedContainers(t *testing.T) {
 				interpreter.NewCapabilityValue(
 					nil,
 					interpreter.NewUnmeteredUInt64Value(1234),
-					interpreter.NewAddressValue(nil, common.Address{}),
+					interpreter.NewAddressValue(nil, common.ZeroAddress),
 					unauthorizedAccountReferenceType,
 				),
 			),

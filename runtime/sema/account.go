@@ -18,6 +18,14 @@
 
 package sema
 
+import (
+	"fmt"
+
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+)
+
 //go:generate go run ./gen account.cdc account.gen.go
 
 var AccountTypeAnnotation = NewTypeAnnotation(AccountType)
@@ -55,6 +63,31 @@ var FullyEntitledAccountReferenceTypeAnnotation = NewTypeAnnotation(FullyEntitle
 
 func init() {
 	Account_ContractsTypeAddFunctionType.Arity = &Arity{Min: 2}
+
+	Account_CapabilitiesTypeGetFunctionType.TypeArgumentsCheck =
+		func(memoryGauge common.MemoryGauge,
+			typeArguments *TypeParameterTypeOrderedMap,
+			_ []*ast.TypeAnnotation,
+			invocationRange ast.HasPosition,
+			report func(err error),
+		) {
+			typeArg, ok := typeArguments.Get(Account_CapabilitiesTypeGetFunctionTypeParameterT)
+			if !ok || typeArg == nil {
+				// checker should prevent this
+				panic(errors.NewUnreachableError())
+			}
+			if typeArg == NeverType {
+				report(&InvalidTypeArgumentError{
+					TypeArgumentName: Account_CapabilitiesTypeGetFunctionTypeParameterT.Name,
+					Range:            ast.NewRangeFromPositioned(memoryGauge, invocationRange),
+					Details: fmt.Sprintf(
+						"Type argument for `%s` cannot be `%s`",
+						Account_CapabilitiesTypeGetFunctionName,
+						NeverType,
+					),
+				})
+			}
+		}
 
 	addToBaseActivation(AccountMappingType)
 	addToBaseActivation(CapabilitiesMappingType)

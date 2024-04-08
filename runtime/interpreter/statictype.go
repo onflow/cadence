@@ -838,8 +838,9 @@ func (a EntitlementMapAuthorization) Equal(other Authorization) bool {
 type ReferenceStaticType struct {
 	Authorization Authorization
 	// ReferencedType is type of the referenced value (the type of the target)
-	ReferencedType     StaticType
-	LegacyIsAuthorized bool
+	ReferencedType        StaticType
+	HasLegacyIsAuthorized bool
+	LegacyIsAuthorized    bool
 }
 
 var _ StaticType = &ReferenceStaticType{}

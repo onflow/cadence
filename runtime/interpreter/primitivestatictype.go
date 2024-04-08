@@ -394,6 +394,9 @@ func (t PrimitiveStaticType) elementSize() uint {
 		PrimitiveStaticTypeAccountKey:
 		// These types are deprecated, and only exist for migration purposes
 		return UnknownElementSize
+
+	case PrimitiveStaticTypeUnknown:
+	case PrimitiveStaticType_Count:
 	}
 
 	panic(errors.NewUnexpectedError("missing case for %s", t))
@@ -422,6 +425,35 @@ func (t PrimitiveStaticType) MeteredString(memoryGauge common.MemoryGauge) strin
 }
 
 func (t PrimitiveStaticType) ID() TypeID {
+
+	// Handle deprecated types specially, because they do not have a sema type equivalent anymore
+	switch t {
+	case PrimitiveStaticTypeAuthAccount: //nolint:staticcheck
+		return "AuthAccount"
+	case PrimitiveStaticTypePublicAccount: //nolint:staticcheck
+		return "PublicAccount"
+	case PrimitiveStaticTypeAuthAccountContracts: //nolint:staticcheck
+		return "AuthAccount.Contracts"
+	case PrimitiveStaticTypePublicAccountContracts: //nolint:staticcheck
+		return "PublicAccount.Contracts"
+	case PrimitiveStaticTypeAuthAccountKeys: //nolint:staticcheck
+		return "AuthAccount.Keys"
+	case PrimitiveStaticTypePublicAccountKeys: //nolint:staticcheck
+		return "PublicAccount.Keys"
+	case PrimitiveStaticTypeAuthAccountInbox: //nolint:staticcheck
+		return "AuthAccount.Inbox"
+	case PrimitiveStaticTypeAuthAccountStorageCapabilities: //nolint:staticcheck
+		return "AuthAccount.StorageCapabilities"
+	case PrimitiveStaticTypeAuthAccountAccountCapabilities: //nolint:staticcheck
+		return "AuthAccount.AccountCapabilities"
+	case PrimitiveStaticTypeAuthAccountCapabilities: //nolint:staticcheck
+		return "AuthAccount.Capabilities"
+	case PrimitiveStaticTypePublicAccountCapabilities: //nolint:staticcheck
+		return "PublicAccount.Capabilities"
+	case PrimitiveStaticTypeAccountKey: //nolint:staticcheck
+		return "AccountKey"
+	}
+
 	return t.SemaType().ID()
 }
 
@@ -654,6 +686,21 @@ func (t PrimitiveStaticType) SemaType() sema.Type {
 	case PrimitiveStaticTypePublicAccount: //nolint:staticcheck
 		// deprecated, but needed for migration purposes
 		return sema.AccountReferenceType
+
+	case PrimitiveStaticTypeAuthAccountContracts:
+	case PrimitiveStaticTypePublicAccountContracts:
+	case PrimitiveStaticTypeAuthAccountKeys:
+	case PrimitiveStaticTypePublicAccountKeys:
+	case PrimitiveStaticTypeAccountKey:
+	case PrimitiveStaticTypeAuthAccountInbox:
+	case PrimitiveStaticTypeAuthAccountStorageCapabilities:
+	case PrimitiveStaticTypeAuthAccountAccountCapabilities:
+	case PrimitiveStaticTypeAuthAccountCapabilities:
+	case PrimitiveStaticTypePublicAccountCapabilities:
+		panic(errors.NewUnexpectedError("cannot convert deprecated type %s", t))
+
+	case PrimitiveStaticTypeUnknown:
+	case PrimitiveStaticType_Count:
 	}
 
 	if t.IsDeprecated() {
@@ -918,4 +965,28 @@ func ConvertSemaToPrimitiveStaticType(
 	}
 
 	return NewPrimitiveStaticType(memoryGauge, typ)
+}
+
+var primitiveStaticTypesByTypeID = map[TypeID]PrimitiveStaticType{}
+
+func init() {
+	// Check all defined primitive static types,
+	// and construct a type ID to primitive static type mapping
+	for ty := PrimitiveStaticTypeUnknown + 1; ty < PrimitiveStaticType_Count; ty++ {
+		if !ty.IsDefined() {
+			continue
+		}
+
+		_ = ty.elementSize()
+
+		primitiveStaticTypesByTypeID[ty.ID()] = ty
+	}
+}
+
+func PrimitiveStaticTypeFromTypeID(typeID TypeID) PrimitiveStaticType {
+	ty, ok := primitiveStaticTypesByTypeID[typeID]
+	if !ok {
+		return PrimitiveStaticTypeUnknown
+	}
+	return ty
 }

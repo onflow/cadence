@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -46,11 +47,20 @@ func NewCadenceV042ToV1ContractUpdateValidator(
 	contractName string,
 	provider AccountContractNamesProvider,
 	oldProgram *ast.Program,
-	newProgram *ast.Program,
+	newProgram *interpreter.Program,
 	newElaborations map[common.Location]*sema.Elaboration,
 ) *CadenceV042ToV1ContractUpdateValidator {
 
-	underlyingValidator := NewContractUpdateValidator(location, contractName, provider, oldProgram, newProgram)
+	underlyingValidator := NewContractUpdateValidator(
+		location,
+		contractName,
+		provider,
+		oldProgram,
+		newProgram.Program,
+	)
+
+	// Also add the elaboration of the current program.
+	newElaborations[location] = newProgram.Elaboration
 
 	return &CadenceV042ToV1ContractUpdateValidator{
 		underlyingUpdateValidator: underlyingValidator,
@@ -97,7 +107,12 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) Validate() error {
 	validator.TypeComparator.expectedIdentifierImportLocations = collectImports(validator, underlyingValidator.oldProgram)
 	validator.TypeComparator.foundIdentifierImportLocations = collectImports(validator, underlyingValidator.newProgram)
 
-	checkDeclarationUpdatability(validator, oldRootDecl, newRootDecl)
+	checkDeclarationUpdatability(
+		validator,
+		oldRootDecl,
+		newRootDecl,
+		validator.checkConformanceV1,
+	)
 
 	if underlyingValidator.hasErrors() {
 		return underlyingValidator.getContractUpdateError()
@@ -152,17 +167,24 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) idAndLocationOfQualifie
 	// and in 1 and 2 we don't need to do anything
 	typIdentifier := typ.Identifier.Identifier
 	rootIdentifier := validator.TypeComparator.RootDeclIdentifier.Identifier
-	location := validator.underlyingUpdateValidator.location
 
-	foundLocations := validator.TypeComparator.foundIdentifierImportLocations
+	newImportLocations := validator.TypeComparator.foundIdentifierImportLocations
+	oldImportLocations := validator.TypeComparator.expectedIdentifierImportLocations
 
-	if typIdentifier != rootIdentifier && foundLocations[typIdentifier] == nil {
-		qualifiedString = fmt.Sprintf("%s.%s", rootIdentifier, qualifiedString)
-		return common.NewTypeIDFromQualifiedName(nil, location, qualifiedString), location
+	// Here we only need to find the qualified type ID.
+	// So check in both old imports as well as in new imports.
+	location, wasImported := newImportLocations[typIdentifier]
+	if !wasImported {
+		location, wasImported = oldImportLocations[typIdentifier]
 	}
 
-	if loc := foundLocations[typIdentifier]; loc != nil {
-		location = loc
+	if !wasImported {
+		location = validator.underlyingUpdateValidator.location
+	}
+
+	if typIdentifier != rootIdentifier && !wasImported {
+		qualifiedString = fmt.Sprintf("%s.%s", rootIdentifier, qualifiedString)
+		return common.NewTypeIDFromQualifiedName(nil, location, qualifiedString), location
 	}
 
 	return common.NewTypeIDFromQualifiedName(nil, location, qualifiedString), location
@@ -231,7 +253,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) requireEqualAccess(
 }
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOfComposite(composite *ast.NominalType) sema.Access {
-	// if this field is set, we are currently upgrading a formerly legacy restricted type into a reference to a composite
+	// If this field is set, we are currently upgrading a former legacy restricted type into a reference to a composite
 	// in this case, the expected entitlements are based not on the underlying composite type,
 	// but instead the types previously in the restriction set
 	if validator.currentRestrictedTypeUpgradeRestrictions != nil {
@@ -389,17 +411,7 @@ typeSwitch:
 		}
 
 		if _, isbuiltinType := builtinTypes[oldType.String()]; !isbuiltinType {
-			oldTypeID, err := validator.typeIDFromType(oldType)
-			if err != nil {
-				break
-			}
-
-			newTypeID, err := validator.typeIDFromType(newType)
-			if err != nil {
-				break
-			}
-
-			checked, valid := validator.checkUserDefinedType(oldTypeID, newTypeID)
+			checked, valid := validator.checkUserDefinedTypeCustomRules(oldType, newType)
 
 			// If there are no custom rules for this type,
 			// do the default type comparison.
@@ -423,6 +435,28 @@ typeSwitch:
 
 	return oldType.CheckEqual(newType, validator)
 
+}
+
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkUserDefinedTypeCustomRules(
+	oldType ast.Type,
+	newType ast.Type,
+) (checked, valid bool) {
+
+	if validator.checkUserDefinedType == nil {
+		return false, false
+	}
+
+	oldTypeID, err := validator.typeIDFromType(oldType)
+	if err != nil {
+		return false, false
+	}
+
+	newTypeID, err := validator.typeIDFromType(newType)
+	if err != nil {
+		return false, false
+	}
+
+	return validator.checkUserDefinedType(oldTypeID, newTypeID)
 }
 
 func isNonStorableType(typ ast.Type) bool {
@@ -476,7 +510,9 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkDeclarationKindCha
 
 	// If the parent is an interface, and the child is a concrete type,
 	// then it is a type requirement.
-	if parent.DeclarationKind() == common.DeclarationKindContractInterface {
+	if parent != nil &&
+		parent.DeclarationKind() == common.DeclarationKindContractInterface {
+
 		// A struct is OK to be converted to a struct-interface
 		if oldDeclKind == common.DeclarationKindStructure &&
 			newDeclKind == common.DeclarationKindStructureInterface {
@@ -497,6 +533,132 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkDeclarationKindCha
 		Range:   ast.NewUnmeteredRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
 	})
 	return false
+}
+
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkNestedDeclarationRemoval(
+	nestedDeclaration ast.Declaration,
+	oldContainingDeclaration ast.Declaration,
+	newContainingDeclaration ast.Declaration,
+) {
+
+	// enums can be removed from contract interfaces, as they have no interface equivalent and are not
+	// actually used in field type annotations in any contracts
+	if oldContainingDeclaration.DeclarationKind() == common.DeclarationKindContractInterface &&
+		newContainingDeclaration.DeclarationKind() == common.DeclarationKindContractInterface &&
+		nestedDeclaration.DeclarationKind() == common.DeclarationKindEnum {
+		return
+	}
+
+	validator.underlyingUpdateValidator.checkNestedDeclarationRemoval(
+		nestedDeclaration,
+		oldContainingDeclaration,
+		newContainingDeclaration,
+	)
+}
+
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkConformanceV1(
+	oldDecl *ast.CompositeDeclaration,
+	newDecl *ast.CompositeDeclaration,
+) {
+
+	oldConformances := oldDecl.Conformances
+
+	// NOTE 1: Here it is assumed enums will always have one and only one conformance.
+	// This is enforced by the checker.
+	//
+	// NOTE 2: If one declaration is an enum, then other is also an enum at this stage.
+	// This is enforced by the validator (in `checkDeclarationUpdatability`), before calling this function.
+	if newDecl.Kind() == common.CompositeKindEnum {
+		err := oldConformances[0].CheckEqual(newDecl.Conformances[0], validator)
+		if err != nil {
+			validator.report(&ConformanceMismatchError{
+				DeclName: newDecl.Identifier.Identifier,
+				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+			})
+		}
+
+		return
+	}
+
+	// Below check for multiple conformances is only applicable
+	// for non-enum type composite declarations. i.e: structs, resources, etc.
+
+	location := validator.underlyingUpdateValidator.location
+
+	elaboration := validator.newElaborations[location]
+	newDeclType := elaboration.CompositeDeclarationType(newDecl)
+
+	// A conformance may not be explicitly defined in the current declaration,
+	// but they could be available via inheritance.
+	newConformances := newDeclType.EffectiveInterfaceConformances()
+
+	// All the existing conformances must have a match. Order is not important.
+	// Having extra new conformance is OK. See: https://github.com/onflow/cadence/issues/1394
+
+	// Note: Removing a conformance is NOT OK. That could lead to type-safety issues.
+	// e.g:
+	//  - Someone stores an array of type `[{I}]` with `T:I` objects inside.
+	//  - Later T’s conformance to `I` is removed.
+	//  - Now `[{I}]` contains objects if `T` that does not conform to `I`.
+
+	for _, oldConformance := range oldConformances {
+		found := false
+		for index, newConformance := range newConformances {
+			newConformanceNominalType := semaConformanceToASTNominalType(newConformance)
+
+			// First check whether there are any custom type-change rules.
+			customRuleChecked, customRuleValid :=
+				validator.checkUserDefinedTypeCustomRules(oldConformance, newConformanceNominalType)
+
+			if customRuleChecked {
+				// If exists, take its result.
+				// DO NOT fall back to the default type equality check, even if the rule did not satisfy.
+				found = customRuleValid
+			} else {
+				// If no custom rule exist, then use the default type equality check.
+				err := oldConformance.CheckEqual(newConformanceNominalType, validator)
+				found = err == nil
+			}
+
+			if found {
+				// Remove the matched conformance, so we don't have to check it again.
+				// i.e: optimization
+				newConformances = append(newConformances[:index], newConformances[index+1:]...)
+				break
+			}
+		}
+
+		if !found {
+			validator.report(&ConformanceMismatchError{
+				DeclName: newDecl.Identifier.Identifier,
+				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+			})
+
+			return
+		}
+	}
+}
+
+func semaConformanceToASTNominalType(newConformance sema.Conformance) *ast.NominalType {
+	interfaceType := newConformance.InterfaceType
+	containerType := interfaceType.GetContainerType()
+
+	identifier := ast.Identifier{
+		Identifier: interfaceType.Identifier,
+	}
+
+	if containerType == nil {
+		return ast.NewNominalType(nil, identifier, nil)
+	}
+
+	return ast.NewNominalType(
+		nil,
+		ast.Identifier{
+			Identifier: containerType.String(),
+		},
+		[]ast.Identifier{identifier},
+	)
+
 }
 
 var builtinTypes = map[string]struct{}{}
@@ -522,24 +684,19 @@ type AuthorizationMismatchError struct {
 }
 
 var _ errors.UserError = &AuthorizationMismatchError{}
-var _ errors.SecondaryError = &AuthorizationMismatchError{}
 
 func (*AuthorizationMismatchError) IsUserError() {}
 
 func (e *AuthorizationMismatchError) Error() string {
-	return "mismatching authorization"
-}
-
-func (e *AuthorizationMismatchError) SecondaryError() string {
 	if e.ExpectedAuthorization == sema.PrimitiveAccess(ast.AccessAll) {
 		return fmt.Sprintf(
-			"The entitlements migration would not grant this value any entitlements, but the annotation present is `%s`",
+			"mismatching authorization: the entitlements migration would not grant this value any entitlements, but the annotation present is `%s`",
 			e.FoundAuthorization.QualifiedString(),
 		)
 	}
 
 	return fmt.Sprintf(
-		"The entitlements migration would only grant this value `%s`, but the annotation present is `%s`",
+		"mismatching authorization: the entitlements migration would only grant this value `%s`, but the annotation present is `%s`",
 		e.ExpectedAuthorization.QualifiedString(),
 		e.FoundAuthorization.QualifiedString(),
 	)
