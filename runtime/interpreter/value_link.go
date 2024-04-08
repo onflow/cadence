@@ -50,11 +50,11 @@ func (PathLinkValue) isValue() {}
 
 func (PathLinkValue) isLinkValue() {}
 
-func (v PathLinkValue) Accept(_ *Interpreter, _ Visitor) {
+func (v PathLinkValue) Accept(_ *Interpreter, _ LocationRange, _ Visitor) {
 	panic(errors.NewUnreachableError())
 }
 
-func (v PathLinkValue) Walk(_ *Interpreter, _ func(Value)) {
+func (v PathLinkValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -118,7 +118,8 @@ func (v PathLinkValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -130,7 +131,7 @@ func (v PathLinkValue) Clone(_ *Interpreter) Value {
 	panic(errors.NewUnreachableError())
 }
 
-func (PathLinkValue) DeepRemove(_ *Interpreter) {
+func (PathLinkValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -160,11 +161,11 @@ func (AccountLinkValue) isValue() {}
 
 func (AccountLinkValue) isLinkValue() {}
 
-func (v AccountLinkValue) Accept(_ *Interpreter, _ Visitor) {
+func (v AccountLinkValue) Accept(_ *Interpreter, _ LocationRange, _ Visitor) {
 	panic(errors.NewUnreachableError())
 }
 
-func (AccountLinkValue) Walk(_ *Interpreter, _ func(Value)) {
+func (AccountLinkValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
 	panic(errors.NewUnreachableError())
 }
 
@@ -223,7 +224,8 @@ func (v AccountLinkValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -235,7 +237,7 @@ func (AccountLinkValue) Clone(_ *Interpreter) Value {
 	return AccountLinkValue{}
 }
 
-func (AccountLinkValue) DeepRemove(_ *Interpreter) {
+func (AccountLinkValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 

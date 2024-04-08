@@ -35,7 +35,7 @@ const StorageDomainContract = "contract"
 
 type Storage struct {
 	*atree.PersistentSlabStorage
-	NewStorageMaps  *orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]
+	NewStorageMaps  *orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]
 	storageMaps     map[interpreter.StorageKey]*interpreter.StorageMap
 	contractUpdates *orderedmap.OrderedMap[interpreter.StorageKey, *interpreter.CompositeValue]
 	Ledger          atree.Ledger
@@ -48,14 +48,16 @@ var _ interpreter.Storage = &Storage{}
 func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 	decodeStorable := func(
 		decoder *cbor.StreamDecoder,
-		slabStorageID atree.StorageID,
+		slabID atree.SlabID,
+		inlinedExtraData []atree.ExtraData,
 	) (
 		atree.Storable,
 		error,
 	) {
 		return interpreter.DecodeStorable(
 			decoder,
-			slabStorageID,
+			slabID,
+			inlinedExtraData,
 			memoryGauge,
 		)
 	}
@@ -120,9 +122,9 @@ func (s *Storage) GetStorageMap(
 		atreeAddress := atree.Address(address)
 
 		if isStorageIndex {
-			var storageIndex atree.StorageIndex
-			copy(storageIndex[:], data[:])
-			storageMap = s.loadExistingStorageMap(atreeAddress, storageIndex)
+			var slabIndex atree.SlabIndex
+			copy(slabIndex[:], data[:])
+			storageMap = s.loadExistingStorageMap(atreeAddress, slabIndex)
 		} else if createIfNotExists {
 			storageMap = s.StoreNewStorageMap(atreeAddress, domain)
 		}
@@ -135,27 +137,24 @@ func (s *Storage) GetStorageMap(
 	return storageMap
 }
 
-func (s *Storage) loadExistingStorageMap(address atree.Address, storageIndex atree.StorageIndex) *interpreter.StorageMap {
+func (s *Storage) loadExistingStorageMap(address atree.Address, slabIndex atree.SlabIndex) *interpreter.StorageMap {
 
-	storageID := atree.StorageID{
-		Address: address,
-		Index:   storageIndex,
-	}
+	slabID := atree.NewSlabID(address, slabIndex)
 
-	return interpreter.NewStorageMapWithRootID(s, storageID)
+	return interpreter.NewStorageMapWithRootID(s, slabID)
 }
 
 func (s *Storage) StoreNewStorageMap(address atree.Address, domain string) *interpreter.StorageMap {
 	storageMap := interpreter.NewStorageMap(s.memoryGauge, s, address)
 
-	storageIndex := storageMap.StorageID().Index
+	slabIndex := storageMap.SlabID().Index()
 
 	storageKey := interpreter.NewStorageKey(s.memoryGauge, common.Address(address), domain)
 
 	if s.NewStorageMaps == nil {
-		s.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]{}
+		s.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
 	}
-	s.NewStorageMaps.Set(storageKey, storageIndex)
+	s.NewStorageMaps.Set(storageKey, slabIndex)
 
 	return storageMap
 }
@@ -285,11 +284,11 @@ func (s *Storage) CheckHealth() error {
 
 	// Find account / non-temporary root slab IDs
 
-	accountRootSlabIDs := make(map[atree.StorageID]struct{}, len(rootSlabIDs))
+	accountRootSlabIDs := make(map[atree.SlabID]struct{}, len(rootSlabIDs))
 
 	// NOTE: map range is safe, as it creates a subset
 	for rootSlabID := range rootSlabIDs { //nolint:maprange
-		if rootSlabID.Address == (atree.Address{}) {
+		if rootSlabID.HasTempAddress() {
 			continue
 		}
 
@@ -298,14 +297,14 @@ func (s *Storage) CheckHealth() error {
 
 	// Check that each storage map refers to an existing slab.
 
-	found := map[atree.StorageID]struct{}{}
+	found := map[atree.SlabID]struct{}{}
 
-	var storageMapStorageIDs []atree.StorageID
+	var storageMapStorageIDs []atree.SlabID
 
 	for _, storageMap := range s.storageMaps { //nolint:maprange
 		storageMapStorageIDs = append(
 			storageMapStorageIDs,
-			storageMap.StorageID(),
+			storageMap.SlabID(),
 		)
 	}
 
@@ -328,7 +327,7 @@ func (s *Storage) CheckHealth() error {
 	// If a slab is not referenced, it is garbage.
 
 	if len(accountRootSlabIDs) > len(found) {
-		var unreferencedRootSlabIDs []atree.StorageID
+		var unreferencedRootSlabIDs []atree.SlabID
 
 		for accountRootSlabID := range accountRootSlabIDs { //nolint:maprange
 			if _, ok := found[accountRootSlabID]; ok {

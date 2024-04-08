@@ -109,11 +109,11 @@ func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *Ref
 	return v.BorrowType
 }
 
-func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
 	visitor.VisitStorageCapabilityControllerValue(interpreter, v)
 }
 
-func (v *StorageCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *StorageCapabilityControllerValue) Walk(_ *Interpreter, _ LocationRange, walkChild func(Value)) {
 	walkChild(v.TargetPath)
 	walkChild(v.CapabilityID)
 }
@@ -203,7 +203,8 @@ func (v *StorageCapabilityControllerValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -219,7 +220,7 @@ func (v *StorageCapabilityControllerValue) Clone(interpreter *Interpreter) Value
 	}
 }
 
-func (v *StorageCapabilityControllerValue) DeepRemove(_ *Interpreter) {
+func (v *StorageCapabilityControllerValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 

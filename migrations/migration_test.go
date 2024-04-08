@@ -482,6 +482,7 @@ func TestMultipleMigrations(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // storedValue is standalone
 		)
 
 		inter.WriteStored(
@@ -621,6 +622,7 @@ func TestMigrationError(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // storedValue is standalone
 		)
 
 		inter.WriteStored(

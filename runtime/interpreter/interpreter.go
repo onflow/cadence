@@ -217,7 +217,7 @@ type Storage interface {
 	CheckHealth() error
 }
 
-type ReferencedResourceKindedValues map[atree.StorageID]map[*EphemeralReferenceValue]struct{}
+type ReferencedResourceKindedValues map[atree.ValueID]map[*EphemeralReferenceValue]struct{}
 
 type Interpreter struct {
 	Location     common.Location
@@ -1781,6 +1781,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		false,
 		nil,
 		nil,
+		true, // value is standalone.
 	)
 
 	targetType = interpreter.substituteMappedEntitlements(targetType)
@@ -2060,7 +2061,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 			array := arrayValue.array
 
-			iterator, err := array.Iterator()
+			iterator, err := array.ReadOnlyIterator()
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
@@ -2101,7 +2102,7 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 
 			dictionary := dictValue.dictionary
 
-			iterator, err := dictionary.Iterator()
+			iterator, err := dictionary.ReadOnlyIterator()
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
@@ -4248,6 +4249,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 				true,
 				nil,
 				nil,
+				true, // value is standalone because it is from invocation.Arguments[0].
 			)
 
 			// Write new value
@@ -4372,6 +4374,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				false,
 				nil,
 				nil,
+				false, // value is an element in storage map because it is from "ReadStored".
 			)
 
 			// Remove the value from storage,
@@ -4646,6 +4649,7 @@ func GetNativeCompositeValueComputedFields(qualifiedIdentifier string) map[strin
 					false,
 					nil,
 					nil,
+					false,
 				)
 			},
 		}
@@ -5012,13 +5016,13 @@ func (interpreter *Interpreter) checkContainerMutation(
 }
 
 func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
-	storageIDStorable, ok := storable.(atree.StorageIDStorable)
+	slabIDStorable, ok := storable.(atree.SlabIDStorable)
 	if !ok {
 		return
 	}
 
-	storageID := atree.StorageID(storageIDStorable)
-	err := interpreter.Storage().Remove(storageID)
+	slabID := atree.SlabID(slabIDStorable)
+	err := interpreter.Storage().Remove(slabID)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -5030,6 +5034,10 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 	if config.AtreeValueValidationEnabled {
 		interpreter.ValidateAtreeValue(v)
 	}
+}
+
+func (interpreter *Interpreter) maybeValidateAtreeStorage() {
+	config := interpreter.SharedState.Config
 
 	if config.AtreeStorageValidationEnabled {
 		err := config.Storage.CheckHealth()
@@ -5114,14 +5122,16 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 	}
 
+	atreeInliningEnabled := true
+
 	switch value := value.(type) {
 	case *atree.Array:
-		err := atree.ValidArray(value, value.Type(), tic, hip)
+		err := atree.VerifyArray(value, value.Address(), value.Type(), tic, hip, atreeInliningEnabled)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
 
-		err = atree.ValidArraySerialization(
+		err = atree.VerifyArraySerialization(
 			value,
 			CBORDecMode,
 			CBOREncMode,
@@ -5142,12 +5152,12 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 		}
 
 	case *atree.OrderedMap:
-		err := atree.ValidMap(value, value.Type(), tic, hip)
+		err := atree.VerifyMap(value, value.Address(), value.Type(), tic, hip, atreeInliningEnabled)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
 
-		err = atree.ValidMapSerialization(
+		err = atree.VerifyMapSerialization(
 			value,
 			CBORDecMode,
 			CBOREncMode,
@@ -5172,13 +5182,13 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
 	if referenceValue, ok := value.(*EphemeralReferenceValue); ok {
 		if value, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue); ok {
-			interpreter.trackReferencedResourceKindedValue(value.StorageID(), referenceValue)
+			interpreter.trackReferencedResourceKindedValue(value.ValueID(), referenceValue)
 		}
 	}
 }
 
 func (interpreter *Interpreter) trackReferencedResourceKindedValue(
-	id atree.StorageID,
+	id atree.ValueID,
 	value *EphemeralReferenceValue,
 ) {
 	values := interpreter.SharedState.referencedResourceKindedValues[id]
@@ -5196,37 +5206,50 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 		return
 	}
 
-	var storageID atree.StorageID
+	var valueID atree.ValueID
 
 	switch value := value.(type) {
 	case *CompositeValue:
-		value.ForEachLoadedField(interpreter, func(_ string, fieldValue Value) (resume bool) {
-			interpreter.invalidateReferencedResources(fieldValue)
-			// continue iteration
-			return true
-		})
-		storageID = value.StorageID()
+		value.ForEachLoadedField(
+			interpreter,
+			func(_ string, fieldValue Value) (resume bool) {
+				interpreter.invalidateReferencedResources(fieldValue)
+				// continue iteration
+				return true
+			},
+		)
+		valueID = value.ValueID()
+
 	case *DictionaryValue:
-		value.IterateLoaded(interpreter, func(_, value Value) (resume bool) {
-			interpreter.invalidateReferencedResources(value)
-			return true
-		})
-		storageID = value.StorageID()
+		value.IterateLoaded(
+			interpreter,
+			func(_, value Value) (resume bool) {
+				interpreter.invalidateReferencedResources(value)
+				return true
+			},
+		)
+		valueID = value.ValueID()
+
 	case *ArrayValue:
-		value.IterateLoaded(interpreter, func(element Value) (resume bool) {
-			interpreter.invalidateReferencedResources(element)
-			return true
-		})
-		storageID = value.StorageID()
+		value.IterateLoaded(
+			interpreter,
+			func(element Value) (resume bool) {
+				interpreter.invalidateReferencedResources(element)
+				return true
+			},
+		)
+		valueID = value.ValueID()
+
 	case *SomeValue:
 		interpreter.invalidateReferencedResources(value.value)
 		return
+
 	default:
 		// skip non-container typed values.
 		return
 	}
 
-	values := interpreter.SharedState.referencedResourceKindedValues[storageID]
+	values := interpreter.SharedState.referencedResourceKindedValues[valueID]
 	if values == nil {
 		return
 	}
@@ -5239,7 +5262,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(value Value) {
 	// So no need to track those stale resources anymore. We will not need to update/clear them again.
 	// Therefore, remove them from the mapping.
 	// This is only to allow GC. No impact to the behavior.
-	delete(interpreter.SharedState.referencedResourceKindedValues, storageID)
+	delete(interpreter.SharedState.referencedResourceKindedValues, valueID)
 }
 
 // startResourceTracking starts tracking the life-span of a resource.
@@ -5351,12 +5374,13 @@ func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
 
 func (interpreter *Interpreter) DecodeStorable(
 	decoder *cbor.StreamDecoder,
-	storageID atree.StorageID,
+	slabID atree.SlabID,
+	inlinedExtraData []atree.ExtraData,
 ) (
 	atree.Storable,
 	error,
 ) {
-	return DecodeStorable(decoder, storageID, interpreter)
+	return DecodeStorable(decoder, slabID, inlinedExtraData, interpreter)
 }
 
 func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
@@ -5448,8 +5472,8 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 	)
 }
 
-func (interpreter *Interpreter) validateMutation(storageID atree.StorageID, locationRange LocationRange) {
-	_, present := interpreter.SharedState.containerValueIteration[storageID]
+func (interpreter *Interpreter) validateMutation(valueID atree.ValueID, locationRange LocationRange) {
+	_, present := interpreter.SharedState.containerValueIteration[valueID]
 	if !present {
 		return
 	}
@@ -5458,24 +5482,24 @@ func (interpreter *Interpreter) validateMutation(storageID atree.StorageID, loca
 	})
 }
 
-func (interpreter *Interpreter) withMutationPrevention(storageID atree.StorageID, f func()) {
-	oldIteration, present := interpreter.SharedState.containerValueIteration[storageID]
-	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
+func (interpreter *Interpreter) withMutationPrevention(valueID atree.ValueID, f func()) {
+	oldIteration, present := interpreter.SharedState.containerValueIteration[valueID]
+	interpreter.SharedState.containerValueIteration[valueID] = struct{}{}
 
 	f()
 
 	if !present {
-		delete(interpreter.SharedState.containerValueIteration, storageID)
+		delete(interpreter.SharedState.containerValueIteration, valueID)
 	} else {
-		interpreter.SharedState.containerValueIteration[storageID] = oldIteration
+		interpreter.SharedState.containerValueIteration[valueID] = oldIteration
 	}
 }
 
 func (interpreter *Interpreter) enforceNotResourceDestruction(
-	storageID atree.StorageID,
+	valueID atree.ValueID,
 	locationRange LocationRange,
 ) {
-	_, exists := interpreter.SharedState.destroyedResources[storageID]
+	_, exists := interpreter.SharedState.destroyedResources[valueID]
 	if exists {
 		panic(DestroyedResourceError{
 			LocationRange: locationRange,
@@ -5484,13 +5508,13 @@ func (interpreter *Interpreter) enforceNotResourceDestruction(
 }
 
 func (interpreter *Interpreter) withResourceDestruction(
-	storageID atree.StorageID,
+	valueID atree.ValueID,
 	locationRange LocationRange,
 	f func(),
 ) {
-	interpreter.enforceNotResourceDestruction(storageID, locationRange)
+	interpreter.enforceNotResourceDestruction(valueID, locationRange)
 
-	interpreter.SharedState.destroyedResources[storageID] = struct{}{}
+	interpreter.SharedState.destroyedResources[valueID] = struct{}{}
 
 	f()
 }

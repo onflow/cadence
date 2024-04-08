@@ -29,11 +29,11 @@ import (
 )
 
 type TestLedger struct {
-	StoredValues           map[string][]byte
-	OnValueExists          func(owner, key []byte) (exists bool, err error)
-	OnGetValue             func(owner, key []byte) (value []byte, err error)
-	OnSetValue             func(owner, key, value []byte) (err error)
-	OnAllocateStorageIndex func(owner []byte) (atree.StorageIndex, error)
+	StoredValues        map[string][]byte
+	OnValueExists       func(owner, key []byte) (exists bool, err error)
+	OnGetValue          func(owner, key []byte) (value []byte, err error)
+	OnSetValue          func(owner, key, value []byte) (err error)
+	OnAllocateSlabIndex func(owner []byte) (atree.SlabIndex, error)
 }
 
 var _ atree.Ledger = TestLedger{}
@@ -50,8 +50,8 @@ func (s TestLedger) ValueExists(owner, key []byte) (exists bool, err error) {
 	return s.OnValueExists(owner, key)
 }
 
-func (s TestLedger) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
-	return s.OnAllocateStorageIndex(owner)
+func (s TestLedger) AllocateSlabIndex(owner []byte) (atree.SlabIndex, error) {
+	return s.OnAllocateSlabIndex(owner)
 }
 
 func (s TestLedger) Dump() {
@@ -96,7 +96,7 @@ func NewTestLedger(
 			}
 			return nil
 		},
-		OnAllocateStorageIndex: func(owner []byte) (result atree.StorageIndex, err error) {
+		OnAllocateSlabIndex: func(owner []byte) (result atree.SlabIndex, err error) {
 			index := storageIndices[string(owner)] + 1
 			storageIndices[string(owner)] = index
 			binary.BigEndian.PutUint64(result[:], index)

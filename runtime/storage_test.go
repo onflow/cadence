@@ -63,13 +63,13 @@ func withWritesToStorage(
 			Key:     fmt.Sprintf("%d", randomIndex),
 		}
 
-		var storageIndex atree.StorageIndex
-		binary.BigEndian.PutUint32(storageIndex[:], randomIndex)
+		var slabIndex atree.SlabIndex
+		binary.BigEndian.PutUint32(slabIndex[:], randomIndex)
 
 		if storage.NewStorageMaps == nil {
-			storage.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]{}
+			storage.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.SlabIndex]{}
 		}
-		storage.NewStorageMaps.Set(storageKey, storageIndex)
+		storage.NewStorageMaps.Set(storageKey, slabIndex)
 	}
 
 	handler(storage, inter)
@@ -1576,11 +1576,14 @@ func TestRuntimeStorageTransfer(t *testing.T) {
 			nonEmptyKeys++
 		}
 	}
-	// 5:
+
+	// TODO: maybe retrieve and compare stored values from 2 accounts
+
+	// 4:
+	// NOTE: with atree inlining, array is inlined inside storage map
 	// - 2x storage index for storage domain storage map
 	// - 2x storage domain storage map
-	// - array (atree array)
-	assert.Equal(t, 5, nonEmptyKeys)
+	assert.Equal(t, 4, nonEmptyKeys)
 }
 
 func TestRuntimeResourceOwnerChange(t *testing.T) {
@@ -1744,18 +1747,16 @@ func TestRuntimeResourceOwnerChange(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			// account 0x1:
+			// NOTE: with atree inlining, contract is inlined in contract map
 			//     storage map (domain key + map slab)
-			//   + contract map (domain key + map slap)
-			//   + contract
-			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x01",
+			//   + contract map (domain key + map slab)
 			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x02",
 			"\x00\x00\x00\x00\x00\x00\x00\x01|$\x00\x00\x00\x00\x00\x00\x00\x04",
 			"\x00\x00\x00\x00\x00\x00\x00\x01|contract",
 			"\x00\x00\x00\x00\x00\x00\x00\x01|storage",
 			// account 0x2
+			// NOTE: with atree inlining, resource is inlined in storage map
 			//     storage map (domain key + map slab)
-			//   + resource
-			"\x00\x00\x00\x00\x00\x00\x00\x02|$\x00\x00\x00\x00\x00\x00\x00\x01",
 			"\x00\x00\x00\x00\x00\x00\x00\x02|$\x00\x00\x00\x00\x00\x00\x00\x02",
 			"\x00\x00\x00\x00\x00\x00\x00\x02|storage",
 		},
