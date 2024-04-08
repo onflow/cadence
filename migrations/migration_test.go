@@ -2747,6 +2747,6 @@ func TestDictionaryKeyConflict(t *testing.T) {
 		// Health check is expected to fail,
 		// as one of the arrays is still stored, but no longer referenced
 		err = storage.CheckHealth()
-		require.ErrorContains(t, err, "slabs not referenced from account Storage: [0x1.3]")
+		require.ErrorContains(t, err, "slabs not referenced: [0x1.3]")
 	})()
 }
