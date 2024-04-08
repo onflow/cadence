@@ -1924,7 +1924,9 @@ func (v *ArrayValue) Iterate(
 	)
 }
 
-func (v *ArrayValue) IterateLoaded(
+// IterateReadOnlyLoaded iterates over all LOADED elements of the array.
+// DO NOT perform storage mutations in the callback!
+func (v *ArrayValue) IterateReadOnlyLoaded(
 	interpreter *Interpreter,
 	f func(element Value) (resume bool),
 	locationRange LocationRange,
@@ -18194,9 +18196,10 @@ func (v *CompositeValue) ForEachField(
 	)
 }
 
-// ForEachLoadedField iterates over all LOADED field-name field-value pairs of the composite value.
+// ForEachReadOnlyLoadedField iterates over all LOADED field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
-func (v *CompositeValue) ForEachLoadedField(
+// DO NOT perform storage mutations in the callback!
+func (v *CompositeValue) ForEachReadOnlyLoadedField(
 	interpreter *Interpreter,
 	f func(fieldName string, fieldValue Value) (resume bool),
 	locationRange LocationRange,
@@ -18959,7 +18962,9 @@ func (v *DictionaryValue) Iterate(
 	v.iterate(interpreter, iterate, f, locationRange)
 }
 
-func (v *DictionaryValue) IterateLoaded(
+// IterateReadOnlyLoaded iterates over all LOADED key-valye pairs of the array.
+// DO NOT perform storage mutations in the callback!
+func (v *DictionaryValue) IterateReadOnlyLoaded(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	f func(key, value Value) (resume bool),
