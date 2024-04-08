@@ -901,27 +901,15 @@ func (interpreter *Interpreter) visitAssignment(
 		HasPosition: position,
 	}
 
-	// If the assignment is a forced move,
-	// ensure that the target is nil,
-	// otherwise panic
+	// Evaluate the value, and assign it using the setter function
 
-	if transferOperation == ast.TransferOperationMoveForced {
-
-		// If the force-move assignment is used for the initialization of a field,
-		// then there is no prior value for the field, so allow missing
-
-		const allowMissing = true
-
-		target := targetGetterSetter.get(allowMissing)
-
-		if _, ok := target.(NilValue); !ok && target != nil {
-			panic(ForceAssignmentToNonNilResourceError{
-				LocationRange: locationRange,
-			})
-		}
-	}
-
-	// Finally, evaluate the value, and assign it using the setter function
+	// Here it is too early to check whether the existing value is a
+	// valid non-nil resource (i.e: causing a resource loss), because
+	// evaluating the `valueExpression` could change things, and
+	// a `nil`/invalid resource at this point could be valid after
+	// the evaluation of `valueExpression`.
+	// Therefore, delay the checking of resource loss as much as possible,
+	// and check it at the 'setter', at the point where the value is assigned.
 
 	value := interpreter.evalExpression(valueExpression)
 
@@ -5509,4 +5497,32 @@ func (interpreter *Interpreter) withResourceDestruction(
 	interpreter.SharedState.destroyedResources[valueID] = struct{}{}
 
 	f()
+}
+
+func (interpreter *Interpreter) checkResourceLoss(value Value, locationRange LocationRange) {
+	if !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	var resourceKindedValue ResourceKindedValue
+
+	switch existingValue := value.(type) {
+	case *CompositeValue:
+		// A dedicated error is thrown when setting duplicate attachments.
+		// So don't throw an error here.
+		if existingValue.Kind == common.CompositeKindAttachment {
+			return
+		}
+		resourceKindedValue = existingValue
+	case ResourceKindedValue:
+		resourceKindedValue = existingValue
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	if !resourceKindedValue.isInvalidatedResource(interpreter) {
+		panic(ResourceLossError{
+			LocationRange: locationRange,
+		})
+	}
 }
