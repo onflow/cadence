@@ -1212,7 +1212,7 @@ func TestVisitor(t *testing.T) {
 		common.ZeroAddress,
 	)
 
-	value.Accept(inter, EmptyLocationRange, visitor)
+	value.Accept(inter, visitor, EmptyLocationRange)
 
 	require.Equal(t, 1, intVisits)
 	require.Equal(t, 1, stringVisits)

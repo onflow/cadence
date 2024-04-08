@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	mrand "math/rand"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -4677,27 +4678,19 @@ func TestRuntimeRandom(t *testing.T) {
 
 			moduloBuffer := newRandBuffer(t)
 
-			// ensure random buffer range used for modulo is not all zeros (modulo cannot be zero)
-			for {
-				var foundNonZero bool
-				for _, v := range moduloBuffer[:byteSize] {
-					if v != 0 {
-						foundNonZero = true
-						break
-					}
-				}
-				if foundNonZero {
-					break
-				}
-
-				// if all zeros, draw new random buffer
-				_, err := rand.Read(moduloBuffer[:byteSize])
-				require.NoError(t, err)
-			}
-
 			// build a big Int from the modulo buffer, with the required `ty` size
 			// big.Int are used as they cover all the tested types including the small ones (UInt8 ..)
 			modulo := new(big.Int).SetBytes(moduloBuffer[:byteSize])
+
+			// make sure `modulo` is non zero, without loss of generality.
+			// a random bit of `modulo` is set to `1` by operating an `Or` with a random
+			// power of 2.
+			// `power` is a random number strictly less than the bitsize of `modulo`
+			power := mrand.Intn(byteSize * 8)
+			// `powerOfTwo` is a random power of 2
+			powerOfTwo := new(big.Int).Lsh(big.NewInt(1), uint(power))
+			// force a bit of `modulo` to `1`
+			modulo.Or(modulo, powerOfTwo)
 
 			value, err := executeScript(ty, modulo.String(), readCryptoRandom)
 			require.NoError(t, err)
@@ -7495,7 +7488,7 @@ func TestRuntimeComputationMetring(t *testing.T) {
         `,
 			ok:        false,
 			hits:      compLimit,
-			intensity: 15,
+			intensity: 6,
 		},
 		{
 			name: "statement + createArray + transferArray + two for-in loop iterations",
@@ -7503,8 +7496,8 @@ func TestRuntimeComputationMetring(t *testing.T) {
           for i in [1, 2] {}
         `,
 			ok:        true,
-			hits:      5,
-			intensity: 6,
+			hits:      4,
+			intensity: 4,
 		},
 		{
 			name: "statement + functionInvocation + encoding",

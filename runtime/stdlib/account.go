@@ -315,11 +315,15 @@ func NewAccountValue(
 	)
 }
 
+type AccountContractAdditionAndNamesHandler interface {
+	AccountContractAdditionHandler
+	AccountContractNamesProvider
+}
+
 type AccountContractsHandler interface {
 	AccountContractProvider
-	AccountContractAdditionHandler
+	AccountContractAdditionAndNamesHandler
 	AccountContractRemovalHandler
-	AccountContractNamesProvider
 }
 
 func newAccountContractsValue(
@@ -921,7 +925,7 @@ func newAccountInboxPublishFunction(
 		gauge,
 		sema.Account_InboxTypePublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			value, ok := invocation.Arguments[0].(*interpreter.CapabilityValue)
+			value, ok := invocation.Arguments[0].(interpreter.CapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -1394,7 +1398,7 @@ type AccountContractAdditionHandler interface {
 func newAccountContractsChangeFunction(
 	functionType *sema.FunctionType,
 	gauge common.MemoryGauge,
-	handler AccountContractAdditionHandler,
+	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
 	isUpdate bool,
 ) *interpreter.HostFunctionValue {
@@ -1409,7 +1413,7 @@ func newAccountContractsChangeFunction(
 
 func changeAccountContracts(
 	invocation interpreter.Invocation,
-	handler AccountContractAdditionHandler,
+	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
 	isUpdate bool,
 ) interpreter.Value {
@@ -1585,6 +1589,8 @@ func changeAccountContracts(
 
 	// Validate the contract update
 
+	inter := invocation.Interpreter
+
 	if isUpdate {
 		oldCode, err := handler.GetAccountContractCode(location)
 		handleContractUpdateError(err)
@@ -1617,16 +1623,19 @@ func changeAccountContracts(
 
 		var validator UpdateValidator
 		if legacyContractUpgrade {
-			validator = NewLegacyContractUpdateValidator(
+			validator = NewCadenceV042ToV1ContractUpdateValidator(
 				location,
 				contractName,
+				handler,
 				oldProgram,
 				program.Program,
+				inter.AllElaborations(),
 			)
 		} else {
 			validator = NewContractUpdateValidator(
 				location,
 				contractName,
+				handler,
 				oldProgram,
 				program.Program,
 			)
@@ -1634,8 +1643,6 @@ func changeAccountContracts(
 		err = validator.Validate()
 		handleContractUpdateError(err)
 	}
-
-	inter := invocation.Interpreter
 
 	err = updateAccountContractCode(
 		handler,
@@ -1690,7 +1697,7 @@ func changeAccountContracts(
 func newAccountContractsTryUpdateFunction(
 	functionType *sema.FunctionType,
 	gauge common.MemoryGauge,
-	handler AccountContractAdditionHandler,
+	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
@@ -2558,7 +2565,7 @@ func checkAndIssueStorageCapabilityControllerWithType(
 	address common.Address,
 	targetPathValue interpreter.PathValue,
 	ty sema.Type,
-) *interpreter.CapabilityValue {
+) *interpreter.IDCapabilityValue {
 
 	borrowType, ok := ty.(*sema.ReferenceType)
 	if !ok {
@@ -2709,7 +2716,7 @@ func checkAndIssueAccountCapabilityControllerWithType(
 	idGenerator AccountIDGenerator,
 	address common.Address,
 	ty sema.Type,
-) *interpreter.CapabilityValue {
+) *interpreter.IDCapabilityValue {
 
 	// Get and check borrow type
 
@@ -3270,11 +3277,11 @@ func newAccountCapabilitiesPublishFunction(
 
 			// Get capability argument
 
-			var capabilityValue *interpreter.CapabilityValue
+			var capabilityValue *interpreter.IDCapabilityValue
 
 			firstValue := invocation.Arguments[0]
 			switch firstValue := firstValue.(type) {
-			case *interpreter.CapabilityValue:
+			case *interpreter.IDCapabilityValue:
 				capabilityValue = firstValue
 
 			default:
@@ -3324,7 +3331,7 @@ func newAccountCapabilitiesPublishFunction(
 				nil,
 				nil,
 				true, // capabilityValue is standalone because it is from invocation.Arguments[0].
-			).(*interpreter.CapabilityValue)
+			).(*interpreter.IDCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -3375,9 +3382,9 @@ func newAccountCapabilitiesUnpublishFunction(
 				return interpreter.Nil
 			}
 
-			var capabilityValue *interpreter.CapabilityValue
+			var capabilityValue *interpreter.IDCapabilityValue
 			switch readValue := readValue.(type) {
-			case *interpreter.CapabilityValue:
+			case *interpreter.IDCapabilityValue:
 				capabilityValue = readValue
 
 			default:
@@ -3392,7 +3399,7 @@ func newAccountCapabilitiesUnpublishFunction(
 				nil,
 				nil,
 				false, // capabilityValue is an element of storage map.
-			).(*interpreter.CapabilityValue)
+			).(*interpreter.IDCapabilityValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -3605,10 +3612,10 @@ func newAccountCapabilitiesGetFunction(
 				return interpreter.Nil
 			}
 
-			var readCapabilityValue *interpreter.CapabilityValue
+			var readCapabilityValue *interpreter.IDCapabilityValue
 
 			switch readValue := readValue.(type) {
-			case *interpreter.CapabilityValue:
+			case *interpreter.IDCapabilityValue:
 				readCapabilityValue = readValue
 
 			default:
@@ -4001,13 +4008,13 @@ func getCapabilityControllerTag(
 func newCapabilityControllerGetCapabilityFunction(
 	address common.Address,
 	controller interpreter.CapabilityControllerValue,
-) func(inter *interpreter.Interpreter) *interpreter.CapabilityValue {
+) func(inter *interpreter.Interpreter) *interpreter.IDCapabilityValue {
 
 	addressValue := interpreter.AddressValue(address)
 	capabilityID := controller.ControllerCapabilityID()
 	borrowType := controller.CapabilityControllerBorrowType()
 
-	return func(inter *interpreter.Interpreter) *interpreter.CapabilityValue {
+	return func(inter *interpreter.Interpreter) *interpreter.IDCapabilityValue {
 		return interpreter.NewCapabilityValue(
 			inter,
 			capabilityID,

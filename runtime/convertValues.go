@@ -229,7 +229,7 @@ func exportValueWithInterpreter(
 		return exportPathValue(inter, v)
 	case interpreter.TypeValue:
 		return exportTypeValue(v, inter), nil
-	case *interpreter.CapabilityValue:
+	case *interpreter.IDCapabilityValue:
 		return exportCapabilityValue(v, inter)
 	case *interpreter.EphemeralReferenceValue:
 		// Break recursion through references
@@ -316,23 +316,28 @@ func exportArrayValue(
 			values := make([]cadence.Value, 0, v.Count())
 
 			var err error
-			v.Iterate(inter, func(value interpreter.Value) (resume bool) {
-				var exportedValue cadence.Value
-				exportedValue, err = exportValueWithInterpreter(
-					value,
-					inter,
-					locationRange,
-					seenReferences,
-				)
-				if err != nil {
-					return false
-				}
-				values = append(
-					values,
-					exportedValue,
-				)
-				return true
-			})
+			v.Iterate(
+				inter,
+				func(value interpreter.Value) (resume bool) {
+					var exportedValue cadence.Value
+					exportedValue, err = exportValueWithInterpreter(
+						value,
+						inter,
+						locationRange,
+						seenReferences,
+					)
+					if err != nil {
+						return false
+					}
+					values = append(
+						values,
+						exportedValue,
+					)
+					return true
+				},
+				false,
+				locationRange,
+			)
 
 			if err != nil {
 				return nil, err
@@ -687,7 +692,7 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 }
 
 func exportCapabilityValue(
-	v *interpreter.CapabilityValue,
+	v *interpreter.IDCapabilityValue,
 	inter *interpreter.Interpreter,
 ) (cadence.Capability, error) {
 	borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
@@ -1166,7 +1171,7 @@ func (i valueImporter) importCapability(
 	address cadence.Address,
 	borrowType cadence.Type,
 ) (
-	*interpreter.CapabilityValue,
+	*interpreter.IDCapabilityValue,
 	error,
 ) {
 	_, ok := borrowType.(*cadence.ReferenceType)

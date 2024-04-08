@@ -91,6 +91,7 @@ func TestInspectValue(t *testing.T) {
 				inspectedValues = append(inspectedValues, value)
 				return true
 			},
+			EmptyLocationRange,
 		)
 
 		AssertValueSlicesEqual(
@@ -119,6 +120,7 @@ func TestInspectValue(t *testing.T) {
 				inspectedValues = append(inspectedValues, value)
 				return true
 			},
+			EmptyLocationRange,
 		)
 
 		AssertValueSlicesEqual(

@@ -995,25 +995,9 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
             }
         `)
 
-		result, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		RequireValuesEqual(
-			t,
-			inter,
-			interpreter.NewArrayValue(
-				inter,
-				interpreter.EmptyLocationRange,
-				&interpreter.VariableSizedStaticType{
-					Type: interpreter.PrimitiveStaticTypeString,
-				},
-				common.ZeroAddress,
-				interpreter.NewUnmeteredStringValue("hello"), // updated
-				interpreter.NewUnmeteredStringValue("hello"), // updated
-				interpreter.NewUnmeteredStringValue("baz"),   // NOT updated
-			),
-			result,
-		)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
 	})
 
 	t.Run("array, remove", func(t *testing.T) {
@@ -1034,7 +1018,7 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		assert.ErrorAs(t, err, &interpreter.ArrayIndexOutOfBoundsError{})
+		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
 	})
 
 	t.Run("dictionary, add", func(t *testing.T) {
@@ -1058,37 +1042,9 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
             }
         `)
 
-		result, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		require.IsType(t, &interpreter.DictionaryValue{}, result)
-		dictionary := result.(*interpreter.DictionaryValue)
-
-		require.Equal(t, 3, dictionary.Count())
-
-		val, present := dictionary.Get(
-			inter,
-			interpreter.EmptyLocationRange,
-			interpreter.NewUnmeteredStringValue("a"),
-		)
-		assert.True(t, present)
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("hello"), val) // Updated
-
-		val, present = dictionary.Get(
-			inter,
-			interpreter.EmptyLocationRange,
-			interpreter.NewUnmeteredStringValue("b"),
-		)
-		assert.True(t, present)
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("hello"), val) // Updated
-
-		val, present = dictionary.Get(
-			inter,
-			interpreter.EmptyLocationRange,
-			interpreter.NewUnmeteredStringValue("c"),
-		)
-		assert.True(t, present)
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("baz"), val) // Not Updated
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
 	})
 
 	t.Run("dictionary, remove", func(t *testing.T) {
@@ -1110,29 +1066,9 @@ func TestInterpretContainerMutationWhileIterating(t *testing.T) {
             }
         `)
 
-		result, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		require.IsType(t, &interpreter.DictionaryValue{}, result)
-		dictionary := result.(*interpreter.DictionaryValue)
-
-		require.Equal(t, 2, dictionary.Count())
-
-		val, present := dictionary.Get(
-			inter,
-			interpreter.EmptyLocationRange,
-			interpreter.NewUnmeteredStringValue("a"),
-		)
-		assert.True(t, present)
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("foo"), val)
-
-		val, present = dictionary.Get(
-			inter,
-			interpreter.EmptyLocationRange,
-			interpreter.NewUnmeteredStringValue("c"),
-		)
-		assert.True(t, present)
-		assert.Equal(t, interpreter.NewUnmeteredStringValue("baz"), val)
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
 	})
 
 	t.Run("resource dictionary, remove", func(t *testing.T) {

@@ -95,11 +95,11 @@ func (f *InterpretedFunctionValue) MeteredString(memoryGauge common.MemoryGauge,
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
+func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
 }
 
-func (f *InterpretedFunctionValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
+func (f *InterpretedFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -107,7 +107,7 @@ func (f *InterpretedFunctionValue) StaticType(interpreter *Interpreter) StaticTy
 	return ConvertSemaToStaticType(interpreter, f.Type)
 }
 
-func (*InterpretedFunctionValue) IsImportable(_ *Interpreter) bool {
+func (*InterpretedFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -226,11 +226,11 @@ var _ ContractValue = &HostFunctionValue{}
 
 func (*HostFunctionValue) isValue() {}
 
-func (f *HostFunctionValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
+func (f *HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitHostFunctionValue(interpreter, f)
 }
 
-func (f *HostFunctionValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
+func (f *HostFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -238,7 +238,7 @@ func (f *HostFunctionValue) StaticType(interpreter *Interpreter) StaticType {
 	return ConvertSemaToStaticType(interpreter, f.Type)
 }
 
-func (*HostFunctionValue) IsImportable(_ *Interpreter) bool {
+func (*HostFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -380,11 +380,11 @@ func (f BoundFunctionValue) MeteredString(memoryGauge common.MemoryGauge, seenRe
 	return f.Function.MeteredString(memoryGauge, seenReferences)
 }
 
-func (f BoundFunctionValue) Accept(interpreter *Interpreter, _ LocationRange, visitor Visitor) {
+func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitBoundFunctionValue(interpreter, f)
 }
 
-func (f BoundFunctionValue) Walk(_ *Interpreter, _ LocationRange, _ func(Value)) {
+func (f BoundFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -392,7 +392,7 @@ func (f BoundFunctionValue) StaticType(inter *Interpreter) StaticType {
 	return f.Function.StaticType(inter)
 }
 
-func (BoundFunctionValue) IsImportable(_ *Interpreter) bool {
+func (BoundFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
