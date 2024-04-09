@@ -42,6 +42,16 @@ func NewEntitlementsMigration(inter *interpreter.Interpreter) EntitlementsMigrat
 	}
 }
 
+func NewEntitlementsMigrationWithCache(
+	inter *interpreter.Interpreter,
+	migratedTypeCache map[common.TypeID]interpreter.StaticType,
+) EntitlementsMigration {
+	return EntitlementsMigration{
+		Interpreter:       inter,
+		migratedTypeCache: migratedTypeCache,
+	}
+}
+
 func (EntitlementsMigration) Name() string {
 	return "EntitlementsMigration"
 }
