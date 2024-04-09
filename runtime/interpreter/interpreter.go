@@ -5244,7 +5244,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(
 
 	switch value := value.(type) {
 	case *CompositeValue:
-		value.ForEachLoadedField(
+		value.ForEachReadOnlyLoadedField(
 			interpreter,
 			func(_ string, fieldValue Value) (resume bool) {
 				interpreter.invalidateReferencedResources(fieldValue, locationRange)
@@ -5256,7 +5256,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(
 		valueID = value.ValueID()
 
 	case *DictionaryValue:
-		value.IterateLoaded(
+		value.IterateReadOnlyLoaded(
 			interpreter,
 			locationRange,
 			func(_, value Value) (resume bool) {
@@ -5267,7 +5267,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(
 		valueID = value.ValueID()
 
 	case *ArrayValue:
-		value.IterateLoaded(
+		value.IterateReadOnlyLoaded(
 			interpreter,
 			func(element Value) (resume bool) {
 				interpreter.invalidateReferencedResources(element, locationRange)

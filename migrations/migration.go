@@ -312,22 +312,23 @@ func (m *StorageMigration) MigrateNestedValue(
 		// by the modification of the nested values.
 		var existingKeysAndValues []keyValuePair
 
-		iterator := dictionary.Iterator()
+		dictionary.IterateReadOnly(
+			inter,
+			emptyLocationRange,
+			func(key, value interpreter.Value) (resume bool) {
 
-		for {
-			key, value := iterator.Next(nil)
-			if key == nil {
-				break
-			}
+				existingKeysAndValues = append(
+					existingKeysAndValues,
+					keyValuePair{
+						key:   key,
+						value: value,
+					},
+				)
 
-			existingKeysAndValues = append(
-				existingKeysAndValues,
-				keyValuePair{
-					key:   key,
-					value: value,
-				},
-			)
-		}
+				// Continue iteration
+				return true
+			},
+		)
 
 		for _, existingKeyAndValue := range existingKeysAndValues {
 			existingKey := existingKeyAndValue.key
