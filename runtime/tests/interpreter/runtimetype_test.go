@@ -50,7 +50,7 @@ func TestInterpretOptionalType(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeString,
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -59,7 +59,7 @@ func TestInterpretOptionalType(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -68,7 +68,7 @@ func TestInterpretOptionalType(t *testing.T) {
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -79,12 +79,12 @@ func TestInterpretOptionalType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("e").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 }
 
@@ -109,7 +109,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeString,
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -118,7 +118,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -127,7 +127,7 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -138,11 +138,11 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("e").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 }
 
@@ -168,7 +168,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 				Size: int64(10),
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -178,7 +178,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 				Size: int64(5),
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -188,7 +188,7 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 				Size: int64(400),
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -201,12 +201,12 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 				Size: int64(6),
 			},
 		},
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("e").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 }
 
@@ -234,7 +234,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -244,7 +244,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 				ValueType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -254,7 +254,7 @@ func TestInterpretDictionaryType(t *testing.T) {
 				KeyType:   interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -267,17 +267,17 @@ func TestInterpretDictionaryType(t *testing.T) {
 				KeyType: interpreter.PrimitiveStaticTypeBool,
 			},
 		},
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("e").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("f").GetValue(),
+		inter.Globals.Get("f").GetValue(inter),
 	)
 }
 
@@ -307,50 +307,50 @@ func TestInterpretCompositeType(t *testing.T) {
 		interpreter.TypeValue{
 			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("e").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "F"),
 		},
-		inter.Globals.Get("f").GetValue(),
+		inter.Globals.Get("f").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "PublicKey"),
 		},
-		inter.Globals.Get("g").GetValue(),
+		inter.Globals.Get("g").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "HashAlgorithm"),
 		},
-		inter.Globals.Get("h").GetValue(),
+		inter.Globals.Get("h").GetValue(inter),
 	)
 }
 
@@ -379,7 +379,7 @@ func TestInterpretFunctionType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -394,7 +394,7 @@ func TestInterpretFunctionType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -405,12 +405,12 @@ func TestInterpretFunctionType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 }
 
@@ -442,7 +442,7 @@ func TestInterpretReferenceType(t *testing.T) {
 				),
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -452,7 +452,7 @@ func TestInterpretReferenceType(t *testing.T) {
 				Authorization:  interpreter.UnauthorizedAccess,
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -467,17 +467,17 @@ func TestInterpretReferenceType(t *testing.T) {
 				),
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("e").GetValue(),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 }
 
@@ -517,12 +517,12 @@ func TestInterpretIntersectionType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -533,12 +533,12 @@ func TestInterpretIntersectionType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("j").GetValue(),
+		inter.Globals.Get("j").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -550,22 +550,22 @@ func TestInterpretIntersectionType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("k").GetValue(),
+		inter.Globals.Get("k").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("f").GetValue(),
+		inter.Globals.Get("f").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("h").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("h").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("b").GetValue(),
-		inter.Globals.Get("i").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
+		inter.Globals.Get("i").GetValue(inter),
 	)
 }
 
@@ -593,7 +593,7 @@ func TestInterpretCapabilityType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -605,7 +605,7 @@ func TestInterpretCapabilityType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
@@ -617,17 +617,17 @@ func TestInterpretCapabilityType(t *testing.T) {
 				},
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("e").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 }
 
@@ -652,26 +652,26 @@ func TestInterpretInclusiveRangeType(t *testing.T) {
 				ElementType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("e").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 }

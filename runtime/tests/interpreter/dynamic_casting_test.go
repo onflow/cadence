@@ -113,14 +113,14 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 									t,
 									inter,
 									test.expected,
-									inter.Globals.Get("x").GetValue(),
+									inter.Globals.Get("x").GetValue(inter),
 								)
 
 								AssertValuesEqual(
 									t,
 									inter,
 									test.expected,
-									inter.Globals.Get("y").GetValue(),
+									inter.Globals.Get("y").GetValue(inter),
 								)
 
 								AssertValuesEqual(
@@ -129,7 +129,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 									interpreter.NewUnmeteredSomeValueNonCopying(
 										test.expected,
 									),
-									inter.Globals.Get("z").GetValue(),
+									inter.Globals.Get("z").GetValue(inter),
 								)
 							})
 						}
@@ -219,7 +219,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 							t,
 							inter,
 							interpreter.Void,
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals.Get("x").GetValue(inter),
 						)
 
 						AssertValuesEqual(
@@ -228,7 +228,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								interpreter.Void,
 							),
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 					})
 				}
@@ -313,7 +313,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 							t,
 							inter,
 							interpreter.NewUnmeteredStringValue("test"),
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals.Get("x").GetValue(inter),
 						)
 
 						AssertValuesEqual(
@@ -322,7 +322,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								interpreter.NewUnmeteredStringValue("test"),
 							),
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 					})
 				}
@@ -406,7 +406,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 							t,
 							inter,
 							interpreter.TrueValue,
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals.Get("x").GetValue(inter),
 						)
 
 						AssertValuesEqual(
@@ -415,7 +415,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								interpreter.TrueValue,
 							),
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 					})
 				}
@@ -503,7 +503,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 							t,
 							inter,
 							addressValue,
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 
 						AssertValuesEqual(
@@ -512,7 +512,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								addressValue,
 							),
-							inter.Globals.Get("z").GetValue(),
+							inter.Globals.Get("z").GetValue(inter),
 						)
 					})
 				}
@@ -597,17 +597,17 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 
 						assert.IsType(t,
 							&interpreter.CompositeValue{},
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals.Get("x").GetValue(inter),
 						)
 
 						require.IsType(t,
 							&interpreter.SomeValue{},
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 
 						require.IsType(t,
 							&interpreter.CompositeValue{},
-							inter.Globals.Get("y").GetValue().(*interpreter.SomeValue).
+							inter.Globals.Get("y").GetValue(inter).(*interpreter.SomeValue).
 								InnerValue(inter, interpreter.EmptyLocationRange),
 						)
 					})
@@ -1100,7 +1100,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							t,
 							inter,
 							expectedValue,
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 
 						if targetType == sema.AnyStructType && !returnsOptional {
@@ -1109,7 +1109,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 								t,
 								inter,
 								expectedValue,
-								inter.Globals.Get("z").GetValue(),
+								inter.Globals.Get("z").GetValue(inter),
 							)
 
 						} else {
@@ -1119,7 +1119,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 								interpreter.NewUnmeteredSomeValueNonCopying(
 									expectedValue,
 								),
-								inter.Globals.Get("z").GetValue(),
+								inter.Globals.Get("z").GetValue(inter),
 							)
 						}
 
@@ -1206,7 +1206,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							interpreter.NewUnmeteredIntValueFromInt64(42),
 						}
 
-						yValue := inter.Globals.Get("y").GetValue()
+						yValue := inter.Globals.Get("y").GetValue(inter)
 						require.IsType(t, yValue, &interpreter.ArrayValue{})
 						yArray := yValue.(*interpreter.ArrayValue)
 
@@ -1217,7 +1217,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							ArrayElements(inter, yArray),
 						)
 
-						zValue := inter.Globals.Get("z").GetValue()
+						zValue := inter.Globals.Get("z").GetValue(inter)
 						require.IsType(t, zValue, &interpreter.SomeValue{})
 						zSome := zValue.(*interpreter.SomeValue)
 
@@ -1377,7 +1377,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							t,
 							inter,
 							expectedDictionary,
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 
 						AssertValuesEqual(
@@ -1386,7 +1386,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								expectedDictionary,
 							),
-							inter.Globals.Get("z").GetValue(),
+							inter.Globals.Get("z").GetValue(inter),
 						)
 					})
 				}
@@ -3485,7 +3485,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 									t,
 									inter,
 									capabilityValue,
-									inter.Globals.Get("x").GetValue(),
+									inter.Globals.Get("x").GetValue(inter),
 								)
 
 								AssertValuesEqual(
@@ -3494,7 +3494,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 									interpreter.NewUnmeteredSomeValueNonCopying(
 										capabilityValue,
 									),
-									inter.Globals.Get("y").GetValue(),
+									inter.Globals.Get("y").GetValue(inter),
 								)
 							})
 						}

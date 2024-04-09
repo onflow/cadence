@@ -39,6 +39,8 @@ type SimpleCompositeValue struct {
 	TypeID   sema.TypeID
 	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
 	FieldNames []string
+
+	isTransaction bool
 }
 
 var _ Value = &SimpleCompositeValue{}

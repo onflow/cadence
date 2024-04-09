@@ -65,6 +65,8 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		nil,
 	)
 
+	self.isTransaction = true
+
 	// Construct a raw HostFunctionValue without a type,
 	// instead of using NewHostFunctionValue, which requires a type.
 	//
@@ -78,7 +80,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 
 			self := MemberAccessibleValue(self)
 			invocation.Self = &self
-			interpreter.declareVariable(sema.SelfIdentifier, self)
+			interpreter.declareSelfVariable(self)
 
 			if declaration.ParameterList != nil {
 				// If the transaction has a parameter list of N parameters,

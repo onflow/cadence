@@ -130,7 +130,7 @@ func TestInterpretBitwiseOr(t *testing.T) {
 				t,
 				inter,
 				valueFunc(0b00010101),
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -159,7 +159,7 @@ func TestInterpretBitwiseXor(t *testing.T) {
 				t,
 				inter,
 				valueFunc(0b00000101),
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -188,7 +188,7 @@ func TestInterpretBitwiseAnd(t *testing.T) {
 				t,
 				inter,
 				valueFunc(0b00010000),
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -217,7 +217,7 @@ func TestInterpretBitwiseLeftShift(t *testing.T) {
 				t,
 				inter,
 				valueFunc(0b01100000),
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -246,7 +246,7 @@ func TestInterpretBitwiseRightShift(t *testing.T) {
 				t,
 				inter,
 				valueFunc(0b00001100),
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
