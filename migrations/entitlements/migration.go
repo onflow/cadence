@@ -20,17 +20,21 @@ package entitlements
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/migrations/statictypes"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+type StaticTypeCache struct {
+	m sync.Map
+}
+
 type EntitlementsMigration struct {
 	Interpreter       *interpreter.Interpreter
-	migratedTypeCache map[common.TypeID]interpreter.StaticType
+	migratedTypeCache *StaticTypeCache
 }
 
 var _ migrations.ValueMigration = EntitlementsMigration{}
@@ -38,13 +42,13 @@ var _ migrations.ValueMigration = EntitlementsMigration{}
 func NewEntitlementsMigration(inter *interpreter.Interpreter) EntitlementsMigration {
 	return EntitlementsMigration{
 		Interpreter:       inter,
-		migratedTypeCache: map[common.TypeID]interpreter.StaticType{},
+		migratedTypeCache: &StaticTypeCache{m: sync.Map{}},
 	}
 }
 
 func NewEntitlementsMigrationWithCache(
 	inter *interpreter.Interpreter,
-	migratedTypeCache map[common.TypeID]interpreter.StaticType,
+	migratedTypeCache *StaticTypeCache,
 ) EntitlementsMigration {
 	return EntitlementsMigration{
 		Interpreter:       inter,
@@ -92,13 +96,13 @@ func ConvertToEntitledType(
 
 	staticTypeID := staticType.ID()
 
-	if migratedType, exists := migratedTypeCache[staticTypeID]; exists {
-		return migratedType, nil
+	if migratedType, exists := migratedTypeCache.m.Load(staticTypeID); exists {
+		return migratedType.(interpreter.StaticType), nil
 	}
 
 	defer func() {
 		if resultType != nil && conversionErr == nil {
-			migratedTypeCache[staticTypeID] = resultType
+			migratedTypeCache.m.Store(staticTypeID, resultType)
 		}
 	}()
 
