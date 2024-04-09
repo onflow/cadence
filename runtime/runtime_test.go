@@ -10139,6 +10139,313 @@ func TestRuntimePreconditionDuplication(t *testing.T) {
 	assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[0])
 }
 
+func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("force cast", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+		signers := []Address{signerAccount}
+
+		accountCodes := map[Location][]byte{}
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return signers, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+				accountCodes[location] = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				return nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		attacker := []byte(fmt.Sprintf(`
+        import Bar from %[1]s
+
+		pub contract Foo {
+            init() {
+                var tripled <- self.tripleVault(victim: <- Bar.createVault(balance: 100.0))
+
+                destroy tripled
+            }
+            // Fake resource that is presented to the static checker to get it to 
+            // wave thru the call to "reverse"
+            pub resource FakeArray {
+                pub fun reverse(): @[Bar.Vault] { return <- [] }
+            }
+            pub fun tripleVault(victim: @Bar.Vault): @Bar.Vault{
+                // Step 1: Create a storage reference to a FakeArray, first borrowing
+                //         it as &AnyResource and then performing a runtime cast to
+                //         &FakeArray. This intermediary step avoid the "dereference
+                //         failed" error later on.
+
+                Foo.account.save(<- create FakeArray(), to: /storage/flipflop)
+                let anyStructRef = Foo.account.borrow<auth &AnyResource>(from: /storage/flipflop)!
+                let flipFlopStorageRef = anyStructRef as! &FakeArray
+
+                // Step 2: Ditch FakeArray and place the victim resource array
+                //         at the same path in storage
+                destroy <- Foo.account.load<@FakeArray>(from: /storage/flipflop)
+                Foo.account.save(<- [<- victim], to: /storage/flipflop)
+
+                // Step 3: As static checker still thinks flipFlopStorageRef is &FakeArray
+                //         we can go ahead and call reverse() to get infinite copies of the resource
+                //         array which should not be possible
+                let reversed1 <- flipFlopStorageRef.reverse()
+                let reversed2 <- flipFlopStorageRef.reverse()
+                reversed1[0].deposit(from: <- reversed2.removeLast())
+                let bounty <- reversed1.removeLast()
+                destroy reversed1
+                destroy reversed2
+				
+                // Clean up our value from storage. Throw the third copy of
+                // the assets into our bounty stash for good measure
+                var arr <- Foo.account.load<@[Bar.Vault]>(from: /storage/flipflop)!
+                bounty.deposit(from: <- arr.removeLast())
+                destroy arr
+                return <- bounty
+            }
+        }`,
+			signerAccount.HexWithPrefix(),
+		))
+
+		bar := []byte(`
+        pub contract Bar {
+            pub resource Vault {
+
+                // Balance of a user's Vault
+                // we use unsigned fixed point numbers for balances
+                // because they can represent decimals and do not allow negative values
+                pub var balance: UFix64
+
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+
+                pub fun withdraw(amount: UFix64): @Vault {
+                    self.balance = self.balance - amount
+                    return <-create Vault(balance: amount)
+                }
+
+                pub fun deposit(from: @Vault) {
+                    self.balance = self.balance + from.balance
+                    destroy from
+                }
+            }
+
+            pub fun createEmptyVault(): @Bar.Vault {
+                return <- create Bar.Vault(balance: 0.0)
+            }
+
+            pub fun createVault(balance: UFix64): @Bar.Vault {
+                return <- create Bar.Vault(balance: balance)
+            }
+        }
+    `)
+
+		// Deploy Bar
+
+		deployVault := DeploymentTransaction("Bar", bar)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployVault,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Deploy Attacker
+
+		deployAttacker := DeploymentTransaction("Foo", attacker)
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployAttacker,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		var dereferenceError interpreter.DereferenceError
+		require.ErrorAs(t, err, &dereferenceError)
+	})
+
+	t.Run("optional cast", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := newTestInterpreterRuntime()
+
+		signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+		signers := []Address{signerAccount}
+
+		accountCodes := map[Location][]byte{}
+
+		runtimeInterface := &testRuntimeInterface{
+			getCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			storage: newTestLedger(nil, nil),
+			getSigningAccounts: func() ([]Address, error) {
+				return signers, nil
+			},
+			resolveLocation: singleIdentifierLocationResolver(t),
+			getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+				accountCodes[location] = code
+				return nil
+			},
+			emitEvent: func(event cadence.Event) error {
+				return nil
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		attacker := []byte(fmt.Sprintf(`
+        import Bar from %[1]s
+
+		pub contract Foo {
+            init() {
+                var tripled <- self.tripleVault(victim: <- Bar.createVault(balance: 100.0))
+
+                destroy tripled
+            }
+            // Fake resource that is presented to the static checker to get it to 
+            // wave thru the call to "reverse"
+            pub resource FakeArray {
+                pub fun reverse(): @[Bar.Vault] { return <- [] }
+            }
+            pub fun tripleVault(victim: @Bar.Vault): @Bar.Vault{
+                // Step 1: Create a storage reference to a FakeArray, first borrowing
+                //         it as &AnyResource and then performing a runtime cast to
+                //         &FakeArray. This intermediary step avoid the "dereference
+                //         failed" error later on.
+
+                Foo.account.save(<- create FakeArray(), to: /storage/flipflop)
+                let anyStructRef = Foo.account.borrow<auth &AnyResource>(from: /storage/flipflop)!
+                let flipFlopStorageRef = (anyStructRef as? &FakeArray)!
+
+                // Step 2: Ditch FakeArray and place the victim resource array
+                //         at the same path in storage
+                destroy <- Foo.account.load<@FakeArray>(from: /storage/flipflop)
+                Foo.account.save(<- [<- victim], to: /storage/flipflop)
+
+                // Step 3: As static checker still thinks flipFlopStorageRef is &FakeArray
+                //         we can go ahead and call reverse() to get infinite copies of the resource
+                //         array which should not be possible
+                let reversed1 <- flipFlopStorageRef.reverse()
+                let reversed2 <- flipFlopStorageRef.reverse()
+                reversed1[0].deposit(from: <- reversed2.removeLast())
+                let bounty <- reversed1.removeLast()
+                destroy reversed1
+                destroy reversed2
+				
+                // Clean up our value from storage. Throw the third copy of
+                // the assets into our bounty stash for good measure
+                var arr <- Foo.account.load<@[Bar.Vault]>(from: /storage/flipflop)!
+                bounty.deposit(from: <- arr.removeLast())
+                destroy arr
+                return <- bounty
+            }
+        }`,
+			signerAccount.HexWithPrefix(),
+		))
+
+		bar := []byte(`
+        pub contract Bar {
+            pub resource Vault {
+
+                // Balance of a user's Vault
+                // we use unsigned fixed point numbers for balances
+                // because they can represent decimals and do not allow negative values
+                pub var balance: UFix64
+
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+
+                pub fun withdraw(amount: UFix64): @Vault {
+                    self.balance = self.balance - amount
+                    return <-create Vault(balance: amount)
+                }
+
+                pub fun deposit(from: @Vault) {
+                    self.balance = self.balance + from.balance
+                    destroy from
+                }
+            }
+
+            pub fun createEmptyVault(): @Bar.Vault {
+                return <- create Bar.Vault(balance: 0.0)
+            }
+
+            pub fun createVault(balance: UFix64): @Bar.Vault {
+                return <- create Bar.Vault(balance: balance)
+            }
+        }
+    `)
+
+		// Deploy Bar
+
+		deployVault := DeploymentTransaction("Bar", bar)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployVault,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Deploy Attacker
+
+		deployAttacker := DeploymentTransaction("Foo", attacker)
+
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployAttacker,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		require.Error(t, err)
+		var dereferenceError interpreter.DereferenceError
+		require.ErrorAs(t, err, &dereferenceError)
+	})
+}
+
 func TestRuntimeIfLetElseBranchConfusion(t *testing.T) {
 
 	t.Parallel()
@@ -10319,4 +10626,166 @@ func TestRuntimeIfLetElseBranchConfusion(t *testing.T) {
 
 	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+}
+
+func TestResourceLossViaSelfRugPull(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := newTestInterpreterRuntime()
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	signers := []Address{signerAccount}
+
+	accountCodes := map[Location][]byte{}
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		storage: newTestLedger(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return signers, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		updateAccountContractCode: func(location common.AddressLocation, code []byte) (err error) {
+			accountCodes[location] = code
+			return nil
+		},
+		log: func(_ string) {},
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	bar := []byte(`
+        access(all) contract Bar {
+
+           access(all) event Burn(balance: UFix64)
+
+            access(all) resource Vault {
+
+
+                // Balance of a user's Vault
+                // we use unsigned fixed point numbers for balances
+                // because they can represent decimals and do not allow negative values
+                access(all) var balance: UFix64
+
+                init(balance: UFix64) {
+                    self.balance = balance
+                }
+
+                access(all) fun withdraw(amount: UFix64): @Vault {
+                    self.balance = self.balance - amount
+                    return <-create Vault(balance: amount)
+                }
+
+                access(all) fun deposit(from: @Vault) {
+                    self.balance = self.balance + from.balance
+                    destroy from
+                }
+
+                destroy() {
+                    emit Burn(balance: self.balance)
+                }
+            }
+
+            access(all) fun createEmptyVault(): @Bar.Vault {
+                return <- create Bar.Vault(balance: 0.0)
+            }
+
+            access(all) fun createVault(balance: UFix64): @Bar.Vault {
+                return <- create Bar.Vault(balance: balance)
+            }
+        }
+    `)
+
+	// Deploy Bar
+
+	deployVault := DeploymentTransaction("Bar", bar)
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployVault,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	attacker := []byte(fmt.Sprintf(`
+        import Bar from %[1]s
+
+        access(all) contract Foo {
+            access(all) var rCopy1: @R?
+            init() {
+                self.rCopy1 <- nil
+                log("Creating a Vault with 1337 units");
+                var r <- Bar.createVault(balance: 1337.0)
+                self.loser(<- r)
+            }
+            access(all) resource R {
+                access(all) var optional: @[Bar.Vault]?
+
+                init() {
+                    self.optional <- []
+                }
+
+                access(all) fun rugpullAndAssign(_ callback: ((): Void), _ victim: @Bar.Vault) {
+                    callback()
+                    // "self" has now been invalidated and accessing "a" for reading would
+                    // trigger a "not initialized" error. However, force-assigning to it succeeds
+                    // and leaves the victim object hanging from an invalidated resource
+                    self.optional <-! [<- victim]
+                }
+
+
+                destroy() {
+                    destroy self.optional
+                }
+            }
+
+            access(all) fun loser(_ victim: @Bar.Vault): Void{
+                var array: @[R] <- [<- create R()]
+                let arrRef = &array as &[R]
+                fun rugPullCallback(): Void{
+                    // Here we move the R resource from the array to a contract field
+                    // invalidating the "self" during the execution of rugpullAndAssign
+                    Foo.rCopy1 <-! arrRef.removeLast()
+                }
+                array[0].rugpullAndAssign(rugPullCallback, <- victim)
+                destroy array
+
+                var y: @R? <- nil
+                self.rCopy1 <-> y
+                destroy y
+            }
+
+        }`,
+		signerAccount.HexWithPrefix(),
+	))
+
+	// Deploy Attacker
+
+	deployAttacker := DeploymentTransaction("Foo", attacker)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deployAttacker,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.ResourceLossError{})
 }
