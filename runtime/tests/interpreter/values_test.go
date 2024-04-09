@@ -949,7 +949,7 @@ func TestInterpretRandomCompositeValueOperations(t *testing.T) {
 
 			// continue iteration
 			return true
-		})
+		}, interpreter.EmptyLocationRange)
 
 		assert.Equal(t, len(orgFields), fieldCount)
 	})

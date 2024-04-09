@@ -33,39 +33,6 @@ type LegacyIntersectionType struct {
 
 var _ interpreter.StaticType = &LegacyIntersectionType{}
 
-func (t *LegacyIntersectionType) Equal(other interpreter.StaticType) bool {
-	var otherTypes []*interpreter.InterfaceStaticType
-
-	switch other := other.(type) {
-
-	case *LegacyIntersectionType:
-		otherTypes = other.Types
-
-	case *interpreter.IntersectionStaticType:
-		otherTypes = other.Types
-
-	default:
-		return false
-	}
-
-	if len(t.Types) != len(otherTypes) {
-		return false
-	}
-
-outer:
-	for _, typ := range t.Types {
-		for _, otherType := range otherTypes {
-			if typ.Equal(otherType) {
-				continue outer
-			}
-		}
-
-		return false
-	}
-
-	return true
-}
-
 func (t *LegacyIntersectionType) ID() common.TypeID {
 	interfaceTypeIDs := make([]string, 0, len(t.Types))
 	for _, interfaceType := range t.Types {
@@ -91,4 +58,11 @@ func (t *LegacyIntersectionType) ID() common.TypeID {
 	}
 	result.WriteByte('}')
 	return common.TypeID(result.String())
+}
+
+func (t *LegacyIntersectionType) Equal(other interpreter.StaticType) bool {
+	if otherLegacy, ok := other.(*LegacyIntersectionType); ok {
+		other = otherLegacy.IntersectionStaticType
+	}
+	return t.IntersectionStaticType.Equal(other)
 }

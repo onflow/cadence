@@ -34,27 +34,12 @@ type LegacyReferenceType struct {
 
 var _ interpreter.StaticType = &LegacyReferenceType{}
 
-// Equal() compares both value and type of t and other.
-// LegacyReferenceType.Equal() is needed because Equal() in general
-// compares values and their types.  Embedded ReferenceStaticType.Equal()
-// returns false when other is *LegacyReferenceType type.
-func (t *LegacyReferenceType) Equal(other interpreter.StaticType) bool {
-	switch other := other.(type) {
-
-	case *LegacyReferenceType:
-		return t.Authorization.Equal(other.Authorization) &&
-			t.ReferencedType.Equal(other.ReferencedType)
-
-	case *interpreter.ReferenceStaticType:
-		return t.Authorization.Equal(other.Authorization) &&
-			t.ReferencedType.Equal(other.ReferencedType)
-
-	default:
-		return false
-	}
-}
-
 func (t *LegacyReferenceType) ID() common.TypeID {
+	if !t.HasLegacyIsAuthorized {
+		// Encode as a regular reference type
+		return t.ReferenceStaticType.ID()
+	}
+
 	borrowedType := t.ReferencedType
 	return common.TypeID(
 		formatReferenceType(
@@ -78,6 +63,14 @@ func formatReferenceType(
 }
 
 func (t *LegacyReferenceType) Encode(e *cbor.StreamEncoder) error {
+	if !t.HasLegacyIsAuthorized {
+		// Encode as a regular reference type
+		return t.ReferenceStaticType.Encode(e)
+	}
+
+	// Has legacy isAuthorized flag,
+	// encode as a legacy reference type
+
 	// Encode tag number and array head
 	err := e.EncodeRawBytes([]byte{
 		// tag number
@@ -100,4 +93,11 @@ func (t *LegacyReferenceType) Encode(e *cbor.StreamEncoder) error {
 
 	// Encode type at array index encodedReferenceStaticTypeTypeFieldKey
 	return t.ReferencedType.Encode(e)
+}
+
+func (t *LegacyReferenceType) Equal(other interpreter.StaticType) bool {
+	if otherLegacy, ok := other.(*LegacyReferenceType); ok {
+		other = otherLegacy.ReferenceStaticType
+	}
+	return t.ReferenceStaticType.Equal(other)
 }

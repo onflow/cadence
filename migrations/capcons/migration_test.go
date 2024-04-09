@@ -454,7 +454,7 @@ func testPathCapabilityValueMigration(
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 
 	capabilityMapping := &CapabilityMapping{}
 
@@ -1298,7 +1298,7 @@ func testLinkMigration(
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 
 	capabilityMapping := &CapabilityMapping{}
 
@@ -2007,7 +2007,7 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 
 	capabilityMapping := &CapabilityMapping{}
 
@@ -2248,7 +2248,7 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage)
+	migration := migrations.NewStorageMigration(inter, storage, "test")
 
 	capabilityMapping := &CapabilityMapping{}
 

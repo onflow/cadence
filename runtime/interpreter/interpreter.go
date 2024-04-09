@@ -925,27 +925,15 @@ func (interpreter *Interpreter) visitAssignment(
 		HasPosition: position,
 	}
 
-	// If the assignment is a forced move,
-	// ensure that the target is nil,
-	// otherwise panic
+	// Evaluate the value, and assign it using the setter function
 
-	if transferOperation == ast.TransferOperationMoveForced {
-
-		// If the force-move assignment is used for the initialization of a field,
-		// then there is no prior value for the field, so allow missing
-
-		const allowMissing = true
-
-		target := targetGetterSetter.get(allowMissing)
-
-		if _, ok := target.(NilValue); !ok && target != nil {
-			panic(ForceAssignmentToNonNilResourceError{
-				LocationRange: locationRange,
-			})
-		}
-	}
-
-	// Finally, evaluate the value, and assign it using the setter function
+	// Here it is too early to check whether the existing value is a
+	// valid non-nil resource (i.e: causing a resource loss), because
+	// evaluating the `valueExpression` could change things, and
+	// a `nil`/invalid resource at this point could be valid after
+	// the evaluation of `valueExpression`.
+	// Therefore, delay the checking of resource loss as much as possible,
+	// and check it at the 'setter', at the point where the value is assigned.
 
 	value := interpreter.evalExpression(valueExpression)
 
@@ -2163,44 +2151,62 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 		}
 
 	case *sema.ReferenceType:
-		if !valueType.Equal(unwrappedTargetType) {
-			// transferring a reference at runtime does not change its entitlements; this is so that an upcast reference
-			// can later be downcast back to its original entitlement set
-
-			// check defensively that we never create a runtime mapped entitlement value
-			if _, isMappedAuth := unwrappedTargetType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
-				panic(UnexpectedMappedEntitlementError{
-					Type:          unwrappedTargetType,
-					LocationRange: locationRange,
-				})
-			}
-
-			switch ref := value.(type) {
-			case *EphemeralReferenceValue:
+		targetAuthorization := ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization)
+		switch ref := value.(type) {
+		case *EphemeralReferenceValue:
+			if interpreter.shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+				checkMappedEntitlements(unwrappedTargetType, locationRange)
 				return NewEphemeralReferenceValue(
 					interpreter,
-					ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
+					targetAuthorization,
 					ref.Value,
 					unwrappedTargetType.Type,
 					locationRange,
 				)
+			}
 
-			case *StorageReferenceValue:
+		case *StorageReferenceValue:
+			if interpreter.shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+				checkMappedEntitlements(unwrappedTargetType, locationRange)
 				return NewStorageReferenceValue(
 					interpreter,
-					ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization),
+					targetAuthorization,
 					ref.TargetStorageAddress,
 					ref.TargetPath,
 					unwrappedTargetType.Type,
 				)
-
-			default:
-				panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
 			}
+
+		default:
+			panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
 		}
 	}
 
 	return value
+}
+
+func (interpreter *Interpreter) shouldConvertReference(
+	ref ReferenceValue,
+	valueType sema.Type,
+	unwrappedTargetType *sema.ReferenceType,
+	targetAuthorization Authorization,
+) bool {
+	if !valueType.Equal(unwrappedTargetType) {
+		return true
+	}
+
+	return !ref.BorrowType().Equal(unwrappedTargetType.Type) ||
+		!ref.GetAuthorization().Equal(targetAuthorization)
+}
+
+func checkMappedEntitlements(unwrappedTargetType *sema.ReferenceType, locationRange LocationRange) {
+	// check defensively that we never create a runtime mapped entitlement value
+	if _, isMappedAuth := unwrappedTargetType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
+		panic(UnexpectedMappedEntitlementError{
+			Type:          unwrappedTargetType,
+			LocationRange: locationRange,
+		})
+	}
 }
 
 // BoxOptional boxes a value in optionals, if necessary
@@ -5245,12 +5251,14 @@ func (interpreter *Interpreter) invalidateReferencedResources(
 				// continue iteration
 				return true
 			},
+			locationRange,
 		)
 		valueID = value.ValueID()
 
 	case *DictionaryValue:
 		value.IterateLoaded(
 			interpreter,
+			locationRange,
 			func(_, value Value) (resume bool) {
 				interpreter.invalidateReferencedResources(value, locationRange)
 				return true
@@ -5512,6 +5520,11 @@ func (interpreter *Interpreter) validateMutation(valueID atree.ValueID, location
 }
 
 func (interpreter *Interpreter) withMutationPrevention(valueID atree.ValueID, f func()) {
+	if interpreter == nil {
+		f()
+		return
+	}
+
 	oldIteration, present := interpreter.SharedState.containerValueIteration[valueID]
 	interpreter.SharedState.containerValueIteration[valueID] = struct{}{}
 
@@ -5546,4 +5559,32 @@ func (interpreter *Interpreter) withResourceDestruction(
 	interpreter.SharedState.destroyedResources[valueID] = struct{}{}
 
 	f()
+}
+
+func (interpreter *Interpreter) checkResourceLoss(value Value, locationRange LocationRange) {
+	if !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	var resourceKindedValue ResourceKindedValue
+
+	switch existingValue := value.(type) {
+	case *CompositeValue:
+		// A dedicated error is thrown when setting duplicate attachments.
+		// So don't throw an error here.
+		if existingValue.Kind == common.CompositeKindAttachment {
+			return
+		}
+		resourceKindedValue = existingValue
+	case ResourceKindedValue:
+		resourceKindedValue = existingValue
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	if !resourceKindedValue.isInvalidatedResource(interpreter) {
+		panic(ResourceLossError{
+			LocationRange: locationRange,
+		})
+	}
 }

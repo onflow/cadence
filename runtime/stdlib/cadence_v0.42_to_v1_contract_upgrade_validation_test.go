@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/old_parser"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
@@ -55,12 +56,14 @@ func testContractUpdate(t *testing.T, oldCode string, newCode string) error {
 	err = checker.Check()
 	require.NoError(t, err)
 
+	program := interpreter.ProgramFromChecker(checker)
+
 	upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
 		utils.TestLocation,
 		"Test",
 		&runtime_utils.TestRuntimeInterface{},
 		oldProgram,
-		newProgram,
+		program,
 		map[common.Location]*sema.Elaboration{
 			utils.TestLocation: checker.Elaboration,
 		})
@@ -104,7 +107,7 @@ func parseAndCheckPrograms(
 	newImports map[common.Location]string,
 ) (
 	oldProgram *ast.Program,
-	newProgram *ast.Program,
+	newProgram *interpreter.Program,
 	elaborations map[common.Location]*sema.Elaboration,
 ) {
 
@@ -112,7 +115,7 @@ func parseAndCheckPrograms(
 	oldProgram, err = old_parser.ParseProgram(nil, []byte(oldCode), old_parser.Config{})
 	require.NoError(t, err)
 
-	newProgram, err = parser.ParseProgram(nil, []byte(newCode), parser.Config{})
+	program, err := parser.ParseProgram(nil, []byte(newCode), parser.Config{})
 	require.NoError(t, err)
 
 	elaborations = map[common.Location]*sema.Elaboration{}
@@ -139,7 +142,7 @@ func parseAndCheckPrograms(
 	}
 
 	checker, err := sema.NewChecker(
-		newProgram,
+		program,
 		location,
 		nil,
 		&sema.Config{
@@ -174,7 +177,7 @@ func parseAndCheckPrograms(
 	err = checker.Check()
 	require.NoError(t, err)
 
-	elaborations[location] = checker.Elaboration
+	newProgram = interpreter.ProgramFromChecker(checker)
 
 	return
 }
@@ -184,6 +187,13 @@ func getSingleContractUpdateErrorCause(t *testing.T, err error, contractName str
 
 	require.Len(t, updateErr.Errors, 1)
 	return updateErr.Errors[0]
+}
+
+func assertMissingDeclarationError(t *testing.T, err error, declName string) bool {
+	var missingDeclError *stdlib.MissingDeclarationError
+	require.ErrorAs(t, err, &missingDeclError)
+
+	return assert.Equal(t, declName, missingDeclError.Name)
 }
 
 func getContractUpdateError(t *testing.T, err error, contractName string) *stdlib.ContractUpdateError {
@@ -722,7 +732,7 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("composite to interface valid", func(t *testing.T) {
+	t.Run("composite to interface invalid", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -759,13 +769,13 @@ func TestContractUpgradeFieldType(t *testing.T) {
 			Address: common.MustBytesToAddress([]byte{0x1}),
 		}
 
-		nftLocation := common.AddressLocation{
+		ftLocation := common.AddressLocation{
 			Name:    "FungibleToken",
 			Address: common.MustBytesToAddress([]byte{0x2}),
 		}
 
 		imports := map[common.Location]string{
-			nftLocation: newImport,
+			ftLocation: newImport,
 		}
 
 		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
@@ -791,6 +801,94 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "Test", "a", "FungibleToken.Vault", "{FungibleToken.Vault}")
 
+	})
+
+	t.Run("custom rule not followed", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            import Import from 0x02
+
+            access(all) contract Test {
+                access(all) var a: @Import.Foo?
+                init() {
+                    self.a <- nil
+                }
+            }
+        `
+
+		const newImport = `
+            access(all) contract Import {
+                access(all) resource Foo {}
+                access(all) resource Bar {}
+            }
+        `
+		const newCode = `
+            import Import from 0x02
+
+            access(all) contract Test {
+                access(all) var a: @Import.Foo?
+                init() {
+                    self.a <- nil
+                }
+            }
+        `
+
+		const contractName = "Test"
+		location := common.AddressLocation{
+			Name:    contractName,
+			Address: common.MustBytesToAddress([]byte{0x1}),
+		}
+
+		importLocation := common.AddressLocation{
+			Name:    "Import",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		imports := map[common.Location]string{
+			importLocation: newImport,
+		}
+
+		barTypeID := sema.FormatIntersectionTypeID(
+			[]common.TypeID{
+				common.NewTypeIDFromQualifiedName(nil, importLocation, "Import.Bar"),
+			},
+		)
+
+		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
+
+		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+			location,
+			contractName,
+			&runtime_utils.TestRuntimeInterface{
+				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+					return []string{"TestImport"}, nil
+				},
+			},
+			oldProgram,
+			newProgram,
+			elaborations,
+		).WithUserDefinedTypeChangeChecker(
+			func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool) {
+				switch oldTypeID {
+				case oldTypeID:
+					return true, newTypeID == barTypeID
+				}
+
+				return false, false
+			},
+		)
+
+		err := upgradeValidator.Validate()
+
+		// This should be an error.
+		// If there are custom rules, they MUST be followed.
+		utils.RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		var fieldMismatchError *stdlib.FieldMismatchError
+		require.ErrorAs(t, cause, &fieldMismatchError)
 	})
 }
 
@@ -1827,5 +1925,500 @@ func TestTypeRequirementRemoval(t *testing.T) {
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		declKindChangeError := &stdlib.InvalidDeclarationKindChangeError{}
 		require.ErrorAs(t, cause, &declKindChangeError)
+	})
+}
+
+func TestInterfaceConformanceChange(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("local inherited interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+                pub resource interface A {}
+
+                pub resource R: A {}
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) resource interface A {}
+                access(all) resource interface B: A {}
+
+                // Also conforms to 'A' via inheritance.
+                // Therefore, existing conformance is not removed.
+                access(all) resource R: B {}
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("imported inherited interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            import TestImport from 0x02
+
+            pub contract Test {
+                pub resource R: TestImport.A {}
+            }
+        `
+
+		const newImport = `
+            access(all) contract TestImport {
+                access(all) resource interface A {}
+
+                access(all) resource interface B: A {}
+            }
+        `
+
+		const newCode = `
+            import TestImport from 0x02
+
+            access(all) contract Test {
+                // Also conforms to 'TestImport.A' via inheritance.
+                // Therefore, existing conformance is not removed.
+                access(all) resource R: TestImport.B {}
+            }
+        `
+
+		err := testContractUpdateWithImports(
+			t,
+			"Test",
+			oldCode,
+			newCode,
+			map[common.Location]string{
+				common.AddressLocation{
+					Name:    "TestImport",
+					Address: common.MustBytesToAddress([]byte{0x2}),
+				}: newImport,
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("with custom rules", func(t *testing.T) {
+		t.Parallel()
+
+		const oldCode = `
+            import NonFungibleToken from 0x02
+
+            pub contract Test {
+                pub resource R: NonFungibleToken.INFT {}
+            }
+        `
+
+		const newImport = `
+            access(all) contract NonFungibleToken {
+                access(all) resource interface INFT {}
+                access(all) resource interface NFT {}
+            }
+        `
+
+		const newCode = `
+            import NonFungibleToken from 0x02
+
+            access(all) contract Test {
+                access(all) resource R: NonFungibleToken.NFT {}
+            }
+        `
+
+		nftLocation := common.AddressLocation{
+			Name:    "NonFungibleToken",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		imports := map[common.Location]string{
+			nftLocation: newImport,
+		}
+
+		const contractName = "Test"
+		location := common.AddressLocation{
+			Name:    contractName,
+			Address: common.MustBytesToAddress([]byte{0x1}),
+		}
+
+		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
+
+		inftTypeID := common.NewTypeIDFromQualifiedName(nil, nftLocation, "NonFungibleToken.INFT")
+		nftTypeID := common.NewTypeIDFromQualifiedName(nil, nftLocation, "NonFungibleToken.NFT")
+
+		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+			location,
+			contractName,
+			&runtime_utils.TestRuntimeInterface{
+				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+					return []string{"TestImport"}, nil
+				},
+			},
+			oldProgram,
+			newProgram,
+			elaborations,
+		).WithUserDefinedTypeChangeChecker(
+			func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool) {
+				switch oldTypeID {
+				case inftTypeID:
+					return true, newTypeID == nftTypeID
+				}
+
+				return false, false
+			},
+		)
+
+		err := upgradeValidator.Validate()
+		require.NoError(t, err)
+	})
+
+	t.Run("with custom rules and changed import", func(t *testing.T) {
+		t.Parallel()
+
+		const oldCode = `
+            import MetadataViews from 0x02
+
+            pub contract Test {
+                pub resource R: MetadataViews.Resolver {}
+            }
+        `
+
+		const newImport = `
+            access(all) contract ViewResolver {
+                access(all) resource interface Resolver {}
+            }
+        `
+
+		const newCode = `
+            import ViewResolver from 0x02
+
+            access(all) contract Test {
+                access(all) resource R: ViewResolver.Resolver {}
+            }
+        `
+
+		viewResolverLocation := common.AddressLocation{
+			Name:    "ViewResolver",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		metadatViewsLocation := common.AddressLocation{
+			Name:    "MetadataViews",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		imports := map[common.Location]string{
+			viewResolverLocation: newImport,
+		}
+
+		const contractName = "Test"
+		location := common.AddressLocation{
+			Name:    contractName,
+			Address: common.MustBytesToAddress([]byte{0x1}),
+		}
+
+		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
+
+		metadataViewsResolverTypeID := common.NewTypeIDFromQualifiedName(
+			nil,
+			metadatViewsLocation,
+			"MetadataViews.Resolver",
+		)
+
+		viewResolverResolverTypeID := common.NewTypeIDFromQualifiedName(
+			nil,
+			viewResolverLocation,
+			"ViewResolver.Resolver",
+		)
+
+		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+			location,
+			contractName,
+			&runtime_utils.TestRuntimeInterface{
+				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+					return []string{"TestImport"}, nil
+				},
+			},
+			oldProgram,
+			newProgram,
+			elaborations,
+		).WithUserDefinedTypeChangeChecker(
+			func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool) {
+				switch oldTypeID {
+				case metadataViewsResolverTypeID:
+					return true, newTypeID == viewResolverResolverTypeID
+				}
+
+				return false, false
+			},
+		)
+
+		err := upgradeValidator.Validate()
+		require.NoError(t, err)
+	})
+
+	t.Run("with custom rule, not applied", func(t *testing.T) {
+		t.Parallel()
+
+		const oldCode = `
+            import NonFungibleToken from 0x02
+
+            pub contract Test {
+                pub resource R: NonFungibleToken.INFT {}
+            }
+        `
+
+		const newImport = `
+            access(all) contract NonFungibleToken {
+                access(all) resource interface INFT {}
+                access(all) resource interface NFT {}
+            }
+        `
+
+		const newCode = `
+            import NonFungibleToken from 0x02
+
+            access(all) contract Test {
+                // Chose not to change the type.
+                // However, the custom rule mandates changing
+                access(all) resource R: NonFungibleToken.INFT {}
+            }
+        `
+
+		nftLocation := common.AddressLocation{
+			Name:    "NonFungibleToken",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		imports := map[common.Location]string{
+			nftLocation: newImport,
+		}
+
+		const contractName = "Test"
+		location := common.AddressLocation{
+			Name:    contractName,
+			Address: common.MustBytesToAddress([]byte{0x1}),
+		}
+
+		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
+
+		inftTypeID := common.NewTypeIDFromQualifiedName(nil, nftLocation, "NonFungibleToken.INFT")
+		nftTypeID := common.NewTypeIDFromQualifiedName(nil, nftLocation, "NonFungibleToken.NFT")
+
+		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+			location,
+			contractName,
+			&runtime_utils.TestRuntimeInterface{
+				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+					return []string{"TestImport"}, nil
+				},
+			},
+			oldProgram,
+			newProgram,
+			elaborations,
+		).WithUserDefinedTypeChangeChecker(
+			func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool) {
+				switch oldTypeID {
+				case inftTypeID:
+					// The rules here says, the new conformance should be `NonFungibleToken.NFT`.
+					return true, newTypeID == nftTypeID
+				}
+
+				return false, false
+			},
+		)
+
+		err := upgradeValidator.Validate()
+
+		// This should be an error.
+		// If there are custom rules, they MUST be followed.
+		utils.RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		var conformanceMismatchError *stdlib.ConformanceMismatchError
+		require.ErrorAs(t, cause, &conformanceMismatchError)
+	})
+}
+
+func TestEnumUpdates(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("remove from contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract Test {
+                pub enum E: UInt {}
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {}
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertMissingDeclarationError(t, cause, "E")
+	})
+
+	t.Run("remove from contract interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            pub contract interface Test {
+                pub enum E: UInt {}
+            }
+        `
+
+		const newCode = `
+            access(all) contract interface Test {
+              
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("update as is", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("change enum type", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+
+                access(all) var x: Foo
+
+                init() {
+                    self.x = Foo.up
+                }
+
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                access(all) var x: Foo
+
+                init() {
+                    self.x = Foo.up
+                }
+
+                access(all) enum Foo: UInt128 {
+                    access(all) case up
+                    access(all) case down
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		utils.RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		var conformanceMismatchError *stdlib.ConformanceMismatchError
+		require.ErrorAs(t, cause, &conformanceMismatchError)
+
+		assert.Equal(t, "Foo", conformanceMismatchError.DeclName)
+	})
+
+	t.Run("remove case", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		utils.RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		var missingEnumCasesError *stdlib.MissingEnumCasesError
+		require.ErrorAs(t, cause, &missingEnumCasesError)
+
+		assert.Equal(t, "Foo", missingEnumCasesError.DeclName)
+		assert.Equal(t, 2, missingEnumCasesError.Expected)
+		assert.Equal(t, 1, missingEnumCasesError.Found)
+	})
+
+	t.Run("add case", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) enum Foo: UInt8 {
+                    access(all) case up
+                    access(all) case down
+                    access(all) case left
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
 	})
 }

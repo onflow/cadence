@@ -53,6 +53,17 @@ func (v *LegacyCharacterValue) HashInput(_ *interpreter.Interpreter, _ interpret
 	return buffer
 }
 
+func (v *LegacyCharacterValue) Equal(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	other interpreter.Value,
+) bool {
+	if otherLegacy, ok := other.(*LegacyCharacterValue); ok {
+		other = otherLegacy.CharacterValue
+	}
+	return v.CharacterValue.Equal(inter, locationRange, other)
+}
+
 func (v *LegacyCharacterValue) Transfer(
 	interpreter *interpreter.Interpreter,
 	_ interpreter.LocationRange,

@@ -1868,16 +1868,18 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 		return nil, err
 	}
 
-	var isAuthorized bool
+	var hasLegacyIsAuthorized bool
+	var legacyIsAuthorized bool
 
 	if t == cbor.BoolType {
 		// if we saw a bool here, this is a reference encoded in the old format
-		isAuthorized, err = d.decoder.DecodeBool()
+		hasLegacyIsAuthorized = true
+
+		legacyIsAuthorized, err = d.decoder.DecodeBool()
 		if err != nil {
 			return nil, err
 		}
 
-		// TODO: better decoding for old values to compute new, sensible authorizations for them.
 		authorization = UnauthorizedAccess
 	} else {
 		// Decode authorized at array index encodedReferenceStaticTypeAuthorizationFieldKey
@@ -1908,7 +1910,8 @@ func (d TypeDecoder) decodeReferenceStaticType() (StaticType, error) {
 		staticType,
 	)
 
-	referenceType.LegacyIsAuthorized = isAuthorized
+	referenceType.HasLegacyIsAuthorized = hasLegacyIsAuthorized
+	referenceType.LegacyIsAuthorized = legacyIsAuthorized
 
 	return referenceType, nil
 }

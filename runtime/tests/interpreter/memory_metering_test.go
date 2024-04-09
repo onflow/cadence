@@ -8658,7 +8658,11 @@ func TestInterpretValueStringConversion(t *testing.T) {
 				// Reset gauge, to only capture the values metered during string conversion
 				meter.meter = make(map[common.MemoryKind]uint64)
 
-				loggedString = invocation.Arguments[0].MeteredString(invocation.Interpreter, interpreter.SeenReferences{})
+				loggedString = invocation.Arguments[0].MeteredString(
+					invocation.Interpreter,
+					interpreter.SeenReferences{},
+					invocation.LocationRange,
+				)
 				return interpreter.Void
 			},
 		)
@@ -8998,7 +9002,11 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				// Reset gauge, to only capture the values metered during string conversion
 				meter.meter = make(map[common.MemoryKind]uint64)
 
-				loggedString = invocation.Arguments[0].MeteredString(invocation.Interpreter, interpreter.SeenReferences{})
+				loggedString = invocation.Arguments[0].MeteredString(
+					invocation.Interpreter,
+					interpreter.SeenReferences{},
+					invocation.LocationRange,
+				)
 				return interpreter.Void
 			},
 		)

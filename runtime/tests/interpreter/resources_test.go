@@ -2732,11 +2732,115 @@ func TestInterpretVariableDeclarationEvaluationOrder(t *testing.T) {
 	)
 }
 
+func TestInterpretNestedSwap(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+        access(all) resource NFT {
+            access(all) var name: String
+            init(name: String) {
+                self.name = name
+            }
+        }
+
+        access(all) resource Company {
+            access(self) var equity: @[NFT]
+
+            init(incorporationEquityCollection: @[NFT]) {
+                pre {
+                    // We make sure the incorporation collection has at least one high-value NFT
+                    incorporationEquityCollection[0].name == "High-value NFT"
+                }
+                self.equity <- incorporationEquityCollection
+            }
+
+            access(all) fun logContents() {
+                log("Current contents of the Company (should have a High-value NFT):")
+                log(self.equity[0].name)
+            }
+        }
+
+        access(all) resource SleightOfHand {
+            access(all) var arr: @[NFT];
+            access(all) var company: @Company?
+            access(all) var trashNFT: @NFT
+
+            init() {
+                self.arr <- [ <- create NFT(name: "High-value NFT")]
+                self.company <- nil
+                self.trashNFT <- create NFT(name: "Trash NFT")
+                self.doMagic()
+            }
+
+            access(all) fun callback(): Int {
+                var x: @[NFT] <- []
+
+                log("before inner")
+                log(&self.arr as &AnyResource)
+                log(&x as &AnyResource)
+
+                self.arr <-> x
+
+                log("after inner")
+                log(&self.arr as &AnyResource)
+                log(&x as &AnyResource)
+
+                // We hand over the array to the Company object after the swap
+                // has already been "scheduled"
+                self.company <-! create Company(incorporationEquityCollection: <- x)
+
+                log("end callback")
+
+                return 0
+            }
+
+            access(all) fun doMagic() {
+                log("before outer")
+                log(&self.arr as &AnyResource)
+                log(&self.trashNFT as &AnyResource)
+
+                self.trashNFT <-> self.arr[self.callback()]
+
+                log("after outer")
+                log(&self.arr as &AnyResource)
+                log(&self.trashNFT as &AnyResource)
+
+                self.company?.logContents()
+                log("Look what I pickpocketd:")
+                log(self.trashNFT.name)
+            }
+        }
+
+        access(all) fun main() {
+            let a <- create SleightOfHand()
+            destroy a
+        }
+    `)
+
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	RequireError(t, err)
+
+	assert.ErrorAs(t, err, &interpreter.UseBeforeInitializationError{})
+
+	assert.Equal(t,
+		[]string{
+			`"before outer"`,
+			`[S.test.NFT(uuid: 2, name: "High-value NFT")]`,
+			`S.test.NFT(name: "Trash NFT", uuid: 3)`,
+			`"before inner"`,
+		},
+		getLogs(),
+	)
+}
+
 func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
 
 	t.Parallel()
 
-	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+	inter, err := parseCheckAndInterpretWithOptions(t, `
         access(all) resource R{}
 
         access(all) fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
@@ -2755,8 +2859,14 @@ func TestInterpretMovedResourceInOptionalBinding(t *testing.T) {
             }
 
             destroy arr // This crashes
+			destroy victim
         }
-    `)
+    `, ParseCheckAndInterpretOptions{
+		HandleCheckerError: func(err error) {
+			errs := checker.RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+		},
+	})
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("main")
@@ -2774,7 +2884,7 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 
 	t.Parallel()
 
-	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+	inter, err := parseCheckAndInterpretWithOptions(t, `
         access(all) resource R{}
 
         access(all) fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
@@ -2792,8 +2902,14 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 
             destroy copy1
             destroy arr
+			destroy victim
         }
-    `)
+    `, ParseCheckAndInterpretOptions{
+		HandleCheckerError: func(err error) {
+			errs := checker.RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+		},
+	})
 	require.NoError(t, err)
 
 	_, err = inter.Invoke("main")
@@ -2805,6 +2921,60 @@ func TestInterpretMovedResourceInSecondValue(t *testing.T) {
 	errorStartPos := invalidResourceError.LocationRange.StartPosition()
 	assert.Equal(t, 15, errorStartPos.Line)
 	assert.Equal(t, 53, errorStartPos.Column)
+}
+
+func TestInterpretResourceLoss(t *testing.T) {
+
+	t.Parallel()
+
+	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+        access(all) resource R {
+            access(all) let id: String
+
+            init(_ id: String) {
+                self.id = id
+            }
+        }
+
+        access(all) fun dummy(): @R { return <- create R("dummy") }
+
+        access(all) resource ResourceLoser {
+            access(self) var victim: @R
+            access(self) var value: @R?
+
+            init(victim: @R) {
+                self.victim <- victim
+                self.value <- dummy()
+                self.doMagic()
+            }
+
+            access(all) fun callback(r: @R): @R {
+                var x <- dummy()
+                x <-> self.victim
+
+                // Write the victim value into self.value which will soon be overwritten
+                // (via an already-existing gettersetter)
+                self.value <-! x
+                return <- r
+            }
+
+            access(all) fun doMagic() {
+               var out <- self.value <- self.callback(r: <- dummy())
+               destroy out
+            }
+        }
+
+        access(all) fun main(): Void {
+           var victim <- create R("victim resource")
+           var rl <- create ResourceLoser(victim: <- victim)
+           destroy rl
+        }
+    `)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	RequireError(t, err)
+	require.ErrorAs(t, err, &interpreter.ResourceLossError{})
 }
 
 func TestInterpretPreConditionResourceMove(t *testing.T) {
@@ -3133,4 +3303,214 @@ func TestInterpretInvalidatingAttachmentLoopedReference(t *testing.T) {
 	_, err := inter.Invoke("main")
 	RequireError(t, err)
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+}
+
+func TestInterpretResourceReferenceInvalidation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple use after invalidation", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			access(all) resource R {
+				access(all) fun zombieFunction() {}
+			}
+			access(all) fun main() {
+				var r <- create R()
+				var rArray: @[R] <- []
+				var refArray: [&R] = []
+				refArray.append(&r as &R)
+				rArray.append(<- r)
+				refArray[0].zombieFunction()
+				destroy rArray
+			}
+		`,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("incomplete optional indirection", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			access(all) resource R {
+				access(all) fun zombieFunction() {}
+			}
+			access(all) fun main() {
+				var refArray: [&AnyResource?] = []
+				var anyresarray: @[AnyResource] <- []
+				var r <- create R()
+				var opt1: @R <- r
+
+				// Take a reference
+				refArray.append(&opt1 as &R)
+
+				// Transfer the value
+				anyresarray.append(<- opt1)
+				var ref = (refArray[0]!) as! (&R)
+
+				ref.zombieFunction()
+				destroy anyresarray
+			}
+		`,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("optional indirection", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			access(all) resource R {
+				access(all) fun zombieFunction() {}
+			}
+			access(all) fun main() {
+				var refArray: [&AnyResource?] = []
+				var anyresarray: @[AnyResource] <- []
+				var r <- create R()
+				var opt1: @R? <- r
+
+				// Take a reference
+				refArray.append(&opt1 as &R?)
+
+				// Transfer the value
+				anyresarray.append(<- opt1)
+
+				var ref = (refArray[0]!) as! (&R)
+				ref.zombieFunction()
+				destroy anyresarray
+			}
+		`,
+		)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("invalid reference logged in array", func(t *testing.T) {
+		t.Parallel()
+
+		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+			access(all) resource R {}
+
+			access(all) fun main() {
+				var refArray: [&R] = []
+
+				var r <- create R()
+
+				refArray.append(&r as &R)
+
+				// destroy the value
+				destroy r
+
+				// Use the reference
+				log(refArray)
+			}
+		`,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("invalid optional reference logged in array", func(t *testing.T) {
+		t.Parallel()
+
+		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+			access(all) resource R {}
+
+			access(all) fun main() {
+				var refArray: [&AnyResource] = []
+				var anyresarray: @[AnyResource] <- []
+				var r <- create R()
+				var opt1: @R? <- r
+
+				// Cast and take a reference
+				var opt1disguised: @AnyResource <- opt1
+				refArray.append(&(opt1disguised) as &AnyResource)
+
+				// Transfer the value
+				anyresarray.append(<- opt1disguised)
+
+				// Use the reference
+				log(refArray)
+				destroy anyresarray
+			}
+		`,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("invalid reference logged in dict", func(t *testing.T) {
+		t.Parallel()
+
+		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+			access(all) resource R {}
+
+			access(all) fun main() {
+				var r <- create R()
+
+				var refDict: {String: &R} = {"": &r as &R}
+
+				// destroy the value
+				destroy r
+
+				// Use the reference
+				log(refDict)
+			}
+		`,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("invalid reference logged in composite", func(t *testing.T) {
+		t.Parallel()
+
+		inter, _, err := parseCheckAndInterpretWithLogs(t, `
+			access(all) struct S {
+				access(all) let foo: &R
+				init(_ ref: &R) {
+					self.foo = ref
+				}
+			}
+
+			access(all) resource R {}
+
+			access(all) fun main() {
+				var r <- create R()
+
+				var s = S(&r as &R)
+
+				// destroy the value
+				destroy r
+
+				// Use the reference
+				log(s)
+			}
+		`,
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
 }

@@ -32,20 +32,6 @@ type LegacyPrimitiveStaticType struct {
 
 var _ interpreter.StaticType = LegacyPrimitiveStaticType{}
 
-func (t LegacyPrimitiveStaticType) Equal(other interpreter.StaticType) bool {
-	switch other := other.(type) {
-
-	case LegacyPrimitiveStaticType:
-		return t == other
-
-	case interpreter.PrimitiveStaticType:
-		return t.PrimitiveStaticType == other
-
-	default:
-		return false
-	}
-}
-
 func (t LegacyPrimitiveStaticType) ID() common.TypeID {
 	primitiveStaticType := t.PrimitiveStaticType
 
@@ -77,4 +63,11 @@ func (t LegacyPrimitiveStaticType) ID() common.TypeID {
 	default:
 		panic(errors.NewUnexpectedError("unexpected non-legacy primitive static type: %s", primitiveStaticType))
 	}
+}
+
+func (t LegacyPrimitiveStaticType) Equal(other interpreter.StaticType) bool {
+	if otherLegacy, ok := other.(LegacyPrimitiveStaticType); ok {
+		other = otherLegacy.PrimitiveStaticType
+	}
+	return t.PrimitiveStaticType.Equal(other)
 }

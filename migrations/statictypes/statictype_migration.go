@@ -182,9 +182,12 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 		}
 
 	case *interpreter.CapabilityStaticType:
-		convertedBorrowType := m.maybeConvertStaticType(staticType.BorrowType, staticType)
-		if convertedBorrowType != nil {
-			return interpreter.NewCapabilityStaticType(nil, convertedBorrowType)
+		borrowType := staticType.BorrowType
+		if borrowType != nil {
+			convertedBorrowType := m.maybeConvertStaticType(borrowType, staticType)
+			if convertedBorrowType != nil {
+				return interpreter.NewCapabilityStaticType(nil, convertedBorrowType)
+			}
 		}
 
 	case *interpreter.IntersectionStaticType:
@@ -350,6 +353,18 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 		compositeTypeConverter := m.compositeTypeConverter
 		if compositeTypeConverter != nil {
 			convertedType = compositeTypeConverter(staticType)
+		}
+
+		// Convert built-in types in composite type form to primitive type
+		if convertedType == nil && staticType.Location == nil {
+			primitiveStaticType := interpreter.PrimitiveStaticTypeFromTypeID(staticType.TypeID)
+			if primitiveStaticType != interpreter.PrimitiveStaticTypeUnknown {
+				convertedPrimitiveStaticType := m.maybeConvertStaticType(primitiveStaticType, parentType)
+				if convertedPrimitiveStaticType != nil {
+					return convertedPrimitiveStaticType
+				}
+				return primitiveStaticType
+			}
 		}
 
 		// Interface types need to be placed in intersection types.

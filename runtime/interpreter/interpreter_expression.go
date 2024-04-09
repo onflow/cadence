@@ -33,19 +33,19 @@ import (
 
 // assignmentGetterSetter returns a getter/setter function pair
 // for the target expression
-func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression) getterSetter {
+func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression, locationRange LocationRange) getterSetter {
 	switch expression := expression.(type) {
 	case *ast.IdentifierExpression:
-		return interpreter.identifierExpressionGetterSetter(expression)
+		return interpreter.identifierExpressionGetterSetter(expression, locationRange)
 
 	case *ast.IndexExpression:
 		if attachmentType, ok := interpreter.Program.Elaboration.AttachmentAccessTypes(expression); ok {
 			return interpreter.typeIndexExpressionGetterSetter(expression, attachmentType)
 		}
-		return interpreter.valueIndexExpressionGetterSetter(expression)
+		return interpreter.valueIndexExpressionGetterSetter(expression, locationRange)
 
 	case *ast.MemberExpression:
-		return interpreter.memberExpressionGetterSetter(expression)
+		return interpreter.memberExpressionGetterSetter(expression, locationRange)
 
 	default:
 		return getterSetter{
@@ -61,7 +61,10 @@ func (interpreter *Interpreter) assignmentGetterSetter(expression ast.Expression
 
 // identifierExpressionGetterSetter returns a getter/setter function pair
 // for the target identifier expression
-func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpression *ast.IdentifierExpression) getterSetter {
+func (interpreter *Interpreter) identifierExpressionGetterSetter(
+	identifierExpression *ast.IdentifierExpression,
+	locationRange LocationRange,
+) getterSetter {
 	identifier := identifierExpression.Identifier.Identifier
 	variable := interpreter.FindVariable(identifier)
 
@@ -73,6 +76,10 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 		},
 		set: func(value Value) {
 			interpreter.startResourceTracking(value, variable, identifier, identifierExpression)
+
+			existingValue := variable.GetValue()
+			interpreter.checkResourceLoss(existingValue, locationRange)
+
 			variable.SetValue(value)
 		},
 	}
@@ -95,9 +102,11 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 	return getterSetter{
 		target: target,
 		get: func(_ bool) Value {
+			interpreter.checkInvalidatedResourceOrResourceReference(target, indexExpression)
 			return target.GetTypeKey(interpreter, locationRange, attachmentType)
 		},
 		set: func(_ Value) {
+			interpreter.checkInvalidatedResourceOrResourceReference(target, indexExpression)
 			// writing to composites with indexing syntax is not supported
 			panic(errors.NewUnreachableError())
 		},
@@ -106,15 +115,32 @@ func (interpreter *Interpreter) typeIndexExpressionGetterSetter(
 
 // valueIndexExpressionGetterSetter returns a getter/setter function pair
 // for the target index expression
-func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression *ast.IndexExpression) getterSetter {
-	target, ok := interpreter.evalExpression(indexExpression.TargetExpression).(ValueIndexableValue)
+func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
+	indexExpression *ast.IndexExpression,
+	locationRange LocationRange,
+) getterSetter {
+
+	// Use getter/setter functions to evaluate the target expression,
+	// instead of evaluating it directly.
+	//
+	// In a swap statement, the left or right side may be an index expression,
+	// and the indexed type (type of the target expression) may be a resource type.
+	// In that case, the target expression must be considered as a nested resource move expression,
+	// i.e. needs to be temporarily moved out (get)
+	// and back in (set) after the index expression got evaluated.
+	//
+	// This is because the evaluation of the index expression
+	// should not be able to access/move the target resource.
+	//
+	// For example, if a side is `a.b[c()]`, then `a.b` is the target expression.
+	// If `a.b` is a resource, then `c()` should not be able to access/move it.
+
+	targetExpression := indexExpression.TargetExpression
+	targetGetterSetter := interpreter.assignmentGetterSetter(targetExpression, locationRange)
+	const allowMissing = false
+	target, ok := targetGetterSetter.get(allowMissing).(ValueIndexableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
-	}
-
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: indexExpression,
 	}
 
 	// Evaluate, transfer, and convert the indexing value,
@@ -135,6 +161,11 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 			HasPosition: indexExpression.IndexingExpression,
 		},
 	)
+
+	isTargetNestedResourceMove := elaboration.IsNestedResourceMoveExpression(targetExpression)
+	if isTargetNestedResourceMove {
+		targetGetterSetter.set(target)
+	}
 
 	// Normally, moves of nested resources (e.g `let r <- rs[0]`) are statically rejected.
 	//
@@ -165,12 +196,14 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 
 	if isNestedResourceMove {
 		get = func(_ bool) Value {
+			interpreter.checkInvalidatedResourceOrResourceReference(target, targetExpression)
 			value := target.RemoveKey(interpreter, locationRange, transferredIndexingValue)
 			target.InsertKey(interpreter, locationRange, transferredIndexingValue, placeholder)
 			return value
 		}
 	} else {
 		get = func(_ bool) Value {
+			interpreter.checkInvalidatedResourceOrResourceReference(target, targetExpression)
 			value := target.GetKey(interpreter, locationRange, transferredIndexingValue)
 
 			// If the indexing value is a reference, then return a reference for the resulting value.
@@ -182,6 +215,7 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 		target: target,
 		get:    get,
 		set: func(value Value) {
+			interpreter.checkInvalidatedResourceOrResourceReference(target, targetExpression)
 			target.SetKey(interpreter, locationRange, transferredIndexingValue, value)
 		},
 	}
@@ -189,13 +223,13 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(indexExpression
 
 // memberExpressionGetterSetter returns a getter/setter function pair
 // for the target member expression
-func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) getterSetter {
+func (interpreter *Interpreter) memberExpressionGetterSetter(
+	memberExpression *ast.MemberExpression,
+	locationRange LocationRange,
+) getterSetter {
+
 	target := interpreter.evalExpression(memberExpression.Expression)
 	identifier := memberExpression.Identifier.Identifier
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: memberExpression,
-	}
 
 	isNestedResourceMove := interpreter.Program.Elaboration.IsNestedResourceMoveExpression(memberExpression)
 
@@ -259,7 +293,6 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *a
 		},
 		set: func(value Value) {
 			interpreter.checkMemberAccess(memberExpression, target, locationRange)
-
 			interpreter.setMember(target, locationRange, identifier, value)
 		},
 	}
@@ -320,6 +353,9 @@ func (interpreter *Interpreter) checkMemberAccess(
 	target Value,
 	locationRange LocationRange,
 ) {
+
+	interpreter.checkInvalidatedResourceOrResourceReference(target, memberExpression)
+
 	memberInfo, _ := interpreter.Program.Elaboration.MemberExpressionMemberAccessInfo(memberExpression)
 	expectedType := memberInfo.AccessedType
 
@@ -382,6 +418,10 @@ func (interpreter *Interpreter) evalExpression(expression ast.Expression) Value 
 }
 
 func (interpreter *Interpreter) checkInvalidatedResourceOrResourceReference(value Value, hasPosition ast.HasPosition) {
+	if interpreter == nil {
+		return
+	}
+
 	// Unwrap SomeValue, to access references wrapped inside optionals.
 	someValue, isSomeValue := value.(*SomeValue)
 	for isSomeValue && someValue.value != nil {
@@ -1002,7 +1042,13 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 
 func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpression) Value {
 	const allowMissing = false
-	return interpreter.memberExpressionGetterSetter(expression).get(allowMissing)
+
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: expression,
+	}
+
+	return interpreter.memberExpressionGetterSetter(expression, locationRange).get(allowMissing)
 }
 
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) Value {
@@ -1262,7 +1308,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		HasPosition: expression.Expression,
 	}
 
-	expectedType := interpreter.substituteMappedEntitlements(interpreter.Program.Elaboration.CastingExpressionTypes(expression).TargetType)
+	castingExpressionTypes := interpreter.Program.Elaboration.CastingExpressionTypes(expression)
+	expectedType := interpreter.substituteMappedEntitlements(castingExpressionTypes.TargetType)
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
@@ -1285,14 +1332,6 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 				return Nil
 			}
 
-			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			value = interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
-
-			// Failable casting is a resource invalidation
-			interpreter.invalidateResource(value)
-
-			return NewSomeValueNonCopying(interpreter, value)
-
 		case ast.OperationForceCast:
 			if !isSubType {
 				locationRange := LocationRange{
@@ -1307,15 +1346,24 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 				})
 			}
 
-			// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
-			return interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
-
 		default:
 			panic(errors.NewUnreachableError())
 		}
 
+		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
+		value = interpreter.ConvertAndBox(locationRange, value, valueSemaType, expectedType)
+
+		if expression.Operation == ast.OperationFailableCast {
+			// Failable casting is a resource invalidation
+			interpreter.invalidateResource(value)
+
+			value = NewSomeValueNonCopying(interpreter, value)
+		}
+
+		return value
+
 	case ast.OperationCast:
-		staticValueType := interpreter.Program.Elaboration.CastingExpressionTypes(expression).StaticValueType
+		staticValueType := castingExpressionTypes.StaticValueType
 		// The cast may upcast to an optional type, e.g. `1 as Int?`, so box
 		return interpreter.ConvertAndBox(locationRange, value, staticValueType, expectedType)
 
