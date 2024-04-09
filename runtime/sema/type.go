@@ -3393,31 +3393,30 @@ func (p Parameter) EffectiveArgumentLabel() string {
 // TypeParameter
 
 type TypeParameter struct {
-	TypeBound Type
+	TypeBound TypeBound
 	Name      string
 	Optional  bool
 }
 
-func (p TypeParameter) string(typeFormatter func(Type) string) string {
+func (p TypeParameter) String() string {
 	var builder strings.Builder
 	builder.WriteString(p.Name)
 	if p.TypeBound != nil {
-		builder.WriteString(": ")
-		builder.WriteString(typeFormatter(p.TypeBound))
+		// so as not to be confusing, existing subtype bounds will continue to be printed the normal way,
+		// and we only use special printing for the cases where there are more general bounds
+		if subtypeBound, isSubtypeBound := p.TypeBound.(SubtypeTypeBound); isSubtypeBound {
+			builder.WriteString(": ")
+			builder.WriteString(subtypeBound.Type.String())
+		} else {
+			builder.WriteString(" ")
+			builder.WriteString(p.TypeBound.String())
+		}
 	}
 	return builder.String()
 }
 
-func (p TypeParameter) String() string {
-	return p.string(func(t Type) string {
-		return t.String()
-	})
-}
-
 func (p TypeParameter) QualifiedString() string {
-	return p.string(func(t Type) string {
-		return t.QualifiedString()
-	})
+	return p.String()
 }
 
 func (p TypeParameter) Equal(other *TypeParameter) bool {
@@ -3442,17 +3441,17 @@ func (p TypeParameter) Equal(other *TypeParameter) bool {
 
 func (p TypeParameter) checkTypeBound(ty Type, memoryGauge common.MemoryGauge, typeRange ast.HasPosition) error {
 	if p.TypeBound == nil ||
-		p.TypeBound.IsInvalidType() ||
+		p.TypeBound.HasInvalidType() ||
 		ty.IsInvalidType() {
 
 		return nil
 	}
 
-	if !IsSubType(ty, p.TypeBound) {
-		return &TypeMismatchError{
-			ExpectedType: p.TypeBound,
-			ActualType:   ty,
-			Range:        ast.NewRangeFromPositioned(memoryGauge, typeRange),
+	if !p.TypeBound.Satisfies(ty) {
+		return &TypeBoundError{
+			ExpectedTypeBound: p.TypeBound,
+			ActualType:        ty,
+			Range:             ast.NewRangeFromPositioned(memoryGauge, typeRange),
 		}
 	}
 
@@ -3793,7 +3792,7 @@ func (t *FunctionType) IsInvalidType() bool {
 	for _, typeParameter := range t.TypeParameters {
 
 		if typeParameter.TypeBound != nil &&
-			typeParameter.TypeBound.IsInvalidType() {
+			typeParameter.TypeBound.HasInvalidType() {
 
 			return true
 		}
@@ -3867,17 +3866,17 @@ func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
 func (t *FunctionType) RewriteWithIntersectionTypes() (Type, bool) {
 	anyRewritten := false
 
-	rewrittenTypeParameterTypeBounds := map[*TypeParameter]Type{}
+	rewrittenTypeParameterTypeBounds := map[*TypeParameter]TypeBound{}
 
 	for _, typeParameter := range t.TypeParameters {
 		if typeParameter.TypeBound == nil {
 			continue
 		}
 
-		rewrittenType, rewritten := typeParameter.TypeBound.RewriteWithIntersectionTypes()
+		rewrittenTypeBound, rewritten := typeParameter.TypeBound.RewriteWithIntersectionTypes()
 		if rewritten {
 			anyRewritten = true
-			rewrittenTypeParameterTypeBounds[typeParameter] = rewrittenType
+			rewrittenTypeParameterTypeBounds[typeParameter] = rewrittenTypeBound
 		}
 	}
 
@@ -4253,24 +4252,30 @@ func baseTypeVariable(name string, ty Type) *Variable {
 // the values available in programs
 var BaseValueActivation = NewVariableActivation(nil)
 
-var AllSignedFixedPointTypes = []Type{
+var AllLeafSignedFixedPointTypes = []Type{
 	Fix64Type,
 }
 
-var AllUnsignedFixedPointTypes = []Type{
+var AllLeafUnsignedFixedPointTypes = []Type{
 	UFix64Type,
 }
 
-var AllFixedPointTypes = common.Concat(
-	AllUnsignedFixedPointTypes,
-	AllSignedFixedPointTypes,
-	[]Type{
-		FixedPointType,
-		SignedFixedPointType,
-	},
+var AllLeafFixedPointTypes = common.Concat(
+	AllLeafUnsignedFixedPointTypes,
+	AllLeafSignedFixedPointTypes,
 )
 
-var AllSignedIntegerTypes = []Type{
+var AllNonLeafFixedPointTypes = []Type{
+	FixedPointType,
+	SignedFixedPointType,
+}
+
+var AllFixedPointTypes = common.Concat(
+	AllLeafFixedPointTypes,
+	AllNonLeafFixedPointTypes,
+)
+
+var AllLeafSignedIntegerTypes = []Type{
 	IntType,
 	Int8Type,
 	Int16Type,
@@ -4280,7 +4285,7 @@ var AllSignedIntegerTypes = []Type{
 	Int256Type,
 }
 
-var AllFixedSizeUnsignedIntegerTypes = []Type{
+var AllLeafFixedSizeUnsignedIntegerTypes = []Type{
 	// UInt*
 	UInt8Type,
 	UInt16Type,
@@ -4297,8 +4302,8 @@ var AllFixedSizeUnsignedIntegerTypes = []Type{
 	Word256Type,
 }
 
-var AllUnsignedIntegerTypes = common.Concat(
-	AllFixedSizeUnsignedIntegerTypes,
+var AllLeafUnsignedIntegerTypes = common.Concat(
+	AllLeafFixedSizeUnsignedIntegerTypes,
 	[]Type{
 		UIntType,
 	},
@@ -4310,9 +4315,13 @@ var AllNonLeafIntegerTypes = []Type{
 	FixedSizeUnsignedIntegerType,
 }
 
+var AllLeafIntegerTypes = common.Concat(
+	AllLeafUnsignedIntegerTypes,
+	AllLeafSignedIntegerTypes,
+)
+
 var AllIntegerTypes = common.Concat(
-	AllUnsignedIntegerTypes,
-	AllSignedIntegerTypes,
+	AllLeafIntegerTypes,
 	AllNonLeafIntegerTypes,
 )
 
@@ -6687,15 +6696,9 @@ func (t *InclusiveRangeType) Instantiate(
 	}
 	paramAstRange := ast.NewRangeFromPositioned(memoryGauge, astTypeArguments[0])
 
-	// memberType must only be a leaf integer type.
-	for _, ty := range AllNonLeafIntegerTypes {
-		if memberType == ty {
-			report(&InvalidTypeArgumentError{
-				TypeArgumentName: inclusiveRangeTypeParameter.Name,
-				Range:            paramAstRange,
-				Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
-			})
-		}
+	err := InclusiveRangeConstructorFunctionTypeParameter.checkTypeBound(memberType, memoryGauge, paramAstRange)
+	if err != nil {
+		report(err)
 	}
 
 	return &InclusiveRangeType{
@@ -6716,7 +6719,7 @@ func (t *InclusiveRangeType) CheckInstantiated(pos ast.HasPosition, memoryGauge 
 
 var inclusiveRangeTypeParameter = &TypeParameter{
 	Name:      "T",
-	TypeBound: IntegerType,
+	TypeBound: SubtypeTypeBound{Type: IntegerType},
 }
 
 func (*InclusiveRangeType) TypeParameters() []*TypeParameter {
@@ -6750,6 +6753,16 @@ const InclusiveRangeTypeContainsFunctionName = "contains"
 const inclusiveRangeTypeContainsFunctionDocString = `
 Returns true if the given integer is in the InclusiveRange sequence
 `
+
+var InclusiveRangeConstructorFunctionTypeParameter = &TypeParameter{
+	Name: "T",
+	TypeBound: NewDisjunctionTypeBound([]TypeBound{
+		NewEqualTypeBound(UIntType),
+		NewEqualTypeBound(IntType),
+		NewStrictSubtypeTypeBound(FixedSizeUnsignedIntegerType),
+		NewStrictSubtypeTypeBound(SignedIntegerType),
+	}),
+}
 
 func (t *InclusiveRangeType) GetMembers() map[string]MemberResolver {
 	t.initializeMemberResolvers()
@@ -7429,7 +7442,7 @@ func IsProperSubType(subType Type, superType Type) bool {
 // the equality of the two types, so does NOT return a specific
 // value when the two types are equal or are not.
 //
-// Consider using IsSubType or IsProperSubType
+// Consider using IsSubType or IsStrictSubType
 func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	if subType == NeverType {
@@ -8656,9 +8669,11 @@ func (t *CapabilityType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 
 var capabilityTypeParameter = &TypeParameter{
 	Name: "T",
-	TypeBound: &ReferenceType{
-		Type:          AnyType,
-		Authorization: UnauthorizedAccess,
+	TypeBound: SubtypeTypeBound{
+		Type: &ReferenceType{
+			Type:          AnyType,
+			Authorization: UnauthorizedAccess,
+		},
 	},
 }
 

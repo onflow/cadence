@@ -1734,10 +1734,24 @@ func TestRuntimeStorageMultipleTransactionsInclusiveRangeFunction(t *testing.T) 
 
 	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	var typeBoundError *sema.TypeBoundError
+	require.ErrorAs(t, errs[0], &typeBoundError)
 
-	typeMismatchError := errs[0].(*sema.TypeMismatchError)
-	assert.Contains(t, typeMismatchError.SecondaryError(), "expected `Storable`, got `InclusiveRange<Int>`")
+	assert.Equal(
+		t,
+		sema.SubtypeTypeBound{
+			Type: sema.StorableType,
+		},
+		typeBoundError.ExpectedTypeBound,
+	)
+	assert.Equal(
+		t,
+		&sema.InclusiveRangeType{
+			MemberType: sema.IntType,
+		},
+		typeBoundError.ActualType,
+	)
+
 }
 
 func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
@@ -4582,7 +4596,7 @@ func TestRuntimeRandom(t *testing.T) {
 	}
 
 	testTypes := func(t *testing.T, testType func(*testing.T, sema.Type)) {
-		for _, ty := range sema.AllFixedSizeUnsignedIntegerTypes {
+		for _, ty := range sema.AllLeafFixedSizeUnsignedIntegerTypes {
 			ty := ty
 			t.Run(ty.String(), func(t *testing.T) {
 				t.Parallel()

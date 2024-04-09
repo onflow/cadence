@@ -1945,8 +1945,18 @@ func (e *Encoder) encodeTypeParameterTypeValue(typeParameter cadence.TypeParamet
 		return err
 	}
 
+	// TODO: perhaps generalize this?
+	if typeParameter.TypeBound == nil {
+		return e.encodeNullableTypeValue(nil, visited)
+	}
+
+	subTypeBound, isSubtypeBound := typeParameter.TypeBound.(cadence.SubtypeTypeBound)
+	if !isSubtypeBound {
+		panic(cadenceErrors.NewUnexpectedError("cannot store non-subtype bounded function type parameter %s", typeParameter.TypeBound))
+	}
+
 	// element 1: type as type-bound.
-	return e.encodeNullableTypeValue(typeParameter.TypeBound, visited)
+	return e.encodeNullableTypeValue(subTypeBound.Type, visited)
 }
 
 // encodeParameterTypeValues encodes composite initializer parameter types as

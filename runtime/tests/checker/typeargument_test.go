@@ -140,7 +140,7 @@ func TestCheckTypeArguments(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeBoundError{}, errs[0])
 	})
 
 	t.Run("capability, instantiation with two arguments", func(t *testing.T) {
@@ -915,8 +915,10 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					{
-						Name:      "T",
-						TypeBound: &sema.InclusiveRangeType{},
+						Name: "T",
+						TypeBound: sema.SubtypeTypeBound{
+							Type: &sema.InclusiveRangeType{},
+						},
 					},
 				},
 				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
@@ -936,8 +938,10 @@ func TestCheckParameterizedTypeIsInstantiated(t *testing.T) {
 				TypeParameters: []*sema.TypeParameter{
 					{
 						Name: "T",
-						TypeBound: &sema.InclusiveRangeType{
-							MemberType: sema.IntType,
+						TypeBound: sema.SubtypeTypeBound{
+							Type: &sema.InclusiveRangeType{
+								MemberType: sema.IntType,
+							},
 						},
 					},
 				},

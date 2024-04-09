@@ -61,13 +61,7 @@ var testIntegerTypesAndValues = map[string]interpreter.Value{
 }
 
 func init() {
-	for _, integerType := range sema.AllIntegerTypes {
-		// Only test leaf types
-		switch integerType {
-		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
-			continue
-		}
-
+	for _, integerType := range sema.AllLeafIntegerTypes {
 		if _, ok := testIntegerTypesAndValues[integerType.String()]; !ok {
 			panic(fmt.Sprintf("broken test: missing %s", integerType))
 		}
@@ -702,13 +696,7 @@ func TestInterpretIntegerConversion(t *testing.T) {
 		},
 	}
 
-	for _, ty := range sema.AllIntegerTypes {
-		// Only test leaf types
-		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
-			continue
-		}
-
+	for _, ty := range sema.AllLeafIntegerTypes {
 		_, ok := testValues[ty.(*sema.NumericType)]
 		require.True(t, ok, "missing expected value for type %s", ty.String())
 	}
@@ -888,13 +876,7 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 		},
 	}
 
-	for _, ty := range sema.AllIntegerTypes {
-		// Only test leaf types
-		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
-			continue
-		}
-
+	for _, ty := range sema.AllLeafIntegerTypes {
 		if _, ok := testCases[ty]; !ok {
 			require.Fail(t, "missing type: %s", ty.String())
 		}
@@ -959,7 +941,7 @@ func TestInterpretStringIntegerConversion(t *testing.T) {
 		}
 	}
 
-	for _, typ := range append(sema.AllSignedIntegerTypes, sema.AllUnsignedIntegerTypes...) {
+	for _, typ := range sema.AllLeafIntegerTypes {
 		t.Run(typ.String(), func(t *testing.T) { test(t, typ) })
 	}
 }

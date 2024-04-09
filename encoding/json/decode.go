@@ -928,13 +928,47 @@ func (d *Decoder) decodeFunction(valueJSON any) cadence.Function {
 	)
 }
 
+func (d *Decoder) decodeTypeBound(valueJSON any, results typeDecodingResults) cadence.TypeBound {
+	obj := toObject(valueJSON)
+
+	kind := obj.Get("kind")
+
+	switch kind {
+	case "subtype":
+		ty := obj.Get("type")
+		decodedType := d.decodeType(ty, results)
+		return cadence.NewSubtypeTypeBound(decodedType)
+	case "supertype":
+		ty := obj.Get("type")
+		decodedType := d.decodeType(ty, results)
+		return cadence.NewSupertypeTypeBound(decodedType)
+	case "equal":
+		ty := obj.Get("type")
+		decodedType := d.decodeType(ty, results)
+		return cadence.NewEqualTypeBound(decodedType)
+	case "negation":
+		bounds := toSlice(obj.Get("bounds"))
+		decodedBound := d.decodeTypeBound(bounds[0], results)
+		return cadence.NewNegationTypeBound(decodedBound)
+	case "conjunction":
+		bounds := toSlice(obj.Get("bounds"))
+		var decodedBounds []cadence.TypeBound
+		for _, bound := range bounds {
+			decodedBounds = append(decodedBounds, d.decodeTypeBound(bound, results))
+		}
+		return cadence.NewConjunctionTypeBound(decodedBounds)
+	}
+
+	panic(errors.NewDefaultUserError("invalid kind in type bound: %s", kind))
+}
+
 func (d *Decoder) decodeTypeParameter(valueJSON any, results typeDecodingResults) cadence.TypeParameter {
 	obj := toObject(valueJSON)
 	// Unmetered because decodeTypeParameter is metered in decodeTypeParameters and called nowhere else
 	typeBoundObj, ok := obj[typeBoundKey]
-	var typeBound cadence.Type
+	var typeBound cadence.TypeBound
 	if ok {
-		typeBound = d.decodeType(typeBoundObj, results)
+		typeBound = d.decodeTypeBound(typeBoundObj, results)
 	}
 
 	return cadence.NewTypeParameter(

@@ -300,11 +300,11 @@ func TestCheckAccountStorageSave(t *testing.T) {
 			if domain == common.PathDomainStorage {
 				errs := RequireCheckerErrors(t, err, 1)
 
-				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeBoundError{}, errs[0])
 			} else {
 				errs := RequireCheckerErrors(t, err, 2)
 
-				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeBoundError{}, errs[0])
 				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 			}
 		})
@@ -331,11 +331,11 @@ func TestCheckAccountStorageSave(t *testing.T) {
 			if domain == common.PathDomainStorage {
 				errs := RequireCheckerErrors(t, err, 1)
 
-				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeBoundError{}, errs[0])
 			} else {
 				errs := RequireCheckerErrors(t, err, 2)
 
-				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeBoundError{}, errs[0])
 				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 			}
 		})
@@ -624,12 +624,12 @@ func TestCheckAccountStorageCopy(t *testing.T) {
 				if domain == common.PathDomainStorage {
 					errs := RequireCheckerErrors(t, err, 1)
 
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeBoundError{}, errs[0])
 
 				} else {
 					errs := RequireCheckerErrors(t, err, 2)
 
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeBoundError{}, errs[0])
 					require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 				}
 			})
@@ -839,11 +839,11 @@ func TestCheckAccountStorageBorrow(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeBoundError{}, errs[0])
 				} else {
 					errs := RequireCheckerErrors(t, err, 2)
 
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeBoundError{}, errs[0])
 					require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 				}
 			})
@@ -869,11 +869,11 @@ func TestCheckAccountStorageBorrow(t *testing.T) {
 
 					errs := RequireCheckerErrors(t, err, 1)
 
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeBoundError{}, errs[0])
 				} else {
 					errs := RequireCheckerErrors(t, err, 2)
 
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeBoundError{}, errs[0])
 					require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 				}
 			})
@@ -1739,8 +1739,8 @@ func TestCheckAccountCapabilities(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
-		require.Equal(t, errs[0].(errors.SecondaryError).SecondaryError(), "Type argument for `get` cannot be `Never`")
+		require.IsType(t, &sema.TypeBoundError{}, errs[0])
+		require.Equal(t, errs[0].(errors.SecondaryError).SecondaryError(), "expected type satisfying (<=: &Any) && (>: Never), got `Never`")
 	})
 }
 

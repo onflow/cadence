@@ -607,7 +607,7 @@ func TestRuntimeParseLiteral(t *testing.T) {
 		require.Nil(t, value)
 	})
 
-	for _, unsignedIntegerType := range sema.AllUnsignedIntegerTypes {
+	for _, unsignedIntegerType := range sema.AllLeafUnsignedIntegerTypes {
 
 		t.Run(
 			fmt.Sprintf(
@@ -649,7 +649,7 @@ func TestRuntimeParseLiteral(t *testing.T) {
 	}
 
 	for _, signedIntegerType := range common.Concat(
-		sema.AllSignedIntegerTypes,
+		sema.AllLeafSignedIntegerTypes,
 		[]sema.Type{
 			sema.IntegerType,
 			sema.SignedIntegerType,

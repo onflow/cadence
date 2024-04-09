@@ -21,8 +21,6 @@ package stdlib
 import (
 	"fmt"
 
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -37,21 +35,17 @@ const inclusiveRangeConstructorFunctionDocString = `
  If not provided, the value of +1 or -1 is used based on the values of start and end. 
  `
 
-var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
-	typeParameter := &sema.TypeParameter{
-		Name:      "T",
-		TypeBound: sema.IntegerType,
-	}
+var InclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 
 	typeAnnotation := sema.NewTypeAnnotation(
 		&sema.GenericType{
-			TypeParameter: typeParameter,
+			TypeParameter: sema.InclusiveRangeConstructorFunctionTypeParameter,
 		},
 	)
 
 	return &sema.FunctionType{
 		TypeParameters: []*sema.TypeParameter{
-			typeParameter,
+			sema.InclusiveRangeConstructorFunctionTypeParameter,
 		},
 		Parameters: []sema.Parameter{
 			{
@@ -76,46 +70,12 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 		),
 		// `step` parameter is optional
 		Arity: &sema.Arity{Min: 2, Max: 3},
-		TypeArgumentsCheck: func(
-			memoryGauge common.MemoryGauge,
-			typeArguments *sema.TypeParameterTypeOrderedMap,
-			astTypeArguments []*ast.TypeAnnotation,
-			invocationRange ast.HasPosition,
-			report func(error),
-		) {
-			memberType, ok := typeArguments.Get(typeParameter)
-			if !ok || memberType == nil {
-				// checker should prevent this
-				panic(errors.NewUnreachableError())
-			}
-
-			// memberType must only be a leaf integer type.
-			for _, ty := range sema.AllNonLeafIntegerTypes {
-				if memberType != ty {
-					continue
-				}
-
-				// If type argument was provided, use its range otherwise fallback to invocation range.
-				errorRange := invocationRange
-				if len(astTypeArguments) > 0 {
-					errorRange = astTypeArguments[0]
-				}
-
-				report(&sema.InvalidTypeArgumentError{
-					TypeArgumentName: typeParameter.Name,
-					Range:            ast.NewRangeFromPositioned(memoryGauge, errorRange),
-					Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
-				})
-
-				break
-			}
-		},
 	}
 }()
 
 var InclusiveRangeConstructorFunction = NewStandardLibraryFunction(
 	"InclusiveRange",
-	inclusiveRangeConstructorFunctionType,
+	InclusiveRangeConstructorFunctionType,
 	inclusiveRangeConstructorFunctionDocString,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		start, startOk := invocation.Arguments[0].(interpreter.IntegerValue)

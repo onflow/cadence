@@ -1408,7 +1408,7 @@ func TestTypeEquality(t *testing.T) {
 				TypeParameters: []TypeParameter{
 					{
 						Name:      "T",
-						TypeBound: AnyStructType,
+						TypeBound: NewSubtypeTypeBound(AnyStructType),
 					},
 				},
 				Parameters: []Parameter{
@@ -1428,7 +1428,7 @@ func TestTypeEquality(t *testing.T) {
 				TypeParameters: []TypeParameter{
 					{
 						Name:      "T",
-						TypeBound: AnyStructType,
+						TypeBound: NewSubtypeTypeBound(AnyStructType),
 					},
 				},
 				Parameters: []Parameter{
@@ -1461,7 +1461,7 @@ func TestTypeEquality(t *testing.T) {
 				TypeParameters: []TypeParameter{
 					{
 						Name:      "T",
-						TypeBound: AnyResourceType,
+						TypeBound: NewSubtypeTypeBound(AnyResourceType),
 					},
 				},
 				Parameters: []Parameter{
@@ -1475,7 +1475,7 @@ func TestTypeEquality(t *testing.T) {
 				TypeParameters: []TypeParameter{
 					{
 						Name:      "T",
-						TypeBound: AnyStructType,
+						TypeBound: NewSubtypeTypeBound(AnyStructType),
 					},
 				},
 				Parameters: []Parameter{
@@ -1495,7 +1495,7 @@ func TestTypeEquality(t *testing.T) {
 				TypeParameters: []TypeParameter{
 					{
 						Name:      "T",
-						TypeBound: AnyResourceType,
+						TypeBound: NewSubtypeTypeBound(AnyResourceType),
 					},
 				},
 				Parameters: []Parameter{
@@ -1509,7 +1509,7 @@ func TestTypeEquality(t *testing.T) {
 				TypeParameters: []TypeParameter{
 					{
 						Name:      "T",
-						TypeBound: AnyResourceType,
+						TypeBound: NewSubtypeTypeBound(AnyResourceType),
 					},
 				},
 				Parameters: []Parameter{

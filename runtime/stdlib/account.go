@@ -187,7 +187,9 @@ var getAuthAccountFunctionType = func() *sema.FunctionType {
 
 	typeParam := &sema.TypeParameter{
 		Name:      "T",
-		TypeBound: sema.AccountReferenceType,
+		TypeBound: sema.SubtypeTypeBound{
+			Type: sema.AccountReferenceType,
+		},
 	}
 
 	return &sema.FunctionType{

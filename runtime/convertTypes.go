@@ -496,6 +496,42 @@ func exportInclusiveRangeType(
 	)
 }
 
+func exportTypeBound(
+	gauge common.MemoryGauge,
+	bound sema.TypeBound,
+	results map[sema.TypeID]cadence.Type,
+) cadence.TypeBound {
+	switch bound := bound.(type) {
+	case sema.SubtypeTypeBound:
+		common.UseMemory(gauge, common.CadenceSubtypeBoundMemoryUsage)
+		ty := ExportMeteredType(gauge, bound.Type, results)
+		return cadence.NewSubtypeTypeBound(ty)
+	case sema.SupertypeTypeBound:
+		common.UseMemory(gauge, common.CadenceEqualBoundMemoryUsage)
+		ty := ExportMeteredType(gauge, bound.Type, results)
+		return cadence.NewSupertypeTypeBound(ty)
+	case sema.EqualTypeBound:
+		common.UseMemory(gauge, common.CadenceEqualBoundMemoryUsage)
+		ty := ExportMeteredType(gauge, bound.Type, results)
+		return cadence.NewEqualTypeBound(ty)
+	case sema.ConjunctionTypeBound:
+		common.UseMemory(gauge, common.CadenceNegationBoundMemoryUsage)
+
+		var joined []cadence.TypeBound
+		for _, typeBound := range bound.TypeBounds {
+			joined = append(joined, exportTypeBound(gauge, typeBound, results))
+		}
+		return cadence.NewConjunctionTypeBound(joined)
+
+	case sema.NegationTypeBound:
+		common.UseMemory(gauge, common.CadenceConjunctionBoundMemoryUsage)
+		negated := exportTypeBound(gauge, bound.NegatedBound, results)
+		return cadence.NewNegationTypeBound(negated)
+	}
+
+	panic(errors.NewUnreachableError())
+}
+
 func exportFunctionType(
 	gauge common.MemoryGauge,
 	t *sema.FunctionType,
@@ -514,9 +550,9 @@ func exportFunctionType(
 		for i, typeParameter := range t.TypeParameters {
 
 			typeBound := typeParameter.TypeBound
-			var convertedParameterTypeBound cadence.Type
+			var convertedParameterTypeBound cadence.TypeBound
 			if typeBound != nil {
-				convertedParameterTypeBound = ExportMeteredType(gauge, typeBound, results)
+				convertedParameterTypeBound = exportTypeBound(gauge, typeBound, results)
 			}
 
 			// Metered above

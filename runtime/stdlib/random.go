@@ -20,10 +20,8 @@ package stdlib
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math/big"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -42,8 +40,9 @@ const revertibleRandomFunctionName = "revertibleRandom"
 
 var revertibleRandomFunctionType = func() *sema.FunctionType {
 	typeParameter := &sema.TypeParameter{
-		Name:      "T",
-		TypeBound: sema.FixedSizeUnsignedIntegerType,
+		Name: "T",
+		TypeBound: sema.NewStrictSubtypeTypeBound(sema.FixedSizeUnsignedIntegerType).
+			And(sema.NewStrictSupertypeTypeBound(sema.NeverType)),
 	}
 
 	typeAnnotation := sema.NewTypeAnnotation(
@@ -61,29 +60,6 @@ var revertibleRandomFunctionType = func() *sema.FunctionType {
 				Identifier:     "modulo",
 				TypeAnnotation: typeAnnotation,
 			},
-		},
-		TypeArgumentsCheck: func(
-			memoryGauge common.MemoryGauge,
-			typeArguments *sema.TypeParameterTypeOrderedMap,
-			_ []*ast.TypeAnnotation,
-			invocationRange ast.HasPosition,
-			report func(err error)) {
-			typeArg, ok := typeArguments.Get(typeParameter)
-			if !ok || typeArg == nil {
-				// checker should prevent this
-				panic(errors.NewUnreachableError())
-			}
-			if typeArg == sema.NeverType || typeArg == sema.FixedSizeUnsignedIntegerType {
-				report(&sema.InvalidTypeArgumentError{
-					TypeArgumentName: typeParameter.Name,
-					Range:            ast.NewRangeFromPositioned(memoryGauge, invocationRange),
-					Details: fmt.Sprintf(
-						"Type argument for `%s` cannot be `%s`",
-						revertibleRandomFunctionName,
-						typeArg,
-					),
-				})
-			}
 		},
 		ReturnTypeAnnotation: typeAnnotation,
 		// `modulo` parameter is optional

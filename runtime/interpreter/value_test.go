@@ -3489,13 +3489,7 @@ func TestNumberValueIntegerConversion(t *testing.T) {
 		sema.Int256Type:  NewUnmeteredInt256ValueFromInt64(42),
 	}
 
-	for _, ty := range sema.AllIntegerTypes {
-		// Only test leaf types
-		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
-			continue
-		}
-
+	for _, ty := range sema.AllLeafIntegerTypes {
 		_, ok := testValues[ty.(*sema.NumericType)]
 		require.True(t, ok, "missing expected value for type %s", ty.String())
 	}
@@ -3794,13 +3788,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			sema.Int256Type:  NewUnmeteredInt256ValueFromInt64(42),
 		}
 
-		for _, ty := range sema.AllIntegerTypes {
-			// Only test leaf types
-			switch ty {
-			case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
-				continue
-			}
-
+		for _, ty := range sema.AllLeafIntegerTypes {
 			_, ok := testCases[ty.(*sema.NumericType)]
 			require.True(t, ok, "missing case for type %s", ty.String())
 		}
@@ -3826,13 +3814,7 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 			sema.Fix64Type:  NewUnmeteredFix64ValueWithInteger(42, EmptyLocationRange),
 		}
 
-		for _, ty := range sema.AllFixedPointTypes {
-			// Only test leaf types
-			switch ty {
-			case sema.FixedPointType, sema.SignedFixedPointType:
-				continue
-			}
-
+		for _, ty := range sema.AllLeafFixedPointTypes {
 			_, ok := testCases[ty.(*sema.FixedPointNumericType)]
 			require.True(t, ok, "missing case for type %s", ty.String())
 		}
