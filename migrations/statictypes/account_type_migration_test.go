@@ -73,6 +73,11 @@ func (t *testReporter) Error(err error) {
 	t.errors = append(t.errors, err)
 }
 
+func (t *testReporter) DictionaryKeyConflict(key interpreter.StringStorageMapKey) {
+	// For testing purposes, record the conflict as an error
+	t.errors = append(t.errors, fmt.Errorf("dictionary key conflict: %s", key))
+}
+
 func TestAccountTypeInTypeValueMigration(t *testing.T) {
 	t.Parallel()
 
@@ -461,12 +466,10 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 
 			// Migrate
 
-			migration := migrations.NewStorageMigration(inter, storage, "test")
-
+			migration := migrations.NewStorageMigration(inter, storage, "test", account)
 			reporter := newTestReporter()
 
-			migration.MigrateAccount(
-				account,
+			migration.Migrate(
 				migration.NewValueMigrationsPathMigrator(
 					reporter,
 					NewStaticTypeMigration(),
@@ -852,12 +855,10 @@ func TestAccountTypeInNestedTypeValueMigration(t *testing.T) {
 
 			// Migrate
 
-			migration := migrations.NewStorageMigration(inter, storage, "test")
-
+			migration := migrations.NewStorageMigration(inter, storage, "test", account)
 			reporter := newTestReporter()
 
-			migration.MigrateAccount(
-				account,
+			migration.Migrate(
 				migration.NewValueMigrationsPathMigrator(
 					reporter,
 					NewStaticTypeMigration(),
@@ -1158,12 +1159,10 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 
 			// Migrate
 
-			migration := migrations.NewStorageMigration(inter, storage, "test")
-
+			migration := migrations.NewStorageMigration(inter, storage, "test", account)
 			reporter := newTestReporter()
 
-			migration.MigrateAccount(
-				account,
+			migration.Migrate(
 				migration.NewValueMigrationsPathMigrator(
 					reporter,
 					NewStaticTypeMigration(),
@@ -1291,12 +1290,10 @@ func TestAccountTypeRehash(t *testing.T) {
 
 				storage, inter := newStorageAndInterpreter(t)
 
-				migration := migrations.NewStorageMigration(inter, storage, "test")
-
+				migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
 				reporter := newTestReporter()
 
-				migration.MigrateAccount(
-					testAddress,
+				migration.Migrate(
 					migration.NewValueMigrationsPathMigrator(
 						reporter,
 						NewStaticTypeMigration(),
