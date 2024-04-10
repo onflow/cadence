@@ -7167,6 +7167,200 @@ func TestInterpretMappingEscalation(t *testing.T) {
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
 
+	t.Run("double nesting", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+			entitlement mapping M {
+				X -> Y
+			}
+			struct S {
+				access(Y) var i: Int
+				init() {
+					self.i = 11
+				}
+                fun bar(_ t: &T) {
+                    // the t.s here should produce an unauthorized s reference which cannot modify i
+                    // i.e. this should be the same as 
+                    //     let ref = t.s
+                    //     ref. i =2
+                    t.s.i = 2
+                }
+			}
+            struct T {
+                access(mapping M) var s: auth(mapping M) &S
+                init() {
+                    self.s = &S()
+                }
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAccessError{}, errors[0])
+	})
+
+	t.Run("member expression in indexing assignment", func(t *testing.T) {
+
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+
+            access(all) entitlement X
+            access(all) entitlement mapping M {
+                X -> Insert
+            }
+
+            access(all) struct S {
+                access(mapping M) var arrayRefMember: auth(mapping M) &[Int]
+                init() {
+                    self.arrayRefMember = &[123]
+                }
+            }
+
+            access(all) fun main() {
+                var unauthedStructRef = &S() as &S
+                unauthedStructRef.arrayRefMember[0] = 456
+            }
+    `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errors[0])
+	})
+
+	t.Run("function call in indexer", func(t *testing.T) {
+
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+
+            access(all) entitlement X
+            access(all) entitlement Y
+            access(all) entitlement mapping M {
+                X -> Y
+            }
+
+            struct A {
+                access(mapping M) fun foo(): auth(mapping M) &Int {
+                    return &1
+                }
+            }
+
+            fun bar(_ ref: auth(Y) &Int): Int {
+                return *ref
+            }
+
+            access(all) fun main() {
+                var x: [Int] = []
+                let a = &A() as &A
+                x[bar(a.foo())] = 456
+            }
+    `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+	t.Run("member expression in indexer", func(t *testing.T) {
+
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+
+            access(all) entitlement X
+            access(all) entitlement Y
+            access(all) entitlement mapping M {
+                X -> Y
+            }
+
+            struct A {
+                access(mapping M) let b: B
+                init() {
+                    self.b = B()
+                }
+            }
+
+            struct B {}
+
+            fun bar(_ b: auth(Y) &B): Int {
+                return 1
+            }
+
+            access(all) fun main() {
+                var x: [Int] = []
+                let a = &A() as &A
+                x[bar(a.b)] = 456
+            }
+    `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+	t.Run("capture function", func(t *testing.T) {
+
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+
+            access(all) entitlement X
+            access(all) entitlement mapping M {
+                X -> Insert
+            }
+
+            access(all) struct S {
+                access(mapping M) var arrayRefMember: auth(mapping M) &[Int]
+                init() {
+                    self.arrayRefMember = &[123]
+                }
+            }
+
+            fun captureFunction(_ f: fun(): Int): Int {
+                f()
+                return 1
+            }            
+
+            access(all) fun main() {
+                var unauthedStructRef = &S() as &S
+                var dict: {Int: Int} = {}
+                dict[captureFunction(unauthedStructRef.arrayRefMember.removeLast)] = 1
+            }
+    `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAccessError{}, errors[0])
+	})
+
+	t.Run("capture reference", func(t *testing.T) {
+
+		t.Parallel()
+		_, err := ParseAndCheck(t, `
+
+            access(all) entitlement X
+            access(all) entitlement mapping M {
+                X -> Insert
+            }
+
+            access(all) struct S {
+                access(mapping M) var arrayRefMember: auth(mapping M) &[Int]
+                init() {
+                    self.arrayRefMember = &[123]
+                }
+            }
+
+            fun captureReference( _ ref: auth(Insert, Remove) &[Int]): Int { 
+                ref.removeLast()
+                return 1
+             }             
+
+            access(all) fun main() {
+                var unauthedStructRef = &S() as &S
+                var dict: {Int: Int} = {}
+                dict[captureReference(unauthedStructRef.arrayRefMember)] = 1
+            }
+    `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
 }
 
 func TestCheckEntitlementMappingComplexFields(t *testing.T) {

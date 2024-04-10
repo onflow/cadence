@@ -268,42 +268,45 @@ func (checker *Checker) accessedSelfMember(expression ast.Expression) *Member {
 	return member
 }
 
-func (checker *Checker) visitAssignmentValueType(
-	targetExpression ast.Expression,
-) (targetType Type) {
-
+func (checker *Checker) withAssignment(b bool, f func() Type) Type {
 	inAssignment := checker.inAssignment
-	checker.inAssignment = true
+	checker.inAssignment = b
 	defer func() {
 		checker.inAssignment = inAssignment
 	}()
+	return f()
+}
 
+func (checker *Checker) visitAssignmentValueType(
+	targetExpression ast.Expression,
+) (targetType Type) {
 	// Check the target is valid (e.g. identifier expression,
 	// indexing expression, or member access expression)
+	return checker.withAssignment(true, func() Type {
+		if !IsValidAssignmentTargetExpression(targetExpression) {
+			checker.report(
+				&InvalidAssignmentTargetError{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
+				},
+			)
 
-	if !IsValidAssignmentTargetExpression(targetExpression) {
-		checker.report(
-			&InvalidAssignmentTargetError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
-			},
-		)
+			return InvalidType
+		}
 
-		return InvalidType
-	}
+		switch target := targetExpression.(type) {
+		case *ast.IdentifierExpression:
+			return checker.visitIdentifierExpressionAssignment(target)
 
-	switch target := targetExpression.(type) {
-	case *ast.IdentifierExpression:
-		return checker.visitIdentifierExpressionAssignment(target)
+		case *ast.IndexExpression:
+			return checker.visitIndexExpressionAssignment(target)
 
-	case *ast.IndexExpression:
-		return checker.visitIndexExpressionAssignment(target)
+		case *ast.MemberExpression:
+			return checker.visitMemberExpressionAssignment(target)
 
-	case *ast.MemberExpression:
-		return checker.visitMemberExpressionAssignment(target)
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	})
 }
 
 func (checker *Checker) visitIdentifierExpressionAssignment(
@@ -344,7 +347,12 @@ func (checker *Checker) visitIndexExpressionAssignment(
 	indexExpression *ast.IndexExpression,
 ) (elementType Type) {
 
-	elementType = checker.visitIndexExpression(indexExpression, true)
+	// in an statement like `ref.foo[i] = x`, the entire statement itself
+	// is an assignment, but the evaluation of the index expression itself (i.e. `ref.foo`)
+	// is not, so we temporarily clear the `inAssignment` status here before restoring it later.
+	elementType = checker.withAssignment(false, func() Type {
+		return checker.visitIndexExpression(indexExpression, true)
+	})
 
 	indexExprTypes := checker.Elaboration.IndexExpressionTypes(indexExpression)
 	indexedRefType, isReference := MaybeReferenceType(indexExprTypes.IndexedType)
