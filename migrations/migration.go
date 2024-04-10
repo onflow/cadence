@@ -390,17 +390,26 @@ func (m *StorageMigration) MigrateNestedValue(
 				inter.RemoveReferencedSlab(existingValueStorable)
 			}
 
-			// Before inserting the new key-value pair, check if the key already exists.
-			// If it still exists, even after we removed the old key,
-			// then there's a conflict, before the migration, some value was already stored with the new key.
-			// Move the key-value pair into a new dictionary under a new unique storage path, and report it
+			// Handle dictionary key conflicts.
+			//
+			// If the dictionary contains the key/value pairs
+			// - key1: value1
+			// - key2: value2
+			//
+			// then key1 is migrated to key1_migrated, and value1 is migrated to value1_migrated.
+			//
+			// If key1_migrated happens to be equal to key2, then we have a conflict.
+			//
+			// Check if the key to set already exists.
+			// - If it already exists, leave it as is, and store the migrated key-value pair
+			//   into a new dictionary under a new unique storage path, and report it.
+			// - If it does not exist, insert the migrated key-value pair normally.
 
-			existingKeyStorable, _ = dictionary.RemoveWithoutTransfer(
+			if dictionary.ContainsKey(
 				inter,
 				emptyLocationRange,
 				keyToSet,
-			)
-			if existingKeyStorable != nil {
+			) {
 				owner := dictionary.GetOwner()
 
 				storageMap := m.storage.GetStorageMap(owner, common.PathDomainStorage.Identifier(), true)
@@ -414,9 +423,7 @@ func (m *StorageMigration) MigrateNestedValue(
 					inter,
 					emptyLocationRange,
 					keyToSet,
-					// NOTE: move the *existing* value to the conflict dictionary,
-					// NOT the value that was just removed – the removed value is the value to set
-					existingValue,
+					valueToSet,
 				)
 
 				conflictStorageMapKey := m.nextDictionaryKeyConflictStorageMapKey()
@@ -428,16 +435,18 @@ func (m *StorageMigration) MigrateNestedValue(
 				)
 
 				reporter.DictionaryKeyConflict(conflictStorageMapKey)
+
+			} else {
+
+				// No conflict, insert the new key-value pair
+
+				dictionary.InsertWithoutTransfer(
+					inter,
+					emptyLocationRange,
+					keyToSet,
+					valueToSet,
+				)
 			}
-
-			// Finally, insert the new key-value pair
-
-			dictionary.InsertWithoutTransfer(
-				inter,
-				emptyLocationRange,
-				keyToSet,
-				valueToSet,
-			)
 		}
 
 	case *interpreter.PublishedValue:
