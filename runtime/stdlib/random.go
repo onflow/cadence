@@ -70,8 +70,8 @@ var revertibleRandomFunctionType = func() *sema.FunctionType {
 			report func(err error)) {
 			typeArg, ok := typeArguments.Get(typeParameter)
 			if !ok || typeArg == nil {
-				// checker should prevent this
-				panic(errors.NewUnreachableError())
+				// Invalid, already reported by checker
+				return
 			}
 			if typeArg == sema.NeverType || typeArg == sema.FixedSizeUnsignedIntegerType {
 				report(&sema.InvalidTypeArgumentError{

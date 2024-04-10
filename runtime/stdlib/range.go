@@ -85,8 +85,8 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 		) {
 			memberType, ok := typeArguments.Get(typeParameter)
 			if !ok || memberType == nil {
-				// checker should prevent this
-				panic(errors.NewUnreachableError())
+				// Invalid, already reported by checker
+				return
 			}
 
 			// memberType must only be a leaf integer type.

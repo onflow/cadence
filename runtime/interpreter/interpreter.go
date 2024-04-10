@@ -692,12 +692,19 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 	// make the function itself available inside the function
 	lexicalScope.Set(identifier, variable)
 
+	value := interpreter.functionDeclarationValue(
+		declaration,
+		functionType,
+		lexicalScope,
+	)
+
 	variable.SetValue(
-		interpreter.functionDeclarationValue(
-			declaration,
-			functionType,
-			lexicalScope,
-		),
+		interpreter,
+		LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: declaration,
+		},
+		value,
 	)
 
 	return nil
@@ -1381,7 +1388,8 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 					// NOTE: set the variable value immediately, as the contract value
 					// needs to be available for nested declarations
 
-					variable.SetValue(value)
+					variable.getter = nil
+					variable.value = value
 
 					// Also, immediately set the nested values,
 					// as the initializer of the contract may use nested declarations
@@ -1419,7 +1427,14 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	} else {
 		constructor := constructorGenerator(common.ZeroAddress)
 		constructor.NestedVariables = nestedVariables
-		variable.SetValue(constructor)
+		variable.SetValue(
+			declarationInterpreter,
+			LocationRange{
+				Location:    location,
+				HasPosition: declaration,
+			},
+			constructor,
+		)
 	}
 
 	return lexicalScope, variable
@@ -1510,7 +1525,11 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		caseValues,
 		constructorNestedVariables,
 	)
-	variable.SetValue(value)
+	variable.SetValue(
+		interpreter,
+		locationRange,
+		value,
+	)
 
 	return lexicalScope, variable
 }

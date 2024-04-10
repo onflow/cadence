@@ -2217,11 +2217,8 @@ func (v *ArrayValue) Set(interpreter *Interpreter, locationRange LocationRange, 
 	interpreter.maybeValidateAtreeValue(v.array)
 
 	existingValue := StoredValue(interpreter, existingStorable, interpreter.Storage())
-
 	interpreter.checkResourceLoss(existingValue, locationRange)
-
 	existingValue.DeepRemove(interpreter)
-
 	interpreter.RemoveReferencedSlab(existingStorable)
 }
 
@@ -18111,7 +18108,7 @@ func (v *CompositeValue) StorageAddress() atree.Address {
 
 func (v *CompositeValue) RemoveField(
 	interpreter *Interpreter,
-	_ LocationRange,
+	locationRange LocationRange,
 	name string,
 ) {
 
@@ -18137,6 +18134,7 @@ func (v *CompositeValue) RemoveField(
 
 	// Value
 	existingValue := StoredValue(interpreter, existingValueStorable, interpreter.Storage())
+	interpreter.checkResourceLoss(existingValue, locationRange)
 	existingValue.DeepRemove(interpreter)
 	interpreter.RemoveReferencedSlab(existingValueStorable)
 }

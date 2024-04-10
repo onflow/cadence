@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 )
 
 //go:generate go run ./gen account.cdc account.gen.go
@@ -73,8 +72,8 @@ func init() {
 		) {
 			typeArg, ok := typeArguments.Get(Account_CapabilitiesTypeGetFunctionTypeParameterT)
 			if !ok || typeArg == nil {
-				// checker should prevent this
-				panic(errors.NewUnreachableError())
+				// Invalid, already reported by checker
+				return
 			}
 			if typeArg == NeverType {
 				report(&InvalidTypeArgumentError{

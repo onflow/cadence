@@ -76,11 +76,11 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(
 		},
 		set: func(value Value) {
 			interpreter.startResourceTracking(value, variable, identifier, identifierExpression)
-
-			existingValue := variable.GetValue()
-			interpreter.checkResourceLoss(existingValue, locationRange)
-
-			variable.SetValue(value)
+			variable.SetValue(
+				interpreter,
+				locationRange,
+				value,
+			)
 		},
 	}
 }
