@@ -159,9 +159,9 @@ func (t *testMigrationReporter) MissingTarget(
 	)
 }
 
-func (t *testMigrationReporter) DictionaryKeyConflict(key interpreter.StringStorageMapKey) {
+func (t *testMigrationReporter) DictionaryKeyConflict(addressPath interpreter.AddressPath) {
 	// For testing purposes, record the conflict as an error
-	t.errors = append(t.errors, fmt.Errorf("dictionary key conflict: %s", key))
+	t.errors = append(t.errors, fmt.Errorf("dictionary key conflict: %s", addressPath))
 }
 
 const testPathIdentifier = "test"
@@ -459,7 +459,9 @@ func testPathCapabilityValueMigration(
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
+
 	reporter := &testMigrationReporter{}
 
 	capabilityMapping := &CapabilityMapping{}
@@ -1300,7 +1302,9 @@ func testLinkMigration(
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
+
 	reporter := &testMigrationReporter{}
 
 	capabilityMapping := &CapabilityMapping{}
@@ -2007,7 +2011,9 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
+
 	reporter := &testMigrationReporter{}
 
 	capabilityMapping := &CapabilityMapping{}
@@ -2245,7 +2251,9 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
+
 	reporter := &testMigrationReporter{}
 
 	capabilityMapping := &CapabilityMapping{}

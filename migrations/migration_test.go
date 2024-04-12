@@ -82,9 +82,9 @@ func (t *testReporter) Error(err error) {
 	t.errors = append(t.errors, err)
 }
 
-func (t *testReporter) DictionaryKeyConflict(key interpreter.StringStorageMapKey) {
+func (t *testReporter) DictionaryKeyConflict(addressPath interpreter.AddressPath) {
 	// For testing purposes, record the conflict as an error
-	t.errors = append(t.errors, fmt.Errorf("dictionary key conflict: %s", key))
+	t.errors = append(t.errors, fmt.Errorf("dictionary key conflict: %s", addressPath))
 }
 
 // testStringMigration
@@ -516,12 +516,13 @@ func TestMultipleMigrations(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := NewStorageMigration(
+	migration, err := NewStorageMigration(
 		inter,
 		storage,
 		"test",
 		account,
 	)
+	require.NoError(t, err)
 
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
@@ -658,7 +659,9 @@ func TestMigrationError(t *testing.T) {
 
 	// Migrate
 
-	migration := NewStorageMigration(inter, storage, "test", account)
+	migration, err := NewStorageMigration(inter, storage, "test", account)
+	require.NoError(t, err)
+
 	reporter := newTestReporter()
 
 	migration.Migrate(
@@ -801,7 +804,9 @@ func TestCapConMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := NewStorageMigration(inter, storage, "test", testAddress)
+	migration, err := NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
+
 	reporter := newTestReporter()
 
 	migration.Migrate(
@@ -914,7 +919,9 @@ func TestContractMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := NewStorageMigration(inter, storage, "test", testAddress)
+	migration, err := NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
+
 	reporter := newTestReporter()
 
 	migration.Migrate(
@@ -1105,7 +1112,9 @@ func TestEmptyIntersectionTypeMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := NewStorageMigration(inter, storage, "test", testAddress)
+	migration, err := NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
+
 	reporter := newTestReporter()
 
 	migration.Migrate(
@@ -1252,7 +1261,9 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		// Migrate
 
-		migration := NewStorageMigration(inter, storage, "test", testAddress)
+		migration, err := NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
+
 		reporter := newTestReporter()
 
 		migration.Migrate(
@@ -1680,7 +1691,9 @@ func TestMigrationPanic(t *testing.T) {
 
 	// Migrate
 
-	migration := NewStorageMigration(inter, storage, "test", testAddress)
+	migration, err := NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
+
 	reporter := newTestReporter()
 
 	migration.Migrate(
@@ -1805,7 +1818,9 @@ func TestSkip(t *testing.T) {
 
 		// Migrate
 
-		migration := NewStorageMigration(inter, storage, "test", testAddress)
+		migration, err := NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
+
 		reporter := newTestReporter()
 
 		valueMigration := &testSkipMigration{
@@ -2159,7 +2174,9 @@ func TestPublishedValueMigration(t *testing.T) {
 	)
 
 	// Migrate
-	migration := NewStorageMigration(inter, storage, "test", testAddress)
+	migration, err := NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
+
 	reporter := newTestReporter()
 
 	migration.Migrate(
@@ -2267,7 +2284,9 @@ func TestDomainsMigration(t *testing.T) {
 
 		// Migrate
 
-		migration := NewStorageMigration(inter, storage, "test", testAddress)
+		migration, err := NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
+
 		reporter := newTestReporter()
 
 		migration.Migrate(
@@ -2701,7 +2720,9 @@ func TestDictionaryKeyConflict(t *testing.T) {
 
 			storage, inter := newStorageAndInterpreter(t)
 
-			migration := NewStorageMigration(inter, storage, "test", testAddress)
+			migration, err := NewStorageMigration(inter, storage, "test", testAddress)
+			require.NoError(t, err)
+
 			reporter := newTestReporter()
 
 			migration.Migrate(
@@ -2713,7 +2734,7 @@ func TestDictionaryKeyConflict(t *testing.T) {
 				),
 			)
 
-			err := migration.Commit()
+			err = migration.Commit()
 			require.NoError(t, err)
 
 			// Assert
@@ -2766,7 +2787,7 @@ func TestDictionaryKeyConflict(t *testing.T) {
 
 			// Check newly created conflict dictionary
 
-			conflictValue := storageMap.ReadValue(nil, DictionaryKeyConflictStorageMapKey(1))
+			conflictValue := storageMap.ReadValue(nil, migration.DictionaryKeyConflictStorageMapKey(1))
 			require.NotNil(t, conflictValue)
 
 			require.IsType(t, &interpreter.DictionaryValue{}, conflictValue)
