@@ -438,21 +438,27 @@ func (m *StorageMigration) MigrateNestedValue(
 
 				conflictStorageMapKey := m.nextDictionaryKeyConflictStorageMapKey()
 
+				addressPath := interpreter.AddressPath{
+					Address: owner,
+					Path: interpreter.PathValue{
+						Domain:     pathDomain,
+						Identifier: string(conflictStorageMapKey),
+					},
+				}
+
+				if storageMap.ValueExists(conflictStorageMapKey) {
+					panic(errors.NewUnexpectedError(
+						"conflict storage map key already exists: %s", addressPath,
+					))
+				}
+
 				storageMap.SetValue(
 					inter,
 					conflictStorageMapKey,
 					conflictDictionary,
 				)
 
-				reporter.DictionaryKeyConflict(
-					interpreter.AddressPath{
-						Address: owner,
-						Path: interpreter.PathValue{
-							Domain:     pathDomain,
-							Identifier: string(conflictStorageMapKey),
-						},
-					},
-				)
+				reporter.DictionaryKeyConflict(addressPath)
 
 			} else {
 
