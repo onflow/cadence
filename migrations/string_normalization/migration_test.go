@@ -77,9 +77,9 @@ func (t *testReporter) Error(err error) {
 	t.errors = append(t.errors, err)
 }
 
-func (t *testReporter) DictionaryKeyConflict(key interpreter.StringStorageMapKey) {
+func (t *testReporter) DictionaryKeyConflict(addressPath interpreter.AddressPath) {
 	// For testing purposes, record the conflict as an error
-	t.errors = append(t.errors, fmt.Errorf("dictionary key conflict: %s", key))
+	t.errors = append(t.errors, fmt.Errorf("dictionary key conflict: %s", addressPath))
 }
 
 func TestStringNormalizingMigration(t *testing.T) {
@@ -309,7 +309,9 @@ func TestStringNormalizingMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage, "test", account)
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", account)
+	require.NoError(t, err)
+
 	reporter := newTestReporter()
 
 	migration.Migrate(
@@ -446,7 +448,8 @@ func TestStringValueRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
-		migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
 
 		reporter := newTestReporter()
 
@@ -457,7 +460,7 @@ func TestStringValueRehash(t *testing.T) {
 			),
 		)
 
-		err := migration.Commit()
+		err = migration.Commit()
 		require.NoError(t, err)
 
 		require.Empty(t, reporter.errors)
@@ -590,7 +593,9 @@ func TestCharacterValueRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
-		migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
+
 		reporter := newTestReporter()
 
 		migration.Migrate(
@@ -600,7 +605,7 @@ func TestCharacterValueRehash(t *testing.T) {
 			),
 		)
 
-		err := migration.Commit()
+		err = migration.Commit()
 		require.NoError(t, err)
 
 		require.Empty(t, reporter.errors)

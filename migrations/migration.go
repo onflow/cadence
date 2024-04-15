@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/parser/lexer"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
@@ -61,14 +62,21 @@ func NewStorageMigration(
 	storage *runtime.Storage,
 	name string,
 	address common.Address,
-) *StorageMigration {
+) (
+	*StorageMigration,
+	error,
+) {
+	if !lexer.IsValidIdentifier(name) {
+		return nil, fmt.Errorf("invalid migration name: %s", name)
+	}
+
 	return &StorageMigration{
 		storage:                storage,
 		interpreter:            interpreter,
 		name:                   name,
 		address:                address,
 		dictionaryKeyConflicts: 0,
-	}
+	}, nil
 }
 
 func (m *StorageMigration) Commit() error {
@@ -412,7 +420,9 @@ func (m *StorageMigration) MigrateNestedValue(
 			) {
 				owner := dictionary.GetOwner()
 
-				storageMap := m.storage.GetStorageMap(owner, common.PathDomainStorage.Identifier(), true)
+				pathDomain := common.PathDomainStorage
+
+				storageMap := m.storage.GetStorageMap(owner, pathDomain.Identifier(), true)
 				conflictDictionary := interpreter.NewDictionaryValueWithAddress(
 					inter,
 					emptyLocationRange,
@@ -428,13 +438,27 @@ func (m *StorageMigration) MigrateNestedValue(
 
 				conflictStorageMapKey := m.nextDictionaryKeyConflictStorageMapKey()
 
+				addressPath := interpreter.AddressPath{
+					Address: owner,
+					Path: interpreter.PathValue{
+						Domain:     pathDomain,
+						Identifier: string(conflictStorageMapKey),
+					},
+				}
+
+				if storageMap.ValueExists(conflictStorageMapKey) {
+					panic(errors.NewUnexpectedError(
+						"conflict storage map key already exists: %s", addressPath,
+					))
+				}
+
 				storageMap.SetValue(
 					inter,
 					conflictStorageMapKey,
 					conflictDictionary,
 				)
 
-				reporter.DictionaryKeyConflict(conflictStorageMapKey)
+				reporter.DictionaryKeyConflict(addressPath)
 
 			} else {
 
@@ -537,12 +561,13 @@ func (m *StorageMigration) MigrateNestedValue(
 
 func (m *StorageMigration) nextDictionaryKeyConflictStorageMapKey() interpreter.StringStorageMapKey {
 	m.dictionaryKeyConflicts++
-	return DictionaryKeyConflictStorageMapKey(m.dictionaryKeyConflicts)
+	return m.DictionaryKeyConflictStorageMapKey(m.dictionaryKeyConflicts)
 }
 
-func DictionaryKeyConflictStorageMapKey(index int) interpreter.StringStorageMapKey {
+func (m *StorageMigration) DictionaryKeyConflictStorageMapKey(index int) interpreter.StringStorageMapKey {
 	return interpreter.StringStorageMapKey(fmt.Sprintf(
-		"cadence_1_migration_dictionary_key_conflict_%d",
+		"cadence1_%s_dictionaryKeyConflict_%d",
+		m.name,
 		index,
 	))
 }

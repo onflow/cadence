@@ -398,7 +398,9 @@ func TestIntersectionTypeMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
+
 	reporter := newTestReporter()
 
 	migration.Migrate(
@@ -566,7 +568,9 @@ func TestIntersectionTypeRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
-		migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
+
 		reporter := newTestReporter()
 
 		migration.Migrate(
@@ -576,7 +580,7 @@ func TestIntersectionTypeRehash(t *testing.T) {
 			),
 		)
 
-		err := migration.Commit()
+		err = migration.Commit()
 		require.NoError(t, err)
 
 		// Assert
@@ -734,7 +738,9 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			storage, inter := newStorageAndInterpreter(t, ledger)
 
-			migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+			migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+			require.NoError(t, err)
+
 			reporter := newTestReporter()
 
 			migration.Migrate(
@@ -744,7 +750,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 				),
 			)
 
-			err := migration.Commit()
+			err = migration.Commit()
 			require.NoError(t, err)
 
 			// Assert
@@ -877,7 +883,9 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 
 			storage, inter := newStorageAndInterpreter(t, ledger)
 
-			migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+			migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+			require.NoError(t, err)
+
 			reporter := newTestReporter()
 
 			migration.Migrate(
@@ -887,7 +895,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 				),
 			)
 
-			err := migration.Commit()
+			err = migration.Commit()
 			require.NoError(t, err)
 
 			// Assert
@@ -1028,7 +1036,9 @@ func TestIntersectionTypeMigrationWithInterfaceTypeConverter(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
+
 		reporter := newTestReporter()
 
 		staticTypeMigration := NewStaticTypeMigration()
@@ -1421,7 +1431,9 @@ func TestIntersectionTypeMigrationWithTypeConverters(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
+
 		reporter := newTestReporter()
 
 		migration.Migrate(
