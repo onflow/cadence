@@ -923,7 +923,7 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 }
 
 // declareSelfVariable declares a special "self" variable in the latest scope
-func (interpreter *Interpreter) declareSelfVariable(value Value) Variable {
+func (interpreter *Interpreter) declareSelfVariable(value Value, locationRange LocationRange) Variable {
 	identifier := sema.SelfIdentifier
 
 	// If the self variable is already a reference (e.g: in attachments),
@@ -940,11 +940,10 @@ func (interpreter *Interpreter) declareSelfVariable(value Value) Variable {
 	}
 
 	// NOTE: semantic analysis already checked possible invalid redeclaration
-	variable := NewSelfVariableWithValue(interpreter, value)
+	variable := NewSelfVariableWithValue(interpreter, value, locationRange)
 	interpreter.setVariable(identifier, variable)
 
-	// TODO: add proper location info
-	interpreter.startResourceTracking(value, variable, identifier, nil)
+	interpreter.startResourceTracking(value, variable, identifier, locationRange)
 
 	return variable
 }
@@ -1025,6 +1024,11 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 	declarationInterpreter.activations.PushNewWithParent(declarationActivation)
 	defer declarationInterpreter.activations.Pop()
 
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: eventDecl,
+	}
+
 	var self MemberAccessibleValue = containingResourceComposite
 	if containingResourceComposite.Kind == common.CompositeKindAttachment {
 		var base *EphemeralReferenceValue
@@ -1035,14 +1039,11 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 		}
 		supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
 		access := sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: eventDecl,
-		}
+
 		base, self = attachmentBaseAndSelfValues(declarationInterpreter, access, containingResourceComposite, locationRange)
 		declarationInterpreter.declareVariable(sema.BaseIdentifier, base)
 	}
-	declarationInterpreter.declareSelfVariable(self)
+	declarationInterpreter.declareSelfVariable(self, locationRange)
 
 	for _, parameter := range parameters {
 		// "lazily" evaluate the default argument expressions.
@@ -2437,7 +2438,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 				}
 
 				if invocation.Self != nil {
-					interpreter.declareSelfVariable(*invocation.Self)
+					interpreter.declareSelfVariable(*invocation.Self, invocation.LocationRange)
 				}
 				if invocation.Base != nil {
 					interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)

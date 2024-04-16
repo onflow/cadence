@@ -80,7 +80,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 
 			self := MemberAccessibleValue(self)
 			invocation.Self = &self
-			interpreter.declareSelfVariable(self)
+			interpreter.declareSelfVariable(self, invocation.LocationRange)
 
 			if declaration.ParameterList != nil {
 				// If the transaction has a parameter list of N parameters,

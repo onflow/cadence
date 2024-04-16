@@ -140,7 +140,7 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 
 	// Make `self` available, if any
 	if invocation.Self != nil {
-		interpreter.declareSelfVariable(*invocation.Self)
+		interpreter.declareSelfVariable(*invocation.Self, invocation.LocationRange)
 	}
 	if invocation.Base != nil {
 		interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
