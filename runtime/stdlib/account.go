@@ -3583,22 +3583,6 @@ func newAccountCapabilitiesGetFunction(
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
-			var failValue interpreter.Value
-			if borrow {
-				failValue = interpreter.Nil
-			} else {
-				failValue =
-					interpreter.NewInvalidCapabilityValue(
-						inter,
-						addressValue,
-						interpreter.NewReferenceStaticType(
-							inter,
-							interpreter.UnauthorizedAccess,
-							interpreter.PrimitiveStaticTypeNever,
-						),
-					)
-			}
-
 			// Get path argument
 
 			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
@@ -3614,12 +3598,36 @@ func newAccountCapabilitiesGetFunction(
 			typeParameterPairValue := invocation.TypeParameterTypes.Oldest().Value
 			// `Never` is never a supertype of any stored value
 			if typeParameterPairValue.Equal(sema.NeverType) {
-				return failValue
+				if borrow {
+					return interpreter.Nil
+				} else {
+					return interpreter.NewInvalidCapabilityValue(
+						inter,
+						addressValue,
+						interpreter.PrimitiveStaticTypeNever,
+					)
+				}
 			}
 
 			wantedBorrowType, ok := typeParameterPairValue.(*sema.ReferenceType)
 			if !ok {
 				panic(errors.NewUnreachableError())
+			}
+
+			var failValue interpreter.Value
+			if borrow {
+				failValue = interpreter.Nil
+			} else {
+				failValue =
+					interpreter.NewInvalidCapabilityValue(
+						inter,
+						addressValue,
+						interpreter.NewReferenceStaticType(
+							inter,
+							interpreter.ConvertSemaAccessToStaticAuthorization(inter, wantedBorrowType.Authorization),
+							interpreter.PrimitiveStaticTypeNever,
+						),
+					)
 			}
 
 			// Read stored capability, if any
