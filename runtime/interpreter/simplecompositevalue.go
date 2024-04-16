@@ -40,6 +40,8 @@ type SimpleCompositeValue struct {
 	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
 	FieldNames []string
 
+	// This is used for distinguishing between transaction values and other composite values.
+	// TODO: maybe cleanup if there is an alternative/better way.
 	isTransaction bool
 }
 

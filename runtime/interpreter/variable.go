@@ -93,6 +93,7 @@ func NewSelfVariableWithValue(interpreter *Interpreter, value Value) Variable {
 
 	// Create an explicit reference to represent the implicit reference behavior of 'self' value.
 	// Authorization doesn't matter, we just need a reference to add to tracking.
+	// TODO: pass proper location range
 	selfRef := NewEphemeralReferenceValue(interpreter, UnauthorizedAccess, value, semaType, EmptyLocationRange)
 
 	return &SelfVariable{
