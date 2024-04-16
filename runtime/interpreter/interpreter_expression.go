@@ -70,7 +70,7 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(
 
 	return getterSetter{
 		get: func(_ bool) Value {
-			value := variable.GetValue()
+			value := variable.GetValue(interpreter)
 			interpreter.checkInvalidatedResourceUse(value, variable, identifier, identifierExpression)
 			return value
 		},
@@ -404,7 +404,7 @@ func (interpreter *Interpreter) checkMemberAccess(
 func (interpreter *Interpreter) VisitIdentifierExpression(expression *ast.IdentifierExpression) Value {
 	name := expression.Identifier.Identifier
 	variable := interpreter.FindVariable(name)
-	value := variable.GetValue()
+	value := variable.GetValue(interpreter)
 
 	interpreter.checkInvalidatedResourceUse(value, variable, name, expression)
 

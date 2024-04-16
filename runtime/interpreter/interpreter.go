@@ -245,7 +245,7 @@ var BaseActivation *VariableActivation
 
 func init() {
 	// No need to meter since this is only created once
-	BaseActivation = activations.NewActivation[*Variable](nil, nil)
+	BaseActivation = activations.NewActivation[Variable](nil, nil)
 	defineBaseFunctions(BaseActivation)
 }
 
@@ -280,7 +280,7 @@ func NewInterpreterWithSharedState(
 
 	// Initialize activations
 
-	interpreter.activations = activations.NewActivations[*Variable](interpreter)
+	interpreter.activations = activations.NewActivations[Variable](interpreter)
 
 	var baseActivation *VariableActivation
 	baseActivationHandler := sharedState.Config.BaseActivationHandler
@@ -296,11 +296,11 @@ func NewInterpreterWithSharedState(
 	return interpreter, nil
 }
 
-func (interpreter *Interpreter) FindVariable(name string) *Variable {
+func (interpreter *Interpreter) FindVariable(name string) Variable {
 	return interpreter.activations.Find(name)
 }
 
-func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
+func (interpreter *Interpreter) findOrDeclareVariable(name string) Variable {
 	variable := interpreter.FindVariable(name)
 	if variable == nil {
 		variable = interpreter.declareVariable(name, nil)
@@ -308,7 +308,7 @@ func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
 	return variable
 }
 
-func (interpreter *Interpreter) setVariable(name string, variable *Variable) {
+func (interpreter *Interpreter) setVariable(name string, variable Variable) {
 	interpreter.activations.Set(name, variable)
 }
 
@@ -367,7 +367,7 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	variableValue := variable.GetValue()
+	variableValue := variable.GetValue(interpreter)
 
 	// the global variable must be declared as a function
 	functionValue, ok := variableValue.(FunctionValue)
@@ -626,11 +626,11 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 	// which will evaluate the variable declaration. The resulting value
 	// is reused for subsequent reads of the variable.
 
-	var variableDeclarationVariables []*Variable
+	var variableDeclarationVariables []Variable
 
 	variableDeclarationCount := len(program.VariableDeclarations())
 	if variableDeclarationCount > 0 {
-		variableDeclarationVariables = make([]*Variable, 0, variableDeclarationCount)
+		variableDeclarationVariables = make([]Variable, 0, variableDeclarationCount)
 
 		for _, declaration := range program.VariableDeclarations() {
 
@@ -641,7 +641,7 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 
 			identifier := declaration.Identifier.Identifier
 
-			var variable *Variable
+			var variable Variable
 
 			variable = NewVariableWithGetter(interpreter, func() Value {
 				result := interpreter.visitVariableDeclaration(declaration, false)
@@ -669,7 +669,7 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 	// in the order they were declared.
 
 	for _, variable := range variableDeclarationVariables {
-		_ = variable.GetValue()
+		_ = variable.GetValue(interpreter)
 	}
 }
 
@@ -910,13 +910,40 @@ func (interpreter *Interpreter) visitCondition(condition ast.Condition, kind ast
 }
 
 // declareVariable declares a variable in the latest scope
-func (interpreter *Interpreter) declareVariable(identifier string, value Value) *Variable {
+func (interpreter *Interpreter) declareVariable(identifier string, value Value) Variable {
 	// NOTE: semantic analysis already checked possible invalid redeclaration
+
 	variable := NewVariableWithValue(interpreter, value)
 	interpreter.setVariable(identifier, variable)
 
 	// TODO: add proper location info
 	interpreter.startResourceTracking(value, variable, identifier, nil)
+
+	return variable
+}
+
+// declareSelfVariable declares a special "self" variable in the latest scope
+func (interpreter *Interpreter) declareSelfVariable(value Value, locationRange LocationRange) Variable {
+	identifier := sema.SelfIdentifier
+
+	// If the self variable is already a reference (e.g: in attachments),
+	// then declare it as a normal variable.
+	// No need to explicitly create a new reference for tracking.
+
+	switch value := value.(type) {
+	case ReferenceValue:
+		return interpreter.declareVariable(identifier, value)
+	case *SimpleCompositeValue:
+		if value.isTransaction {
+			return interpreter.declareVariable(identifier, value)
+		}
+	}
+
+	// NOTE: semantic analysis already checked possible invalid redeclaration
+	variable := NewSelfVariableWithValue(interpreter, value, locationRange)
+	interpreter.setVariable(identifier, variable)
+
+	interpreter.startResourceTracking(value, variable, identifier, locationRange)
 
 	return variable
 }
@@ -972,7 +999,7 @@ func (interpreter *Interpreter) declareAttachmentValue(
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
-	variable *Variable,
+	variable Variable,
 ) {
 	return interpreter.declareCompositeValue(declaration, lexicalScope)
 }
@@ -997,6 +1024,11 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 	declarationInterpreter.activations.PushNewWithParent(declarationActivation)
 	defer declarationInterpreter.activations.Pop()
 
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: eventDecl,
+	}
+
 	var self MemberAccessibleValue = containingResourceComposite
 	if containingResourceComposite.Kind == common.CompositeKindAttachment {
 		var base *EphemeralReferenceValue
@@ -1007,14 +1039,11 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 		}
 		supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
 		access := sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: eventDecl,
-		}
+
 		base, self = attachmentBaseAndSelfValues(declarationInterpreter, access, containingResourceComposite, locationRange)
 		declarationInterpreter.declareVariable(sema.BaseIdentifier, base)
 	}
-	declarationInterpreter.declareVariable(sema.SelfIdentifier, self)
+	declarationInterpreter.declareSelfVariable(self, locationRange)
 
 	for _, parameter := range parameters {
 		// "lazily" evaluate the default argument expressions.
@@ -1051,7 +1080,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
-	variable *Variable,
+	variable Variable,
 ) {
 	if declaration.Kind() == common.CompositeKindEnum {
 		return interpreter.declareEnumConstructor(declaration.(*ast.CompositeDeclaration), lexicalScope)
@@ -1065,7 +1094,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
-	variable *Variable,
+	variable Variable,
 ) {
 	identifier := declaration.DeclarationIdentifier().Identifier
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
@@ -1077,7 +1106,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
 
-	nestedVariables := map[string]*Variable{}
+	nestedVariables := map[string]Variable{}
 
 	var destroyEventConstructor FunctionValue
 
@@ -1118,7 +1147,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 			// to the nested declarations so they can refer to it, and update the lexical scope
 			// so the container's functions can refer to the nested composite's value
 
-			var nestedVariable *Variable
+			var nestedVariable Variable
 			lexicalScope, nestedVariable =
 				declarationInterpreter.declareCompositeValue(
 					nestedCompositeDeclaration,
@@ -1130,7 +1159,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 
 			// statically we know there is at most one of these
 			if nestedCompositeDeclaration.IsResourceDestructionDefaultEvent() {
-				destroyEventConstructor = nestedVariable.GetValue().(FunctionValue)
+				destroyEventConstructor = nestedVariable.GetValue(declarationInterpreter).(FunctionValue)
 			}
 		}
 
@@ -1140,7 +1169,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 			// to the nested declarations so they can refer to it, and update the lexical scope
 			// so the container's functions can refer to the nested composite's value
 
-			var nestedVariable *Variable
+			var nestedVariable Variable
 			lexicalScope, nestedVariable =
 				declarationInterpreter.declareAttachmentValue(
 					nestedAttachmentDeclaration,
@@ -1388,8 +1417,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 					// NOTE: set the variable value immediately, as the contract value
 					// needs to be available for nested declarations
 
-					variable.getter = nil
-					variable.value = value
+					variable.InitializeWithValue(value)
 
 					// Also, immediately set the nested values,
 					// as the initializer of the contract may use nested declarations
@@ -1411,7 +1439,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	// for all other composite kinds, the constructor is declared
 
 	if declaration.Kind() == common.CompositeKindContract {
-		variable.getter = func() Value {
+		variable.InitializeWithGetter(func() Value {
 			positioned := ast.NewRangeFromPositioned(declarationInterpreter, declaration.DeclarationIdentifier())
 
 			contractValue := config.ContractValueHandler(
@@ -1423,7 +1451,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 
 			contractValue.SetNestedVariables(nestedVariables)
 			return contractValue
-		}
+		})
 	} else {
 		constructor := constructorGenerator(common.ZeroAddress)
 		constructor.NestedVariables = nestedVariables
@@ -1450,7 +1478,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
-	variable *Variable,
+	variable Variable,
 ) {
 	identifier := declaration.Identifier.Identifier
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
@@ -1468,7 +1496,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	enumCases := declaration.Members.EnumCases()
 	caseValues := make([]EnumCase, len(enumCases))
 
-	constructorNestedVariables := map[string]*Variable{}
+	constructorNestedVariables := map[string]Variable{}
 
 	for i, enumCase := range enumCases {
 
@@ -1539,7 +1567,7 @@ func EnumConstructorFunction(
 	locationRange LocationRange,
 	enumType *sema.CompositeType,
 	cases []EnumCase,
-	nestedVariables map[string]*Variable,
+	nestedVariables map[string]Variable,
 ) *HostFunctionValue {
 
 	// Prepare a lookup table based on the big-endian byte representation
@@ -2317,12 +2345,12 @@ func (interpreter *Interpreter) declareInterface(
 
 	var defaultDestroyEventConstructor FunctionValue
 	if defautlDestroyEvent := interpreter.Program.Elaboration.DefaultDestroyDeclaration(declaration); defautlDestroyEvent != nil {
-		var nestedVariable *Variable
+		var nestedVariable Variable
 		lexicalScope, nestedVariable = interpreter.declareCompositeValue(
 			defautlDestroyEvent,
 			lexicalScope,
 		)
-		defaultDestroyEventConstructor = nestedVariable.GetValue().(FunctionValue)
+		defaultDestroyEventConstructor = nestedVariable.GetValue(interpreter).(FunctionValue)
 	}
 
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
@@ -2410,7 +2438,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 				}
 
 				if invocation.Self != nil {
-					interpreter.declareVariable(sema.SelfIdentifier, *invocation.Self)
+					interpreter.declareSelfVariable(*invocation.Self, invocation.LocationRange)
 				}
 				if invocation.Base != nil {
 					interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
@@ -2445,7 +2473,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 						// for use by the post-condition block.
 
 						type argumentVariable struct {
-							variable *Variable
+							variable Variable
 							value    ResourceKindedValue
 						}
 
@@ -3714,7 +3742,7 @@ var converterFunctionValues = func() []converterFunction {
 
 		addMember := func(name string, value Value) {
 			if converterFunctionValue.NestedVariables == nil {
-				converterFunctionValue.NestedVariables = map[string]*Variable{}
+				converterFunctionValue.NestedVariables = map[string]Variable{}
 			}
 			// these variables are not needed to be metered as they are only ever declared once,
 			// and can be considered base interpreter overhead
@@ -4094,7 +4122,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 
 			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
 
-				staticType := value.StaticType(inter)
+				staticType := value.StaticType(interpreter)
 
 				// Perform a forced value de-referencing to see if the associated type is not broken.
 				// If broken, skip this value from the iteration.
@@ -4657,7 +4685,7 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 	}
 
 	// get contract value
-	contractValue, ok := contractGlobal.GetValue().(*CompositeValue)
+	contractValue, ok := contractGlobal.GetValue(interpreter).(*CompositeValue)
 	if !ok {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindContract,
@@ -5303,7 +5331,7 @@ func (interpreter *Interpreter) invalidateReferencedResources(
 // A resource can only be associated with one variable at most, at a given time.
 func (interpreter *Interpreter) startResourceTracking(
 	value Value,
-	variable *Variable,
+	variable Variable,
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
@@ -5336,7 +5364,7 @@ func (interpreter *Interpreter) startResourceTracking(
 // checkInvalidatedResourceUse checks whether a resource variable is used after invalidation.
 func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	value Value,
-	variable *Variable,
+	variable Variable,
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {

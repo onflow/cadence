@@ -449,7 +449,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
           let ref = &r as &R?
         `)
 
-		value := inter.Globals.Get("ref").GetValue()
+		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).
@@ -468,7 +468,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
           let ref = &s as &S?
         `)
 
-		value := inter.Globals.Get("ref").GetValue()
+		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).
@@ -485,7 +485,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
           let ref = &i as &Int?
         `)
 
-		value := inter.Globals.Get("ref").GetValue()
+		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).
@@ -502,7 +502,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
           let ref = &i as &Int?
         `)
 
-		value := inter.Globals.Get("ref").GetValue()
+		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).
@@ -519,7 +519,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
           let ref = &i as &Int?
         `)
 
-		value := inter.Globals.Get("ref").GetValue()
+		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, interpreter.Nil, value)
 	})
 }
@@ -2370,7 +2370,7 @@ func TestInterpretDereference(t *testing.T) {
 					t,
 					inter,
 					expectedOriginalValue,
-					inter.Globals.Get("originalArray").GetValue(),
+					inter.Globals.Get("originalArray").GetValue(inter),
 				)
 			})
 		}
@@ -2765,7 +2765,7 @@ func TestInterpretDereference(t *testing.T) {
 					t,
 					inter,
 					expectedOriginalValue,
-					inter.Globals.Get("originalArray").GetValue(),
+					inter.Globals.Get("originalArray").GetValue(inter),
 				)
 			})
 		}

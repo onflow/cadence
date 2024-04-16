@@ -20,9 +20,9 @@ package interpreter
 
 import "github.com/onflow/cadence/runtime/activations"
 
-type VariableActivations = activations.Activations[*Variable]
+type VariableActivations = activations.Activations[Variable]
 
-type VariableActivation = activations.Activation[*Variable]
+type VariableActivation = activations.Activation[Variable]
 
 func Declare(a *VariableActivation, declaration ValueDeclaration) {
 

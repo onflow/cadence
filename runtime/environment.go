@@ -289,7 +289,7 @@ func (e *interpreterEnvironment) interpreterBaseActivationFor(
 
 	baseActivation := e.baseActivationsByLocation[location]
 	if baseActivation == nil {
-		baseActivation = activations.NewActivation[*interpreter.Variable](nil, defaultBaseActivation)
+		baseActivation = activations.NewActivation[interpreter.Variable](nil, defaultBaseActivation)
 		if e.baseActivationsByLocation == nil {
 			e.baseActivationsByLocation = map[common.Location]*interpreter.VariableActivation{}
 		}
@@ -1106,7 +1106,7 @@ func (e *interpreterEnvironment) InterpretContract(
 		)
 	}
 
-	contract = variable.GetValue().(*interpreter.CompositeValue)
+	contract = variable.GetValue(inter).(*interpreter.CompositeValue)
 
 	return
 }

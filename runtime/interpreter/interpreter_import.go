@@ -56,10 +56,10 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	// determine which identifiers are imported /
 	// which variables need to be declared
 
-	var variables map[string]*Variable
+	var variables map[string]Variable
 	identifierLength := len(resolvedLocation.Identifiers)
 	if identifierLength > 0 {
-		variables = make(map[string]*Variable, identifierLength)
+		variables = make(map[string]Variable, identifierLength)
 		for _, identifier := range resolvedLocation.Identifiers {
 			variables[identifier.Identifier] =
 				subInterpreter.Globals.Get(identifier.Identifier)

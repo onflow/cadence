@@ -230,7 +230,7 @@ type ReferenceTrackedResourceKindedValue interface {
 // Hence, during tests, the value is a HostFunctionValue.
 type ContractValue interface {
 	Value
-	SetNestedVariables(variables map[string]*Variable)
+	SetNestedVariables(variables map[string]Variable)
 }
 
 // IterableValue is a value which can be iterated over, e.g. with a for-loop
@@ -16652,7 +16652,7 @@ type CompositeValue struct {
 	Stringer        func(gauge common.MemoryGauge, value *CompositeValue, seenReferences SeenReferences) string
 	injectedFields  map[string]Value
 	computedFields  map[string]ComputedField
-	NestedVariables map[string]*Variable
+	NestedVariables map[string]Variable
 	Functions       *FunctionOrderedMap
 	dictionary      *atree.OrderedMap
 	typeID          TypeID
@@ -17068,7 +17068,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	if v.NestedVariables != nil {
 		variable, ok := v.NestedVariables[name]
 		if ok {
-			return variable.GetValue()
+			return variable.GetValue(interpreter)
 		}
 	}
 
@@ -18139,7 +18139,7 @@ func (v *CompositeValue) RemoveField(
 	interpreter.RemoveReferencedSlab(existingValueStorable)
 }
 
-func (v *CompositeValue) SetNestedVariables(variables map[string]*Variable) {
+func (v *CompositeValue) SetNestedVariables(variables map[string]Variable) {
 	v.NestedVariables = variables
 }
 

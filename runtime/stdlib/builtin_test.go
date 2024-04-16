@@ -69,7 +69,7 @@ func newInterpreter(t *testing.T, code string, valueDeclarations ...StandardLibr
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation[interpreter.Variable](nil, interpreter.BaseActivation)
 	for _, valueDeclaration := range valueDeclarations {
 		interpreter.Declare(baseActivation, valueDeclaration)
 	}
