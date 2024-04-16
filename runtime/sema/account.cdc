@@ -324,10 +324,11 @@ struct Account {
         let account: Account.AccountCapabilities
 
         /// Returns the capability at the given public path.
-        /// Returns nil if the capability does not exist,
-        /// or if the given type is not a supertype of the capability's borrow type.
+        /// If the capability does not exist,
+        /// or if the given type is not a supertype of the capability's borrow type,
+        /// returns an "invalid" capability with ID 0 that will always fail to `check` or `borrow`
         access(all)
-        view fun get<T: &Any>(_ path: PublicPath): Capability<T>?
+        view fun get<T: &Any>(_ path: PublicPath): Capability<T>
 
         /// Borrows the capability at the given public path.
         /// Returns nil if the capability does not exist, or cannot be borrowed using the given type.
