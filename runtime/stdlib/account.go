@@ -3622,11 +3622,7 @@ func newAccountCapabilitiesGetFunction(
 					interpreter.NewInvalidCapabilityValue(
 						inter,
 						addressValue,
-						interpreter.NewReferenceStaticType(
-							inter,
-							interpreter.ConvertSemaAccessToStaticAuthorization(inter, wantedBorrowType.Authorization),
-							interpreter.PrimitiveStaticTypeNever,
-						),
+						interpreter.ConvertSemaToStaticType(inter, wantedBorrowType),
 					)
 			}
 

@@ -2184,6 +2184,9 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			case *IDCapabilityValue:
 				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
 				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
+				if capability.isInvalid() {
+					return NewInvalidCapabilityValue(interpreter, capability.Address, borrowType)
+				}
 				return NewCapabilityValue(
 					interpreter,
 					capability.ID,

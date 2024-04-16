@@ -231,8 +231,10 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testNonExistent() {
                   let path = /public/nonExistent
-                  let cap = self.account.capabilities.get<&AnyResource>(path)
+                  let cap = self.account.capabilities.get<&R>(path)
                   assert(cap.id == 0)
+                  assert(cap as? Capability<&R> != nil)
+                  assert(cap as? Capability<&AnyResource> != nil)
                   assert(cap.borrow() == nil)
                   assert(cap.check() == false)
                   assert(!self.account.capabilities.exists(path))
@@ -486,8 +488,10 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testNonExistent() {
                   let path = /public/nonExistent
-                  let cap = self.account.capabilities.get<&AnyStruct>(path)
+                  let cap = self.account.capabilities.get<&S>(path)
                   assert(cap.id == 0)
+                  assert(cap as? Capability<&S> != nil)
+                  assert(cap as? Capability<&AnyStruct> != nil)
                   assert(cap.borrow() == nil)
                   assert(cap.check() == false)
                   assert(!self.account.capabilities.exists(path))
