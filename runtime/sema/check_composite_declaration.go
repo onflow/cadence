@@ -1592,7 +1592,7 @@ func (checker *Checker) memberSatisfied(
 	effectiveInterfaceMemberAccess := checker.effectiveInterfaceMemberAccess(interfaceMember.Access)
 	effectiveCompositeMemberAccess := checker.EffectiveCompositeMemberAccess(compositeMember.Access)
 
-	return !effectiveCompositeMemberAccess.IsLessPermissiveThan(effectiveInterfaceMemberAccess)
+	return effectiveCompositeMemberAccess.Equal(effectiveInterfaceMemberAccess)
 }
 
 func CompositeLikeConstructorType(
