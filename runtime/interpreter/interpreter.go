@@ -5466,6 +5466,10 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
+			if capabilityID == invalidCapabilityID {
+				return Nil
+			}
+
 			var wantedBorrowType *sema.ReferenceType
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair != nil {
@@ -5503,6 +5507,10 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 		interpreter,
 		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
 		func(invocation Invocation) Value {
+
+			if capabilityID == invalidCapabilityID {
+				return FalseValue
+			}
 
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange

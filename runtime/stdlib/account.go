@@ -3583,6 +3583,22 @@ func newAccountCapabilitiesGetFunction(
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
+			var failValue interpreter.Value
+			if borrow {
+				failValue = interpreter.Nil
+			} else {
+				failValue =
+					interpreter.NewInvalidCapabilityValue(
+						inter,
+						addressValue,
+						interpreter.NewReferenceStaticType(
+							inter,
+							interpreter.UnauthorizedAccess,
+							interpreter.PrimitiveStaticTypeNever,
+						),
+					)
+			}
+
 			// Get path argument
 
 			pathValue, ok := invocation.Arguments[0].(interpreter.PathValue)
@@ -3598,7 +3614,7 @@ func newAccountCapabilitiesGetFunction(
 			typeParameterPairValue := invocation.TypeParameterTypes.Oldest().Value
 			// `Never` is never a supertype of any stored value
 			if typeParameterPairValue.Equal(sema.NeverType) {
-				return interpreter.Nil
+				return failValue
 			}
 
 			wantedBorrowType, ok := typeParameterPairValue.(*sema.ReferenceType)
@@ -3612,7 +3628,7 @@ func newAccountCapabilitiesGetFunction(
 
 			readValue := inter.ReadStored(address, domain, storageMapKey)
 			if readValue == nil {
-				return interpreter.Nil
+				return failValue
 			}
 
 			var readCapabilityValue *interpreter.IDCapabilityValue
@@ -3677,13 +3693,17 @@ func newAccountCapabilitiesGetFunction(
 			}
 
 			if resultValue == nil {
-				return interpreter.Nil
+				return failValue
 			}
 
-			return interpreter.NewSomeValueNonCopying(
-				inter,
-				resultValue,
-			)
+			if borrow {
+				resultValue = interpreter.NewSomeValueNonCopying(
+					inter,
+					resultValue,
+				)
+			}
+
+			return resultValue
 		},
 	)
 }
