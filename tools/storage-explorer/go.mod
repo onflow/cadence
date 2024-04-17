@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/gorilla/mux v1.8.1
-	github.com/onflow/atree v0.6.1-0.20240308163425-dc825c20b1a2
+	github.com/onflow/atree v0.6.1-0.20240416233652-f4568c0c03df
 	github.com/onflow/cadence v1.0.0-M8
 	github.com/onflow/flow-go v0.34.0-crescendo-preview.5.0.20240229164931-a67398875618
 	github.com/rs/zerolog v1.32.0
