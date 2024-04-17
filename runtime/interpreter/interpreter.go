@@ -814,7 +814,7 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 	}
 
 	resultAuth := func(ty sema.Type) Authorization {
-		var auth Authorization = UnauthorizedAccess
+		auth := UnauthorizedAccess
 		// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned
 		if entitlementSupportingType, ok := ty.(sema.EntitlementSupportingType); ok {
 			supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
@@ -1039,8 +1039,12 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 		}
 		supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
 		access := sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
-
-		base, self = attachmentBaseAndSelfValues(declarationInterpreter, access, containingResourceComposite, locationRange)
+		base, self = attachmentBaseAndSelfValues(
+			declarationInterpreter,
+			access,
+			containingResourceComposite,
+			locationRange,
+		)
 		declarationInterpreter.declareVariable(sema.BaseIdentifier, base)
 	}
 	declarationInterpreter.declareSelfVariable(self, locationRange)
