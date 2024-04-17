@@ -2082,10 +2082,7 @@ func (checker *Checker) checkDefaultDestroyEventParam(
 	// make `self` and `base` available when checking default arguments so the fields of the composite are available
 	// as this event is emitted when the resource is destroyed, these values should be fully entitled
 	supportedEntitlements := containerType.SupportedEntitlements()
-	fullyEntitledAccess := UnauthorizedAccess
-	if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
-		fullyEntitledAccess = NewAccessFromEntitlementSet(supportedEntitlements, Conjunction)
-	}
+	fullyEntitledAccess := NewAccessFromEntitlementSet(supportedEntitlements, Conjunction)
 
 	checker.declareSelfValue(
 		fullyEntitledAccess,
@@ -2229,10 +2226,7 @@ func (checker *Checker) checkSpecialFunction(
 
 	// initializers and destructors are considered fully entitled to their container type
 	supportedEntitlements := containerType.SupportedEntitlements()
-	fnAccess := UnauthorizedAccess
-	if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
-		fnAccess = NewAccessFromEntitlementSet(supportedEntitlements, Conjunction)
-	}
+	fnAccess := NewAccessFromEntitlementSet(supportedEntitlements, Conjunction)
 
 	checker.declareSelfValue(fnAccess, containerType, containerDocString)
 

@@ -1037,11 +1037,8 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		access := sema.UnauthorizedAccess
 		supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
-		if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
-			access = sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
-		}
+		access := sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
 		base, self = attachmentBaseAndSelfValues(
 			declarationInterpreter,
 			access,

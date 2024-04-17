@@ -397,13 +397,13 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 		var resultType Type
 		if returnType.IsResourceType() {
 
-			var innerType Type = returnType
+			innerType := returnType
 			optType, isOptional := returnType.(*OptionalType)
 			if isOptional {
 				innerType = optType.Type
 			}
 
-			var auth Access = UnauthorizedAccess
+			auth := UnauthorizedAccess
 			// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned.
 			// To create a "fully authorized" reference, we scan the resource type and produce a conjunction of all the entitlements mentioned within.
 			// So, for example,
@@ -423,12 +423,7 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 			// here the `result` value in the `post` block will have type `auth(E, X, Y) &R`
 			if entitlementSupportingType, ok := innerType.(EntitlementSupportingType); ok {
 				supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
-				if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
-					auth = EntitlementSetAccess{
-						SetKind:      Conjunction,
-						Entitlements: supportedEntitlements,
-					}
-				}
+				auth = NewAccessFromEntitlementSet(supportedEntitlements, Conjunction)
 			}
 
 			resultType = &ReferenceType{

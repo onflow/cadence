@@ -78,7 +78,7 @@ func NewAccessFromEntitlementSet(
 	set *EntitlementOrderedSet,
 	setKind EntitlementSetKind,
 ) Access {
-	if set.Len() == 0 {
+	if set == nil || set.Len() == 0 {
 		return UnauthorizedAccess
 	}
 
