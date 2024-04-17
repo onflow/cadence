@@ -356,7 +356,7 @@ func (s *Storage) CheckHealth() error {
 }
 
 type UnreferencedRootSlabsError struct {
-	UnreferencedRootSlabIDs []atree.StorageID
+	UnreferencedRootSlabIDs []atree.SlabID
 }
 
 var _ errors.InternalError = UnreferencedRootSlabsError{}
