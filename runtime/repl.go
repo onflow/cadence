@@ -375,7 +375,7 @@ func (r *REPL) GetGlobal(name string) interpreter.Value {
 	if variable == nil {
 		return nil
 	}
-	return variable.GetValue()
+	return variable.GetValue(r.inter)
 }
 
 func (r *REPL) ExportValue(value interpreter.Value) (cadence.Value, error) {

@@ -75,12 +75,12 @@ func TestStaticTypeMigration(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage, "test")
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
 
 		reporter := newTestReporter()
 
-		migration.MigrateAccount(
-			testAddress,
+		migration.Migrate(
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				staticTypeMigration,
@@ -881,12 +881,12 @@ func TestMigratingNestedContainers(t *testing.T) {
 
 		// Migrate
 
-		migration := migrations.NewStorageMigration(inter, storage, "test")
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
 
 		reporter := newTestReporter()
 
-		migration.MigrateAccount(
-			testAddress,
+		migration.Migrate(
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				staticTypeMigration,

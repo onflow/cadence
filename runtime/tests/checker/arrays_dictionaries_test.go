@@ -2648,6 +2648,22 @@ func TestCheckResourceArrayToConstantSizedInvalid(t *testing.T) {
 	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
 }
 
+func TestCheckArrayToConstantSizedMissingTypeArgument(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x: [Int16] = [1, 2, 3]
+			let y = x.toConstantSized()
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+}
+
 func TestCheckArrayReferenceTypeInference(t *testing.T) {
 
 	t.Parallel()

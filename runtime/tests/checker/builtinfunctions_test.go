@@ -409,7 +409,7 @@ func TestCheckRevertibleRandom(t *testing.T) {
 
 	runInvalidCase(
 		t,
-		"invalid type arg never",
+		"invalid type argument Never",
 		`let rand = revertibleRandom<Never>(modulo: 1)`,
 		[]error{
 			&sema.TypeMismatchError{},
@@ -418,10 +418,19 @@ func TestCheckRevertibleRandom(t *testing.T) {
 	)
 	runInvalidCase(
 		t,
-		"invalid type arg FixedSizeUnsignedInteger",
+		"invalid type argument FixedSizeUnsignedInteger",
 		`let rand = revertibleRandom<FixedSizeUnsignedInteger>(modulo: 1)`,
 		[]error{
 			&sema.InvalidTypeArgumentError{},
+		},
+	)
+
+	runInvalidCase(
+		t,
+		"missing type argument",
+		`let rand = revertibleRandom()`,
+		[]error{
+			&sema.TypeParameterTypeInferenceError{},
 		},
 	)
 

@@ -169,7 +169,7 @@ func cryptoAlgorithmEnumValueAndCaseValues[T sema.CryptoAlgorithm](
 
 	caseCount := len(enumCases)
 	caseValues := make([]interpreter.EnumCase, caseCount)
-	constructorNestedVariables := make(map[string]*interpreter.Variable, caseCount)
+	constructorNestedVariables := make(map[string]interpreter.Variable, caseCount)
 	cases = make(map[interpreter.UInt8Value]interpreter.MemberAccessibleValue, caseCount)
 
 	for i, enumCase := range enumCases {

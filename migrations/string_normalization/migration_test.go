@@ -19,6 +19,7 @@
 package string_normalization
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -74,6 +75,11 @@ func (t *testReporter) Migrated(
 
 func (t *testReporter) Error(err error) {
 	t.errors = append(t.errors, err)
+}
+
+func (t *testReporter) DictionaryKeyConflict(addressPath interpreter.AddressPath) {
+	// For testing purposes, record the conflict as an error
+	t.errors = append(t.errors, fmt.Errorf("dictionary key conflict: %s", addressPath))
 }
 
 func TestStringNormalizingMigration(t *testing.T) {
@@ -304,12 +310,12 @@ func TestStringNormalizingMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", account)
+	require.NoError(t, err)
 
 	reporter := newTestReporter()
 
-	migration.MigrateAccount(
-		account,
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			NewStringNormalizingMigration(),
@@ -445,19 +451,19 @@ func TestStringValueRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
-		migration := migrations.NewStorageMigration(inter, storage, "test")
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
 
 		reporter := newTestReporter()
 
-		migration.MigrateAccount(
-			testAddress,
+		migration.Migrate(
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				NewStringNormalizingMigration(),
 			),
 		)
 
-		err := migration.Commit()
+		err = migration.Commit()
 		require.NoError(t, err)
 
 		require.Empty(t, reporter.errors)
@@ -591,19 +597,19 @@ func TestCharacterValueRehash(t *testing.T) {
 
 		storage, inter := newStorageAndInterpreter(t)
 
-		migration := migrations.NewStorageMigration(inter, storage, "test")
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
 
 		reporter := newTestReporter()
 
-		migration.MigrateAccount(
-			testAddress,
+		migration.Migrate(
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				NewStringNormalizingMigration(),
 			),
 		)
 
-		err := migration.Commit()
+		err = migration.Commit()
 		require.NoError(t, err)
 
 		require.Empty(t, reporter.errors)
