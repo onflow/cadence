@@ -354,13 +354,17 @@ func (checker *Checker) visitIndexExpression(
 			)
 			return InvalidType
 		}
+
 		elementType := checker.checkTypeIndexingExpression(typeIndexedType, indexExpression)
 		if elementType == InvalidType {
 			checker.report(
 				&InvalidTypeIndexingError{
 					BaseType:           typeIndexedType,
 					IndexingExpression: indexExpression.IndexingExpression,
-					Range:              ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression.IndexingExpression),
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						indexExpression.IndexingExpression,
+					),
 				},
 			)
 		}
@@ -372,9 +376,11 @@ func (checker *Checker) visitIndexExpression(
 }
 
 func (checker *Checker) checkTypeIndexingExpression(
-	base TypeIndexableType,
+	targetType TypeIndexableType,
 	indexExpression *ast.IndexExpression,
 ) Type {
+
+	targetExpression := indexExpression.TargetExpression
 
 	if !checker.Config.AttachmentsEnabled {
 		checker.report(&AttachmentsNotEnabledError{
@@ -386,21 +392,25 @@ func (checker *Checker) checkTypeIndexingExpression(
 	if expressionType == nil {
 		return InvalidType
 	}
+
 	nominalTypeExpression, isNominalType := expressionType.(*ast.NominalType)
 	if !isNominalType {
 		return InvalidType
 	}
+
 	nominalType := checker.convertNominalType(nominalTypeExpression)
 
-	if !base.IsValidIndexingType(nominalType) {
+	if !targetType.IsValidIndexingType(nominalType) {
 		return InvalidType
 	}
 
 	checker.Elaboration.SetAttachmentAccessTypes(indexExpression, nominalType)
 
+	checker.checkUnusedExpressionResourceLoss(targetType, targetExpression)
+
 	// at this point, the base is known to be a struct/resource,
 	// and the attachment is known to be a valid attachment for that base
-	indexedType, err := base.TypeIndexingElementType(nominalType, func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression) })
+	indexedType, err := targetType.TypeIndexingElementType(nominalType, func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression) })
 	if err != nil {
 		checker.report(err)
 		return InvalidType
