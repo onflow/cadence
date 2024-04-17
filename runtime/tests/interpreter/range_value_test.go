@@ -444,7 +444,7 @@ func TestInclusiveRange(t *testing.T) {
 				t,
 				inter,
 				expectedRangeValue,
-				inter.Globals.Get("r").GetValue(),
+				inter.Globals.Get("r").GetValue(inter),
 			)
 
 			// Check that contains returns correct information.
@@ -460,7 +460,7 @@ func TestInclusiveRange(t *testing.T) {
 					t,
 					inter,
 					expectedValue,
-					inter.Globals.Get(fmt.Sprintf("c_%d", i)).GetValue(),
+					inter.Globals.Get(fmt.Sprintf("c_%d", i)).GetValue(inter),
 				)
 			}
 		})

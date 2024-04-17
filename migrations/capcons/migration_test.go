@@ -159,6 +159,11 @@ func (t *testMigrationReporter) MissingTarget(
 	)
 }
 
+func (t *testMigrationReporter) DictionaryKeyConflict(addressPath interpreter.AddressPath) {
+	// For testing purposes, record the conflict as an error
+	t.errors = append(t.errors, fmt.Errorf("dictionary key conflict: %s", addressPath))
+}
+
 const testPathIdentifier = "test"
 
 var testAddress = common.MustBytesToAddress([]byte{0x1})
@@ -454,14 +459,14 @@ func testPathCapabilityValueMigration(
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
-
-	capabilityMapping := &CapabilityMapping{}
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
 
 	reporter := &testMigrationReporter{}
 
-	migration.MigrateAccount(
-		testAddress,
+	capabilityMapping := &CapabilityMapping{}
+
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
@@ -472,8 +477,7 @@ func testPathCapabilityValueMigration(
 		),
 	)
 
-	migration.MigrateAccount(
-		testAddress,
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
@@ -1298,14 +1302,14 @@ func testLinkMigration(
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
-
-	capabilityMapping := &CapabilityMapping{}
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
 
 	reporter := &testMigrationReporter{}
 
-	migration.MigrateAccount(
-		testAddress,
+	capabilityMapping := &CapabilityMapping{}
+
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
@@ -2007,14 +2011,14 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
-
-	capabilityMapping := &CapabilityMapping{}
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
 
 	reporter := &testMigrationReporter{}
 
-	migration.MigrateAccount(
-		testAddress,
+	capabilityMapping := &CapabilityMapping{}
+
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
@@ -2025,8 +2029,7 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 		),
 	)
 
-	migration.MigrateAccount(
-		testAddress,
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
@@ -2248,14 +2251,14 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
-
-	capabilityMapping := &CapabilityMapping{}
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
 
 	reporter := &testMigrationReporter{}
 
-	migration.MigrateAccount(
-		testAddress,
+	capabilityMapping := &CapabilityMapping{}
+
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
@@ -2266,8 +2269,7 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 		),
 	)
 
-	migration.MigrateAccount(
-		testAddress,
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{

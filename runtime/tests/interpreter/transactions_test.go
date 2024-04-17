@@ -303,7 +303,7 @@ func TestInterpretTransactions(t *testing.T) {
 		err := inter.InvokeTransaction(0, arguments...)
 		require.NoError(t, err)
 
-		values := inter.Globals.Get("values").GetValue()
+		values := inter.Globals.Get("values").GetValue(inter)
 
 		require.IsType(t, &interpreter.ArrayValue{}, values)
 

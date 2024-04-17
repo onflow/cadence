@@ -192,7 +192,7 @@ var stringFunction = func() Value {
 
 	addMember := func(name string, value Value) {
 		if functionValue.NestedVariables == nil {
-			functionValue.NestedVariables = map[string]*Variable{}
+			functionValue.NestedVariables = map[string]Variable{}
 		}
 		// these variables are not needed to be metered as they are only ever declared once,
 		// and can be considered base interpreter overhead

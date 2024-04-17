@@ -10212,9 +10212,6 @@ func TestRuntimeIfLetElseBranchConfusion(t *testing.T) {
 
 func TestResourceLossViaSelfRugPull(t *testing.T) {
 
-	// TODO: Disabled temporarily
-	t.SkipNow()
-
 	t.Parallel()
 
 	runtime := NewTestInterpreterRuntime()
@@ -10361,7 +10358,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestRuntimeValueTransferResourceLoss(t *testing.T) {

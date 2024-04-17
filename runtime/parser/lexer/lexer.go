@@ -357,12 +357,24 @@ func (l *lexer) scanSpace() (containsNewline bool) {
 func (l *lexer) scanIdentifier() {
 	// lookahead is already lexed.
 	// parse more, if any
-	l.acceptWhile(func(r rune) bool {
-		return r >= 'a' && r <= 'z' ||
-			r >= 'A' && r <= 'Z' ||
-			r >= '0' && r <= '9' ||
-			r == '_'
-	})
+	l.acceptWhile(IsIdentifierRune)
+}
+
+func IsIdentifierRune(r rune) bool {
+	return r >= 'a' && r <= 'z' ||
+		r >= 'A' && r <= 'Z' ||
+		r >= '0' && r <= '9' ||
+		r == '_'
+}
+
+func IsValidIdentifier(s string) bool {
+	for _, r := range s {
+		if !IsIdentifierRune(r) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (l *lexer) scanLineComment() {

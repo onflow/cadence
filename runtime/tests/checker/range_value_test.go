@@ -378,7 +378,10 @@ func TestCheckInclusiveRangeConstructionInvalid(t *testing.T) {
 		t,
 		"without_inner_type_annotation",
 		"let r: InclusiveRange<> = InclusiveRange(1, 10)",
-		[]error{&sema.InvalidTypeArgumentCountError{}, &sema.MissingTypeArgumentError{}},
+		[]error{
+			&sema.InvalidTypeArgumentCountError{},
+			&sema.MissingTypeArgumentError{},
+		},
 	)
 
 	runInvalidCase(
