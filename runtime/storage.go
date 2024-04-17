@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"fmt"
 	"runtime"
 	"sort"
 
@@ -346,8 +347,22 @@ func (s *Storage) CheckHealth() error {
 			return a.Compare(b) < 0
 		})
 
-		return errors.NewUnexpectedError("slabs not referenced from account storage: %s", unreferencedRootSlabIDs)
+		return UnreferencedRootSlabsError{
+			UnreferencedRootSlabIDs: unreferencedRootSlabIDs,
+		}
 	}
 
 	return nil
+}
+
+type UnreferencedRootSlabsError struct {
+	UnreferencedRootSlabIDs []atree.SlabID
+}
+
+var _ errors.InternalError = UnreferencedRootSlabsError{}
+
+func (UnreferencedRootSlabsError) IsInternalError() {}
+
+func (e UnreferencedRootSlabsError) Error() string {
+	return fmt.Sprintf("slabs not referenced: %s", e.UnreferencedRootSlabIDs)
 }
