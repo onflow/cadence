@@ -72,16 +72,21 @@ func (checker *Checker) checkAttachmentMemberAccess(
 	baseType Type,
 	supportedBaseEntitlements *EntitlementOrderedSet,
 ) {
-	var requestedEntitlements *EntitlementOrderedSet = &orderedmap.OrderedMap[*EntitlementType, struct{}]{}
+	var requestedEntitlements *EntitlementOrderedSet
+
 	switch memberAccess := member.Access.(type) {
 	case EntitlementSetAccess:
 		requestedEntitlements = memberAccess.Entitlements
+
 	// if the attachment field/function is declared with mapped access, the domain of the map must be a
 	// subset of the supported entitlements on the base. This is because the attachment reference
 	// will never be able to possess any entitlements other than these, so any map relations that map
 	// from other entitlements will be unreachable
 	case *EntitlementMapAccess:
 		requestedEntitlements = memberAccess.Domain().Entitlements
+
+	default:
+		requestedEntitlements = &orderedmap.OrderedMap[*EntitlementType, struct{}]{}
 	}
 
 	requestedEntitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
@@ -99,11 +104,13 @@ func (checker *Checker) checkAttachmentMemberAccess(
 func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeType) {
 
 	// all the access modifiers for attachment members must be valid entitlements for the base type
-	var supportedBaseEntitlements *EntitlementOrderedSet = &orderedmap.OrderedMap[*EntitlementType, struct{}]{}
+	var supportedBaseEntitlements *EntitlementOrderedSet
 	baseType := attachmentType.GetBaseType()
-	switch base := attachmentType.GetBaseType().(type) {
-	case EntitlementSupportingType:
+	if base, ok := attachmentType.GetBaseType().(EntitlementSupportingType); ok {
 		supportedBaseEntitlements = base.SupportedEntitlements()
+	}
+	if supportedBaseEntitlements == nil {
+		supportedBaseEntitlements = &orderedmap.OrderedMap[*EntitlementType, struct{}]{}
 	}
 
 	attachmentType.EffectiveInterfaceConformanceSet().ForEach(func(intf *InterfaceType) {
@@ -2074,9 +2081,21 @@ func (checker *Checker) checkDefaultDestroyEventParam(
 
 	// make `self` and `base` available when checking default arguments so the fields of the composite are available
 	// as this event is emitted when the resource is destroyed, these values should be fully entitled
-	fullyEntitledAccess := NewAccessFromEntitlementSet(containerType.SupportedEntitlements(), Conjunction)
-	checker.declareSelfValue(fullyEntitledAccess, containerType, containerDeclaration.DeclarationDocString())
-	if compositeContainer, isComposite := containerType.(*CompositeType); isComposite && compositeContainer.Kind == common.CompositeKindAttachment {
+	supportedEntitlements := containerType.SupportedEntitlements()
+	fullyEntitledAccess := UnauthorizedAccess
+	if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
+		fullyEntitledAccess = NewAccessFromEntitlementSet(supportedEntitlements, Conjunction)
+	}
+
+	checker.declareSelfValue(
+		fullyEntitledAccess,
+		containerType,
+		containerDeclaration.DeclarationDocString(),
+	)
+
+	if compositeContainer, isComposite := containerType.(*CompositeType); isComposite &&
+		compositeContainer.Kind == common.CompositeKindAttachment {
+
 		checker.declareBaseValue(
 			fullyEntitledAccess,
 			compositeContainer.baseType,
@@ -2209,9 +2228,14 @@ func (checker *Checker) checkSpecialFunction(
 	defer checker.leaveValueScope(specialFunction.EndPosition, checkResourceLoss)
 
 	// initializers and destructors are considered fully entitled to their container type
-	fnAccess := NewAccessFromEntitlementSet(containerType.SupportedEntitlements(), Conjunction)
+	supportedEntitlements := containerType.SupportedEntitlements()
+	fnAccess := UnauthorizedAccess
+	if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
+		fnAccess = NewAccessFromEntitlementSet(supportedEntitlements, Conjunction)
+	}
 
 	checker.declareSelfValue(fnAccess, containerType, containerDocString)
+
 	if containerType.GetCompositeKind() == common.CompositeKindAttachment {
 		// attachments cannot be interfaces, so this cast must succeed
 		attachmentType, ok := containerType.(*CompositeType)

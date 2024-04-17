@@ -122,9 +122,9 @@ func ConvertToEntitledType(
 					break
 
 				default:
-					newAuth := sema.UnauthorizedAccess
 					supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
-					if supportedEntitlements.Len() > 0 {
+					newAuth := sema.UnauthorizedAccess
+					if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
 						newAuth = sema.EntitlementSetAccess{
 							SetKind:      sema.Conjunction,
 							Entitlements: supportedEntitlements,
