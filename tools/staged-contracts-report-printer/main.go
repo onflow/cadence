@@ -54,7 +54,7 @@ func main() {
 	markdownBuilder := strings.Builder{}
 	markdownBuilder.WriteString("## Cadence 1.0 staged contracts migration results\n")
 	markdownBuilder.WriteString(fmt.Sprintf("Date: %s\n", now.Format("02 January, 2006")))
-	markdownBuilder.WriteString("|Address | Name | Status |\n")
+	markdownBuilder.WriteString("|Account Address | Contract Name | Status |\n")
 	markdownBuilder.WriteString("| --- | --- | --- | \n")
 
 	for _, entry := range reportEntries {
@@ -96,7 +96,7 @@ func main() {
 }
 
 type contractUpdateStatus struct {
-	AccountAddress string `json:"address"`
-	ContractName   string `json:"name"`
+	AccountAddress string `json:"account_address"`
+	ContractName   string `json:"contract_name"`
 	Error          string `json:"error"`
 }

@@ -2927,7 +2927,11 @@ func TestInterpretResourceLoss(t *testing.T) {
 
 	t.Parallel()
 
-	inter, _, err := parseCheckAndInterpretWithLogs(t, `
+	t.Run("in callback", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
         access(all) resource R {
             access(all) let id: String
 
@@ -2970,11 +2974,36 @@ func TestInterpretResourceLoss(t *testing.T) {
            destroy rl
         }
     `)
-	require.NoError(t, err)
 
-	_, err = inter.Invoke("main")
-	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+	})
+
+	t.Run("force nil assignment", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource R {
+                access(all) event ResourceDestroyed()
+            }
+
+            access(all) fun loseResource(_ victim: @R) {
+                var dict <- { 0: <- victim}
+                dict[0] <-! nil
+                destroy dict
+            }
+
+            access(all) fun main() {
+                loseResource(<- create R())
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+	})
 }
 
 func TestInterpretPreConditionResourceMove(t *testing.T) {

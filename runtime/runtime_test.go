@@ -10501,3 +10501,156 @@ func TestRuntimeValueTransferResourceLoss(t *testing.T) {
 	require.Equal(t, `A.0000000000000001.Foo.R.ResourceDestroyed(id: "dummy resource")`, events[1].String())
 	require.Equal(t, `A.0000000000000001.Foo.R.ResourceDestroyed(id: "victim resource")`, events[2].String())
 }
+
+func TestRuntimeNonPublicAccessModifierInInterface(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntimeWithAttachments()
+
+	address1 := common.MustBytesToAddress([]byte{0x1})
+	address2 := common.MustBytesToAddress([]byte{0x2})
+
+	contract1 := []byte(`
+		access(all)
+        contract C1 {
+
+			access(all)
+            struct interface SI {
+
+				access(contract)
+                fun contractTest()
+
+                access(account)
+                fun accountTest()
+			}
+
+            access(all)
+            fun test(_ si: {SI}) {
+                si.contractTest()
+                si.accountTest()
+            }
+		}
+	`)
+
+	contract2 := []byte(`
+        import C1 from 0x1
+
+		access(all)
+        contract C2 {
+
+			access(all)
+            struct S1: C1.SI {
+				access(contract)
+                fun contractTest() {}
+
+                access(account)
+                fun accountTest() {}
+			}
+
+            access(all)
+            struct S2: C1.SI {
+				access(all)
+                fun contractTest() {}
+
+                access(all)
+                fun accountTest() {}
+			}
+
+            access(all)
+            fun test() {
+                S1().contractTest()
+                S1().accountTest()
+                S2().contractTest()
+                S2().accountTest()
+            }
+		}
+	`)
+
+	tx := []byte(`
+        import C1 from 0x1
+        import C2 from 0x2
+
+        transaction {
+            prepare(acct: &Account) {
+               C1.test(C2.S1())
+               C1.test(C2.S2())
+               C2.test()
+            }
+        }
+    `)
+
+	deploy1 := DeploymentTransaction("C1", contract1)
+	deploy2 := DeploymentTransaction("C2", contract2)
+
+	var signer Address
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signer}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy first contract to first account
+
+	signer = address1
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Deploy second contract to second account
+
+	signer = address2
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deploy2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Run test transaction
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		})
+	require.NoError(t, err)
+}
