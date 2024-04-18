@@ -238,6 +238,9 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                     // Assert
                                     assert(!%[1]s.capabilities.exists(path))
                                     assert(gotCap.id == 0)
+                                    assert(gotCap.borrow() == nil)
+                                    assert(gotCap.check() == false)
+                                    assert(gotCap.address == 0x1)
                                 }
                             }
                         `,
@@ -443,6 +446,9 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap.id == 0)
+                                      assert(gotCap.borrow() == nil)
+                                      assert(gotCap.check() == false)
+                                      assert(gotCap.address == 0x1)
                                   }
                               }
                             `,
@@ -479,6 +485,9 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap.id == 0)
+                                      assert(gotCap.borrow() == nil)
+                                      assert(gotCap.check() == false)
+                                      assert(gotCap.address == 0x1)
                                   }
                               }
                             `,
@@ -523,6 +532,9 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap.id == 0)
+                                      assert(gotCap.borrow() == nil)
+                                      assert(gotCap.check() == false)
+                                      assert(gotCap.address == 0x1)
                                   }
                               }
                             `,
@@ -557,6 +569,9 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(gotCap.id == 0)
+                                      assert(gotCap.borrow() == nil)
+                                      assert(gotCap.check() == false)
+                                      assert(gotCap.address == 0x1)
                                   }
                               }
                             `,
@@ -602,6 +617,9 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       assert(issuedCap.id == expectedCapID)
                                       assert(unpublishedcap!.id == expectedCapID)
                                       assert(gotCap.id == 0)
+                                      assert(gotCap.borrow() == nil)
+                                      assert(gotCap.check() == false)
+                                      assert(gotCap.address == 0x1)
                                   }
                               }
                             `,
@@ -637,6 +655,9 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       assert(issuedCap.id == expectedCapID)
                                       assert(unpublishedcap!.id == expectedCapID)
                                       assert(gotCap.id == 0)
+                                      assert(gotCap.borrow() == nil)
+                                      assert(gotCap.check() == false)
+                                      assert(gotCap.address == 0x1)
                                   }
                               }
                             `,
