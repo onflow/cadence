@@ -123,7 +123,7 @@ func ConvertToEntitledType(
 
 				default:
 					supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
-					newAccess := sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
+					newAccess := supportedEntitlements.Access()
 					auth = interpreter.ConvertSemaAccessToStaticAuthorization(inter, newAccess)
 					returnNew = true
 				}

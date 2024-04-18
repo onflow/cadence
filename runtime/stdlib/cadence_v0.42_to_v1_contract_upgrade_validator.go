@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -267,7 +266,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOf
 	}
 
 	supportedEntitlements := compositeType.SupportedEntitlements()
-	return sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
+	return supportedEntitlements.Access()
 }
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOfIntersection(
@@ -279,13 +278,9 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOf
 	// been a restricted type with no legacy type
 	interfaces := validator.getIntersectedInterfaces(intersectionTypes)
 
-	supportedEntitlements := orderedmap.New[sema.EntitlementOrderedSet](0)
+	intersectionType := sema.NewIntersectionType(nil, nil, interfaces)
 
-	for _, interfaceType := range interfaces {
-		supportedEntitlements.SetAll(interfaceType.SupportedEntitlements())
-	}
-
-	return sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
+	return intersectionType.SupportedEntitlements().Access()
 }
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) checkEntitlementsUpgrade(

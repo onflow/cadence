@@ -521,12 +521,9 @@ func allSupportedEntitlements(typ Type, isInnerType bool) Access {
 			return allSupportedEntitlements(typ.ReturnTypeAnnotation.Type, true)
 		}
 	case EntitlementSupportingType:
-		supportedEntitlements := typ.SupportedEntitlements()
-		if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
-			return EntitlementSetAccess{
-				SetKind:      Conjunction,
-				Entitlements: supportedEntitlements,
-			}
+		access := typ.SupportedEntitlements().Access()
+		if access != UnauthorizedAccess {
+			return access
 		}
 	}
 

@@ -474,7 +474,7 @@ func TestConvertToEntitledType(t *testing.T) {
 		},
 		{
 			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, compositeResourceWithEOrF),
-			Output: sema.NewReferenceType(nil, eAndFAccess, compositeResourceWithEOrF),
+			Output: sema.NewReferenceType(nil, eOrFAccess, compositeResourceWithEOrF),
 			Name:   "composite E or F",
 		},
 		{
