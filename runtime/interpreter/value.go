@@ -19049,20 +19049,24 @@ func (v *DictionaryValue) SetKey(
 		locationRange,
 	)
 
+	var existingValue Value
 	switch value := value.(type) {
 	case *SomeValue:
 		innerValue := value.InnerValue(interpreter, locationRange)
-		existingValue := v.Insert(interpreter, locationRange, keyValue, innerValue)
-		interpreter.checkResourceLoss(existingValue, locationRange)
+		existingValue = v.Insert(interpreter, locationRange, keyValue, innerValue)
 
 	case NilValue:
-		_ = v.Remove(interpreter, locationRange, keyValue)
+		existingValue = v.Remove(interpreter, locationRange, keyValue)
 
 	case placeholderValue:
 		// NO-OP
 
 	default:
 		panic(errors.NewUnreachableError())
+	}
+
+	if existingValue != nil {
+		interpreter.checkResourceLoss(existingValue, locationRange)
 	}
 }
 
