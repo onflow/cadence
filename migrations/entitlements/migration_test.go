@@ -3156,7 +3156,16 @@ func TestRehash(t *testing.T) {
 			ReferenceStaticType: refType,
 		}
 
-		typeValue := interpreter.NewUnmeteredTypeValue(legacyRefType)
+		optType := interpreter.NewOptionalStaticType(
+			nil,
+			legacyRefType,
+		)
+
+		legacyOptType := &migrations.LegacyOptionalType{
+			OptionalStaticType: optType,
+		}
+
+		typeValue := interpreter.NewUnmeteredTypeValue(legacyOptType)
 
 		dictValue.Insert(
 			inter,
@@ -3167,8 +3176,8 @@ func TestRehash(t *testing.T) {
 
 		// Note: ID is in the old format
 		assert.Equal(t,
-			common.TypeID("auth&A.4200000000000000.Foo.Bar"),
-			legacyRefType.ID(),
+			common.TypeID("auth&A.4200000000000000.Foo.Bar?"),
+			legacyOptType.ID(),
 		)
 
 		storageMap := storage.GetStorageMap(
@@ -3289,12 +3298,17 @@ func TestRehash(t *testing.T) {
 			newCompositeType(),
 		)
 
-		typeValue := interpreter.NewUnmeteredTypeValue(refType)
+		optType := interpreter.NewOptionalStaticType(
+			nil,
+			refType,
+		)
+
+		typeValue := interpreter.NewUnmeteredTypeValue(optType)
 
 		// Note: ID is in the new format
 		assert.Equal(t,
-			common.TypeID("auth(A.4200000000000000.E)&A.4200000000000000.Foo.Bar"),
-			refType.ID(),
+			common.TypeID("(auth(A.4200000000000000.E)&A.4200000000000000.Foo.Bar)?"),
+			optType.ID(),
 		)
 
 		value, ok := dictValue.Get(inter, locationRange, typeValue)

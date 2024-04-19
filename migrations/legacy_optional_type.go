@@ -55,10 +55,8 @@ func (t *LegacyOptionalType) Encode(e *cbor.StreamEncoder) error {
 }
 
 func (t *LegacyOptionalType) Equal(other interpreter.StaticType) bool {
-	otherOptionalType, ok := other.(*LegacyOptionalType)
-	if !ok {
-		return false
+	if otherLegacy, ok := other.(*LegacyOptionalType); ok {
+		other = otherLegacy.OptionalStaticType
 	}
-
-	return t.Type.Equal(otherOptionalType.Type)
+	return t.OptionalStaticType.Equal(other)
 }

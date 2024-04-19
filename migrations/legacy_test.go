@@ -113,4 +113,20 @@ func TestLegacyEquality(t *testing.T) {
 			}),
 		)
 	})
+
+	t.Run("Optional type", func(t *testing.T) {
+		t.Parallel()
+
+		require.True(t,
+			(&LegacyOptionalType{
+				OptionalStaticType: &interpreter.OptionalStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			}).Equal(&LegacyOptionalType{
+				OptionalStaticType: &interpreter.OptionalStaticType{
+					Type: interpreter.PrimitiveStaticTypeInt,
+				},
+			}),
+		)
+	})
 }
