@@ -693,7 +693,7 @@ func (t *OptionalType) QualifiedString() string {
 }
 
 func FormatOptionalTypeID[T ~string](elementTypeID T) T {
-	return T(fmt.Sprintf("%s?", elementTypeID))
+	return T(fmt.Sprintf("(%s)?", elementTypeID))
 }
 
 func (t *OptionalType) ID() TypeID {
