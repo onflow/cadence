@@ -1180,7 +1180,7 @@ func TestCanSkipStaticTypeMigration(t *testing.T) {
 				optionalType := interpreter.NewOptionalStaticType(nil, ty)
 
 				actual := CanSkipStaticTypeMigration(optionalType)
-				assert.Equal(t, expected, actual)
+				assert.False(t, actual)
 			})
 
 			t.Run("variable-sized", func(t *testing.T) {

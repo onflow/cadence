@@ -2334,6 +2334,73 @@ func TestDomainsMigration(t *testing.T) {
 	})
 }
 
+func TestLegacyOptionalType(t *testing.T) {
+	t.Parallel()
+
+	test := func(
+		t *testing.T,
+		optionalType *interpreter.OptionalStaticType,
+		expectedTypeID common.TypeID,
+		expectedEncoding []byte,
+	) {
+
+		legacyRefType := &LegacyOptionalType{
+			OptionalStaticType: optionalType,
+		}
+
+		assert.Equal(t,
+			expectedTypeID,
+			legacyRefType.ID(),
+		)
+
+		var buf bytes.Buffer
+
+		encoder := cbor.NewStreamEncoder(&buf)
+		err := legacyRefType.Encode(encoder)
+		require.NoError(t, err)
+
+		err = encoder.Flush()
+		require.NoError(t, err)
+
+		assert.Equal(t, expectedEncoding, buf.Bytes())
+	}
+
+	t.Run("reference to optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		refType := interpreter.NewOptionalStaticType(
+			nil,
+			interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				interpreter.PrimitiveStaticTypeAnyStruct,
+			),
+		)
+
+		test(t,
+			refType,
+			"&AnyStruct?",
+			[]byte{
+				// tag
+				0xd8, interpreter.CBORTagOptionalStaticType,
+				// tag
+				0xd8, interpreter.CBORTagReferenceStaticType,
+				// array, 2 items follow
+				0x82,
+				// Unauthorized
+				0xd8, interpreter.CBORTagUnauthorizedStaticAuthorization,
+				// nil
+				0xf6,
+				// tag
+				0xd8, interpreter.CBORTagPrimitiveStaticType,
+				// AnyStruct,
+				byte(interpreter.PrimitiveStaticTypeAnyStruct),
+			},
+		)
+	})
+}
+
 func TestLegacyReferenceType(t *testing.T) {
 
 	t.Parallel()
