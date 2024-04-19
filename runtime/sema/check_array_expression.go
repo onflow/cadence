@@ -69,7 +69,7 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Ty
 		argumentTypes = make([]Type, elementCount)
 
 		for i, value := range expression.Values {
-			valueType := checker.VisitExpression(value, elementType)
+			valueType := checker.VisitExpression(value, expression, elementType)
 
 			argumentTypes[i] = valueType
 

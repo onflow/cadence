@@ -9674,8 +9674,9 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("function expression", func(t *testing.T) {
@@ -9703,8 +9704,9 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[1])
 	})
 
 	t.Run("array expression", func(t *testing.T) {
@@ -9729,9 +9731,37 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
             }
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[1])
 	})
 
+	t.Run("array expression map function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var f: fun(): Void = fun() {}
+
+                // ArrayExpression trick to capture the bound function
+                [r.sayHi].map(fun(element: fun(): Void): Void {
+                    f = element
+                })
+
+                f() // Bound resource method called here
+
+                destroy r
+            }  
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+	})
 }
 
 func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
