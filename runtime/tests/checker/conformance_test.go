@@ -218,9 +218,9 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		var conformanceErr *sema.ConformanceError
+		require.ErrorAs(t, errs[0], &conformanceErr)
 
-		conformanceErr := errs[0].(*sema.ConformanceError)
 		require.NotNil(t, conformanceErr.InitializerMismatch)
 		notes := conformanceErr.ErrorNotes()
 		require.Len(t, notes, 1)
@@ -238,19 +238,23 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-        access(all) resource interface I {
-            fun foo(): Int
-        }
+          access(all) resource interface I {
+              fun foo(): Int
+          }
 
-        access(all) resource R: I {
-        }
+          access(all) resource R: I {
+          }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.ConformanceError{}, errs[0])
-		conformanceErr := errs[0].(*sema.ConformanceError)
-		require.Equal(t, "`R` is missing definitions for members: `foo`", conformanceErr.SecondaryError())
+		var conformanceErr *sema.ConformanceError
+		require.ErrorAs(t, errs[0], &conformanceErr)
+
+		require.Equal(t,
+			"`R` is missing definitions for members: `foo`",
+			conformanceErr.SecondaryError(),
+		)
 	})
 
 	t.Run("2 missing member", func(t *testing.T) {
@@ -258,19 +262,23 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-        access(all) resource interface I {
-            fun foo(): Int
-            fun bar(): Int
-        }
+          access(all) resource interface I {
+              fun foo(): Int
+              fun bar(): Int
+          }
 
-        access(all) resource R: I {
-        }
+          access(all) resource R: I {
+          }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.ConformanceError{}, errs[0])
-		conformanceErr := errs[0].(*sema.ConformanceError)
-		require.Equal(t, "`R` is missing definitions for members: `foo`, `bar`", conformanceErr.SecondaryError())
+		var conformanceErr *sema.ConformanceError
+		require.ErrorAs(t, errs[0], &conformanceErr)
+
+		require.Equal(t,
+			"`R` is missing definitions for members: `foo`, `bar`",
+			conformanceErr.SecondaryError(),
+		)
 	})
 }

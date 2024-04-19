@@ -2702,7 +2702,10 @@ func TestCheckEntitlementInheritance(t *testing.T) {
             }
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		require.IsType(t, &sema.ConformanceError{}, errs[1])
 	})
 
 	t.Run("more expanded entitlements valid in disjunction", func(t *testing.T) {
@@ -2720,7 +2723,9 @@ func TestCheckEntitlementInheritance(t *testing.T) {
             }
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
 	t.Run("reduced entitlements valid with conjunction", func(t *testing.T) {
@@ -2741,7 +2746,10 @@ func TestCheckEntitlementInheritance(t *testing.T) {
             }
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		require.IsType(t, &sema.ConformanceError{}, errs[1])
 	})
 
 	t.Run("more reduced entitlements valid with conjunction", func(t *testing.T) {
@@ -2759,7 +2767,9 @@ func TestCheckEntitlementInheritance(t *testing.T) {
             }
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
 	t.Run("expanded entitlements invalid in conjunction", func(t *testing.T) {
@@ -2924,7 +2934,9 @@ func TestCheckEntitlementInheritance(t *testing.T) {
             }
         `)
 
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
 	t.Run("overlapped entitlements valid with conjunction/disjunction subtype", func(t *testing.T) {
@@ -2942,8 +2954,9 @@ func TestCheckEntitlementInheritance(t *testing.T) {
             }
         `)
 
-		// implementation is less specific because it only requires one, but interface guarantees both
-		assert.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
 	t.Run("different entitlements invalid", func(t *testing.T) {
@@ -2964,9 +2977,10 @@ func TestCheckEntitlementInheritance(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		require.IsType(t, &sema.ConformanceError{}, errs[1])
 	})
 
 	t.Run("default function entitlements", func(t *testing.T) {
@@ -5656,7 +5670,7 @@ func TestCheckEntitlementConditions(t *testing.T) {
 			access(X, Y) view fun foo(): Bool
 		}
 		resource interface J: I {
-			access(Y) view fun foo(): Bool
+			access(X, Y) view fun foo(): Bool
 		}
 		fun bar(r: @{J}): @{J} {
 			post {
