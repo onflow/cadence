@@ -367,3 +367,103 @@ func TestLegacyReferenceType(t *testing.T) {
 		)
 	})
 }
+
+func TestLegacyIntersectionType(t *testing.T) {
+	t.Parallel()
+
+	test := func(
+		t *testing.T,
+		intersectionType *interpreter.IntersectionStaticType,
+		expectedTypeID common.TypeID,
+		expectedEncoding []byte,
+	) {
+
+		legacyIntersectionType := &LegacyIntersectionType{
+			IntersectionStaticType: intersectionType,
+		}
+
+		assert.Equal(t,
+			expectedTypeID,
+			legacyIntersectionType.ID(),
+		)
+
+		var buf bytes.Buffer
+
+		encoder := cbor.NewStreamEncoder(&buf)
+		err := legacyIntersectionType.Encode(encoder)
+		require.NoError(t, err)
+
+		err = encoder.Flush()
+		require.NoError(t, err)
+
+		assert.Equal(t, expectedEncoding, buf.Bytes())
+	}
+
+	t.Run("unsorted", func(t *testing.T) {
+
+		t.Parallel()
+
+		fooType := interpreter.NewInterfaceStaticTypeComputeTypeID(
+			nil,
+			utils.TestLocation,
+			"Test.Foo",
+		)
+
+		barType := interpreter.NewInterfaceStaticTypeComputeTypeID(
+			nil,
+			utils.TestLocation,
+			"Test.Bar",
+		)
+
+		intersectionType := interpreter.NewIntersectionStaticType(
+			nil,
+			[]*interpreter.InterfaceStaticType{
+				fooType,
+				barType,
+			},
+		)
+
+		test(t,
+			intersectionType,
+			"{S.test.Test.Foo,S.test.Test.Bar}",
+			[]byte{
+				// tag
+				0xd8, interpreter.CBORTagIntersectionStaticType,
+				// array, length 2
+				0x82,
+				// nil
+				0xf6,
+				// array, length 2
+				0x82,
+				// tag
+				0xd8, interpreter.CBORTagInterfaceStaticType,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, interpreter.CBORTagStringLocation,
+				// UTF-8 string, length 4
+				0x64,
+				// t, e, s, t
+				0x74, 0x65, 0x73, 0x74,
+				// UTF-8 string, length 8
+				0x68,
+				// T, e, s, t, ., F, o, o
+				0x54, 0x65, 0x73, 0x74, 0x2e, 0x46, 0x6f, 0x6f,
+				// tag
+				0xd8, interpreter.CBORTagInterfaceStaticType,
+				// array, 2 items follow
+				0x82,
+				// tag
+				0xd8, interpreter.CBORTagStringLocation,
+				// UTF-8 string, length 4
+				0x64,
+				// t, e, s, t
+				0x74, 0x65, 0x73, 0x74,
+				// UTF-8 string, length 8
+				0x68,
+				// T, e, s, t, ., B, a, r
+				0x54, 0x65, 0x73, 0x74, 0x2e, 0x42, 0x61, 0x72,
+			},
+		)
+	})
+}
