@@ -569,11 +569,15 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkConformanceV1(
 	// NOTE 2: If one declaration is an enum, then other is also an enum at this stage.
 	// This is enforced by the validator (in `checkDeclarationUpdatability`), before calling this function.
 	if newDecl.Kind() == common.CompositeKindEnum {
-		err := oldConformances[0].CheckEqual(newDecl.Conformances[0], validator)
+		oldConformance := oldConformances[0]
+		newConformance := newDecl.Conformances[0]
+
+		err := oldConformance.CheckEqual(newConformance, validator)
 		if err != nil {
 			validator.report(&ConformanceMismatchError{
-				DeclName: newDecl.Identifier.Identifier,
-				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+				DeclName:           newDecl.Identifier.Identifier,
+				MissingConformance: oldConformance.String(),
+				Range:              ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
 			})
 		}
 
@@ -630,8 +634,9 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkConformanceV1(
 
 		if !found {
 			validator.report(&ConformanceMismatchError{
-				DeclName: newDecl.Identifier.Identifier,
-				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+				DeclName:           newDecl.Identifier.Identifier,
+				MissingConformance: oldConformance.String(),
+				Range:              ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
 			})
 
 			return
