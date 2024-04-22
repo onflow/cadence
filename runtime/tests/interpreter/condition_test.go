@@ -835,7 +835,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						// use the contract singleton, so it is loaded
 						testFunction = `
 					       access(all) fun test() {
-					            TestImpl
+					            TestImpl.NoOpFunc()
 					       }
                         `
 					} else {
@@ -878,6 +878,8 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
                                              emit Foo(x: x)
 					                     }
 					                 }
+
+					                 access(all) fun NoOpFunc() {}
 					             }
 
 					             %[2]s

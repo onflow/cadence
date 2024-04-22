@@ -73,7 +73,6 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Ty
 
 			argumentTypes[i] = valueType
 
-			checker.checkVariableMove(value)
 			checker.checkResourceMoveOperation(value, valueType)
 		}
 	}

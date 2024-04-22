@@ -110,7 +110,6 @@ func (checker *Checker) checkAssignment(
 	}
 
 	checker.enforceViewAssignment(assignment, target)
-	checker.checkVariableMove(value)
 
 	checker.recordResourceInvalidation(
 		value,

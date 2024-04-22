@@ -41,7 +41,6 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 		return InvalidType
 	}
 
-	checker.checkVariableMove(baseExpression)
 	checker.checkResourceMoveOperation(baseExpression, attachmentType)
 
 	// check that the attachment type is a valid attachment,
