@@ -6943,7 +6943,7 @@ func formatReferenceType[T ~string](
 ) string {
 	var builder strings.Builder
 
-	// authorization of "true" and "false" are old versions of the ReferenceType
+	// authorization of "true" and "false" are old versions of the ReferenceType <= v0.42.0
 	if authorization == "true" {
 		builder.WriteString("auth" + separator)
 	} else if authorization != "" && authorization != "false" {

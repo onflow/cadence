@@ -1566,7 +1566,6 @@ func (e EntitlementMapAuthorization) Equal(other Authorization) bool {
 	return e.TypeID == auth.TypeID
 }
 
-
 // ReferenceType
 
 type ReferenceType struct {
@@ -1607,7 +1606,6 @@ func (t *ReferenceType) ID() string {
 		t.Type.ID(),
 	)
 }
-
 
 func (t *ReferenceType) Equal(other Type) bool {
 	otherType, ok := other.(*ReferenceType)

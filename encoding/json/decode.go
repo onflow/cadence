@@ -128,7 +128,7 @@ const (
 	addressKey           = "address"
 	pathKey              = "path"
 	authorizationKey     = "authorization"
-	authorizedKey 		 = "authorized" // deprecated. please use authorizationKey
+	authorizedKey        = "authorized" // deprecated. please use entitlementsKey
 	entitlementsKey      = "entitlements"
 	sizeKey              = "size"
 	typeIDKey            = "typeID"
@@ -146,34 +146,6 @@ const (
 	endKey               = "end"
 	stepKey              = "step"
 )
-
-// const (
-// 	typeKey           = "type"
-// 	kindKey           = "kind"
-// 	valueKey          = "value"
-// 	keyKey            = "key"
-// 	nameKey           = "name"
-// 	fieldsKey         = "fields"
-// 	initializersKey   = "initializers"
-// 	idKey             = "id"
-// 	targetPathKey     = "targetPath"
-// 	borrowTypeKey     = "borrowType"
-// 	domainKey         = "domain"
-// 	identifierKey     = "identifier"
-// 	staticTypeKey     = "staticType"
-// 	addressKey        = "address"
-// 	pathKey           = "path"
-// 	authorizedKey     = "authorized"
-// 	sizeKey           = "size"
-// 	typeIDKey         = "typeID"
-// 	restrictionsKey   = "restrictions"
-// 	labelKey          = "label"
-// 	parametersKey     = "parameters"
-// 	typeParametersKey = "typeParameters"
-// 	returnKey         = "return"
-// 	typeBoundKey      = "typeBound"
-// 	functionTypeKey   = "functionType"
-// )
 
 func (d *Decoder) DecodeJSON(v any) cadence.Value {
 	obj := toObject(v)
