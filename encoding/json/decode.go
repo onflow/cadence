@@ -128,9 +128,11 @@ const (
 	addressKey           = "address"
 	pathKey              = "path"
 	authorizationKey     = "authorization"
+	authorizedKey 		 = "authorized" // deprecated. please use authorizationKey
 	entitlementsKey      = "entitlements"
 	sizeKey              = "size"
 	typeIDKey            = "typeID"
+	restrictionsKey      = "restrictions" // deprecated. please use entitlementsKey
 	intersectionTypesKey = "types"
 	labelKey             = "label"
 	parametersKey        = "parameters"
@@ -144,6 +146,34 @@ const (
 	endKey               = "end"
 	stepKey              = "step"
 )
+
+// const (
+// 	typeKey           = "type"
+// 	kindKey           = "kind"
+// 	valueKey          = "value"
+// 	keyKey            = "key"
+// 	nameKey           = "name"
+// 	fieldsKey         = "fields"
+// 	initializersKey   = "initializers"
+// 	idKey             = "id"
+// 	targetPathKey     = "targetPath"
+// 	borrowTypeKey     = "borrowType"
+// 	domainKey         = "domain"
+// 	identifierKey     = "identifier"
+// 	staticTypeKey     = "staticType"
+// 	addressKey        = "address"
+// 	pathKey           = "path"
+// 	authorizedKey     = "authorized"
+// 	sizeKey           = "size"
+// 	typeIDKey         = "typeID"
+// 	restrictionsKey   = "restrictions"
+// 	labelKey          = "label"
+// 	parametersKey     = "parameters"
+// 	typeParametersKey = "typeParameters"
+// 	returnKey         = "return"
+// 	typeBoundKey      = "typeBound"
+// 	functionTypeKey   = "functionType"
+// )
 
 func (d *Decoder) DecodeJSON(v any) cadence.Value {
 	obj := toObject(v)
@@ -1266,6 +1296,14 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.gauge,
 			d.decodeType(obj.Get(typeKey), results),
 		)
+	case "Restriction":
+		restrictionsValue := obj.Get(restrictionsKey)
+		typeValue := obj.Get(typeKey)
+		return d.decodeRestrictedType(
+			typeValue,
+			toSlice(restrictionsValue),
+			results,
+		)
 	case "VariableSizedArray":
 		return cadence.NewMeteredVariableSizedArrayType(
 			d.gauge,
@@ -1337,6 +1375,25 @@ func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 		d.decodeUInt64(obj.Get(idKey)),
 		d.decodeAddress(obj.Get(addressKey)),
 		d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
+	)
+}
+
+func (d *Decoder) decodeRestrictedType(
+	typeValue any,
+	restrictionsValue []any,
+	results typeDecodingResults,
+) cadence.Type {
+	typ := d.decodeType(typeValue, results)
+
+	restrictions := make([]cadence.Type, 0, len(restrictionsValue))
+	for _, restriction := range restrictionsValue {
+		restrictions = append(restrictions, d.decodeType(restriction, results))
+	}
+
+	return cadence.NewMeteredRestrictedType(
+		d.gauge,
+		typ,
+		restrictions,
 	)
 }
 

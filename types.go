@@ -1616,6 +1616,103 @@ func (t *ReferenceType) Equal(other Type) bool {
 		t.Type.Equal(otherType.Type)
 }
 
+// RestrictedType
+// Deprecated: here for backwards compatibility
+type RestrictedType struct {
+	typeID             string
+	Type               Type
+	Restrictions       []Type
+	restrictionSet     RestrictionSet
+	restrictionSetOnce sync.Once
+}
+
+func NewRestrictedType(
+	typ Type,
+	restrictions []Type,
+) *RestrictedType {
+	return &RestrictedType{
+		Type:         typ,
+		Restrictions: restrictions,
+	}
+}
+
+func NewMeteredRestrictedType(
+	gauge common.MemoryGauge,
+	typ Type,
+	restrictions []Type,
+) *RestrictedType {
+	common.UseMemory(gauge, common.CadenceRestrictedTypeMemoryUsage)
+	return NewRestrictedType(typ, restrictions)
+}
+
+func (*RestrictedType) isType() {}
+
+func (t *RestrictedType) ID() string {
+	if t.typeID == "" {
+		var restrictionStrings []string
+		restrictionCount := len(t.Restrictions)
+		if restrictionCount > 0 {
+			restrictionStrings = make([]string, 0, restrictionCount)
+			for _, restriction := range t.Restrictions {
+				restrictionStrings = append(restrictionStrings, restriction.ID())
+			}
+		}
+		var typeString string
+		if t.Type != nil {
+			typeString = t.Type.ID()
+		}
+		t.typeID = sema.FormatRestrictedTypeID(typeString, restrictionStrings)
+	}
+	return t.typeID
+}
+
+func (t *RestrictedType) Equal(other Type) bool {
+	otherType, ok := other.(*RestrictedType)
+	if !ok {
+		return false
+	}
+
+	if t.Type == nil && otherType.Type != nil {
+		return false
+	}
+	if t.Type != nil && otherType.Type == nil {
+		return false
+	}
+	if t.Type != nil && !t.Type.Equal(otherType.Type) {
+		return false
+	}
+
+	restrictionSet := t.RestrictionSet()
+	otherRestrictionSet := otherType.RestrictionSet()
+
+	if len(restrictionSet) != len(otherRestrictionSet) {
+		return false
+	}
+
+	for restriction := range restrictionSet { //nolint:maprange
+		_, ok := otherRestrictionSet[restriction]
+		if !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (t *RestrictedType) initializeRestrictionSet() {
+	t.restrictionSetOnce.Do(func() {
+		t.restrictionSet = make(RestrictionSet, len(t.Restrictions))
+		for _, restriction := range t.Restrictions {
+			t.restrictionSet[restriction] = struct{}{}
+		}
+	})
+}
+
+func (t *RestrictedType) RestrictionSet() RestrictionSet {
+	t.initializeRestrictionSet()
+	return t.restrictionSet
+}
+
 // IntersectionType
 
 type IntersectionSet = map[Type]struct{}
