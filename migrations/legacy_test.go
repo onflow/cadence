@@ -58,12 +58,11 @@ func TestLegacyEquality(t *testing.T) {
 	t.Run("Intersection type", func(t *testing.T) {
 		t.Parallel()
 
-		fooQualifiedIdentifier := "Test.Foo"
-		fooType := &interpreter.InterfaceStaticType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: fooQualifiedIdentifier,
-			TypeID:              utils.TestLocation.TypeID(nil, fooQualifiedIdentifier),
-		}
+		fooType := interpreter.NewInterfaceStaticTypeComputeTypeID(
+			nil,
+			utils.TestLocation,
+			"Test.Foo",
+		)
 
 		require.True(t,
 			(&LegacyIntersectionType{
