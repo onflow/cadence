@@ -696,7 +696,7 @@ func (*ConformanceMismatchError) IsUserError() {}
 
 func (e *ConformanceMismatchError) Error() string {
 	return fmt.Sprintf(
-		"conformances does not match in `%s`: missing `%s`",
+		"conformances do not match in `%s`: missing `%s`",
 		e.DeclName,
 		e.MissingConformance,
 	)
