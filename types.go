@@ -1565,6 +1565,7 @@ func (e EntitlementMapAuthorization) Equal(other Authorization) bool {
 	return e.TypeID == auth.TypeID
 }
 
+
 // ReferenceType
 
 type ReferenceType struct {
@@ -1614,6 +1615,55 @@ func (t *ReferenceType) Equal(other Type) bool {
 	}
 
 	return t.Authorization.Equal(otherType.Authorization) &&
+		t.Type.Equal(otherType.Type)
+}
+
+// DeprecatedReferenceType
+// Deprecated: here for backwards compatibility
+
+type DeprecatedReferenceType struct {
+	Type       Type
+	Authorized bool
+	typeID     string
+}
+
+var _ Type = &DeprecatedReferenceType{}
+
+func NewDeprecatedReferenceType(
+	authorized bool,
+	typ Type,
+) *DeprecatedReferenceType {
+	return &DeprecatedReferenceType{
+		Authorized: authorized,
+		Type:       typ,
+	}
+}
+
+func NewDeprecatedMeteredReferenceType(
+	gauge common.MemoryGauge,
+	authorized bool,
+	typ Type,
+) *DeprecatedReferenceType {
+	common.UseMemory(gauge, common.CadenceReferenceTypeMemoryUsage)
+	return NewDeprecatedReferenceType(authorized, typ)
+}
+
+func (*DeprecatedReferenceType) isType() {}
+
+func (t *DeprecatedReferenceType) ID() string {
+	if t.typeID == "" {
+		t.typeID = sema.FormatReferenceTypeID(t.Authorized, t.Type.ID())
+	}
+	return t.typeID
+}
+
+func (t *DeprecatedReferenceType) Equal(other Type) bool {
+	otherType, ok := other.(*DeprecatedReferenceType)
+	if !ok {
+		return false
+	}
+
+	return t.Authorized == otherType.Authorized &&
 		t.Type.Equal(otherType.Type)
 }
 
