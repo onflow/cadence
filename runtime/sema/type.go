@@ -8832,6 +8832,28 @@ func (t *CapabilityType) initializeMemberResolvers() {
 	})
 }
 
+// RestrictedType helpers for backwards compatibility
+
+func formatRestrictedType(separator string, typeString string, restrictionStrings []string) string {
+	var result strings.Builder
+	result.WriteString(typeString)
+	result.WriteByte('{')
+	for i, restrictionString := range restrictionStrings {
+		if i > 0 {
+			result.WriteByte(',')
+			result.WriteString(separator)
+		}
+		result.WriteString(restrictionString)
+	}
+	result.WriteByte('}')
+	return result.String()
+}
+
+func FormatRestrictedTypeID(typeString string, restrictionStrings []string) string {
+	return formatRestrictedType("", typeString, restrictionStrings)
+}
+
+
 const AccountKeyTypeName = "AccountKey"
 const AccountKeyKeyIndexFieldName = "keyIndex"
 const AccountKeyPublicKeyFieldName = "publicKey"
