@@ -30,7 +30,7 @@ import (
 )
 
 type CadenceV042ToV1ContractUpdateValidator struct {
-	TypeComparator
+	*TypeComparator
 
 	newElaborations                          map[common.Location]*sema.Elaboration
 	currentRestrictedTypeUpgradeRestrictions []*ast.NominalType
@@ -65,6 +65,7 @@ func NewCadenceV042ToV1ContractUpdateValidator(
 	return &CadenceV042ToV1ContractUpdateValidator{
 		underlyingUpdateValidator: underlyingValidator,
 		newElaborations:           newElaborations,
+		TypeComparator:            underlyingValidator.TypeComparator,
 	}
 }
 
@@ -633,9 +634,11 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkConformanceV1(
 		}
 
 		if !found {
+			oldConformanceID := validator.underlyingUpdateValidator.oldTypeID(oldConformance)
+
 			validator.report(&ConformanceMismatchError{
 				DeclName:           newDecl.Identifier.Identifier,
-				MissingConformance: oldConformance.String(),
+				MissingConformance: string(oldConformanceID),
 				Range:              ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
 			})
 

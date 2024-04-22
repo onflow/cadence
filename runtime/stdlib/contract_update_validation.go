@@ -56,7 +56,7 @@ type checkConformanceFunc func(
 )
 
 type ContractUpdateValidator struct {
-	TypeComparator
+	*TypeComparator
 
 	location                     common.Location
 	contractName                 string
@@ -89,6 +89,7 @@ func NewContractUpdateValidator(
 		contractName:                 contractName,
 		accountContractNamesProvider: accountContractNamesProvider,
 		importLocations:              map[ast.Identifier]common.Location{},
+		TypeComparator:               &TypeComparator{},
 	}
 }
 
@@ -324,6 +325,15 @@ func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
 	})
 }
 
+func (validator *ContractUpdateValidator) oldTypeID(oldType *ast.NominalType) common.TypeID {
+	oldImportLocation := validator.expectedIdentifierImportLocations[oldType.Identifier.Identifier]
+	qualifiedIdentifier := oldType.String()
+	if oldImportLocation == nil {
+		return common.TypeID(qualifiedIdentifier)
+	}
+	return oldImportLocation.TypeID(nil, qualifiedIdentifier)
+}
+
 func checkNestedDeclarations(
 	validator UpdateValidator,
 	oldDeclaration ast.Declaration,
@@ -506,9 +516,11 @@ func (validator *ContractUpdateValidator) checkConformance(
 		}
 
 		if !found {
+			oldConformanceID := validator.oldTypeID(oldConformance)
+
 			validator.report(&ConformanceMismatchError{
 				DeclName:           newDecl.Identifier.Identifier,
-				MissingConformance: oldConformance.String(),
+				MissingConformance: string(oldConformanceID),
 				Range:              ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
 			})
 
