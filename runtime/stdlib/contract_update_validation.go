@@ -507,8 +507,9 @@ func (validator *ContractUpdateValidator) checkConformance(
 
 		if !found {
 			validator.report(&ConformanceMismatchError{
-				DeclName: newDecl.Identifier.Identifier,
-				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+				DeclName:           newDecl.Identifier.Identifier,
+				MissingConformance: oldConformance.String(),
+				Range:              ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
 			})
 
 			return
@@ -684,7 +685,8 @@ func (e *InvalidDeclarationKindChangeError) Error() string {
 // ConformanceMismatchError is reported during a contract update, when the enum conformance of the new program
 // does not match the existing one.
 type ConformanceMismatchError struct {
-	DeclName string
+	DeclName           string
+	MissingConformance string
 	ast.Range
 }
 
@@ -693,7 +695,11 @@ var _ errors.UserError = &ConformanceMismatchError{}
 func (*ConformanceMismatchError) IsUserError() {}
 
 func (e *ConformanceMismatchError) Error() string {
-	return fmt.Sprintf("conformances does not match in `%s`", e.DeclName)
+	return fmt.Sprintf(
+		"conformances does not match in `%s`: missing `%s`",
+		e.DeclName,
+		e.MissingConformance,
+	)
 }
 
 // EnumCaseMismatchError is reported during an enum update, when an updated enum case
