@@ -110,6 +110,7 @@ const (
 
 	// Cadence Types
 	MemoryKindCadenceOptionalType
+	MemoryKindCadenceRestrictedType
 	MemoryKindCadenceVariableSizedArrayType
 	MemoryKindCadenceConstantSizedArrayType
 	MemoryKindCadenceDictionaryType
