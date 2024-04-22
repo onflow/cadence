@@ -21,6 +21,7 @@ package cadence
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -1652,7 +1653,8 @@ func (*DeprecatedReferenceType) isType() {}
 
 func (t *DeprecatedReferenceType) ID() string {
 	if t.typeID == "" {
-		t.typeID = sema.FormatDeprecatedReferenceTypeID(t.Authorized, t.Type.ID())
+		// convert the bool to a string for backwards compatability 
+		t.typeID = sema.FormatReferenceTypeID(strconv.FormatBool(t.Authorized), t.Type.ID())
 	}
 	return t.typeID
 }

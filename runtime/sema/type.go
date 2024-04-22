@@ -6942,38 +6942,22 @@ func formatReferenceType[T ~string](
 	typeString T,
 ) string {
 	var builder strings.Builder
-	if authorization != "" {
-		builder.WriteString("auth(")
-		builder.WriteString(string(authorization))
-		builder.WriteString(")")
-		builder.WriteString(separator)
+
+	// authorization of "true" and "false" are old versions of the ReferenceType
+	if authorization == "true" {
+		builder.WriteString("auth" + separator)
+	} else if authorization != "" && authorization != "false" {
+		builder.WriteString("auth(" + string(authorization) + ")" + separator)
 	}
+
 	builder.WriteByte('&')
 	builder.WriteString(string(typeString))
+
 	return builder.String()
 }
 
 func FormatReferenceTypeID[T ~string](authorization T, borrowTypeID T) T {
 	return T(formatReferenceType("", authorization, borrowTypeID))
-}
-
-func formatDeprecatedReferenceType(
-	separator string,
-	authorized bool,
-	typeString string,
-) string {
-	var builder strings.Builder
-	if authorized {
-		builder.WriteString("auth")
-		builder.WriteString(separator)
-	}
-	builder.WriteByte('&')
-	builder.WriteString(typeString)
-	return builder.String()
-}
-
-func FormatDeprecatedReferenceTypeID(authorized bool, typeString string) string {
-	return formatDeprecatedReferenceType("", authorized, typeString)
 }
 
 func (t *ReferenceType) String() string {

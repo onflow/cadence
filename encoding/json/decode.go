@@ -1336,9 +1336,9 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 	case "Reference":
 		// Backwards-compatibility for format <=v0.42.0:
 		if _, hasKey := obj[authorizedKey]; hasKey {
-			return cadence.NewMeteredReferenceType(
+			return cadence.NewDeprecatedMeteredReferenceType(
 				d.gauge,
-				d.decodeAuthorization(obj.Get(authorizedKey)),
+				obj.GetBool(authorizedKey),
 				d.decodeType(obj.Get(typeKey), results),
 			)
 		}
