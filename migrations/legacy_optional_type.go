@@ -21,37 +21,19 @@ package migrations
 import (
 	"fmt"
 
-	"github.com/fxamacker/cbor/v2"
-
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-// LegacyOptionalType simulates the old reference type with the old typeID generation.
+// LegacyOptionalType simulates the old optional type with the old typeID generation.
 type LegacyOptionalType struct {
 	*interpreter.OptionalStaticType
 }
 
 var _ interpreter.StaticType = &LegacyOptionalType{}
 
-func FormatOptionalTypeID[T ~string](elementTypeID T) T {
-	return T(fmt.Sprintf("%s?", elementTypeID))
-}
-
 func (t *LegacyOptionalType) ID() common.TypeID {
-	return FormatOptionalTypeID(t.Type.ID())
-}
-
-func (t *LegacyOptionalType) Encode(e *cbor.StreamEncoder) error {
-	err := e.EncodeRawBytes([]byte{
-		// tag number
-		0xd8, interpreter.CBORTagOptionalStaticType,
-	})
-	if err != nil {
-		return err
-	}
-
-	return t.Type.Encode(e)
+	return common.TypeID(fmt.Sprintf("%s?", t.Type.ID()))
 }
 
 func (t *LegacyOptionalType) Equal(other interpreter.StaticType) bool {
