@@ -1606,6 +1606,7 @@ func (t *ReferenceType) ID() string {
 	)
 }
 
+
 func (t *ReferenceType) Equal(other Type) bool {
 	otherType, ok := other.(*ReferenceType)
 	if !ok {
