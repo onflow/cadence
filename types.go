@@ -1651,7 +1651,7 @@ func (*DeprecatedReferenceType) isType() {}
 
 func (t *DeprecatedReferenceType) ID() string {
 	if t.typeID == "" {
-		// convert the bool to a string for backwards compatability
+		// convert the bool to a string for backwards compatibility
 		t.typeID = sema.FormatReferenceTypeID(strconv.FormatBool(t.Authorized), t.Type.ID())
 	}
 	return t.typeID
