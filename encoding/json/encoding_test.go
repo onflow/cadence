@@ -3026,7 +3026,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 func TestDecodeDeprecatedTypes(t *testing.T) {
 
-	t.Run("with static &int with deprecated reference", func(t *testing.T) {
+	t.Run("with static reference type", func(t *testing.T) {
 		testDecode(
 			t,
 			// language=json
@@ -3053,7 +3053,7 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 		)
 	})
 
-	t.Run("with static &int with deprecated entitlement", func(t *testing.T) {
+	t.Run("with static restricted type", func(t *testing.T) {
 		testDecode(
 			t,
 			// language=json
@@ -3062,18 +3062,25 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
                 "type": "Type",
                 "value": {
                   "staticType": {
-                    "kind": "Reference",
+                    "kind": "Restriction",
+                    "typeID": "Int{String}",
                     "type": {
                       "kind": "Int"
                     },
-                    "authorized": false
+                    "restrictions": [
+                      {
+                        "kind": "String"
+                      }
+                    ]
                   }
                 }
               }
             `,
 			cadence.TypeValue{
-				StaticType: &cadence.DeprecatedReferenceType{
-					Authorized: false,
+				StaticType: &cadence.RestrictedType{
+					Restrictions: []cadence.Type{
+						cadence.StringType,
+					},
 					Type: cadence.IntType,
 				},
 			},
