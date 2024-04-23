@@ -323,6 +323,10 @@ func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType inte
 		if convertedInnerType != nil {
 			return interpreter.NewOptionalStaticType(nil, convertedInnerType)
 		}
+		// NOTE: force re-storing/re-encoding of optional types,
+		// even if the inner type has not changed,
+		// as the type ID generation of optional types has changed
+		return staticType
 
 	case *interpreter.ReferenceStaticType:
 		// TODO: Reference of references must not be allowed?
