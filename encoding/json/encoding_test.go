@@ -3024,6 +3024,64 @@ func TestDecodeFixedPoints(t *testing.T) {
 	})
 }
 
+func TestDecodeDeprecatedTypes(t *testing.T) {
+
+	t.Run("with static &int with deprecated reference", func(t *testing.T) {
+		testDecode(
+			t,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Reference",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "authorized": false
+                  }
+                }
+              }
+            `,
+			cadence.TypeValue{
+				StaticType: &cadence.DeprecatedReferenceType{
+					Authorized: false,
+					Type: cadence.IntType,
+				},
+			},
+		)
+
+	t.Run("with static &int with deprecated entitlement", func(t *testing.T) {
+		testDecode(
+			t,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Reference",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "authorized": false
+                  }
+                }
+              }
+            `,
+			cadence.TypeValue{
+				StaticType: &cadence.DeprecatedReferenceType{
+					Authorized: false,
+					Type: cadence.IntType,
+				},
+			},
+		)
+
+	})
+
+}
+
 func TestExportRecursiveType(t *testing.T) {
 
 	t.Parallel()
