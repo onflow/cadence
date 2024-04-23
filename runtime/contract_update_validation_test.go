@@ -1326,7 +1326,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
-		assertConformanceMismatchError(t, cause, "Foo")
+		assertConformanceMismatchError(t, cause, "Foo", "UInt8")
 	})
 
 	testWithValidators(t, "change nested interface", func(t *testing.T, withC1Upgrade bool) {
@@ -2452,11 +2452,13 @@ func assertConformanceMismatchError(
 	t *testing.T,
 	err error,
 	erroneousDeclName string,
+	missingConformance string,
 ) {
 	var conformanceMismatchError *stdlib.ConformanceMismatchError
 	require.ErrorAs(t, err, &conformanceMismatchError)
 
 	assert.Equal(t, erroneousDeclName, conformanceMismatchError.DeclName)
+	assert.Equal(t, missingConformance, conformanceMismatchError.MissingConformance)
 }
 
 func assertEnumCaseMismatchError(t *testing.T, err error, expectedEnumCase string, foundEnumCase string) {
@@ -2593,7 +2595,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		assertExtraneousFieldError(t, cause, "Foo", "name")
 	})
 
-	testWithValidators(t, "Removing conformance", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Removing conformance, one", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2631,7 +2633,66 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
-		assertConformanceMismatchError(t, cause, "Foo")
+
+		assertConformanceMismatchError(t, cause, "Foo", "Bar")
+	})
+
+	testWithValidators(t, "Removing conformance, multiple", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+            access(all)
+            contract Test {
+
+                access(all) var a: Foo
+
+                init() {
+                    self.a = Foo()
+                }
+
+                access(all)
+                struct Foo: Bar, Baz, Blub {
+                    init() {}
+                }
+
+                access(all)
+                struct interface Bar {}
+                access(all)
+                struct interface Baz {}
+                access(all)
+                struct interface Blub {}
+            }
+        `
+
+		const newCode = `
+            access(all)
+            contract Test {
+                access(all)
+                var a: Foo
+
+                init() {
+                    self.a = Foo()
+                }
+
+                access(all)
+                struct Foo: Bar {
+                    init() {}
+                }
+
+                access(all)
+                struct interface Bar {}
+                access(all)
+                struct interface Baz {}
+                access(all)
+                struct interface Blub {}
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		RequireError(t, err)
+
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+
+		assertConformanceMismatchError(t, cause, "Foo", "Baz")
 	})
 
 	testWithValidators(t, "Change conformance order", func(t *testing.T, withC1Upgrade bool) {
