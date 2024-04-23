@@ -137,7 +137,7 @@ func TestIntersectionTypeMigration(t *testing.T) {
 		// optional
 		"optional_primitive": {
 			storedType:   interpreter.NewOptionalStaticType(nil, stringType),
-			expectedType: nil,
+			expectedType: interpreter.NewOptionalStaticType(nil, stringType),
 		},
 		"optional_intersection_with_one_interface": {
 			storedType: interpreter.NewOptionalStaticType(
