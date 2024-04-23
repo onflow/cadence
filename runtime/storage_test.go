@@ -5725,103 +5725,158 @@ func TestRuntimeStorageReferenceBoundFunction(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	t.Run("resource", func(t *testing.T) {
 
-	signerAddress := common.MustBytesToAddress([]byte{0x42})
+		runtime := NewTestInterpreterRuntime()
 
-	deployTx := DeploymentTransaction("Test", []byte(`
-      access(all) contract Test {
+		signerAddress := common.MustBytesToAddress([]byte{0x42})
 
-          access(all) resource R {
-              access(all) fun foo() {}
-          }
+		deployTx := DeploymentTransaction("Test", []byte(`
+            access(all) contract Test {
 
-          access(all) fun createR(): @R {
-              return <-create R()
-          }
-      }
-    `))
+                access(all) resource R {
+                    access(all) fun foo() {}
+                }
 
-	accountCodes := map[Location][]byte{}
-	var events []cadence.Event
-	var loggedMessages []string
+                access(all) fun createR(): @R {
+                    return <-create R()
+                }
+            }
+        `))
 
-	runtimeInterface := &TestRuntimeInterface{
-		Storage: NewTestLedger(nil, nil),
-		OnGetSigningAccounts: func() ([]Address, error) {
-			return []Address{signerAddress}, nil
-		},
-		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-			accountCodes[location] = code
-			return nil
-		},
-		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-			code = accountCodes[location]
-			return code, nil
-		},
-		OnEmitEvent: func(event cadence.Event) error {
-			events = append(events, event)
-			return nil
-		},
-		OnProgramLog: func(message string) {
-			loggedMessages = append(loggedMessages, message)
-		},
-	}
+		accountCodes := map[Location][]byte{}
+		var events []cadence.Event
+		var loggedMessages []string
 
-	nextTransactionLocation := NewTransactionLocationGenerator()
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{signerAddress}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				code = accountCodes[location]
+				return code, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			OnProgramLog: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
 
-	// Deploy contract
+		nextTransactionLocation := NewTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: deployTx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
+		// Deploy contract
 
-	// Run test transaction
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
 
-	const testTx = `
-      import Test from 0x42
+		// Run test transaction
 
-      transaction {
-          prepare(signer: auth(Storage) &Account) {
-              signer.storage.save(<-Test.createR(), to: /storage/r)
+		const testTx = `
+            import Test from 0x42
 
-              let ref = signer.storage.borrow<&Test.R>(from: /storage/r)!
+            transaction {
+                prepare(signer: auth(Storage) &Account) {
+                    signer.storage.save(<-Test.createR(), to: /storage/r)
 
-              var func = ref.foo
+                    let ref = signer.storage.borrow<&Test.R>(from: /storage/r)!
 
-              let r <- signer.storage.load<@Test.R>(from: /storage/r)!
+                    var func = ref.foo
 
-              // Should be OK
-              func()
+                    let r <- signer.storage.load<@Test.R>(from: /storage/r)!
 
-              destroy r
+                    // Should be OK
+                    func()
 
-              // Should fail!
-              func()
-          }
-      }
-    `
+                    destroy r
 
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: []byte(testTx),
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
+                    // Should fail!
+                    func()
+                }
+            }
+        `
 
-	RequireError(t, err)
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: []byte(testTx),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.ReferencedValueChangedError{})
+	})
+
+	t.Run("struct", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := NewTestInterpreterRuntimeWithAttachments()
+
+		tx := []byte(`
+            transaction {
+
+               prepare(signer: auth(Storage, Capabilities) &Account) {
+
+                  signer.storage.save([] as [AnyStruct], to: /storage/zombieArray)
+                  var borrowed = signer.storage.borrow<auth(Mutate) &[AnyStruct]>(from: /storage/zombieArray)!
+
+                  var x: [Int] = []
+
+                  var appendFunc = borrowed.append
+
+                  // If we were to call appendFunc() here, we wouldn't see a big effect as the
+                  // next load() call  will remove the array from storage
+                  var throwaway = signer.storage.load<[AnyStruct]>(from: /storage/zombieArray)
+
+                  // Should be an error, since the value was moved out.
+                  appendFunc(x)
+               }
+            }
+        `)
+
+		signer := common.MustBytesToAddress([]byte{0x1})
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{signer}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: tx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			})
+
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.ReferencedValueChangedError{})
+	})
 }
 
 func TestRuntimeStorageReferenceAccess(t *testing.T) {

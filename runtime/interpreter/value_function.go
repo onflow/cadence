@@ -330,7 +330,7 @@ type BoundFunctionValue struct {
 	Base               *EphemeralReferenceValue
 	Self               *Value
 	BoundAuthorization Authorization
-	selfRef            *EphemeralReferenceValue
+	selfRef            ReferenceValue
 }
 
 var _ Value = BoundFunctionValue{}
@@ -353,8 +353,8 @@ func NewBoundFunctionValue(
 
 	// Since 'self' work as an implicit reference, create an explicit one and hold it.
 	// This reference is later used to check the validity of the referenced value/resource.
-	var selfRef *EphemeralReferenceValue
-	if reference, isReference := (*self).(*EphemeralReferenceValue); isReference {
+	var selfRef ReferenceValue
+	if reference, isReference := (*self).(ReferenceValue); isReference {
 		// For attachments, 'self' is already a reference.
 		// So no need to create a reference again.
 		selfRef = reference
@@ -413,10 +413,40 @@ func (f BoundFunctionValue) invoke(invocation Invocation) Value {
 	invocation.Base = f.Base
 	invocation.BoundAuthorization = f.BoundAuthorization
 
+	locationRange := invocation.LocationRange
+	inter := invocation.Interpreter
+
 	// Check if the 'self' is not invalidated.
-	invocation.Interpreter.checkInvalidatedResourceOrResourceReference(f.selfRef, invocation.LocationRange)
+	if storageRef, isStorageRef := f.selfRef.(*StorageReferenceValue); isStorageRef {
+		inter.checkInvalidatedStorageReference(storageRef, locationRange)
+	} else {
+		inter.checkInvalidatedResourceOrResourceReference(f.selfRef, locationRange)
+	}
 
 	return f.Function.invoke(invocation)
+}
+
+// checkInvalidatedStorageReference checks whether a storage reference is valid, by
+// comparing the referenced-value against the cached-referenced-value.
+// A storage reference can be invalid for both resources and non-resource values.
+func (interpreter *Interpreter) checkInvalidatedStorageReference(
+	storageRef *StorageReferenceValue,
+	locationRange LocationRange,
+) {
+
+	referencedValue := storageRef.ReferencedValue(
+		interpreter,
+		locationRange,
+		true,
+	)
+
+	// `storageRef.ReferencedValue` above already checks for the type validity, if it's not nil.
+	// If nil, that means the value has been moved out of storage.
+	if referencedValue == nil {
+		panic(ReferencedValueChangedError{
+			locationRange,
+		})
+	}
 }
 
 func (f BoundFunctionValue) ConformsToStaticType(
