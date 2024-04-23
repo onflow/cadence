@@ -519,17 +519,21 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	require.Len(t, storage.events, 3)
 
-	assert.EqualValues(t,
-		stdlib.AccountCreatedEventType.ID(),
+	assert.Equal(t,
+		string(stdlib.AccountCreatedEventType.ID()),
 		storage.events[0].Type().ID(),
 	)
 
 	key0AddedEvent := storage.events[1]
 	key1AddedEvent := storage.events[2]
 
-	assert.EqualValues(t,
-		stdlib.AccountKeyAddedFromPublicKeyEventType.ID(),
+	assert.Equal(t,
+		string(stdlib.AccountKeyAddedFromPublicKeyEventType.ID()),
 		key0AddedEvent.Type().ID(),
+	)
+	assert.Equal(t,
+		string(stdlib.AccountKeyAddedFromPublicKeyEventType.ID()),
+		key1AddedEvent.Type().ID(),
 	)
 
 	// key weight
@@ -538,19 +542,48 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 	key1Weight, err := cadence.NewUFix64("0.0")
 	require.NoError(t, err)
 
-	assert.EqualValues(t, key0Weight, key0AddedEvent.Fields[2])
-	assert.EqualValues(t, sema.UFix64TypeName, key0AddedEvent.Fields[2].Type().ID())
-	assert.EqualValues(t, key1Weight, key1AddedEvent.Fields[2])
+	assert.Equal(t,
+		key0Weight,
+		key0AddedEvent.Fields[2],
+	)
+	assert.Equal(t,
+		sema.UFix64TypeName,
+		key0AddedEvent.Fields[2].Type().ID(),
+	)
+
+	assert.Equal(t,
+		key1Weight,
+		key1AddedEvent.Fields[2],
+	)
+	assert.Equal(t,
+		sema.UFix64TypeName,
+		key1AddedEvent.Fields[2].Type().ID(),
+	)
 
 	// key hash algorithm
-	assert.EqualValues(t, sema.HashAlgorithmSHA3_256, key0AddedEvent.Fields[3].(cadence.Enum).Fields[0])
-	assert.EqualValues(t, sema.HashAlgorithmTypeName, key0AddedEvent.Fields[3].Type().ID())
-	assert.EqualValues(t, sema.HashAlgorithmSHA2_256, key1AddedEvent.Fields[3].(cadence.Enum).Fields[0])
+	assert.Equal(t,
+		cadence.UInt8(sema.HashAlgorithmSHA3_256),
+		key0AddedEvent.Fields[3].(cadence.Enum).Fields[0],
+	)
+	assert.Equal(t,
+		sema.HashAlgorithmTypeName,
+		key0AddedEvent.Fields[3].Type().ID(),
+	)
+
+	assert.Equal(t,
+		cadence.UInt8(sema.HashAlgorithmSHA2_256),
+		key1AddedEvent.Fields[3].(cadence.Enum).Fields[0],
+	)
+	assert.Equal(t,
+		sema.HashAlgorithmTypeName,
+		key1AddedEvent.Fields[3].Type().ID(),
+	)
 
 	// key index
-	assert.EqualValues(t, cadence.NewInt(0), key0AddedEvent.Fields[4])
-	assert.EqualValues(t, sema.IntTypeName, key0AddedEvent.Fields[4].Type().ID())
-	assert.EqualValues(t, cadence.NewInt(1), key1AddedEvent.Fields[4])
+	assert.Equal(t, cadence.NewInt(0), key0AddedEvent.Fields[4])
+	assert.Equal(t, sema.IntTypeName, key0AddedEvent.Fields[4].Type().ID())
+	assert.Equal(t, cadence.NewInt(1), key1AddedEvent.Fields[4])
+	assert.Equal(t, sema.IntTypeName, key1AddedEvent.Fields[4].Type().ID())
 }
 
 func TestRuntimePublicAccountKeys(t *testing.T) {
