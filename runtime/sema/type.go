@@ -8856,7 +8856,6 @@ func FormatRestrictedTypeID(typeString string, restrictionStrings []string) stri
 	return formatRestrictedType("", typeString, restrictionStrings)
 }
 
-
 const AccountKeyTypeName = "AccountKey"
 const AccountKeyKeyIndexFieldName = "keyIndex"
 const AccountKeyPublicKeyFieldName = "publicKey"
