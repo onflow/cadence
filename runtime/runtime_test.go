@@ -8739,7 +8739,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 	tx2 := []byte(`
         transaction {
             prepare(signer: &Account) {
-                let cap = signer.capabilities.get<&AnyStruct>(/public/r)!
+                let cap = signer.capabilities.get<&AnyStruct>(/public/r)
 				cap.check()
             }
         }

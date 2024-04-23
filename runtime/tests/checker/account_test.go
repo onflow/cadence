@@ -1679,7 +1679,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 		_, err := ParseAndCheck(t, `
           fun test(capabilities: &Account.Capabilities) {
 
-              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
+              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)
 
               let ref: &Int = capabilities.borrow<&Int>(/public/foo)!
           }
@@ -1694,7 +1694,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 		_, err := ParseAndCheck(t, `
           fun test(capabilities: auth(Capabilities) &Account.Capabilities) {
 
-              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
+              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)
 
               let ref: &Int = capabilities.borrow<&Int>(/public/foo)!
 
@@ -1713,7 +1713,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 		_, err := ParseAndCheck(t, `
            fun test(capabilities: &Account.Capabilities) {
 
-              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
+              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)
 
               capabilities.publish(cap, at: /public/bar)
 
@@ -1733,7 +1733,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
           fun test(capabilities: &Account.Capabilities) {
-              capabilities.get<Never>(/public/foo)!
+              capabilities.get<Never>(/public/foo)
           }
         `)
 		errs := RequireCheckerErrors(t, err, 1)
@@ -1752,7 +1752,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
           fun test(capabilities: &Account.Capabilities) {
-              capabilities.get(/public/foo)!
+              capabilities.get(/public/foo)
           }
         `)
 		errs := RequireCheckerErrors(t, err, 1)

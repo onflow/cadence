@@ -1233,21 +1233,20 @@ var Account_CapabilitiesTypeGetFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: MustInstantiate(
-				&CapabilityType{},
-				&GenericType{
-					TypeParameter: Account_CapabilitiesTypeGetFunctionTypeParameterT,
-				},
-			),
-		},
+		MustInstantiate(
+			&CapabilityType{},
+			&GenericType{
+				TypeParameter: Account_CapabilitiesTypeGetFunctionTypeParameterT,
+			},
+		),
 	),
 }
 
 const Account_CapabilitiesTypeGetFunctionDocString = `
 Returns the capability at the given public path.
-Returns nil if the capability does not exist,
-or if the given type is not a supertype of the capability's borrow type.
+If the capability does not exist,
+or if the given type is not a supertype of the capability's borrow type,
+returns an "invalid" capability with ID 0 that will always fail to ` + "`check`" + ` or ` + "`borrow`" + `
 `
 
 const Account_CapabilitiesTypeBorrowFunctionName = "borrow"
@@ -1284,7 +1283,7 @@ var Account_CapabilitiesTypeBorrowFunctionType = &FunctionType{
 const Account_CapabilitiesTypeBorrowFunctionDocString = `
 Borrows the capability at the given public path.
 Returns nil if the capability does not exist, or cannot be borrowed using the given type.
-The function is equivalent to ` + "`get(path)?.borrow()`" + `.
+The function is equivalent to ` + "`get(path).borrow()`" + `.
 `
 
 const Account_CapabilitiesTypeExistsFunctionName = "exists"

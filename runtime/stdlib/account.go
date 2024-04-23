@@ -3598,12 +3598,32 @@ func newAccountCapabilitiesGetFunction(
 			typeParameterPairValue := invocation.TypeParameterTypes.Oldest().Value
 			// `Never` is never a supertype of any stored value
 			if typeParameterPairValue.Equal(sema.NeverType) {
-				return interpreter.Nil
+				if borrow {
+					return interpreter.Nil
+				} else {
+					return interpreter.NewInvalidCapabilityValue(
+						inter,
+						addressValue,
+						interpreter.PrimitiveStaticTypeNever,
+					)
+				}
 			}
 
 			wantedBorrowType, ok := typeParameterPairValue.(*sema.ReferenceType)
 			if !ok {
 				panic(errors.NewUnreachableError())
+			}
+
+			var failValue interpreter.Value
+			if borrow {
+				failValue = interpreter.Nil
+			} else {
+				failValue =
+					interpreter.NewInvalidCapabilityValue(
+						inter,
+						addressValue,
+						interpreter.ConvertSemaToStaticType(inter, wantedBorrowType),
+					)
 			}
 
 			// Read stored capability, if any
@@ -3612,7 +3632,7 @@ func newAccountCapabilitiesGetFunction(
 
 			readValue := inter.ReadStored(address, domain, storageMapKey)
 			if readValue == nil {
-				return interpreter.Nil
+				return failValue
 			}
 
 			var readCapabilityValue *interpreter.IDCapabilityValue
@@ -3677,13 +3697,17 @@ func newAccountCapabilitiesGetFunction(
 			}
 
 			if resultValue == nil {
-				return interpreter.Nil
+				return failValue
 			}
 
-			return interpreter.NewSomeValueNonCopying(
-				inter,
-				resultValue,
-			)
+			if borrow {
+				resultValue = interpreter.NewSomeValueNonCopying(
+					inter,
+					resultValue,
+				)
+			}
+
+			return resultValue
 		},
 	)
 }

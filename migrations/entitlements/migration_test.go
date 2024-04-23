@@ -1217,7 +1217,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 			wrap: func(staticType interpreter.StaticType) interpreter.Value {
 				return interpreter.NewCapabilityValue(
 					nil,
-					0,
+					1,
 					interpreter.AddressValue{},
 					staticType,
 				)
@@ -1241,7 +1241,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 					interpreter.AddressValue{},
 					interpreter.NewCapabilityValue(
 						nil,
-						0,
+						1,
 						interpreter.AddressValue{},
 						staticType,
 					),
@@ -1453,7 +1453,7 @@ func TestMigrateSimpleContract(t *testing.T) {
 
 	unentitledRCap := interpreter.NewCapabilityValue(
 		inter,
-		0,
+		1,
 		interpreter.NewAddressValue(inter, account),
 		unentitledRRefStaticType,
 	)
@@ -1475,7 +1475,7 @@ func TestMigrateSimpleContract(t *testing.T) {
 	entitledRRefStaticType := entitledRRef.StaticType(inter)
 	entitledRCap := interpreter.NewCapabilityValue(
 		inter,
-		0,
+		1,
 		interpreter.NewAddressValue(inter, account),
 		entitledRRefStaticType,
 	)
@@ -1492,7 +1492,7 @@ func TestMigrateSimpleContract(t *testing.T) {
 			storedValue: unentitledRCap.Clone(inter),
 			expectedValue: interpreter.NewCapabilityValue(
 				inter,
-				0,
+				1,
 				interpreter.NewAddressValue(inter, account),
 				entitledRRefStaticType,
 			),
