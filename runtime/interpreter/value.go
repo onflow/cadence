@@ -17066,7 +17066,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	if builtin := v.getBuiltinMember(interpreter, locationRange, name); builtin != nil {
-		return builtin
+		return compositeMember(interpreter, v, builtin)
 	}
 
 	// Give computed fields precedence over stored fields for built-in types
@@ -17077,11 +17077,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	if field := v.GetField(interpreter, locationRange, name); field != nil {
-		if hostFunc, isHostFunc := field.(*HostFunctionValue); isHostFunc {
-			var self MemberAccessibleValue = v
-			return NewBoundFunctionValue(interpreter, hostFunc, &self, nil, nil)
-		}
-		return field
+		return compositeMember(interpreter, v, field)
 	}
 
 	if v.NestedVariables != nil {
@@ -17108,6 +17104,15 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	return nil
+}
+
+func compositeMember(interpreter *Interpreter, compositeValue MemberAccessibleValue, memberValue Value) Value {
+	hostFunc, isHostFunc := memberValue.(*HostFunctionValue)
+	if isHostFunc {
+		return NewBoundFunctionValue(interpreter, hostFunc, &compositeValue, nil, nil)
+	}
+
+	return memberValue
 }
 
 func (v *CompositeValue) isInvalidatedResource(_ *Interpreter) bool {
