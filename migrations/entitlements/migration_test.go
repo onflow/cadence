@@ -3311,6 +3311,8 @@ func TestRehash(t *testing.T) {
 			optType.ID(),
 		)
 
+		assert.Equal(t, 1, dictValue.Count())
+
 		value, ok := dictValue.Get(inter, locationRange, typeValue)
 		require.True(t, ok)
 

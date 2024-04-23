@@ -1393,6 +1393,8 @@ func TestOptionalTypeRehash(t *testing.T) {
 			optionalType.ID(),
 		)
 
+		assert.Equal(t, 1, dictValue.Count())
+
 		value, ok := dictValue.Get(inter, locationRange, typeValue)
 		require.True(t, ok)
 

@@ -628,6 +628,8 @@ func TestIntersectionTypeRehash(t *testing.T) {
 			intersectionType.ID(),
 		)
 
+		assert.Equal(t, 1, dictValue.Count())
+
 		value, ok := dictValue.Get(inter, locationRange, typeValue)
 		require.True(t, ok)
 
@@ -800,6 +802,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 				intersectionType.ID(),
 			)
 
+			assert.Equal(t, 1, dictValue.Count())
+
 			value, ok := dictValue.Get(inter, locationRange, typeValue)
 			require.True(t, ok)
 
@@ -947,6 +951,8 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 				common.TypeID("{A.4200000000000000.Foo.Bar,A.4200000000000000.Foo.Baz}"),
 				intersectionType.ID(),
 			)
+
+			assert.Equal(t, 1, dictValue.Count())
 
 			value, ok := dictValue.Get(inter, locationRange, typeValue)
 			require.True(t, ok)
