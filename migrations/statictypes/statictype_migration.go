@@ -569,8 +569,7 @@ func CanSkipStaticTypeMigration(valueType interpreter.StaticType) bool {
 		return CanSkipStaticTypeMigration(valueType.ElementType())
 
 	case *interpreter.OptionalStaticType:
-		// optional types need to be rewritten as a result of changes to TypeID printing
-		return false
+		return CanSkipStaticTypeMigration(valueType.Type)
 
 	case *interpreter.CapabilityStaticType:
 		// Typed capability, cannot skip
