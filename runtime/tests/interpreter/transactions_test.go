@@ -352,5 +352,28 @@ func TestRuntimeInvalidTransferInExecute(t *testing.T) {
 	signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
 	err := inter.InvokeTransaction(0, signer1)
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+}
 
+func TestRuntimeInvalidRecursiveTransferInExecute(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		access(all) resource Dummy {}
+
+		transaction {
+			var vaults: @[AnyResource]
+
+			prepare() {
+				self.vaults <- [<-create Dummy(), <-create Dummy()]
+			}
+
+			execute {
+				self.vaults.append(<-self.vaults)
+			}
+		}
+	`)
+
+	err := inter.InvokeTransaction(0)
+	require.NoError(t, err)
 }
