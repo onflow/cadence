@@ -128,7 +128,7 @@ const (
 	addressKey           = "address"
 	pathKey              = "path"
 	authorizationKey     = "authorization"
-	authorizedKey        = "authorized" // deprecated. please use entitlementsKey
+	authorizedKey        = "authorized" // deprecated. please use authorizationKey
 	entitlementsKey      = "entitlements"
 	sizeKey              = "size"
 	typeIDKey            = "typeID"

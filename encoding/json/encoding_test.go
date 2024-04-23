@@ -3051,6 +3051,7 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 				},
 			},
 		)
+	})
 
 	t.Run("with static &int with deprecated entitlement", func(t *testing.T) {
 		testDecode(
@@ -3077,7 +3078,6 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 				},
 			},
 		)
-
 	})
 
 }
