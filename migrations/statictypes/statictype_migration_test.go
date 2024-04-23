@@ -1156,6 +1156,9 @@ func TestCanSkipStaticTypeMigration(t *testing.T) {
 
 		interpreter.PrimitiveStaticTypeAnyStruct:   false,
 		interpreter.PrimitiveStaticTypeAnyResource: false,
+
+		// Run-time types
+		interpreter.PrimitiveStaticTypeMetaType: false,
 	}
 
 	test := func(ty interpreter.StaticType, expected bool) {
@@ -1180,7 +1183,7 @@ func TestCanSkipStaticTypeMigration(t *testing.T) {
 				optionalType := interpreter.NewOptionalStaticType(nil, ty)
 
 				actual := CanSkipStaticTypeMigration(optionalType)
-				assert.False(t, actual)
+				assert.Equal(t, expected, actual)
 			})
 
 			t.Run("variable-sized", func(t *testing.T) {
