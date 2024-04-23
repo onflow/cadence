@@ -319,3 +319,38 @@ func TestInterpretTransactions(t *testing.T) {
 		)
 	})
 }
+
+func TestRuntimeInvalidTransferInExecute(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		access(all) resource Dummy {}
+
+		transaction {
+			var vaults: @[AnyResource]
+			var account: auth(Storage) &Account
+
+			prepare(account: auth(Storage) &Account) {
+				self.vaults <- [<-create Dummy(), <-create Dummy()]
+				self.account = account
+			}
+
+			execute {
+				let x = fun(): @[AnyResource] {
+					var x <- self.vaults <- [<-create Dummy()]
+					return <-x
+				}
+
+				var t <-  self.vaults[0] <- self.vaults 
+				destroy t
+				self.account.storage.save(<- x(), to: /storage/x42)
+			}
+		}
+	`)
+
+	signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
+	err := inter.InvokeTransaction(0, signer1)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+
+}
