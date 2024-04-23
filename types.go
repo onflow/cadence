@@ -1651,7 +1651,7 @@ func (*DeprecatedReferenceType) isType() {}
 
 func (t *DeprecatedReferenceType) ID() string {
 	if t.typeID == "" {
-		// convert the bool to a string for backwards compatability 
+		// convert the bool to a string for backwards compatability
 		t.typeID = sema.FormatReferenceTypeID(strconv.FormatBool(t.Authorized), t.Type.ID())
 	}
 	return t.typeID
@@ -1676,6 +1676,9 @@ type RestrictedType struct {
 	restrictionSet     RestrictionSet
 	restrictionSetOnce sync.Once
 }
+
+// Deprecated: here for backwards compatibility
+type RestrictionSet = map[Type]struct{}
 
 func NewRestrictedType(
 	typ Type,
