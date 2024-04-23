@@ -2487,7 +2487,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			entitlement E
 			entitlement G
 			struct S: I {
-				access(X, E) fun foo() {}
+				access(X, E, G) fun foo() {}
 			}
 			struct interface I {
 				access(X, E, G) fun foo()
