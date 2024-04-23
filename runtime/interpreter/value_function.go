@@ -457,3 +457,24 @@ func (f BoundFunctionValue) Clone(_ *Interpreter) Value {
 func (BoundFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
+
+// NewBoundHostFunctionValue creates a bound-function value for a host-function.
+func NewBoundHostFunctionValue(
+	interpreter *Interpreter,
+	self MemberAccessibleValue,
+	funcType *sema.FunctionType,
+	function HostFunction,
+) FunctionValue {
+
+	common.UseMemory(interpreter, common.HostFunctionValueMemoryUsage)
+
+	hostFunc := NewUnmeteredHostFunctionValue(funcType, function)
+
+	return NewBoundFunctionValue(
+		interpreter,
+		hostFunc,
+		&self,
+		nil,
+		nil,
+	)
+}

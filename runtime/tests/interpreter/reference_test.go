@@ -3150,3 +3150,35 @@ func TestInterpretOptionalReference(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("host function ref", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                var array: @[R] <- []
+                var arrayRef: auth(Mutate) &[R] = &array as auth(Mutate) &[R]
+
+                // Take a reference to the resource array
+                var arrayAppend = arrayRef.append
+
+                // Destroy the resource array
+                destroy array
+
+                // Call the function pointer
+                arrayAppend(<- create R())
+            }
+
+            resource R {}
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		invalidatedRefError := interpreter.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, err, &invalidatedRefError)
+	})
+}

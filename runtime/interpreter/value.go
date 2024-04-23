@@ -2499,8 +2499,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		return NewIntValueFromInt64(interpreter, int64(v.Count()))
 
 	case "append":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayAppendFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2515,8 +2516,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "appendAll":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayAppendAllFunctionType(
 				v.SemaType(interpreter),
 			),
@@ -2535,8 +2537,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "concat":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayConcatFunctionType(
 				v.SemaType(interpreter),
 			),
@@ -2554,8 +2557,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "insert":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayInsertFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2582,8 +2586,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "remove":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayRemoveFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2606,8 +2611,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "removeFirst":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayRemoveFirstFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2620,8 +2626,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "removeLast":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayRemoveLastFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2634,8 +2641,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "firstIndex":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayFirstIndexFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2649,8 +2657,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "contains":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayContainsFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2664,8 +2673,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "slice":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArraySliceFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2690,8 +2700,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case sema.ArrayTypeReverseFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayReverseFunctionType(
 				v.SemaType(interpreter),
 			),
@@ -2704,8 +2715,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case sema.ArrayTypeFilterFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayFilterFunctionType(
 				interpreter,
 				v.SemaType(interpreter).ElementType(false),
@@ -2727,8 +2739,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case sema.ArrayTypeMapFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayMapFunctionType(
 				interpreter,
 				v.SemaType(interpreter),
@@ -2756,8 +2769,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case sema.ArrayTypeToVariableSizedFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayToVariableSizedFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2772,8 +2786,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case sema.ArrayTypeToConstantSizedFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayToConstantSizedFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -17062,6 +17077,10 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	if field := v.GetField(interpreter, locationRange, name); field != nil {
+		if hostFunc, isHostFunc := field.(*HostFunctionValue); isHostFunc {
+			var self MemberAccessibleValue = v
+			return NewBoundFunctionValue(interpreter, hostFunc, &self, nil, nil)
+		}
 		return field
 	}
 
@@ -19223,8 +19242,9 @@ func (v *DictionaryValue) GetMember(
 			})
 
 	case "remove":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.DictionaryRemoveFunctionType(
 				v.SemaType(interpreter),
 			),
@@ -19240,8 +19260,9 @@ func (v *DictionaryValue) GetMember(
 		)
 
 	case "insert":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.DictionaryInsertFunctionType(
 				v.SemaType(interpreter),
 			),
@@ -19259,8 +19280,9 @@ func (v *DictionaryValue) GetMember(
 		)
 
 	case "containsKey":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.DictionaryContainsKeyFunctionType(
 				v.SemaType(interpreter),
 			),
@@ -19273,8 +19295,9 @@ func (v *DictionaryValue) GetMember(
 			},
 		)
 	case "forEachKey":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.DictionaryForEachKeyFunctionType(
 				v.SemaType(interpreter),
 			),
