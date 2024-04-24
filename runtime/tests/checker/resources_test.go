@@ -9418,6 +9418,76 @@ func TestCheckInvalidResourceDestructionInFunction(t *testing.T) {
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }
 
+func TestCheckInvalidResourceCaptureOnLeft(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          var x: @AnyResource? <- nil
+
+          fun () {
+              x <-! []
+          }
+
+          destroy x
+      }
+    `)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+}
+
+func TestCheckInvalidNestedResourceCapture(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("on right", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    fun() {
+                        let y <- self.x
+                        destroy y
+                    }
+                }
+            }
+    `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("on left", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    fun() {
+                        self.x <-! nil
+                    }
+
+                    destroy self.x
+                }
+            }
+    `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+}
+
 func TestCheckInvalidationInCondition(t *testing.T) {
 
 	t.Parallel()
