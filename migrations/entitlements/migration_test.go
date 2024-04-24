@@ -49,6 +49,7 @@ func TestConvertToEntitledType(t *testing.T) {
 	t.Parallel()
 
 	inter := NewTestInterpreter(t)
+	migration := NewEntitlementsMigration(inter)
 
 	elaboration := sema.NewElaboration(nil)
 
@@ -458,7 +459,7 @@ func TestConvertToEntitledType(t *testing.T) {
 			Name:   "int",
 		},
 		{
-			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, &sema.FunctionType{}),
+			Input:  sema.NewReferenceType(nil, sema.UnauthorizedAccess, &sema.FunctionType{ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.IntType)}),
 			Output: nil,
 			Name:   "function",
 		},
@@ -646,7 +647,7 @@ func TestConvertToEntitledType(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 
 			inputStaticType := interpreter.ConvertSemaToStaticType(nil, test.Input)
-			convertedType, _ := ConvertToEntitledType(inter, inputStaticType)
+			convertedType, _ := migration.ConvertToEntitledType(inputStaticType)
 
 			expectedType := interpreter.ConvertSemaToStaticType(nil, test.Output)
 
@@ -693,7 +694,8 @@ func (m testEntitlementsMigration) Migrate(
 	interpreter.Value,
 	error,
 ) {
-	return ConvertValueToEntitlements(m.inter, value)
+	migration := NewEntitlementsMigration(m.inter)
+	return migration.ConvertValueToEntitlements(value)
 }
 
 func (m testEntitlementsMigration) CanSkip(_ interpreter.StaticType) bool {
@@ -1575,7 +1577,10 @@ func TestMigrateSimpleContract(t *testing.T) {
 func TestNilTypeValue(t *testing.T) {
 	t.Parallel()
 
-	result, err := ConvertValueToEntitlements(nil, interpreter.NewTypeValue(nil, nil))
+	migration := NewEntitlementsMigration(nil)
+	result, err := migration.ConvertValueToEntitlements(
+		interpreter.NewTypeValue(nil, nil),
+	)
 	require.NoError(t, err)
 	require.Nil(t, result)
 }
@@ -1583,8 +1588,8 @@ func TestNilTypeValue(t *testing.T) {
 func TestNilPathCapabilityValue(t *testing.T) {
 	t.Parallel()
 
-	result, err := ConvertValueToEntitlements(
-		NewTestInterpreter(t),
+	migration := NewEntitlementsMigration(NewTestInterpreter(t))
+	result, err := migration.ConvertValueToEntitlements(
 		&interpreter.PathCapabilityValue{ //nolint:staticcheck
 			Address:    interpreter.NewAddressValue(nil, common.MustBytesToAddress([]byte{0x1})),
 			Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test"),
@@ -2803,6 +2808,7 @@ func TestConvertDeprecatedStaticTypes(t *testing.T) {
 			t.Parallel()
 
 			inter := NewTestInterpreter(t)
+			migration := NewEntitlementsMigration(inter)
 			value := interpreter.NewUnmeteredCapabilityValue(
 				1,
 				interpreter.AddressValue(common.ZeroAddress),
@@ -2813,7 +2819,7 @@ func TestConvertDeprecatedStaticTypes(t *testing.T) {
 				),
 			)
 
-			result, err := ConvertValueToEntitlements(inter, value)
+			result, err := migration.ConvertValueToEntitlements(value)
 			require.Error(t, err)
 			assert.ErrorContains(t, err, "cannot migrate deprecated type")
 			require.Nil(t, result)
@@ -2839,6 +2845,7 @@ func TestConvertMigratedAccountTypes(t *testing.T) {
 			t.Parallel()
 
 			inter := NewTestInterpreter(t)
+			migration := NewEntitlementsMigration(inter)
 			value := interpreter.NewUnmeteredCapabilityValue(
 				1,
 				interpreter.AddressValue(common.ZeroAddress),
@@ -2859,7 +2866,7 @@ func TestConvertMigratedAccountTypes(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, newValue)
 
-			result, err := ConvertValueToEntitlements(inter, newValue)
+			result, err := migration.ConvertValueToEntitlements(newValue)
 			require.NoError(t, err)
 			require.Nilf(t, result, "expected no migration, but got %s", result)
 		})
