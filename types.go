@@ -21,7 +21,6 @@ package cadence
 import (
 	"fmt"
 	"reflect"
-	"strconv"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -1619,7 +1618,6 @@ func (t *ReferenceType) Equal(other Type) bool {
 
 // DeprecatedReferenceType
 // Deprecated: here for backwards compatibility
-
 type DeprecatedReferenceType struct {
 	Type       Type
 	Authorized bool
@@ -1651,8 +1649,7 @@ func (*DeprecatedReferenceType) isType() {}
 
 func (t *DeprecatedReferenceType) ID() string {
 	if t.typeID == "" {
-		// convert the bool to a string for backwards compatibility
-		t.typeID = sema.FormatReferenceTypeID(strconv.FormatBool(t.Authorized), t.Type.ID())
+		t.typeID = sema.FormatDeprecatedReferenceTypeID(t.Authorized, t.Type.ID())
 	}
 	return t.typeID
 }
