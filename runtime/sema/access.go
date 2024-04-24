@@ -72,7 +72,7 @@ func NewEntitlementSetAccess(
 	}
 }
 
-func NewAccessFromEntitlementSet(
+func NewAccessFromEntitlementOrderedSet(
 	set *EntitlementOrderedSet,
 	setKind EntitlementSetKind,
 ) Access {

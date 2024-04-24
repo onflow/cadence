@@ -736,7 +736,7 @@ func leastCommonAccess(accessA, accessB Access) Access {
 			// e.g. the least common supertype of (E, F) and (E, G)  is just E
 			intersection := orderedmap.KeySetIntersection(setAccessA.Entitlements, setAccessB.Entitlements)
 			if intersection.Len() != 0 {
-				return NewAccessFromEntitlementSet(intersection, Conjunction)
+				return NewAccessFromEntitlementOrderedSet(intersection, Conjunction)
 			}
 			// if the intersection is completely empty (i.e. the two sets are totally disjoint)
 			// the least common supertype is the union of one element arbitrarily chosen from each conjunction.
@@ -749,7 +749,7 @@ func leastCommonAccess(accessA, accessB Access) Access {
 			// e.g. the least common supertype of E and F is `(E | F)`
 			// and the least common supertype of `(A, B)` and `(C, D)` is `(A | B | C | D)`
 			union := orderedmap.KeySetUnion(setAccessA.Entitlements, setAccessB.Entitlements)
-			return NewAccessFromEntitlementSet(union, Disjunction)
+			return NewAccessFromEntitlementOrderedSet(union, Disjunction)
 
 		case Disjunction:
 			// least common supertype of a non-disjoint conjunction and a disjunction is
@@ -769,7 +769,7 @@ func leastCommonAccess(accessA, accessB Access) Access {
 			// which luckily here is just the union of the elements of the disjunction and the conjunction.
 			// E.g. our computed supertype of `(E, F)` and `(G | H)` is `(E | F | G | H)`
 			union := orderedmap.KeySetUnion(setAccessA.Entitlements, setAccessB.Entitlements)
-			return NewAccessFromEntitlementSet(union, Disjunction)
+			return NewAccessFromEntitlementOrderedSet(union, Disjunction)
 		}
 
 	case Disjunction:
@@ -781,7 +781,7 @@ func leastCommonAccess(accessA, accessB Access) Access {
 			// least common access of two disjunctions is their union
 			// e.g. the least common supertype of (E | F) and (E | G) is (E | F | G)
 			union := orderedmap.KeySetUnion(setAccessA.Entitlements, setAccessB.Entitlements)
-			return NewAccessFromEntitlementSet(union, Disjunction)
+			return NewAccessFromEntitlementOrderedSet(union, Disjunction)
 		}
 	}
 

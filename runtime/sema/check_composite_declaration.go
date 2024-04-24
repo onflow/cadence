@@ -107,20 +107,35 @@ func (checker *Checker) checkAttachmentMembersAccess(attachmentType *CompositeTy
 	var supportedBaseEntitlements *EntitlementOrderedSet
 	baseType := attachmentType.GetBaseType()
 	if base, ok := attachmentType.GetBaseType().(EntitlementSupportingType); ok {
-		supportedBaseEntitlements = base.SupportedEntitlements()
+		// TODO:
+		access := base.SupportedEntitlements().Access()
+		if access, ok := access.(EntitlementSetAccess); ok {
+			supportedBaseEntitlements = access.Entitlements
+		}
 	}
 	if supportedBaseEntitlements == nil {
 		supportedBaseEntitlements = &orderedmap.OrderedMap[*EntitlementType, struct{}]{}
 	}
 
-	attachmentType.EffectiveInterfaceConformanceSet().ForEach(func(intf *InterfaceType) {
-		intf.Members.Foreach(func(_ string, member *Member) {
-			checker.checkAttachmentMemberAccess(attachmentType, member, baseType, supportedBaseEntitlements)
+	attachmentType.EffectiveInterfaceConformanceSet().
+		ForEach(func(interfaceType *InterfaceType) {
+			interfaceType.Members.Foreach(func(_ string, member *Member) {
+				checker.checkAttachmentMemberAccess(
+					attachmentType,
+					member,
+					baseType,
+					supportedBaseEntitlements,
+				)
+			})
 		})
-	})
 
 	attachmentType.Members.Foreach(func(_ string, member *Member) {
-		checker.checkAttachmentMemberAccess(attachmentType, member, baseType, supportedBaseEntitlements)
+		checker.checkAttachmentMemberAccess(
+			attachmentType,
+			member,
+			baseType,
+			supportedBaseEntitlements,
+		)
 	})
 
 }
@@ -2081,7 +2096,7 @@ func (checker *Checker) checkDefaultDestroyEventParam(
 
 	// make `self` and `base` available when checking default arguments so the fields of the composite are available
 	// as this event is emitted when the resource is destroyed, these values should be fully entitled
-	fullyEntitledAccess := NewAccessFromEntitlementSet(containerType.SupportedEntitlements(), Conjunction)
+	fullyEntitledAccess := containerType.SupportedEntitlements().Access()
 
 	checker.declareSelfValue(
 		fullyEntitledAccess,
@@ -2224,7 +2239,7 @@ func (checker *Checker) checkSpecialFunction(
 	defer checker.leaveValueScope(specialFunction.EndPosition, checkResourceLoss)
 
 	// initializers and destructors are considered fully entitled to their container type
-	fnAccess := NewAccessFromEntitlementSet(containerType.SupportedEntitlements(), Conjunction)
+	fnAccess := containerType.SupportedEntitlements().Access()
 
 	checker.declareSelfValue(fnAccess, containerType, containerDocString)
 
