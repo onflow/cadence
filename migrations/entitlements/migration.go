@@ -68,8 +68,7 @@ func (EntitlementsMigration) Domains() map[string]struct{} {
 // where `Entitlements(I)` is defined as the result of `T.SupportedEntitlements()`
 //
 // TODO: functions?
-func ConvertToEntitledType(
-	mig EntitlementsMigration,
+func (m EntitlementsMigration) ConvertToEntitledType(
 	staticType interpreter.StaticType,
 ) (
 	resultType interpreter.StaticType,
@@ -83,8 +82,8 @@ func ConvertToEntitledType(
 		return nil, fmt.Errorf("cannot migrate deprecated type: %s", staticType)
 	}
 
-	inter := mig.Interpreter
-	migratedTypeCache := mig.migratedTypeCache
+	inter := m.Interpreter
+	migratedTypeCache := m.migratedTypeCache
 
 	staticTypeID := staticType.ID()
 
@@ -103,7 +102,7 @@ func ConvertToEntitledType(
 
 		referencedType := t.ReferencedType
 
-		convertedReferencedType, err := ConvertToEntitledType(mig, referencedType)
+		convertedReferencedType, err := m.ConvertToEntitledType(referencedType)
 		if err != nil {
 			conversionErr = err
 			return
@@ -169,7 +168,7 @@ func ConvertToEntitledType(
 		}
 
 	case *interpreter.CapabilityStaticType:
-		convertedBorrowType, err := ConvertToEntitledType(mig, t.BorrowType)
+		convertedBorrowType, err := m.ConvertToEntitledType(t.BorrowType)
 		if err != nil {
 			conversionErr = err
 			return
@@ -183,7 +182,7 @@ func ConvertToEntitledType(
 	case *interpreter.VariableSizedStaticType:
 		elementType := t.Type
 
-		convertedElementType, err := ConvertToEntitledType(mig, elementType)
+		convertedElementType, err := m.ConvertToEntitledType(elementType)
 		if err != nil {
 			conversionErr = err
 			return
@@ -197,7 +196,7 @@ func ConvertToEntitledType(
 	case *interpreter.ConstantSizedStaticType:
 		elementType := t.Type
 
-		convertedElementType, err := ConvertToEntitledType(mig, elementType)
+		convertedElementType, err := m.ConvertToEntitledType(elementType)
 		if err != nil {
 			conversionErr = err
 			return
@@ -211,7 +210,7 @@ func ConvertToEntitledType(
 	case *interpreter.DictionaryStaticType:
 		keyType := t.KeyType
 
-		convertedKeyType, err := ConvertToEntitledType(mig, keyType)
+		convertedKeyType, err := m.ConvertToEntitledType(keyType)
 		if err != nil {
 			conversionErr = err
 			return
@@ -219,7 +218,7 @@ func ConvertToEntitledType(
 
 		valueType := t.ValueType
 
-		convertedValueType, err := ConvertToEntitledType(mig, valueType)
+		convertedValueType, err := m.ConvertToEntitledType(valueType)
 		if err != nil {
 			conversionErr = err
 			return
@@ -241,7 +240,7 @@ func ConvertToEntitledType(
 	case *interpreter.OptionalStaticType:
 		innerType := t.Type
 
-		convertedInnerType, err := ConvertToEntitledType(mig, innerType)
+		convertedInnerType, err := m.ConvertToEntitledType(innerType)
 		if err != nil {
 			conversionErr = err
 			return
@@ -258,22 +257,15 @@ func ConvertToEntitledType(
 
 // ConvertValueToEntitlements converts the input value into a version compatible with the new entitlements feature,
 // with the same members/operations accessible on any references as would have been accessible in the past.
-func ConvertValueToEntitlements(
-	mig EntitlementsMigration,
-	v interpreter.Value,
-) (
-	interpreter.Value,
-	error,
-) {
-
-	inter := mig.Interpreter
+func (m EntitlementsMigration) ConvertValueToEntitlements(v interpreter.Value) (interpreter.Value, error) {
+	inter := m.Interpreter
 
 	switch v := v.(type) {
 
 	case *interpreter.ArrayValue:
 		elementType := v.Type
 
-		entitledElementType, err := ConvertToEntitledType(mig, elementType)
+		entitledElementType, err := m.ConvertToEntitledType(elementType)
 		if err != nil {
 			return nil, err
 		}
@@ -289,7 +281,7 @@ func ConvertValueToEntitlements(
 	case *interpreter.DictionaryValue:
 		elementType := v.Type
 
-		entitledElementType, err := ConvertToEntitledType(mig, elementType)
+		entitledElementType, err := m.ConvertToEntitledType(elementType)
 		if err != nil {
 			return nil, err
 		}
@@ -305,7 +297,7 @@ func ConvertValueToEntitlements(
 	case *interpreter.IDCapabilityValue:
 		borrowType := v.BorrowType
 
-		entitledBorrowType, err := ConvertToEntitledType(mig, borrowType)
+		entitledBorrowType, err := m.ConvertToEntitledType(borrowType)
 		if err != nil {
 			return nil, err
 		}
@@ -322,7 +314,7 @@ func ConvertValueToEntitlements(
 	case *interpreter.PathCapabilityValue: //nolint:staticcheck
 		borrowType := v.BorrowType
 
-		entitledBorrowType, err := ConvertToEntitledType(mig, borrowType)
+		entitledBorrowType, err := m.ConvertToEntitledType(borrowType)
 		if err != nil {
 			return nil, err
 		}
@@ -338,7 +330,7 @@ func ConvertValueToEntitlements(
 	case interpreter.TypeValue:
 		ty := v.Type
 
-		entitledType, err := ConvertToEntitledType(mig, ty)
+		entitledType, err := m.ConvertToEntitledType(ty)
 		if err != nil {
 			return nil, err
 		}
@@ -350,7 +342,7 @@ func ConvertValueToEntitlements(
 	case *interpreter.AccountCapabilityControllerValue:
 		borrowType := v.BorrowType
 
-		entitledBorrowType, err := ConvertToEntitledType(mig, borrowType)
+		entitledBorrowType, err := m.ConvertToEntitledType(borrowType)
 		if err != nil {
 			return nil, err
 		}
@@ -366,7 +358,7 @@ func ConvertValueToEntitlements(
 	case *interpreter.StorageCapabilityControllerValue:
 		borrowType := v.BorrowType
 
-		entitledBorrowType, err := ConvertToEntitledType(mig, borrowType)
+		entitledBorrowType, err := m.ConvertToEntitledType(borrowType)
 		if err != nil {
 			return nil, err
 		}
@@ -383,7 +375,7 @@ func ConvertValueToEntitlements(
 	case interpreter.PathLinkValue: //nolint:staticcheck
 		borrowType := v.Type
 
-		entitledBorrowType, err := ConvertToEntitledType(mig, borrowType)
+		entitledBorrowType, err := m.ConvertToEntitledType(borrowType)
 		if err != nil {
 			return nil, err
 		}
@@ -399,7 +391,7 @@ func ConvertValueToEntitlements(
 	return nil, nil
 }
 
-func (mig EntitlementsMigration) Migrate(
+func (m EntitlementsMigration) Migrate(
 	_ interpreter.StorageKey,
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
@@ -408,9 +400,9 @@ func (mig EntitlementsMigration) Migrate(
 	interpreter.Value,
 	error,
 ) {
-	return ConvertValueToEntitlements(mig, value)
+	return m.ConvertValueToEntitlements(value)
 }
 
-func (mig EntitlementsMigration) CanSkip(valueType interpreter.StaticType) bool {
+func (m EntitlementsMigration) CanSkip(valueType interpreter.StaticType) bool {
 	return statictypes.CanSkipStaticTypeMigration(valueType)
 }

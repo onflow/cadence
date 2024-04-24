@@ -647,7 +647,7 @@ func TestConvertToEntitledType(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 
 			inputStaticType := interpreter.ConvertSemaToStaticType(nil, test.Input)
-			convertedType, _ := ConvertToEntitledType(migration, inputStaticType)
+			convertedType, _ := migration.ConvertToEntitledType(inputStaticType)
 
 			expectedType := interpreter.ConvertSemaToStaticType(nil, test.Output)
 
@@ -694,8 +694,8 @@ func (m testEntitlementsMigration) Migrate(
 	interpreter.Value,
 	error,
 ) {
-	mig := NewEntitlementsMigration(m.inter)
-	return ConvertValueToEntitlements(mig, value)
+	migration := NewEntitlementsMigration(m.inter)
+	return migration.ConvertValueToEntitlements(value)
 }
 
 func (m testEntitlementsMigration) CanSkip(_ interpreter.StaticType) bool {
@@ -1577,7 +1577,10 @@ func TestMigrateSimpleContract(t *testing.T) {
 func TestNilTypeValue(t *testing.T) {
 	t.Parallel()
 
-	result, err := ConvertValueToEntitlements(NewEntitlementsMigration(nil), interpreter.NewTypeValue(nil, nil))
+	migration := NewEntitlementsMigration(nil)
+	result, err := migration.ConvertValueToEntitlements(
+		interpreter.NewTypeValue(nil, nil),
+	)
 	require.NoError(t, err)
 	require.Nil(t, result)
 }
@@ -1585,8 +1588,8 @@ func TestNilTypeValue(t *testing.T) {
 func TestNilPathCapabilityValue(t *testing.T) {
 	t.Parallel()
 
-	result, err := ConvertValueToEntitlements(
-		NewEntitlementsMigration(NewTestInterpreter(t)),
+	migration := NewEntitlementsMigration(NewTestInterpreter(t))
+	result, err := migration.ConvertValueToEntitlements(
 		&interpreter.PathCapabilityValue{ //nolint:staticcheck
 			Address:    interpreter.NewAddressValue(nil, common.MustBytesToAddress([]byte{0x1})),
 			Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test"),
@@ -2816,7 +2819,7 @@ func TestConvertDeprecatedStaticTypes(t *testing.T) {
 				),
 			)
 
-			result, err := ConvertValueToEntitlements(migration, value)
+			result, err := migration.ConvertValueToEntitlements(value)
 			require.Error(t, err)
 			assert.ErrorContains(t, err, "cannot migrate deprecated type")
 			require.Nil(t, result)
@@ -2863,7 +2866,7 @@ func TestConvertMigratedAccountTypes(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, newValue)
 
-			result, err := ConvertValueToEntitlements(migration, newValue)
+			result, err := migration.ConvertValueToEntitlements(newValue)
 			require.NoError(t, err)
 			require.Nilf(t, result, "expected no migration, but got %s", result)
 		})
