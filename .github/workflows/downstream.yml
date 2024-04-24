@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: 'onflow/flow-go'
-          ref: ${{ github.base_ref == 'feature/stable-cadence' && 'feature/stable-cadence' || 'master' }}
+          ref: ${{ github.base_ref == 'master' && 'feature/stable-cadence' || 'master' }}
 
       - name: Setup Go
         uses: actions/setup-go@v3
@@ -53,7 +53,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           repository: 'onflow/flow-emulator'
-          ref: ${{ github.base_ref == 'feature/stable-cadence' && 'feature/stable-cadence' || 'master' }}
+          ref: ${{ github.base_ref == 'master' && 'master' || 'release/v0' }}
 
       - name: Setup Go
         uses: actions/setup-go@v3
