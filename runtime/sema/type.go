@@ -6942,14 +6942,11 @@ func formatReferenceType[T ~string](
 	typeString T,
 ) string {
 	var builder strings.Builder
-
 	if authorization != "" {
 		builder.WriteString("auth(")
 		builder.WriteString(string(authorization))
 		builder.WriteString(")")
 		builder.WriteString(separator)
-		builder.WriteByte('&')
-		builder.WriteString(string(typeString))
 	}
 	builder.WriteByte('&')
 	builder.WriteString(string(typeString))
