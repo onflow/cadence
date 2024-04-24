@@ -9787,11 +9787,12 @@ func TestRuntimePreconditionDuplication(t *testing.T) {
 	var checkerErr *sema.CheckerError
 	require.ErrorAs(t, err, &checkerErr)
 
-	errs := checker.RequireCheckerErrors(t, checkerErr, 3)
+	errs := checker.RequireCheckerErrors(t, checkerErr, 4)
 
 	assert.IsType(t, &sema.PurityError{}, errs[0])
 	assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[1])
 	assert.IsType(t, &sema.PurityError{}, errs[2])
+	assert.IsType(t, &sema.ResourceCapturingError{}, errs[3])
 }
 
 func TestRuntimeStorageReferenceStaticTypeSpoofing(t *testing.T) {
@@ -10355,9 +10356,13 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	var checkerErr *sema.CheckerError
+	require.ErrorAs(t, err, &checkerErr)
+
+	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
+
+	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }
 
 func TestRuntimeValueTransferResourceLoss(t *testing.T) {
