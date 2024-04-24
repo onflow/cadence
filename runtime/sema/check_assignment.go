@@ -392,13 +392,6 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		return InvalidType
 	}
 
-	if memberType.IsResourceType() {
-		baseVariable, _ := checker.rootOfAccessChain(target)
-		if baseVariable != nil {
-			checker.checkResourceVariableCapturingInFunction(baseVariable, member.Identifier)
-		}
-	}
-
 	if isOptional {
 		checker.report(
 			&UnsupportedOptionalChainingAssignmentError{

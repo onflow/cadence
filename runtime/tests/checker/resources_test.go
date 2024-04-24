@@ -9479,10 +9479,9 @@ func TestCheckInvalidNestedResourceCaptureOnLeft(t *testing.T) {
                 }
             }
       `)
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
-		assert.IsType(t, &sema.ResourceCapturingError{}, errs[1])
 	})
 
 	t.Run("on left", func(t *testing.T) {
@@ -9545,9 +9544,7 @@ func TestCheckInvalidNestedResourceCaptureOnLeft(t *testing.T) {
                 }
             }
     `)
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+		require.NoError(t, err)
 	})
 
 	t.Run("contract self variable on left method scope", func(t *testing.T) {
