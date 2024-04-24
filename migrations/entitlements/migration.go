@@ -20,7 +20,6 @@ package entitlements
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/migrations/statictypes"
@@ -28,27 +27,20 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type StaticTypeCache struct {
-	m sync.Map
-}
-
 type EntitlementsMigration struct {
 	Interpreter       *interpreter.Interpreter
-	migratedTypeCache *StaticTypeCache
+	migratedTypeCache *migrations.StaticTypeCache
 }
 
 var _ migrations.ValueMigration = EntitlementsMigration{}
 
 func NewEntitlementsMigration(inter *interpreter.Interpreter) EntitlementsMigration {
-	return EntitlementsMigration{
-		Interpreter:       inter,
-		migratedTypeCache: &StaticTypeCache{m: sync.Map{}},
-	}
+	return NewEntitlementsMigrationWithCache(inter, &migrations.StaticTypeCache{})
 }
 
 func NewEntitlementsMigrationWithCache(
 	inter *interpreter.Interpreter,
-	migratedTypeCache *StaticTypeCache,
+	migratedTypeCache *migrations.StaticTypeCache,
 ) EntitlementsMigration {
 	return EntitlementsMigration{
 		Interpreter:       inter,
@@ -96,13 +88,13 @@ func ConvertToEntitledType(
 
 	staticTypeID := staticType.ID()
 
-	if migratedType, exists := migratedTypeCache.m.Load(staticTypeID); exists {
-		return migratedType.(interpreter.StaticType), nil
+	if migratedType, exists := migratedTypeCache.Get(staticTypeID); exists {
+		return migratedType, nil
 	}
 
 	defer func() {
 		if resultType != nil && conversionErr == nil {
-			migratedTypeCache.m.Store(staticTypeID, resultType)
+			migratedTypeCache.Set(staticTypeID, resultType)
 		}
 	}()
 
