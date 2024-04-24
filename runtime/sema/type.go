@@ -4956,12 +4956,15 @@ func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
 	return t.Members
 }
 
-// TODO: improve naming
 func newCompositeOrInterfaceSupportedEntitlementSet(
 	members *StringMemberOrderedMap,
 	effectiveInterfaceConformanceSet *InterfaceSet,
 ) *EntitlementSet {
 	set := &EntitlementSet{}
+
+	// We need to handle conjunctions and disjunctions separately, in two passes,
+	// as adding entitlements after disjunctions does not remove disjunctions from the set,
+	// whereas adding disjunctions after entitlements does.
 
 	// First pass: Handle maps and conjunctions
 	members.Foreach(func(_ string, member *Member) {
