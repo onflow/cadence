@@ -30,7 +30,6 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -253,7 +252,7 @@ type NominalType interface {
 // entitlement supporting types
 type EntitlementSupportingType interface {
 	Type
-	SupportedEntitlements() *EntitlementOrderedSet
+	SupportedEntitlements() *EntitlementSet
 }
 
 // ContainedType is a type which might have a container type
@@ -693,7 +692,7 @@ func (t *OptionalType) QualifiedString() string {
 }
 
 func FormatOptionalTypeID[T ~string](elementTypeID T) T {
-	return T(fmt.Sprintf("%s?", elementTypeID))
+	return T(fmt.Sprintf("(%s)?", elementTypeID))
 }
 
 func (t *OptionalType) ID() TypeID {
@@ -797,7 +796,7 @@ func (t *OptionalType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 	}
 }
 
-func (t *OptionalType) SupportedEntitlements() *EntitlementOrderedSet {
+func (t *OptionalType) SupportedEntitlements() *EntitlementSet {
 	if entitlementSupportingType, ok := t.Type.(EntitlementSupportingType); ok {
 		return entitlementSupportingType.SupportedEntitlements()
 	}
@@ -3125,15 +3124,15 @@ func (t *VariableSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) 
 	}
 }
 
-func (t *VariableSizedType) SupportedEntitlements() *EntitlementOrderedSet {
+func (t *VariableSizedType) SupportedEntitlements() *EntitlementSet {
 	return arrayDictionaryEntitlements
 }
 
-var arrayDictionaryEntitlements = func() *EntitlementOrderedSet {
-	set := orderedmap.New[EntitlementOrderedSet](3)
-	set.Set(MutateType, struct{}{})
-	set.Set(InsertType, struct{}{})
-	set.Set(RemoveType, struct{}{})
+var arrayDictionaryEntitlements = func() *EntitlementSet {
+	set := &EntitlementSet{}
+	set.Add(MutateType)
+	set.Add(InsertType)
+	set.Add(RemoveType)
 	return set
 }()
 
@@ -3321,7 +3320,7 @@ func (t *ConstantSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) 
 	}
 }
 
-func (t *ConstantSizedType) SupportedEntitlements() *EntitlementOrderedSet {
+func (t *ConstantSizedType) SupportedEntitlements() *EntitlementSet {
 	return arrayDictionaryEntitlements
 }
 
@@ -4770,7 +4769,7 @@ type CompositeType struct {
 	// Only applicable for native composite types
 	ImportableBuiltin         bool
 	supportedEntitlementsOnce sync.Once
-	supportedEntitlements     *EntitlementOrderedSet
+	supportedEntitlements     *EntitlementSet
 }
 
 var _ Type = &CompositeType{}
@@ -4957,27 +4956,72 @@ func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
 	return t.Members
 }
 
-func (t *CompositeType) SupportedEntitlements() *EntitlementOrderedSet {
-	t.supportedEntitlementsOnce.Do(func() {
-		set := orderedmap.New[EntitlementOrderedSet](t.Members.Len())
-		t.Members.Foreach(func(_ string, member *Member) {
-			switch access := member.Access.(type) {
-			case *EntitlementMapAccess:
-				set.SetAll(access.Domain().Entitlements)
-			case EntitlementSetAccess:
-				set.SetAll(access.Entitlements)
+func newCompositeOrInterfaceSupportedEntitlementSet(
+	members *StringMemberOrderedMap,
+	effectiveInterfaceConformanceSet *InterfaceSet,
+) *EntitlementSet {
+	set := &EntitlementSet{}
+
+	// We need to handle conjunctions and disjunctions separately, in two passes,
+	// as adding entitlements after disjunctions does not remove disjunctions from the set,
+	// whereas adding disjunctions after entitlements does.
+
+	// First pass: Handle maps and conjunctions
+	members.Foreach(func(_ string, member *Member) {
+		switch access := member.Access.(type) {
+		case *EntitlementMapAccess:
+			// Domain is a conjunction, add all entitlements
+			domain := access.Domain()
+			if domain.SetKind != Conjunction {
+				panic(errors.NewUnreachableError())
 			}
-		})
-		t.EffectiveInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
-			set.SetAll(it.SupportedEntitlements())
-		})
+			domain.Entitlements.
+				Foreach(func(entitlementType *EntitlementType, _ struct{}) {
+					set.Add(entitlementType)
+				})
+
+		case EntitlementSetAccess:
+			// Disjunctions are handled in a second pass
+			if access.SetKind == Conjunction {
+				access.Entitlements.Foreach(func(entitlementType *EntitlementType, _ struct{}) {
+					set.Add(entitlementType)
+				})
+			}
+		}
+	})
+
+	// Second pass: Handle disjunctions
+	for pair := members.Oldest(); pair != nil; pair = pair.Next() {
+		member := pair.Value
+
+		if access, ok := member.Access.(EntitlementSetAccess); ok &&
+			access.SetKind == Disjunction {
+
+			set.AddDisjunction(access.Entitlements)
+		}
+	}
+
+	effectiveInterfaceConformanceSet.ForEach(func(it *InterfaceType) {
+		set.Merge(it.SupportedEntitlements())
+	})
+
+	return set
+}
+
+func (t *CompositeType) SupportedEntitlements() *EntitlementSet {
+	t.supportedEntitlementsOnce.Do(func() {
+
+		set := newCompositeOrInterfaceSupportedEntitlementSet(
+			t.Members,
+			t.EffectiveInterfaceConformanceSet(),
+		)
 
 		// attachments support at least the entitlements supported by their base,
 		// and we must ensure there is no recursive case
 		if entitlementSupportingBase, isEntitlementSupportingBase :=
 			t.GetBaseType().(EntitlementSupportingType); isEntitlementSupportingBase && entitlementSupportingBase != t {
 
-			set.SetAll(entitlementSupportingBase.SupportedEntitlements())
+			set.Merge(entitlementSupportingBase.SupportedEntitlements())
 		}
 
 		t.supportedEntitlements = set
@@ -5155,7 +5199,7 @@ func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ func() ast.
 	case *CompositeType:
 		// when accessed on an owned value, the produced attachment reference is entitled to all the
 		// entitlements it supports
-		access = NewAccessFromEntitlementSet(attachment.SupportedEntitlements(), Conjunction)
+		access = attachment.SupportedEntitlements().Access()
 	}
 
 	return &OptionalType{
@@ -5658,7 +5702,7 @@ type InterfaceType struct {
 	effectiveInterfaceConformances   []Conformance
 	effectiveInterfaceConformanceSet *InterfaceSet
 	supportedEntitlementsOnce        sync.Once
-	supportedEntitlements            *EntitlementOrderedSet
+	supportedEntitlements            *EntitlementSet
 
 	DefaultDestroyEvent *CompositeType
 }
@@ -5767,27 +5811,12 @@ func (t *InterfaceType) MemberMap() *StringMemberOrderedMap {
 	return t.Members
 }
 
-func (t *InterfaceType) SupportedEntitlements() *EntitlementOrderedSet {
+func (t *InterfaceType) SupportedEntitlements() *EntitlementSet {
 	t.supportedEntitlementsOnce.Do(func() {
-		set := orderedmap.New[EntitlementOrderedSet](t.Members.Len())
-		t.Members.Foreach(func(_ string, member *Member) {
-			switch access := member.Access.(type) {
-			case *EntitlementMapAccess:
-				access.Domain().Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
-					set.Set(entitlement, struct{}{})
-				})
-			case EntitlementSetAccess:
-				access.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
-					set.Set(entitlement, struct{}{})
-				})
-			}
-		})
-
-		t.EffectiveInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
-			set.SetAll(it.SupportedEntitlements())
-		})
-
-		t.supportedEntitlements = set
+		t.supportedEntitlements = newCompositeOrInterfaceSupportedEntitlementSet(
+			t.Members,
+			t.EffectiveInterfaceConformanceSet(),
+		)
 	})
 	return t.supportedEntitlements
 }
@@ -6535,7 +6564,7 @@ func (t *DictionaryType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 	}
 }
 
-func (t *DictionaryType) SupportedEntitlements() *EntitlementOrderedSet {
+func (t *DictionaryType) SupportedEntitlements() *EntitlementSet {
 	return arrayDictionaryEntitlements
 }
 
@@ -8146,7 +8175,7 @@ type IntersectionType struct {
 	memberResolvers              map[string]MemberResolver
 	memberResolversOnce          sync.Once
 	supportedEntitlementsOnce    sync.Once
-	supportedEntitlements        *EntitlementOrderedSet
+	supportedEntitlements        *EntitlementSet
 	// Deprecated
 	LegacyType Type
 }
@@ -8401,13 +8430,14 @@ func (t *IntersectionType) initializeMemberResolvers() {
 	})
 }
 
-func (t *IntersectionType) SupportedEntitlements() *EntitlementOrderedSet {
+func (t *IntersectionType) SupportedEntitlements() *EntitlementSet {
 	t.supportedEntitlementsOnce.Do(func() {
 		// an intersection type supports all the entitlements of its interfaces
-		set := orderedmap.New[EntitlementOrderedSet](t.EffectiveIntersectionSet().Len())
-		t.EffectiveIntersectionSet().ForEach(func(it *InterfaceType) {
-			set.SetAll(it.SupportedEntitlements())
-		})
+		set := &EntitlementSet{}
+		t.EffectiveIntersectionSet().
+			ForEach(func(interfaceType *InterfaceType) {
+				set.Merge(interfaceType.SupportedEntitlements())
+			})
 		t.supportedEntitlements = set
 	})
 
@@ -8450,7 +8480,7 @@ func (t *IntersectionType) TypeIndexingElementType(indexingType Type, _ func() a
 	case *CompositeType:
 		// when accessed on an owned value, the produced attachment reference is entitled to all the
 		// entitlements it supports
-		access = NewAccessFromEntitlementSet(attachment.SupportedEntitlements(), Conjunction)
+		access = attachment.SupportedEntitlements().Access()
 	}
 
 	return &OptionalType{

@@ -817,14 +817,8 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 		auth := UnauthorizedAccess
 		// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned
 		if entitlementSupportingType, ok := ty.(sema.EntitlementSupportingType); ok {
-			supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
-			if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
-				access := sema.EntitlementSetAccess{
-					SetKind:      sema.Conjunction,
-					Entitlements: supportedEntitlements,
-				}
-				auth = ConvertSemaAccessToStaticAuthorization(interpreter, access)
-			}
+			access := entitlementSupportingType.SupportedEntitlements().Access()
+			auth = ConvertSemaAccessToStaticAuthorization(interpreter, access)
 		}
 		return auth
 	}
@@ -1038,7 +1032,7 @@ func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
 			panic(errors.NewUnreachableError())
 		}
 		supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
-		access := sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
+		access := supportedEntitlements.Access()
 		base, self = attachmentBaseAndSelfValues(
 			declarationInterpreter,
 			access,
@@ -1393,10 +1387,8 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 					// Self's type in the constructor is fully entitled, since
 					// the constructor can only be called when in possession of the base resource
 
-					auth := ConvertSemaAccessToStaticAuthorization(
-						interpreter,
-						sema.NewAccessFromEntitlementSet(attachmentType.SupportedEntitlements(), sema.Conjunction),
-					)
+					access := attachmentType.SupportedEntitlements().Access()
+					auth := ConvertSemaAccessToStaticAuthorization(interpreter, access)
 
 					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType, locationRange)
 
@@ -2189,6 +2181,9 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 			case *IDCapabilityValue:
 				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
 				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
+				if capability.isInvalid() {
+					return NewInvalidCapabilityValue(interpreter, capability.Address, borrowType)
+				}
 				return NewCapabilityValue(
 					interpreter,
 					capability.ID,
@@ -5493,6 +5488,10 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
+			if capabilityID == invalidCapabilityID {
+				return Nil
+			}
+
 			var wantedBorrowType *sema.ReferenceType
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair != nil {
@@ -5530,6 +5529,10 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 		interpreter,
 		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
 		func(invocation Invocation) Value {
+
+			if capabilityID == invalidCapabilityID {
+				return FalseValue
+			}
 
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange

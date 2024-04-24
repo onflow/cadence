@@ -495,7 +495,8 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
-				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
+				var invalidEntryPointArgumentErr *InvalidEntryPointArgumentError
+				assert.ErrorAs(t, err, &invalidEntryPointArgumentErr)
 			},
 		},
 		{
@@ -513,8 +514,11 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
-				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
+				var invalidEntryPointArgumentErr *InvalidEntryPointArgumentError
+				assert.ErrorAs(t, err, &invalidEntryPointArgumentErr)
+
+				var invalidValueTypeErr *InvalidValueTypeError
+				assert.ErrorAs(t, err, &invalidValueTypeErr)
 			},
 		},
 		{
@@ -8744,7 +8748,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 	tx2 := []byte(`
         transaction {
             prepare(signer: &Account) {
-                let cap = signer.capabilities.get<&AnyStruct>(/public/r)!
+                let cap = signer.capabilities.get<&AnyStruct>(/public/r)
 				cap.check()
             }
         }
@@ -10567,19 +10571,6 @@ func TestRuntimeNonPublicAccessModifierInInterface(t *testing.T) {
 		}
 	`)
 
-	tx := []byte(`
-        import C1 from 0x1
-        import C2 from 0x2
-
-        transaction {
-            prepare(acct: &Account) {
-               C1.test(C2.S1())
-               C1.test(C2.S2())
-               C2.test()
-            }
-        }
-    `)
-
 	deploy1 := DeploymentTransaction("C1", contract1)
 	deploy2 := DeploymentTransaction("C2", contract2)
 
@@ -10640,17 +10631,10 @@ func TestRuntimeNonPublicAccessModifierInInterface(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	require.NoError(t, err)
+	RequireError(t, err)
 
-	// Run test transaction
+	var conformanceErr *sema.ConformanceError
+	require.ErrorAs(t, err, &conformanceErr)
 
-	err = runtime.ExecuteTransaction(
-		Script{
-			Source: tx,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		})
-	require.NoError(t, err)
+	require.Len(t, conformanceErr.MemberMismatches, 2)
 }

@@ -1562,7 +1562,7 @@ func (interpreter *Interpreter) VisitAttachExpression(attachExpression *ast.Atta
 	// within the constructor, the attachment's base and self references should be fully entitled,
 	// as the constructor of the attachment is only callable by the owner of the base
 	baseType := interpreter.MustSemaTypeOfValue(base).(sema.EntitlementSupportingType)
-	baseAccess := sema.NewAccessFromEntitlementSet(baseType.SupportedEntitlements(), sema.Conjunction)
+	baseAccess := baseType.SupportedEntitlements().Access()
 	auth := ConvertSemaAccessToStaticAuthorization(interpreter, baseAccess)
 
 	attachmentType := interpreter.Program.Elaboration.AttachTypes(attachExpression)

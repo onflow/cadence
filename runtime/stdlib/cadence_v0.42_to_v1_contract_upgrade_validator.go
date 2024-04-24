@@ -23,14 +23,13 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 type CadenceV042ToV1ContractUpdateValidator struct {
-	TypeComparator
+	*TypeComparator
 
 	newElaborations                          map[common.Location]*sema.Elaboration
 	currentRestrictedTypeUpgradeRestrictions []*ast.NominalType
@@ -65,6 +64,7 @@ func NewCadenceV042ToV1ContractUpdateValidator(
 	return &CadenceV042ToV1ContractUpdateValidator{
 		underlyingUpdateValidator: underlyingValidator,
 		newElaborations:           newElaborations,
+		TypeComparator:            underlyingValidator.TypeComparator,
 	}
 }
 
@@ -267,7 +267,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOf
 	}
 
 	supportedEntitlements := compositeType.SupportedEntitlements()
-	return sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
+	return supportedEntitlements.Access()
 }
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOfIntersection(
@@ -279,19 +279,12 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOf
 	// been a restricted type with no legacy type
 	interfaces := validator.getIntersectedInterfaces(intersectionTypes)
 
-	supportedEntitlements := orderedmap.New[sema.EntitlementOrderedSet](0)
+	intersectionType := sema.NewIntersectionType(nil, nil, interfaces)
 
-	for _, interfaceType := range interfaces {
-		supportedEntitlements.SetAll(interfaceType.SupportedEntitlements())
-	}
-
-	return sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
+	return intersectionType.SupportedEntitlements().Access()
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) checkEntitlementsUpgrade(
-	oldType *ast.ReferenceType,
-	newType *ast.ReferenceType,
-) error {
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkEntitlementsUpgrade(newType *ast.ReferenceType) error {
 	newAuthorization := newType.Authorization
 	newEntitlementSet, isEntitlementsSet := newAuthorization.(ast.EntitlementSet)
 	foundEntitlementSet := validator.getEntitlementSetAccess(newEntitlementSet)
@@ -331,7 +324,7 @@ typeSwitch:
 			}
 
 			if newReference.Authorization != nil {
-				return validator.checkEntitlementsUpgrade(oldType, newReference)
+				return validator.checkEntitlementsUpgrade(newReference)
 
 			}
 			return nil
@@ -569,11 +562,15 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkConformanceV1(
 	// NOTE 2: If one declaration is an enum, then other is also an enum at this stage.
 	// This is enforced by the validator (in `checkDeclarationUpdatability`), before calling this function.
 	if newDecl.Kind() == common.CompositeKindEnum {
-		err := oldConformances[0].CheckEqual(newDecl.Conformances[0], validator)
+		oldConformance := oldConformances[0]
+		newConformance := newDecl.Conformances[0]
+
+		err := oldConformance.CheckEqual(newConformance, validator)
 		if err != nil {
 			validator.report(&ConformanceMismatchError{
-				DeclName: newDecl.Identifier.Identifier,
-				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+				DeclName:           newDecl.Identifier.Identifier,
+				MissingConformance: oldConformance.String(),
+				Range:              ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
 			})
 		}
 
@@ -629,9 +626,12 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkConformanceV1(
 		}
 
 		if !found {
+			oldConformanceID := validator.underlyingUpdateValidator.oldTypeID(oldConformance)
+
 			validator.report(&ConformanceMismatchError{
-				DeclName: newDecl.Identifier.Identifier,
-				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+				DeclName:           newDecl.Identifier.Identifier,
+				MissingConformance: string(oldConformanceID),
+				Range:              ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
 			})
 
 			return

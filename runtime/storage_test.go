@@ -1176,7 +1176,7 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
                           signer.capabilities.publish(cap, at: /public/test)
                           signer.storage.save(cap, to: %[2]s)
 
-                          let cap2 = signer.capabilities.get<%[1]s>(/public/test)!
+                          let cap2 = signer.capabilities.get<%[1]s>(/public/test)
                           signer.storage.save(cap2, to: %[3]s)
                       }
                   }
@@ -3802,12 +3802,14 @@ func TestRuntimeStorageIteration(t *testing.T) {
 
                             account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                                 total = total + 1
-                                if var cap = account.capabilities.get<&[{Foo.Collection}]>(path) {
-                                    cap.check()
-                                    var refArray = cap.borrow()!
-                                    capTaken = true
-                                }
 
+                                var cap = account.capabilities.get<&[{Foo.Collection}]>(path)
+								if cap.id != 0 {
+									cap.check()
+									var refArray = cap.borrow()!
+									capTaken = true
+								}
+                                
                                 return true
                             })
 
@@ -3999,10 +4001,11 @@ func TestRuntimeStorageIteration(t *testing.T) {
                             account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
                                 total = total + 1
 
-                                if var cap = account.capabilities.get<&{Foo.Collection}>(path) {
-                                    cap.check()
-                                    capTaken = true
-                                }
+                                var cap = account.capabilities.get<&{Foo.Collection}>(path)
+								if cap.id != 0 {
+									cap.check()
+									capTaken = true
+								}
 
                                 return true
                             })
@@ -4208,7 +4211,7 @@ func TestRuntimeStorageIteration(t *testing.T) {
                               prepare(account: &Account) {
                                   var total = 0
                                   account.storage.forEachPublic(fun (path: PublicPath, type: Type): Bool {
-                                      var cap = account.capabilities.get<&String>(path)!
+                                      var cap = account.capabilities.get<&String>(path)
                                       cap.check()
                                       total = total + 1
                                       return true
