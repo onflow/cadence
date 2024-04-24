@@ -338,11 +338,31 @@ typeSwitch:
 			return nil
 		}
 	case *ast.IntersectionType:
-		// intersection types cannot be upgraded unless they have a legacy restricted type,
-		// in which case they must be upgraded according to the migration rules: i.e. R{I} -> R
+		// If the intersection type have doesn't a legacy restricted type,
+		// the interface set must be compatible.
 		if oldType.LegacyRestrictedType == nil {
-			break
+			foundIntersectionType, ok := newType.(*ast.IntersectionType)
+			if !ok {
+				return newTypeMismatchError(oldType, newType)
+			}
+
+			if len(oldType.Types) != len(foundIntersectionType.Types) {
+				return newTypeMismatchError(oldType, newType)
+			}
+
+			for index, expectedIntersectedType := range oldType.Types {
+				foundType := foundIntersectionType.Types[index]
+				err := validator.checkTypeUpgradability(expectedIntersectedType, foundType)
+				if err != nil {
+					return newTypeMismatchError(oldType, newType)
+				}
+			}
+
+			return nil
 		}
+
+		// If the intersection type have a legacy restricted type,
+		// they must be upgraded according to the migration rules: i.e. R{I} -> R
 		validator.currentRestrictedTypeUpgradeRestrictions = oldType.Types
 
 		// If the old restricted type is for AnyStruct/AnyResource,
