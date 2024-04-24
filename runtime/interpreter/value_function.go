@@ -173,7 +173,7 @@ type HostFunction func(invocation Invocation) Value
 
 type HostFunctionValue struct {
 	Function        HostFunction
-	NestedVariables map[string]*Variable
+	NestedVariables map[string]Variable
 	Type            *sema.FunctionType
 }
 
@@ -255,10 +255,10 @@ func (f *HostFunctionValue) invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f *HostFunctionValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (f *HostFunctionValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 	if f.NestedVariables != nil {
 		if variable, ok := f.NestedVariables[name]; ok {
-			return variable.GetValue()
+			return variable.GetValue(inter)
 		}
 	}
 	return nil
@@ -317,7 +317,7 @@ func (*HostFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
 
-func (v *HostFunctionValue) SetNestedVariables(variables map[string]*Variable) {
+func (v *HostFunctionValue) SetNestedVariables(variables map[string]Variable) {
 	v.NestedVariables = variables
 }
 

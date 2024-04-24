@@ -100,14 +100,18 @@ func getFunctionTypeFromMember(funcMember *sema.Member, funcName string) *sema.F
 	return functionType
 }
 
-func getNestedTypeConstructorValue(parent interpreter.Value, typeName string) *interpreter.HostFunctionValue {
+func getNestedTypeConstructorValue(
+	inter *interpreter.Interpreter,
+	parent interpreter.Value,
+	typeName string,
+) *interpreter.HostFunctionValue {
 	compositeValue, ok := parent.(*interpreter.CompositeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
 	constructorVar := compositeValue.NestedVariables[typeName]
-	constructor, ok := constructorVar.GetValue().(*interpreter.HostFunctionValue)
+	constructor, ok := constructorVar.GetValue(inter).(*interpreter.HostFunctionValue)
 	if !ok {
 		panic(errors.NewUnexpectedError("invalid type for constructor"))
 	}
@@ -155,10 +159,10 @@ func newScriptResult(
 	var status interpreter.Value
 	if result.Error == nil {
 		succeededVar := resultStatusConstructor.NestedVariables[testResultStatusTypeSucceededCaseName]
-		status = succeededVar.GetValue()
+		status = succeededVar.GetValue(inter)
 	} else {
 		failedVar := resultStatusConstructor.NestedVariables[testResultStatusTypeFailedCaseName]
-		status = failedVar.GetValue()
+		status = failedVar.GetValue(inter)
 	}
 
 	errValue := newErrorValue(inter, result.Error)
@@ -184,7 +188,7 @@ func newScriptResult(
 
 func getConstructor(inter *interpreter.Interpreter, typeName string) *interpreter.HostFunctionValue {
 	resultStatusConstructorVar := inter.FindVariable(typeName)
-	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
+	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue(inter).(*interpreter.HostFunctionValue)
 	if !ok {
 		panic(errors.NewUnexpectedError("invalid type for constructor of '%s'", typeName))
 	}
@@ -303,10 +307,10 @@ func newTransactionResult(inter *interpreter.Interpreter, result *TransactionRes
 	var status interpreter.Value
 	if result.Error == nil {
 		succeededVar := resultStatusConstructor.NestedVariables[testResultStatusTypeSucceededCaseName]
-		status = succeededVar.GetValue()
+		status = succeededVar.GetValue(inter)
 	} else {
 		failedVar := resultStatusConstructor.NestedVariables[testResultStatusTypeFailedCaseName]
-		status = failedVar.GetValue()
+		status = failedVar.GetValue(inter)
 	}
 
 	// Create a 'TransactionResult' by calling its constructor.
@@ -378,11 +382,14 @@ func newMatcherWithAnyStructTestFunction(
 	testFunc interpreter.FunctionValue,
 ) interpreter.Value {
 
+	inter := invocation.Interpreter
+
 	matcherConstructor := getNestedTypeConstructorValue(
+		inter,
 		*invocation.Self,
 		testMatcherTypeName,
 	)
-	matcher, err := invocation.Interpreter.InvokeExternally(
+	matcher, err := inter.InvokeExternally(
 		matcherConstructor,
 		matcherConstructor.Type,
 		[]interpreter.Value{

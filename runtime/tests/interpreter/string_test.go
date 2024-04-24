@@ -445,21 +445,21 @@ func TestInterpretCompareCharacters(t *testing.T) {
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("x").GetValue(),
+		inter.Globals.Get("x").GetValue(inter),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.TrueValue,
-		inter.Globals.Get("y").GetValue(),
+		inter.Globals.Get("y").GetValue(inter),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
 		interpreter.FalseValue,
-		inter.Globals.Get("z").GetValue(),
+		inter.Globals.Get("z").GetValue(inter),
 	)
 }
 

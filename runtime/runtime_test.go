@@ -495,7 +495,8 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
-				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
+				var invalidEntryPointArgumentErr *InvalidEntryPointArgumentError
+				assert.ErrorAs(t, err, &invalidEntryPointArgumentErr)
 			},
 		},
 		{
@@ -513,8 +514,11 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			check: func(t *testing.T, err error) {
 				RequireError(t, err)
 
-				assert.IsType(t, &InvalidEntryPointArgumentError{}, errors.Unwrap(err))
-				assert.IsType(t, &InvalidValueTypeError{}, errors.Unwrap(errors.Unwrap(err)))
+				var invalidEntryPointArgumentErr *InvalidEntryPointArgumentError
+				assert.ErrorAs(t, err, &invalidEntryPointArgumentErr)
+
+				var invalidValueTypeErr *InvalidValueTypeError
+				assert.ErrorAs(t, err, &invalidValueTypeErr)
 			},
 		},
 		{
@@ -8739,7 +8743,7 @@ func TestRuntimeWrappedErrorHandling(t *testing.T) {
 	tx2 := []byte(`
         transaction {
             prepare(signer: &Account) {
-                let cap = signer.capabilities.get<&AnyStruct>(/public/r)!
+                let cap = signer.capabilities.get<&AnyStruct>(/public/r)
 				cap.check()
             }
         }
@@ -10207,9 +10211,6 @@ func TestRuntimeIfLetElseBranchConfusion(t *testing.T) {
 
 func TestResourceLossViaSelfRugPull(t *testing.T) {
 
-	// TODO: Disabled temporarily
-	t.SkipNow()
-
 	t.Parallel()
 
 	runtime := NewTestInterpreterRuntime()
@@ -10356,7 +10357,7 @@ func TestResourceLossViaSelfRugPull(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	require.ErrorAs(t, err, &interpreter.ResourceLossError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestRuntimeValueTransferResourceLoss(t *testing.T) {
@@ -10498,4 +10499,137 @@ func TestRuntimeValueTransferResourceLoss(t *testing.T) {
 	require.Equal(t, "flow.AccountContractAdded", events[0].EventType.ID())
 	require.Equal(t, `A.0000000000000001.Foo.R.ResourceDestroyed(id: "dummy resource")`, events[1].String())
 	require.Equal(t, `A.0000000000000001.Foo.R.ResourceDestroyed(id: "victim resource")`, events[2].String())
+}
+
+func TestRuntimeNonPublicAccessModifierInInterface(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntimeWithAttachments()
+
+	address1 := common.MustBytesToAddress([]byte{0x1})
+	address2 := common.MustBytesToAddress([]byte{0x2})
+
+	contract1 := []byte(`
+		access(all)
+        contract C1 {
+
+			access(all)
+            struct interface SI {
+
+				access(contract)
+                fun contractTest()
+
+                access(account)
+                fun accountTest()
+			}
+
+            access(all)
+            fun test(_ si: {SI}) {
+                si.contractTest()
+                si.accountTest()
+            }
+		}
+	`)
+
+	contract2 := []byte(`
+        import C1 from 0x1
+
+		access(all)
+        contract C2 {
+
+			access(all)
+            struct S1: C1.SI {
+				access(contract)
+                fun contractTest() {}
+
+                access(account)
+                fun accountTest() {}
+			}
+
+            access(all)
+            struct S2: C1.SI {
+				access(all)
+                fun contractTest() {}
+
+                access(all)
+                fun accountTest() {}
+			}
+
+            access(all)
+            fun test() {
+                S1().contractTest()
+                S1().accountTest()
+                S2().contractTest()
+                S2().accountTest()
+            }
+		}
+	`)
+
+	deploy1 := DeploymentTransaction("C1", contract1)
+	deploy2 := DeploymentTransaction("C2", contract2)
+
+	var signer Address
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signer}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy first contract to first account
+
+	signer = address1
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Deploy second contract to second account
+
+	signer = address2
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deploy2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	var conformanceErr *sema.ConformanceError
+	require.ErrorAs(t, err, &conformanceErr)
+
+	require.Len(t, conformanceErr.MemberMismatches, 2)
 }

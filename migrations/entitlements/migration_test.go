@@ -19,6 +19,7 @@
 package entitlements
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -715,7 +716,8 @@ func convertEntireTestValue(
 
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", address)
+	require.NoError(t, err)
 
 	migratedValue := migration.MigrateNestedValue(
 		interpreter.StorageKey{
@@ -730,7 +732,7 @@ func convertEntireTestValue(
 		reporter,
 	)
 
-	err := migration.Commit()
+	err = migration.Commit()
 	require.NoError(t, err)
 
 	// Assert
@@ -1217,7 +1219,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 			wrap: func(staticType interpreter.StaticType) interpreter.Value {
 				return interpreter.NewCapabilityValue(
 					nil,
-					0,
+					1,
 					interpreter.AddressValue{},
 					staticType,
 				)
@@ -1241,7 +1243,7 @@ func TestConvertToEntitledValue(t *testing.T) {
 					interpreter.AddressValue{},
 					interpreter.NewCapabilityValue(
 						nil,
-						0,
+						1,
 						interpreter.AddressValue{},
 						staticType,
 					),
@@ -1453,7 +1455,7 @@ func TestMigrateSimpleContract(t *testing.T) {
 
 	unentitledRCap := interpreter.NewCapabilityValue(
 		inter,
-		0,
+		1,
 		interpreter.NewAddressValue(inter, account),
 		unentitledRRefStaticType,
 	)
@@ -1475,7 +1477,7 @@ func TestMigrateSimpleContract(t *testing.T) {
 	entitledRRefStaticType := entitledRRef.StaticType(inter)
 	entitledRCap := interpreter.NewCapabilityValue(
 		inter,
-		0,
+		1,
 		interpreter.NewAddressValue(inter, account),
 		entitledRRefStaticType,
 	)
@@ -1492,7 +1494,7 @@ func TestMigrateSimpleContract(t *testing.T) {
 			storedValue: unentitledRCap.Clone(inter),
 			expectedValue: interpreter.NewCapabilityValue(
 				inter,
-				0,
+				1,
 				interpreter.NewAddressValue(inter, account),
 				entitledRRefStaticType,
 			),
@@ -1530,11 +1532,12 @@ func TestMigrateSimpleContract(t *testing.T) {
 
 	// Migrate
 
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", account)
+	require.NoError(t, err)
+
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
-	migration.MigrateAccount(
-		account,
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			NewEntitlementsMigration(inter),
@@ -1708,16 +1711,17 @@ func TestMigratePublishedValue(t *testing.T) {
 
 	// Migrate
 
-	reporter := newTestReporter()
-
 	storage, inter, err := rt.Storage(runtime.Context{
 		Interface: runtimeInterface,
 	})
 	require.NoError(t, err)
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
-	migration.MigrateAccount(
-		testAddress,
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
+
+	reporter := newTestReporter()
+
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			NewEntitlementsMigration(inter),
@@ -1968,21 +1972,23 @@ func TestMigratePublishedValueAcrossTwoAccounts(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
-	migrator := migration.NewValueMigrationsPathMigrator(
-		reporter,
-		NewEntitlementsMigration(inter),
-	)
-
 	for _, address := range []common.Address{
 		testAddress1,
 		testAddress2,
 	} {
-		migration.MigrateAccount(address, migrator)
-	}
 
-	err = migration.Commit()
-	require.NoError(t, err)
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", address)
+		require.NoError(t, err)
+
+		migrator := migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewEntitlementsMigration(inter),
+		)
+		migration.Migrate(migrator)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+	}
 
 	// Assert
 
@@ -2215,16 +2221,21 @@ func TestMigrateAcrossContracts(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
-	migrator := migration.NewValueMigrationsPathMigrator(
-		reporter,
-		NewEntitlementsMigration(inter),
-	)
 	for _, address := range []common.Address{
 		testAddress1,
 		testAddress2,
 	} {
-		migration.MigrateAccount(address, migrator)
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", address)
+		require.NoError(t, err)
+
+		migrator := migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewEntitlementsMigration(inter),
+		)
+		migration.Migrate(migrator)
+
+		err = migration.Commit()
+		require.NoError(t, err)
 	}
 
 	// Assert
@@ -2418,20 +2429,22 @@ func TestMigrateArrayOfValues(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
-	migrator := migration.NewValueMigrationsPathMigrator(
-		reporter,
-		NewEntitlementsMigration(inter),
-	)
 	for _, address := range []common.Address{
 		testAddress1,
 		testAddress2,
 	} {
-		migration.MigrateAccount(address, migrator)
-	}
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", address)
+		require.NoError(t, err)
 
-	err = migration.Commit()
-	require.NoError(t, err)
+		migrator := migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewEntitlementsMigration(inter),
+		)
+		migration.Migrate(migrator)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+	}
 
 	// Assert
 
@@ -2667,20 +2680,23 @@ func TestMigrateDictOfValues(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
-	migrator := migration.NewValueMigrationsPathMigrator(
-		reporter,
-		NewEntitlementsMigration(inter),
-	)
 	for _, address := range []common.Address{
 		testAddress1,
 		testAddress2,
 	} {
-		migration.MigrateAccount(address, migrator)
-	}
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", address)
+		require.NoError(t, err)
 
-	err = migration.Commit()
-	require.NoError(t, err)
+		migrator := migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewEntitlementsMigration(inter),
+		)
+
+		migration.Migrate(migrator)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+	}
 
 	// Assert
 
@@ -2990,20 +3006,23 @@ func TestMigrateCapConsAcrossTwoAccounts(t *testing.T) {
 
 	reporter := newTestReporter()
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
-	migrator := migration.NewValueMigrationsPathMigrator(
-		reporter,
-		NewEntitlementsMigration(inter),
-	)
 	for _, address := range []common.Address{
 		testAddress1,
 		testAddress2,
 	} {
-		migration.MigrateAccount(address, migrator)
-	}
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", address)
+		require.NoError(t, err)
 
-	err = migration.Commit()
-	require.NoError(t, err)
+		migrator := migration.NewValueMigrationsPathMigrator(
+			reporter,
+			NewEntitlementsMigration(inter),
+		)
+
+		migration.Migrate(migrator)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+	}
 
 	// Assert
 
@@ -3052,6 +3071,11 @@ func (t *testReporter) Migrated(
 
 func (t *testReporter) Error(err error) {
 	t.errors = append(t.errors, err)
+}
+
+func (t *testReporter) DictionaryKeyConflict(addressPath interpreter.AddressPath) {
+	// For testing purposes, record the conflict as an error
+	t.errors = append(t.errors, fmt.Errorf("dictionary key conflict: %s", addressPath))
 }
 
 func TestRehash(t *testing.T) {
@@ -3136,7 +3160,16 @@ func TestRehash(t *testing.T) {
 			ReferenceStaticType: refType,
 		}
 
-		typeValue := interpreter.NewUnmeteredTypeValue(legacyRefType)
+		optType := interpreter.NewOptionalStaticType(
+			nil,
+			legacyRefType,
+		)
+
+		legacyOptType := &migrations.LegacyOptionalType{
+			OptionalStaticType: optType,
+		}
+
+		typeValue := interpreter.NewUnmeteredTypeValue(legacyOptType)
 
 		dictValue.Insert(
 			inter,
@@ -3147,8 +3180,8 @@ func TestRehash(t *testing.T) {
 
 		// Note: ID is in the old format
 		assert.Equal(t,
-			common.TypeID("auth&A.4200000000000000.Foo.Bar"),
-			legacyRefType.ID(),
+			common.TypeID("auth&A.4200000000000000.Foo.Bar?"),
+			legacyOptType.ID(),
 		)
 
 		storageMap := storage.GetStorageMap(
@@ -3205,19 +3238,19 @@ func TestRehash(t *testing.T) {
 			return compositeType
 		}
 
-		migration := migrations.NewStorageMigration(inter, storage, "test")
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
 
 		reporter := newTestReporter()
 
-		migration.MigrateAccount(
-			testAddress,
+		migration.Migrate(
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				NewEntitlementsMigration(inter),
 			),
 		)
 
-		err := migration.Commit()
+		err = migration.Commit()
 		require.NoError(t, err)
 
 		// Assert
@@ -3269,13 +3302,20 @@ func TestRehash(t *testing.T) {
 			newCompositeType(),
 		)
 
-		typeValue := interpreter.NewUnmeteredTypeValue(refType)
+		optType := interpreter.NewOptionalStaticType(
+			nil,
+			refType,
+		)
+
+		typeValue := interpreter.NewUnmeteredTypeValue(optType)
 
 		// Note: ID is in the new format
 		assert.Equal(t,
-			common.TypeID("auth(A.4200000000000000.E)&A.4200000000000000.Foo.Bar"),
-			refType.ID(),
+			common.TypeID("(auth(A.4200000000000000.E)&A.4200000000000000.Foo.Bar)?"),
+			optType.ID(),
 		)
+
+		assert.Equal(t, 1, dictValue.Count())
 
 		value, ok := dictValue.Get(inter, locationRange, typeValue)
 		require.True(t, ok)
@@ -3398,19 +3438,19 @@ func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
 			}
 		}
 
-		migration := migrations.NewStorageMigration(inter, storage, "test")
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
 
 		reporter := newTestReporter()
 
-		migration.MigrateAccount(
-			testAddress,
+		migration.Migrate(
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				NewEntitlementsMigration(inter),
 			),
 		)
 
-		err := migration.Commit()
+		err = migration.Commit()
 		require.NoError(t, err)
 
 		// Assert

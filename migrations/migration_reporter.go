@@ -26,5 +26,6 @@ type Reporter interface {
 		storageMapKey interpreter.StorageMapKey,
 		migration string,
 	)
+	DictionaryKeyConflict(addressPath interpreter.AddressPath)
 	Error(err error)
 }

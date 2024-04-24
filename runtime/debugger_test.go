@@ -106,7 +106,7 @@ func TestRuntimeDebugger(t *testing.T) {
 	variable := activation.Find("answer")
 	require.NotNil(t, variable)
 
-	value := variable.GetValue()
+	value := variable.GetValue(stop.Interpreter)
 	require.Equal(
 		t,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
@@ -192,7 +192,7 @@ func TestRuntimeDebuggerBreakpoints(t *testing.T) {
 	variable := activation.Find("answer")
 	require.NotNil(t, variable)
 
-	value := variable.GetValue()
+	value := variable.GetValue(stop.Interpreter)
 	require.Equal(
 		t,
 		interpreter.NewUnmeteredIntValueFromInt64(42),

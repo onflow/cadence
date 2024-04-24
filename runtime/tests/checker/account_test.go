@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -1680,7 +1679,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 		_, err := ParseAndCheck(t, `
           fun test(capabilities: &Account.Capabilities) {
 
-              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
+              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)
 
               let ref: &Int = capabilities.borrow<&Int>(/public/foo)!
           }
@@ -1695,7 +1694,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 		_, err := ParseAndCheck(t, `
           fun test(capabilities: auth(Capabilities) &Account.Capabilities) {
 
-              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
+              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)
 
               let ref: &Int = capabilities.borrow<&Int>(/public/foo)!
 
@@ -1714,7 +1713,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 		_, err := ParseAndCheck(t, `
            fun test(capabilities: &Account.Capabilities) {
 
-              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
+              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)
 
               capabilities.publish(cap, at: /public/bar)
 
@@ -1728,19 +1727,37 @@ func TestCheckAccountCapabilities(t *testing.T) {
 		require.IsType(t, &sema.InvalidAccessError{}, errors[1])
 	})
 
-	t.Run("never type arg", func(t *testing.T) {
+	t.Run("Never type argument", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           fun test(capabilities: &Account.Capabilities) {
-              capabilities.get<Never>(/public/foo)!
+              capabilities.get<Never>(/public/foo)
           }
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
-		require.Equal(t, errs[0].(errors.SecondaryError).SecondaryError(), "Type argument for `get` cannot be `Never`")
+		var invalidTypeArgumentErr *sema.InvalidTypeArgumentError
+		require.ErrorAs(t, errs[0], &invalidTypeArgumentErr)
+		assert.Equal(t,
+			"Type argument for `get` cannot be `Never`",
+			invalidTypeArgumentErr.SecondaryError(),
+		)
+	})
+
+	t.Run("missing type argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(capabilities: &Account.Capabilities) {
+              capabilities.get(/public/foo)
+          }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
 	})
 }
 

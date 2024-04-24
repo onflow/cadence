@@ -30,7 +30,7 @@ import (
 )
 
 type CadenceV042ToV1ContractUpdateValidator struct {
-	TypeComparator
+	*TypeComparator
 
 	newElaborations                          map[common.Location]*sema.Elaboration
 	currentRestrictedTypeUpgradeRestrictions []*ast.NominalType
@@ -65,6 +65,7 @@ func NewCadenceV042ToV1ContractUpdateValidator(
 	return &CadenceV042ToV1ContractUpdateValidator{
 		underlyingUpdateValidator: underlyingValidator,
 		newElaborations:           newElaborations,
+		TypeComparator:            underlyingValidator.TypeComparator,
 	}
 }
 
@@ -569,11 +570,15 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkConformanceV1(
 	// NOTE 2: If one declaration is an enum, then other is also an enum at this stage.
 	// This is enforced by the validator (in `checkDeclarationUpdatability`), before calling this function.
 	if newDecl.Kind() == common.CompositeKindEnum {
-		err := oldConformances[0].CheckEqual(newDecl.Conformances[0], validator)
+		oldConformance := oldConformances[0]
+		newConformance := newDecl.Conformances[0]
+
+		err := oldConformance.CheckEqual(newConformance, validator)
 		if err != nil {
 			validator.report(&ConformanceMismatchError{
-				DeclName: newDecl.Identifier.Identifier,
-				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+				DeclName:           newDecl.Identifier.Identifier,
+				MissingConformance: oldConformance.String(),
+				Range:              ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
 			})
 		}
 
@@ -629,9 +634,12 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkConformanceV1(
 		}
 
 		if !found {
+			oldConformanceID := validator.underlyingUpdateValidator.oldTypeID(oldConformance)
+
 			validator.report(&ConformanceMismatchError{
-				DeclName: newDecl.Identifier.Identifier,
-				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+				DeclName:           newDecl.Identifier.Identifier,
+				MissingConformance: string(oldConformanceID),
+				Range:              ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
 			})
 
 			return

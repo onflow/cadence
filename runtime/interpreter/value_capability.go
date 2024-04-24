@@ -27,6 +27,8 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+const invalidCapabilityID UInt64Value = 0
+
 // CapabilityValue
 
 // TODO: remove once migration to Cadence 1.0 / ID capabilities is complete
@@ -49,6 +51,9 @@ func NewUnmeteredCapabilityValue(
 	address AddressValue,
 	borrowType StaticType,
 ) *IDCapabilityValue {
+	if id == invalidCapabilityID {
+		panic(InvalidCapabilityIDError{})
+	}
 	return &IDCapabilityValue{
 		ID:         id,
 		Address:    address,
@@ -67,6 +72,20 @@ func NewCapabilityValue(
 	return NewUnmeteredCapabilityValue(id, address, borrowType)
 }
 
+func NewInvalidCapabilityValue(
+	memoryGauge common.MemoryGauge,
+	address AddressValue,
+	borrowType StaticType,
+) *IDCapabilityValue {
+	// Constant because its constituents are already metered.
+	common.UseMemory(memoryGauge, common.CapabilityValueMemoryUsage)
+	return &IDCapabilityValue{
+		ID:         invalidCapabilityID,
+		Address:    address,
+		BorrowType: borrowType,
+	}
+}
+
 var _ Value = &IDCapabilityValue{}
 var _ atree.Storable = &IDCapabilityValue{}
 var _ EquatableValue = &IDCapabilityValue{}
@@ -76,6 +95,10 @@ var _ CapabilityValue = &IDCapabilityValue{}
 func (*IDCapabilityValue) isValue() {}
 
 func (*IDCapabilityValue) isCapabilityValue() {}
+
+func (v *IDCapabilityValue) isInvalid() bool {
+	return v.ID == invalidCapabilityID
+}
 
 func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitCapabilityValue(interpreter, v)

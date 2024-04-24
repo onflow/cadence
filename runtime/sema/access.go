@@ -37,8 +37,6 @@ type Access interface {
 	String() string
 	QualifiedString() string
 	Equal(other Access) bool
-	// IsLessPermissiveThan returns whether receiver access is less permissive than argument access
-	IsLessPermissiveThan(Access) bool
 	// PermitsAccess returns whether receiver access permits argument access
 	PermitsAccess(Access) bool
 }
@@ -78,7 +76,7 @@ func NewAccessFromEntitlementSet(
 	set *EntitlementOrderedSet,
 	setKind EntitlementSetKind,
 ) Access {
-	if set.Len() == 0 {
+	if set == nil || set.Len() == 0 {
 		return UnauthorizedAccess
 	}
 
@@ -252,18 +250,6 @@ func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
 	}
 }
 
-func (e EntitlementSetAccess) IsLessPermissiveThan(other Access) bool {
-	switch otherAccess := other.(type) {
-	case PrimitiveAccess:
-		return ast.PrimitiveAccess(otherAccess) != ast.AccessSelf
-	case EntitlementSetAccess:
-		// subset check returns true on equality, and we want this function to be false on equality, so invert the >= check
-		return !e.PermitsAccess(otherAccess)
-	default:
-		return true
-	}
-}
-
 // EntitlementMapAccess
 
 type EntitlementMapAccess struct {
@@ -344,18 +330,6 @@ func (e *EntitlementMapAccess) PermitsAccess(other Access) bool {
 		return e.Codomain().PermitsAccess(otherAccess)
 	default:
 		return false
-	}
-}
-
-func (e *EntitlementMapAccess) IsLessPermissiveThan(other Access) bool {
-	switch otherAccess := other.(type) {
-	case PrimitiveAccess:
-		return ast.PrimitiveAccess(otherAccess) != ast.AccessSelf
-	case *EntitlementMapAccess:
-		// this should be false on equality
-		return !e.Type.Equal(otherAccess.Type)
-	default:
-		return true
 	}
 }
 
@@ -481,14 +455,6 @@ func (a PrimitiveAccess) Equal(other Access) bool {
 		return ast.PrimitiveAccess(a) == ast.PrimitiveAccess(otherAccess)
 	}
 	return false
-}
-
-func (a PrimitiveAccess) IsLessPermissiveThan(otherAccess Access) bool {
-	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
-		return ast.PrimitiveAccess(a) < ast.PrimitiveAccess(otherPrimitive)
-	}
-	// primitive and entitlement access should never mix in interface conformance checks
-	return true
 }
 
 func (a PrimitiveAccess) PermitsAccess(otherAccess Access) bool {

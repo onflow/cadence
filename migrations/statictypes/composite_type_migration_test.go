@@ -145,15 +145,15 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 
 	// Migrate
 
-	migration := migrations.NewStorageMigration(inter, storage, "test")
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
 
 	reporter := newTestReporter()
 
 	barStaticType := newCompositeType()
 	bazStaticType := newInterfaceType()
 
-	migration.MigrateAccount(
-		testAddress,
+	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			NewStaticTypeMigration().

@@ -164,7 +164,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 			checker.currentMemberExpression = previousMemberExpression
 		}()
 
-		accessedType = checker.VisitExpression(accessedExpression, nil)
+		// in an statement like `a.b.c = x`, the entire statement itself
+		// is an assignment, but the evaluation of the accessed exprssion itself (i.e. `a.b`)
+		// is not, so we temporarily clear the `inAssignment` status here before restoring it later.
+		accessedType = checker.withAssignment(false, func() Type {
+			return checker.VisitExpression(accessedExpression, nil)
+		})
 	}()
 
 	checker.checkUnusedExpressionResourceLoss(accessedType, accessedExpression)
@@ -518,11 +523,10 @@ func allSupportedEntitlements(typ Type, isInnerType bool) Access {
 	case EntitlementSupportingType:
 		supportedEntitlements := typ.SupportedEntitlements()
 		if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
-			access := EntitlementSetAccess{
+			return EntitlementSetAccess{
 				SetKind:      Conjunction,
 				Entitlements: supportedEntitlements,
 			}
-			return access
 		}
 	}
 

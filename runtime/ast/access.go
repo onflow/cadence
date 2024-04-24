@@ -129,18 +129,18 @@ func (e EntitlementAccess) entitlementsString(prefix *strings.Builder) {
 }
 
 func (e EntitlementAccess) String() string {
-	str := &strings.Builder{}
-	str.WriteString("EntitlementAccess ")
-	e.entitlementsString(str)
-	return str.String()
+	var sb strings.Builder
+	sb.WriteString("EntitlementAccess ")
+	e.entitlementsString(&sb)
+	return sb.String()
 }
 
 func (e EntitlementAccess) Keyword() string {
-	str := &strings.Builder{}
-	str.WriteString("access(")
-	e.entitlementsString(str)
-	str.WriteString(")")
-	return str.String()
+	var sb strings.Builder
+	sb.WriteString("access(")
+	e.entitlementsString(&sb)
+	sb.WriteString(")")
+	return sb.String()
 }
 
 func (e EntitlementAccess) MarshalJSON() ([]byte, error) {

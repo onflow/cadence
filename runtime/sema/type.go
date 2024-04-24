@@ -2844,8 +2844,8 @@ func ArrayToConstantSizedFunctionType(elementType Type) *FunctionType {
 		) {
 			typeArg, ok := typeArguments.Get(typeParameter)
 			if !ok || typeArg == nil {
-				// checker should prevent this
-				panic(errors.NewUnreachableError())
+				// Invalid, already reported by checker
+				return
 			}
 
 			constArrayType, ok := typeArg.(*ConstantSizedType)
