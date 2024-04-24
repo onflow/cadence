@@ -289,10 +289,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOf
 	return sema.NewAccessFromEntitlementSet(supportedEntitlements, sema.Conjunction)
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) checkEntitlementsUpgrade(
-	oldType *ast.ReferenceType,
-	newType *ast.ReferenceType,
-) error {
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkEntitlementsUpgrade(newType *ast.ReferenceType) error {
 	newAuthorization := newType.Authorization
 	newEntitlementSet, isEntitlementsSet := newAuthorization.(ast.EntitlementSet)
 	foundEntitlementSet := validator.getEntitlementSetAccess(newEntitlementSet)
@@ -332,7 +329,7 @@ typeSwitch:
 			}
 
 			if newReference.Authorization != nil {
-				return validator.checkEntitlementsUpgrade(oldType, newReference)
+				return validator.checkEntitlementsUpgrade(newReference)
 
 			}
 			return nil
