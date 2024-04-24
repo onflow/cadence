@@ -3047,7 +3047,7 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 			cadence.TypeValue{
 				StaticType: &cadence.DeprecatedReferenceType{
 					Authorized: false,
-					Type: cadence.IntType,
+					Type:       cadence.IntType,
 				},
 			},
 		)

@@ -110,7 +110,7 @@ const (
 
 	// Cadence Types
 	MemoryKindCadenceOptionalType
-	MemoryKindCadenceRestrictedType
+	MemoryKindCadenceRestrictedType // Deprecated
 	MemoryKindCadenceVariableSizedArrayType
 	MemoryKindCadenceConstantSizedArrayType
 	MemoryKindCadenceDictionaryType
