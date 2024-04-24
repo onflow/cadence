@@ -1649,7 +1649,7 @@ func (*DeprecatedReferenceType) isType() {}
 
 func (t *DeprecatedReferenceType) ID() string {
 	if t.typeID == "" {
-		t.typeID = sema.FormatDeprecatedReferenceTypeID(t.Authorized, t.Type.ID())
+		t.typeID = sema.FormatDeprecatedReferenceTypeID(t.Authorized, t.Type.ID()) //nolint:staticcheck
 	}
 	return t.typeID
 }

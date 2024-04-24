@@ -6972,7 +6972,6 @@ func formatDeprecatedReferenceType(
 	return builder.String()
 }
 
-
 func FormatReferenceTypeID[T ~string](authorization T, borrowTypeID T) T {
 	return T(formatReferenceType("", authorization, borrowTypeID))
 }
