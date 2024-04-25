@@ -6953,22 +6953,6 @@ func formatReferenceType[T ~string](
 	return builder.String()
 }
 
-// Deprecated: use FormatReferenceTypeID
-func formatDeprecatedReferenceType(
-	separator string,
-	authorized bool,
-	typeString string,
-) string {
-	var builder strings.Builder
-	if authorized {
-		builder.WriteString("auth")
-		builder.WriteString(separator)
-	}
-	builder.WriteByte('&')
-	builder.WriteString(typeString)
-	return builder.String()
-}
-
 func FormatReferenceTypeID[T ~string](authorization T, borrowTypeID T) T {
 	return T(formatReferenceType("", authorization, borrowTypeID))
 }
