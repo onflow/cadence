@@ -6973,11 +6973,6 @@ func FormatReferenceTypeID[T ~string](authorization T, borrowTypeID T) T {
 	return T(formatReferenceType("", authorization, borrowTypeID))
 }
 
-// Deprecated: use FormatReferenceTypeID
-func FormatDeprecatedReferenceTypeID(authorized bool, typeString string) string {
-	return formatDeprecatedReferenceType("", authorized, typeString)
-}
-
 func (t *ReferenceType) String() string {
 	if t.Type == nil {
 		return "reference"
@@ -8851,26 +8846,6 @@ func (t *CapabilityType) initializeMemberResolvers() {
 		})
 		t.memberResolvers = withBuiltinMembers(t, members)
 	})
-}
-
-// RestrictedType helpers for backwards compatibility
-func formatRestrictedType(separator string, typeString string, restrictionStrings []string) string {
-	var result strings.Builder
-	result.WriteString(typeString)
-	result.WriteByte('{')
-	for i, restrictionString := range restrictionStrings {
-		if i > 0 {
-			result.WriteByte(',')
-			result.WriteString(separator)
-		}
-		result.WriteString(restrictionString)
-	}
-	result.WriteByte('}')
-	return result.String()
-}
-
-func FormatRestrictedTypeID(typeString string, restrictionStrings []string) string {
-	return formatRestrictedType("", typeString, restrictionStrings)
 }
 
 const AccountKeyTypeName = "AccountKey"

@@ -21,6 +21,7 @@ package cadence
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -1649,7 +1650,7 @@ func (*DeprecatedReferenceType) isType() {}
 
 func (t *DeprecatedReferenceType) ID() string {
 	if t.typeID == "" {
-		t.typeID = sema.FormatDeprecatedReferenceTypeID(t.Authorized, t.Type.ID()) //nolint:staticcheck
+		t.typeID = formatDeprecatedReferenceTypeID(t.Authorized, t.Type.ID()) //nolint:staticcheck
 	}
 	return t.typeID
 }
@@ -1662,6 +1663,27 @@ func (t *DeprecatedReferenceType) Equal(other Type) bool {
 
 	return t.Authorized == otherType.Authorized &&
 		t.Type.Equal(otherType.Type)
+}
+
+// Deprecated: use FormatReferenceTypeID
+func formatDeprecatedReferenceTypeID(authorized bool, typeString string) string {
+	return formatDeprecatedReferenceType("", authorized, typeString)
+}
+
+// Deprecated: use FormatReferenceTypeID
+func formatDeprecatedReferenceType(
+	separator string,
+	authorized bool,
+	typeString string,
+) string {
+	var builder strings.Builder
+	if authorized {
+		builder.WriteString("auth")
+		builder.WriteString(separator)
+	}
+	builder.WriteByte('&')
+	builder.WriteString(typeString)
+	return builder.String()
 }
 
 // DeprecatedRestrictedType
@@ -1712,7 +1734,7 @@ func (t *DeprecatedRestrictedType) ID() string {
 		if t.Type != nil {
 			typeString = t.Type.ID()
 		}
-		t.typeID = sema.FormatRestrictedTypeID(typeString, restrictionStrings)
+		t.typeID = formatDeprecatedRestrictedTypeID(typeString, restrictionStrings)
 	}
 	return t.typeID
 }
@@ -1762,6 +1784,26 @@ func (t *DeprecatedRestrictedType) initializeRestrictionSet() {
 func (t *DeprecatedRestrictedType) RestrictionSet() DeprecatedRestrictionSet {
 	t.initializeRestrictionSet()
 	return t.restrictionSet
+}
+
+// RestrictedType helpers for backwards compatibility
+func formatDeprecatedRestrictedType(separator string, typeString string, restrictionStrings []string) string {
+	var result strings.Builder
+	result.WriteString(typeString)
+	result.WriteByte('{')
+	for i, restrictionString := range restrictionStrings {
+		if i > 0 {
+			result.WriteByte(',')
+			result.WriteString(separator)
+		}
+		result.WriteString(restrictionString)
+	}
+	result.WriteByte('}')
+	return result.String()
+}
+
+func formatDeprecatedRestrictedTypeID(typeString string, restrictionStrings []string) string {
+	return formatDeprecatedRestrictedType("", typeString, restrictionStrings)
 }
 
 // IntersectionType
