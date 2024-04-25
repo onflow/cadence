@@ -384,7 +384,7 @@ func TestRuntimeInvalidRecursiveTransferInExecute(t *testing.T) {
 		`)
 
 		err := inter.InvokeTransaction(0)
-		require.NoError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("Dictionary", func(t *testing.T) {
@@ -406,7 +406,7 @@ func TestRuntimeInvalidRecursiveTransferInExecute(t *testing.T) {
 		`)
 
 		err := inter.InvokeTransaction(0)
-		require.NoError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("resource", func(t *testing.T) {
@@ -434,6 +434,6 @@ func TestRuntimeInvalidRecursiveTransferInExecute(t *testing.T) {
 		`)
 
 		err := inter.InvokeTransaction(0)
-		require.NoError(t, err)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
