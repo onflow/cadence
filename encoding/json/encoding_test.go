@@ -3059,7 +3059,7 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 		)
 	})
 
-	t.Run("with static reference type without backwards compatability", func(t *testing.T) {
+	t.Run("with static reference type without backwards compatibility", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3119,7 +3119,7 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 		)
 	})
 
-	t.Run("with static restricted type without backwards compatability", func(t *testing.T) {
+	t.Run("with static restricted type without backwards compatibility", func(t *testing.T) {
 
 		t.Parallel()
 
