@@ -365,22 +365,75 @@ func TestRuntimeInvalidRecursiveTransferInExecute(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-		access(all) resource Dummy {}
+	t.Run("Array", func(t *testing.T) {
 
-		transaction {
-			var vaults: @[AnyResource]
+		t.Parallel()
 
-			prepare() {
-				self.vaults <- [<-create Dummy(), <-create Dummy()]
+		inter := parseCheckAndInterpret(t, `
+			transaction {
+				var arr: @[AnyResource]
+
+				prepare() {
+					self.arr <- []
+				}
+
+				execute {
+					self.arr.append(<-self.arr)
+				}
+			}
+		`)
+
+		err := inter.InvokeTransaction(0)
+		require.NoError(t, err)
+	})
+
+	t.Run("Dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			transaction {
+				var dict: @{String: AnyResource}
+
+				prepare() {
+					self.dict <- {}
+				}
+
+				execute {
+					destroy self.dict.insert(key: "", <-self.dict)
+				}
+			}
+		`)
+
+		err := inter.InvokeTransaction(0)
+		require.NoError(t, err)
+	})
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			resource R {
+				fun foo(_ r: @R) {
+					destroy r
+				}
 			}
 
-			execute {
-				self.vaults.append(<-self.vaults)
-			}
-		}
-	`)
+			transaction {
+				var r: @R
 
-	err := inter.InvokeTransaction(0)
-	require.NoError(t, err)
+				prepare() {
+					self.r <- create R()
+				}
+
+				execute {
+					self.r.foo(<-self.r) 
+				}
+			}
+		`)
+
+		err := inter.InvokeTransaction(0)
+		require.NoError(t, err)
+	})
 }
