@@ -25,7 +25,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -324,7 +326,7 @@ func TestRuntimeInvalidTransferInExecute(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
+	inter, _ := parseCheckAndInterpretWithOptions(t, `
 		access(all) resource Dummy {}
 
 		transaction {
@@ -347,7 +349,12 @@ func TestRuntimeInvalidTransferInExecute(t *testing.T) {
 				self.account.storage.save(<- x(), to: /storage/x42)
 			}
 		}
-	`)
+	`, ParseCheckAndInterpretOptions{
+		HandleCheckerError: func(err error) {
+			errs := checker.RequireCheckerErrors(t, err, 1)
+			require.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+		},
+	})
 
 	signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
 	err := inter.InvokeTransaction(0, signer1)
