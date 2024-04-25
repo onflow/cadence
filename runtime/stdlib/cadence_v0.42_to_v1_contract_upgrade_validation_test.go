@@ -1048,6 +1048,39 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("intersection types changed order", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) struct interface I {}
+                access(all) struct interface J {}
+                access(all) struct S: I, J {}
+
+                access(all) var a: {I, J}
+                init() {
+                    self.a = S()
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) struct interface I {}
+                access(all) struct interface J {}
+                access(all) struct S: I, J {}
+
+                access(all) var a: {J, I}
+                init() {
+                    self.a = S()
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
 }
 
 func TestContractUpgradeIntersectionAuthorization(t *testing.T) {

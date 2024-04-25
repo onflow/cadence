@@ -390,21 +390,44 @@ typeSwitch:
 		// If the intersection type have doesn't a legacy restricted type,
 		// the interface set must be compatible.
 		if oldType.LegacyRestrictedType == nil {
-			foundIntersectionType, ok := newType.(*ast.IntersectionType)
+			newIntersectionType, ok := newType.(*ast.IntersectionType)
 			if !ok {
 				return newTypeMismatchError(oldType, newType)
 			}
 
-			if len(oldType.Types) != len(foundIntersectionType.Types) {
+			if len(oldType.Types) != len(newIntersectionType.Types) {
 				return newTypeMismatchError(oldType, newType)
 			}
 
-			for index, expectedIntersectedType := range oldType.Types {
-				foundType := foundIntersectionType.Types[index]
-				err := validator.checkTypeUpgradability(expectedIntersectedType, foundType)
-				if err != nil {
+			// Work on a copy. Otherwise, re-slicing in the loop messes up the
+			// original slice `newIntersectionType.Types` because of the pointer-type.
+			newInterfaceTypes := make([]*ast.NominalType, len(newIntersectionType.Types))
+			copy(newInterfaceTypes, newIntersectionType.Types)
+
+			for _, oldInterfaceType := range oldType.Types {
+				found := false
+				// Have to do an exhaustive search, because the new type could be
+				// a completely different type, and can only know if it's a match
+				// only after checking with `checkTypeUpgradability`.
+				for index := 0; index < len(newInterfaceTypes); index++ {
+					newInterfaceType := newInterfaceTypes[index]
+					err := validator.checkTypeUpgradability(oldInterfaceType, newInterfaceType, inCapability)
+					if err == nil {
+						found = true
+						// Optimization: Remove the found type
+						newInterfaceTypes = append(newInterfaceTypes[:index], newInterfaceTypes[index+1:]...)
+						break
+					}
+				}
+
+				if !found {
 					return newTypeMismatchError(oldType, newType)
 				}
+			}
+
+			// Cannot have extra interfaces in the new set.
+			if len(newInterfaceTypes) > 0 {
+				return newTypeMismatchError(oldType, newType)
 			}
 
 			return nil
