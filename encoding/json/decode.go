@@ -1284,7 +1284,7 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		if d.backwardsCompatible {
 			restrictionsValue := obj.Get(restrictionsKey)
 			typeValue := obj.Get(typeKey)
-			return d.decodeRestrictedType(
+			return d.decodeDeprecatedRestrictedType(
 				typeValue,
 				toSlice(restrictionsValue),
 				results,
@@ -1394,7 +1394,7 @@ func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 
 // Deprecated: do not use in new code, only for backwards compatibility
 // Restricted types got removed in v1.0.0
-func (d *Decoder) decodeRestrictedType(
+func (d *Decoder) decodeDeprecatedRestrictedType(
 	typeValue any,
 	restrictionsValue []any,
 	results typeDecodingResults,
@@ -1406,7 +1406,7 @@ func (d *Decoder) decodeRestrictedType(
 		restrictions = append(restrictions, d.decodeType(restriction, results))
 	}
 
-	return cadence.NewMeteredRestrictedType(
+	return cadence.NewDeprecatedMeteredRestrictedType(
 		d.gauge,
 		typ,
 		restrictions,
