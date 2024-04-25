@@ -3125,7 +3125,7 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 
 		// Decode with panic if restriction is not supported
 		require.Panics(t, func() {
-			Decode(nil, []byte(`
+			_, err := Decode(nil, []byte(`
 	              {
 	                "type": "Type",
 	                "value": {
@@ -3144,6 +3144,7 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 	                }
 	              }
 	            `))
+			require.NoError(t, err)
 		},
 		)
 	})
