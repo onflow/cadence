@@ -1714,7 +1714,7 @@ func NewDeprecatedMeteredRestrictedType(
 	typ Type,
 	restrictions []Type,
 ) *DeprecatedRestrictedType {
-	common.UseMemory(gauge, common.CadenceRestrictedTypeMemoryUsage)
+	common.UseMemory(gauge, common.CadenceDeprecatedRestrictedTypeMemoryUsage)
 	return NewDeprecatedRestrictedType(typ, restrictions)
 }
 
