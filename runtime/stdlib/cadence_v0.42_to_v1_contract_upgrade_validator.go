@@ -308,7 +308,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkEntitlementsUpgrad
 	return nil
 }
 
-var astAccountReference = &ast.ReferenceType{
+var astAccountReferenceType = &ast.ReferenceType{
 	Type: &ast.NominalType{
 		Identifier: ast.Identifier{
 			Identifier: sema.AccountType.Identifier,
@@ -316,7 +316,7 @@ var astAccountReference = &ast.ReferenceType{
 	},
 }
 
-var astFullyEntitledAccountReference = &ast.ReferenceType{
+var astFullyEntitledAccountReferenceType = &ast.ReferenceType{
 	Type: &ast.NominalType{
 		Identifier: ast.Identifier{
 			Identifier: sema.AccountType.Identifier,
@@ -370,9 +370,9 @@ typeSwitch:
 			// be replaced with the new account reference type `&Account`.
 			switch oldType.Type.String() {
 			case "AuthAccount":
-				return newReference.CheckEqual(astFullyEntitledAccountReference, validator)
+				return newReference.CheckEqual(astFullyEntitledAccountReferenceType, validator)
 			case "PublicAccount":
-				return newReference.CheckEqual(astAccountReference, validator)
+				return newReference.CheckEqual(astAccountReferenceType, validator)
 			default:
 				err := validator.checkTypeUpgradability(oldType.Type, newReference.Type, inCapability)
 				if err != nil {
@@ -465,15 +465,13 @@ typeSwitch:
 
 				// If there are no custom rules for this type,
 				// do the default type comparison.
-				if !checked {
-					break
-				}
-
-				if valid {
+				if checked {
+					if !valid {
+						return newTypeMismatchError(oldType, newType)
+					}
 					return nil
 				}
 
-				return newTypeMismatchError(oldType, newType)
 			}
 		}
 
@@ -483,10 +481,10 @@ typeSwitch:
 
 		switch oldTypeName {
 		case "AuthAccount":
-			return newType.CheckEqual(astFullyEntitledAccountReference, validator)
+			return newType.CheckEqual(astFullyEntitledAccountReferenceType, validator)
 
 		case "PublicAccount":
-			return newType.CheckEqual(astAccountReference, validator)
+			return newType.CheckEqual(astAccountReferenceType, validator)
 
 		case "AuthAccount.Capabilities",
 			"PublicAccount.Capabilities":
