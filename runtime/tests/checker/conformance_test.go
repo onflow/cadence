@@ -19,11 +19,13 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -218,9 +220,9 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.ConformanceError{}, errs[0])
+		var conformanceErr *sema.ConformanceError
+		require.ErrorAs(t, errs[0], &conformanceErr)
 
-		conformanceErr := errs[0].(*sema.ConformanceError)
 		require.NotNil(t, conformanceErr.InitializerMismatch)
 		notes := conformanceErr.ErrorNotes()
 		require.Len(t, notes, 1)
@@ -238,19 +240,23 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-        access(all) resource interface I {
-            fun foo(): Int
-        }
+          access(all) resource interface I {
+              fun foo(): Int
+          }
 
-        access(all) resource R: I {
-        }
+          access(all) resource R: I {
+          }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.ConformanceError{}, errs[0])
-		conformanceErr := errs[0].(*sema.ConformanceError)
-		require.Equal(t, "`R` is missing definitions for members: `foo`", conformanceErr.SecondaryError())
+		var conformanceErr *sema.ConformanceError
+		require.ErrorAs(t, errs[0], &conformanceErr)
+
+		require.Equal(t,
+			"`R` is missing definitions for members: `foo`",
+			conformanceErr.SecondaryError(),
+		)
 	})
 
 	t.Run("2 missing member", func(t *testing.T) {
@@ -258,19 +264,150 @@ func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-        access(all) resource interface I {
-            fun foo(): Int
-            fun bar(): Int
-        }
+          access(all) resource interface I {
+              fun foo(): Int
+              fun bar(): Int
+          }
 
-        access(all) resource R: I {
-        }
+          access(all) resource R: I {
+          }
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		require.IsType(t, &sema.ConformanceError{}, errs[0])
-		conformanceErr := errs[0].(*sema.ConformanceError)
-		require.Equal(t, "`R` is missing definitions for members: `foo`, `bar`", conformanceErr.SecondaryError())
+		var conformanceErr *sema.ConformanceError
+		require.ErrorAs(t, errs[0], &conformanceErr)
+
+		require.Equal(t,
+			"`R` is missing definitions for members: `foo`, `bar`",
+			conformanceErr.SecondaryError(),
+		)
 	})
+}
+
+func TestCheckConformanceAccessModifierMatches(t *testing.T) {
+	t.Parallel()
+
+	e1 := &sema.EntitlementType{
+		Identifier: "E1",
+	}
+	e2 := &sema.EntitlementType{
+		Identifier: "E2",
+	}
+
+	accessModifiers := []sema.Access{
+		sema.PrimitiveAccess(ast.AccessSelf),
+		sema.PrimitiveAccess(ast.AccessAccount),
+		sema.PrimitiveAccess(ast.AccessContract),
+		sema.NewEntitlementSetAccess(
+			[]*sema.EntitlementType{e1, e2},
+			sema.Conjunction,
+		),
+		sema.NewEntitlementSetAccess(
+			[]*sema.EntitlementType{e1, e2},
+			sema.Disjunction,
+		),
+		sema.NewEntitlementSetAccess(
+			[]*sema.EntitlementType{e1},
+			sema.Conjunction,
+		),
+		sema.PrimitiveAccess(ast.AccessAll),
+	}
+
+	asASTAccess := func(access sema.Access) ast.Access {
+		switch access := access.(type) {
+		case sema.PrimitiveAccess:
+			return ast.PrimitiveAccess(access)
+
+		case sema.EntitlementSetAccess:
+
+			entitlementTypes := make([]*ast.NominalType, 0, access.Entitlements.Len())
+
+			access.Entitlements.Foreach(func(entitlementType *sema.EntitlementType, _ struct{}) {
+				entitlementTypes = append(
+					entitlementTypes,
+					&ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: entitlementType.QualifiedIdentifier(),
+						},
+					},
+				)
+			})
+
+			var entitlementSet ast.EntitlementSet
+			switch access.SetKind {
+			case sema.Conjunction:
+				entitlementSet = ast.NewConjunctiveEntitlementSet(entitlementTypes)
+
+			case sema.Disjunction:
+				entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlementTypes)
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
+			return ast.EntitlementAccess{
+				EntitlementSet: entitlementSet,
+			}
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	}
+
+	test := func(t *testing.T, interfaceAccess, implementationAccess sema.Access) {
+		name := fmt.Sprintf("%s %s", interfaceAccess, implementationAccess)
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      entitlement E1
+                      entitlement E2
+
+                      struct interface SI {
+                          %s fun foo()
+                      }
+
+                      struct S: SI {
+                          %s fun foo() {}
+                      }
+                    `,
+					asASTAccess(interfaceAccess).Keyword(),
+					asASTAccess(implementationAccess).Keyword(),
+				),
+			)
+
+			if interfaceAccess == sema.PrimitiveAccess(ast.AccessSelf) {
+				if implementationAccess == sema.PrimitiveAccess(ast.AccessSelf) {
+					errs := RequireCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+				} else {
+					errs := RequireCheckerErrors(t, err, 2)
+
+					require.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+					require.IsType(t, &sema.ConformanceError{}, errs[1])
+				}
+			} else if !implementationAccess.Equal(interfaceAccess) {
+				errs := RequireCheckerErrors(t, err, 1)
+
+				var conformanceErr *sema.ConformanceError
+				require.ErrorAs(t, errs[0], &conformanceErr)
+
+				require.Len(t, conformanceErr.MemberMismatches, 1)
+
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+
+	for _, access1 := range accessModifiers {
+		for _, access2 := range accessModifiers {
+			test(t, access1, access2)
+		}
+	}
 }

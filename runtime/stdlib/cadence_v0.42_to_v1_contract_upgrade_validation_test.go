@@ -624,6 +624,35 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("changing to a non-storable inside Capability", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                // Capability<Int> is invalid, but that's OK, we just want to check
+                // whether inner type is changeable to a non-storable type.
+                access(all) var a: Capability<Int>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) var a: Capability<&Int>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertFieldTypeMismatchError(t, cause, "Test", "a", "Int", "&Int")
+	})
+
 	t.Run("changing from a non-storable types", func(t *testing.T) {
 
 		t.Parallel()
@@ -889,6 +918,38 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		var fieldMismatchError *stdlib.FieldMismatchError
 		require.ErrorAs(t, cause, &fieldMismatchError)
+	})
+
+	t.Run("account types", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) var a: Capability<&AuthAccount>?
+                access(all) var b: Capability<&AuthAccount.Keys>?
+                access(all) var c: Capability<&PublicAccount.Capabilities>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) var a: Capability<auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account>?
+                access(all) var b: Capability<&Account.Keys>?
+                access(all) var c: Capability<&Account.Capabilities>?
+                init() {
+                    self.a = nil
+                    self.b = nil
+                    self.c = nil
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
 	})
 }
 

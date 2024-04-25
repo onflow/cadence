@@ -3071,6 +3071,7 @@ func (e *InvalidAccessError) SecondaryError() string {
 			fmt.Fprint(&sb, "reference needs all of entitlements ")
 			missingEntitlements.ForeachWithIndex(enumerateEntitlements(missingLen, "and"))
 		}
+
 	case Disjunction:
 		// when both `required` is a disjunction, we know `possessed` has none of the entitlements in it:
 		// suggest adding one of those entitlements
@@ -3079,6 +3080,9 @@ func (e *InvalidAccessError) SecondaryError() string {
 		requiredLen := requiredEntitlementsSet.Len()
 		// singleton-1 sets are always conjunctions
 		requiredEntitlementsSet.ForeachWithIndex(enumerateEntitlements(requiredLen, "or"))
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
 	return sb.String()

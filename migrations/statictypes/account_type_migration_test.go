@@ -151,7 +151,7 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 		},
 		"optional_string": {
 			storedType:   interpreter.NewOptionalStaticType(nil, stringType),
-			expectedType: nil,
+			expectedType: interpreter.NewOptionalStaticType(nil, stringType),
 		},
 		"constant_sized_account_array": {
 			storedType:   interpreter.NewConstantSizedStaticType(nil, publicAccountType, 3),
