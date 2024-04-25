@@ -1290,22 +1290,7 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 				results,
 			)
 		} else {
-			simpleType, ok := simpleTypes[kindValue]
-			if ok {
-				return simpleType
-			}
-
-			fieldsValue := obj.Get(fieldsKey)
-			typeIDValue := toString(obj.Get(typeIDKey))
-			initValue := obj.Get(initializersKey)
-			return d.decodeNominalType(
-				obj,
-				kindValue,
-				typeIDValue,
-				toSlice(fieldsValue),
-				toSlice(initValue),
-				results,
-			)
+			panic("Restriction kind is not supported")
 		}
 	case "VariableSizedArray":
 		return cadence.NewMeteredVariableSizedArrayType(

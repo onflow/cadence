@@ -1786,14 +1786,13 @@ func (t *DeprecatedRestrictedType) RestrictionSet() DeprecatedRestrictionSet {
 	return t.restrictionSet
 }
 
-func formatDeprecatedRestrictedType(separator string, typeString string, restrictionStrings []string) string {
+func formatDeprecatedRestrictedType(typeString string, restrictionStrings []string) string {
 	var result strings.Builder
 	result.WriteString(typeString)
 	result.WriteByte('{')
 	for i, restrictionString := range restrictionStrings {
 		if i > 0 {
 			result.WriteByte(',')
-			result.WriteString(separator)
 		}
 		result.WriteString(restrictionString)
 	}
@@ -1802,7 +1801,7 @@ func formatDeprecatedRestrictedType(separator string, typeString string, restric
 }
 
 func formatDeprecatedRestrictedTypeID(typeString string, restrictionStrings []string) string {
-	return formatDeprecatedRestrictedType("", typeString, restrictionStrings)
+	return formatDeprecatedRestrictedType(typeString, restrictionStrings)
 }
 
 // IntersectionType

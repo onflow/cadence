@@ -3026,7 +3026,12 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 func TestDecodeDeprecatedTypes(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("with static reference type", func(t *testing.T) {
+
+		t.Parallel()
+
 		testDecode(
 			t,
 			// language=json
@@ -3055,6 +3060,9 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 	})
 
 	t.Run("with static restricted type", func(t *testing.T) {
+
+		t.Parallel()
+
 		testDecode(
 			t,
 			// language=json
