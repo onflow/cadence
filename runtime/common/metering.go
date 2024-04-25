@@ -216,25 +216,25 @@ var (
 
 	// Cadence external types
 
-	CadenceCapabilityTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceCapabilityType)
-	CadenceConstantSizedArrayTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceConstantSizedArrayType)
-	CadenceVariableSizedArrayTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceVariableSizedArrayType)
-	CadenceContractInterfaceTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindCadenceContractInterfaceType)
-	CadenceContractTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceContractType)
-	CadenceDictionaryTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceDictionaryType)
-	CadenceInclusiveRangeTypeMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceInclusiveRangeType)
-	CadenceEnumTypeMemoryUsage               = NewConstantMemoryUsage(MemoryKindCadenceEnumType)
-	CadenceEventTypeMemoryUsage              = NewConstantMemoryUsage(MemoryKindCadenceEventType)
-	CadenceFunctionTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceFunctionType)
-	CadenceOptionalTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceOptionalType)
-	CadenceDeprecatedRestrictedTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceDeprecatedRestrictedType) // Deprecated: removed in v1.0.0
-	CadenceReferenceTypeMemoryUsage          = NewConstantMemoryUsage(MemoryKindCadenceReferenceType)
-	CadenceResourceInterfaceTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindCadenceResourceInterfaceType)
-	CadenceResourceTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceResourceType)
-	CadenceIntersectionTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadenceIntersectionType)
-	CadenceStructInterfaceTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceStructInterfaceType)
-	CadenceStructTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceStructType)
-	CadenceAttachmentTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceAttachmentType)
+	CadenceCapabilityTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceCapabilityType)
+	CadenceConstantSizedArrayTypeMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceConstantSizedArrayType)
+	CadenceVariableSizedArrayTypeMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceVariableSizedArrayType)
+	CadenceContractInterfaceTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceContractInterfaceType)
+	CadenceContractTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceContractType)
+	CadenceDictionaryTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceDictionaryType)
+	CadenceInclusiveRangeTypeMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadenceInclusiveRangeType)
+	CadenceEnumTypeMemoryUsage                 = NewConstantMemoryUsage(MemoryKindCadenceEnumType)
+	CadenceEventTypeMemoryUsage                = NewConstantMemoryUsage(MemoryKindCadenceEventType)
+	CadenceFunctionTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceFunctionType)
+	CadenceOptionalTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceOptionalType)
+	CadenceDeprecatedRestrictedTypeMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceDeprecatedRestrictedType) // Deprecated: removed in v1.0.0
+	CadenceReferenceTypeMemoryUsage            = NewConstantMemoryUsage(MemoryKindCadenceReferenceType)
+	CadenceResourceInterfaceTypeMemoryUsage    = NewConstantMemoryUsage(MemoryKindCadenceResourceInterfaceType)
+	CadenceResourceTypeMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceResourceType)
+	CadenceIntersectionTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceIntersectionType)
+	CadenceStructInterfaceTypeMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceStructInterfaceType)
+	CadenceStructTypeMemoryUsage               = NewConstantMemoryUsage(MemoryKindCadenceStructType)
+	CadenceAttachmentTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceAttachmentType)
 
 	// Following are the known memory usage amounts for string representation of interpreter values.
 	// Same as `len(format.X)`. However, values are hard-coded to avoid the circular dependency.
