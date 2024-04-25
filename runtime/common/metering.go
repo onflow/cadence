@@ -227,7 +227,7 @@ var (
 	CadenceEventTypeMemoryUsage              = NewConstantMemoryUsage(MemoryKindCadenceEventType)
 	CadenceFunctionTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceFunctionType)
 	CadenceOptionalTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceOptionalType)
-	CadenceRestrictedTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceRestrictedType)
+	CadenceRestrictedTypeMemoryUsage         = NewConstantMemoryUsage(MemoryKindCadenceRestrictedType) // Deprecated
 	CadenceReferenceTypeMemoryUsage          = NewConstantMemoryUsage(MemoryKindCadenceReferenceType)
 	CadenceResourceInterfaceTypeMemoryUsage  = NewConstantMemoryUsage(MemoryKindCadenceResourceInterfaceType)
 	CadenceResourceTypeMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceResourceType)
