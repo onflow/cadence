@@ -1664,9 +1664,9 @@ func (t *DeprecatedReferenceType) Equal(other Type) bool {
 		t.Type.Equal(otherType.Type)
 }
 
-// RestrictedType
+// DeprecatedRestrictedType
 // Deprecated: here for backwards compatibility
-type RestrictedType struct {
+type DeprecatedRestrictedType struct {
 	typeID             string
 	Type               Type
 	Restrictions       []Type
@@ -1675,30 +1675,30 @@ type RestrictedType struct {
 }
 
 // Deprecated: here for backwards compatibility
-type RestrictionSet = map[Type]struct{}
+type DeprecatedRestrictionSet = map[Type]struct{}
 
-func NewRestrictedType(
+func NewDeprecatedRestrictedType(
 	typ Type,
 	restrictions []Type,
-) *RestrictedType {
-	return &RestrictedType{
+) *DeprecatedRestrictedType {
+	return &DeprecatedRestrictedType{
 		Type:         typ,
 		Restrictions: restrictions,
 	}
 }
 
-func NewMeteredRestrictedType(
+func NewDeprecatedMeteredRestrictedType(
 	gauge common.MemoryGauge,
 	typ Type,
 	restrictions []Type,
-) *RestrictedType {
+) *DeprecatedRestrictedType {
 	common.UseMemory(gauge, common.CadenceRestrictedTypeMemoryUsage)
-	return NewRestrictedType(typ, restrictions)
+	return NewDeprecatedRestrictedType(typ, restrictions)
 }
 
-func (*RestrictedType) isType() {}
+func (*DeprecatedRestrictedType) isType() {}
 
-func (t *RestrictedType) ID() string {
+func (t *DeprecatedRestrictedType) ID() string {
 	if t.typeID == "" {
 		var restrictionStrings []string
 		restrictionCount := len(t.Restrictions)
@@ -1717,8 +1717,8 @@ func (t *RestrictedType) ID() string {
 	return t.typeID
 }
 
-func (t *RestrictedType) Equal(other Type) bool {
-	otherType, ok := other.(*RestrictedType)
+func (t *DeprecatedRestrictedType) Equal(other Type) bool {
+	otherType, ok := other.(*DeprecatedRestrictedType)
 	if !ok {
 		return false
 	}
@@ -1750,7 +1750,7 @@ func (t *RestrictedType) Equal(other Type) bool {
 	return true
 }
 
-func (t *RestrictedType) initializeRestrictionSet() {
+func (t *DeprecatedRestrictedType) initializeRestrictionSet() {
 	t.restrictionSetOnce.Do(func() {
 		t.restrictionSet = make(RestrictionSet, len(t.Restrictions))
 		for _, restriction := range t.Restrictions {
@@ -1759,7 +1759,7 @@ func (t *RestrictedType) initializeRestrictionSet() {
 	})
 }
 
-func (t *RestrictedType) RestrictionSet() RestrictionSet {
+func (t *DeprecatedRestrictedType) RestrictionSet() DeprecatedRestrictionSet {
 	t.initializeRestrictionSet()
 	return t.restrictionSet
 }

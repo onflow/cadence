@@ -3039,17 +3039,18 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
                     "type": {
                       "kind": "Int"
                     },
-                    "authorized": false
+                    "authorized": true 
                   }
                 }
               }
             `,
 			cadence.TypeValue{
 				StaticType: &cadence.DeprecatedReferenceType{
-					Authorized: false,
+					Authorized: true,
 					Type:       cadence.IntType,
 				},
 			},
+			WithBackwardsCompatability(),
 		)
 	})
 
@@ -3084,6 +3085,7 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 					Type: cadence.IntType,
 				},
 			},
+			WithBackwardsCompatability(),
 		)
 	})
 
