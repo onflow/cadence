@@ -1692,7 +1692,7 @@ type DeprecatedRestrictedType struct {
 	typeID             string
 	Type               Type
 	Restrictions       []Type
-	restrictionSet     RestrictionSet
+	restrictionSet     DeprecatedRestrictionSet
 	restrictionSetOnce sync.Once
 }
 
@@ -1774,7 +1774,7 @@ func (t *DeprecatedRestrictedType) Equal(other Type) bool {
 
 func (t *DeprecatedRestrictedType) initializeRestrictionSet() {
 	t.restrictionSetOnce.Do(func() {
-		t.restrictionSet = make(RestrictionSet, len(t.Restrictions))
+		t.restrictionSet = make(DeprecatedRestrictionSet, len(t.Restrictions))
 		for _, restriction := range t.Restrictions {
 			t.restrictionSet[restriction] = struct{}{}
 		}
