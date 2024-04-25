@@ -3055,8 +3055,30 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 					Type:       cadence.IntType,
 				},
 			},
-			WithBackwardsCompatability(),
+			WithBackwardsCompatibility(),
 		)
+	})
+
+	t.Run("with static reference type without backwards compatability", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Decode with error if reference is not supported
+		_, err := Decode(nil, []byte(`
+	              {
+	                "type": "Type",
+	                "value": {
+	                  "staticType": {
+	                    "kind": "Reference",
+	                    "type": {
+	                      "kind": "Int"
+	                    },
+	                    "authorized": true 
+	                  }
+	                }
+	              }
+	            `))
+		require.Error(t, err)
 	})
 
 	t.Run("with static restricted type", func(t *testing.T) {
@@ -3093,10 +3115,38 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 					Type: cadence.IntType,
 				},
 			},
-			WithBackwardsCompatability(),
+			WithBackwardsCompatibility(),
 		)
 	})
 
+	t.Run("with static restricted type without backwards compatability", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Decode with panic if restriction is not supported
+		require.Panics(t, func() {
+			Decode(nil, []byte(`
+	              {
+	                "type": "Type",
+	                "value": {
+	                  "staticType": {
+	                    "kind": "Restriction",
+	                    "typeID": "Int{String}",
+	                    "type": {
+	                      "kind": "Int"
+	                    },
+	                    "restrictions": [
+	                      {
+	                        "kind": "String"
+	                      }
+	                    ]
+	                  }
+	                }
+	              }
+	            `))
+		},
+		)
+	})
 }
 
 func TestExportRecursiveType(t *testing.T) {

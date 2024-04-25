@@ -55,10 +55,10 @@ func WithAllowUnstructuredStaticTypes(allow bool) Option {
 	}
 }
 
-// WithBackwardsCompatability returns a new Decoder Option
+// WithBackwardsCompatibility returns a new Decoder Option
 // which enables backwards compatibility mode, where the decoding
 // of old versions of the JSON encoding is allowed
-func WithBackwardsCompatability() Option {
+func WithBackwardsCompatibility() Option {
 	return func(decoder *Decoder) {
 		decoder.backwardsCompatible = true
 	}
@@ -1281,17 +1281,17 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		)
 	case "Restriction":
 		// Backwards-compatibility for format <v1.0.0:
-		if d.backwardsCompatible {
-			restrictionsValue := obj.Get(restrictionsKey)
-			typeValue := obj.Get(typeKey)
-			return d.decodeDeprecatedRestrictedType(
-				typeValue,
-				toSlice(restrictionsValue),
-				results,
-			)
-		} else {
+		if !d.backwardsCompatible {
 			panic("Restriction kind is not supported")
 		}
+
+		restrictionsValue := obj.Get(restrictionsKey)
+		typeValue := obj.Get(typeKey)
+		return d.decodeDeprecatedRestrictedType(
+			typeValue,
+			toSlice(restrictionsValue),
+			results,
+		)
 	case "VariableSizedArray":
 		return cadence.NewMeteredVariableSizedArrayType(
 			d.gauge,
