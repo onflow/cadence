@@ -1289,6 +1289,23 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 				toSlice(restrictionsValue),
 				results,
 			)
+		} else {
+			simpleType, ok := simpleTypes[kindValue]
+			if ok {
+				return simpleType
+			}
+
+			fieldsValue := obj.Get(fieldsKey)
+			typeIDValue := toString(obj.Get(typeIDKey))
+			initValue := obj.Get(initializersKey)
+			return d.decodeNominalType(
+				obj,
+				kindValue,
+				typeIDValue,
+				toSlice(fieldsValue),
+				toSlice(initValue),
+				results,
+			)
 		}
 	case "VariableSizedArray":
 		return cadence.NewMeteredVariableSizedArrayType(
