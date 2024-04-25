@@ -40,6 +40,8 @@ type Decoder struct {
 	// allowUnstructuredStaticTypes controls if the decoding
 	// of a static type as a type ID (cadence.TypeID) is allowed
 	allowUnstructuredStaticTypes bool
+	// backwardsCompatible controls if the decoder can decode old versions of the JSON encoding
+	backwardsCompatible bool
 }
 
 type Option func(*Decoder)
@@ -50,6 +52,15 @@ type Option func(*Decoder)
 func WithAllowUnstructuredStaticTypes(allow bool) Option {
 	return func(decoder *Decoder) {
 		decoder.allowUnstructuredStaticTypes = allow
+	}
+}
+
+// WithBackwardsCompatability returns a new Decoder Option
+// which enables backwards compatibility mode, where the decoding
+// of old versions of the JSON encoding is allowed
+func WithBackwardsCompatability() Option {
+	return func(decoder *Decoder) {
+		decoder.backwardsCompatible = true
 	}
 }
 
@@ -128,11 +139,11 @@ const (
 	addressKey           = "address"
 	pathKey              = "path"
 	authorizationKey     = "authorization"
-	authorizedKey        = "authorized" // deprecated. please use authorizationKey
+	authorizedKey        = "authorized" // Deprecated. The authorized flag got replaced by the authorization field.
 	entitlementsKey      = "entitlements"
 	sizeKey              = "size"
 	typeIDKey            = "typeID"
-	restrictionsKey      = "restrictions" // deprecated. please use entitlementsKey
+	restrictionsKey      = "restrictions" // Deprecated. Restricted types are removed in v1.0.0
 	intersectionTypesKey = "types"
 	labelKey             = "label"
 	parametersKey        = "parameters"
@@ -1269,7 +1280,7 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.decodeType(obj.Get(typeKey), results),
 		)
 	case "Restriction":
-		// Backwards-compatibility for format <=v0.42.0:
+		// Backwards-compatibility for format <v1.0.0:
 		restrictionsValue := obj.Get(restrictionsKey)
 		typeValue := obj.Get(typeKey)
 		return d.decodeRestrictedType(
@@ -1306,13 +1317,15 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.decodeType(obj.Get(typeKey), results),
 		)
 	case "Reference":
-		// Backwards-compatibility for format <=v0.42.0:
-		if _, hasKey := obj[authorizedKey]; hasKey {
-			return cadence.NewDeprecatedMeteredReferenceType(
-				d.gauge,
-				obj.GetBool(authorizedKey),
-				d.decodeType(obj.Get(typeKey), results),
-			)
+		// Backwards-compatibility for format <v1.0.0:
+		if d.backwardsCompatible {
+			if _, hasKey := obj[authorizedKey]; hasKey {
+				return cadence.NewDeprecatedMeteredReferenceType(
+					d.gauge,
+					obj.GetBool(authorizedKey),
+					d.decodeType(obj.Get(typeKey), results),
+				)
+			}
 		}
 
 		return cadence.NewMeteredReferenceType(
