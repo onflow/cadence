@@ -1773,7 +1773,7 @@ func (t *DeprecatedRestrictedType) Equal(other Type) bool {
 }
 
 func (t *DeprecatedRestrictedType) initializeRestrictionSet() {
-t.restrictionSetOnce.Do(func() {
+	t.restrictionSetOnce.Do(func() {
 		t.restrictionSet = make(DeprecatedRestrictionSet, len(t.Restrictions))
 		for _, restriction := range t.Restrictions {
 			t.restrictionSet[restriction] = struct{}{}
