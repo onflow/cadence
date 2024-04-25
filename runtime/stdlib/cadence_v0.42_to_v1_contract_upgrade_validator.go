@@ -308,26 +308,83 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkEntitlementsUpgrad
 	return nil
 }
 
-func (validator *CadenceV042ToV1ContractUpdateValidator) checkTypeUpgradability(oldType ast.Type, newType ast.Type) error {
+var astAccountReference = &ast.ReferenceType{
+	Type: &ast.NominalType{
+		Identifier: ast.Identifier{
+			Identifier: sema.AccountType.Identifier,
+		},
+	},
+}
+
+var astFullyEntitledAccountReference = &ast.ReferenceType{
+	Type: &ast.NominalType{
+		Identifier: ast.Identifier{
+			Identifier: sema.AccountType.Identifier,
+		},
+	},
+	Authorization: ast.ConjunctiveEntitlementSet{
+		Elements: []*ast.NominalType{
+			{
+				Identifier: ast.Identifier{
+					Identifier: sema.StorageType.Identifier,
+				},
+			},
+			{
+				Identifier: ast.Identifier{
+					Identifier: sema.ContractsType.Identifier,
+				},
+			},
+			{
+				Identifier: ast.Identifier{
+					Identifier: sema.KeysType.Identifier,
+				},
+			},
+			{
+				Identifier: ast.Identifier{
+					Identifier: sema.InboxType.Identifier,
+				},
+			},
+			{
+				Identifier: ast.Identifier{
+					Identifier: sema.CapabilitiesType.Identifier,
+				},
+			},
+		},
+	},
+}
+
+func (validator *CadenceV042ToV1ContractUpdateValidator) checkTypeUpgradability(oldType ast.Type, newType ast.Type, inCapability bool) error {
 
 typeSwitch:
 	switch oldType := oldType.(type) {
 	case *ast.OptionalType:
 		if newOptional, isOptional := newType.(*ast.OptionalType); isOptional {
-			return validator.checkTypeUpgradability(oldType.Type, newOptional.Type)
+			return validator.checkTypeUpgradability(oldType.Type, newOptional.Type, inCapability)
 		}
 	case *ast.ReferenceType:
+
 		if newReference, isReference := newType.(*ast.ReferenceType); isReference {
-			err := validator.checkTypeUpgradability(oldType.Type, newReference.Type)
-			if err != nil {
-				return err
-			}
+			// Special-case `&AuthAccount` and `&PublicAccount`.
+			// These two references also equal to the new account reference-types.
+			// i.e: Both `AuthAccount` (non-reference) as well as `&AuthAccount` (reference) can
+			// be replaced with the new account reference type `&Account`.
+			switch oldType.Type.String() {
+			case "AuthAccount":
+				return newReference.CheckEqual(astFullyEntitledAccountReference, validator)
+			case "PublicAccount":
+				return newReference.CheckEqual(astAccountReference, validator)
+			default:
+				err := validator.checkTypeUpgradability(oldType.Type, newReference.Type, inCapability)
+				if err != nil {
+					return err
+				}
 
-			if newReference.Authorization != nil {
-				return validator.checkEntitlementsUpgrade(newReference)
+				if newReference.Authorization != nil {
+					return validator.checkEntitlementsUpgrade(newReference)
 
+				}
+				return nil
 			}
-			return nil
 		}
 	case *ast.IntersectionType:
 		// intersection types cannot be upgraded unless they have a legacy restricted type,
@@ -354,11 +411,11 @@ typeSwitch:
 		// Otherwise require them to drop the "restrictions".
 		// e.g-1: `T{I} -> T`
 		// e.g-2: `AnyStruct{} -> AnyStruct`
-		return validator.checkTypeUpgradability(oldType.LegacyRestrictedType, newType)
+		return validator.checkTypeUpgradability(oldType.LegacyRestrictedType, newType, inCapability)
 
 	case *ast.VariableSizedType:
 		if newVariableSizedType, isVariableSizedType := newType.(*ast.VariableSizedType); isVariableSizedType {
-			return validator.checkTypeUpgradability(oldType.Type, newVariableSizedType.Type)
+			return validator.checkTypeUpgradability(oldType.Type, newVariableSizedType.Type, inCapability)
 		}
 	case *ast.ConstantSizedType:
 		if newConstantSizedType, isConstantSizedType := newType.(*ast.ConstantSizedType); isConstantSizedType {
@@ -366,15 +423,15 @@ typeSwitch:
 				oldType.Size.Base != newConstantSizedType.Size.Base {
 				return newTypeMismatchError(oldType, newConstantSizedType)
 			}
-			return validator.checkTypeUpgradability(oldType.Type, newConstantSizedType.Type)
+			return validator.checkTypeUpgradability(oldType.Type, newConstantSizedType.Type, inCapability)
 		}
 	case *ast.DictionaryType:
 		if newDictionaryType, isDictionaryType := newType.(*ast.DictionaryType); isDictionaryType {
-			err := validator.checkTypeUpgradability(oldType.KeyType, newDictionaryType.KeyType)
+			err := validator.checkTypeUpgradability(oldType.KeyType, newDictionaryType.KeyType, inCapability)
 			if err != nil {
 				return err
 			}
-			return validator.checkTypeUpgradability(oldType.ValueType, newDictionaryType.ValueType)
+			return validator.checkTypeUpgradability(oldType.ValueType, newDictionaryType.ValueType, inCapability)
 		}
 	case *ast.InstantiationType:
 		// if the type is a Capability, allow the borrow type to change according to the normal upgrade rules
@@ -393,37 +450,91 @@ typeSwitch:
 					oldTypeArg := oldType.TypeArguments[0]
 					newTypeArg := instantiationType.TypeArguments[0]
 
-					return validator.checkTypeUpgradability(oldTypeArg.Type, newTypeArg.Type)
+					return validator.checkTypeUpgradability(oldTypeArg.Type, newTypeArg.Type, true)
 				}
 			}
 		}
 
 	case *ast.NominalType:
-		if validator.checkUserDefinedType == nil {
-			break
+
+		oldTypeName := oldType.String()
+
+		if validator.checkUserDefinedType != nil {
+			if _, isbuiltinType := builtinTypes[oldTypeName]; !isbuiltinType {
+				checked, valid := validator.checkUserDefinedTypeCustomRules(oldType, newType)
+
+				// If there are no custom rules for this type,
+				// do the default type comparison.
+				if !checked {
+					break
+				}
+
+				if valid {
+					return nil
+				}
+
+				return newTypeMismatchError(oldType, newType)
+			}
 		}
 
-		if _, isbuiltinType := builtinTypes[oldType.String()]; !isbuiltinType {
-			checked, valid := validator.checkUserDefinedTypeCustomRules(oldType, newType)
+		var expectedTypeName string
 
-			// If there are no custom rules for this type,
-			// do the default type comparison.
-			if !checked {
-				break
+		isAccountType := true
+
+		switch oldTypeName {
+		case "AuthAccount":
+			return newType.CheckEqual(astFullyEntitledAccountReference, validator)
+
+		case "PublicAccount":
+			return newType.CheckEqual(astAccountReference, validator)
+
+		case "AuthAccount.Capabilities",
+			"PublicAccount.Capabilities":
+			expectedTypeName = sema.Account_CapabilitiesType.QualifiedString()
+
+		case "AuthAccount.AccountCapabilities":
+			expectedTypeName = sema.Account_AccountCapabilitiesType.QualifiedString()
+
+		case "AuthAccount.StorageCapabilities":
+			expectedTypeName = sema.Account_StorageCapabilitiesType.QualifiedString()
+
+		case "AuthAccount.Contracts",
+			"PublicAccount.Contracts":
+			expectedTypeName = sema.Account_ContractsType.QualifiedString()
+
+		case "AuthAccount.Keys",
+			"PublicAccount.Keys":
+			expectedTypeName = sema.Account_KeysType.QualifiedString()
+
+		case "AuthAccount.Inbox":
+			expectedTypeName = sema.Account_InboxType.QualifiedString()
+
+		case "AccountKey":
+			expectedTypeName = sema.AccountKeyType.QualifiedString()
+
+		default:
+			isAccountType = false
+
+		}
+
+		if isAccountType {
+			// Only reaches here for the deprecated account types.
+			if newType.String() != expectedTypeName {
+				return newTypeMismatchError(oldType, newType)
 			}
+			return nil
 
-			if valid {
-				return nil
-			}
-
-			return newTypeMismatchError(oldType, newType)
 		}
 	}
 
 	// If the new/old type is non-storable,
 	// then changing the type of this field has no impact to the storage.
-	if isNonStorableType(oldType) || isNonStorableType(newType) {
-		return nil
+	// However, fields having non-storable types inside capabilities are in-fact storable.
+	// So, skip only if the non-storable type is a direct field type.
+	if !inCapability {
+		if isNonStorableType(oldType) || isNonStorableType(newType) {
+			return nil
+		}
 	}
 
 	return oldType.CheckEqual(newType, validator)
@@ -468,7 +579,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkField(oldField *as
 	newType := newField.TypeAnnotation.Type
 
 	validator.currentRestrictedTypeUpgradeRestrictions = nil
-	err := validator.checkTypeUpgradability(oldType, newType)
+	err := validator.checkTypeUpgradability(oldType, newType, false)
 	if err == nil {
 		return
 	}
