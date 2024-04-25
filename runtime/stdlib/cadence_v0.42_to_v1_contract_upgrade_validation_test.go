@@ -951,6 +951,136 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		err := testContractUpdate(t, oldCode, newCode)
 		require.NoError(t, err)
 	})
+
+	t.Run("custom type change inside interface set", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            import MetadataViews from 0x02
+
+            access(all) contract Test {
+                access(all) resource interface Foo {}
+
+                access(all) var a: Capability<&{Foo, MetadataViews.Resolver}>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		const newImport = `
+            access(all) contract ViewResolver {
+                access(all) resource interface Resolver {}
+            }
+        `
+
+		const newCode = `
+            import ViewResolver from 0x02
+
+            access(all) contract Test {
+                access(all) resource interface Foo {}
+
+                access(all) var a: Capability<&{Foo, ViewResolver.Resolver}>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		const contractName = "Test"
+		location := common.AddressLocation{
+			Name:    contractName,
+			Address: common.MustBytesToAddress([]byte{0x1}),
+		}
+
+		metadataViewsLocation := common.AddressLocation{
+			Name:    "MetadataViews",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		viewResolverLocation := common.AddressLocation{
+			Name:    "ViewResolver",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		imports := map[common.Location]string{
+			viewResolverLocation: newImport,
+		}
+
+		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
+
+		metadataViewsResolverTypeID := common.NewTypeIDFromQualifiedName(
+			nil,
+			metadataViewsLocation,
+			"MetadataViews.Resolver",
+		)
+
+		viewResolverResolverTypeID := common.NewTypeIDFromQualifiedName(
+			nil,
+			viewResolverLocation,
+			"ViewResolver.Resolver",
+		)
+
+		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+			location,
+			contractName,
+			&runtime_utils.TestRuntimeInterface{
+				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+					return []string{"TestImport"}, nil
+				},
+			},
+			oldProgram,
+			newProgram,
+			elaborations,
+		).WithUserDefinedTypeChangeChecker(
+			func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool) {
+				switch oldTypeID {
+				case metadataViewsResolverTypeID:
+					return true, newTypeID == viewResolverResolverTypeID
+				}
+
+				return false, false
+			},
+		)
+
+		err := upgradeValidator.Validate()
+		require.NoError(t, err)
+	})
+
+	t.Run("intersection types changed order", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) struct interface I {}
+                access(all) struct interface J {}
+                access(all) struct S: I, J {}
+
+                access(all) var a: {I, J}
+                init() {
+                    self.a = S()
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) struct interface I {}
+                access(all) struct interface J {}
+                access(all) struct S: I, J {}
+
+                access(all) var a: {J, I}
+                init() {
+                    self.a = S()
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
 }
 
 func TestContractUpgradeIntersectionAuthorization(t *testing.T) {
