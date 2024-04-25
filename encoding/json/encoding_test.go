@@ -3078,7 +3078,7 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
               }
             `,
 			cadence.TypeValue{
-				StaticType: &cadence.RestrictedType{
+				StaticType: &cadence.DeprecatedRestrictedType{
 					Restrictions: []cadence.Type{
 						cadence.StringType,
 					},
