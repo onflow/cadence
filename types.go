@@ -1618,7 +1618,7 @@ func (t *ReferenceType) Equal(other Type) bool {
 }
 
 // DeprecatedReferenceType
-// Deprecated: here for backwards compatibility
+// Deprecated: removed in v1.0.0
 type DeprecatedReferenceType struct {
 	Type       Type
 	Authorized bool
@@ -1687,7 +1687,7 @@ func formatDeprecatedReferenceType(
 }
 
 // DeprecatedRestrictedType
-// Deprecated: here for backwards compatibility
+// Deprecated: removed in v1.0.0
 type DeprecatedRestrictedType struct {
 	typeID             string
 	Type               Type
@@ -1696,7 +1696,7 @@ type DeprecatedRestrictedType struct {
 	restrictionSetOnce sync.Once
 }
 
-// Deprecated: here for backwards compatibility
+// Deprecated: removed in v1.0.0
 type DeprecatedRestrictionSet = map[Type]struct{}
 
 func NewDeprecatedRestrictedType(
@@ -1773,7 +1773,7 @@ func (t *DeprecatedRestrictedType) Equal(other Type) bool {
 }
 
 func (t *DeprecatedRestrictedType) initializeRestrictionSet() {
-	t.restrictionSetOnce.Do(func() {
+t.restrictionSetOnce.Do(func() {
 		t.restrictionSet = make(DeprecatedRestrictionSet, len(t.Restrictions))
 		for _, restriction := range t.Restrictions {
 			t.restrictionSet[restriction] = struct{}{}
@@ -1786,7 +1786,6 @@ func (t *DeprecatedRestrictedType) RestrictionSet() DeprecatedRestrictionSet {
 	return t.restrictionSet
 }
 
-// RestrictedType helpers for backwards compatibility
 func formatDeprecatedRestrictedType(separator string, typeString string, restrictionStrings []string) string {
 	var result strings.Builder
 	result.WriteString(typeString)

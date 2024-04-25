@@ -1392,7 +1392,7 @@ func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 	)
 }
 
-// dDprecated, do not use in new code, only for backwards compatibility
+// Deprecated: do not use in new code, only for backwards compatibility
 // Restricted types got removed in v1.0.0
 func (d *Decoder) decodeRestrictedType(
 	typeValue any,
