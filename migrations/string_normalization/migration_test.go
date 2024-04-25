@@ -488,6 +488,8 @@ func TestStringValueRehash(t *testing.T) {
 			stringValue.HashInput(inter, locationRange, nil),
 		)
 
+		assert.Equal(t, 1, dictValue.Count())
+
 		value, ok := dictValue.Get(inter, locationRange, stringValue)
 		require.True(t, ok)
 
@@ -632,6 +634,8 @@ func TestCharacterValueRehash(t *testing.T) {
 			[]byte("\x06\xCe\xA9"),
 			characterValue.HashInput(inter, locationRange, nil),
 		)
+
+		assert.Equal(t, 1, dictValue.Count())
 
 		value, ok := dictValue.Get(inter, locationRange, characterValue)
 		require.True(t, ok)

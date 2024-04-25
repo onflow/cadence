@@ -55,7 +55,7 @@ func TestType_ID(t *testing.T) {
 			&OptionalType{
 				Type: StringType,
 			},
-			"String?",
+			"(String)?",
 		},
 		{
 			&VariableSizedArrayType{

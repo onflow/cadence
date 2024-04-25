@@ -1156,6 +1156,9 @@ func TestCanSkipStaticTypeMigration(t *testing.T) {
 
 		interpreter.PrimitiveStaticTypeAnyStruct:   false,
 		interpreter.PrimitiveStaticTypeAnyResource: false,
+
+		// Run-time types
+		interpreter.PrimitiveStaticTypeMetaType: false,
 	}
 
 	test := func(ty interpreter.StaticType, expected bool) {
@@ -1237,4 +1240,171 @@ func TestCanSkipStaticTypeMigration(t *testing.T) {
 	for ty, expected := range testCases {
 		test(ty, expected)
 	}
+}
+
+// TestOptionalTypeRehash stores a dictionary in storage,
+// which has a key that is a type value with an optional type,
+// runs the migration, and ensures the dictionary is still usable
+func TestOptionalTypeRehash(t *testing.T) {
+
+	t.Parallel()
+
+	locationRange := interpreter.EmptyLocationRange
+
+	ledger := NewTestLedger(nil, nil)
+
+	storageMapKey := interpreter.StringStorageMapKey("dict")
+	newTestValue := func() interpreter.Value {
+		return interpreter.NewUnmeteredStringValue("test")
+	}
+
+	newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
+		storage := runtime.NewStorage(ledger, nil)
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                       storage,
+				AtreeValueValidationEnabled:   true,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		return storage, inter
+	}
+
+	newOptionalType := func() *interpreter.OptionalStaticType {
+		return interpreter.NewOptionalStaticType(nil, interpreter.PrimitiveStaticTypeInt)
+	}
+
+	// Prepare
+	(func() {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		dictionaryStaticType := interpreter.NewDictionaryStaticType(
+			nil,
+			interpreter.PrimitiveStaticTypeMetaType,
+			interpreter.PrimitiveStaticTypeString,
+		)
+		dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
+
+		optionalType := &migrations.LegacyOptionalType{
+			OptionalStaticType: newOptionalType(),
+		}
+
+		typeValue := interpreter.NewUnmeteredTypeValue(optionalType)
+
+		dictValue.Insert(
+			inter,
+			locationRange,
+			typeValue,
+			newTestValue(),
+		)
+
+		// NOTE: intentionally in old format
+		assert.Equal(t,
+			common.TypeID("Int?"),
+			optionalType.ID(),
+		)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			true,
+		)
+
+		storageMap.SetValue(inter,
+			storageMapKey,
+			dictValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address(testAddress),
+				false,
+				nil,
+				nil,
+			),
+		)
+
+		err := storage.Commit(inter, false)
+		require.NoError(t, err)
+	})()
+
+	// Migrate
+	(func() {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
+
+		reporter := newTestReporter()
+
+		migration.Migrate(
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				NewStaticTypeMigration(),
+			),
+		)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+
+		// Assert
+
+		require.Empty(t, reporter.errors)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		require.Equal(t,
+			map[struct {
+				interpreter.StorageKey
+				interpreter.StorageMapKey
+			}]struct{}{
+				{
+					StorageKey: interpreter.StorageKey{
+						Address: testAddress,
+						Key:     common.PathDomainStorage.Identifier(),
+					},
+					StorageMapKey: storageMapKey,
+				}: {},
+			},
+			reporter.migrated,
+		)
+	})()
+
+	// Load
+	(func() {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		storageMap := storage.GetStorageMap(testAddress, common.PathDomainStorage.Identifier(), false)
+		storedValue := storageMap.ReadValue(inter, storageMapKey)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, storedValue)
+
+		dictValue := storedValue.(*interpreter.DictionaryValue)
+
+		optionalType := newOptionalType()
+		typeValue := interpreter.NewUnmeteredTypeValue(optionalType)
+
+		// NOTE: in *new* format
+		assert.Equal(t,
+			common.TypeID("(Int)?"),
+			optionalType.ID(),
+		)
+
+		assert.Equal(t, 1, dictValue.Count())
+
+		value, ok := dictValue.Get(inter, locationRange, typeValue)
+		require.True(t, ok)
+
+		require.IsType(t, &interpreter.StringValue{}, value)
+		require.Equal(t,
+			newTestValue(),
+			value.(*interpreter.StringValue),
+		)
+	})()
 }

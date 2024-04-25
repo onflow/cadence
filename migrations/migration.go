@@ -688,9 +688,15 @@ func legacyType(staticType interpreter.StaticType) interpreter.StaticType {
 		}
 
 	case *interpreter.OptionalStaticType:
+		optionalType := typ
+
 		legacyInnerType := legacyType(typ.Type)
 		if legacyInnerType != nil {
-			return interpreter.NewOptionalStaticType(nil, legacyInnerType)
+			optionalType = interpreter.NewOptionalStaticType(nil, legacyInnerType)
+		}
+
+		return &LegacyOptionalType{
+			OptionalStaticType: optionalType,
 		}
 
 	case *interpreter.CapabilityStaticType:
