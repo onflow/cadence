@@ -1281,13 +1281,15 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 		)
 	case "Restriction":
 		// Backwards-compatibility for format <v1.0.0:
-		restrictionsValue := obj.Get(restrictionsKey)
-		typeValue := obj.Get(typeKey)
-		return d.decodeRestrictedType(
-			typeValue,
-			toSlice(restrictionsValue),
-			results,
-		)
+		if d.backwardsCompatible {
+			restrictionsValue := obj.Get(restrictionsKey)
+			typeValue := obj.Get(typeKey)
+			return d.decodeRestrictedType(
+				typeValue,
+				toSlice(restrictionsValue),
+				results,
+			)
+		}
 	case "VariableSizedArray":
 		return cadence.NewMeteredVariableSizedArrayType(
 			d.gauge,
@@ -1373,7 +1375,8 @@ func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 	)
 }
 
-// deprecated, do not use in new code, only for backwards compatibility
+// dDprecated, do not use in new code, only for backwards compatibility
+// Restricted types got removed in v1.0.0
 func (d *Decoder) decodeRestrictedType(
 	typeValue any,
 	restrictionsValue []any,
