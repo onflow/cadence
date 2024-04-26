@@ -543,42 +543,39 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 		key1AddedEvent.Type().ID(),
 	)
 
+	key0AddedEventFields := cadence.FieldsMappedByName(key0AddedEvent)
+	key1AddedEventFields := cadence.FieldsMappedByName(key1AddedEvent)
+
 	// address
 	assert.Equal(t,
 		cadence.Address(accountKeyTestAddress),
-		key0AddedEvent.Fields[0],
+		key0AddedEventFields[stdlib.AccountEventAddressParameter.Identifier],
 	)
 	assert.Equal(t,
 		cadence.Address(accountKeyTestAddress),
-		key1AddedEvent.Fields[0],
+		key1AddedEventFields[stdlib.AccountEventAddressParameter.Identifier],
 	)
 
 	// public key
 	assert.Equal(t,
-		cadence.Struct{
-			StructType: PublicKeyType,
-			Fields: []cadence.Value{
-				// Public key (bytes)
-				newBytesValue(pubKey1),
+		cadence.NewStruct([]cadence.Value{
+			// Public key (bytes)
+			newBytesValue(pubKey1),
 
-				// Signature Algo
-				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
-			},
-		},
-		key0AddedEvent.Fields[1],
+			// Signature Algo
+			newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+		}).WithType(PublicKeyType),
+		key0AddedEventFields[stdlib.AccountEventPublicKeyParameterAsCompositeType.Identifier],
 	)
 	assert.Equal(t,
-		cadence.Struct{
-			StructType: PublicKeyType,
-			Fields: []cadence.Value{
-				// Public key (bytes)
-				newBytesValue(pubKey2),
+		cadence.NewStruct([]cadence.Value{
+			// Public key (bytes)
+			newBytesValue(pubKey2),
 
-				// Signature Algo
-				newSignAlgoValue(sema.SignatureAlgorithmECDSA_secp256k1),
-			},
-		},
-		key1AddedEvent.Fields[1],
+			// Signature Algo
+			newSignAlgoValue(sema.SignatureAlgorithmECDSA_secp256k1),
+		}).WithType(PublicKeyType),
+		key1AddedEventFields[stdlib.AccountEventPublicKeyParameterAsCompositeType.Identifier],
 	)
 
 	// key weight
@@ -589,46 +586,62 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	assert.Equal(t,
 		key0Weight,
-		key0AddedEvent.Fields[2],
+		key0AddedEventFields[stdlib.AccountEventKeyWeightParameter.Identifier],
 	)
 	assert.Equal(t,
 		sema.UFix64TypeName,
-		key0AddedEvent.Fields[2].Type().ID(),
+		key0AddedEventFields[stdlib.AccountEventKeyWeightParameter.Identifier].Type().ID(),
 	)
 
 	assert.Equal(t,
 		key1Weight,
-		key1AddedEvent.Fields[2],
+		key1AddedEventFields[stdlib.AccountEventKeyWeightParameter.Identifier],
 	)
 	assert.Equal(t,
 		sema.UFix64TypeName,
-		key1AddedEvent.Fields[2].Type().ID(),
+		key1AddedEventFields[stdlib.AccountEventKeyWeightParameter.Identifier].Type().ID(),
 	)
 
 	// key hash algorithm
+	key0HashAlgo := key0AddedEventFields[stdlib.AccountEventHashAlgorithmParameter.Identifier].(cadence.Enum)
+	key0HashAlgoFields := cadence.FieldsMappedByName(key0HashAlgo)
 	assert.Equal(t,
 		cadence.UInt8(sema.HashAlgorithmSHA3_256),
-		key0AddedEvent.Fields[3].(cadence.Enum).Fields[0],
+		key0HashAlgoFields[sema.EnumRawValueFieldName],
 	)
 	assert.Equal(t,
 		sema.HashAlgorithmTypeName,
-		key0AddedEvent.Fields[3].Type().ID(),
+		key0AddedEventFields[stdlib.AccountEventHashAlgorithmParameter.Identifier].Type().ID(),
 	)
 
+	key1HashAlgo := key1AddedEventFields[stdlib.AccountEventHashAlgorithmParameter.Identifier].(cadence.Enum)
+	key1HashAlgoFields := cadence.FieldsMappedByName(key1HashAlgo)
 	assert.Equal(t,
 		cadence.UInt8(sema.HashAlgorithmSHA2_256),
-		key1AddedEvent.Fields[3].(cadence.Enum).Fields[0],
+		key1HashAlgoFields[sema.EnumRawValueFieldName],
 	)
 	assert.Equal(t,
 		sema.HashAlgorithmTypeName,
-		key1AddedEvent.Fields[3].Type().ID(),
+		key1AddedEventFields[stdlib.AccountEventHashAlgorithmParameter.Identifier].Type().ID(),
 	)
 
 	// key index
-	assert.Equal(t, cadence.NewInt(0), key0AddedEvent.Fields[4])
-	assert.Equal(t, sema.IntTypeName, key0AddedEvent.Fields[4].Type().ID())
-	assert.Equal(t, cadence.NewInt(1), key1AddedEvent.Fields[4])
-	assert.Equal(t, sema.IntTypeName, key1AddedEvent.Fields[4].Type().ID())
+	assert.Equal(t,
+		cadence.NewInt(0),
+		key0AddedEventFields[stdlib.AccountEventKeyIndexParameter.Identifier],
+	)
+	assert.Equal(t,
+		sema.IntTypeName,
+		key0AddedEventFields[stdlib.AccountEventKeyIndexParameter.Identifier].Type().ID(),
+	)
+	assert.Equal(t,
+		cadence.NewInt(1),
+		key1AddedEventFields[stdlib.AccountEventKeyIndexParameter.Identifier],
+	)
+	assert.Equal(t,
+		sema.IntTypeName,
+		key1AddedEventFields[stdlib.AccountEventKeyIndexParameter.Identifier].Type().ID(),
+	)
 }
 
 func TestRuntimePublicAccountKeys(t *testing.T) {
@@ -886,10 +899,12 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Enum{}, optionalValue.Value)
 	builtinStruct := optionalValue.Value.(cadence.Enum)
 
-	require.Len(t, builtinStruct.Fields, 1)
+	fields := cadence.FieldsMappedByName(builtinStruct)
+
+	require.Len(t, fields, 1)
 	assert.Equal(t,
 		cadence.NewUInt8(HashAlgorithmSHA3_256.RawValue()),
-		builtinStruct.Fields[0],
+		fields[sema.EnumRawValueFieldName],
 	)
 
 	// Check key2
@@ -899,10 +914,11 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Enum{}, optionalValue.Value)
 	builtinStruct = optionalValue.Value.(cadence.Enum)
 
-	require.Len(t, builtinStruct.Fields, 1)
+	fields = cadence.FieldsMappedByName(builtinStruct)
+	require.Len(t, fields, 1)
 	assert.Equal(t,
 		cadence.NewUInt8(HashAlgorithmSHA3_256.RawValue()),
-		builtinStruct.Fields[0],
+		fields[sema.EnumRawValueFieldName],
 	)
 
 	// Check key3
@@ -958,10 +974,11 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Enum{}, optionalValue.Value)
 	builtinStruct := optionalValue.Value.(cadence.Enum)
 
-	require.Len(t, builtinStruct.Fields, 1)
+	fields := cadence.FieldsMappedByName(builtinStruct)
+	require.Len(t, fields, 1)
 	assert.Equal(t,
 		cadence.NewUInt8(SignatureAlgorithmECDSA_secp256k1.RawValue()),
-		builtinStruct.Fields[0],
+		fields[sema.EnumRawValueFieldName],
 	)
 
 	// Check key2
@@ -971,10 +988,11 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Enum{}, optionalValue.Value)
 	builtinStruct = optionalValue.Value.(cadence.Enum)
 
-	require.Len(t, builtinStruct.Fields, 1)
+	fields = cadence.FieldsMappedByName(builtinStruct)
+	require.Len(t, fields, 1)
 	assert.Equal(t,
 		cadence.NewUInt8(SignatureAlgorithmECDSA_secp256k1.RawValue()),
-		builtinStruct.Fields[0],
+		fields[sema.EnumRawValueFieldName],
 	)
 
 	// Check key3
@@ -1026,36 +1044,30 @@ func accountKeyExportedValue(
 		panic(err)
 	}
 
-	return cadence.Struct{
-		StructType: AccountKeyType,
-		Fields: []cadence.Value{
-			// Key index
-			cadence.NewInt(index),
+	return cadence.NewStruct([]cadence.Value{
+		// Key index
+		cadence.NewInt(index),
 
-			// Public Key (struct)
-			cadence.Struct{
-				StructType: PublicKeyType,
-				Fields: []cadence.Value{
-					// Public key (bytes)
-					newBytesValue(publicKeyBytes),
+		// Public Key (struct)
+		cadence.NewStruct([]cadence.Value{
+			// Public key (bytes)
+			newBytesValue(publicKeyBytes),
 
-					// Signature Algo
-					newSignAlgoValue(signAlgo),
-				},
-			},
+			// Signature Algo
+			newSignAlgoValue(signAlgo),
+		}).WithType(PublicKeyType),
 
-			// Hash algo
-			cadence.NewEnum([]cadence.Value{
-				cadence.NewUInt8(hashAlgo.RawValue()),
-			}).WithType(HashAlgoType),
+		// Hash algo
+		cadence.NewEnum([]cadence.Value{
+			cadence.NewUInt8(hashAlgo.RawValue()),
+		}).WithType(HashAlgoType),
 
-			// Weight
-			weightUFix64,
+		// Weight
+		weightUFix64,
 
-			// IsRevoked
-			cadence.NewBool(isRevoked),
-		},
-	}
+		// IsRevoked
+		cadence.NewBool(isRevoked),
+	}).WithType(AccountKeyType)
 }
 
 var accountKeyTestAddress = Address{42}
@@ -1279,16 +1291,13 @@ func TestRuntimePublicKey(t *testing.T) {
 		value, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
 
-		expected := cadence.Struct{
-			StructType: PublicKeyType,
-			Fields: []cadence.Value{
-				// Public key (bytes)
-				newBytesValue([]byte{1, 2}),
+		expected := cadence.NewStruct([]cadence.Value{
+			// Public key (bytes)
+			newBytesValue([]byte{1, 2}),
 
-				// Signature Algo
-				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
-			},
-		}
+			// Signature Algo
+			newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+		}).WithType(PublicKeyType)
 
 		assert.Equal(t, expected, value)
 	})
@@ -1544,16 +1553,13 @@ func TestRuntimePublicKey(t *testing.T) {
 		value, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
 
-		expected := cadence.Struct{
-			StructType: PublicKeyType,
-			Fields: []cadence.Value{
-				// Public key (bytes)
-				newBytesValue([]byte{1, 2}),
+		expected := cadence.NewStruct([]cadence.Value{
+			// Public key (bytes)
+			newBytesValue([]byte{1, 2}),
 
-				// Signature Algo
-				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
-			},
-		}
+			// Signature Algo
+			newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+		}).WithType(PublicKeyType)
 
 		assert.Equal(t, expected, value)
 	})
@@ -1585,19 +1591,15 @@ func TestRuntimePublicKey(t *testing.T) {
 		value, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
 
-		expected := cadence.Struct{
-			StructType: PublicKeyType,
-			Fields: []cadence.Value{
-				// Public key (bytes)
-				newBytesValue([]byte{1, 2}),
-				// Signature Algo
-				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
-			},
-		}
+		expected := cadence.NewStruct([]cadence.Value{
+			// Public key (bytes)
+			newBytesValue([]byte{1, 2}),
+			// Signature Algo
+			newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+		}).WithType(PublicKeyType)
 
 		assert.Equal(t, expected, value)
 	})
-
 }
 
 func TestRuntimeAuthAccountContracts(t *testing.T) {
