@@ -624,6 +624,35 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("changing to a non-storable inside Capability", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                // Capability<Int> is invalid, but that's OK, we just want to check
+                // whether inner type is changeable to a non-storable type.
+                access(all) var a: Capability<Int>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) var a: Capability<&Int>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		cause := getSingleContractUpdateErrorCause(t, err, "Test")
+		assertFieldTypeMismatchError(t, cause, "Test", "a", "Int", "&Int")
+	})
+
 	t.Run("changing from a non-storable types", func(t *testing.T) {
 
 		t.Parallel()
@@ -889,6 +918,168 @@ func TestContractUpgradeFieldType(t *testing.T) {
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		var fieldMismatchError *stdlib.FieldMismatchError
 		require.ErrorAs(t, cause, &fieldMismatchError)
+	})
+
+	t.Run("account types", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) var a: Capability<&AuthAccount>?
+                access(all) var b: Capability<&AuthAccount.Keys>?
+                access(all) var c: Capability<&PublicAccount.Capabilities>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) var a: Capability<auth(Storage, Contracts, Keys, Inbox, Capabilities) &Account>?
+                access(all) var b: Capability<&Account.Keys>?
+                access(all) var c: Capability<&Account.Capabilities>?
+                init() {
+                    self.a = nil
+                    self.b = nil
+                    self.c = nil
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("custom type change inside interface set", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            import MetadataViews from 0x02
+
+            access(all) contract Test {
+                access(all) resource interface Foo {}
+
+                access(all) var a: Capability<&{Foo, MetadataViews.Resolver}>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		const newImport = `
+            access(all) contract ViewResolver {
+                access(all) resource interface Resolver {}
+            }
+        `
+
+		const newCode = `
+            import ViewResolver from 0x02
+
+            access(all) contract Test {
+                access(all) resource interface Foo {}
+
+                access(all) var a: Capability<&{Foo, ViewResolver.Resolver}>?
+                init() {
+                    self.a = nil
+                }
+            }
+        `
+
+		const contractName = "Test"
+		location := common.AddressLocation{
+			Name:    contractName,
+			Address: common.MustBytesToAddress([]byte{0x1}),
+		}
+
+		metadataViewsLocation := common.AddressLocation{
+			Name:    "MetadataViews",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		viewResolverLocation := common.AddressLocation{
+			Name:    "ViewResolver",
+			Address: common.MustBytesToAddress([]byte{0x2}),
+		}
+
+		imports := map[common.Location]string{
+			viewResolverLocation: newImport,
+		}
+
+		oldProgram, newProgram, elaborations := parseAndCheckPrograms(t, location, oldCode, newCode, imports)
+
+		metadataViewsResolverTypeID := common.NewTypeIDFromQualifiedName(
+			nil,
+			metadataViewsLocation,
+			"MetadataViews.Resolver",
+		)
+
+		viewResolverResolverTypeID := common.NewTypeIDFromQualifiedName(
+			nil,
+			viewResolverLocation,
+			"ViewResolver.Resolver",
+		)
+
+		upgradeValidator := stdlib.NewCadenceV042ToV1ContractUpdateValidator(
+			location,
+			contractName,
+			&runtime_utils.TestRuntimeInterface{
+				OnGetAccountContractNames: func(address runtime.Address) ([]string, error) {
+					return []string{"TestImport"}, nil
+				},
+			},
+			oldProgram,
+			newProgram,
+			elaborations,
+		).WithUserDefinedTypeChangeChecker(
+			func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool) {
+				switch oldTypeID {
+				case metadataViewsResolverTypeID:
+					return true, newTypeID == viewResolverResolverTypeID
+				}
+
+				return false, false
+			},
+		)
+
+		err := upgradeValidator.Validate()
+		require.NoError(t, err)
+	})
+
+	t.Run("intersection types changed order", func(t *testing.T) {
+
+		t.Parallel()
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) struct interface I {}
+                access(all) struct interface J {}
+                access(all) struct S: I, J {}
+
+                access(all) var a: {I, J}
+                init() {
+                    self.a = S()
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) struct interface I {}
+                access(all) struct interface J {}
+                access(all) struct S: I, J {}
+
+                access(all) var a: {J, I}
+                init() {
+                    self.a = S()
+                }
+            }
+        `
+
+		err := testContractUpdate(t, oldCode, newCode)
+		require.NoError(t, err)
 	})
 }
 

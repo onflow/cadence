@@ -225,7 +225,7 @@ type accountTestEnvironment struct {
 func newAccountTestEnv() accountTestEnvironment {
 	storage := newTestAccountKeyStorage()
 	rt := NewTestInterpreterRuntime()
-	rtInterface := getAccountKeyTestRuntimeInterface(storage)
+	rtInterface := newAccountKeyTestRuntimeInterface(storage)
 
 	addPublicKeyValidation(rtInterface, nil)
 
@@ -471,34 +471,49 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	rt := NewTestInterpreterRuntime()
 
-	pubKey := newBytesValue([]byte{1, 2, 3})
+	pubKey1 := []byte{1, 2, 3}
+	pubKey1Value := newBytesValue(pubKey1)
+
+	pubKey2 := []byte{4, 5, 6}
+	pubKey2Value := newBytesValue(pubKey2)
 
 	const code = `
-       transaction(publicKey: [UInt8]) {
+       transaction(publicKey1: [UInt8], publicKey2: [UInt8]) {
            prepare(signer: auth(BorrowValue) &Account) {
                let acct = Account(payer: signer)
                acct.keys.add(
                    publicKey: PublicKey(
-                       publicKey: publicKey,
+                       publicKey: publicKey1,
                        signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
                    ),
                    hashAlgorithm: HashAlgorithm.SHA3_256,
                    weight: 100.0
+               )
+               acct.keys.add(
+                   publicKey: PublicKey(
+                       publicKey: publicKey2,
+                       signatureAlgorithm: SignatureAlgorithm.ECDSA_secp256k1
+                   ),
+                   hashAlgorithm: HashAlgorithm.SHA2_256,
+                   weight: 0.0
                )
            }
        }
    `
 
 	storage := newTestAccountKeyStorage()
-	runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+	runtimeInterface := newAccountKeyTestRuntimeInterface(storage)
 	addPublicKeyValidation(runtimeInterface, nil)
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
-			Source:    []byte(code),
-			Arguments: encodeArgs([]cadence.Value{pubKey}),
+			Source: []byte(code),
+			Arguments: encodeArgs([]cadence.Value{
+				pubKey1Value,
+				pubKey2Value,
+			}),
 		},
 		Context{
 			Location:  nextTransactionLocation(),
@@ -507,19 +522,113 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	assert.Len(t, storage.keys, 1)
+	assert.Len(t, storage.keys, 2)
 
-	require.Len(t, storage.events, 2)
+	require.Len(t, storage.events, 3)
 
-	assert.EqualValues(t,
-		stdlib.AccountCreatedEventType.ID(),
+	assert.Equal(t,
+		string(stdlib.AccountCreatedEventType.ID()),
 		storage.events[0].Type().ID(),
 	)
 
-	assert.EqualValues(t,
-		stdlib.AccountKeyAddedFromPublicKeyEventType.ID(),
-		storage.events[1].Type().ID(),
+	key0AddedEvent := storage.events[1]
+	key1AddedEvent := storage.events[2]
+
+	assert.Equal(t,
+		string(stdlib.AccountKeyAddedFromPublicKeyEventType.ID()),
+		key0AddedEvent.Type().ID(),
 	)
+	assert.Equal(t,
+		string(stdlib.AccountKeyAddedFromPublicKeyEventType.ID()),
+		key1AddedEvent.Type().ID(),
+	)
+
+	// address
+	assert.Equal(t,
+		cadence.Address(accountKeyTestAddress),
+		key0AddedEvent.Fields[0],
+	)
+	assert.Equal(t,
+		cadence.Address(accountKeyTestAddress),
+		key1AddedEvent.Fields[0],
+	)
+
+	// public key
+	assert.Equal(t,
+		cadence.Struct{
+			StructType: PublicKeyType,
+			Fields: []cadence.Value{
+				// Public key (bytes)
+				newBytesValue(pubKey1),
+
+				// Signature Algo
+				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+			},
+		},
+		key0AddedEvent.Fields[1],
+	)
+	assert.Equal(t,
+		cadence.Struct{
+			StructType: PublicKeyType,
+			Fields: []cadence.Value{
+				// Public key (bytes)
+				newBytesValue(pubKey2),
+
+				// Signature Algo
+				newSignAlgoValue(sema.SignatureAlgorithmECDSA_secp256k1),
+			},
+		},
+		key1AddedEvent.Fields[1],
+	)
+
+	// key weight
+	key0Weight, err := cadence.NewUFix64("100.0")
+	require.NoError(t, err)
+	key1Weight, err := cadence.NewUFix64("0.0")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		key0Weight,
+		key0AddedEvent.Fields[2],
+	)
+	assert.Equal(t,
+		sema.UFix64TypeName,
+		key0AddedEvent.Fields[2].Type().ID(),
+	)
+
+	assert.Equal(t,
+		key1Weight,
+		key1AddedEvent.Fields[2],
+	)
+	assert.Equal(t,
+		sema.UFix64TypeName,
+		key1AddedEvent.Fields[2].Type().ID(),
+	)
+
+	// key hash algorithm
+	assert.Equal(t,
+		cadence.UInt8(sema.HashAlgorithmSHA3_256),
+		key0AddedEvent.Fields[3].(cadence.Enum).Fields[0],
+	)
+	assert.Equal(t,
+		sema.HashAlgorithmTypeName,
+		key0AddedEvent.Fields[3].Type().ID(),
+	)
+
+	assert.Equal(t,
+		cadence.UInt8(sema.HashAlgorithmSHA2_256),
+		key1AddedEvent.Fields[3].(cadence.Enum).Fields[0],
+	)
+	assert.Equal(t,
+		sema.HashAlgorithmTypeName,
+		key1AddedEvent.Fields[3].Type().ID(),
+	)
+
+	// key index
+	assert.Equal(t, cadence.NewInt(0), key0AddedEvent.Fields[4])
+	assert.Equal(t, sema.IntTypeName, key0AddedEvent.Fields[4].Type().ID())
+	assert.Equal(t, cadence.NewInt(1), key1AddedEvent.Fields[4])
+	assert.Equal(t, sema.IntTypeName, key1AddedEvent.Fields[4].Type().ID())
 }
 
 func TestRuntimePublicAccountKeys(t *testing.T) {
@@ -949,14 +1058,16 @@ func accountKeyExportedValue(
 	}
 }
 
-func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *TestRuntimeInterface {
+var accountKeyTestAddress = Address{42}
+
+func newAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *TestRuntimeInterface {
 	return &TestRuntimeInterface{
 		Storage: NewTestLedger(nil, nil),
 		OnGetSigningAccounts: func() ([]Address, error) {
-			return []Address{{42}}, nil
+			return []Address{accountKeyTestAddress}, nil
 		},
 		OnCreateAccount: func(payer Address) (address Address, err error) {
-			return Address{42}, nil
+			return accountKeyTestAddress, nil
 		},
 		OnAddAccountKey: func(address Address, publicKey *stdlib.PublicKey, hashAlgo HashAlgorithm, weight int) (*stdlib.AccountKey, error) {
 			index := len(storage.keys)
@@ -1270,7 +1381,7 @@ func TestRuntimePublicKey(t *testing.T) {
 
 			var invoked bool
 
-			runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+			runtimeInterface := newAccountKeyTestRuntimeInterface(storage)
 			runtimeInterface.OnValidatePublicKey = func(publicKey *stdlib.PublicKey) error {
 				invoked = true
 				return nil
@@ -1355,7 +1466,7 @@ func TestRuntimePublicKey(t *testing.T) {
 
 		var invoked bool
 
-		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+		runtimeInterface := newAccountKeyTestRuntimeInterface(storage)
 		runtimeInterface.OnVerifySignature = func(
 			_ []byte,
 			_ string,
