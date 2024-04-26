@@ -1325,6 +1325,7 @@ func TestOptionalTypeRehash(t *testing.T) {
 				false,
 				nil,
 				nil,
+				false,
 			),
 		)
 
