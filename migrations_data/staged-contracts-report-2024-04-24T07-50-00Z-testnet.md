@@ -1,5 +1,52 @@
 ## Cadence 1.0 staged contracts migration results
 Date: 26 April, 2024
+Stats: 198 contracts staged, 124 successfully upgraded, 74 failed to upgrade
+
+Snapshot: devnet49-execution-snapshot-for-migration-4-april-24
+
+Flow-go build: v0.34.0-crescendo-preview.15-atree-inlining
+
+### Previously staged contrats that need updating
+
+The Cadence team introduced new breaking changes in the [Cadence preview build 22](https://github.com/onflow/cadence/releases/tag/v1.0.0-preview.22), for this reason some contracts that were previously successfully migrated failed this migration. The changes were [announced in Discord](https://discord.com/channels/613813861610684416/811693600403357706/1230562679312089249) and discussed and approved by the community in the [Developer Office Hours](https://discord.com/channels/613813861610684416/811693600403357706/1232758129788457000).
+Please upgrade you contract to comply with the latest release and re-stage it. See the full migration report in the following section to see the specific migration error for your contract.
+
+|Account Address | Contract Name |
+| --- | --- | 
+|0x566c813b3632783e | ExampleNFT |
+|0xd704ee8202a0d82d | ExampleNFT |
+|0xf28310b45fc6b319 | ExampleNFT |
+|0x1f38da7a93c61f28 | ExampleNFT |
+|0x668df1b27a5da384 | FanTopMarket |
+|0xff5b7741090ee518 | FanTopMarket |
+|0xb668e8c9726ef26b | FanTopMarket |
+|0xa47a2d3a3b7e9133 | FanTopMarket |
+|0xe1d43e0cfc237807 | Flowty |
+|0xe1d43e0cfc237807 | FlowtyRentals |
+|0xc7c122b5b811de8e | FlowversePass |
+|0xc7c122b5b811de8e | FlowversePassPrimarySaleMinter |
+|0xc7c122b5b811de8e | FlowversePrimarySale |
+|0xc7c122b5b811de8e | FlowverseShirt |
+|0xc7c122b5b811de8e | FlowverseSocks |
+|0xc7c122b5b811de8e | FlowverseTreasures |
+|0xc7c122b5b811de8e | FlowverseTreasuresPrimarySaleMinter |
+|0x2d59ec5158e3adae | HeroesOfTheFlow |
+|0x566c813b3632783e | KaratNFT |
+|0x2bd8210db3a8fe8a | NFTLocking 
+|0xb051bdaddb672a33 | NFTStorefrontV2 |
+|0x0d3dc5ad70be03d1 | Offers |
+|0xc7c122b5b811de8e | Ordinal |
+|0xc7c122b5b811de8e | OrdinalVendor |
+|0xef4cd3d07a7b43ce | PDS |
+|0xa2526e2d9cc7f0d2 | Pinnacle |
+|0x1c5033ad60821c97 | Redeemables |
+|0x31ad40c07a2a9788 | ScopedFTProviders |
+|0x31ad40c07a2a9788 | ScopedNFTProviders |
+|0x2bd8210db3a8fe8a | Swap |
+v0x877931736ee77cff | TopShot |
+
+### Full Migration Report
+
 |Account Address | Contract Name | Status |
 | --- | --- | --- | 
 | 0xff5b7741090ee518 | FanTopPermissionV2a | &#9989; | 
