@@ -11708,9 +11708,10 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		name     string
-		typeName string
-		code     string
+		name       string
+		typeName   string
+		code       string
+		isResource bool
 	}
 
 	testFunctionReturn := func(tc testCase) {
@@ -11719,17 +11720,24 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
-				`
-                      #allowAccountLinking
+			refType := "AnyStruct"
+			if tc.isResource {
+				refType = "AnyResource"
+			}
 
+			inter, _ := testAccount(t,
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				true,
+				nil,
+				fmt.Sprintf(
+					`
                       struct S {}
 
 					  entitlement E
 
-                      fun getRef(): &AnyStruct  {
-                         %[2]s
-                         return ref
+                      fun getRef(): &%[3]s  {
+                          %[2]s
+                          return ref
                       }
 
                       fun test(): &%[1]s {
@@ -11737,9 +11745,12 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
                           return (ref2 as AnyStruct) as! &%[1]s
                       }
                     `,
-				tc.typeName,
-				tc.code,
-			), sema.Config{})
+					tc.typeName,
+					tc.code,
+					refType,
+				),
+				sema.Config{},
+			)
 
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
@@ -11752,23 +11763,33 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 
 			t.Parallel()
 
-			inter, _ := testAccount(t, interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}), true, nil, fmt.Sprintf(
-				`
-                      #allowAccountLinking
+			refType := "AnyStruct"
+			if tc.isResource {
+				refType = "AnyResource"
+			}
 
+			inter, _ := testAccount(t,
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+				true,
+				nil,
+				fmt.Sprintf(
+					`
                       struct S {}
 
 					  entitlement E
 
                       fun test(): &%[1]s {
                           %[2]s
-                          let ref2: &AnyStruct = ref
+                          let ref2: &%[3]s = ref
                           return (ref2 as AnyStruct) as! &%[1]s
                       }
                     `,
-				tc.typeName,
-				tc.code,
-			), sema.Config{})
+					tc.typeName,
+					tc.code,
+					refType,
+				),
+				sema.Config{},
+			)
 
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
@@ -11782,6 +11803,7 @@ func TestInterpretReferenceUpAndDowncast(t *testing.T) {
 			code: `
 		      let ref = account
 		    `,
+			isResource: true,
 		},
 	}
 

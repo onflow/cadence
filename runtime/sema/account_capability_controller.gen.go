@@ -103,7 +103,7 @@ var AccountCapabilityControllerType = &SimpleType{
 	QualifiedName: AccountCapabilityControllerTypeName,
 	TypeID:        AccountCapabilityControllerTypeName,
 	TypeTag:       AccountCapabilityControllerTypeTag,
-	IsResource:    false,
+	IsResource:    true,
 	Storable:      false,
 	Primitive:     false,
 	Equatable:     false,

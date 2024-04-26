@@ -1,5 +1,5 @@
 access(all)
-struct StorageCapabilityController: ContainFields {
+resource StorageCapabilityController: ContainFields {
 
     /// The capability that is controlled by this controller.
     access(all)
