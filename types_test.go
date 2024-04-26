@@ -1897,6 +1897,214 @@ func TestTypeEquality(t *testing.T) {
 		})
 	})
 
+	t.Run("deprecated reference type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: false,
+			}
+			target := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: false,
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different referenced type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: false,
+			}
+			target := &DeprecatedReferenceType{
+				Type:       StringType,
+				Authorized: false,
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("auth vs non-auth", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: false,
+			}
+			target := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: true,
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("non-auth vs auth", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: true,
+			}
+			target := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: false,
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: true,
+			}
+			target := AnyType
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("deprecated restricted type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					IntType,
+				},
+			}
+			target := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					IntType,
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different restrictions order", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					IntType,
+				},
+			}
+			target := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					IntType,
+					AnyType,
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("duplicate restrictions", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					IntType,
+					AnyType,
+					IntType,
+				},
+			}
+			target := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					IntType,
+					AnyType,
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different inner type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					IntType,
+				},
+			}
+			target := &DeprecatedRestrictedType{
+				Type: StringType,
+				Restrictions: []Type{
+					AnyType,
+					IntType,
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different restrictions", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					IntType,
+				},
+			}
+			target := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					StringType,
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different restrictions length", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+				},
+			}
+			target := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					StringType,
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+				},
+			}
+			target := AnyType
+			assert.False(t, source.Equal(target))
+		})
+	})
+
 	t.Run("enum type", func(t *testing.T) {
 		t.Parallel()
 

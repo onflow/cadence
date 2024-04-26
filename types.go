@@ -21,6 +21,7 @@ package cadence
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -1614,6 +1615,193 @@ func (t *ReferenceType) Equal(other Type) bool {
 
 	return t.Authorization.Equal(otherType.Authorization) &&
 		t.Type.Equal(otherType.Type)
+}
+
+// DeprecatedReferenceType
+// Deprecated: removed in v1.0.0
+type DeprecatedReferenceType struct {
+	Type       Type
+	Authorized bool
+	typeID     string
+}
+
+var _ Type = &DeprecatedReferenceType{}
+
+func NewDeprecatedReferenceType(
+	authorized bool,
+	typ Type,
+) *DeprecatedReferenceType {
+	return &DeprecatedReferenceType{
+		Authorized: authorized,
+		Type:       typ,
+	}
+}
+
+func NewDeprecatedMeteredReferenceType(
+	gauge common.MemoryGauge,
+	authorized bool,
+	typ Type,
+) *DeprecatedReferenceType {
+	common.UseMemory(gauge, common.CadenceReferenceTypeMemoryUsage)
+	return NewDeprecatedReferenceType(authorized, typ)
+}
+
+func (*DeprecatedReferenceType) isType() {}
+
+func (t *DeprecatedReferenceType) ID() string {
+	if t.typeID == "" {
+		t.typeID = formatDeprecatedReferenceTypeID(t.Authorized, t.Type.ID()) //nolint:staticcheck
+	}
+	return t.typeID
+}
+
+func (t *DeprecatedReferenceType) Equal(other Type) bool {
+	otherType, ok := other.(*DeprecatedReferenceType)
+	if !ok {
+		return false
+	}
+
+	return t.Authorized == otherType.Authorized &&
+		t.Type.Equal(otherType.Type)
+}
+
+// Deprecated: use FormatReferenceTypeID
+func formatDeprecatedReferenceTypeID(authorized bool, typeString string) string {
+	return formatDeprecatedReferenceType("", authorized, typeString)
+}
+
+// Deprecated: use FormatReferenceTypeID
+func formatDeprecatedReferenceType(
+	separator string,
+	authorized bool,
+	typeString string,
+) string {
+	var builder strings.Builder
+	if authorized {
+		builder.WriteString("auth")
+		builder.WriteString(separator)
+	}
+	builder.WriteByte('&')
+	builder.WriteString(typeString)
+	return builder.String()
+}
+
+// DeprecatedRestrictedType
+// Deprecated: removed in v1.0.0
+type DeprecatedRestrictedType struct {
+	typeID             string
+	Type               Type
+	Restrictions       []Type
+	restrictionSet     DeprecatedRestrictionSet
+	restrictionSetOnce sync.Once
+}
+
+// Deprecated: removed in v1.0.0
+type DeprecatedRestrictionSet = map[Type]struct{}
+
+func NewDeprecatedRestrictedType(
+	typ Type,
+	restrictions []Type,
+) *DeprecatedRestrictedType {
+	return &DeprecatedRestrictedType{
+		Type:         typ,
+		Restrictions: restrictions,
+	}
+}
+
+func NewDeprecatedMeteredRestrictedType(
+	gauge common.MemoryGauge,
+	typ Type,
+	restrictions []Type,
+) *DeprecatedRestrictedType {
+	common.UseMemory(gauge, common.CadenceDeprecatedRestrictedTypeMemoryUsage)
+	return NewDeprecatedRestrictedType(typ, restrictions)
+}
+
+func (*DeprecatedRestrictedType) isType() {}
+
+func (t *DeprecatedRestrictedType) ID() string {
+	if t.typeID == "" {
+		var restrictionStrings []string
+		restrictionCount := len(t.Restrictions)
+		if restrictionCount > 0 {
+			restrictionStrings = make([]string, 0, restrictionCount)
+			for _, restriction := range t.Restrictions {
+				restrictionStrings = append(restrictionStrings, restriction.ID())
+			}
+		}
+		var typeString string
+		if t.Type != nil {
+			typeString = t.Type.ID()
+		}
+		t.typeID = formatDeprecatedRestrictedTypeID(typeString, restrictionStrings)
+	}
+	return t.typeID
+}
+
+func (t *DeprecatedRestrictedType) Equal(other Type) bool {
+	otherType, ok := other.(*DeprecatedRestrictedType)
+	if !ok {
+		return false
+	}
+
+	if t.Type == nil && otherType.Type != nil {
+		return false
+	}
+	if t.Type != nil && otherType.Type == nil {
+		return false
+	}
+	if t.Type != nil && !t.Type.Equal(otherType.Type) {
+		return false
+	}
+
+	restrictionSet := t.RestrictionSet()
+	otherRestrictionSet := otherType.RestrictionSet()
+
+	if len(restrictionSet) != len(otherRestrictionSet) {
+		return false
+	}
+
+	for restriction := range restrictionSet { //nolint:maprange
+		_, ok := otherRestrictionSet[restriction]
+		if !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (t *DeprecatedRestrictedType) initializeRestrictionSet() {
+	t.restrictionSetOnce.Do(func() {
+		t.restrictionSet = make(DeprecatedRestrictionSet, len(t.Restrictions))
+		for _, restriction := range t.Restrictions {
+			t.restrictionSet[restriction] = struct{}{}
+		}
+	})
+}
+
+func (t *DeprecatedRestrictedType) RestrictionSet() DeprecatedRestrictionSet {
+	t.initializeRestrictionSet()
+	return t.restrictionSet
+}
+
+func formatDeprecatedRestrictedType(typeString string, restrictionStrings []string) string {
+	var result strings.Builder
+	result.WriteString(typeString)
+	result.WriteByte('{')
+	for i, restrictionString := range restrictionStrings {
+		if i > 0 {
+			result.WriteByte(',')
+		}
+		result.WriteString(restrictionString)
+	}
+	result.WriteByte('}')
+	return result.String()
+}
+
+func formatDeprecatedRestrictedTypeID(typeString string, restrictionStrings []string) string {
+	return formatDeprecatedRestrictedType(typeString, restrictionStrings)
 }
 
 // IntersectionType

@@ -3024,6 +3024,132 @@ func TestDecodeFixedPoints(t *testing.T) {
 	})
 }
 
+func TestDecodeDeprecatedTypes(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with static reference type", func(t *testing.T) {
+
+		t.Parallel()
+
+		testDecode(
+			t,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Reference",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "authorized": true 
+                  }
+                }
+              }
+            `,
+			cadence.TypeValue{
+				StaticType: &cadence.DeprecatedReferenceType{
+					Authorized: true,
+					Type:       cadence.IntType,
+				},
+			},
+			WithBackwardsCompatibility(),
+		)
+	})
+
+	t.Run("with static reference type without backwards compatibility", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Decode with error if reference is not supported
+		_, err := Decode(nil, []byte(`
+	              {
+	                "type": "Type",
+	                "value": {
+	                  "staticType": {
+	                    "kind": "Reference",
+	                    "type": {
+	                      "kind": "Int"
+	                    },
+	                    "authorized": true 
+	                  }
+	                }
+	              }
+	            `))
+		require.Error(t, err)
+	})
+
+	t.Run("with static restricted type", func(t *testing.T) {
+
+		t.Parallel()
+
+		testDecode(
+			t,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Restriction",
+                    "typeID": "Int{String}",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "restrictions": [
+                      {
+                        "kind": "String"
+                      }
+                    ]
+                  }
+                }
+              }
+            `,
+			cadence.TypeValue{
+				StaticType: &cadence.DeprecatedRestrictedType{
+					Restrictions: []cadence.Type{
+						cadence.StringType,
+					},
+					Type: cadence.IntType,
+				},
+			},
+			WithBackwardsCompatibility(),
+		)
+	})
+
+	t.Run("with static restricted type without backwards compatibility", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Decode with panic if restriction is not supported
+		require.Panics(t, func() {
+			_, err := Decode(nil, []byte(`
+	              {
+	                "type": "Type",
+	                "value": {
+	                  "staticType": {
+	                    "kind": "Restriction",
+	                    "typeID": "Int{String}",
+	                    "type": {
+	                      "kind": "Int"
+	                    },
+	                    "restrictions": [
+	                      {
+	                        "kind": "String"
+	                      }
+	                    ]
+	                  }
+	                }
+	              }
+	            `))
+			require.NoError(t, err)
+		},
+		)
+	})
+}
+
 func TestExportRecursiveType(t *testing.T) {
 
 	t.Parallel()
