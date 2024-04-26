@@ -610,11 +610,14 @@ func newAccountKeysAddFunction(
 				panic(err)
 			}
 
-			hashAlgo := NewHashAlgorithmFromValue(inter, locationRange, invocation.Arguments[1])
+			hashAlgoValue := invocation.Arguments[1]
+			hashAlgo := NewHashAlgorithmFromValue(inter, locationRange, hashAlgoValue)
+
 			weightValue, ok := invocation.Arguments[2].(interpreter.UFix64Value)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
+
 			weight := weightValue.ToInt(locationRange)
 
 			var accountKey *AccountKey
@@ -631,6 +634,9 @@ func newAccountKeysAddFunction(
 				[]interpreter.Value{
 					addressValue,
 					publicKeyValue,
+					weightValue,
+					hashAlgoValue,
+					interpreter.NewIntValueFromInt64(gauge, int64(accountKey.KeyIndex)),
 				},
 				locationRange,
 			)
