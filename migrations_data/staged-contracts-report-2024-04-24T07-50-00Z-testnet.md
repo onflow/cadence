@@ -1,5 +1,11 @@
 ## Cadence 1.0 staged contracts migration results
 Date: 26 April, 2024
+Stats: 198 contracts staged, 124 successfully upgraded, 74 failed to upgrade
+
+Snapshot: devnet49-execution-snapshot-for-migration-4-april-24
+
+Flow-go build: v0.34.0-crescendo-preview.15-atree-inlining
+
 |Account Address | Contract Name | Status |
 | --- | --- | --- | 
 | 0xff5b7741090ee518 | FanTopPermissionV2a | &#9989; | 
