@@ -1670,7 +1670,7 @@ type Composite interface {
 
 // linked in by packages that need access to getFieldValues,
 // e.g. JSON and CCF codecs
-func getFieldValues(composite Composite) []Value {
+func getFieldValues(composite Composite) []Value { //nolint:unused
 	return composite.getFieldValues()
 }
 
