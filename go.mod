@@ -13,7 +13,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/leanovate/gopter v0.2.9
 	github.com/logrusorgru/aurora/v4 v4.0.0
-	github.com/onflow/atree v0.6.1-0.20240416233652-f4568c0c03df
+	github.com/onflow/atree v0.6.1-0.20240429171449-cb486ceb1f9c
 	github.com/rivo/uniseg v0.4.4
 	github.com/schollz/progressbar/v3 v3.13.1
 	github.com/stretchr/testify v1.8.4
