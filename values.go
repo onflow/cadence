@@ -39,7 +39,6 @@ type Value interface {
 	isValue()
 	Type() Type
 	MeteredType(gauge common.MemoryGauge) Type
-	ToGoValue() any
 	fmt.Stringer
 }
 
@@ -73,10 +72,6 @@ func (Void) Type() Type {
 
 func (v Void) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (Void) ToGoValue() any {
-	return nil
 }
 
 func (Void) String() string {
@@ -129,16 +124,6 @@ func (o Optional) MeteredType(gauge common.MemoryGauge) Type {
 	)
 }
 
-func (o Optional) ToGoValue() any {
-	if o.Value == nil {
-		return nil
-	}
-
-	value := o.Value.ToGoValue()
-
-	return value
-}
-
 func (o Optional) String() string {
 	if o.Value == nil {
 		return format.Nil
@@ -169,10 +154,6 @@ func (Bool) Type() Type {
 
 func (v Bool) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Bool) ToGoValue() any {
-	return bool(v)
 }
 
 func (v Bool) String() string {
@@ -213,10 +194,6 @@ func (v String) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v String) ToGoValue() any {
-	return string(v)
-}
-
 func (v String) String() string {
 	return format.String(string(v))
 }
@@ -240,10 +217,6 @@ func (Bytes) Type() Type {
 
 func (v Bytes) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Bytes) ToGoValue() any {
-	return []byte(v)
 }
 
 func (v Bytes) String() string {
@@ -286,10 +259,6 @@ func (v Character) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Character) ToGoValue() any {
-	return string(v)
-}
-
 func (v Character) String() string {
 	return format.String(string(v))
 }
@@ -330,10 +299,6 @@ func (Address) Type() Type {
 
 func (Address) MeteredType(common.MemoryGauge) Type {
 	return AddressType
-}
-
-func (v Address) ToGoValue() any {
-	return [AddressLength]byte(v)
 }
 
 func (v Address) Bytes() []byte {
@@ -388,10 +353,6 @@ func (v Int) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Int) ToGoValue() any {
-	return v.Big()
-}
-
 func (v Int) Int() int {
 	return int(v.Value.Int64())
 }
@@ -426,10 +387,6 @@ func NewMeteredInt8(memoryGauge common.MemoryGauge, v int8) Int8 {
 }
 
 func (Int8) isValue() {}
-
-func (v Int8) ToGoValue() any {
-	return int8(v)
-}
 
 func (Int8) Type() Type {
 	return Int8Type
@@ -474,10 +431,6 @@ func (v Int16) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Int16) ToGoValue() any {
-	return int16(v)
-}
-
 func (v Int16) ToBigEndianBytes() []byte {
 	b := make([]byte, 2)
 	binary.BigEndian.PutUint16(b, uint16(v))
@@ -515,10 +468,6 @@ func (v Int32) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Int32) ToGoValue() any {
-	return int32(v)
-}
-
 func (v Int32) ToBigEndianBytes() []byte {
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, uint32(v))
@@ -554,10 +503,6 @@ func (Int64) Type() Type {
 
 func (v Int64) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Int64) ToGoValue() any {
-	return int64(v)
 }
 
 func (v Int64) ToBigEndianBytes() []byte {
@@ -616,10 +561,6 @@ func (Int128) Type() Type {
 
 func (v Int128) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Int128) ToGoValue() any {
-	return v.Big()
 }
 
 func (v Int128) Int() int {
@@ -686,10 +627,6 @@ func (v Int256) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Int256) ToGoValue() any {
-	return v.Big()
-}
-
 func (v Int256) Int() int {
 	return int(v.Value.Int64())
 }
@@ -749,10 +686,6 @@ func (v UInt) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v UInt) ToGoValue() any {
-	return v.Big()
-}
-
 func (v UInt) Int() int {
 	return int(v.Value.Uint64())
 }
@@ -796,10 +729,6 @@ func (v UInt8) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v UInt8) ToGoValue() any {
-	return uint8(v)
-}
-
 func (v UInt8) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
@@ -833,10 +762,6 @@ func (UInt16) Type() Type {
 
 func (v UInt16) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v UInt16) ToGoValue() any {
-	return uint16(v)
 }
 
 func (v UInt16) ToBigEndianBytes() []byte {
@@ -876,10 +801,6 @@ func (v UInt32) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v UInt32) ToGoValue() any {
-	return uint32(v)
-}
-
 func (v UInt32) ToBigEndianBytes() []byte {
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, uint32(v))
@@ -915,10 +836,6 @@ func (UInt64) Type() Type {
 
 func (v UInt64) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v UInt64) ToGoValue() any {
-	return uint64(v)
 }
 
 func (v UInt64) ToBigEndianBytes() []byte {
@@ -977,10 +894,6 @@ func (UInt128) Type() Type {
 
 func (v UInt128) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v UInt128) ToGoValue() any {
-	return v.Big()
 }
 
 func (v UInt128) Int() int {
@@ -1047,10 +960,6 @@ func (v UInt256) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v UInt256) ToGoValue() any {
-	return v.Big()
-}
-
 func (v UInt256) Int() int {
 	return int(v.Value.Uint64())
 }
@@ -1094,10 +1003,6 @@ func (v Word8) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Word8) ToGoValue() any {
-	return uint8(v)
-}
-
 func (v Word8) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
@@ -1131,10 +1036,6 @@ func (Word16) Type() Type {
 
 func (v Word16) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Word16) ToGoValue() any {
-	return uint16(v)
 }
 
 func (v Word16) ToBigEndianBytes() []byte {
@@ -1174,10 +1075,6 @@ func (v Word32) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Word32) ToGoValue() any {
-	return uint32(v)
-}
-
 func (v Word32) ToBigEndianBytes() []byte {
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, uint32(v))
@@ -1213,10 +1110,6 @@ func (Word64) Type() Type {
 
 func (v Word64) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Word64) ToGoValue() any {
-	return uint64(v)
 }
 
 func (v Word64) ToBigEndianBytes() []byte {
@@ -1275,10 +1168,6 @@ func (Word128) Type() Type {
 
 func (v Word128) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Word128) ToGoValue() any {
-	return v.Big()
 }
 
 func (v Word128) Int() int {
@@ -1343,10 +1232,6 @@ func (Word256) Type() Type {
 
 func (v Word256) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Word256) ToGoValue() any {
-	return v.Big()
 }
 
 func (v Word256) Int() int {
@@ -1416,10 +1301,6 @@ func (Fix64) Type() Type {
 
 func (v Fix64) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Fix64) ToGoValue() any {
-	return int64(v)
 }
 
 func (v Fix64) ToBigEndianBytes() []byte {
@@ -1492,10 +1373,6 @@ func (v UFix64) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v UFix64) ToGoValue() any {
-	return uint64(v)
-}
-
 func (v UFix64) ToBigEndianBytes() []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(v))
@@ -1551,16 +1428,6 @@ func (v Array) WithType(arrayType ArrayType) Array {
 	return v
 }
 
-func (v Array) ToGoValue() any {
-	ret := make([]any, len(v.Values))
-
-	for i, e := range v.Values {
-		ret[i] = e.ToGoValue()
-	}
-
-	return ret
-}
-
 func (v Array) String() string {
 	values := make([]string, len(v.Values))
 	for i, value := range v.Values {
@@ -1614,16 +1481,6 @@ func (v Dictionary) MeteredType(common.MemoryGauge) Type {
 func (v Dictionary) WithType(dictionaryType *DictionaryType) Dictionary {
 	v.DictionaryType = dictionaryType
 	return v
-}
-
-func (v Dictionary) ToGoValue() any {
-	ret := map[any]any{}
-
-	for _, p := range v.Pairs {
-		ret[p.Key.ToGoValue()] = p.Value.ToGoValue()
-	}
-
-	return ret
 }
 
 func (v Dictionary) String() string {
@@ -1724,16 +1581,6 @@ func (v Struct) WithType(typ *StructType) Struct {
 	return v
 }
 
-func (v Struct) ToGoValue() any {
-	ret := make([]any, len(v.fields))
-
-	for i, field := range v.fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
-}
-
 func (v Struct) String() string {
 	return formatComposite(
 		v.StructType.ID(),
@@ -1824,16 +1671,6 @@ func (v Resource) WithType(typ *ResourceType) Resource {
 	return v
 }
 
-func (v Resource) ToGoValue() any {
-	ret := make([]any, len(v.fields))
-
-	for i, field := range v.fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
-}
-
 func (v Resource) String() string {
 	return formatComposite(
 		v.ResourceType.ID(),
@@ -1901,16 +1738,6 @@ func (v Attachment) MeteredType(_ common.MemoryGauge) Type {
 func (v Attachment) WithType(typ *AttachmentType) Attachment {
 	v.AttachmentType = typ
 	return v
-}
-
-func (v Attachment) ToGoValue() any {
-	ret := make([]any, len(v.fields))
-
-	for i, field := range v.fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
 }
 
 func (v Attachment) String() string {
@@ -1982,15 +1809,6 @@ func (v Event) WithType(typ *EventType) Event {
 	return v
 }
 
-func (v Event) ToGoValue() any {
-	ret := make([]any, len(v.fields))
-
-	for i, field := range v.fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
-}
 func (v Event) String() string {
 	return formatComposite(
 		v.EventType.ID(),
@@ -2060,16 +1878,6 @@ func (v Contract) WithType(typ *ContractType) Contract {
 	return v
 }
 
-func (v Contract) ToGoValue() any {
-	ret := make([]any, len(v.fields))
-
-	for i, field := range v.fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
-}
-
 func (v Contract) String() string {
 	return formatComposite(
 		v.ContractType.ID(),
@@ -2136,14 +1944,6 @@ func (v *InclusiveRange) MeteredType(common.MemoryGauge) Type {
 func (v *InclusiveRange) WithType(typ *InclusiveRangeType) *InclusiveRange {
 	v.InclusiveRangeType = typ
 	return v
-}
-
-func (v *InclusiveRange) ToGoValue() any {
-	return []any{
-		v.Start.ToGoValue(),
-		v.End.ToGoValue(),
-		v.Step.ToGoValue(),
-	}
 }
 
 func (v *InclusiveRange) String() string {
@@ -2228,10 +2028,6 @@ func (v Path) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (Path) ToGoValue() any {
-	return nil
-}
-
 func (v Path) String() string {
 	return format.Path(
 		v.Domain.Identifier(),
@@ -2266,10 +2062,6 @@ func (TypeValue) Type() Type {
 
 func (v TypeValue) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (TypeValue) ToGoValue() any {
-	return nil
 }
 
 func (v TypeValue) String() string {
@@ -2320,10 +2112,6 @@ func (v Capability) Type() Type {
 
 func (v Capability) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredCapabilityType(gauge, v.BorrowType)
-}
-
-func (Capability) ToGoValue() any {
-	return nil
 }
 
 func (v Capability) String() string {
@@ -2382,16 +2170,6 @@ func (v Enum) WithType(typ *EnumType) Enum {
 	return v
 }
 
-func (v Enum) ToGoValue() any {
-	ret := make([]any, len(v.fields))
-
-	for i, field := range v.fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
-}
-
 func (v Enum) String() string {
 	return formatComposite(
 		v.EnumType.ID(),
@@ -2443,10 +2221,6 @@ func (v Function) Type() Type {
 
 func (v Function) MeteredType(common.MemoryGauge) Type {
 	return v.FunctionType
-}
-
-func (Function) ToGoValue() any {
-	return nil
 }
 
 func (v Function) String() string {

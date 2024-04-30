@@ -544,7 +544,7 @@ func decodeOptional(valueType reflect.Type, cadenceField Value) (*reflect.Value,
 	}
 
 	// if optional is nil, skip and default the field to nil
-	if optional.ToGoValue() == nil {
+	if optional.Value == nil {
 		zeroValue := reflect.Zero(valueType)
 		return &zeroValue, nil
 	}
