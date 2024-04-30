@@ -1884,6 +1884,7 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
     `)
 	require.NoError(t, err)
 
+	// these capture x and y because they are created in a different file
 	_, err = ParseAndCheckWithOptions(t,
 		`
            import x, y, createR from "imported"
