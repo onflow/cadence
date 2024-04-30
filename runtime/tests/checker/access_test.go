@@ -1859,20 +1859,22 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 
 	require.IsType(t, &sema.ResourceCapturingError{}, errs[1])
 
-	require.IsType(t, &sema.AssignmentToConstantError{}, errs[2])
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[2])
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[3])
 	assert.Equal(t,
 		"x",
-		errs[2].(*sema.AssignmentToConstantError).Name,
+		errs[3].(*sema.AssignmentToConstantError).Name,
 	)
-
-	require.IsType(t, &sema.ResourceCapturingError{}, errs[3])
 
 	require.IsType(t, &sema.ResourceCapturingError{}, errs[4])
 
-	require.IsType(t, &sema.AssignmentToConstantError{}, errs[5])
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[5])
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[6])
 	assert.Equal(t,
 		"y",
-		errs[5].(*sema.AssignmentToConstantError).Name,
+		errs[6].(*sema.AssignmentToConstantError).Name,
 	)
 
 	require.IsType(t, &sema.ResourceCapturingError{}, errs[6])
