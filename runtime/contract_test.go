@@ -886,18 +886,41 @@ func TestRuntimeContractInterfaceEventEmission(t *testing.T) {
 	// first two events are `AccountContractAdded`
 	require.Len(t, actualEvents, 4)
 
-	intfEvent := actualEvents[2]
+	interfaceEvent := actualEvents[2]
 	concreteEvent := actualEvents[3]
 
-	require.Equal(t, intfEvent.EventType.QualifiedIdentifier, "TestInterface.Foo")
-	require.Equal(t, concreteEvent.EventType.QualifiedIdentifier, "TestContract.Foo")
+	require.Equal(
+		t,
+		"TestInterface.Foo",
+		interfaceEvent.EventType.QualifiedIdentifier,
+	)
+	require.Equal(
+		t,
+		"TestContract.Foo",
+		concreteEvent.EventType.QualifiedIdentifier,
+	)
 
-	require.Len(t, intfEvent.Fields, 1)
-	require.Len(t, concreteEvent.Fields, 2)
+	interfaceFields := cadence.FieldsMappedByName(interfaceEvent)
+	concreteFields := cadence.FieldsMappedByName(concreteEvent)
 
-	require.Equal(t, intfEvent.Fields[0], cadence.NewInt(3))
-	require.Equal(t, concreteEvent.Fields[0], cadence.String(""))
-	require.Equal(t, concreteEvent.Fields[1], cadence.NewInt(2))
+	require.Len(t, interfaceFields, 1)
+	require.Len(t, concreteFields, 2)
+
+	require.Equal(
+		t,
+		cadence.NewInt(3),
+		interfaceFields["x"],
+	)
+	require.Equal(
+		t,
+		cadence.String(""),
+		concreteFields["x"],
+	)
+	require.Equal(
+		t,
+		cadence.NewInt(2),
+		concreteFields["y"],
+	)
 }
 
 func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
@@ -1009,18 +1032,41 @@ func TestRuntimeContractInterfaceConditionEventEmission(t *testing.T) {
 	// first two events are `AccountContractAdded`
 	require.Len(t, actualEvents, 4)
 
-	intfEvent := actualEvents[3]
+	interfaceEvent := actualEvents[3]
 	concreteEvent := actualEvents[2]
 
-	require.Equal(t, intfEvent.EventType.QualifiedIdentifier, "TestInterface.Foo")
-	require.Equal(t, concreteEvent.EventType.QualifiedIdentifier, "TestContract.Foo")
+	require.Equal(
+		t,
+		"TestInterface.Foo",
+		interfaceEvent.EventType.QualifiedIdentifier,
+	)
+	require.Equal(
+		t,
+		"TestContract.Foo",
+		concreteEvent.EventType.QualifiedIdentifier,
+	)
 
-	require.Len(t, intfEvent.Fields, 1)
-	require.Len(t, concreteEvent.Fields, 2)
+	interfaceFields := cadence.FieldsMappedByName(interfaceEvent)
+	concreteFields := cadence.FieldsMappedByName(concreteEvent)
 
-	require.Equal(t, intfEvent.Fields[0], cadence.NewInt(3))
-	require.Equal(t, concreteEvent.Fields[0], cadence.String(""))
-	require.Equal(t, concreteEvent.Fields[1], cadence.NewInt(2))
+	require.Len(t, interfaceFields, 1)
+	require.Len(t, concreteFields, 2)
+
+	require.Equal(
+		t,
+		cadence.NewInt(3),
+		interfaceFields["x"],
+	)
+	require.Equal(
+		t,
+		cadence.String(""),
+		concreteFields["x"],
+	)
+	require.Equal(
+		t,
+		cadence.NewInt(2),
+		concreteFields["y"],
+	)
 }
 
 func TestRuntimeContractTryUpdate(t *testing.T) {

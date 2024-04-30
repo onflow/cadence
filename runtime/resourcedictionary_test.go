@@ -982,8 +982,10 @@ func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 	require.Equal(t, "flow.AccountContractAdded", events[0].EventType.ID())
 	require.Equal(t, "A.0000000000000001.Test.R.ResourceDestroyed", events[1].EventType.ID())
 	require.Equal(t, "A.0000000000000001.Test.R.ResourceDestroyed", events[2].EventType.ID())
-	require.Equal(t, "1", events[2].Fields[0].String())
-	require.Equal(t, "2", events[1].Fields[0].String())
+	event2Fields := cadence.FieldsMappedByName(events[1])
+	event3Fields := cadence.FieldsMappedByName(events[2])
+	require.Equal(t, "2", event2Fields["value"].String())
+	require.Equal(t, "1", event3Fields["value"].String())
 }
 
 func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {

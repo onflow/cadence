@@ -9079,10 +9079,10 @@ func TestRuntimeEventEmission(t *testing.T) {
 
 		assert.Equal(
 			t,
-			[]cadence.Value{
-				cadence.NewInt(42),
+			map[string]cadence.Value{
+				"ref": cadence.NewInt(42),
 			},
-			event.GetFieldValues(),
+			cadence.FieldsMappedByName(event),
 		)
 
 	})
@@ -9138,10 +9138,10 @@ func TestRuntimeEventEmission(t *testing.T) {
 
 		assert.Equal(
 			t,
-			[]cadence.Value{
-				cadence.NewInt(42),
+			map[string]cadence.Value{
+				"ref": cadence.NewInt(42),
 			},
-			event.GetFieldValues(),
+			cadence.FieldsMappedByName(event),
 		)
 
 	})

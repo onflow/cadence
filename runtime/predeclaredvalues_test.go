@@ -385,10 +385,13 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t,
-			cadence.Struct{
-				StructType: cadence.NewStructType(nil, xType.QualifiedIdentifier(), []cadence.Field{}, nil),
-				Fields:     []cadence.Value{},
-			},
+			cadence.NewStruct([]cadence.Value{}).
+				WithType(cadence.NewStructType(
+					nil,
+					xType.QualifiedIdentifier(),
+					[]cadence.Field{},
+					nil,
+				)),
 			result,
 		)
 	})
@@ -529,10 +532,13 @@ func TestRuntimePredeclaredTypes(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t,
-			cadence.Struct{
-				StructType: cadence.NewStructType(nil, yType.QualifiedIdentifier(), []cadence.Field{}, nil),
-				Fields:     []cadence.Value{},
-			},
+			cadence.NewStruct([]cadence.Value{}).
+				WithType(cadence.NewStructType(
+					nil,
+					yType.QualifiedIdentifier(),
+					[]cadence.Field{},
+					nil,
+				)),
 			result,
 		)
 	})

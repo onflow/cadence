@@ -395,9 +395,16 @@ func TestRuntimeAccountAttachedExport(t *testing.T) {
 	require.NoError(t, err)
 
 	require.IsType(t, cadence.Resource{}, v)
-	require.Len(t, v.(cadence.Resource).Fields, 2)
-	require.IsType(t, cadence.Attachment{}, v.(cadence.Resource).Fields[1])
-	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Resource).Fields[1].String())
+	fields := cadence.FieldsMappedByName(v.(cadence.Resource))
+	require.Len(t, fields, 2)
+
+	attachment := fields["$A.0000000000000001.Test.A"]
+	require.IsType(t, cadence.Attachment{}, attachment)
+	require.Equal(
+		t,
+		"A.0000000000000001.Test.A()",
+		attachment.String(),
+	)
 }
 
 func TestRuntimeAccountAttachmentSaveAndBorrow(t *testing.T) {
