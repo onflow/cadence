@@ -1517,17 +1517,32 @@ func NewMeteredKeyValuePair(gauge common.MemoryGauge, key, value Value) KeyValue
 	}
 }
 
+// Composite
+
+type Composite interface {
+	Value
+	GetFields() []Field
+	getFieldValues() []Value
+}
+
+// linked in by packages that need access to getFieldValues,
+// e.g. JSON and CCF codecs
+func getFieldValues(composite Composite) []Value { //nolint:unused
+	return composite.getFieldValues()
+}
+
 // Struct
 
 type Struct struct {
 	StructType *StructType
-	Fields     []Value
+	fields     []Value
 }
 
 var _ Value = Struct{}
+var _ Composite = Struct{}
 
 func NewStruct(fields []Value) Struct {
-	return Struct{Fields: fields}
+	return Struct{fields: fields}
 }
 
 func NewMeteredStruct(
@@ -1570,7 +1585,7 @@ func (v Struct) String() string {
 	return formatComposite(
 		v.StructType.ID(),
 		v.StructType.Fields,
-		v.Fields,
+		v.fields,
 	)
 }
 
@@ -1582,8 +1597,8 @@ func (v Struct) GetFields() []Field {
 	return v.StructType.Fields
 }
 
-func (v Struct) GetFieldValues() []Value {
-	return v.Fields
+func (v Struct) getFieldValues() []Value {
+	return v.fields
 }
 
 func formatComposite(typeID string, fields []Field, values []Value) string {
@@ -1611,13 +1626,14 @@ func formatComposite(typeID string, fields []Field, values []Value) string {
 
 type Resource struct {
 	ResourceType *ResourceType
-	Fields       []Value
+	fields       []Value
 }
 
 var _ Value = Resource{}
+var _ Composite = Resource{}
 
 func NewResource(fields []Value) Resource {
-	return Resource{Fields: fields}
+	return Resource{fields: fields}
 }
 
 func NewMeteredResource(
@@ -1659,7 +1675,7 @@ func (v Resource) String() string {
 	return formatComposite(
 		v.ResourceType.ID(),
 		v.ResourceType.Fields,
-		v.Fields,
+		v.fields,
 	)
 }
 
@@ -1671,21 +1687,22 @@ func (v Resource) GetFields() []Field {
 	return v.ResourceType.Fields
 }
 
-func (v Resource) GetFieldValues() []Value {
-	return v.Fields
+func (v Resource) getFieldValues() []Value {
+	return v.fields
 }
 
 // Attachment
 
 type Attachment struct {
 	AttachmentType *AttachmentType
-	Fields         []Value
+	fields         []Value
 }
 
 var _ Value = Attachment{}
+var _ Composite = Attachment{}
 
 func NewAttachment(fields []Value) Attachment {
-	return Attachment{Fields: fields}
+	return Attachment{fields: fields}
 }
 
 func NewMeteredAttachment(
@@ -1727,7 +1744,7 @@ func (v Attachment) String() string {
 	return formatComposite(
 		v.AttachmentType.ID(),
 		v.AttachmentType.Fields,
-		v.Fields,
+		v.fields,
 	)
 }
 
@@ -1739,21 +1756,22 @@ func (v Attachment) GetFields() []Field {
 	return v.AttachmentType.Fields
 }
 
-func (v Attachment) GetFieldValues() []Value {
-	return v.Fields
+func (v Attachment) getFieldValues() []Value {
+	return v.fields
 }
 
 // Event
 
 type Event struct {
 	EventType *EventType
-	Fields    []Value
+	fields    []Value
 }
 
 var _ Value = Event{}
+var _ Composite = Event{}
 
 func NewEvent(fields []Value) Event {
-	return Event{Fields: fields}
+	return Event{fields: fields}
 }
 
 func NewMeteredEvent(
@@ -1795,7 +1813,7 @@ func (v Event) String() string {
 	return formatComposite(
 		v.EventType.ID(),
 		v.EventType.Fields,
-		v.Fields,
+		v.fields,
 	)
 }
 
@@ -1807,21 +1825,22 @@ func (v Event) GetFields() []Field {
 	return v.EventType.Fields
 }
 
-func (v Event) GetFieldValues() []Value {
-	return v.Fields
+func (v Event) getFieldValues() []Value {
+	return v.fields
 }
 
 // Contract
 
 type Contract struct {
 	ContractType *ContractType
-	Fields       []Value
+	fields       []Value
 }
 
 var _ Value = Contract{}
+var _ Composite = Contract{}
 
 func NewContract(fields []Value) Contract {
-	return Contract{Fields: fields}
+	return Contract{fields: fields}
 }
 
 func NewMeteredContract(
@@ -1863,7 +1882,7 @@ func (v Contract) String() string {
 	return formatComposite(
 		v.ContractType.ID(),
 		v.ContractType.Fields,
-		v.Fields,
+		v.fields,
 	)
 }
 
@@ -1875,8 +1894,8 @@ func (v Contract) GetFields() []Field {
 	return v.ContractType.Fields
 }
 
-func (v Contract) GetFieldValues() []Value {
-	return v.Fields
+func (v Contract) getFieldValues() []Value {
+	return v.fields
 }
 
 // InclusiveRange
@@ -2106,13 +2125,14 @@ func (v Capability) String() string {
 // Enum
 type Enum struct {
 	EnumType *EnumType
-	Fields   []Value
+	fields   []Value
 }
 
 var _ Value = Enum{}
+var _ Composite = Enum{}
 
 func NewEnum(fields []Value) Enum {
-	return Enum{Fields: fields}
+	return Enum{fields: fields}
 }
 
 func NewMeteredEnum(
@@ -2154,7 +2174,7 @@ func (v Enum) String() string {
 	return formatComposite(
 		v.EnumType.ID(),
 		v.EnumType.Fields,
-		v.Fields,
+		v.fields,
 	)
 }
 
@@ -2166,8 +2186,8 @@ func (v Enum) GetFields() []Field {
 	return v.EnumType.Fields
 }
 
-func (v Enum) GetFieldValues() []Value {
-	return v.Fields
+func (v Enum) getFieldValues() []Value {
+	return v.fields
 }
 
 // Function

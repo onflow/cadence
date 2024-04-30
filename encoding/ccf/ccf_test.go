@@ -11698,11 +11698,9 @@ func TestExportRecursiveType(t *testing.T) {
 
 	testEncode(
 		t,
-		cadence.Resource{
-			Fields: []cadence.Value{
-				cadence.Optional{},
-			},
-		}.WithType(ty),
+		cadence.NewResource([]cadence.Value{
+			cadence.Optional{},
+		}).WithType(ty),
 		[]byte{
 			// language=json, format=json-cdc
 			// {"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"foo","value":{"type": "Optional","value":null}}]}}

@@ -426,13 +426,13 @@ func NewField(identifier string, typ Type) Field {
 	}
 }
 
-type HasFields interface {
-	GetFields() []Field
-	GetFieldValues() []Value
-}
-
-func GetFieldByName(v HasFields, fieldName string) Value {
-	fieldValues := v.GetFieldValues()
+// SearchFieldByName searches for the field with the given name in the composite type,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func SearchFieldByName(v Composite, fieldName string) Value {
+	fieldValues := v.getFieldValues()
 	fields := v.GetFields()
 
 	if fieldValues == nil || fields == nil {
@@ -441,14 +441,14 @@ func GetFieldByName(v HasFields, fieldName string) Value {
 
 	for i, field := range v.GetFields() {
 		if field.Identifier == fieldName {
-			return v.GetFieldValues()[i]
+			return fieldValues[i]
 		}
 	}
 	return nil
 }
 
-func GetFieldsMappedByName(v HasFields) map[string]Value {
-	fieldValues := v.GetFieldValues()
+func FieldsMappedByName(v Composite) map[string]Value {
+	fieldValues := v.getFieldValues()
 	fields := v.GetFields()
 
 	if fieldValues == nil || fields == nil {
@@ -456,14 +456,21 @@ func GetFieldsMappedByName(v HasFields) map[string]Value {
 	}
 
 	fieldsMap := make(map[string]Value, len(fields))
-	for i, field := range fields {
-		fieldsMap[field.Identifier] = fieldValues[i]
+	for i, fieldValue := range fieldValues {
+		var fieldName string
+		if i < len(fields) {
+			fieldName = fields[i].Identifier
+		} else if attachment, ok := fieldValue.(Attachment); ok {
+			fieldName = interpreter.AttachmentMemberName(attachment.Type().ID())
+		}
+		fieldsMap[fieldName] = fieldValue
 	}
+
 	return fieldsMap
 }
 
 // DecodeFields decodes a HasFields into a struct
-func DecodeFields(hasFields HasFields, s interface{}) error {
+func DecodeFields(composite Composite, s interface{}) error {
 	v := reflect.ValueOf(s)
 	if !v.IsValid() || v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
 		return fmt.Errorf("s must be a pointer to a struct")
@@ -472,7 +479,7 @@ func DecodeFields(hasFields HasFields, s interface{}) error {
 	v = v.Elem()
 	t := v.Type()
 
-	fieldsMap := GetFieldsMappedByName(hasFields)
+	fieldsMap := FieldsMappedByName(composite)
 
 	for i := 0; i < v.NumField(); i++ {
 		structField := t.Field(i)

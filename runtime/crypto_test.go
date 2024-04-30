@@ -276,8 +276,12 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 		require.IsType(t, cadence.Enum{}, value)
 		enumValue := value.(cadence.Enum)
 
-		require.Len(t, enumValue.Fields, 1)
-		assert.Equal(t, cadence.NewUInt8(algo.RawValue()), enumValue.Fields[0])
+		fields := cadence.FieldsMappedByName(enumValue)
+		require.Len(t, fields, 1)
+		assert.Equal(t,
+			cadence.NewUInt8(algo.RawValue()),
+			fields[sema.EnumRawValueFieldName],
+		)
 	}
 
 	for _, algo := range sema.HashAlgorithms {
@@ -317,8 +321,12 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 		require.IsType(t, cadence.Enum{}, value)
 		enumValue := value.(cadence.Enum)
 
-		require.Len(t, enumValue.Fields, 1)
-		assert.Equal(t, cadence.NewUInt8(algo.RawValue()), enumValue.Fields[0])
+		fields := cadence.FieldsMappedByName(enumValue)
+		require.Len(t, fields, 1)
+		assert.Equal(t,
+			cadence.NewUInt8(algo.RawValue()),
+			fields[sema.EnumRawValueFieldName],
+		)
 	}
 
 	for _, algo := range sema.SignatureAlgorithms {
@@ -655,6 +663,7 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	fields := cadence.FieldsMappedByName(result.(cadence.Optional).Value.(cadence.Struct))
 	assert.Equal(t,
 		cadence.NewArray([]cadence.Value{
 			cadence.UInt8(1),
@@ -664,7 +673,7 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 		}).WithType(&cadence.VariableSizedArrayType{
 			ElementType: cadence.UInt8Type,
 		}),
-		result.(cadence.Optional).Value.(cadence.Struct).Fields[0],
+		fields[sema.PublicKeyTypePublicKeyFieldName],
 	)
 
 	assert.True(t, called)

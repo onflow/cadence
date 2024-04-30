@@ -9079,10 +9079,10 @@ func TestRuntimeEventEmission(t *testing.T) {
 
 		assert.Equal(
 			t,
-			[]cadence.Value{
-				cadence.NewInt(42),
+			map[string]cadence.Value{
+				"ref": cadence.NewInt(42),
 			},
-			event.GetFieldValues(),
+			cadence.FieldsMappedByName(event),
 		)
 
 	})
@@ -9138,10 +9138,10 @@ func TestRuntimeEventEmission(t *testing.T) {
 
 		assert.Equal(
 			t,
-			[]cadence.Value{
-				cadence.NewInt(42),
+			map[string]cadence.Value{
+				"ref": cadence.NewInt(42),
 			},
-			event.GetFieldValues(),
+			cadence.FieldsMappedByName(event),
 		)
 
 	})
@@ -10632,4 +10632,121 @@ func TestRuntimeNonPublicAccessModifierInInterface(t *testing.T) {
 	require.ErrorAs(t, err, &conformanceErr)
 
 	require.Len(t, conformanceErr.MemberMismatches, 2)
+}
+
+func TestRuntimeMoveSelfVariable(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("contract", func(t *testing.T) {
+		t.Parallel()
+
+		contract := []byte(`
+            access(all) contract Foo {
+
+                access(all) fun moveSelf() {
+                    var x = self!
+                }
+            }
+        `)
+
+		runtime := NewTestInterpreterRuntimeWithConfig(Config{
+			AtreeValidationEnabled: false,
+		})
+
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		var contractCode []byte
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{address}, nil
+			},
+			OnGetAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
+				return contractCode, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
+				contractCode = code
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		// Deploy
+
+		deploymentTx := DeploymentTransaction("Foo", contract)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deploymentTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Execute script
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		script := []byte(fmt.Sprintf(`
+            import Foo from %[1]s
+
+            access(all) fun main(): Void {
+                Foo.moveSelf()
+            }`,
+			address.HexWithPrefix(),
+		))
+
+		_, err = runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.NonTransferableValueError{})
+	})
+
+	t.Run("transaction", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            transaction {
+                prepare() {
+                    var x = true ? self : self
+                }
+                execute {}
+            }
+        `)
+
+		runtime := NewTestInterpreterRuntime()
+		runtimeInterface := &TestRuntimeInterface{}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.NonTransferableValueError{})
+	})
 }
