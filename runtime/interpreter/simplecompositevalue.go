@@ -272,6 +272,13 @@ func (v *SimpleCompositeValue) Transfer(
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+
+	if v.isTransaction {
+		panic(NonTransferableValueError{
+			Value: v,
+		})
+	}
+
 	return v
 }
 

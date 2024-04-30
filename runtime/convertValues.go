@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"math/big"
+	_ "unsafe"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
@@ -779,6 +780,9 @@ func ImportValue(
 	}.importValue(value, expectedType)
 }
 
+//go:linkname getFieldValues github.com/onflow/cadence.getFieldValues
+func getFieldValues(cadence.Composite) []cadence.Value
+
 func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) (interpreter.Value, error) {
 	switch v := value.(type) {
 	case cadence.Void:
@@ -851,7 +855,7 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 			v.StructType.Location,
 			v.StructType.QualifiedIdentifier,
 			v.StructType.Fields,
-			v.Fields,
+			getFieldValues(v),
 		)
 	case cadence.Resource:
 		return i.importCompositeValue(
@@ -859,7 +863,7 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 			v.ResourceType.Location,
 			v.ResourceType.QualifiedIdentifier,
 			v.ResourceType.Fields,
-			v.Fields,
+			getFieldValues(v),
 		)
 	case cadence.Event:
 		return i.importCompositeValue(
@@ -867,7 +871,7 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 			v.EventType.Location,
 			v.EventType.QualifiedIdentifier,
 			v.EventType.Fields,
-			v.Fields,
+			getFieldValues(v),
 		)
 	case cadence.Enum:
 		return i.importCompositeValue(
@@ -875,7 +879,7 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 			v.EnumType.Location,
 			v.EnumType.QualifiedIdentifier,
 			v.EnumType.Fields,
-			v.Fields,
+			getFieldValues(v),
 		)
 	case *cadence.InclusiveRange:
 		return i.importInclusiveRangeValue(v, expectedType)

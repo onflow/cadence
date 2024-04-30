@@ -58,24 +58,20 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 	}
 
 	newFooStruct := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: &cadence.StructType{
+		return cadence.NewStruct([]cadence.Value{}).
+			WithType(&cadence.StructType{
 				Location:            common.ScriptLocation{},
 				QualifiedIdentifier: "Foo",
 				Fields:              []cadence.Field{},
-			},
-			Fields: []cadence.Value{},
-		}
+			})
 	}
 
 	newPublicAccountKeys := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: &cadence.StructType{
+		return cadence.NewStruct([]cadence.Value{}).
+			WithType(&cadence.StructType{
 				QualifiedIdentifier: "Account.Keys",
 				Fields:              []cadence.Field{},
-			},
-			Fields: []cadence.Value{},
-		}
+			})
 	}
 
 	executeScript := func(t *testing.T, script string, arg cadence.Value) (err error) {
@@ -669,27 +665,23 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 	}
 
 	newFooStruct := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: &cadence.StructType{
+		return cadence.NewStruct([]cadence.Value{}).
+			WithType(&cadence.StructType{
 				Location: common.AddressLocation{
 					Address: common.MustBytesToAddress([]byte{0x1}),
 					Name:    "C",
 				},
 				QualifiedIdentifier: "C.Foo",
 				Fields:              []cadence.Field{},
-			},
-			Fields: []cadence.Value{},
-		}
+			})
 	}
 
 	newPublicAccountKeys := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: &cadence.StructType{
+		return cadence.NewStruct([]cadence.Value{}).
+			WithType(&cadence.StructType{
 				QualifiedIdentifier: "Account.Keys",
 				Fields:              []cadence.Field{},
-			},
-			Fields: []cadence.Value{},
-		}
+			})
 	}
 
 	executeTransaction := func(
@@ -1268,24 +1260,21 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.AccountType),
 		)
 
-		arg := cadence.Struct{
-			StructType: &cadence.StructType{
-				Location: common.AddressLocation{
-					Address: address,
-					Name:    "C",
-				},
-				QualifiedIdentifier: "C.S",
-				Fields: []cadence.Field{
-					{
-						Identifier: "cap",
-						Type:       &cadence.CapabilityType{},
-					},
+		arg := cadence.NewStruct([]cadence.Value{
+			capability,
+		}).WithType(&cadence.StructType{
+			Location: common.AddressLocation{
+				Address: address,
+				Name:    "C",
+			},
+			QualifiedIdentifier: "C.S",
+			Fields: []cadence.Field{
+				{
+					Identifier: "cap",
+					Type:       &cadence.CapabilityType{},
 				},
 			},
-			Fields: []cadence.Value{
-				capability,
-			},
-		}
+		})
 
 		err := executeTransaction(t, script, contracts, arg)
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})

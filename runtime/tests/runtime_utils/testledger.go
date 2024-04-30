@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -54,6 +55,34 @@ func (s TestLedger) AllocateSlabIndex(owner []byte) (atree.SlabIndex, error) {
 	return s.OnAllocateSlabIndex(owner)
 }
 
+const testLedgerKeySeparator = "|"
+
+func (s TestLedger) ForEach(f func(owner, key, value []byte) error) error {
+
+	var keys []string
+	for key := range s.StoredValues { //nolint:maprange
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys { //nolint:maprange
+		value := s.StoredValues[key]
+
+		keyParts := strings.Split(key, testLedgerKeySeparator)
+		owner := []byte(keyParts[0])
+		key := []byte(keyParts[1])
+
+		if err := f(owner, key, value); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func TestStorageKey(owner, key string) string {
+	return strings.Join([]string{owner, key}, testLedgerKeySeparator)
+}
+
 func (s TestLedger) Dump() {
 	// Only used for testing/debugging purposes
 	for key, data := range s.StoredValues { //nolint:maprange
@@ -68,10 +97,6 @@ func NewTestLedger(
 	onWrite func(owner, key, value []byte),
 ) TestLedger {
 
-	storageKey := func(owner, key string) string {
-		return strings.Join([]string{owner, key}, "|")
-	}
-
 	storedValues := map[string][]byte{}
 
 	storageIndices := map[string]uint64{}
@@ -79,18 +104,18 @@ func NewTestLedger(
 	return TestLedger{
 		StoredValues: storedValues,
 		OnValueExists: func(owner, key []byte) (bool, error) {
-			value := storedValues[storageKey(string(owner), string(key))]
+			value := storedValues[TestStorageKey(string(owner), string(key))]
 			return len(value) > 0, nil
 		},
 		OnGetValue: func(owner, key []byte) (value []byte, err error) {
-			value = storedValues[storageKey(string(owner), string(key))]
+			value = storedValues[TestStorageKey(string(owner), string(key))]
 			if onRead != nil {
 				onRead(owner, key, value)
 			}
 			return value, nil
 		},
 		OnSetValue: func(owner, key, value []byte) (err error) {
-			storedValues[storageKey(string(owner), string(key))] = value
+			storedValues[TestStorageKey(string(owner), string(key))] = value
 			if onWrite != nil {
 				onWrite(owner, key, value)
 			}

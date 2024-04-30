@@ -97,27 +97,27 @@ func (ct *compositeTypes) traverseValue(v cadence.Value) {
 		}
 
 	case cadence.Struct:
-		for _, field := range v.Fields {
+		for _, field := range getFieldValues(v) {
 			ct.traverseValue(field)
 		}
 
 	case cadence.Resource:
-		for _, field := range v.Fields {
+		for _, field := range getFieldValues(v) {
 			ct.traverseValue(field)
 		}
 
 	case cadence.Event:
-		for _, field := range v.Fields {
+		for _, field := range getFieldValues(v) {
 			ct.traverseValue(field)
 		}
 
 	case cadence.Contract:
-		for _, field := range v.Fields {
+		for _, field := range getFieldValues(v) {
 			ct.traverseValue(field)
 		}
 
 	case cadence.Attachment:
-		for _, field := range v.Fields {
+		for _, field := range getFieldValues(v) {
 			ct.traverseValue(field)
 		}
 	}
