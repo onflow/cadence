@@ -451,7 +451,7 @@ func TestEntitlementSet_MinimallyRepresentable(t *testing.T) {
 func TestEntitlementSet_Access(t *testing.T) {
 	t.Parallel()
 
-	t.Run("no entitlements, no disjunctions", func(t *testing.T) {
+	t.Run("no entitlements, no disjunctions: {} = unauthorized", func(t *testing.T) {
 		t.Parallel()
 
 		set := &EntitlementSet{}
@@ -462,7 +462,7 @@ func TestEntitlementSet_Access(t *testing.T) {
 		assert.Equal(t, UnauthorizedAccess, access)
 	})
 
-	t.Run("entitlements, no disjunctions", func(t *testing.T) {
+	t.Run("entitlements, no disjunctions: {E1, E2} = auth(E1, E2)", func(t *testing.T) {
 		t.Parallel()
 
 		set := &EntitlementSet{}
@@ -494,7 +494,7 @@ func TestEntitlementSet_Access(t *testing.T) {
 		)
 	})
 
-	t.Run("no entitlements, one disjunction", func(t *testing.T) {
+	t.Run("no entitlements, one disjunction: {(E1 | E2)} = auth(E1 | E2)", func(t *testing.T) {
 		t.Parallel()
 
 		set := &EntitlementSet{}
@@ -525,7 +525,7 @@ func TestEntitlementSet_Access(t *testing.T) {
 		)
 	})
 
-	t.Run("no entitlements, two disjunctions", func(t *testing.T) {
+	t.Run("no entitlements, two disjunctions: {(E1 | E2), (E2 | E3)} = auth(E1, E2, E3)", func(t *testing.T) {
 		t.Parallel()
 
 		set := &EntitlementSet{}
@@ -578,7 +578,7 @@ func TestEntitlementSet_Access(t *testing.T) {
 		)
 	})
 
-	t.Run("entitlement, one disjunction, minimal", func(t *testing.T) {
+	t.Run("entitlement, one disjunction, not minimal: {E1, (E2 | E3)} = auth(E1, E2, E3)", func(t *testing.T) {
 		t.Parallel()
 
 		set := &EntitlementSet{}
@@ -623,7 +623,7 @@ func TestEntitlementSet_Access(t *testing.T) {
 		)
 	})
 
-	t.Run("entitlement, one disjunction, not minimal", func(t *testing.T) {
+	t.Run("entitlement, one disjunction, minimal: {(E1 | E2), E1} = auth(E1)", func(t *testing.T) {
 		t.Parallel()
 
 		set := &EntitlementSet{}
