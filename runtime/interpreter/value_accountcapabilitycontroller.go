@@ -336,7 +336,7 @@ func (v *AccountCapabilityControllerValue) newHostFunctionValue(
 	f func(invocation Invocation) Value,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
-		FunctionValue: NewHostFunctionValue(
+		FunctionValue: NewUnboundHostFunctionValue(
 			gauge,
 			funcType,
 			func(invocation Invocation) Value {

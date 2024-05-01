@@ -594,7 +594,7 @@ func newAccountKeysAddFunction(
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_KeysTypeAddFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -680,7 +680,7 @@ func newAccountKeysGetFunction(
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		functionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -735,7 +735,7 @@ func newAccountKeysForEachFunction(
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
 
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		functionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -869,7 +869,7 @@ func newAccountKeysRevokeFunction(
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_KeysTypeRevokeFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -929,7 +929,7 @@ func newAccountInboxPublishFunction(
 	providerValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	provider := providerValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_InboxTypePublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -992,7 +992,7 @@ func newAccountInboxUnpublishFunction(
 	providerValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	provider := providerValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_InboxTypeUnpublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -1066,7 +1066,7 @@ func newAccountInboxClaimFunction(
 	handler EventEmitter,
 	recipientValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_InboxTypePublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -1236,7 +1236,7 @@ func newAccountContractsGetFunction(
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		functionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -1286,7 +1286,7 @@ func newAccountContractsBorrowFunction(
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		functionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -1414,7 +1414,7 @@ func newAccountContractsChangeFunction(
 	addressValue interpreter.AddressValue,
 	isUpdate bool,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		functionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -1714,7 +1714,7 @@ func newAccountContractsTryUpdateFunction(
 	handler AccountContractAdditionAndNamesHandler,
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		functionType,
 		func(invocation interpreter.Invocation) (deploymentResult interpreter.Value) {
@@ -2015,7 +2015,7 @@ func newAccountContractsRemoveFunction(
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_ContractsTypeRemoveFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -2281,7 +2281,7 @@ func newAccountStorageCapabilitiesGetControllerFunction(
 	addressValue interpreter.AddressValue,
 ) interpreter.FunctionValue {
 	address := addressValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -2320,7 +2320,7 @@ func newAccountStorageCapabilitiesGetControllersFunction(
 	addressValue interpreter.AddressValue,
 ) interpreter.FunctionValue {
 	address := addressValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -2385,7 +2385,7 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
 
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -2491,7 +2491,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_StorageCapabilitiesTypeIssueFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -2531,7 +2531,7 @@ func newAccountStorageCapabilitiesIssueWithTypeFunction(
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_StorageCapabilitiesTypeIssueFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -2663,7 +2663,7 @@ func newAccountAccountCapabilitiesIssueFunction(
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_AccountCapabilitiesTypeIssueFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -2695,7 +2695,7 @@ func newAccountAccountCapabilitiesIssueWithTypeFunction(
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_AccountCapabilitiesTypeIssueFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -3290,7 +3290,7 @@ func newAccountCapabilitiesPublishFunction(
 	accountAddressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	accountAddress := accountAddressValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_CapabilitiesTypePublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -3376,7 +3376,7 @@ func newAccountCapabilitiesUnpublishFunction(
 	addressValue interpreter.AddressValue,
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_CapabilitiesTypeUnpublishFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -3597,7 +3597,7 @@ func newAccountCapabilitiesGetFunction(
 		funcType = sema.Account_CapabilitiesTypeGetFunctionType
 	}
 
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		funcType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -3740,7 +3740,7 @@ func newAccountCapabilitiesExistsFunction(
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
 
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_CapabilitiesTypeExistsFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -3799,7 +3799,7 @@ func newAccountAccountCapabilitiesGetControllerFunction(
 	addressValue interpreter.AddressValue,
 ) interpreter.FunctionValue {
 	address := addressValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -3838,7 +3838,7 @@ func newAccountAccountCapabilitiesGetControllersFunction(
 	addressValue interpreter.AddressValue,
 ) interpreter.FunctionValue {
 	address := addressValue.ToAddress()
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -3914,7 +3914,7 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 ) *interpreter.HostFunctionValue {
 	address := addressValue.ToAddress()
 
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {

@@ -215,7 +215,7 @@ func newPublicKeyVerifySignatureFunction(
 	gauge common.MemoryGauge,
 	verifier PublicKeySignatureVerifier,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.PublicKeyVerifyFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -300,7 +300,7 @@ func newPublicKeyVerifyPoPFunction(
 	gauge common.MemoryGauge,
 	verifier BLSPoPVerifier,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		sema.PublicKeyVerifyPoPFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {

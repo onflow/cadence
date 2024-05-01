@@ -207,7 +207,10 @@ func NewUnmeteredHostFunctionValue(
 	}
 }
 
-func NewHostFunctionValue(
+// NewUnboundHostFunctionValue constructs a host function that is not bounded to any value.
+// For constructing a function bound to a value (e.g: a member function), the output of this method
+// must be wrapped with a bound-function, or `NewBoundHostFunctionValue` method must be used.
+func NewUnboundHostFunctionValue(
 	gauge common.MemoryGauge,
 	funcType *sema.FunctionType,
 	function HostFunction,
@@ -466,9 +469,7 @@ func NewBoundHostFunctionValue(
 	function HostFunction,
 ) FunctionValue {
 
-	common.UseMemory(interpreter, common.HostFunctionValueMemoryUsage)
-
-	hostFunc := NewUnmeteredHostFunctionValue(funcType, function)
+	hostFunc := NewUnboundHostFunctionValue(interpreter, funcType, function)
 
 	return NewBoundFunctionValue(
 		interpreter,

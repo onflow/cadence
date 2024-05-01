@@ -1328,7 +1328,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	valueDeclaration := stdlib.StandardLibraryValue{
 		Name: "check",
 		Type: checkFunctionType,
-		Value: interpreter.NewHostFunctionValue(
+		Value: interpreter.NewUnboundHostFunctionValue(
 			nil,
 			checkFunctionType,
 			func(invocation interpreter.Invocation) interpreter.Value {

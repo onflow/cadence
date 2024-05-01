@@ -62,7 +62,7 @@ func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, 
 	var publicTypes *ArrayValue
 
 	address := addressValue.ToAddress()
-	return NewHostFunctionValue(
+	return NewUnboundHostFunctionValue(
 		inter,
 		sema.DeployedContractTypePublicTypesFunctionType,
 		func(inv Invocation) Value {

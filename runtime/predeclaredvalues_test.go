@@ -653,7 +653,7 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 		Name: "X",
 		Type: xConstructorType,
 		Kind: common.DeclarationKindConstant,
-		Value: interpreter.NewHostFunctionValue(
+		Value: interpreter.NewUnboundHostFunctionValue(
 			nil,
 			xConstructorType,
 			func(invocation interpreter.Invocation) interpreter.Value {
@@ -708,7 +708,7 @@ func TestRuntimePredeclaredTypeWithInjectedFunctions(t *testing.T) {
 			require.NotNil(t, compositeValue)
 
 			functions := orderedmap.New[interpreter.FunctionOrderedMap](1)
-			functions.Set(fooFunctionName, interpreter.NewHostFunctionValue(
+			functions.Set(fooFunctionName, interpreter.NewUnboundHostFunctionValue(
 				inter,
 				fooFunctionType,
 				func(invocation interpreter.Invocation) interpreter.Value {

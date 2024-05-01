@@ -506,7 +506,7 @@ func newTestTypeEqualFunction(
 
 			inter := invocation.Interpreter
 
-			equalTestFunc := interpreter.NewHostFunctionValue(
+			equalTestFunc := interpreter.NewUnboundHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
 				func(invocation interpreter.Invocation) interpreter.Value {
@@ -558,7 +558,7 @@ func newTestTypeBeEmptyFunction(
 	return interpreter.NewUnmeteredHostFunctionValue(
 		beEmptyFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
-			beEmptyTestFunc := interpreter.NewHostFunctionValue(
+			beEmptyTestFunc := interpreter.NewUnboundHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
 				func(invocation interpreter.Invocation) interpreter.Value {
@@ -619,7 +619,7 @@ func newTestTypeHaveElementCountFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			haveElementCountTestFunc := interpreter.NewHostFunctionValue(
+			haveElementCountTestFunc := interpreter.NewUnboundHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
 				func(invocation interpreter.Invocation) interpreter.Value {
@@ -683,7 +683,7 @@ func newTestTypeContainFunction(
 
 			inter := invocation.Interpreter
 
-			containTestFunc := interpreter.NewHostFunctionValue(
+			containTestFunc := interpreter.NewUnboundHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
 				func(invocation interpreter.Invocation) interpreter.Value {
@@ -754,7 +754,7 @@ func newTestTypeBeGreaterThanFunction(
 
 			inter := invocation.Interpreter
 
-			beGreaterThanTestFunc := interpreter.NewHostFunctionValue(
+			beGreaterThanTestFunc := interpreter.NewUnboundHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
 				func(invocation interpreter.Invocation) interpreter.Value {
@@ -897,7 +897,7 @@ func newTestTypeBeLessThanFunction(
 
 			inter := invocation.Interpreter
 
-			beLessThanTestFunc := interpreter.NewHostFunctionValue(
+			beLessThanTestFunc := interpreter.NewUnboundHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
 				func(invocation interpreter.Invocation) interpreter.Value {

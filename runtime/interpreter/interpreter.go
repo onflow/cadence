@@ -1187,7 +1187,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 
 	var initializerFunction FunctionValue
 	if declaration.Kind() == common.CompositeKindEvent {
-		initializerFunction = NewHostFunctionValue(
+		initializerFunction = NewUnboundHostFunctionValue(
 			declarationInterpreter,
 			initializerType,
 			func(invocation Invocation) Value {
@@ -1302,7 +1302,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	constructorType := compositeType.ConstructorFunctionType()
 
 	constructorGenerator := func(address common.Address) *HostFunctionValue {
-		return NewHostFunctionValue(
+		return NewUnboundHostFunctionValue(
 			declarationInterpreter,
 			constructorType,
 			func(invocation Invocation) Value {
@@ -1577,7 +1577,7 @@ func EnumConstructorFunction(
 
 	// Prepare the constructor function which performs a lookup in the lookup table
 
-	constructor := NewHostFunctionValue(
+	constructor := NewUnboundHostFunctionValue(
 		gauge,
 		sema.EnumConstructorType(enumType),
 		func(invocation Invocation) Value {
@@ -2419,7 +2419,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 
 	return func(inner FunctionValue) FunctionValue {
-		return NewHostFunctionValue(
+		return NewUnboundHostFunctionValue(
 			interpreter,
 			functionType,
 			func(invocation Invocation) Value {
@@ -4091,7 +4091,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 	address := addressValue.ToAddress()
 	config := interpreter.SharedState.Config
 
-	return NewHostFunctionValue(
+	return NewUnboundHostFunctionValue(
 		interpreter,
 		functionType,
 		func(invocation Invocation) Value {
@@ -4250,7 +4250,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewHostFunctionValue(
+	return NewUnboundHostFunctionValue(
 		interpreter,
 		sema.Account_StorageTypeSaveFunctionType,
 		func(invocation Invocation) Value {
@@ -4310,7 +4310,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewHostFunctionValue(
+	return NewUnboundHostFunctionValue(
 		interpreter,
 		sema.Account_StorageTypeTypeFunctionType,
 		func(invocation Invocation) Value {
@@ -4356,7 +4356,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewHostFunctionValue(
+	return NewUnboundHostFunctionValue(
 		interpreter,
 		// same as sema.Account_StorageTypeCopyFunctionType
 		sema.Account_StorageTypeLoadFunctionType,
@@ -4436,7 +4436,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewHostFunctionValue(
+	return NewUnboundHostFunctionValue(
 		interpreter,
 		sema.Account_StorageTypeBorrowFunctionType,
 		func(invocation Invocation) Value {
@@ -4489,7 +4489,7 @@ func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressVal
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewHostFunctionValue(
+	return NewUnboundHostFunctionValue(
 		interpreter,
 		sema.Account_StorageTypeCheckFunctionType,
 		func(invocation Invocation) Value {
@@ -5011,7 +5011,7 @@ func (interpreter *Interpreter) getMember(self Value, locationRange LocationRang
 }
 
 func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValue {
-	return NewHostFunctionValue(
+	return NewUnboundHostFunctionValue(
 		interpreter,
 		sema.IsInstanceFunctionType,
 		func(invocation Invocation) Value {
@@ -5041,7 +5041,7 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 }
 
 func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
-	return NewHostFunctionValue(
+	return NewUnboundHostFunctionValue(
 		interpreter,
 		sema.GetTypeFunctionType,
 		func(invocation Invocation) Value {
@@ -5457,7 +5457,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 	capabilityBorrowType *sema.ReferenceType,
 ) *HostFunctionValue {
 
-	return NewHostFunctionValue(
+	return NewUnboundHostFunctionValue(
 		interpreter,
 		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
 		func(invocation Invocation) Value {
@@ -5502,7 +5502,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 	capabilityBorrowType *sema.ReferenceType,
 ) *HostFunctionValue {
 
-	return NewHostFunctionValue(
+	return NewUnboundHostFunctionValue(
 		interpreter,
 		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
 		func(invocation Invocation) Value {

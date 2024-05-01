@@ -38,7 +38,7 @@ func newBLSAggregatePublicKeysFunction(
 	gauge common.MemoryGauge,
 	aggregator BLSPublicKeyAggregator,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		BLSTypeAggregatePublicKeysFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -113,7 +113,7 @@ func newBLSAggregateSignaturesFunction(
 	gauge common.MemoryGauge,
 	aggregator BLSSignatureAggregator,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewUnboundHostFunctionValue(
 		gauge,
 		BLSTypeAggregateSignaturesFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
