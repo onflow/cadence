@@ -286,14 +286,14 @@ func TestEntitlementSet_Minimize(t *testing.T) {
 func TestEntitlementSet_MinimallyRepresentable(t *testing.T) {
 	t.Parallel()
 
-	t.Run("no entitlements, no disjunctions", func(t *testing.T) {
+	t.Run("no entitlements, no disjunctions: {} = true", func(t *testing.T) {
 		t.Parallel()
 
 		set := &EntitlementSet{}
 		assert.True(t, set.IsMinimallyRepresentable())
 	})
 
-	t.Run("one entitlement, no disjunctions", func(t *testing.T) {
+	t.Run("one entitlement, no disjunctions: {E1} = true", func(t *testing.T) {
 		t.Parallel()
 
 		set := &EntitlementSet{}
@@ -306,7 +306,7 @@ func TestEntitlementSet_MinimallyRepresentable(t *testing.T) {
 		assert.True(t, set.IsMinimallyRepresentable())
 	})
 
-	t.Run("two entitlements, no disjunctions", func(t *testing.T) {
+	t.Run("two entitlements, no disjunctions: {E1, E2} = true", func(t *testing.T) {
 		t.Parallel()
 
 		set := &EntitlementSet{}
@@ -324,7 +324,7 @@ func TestEntitlementSet_MinimallyRepresentable(t *testing.T) {
 		assert.True(t, set.IsMinimallyRepresentable())
 	})
 
-	t.Run("one entitlement, redundant disjunction", func(t *testing.T) {
+	t.Run("one entitlement, redundant disjunction: {E1, (E1 | E2)} = true", func(t *testing.T) {
 		t.Parallel()
 
 		set := &EntitlementSet{}
@@ -348,7 +348,7 @@ func TestEntitlementSet_MinimallyRepresentable(t *testing.T) {
 		assert.True(t, set.IsMinimallyRepresentable())
 	})
 
-	t.Run("two entitlements, two redundant disjunctions", func(t *testing.T) {
+	t.Run("two entitlements, two redundant disjunctions: {E1, E3, (E1 | E2), (E3 | E4)} = true", func(t *testing.T) {
 		t.Parallel()
 
 		set := &EntitlementSet{}
@@ -387,7 +387,7 @@ func TestEntitlementSet_MinimallyRepresentable(t *testing.T) {
 		assert.True(t, set.IsMinimallyRepresentable())
 	})
 
-	t.Run("one entitlement, non-redundant disjunction", func(t *testing.T) {
+	t.Run("one entitlement, non-redundant disjunction: {E1, (E3 | E2)} = false", func(t *testing.T) {
 		t.Parallel()
 
 		set := &EntitlementSet{}
@@ -415,7 +415,7 @@ func TestEntitlementSet_MinimallyRepresentable(t *testing.T) {
 		assert.False(t, set.IsMinimallyRepresentable())
 	})
 
-	t.Run("two disjunctions", func(t *testing.T) {
+	t.Run("two disjunctions: {(E1 | E2), (E2 | E3)} = false", func(t *testing.T) {
 		t.Parallel()
 
 		set := &EntitlementSet{}
