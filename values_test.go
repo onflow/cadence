@@ -887,7 +887,7 @@ func TestValue_Type(t *testing.T) {
 	}
 }
 
-func TestValue_HasFields(t *testing.T) {
+func TestComposite(t *testing.T) {
 	t.Parallel()
 
 	test := func(name string, testCase valueTestCase) {
@@ -897,12 +897,12 @@ func TestValue_HasFields(t *testing.T) {
 			switch value.(type) {
 			case Event, Struct, Contract, Enum, Resource, Attachment:
 				valueWithType := testCase.withType(value, testCase.exampleType)
-				assert.Implements(t, (*HasFields)(nil), valueWithType)
-				fieldedValueWithType := valueWithType.(HasFields)
-				assert.NotNil(t, fieldedValueWithType.GetFieldValues())
+				require.Implements(t, (*Composite)(nil), valueWithType)
+				fieldedValueWithType := valueWithType.(Composite)
+				assert.NotNil(t, fieldedValueWithType.getFieldValues())
 				assert.NotNil(t, fieldedValueWithType.GetFields())
 
-				fieldedValue := value.(HasFields)
+				fieldedValue := value.(Composite)
 
 				assert.Nil(t, fieldedValue.GetFields())
 			}
@@ -924,8 +924,8 @@ func TestEvent_GetFieldByName(t *testing.T) {
 			String("foo"),
 		},
 	)
-	assert.Nil(t, GetFieldsMappedByName(simpleEvent))
-	assert.Nil(t, GetFieldByName(simpleEvent, "a"))
+	assert.Nil(t, FieldsMappedByName(simpleEvent))
+	assert.Nil(t, SearchFieldByName(simpleEvent, "a"))
 
 	simpleEventWithType := simpleEvent.WithType(&EventType{
 		Location:            utils.TestLocation,
@@ -942,12 +942,15 @@ func TestEvent_GetFieldByName(t *testing.T) {
 		},
 	})
 
-	assert.Equal(t, NewInt(1), GetFieldByName(simpleEventWithType, "a").(Int))
-	assert.Equal(t, String("foo"), GetFieldByName(simpleEventWithType, "b").(String))
-	assert.Nil(t, GetFieldByName(simpleEventWithType, "c"))
+	assert.Equal(t, NewInt(1), SearchFieldByName(simpleEventWithType, "a"))
+	assert.Equal(t, String("foo"), SearchFieldByName(simpleEventWithType, "b"))
+	assert.Nil(t, SearchFieldByName(simpleEventWithType, "c"))
 
-	assert.Equal(t, map[string]Value{
-		"a": NewInt(1),
-		"b": String("foo"),
-	}, GetFieldsMappedByName(simpleEventWithType))
+	assert.Equal(t,
+		map[string]Value{
+			"a": NewInt(1),
+			"b": String("foo"),
+		},
+		FieldsMappedByName(simpleEventWithType),
+	)
 }

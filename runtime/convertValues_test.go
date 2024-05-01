@@ -474,62 +474,50 @@ func TestRuntimeExportValue(t *testing.T) {
 				publicKeyType := newPublicKeyType(signatureAlgorithmType)
 				hashAlgorithmType := newHashAlgorithmType()
 
-				return cadence.Struct{
-					StructType: &cadence.StructType{
-						QualifiedIdentifier: "AccountKey",
-						Fields: []cadence.Field{
-							{
-								Identifier: "keyIndex",
-								Type:       cadence.IntType,
-							},
-							{
-								Identifier: "publicKey",
-								Type:       publicKeyType,
-							},
-							{
-								Identifier: "hashAlgorithm",
-								Type:       hashAlgorithmType,
-							},
-							{
-								Identifier: "weight",
-								Type:       cadence.UFix64Type,
-							},
-							{
-								Identifier: "isRevoked",
-								Type:       cadence.BoolType,
-							},
+				return cadence.NewStruct([]cadence.Value{
+					cadence.NewInt(1),
+					cadence.NewStruct([]cadence.Value{
+						cadence.NewArray([]cadence.Value{
+							cadence.NewUInt8(1),
+							cadence.NewUInt8(2),
+							cadence.NewUInt8(3),
+						}).WithType(&cadence.VariableSizedArrayType{
+							ElementType: cadence.UInt8Type,
+						}),
+						cadence.NewEnum([]cadence.Value{
+							cadence.UInt8(2),
+						}).WithType(signatureAlgorithmType),
+					}).WithType(publicKeyType),
+					cadence.NewEnum([]cadence.Value{
+						cadence.UInt8(1),
+					}).WithType(hashAlgorithmType),
+					cadence.UFix64(10_00000000),
+					cadence.Bool(false),
+				}).WithType(&cadence.StructType{
+					QualifiedIdentifier: "AccountKey",
+					Fields: []cadence.Field{
+						{
+							Identifier: "keyIndex",
+							Type:       cadence.IntType,
+						},
+						{
+							Identifier: "publicKey",
+							Type:       publicKeyType,
+						},
+						{
+							Identifier: "hashAlgorithm",
+							Type:       hashAlgorithmType,
+						},
+						{
+							Identifier: "weight",
+							Type:       cadence.UFix64Type,
+						},
+						{
+							Identifier: "isRevoked",
+							Type:       cadence.BoolType,
 						},
 					},
-					Fields: []cadence.Value{
-						cadence.NewInt(1),
-						cadence.Struct{
-							StructType: publicKeyType,
-							Fields: []cadence.Value{
-								cadence.NewArray([]cadence.Value{
-									cadence.NewUInt8(1),
-									cadence.NewUInt8(2),
-									cadence.NewUInt8(3),
-								}).WithType(&cadence.VariableSizedArrayType{
-									ElementType: cadence.UInt8Type,
-								}),
-								cadence.Enum{
-									EnumType: signatureAlgorithmType,
-									Fields: []cadence.Value{
-										cadence.UInt8(2),
-									},
-								},
-							},
-						},
-						cadence.Enum{
-							EnumType: hashAlgorithmType,
-							Fields: []cadence.Value{
-								cadence.UInt8(1),
-							},
-						},
-						cadence.UFix64(10_00000000),
-						cadence.Bool(false),
-					},
-				}
+				})
 			}(),
 		},
 		{
@@ -2353,22 +2341,19 @@ func TestRuntimeEnumValue(t *testing.T) {
 	t.Parallel()
 
 	newEnumValue := func() cadence.Enum {
-		return cadence.Enum{
-			EnumType: &cadence.EnumType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Direction",
-				Fields: []cadence.Field{
-					{
-						Identifier: sema.EnumRawValueFieldName,
-						Type:       cadence.IntType,
-					},
+		return cadence.NewEnum([]cadence.Value{
+			cadence.NewInt(3),
+		}).WithType(&cadence.EnumType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Direction",
+			Fields: []cadence.Field{
+				{
+					Identifier: sema.EnumRawValueFieldName,
+					Type:       cadence.IntType,
 				},
-				RawType: cadence.IntType,
 			},
-			Fields: []cadence.Value{
-				cadence.NewInt(3),
-			},
-		}
+			RawType: cadence.IntType,
+		})
 	}
 
 	t.Run("test export", func(t *testing.T) {
@@ -2723,112 +2708,109 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 	t.Parallel()
 
 	// Complex struct value
-	complexStructValue := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: &cadence.OptionalType{
-						Type: cadence.StringType,
-					},
-				},
-				{
-					Identifier: "b",
-					Type: &cadence.DictionaryType{
-						KeyType:     cadence.StringType,
-						ElementType: cadence.StringType,
-					},
-				},
-				{
-					Identifier: "c",
-					Type: &cadence.VariableSizedArrayType{
-						ElementType: cadence.StringType,
-					},
-				},
-				{
-					Identifier: "d",
-					Type: &cadence.ConstantSizedArrayType{
-						ElementType: cadence.StringType,
-						Size:        2,
-					},
-				},
-				{
-					Identifier: "e",
-					Type:       cadence.AddressType,
-				},
-				{
-					Identifier: "f",
-					Type:       cadence.BoolType,
-				},
-				{
-					Identifier: "g",
-					Type:       cadence.StoragePathType,
-				},
-				{
-					Identifier: "h",
-					Type:       cadence.PublicPathType,
-				},
-				{
-					Identifier: "i",
-					Type:       cadence.PrivatePathType,
-				},
-				{
-					Identifier: "j",
-					Type:       cadence.AnyStructType,
-				},
-				{
-					Identifier: "k",
-					Type:       cadence.HashableStructType,
+	structType := &cadence.StructType{
+		Location:            common.ScriptLocation{},
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type: &cadence.OptionalType{
+					Type: cadence.StringType,
 				},
 			},
-		},
-
-		Fields: []cadence.Value{
-			cadence.NewOptional(
-				cadence.String("John"),
-			),
-			cadence.NewDictionary([]cadence.KeyValuePair{
-				{
-					Key:   cadence.String("name"),
-					Value: cadence.String("Doe"),
+			{
+				Identifier: "b",
+				Type: &cadence.DictionaryType{
+					KeyType:     cadence.StringType,
+					ElementType: cadence.StringType,
 				},
-			}).WithType(&cadence.DictionaryType{
-				KeyType:     cadence.StringType,
-				ElementType: cadence.StringType,
-			}),
-			cadence.NewArray([]cadence.Value{
-				cadence.String("foo"),
-				cadence.String("bar"),
-			}).WithType(&cadence.VariableSizedArrayType{
-				ElementType: cadence.StringType,
-			}),
-			cadence.NewArray([]cadence.Value{
-				cadence.String("foo"),
-				cadence.String("bar"),
-			}).WithType(&cadence.ConstantSizedArrayType{
-				ElementType: cadence.StringType,
-				Size:        2,
-			}),
-			cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
-			cadence.NewBool(true),
-			cadence.Path{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
 			},
-			cadence.Path{
-				Domain:     common.PathDomainPublic,
-				Identifier: "foo",
+			{
+				Identifier: "c",
+				Type: &cadence.VariableSizedArrayType{
+					ElementType: cadence.StringType,
+				},
 			},
-			cadence.Path{
-				Domain:     common.PathDomainPrivate,
-				Identifier: "foo",
+			{
+				Identifier: "d",
+				Type: &cadence.ConstantSizedArrayType{
+					ElementType: cadence.StringType,
+					Size:        2,
+				},
 			},
-			cadence.String("foo"),
-			cadence.String("foo"),
+			{
+				Identifier: "e",
+				Type:       cadence.AddressType,
+			},
+			{
+				Identifier: "f",
+				Type:       cadence.BoolType,
+			},
+			{
+				Identifier: "g",
+				Type:       cadence.StoragePathType,
+			},
+			{
+				Identifier: "h",
+				Type:       cadence.PublicPathType,
+			},
+			{
+				Identifier: "i",
+				Type:       cadence.PrivatePathType,
+			},
+			{
+				Identifier: "j",
+				Type:       cadence.AnyStructType,
+			},
+			{
+				Identifier: "k",
+				Type:       cadence.HashableStructType,
+			},
 		},
 	}
+	complexStructValue := cadence.NewStruct([]cadence.Value{
+		cadence.NewOptional(
+			cadence.String("John"),
+		),
+		cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key:   cadence.String("name"),
+				Value: cadence.String("Doe"),
+			},
+		}).WithType(&cadence.DictionaryType{
+			KeyType:     cadence.StringType,
+			ElementType: cadence.StringType,
+		}),
+		cadence.NewArray([]cadence.Value{
+			cadence.String("foo"),
+			cadence.String("bar"),
+		}).WithType(&cadence.VariableSizedArrayType{
+			ElementType: cadence.StringType,
+		}),
+		cadence.NewArray([]cadence.Value{
+			cadence.String("foo"),
+			cadence.String("bar"),
+		}).WithType(&cadence.ConstantSizedArrayType{
+			ElementType: cadence.StringType,
+			Size:        2,
+		}),
+		cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
+		cadence.NewBool(true),
+		cadence.Path{
+			Domain:     common.PathDomainStorage,
+			Identifier: "foo",
+		},
+		cadence.Path{
+			Domain:     common.PathDomainPublic,
+			Identifier: "foo",
+		},
+		cadence.Path{
+			Domain:     common.PathDomainPrivate,
+			Identifier: "foo",
+		},
+		cadence.String("foo"),
+		cadence.String("foo"),
+	}).WithType(structType)
 
 	script := fmt.Sprintf(
 		`
@@ -2885,74 +2867,71 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 	t.Parallel()
 
 	// Complex struct value
-	complexStructValue := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: &cadence.OptionalType{
-						Type: cadence.AnyStructType,
-					},
-				},
-				{
-					Identifier: "b",
-					Type: &cadence.DictionaryType{
-						KeyType:     cadence.StringType,
-						ElementType: cadence.AnyStructType,
-					},
-				},
-				{
-					Identifier: "c",
-					Type: &cadence.VariableSizedArrayType{
-						ElementType: cadence.AnyStructType,
-					},
-				},
-				{
-					Identifier: "d",
-					Type: &cadence.ConstantSizedArrayType{
-						ElementType: cadence.AnyStructType,
-						Size:        2,
-					},
-				},
-				{
-					Identifier: "e",
-					Type:       cadence.AnyStructType,
+	structType := &cadence.StructType{
+		Location:            common.ScriptLocation{},
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type: &cadence.OptionalType{
+					Type: cadence.AnyStructType,
 				},
 			},
-		},
-
-		Fields: []cadence.Value{
-			cadence.NewOptional(cadence.String("John")),
-			cadence.NewDictionary([]cadence.KeyValuePair{
-				{
-					Key:   cadence.String("name"),
-					Value: cadence.String("Doe"),
+			{
+				Identifier: "b",
+				Type: &cadence.DictionaryType{
+					KeyType:     cadence.StringType,
+					ElementType: cadence.AnyStructType,
 				},
-			}).WithType(&cadence.DictionaryType{
-				KeyType:     cadence.StringType,
-				ElementType: cadence.AnyStructType,
-			}),
-			cadence.NewArray([]cadence.Value{
-				cadence.String("foo"),
-				cadence.String("bar"),
-			}).WithType(&cadence.VariableSizedArrayType{
-				ElementType: cadence.AnyStructType,
-			}),
-			cadence.NewArray([]cadence.Value{
-				cadence.String("foo"),
-				cadence.String("bar"),
-			}).WithType(&cadence.ConstantSizedArrayType{
-				ElementType: cadence.AnyStructType,
-				Size:        2,
-			}),
-			cadence.Path{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
+			},
+			{
+				Identifier: "c",
+				Type: &cadence.VariableSizedArrayType{
+					ElementType: cadence.AnyStructType,
+				},
+			},
+			{
+				Identifier: "d",
+				Type: &cadence.ConstantSizedArrayType{
+					ElementType: cadence.AnyStructType,
+					Size:        2,
+				},
+			},
+			{
+				Identifier: "e",
+				Type:       cadence.AnyStructType,
 			},
 		},
 	}
+	complexStructValue := cadence.NewStruct([]cadence.Value{
+		cadence.NewOptional(cadence.String("John")),
+		cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key:   cadence.String("name"),
+				Value: cadence.String("Doe"),
+			},
+		}).WithType(&cadence.DictionaryType{
+			KeyType:     cadence.StringType,
+			ElementType: cadence.AnyStructType,
+		}),
+		cadence.NewArray([]cadence.Value{
+			cadence.String("foo"),
+			cadence.String("bar"),
+		}).WithType(&cadence.VariableSizedArrayType{
+			ElementType: cadence.AnyStructType,
+		}),
+		cadence.NewArray([]cadence.Value{
+			cadence.String("foo"),
+			cadence.String("bar"),
+		}).WithType(&cadence.ConstantSizedArrayType{
+			ElementType: cadence.AnyStructType,
+			Size:        2,
+		}),
+		cadence.Path{
+			Domain:     common.PathDomainStorage,
+			Identifier: "foo",
+		},
+	}).WithType(structType)
 
 	script := fmt.Sprintf(
 		`
@@ -2995,74 +2974,71 @@ func TestRuntimeComplexStructWithHashableStructFields(t *testing.T) {
 	t.Parallel()
 
 	// Complex struct value
-	complexStructValue := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            common.ScriptLocation{},
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: &cadence.OptionalType{
-						Type: cadence.HashableStructType,
-					},
-				},
-				{
-					Identifier: "b",
-					Type: &cadence.DictionaryType{
-						KeyType:     cadence.StringType,
-						ElementType: cadence.HashableStructType,
-					},
-				},
-				{
-					Identifier: "c",
-					Type: &cadence.VariableSizedArrayType{
-						ElementType: cadence.HashableStructType,
-					},
-				},
-				{
-					Identifier: "d",
-					Type: &cadence.ConstantSizedArrayType{
-						ElementType: cadence.HashableStructType,
-						Size:        2,
-					},
-				},
-				{
-					Identifier: "e",
-					Type:       cadence.HashableStructType,
+	structType := &cadence.StructType{
+		Location:            common.ScriptLocation{},
+		QualifiedIdentifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type: &cadence.OptionalType{
+					Type: cadence.HashableStructType,
 				},
 			},
-		},
-
-		Fields: []cadence.Value{
-			cadence.NewOptional(cadence.String("John")),
-			cadence.NewDictionary([]cadence.KeyValuePair{
-				{
-					Key:   cadence.String("name"),
-					Value: cadence.String("Doe"),
+			{
+				Identifier: "b",
+				Type: &cadence.DictionaryType{
+					KeyType:     cadence.StringType,
+					ElementType: cadence.HashableStructType,
 				},
-			}).WithType(&cadence.DictionaryType{
-				KeyType:     cadence.StringType,
-				ElementType: cadence.HashableStructType,
-			}),
-			cadence.NewArray([]cadence.Value{
-				cadence.String("foo"),
-				cadence.String("bar"),
-			}).WithType(&cadence.VariableSizedArrayType{
-				ElementType: cadence.HashableStructType,
-			}),
-			cadence.NewArray([]cadence.Value{
-				cadence.String("foo"),
-				cadence.String("bar"),
-			}).WithType(&cadence.ConstantSizedArrayType{
-				ElementType: cadence.HashableStructType,
-				Size:        2,
-			}),
-			cadence.Path{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
+			},
+			{
+				Identifier: "c",
+				Type: &cadence.VariableSizedArrayType{
+					ElementType: cadence.HashableStructType,
+				},
+			},
+			{
+				Identifier: "d",
+				Type: &cadence.ConstantSizedArrayType{
+					ElementType: cadence.HashableStructType,
+					Size:        2,
+				},
+			},
+			{
+				Identifier: "e",
+				Type:       cadence.HashableStructType,
 			},
 		},
 	}
+	complexStructValue := cadence.NewStruct([]cadence.Value{
+		cadence.NewOptional(cadence.String("John")),
+		cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key:   cadence.String("name"),
+				Value: cadence.String("Doe"),
+			},
+		}).WithType(&cadence.DictionaryType{
+			KeyType:     cadence.StringType,
+			ElementType: cadence.HashableStructType,
+		}),
+		cadence.NewArray([]cadence.Value{
+			cadence.String("foo"),
+			cadence.String("bar"),
+		}).WithType(&cadence.VariableSizedArrayType{
+			ElementType: cadence.HashableStructType,
+		}),
+		cadence.NewArray([]cadence.Value{
+			cadence.String("foo"),
+			cadence.String("bar"),
+		}).WithType(&cadence.ConstantSizedArrayType{
+			ElementType: cadence.HashableStructType,
+			Size:        2,
+		}),
+		cadence.Path{
+			Domain:     common.PathDomainStorage,
+			Identifier: "foo",
+		},
+	}).WithType(structType)
 
 	script := fmt.Sprintf(
 		`
@@ -3119,105 +3095,90 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 	}
 
 	newMalformedStruct1 := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: newMalformedStructType1(),
-			Fields: []cadence.Value{
-				cadence.NewInt(3),
-			},
-		}
+		return cadence.NewStruct([]cadence.Value{
+			cadence.NewInt(3),
+		}).WithType(newMalformedStructType1())
 	}
 
 	// Struct with wrong field name
 
 	newMalformedStruct2 := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: &cadence.StructType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Foo",
-				Fields: []cadence.Field{
-					{
-						Identifier: "nonExisting",
-						Type:       cadence.StringType,
-					},
+		return cadence.NewStruct([]cadence.Value{
+			cadence.String("John"),
+		}).WithType(&cadence.StructType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "nonExisting",
+					Type:       cadence.StringType,
 				},
 			},
-			Fields: []cadence.Value{
-				cadence.String("John"),
-			},
-		}
+		})
 	}
 
 	// Struct with nested malformed array value
 	newMalformedStruct3 := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: &cadence.StructType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Bar",
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type: &cadence.VariableSizedArrayType{
-							ElementType: newMalformedStructType1(),
-						},
+		return cadence.NewStruct([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				newMalformedStruct1(),
+			}),
+		}).WithType(&cadence.StructType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Bar",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type: &cadence.VariableSizedArrayType{
+						ElementType: newMalformedStructType1(),
 					},
 				},
 			},
-			Fields: []cadence.Value{
-				cadence.NewArray([]cadence.Value{
-					newMalformedStruct1(),
-				}),
-			},
-		}
+		})
 	}
 
 	// Struct with nested malformed dictionary value
 	newMalformedStruct4 := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: &cadence.StructType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Baz",
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type: &cadence.DictionaryType{
-							KeyType:     cadence.StringType,
-							ElementType: newMalformedStructType1(),
-						},
+		return cadence.NewStruct([]cadence.Value{
+			cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.String("foo"),
+					Value: newMalformedStruct1(),
+				},
+			}),
+		}).WithType(&cadence.StructType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Baz",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type: &cadence.DictionaryType{
+						KeyType:     cadence.StringType,
+						ElementType: newMalformedStructType1(),
 					},
 				},
 			},
-			Fields: []cadence.Value{
-				cadence.NewDictionary([]cadence.KeyValuePair{
-					{
-						Key:   cadence.String("foo"),
-						Value: newMalformedStruct1(),
-					},
-				}),
-			},
-		}
+		})
 	}
 
 	// Struct with nested array with mismatching element type
 	newMalformedStruct5 := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: &cadence.StructType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Bar",
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type: &cadence.VariableSizedArrayType{
-							ElementType: newMalformedStructType1(),
-						},
+		return cadence.NewStruct([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				cadence.String("mismatching value"),
+			}),
+		}).WithType(&cadence.StructType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Bar",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type: &cadence.VariableSizedArrayType{
+						ElementType: newMalformedStructType1(),
 					},
 				},
 			},
-			Fields: []cadence.Value{
-				cadence.NewArray([]cadence.Value{
-					cadence.String("mismatching value"),
-				}),
-			},
-		}
+		})
 	}
 
 	type argumentPassingTest struct {
@@ -4949,12 +4910,9 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		common.ZeroAddress,
 	)
 
-	externalCompositeValue := cadence.Struct{
-		StructType: externalCompositeType,
-		Fields: []cadence.Value{
-			externalDictionaryValue,
-		},
-	}
+	externalCompositeValue := cadence.NewStruct([]cadence.Value{
+		externalDictionaryValue,
+	}).WithType(externalCompositeType)
 
 	t.Run("export", func(t *testing.T) {
 
@@ -5025,25 +4983,21 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
             }
         `
 
-		structValue := cadence.Struct{
-			StructType: &cadence.StructType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Foo",
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type:       cadence.AnyStructType,
-					},
+		structValue := cadence.NewStruct([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				cadence.String("foo"),
+				cadence.String("bar"),
+			}),
+		}).WithType(&cadence.StructType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type:       cadence.AnyStructType,
 				},
 			},
-
-			Fields: []cadence.Value{
-				cadence.NewArray([]cadence.Value{
-					cadence.String("foo"),
-					cadence.String("bar"),
-				}),
-			},
-		}
+		})
 
 		_, err := executeTestScript(t, script, structValue)
 		require.NoError(t, err)
@@ -5063,27 +5017,23 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
             }
         `
 
-		structValue := cadence.Struct{
-			StructType: &cadence.StructType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Foo",
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type:       cadence.AnyStructType,
-					},
+		structValue := cadence.NewStruct([]cadence.Value{
+			cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.String("foo"),
+					Value: cadence.String("bar"),
+				},
+			}),
+		}).WithType(&cadence.StructType{
+			Location:            common.ScriptLocation{},
+			QualifiedIdentifier: "Foo",
+			Fields: []cadence.Field{
+				{
+					Identifier: "a",
+					Type:       cadence.AnyStructType,
 				},
 			},
-
-			Fields: []cadence.Value{
-				cadence.NewDictionary([]cadence.KeyValuePair{
-					{
-						Key:   cadence.String("foo"),
-						Value: cadence.String("bar"),
-					},
-				}),
-			},
-		}
+		})
 
 		_, err := executeTestScript(t, script, structValue)
 		require.NoError(t, err)

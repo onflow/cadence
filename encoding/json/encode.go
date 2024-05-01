@@ -27,6 +27,7 @@ import (
 	goRuntime "runtime"
 	"strconv"
 	"strings"
+	_ "unsafe"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
@@ -603,28 +604,61 @@ func prepareInclusiveRange(v *cadence.InclusiveRange) jsonValue {
 	}
 }
 
+//go:linkname getFieldValues github.com/onflow/cadence.getFieldValues
+func getFieldValues(cadence.Composite) []cadence.Value
+
 func prepareStruct(v cadence.Struct) jsonValue {
-	return prepareComposite(structTypeStr, v.StructType.ID(), v.StructType.Fields, v.Fields)
+	return prepareComposite(
+		structTypeStr,
+		v.StructType.ID(),
+		v.StructType.Fields,
+		getFieldValues(v),
+	)
 }
 
 func prepareResource(v cadence.Resource) jsonValue {
-	return prepareComposite(resourceTypeStr, v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
+	return prepareComposite(
+		resourceTypeStr,
+		v.ResourceType.ID(),
+		v.ResourceType.Fields,
+		getFieldValues(v),
+	)
 }
 
 func prepareEvent(v cadence.Event) jsonValue {
-	return prepareComposite(eventTypeStr, v.EventType.ID(), v.EventType.Fields, v.Fields)
+	return prepareComposite(
+		eventTypeStr,
+		v.EventType.ID(),
+		v.EventType.Fields,
+		getFieldValues(v),
+	)
 }
 
 func prepareContract(v cadence.Contract) jsonValue {
-	return prepareComposite(contractTypeStr, v.ContractType.ID(), v.ContractType.Fields, v.Fields)
+	return prepareComposite(
+		contractTypeStr,
+		v.ContractType.ID(),
+		v.ContractType.Fields,
+		getFieldValues(v),
+	)
 }
 
 func prepareEnum(v cadence.Enum) jsonValue {
-	return prepareComposite(enumTypeStr, v.EnumType.ID(), v.EnumType.Fields, v.Fields)
+	return prepareComposite(
+		enumTypeStr,
+		v.EnumType.ID(),
+		v.EnumType.Fields,
+		getFieldValues(v),
+	)
 }
 
 func prepareAttachment(v cadence.Attachment) jsonValue {
-	return prepareComposite(attachmentTypeStr, v.AttachmentType.ID(), v.AttachmentType.Fields, v.Fields)
+	return prepareComposite(
+		attachmentTypeStr,
+		v.AttachmentType.ID(),
+		v.AttachmentType.Fields,
+		getFieldValues(v),
+	)
 }
 
 func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cadence.Value) jsonValue {

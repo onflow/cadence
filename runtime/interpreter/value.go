@@ -18340,12 +18340,17 @@ func (v *CompositeValue) setBaseValue(interpreter *Interpreter, base *CompositeV
 	v.base = base
 }
 
-func attachmentMemberName(ty sema.Type) string {
-	return unrepresentableNamePrefix + string(ty.ID())
+func AttachmentMemberName(typeID string) string {
+	return unrepresentableNamePrefix + typeID
 }
 
 func (v *CompositeValue) getAttachmentValue(interpreter *Interpreter, locationRange LocationRange, ty sema.Type) *CompositeValue {
-	if attachment := v.GetMember(interpreter, locationRange, attachmentMemberName(ty)); attachment != nil {
+	attachment := v.GetMember(
+		interpreter,
+		locationRange,
+		AttachmentMemberName(string(ty.ID())),
+	)
+	if attachment != nil {
 		return attachment.(*CompositeValue)
 	}
 	return nil
@@ -18535,7 +18540,8 @@ func (v *CompositeValue) SetTypeKey(
 	attachmentType sema.Type,
 	attachment Value,
 ) {
-	if v.SetMember(interpreter, locationRange, attachmentMemberName(attachmentType), attachment) {
+	memberName := AttachmentMemberName(string(attachmentType.ID()))
+	if v.SetMember(interpreter, locationRange, memberName, attachment) {
 		panic(DuplicateAttachmentError{
 			AttachmentType: attachmentType,
 			Value:          v,
@@ -18549,7 +18555,8 @@ func (v *CompositeValue) RemoveTypeKey(
 	locationRange LocationRange,
 	attachmentType sema.Type,
 ) Value {
-	return v.RemoveMember(interpreter, locationRange, attachmentMemberName(attachmentType))
+	memberName := AttachmentMemberName(string(attachmentType.ID()))
+	return v.RemoveMember(interpreter, locationRange, memberName)
 }
 
 func (v *CompositeValue) Iterator(interpreter *Interpreter, locationRange LocationRange) ValueIterator {

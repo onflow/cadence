@@ -19,6 +19,10 @@
 package migrations
 
 import (
+	"bytes"
+	_ "embed"
+	"encoding/csv"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"testing"
@@ -2661,4 +2665,99 @@ func TestDictionaryKeyConflict(t *testing.T) {
 
 		test(t, false)
 	})
+}
+
+//go:embed testdata/missing-slabs-payloads.csv
+var missingSlabsPayloadsData []byte
+
+// '$' + 8 byte index
+const slabKeyLength = 9
+
+func isSlabStorageKey(key []byte) bool {
+	return len(key) == slabKeyLength && key[0] == '$'
+}
+
+func TestFixLoadedBrokenReferences(t *testing.T) {
+
+	t.Parallel()
+
+	// Read CSV file with test data
+
+	reader := csv.NewReader(bytes.NewReader(missingSlabsPayloadsData))
+
+	// account, key, value
+	reader.FieldsPerRecord = 3
+
+	records, err := reader.ReadAll()
+	require.NoError(t, err)
+
+	// Load data into ledger. Skip header
+
+	ledger := NewTestLedger(nil, nil)
+
+	for _, record := range records[1:] {
+		account, err := hex.DecodeString(record[0])
+		require.NoError(t, err)
+
+		key, err := hex.DecodeString(record[1])
+		require.NoError(t, err)
+
+		value, err := hex.DecodeString(record[2])
+		require.NoError(t, err)
+
+		err = ledger.SetValue(account, key, value)
+		require.NoError(t, err)
+	}
+
+	storage := runtime.NewStorage(ledger, nil)
+
+	// Check health.
+	// Retrieve all slabs before migration
+
+	err = ledger.ForEach(func(owner, key, value []byte) error {
+
+		if !isSlabStorageKey(key) {
+			return nil
+		}
+
+		// Convert the owner/key to a storage ID.
+
+		var slabIndex atree.SlabIndex
+		copy(slabIndex[:], key[1:])
+
+		storageID := atree.NewSlabID(atree.Address(owner), slabIndex)
+
+		// Retrieve the slab.
+		_, _, err = storage.Retrieve(storageID)
+		require.NoError(t, err)
+
+		return nil
+	})
+	require.NoError(t, err)
+
+	address, err := common.HexToAddress("0x5d63c34d7f05e5a4")
+	require.NoError(t, err)
+
+	for _, domain := range common.AllPathDomains {
+		_ = storage.GetStorageMap(address, domain.Identifier(), false)
+	}
+
+	err = storage.CheckHealth()
+	require.Error(t, err)
+
+	require.ErrorContains(t, err, "slab (0x0.49) not found: slab not found during slab iteration")
+
+	// Fix the broken slab references
+
+	fixedSlabs, skippedSlabIDs, err := storage.PersistentSlabStorage.
+		FixLoadedBrokenReferences(ShouldFixBrokenCompositeKeyedDictionary)
+	require.NoError(t, err)
+
+	require.NotEmpty(t, fixedSlabs)
+	require.Empty(t, skippedSlabIDs)
+
+	// Re-run health check. This time it should pass.
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 }

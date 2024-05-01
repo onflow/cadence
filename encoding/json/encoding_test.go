@@ -3170,11 +3170,9 @@ func TestExportRecursiveType(t *testing.T) {
 
 	testEncode(
 		t,
-		cadence.Resource{
-			Fields: []cadence.Value{
-				cadence.Optional{},
-			},
-		}.WithType(ty),
+		cadence.NewResource([]cadence.Value{
+			cadence.Optional{},
+		}).WithType(ty),
 		// language=json
 		`
           {

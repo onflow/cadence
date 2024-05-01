@@ -25,6 +25,7 @@ import (
 	goRuntime "runtime"
 	"sort"
 	"sync"
+	_ "unsafe"
 
 	"github.com/fxamacker/cbor/v2"
 
@@ -1021,46 +1022,73 @@ func (e *Encoder) encodeInclusiveRange(v *cadence.InclusiveRange, tids ccfTypeID
 	return e.encodeValue(v.Step, staticElementType, tids)
 }
 
+//go:linkname getFieldValues github.com/onflow/cadence.getFieldValues
+func getFieldValues(cadence.Composite) []cadence.Value
+
 // encodeStruct encodes cadence.Struct as
 // language=CDDL
 // composite-value = [* (field: value)]
 func (e *Encoder) encodeStruct(v cadence.Struct, tids ccfTypeIDByCadenceType) error {
-	return e.encodeComposite(v.StructType, v.Fields, tids)
+	return e.encodeComposite(
+		v.StructType,
+		getFieldValues(v),
+		tids,
+	)
 }
 
 // encodeResource encodes cadence.Resource as
 // language=CDDL
 // composite-value = [* (field: value)]
 func (e *Encoder) encodeResource(v cadence.Resource, tids ccfTypeIDByCadenceType) error {
-	return e.encodeComposite(v.ResourceType, v.Fields, tids)
+	return e.encodeComposite(
+		v.ResourceType,
+		getFieldValues(v),
+		tids,
+	)
 }
 
 // encodeEvent encodes cadence.Event as
 // language=CDDL
 // composite-value = [* (field: value)]
 func (e *Encoder) encodeEvent(v cadence.Event, tids ccfTypeIDByCadenceType) error {
-	return e.encodeComposite(v.EventType, v.Fields, tids)
+	return e.encodeComposite(
+		v.EventType,
+		getFieldValues(v),
+		tids,
+	)
 }
 
 // encodeContract encodes cadence.Contract as
 // language=CDDL
 // composite-value = [* (field: value)]
 func (e *Encoder) encodeContract(v cadence.Contract, tids ccfTypeIDByCadenceType) error {
-	return e.encodeComposite(v.ContractType, v.Fields, tids)
+	return e.encodeComposite(
+		v.ContractType,
+		getFieldValues(v),
+		tids,
+	)
 }
 
 // encodeEnum encodes cadence.Enum as
 // language=CDDL
 // composite-value = [* (field: value)]
 func (e *Encoder) encodeEnum(v cadence.Enum, tids ccfTypeIDByCadenceType) error {
-	return e.encodeComposite(v.EnumType, v.Fields, tids)
+	return e.encodeComposite(
+		v.EnumType,
+		getFieldValues(v),
+		tids,
+	)
 }
 
 // encodeAttachment encodes cadence.Attachment as
 // language=CDDL
 // composite-value = [* (field: value)]
 func (e *Encoder) encodeAttachment(v cadence.Attachment, tids ccfTypeIDByCadenceType) error {
-	return e.encodeComposite(v.AttachmentType, v.Fields, tids)
+	return e.encodeComposite(
+		v.AttachmentType,
+		getFieldValues(v),
+		tids,
+	)
 }
 
 // encodeComposite encodes composite types as
