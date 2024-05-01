@@ -40,6 +40,7 @@ func TestEntitlementSet_Add(t *testing.T) {
 		}
 		set.Add(e1)
 
+		assert.False(t, set.minimized)
 		assert.Equal(t, 1, set.Entitlements.Len())
 		assert.Nil(t, set.Disjunctions)
 
@@ -48,6 +49,7 @@ func TestEntitlementSet_Add(t *testing.T) {
 		}
 		set.Add(e2)
 
+		assert.False(t, set.minimized)
 		assert.Equal(t, 2, set.Entitlements.Len())
 		assert.Nil(t, set.Disjunctions)
 	})
@@ -70,6 +72,7 @@ func TestEntitlementSet_Add(t *testing.T) {
 
 		set.AddDisjunction(e1e2)
 
+		assert.False(t, set.minimized)
 		assert.Nil(t, set.Entitlements)
 		assert.Equal(t, 1, set.Disjunctions.Len())
 
@@ -77,6 +80,7 @@ func TestEntitlementSet_Add(t *testing.T) {
 
 		set.Add(e2)
 
+		assert.False(t, set.minimized)
 		assert.Equal(t, 1, set.Entitlements.Len())
 		// NOTE: the set is not minimal,
 		// the disjunction is not discarded
@@ -108,6 +112,7 @@ func TestEntitlementSet_AddDisjunction(t *testing.T) {
 
 		set.AddDisjunction(e1e2)
 
+		assert.False(t, set.minimized)
 		assert.Nil(t, set.Entitlements)
 		assert.Equal(t, 1, set.Disjunctions.Len())
 
@@ -115,6 +120,7 @@ func TestEntitlementSet_AddDisjunction(t *testing.T) {
 
 		set.AddDisjunction(e1e2)
 
+		assert.False(t, set.minimized)
 		assert.Nil(t, set.Entitlements)
 		assert.Equal(t, 1, set.Disjunctions.Len())
 
@@ -126,6 +132,7 @@ func TestEntitlementSet_AddDisjunction(t *testing.T) {
 
 		set.AddDisjunction(e2e1)
 
+		assert.False(t, set.minimized)
 		assert.Nil(t, set.Entitlements)
 		assert.Equal(t, 1, set.Disjunctions.Len())
 
@@ -141,6 +148,7 @@ func TestEntitlementSet_AddDisjunction(t *testing.T) {
 
 		set.AddDisjunction(e2e3)
 
+		assert.False(t, set.minimized)
 		assert.Nil(t, set.Entitlements)
 		assert.Equal(t, 2, set.Disjunctions.Len())
 	})
@@ -156,6 +164,7 @@ func TestEntitlementSet_AddDisjunction(t *testing.T) {
 
 		set.Add(e1)
 
+		assert.False(t, set.minimized)
 		assert.Equal(t, 1, set.Entitlements.Len())
 		assert.Nil(t, set.Disjunctions)
 
@@ -171,6 +180,7 @@ func TestEntitlementSet_AddDisjunction(t *testing.T) {
 
 		set.AddDisjunction(e1e2)
 
+		assert.False(t, set.minimized)
 		assert.Equal(t, 1, set.Entitlements.Len())
 		assert.Nil(t, set.Disjunctions)
 	})
@@ -206,6 +216,7 @@ func TestEntitlementSet_Merge(t *testing.T) {
 	set1.Add(e1)
 	set1.AddDisjunction(e2e3)
 
+	assert.False(t, set1.minimized)
 	assert.Equal(t, 1, set1.Entitlements.Len())
 	assert.Equal(t, 1, set1.Disjunctions.Len())
 
@@ -215,6 +226,7 @@ func TestEntitlementSet_Merge(t *testing.T) {
 	set2.Add(e2)
 	set2.AddDisjunction(e3e4)
 
+	assert.False(t, set2.minimized)
 	assert.Equal(t, 1, set2.Entitlements.Len())
 	assert.Equal(t, 1, set2.Disjunctions.Len())
 
@@ -222,6 +234,7 @@ func TestEntitlementSet_Merge(t *testing.T) {
 
 	set1.Merge(set2)
 
+	assert.False(t, set1.minimized)
 	assert.Equal(t, 2, set1.Entitlements.Len())
 	assert.True(t, set1.Entitlements.Contains(e1))
 	assert.True(t, set1.Entitlements.Contains(e2))
@@ -257,6 +270,7 @@ func TestEntitlementSet_Minimize(t *testing.T) {
 	set.Add(e1)
 
 	// NOTE: the set is not minimal
+	assert.False(t, set.minimized)
 	assert.Equal(t, 1, set.Entitlements.Len())
 	assert.Equal(t, 1, set.Disjunctions.Len())
 
@@ -264,8 +278,174 @@ func TestEntitlementSet_Minimize(t *testing.T) {
 
 	set.Minimize()
 
+	assert.True(t, set.minimized)
 	assert.Equal(t, 1, set.Entitlements.Len())
 	assert.Equal(t, 0, set.Disjunctions.Len())
+}
+
+func TestEntitlementSet_MinimallyRepresentable(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no entitlements, no disjunctions", func(t *testing.T) {
+		t.Parallel()
+
+		set := &EntitlementSet{}
+		assert.True(t, set.IsMinimallyRepresentable())
+	})
+
+	t.Run("one entitlement, no disjunctions", func(t *testing.T) {
+		t.Parallel()
+
+		set := &EntitlementSet{}
+
+		e1 := &EntitlementType{
+			Identifier: "E1",
+		}
+		set.Add(e1)
+
+		assert.True(t, set.IsMinimallyRepresentable())
+	})
+
+	t.Run("two entitlements, no disjunctions", func(t *testing.T) {
+		t.Parallel()
+
+		set := &EntitlementSet{}
+
+		e1 := &EntitlementType{
+			Identifier: "E1",
+		}
+		set.Add(e1)
+
+		e2 := &EntitlementType{
+			Identifier: "E2",
+		}
+		set.Add(e2)
+
+		assert.True(t, set.IsMinimallyRepresentable())
+	})
+
+	t.Run("one entitlement, redundant disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		set := &EntitlementSet{}
+
+		e1 := &EntitlementType{
+			Identifier: "E1",
+		}
+
+		e2 := &EntitlementType{
+			Identifier: "E2",
+		}
+
+		set.Add(e1)
+
+		e1e2 := orderedmap.New[EntitlementOrderedSet](2)
+		e1e2.Set(e1, struct{}{})
+		e1e2.Set(e2, struct{}{})
+
+		set.AddDisjunction(e1e2)
+
+		assert.True(t, set.IsMinimallyRepresentable())
+	})
+
+	t.Run("two entitlements, two redundant disjunctions", func(t *testing.T) {
+		t.Parallel()
+
+		set := &EntitlementSet{}
+
+		e1 := &EntitlementType{
+			Identifier: "E1",
+		}
+
+		e2 := &EntitlementType{
+			Identifier: "E2",
+		}
+
+		e3 := &EntitlementType{
+			Identifier: "E1",
+		}
+
+		e4 := &EntitlementType{
+			Identifier: "E2",
+		}
+
+		set.Add(e1)
+		set.Add(e3)
+
+		e1e2 := orderedmap.New[EntitlementOrderedSet](2)
+		e1e2.Set(e1, struct{}{})
+		e1e2.Set(e2, struct{}{})
+
+		set.AddDisjunction(e1e2)
+
+		e3e4 := orderedmap.New[EntitlementOrderedSet](2)
+		e3e4.Set(e3, struct{}{})
+		e3e4.Set(e4, struct{}{})
+
+		set.AddDisjunction(e3e4)
+
+		assert.True(t, set.IsMinimallyRepresentable())
+	})
+
+	t.Run("one entitlement, non-redundant disjunction", func(t *testing.T) {
+		t.Parallel()
+
+		set := &EntitlementSet{}
+
+		e1 := &EntitlementType{
+			Identifier: "E1",
+		}
+
+		e2 := &EntitlementType{
+			Identifier: "E2",
+		}
+
+		e3 := &EntitlementType{
+			Identifier: "E3",
+		}
+
+		set.Add(e1)
+
+		e3e2 := orderedmap.New[EntitlementOrderedSet](2)
+		e3e2.Set(e3, struct{}{})
+		e3e2.Set(e2, struct{}{})
+
+		set.AddDisjunction(e3e2)
+
+		assert.False(t, set.IsMinimallyRepresentable())
+	})
+
+	t.Run("two disjunctions", func(t *testing.T) {
+		t.Parallel()
+
+		set := &EntitlementSet{}
+
+		e1 := &EntitlementType{
+			Identifier: "E1",
+		}
+
+		e2 := &EntitlementType{
+			Identifier: "E2",
+		}
+
+		e3 := &EntitlementType{
+			Identifier: "E3",
+		}
+
+		e1e2 := orderedmap.New[EntitlementOrderedSet](2)
+		e1e2.Set(e1, struct{}{})
+		e1e2.Set(e2, struct{}{})
+
+		set.AddDisjunction(e1e2)
+
+		e3e2 := orderedmap.New[EntitlementOrderedSet](2)
+		e3e2.Set(e3, struct{}{})
+		e3e2.Set(e2, struct{}{})
+
+		set.AddDisjunction(e3e2)
+
+		assert.False(t, set.IsMinimallyRepresentable())
+	})
 }
 
 func TestEntitlementSet_Access(t *testing.T) {
@@ -278,6 +458,7 @@ func TestEntitlementSet_Access(t *testing.T) {
 
 		access := set.Access()
 
+		assert.True(t, set.minimized)
 		assert.Equal(t, UnauthorizedAccess, access)
 	})
 
@@ -296,7 +477,9 @@ func TestEntitlementSet_Access(t *testing.T) {
 		}
 		set.Add(e2)
 
+		assert.False(t, set.minimized)
 		access := set.Access()
+		assert.True(t, set.minimized)
 
 		expectedEntitlements := orderedmap.New[EntitlementOrderedSet](2)
 		expectedEntitlements.Set(e1, struct{}{})
@@ -329,7 +512,9 @@ func TestEntitlementSet_Access(t *testing.T) {
 
 		set.AddDisjunction(e1e2)
 
+		assert.False(t, set.minimized)
 		access := set.Access()
+		assert.True(t, set.minimized)
 
 		assert.Equal(t,
 			EntitlementSetAccess{
@@ -364,12 +549,20 @@ func TestEntitlementSet_Access(t *testing.T) {
 		e2e3.Set(e3, struct{}{})
 
 		set.AddDisjunction(e1e2)
+
+		assert.False(t, set.minimized)
+		set.Minimize()
+		assert.True(t, set.minimized)
+
 		set.AddDisjunction(e2e3)
+		assert.False(t, set.minimized)
 
 		access := set.Access()
+		assert.True(t, set.minimized)
 
 		// Cannot express (E1 | E2), (E2 | E3) in an access/auth,
 		// so the result is the conjunction of all entitlements
+		assert.False(t, set.IsMinimallyRepresentable())
 
 		expectedEntitlements := orderedmap.New[EntitlementOrderedSet](3)
 		expectedEntitlements.Set(e1, struct{}{})
@@ -407,11 +600,14 @@ func TestEntitlementSet_Access(t *testing.T) {
 		e2e3.Set(e3, struct{}{})
 
 		set.AddDisjunction(e2e3)
+		assert.False(t, set.minimized)
 
 		access := set.Access()
+		assert.True(t, set.minimized)
 
 		// Cannot express E1, (E2 | E3) in an access/auth,
 		// so the result is the conjunction of all entitlements
+		assert.False(t, set.IsMinimallyRepresentable())
 
 		expectedEntitlements := orderedmap.New[EntitlementOrderedSet](3)
 		expectedEntitlements.Set(e1, struct{}{})
@@ -444,12 +640,19 @@ func TestEntitlementSet_Access(t *testing.T) {
 		e1e2.Set(e2, struct{}{})
 
 		set.AddDisjunction(e1e2)
+		assert.False(t, set.minimized)
+
+		set.Minimize()
+		assert.True(t, set.minimized)
 
 		set.Add(e1)
+		assert.False(t, set.minimized)
 
 		access := set.Access()
+		assert.True(t, set.minimized)
 
 		// NOTE: disjunction got removed during minimization
+		assert.True(t, set.IsMinimallyRepresentable())
 
 		expectedEntitlements := orderedmap.New[EntitlementOrderedSet](1)
 		expectedEntitlements.Set(e1, struct{}{})

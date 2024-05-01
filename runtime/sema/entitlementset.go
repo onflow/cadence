@@ -48,12 +48,16 @@ func disjunctionKey(disjunction *EntitlementOrderedSet) string {
 type DisjunctionOrderedSet = orderedmap.OrderedMap[string, *EntitlementOrderedSet]
 
 // EntitlementSet is a set (conjunction) of entitlements and entitlement disjunctions.
-// e.g. {entitlements: A, B; disjunctions: (C | D), (E | F)}
+// e.g. {entitlements: A, B; disjunctions: (C ∨ D), (E ∨ F)}
+// This is distinct from an EntitlementSetAccess in Cadence, which is a program-level
+// (and possibly non-minimal) approximation of this abstract set
 type EntitlementSet struct {
 	// Entitlements is a set of entitlements
 	Entitlements *EntitlementOrderedSet
 	// Disjunctions is a set of entitlement disjunctions, keyed by disjunctionKey
 	Disjunctions *DisjunctionOrderedSet
+	// Minimized tracks whether the set is minimized or not
+	minimized bool
 }
 
 // Add adds an entitlement to the set.
@@ -67,6 +71,8 @@ func (s *EntitlementSet) Add(entitlementType *EntitlementType) {
 		s.Entitlements = orderedmap.New[EntitlementOrderedSet](1)
 	}
 	s.Entitlements.Set(entitlementType, struct{}{})
+
+	s.minimized = false
 }
 
 // AddDisjunction adds an entitlement disjunction to the set.
@@ -92,6 +98,8 @@ func (s *EntitlementSet) AddDisjunction(disjunction *EntitlementOrderedSet) {
 		s.Disjunctions = orderedmap.New[DisjunctionOrderedSet](1)
 	}
 	s.Disjunctions.Set(key, disjunction)
+
+	s.minimized = false
 }
 
 // Merge merges the other entitlement set into this set.
@@ -116,12 +124,16 @@ func (s *EntitlementSet) Merge(other *EntitlementSet) {
 				s.AddDisjunction(disjunction)
 			})
 	}
+
+	s.minimized = false
 }
 
 // Minimize minimizes the entitlement set.
 // It removes disjunctions that contain entitlements
 // which are also in the entitlement set
 func (s *EntitlementSet) Minimize() {
+	s.minimized = true
+
 	// If there are no entitlements or no disjunctions,
 	// there is nothing to minimize
 	if s.Entitlements == nil || s.Disjunctions == nil {
@@ -141,14 +153,38 @@ func (s *EntitlementSet) Minimize() {
 	}
 }
 
+// Returns whether this entitlement set is minimally representable in Cadence.
+//
+// If true, this set can be exactly represented as a non-nested logical formula: i.e. either a single conjunction or a single disjunction
+// If false, this set cannot be represented without nesting connective operators, and thus must be over-approximated when being
+// represented in Cadence.
+// As Cadence does not support nesting disjunctions and conjunctions in the same entitlement set, this function returns false
+// when s.Entitlements and s.Disjunctions are both non-empty, or when s.Disjunctions has more than one element
+func (s *EntitlementSet) IsMinimallyRepresentable() bool {
+	if s == nil {
+		return true
+	}
+
+	if !s.minimized {
+		s.Minimize()
+	}
+
+	return s.Disjunctions.Len() == 0 || (s.Entitlements.Len() == 0 && s.Disjunctions.Len() == 1)
+}
+
 // Access returns the access represented by the entitlement set.
 // The set is minimized before the access is computed.
+// Note that this function may over-approximate the permissions
+// required to represent this set of entitlements as an access modifier that Cadence can use,
+// e.g. `(A ∨ B) ∧ C` cannot be represented in Cadence and will the produce an over-approximation of `(A, B, C)`
 func (s *EntitlementSet) Access() Access {
 	if s == nil {
 		return UnauthorizedAccess
 	}
 
-	s.Minimize()
+	if !s.minimized {
+		s.Minimize()
+	}
 
 	var entitlements *EntitlementOrderedSet
 	if s.Entitlements != nil && s.Entitlements.Len() > 0 {
