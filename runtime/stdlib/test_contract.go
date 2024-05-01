@@ -506,6 +506,7 @@ func newTestTypeEqualFunction(
 
 			inter := invocation.Interpreter
 
+			// This is a static function. So create an unbound-host function.
 			equalTestFunc := interpreter.NewUnboundHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
@@ -558,6 +559,8 @@ func newTestTypeBeEmptyFunction(
 	return interpreter.NewUnmeteredHostFunctionValue(
 		beEmptyFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
+
+			// This is a static function. So create an unbound-host function.
 			beEmptyTestFunc := interpreter.NewUnboundHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
@@ -619,6 +622,7 @@ func newTestTypeHaveElementCountFunction(
 				panic(errors.NewUnreachableError())
 			}
 
+			// This is a static function. So create an unbound-host function.
 			haveElementCountTestFunc := interpreter.NewUnboundHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
@@ -683,6 +687,7 @@ func newTestTypeContainFunction(
 
 			inter := invocation.Interpreter
 
+			// This is a static function. So create an unbound-host function.
 			containTestFunc := interpreter.NewUnboundHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
@@ -754,6 +759,7 @@ func newTestTypeBeGreaterThanFunction(
 
 			inter := invocation.Interpreter
 
+			// This is a static function. So create an unbound-host function.
 			beGreaterThanTestFunc := interpreter.NewUnboundHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
@@ -897,6 +903,7 @@ func newTestTypeBeLessThanFunction(
 
 			inter := invocation.Interpreter
 
+			// This is a static function. So create an unbound-host function.
 			beLessThanTestFunc := interpreter.NewUnboundHostFunctionValue(
 				nil,
 				matcherTestFunctionType,

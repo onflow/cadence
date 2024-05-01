@@ -3163,7 +3163,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
                 var array: @[R] <- []
                 var arrayRef: auth(Mutate) &[R] = &array as auth(Mutate) &[R]
 
-                // Take a reference to the resource array
+                // Take an implicit reference to the resource array, using a function pointer
                 var arrayAppend = arrayRef.append
 
                 // Destroy the resource array
@@ -3190,10 +3190,10 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
                 var array: [S] = []
                 var arrayRef: auth(Mutate) &[S] = &array as auth(Mutate) &[S]
 
-                // Take a reference to the struct array
+                // Take an implicit reference to the struct array, using a function pointer
                 var arrayAppend = arrayRef.append
 
-                // Destroy the struct array
+                // Move the struct array
                 var array2 = array
 
                 // Call the function pointer
@@ -3239,7 +3239,7 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
                 var dictionary: @{String:R} <- {}
                 var dictionaryRef: auth(Mutate) &{String:R} = &dictionary as auth(Mutate) &{String:R}
 
-                // Take a reference to the resource dictionary
+                // Take an implicit reference to the resource dictionary, using a function pointer
                 var dictionaryInsert = dictionaryRef.insert
 
                 // Destroy the resource dictionary
@@ -3256,5 +3256,38 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 		RequireError(t, err)
 		invalidatedRefError := interpreter.InvalidatedResourceReferenceError{}
 		assert.ErrorAs(t, err, &invalidatedRefError)
+	})
+
+	t.Run("struct host function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main(): Type {
+                var s = S()
+
+                // Take an implicit reference to the struct, using a function pointer
+                var structGetType = s.getType
+
+                // Move/assign the struct
+                var s2 = s
+
+                // Call the function pointer
+                return structGetType()
+            }
+
+            struct S {}
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S").(*sema.CompositeType)
+
+		expectedResult := interpreter.NewTypeValue(
+			inter,
+			interpreter.ConvertSemaToStaticType(nil, sType),
+		)
+
+		AssertValuesEqual(t, inter, expectedResult, result)
 	})
 }

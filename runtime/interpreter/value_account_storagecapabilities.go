@@ -34,20 +34,12 @@ var account_StorageCapabilitiesFieldNames []string = nil
 func NewAccountStorageCapabilitiesValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	getControllerFunction FunctionValue,
-	getControllersFunction FunctionValue,
-	forEachControllerFunction FunctionValue,
-	issueFunction FunctionValue,
-	issueWithTypeFunction FunctionValue,
+	getControllerFunction BoundFunctionGenerator,
+	getControllersFunction BoundFunctionGenerator,
+	forEachControllerFunction BoundFunctionGenerator,
+	issueFunction BoundFunctionGenerator,
+	issueWithTypeFunction BoundFunctionGenerator,
 ) Value {
-
-	fields := map[string]Value{
-		sema.Account_StorageCapabilitiesTypeGetControllerFunctionName:     getControllerFunction,
-		sema.Account_StorageCapabilitiesTypeGetControllersFunctionName:    getControllersFunction,
-		sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction,
-		sema.Account_StorageCapabilitiesTypeIssueFunctionName:             issueFunction,
-		sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName:     issueWithTypeFunction,
-	}
 
 	var str string
 	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
@@ -59,14 +51,24 @@ func NewAccountStorageCapabilitiesValue(
 		return str
 	}
 
-	return NewSimpleCompositeValue(
+	storageCapabilities := NewSimpleCompositeValue(
 		gauge,
 		account_StorageCapabilitiesTypeID,
 		account_StorageCapabilitiesStaticType,
 		account_StorageCapabilitiesFieldNames,
-		fields,
+		nil,
 		nil,
 		nil,
 		stringer,
 	)
+
+	storageCapabilities.Fields = map[string]Value{
+		sema.Account_StorageCapabilitiesTypeGetControllerFunctionName:     getControllerFunction(storageCapabilities),
+		sema.Account_StorageCapabilitiesTypeGetControllersFunctionName:    getControllersFunction(storageCapabilities),
+		sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction(storageCapabilities),
+		sema.Account_StorageCapabilitiesTypeIssueFunctionName:             issueFunction(storageCapabilities),
+		sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName:     issueWithTypeFunction(storageCapabilities),
+	}
+
+	return storageCapabilities
 }

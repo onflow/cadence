@@ -206,7 +206,7 @@ func (executor *interpreterTransactionExecutor) authorizerValues(
 
 		addressValue := interpreter.NewAddressValue(inter, address)
 
-		accountValue := executor.environment.NewAccountValue(addressValue)
+		accountValue := executor.environment.NewAccountValue(inter, addressValue)
 
 		referenceType, ok := parameter.TypeAnnotation.Type.(*sema.ReferenceType)
 		if !ok || referenceType.Type != sema.AccountType {

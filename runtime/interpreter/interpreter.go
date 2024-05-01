@@ -151,6 +151,7 @@ type ImportLocationHandlerFunc func(
 // AccountHandlerFunc is a function that handles retrieving an auth account at a given address.
 // The account returned must be of type `Account`.
 type AccountHandlerFunc func(
+	inter *Interpreter,
 	address AddressValue,
 ) Value
 
@@ -440,7 +441,7 @@ func (interpreter *Interpreter) InvokeExternally(
 		}
 	}
 
-	var self *MemberAccessibleValue
+	var self *Value
 	var base *EphemeralReferenceValue
 	var boundAuth Authorization
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
@@ -1187,6 +1188,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 
 	var initializerFunction FunctionValue
 	if declaration.Kind() == common.CompositeKindEvent {
+		// Initializer is a static function. So create an unbound-host function.
 		initializerFunction = NewUnboundHostFunctionValue(
 			declarationInterpreter,
 			initializerType,
@@ -1194,6 +1196,11 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 				invocationInterpreter := invocation.Interpreter
 				locationRange := invocation.LocationRange
 				self := *invocation.Self
+
+				compositeSelf, ok := self.(*CompositeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
 				if len(compositeType.ConstructorParameters) < 1 {
 					return nil
@@ -1215,7 +1222,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
-					self.SetMember(
+					compositeSelf.SetMember(
 						invocationInterpreter,
 						locationRange,
 						parameter.Identifier,
@@ -1302,6 +1309,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	constructorType := compositeType.ConstructorFunctionType()
 
 	constructorGenerator := func(address common.Address) *HostFunctionValue {
+		// Constructor is a static function. So create an unbound-host function.
 		return NewUnboundHostFunctionValue(
 			declarationInterpreter,
 			constructorType,
@@ -1380,7 +1388,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 				value.injectedFields = injectedFields
 				value.Functions = functions
 
-				var self MemberAccessibleValue = value
+				var self Value = value
 				if declaration.Kind() == common.CompositeKindAttachment {
 
 					attachmentType := interpreter.MustSemaTypeOfValue(value).(*sema.CompositeType)
@@ -1577,6 +1585,7 @@ func EnumConstructorFunction(
 
 	// Prepare the constructor function which performs a lookup in the lookup table
 
+	// Constructor is a static function. So create an unbound-host function.
 	constructor := NewUnboundHostFunctionValue(
 		gauge,
 		sema.EnumConstructorType(enumType),
@@ -2419,6 +2428,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 
 	return func(inner FunctionValue) FunctionValue {
+		// Condition wrapper is a static function. So create an unbound-host function.
 		return NewUnboundHostFunctionValue(
 			interpreter,
 			functionType,
@@ -4082,17 +4092,19 @@ func (interpreter *Interpreter) recordStorageMutation() {
 }
 
 func (interpreter *Interpreter) newStorageIterationFunction(
+	storageValue *SimpleCompositeValue,
 	functionType *sema.FunctionType,
 	addressValue AddressValue,
 	domain common.PathDomain,
 	pathType sema.Type,
-) *HostFunctionValue {
+) BoundFunctionValue {
 
 	address := addressValue.ToAddress()
 	config := interpreter.SharedState.Config
 
-	return NewUnboundHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		storageValue,
 		functionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
@@ -4245,13 +4257,17 @@ func (interpreter *Interpreter) checkValue(
 	return
 }
 
-func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {
+func (interpreter *Interpreter) authAccountSaveFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+) BoundFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewUnboundHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		storageValue,
 		sema.Account_StorageTypeSaveFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
@@ -4305,13 +4321,17 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 	)
 }
 
-func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValue) *HostFunctionValue {
+func (interpreter *Interpreter) authAccountTypeFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+) BoundFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewUnboundHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		storageValue,
 		sema.Account_StorageTypeTypeFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
@@ -4343,21 +4363,32 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 	)
 }
 
-func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValue) *HostFunctionValue {
-	return interpreter.authAccountReadFunction(addressValue, true)
+func (interpreter *Interpreter) authAccountLoadFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+) BoundFunctionValue {
+	return interpreter.authAccountReadFunction(storageValue, addressValue, true)
 }
 
-func (interpreter *Interpreter) authAccountCopyFunction(addressValue AddressValue) *HostFunctionValue {
-	return interpreter.authAccountReadFunction(addressValue, false)
+func (interpreter *Interpreter) authAccountCopyFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+) BoundFunctionValue {
+	return interpreter.authAccountReadFunction(storageValue, addressValue, false)
 }
 
-func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValue, clear bool) *HostFunctionValue {
+func (interpreter *Interpreter) authAccountReadFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+	clear bool,
+) BoundFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewUnboundHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		storageValue,
 		// same as sema.Account_StorageTypeCopyFunctionType
 		sema.Account_StorageTypeLoadFunctionType,
 		func(invocation Invocation) Value {
@@ -4431,13 +4462,17 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 	)
 }
 
-func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressValue) *HostFunctionValue {
+func (interpreter *Interpreter) authAccountBorrowFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+) BoundFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewUnboundHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		storageValue,
 		sema.Account_StorageTypeBorrowFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
@@ -4484,13 +4519,17 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 	)
 }
 
-func (interpreter *Interpreter) authAccountCheckFunction(addressValue AddressValue) *HostFunctionValue {
+func (interpreter *Interpreter) authAccountCheckFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+) BoundFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewUnboundHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		storageValue,
 		sema.Account_StorageTypeCheckFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
@@ -5010,9 +5049,10 @@ func (interpreter *Interpreter) getMember(self Value, locationRange LocationRang
 	return result
 }
 
-func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValue {
-	return NewUnboundHostFunctionValue(
+func (interpreter *Interpreter) isInstanceFunction(self Value) FunctionValue {
+	return NewBoundHostFunctionValue(
 		interpreter,
+		self,
 		sema.IsInstanceFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
@@ -5040,9 +5080,10 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 	)
 }
 
-func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
-	return NewUnboundHostFunctionValue(
+func (interpreter *Interpreter) getTypeFunction(self Value) FunctionValue {
+	return NewBoundHostFunctionValue(
 		interpreter,
+		self,
 		sema.GetTypeFunctionType,
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
@@ -5452,13 +5493,15 @@ func (interpreter *Interpreter) Storage() Storage {
 }
 
 func (interpreter *Interpreter) capabilityBorrowFunction(
+	capabilityValue CapabilityValue,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
-) *HostFunctionValue {
+) FunctionValue {
 
-	return NewUnboundHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		capabilityValue,
 		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
 		func(invocation Invocation) Value {
 
@@ -5497,13 +5540,15 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 }
 
 func (interpreter *Interpreter) capabilityCheckFunction(
+	capabilityValue CapabilityValue,
 	addressValue AddressValue,
 	capabilityID UInt64Value,
 	capabilityBorrowType *sema.ReferenceType,
-) *HostFunctionValue {
+) FunctionValue {
 
-	return NewUnboundHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		capabilityValue,
 		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
 		func(invocation Invocation) Value {
 

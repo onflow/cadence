@@ -9124,8 +9124,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
-				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-					return stdlib.NewAccountValue(nil, nil, address)
+				AccountHandler: func(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
+					return stdlib.NewAccountValue(inter, nil, address)
 				},
 			},
 		},

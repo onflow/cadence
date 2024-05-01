@@ -328,7 +328,7 @@ func (v *HostFunctionValue) SetNestedVariables(variables map[string]Variable) {
 type BoundFunctionValue struct {
 	Function           FunctionValue
 	Base               *EphemeralReferenceValue
-	Self               *MemberAccessibleValue
+	Self               *Value
 	BoundAuthorization Authorization
 	selfRef            *EphemeralReferenceValue
 }
@@ -339,10 +339,15 @@ var _ FunctionValue = BoundFunctionValue{}
 func NewBoundFunctionValue(
 	interpreter *Interpreter,
 	function FunctionValue,
-	self *MemberAccessibleValue,
+	self *Value,
 	base *EphemeralReferenceValue,
 	boundAuth Authorization,
 ) BoundFunctionValue {
+
+	// If the function is already a bound function, then do not re-wrap.
+	if boundFunc, isBoundFunc := function.(BoundFunctionValue); isBoundFunc {
+		return boundFunc
+	}
 
 	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
 
@@ -464,10 +469,10 @@ func (BoundFunctionValue) DeepRemove(_ *Interpreter) {
 // NewBoundHostFunctionValue creates a bound-function value for a host-function.
 func NewBoundHostFunctionValue(
 	interpreter *Interpreter,
-	self MemberAccessibleValue,
+	self Value,
 	funcType *sema.FunctionType,
 	function HostFunction,
-) FunctionValue {
+) BoundFunctionValue {
 
 	hostFunc := NewUnboundHostFunctionValue(interpreter, funcType, function)
 
@@ -479,3 +484,5 @@ func NewBoundHostFunctionValue(
 		nil,
 	)
 }
+
+type BoundFunctionGenerator func(MemberAccessibleValue) BoundFunctionValue

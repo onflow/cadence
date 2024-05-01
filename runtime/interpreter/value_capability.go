@@ -34,6 +34,7 @@ const InvalidCapabilityID UInt64Value = 0
 // TODO: remove once migration to Cadence 1.0 / ID capabilities is complete
 type CapabilityValue interface {
 	EquatableValue
+	MemberAccessibleValue
 	atree.Storable
 	isCapabilityValue()
 }
@@ -144,12 +145,12 @@ func (v *IDCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange,
 	case sema.CapabilityTypeBorrowFunctionName:
 		// this function will panic already if this conversion fails
 		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-		return interpreter.capabilityBorrowFunction(v.Address, v.ID, borrowType)
+		return interpreter.capabilityBorrowFunction(v, v.Address, v.ID, borrowType)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		// this function will panic already if this conversion fails
 		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-		return interpreter.capabilityCheckFunction(v.Address, v.ID, borrowType)
+		return interpreter.capabilityCheckFunction(v, v.Address, v.ID, borrowType)
 
 	case sema.CapabilityTypeAddressFieldName:
 		return v.Address

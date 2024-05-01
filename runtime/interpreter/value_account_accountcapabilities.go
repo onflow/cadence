@@ -27,27 +27,19 @@ import (
 
 // Account.AccountCapabilities
 
-var account_AccountCapabilitiesTypeID = sema.Account_AccountCapabilitiesType.ID()
-var account_AccountCapabilitiesStaticType StaticType = PrimitiveStaticTypeAccount_AccountCapabilities // unmetered
-var account_AccountCapabilitiesFieldNames []string = nil
+var Account_AccountCapabilitiesTypeID = sema.Account_AccountCapabilitiesType.ID()
+var Account_AccountCapabilitiesStaticType StaticType = PrimitiveStaticTypeAccount_AccountCapabilities // unmetered
+var Account_AccountCapabilitiesFieldNames []string = nil
 
 func NewAccountAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	getControllerFunction FunctionValue,
-	getControllersFunction FunctionValue,
-	forEachControllerFunction FunctionValue,
-	issueFunction FunctionValue,
-	issueWithTypeFunction FunctionValue,
-) Value {
-
-	fields := map[string]Value{
-		sema.Account_AccountCapabilitiesTypeGetControllerFunctionName:     getControllerFunction,
-		sema.Account_AccountCapabilitiesTypeGetControllersFunctionName:    getControllersFunction,
-		sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction,
-		sema.Account_AccountCapabilitiesTypeIssueFunctionName:             issueFunction,
-		sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName:     issueWithTypeFunction,
-	}
+	getControllerFunction BoundFunctionGenerator,
+	getControllersFunction BoundFunctionGenerator,
+	forEachControllerFunction BoundFunctionGenerator,
+	issueFunction BoundFunctionGenerator,
+	issueWithTypeFunction BoundFunctionGenerator,
+) *SimpleCompositeValue {
 
 	var str string
 	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
@@ -59,14 +51,24 @@ func NewAccountAccountCapabilitiesValue(
 		return str
 	}
 
-	return NewSimpleCompositeValue(
+	accountCapabilities := NewSimpleCompositeValue(
 		gauge,
-		account_AccountCapabilitiesTypeID,
-		account_AccountCapabilitiesStaticType,
-		account_AccountCapabilitiesFieldNames,
-		fields,
+		Account_AccountCapabilitiesTypeID,
+		Account_AccountCapabilitiesStaticType,
+		Account_AccountCapabilitiesFieldNames,
+		nil,
 		nil,
 		nil,
 		stringer,
 	)
+
+	accountCapabilities.Fields = map[string]Value{
+		sema.Account_AccountCapabilitiesTypeGetControllerFunctionName:     getControllerFunction(accountCapabilities),
+		sema.Account_AccountCapabilitiesTypeGetControllersFunctionName:    getControllersFunction(accountCapabilities),
+		sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction(accountCapabilities),
+		sema.Account_AccountCapabilitiesTypeIssueFunctionName:             issueFunction(accountCapabilities),
+		sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName:     issueWithTypeFunction(accountCapabilities),
+	}
+
+	return accountCapabilities
 }

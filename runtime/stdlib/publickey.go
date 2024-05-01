@@ -19,7 +19,6 @@
 package stdlib
 
 import (
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -212,11 +211,13 @@ type PublicKeySignatureVerifier interface {
 }
 
 func newPublicKeyVerifySignatureFunction(
-	gauge common.MemoryGauge,
+	inter *interpreter.Interpreter,
+	publicKeyValue *interpreter.CompositeValue,
 	verifier PublicKeySignatureVerifier,
-) *interpreter.HostFunctionValue {
-	return interpreter.NewUnboundHostFunctionValue(
-		gauge,
+) interpreter.BoundFunctionValue {
+	return interpreter.NewBoundHostFunctionValue(
+		inter,
+		publicKeyValue,
 		sema.PublicKeyVerifyFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
@@ -239,7 +240,10 @@ func newPublicKeyVerifySignatureFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			publicKeyValue := *invocation.Self
+			publicKeyValue, ok := (*invocation.Self).(interpreter.MemberAccessibleValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
 			inter := invocation.Interpreter
 
@@ -297,11 +301,13 @@ type BLSPoPVerifier interface {
 }
 
 func newPublicKeyVerifyPoPFunction(
-	gauge common.MemoryGauge,
+	inter *interpreter.Interpreter,
+	publicKeyValue *interpreter.CompositeValue,
 	verifier BLSPoPVerifier,
-) *interpreter.HostFunctionValue {
-	return interpreter.NewUnboundHostFunctionValue(
-		gauge,
+) interpreter.BoundFunctionValue {
+	return interpreter.NewBoundHostFunctionValue(
+		inter,
+		publicKeyValue,
 		sema.PublicKeyVerifyPoPFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
@@ -309,7 +315,10 @@ func newPublicKeyVerifyPoPFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			publicKeyValue := *invocation.Self
+			publicKeyValue, ok := (*invocation.Self).(interpreter.MemberAccessibleValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
 			inter := invocation.Interpreter
 
@@ -349,11 +358,21 @@ type PublicKeyFunctionsHandler interface {
 }
 
 func PublicKeyFunctions(
-	gauge common.MemoryGauge,
+	inter *interpreter.Interpreter,
+	publicKeyValue *interpreter.CompositeValue,
 	handler PublicKeyFunctionsHandler,
 ) *interpreter.FunctionOrderedMap {
 	functions := orderedmap.New[interpreter.FunctionOrderedMap](2)
-	functions.Set(sema.PublicKeyTypeVerifyFunctionName, newPublicKeyVerifySignatureFunction(gauge, handler))
-	functions.Set(sema.PublicKeyTypeVerifyPoPFunctionName, newPublicKeyVerifyPoPFunction(gauge, handler))
+
+	functions.Set(
+		sema.PublicKeyTypeVerifyFunctionName,
+		newPublicKeyVerifySignatureFunction(inter, publicKeyValue, handler),
+	)
+
+	functions.Set(
+		sema.PublicKeyTypeVerifyPoPFunctionName,
+		newPublicKeyVerifyPoPFunction(inter, publicKeyValue, handler),
+	)
+
 	return functions
 }

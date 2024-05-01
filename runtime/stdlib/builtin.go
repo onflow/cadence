@@ -79,9 +79,9 @@ func DefaultStandardLibraryCompositeValueFunctionHandlers(
 		sema.PublicKeyType.ID(): func(
 			inter *interpreter.Interpreter,
 			_ interpreter.LocationRange,
-			_ *interpreter.CompositeValue,
+			publicKeyValue *interpreter.CompositeValue,
 		) *interpreter.FunctionOrderedMap {
-			return PublicKeyFunctions(inter, handler)
+			return PublicKeyFunctions(inter, publicKeyValue, handler)
 		},
 	}
 }
