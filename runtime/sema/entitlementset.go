@@ -132,7 +132,7 @@ func (s *EntitlementSet) Merge(other *EntitlementSet) {
 // It removes disjunctions that contain entitlements
 // which are also in the entitlement set
 func (s *EntitlementSet) Minimize() {
-	s.minimized = true
+	defer func() { s.minimized = true }()
 
 	// If there are no entitlements or no disjunctions,
 	// there is nothing to minimize
