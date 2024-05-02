@@ -73,7 +73,7 @@ var testTypeAssertFunctionType = &sema.FunctionType{
 	Arity: &sema.Arity{Min: 1, Max: 2},
 }
 
-var testTypeAssertFunction = interpreter.NewUnmeteredHostFunctionValue(
+var testTypeAssertFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 	testTypeAssertFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		condition, ok := invocation.Arguments[0].(interpreter.BoolValue)
@@ -132,7 +132,7 @@ var testTypeAssertEqualFunctionType = &sema.FunctionType{
 	),
 }
 
-var testTypeAssertEqualFunction = interpreter.NewUnmeteredHostFunctionValue(
+var testTypeAssertEqualFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 	testTypeAssertEqualFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		expected, ok := invocation.Arguments[0].(interpreter.EquatableValue)
@@ -204,7 +204,7 @@ var testTypeFailFunctionType = &sema.FunctionType{
 	Arity: &sema.Arity{Min: 0, Max: 1},
 }
 
-var testTypeFailFunction = interpreter.NewUnmeteredHostFunctionValue(
+var testTypeFailFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 	testTypeFailFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
 		var message string
@@ -263,7 +263,7 @@ func newTestTypeExpectFunctionType(matcherType *sema.CompositeType) *sema.Functi
 }
 
 func newTestTypeExpectFunction(functionType *sema.FunctionType) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		functionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			value := invocation.Arguments[0]
@@ -361,7 +361,7 @@ var testTypeReadFileFunctionType = &sema.FunctionType{
 }
 
 func newTestTypeReadFileFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		testTypeReadFileFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			pathString, ok := invocation.Arguments[0].(*interpreter.StringValue)
@@ -440,7 +440,7 @@ func newTestTypeNewMatcherFunction(
 	newMatcherFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
 ) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		newMatcherFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			test, ok := invocation.Arguments[0].(interpreter.FunctionValue)
@@ -496,7 +496,7 @@ func newTestTypeEqualFunction(
 	equalFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
 ) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		equalFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			otherValue, ok := invocation.Arguments[0].(interpreter.EquatableValue)
@@ -506,8 +506,8 @@ func newTestTypeEqualFunction(
 
 			inter := invocation.Interpreter
 
-			// This is a static function. So create an unbound-host function.
-			equalTestFunc := interpreter.NewUnboundHostFunctionValue(
+			// This is a static function.
+			equalTestFunc := interpreter.NewStaticHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
 				func(invocation interpreter.Invocation) interpreter.Value {
@@ -556,12 +556,12 @@ func newTestTypeBeEmptyFunction(
 	beEmptyFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
 ) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		beEmptyFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 
-			// This is a static function. So create an unbound-host function.
-			beEmptyTestFunc := interpreter.NewUnboundHostFunctionValue(
+			// This is a static function.
+			beEmptyTestFunc := interpreter.NewStaticHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
 				func(invocation interpreter.Invocation) interpreter.Value {
@@ -614,7 +614,7 @@ func newTestTypeHaveElementCountFunction(
 	haveElementCountFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
 ) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		haveElementCountFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			count, ok := invocation.Arguments[0].(interpreter.IntValue)
@@ -622,8 +622,8 @@ func newTestTypeHaveElementCountFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			// This is a static function. So create an unbound-host function.
-			haveElementCountTestFunc := interpreter.NewUnboundHostFunctionValue(
+			// This is a static function.
+			haveElementCountTestFunc := interpreter.NewStaticHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
 				func(invocation interpreter.Invocation) interpreter.Value {
@@ -677,7 +677,7 @@ func newTestTypeContainFunction(
 	containFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
 ) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		containFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			element, ok := invocation.Arguments[0].(interpreter.EquatableValue)
@@ -687,8 +687,8 @@ func newTestTypeContainFunction(
 
 			inter := invocation.Interpreter
 
-			// This is a static function. So create an unbound-host function.
-			containTestFunc := interpreter.NewUnboundHostFunctionValue(
+			// This is a static function.
+			containTestFunc := interpreter.NewStaticHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
 				func(invocation interpreter.Invocation) interpreter.Value {
@@ -749,7 +749,7 @@ func newTestTypeBeGreaterThanFunction(
 	beGreaterThanFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
 ) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		beGreaterThanFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			otherValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
@@ -759,8 +759,8 @@ func newTestTypeBeGreaterThanFunction(
 
 			inter := invocation.Interpreter
 
-			// This is a static function. So create an unbound-host function.
-			beGreaterThanTestFunc := interpreter.NewUnboundHostFunctionValue(
+			// This is a static function.
+			beGreaterThanTestFunc := interpreter.NewStaticHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
 				func(invocation interpreter.Invocation) interpreter.Value {
@@ -843,7 +843,7 @@ func newTestTypeExpectFailureFunctionType() *sema.FunctionType {
 func newTestTypeExpectFailureFunction(
 	testExpectFailureFunctionType *sema.FunctionType,
 ) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		testExpectFailureFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
@@ -893,7 +893,7 @@ func newTestTypeBeLessThanFunction(
 	beLessThanFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
 ) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		beLessThanFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			otherValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
@@ -903,8 +903,8 @@ func newTestTypeBeLessThanFunction(
 
 			inter := invocation.Interpreter
 
-			// This is a static function. So create an unbound-host function.
-			beLessThanTestFunc := interpreter.NewUnboundHostFunctionValue(
+			// This is a static function.
+			beLessThanTestFunc := interpreter.NewStaticHostFunctionValue(
 				nil,
 				matcherTestFunctionType,
 				func(invocation interpreter.Invocation) interpreter.Value {

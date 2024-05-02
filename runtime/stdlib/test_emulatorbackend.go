@@ -256,7 +256,7 @@ The 'returnValue' field of the result will be nil if the script failed.
 func (t *testEmulatorBackendType) newExecuteScriptFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.executeScriptFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
@@ -295,7 +295,7 @@ The returned account can be used to sign and authorize transactions.
 func (t *testEmulatorBackendType) newCreateAccountFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.createAccountFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			account, err := blockchain.CreateAccount()
@@ -359,7 +359,7 @@ Returns the account for the given address.
 func (t *testEmulatorBackendType) newGetAccountFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.getAccountFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			address, ok := invocation.Arguments[0].(interpreter.AddressValue)
@@ -404,7 +404,7 @@ const testTransactionTypeArgumentsFieldName = "arguments"
 func (t *testEmulatorBackendType) newAddTransactionFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.addTransactionFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
@@ -488,7 +488,7 @@ Returns the result of the transaction, or nil if no transaction was scheduled.
 func (t *testEmulatorBackendType) newExecuteNextTransactionFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.executeNextTransactionFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			result := blockchain.ExecuteNextTransaction()
@@ -514,7 +514,7 @@ Commit the current block. Committing will fail if there are un-executed transact
 func (t *testEmulatorBackendType) newCommitBlockFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.commitBlockFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			err := blockchain.CommitBlock()
@@ -538,7 +538,7 @@ Deploys a given contract, and initializes it with the provided arguments.
 func (t *testEmulatorBackendType) newDeployContractFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.deployContractFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter
@@ -588,7 +588,7 @@ Returns all the logs from the blockchain, up to the calling point.
 func (t *testEmulatorBackendType) newLogsFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.logsFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			logs := blockchain.Logs()
@@ -637,7 +637,7 @@ transactions with this account.
 func (t *testEmulatorBackendType) newServiceAccountFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.serviceAccountFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			serviceAccount, err := blockchain.ServiceAccount()
@@ -666,7 +666,7 @@ optionally filtered by event type.
 func (t *testEmulatorBackendType) newEventsFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.eventsFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			var eventType interpreter.StaticType = nil
@@ -702,7 +702,7 @@ Resets the state of the blockchain to the given height.
 func (t *testEmulatorBackendType) newResetFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.resetFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			height, ok := invocation.Arguments[0].(interpreter.UInt64Value)
@@ -727,7 +727,7 @@ which should be passed in the form of seconds.
 func (t *testEmulatorBackendType) newMoveTimeFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.moveTimeFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			timeDelta, ok := invocation.Arguments[0].(interpreter.Fix64Value)
@@ -752,7 +752,7 @@ current ledger state, with the given name.
 func (t *testEmulatorBackendType) newCreateSnapshotFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.createSnapshotFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			name, ok := invocation.Arguments[0].(*interpreter.StringValue)
@@ -778,7 +778,7 @@ updates the current ledger state.
 func (t *testEmulatorBackendType) newLoadSnapshotFunction(
 	blockchain Blockchain,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		t.loadSnapshotFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			name, ok := invocation.Arguments[0].(*interpreter.StringValue)

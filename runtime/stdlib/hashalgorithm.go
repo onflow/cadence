@@ -71,7 +71,7 @@ func newHashAlgorithmHashFunction(
 	hashAlgoValue interpreter.MemberAccessibleValue,
 	hasher Hasher,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		sema.HashAlgorithmTypeHashFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
@@ -99,7 +99,7 @@ func newHashAlgorithmHashWithTagFunction(
 	hashAlgorithmValue interpreter.MemberAccessibleValue,
 	hasher Hasher,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		sema.HashAlgorithmTypeHashWithTagFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 

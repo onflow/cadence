@@ -20040,7 +20040,7 @@ func (v NilValue) MeteredString(interpreter *Interpreter, _ SeenReferences, loca
 
 // nilValueMapFunction is created only once per interpreter.
 // Hence, no need to meter, as it's a constant.
-var nilValueMapFunction = NewUnmeteredHostFunctionValue(
+var nilValueMapFunction = NewUnmeteredStaticHostFunctionValue(
 	sema.OptionalTypeMapFunctionType(sema.NeverType),
 	func(invocation Invocation) Value {
 		return Nil

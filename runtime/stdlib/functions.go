@@ -39,7 +39,7 @@ func NewStandardLibraryFunction(
 		argumentLabels[i] = parameter.EffectiveArgumentLabel()
 	}
 
-	functionValue := interpreter.NewUnmeteredHostFunctionValue(functionType, function)
+	functionValue := interpreter.NewUnmeteredStaticHostFunctionValue(functionType, function)
 
 	return StandardLibraryValue{
 		Name:           name,

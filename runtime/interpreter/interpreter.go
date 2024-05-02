@@ -1188,8 +1188,8 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 
 	var initializerFunction FunctionValue
 	if declaration.Kind() == common.CompositeKindEvent {
-		// Initializer is a static function. So create an unbound-host function.
-		initializerFunction = NewUnboundHostFunctionValue(
+		// Initializer is a static function.
+		initializerFunction = NewStaticHostFunctionValue(
 			declarationInterpreter,
 			initializerType,
 			func(invocation Invocation) Value {
@@ -1309,8 +1309,8 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	constructorType := compositeType.ConstructorFunctionType()
 
 	constructorGenerator := func(address common.Address) *HostFunctionValue {
-		// Constructor is a static function. So create an unbound-host function.
-		return NewUnboundHostFunctionValue(
+		// Constructor is a static function.
+		return NewStaticHostFunctionValue(
 			declarationInterpreter,
 			constructorType,
 			func(invocation Invocation) Value {
@@ -1585,8 +1585,8 @@ func EnumConstructorFunction(
 
 	// Prepare the constructor function which performs a lookup in the lookup table
 
-	// Constructor is a static function. So create an unbound-host function.
-	constructor := NewUnboundHostFunctionValue(
+	// Constructor is a static function.
+	constructor := NewStaticHostFunctionValue(
 		gauge,
 		sema.EnumConstructorType(enumType),
 		func(invocation Invocation) Value {
@@ -2428,8 +2428,8 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 
 	return func(inner FunctionValue) FunctionValue {
-		// Condition wrapper is a static function. So create an unbound-host function.
-		return NewUnboundHostFunctionValue(
+		// Condition wrapper is a static function.
+		return NewStaticHostFunctionValue(
 			interpreter,
 			functionType,
 			func(invocation Invocation) Value {
@@ -2674,7 +2674,7 @@ type stringValueParser func(*Interpreter, string) OptionalValue
 func newFromStringFunction(ty sema.Type, parser stringValueParser) fromStringFunctionValue {
 	functionType := sema.FromStringFunctionType(ty)
 
-	hostFunctionImpl := NewUnmeteredHostFunctionValue(
+	hostFunctionImpl := NewUnmeteredStaticHostFunctionValue(
 		functionType,
 		func(invocation Invocation) Value {
 			argument, ok := invocation.Arguments[0].(*StringValue)
@@ -2908,7 +2908,8 @@ func newFromBigEndianBytesFunction(
 	converter bigEndianBytesConverter) fromBigEndianBytesFunctionValue {
 	functionType := sema.FromBigEndianBytesFunctionType(ty)
 
-	hostFunctionImpl := NewUnmeteredHostFunctionValue(
+	// Converter functions are static functions.
+	hostFunctionImpl := NewUnmeteredStaticHostFunctionValue(
 		functionType,
 		func(invocation Invocation) Value {
 			argument, ok := invocation.Arguments[0].(*ArrayValue)
@@ -3310,16 +3311,17 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 			Name  string
 			Value Value
 		}{
+			// Converter functions are static functions.
 			{
 				Name: sema.AddressTypeFromBytesFunctionName,
-				Value: NewUnmeteredHostFunctionValue(
+				Value: NewUnmeteredStaticHostFunctionValue(
 					sema.AddressTypeFromBytesFunctionType,
 					AddressFromBytes,
 				),
 			},
 			{
 				Name: sema.AddressTypeFromStringFunctionName,
-				Value: NewUnmeteredHostFunctionValue(
+				Value: NewUnmeteredStaticHostFunctionValue(
 					sema.AddressTypeFromStringFunctionType,
 					AddressFromString,
 				),
@@ -3431,10 +3433,12 @@ func init() {
 	}
 
 	// We assign this here because it depends on the interpreter, so this breaks the initialization cycle
+
+	// All of the following methods are static functions.
 	defineBaseValue(
 		BaseActivation,
 		sema.DictionaryTypeFunctionName,
-		NewUnmeteredHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValue(
 			sema.DictionaryTypeFunctionType,
 			dictionaryTypeFunction,
 		))
@@ -3442,7 +3446,7 @@ func init() {
 	defineBaseValue(
 		BaseActivation,
 		sema.CompositeTypeFunctionName,
-		NewUnmeteredHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValue(
 			sema.CompositeTypeFunctionType,
 			compositeTypeFunction,
 		),
@@ -3451,7 +3455,7 @@ func init() {
 	defineBaseValue(
 		BaseActivation,
 		sema.ReferenceTypeFunctionName,
-		NewUnmeteredHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValue(
 			sema.ReferenceTypeFunctionType,
 			referenceTypeFunction,
 		),
@@ -3460,7 +3464,7 @@ func init() {
 	defineBaseValue(
 		BaseActivation,
 		sema.FunctionTypeFunctionName,
-		NewUnmeteredHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValue(
 			sema.FunctionTypeFunctionType,
 			functionTypeFunction,
 		),
@@ -3469,7 +3473,7 @@ func init() {
 	defineBaseValue(
 		BaseActivation,
 		sema.IntersectionTypeFunctionName,
-		NewUnmeteredHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValue(
 			sema.IntersectionTypeFunctionType,
 			intersectionTypeFunction,
 		),
@@ -3742,7 +3746,7 @@ var converterFunctionValues = func() []converterFunction {
 	for index, declaration := range ConverterDeclarations {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.convert
-		converterFunctionValue := NewUnmeteredHostFunctionValue(
+		converterFunctionValue := NewUnmeteredStaticHostFunctionValue(
 			declaration.functionType,
 			func(invocation Invocation) Value {
 				return convert(invocation.Interpreter, invocation.Arguments[0], invocation.LocationRange)
@@ -3801,10 +3805,11 @@ type runtimeTypeConstructor struct {
 }
 
 // Constructor functions are stateless functions. Hence they can be re-used across interpreters.
+// They are also static functions.
 var runtimeTypeConstructors = []runtimeTypeConstructor{
 	{
 		name: sema.OptionalTypeFunctionName,
-		converter: NewUnmeteredHostFunctionValue(
+		converter: NewUnmeteredStaticHostFunctionValue(
 			sema.OptionalTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
@@ -3824,7 +3829,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 	},
 	{
 		name: sema.VariableSizedArrayTypeFunctionName,
-		converter: NewUnmeteredHostFunctionValue(
+		converter: NewUnmeteredStaticHostFunctionValue(
 			sema.VariableSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
@@ -3845,7 +3850,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 	},
 	{
 		name: sema.ConstantSizedArrayTypeFunctionName,
-		converter: NewUnmeteredHostFunctionValue(
+		converter: NewUnmeteredStaticHostFunctionValue(
 			sema.ConstantSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
@@ -3871,7 +3876,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 	},
 	{
 		name: sema.CapabilityTypeFunctionName,
-		converter: NewUnmeteredHostFunctionValue(
+		converter: NewUnmeteredStaticHostFunctionValue(
 			sema.CapabilityTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
@@ -3901,7 +3906,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 	},
 	{
 		name: "InclusiveRangeType",
-		converter: NewUnmeteredHostFunctionValue(
+		converter: NewUnmeteredStaticHostFunctionValue(
 			sema.InclusiveRangeTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
@@ -3940,7 +3945,8 @@ func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {
 }
 
 // typeFunction is the `Type` function. It is stateless, hence it can be re-used across interpreters.
-var typeFunction = NewUnmeteredHostFunctionValue(
+// It's also a static function.
+var typeFunction = NewUnmeteredStaticHostFunctionValue(
 	sema.MetaTypeFunctionType,
 	func(invocation Invocation) Value {
 		typeParameterPair := invocation.TypeParameterTypes.Oldest()

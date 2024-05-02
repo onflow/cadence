@@ -49,7 +49,7 @@ func TestFunctionStaticType(t *testing.T) {
 			sema.BoolTypeAnnotation,
 		)
 
-		hostFunctionValue := NewUnboundHostFunctionValue(
+		hostFunctionValue := NewStaticHostFunctionValue(
 			inter,
 			hostFunctionType,
 			hostFunction,
@@ -83,7 +83,7 @@ func TestFunctionStaticType(t *testing.T) {
 			sema.BoolTypeAnnotation,
 		)
 
-		hostFunctionValue := NewUnboundHostFunctionValue(
+		hostFunctionValue := NewStaticHostFunctionValue(
 			inter,
 			hostFunctionType,
 			hostFunction,

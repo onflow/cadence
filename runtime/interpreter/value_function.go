@@ -190,7 +190,7 @@ func (f *HostFunctionValue) MeteredString(interpreter *Interpreter, _ SeenRefere
 	return f.String()
 }
 
-func NewUnmeteredHostFunctionValue(
+func NewUnmeteredStaticHostFunctionValue(
 	funcType *sema.FunctionType,
 	function HostFunction,
 ) *HostFunctionValue {
@@ -207,10 +207,10 @@ func NewUnmeteredHostFunctionValue(
 	}
 }
 
-// NewUnboundHostFunctionValue constructs a host function that is not bounded to any value.
+// NewStaticHostFunctionValue constructs a host function that is not bounded to any value.
 // For constructing a function bound to a value (e.g: a member function), the output of this method
 // must be wrapped with a bound-function, or `NewBoundHostFunctionValue` method must be used.
-func NewUnboundHostFunctionValue(
+func NewStaticHostFunctionValue(
 	gauge common.MemoryGauge,
 	funcType *sema.FunctionType,
 	function HostFunction,
@@ -218,7 +218,7 @@ func NewUnboundHostFunctionValue(
 
 	common.UseMemory(gauge, common.HostFunctionValueMemoryUsage)
 
-	return NewUnmeteredHostFunctionValue(funcType, function)
+	return NewUnmeteredStaticHostFunctionValue(funcType, function)
 }
 
 var _ Value = &HostFunctionValue{}
@@ -474,7 +474,7 @@ func NewBoundHostFunctionValue(
 	function HostFunction,
 ) BoundFunctionValue {
 
-	hostFunc := NewUnboundHostFunctionValue(interpreter, funcType, function)
+	hostFunc := NewStaticHostFunctionValue(interpreter, funcType, function)
 
 	return NewBoundFunctionValue(
 		interpreter,
