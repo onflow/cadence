@@ -114,6 +114,16 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) Validate() error {
 		validator.checkConformanceV1,
 	)
 
+	// Check entitlements added to nested decls are all representable
+	nestedComposites := newRootDecl.DeclarationMembers().Composites()
+	for _, nestedComposite := range nestedComposites {
+		validator.validateEntitlementsRepresentableComposite(nestedComposite)
+	}
+	nestedInterfaces := newRootDecl.DeclarationMembers().Interfaces()
+	for _, nestedInterface := range nestedInterfaces {
+		validator.validateEntitlementsRepresentableInterface(nestedInterface)
+	}
+
 	if underlyingValidator.hasErrors() {
 		return underlyingValidator.getContractUpdateError()
 	}
@@ -282,6 +292,34 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOf
 	intersectionType := sema.NewIntersectionType(nil, nil, interfaces)
 
 	return intersectionType.SupportedEntitlements().Access()
+}
+
+func (validator *CadenceV042ToV1ContractUpdateValidator) validateEntitlementsRepresentableComposite(decl *ast.CompositeDeclaration) {
+	dummyNominalType := ast.NewNominalType(nil, decl.Identifier, nil)
+	compositeType := validator.getCompositeType(dummyNominalType)
+	supportedEntitlements := compositeType.SupportedEntitlements()
+
+	if !supportedEntitlements.IsMinimallyRepresentable() {
+		validator.report(&UnrepresentableEntitlementsUpgrade{
+			Type:                 compositeType,
+			InvalidAuthorization: supportedEntitlements.Access(),
+			Range:                decl.Range,
+		})
+	}
+}
+
+func (validator *CadenceV042ToV1ContractUpdateValidator) validateEntitlementsRepresentableInterface(decl *ast.InterfaceDeclaration) {
+	dummyNominalType := ast.NewNominalType(nil, decl.Identifier, nil)
+	interfaceType := validator.getInterfaceType(dummyNominalType)
+	supportedEntitlements := interfaceType.SupportedEntitlements()
+
+	if !supportedEntitlements.IsMinimallyRepresentable() {
+		validator.report(&UnrepresentableEntitlementsUpgrade{
+			Type:                 interfaceType,
+			InvalidAuthorization: supportedEntitlements.Access(),
+			Range:                decl.Range,
+		})
+	}
 }
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) checkEntitlementsUpgrade(newType *ast.ReferenceType) error {
@@ -852,4 +890,30 @@ func (e *AuthorizationMismatchError) Error() string {
 		e.ExpectedAuthorization.QualifiedString(),
 		e.FoundAuthorization.QualifiedString(),
 	)
+}
+
+// UnrepresentableEntitlementsUpgrade is reported during a contract upgrade,
+// when a composite or interface type is given access modifiers on its field that would
+// cause the migration to produce an unrepresentable entitlement set for references to that type
+type UnrepresentableEntitlementsUpgrade struct {
+	Type                 sema.Type
+	InvalidAuthorization sema.Access
+	ast.Range
+}
+
+var _ errors.UserError = &UnrepresentableEntitlementsUpgrade{}
+var _ errors.SecondaryError = &UnrepresentableEntitlementsUpgrade{}
+
+func (*UnrepresentableEntitlementsUpgrade) IsUserError() {}
+
+func (e *UnrepresentableEntitlementsUpgrade) Error() string {
+	return fmt.Sprintf(
+		"unsafe access modifiers on %s: the entitlements migration would grant references to this type %s authorization, which is too permissive.",
+		e.Type.QualifiedString(),
+		e.InvalidAuthorization.QualifiedString(),
+	)
+}
+
+func (e *UnrepresentableEntitlementsUpgrade) SecondaryError() string {
+	return "Consider removing any disjunction access modifiers"
 }
