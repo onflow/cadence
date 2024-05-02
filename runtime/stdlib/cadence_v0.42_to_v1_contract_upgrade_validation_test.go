@@ -19,6 +19,7 @@
 package stdlib_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -194,6 +195,14 @@ func assertMissingDeclarationError(t *testing.T, err error, declName string) boo
 	require.ErrorAs(t, err, &missingDeclError)
 
 	return assert.Equal(t, declName, missingDeclError.Name)
+}
+
+func assertInvalidEntitlementsUpgradeError(t *testing.T, err error, declName string, accessString string) {
+	var invalidEntitlements *stdlib.UnrepresentableEntitlementsUpgrade
+	require.ErrorAs(t, err, &invalidEntitlements)
+
+	require.Equal(t, declName, invalidEntitlements.Type.QualifiedString())
+	require.Equal(t, accessString, invalidEntitlements.InvalidAuthorization.QualifiedString())
 }
 
 func getContractUpdateError(t *testing.T, err error, contractName string) *stdlib.ContractUpdateError {
@@ -2612,4 +2621,170 @@ func TestEnumUpdates(t *testing.T) {
 		err := testContractUpdate(t, oldCode, newCode)
 		require.NoError(t, err)
 	})
+}
+
+func TestContractUpgradeIsRepresentable(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(isInterface bool) {
+		nameString := "composite"
+		if isInterface {
+			nameString = "interface"
+		}
+
+		codeString := ""
+		if isInterface {
+			codeString = "interface"
+		}
+
+		functionImplString := "{}"
+		if isInterface {
+			functionImplString = ""
+		}
+
+		t.Run(fmt.Sprintf("grant one entitlement %s", nameString), func(t *testing.T) {
+
+			t.Parallel()
+
+			var oldCode = fmt.Sprintf(`
+                access(all) contract %[1]s Test {
+                    access(all) resource %[1]s R {
+                        access(all) fun a() %[2]s
+                    }
+                }
+            `, codeString, functionImplString)
+
+			var newCode = fmt.Sprintf(`
+                access(all) contract %[1]s Test {
+                    access(all) entitlement E
+                    access(all) resource %[1]s R {
+                        access(E) fun a() %[2]s
+                    }
+                }
+            `, codeString, functionImplString)
+
+			err := testContractUpdate(t, oldCode, newCode)
+			require.NoError(t, err)
+		})
+
+		t.Run(fmt.Sprintf("grant two entitlements %s", nameString), func(t *testing.T) {
+
+			t.Parallel()
+
+			var oldCode = fmt.Sprintf(`
+                access(all) contract %[1]s Test {
+                    access(all) resource %[1]s R {
+                        access(all) fun a() %[2]s
+                        access(all) fun b() %[2]s
+                    }
+                }
+            `, codeString, functionImplString)
+
+			var newCode = fmt.Sprintf(`
+                access(all) contract %[1]s Test {
+                    access(all) entitlement E
+                    access(all) entitlement F
+                    access(all) resource %[1]s R {
+                        access(E) fun a() %[2]s
+                        access(F) fun b() %[2]s
+                    }
+                }
+            `, codeString, functionImplString)
+
+			err := testContractUpdate(t, oldCode, newCode)
+			require.NoError(t, err)
+		})
+
+		t.Run(fmt.Sprintf("redundant disjunction %s", nameString), func(t *testing.T) {
+
+			t.Parallel()
+
+			var oldCode = fmt.Sprintf(`
+                access(all) contract %[1]s Test {
+                    access(all) resource %[1]s R {
+                        access(all) fun a() %[2]s
+                        access(all) fun b() %[2]s
+                    }
+                }
+            `, codeString, functionImplString)
+
+			var newCode = fmt.Sprintf(`
+                access(all) contract %[1]s Test {
+                    access(all) entitlement E
+                    access(all) entitlement F
+                    access(all) resource %[1]s R {
+                        access(E) fun a() %[2]s
+                        access(E | F) fun b() %[2]s
+                    }
+                }
+            `, codeString, functionImplString)
+
+			err := testContractUpdate(t, oldCode, newCode)
+			require.NoError(t, err)
+		})
+
+		t.Run(fmt.Sprintf("non-redundant disjunction %s", nameString), func(t *testing.T) {
+
+			t.Parallel()
+
+			var oldCode = fmt.Sprintf(`
+                access(all) contract %[1]s Test {
+                    access(all) resource %[1]s R {
+                        access(all) fun a() %[2]s
+                        access(all) fun b() %[2]s
+                    }
+                }
+            `, codeString, functionImplString)
+
+			var newCode = fmt.Sprintf(`
+                access(all) contract %[1]s Test {
+                    access(all) entitlement E
+                    access(all) entitlement F
+                    access(all) entitlement G
+                    access(all) resource %[1]s R {
+                        access(E) fun a() %[2]s
+                        access(F | G) fun b() %[2]s
+                    }
+                }
+            `, codeString, functionImplString)
+
+			err := testContractUpdate(t, oldCode, newCode)
+			cause := getSingleContractUpdateErrorCause(t, err, "Test")
+			assertInvalidEntitlementsUpgradeError(t, cause, "Test.R", "Test.E, Test.F, Test.G")
+		})
+
+		t.Run(fmt.Sprintf("two disjunctions %s", nameString), func(t *testing.T) {
+
+			t.Parallel()
+
+			var oldCode = fmt.Sprintf(`
+                access(all) contract %[1]s Test {
+                    access(all) resource %[1]s R {
+                        access(all) fun a() %[2]s
+                        access(all) fun b() %[2]s
+                    }
+                }
+            `, codeString, functionImplString)
+
+			var newCode = fmt.Sprintf(`
+                access(all) contract %[1]s Test {
+                    access(all) entitlement E
+                    access(all) entitlement F
+                    access(all) entitlement G
+                    access(all) resource %[1]s R {
+                        access(E | F) fun a() %[2]s
+                        access(F | G) fun b() %[2]s
+                    }
+                }
+            `, codeString, functionImplString)
+
+			err := testContractUpdate(t, oldCode, newCode)
+			cause := getSingleContractUpdateErrorCause(t, err, "Test")
+			assertInvalidEntitlementsUpgradeError(t, cause, "Test.R", "Test.E, Test.F, Test.G")
+		})
+	}
+
+	test(true)
+	test(false)
 }
