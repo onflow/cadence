@@ -485,4 +485,23 @@ func NewBoundHostFunctionValue(
 	)
 }
 
+// NewUnmeteredBoundHostFunctionValue creates a bound-function value for a host-function.
+func NewUnmeteredBoundHostFunctionValue(
+	interpreter *Interpreter,
+	self Value,
+	funcType *sema.FunctionType,
+	function HostFunction,
+) BoundFunctionValue {
+
+	hostFunc := NewUnmeteredStaticHostFunctionValue(funcType, function)
+
+	return NewBoundFunctionValue(
+		interpreter,
+		hostFunc,
+		&self,
+		nil,
+		nil,
+	)
+}
+
 type BoundFunctionGenerator func(MemberAccessibleValue) BoundFunctionValue

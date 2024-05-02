@@ -24,7 +24,8 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func NewStandardLibraryFunction(
+// NewStandardLibraryStaticFunction should only be used for creating static functions.
+func NewStandardLibraryStaticFunction(
 	name string,
 	functionType *sema.FunctionType,
 	docString string,

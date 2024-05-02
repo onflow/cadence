@@ -36,16 +36,21 @@ type TestContractType struct {
 	CompositeType            *sema.CompositeType
 	InitializerTypes         []sema.Type
 	emulatorBackendType      *testEmulatorBackendType
-	expectFunction           interpreter.FunctionValue
-	newMatcherFunction       interpreter.FunctionValue
-	haveElementCountFunction interpreter.FunctionValue
-	beEmptyFunction          interpreter.FunctionValue
-	equalFunction            interpreter.FunctionValue
-	beGreaterThanFunction    interpreter.FunctionValue
-	containFunction          interpreter.FunctionValue
-	beLessThanFunction       interpreter.FunctionValue
-	expectFailureFunction    interpreter.FunctionValue
+	expectFunction           testContractBoundFunctionGenerator
+	newMatcherFunction       testContractBoundFunctionGenerator
+	haveElementCountFunction testContractBoundFunctionGenerator
+	beEmptyFunction          testContractBoundFunctionGenerator
+	equalFunction            testContractBoundFunctionGenerator
+	beGreaterThanFunction    testContractBoundFunctionGenerator
+	containFunction          testContractBoundFunctionGenerator
+	beLessThanFunction       testContractBoundFunctionGenerator
+	expectFailureFunction    testContractBoundFunctionGenerator
 }
+
+type testContractBoundFunctionGenerator func(
+	*interpreter.Interpreter,
+	*interpreter.CompositeValue,
+) interpreter.BoundFunctionValue
 
 // 'Test.assert' function
 
@@ -73,33 +78,40 @@ var testTypeAssertFunctionType = &sema.FunctionType{
 	Arity: &sema.Arity{Min: 1, Max: 2},
 }
 
-var testTypeAssertFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
-	testTypeAssertFunctionType,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		condition, ok := invocation.Arguments[0].(interpreter.BoolValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		var message string
-		if len(invocation.Arguments) > 1 {
-			messageValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+func testTypeAssertFunction(
+	inter *interpreter.Interpreter,
+	testContractValue *interpreter.CompositeValue,
+) interpreter.BoundFunctionValue {
+	return interpreter.NewUnmeteredBoundHostFunctionValue(
+		inter,
+		testContractValue,
+		testTypeAssertFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			condition, ok := invocation.Arguments[0].(interpreter.BoolValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
-			message = messageValue.Str
-		}
 
-		if !condition {
-			panic(AssertionError{
-				Message:       message,
-				LocationRange: invocation.LocationRange,
-			})
-		}
+			var message string
+			if len(invocation.Arguments) > 1 {
+				messageValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				message = messageValue.Str
+			}
 
-		return interpreter.Void
-	},
-)
+			if !condition {
+				panic(AssertionError{
+					Message:       message,
+					LocationRange: invocation.LocationRange,
+				})
+			}
+
+			return interpreter.Void
+		},
+	)
+}
 
 // 'Test.assertEqual' function
 
@@ -132,56 +144,63 @@ var testTypeAssertEqualFunctionType = &sema.FunctionType{
 	),
 }
 
-var testTypeAssertEqualFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
-	testTypeAssertEqualFunctionType,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		expected, ok := invocation.Arguments[0].(interpreter.EquatableValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+func testTypeAssertEqualFunction(
+	inter *interpreter.Interpreter,
+	testContractValue *interpreter.CompositeValue,
+) interpreter.BoundFunctionValue {
+	return interpreter.NewUnmeteredBoundHostFunctionValue(
+		inter,
+		testContractValue,
+		testTypeAssertEqualFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			expected, ok := invocation.Arguments[0].(interpreter.EquatableValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		actual, ok := invocation.Arguments[1].(interpreter.EquatableValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+			actual, ok := invocation.Arguments[1].(interpreter.EquatableValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		inter := invocation.Interpreter
+			inter := invocation.Interpreter
 
-		expectedType := expected.StaticType(inter)
-		actualType := actual.StaticType(inter)
-		if !expectedType.Equal(actualType) {
-			message := fmt.Sprintf(
-				"not equal types: expected: %s, actual: %s",
-				expectedType,
-				actualType,
-			)
-			panic(AssertionError{
-				Message:       message,
-				LocationRange: invocation.LocationRange,
-			})
-		}
+			expectedType := expected.StaticType(inter)
+			actualType := actual.StaticType(inter)
+			if !expectedType.Equal(actualType) {
+				message := fmt.Sprintf(
+					"not equal types: expected: %s, actual: %s",
+					expectedType,
+					actualType,
+				)
+				panic(AssertionError{
+					Message:       message,
+					LocationRange: invocation.LocationRange,
+				})
+			}
 
-		equal := expected.Equal(
-			inter,
-			invocation.LocationRange,
-			actual,
-		)
-
-		if !equal {
-			message := fmt.Sprintf(
-				"not equal: expected: %s, actual: %s",
-				expected,
+			equal := expected.Equal(
+				inter,
+				invocation.LocationRange,
 				actual,
 			)
-			panic(AssertionError{
-				Message:       message,
-				LocationRange: invocation.LocationRange,
-			})
-		}
 
-		return interpreter.Void
-	},
-)
+			if !equal {
+				message := fmt.Sprintf(
+					"not equal: expected: %s, actual: %s",
+					expected,
+					actual,
+				)
+				panic(AssertionError{
+					Message:       message,
+					LocationRange: invocation.LocationRange,
+				})
+			}
+
+			return interpreter.Void
+		},
+	)
+}
 
 // 'Test.fail' function
 
@@ -204,24 +223,31 @@ var testTypeFailFunctionType = &sema.FunctionType{
 	Arity: &sema.Arity{Min: 0, Max: 1},
 }
 
-var testTypeFailFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
-	testTypeFailFunctionType,
-	func(invocation interpreter.Invocation) interpreter.Value {
-		var message string
-		if len(invocation.Arguments) > 0 {
-			messageValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
+func testTypeFailFunction(
+	inter *interpreter.Interpreter,
+	testContractValue *interpreter.CompositeValue,
+) interpreter.BoundFunctionValue {
+	return interpreter.NewUnmeteredBoundHostFunctionValue(
+		inter,
+		testContractValue,
+		testTypeFailFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			var message string
+			if len(invocation.Arguments) > 0 {
+				messageValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				message = messageValue.Str
 			}
-			message = messageValue.Str
-		}
 
-		panic(AssertionError{
-			Message:       message,
-			LocationRange: invocation.LocationRange,
-		})
-	},
-)
+			panic(AssertionError{
+				Message:       message,
+				LocationRange: invocation.LocationRange,
+			})
+		},
+	)
+}
 
 // 'Test.expect' function
 
@@ -262,41 +288,45 @@ func newTestTypeExpectFunctionType(matcherType *sema.CompositeType) *sema.Functi
 	}
 }
 
-func newTestTypeExpectFunction(functionType *sema.FunctionType) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
-		functionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			value := invocation.Arguments[0]
+func newTestTypeExpectFunction(functionType *sema.FunctionType) testContractBoundFunctionGenerator {
+	return func(inter *interpreter.Interpreter, testContractValue *interpreter.CompositeValue) interpreter.BoundFunctionValue {
+		return interpreter.NewUnmeteredBoundHostFunctionValue(
+			inter,
+			testContractValue,
+			functionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				value := invocation.Arguments[0]
 
-			matcher, ok := invocation.Arguments[1].(*interpreter.CompositeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+				matcher, ok := invocation.Arguments[1].(*interpreter.CompositeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
-			inter := invocation.Interpreter
-			locationRange := invocation.LocationRange
+				inter := invocation.Interpreter
+				locationRange := invocation.LocationRange
 
-			result := invokeMatcherTest(
-				inter,
-				matcher,
-				value,
-				locationRange,
-			)
-
-			if !result {
-				message := fmt.Sprintf(
-					"given value is: %s",
+				result := invokeMatcherTest(
+					inter,
+					matcher,
 					value,
+					locationRange,
 				)
-				panic(AssertionError{
-					Message:       message,
-					LocationRange: locationRange,
-				})
-			}
 
-			return interpreter.Void
-		},
-	)
+				if !result {
+					message := fmt.Sprintf(
+						"given value is: %s",
+						value,
+					)
+					panic(AssertionError{
+						Message:       message,
+						LocationRange: locationRange,
+					})
+				}
+
+				return interpreter.Void
+			},
+		)
+	}
 }
 
 func invokeMatcherTest(
@@ -360,8 +390,14 @@ var testTypeReadFileFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.StringTypeAnnotation,
 }
 
-func newTestTypeReadFileFunction(testFramework TestFramework) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
+func newTestTypeReadFileFunction(
+	testFramework TestFramework,
+	inter *interpreter.Interpreter,
+	testContractValue *interpreter.CompositeValue,
+) interpreter.BoundFunctionValue {
+	return interpreter.NewUnmeteredBoundHostFunctionValue(
+		inter,
+		testContractValue,
 		testTypeReadFileFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			pathString, ok := invocation.Arguments[0].(*interpreter.StringValue)
@@ -439,22 +475,26 @@ func newTestTypeNewMatcherFunctionType(matcherType *sema.CompositeType) *sema.Fu
 func newTestTypeNewMatcherFunction(
 	newMatcherFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
-) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
-		newMatcherFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			test, ok := invocation.Arguments[0].(interpreter.FunctionValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+) testContractBoundFunctionGenerator {
+	return func(inter *interpreter.Interpreter, testContractValue *interpreter.CompositeValue) interpreter.BoundFunctionValue {
+		return interpreter.NewUnmeteredBoundHostFunctionValue(
+			inter,
+			testContractValue,
+			newMatcherFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				test, ok := invocation.Arguments[0].(interpreter.FunctionValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
-			return newMatcherWithGenericTestFunction(
-				invocation,
-				test,
-				matcherTestFunctionType,
-			)
-		},
-	)
+				return newMatcherWithGenericTestFunction(
+					invocation,
+					test,
+					matcherTestFunctionType,
+				)
+			},
+		)
+	}
 }
 
 // `Test.equal`
@@ -495,45 +535,49 @@ func newTestTypeEqualFunctionType(matcherType *sema.CompositeType) *sema.Functio
 func newTestTypeEqualFunction(
 	equalFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
-) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
-		equalFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			otherValue, ok := invocation.Arguments[0].(interpreter.EquatableValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+) testContractBoundFunctionGenerator {
+	return func(inter *interpreter.Interpreter, testContractValue *interpreter.CompositeValue) interpreter.BoundFunctionValue {
+		return interpreter.NewUnmeteredBoundHostFunctionValue(
+			inter,
+			testContractValue,
+			equalFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				otherValue, ok := invocation.Arguments[0].(interpreter.EquatableValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
-			inter := invocation.Interpreter
+				inter := invocation.Interpreter
 
-			// This is a static function.
-			equalTestFunc := interpreter.NewStaticHostFunctionValue(
-				nil,
-				matcherTestFunctionType,
-				func(invocation interpreter.Invocation) interpreter.Value {
+				// This is a static function.
+				equalTestFunc := interpreter.NewStaticHostFunctionValue(
+					nil,
+					matcherTestFunctionType,
+					func(invocation interpreter.Invocation) interpreter.Value {
 
-					thisValue, ok := invocation.Arguments[0].(interpreter.EquatableValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
+						thisValue, ok := invocation.Arguments[0].(interpreter.EquatableValue)
+						if !ok {
+							panic(errors.NewUnreachableError())
+						}
 
-					equal := thisValue.Equal(
-						inter,
-						invocation.LocationRange,
-						otherValue,
-					)
+						equal := thisValue.Equal(
+							inter,
+							invocation.LocationRange,
+							otherValue,
+						)
 
-					return interpreter.AsBoolValue(equal)
-				},
-			)
+						return interpreter.AsBoolValue(equal)
+					},
+				)
 
-			return newMatcherWithGenericTestFunction(
-				invocation,
-				equalTestFunc,
-				matcherTestFunctionType,
-			)
-		},
-	)
+				return newMatcherWithGenericTestFunction(
+					invocation,
+					equalTestFunc,
+					matcherTestFunctionType,
+				)
+			},
+		)
+	}
 }
 
 // `Test.beEmpty`
@@ -555,36 +599,40 @@ func newTestTypeBeEmptyFunctionType(matcherType *sema.CompositeType) *sema.Funct
 func newTestTypeBeEmptyFunction(
 	beEmptyFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
-) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
-		beEmptyFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
+) testContractBoundFunctionGenerator {
+	return func(inter *interpreter.Interpreter, testContractValue *interpreter.CompositeValue) interpreter.BoundFunctionValue {
+		return interpreter.NewUnmeteredBoundHostFunctionValue(
+			inter,
+			testContractValue,
+			beEmptyFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
 
-			// This is a static function.
-			beEmptyTestFunc := interpreter.NewStaticHostFunctionValue(
-				nil,
-				matcherTestFunctionType,
-				func(invocation interpreter.Invocation) interpreter.Value {
-					var isEmpty bool
-					switch value := invocation.Arguments[0].(type) {
-					case *interpreter.ArrayValue:
-						isEmpty = value.Count() == 0
-					case *interpreter.DictionaryValue:
-						isEmpty = value.Count() == 0
-					default:
-						panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
-					}
+				// This is a static function.
+				beEmptyTestFunc := interpreter.NewStaticHostFunctionValue(
+					nil,
+					matcherTestFunctionType,
+					func(invocation interpreter.Invocation) interpreter.Value {
+						var isEmpty bool
+						switch value := invocation.Arguments[0].(type) {
+						case *interpreter.ArrayValue:
+							isEmpty = value.Count() == 0
+						case *interpreter.DictionaryValue:
+							isEmpty = value.Count() == 0
+						default:
+							panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
+						}
 
-					return interpreter.AsBoolValue(isEmpty)
-				},
-			)
+						return interpreter.AsBoolValue(isEmpty)
+					},
+				)
 
-			return newMatcherWithAnyStructTestFunction(
-				invocation,
-				beEmptyTestFunc,
-			)
-		},
-	)
+				return newMatcherWithAnyStructTestFunction(
+					invocation,
+					beEmptyTestFunc,
+				)
+			},
+		)
+	}
 }
 
 // `Test.haveElementCount`
@@ -613,40 +661,44 @@ func newTestTypeHaveElementCountFunctionType(matcherType *sema.CompositeType) *s
 func newTestTypeHaveElementCountFunction(
 	haveElementCountFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
-) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
-		haveElementCountFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			count, ok := invocation.Arguments[0].(interpreter.IntValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+) testContractBoundFunctionGenerator {
+	return func(inter *interpreter.Interpreter, testContractValue *interpreter.CompositeValue) interpreter.BoundFunctionValue {
+		return interpreter.NewUnmeteredBoundHostFunctionValue(
+			inter,
+			testContractValue,
+			haveElementCountFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				count, ok := invocation.Arguments[0].(interpreter.IntValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
-			// This is a static function.
-			haveElementCountTestFunc := interpreter.NewStaticHostFunctionValue(
-				nil,
-				matcherTestFunctionType,
-				func(invocation interpreter.Invocation) interpreter.Value {
-					var matchingCount bool
-					switch value := invocation.Arguments[0].(type) {
-					case *interpreter.ArrayValue:
-						matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
-					case *interpreter.DictionaryValue:
-						matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
-					default:
-						panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
-					}
+				// This is a static function.
+				haveElementCountTestFunc := interpreter.NewStaticHostFunctionValue(
+					nil,
+					matcherTestFunctionType,
+					func(invocation interpreter.Invocation) interpreter.Value {
+						var matchingCount bool
+						switch value := invocation.Arguments[0].(type) {
+						case *interpreter.ArrayValue:
+							matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
+						case *interpreter.DictionaryValue:
+							matchingCount = value.Count() == count.ToInt(invocation.LocationRange)
+						default:
+							panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
+						}
 
-					return interpreter.AsBoolValue(matchingCount)
-				},
-			)
+						return interpreter.AsBoolValue(matchingCount)
+					},
+				)
 
-			return newMatcherWithAnyStructTestFunction(
-				invocation,
-				haveElementCountTestFunc,
-			)
-		},
-	)
+				return newMatcherWithAnyStructTestFunction(
+					invocation,
+					haveElementCountTestFunc,
+				)
+			},
+		)
+	}
 }
 
 // `Test.contain`
@@ -676,50 +728,54 @@ func newTestTypeContainFunctionType(matcherType *sema.CompositeType) *sema.Funct
 func newTestTypeContainFunction(
 	containFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
-) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
-		containFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			element, ok := invocation.Arguments[0].(interpreter.EquatableValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+) testContractBoundFunctionGenerator {
+	return func(inter *interpreter.Interpreter, testContractValue *interpreter.CompositeValue) interpreter.BoundFunctionValue {
+		return interpreter.NewUnmeteredBoundHostFunctionValue(
+			inter,
+			testContractValue,
+			containFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				element, ok := invocation.Arguments[0].(interpreter.EquatableValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
-			inter := invocation.Interpreter
+				inter := invocation.Interpreter
 
-			// This is a static function.
-			containTestFunc := interpreter.NewStaticHostFunctionValue(
-				nil,
-				matcherTestFunctionType,
-				func(invocation interpreter.Invocation) interpreter.Value {
-					var elementFound interpreter.BoolValue
-					switch value := invocation.Arguments[0].(type) {
-					case *interpreter.ArrayValue:
-						elementFound = value.Contains(
-							inter,
-							invocation.LocationRange,
-							element,
-						)
-					case *interpreter.DictionaryValue:
-						elementFound = value.ContainsKey(
-							inter,
-							invocation.LocationRange,
-							element,
-						)
-					default:
-						panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
-					}
+				// This is a static function.
+				containTestFunc := interpreter.NewStaticHostFunctionValue(
+					nil,
+					matcherTestFunctionType,
+					func(invocation interpreter.Invocation) interpreter.Value {
+						var elementFound interpreter.BoolValue
+						switch value := invocation.Arguments[0].(type) {
+						case *interpreter.ArrayValue:
+							elementFound = value.Contains(
+								inter,
+								invocation.LocationRange,
+								element,
+							)
+						case *interpreter.DictionaryValue:
+							elementFound = value.ContainsKey(
+								inter,
+								invocation.LocationRange,
+								element,
+							)
+						default:
+							panic(errors.NewDefaultUserError("expected Array or Dictionary argument"))
+						}
 
-					return elementFound
-				},
-			)
+						return elementFound
+					},
+				)
 
-			return newMatcherWithAnyStructTestFunction(
-				invocation,
-				containTestFunc,
-			)
-		},
-	)
+				return newMatcherWithAnyStructTestFunction(
+					invocation,
+					containTestFunc,
+				)
+			},
+		)
+	}
 }
 
 // `Test.beGreaterThan`
@@ -748,43 +804,47 @@ func newTestTypeBeGreaterThanFunctionType(matcherType *sema.CompositeType) *sema
 func newTestTypeBeGreaterThanFunction(
 	beGreaterThanFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
-) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
-		beGreaterThanFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			otherValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+) testContractBoundFunctionGenerator {
+	return func(inter *interpreter.Interpreter, testContractValue *interpreter.CompositeValue) interpreter.BoundFunctionValue {
+		return interpreter.NewUnmeteredBoundHostFunctionValue(
+			inter,
+			testContractValue,
+			beGreaterThanFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				otherValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
-			inter := invocation.Interpreter
+				inter := invocation.Interpreter
 
-			// This is a static function.
-			beGreaterThanTestFunc := interpreter.NewStaticHostFunctionValue(
-				nil,
-				matcherTestFunctionType,
-				func(invocation interpreter.Invocation) interpreter.Value {
-					thisValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
+				// This is a static function.
+				beGreaterThanTestFunc := interpreter.NewStaticHostFunctionValue(
+					nil,
+					matcherTestFunctionType,
+					func(invocation interpreter.Invocation) interpreter.Value {
+						thisValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+						if !ok {
+							panic(errors.NewUnreachableError())
+						}
 
-					isGreaterThan := thisValue.Greater(
-						inter,
-						otherValue,
-						invocation.LocationRange,
-					)
+						isGreaterThan := thisValue.Greater(
+							inter,
+							otherValue,
+							invocation.LocationRange,
+						)
 
-					return isGreaterThan
-				},
-			)
+						return isGreaterThan
+					},
+				)
 
-			return newMatcherWithAnyStructTestFunction(
-				invocation,
-				beGreaterThanTestFunc,
-			)
-		},
-	)
+				return newMatcherWithAnyStructTestFunction(
+					invocation,
+					beGreaterThanTestFunc,
+				)
+			},
+		)
+	}
 }
 
 // `Test.beLessThan`
@@ -842,93 +902,101 @@ func newTestTypeExpectFailureFunctionType() *sema.FunctionType {
 
 func newTestTypeExpectFailureFunction(
 	testExpectFailureFunctionType *sema.FunctionType,
-) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
-		testExpectFailureFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			inter := invocation.Interpreter
-			functionValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-			functionType := functionValue.FunctionType()
-
-			errorMessage, ok := invocation.Arguments[1].(*interpreter.StringValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			failedAsExpected := true
-
-			defer inter.RecoverErrors(func(internalErr error) {
-				if !failedAsExpected {
-					panic(internalErr)
-				} else if !strings.Contains(internalErr.Error(), errorMessage.Str) {
-					msg := fmt.Sprintf(
-						"Expected error message to include: %s.",
-						errorMessage,
-					)
-					panic(
-						errors.NewDefaultUserError(msg),
-					)
+) testContractBoundFunctionGenerator {
+	return func(inter *interpreter.Interpreter, testContractValue *interpreter.CompositeValue) interpreter.BoundFunctionValue {
+		return interpreter.NewUnmeteredBoundHostFunctionValue(
+			inter,
+			testContractValue,
+			testExpectFailureFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				inter := invocation.Interpreter
+				functionValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
 				}
-			})
+				functionType := functionValue.FunctionType()
 
-			_, err := inter.InvokeExternally(
-				functionValue,
-				functionType,
-				nil,
-			)
-			if err == nil {
-				failedAsExpected = false
-				panic(errors.NewDefaultUserError("Expected a failure, but found none."))
-			}
+				errorMessage, ok := invocation.Arguments[1].(*interpreter.StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
-			return interpreter.Void
-		},
-	)
+				failedAsExpected := true
+
+				defer inter.RecoverErrors(func(internalErr error) {
+					if !failedAsExpected {
+						panic(internalErr)
+					} else if !strings.Contains(internalErr.Error(), errorMessage.Str) {
+						msg := fmt.Sprintf(
+							"Expected error message to include: %s.",
+							errorMessage,
+						)
+						panic(
+							errors.NewDefaultUserError(msg),
+						)
+					}
+				})
+
+				_, err := inter.InvokeExternally(
+					functionValue,
+					functionType,
+					nil,
+				)
+				if err == nil {
+					failedAsExpected = false
+					panic(errors.NewDefaultUserError("Expected a failure, but found none."))
+				}
+
+				return interpreter.Void
+			},
+		)
+	}
 }
 
 func newTestTypeBeLessThanFunction(
 	beLessThanFunctionType *sema.FunctionType,
 	matcherTestFunctionType *sema.FunctionType,
-) interpreter.FunctionValue {
-	return interpreter.NewUnmeteredStaticHostFunctionValue(
-		beLessThanFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
-			otherValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+) testContractBoundFunctionGenerator {
+	return func(inter *interpreter.Interpreter, testContractValue *interpreter.CompositeValue) interpreter.BoundFunctionValue {
+		return interpreter.NewUnmeteredBoundHostFunctionValue(
+			inter,
+			testContractValue,
+			beLessThanFunctionType,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				otherValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
-			inter := invocation.Interpreter
+				inter := invocation.Interpreter
 
-			// This is a static function.
-			beLessThanTestFunc := interpreter.NewStaticHostFunctionValue(
-				nil,
-				matcherTestFunctionType,
-				func(invocation interpreter.Invocation) interpreter.Value {
-					thisValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
-					if !ok {
-						panic(errors.NewUnreachableError())
-					}
+				// This is a static function.
+				beLessThanTestFunc := interpreter.NewStaticHostFunctionValue(
+					nil,
+					matcherTestFunctionType,
+					func(invocation interpreter.Invocation) interpreter.Value {
+						thisValue, ok := invocation.Arguments[0].(interpreter.NumberValue)
+						if !ok {
+							panic(errors.NewUnreachableError())
+						}
 
-					isLessThan := thisValue.Less(
-						inter,
-						otherValue,
-						invocation.LocationRange,
-					)
+						isLessThan := thisValue.Less(
+							inter,
+							otherValue,
+							invocation.LocationRange,
+						)
 
-					return isLessThan
-				},
-			)
+						return isLessThan
+					},
+				)
 
-			return newMatcherWithAnyStructTestFunction(
-				invocation,
-				beLessThanTestFunc,
-			)
-		},
-	)
+				return newMatcherWithAnyStructTestFunction(
+					invocation,
+					beLessThanTestFunc,
+				)
+			},
+		)
+	}
 }
 
 func newTestContractType() *TestContractType {
@@ -1251,22 +1319,24 @@ func (t *TestContractType) NewTestContract(
 	compositeValue := value.(*interpreter.CompositeValue)
 
 	// Inject natively implemented function values
-	compositeValue.Functions.Set(testTypeAssertFunctionName, testTypeAssertFunction)
-	compositeValue.Functions.Set(testTypeAssertEqualFunctionName, testTypeAssertEqualFunction)
-	compositeValue.Functions.Set(testTypeFailFunctionName, testTypeFailFunction)
-	compositeValue.Functions.Set(testTypeExpectFunctionName, t.expectFunction)
-	compositeValue.Functions.Set(testTypeReadFileFunctionName,
-		newTestTypeReadFileFunction(testFramework))
+	compositeValue.Functions.Set(testTypeAssertFunctionName, testTypeAssertFunction(inter, compositeValue))
+	compositeValue.Functions.Set(testTypeAssertEqualFunctionName, testTypeAssertEqualFunction(inter, compositeValue))
+	compositeValue.Functions.Set(testTypeFailFunctionName, testTypeFailFunction(inter, compositeValue))
+	compositeValue.Functions.Set(testTypeExpectFunctionName, t.expectFunction(inter, compositeValue))
+	compositeValue.Functions.Set(
+		testTypeReadFileFunctionName,
+		newTestTypeReadFileFunction(testFramework, inter, compositeValue),
+	)
 
 	// Inject natively implemented matchers
-	compositeValue.Functions.Set(testTypeNewMatcherFunctionName, t.newMatcherFunction)
-	compositeValue.Functions.Set(testTypeEqualFunctionName, t.equalFunction)
-	compositeValue.Functions.Set(testTypeBeEmptyFunctionName, t.beEmptyFunction)
-	compositeValue.Functions.Set(testTypeHaveElementCountFunctionName, t.haveElementCountFunction)
-	compositeValue.Functions.Set(testTypeContainFunctionName, t.containFunction)
-	compositeValue.Functions.Set(testTypeBeGreaterThanFunctionName, t.beGreaterThanFunction)
-	compositeValue.Functions.Set(testTypeBeLessThanFunctionName, t.beLessThanFunction)
-	compositeValue.Functions.Set(testExpectFailureFunctionName, t.expectFailureFunction)
+	compositeValue.Functions.Set(testTypeNewMatcherFunctionName, t.newMatcherFunction(inter, compositeValue))
+	compositeValue.Functions.Set(testTypeEqualFunctionName, t.equalFunction(inter, compositeValue))
+	compositeValue.Functions.Set(testTypeBeEmptyFunctionName, t.beEmptyFunction(inter, compositeValue))
+	compositeValue.Functions.Set(testTypeHaveElementCountFunctionName, t.haveElementCountFunction(inter, compositeValue))
+	compositeValue.Functions.Set(testTypeContainFunctionName, t.containFunction(inter, compositeValue))
+	compositeValue.Functions.Set(testTypeBeGreaterThanFunctionName, t.beGreaterThanFunction(inter, compositeValue))
+	compositeValue.Functions.Set(testTypeBeLessThanFunctionName, t.beLessThanFunction(inter, compositeValue))
+	compositeValue.Functions.Set(testExpectFailureFunctionName, t.expectFailureFunction(inter, compositeValue))
 
 	return compositeValue, nil
 }

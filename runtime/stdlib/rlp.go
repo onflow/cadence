@@ -44,6 +44,7 @@ func (e RLPDecodeStringError) Error() string {
 
 const rlpErrMsgInputContainsExtraBytes = "input data is expected to be RLP-encoded of a single string or a single list but it seems it contains extra trailing bytes."
 
+// rlpDecodeStringFunction is a static function
 var rlpDecodeStringFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 	RLPTypeDecodeStringFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {
@@ -93,6 +94,7 @@ func (e RLPDecodeListError) Error() string {
 	return fmt.Sprintf("failed to RLP-decode list: %s", e.Msg)
 }
 
+// rlpDecodeListFunction is a static function
 var rlpDecodeListFunction = interpreter.NewUnmeteredStaticHostFunctionValue(
 	RLPTypeDecodeListFunctionType,
 	func(invocation interpreter.Invocation) interpreter.Value {

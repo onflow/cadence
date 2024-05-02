@@ -71,6 +71,8 @@ func newHashAlgorithmHashFunction(
 	hashAlgoValue interpreter.MemberAccessibleValue,
 	hasher Hasher,
 ) *interpreter.HostFunctionValue {
+	// TODO: should ideally create a bound-host function.
+	// But the interpreter is not available at this point.
 	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		sema.HashAlgorithmTypeHashFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -99,6 +101,8 @@ func newHashAlgorithmHashWithTagFunction(
 	hashAlgorithmValue interpreter.MemberAccessibleValue,
 	hasher Hasher,
 ) *interpreter.HostFunctionValue {
+	// TODO: should ideally create a bound-host function.
+	// But the interpreter is not available at this point.
 	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		sema.HashAlgorithmTypeHashWithTagFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {

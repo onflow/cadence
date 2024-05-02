@@ -53,7 +53,7 @@ var assertFunctionType = &sema.FunctionType{
 	Arity: &sema.Arity{Min: 1, Max: 2},
 }
 
-var AssertFunction = NewStandardLibraryFunction(
+var AssertFunction = NewStandardLibraryStaticFunction(
 	"assert",
 	assertFunctionType,
 	assertFunctionDocString,

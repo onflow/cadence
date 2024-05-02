@@ -55,7 +55,7 @@ var panicFunctionType = sema.NewSimpleFunctionType(
 	sema.NeverTypeAnnotation,
 )
 
-var PanicFunction = NewStandardLibraryFunction(
+var PanicFunction = NewStandardLibraryStaticFunction(
 	"panic",
 	panicFunctionType,
 	panicFunctionDocString,
