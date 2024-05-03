@@ -25,6 +25,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -2760,4 +2762,325 @@ func TestFixLoadedBrokenReferences(t *testing.T) {
 
 	err = storage.CheckHealth()
 	require.NoError(t, err)
+}
+
+// TestMigrateNestedValue is a reproducer for issue #3288.
+// https://github.com/onflow/cadence/issues/3288
+// The reproducer uses a simplified data structure.
+func TestMigrateNestedValue(t *testing.T) {
+
+	account := common.Address{0x42}
+
+	elaboration := sema.NewElaboration(nil)
+
+	const s1QualifiedIdentifier = "S1"
+
+	elaboration.SetCompositeType(
+		utils.TestLocation.TypeID(nil, s1QualifiedIdentifier),
+		&sema.CompositeType{
+			Location:   utils.TestLocation,
+			Members:    &sema.StringMemberOrderedMap{},
+			Identifier: s1QualifiedIdentifier,
+			Kind:       common.CompositeKindStructure,
+		},
+	)
+
+	storageDomain := "storage"
+	storageMapKey := interpreter.StringStorageMapKey("foo")
+
+	createData := func(storageDomain string, storageMapKey interpreter.StorageMapKey) map[string][]byte {
+		ledger := NewTestLedger(nil, nil)
+		storage := runtime.NewStorage(ledger, nil)
+
+		inter, err := interpreter.NewInterpreter(
+			&interpreter.Program{
+				Elaboration: elaboration,
+			},
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                     storage,
+				AtreeValueValidationEnabled: true,
+				// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+				AtreeStorageValidationEnabled: false,
+			},
+		)
+		require.NoError(t, err)
+
+		dictionaryAnyStructStaticType :=
+			interpreter.NewDictionaryStaticType(
+				nil,
+				interpreter.PrimitiveStaticTypeAnyStruct,
+				interpreter.PrimitiveStaticTypeAnyStruct,
+			)
+
+		// Nested data structure in testnet account 0xa47a2d3a3b7e9133:
+		// dictionary (not inlined) ->
+		// 	  composite (inlined) ->
+		//    	  dictionary (inlined) ->
+		//    		  composite (inlined) ->
+		//    			  dictionary (not inlined)
+
+		// Nested data stucture used to reproduce issue #3288:
+		// "parentDict" (not inlined) ->
+		//     "childComposite" (inlined) ->
+		//         "gchildDict" (not inlined)
+
+		// Create a dictionary value with 10 elements:
+		// {
+		//	    "grand_child_dict_key_0":"grand_child_dict_value_0",
+		//      ...,
+		//      "grand_child_dict_key_9":"grand_child_dict_value_9"
+		// }
+		const gchildDictCount = 10
+		gchildDictElements := make([]interpreter.Value, 0, 2*gchildDictCount)
+		for i := 0; i < gchildDictCount; i++ {
+			k := interpreter.NewUnmeteredStringValue("grand_child_dict_key_" + strconv.Itoa(i))
+			v := interpreter.NewUnmeteredStringValue("grand_child_dict_value_" + strconv.Itoa(i))
+			gchildDictElements = append(gchildDictElements, k, v)
+		}
+
+		gchildDict := interpreter.NewDictionaryValue(
+			inter,
+			emptyLocationRange,
+			dictionaryAnyStructStaticType,
+			gchildDictElements...,
+		)
+
+		// Create a composite value with 1 field "bar":
+		// {
+		//     bar:{
+		//	        "grand_child_dict_key_0":"grand_child_dict_value_0",
+		//          ...,
+		//          "grand_child_dict_key_9":"grand_child_dict_value_9"
+		//     }
+		// }
+		// Under the hood, nested dictionary is referenced by atree SlabID (not inlined).
+		childComposite := interpreter.NewCompositeValue(
+			inter,
+			emptyLocationRange,
+			utils.TestLocation,
+			s1QualifiedIdentifier,
+			common.CompositeKindStructure,
+			[]interpreter.CompositeField{
+				{
+					Name:  "bar",
+					Value: gchildDict,
+				},
+			},
+			common.ZeroAddress,
+		)
+
+		// Create a dictionary value with 20 elements:
+		// {
+		//	    "parent_dict_key_0": {bar:{"grand_child_dict_key_0":"grand_child_dict_value_0", ...}},
+		//      ...,
+		//      "parent_dict_key_19":"parent_dict_value_19"
+		// }
+		// Under the hood, nested composite (childComposite) is inlined, while gchildDict remains to be not inlined.
+		const parentDictCount = 20
+		parentDictElements := make([]interpreter.Value, 0, 2*parentDictCount)
+		for i := 0; i < parentDictCount; i++ {
+			var k, v interpreter.Value
+
+			k = interpreter.NewUnmeteredStringValue("parent_dict_key_" + strconv.Itoa(i))
+
+			if i == 0 {
+				v = childComposite
+			} else {
+				v = interpreter.NewUnmeteredStringValue("parent_dict_value_" + strconv.Itoa(i))
+			}
+
+			parentDictElements = append(parentDictElements, k, v)
+		}
+
+		parentDict := interpreter.NewDictionaryValueWithAddress(
+			inter,
+			emptyLocationRange,
+			dictionaryAnyStructStaticType,
+			account,
+			parentDictElements...,
+		)
+
+		// Create storage map under "storage" domain.
+		storageMap := storage.GetStorageMap(account, storageDomain, true)
+
+		// Add parentDict (not inlined) to storage map.
+		exist := storageMap.WriteValue(inter, storageMapKey, parentDict)
+		require.False(t, exist)
+
+		err = storage.Commit(inter, true)
+		require.NoError(t, err)
+
+		// Expect 4 registers:
+		// - register contains slab index for storage map of "storage" domain
+		// - register for storage map of "storage" domain
+		// - register for parentDict
+		// - register for gchildDict
+		const expectedNonEmptyRegisterCount = 4
+
+		// Verify that not empty registers
+		storedValues := ledger.StoredValues
+		nonEmptyRegisterCount := 0
+		for _, v := range storedValues {
+			if len(v) > 0 {
+				nonEmptyRegisterCount++
+			}
+		}
+		require.Equal(t, expectedNonEmptyRegisterCount, nonEmptyRegisterCount)
+
+		return storedValues
+	}
+
+	ledgerData := createData(storageDomain, storageMapKey)
+
+	// Check health of ledger data before migration.
+	checkHealth(t, account, ledgerData)
+
+	ledger := NewTestLedgerWithData(
+		nil,
+		nil,
+		ledgerData,
+		map[string]uint64{string(account[:]): uint64(len(ledgerData))},
+	)
+
+	storage := runtime.NewStorage(ledger, nil)
+
+	inter, err := interpreter.NewInterpreter(
+		&interpreter.Program{
+			Elaboration: elaboration,
+		},
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage:                     storage,
+			AtreeValueValidationEnabled: true,
+			// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+			AtreeStorageValidationEnabled: false,
+		},
+	)
+
+	storageMap := storage.GetStorageMap(account, storageDomain, false)
+	require.NotNil(t, storageMap)
+
+	value := storageMap.ReadValue(inter, storageMapKey)
+	require.NotNil(t, value)
+
+	migration, err := NewStorageMigration(
+		inter,
+		storage,
+		"test",
+		account,
+	)
+	require.NoError(t, err)
+
+	reporter := newTestReporter()
+
+	// Migration migrates all gchildDict element values from "grand_child_dict_value_x" to 0.
+	// This causes gchildDict (was not inlined) to be inlined in its parent childComposite.
+	// So after migration, number of registers should be decreased by 1 (from not inlined to inlined).
+	migration.MigrateNestedValue(
+		interpreter.StorageKey{
+			Key:     storageDomain,
+			Address: account,
+		},
+		storageMapKey,
+		value,
+		[]ValueMigration{
+			testMigration{inter: inter},
+		},
+		reporter,
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Check health of ledger data after migration.
+	checkHealth(t, account, ledger.StoredValues)
+}
+
+func checkHealth(t *testing.T, account common.Address, storedValues map[string][]byte) {
+	ledger := NewTestLedgerWithData(nil, nil, storedValues, nil)
+
+	storage := runtime.NewStorage(ledger, nil)
+
+	// Load storage maps
+	for _, domain := range common.AllPathDomains {
+		_ = storage.GetStorageMap(account, domain.Identifier(), false)
+	}
+
+	// Load atree slabs
+	err := loadAtreeSlabsInStorge(storage, account, storedValues)
+	require.NoError(t, err)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+}
+
+type testMigration struct {
+	inter *interpreter.Interpreter
+}
+
+var _ ValueMigration = testMigration{}
+
+func (testMigration) Name() string {
+	return "Test Migration"
+}
+
+func (m testMigration) Migrate(
+	key interpreter.StorageKey,
+	mapKey interpreter.StorageMapKey,
+	value interpreter.Value,
+	inter *interpreter.Interpreter,
+) (
+	interpreter.Value,
+	error,
+) {
+	switch value := value.(type) {
+	case *interpreter.StringValue:
+		if strings.HasPrefix(value.Str, "grand_child_dict_value_") {
+			return interpreter.Int64Value(0), nil
+		}
+	}
+
+	return nil, nil
+}
+
+func (m testMigration) CanSkip(_ interpreter.StaticType) bool {
+	return false
+}
+
+func (testMigration) Domains() map[string]struct{} {
+	return nil
+}
+
+func loadAtreeSlabsInStorge(storage *runtime.Storage, account common.Address, storedValues map[string][]byte) error {
+	splitKey := func(s string) (owner string, key string, err error) {
+		results := strings.Split(s, "|")
+		if len(results) != 2 {
+			return "", "", fmt.Errorf("failed to split key into owner and key: expected 2 elements, got %d elements", len(results))
+		}
+		return results[0], results[1], nil
+	}
+
+	for k := range storedValues {
+		owner, key, err := splitKey(k)
+		if err != nil {
+			return err
+		}
+
+		if key[0] != '$' {
+			continue
+		}
+
+		slabID := atree.NewSlabID(
+			atree.Address([]byte(owner[:])),
+			atree.SlabIndex([]byte(key[1:])))
+
+		// Retrieve the slab.
+		_, _, err = storage.Retrieve(slabID)
+		if err != nil {
+			return fmt.Errorf("failed to retrieve slab %s: %w", slabID, err)
+		}
+	}
+
+	return nil
 }
