@@ -29,6 +29,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/onflow/atree"
 
@@ -2778,6 +2779,91 @@ func TestFixLoadedBrokenReferences(t *testing.T) {
 //go:embed testdata/lost-slab-inlined-payloads.csv
 var lostSlabInlinedPayloads []byte
 
+type testStringNormalizingMigration struct{}
+
+var _ ValueMigration = testStringNormalizingMigration{}
+
+func (testStringNormalizingMigration) Name() string {
+	return "testStringNormalizingMigration"
+}
+
+func (testStringNormalizingMigration) Migrate(
+	_ interpreter.StorageKey,
+	_ interpreter.StorageMapKey,
+	value interpreter.Value,
+	_ *interpreter.Interpreter,
+) (
+	interpreter.Value,
+	error,
+) {
+
+	// Normalize strings and characters to NFC.
+	// If the value is already in NFC, skip the migration.
+
+	switch value := value.(type) {
+	case *interpreter.StringValue:
+		unnormalizedStr := value.UnnormalizedStr
+		normalizedStr := norm.NFC.String(unnormalizedStr)
+		if normalizedStr == unnormalizedStr {
+			return nil, nil
+		}
+		return interpreter.NewStringValue_Unsafe(normalizedStr, unnormalizedStr), nil //nolint:staticcheck
+
+	}
+
+	return nil, nil
+}
+
+func (testStringNormalizingMigration) Domains() map[string]struct{} {
+	return nil
+}
+
+func (m testStringNormalizingMigration) CanSkip(valueType interpreter.StaticType) bool {
+	return CanSkipStringNormalizingMigration(valueType)
+}
+
+func CanSkipStringNormalizingMigration(valueType interpreter.StaticType) bool {
+	switch ty := valueType.(type) {
+	case *interpreter.DictionaryStaticType:
+		return CanSkipStringNormalizingMigration(ty.KeyType) &&
+			CanSkipStringNormalizingMigration(ty.ValueType)
+
+	case interpreter.ArrayStaticType:
+		return CanSkipStringNormalizingMigration(ty.ElementType())
+
+	case *interpreter.OptionalStaticType:
+		return CanSkipStringNormalizingMigration(ty.Type)
+
+	case *interpreter.CapabilityStaticType:
+		return true
+
+	case interpreter.PrimitiveStaticType:
+
+		switch ty {
+		case interpreter.PrimitiveStaticTypeBool,
+			interpreter.PrimitiveStaticTypeVoid,
+			interpreter.PrimitiveStaticTypeAddress,
+			interpreter.PrimitiveStaticTypeMetaType,
+			interpreter.PrimitiveStaticTypeBlock,
+			interpreter.PrimitiveStaticTypeCapability:
+
+			return true
+		}
+
+		if !ty.IsDeprecated() { //nolint:staticcheck
+			semaType := ty.SemaType()
+
+			if sema.IsSubType(semaType, sema.NumberType) ||
+				sema.IsSubType(semaType, sema.PathType) {
+
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 func TestLostSlabInlinedPayloads(t *testing.T) {
 
 	t.Parallel()
@@ -2824,4 +2910,43 @@ func TestLostSlabInlinedPayloads(t *testing.T) {
 	err = storage.CheckHealth()
 	require.Error(t, err)
 
+	// Migrate
+
+	reporter := newTestReporter()
+
+	inter, err := interpreter.NewInterpreter(
+		nil,
+		utils.TestLocation,
+		&interpreter.Config{
+			Storage:                       storage,
+			AtreeValueValidationEnabled:   true,
+			AtreeStorageValidationEnabled: true,
+		},
+	)
+	require.NoError(t, err)
+
+	migration, err := NewStorageMigration(
+		inter,
+		storage,
+		"test",
+		address,
+	)
+	require.NoError(t, err)
+
+	migration.Migrate(
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			testStringNormalizingMigration{},
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
 }
