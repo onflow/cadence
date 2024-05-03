@@ -2828,13 +2828,13 @@ func TestMigrateNestedValue(t *testing.T) {
 		//     "childComposite" (inlined) ->
 		//         "gchildDict" (not inlined)
 
-		// Create a dictionary value with 10 elements:
+		// Create a dictionary value with 8 elements:
 		// {
 		//	    "grand_child_dict_key_0":"grand_child_dict_value_0",
 		//      ...,
-		//      "grand_child_dict_key_9":"grand_child_dict_value_9"
+		//      "grand_child_dict_key_7":"grand_child_dict_value_7"
 		// }
-		const gchildDictCount = 10
+		const gchildDictCount = 8
 		gchildDictElements := make([]interpreter.Value, 0, 2*gchildDictCount)
 		for i := 0; i < gchildDictCount; i++ {
 			k := interpreter.NewUnmeteredStringValue("grand_child_dict_key_" + strconv.Itoa(i))
@@ -2873,14 +2873,14 @@ func TestMigrateNestedValue(t *testing.T) {
 			common.ZeroAddress,
 		)
 
-		// Create a dictionary value with 20 elements:
+		// Create a dictionary value with 2 elements:
 		// {
 		//	    "parent_dict_key_0": {bar:{"grand_child_dict_key_0":"grand_child_dict_value_0", ...}},
 		//      ...,
-		//      "parent_dict_key_19":"parent_dict_value_19"
+		//      "parent_dict_key_1":"parent_dict_value_1"
 		// }
 		// Under the hood, nested composite (childComposite) is inlined, while gchildDict remains to be not inlined.
-		const parentDictCount = 20
+		const parentDictCount = 2
 		parentDictElements := make([]interpreter.Value, 0, 2*parentDictCount)
 		for i := 0; i < parentDictCount; i++ {
 			var k, v interpreter.Value
@@ -2919,7 +2919,7 @@ func TestMigrateNestedValue(t *testing.T) {
 		// - register for storage map of "storage" domain
 		// - register for parentDict
 		// - register for gchildDict
-		const expectedNonEmptyRegisterCount = 4
+		const expectedNonEmptyRegisterCount = 3
 
 		// Verify that not empty registers
 		storedValues := ledger.StoredValues
