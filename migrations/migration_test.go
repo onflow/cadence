@@ -2820,7 +2820,7 @@ func TestMigrateNestedValue(t *testing.T) {
 		//    		  composite (inlined) ->
 		//    			  dictionary (not inlined)
 
-		// Nested data stucture used to reproduce issue #3288:
+		// Nested data structure used to reproduce issue #3288:
 		// "parentDict" (not inlined) ->
 		//     "childComposite" (inlined) ->
 		//         "gchildDict" (not inlined)
@@ -2957,6 +2957,7 @@ func TestMigrateNestedValue(t *testing.T) {
 			AtreeStorageValidationEnabled: false,
 		},
 	)
+	require.NoError(t, err)
 
 	storageMap := storage.GetStorageMap(account, storageDomain, false)
 	require.NotNil(t, storageMap)
