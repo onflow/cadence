@@ -2677,6 +2677,41 @@ func isSlabStorageKey(key []byte) bool {
 	return len(key) == slabKeyLength && key[0] == '$'
 }
 
+func loadAccount(ledger TestLedger, storage *runtime.Storage, address common.Address) error {
+
+	err := ledger.ForEach(func(owner, key, value []byte) error {
+
+		if !isSlabStorageKey(key) {
+			return nil
+		}
+
+		// Convert the owner/key to a storage ID.
+
+		var slabIndex atree.SlabIndex
+		copy(slabIndex[:], key[1:])
+
+		storageID := atree.NewSlabID(atree.Address(owner), slabIndex)
+
+		// Retrieve the slab.
+		_, _, err := storage.Retrieve(storageID)
+		if err != nil {
+			return err
+		}
+
+		// Continue iteration
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, domain := range common.AllPathDomains {
+		_ = storage.GetStorageMap(address, domain.Identifier(), false)
+	}
+
+	return nil
+}
+
 func TestFixLoadedBrokenReferences(t *testing.T) {
 
 	t.Parallel()
@@ -2714,33 +2749,11 @@ func TestFixLoadedBrokenReferences(t *testing.T) {
 	// Check health.
 	// Retrieve all slabs before migration
 
-	err = ledger.ForEach(func(owner, key, value []byte) error {
-
-		if !isSlabStorageKey(key) {
-			return nil
-		}
-
-		// Convert the owner/key to a storage ID.
-
-		var slabIndex atree.SlabIndex
-		copy(slabIndex[:], key[1:])
-
-		storageID := atree.NewSlabID(atree.Address(owner), slabIndex)
-
-		// Retrieve the slab.
-		_, _, err = storage.Retrieve(storageID)
-		require.NoError(t, err)
-
-		return nil
-	})
-	require.NoError(t, err)
-
 	address, err := common.HexToAddress("0x5d63c34d7f05e5a4")
 	require.NoError(t, err)
 
-	for _, domain := range common.AllPathDomains {
-		_ = storage.GetStorageMap(address, domain.Identifier(), false)
-	}
+	err = loadAccount(ledger, storage, address)
+	require.NoError(t, err)
 
 	err = storage.CheckHealth()
 	require.Error(t, err)
@@ -2760,4 +2773,55 @@ func TestFixLoadedBrokenReferences(t *testing.T) {
 
 	err = storage.CheckHealth()
 	require.NoError(t, err)
+}
+
+//go:embed testdata/lost-slab-inlined-payloads.csv
+var lostSlabInlinedPayloads []byte
+
+func TestLostSlabInlinedPayloads(t *testing.T) {
+
+	t.Parallel()
+
+	// Read CSV file with test data
+
+	reader := csv.NewReader(bytes.NewReader(lostSlabInlinedPayloads))
+
+	// account, key, value
+	reader.FieldsPerRecord = 3
+
+	records, err := reader.ReadAll()
+	require.NoError(t, err)
+
+	// Load data into ledger. Skip header
+
+	ledger := NewTestLedger(nil, nil)
+
+	for _, record := range records[1:] {
+		account, err := hex.DecodeString(record[0])
+		require.NoError(t, err)
+
+		key, err := hex.DecodeString(record[1])
+		require.NoError(t, err)
+
+		value, err := hex.DecodeString(record[2])
+		require.NoError(t, err)
+
+		err = ledger.SetValue(account, key, value)
+		require.NoError(t, err)
+	}
+
+	storage := runtime.NewStorage(ledger, nil)
+
+	// Check health.
+	// Retrieve all slabs before migration
+
+	address, err := common.HexToAddress("0xa47a2d3a3b7e9133")
+	require.NoError(t, err)
+
+	err = loadAccount(ledger, storage, address)
+	require.NoError(t, err)
+
+	err = storage.CheckHealth()
+	require.Error(t, err)
+
 }
