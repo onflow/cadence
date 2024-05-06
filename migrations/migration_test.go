@@ -2914,10 +2914,9 @@ func TestMigrateNestedValue(t *testing.T) {
 		err = storage.Commit(inter, true)
 		require.NoError(t, err)
 
-		// Expect 4 registers:
+		// Expect 3 registers:
 		// - register contains slab index for storage map of "storage" domain
-		// - register for storage map of "storage" domain
-		// - register for parentDict
+		// - register for storage map of "storage" domain with parentDict inlined
 		// - register for gchildDict
 		const expectedNonEmptyRegisterCount = 3
 
@@ -3017,11 +3016,10 @@ func TestMigrateNestedValue(t *testing.T) {
 	// Check health of ledger data after migration.
 	checkHealth(t, account, ledger.StoredValues)
 
-	// Expect 3 registers:
+	// Expect 2 registers:
 	// - register contains slab index for storage map of "storage" domain
-	// - register for storage map of "storage" domain
-	// - register for parentDict (childComposite and gchildDict are inlined)
-	const expectedNonEmptyRegisterCount = 3
+	// - register for storage map of "storage" domain with parentDict, childComposite and gchildDict inlined
+	const expectedNonEmptyRegisterCount = 2
 
 	// Verify that not empty registers
 	storedValues := ledger.StoredValues
