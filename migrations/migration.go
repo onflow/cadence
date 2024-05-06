@@ -318,30 +318,22 @@ func (m *StorageMigration) MigrateNestedValue(
 			key, value interpreter.Value
 		}
 
-		// Read the keys first, so the iteration wouldn't be affected
-		// by the modification of the nested values.
-		var existingKeysAndValues []keyValuePair
+		// Migrate keys first.
 
-		iterator := dictionary.Iterator()
+		var existingKeys []interpreter.Value
 
-		for {
-			key, value := iterator.Next(nil)
-			if key == nil {
-				break
-			}
+		dictionary.IterateKeys(
+			inter,
+			func(key interpreter.Value) (resume bool) {
 
-			existingKeysAndValues = append(
-				existingKeysAndValues,
-				keyValuePair{
-					key:   key,
-					value: value,
-				},
-			)
-		}
+				existingKeys = append(existingKeys, key)
 
-		for _, existingKeyAndValue := range existingKeysAndValues {
-			existingKey := existingKeyAndValue.key
-			existingValue := existingKeyAndValue.value
+				// Continue iteration
+				return true
+			},
+		)
+
+		for _, existingKey := range existingKeys {
 
 			newKey := m.MigrateNestedValue(
 				storageKey,
@@ -351,26 +343,11 @@ func (m *StorageMigration) MigrateNestedValue(
 				reporter,
 			)
 
-			newValue := m.MigrateNestedValue(
-				storageKey,
-				storageMapKey,
-				existingValue,
-				valueMigrations,
-				reporter,
-			)
-
-			if newKey == nil && newValue == nil {
+			if newKey == nil {
 				continue
 			}
 
-			// We only reach here at least one of key or value has been migrated.
-			var keyToSet, valueToSet interpreter.Value
-
-			if newKey == nil {
-				keyToSet = existingKey
-			} else {
-				keyToSet = newKey
-			}
+			// We only reach here because key needs to be migrated.
 
 			// Remove the old key-value pair
 
@@ -387,16 +364,13 @@ func (m *StorageMigration) MigrateNestedValue(
 				))
 			}
 
-			if newValue == nil {
-				valueToSet = existingValue
-			} else {
-				// Value was migrated
-				valueToSet = newValue
+			// Remove existing key since old key is migrated
+			interpreter.StoredValue(inter, existingKeyStorable, m.storage).
+				DeepRemove(inter)
+			inter.RemoveReferencedSlab(existingKeyStorable)
 
-				interpreter.StoredValue(inter, existingValueStorable, m.storage).
-					DeepRemove(inter)
-				inter.RemoveReferencedSlab(existingValueStorable)
-			}
+			// Convert removed value storable to Value.
+			existingValue := interpreter.StoredValue(inter, existingValueStorable, m.storage)
 
 			// Handle dictionary key conflicts.
 			//
@@ -416,8 +390,28 @@ func (m *StorageMigration) MigrateNestedValue(
 			if dictionary.ContainsKey(
 				inter,
 				emptyLocationRange,
-				keyToSet,
+				newKey,
 			) {
+
+				newValue := m.MigrateNestedValue(
+					storageKey,
+					storageMapKey,
+					existingValue,
+					valueMigrations,
+					reporter,
+				)
+
+				var valueToSet interpreter.Value
+				if newValue == nil {
+					valueToSet = existingValue
+				} else {
+					valueToSet = newValue
+
+					// Remove existing value since value is migrated.
+					existingValue.DeepRemove(inter)
+					inter.RemoveReferencedSlab(existingValueStorable)
+				}
+
 				owner := dictionary.GetOwner()
 
 				pathDomain := common.PathDomainStorage
@@ -432,7 +426,7 @@ func (m *StorageMigration) MigrateNestedValue(
 				conflictDictionary.InsertWithoutTransfer(
 					inter,
 					emptyLocationRange,
-					keyToSet,
+					newKey,
 					valueToSet,
 				)
 
@@ -462,15 +456,74 @@ func (m *StorageMigration) MigrateNestedValue(
 
 			} else {
 
-				// No conflict, insert the new key-value pair
+				// No conflict, insert the new key and existing value pair
+				// Don't migrate value here because we are going to migrate all values in the dictionary next.
 
 				dictionary.InsertWithoutTransfer(
 					inter,
 					emptyLocationRange,
-					keyToSet,
-					valueToSet,
+					newKey,
+					existingValue,
 				)
 			}
+		}
+
+		// Migrate values next.
+
+		var existingKeysAndValues []keyValuePair
+
+		dictionary.Iterate(
+			inter,
+			func(key, value interpreter.Value) (resume bool) {
+
+				existingKeysAndValues = append(
+					existingKeysAndValues,
+					keyValuePair{
+						key:   key,
+						value: value,
+					},
+				)
+
+				// Continue iteration
+				return true
+			},
+			emptyLocationRange,
+		)
+
+		for _, existingKeyAndValue := range existingKeysAndValues {
+			existingKey := existingKeyAndValue.key
+			existingValue := existingKeyAndValue.value
+
+			newValue := m.MigrateNestedValue(
+				storageKey,
+				storageMapKey,
+				existingValue,
+				valueMigrations,
+				reporter,
+			)
+
+			if newValue == nil {
+				continue
+			}
+
+			// Set new value with existing key in the dictionary.
+			existingValueStorable := dictionary.InsertWithoutTransfer(
+				inter,
+				emptyLocationRange,
+				existingKey,
+				newValue,
+			)
+			if existingValueStorable == nil {
+				panic(errors.NewUnexpectedError(
+					"failed to set migrated value for key: %s",
+					existingKey,
+				))
+			}
+
+			// Remove existing value since value is migrated
+			interpreter.StoredValue(inter, existingValueStorable, m.storage).
+				DeepRemove(inter)
+			inter.RemoveReferencedSlab(existingValueStorable)
 		}
 
 	case *interpreter.PublishedValue:
