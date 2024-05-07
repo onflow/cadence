@@ -1840,6 +1840,25 @@ func TestInterpretReferenceToReference(t *testing.T) {
 		RequireError(t, err)
 		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
 	})
+
+	t.Run("nested optional reference as AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                var array: [Foo] = []
+                var optionalArrayRef: (&[Foo])? = &array as &[Foo]
+                var anyStructValue = optionalArrayRef as AnyStruct
+                var ref = &anyStructValue as &AnyStruct
+            }
+
+            struct Foo {}
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
 }
 
 func TestInterpretDereference(t *testing.T) {

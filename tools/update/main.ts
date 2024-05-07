@@ -553,8 +553,7 @@ class Releaser {
                 }
             },
             async (args) => {
-                const configData = await readFile(args.config, 'utf8')
-                const config = YAML.load(configData) as CadenceUpdateToolConfigSchema
+                const config = await loadConfig(args.config)
 
                 const versions = new Map([
                     [config.repo, args.version],
@@ -608,9 +607,41 @@ class Releaser {
                 await new Releaser(args.repo, args.branch, args.mod || '', args.version, octokit, protocol).release()
             }
         )
+        .command(
+            "mermaid",
+            "render the dependency graph as a Mermaid",
+            {
+                config: {
+                    alias: 'c',
+                    type: 'string',
+                    describe: 'The path of the config',
+                    default: 'config.yaml'
+                },
+            },
+            async (args) => {
+                const config = await loadConfig(args.config)
+
+                for (const repo of config.repos) {
+                    for (const mod of repo.mods) {
+                        let source = repo.repo
+                        if (mod.path) {
+                            source += `/${mod.path}`
+                        }
+                        for (const dep of mod.deps) {
+                            console.log(`${source} ---> ${dep}`)
+                        }
+                    }
+                }
+            }
+        )
         .parse()
 })()
 
+
+async function loadConfig(config: string): Promise<CadenceUpdateToolConfigSchema> {
+    const configData = await readFile(config, 'utf8')
+    return YAML.load(configData) as CadenceUpdateToolConfigSchema
+}
 
 async function gitClone(protocol: Protocol, fullRepoName: string, dir: string, branch?: string) {
     let prefix: string
