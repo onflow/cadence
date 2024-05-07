@@ -2971,3 +2971,135 @@ func TestDictionaryWithEnumKey(t *testing.T) {
 	})()
 
 }
+
+func TestDictionaryKeyMutationMigration(t *testing.T) {
+
+	t.Parallel()
+
+	testAddress := common.MustBytesToAddress([]byte{0x1})
+	storagePathDomain := common.PathDomainStorage.Identifier()
+	storageMapKey := interpreter.StringStorageMapKey("test")
+
+	ledger := NewTestLedger(nil, nil)
+
+	newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
+		storage := runtime.NewStorage(ledger, nil)
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage:                     storage,
+				AtreeValueValidationEnabled: true,
+				// NOTE: disabled, as storage is not expected to be always valid _during_ migration
+				AtreeStorageValidationEnabled: false,
+			},
+		)
+		require.NoError(t, err)
+
+		return storage, inter
+	}
+
+	fooQualifiedIdentifier := "Test.Foo"
+	fooType := &interpreter.CompositeStaticType{
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: fooQualifiedIdentifier,
+		TypeID:              utils.TestLocation.TypeID(nil, fooQualifiedIdentifier),
+	}
+
+	// Prepare
+	(func() {
+		storage, inter := newStorageAndInterpreter(t)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			storagePathDomain,
+			true,
+		)
+
+		// {Test.Foo: Int8}
+		dictionaryValue := interpreter.NewDictionaryValueWithAddress(
+			inter,
+			emptyLocationRange,
+			interpreter.NewDictionaryStaticType(
+				nil,
+				fooType,
+				interpreter.PrimitiveStaticTypeInt8,
+			),
+			testAddress,
+		)
+
+		// Write the dictionary value to storage before inserting values into dictionary,
+		// as the insertion of values into the dictionary triggers a storage health check,
+		// which fails if the dictionary value is not yet stored (unreferenced slabs)
+
+		storageMap.WriteValue(
+			inter,
+			storageMapKey,
+			dictionaryValue,
+		)
+
+		dictionaryKey := interpreter.NewCompositeValue(
+			inter,
+			emptyLocationRange,
+			utils.TestLocation,
+			"Foo",
+			common.CompositeKindEnum,
+			[]interpreter.CompositeField{
+				{
+					Name:  sema.EnumRawValueFieldName,
+					Value: interpreter.Int8Value(10),
+				},
+			},
+			testAddress,
+		)
+
+		dictionaryValue.InsertWithoutTransfer(
+			inter,
+			emptyLocationRange,
+			dictionaryKey,
+			interpreter.Int8Value(100),
+		)
+
+		err := storage.Commit(inter, false)
+		require.NoError(t, err)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+	})()
+
+	// Migrate
+	(func() {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		migration, err := NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
+
+		reporter := newTestReporter()
+
+		migration.Migrate(
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				testInt8Migration{},
+			),
+		)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+
+		// Assert
+
+		require.Len(t, reporter.errors, 1)
+		assert.ErrorContains(
+			t,
+			reporter.errors[0],
+			"mutation not allowed: attempting to migrate composite value field rawValue",
+		)
+
+		assert.Len(t, reporter.migrated, 1)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+	})()
+
+}

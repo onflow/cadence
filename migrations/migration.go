@@ -155,6 +155,7 @@ func (m *StorageMigration) NewValueMigrationsPathMigrator(
 				value,
 				valueMigrations,
 				reporter,
+				true,
 			)
 		},
 	)
@@ -168,6 +169,7 @@ func (m *StorageMigration) MigrateNestedValue(
 	value interpreter.Value,
 	valueMigrations []ValueMigration,
 	reporter Reporter,
+	allowMutation bool,
 ) (migratedValue interpreter.Value) {
 
 	defer func() {
@@ -226,6 +228,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			innerValue,
 			valueMigrations,
 			reporter,
+			allowMutation,
 		)
 		if newInnerValue != nil {
 			migratedValue = interpreter.NewSomeValueNonCopying(inter, newInnerValue)
@@ -249,10 +252,19 @@ func (m *StorageMigration) MigrateNestedValue(
 				element,
 				valueMigrations,
 				reporter,
+				allowMutation,
 			)
 
 			if newElement == nil {
 				continue
+			}
+
+			if !allowMutation {
+				panic(errors.NewUnexpectedError(
+					"mutation not allowed: attempting to migrate array element at index %d: %s",
+					index,
+					element,
+				))
 			}
 
 			existingStorable := array.RemoveWithoutTransfer(
@@ -297,10 +309,19 @@ func (m *StorageMigration) MigrateNestedValue(
 				existingValue,
 				valueMigrations,
 				reporter,
+				allowMutation,
 			)
 
 			if migratedValue == nil {
 				continue
+			}
+
+			if !allowMutation {
+				panic(errors.NewUnexpectedError(
+					"mutation not allowed: attempting to migrate composite value field %s: %s",
+					fieldName,
+					existingValue,
+				))
 			}
 
 			composite.SetMemberWithoutTransfer(
@@ -323,8 +344,23 @@ func (m *StorageMigration) MigrateNestedValue(
 		// The mutating iterator is only able to read new keys,
 		// as it recalculates the stored values' hashes.
 
-		m.migrateDictionaryKeys(storageKey, storageMapKey, dictionary, valueMigrations, reporter)
-		m.migrateDictionaryValues(storageKey, storageMapKey, dictionary, valueMigrations, reporter)
+		m.migrateDictionaryKeys(
+			storageKey,
+			storageMapKey,
+			dictionary,
+			valueMigrations,
+			reporter,
+			allowMutation,
+		)
+
+		m.migrateDictionaryValues(
+			storageKey,
+			storageMapKey,
+			dictionary,
+			valueMigrations,
+			reporter,
+			allowMutation,
+		)
 
 	case *interpreter.PublishedValue:
 		publishedValue := typedValue
@@ -334,6 +370,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			publishedValue.Value,
 			valueMigrations,
 			reporter,
+			allowMutation,
 		)
 		if newInnerValue != nil {
 			newInnerCapability := newInnerValue.(interpreter.CapabilityValue)
@@ -418,6 +455,7 @@ func (m *StorageMigration) migrateDictionaryKeys(
 	dictionary *interpreter.DictionaryValue,
 	valueMigrations []ValueMigration,
 	reporter Reporter,
+	allowMutation bool,
 ) {
 	inter := m.interpreter
 
@@ -442,10 +480,19 @@ func (m *StorageMigration) migrateDictionaryKeys(
 			existingKey,
 			valueMigrations,
 			reporter,
+			// NOTE: Mutation of keys is not allowed.
+			false,
 		)
 
 		if newKey == nil {
 			continue
+		}
+
+		if !allowMutation {
+			panic(errors.NewUnexpectedError(
+				"mutation not allowed: attempting to migrate dictionary key: %s",
+				existingKey,
+			))
 		}
 
 		// We only reach here because key needs to be migrated.
@@ -507,6 +554,7 @@ func (m *StorageMigration) migrateDictionaryKeys(
 				existingValue,
 				valueMigrations,
 				reporter,
+				allowMutation,
 			)
 
 			var valueToSet interpreter.Value
@@ -583,6 +631,7 @@ func (m *StorageMigration) migrateDictionaryValues(
 	dictionary *interpreter.DictionaryValue,
 	valueMigrations []ValueMigration,
 	reporter Reporter,
+	allowMutation bool,
 ) {
 
 	inter := m.interpreter
@@ -621,10 +670,18 @@ func (m *StorageMigration) migrateDictionaryValues(
 			existingValue,
 			valueMigrations,
 			reporter,
+			allowMutation,
 		)
 
 		if newValue == nil {
 			continue
+		}
+
+		if !allowMutation {
+			panic(errors.NewUnexpectedError(
+				"mutation not allowed: attempting to migrate dictionary value: %s",
+				existingValue,
+			))
 		}
 
 		// Set new value with existing key in the dictionary.
