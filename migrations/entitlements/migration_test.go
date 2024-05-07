@@ -730,6 +730,7 @@ func convertEntireTestValue(
 			testEntitlementsMigration{inter: inter},
 		},
 		reporter,
+		true,
 	)
 
 	err = migration.Commit()
