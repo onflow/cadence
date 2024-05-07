@@ -318,6 +318,15 @@ func (m *StorageMigration) MigrateNestedValue(
 			key, value interpreter.Value
 		}
 
+		// Dictionaries are migrated in two passes:
+		// First, the keys are migrated, then the values.
+		//
+		// This is necessary because in the atree register inlining version,
+		// only the read-only iterator is able to read old keys,
+		// as they potentially have different hash values.
+		// The mutating iterator is only able to read new keys,
+		// as it recalculates the stored values' hashes.
+
 		// Migrate keys first.
 
 		var existingKeys []interpreter.Value
@@ -383,16 +392,23 @@ func (m *StorageMigration) MigrateNestedValue(
 			// If key1_migrated happens to be equal to key2, then we have a conflict.
 			//
 			// Check if the key to set already exists.
+			//
 			// - If it already exists, leave it as is, and store the migrated key-value pair
 			//   into a new dictionary under a new unique storage path, and report it.
+			//
+			//   The new key that already exists, key2, was already or will be migrated,
+			//   so we must NOT handle it here (e.g. remove it from the dictionary).
+			//
 			// - If it does not exist, insert the migrated key-value pair normally.
+
+			// NOTE: Do NOT attempt to change the logic here to instead remove newKey
+			// and move it to the new dictionary instead!
 
 			if dictionary.ContainsKey(
 				inter,
 				emptyLocationRange,
 				newKey,
 			) {
-
 				newValue := m.MigrateNestedValue(
 					storageKey,
 					storageMapKey,
