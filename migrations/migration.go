@@ -259,6 +259,10 @@ func (m *StorageMigration) MigrateNestedValue(
 				continue
 			}
 
+			// We should only check if we're allowed to mutate if we actually are going to mutate,
+			// i.e. if newValue != nil. It might be the case that none of the values need to be migrated,
+			// in which case we should not panic with an error that we're not allowed to mutate
+
 			if !allowMutation {
 				panic(errors.NewUnexpectedError(
 					"mutation not allowed: attempting to migrate array element at index %d: %s",
@@ -315,6 +319,10 @@ func (m *StorageMigration) MigrateNestedValue(
 			if newValue == nil {
 				continue
 			}
+
+			// We should only check if we're allowed to mutate if we actually are going to mutate,
+			// i.e. if newValue != nil. It might be the case that none of the values need to be migrated,
+			// in which case we should not panic with an error that we're not allowed to mutate
 
 			if !allowMutation {
 				panic(errors.NewUnexpectedError(
@@ -487,6 +495,10 @@ func (m *StorageMigration) migrateDictionaryKeys(
 		if newKey == nil {
 			continue
 		}
+
+		// We should only check if we're allowed to mutate if we actually are going to mutate,
+		// i.e. if newKey != nil. It might be the case that none of the keys need to be migrated,
+		// in which case we should not panic with an error that we're not allowed to mutate
 
 		if !allowMutation {
 			panic(errors.NewUnexpectedError(
@@ -676,6 +688,10 @@ func (m *StorageMigration) migrateDictionaryValues(
 		if newValue == nil {
 			continue
 		}
+
+		// We should only check if we're allowed to mutate if we actually are going to mutate,
+		// i.e. if newValue != nil. It might be the case that none of the values need to be migrated,
+		// in which case we should not panic with an error that we're not allowed to mutate
 
 		if !allowMutation {
 			panic(errors.NewUnexpectedError(
