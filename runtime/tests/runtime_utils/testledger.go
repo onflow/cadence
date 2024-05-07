@@ -129,3 +129,43 @@ func NewTestLedger(
 		},
 	}
 }
+
+func NewTestLedgerWithData(
+	onRead func(owner, key, value []byte),
+	onWrite func(owner, key, value []byte),
+	storedValues map[string][]byte,
+	storageIndices map[string]uint64,
+) TestLedger {
+
+	storageKey := func(owner, key string) string {
+		return strings.Join([]string{owner, key}, "|")
+	}
+
+	return TestLedger{
+		StoredValues: storedValues,
+		OnValueExists: func(owner, key []byte) (bool, error) {
+			value := storedValues[storageKey(string(owner), string(key))]
+			return len(value) > 0, nil
+		},
+		OnGetValue: func(owner, key []byte) (value []byte, err error) {
+			value = storedValues[storageKey(string(owner), string(key))]
+			if onRead != nil {
+				onRead(owner, key, value)
+			}
+			return value, nil
+		},
+		OnSetValue: func(owner, key, value []byte) (err error) {
+			storedValues[storageKey(string(owner), string(key))] = value
+			if onWrite != nil {
+				onWrite(owner, key, value)
+			}
+			return nil
+		},
+		OnAllocateSlabIndex: func(owner []byte) (result atree.SlabIndex, err error) {
+			index := storageIndices[string(owner)] + 1
+			storageIndices[string(owner)] = index
+			binary.BigEndian.PutUint64(result[:], index)
+			return
+		},
+	}
+}
