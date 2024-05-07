@@ -303,7 +303,7 @@ func (m *StorageMigration) MigrateNestedValue(
 				fieldName,
 			)
 
-			migratedValue := m.MigrateNestedValue(
+			newValue := m.MigrateNestedValue(
 				storageKey,
 				storageMapKey,
 				existingValue,
@@ -312,7 +312,7 @@ func (m *StorageMigration) MigrateNestedValue(
 				allowMutation,
 			)
 
-			if migratedValue == nil {
+			if newValue == nil {
 				continue
 			}
 
@@ -328,7 +328,7 @@ func (m *StorageMigration) MigrateNestedValue(
 				inter,
 				emptyLocationRange,
 				fieldName,
-				migratedValue,
+				newValue,
 			)
 		}
 
