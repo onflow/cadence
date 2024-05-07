@@ -29,18 +29,19 @@ import (
 
 type EntitlementsMigration struct {
 	Interpreter       *interpreter.Interpreter
-	migratedTypeCache *migrations.StaticTypeCache
+	migratedTypeCache migrations.StaticTypeCache
 }
 
 var _ migrations.ValueMigration = EntitlementsMigration{}
 
 func NewEntitlementsMigration(inter *interpreter.Interpreter) EntitlementsMigration {
-	return NewEntitlementsMigrationWithCache(inter, &migrations.StaticTypeCache{})
+	staticTypeCache := migrations.NewDefaultStaticTypeCache()
+	return NewEntitlementsMigrationWithCache(inter, staticTypeCache)
 }
 
 func NewEntitlementsMigrationWithCache(
 	inter *interpreter.Interpreter,
-	migratedTypeCache *migrations.StaticTypeCache,
+	migratedTypeCache migrations.StaticTypeCache,
 ) EntitlementsMigration {
 	return EntitlementsMigration{
 		Interpreter:       inter,
