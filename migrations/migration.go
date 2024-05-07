@@ -313,7 +313,6 @@ func (m *StorageMigration) MigrateNestedValue(
 				existingValue,
 				valueMigrations,
 				reporter,
-
 				allowMutation,
 			)
 
