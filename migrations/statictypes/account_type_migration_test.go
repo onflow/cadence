@@ -506,14 +506,15 @@ func TestAccountTypeInTypeValueMigration(t *testing.T) {
 							StorageMapKey: storageMapKey,
 						}: {},
 					},
-					reporter.migrated)
+					reporter.migrated,
+				)
 			}
 
 			// Assert the migrated values.
 
 			storageMap := storage.GetStorageMap(account, pathDomain.Identifier(), false)
 			require.NotNil(t, storageMap)
-			require.Equal(t, storageMap.Count(), uint64(1))
+			require.Equal(t, uint64(1), storageMap.Count())
 
 			value := storageMap.ReadValue(nil, storageMapKey)
 
