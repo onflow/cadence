@@ -31,6 +31,7 @@ import (
 type StaticTypeMigration struct {
 	compositeTypeConverter CompositeTypeConverterFunc
 	interfaceTypeConverter InterfaceTypeConverterFunc
+	migratedTypeCache      migrations.StaticTypeCache
 }
 
 type CompositeTypeConverterFunc func(*interpreter.CompositeStaticType) interpreter.StaticType
@@ -39,7 +40,14 @@ type InterfaceTypeConverterFunc func(*interpreter.InterfaceStaticType) interpret
 var _ migrations.ValueMigration = &StaticTypeMigration{}
 
 func NewStaticTypeMigration() *StaticTypeMigration {
-	return &StaticTypeMigration{}
+	staticTypeCache := migrations.NewDefaultStaticTypeCache()
+	return NewStaticTypeMigrationWithCache(staticTypeCache)
+}
+
+func NewStaticTypeMigrationWithCache(migratedTypeCache migrations.StaticTypeCache) *StaticTypeMigration {
+	return &StaticTypeMigration{
+		migratedTypeCache: migratedTypeCache,
+	}
 }
 
 func (m *StaticTypeMigration) WithCompositeTypeConverter(converterFunc CompositeTypeConverterFunc) *StaticTypeMigration {
@@ -56,14 +64,17 @@ func (*StaticTypeMigration) Name() string {
 	return "StaticTypeMigration"
 }
 
-// Migrate migrates `AuthAccount` and `PublicAccount` types inside `TypeValue`s,
-// to the account reference type (&Account).
+// Migrate migrates static types in values.
 func (m *StaticTypeMigration) Migrate(
 	_ interpreter.StorageKey,
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
-	inter *interpreter.Interpreter,
-) (newValue interpreter.Value, err error) {
+	_ *interpreter.Interpreter,
+) (
+	newValue interpreter.Value,
+	err error,
+) {
+
 	switch value := value.(type) {
 	case interpreter.TypeValue:
 		// Type is optional. nil represents "unknown"/"invalid" type
@@ -154,7 +165,30 @@ func (m *StaticTypeMigration) Migrate(
 	return
 }
 
-func (m *StaticTypeMigration) maybeConvertStaticType(staticType, parentType interpreter.StaticType) interpreter.StaticType {
+func (m *StaticTypeMigration) maybeConvertStaticType(
+	staticType interpreter.StaticType,
+	parentType interpreter.StaticType,
+) (
+	resultType interpreter.StaticType,
+) {
+	// Consult the cache and cache the result
+	// at the root of the migration,
+	// i.e. when the parent type is nil.
+
+	if parentType == nil {
+
+		migratedTypeCache := m.migratedTypeCache
+		staticTypeID := staticType.ID()
+
+		if migratedType, exists := migratedTypeCache.Get(staticTypeID); exists {
+			return migratedType
+		}
+
+		defer func() {
+			migratedTypeCache.Set(staticTypeID, resultType)
+		}()
+	}
+
 	switch staticType := staticType.(type) {
 	case *interpreter.ConstantSizedStaticType:
 		convertedType := m.maybeConvertStaticType(staticType.Type, staticType)

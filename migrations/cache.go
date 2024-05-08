@@ -42,7 +42,8 @@ func (c *DefaultStaticTypeCache) Get(typeID interpreter.TypeID) (interpreter.Sta
 	if !ok {
 		return nil, false
 	}
-	return v.(interpreter.StaticType), true
+	staticType, _ := v.(interpreter.StaticType)
+	return staticType, true
 }
 
 func (c *DefaultStaticTypeCache) Set(typeID interpreter.TypeID, ty interpreter.StaticType) {
