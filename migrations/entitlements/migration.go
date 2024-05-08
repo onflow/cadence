@@ -89,13 +89,11 @@ func (m EntitlementsMigration) ConvertToEntitledType(
 	staticTypeID := staticType.ID()
 
 	if migratedType, exists := migratedTypeCache.Get(staticTypeID); exists {
-		return migratedType, nil
+		return migratedType.StaticType, migratedType.Error
 	}
 
 	defer func() {
-		if err != nil {
-			migratedTypeCache.Set(staticTypeID, resultType)
-		}
+		migratedTypeCache.Set(staticTypeID, resultType, err)
 	}()
 
 	switch t := staticType.(type) {

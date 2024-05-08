@@ -24,9 +24,18 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
+type CachedStaticType struct {
+	StaticType interpreter.StaticType
+	Error      error
+}
+
 type StaticTypeCache interface {
-	Get(typeID interpreter.TypeID) (interpreter.StaticType, bool)
-	Set(typeID interpreter.TypeID, ty interpreter.StaticType)
+	Get(typeID interpreter.TypeID) (CachedStaticType, bool)
+	Set(
+		typeID interpreter.TypeID,
+		staticType interpreter.StaticType,
+		err error,
+	)
 }
 
 type DefaultStaticTypeCache struct {
@@ -37,15 +46,21 @@ func NewDefaultStaticTypeCache() *DefaultStaticTypeCache {
 	return &DefaultStaticTypeCache{}
 }
 
-func (c *DefaultStaticTypeCache) Get(typeID interpreter.TypeID) (interpreter.StaticType, bool) {
+func (c *DefaultStaticTypeCache) Get(typeID interpreter.TypeID) (CachedStaticType, bool) {
 	v, ok := c.entries.Load(typeID)
 	if !ok {
-		return nil, false
+		return CachedStaticType{}, false
 	}
-	staticType, _ := v.(interpreter.StaticType)
-	return staticType, true
+	return v.(CachedStaticType), true
 }
 
-func (c *DefaultStaticTypeCache) Set(typeID interpreter.TypeID, ty interpreter.StaticType) {
-	c.entries.Store(typeID, ty)
+func (c *DefaultStaticTypeCache) Set(
+	typeID interpreter.TypeID,
+	staticType interpreter.StaticType,
+	err error,
+) {
+	c.entries.Store(typeID, CachedStaticType{
+		StaticType: staticType,
+		Error:      err,
+	})
 }
