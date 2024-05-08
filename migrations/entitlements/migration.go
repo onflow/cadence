@@ -73,7 +73,7 @@ func (m EntitlementsMigration) ConvertToEntitledType(
 	staticType interpreter.StaticType,
 ) (
 	resultType interpreter.StaticType,
-	conversionErr error,
+	err error,
 ) {
 	if staticType == nil {
 		return nil, nil
@@ -93,7 +93,7 @@ func (m EntitlementsMigration) ConvertToEntitledType(
 	}
 
 	defer func() {
-		if resultType != nil && conversionErr == nil {
+		if err != nil {
 			migratedTypeCache.Set(staticTypeID, resultType)
 		}
 	}()
@@ -105,8 +105,7 @@ func (m EntitlementsMigration) ConvertToEntitledType(
 
 		convertedReferencedType, err := m.ConvertToEntitledType(referencedType)
 		if err != nil {
-			conversionErr = err
-			return
+			return nil, err
 		}
 
 		var returnNew bool
@@ -164,20 +163,17 @@ func (m EntitlementsMigration) ConvertToEntitledType(
 		}
 
 		if returnNew {
-			resultType = interpreter.NewReferenceStaticType(nil, auth, referencedType)
-			return
+			return interpreter.NewReferenceStaticType(nil, auth, referencedType), nil
 		}
 
 	case *interpreter.CapabilityStaticType:
 		convertedBorrowType, err := m.ConvertToEntitledType(t.BorrowType)
 		if err != nil {
-			conversionErr = err
-			return
+			return nil, err
 		}
 
 		if convertedBorrowType != nil {
-			resultType = interpreter.NewCapabilityStaticType(nil, convertedBorrowType)
-			return
+			return interpreter.NewCapabilityStaticType(nil, convertedBorrowType), nil
 		}
 
 	case *interpreter.VariableSizedStaticType:
@@ -185,13 +181,11 @@ func (m EntitlementsMigration) ConvertToEntitledType(
 
 		convertedElementType, err := m.ConvertToEntitledType(elementType)
 		if err != nil {
-			conversionErr = err
-			return
+			return nil, err
 		}
 
 		if convertedElementType != nil {
-			resultType = interpreter.NewVariableSizedStaticType(nil, convertedElementType)
-			return
+			return interpreter.NewVariableSizedStaticType(nil, convertedElementType), nil
 		}
 
 	case *interpreter.ConstantSizedStaticType:
@@ -199,13 +193,11 @@ func (m EntitlementsMigration) ConvertToEntitledType(
 
 		convertedElementType, err := m.ConvertToEntitledType(elementType)
 		if err != nil {
-			conversionErr = err
-			return
+			return nil, err
 		}
 
 		if convertedElementType != nil {
-			resultType = interpreter.NewConstantSizedStaticType(nil, convertedElementType, t.Size)
-			return
+			return interpreter.NewConstantSizedStaticType(nil, convertedElementType, t.Size), nil
 		}
 
 	case *interpreter.DictionaryStaticType:
@@ -213,29 +205,36 @@ func (m EntitlementsMigration) ConvertToEntitledType(
 
 		convertedKeyType, err := m.ConvertToEntitledType(keyType)
 		if err != nil {
-			conversionErr = err
-			return
+			return nil, err
 		}
 
 		valueType := t.ValueType
 
 		convertedValueType, err := m.ConvertToEntitledType(valueType)
 		if err != nil {
-			conversionErr = err
-			return
+			return nil, err
 		}
 
 		if convertedKeyType != nil {
 			if convertedValueType != nil {
-				resultType = interpreter.NewDictionaryStaticType(nil, convertedKeyType, convertedValueType)
-				return
+				return interpreter.NewDictionaryStaticType(
+					nil,
+					convertedKeyType,
+					convertedValueType,
+				), nil
 			} else {
-				resultType = interpreter.NewDictionaryStaticType(nil, convertedKeyType, valueType)
-				return
+				return interpreter.NewDictionaryStaticType(
+					nil,
+					convertedKeyType,
+					valueType,
+				), nil
 			}
 		} else if convertedValueType != nil {
-			resultType = interpreter.NewDictionaryStaticType(nil, keyType, convertedValueType)
-			return
+			return interpreter.NewDictionaryStaticType(
+				nil,
+				keyType,
+				convertedValueType,
+			), nil
 		}
 
 	case *interpreter.OptionalStaticType:
@@ -243,17 +242,15 @@ func (m EntitlementsMigration) ConvertToEntitledType(
 
 		convertedInnerType, err := m.ConvertToEntitledType(innerType)
 		if err != nil {
-			conversionErr = err
-			return
+			return nil, err
 		}
 
 		if convertedInnerType != nil {
-			resultType = interpreter.NewOptionalStaticType(nil, convertedInnerType)
-			return
+			return interpreter.NewOptionalStaticType(nil, convertedInnerType), nil
 		}
 	}
 
-	return
+	return nil, nil
 }
 
 // ConvertValueToEntitlements converts the input value into a version compatible with the new entitlements feature,
