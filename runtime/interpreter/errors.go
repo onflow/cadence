@@ -1108,3 +1108,14 @@ func (e ResourceLossError) Error() string {
 	return "resource loss: attempting to assign to non-nil resource-typed value"
 }
 
+// InvalidCapabilityIDError
+
+type InvalidCapabilityIDError struct{}
+
+var _ errors.InternalError = InvalidCapabilityIDError{}
+
+func (InvalidCapabilityIDError) IsInternalError() {}
+
+func (e InvalidCapabilityIDError) Error() string {
+	return "capability created with invalid ID"
+}

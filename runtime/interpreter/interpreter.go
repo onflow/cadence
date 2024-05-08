@@ -5465,7 +5465,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
-			if capabilityID == invalidCapabilityID {
+			if capabilityID == InvalidCapabilityID {
 				return Nil
 			}
 
@@ -5507,7 +5507,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
 		func(invocation Invocation) Value {
 
-			if capabilityID == invalidCapabilityID {
+			if capabilityID == InvalidCapabilityID {
 				return FalseValue
 			}
 
