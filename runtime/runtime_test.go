@@ -10750,3 +10750,101 @@ func TestRuntimeMoveSelfVariable(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.NonTransferableValueError{})
 	})
 }
+
+func TestRuntimeContractWithInvalidCapability(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntimeWithAttachments()
+
+	address := common.MustBytesToAddress([]byte{0x1})
+
+	contract := []byte(`
+		access(all)
+        contract Test {
+
+			access(all) var invalidCap: Capability
+            access(all) var unrelatedStoragePath: StoragePath
+
+            init() {
+                self.invalidCap = self.account.capabilities.get<&AnyResource>(/public/path)
+                self.unrelatedStoragePath = /storage/validPath
+            }
+		}
+	`)
+
+	script := []byte(`
+        import Test from 0x1
+
+        access(all) fun main() {
+            log(Test.unrelatedStoragePath)
+            log(Test.invalidCap)
+        }
+    `)
+
+	deploy := DeploymentTransaction("Test", contract)
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+	var logs []string
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnProgramLog: func(s string) {
+			logs = append(logs, s)
+		},
+	}
+
+	// Deploy contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.TransactionLocation{},
+		},
+	)
+	require.NoError(t, err)
+
+	// Run script
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(
+		t,
+		[]string{
+			"/storage/validPath",
+			"Capability<&AnyResource>(address: 0x0000000000000001, id: 0)",
+		},
+		logs,
+	)
+}
