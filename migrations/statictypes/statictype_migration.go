@@ -171,9 +171,11 @@ func (m *StaticTypeMigration) maybeConvertStaticType(
 ) (
 	resultType interpreter.StaticType,
 ) {
-	// Consult the cache and cache the result
-	// at the root of the migration,
+	// Consult the cache and cache the result at the root of the migration,
 	// i.e. when the parent type is nil.
+	//
+	// Parse of the migration, e.g. the intersection type migration depends on the parent type.
+	// For example, `{Ts}` in `&{Ts}` is migrated differently from `{Ts}`.
 
 	if parentType == nil {
 
