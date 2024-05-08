@@ -177,16 +177,18 @@ func (m *StaticTypeMigration) maybeConvertStaticType(
 	// Parse of the migration, e.g. the intersection type migration depends on the parent type.
 	// For example, `{Ts}` in `&{Ts}` is migrated differently from `{Ts}`.
 
-	migratedTypeCache := m.migratedTypeCache
-	staticTypeID := staticType.ID()
+	if parentType == nil {
+		migratedTypeCache := m.migratedTypeCache
+		staticTypeID := staticType.ID()
 
-	if cachedType, exists := migratedTypeCache.Get(staticTypeID); exists {
-		return cachedType.StaticType
+		if cachedType, exists := migratedTypeCache.Get(staticTypeID); exists {
+			return cachedType.StaticType
+		}
+
+		defer func() {
+			migratedTypeCache.Set(staticTypeID, resultType, nil)
+		}()
 	}
-
-	defer func() {
-		migratedTypeCache.Set(staticTypeID, resultType, nil)
-	}()
 
 	switch staticType := staticType.(type) {
 	case *interpreter.ConstantSizedStaticType:
