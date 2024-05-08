@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-const invalidCapabilityID UInt64Value = 0
+const InvalidCapabilityID UInt64Value = 0
 
 // CapabilityValue
 
@@ -51,9 +51,6 @@ func NewUnmeteredCapabilityValue(
 	address AddressValue,
 	borrowType StaticType,
 ) *IDCapabilityValue {
-	if id == invalidCapabilityID {
-		panic(InvalidCapabilityIDError{})
-	}
 	return &IDCapabilityValue{
 		ID:         id,
 		Address:    address,
@@ -80,7 +77,7 @@ func NewInvalidCapabilityValue(
 	// Constant because its constituents are already metered.
 	common.UseMemory(memoryGauge, common.CapabilityValueMemoryUsage)
 	return &IDCapabilityValue{
-		ID:         invalidCapabilityID,
+		ID:         InvalidCapabilityID,
 		Address:    address,
 		BorrowType: borrowType,
 	}
@@ -97,7 +94,7 @@ func (*IDCapabilityValue) isValue() {}
 func (*IDCapabilityValue) isCapabilityValue() {}
 
 func (v *IDCapabilityValue) isInvalid() bool {
-	return v.ID == invalidCapabilityID
+	return v.ID == InvalidCapabilityID
 }
 
 func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {

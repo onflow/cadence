@@ -2593,6 +2593,10 @@ func checkAndIssueStorageCapabilityControllerWithType(
 		targetPathValue,
 	)
 
+	if capabilityIDValue == interpreter.InvalidCapabilityID {
+		panic(interpreter.InvalidCapabilityIDError{})
+	}
+
 	// Return controller's capability
 
 	return interpreter.NewCapabilityValue(
@@ -2750,6 +2754,10 @@ func checkAndIssueAccountCapabilityControllerWithType(
 			address,
 			borrowType,
 		)
+
+	if capabilityIDValue == interpreter.InvalidCapabilityID {
+		panic(interpreter.InvalidCapabilityIDError{})
+	}
 
 	// Return controller's capability
 
