@@ -1874,6 +1874,102 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("borrow existing contract interface", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewTestInterpreterRuntime()
+
+		accountCodes := map[Location][]byte{}
+		var events []cadence.Event
+
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{{0, 0, 0, 0, 0, 0, 0, 0x42}}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		// Deploy contract interface
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction("HelloInterface", []byte(`
+                  access(all) contract interface HelloInterface {
+
+                      access(all) fun hello(): String
+                  }
+                `)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Deploy concrete contract
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction("Hello", []byte(`
+                  import HelloInterface from 0x42
+
+                  access(all) contract Hello: HelloInterface {
+
+                      access(all) fun hello(): String {
+                          return "Hello!"
+                      }
+                  }
+                `)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Test usage
+
+		// NOTE: name is contract interface, i.e. no stored contract composite.
+		// This should not panic, but still return nil
+
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                  import HelloInterface from 0x42
+
+                  transaction {
+                      prepare(acc: &Account) {
+                          let hello = acc.contracts.borrow<&{HelloInterface}>(name: "HelloInterface")
+                          assert(hello == nil)
+                      }
+                  }
+              `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
 	t.Run("borrow non-existing contract", func(t *testing.T) {
 		t.Parallel()
 

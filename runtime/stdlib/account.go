@@ -19,6 +19,7 @@
 package stdlib
 
 import (
+	goerrors "errors"
 	"fmt"
 
 	"golang.org/x/crypto/sha3"
@@ -1325,12 +1326,19 @@ func newAccountContractsBorrowFunction(
 				return interpreter.Nil
 			}
 
-			// Load the contract
+			// Load the contract and get the contract composite value.
+			// The requested contract may be a contract interface,
+			// in which case there will be no contract composite value.
 
 			contractLocation := common.NewAddressLocation(gauge, address, name)
 			inter = inter.EnsureLoaded(contractLocation)
 			contractValue, err := inter.GetContractComposite(contractLocation)
 			if err != nil {
+				var notDeclaredErr interpreter.NotDeclaredError
+				if goerrors.As(err, &notDeclaredErr) {
+					return interpreter.Nil
+				}
+
 				panic(err)
 			}
 
