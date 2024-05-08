@@ -51,9 +51,6 @@ func NewUnmeteredCapabilityValue(
 	address AddressValue,
 	borrowType StaticType,
 ) *IDCapabilityValue {
-	if id == invalidCapabilityID {
-		panic(InvalidCapabilityIDError{})
-	}
 	return &IDCapabilityValue{
 		ID:         id,
 		Address:    address,
