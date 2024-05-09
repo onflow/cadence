@@ -1884,6 +1884,7 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
     `)
 	require.NoError(t, err)
 
+	// these capture x and y because they are created in a different file
 	_, err = ParseAndCheckWithOptions(t,
 		`
            import x, y, createR from "imported"
@@ -1907,7 +1908,7 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 		},
 	)
 
-	errs := RequireCheckerErrors(t, err, 5)
+	errs := RequireCheckerErrors(t, err, 7)
 
 	require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	assert.Equal(t,
@@ -1917,18 +1918,22 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 
 	require.IsType(t, &sema.ResourceCapturingError{}, errs[1])
 
-	require.IsType(t, &sema.AssignmentToConstantError{}, errs[2])
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[2])
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[3])
 	assert.Equal(t,
 		"x",
-		errs[2].(*sema.AssignmentToConstantError).Name,
+		errs[3].(*sema.AssignmentToConstantError).Name,
 	)
 
-	require.IsType(t, &sema.ResourceCapturingError{}, errs[3])
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[4])
 
-	require.IsType(t, &sema.AssignmentToConstantError{}, errs[4])
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[5])
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[6])
 	assert.Equal(t,
 		"y",
-		errs[4].(*sema.AssignmentToConstantError).Name,
+		errs[6].(*sema.AssignmentToConstantError).Name,
 	)
 }
 
