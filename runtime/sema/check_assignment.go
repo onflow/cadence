@@ -491,8 +491,6 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		reportAssignmentToConstant()
 	}
 
-	memberType = member.TypeAnnotation.Type
-
 	if memberType.IsResourceType() {
 		// if the member is a resource, check that it is not captured in a function,
 		// based off the activation depth of the root of the access chain, i.e. `a` in `a.b.c`

@@ -10113,9 +10113,6 @@ func TestCheckInvalidNestedResourceCapture(t *testing.T) {
                         destroy y
                     }
                 }
-                destroy() {
-                    destroy self.x
-                }
             }
       `)
 		errs := RequireCheckerErrors(t, err, 1)
