@@ -135,6 +135,34 @@ func (checker *Checker) checkAssignment(
 	return
 }
 
+func (checker *Checker) rootOfAccessChain(target ast.Expression) (baseVariable *Variable, accessChain []Type) {
+	var inAccessChain = true
+
+	// seek the variable expression (if it exists) at the base of the access chain
+	for inAccessChain {
+		switch targetExp := target.(type) {
+		case *ast.IdentifierExpression:
+			baseVariable = checker.valueActivations.Find(targetExp.Identifier.Identifier)
+			if baseVariable != nil {
+				accessChain = append(accessChain, baseVariable.Type)
+			}
+			inAccessChain = false
+		case *ast.IndexExpression:
+			target = targetExp.TargetExpression
+			elementType := checker.Elaboration.IndexExpressionTypes(targetExp).IndexedType.ElementType(true)
+			accessChain = append(accessChain, elementType)
+		case *ast.MemberExpression:
+			target = targetExp.Expression
+			memberType, _, _, _ := checker.visitMember(targetExp, true)
+			accessChain = append(accessChain, memberType)
+		default:
+			inAccessChain = false
+		}
+	}
+
+	return
+}
+
 // We have to prevent any writes to references, since we cannot know where the value
 // pointed to by the reference may have come from. Similarly, we can never safely assign
 // to a resource; because resources are moved instead of copied, we cannot currently
@@ -162,31 +190,7 @@ func (checker *Checker) enforceViewAssignment(assignment ast.Statement, target a
 		return
 	}
 
-	var baseVariable *Variable
-	var accessChain = make([]Type, 0)
-	var inAccessChain = true
-
-	// seek the variable expression (if it exists) at the base of the access chain
-	for inAccessChain {
-		switch targetExp := target.(type) {
-		case *ast.IdentifierExpression:
-			baseVariable = checker.valueActivations.Find(targetExp.Identifier.Identifier)
-			if baseVariable != nil {
-				accessChain = append(accessChain, baseVariable.Type)
-			}
-			inAccessChain = false
-		case *ast.IndexExpression:
-			target = targetExp.TargetExpression
-			elementType := checker.Elaboration.IndexExpressionTypes(targetExp).IndexedType.ElementType(true)
-			accessChain = append(accessChain, elementType)
-		case *ast.MemberExpression:
-			target = targetExp.Expression
-			memberType, _, _, _ := checker.visitMember(targetExp, true)
-			accessChain = append(accessChain, memberType)
-		default:
-			inAccessChain = false
-		}
-	}
+	baseVariable, accessChain := checker.rootOfAccessChain(target)
 
 	// if the base of the access chain is not a variable, then we cannot make any static guarantees about
 	// whether or not it is a local struct-kinded variable. E.g. in the case of `(b ? s1 : s2).x`, we can't
@@ -312,7 +316,7 @@ func (checker *Checker) visitAssignmentValueType(
 func (checker *Checker) visitIdentifierExpressionAssignment(
 	target *ast.IdentifierExpression,
 ) (targetType Type) {
-	identifier := target.Identifier.Identifier
+	identifier := target.Identifier
 
 	// check identifier was declared before
 	variable := checker.findAndCheckValueVariable(target, true)
@@ -320,11 +324,15 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 		return InvalidType
 	}
 
+	if variable.Type.IsResourceType() {
+		checker.checkResourceVariableCapturingInFunction(variable, identifier)
+	}
+
 	// check identifier is not a constant
 	if variable.IsConstant {
 		checker.report(
 			&AssignmentToConstantError{
-				Name:  identifier,
+				Name:  identifier.Identifier,
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, target),
 			},
 		)
@@ -483,7 +491,24 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		reportAssignmentToConstant()
 	}
 
-	return memberType
+	if memberType.IsResourceType() {
+		// if the member is a resource, check that it is not captured in a function,
+		// based off the activation depth of the root of the access chain, i.e. `a` in `a.b.c`
+		// we only want to make this check for transactions, as they are the only "resource-like" types
+		// (that can contain resources and must destroy them in their `execute` blocks), that are themselves
+		// not checked by the capturing logic, since they are not themselves resources.
+		baseVariable, _ := checker.rootOfAccessChain(target)
+
+		if baseVariable == nil {
+			return
+		}
+
+		if _, isTransaction := baseVariable.Type.(*TransactionType); isTransaction {
+			checker.checkResourceVariableCapturingInFunction(baseVariable, member.Identifier)
+		}
+	}
+
+	return
 }
 
 func IsValidAssignmentTargetExpression(expression ast.Expression) bool {
