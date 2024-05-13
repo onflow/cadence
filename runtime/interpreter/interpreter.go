@@ -3320,21 +3320,21 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 		name:         sema.PublicPathType.Name,
 		functionType: sema.PublicPathConversionFunctionType,
 		convert: func(interpreter *Interpreter, value Value, _ LocationRange) Value {
-			return ConvertPublicPath(interpreter, value)
+			return newPathFromStringValue(interpreter, common.PathDomainPublic, value)
 		},
 	},
 	{
 		name:         sema.PrivatePathType.Name,
 		functionType: sema.PrivatePathConversionFunctionType,
 		convert: func(interpreter *Interpreter, value Value, _ LocationRange) Value {
-			return ConvertPrivatePath(interpreter, value)
+			return newPathFromStringValue(interpreter, common.PathDomainPrivate, value)
 		},
 	},
 	{
 		name:         sema.StoragePathType.Name,
 		functionType: sema.StoragePathConversionFunctionType,
 		convert: func(interpreter *Interpreter, value Value, _ LocationRange) Value {
-			return ConvertStoragePath(interpreter, value)
+			return newPathFromStringValue(interpreter, common.PathDomainStorage, value)
 		},
 	},
 }

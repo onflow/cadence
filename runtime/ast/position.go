@@ -146,6 +146,10 @@ func (e Range) EndPosition(common.MemoryGauge) Position {
 // NewRangeFromPositioned
 
 func NewRangeFromPositioned(memoryGauge common.MemoryGauge, hasPosition HasPosition) Range {
+	if hasPosition == nil {
+		return EmptyRange
+	}
+
 	return NewRange(
 		memoryGauge,
 		hasPosition.StartPosition(),
