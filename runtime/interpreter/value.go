@@ -21646,21 +21646,13 @@ func (PathValue) IsStorable() bool {
 	return true
 }
 
-func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value) Value {
+func newPathFromStringValue(interpreter *Interpreter, domain common.PathDomain, value Value) Value {
 	stringValue, ok := value.(*StringValue)
 	if !ok {
 		return Nil
 	}
 
-	_, err := sema.CheckPathLiteral(
-		domain.Identifier(),
-		stringValue.Str,
-		ReturnEmptyRange,
-		ReturnEmptyRange,
-	)
-	if err != nil {
-		return Nil
-	}
+	// NOTE: any identifier is allowed, it does not have to match the syntax for path literals
 
 	return NewSomeValueNonCopying(
 		interpreter,
@@ -21670,18 +21662,6 @@ func convertPath(interpreter *Interpreter, domain common.PathDomain, value Value
 			stringValue.Str,
 		),
 	)
-}
-
-func ConvertPublicPath(interpreter *Interpreter, value Value) Value {
-	return convertPath(interpreter, common.PathDomainPublic, value)
-}
-
-func ConvertPrivatePath(interpreter *Interpreter, value Value) Value {
-	return convertPath(interpreter, common.PathDomainPrivate, value)
-}
-
-func ConvertStoragePath(interpreter *Interpreter, value Value) Value {
-	return convertPath(interpreter, common.PathDomainStorage, value)
 }
 
 func (v PathValue) Storable(

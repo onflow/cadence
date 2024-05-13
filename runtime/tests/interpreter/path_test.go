@@ -95,7 +95,7 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 			)
 		})
 
-		t.Run(fmt.Sprintf("invalid identifier 2: %s", domain.Identifier()), func(t *testing.T) {
+		t.Run(fmt.Sprintf("syntactically invalid identifier 2: %s", domain.Identifier()), func(t *testing.T) {
 
 			t.Parallel()
 
@@ -104,19 +104,22 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
-                      let x = %[1]s(identifier: "2")
+                      let x = %[1]s(identifier: "2")!
                     `,
 					domainType.String(),
 				),
 			)
 
 			assert.Equal(t,
-				interpreter.Nil,
+				interpreter.PathValue{
+					Domain:     domain,
+					Identifier: "2",
+				},
 				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 
-		t.Run(fmt.Sprintf("invalid identifier -: %s", domain.Identifier()), func(t *testing.T) {
+		t.Run(fmt.Sprintf("syntactically invalid identifier -: %s", domain.Identifier()), func(t *testing.T) {
 
 			t.Parallel()
 
@@ -125,14 +128,17 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
-                      let x = %[1]s(identifier: "fo-o")
+                      let x = %[1]s(identifier: "fo-o")!
                     `,
 					domainType.String(),
 				),
 			)
 
 			assert.Equal(t,
-				interpreter.Nil,
+				interpreter.PathValue{
+					Domain:     domain,
+					Identifier: "fo-o",
+				},
 				inter.Globals.Get("x").GetValue(inter),
 			)
 		})

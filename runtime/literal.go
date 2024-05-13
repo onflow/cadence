@@ -156,14 +156,11 @@ func pathLiteralValue(
 	pathIdentifier := pathExpression.Identifier.Identifier
 
 	pathType, err := sema.CheckPathLiteral(
+		memoryGauge,
 		pathDomain,
 		pathIdentifier,
-		func() ast.Range {
-			return ast.NewRangeFromPositioned(memoryGauge, pathExpression.Domain)
-		},
-		func() ast.Range {
-			return ast.NewRangeFromPositioned(memoryGauge, pathExpression.Identifier)
-		},
+		pathExpression.Domain,
+		pathExpression.Identifier,
 	)
 	if err != nil {
 		return nil, InvalidLiteralError
