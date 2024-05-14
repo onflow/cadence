@@ -3512,6 +3512,23 @@ func TestCheckDereference(t *testing.T) {
               }
             `,
 		)
+
+		// Dictionaries with composite typed keys cannot be dereferenced.
+		runInvalidTestCase(
+			t,
+			"{Enum: Int}",
+			`
+                access(all) enum E:Int {
+                    access(all) case first
+                }
+
+                access(all) fun main() {
+                    var dict = {E.first: 0}
+                    var ref = &dict as &{E: Int}
+                    var deref = *ref
+                }
+            `,
+		)
 	})
 
 	runInvalidTestCase(
