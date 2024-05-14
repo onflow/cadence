@@ -21,4 +21,4 @@
 
 package cadence
 
-const Version = "v0.42.11-atree-register-inlining"
+const Version = "v0.42.11-atree-register-inlining.2"
