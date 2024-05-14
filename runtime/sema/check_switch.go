@@ -24,7 +24,7 @@ import (
 
 func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) (_ struct{}) {
 
-	testType := checker.VisitExpression(statement.Expression, nil)
+	testType := checker.VisitExpression(statement.Expression, statement, nil)
 
 	testTypeIsValid := !testType.IsInvalidType()
 
@@ -43,6 +43,7 @@ func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) (_ 
 
 	checker.functionActivations.Current().WithSwitch(func() {
 		checker.checkSwitchCasesStatements(
+			statement,
 			statement.Cases,
 			testType,
 			testTypeIsValid,
@@ -53,6 +54,7 @@ func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) (_ 
 }
 
 func (checker *Checker) checkSwitchCaseExpression(
+	statement *ast.SwitchStatement,
 	caseExpression ast.Expression,
 	testType Type,
 	testTypeIsValid bool,
@@ -63,7 +65,7 @@ func (checker *Checker) checkSwitchCaseExpression(
 		caseExprExpectedType = testType
 	}
 
-	caseType := checker.VisitExpression(caseExpression, caseExprExpectedType)
+	caseType := checker.VisitExpression(caseExpression, statement, caseExprExpectedType)
 
 	if caseType.IsInvalidType() {
 		return
@@ -88,6 +90,7 @@ func (checker *Checker) checkSwitchCaseExpression(
 }
 
 func (checker *Checker) checkSwitchCasesStatements(
+	statement *ast.SwitchStatement,
 	remainingCases []*ast.SwitchCase,
 	testType Type,
 	testTypeIsValid bool,
@@ -128,6 +131,7 @@ func (checker *Checker) checkSwitchCasesStatements(
 	}
 
 	checker.checkSwitchCaseExpression(
+		statement,
 		caseExpression,
 		testType,
 		testTypeIsValid,
@@ -145,6 +149,7 @@ func (checker *Checker) checkSwitchCasesStatements(
 		},
 		func() Type {
 			checker.checkSwitchCasesStatements(
+				statement,
 				remainingCases[1:],
 				testType,
 				testTypeIsValid,

@@ -60,7 +60,7 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 	// If the return statement has a return value,
 	// check that the value's type matches the enclosing function's return type
 
-	valueType := checker.VisitExpression(statement.Expression, returnType)
+	valueType := checker.VisitExpression(statement.Expression, statement, returnType)
 
 	checker.Elaboration.SetReturnStatementTypes(
 		statement,

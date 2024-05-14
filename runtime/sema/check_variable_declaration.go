@@ -54,7 +54,7 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 		}
 	}
 
-	valueType := checker.VisitExpression(declaration.Value, expectedValueType)
+	valueType := checker.VisitExpression(declaration.Value, declaration, expectedValueType)
 
 	if isOptionalBinding {
 		optionalType, isOptional := valueType.(*OptionalType)
@@ -203,7 +203,7 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 			if recordedResourceInvalidation != nil {
 				checker.resources.RemoveTemporaryMoveInvalidation(recordedResourceInvalidation.resource, recordedResourceInvalidation.invalidation)
 			}
-			checker.VisitExpression(declaration.Value, expectedValueType)
+			checker.VisitExpression(declaration.Value, declaration, expectedValueType)
 		}
 	}
 

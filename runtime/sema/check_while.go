@@ -25,7 +25,7 @@ import (
 
 func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
 
-	checker.VisitExpression(statement.Test, BoolType)
+	checker.VisitExpression(statement.Test, statement, BoolType)
 
 	// The body of the loop will maybe be evaluated.
 	// That means that resource invalidations and

@@ -161,7 +161,7 @@ func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Varia
 func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
 	expression := statement.Expression
 
-	ty := checker.VisitExpression(expression, nil)
+	ty := checker.VisitExpression(expression, statement, nil)
 
 	if ty.IsResourceType() {
 		checker.report(
@@ -270,7 +270,7 @@ func (checker *Checker) visitIndexExpression(
 ) Type {
 
 	targetExpression := indexExpression.TargetExpression
-	targetType := checker.VisitExpression(targetExpression, nil)
+	targetType := checker.VisitExpression(targetExpression, indexExpression, nil)
 
 	// NOTE: check indexed type first for UX reasons
 
@@ -309,6 +309,7 @@ func (checker *Checker) visitIndexExpression(
 		}
 		indexingType := checker.VisitExpression(
 			indexExpression.IndexingExpression,
+			indexExpression,
 			valueIndexedType.IndexingType(),
 		)
 
