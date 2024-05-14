@@ -86,7 +86,7 @@ func (m *StorageMigration) WithErrorStacktrace(stacktraceEnabled bool) *StorageM
 }
 
 func (m *StorageMigration) Commit() error {
-	return m.storage.Commit(m.interpreter, false)
+	return m.storage.NondeterministicCommit(m.interpreter, false)
 }
 
 func (m *StorageMigration) Migrate(migrator StorageMapKeyMigrator) {
