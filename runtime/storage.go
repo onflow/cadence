@@ -229,6 +229,17 @@ func (s *Storage) writeContractUpdate(
 
 // Commit serializes/saves all values in the readCache in storage (through the runtime interface).
 func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
+	return s.commit(inter, commitContractUpdates, true)
+}
+
+// NondeterministicCommit serializes and commits all values in the deltas storage
+// in nondeterministic order.  This function is used when commit ordering isn't
+// required (e.g. migration programs).
+func (s *Storage) NondeterministicCommit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
+	return s.commit(inter, commitContractUpdates, false)
+}
+
+func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates bool, deterministic bool) error {
 
 	if commitContractUpdates {
 		s.commitContractUpdates(inter)
@@ -252,7 +263,11 @@ func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates b
 	common.UseMemory(s.memoryGauge, common.NewAtreeEncodedSlabMemoryUsage(deltas))
 
 	// TODO: report encoding metric for all encoded slabs
-	return s.PersistentSlabStorage.FastCommit(runtime.NumCPU())
+	if deterministic {
+		return s.PersistentSlabStorage.FastCommit(runtime.NumCPU())
+	} else {
+		return s.PersistentSlabStorage.NondeterministicFastCommit(runtime.NumCPU())
+	}
 }
 
 func (s *Storage) commitNewStorageMaps() error {
