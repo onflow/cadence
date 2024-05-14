@@ -51,7 +51,7 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 	return valueType
 }
 
-func (checker *Checker) checkVariableMove(IdentifierExpression *ast.IdentifierExpression, variable *Variable) {
+func (checker *Checker) checkVariableMove(identifierExpression *ast.IdentifierExpression, variable *Variable) {
 
 	reportMaybeInvalidMove := func(declarationKind common.DeclarationKind) {
 		// If the parent is member-access or index-access, then it's OK.
@@ -59,12 +59,12 @@ func (checker *Checker) checkVariableMove(IdentifierExpression *ast.IdentifierEx
 		switch parent := checker.parent.(type) {
 		case *ast.MemberExpression:
 			// TODO: No need for below check? i.e: should always be true
-			if parent.Expression == IdentifierExpression {
+			if parent.Expression == identifierExpression {
 				return
 			}
 		case *ast.IndexExpression:
 			// Only `v[foo]` is OK, `foo[v]` is not.
-			if parent.TargetExpression == IdentifierExpression {
+			if parent.TargetExpression == identifierExpression {
 				return
 			}
 		}
@@ -73,7 +73,7 @@ func (checker *Checker) checkVariableMove(IdentifierExpression *ast.IdentifierEx
 			&InvalidMoveError{
 				Name:            variable.Identifier,
 				DeclarationKind: declarationKind,
-				Pos:             IdentifierExpression.StartPosition(),
+				Pos:             identifierExpression.StartPosition(),
 			},
 		)
 	}
