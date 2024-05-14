@@ -20,15 +20,15 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 
 	"github.com/onflow/cadence/runtime/bbq/commons"
 )
 
 type Config struct {
-	Storage
+	interpreter.Storage
 	common.MemoryGauge
 	commons.ImportHandler
 	ContractValueHandler
@@ -36,11 +36,7 @@ type Config struct {
 
 type ContractValueHandler func(conf *Config, location common.Location) *CompositeValue
 
-type Storage interface {
-	atree.SlabStorage
-}
-
-func RemoveReferencedSlab(storage Storage, storable atree.Storable) {
+func RemoveReferencedSlab(storage interpreter.Storage, storable atree.Storable) {
 	storageIDStorable, ok := storable.(atree.StorageIDStorable)
 	if !ok {
 		return

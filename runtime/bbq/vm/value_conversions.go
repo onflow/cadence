@@ -28,7 +28,7 @@ import (
 // Utility methods to convert between old and new values.
 // These are temporary until all parts of the interpreter are migrated to the vm.
 
-func InterpreterValueToVMValue(config *Config, value interpreter.Value) Value {
+func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Value) Value {
 	switch value := value.(type) {
 	case interpreter.IntValue:
 		return IntValue{value.BigInt.Int64()}
@@ -40,7 +40,7 @@ func InterpreterValueToVMValue(config *Config, value interpreter.Value) Value {
 			value.QualifiedIdentifier,
 			value.Kind,
 			common.Address{},
-			config.Storage,
+			storage,
 		)
 	default:
 		panic(errors.NewUnreachableError())

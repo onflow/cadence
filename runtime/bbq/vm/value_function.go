@@ -51,7 +51,7 @@ func (v FunctionValue) String() string {
 type NativeFunctionValue struct {
 	Name           string
 	ParameterCount int
-	Function       func(arguments ...Value) Value
+	Function       func(config *Config, arguments ...Value) Value
 }
 
 var _ Value = NativeFunctionValue{}

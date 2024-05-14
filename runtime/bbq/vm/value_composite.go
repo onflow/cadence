@@ -68,6 +68,18 @@ func NewCompositeValue(
 	}
 }
 
+func newCompositeValueFromOrderedMap(
+	dict *atree.OrderedMap,
+	typeInfo interpreter.CompositeTypeInfo,
+) *CompositeValue {
+	return &CompositeValue{
+		dictionary:          dict,
+		Location:            typeInfo.Location,
+		QualifiedIdentifier: typeInfo.QualifiedIdentifier,
+		Kind:                typeInfo.Kind,
+	}
+}
+
 func (*CompositeValue) isValue() {}
 
 func (v *CompositeValue) StaticType(memoryGauge common.MemoryGauge) StaticType {
@@ -97,9 +109,7 @@ func (v *CompositeValue) GetMember(config *Config, name string) Value {
 	}
 
 	if storable != nil {
-		interpreterValue := interpreter.StoredValue(config.MemoryGauge, storable, config.Storage)
-		// TODO: Temp conversion
-		return InterpreterValueToVMValue(config, interpreterValue)
+		return StoredValue(config.MemoryGauge, storable, config.Storage)
 	}
 
 	return nil

@@ -31,7 +31,7 @@ func init() {
 	// PublicAccount.getCapability
 	RegisterTypeBoundFunction(typeName, sema.PublicAccountGetCapabilityField, NativeFunctionValue{
 		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(value ...Value) Value {
+		Function: func(config *Config, value ...Value) Value {
 			// TODO:
 			return NilValue{}
 		},

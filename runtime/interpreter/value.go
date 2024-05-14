@@ -13909,7 +13909,7 @@ func NewCompositeValue(
 
 func newCompositeValueFromOrderedMap(
 	dict *atree.OrderedMap,
-	typeInfo compositeTypeInfo,
+	typeInfo CompositeTypeInfo,
 ) *CompositeValue {
 	return &CompositeValue{
 		dictionary:          dict,
@@ -13922,7 +13922,7 @@ func newCompositeValueFromOrderedMap(
 func newCompositeValueFromConstructor(
 	gauge common.MemoryGauge,
 	count uint64,
-	typeInfo compositeTypeInfo,
+	typeInfo CompositeTypeInfo,
 	constructor func() *atree.OrderedMap,
 ) *CompositeValue {
 	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(count, 0)

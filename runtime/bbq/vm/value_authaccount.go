@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -42,7 +43,7 @@ func init() {
 	// AuthAccount.link
 	RegisterTypeBoundFunction(typeName, sema.AuthAccountLinkField, NativeFunctionValue{
 		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(value ...Value) Value {
+		Function: func(config *Config, value ...Value) Value {
 			// TODO:
 			return NilValue{}
 		},
@@ -51,7 +52,7 @@ func init() {
 	// AuthAccount.save
 	RegisterTypeBoundFunction(typeName, sema.AuthAccountSaveField, NativeFunctionValue{
 		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(value ...Value) Value {
+		Function: func(config *Config, value ...Value) Value {
 			// TODO:
 			return NilValue{}
 		},
@@ -60,9 +61,52 @@ func init() {
 	// AuthAccount.borrow
 	RegisterTypeBoundFunction(typeName, sema.AuthAccountBorrowField, NativeFunctionValue{
 		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(value ...Value) Value {
-			// TODO:
-			return NilValue{}
+		Function: func(config *Config, args ...Value) Value {
+			authAccount, ok := args[0].(*CompositeValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			path, ok := args[1].(PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// TODO: pass type parameter
+			var typeParameter StaticType
+
+			referenceType, ok := typeParameter.(*interpreter.ReferenceStaticType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			address := authAccount.GetMember(config, sema.AuthAccountAddressField)
+			addressValue, ok := address.(AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			reference := NewStorageReferenceValue(
+				nil,
+				referenceType.Authorized,
+				common.Address(addressValue),
+				path,
+				typeParameter,
+			)
+
+			// Attempt to dereference,
+			// which reads the stored value
+			// and performs a dynamic type check
+
+			referenced, err := reference.dereference(config.MemoryGauge)
+			if err != nil {
+				panic(err)
+			}
+			if referenced == nil {
+				return NilValue{}
+			}
+
+			return NewSomeValueNonCopying(reference)
 		},
 	})
 }

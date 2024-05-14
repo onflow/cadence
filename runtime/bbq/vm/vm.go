@@ -318,7 +318,7 @@ func opInvoke(vm *VM) {
 	case NativeFunctionValue:
 		parameterCount := value.ParameterCount
 		arguments := vm.stack[stackHeight-parameterCount:]
-		result := value.Function(arguments...)
+		result := value.Function(vm.config, arguments...)
 		vm.push(result)
 	default:
 		panic(errors.NewUnreachableError())

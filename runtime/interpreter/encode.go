@@ -1367,8 +1367,8 @@ func (t FunctionStaticType) Encode(_ *cbor.StreamEncoder) error {
 	}
 }
 
-// compositeTypeInfo
-type compositeTypeInfo struct {
+// CompositeTypeInfo
+type CompositeTypeInfo struct {
 	Location            common.Location
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
@@ -1379,21 +1379,21 @@ func NewCompositeTypeInfo(
 	location common.Location,
 	qualifiedIdentifier string,
 	kind common.CompositeKind,
-) compositeTypeInfo {
+) CompositeTypeInfo {
 	common.UseMemory(memoryGauge, common.CompositeTypeInfoMemoryUsage)
 
-	return compositeTypeInfo{
+	return CompositeTypeInfo{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
 		Kind:                kind,
 	}
 }
 
-var _ atree.TypeInfo = compositeTypeInfo{}
+var _ atree.TypeInfo = CompositeTypeInfo{}
 
 const encodedCompositeTypeInfoLength = 3
 
-func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
+func (c CompositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagCompositeValue,
@@ -1422,8 +1422,8 @@ func (c compositeTypeInfo) Encode(e *cbor.StreamEncoder) error {
 	return nil
 }
 
-func (c compositeTypeInfo) Equal(o atree.TypeInfo) bool {
-	other, ok := o.(compositeTypeInfo)
+func (c CompositeTypeInfo) Equal(o atree.TypeInfo) bool {
+	other, ok := o.(CompositeTypeInfo)
 	return ok &&
 		c.Location == other.Location &&
 		c.QualifiedIdentifier == other.QualifiedIdentifier &&

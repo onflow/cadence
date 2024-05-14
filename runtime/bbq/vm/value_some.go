@@ -19,21 +19,41 @@
 package vm
 
 import (
+	"github.com/onflow/atree"
+
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
-// members
+type SomeValue struct {
+	value Value
+}
 
-func init() {
-	typeName := interpreter.PrimitiveStaticTypeCapability.String()
+var _ Value = &SomeValue{}
 
-	// Capability.borrow
-	RegisterTypeBoundFunction(typeName, sema.CapabilityTypeBorrowField, NativeFunctionValue{
-		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(config *Config, value ...Value) Value {
-			// TODO:
-			return NilValue{}
-		},
-	})
+func NewSomeValueNonCopying(value Value) *SomeValue {
+	return &SomeValue{
+		value: value,
+	}
+}
+
+func (*SomeValue) isValue() {}
+
+func (v *SomeValue) StaticType(common.MemoryGauge) StaticType {
+	innerType := v.value.StaticType(inter)
+	if innerType == nil {
+		return nil
+	}
+	return interpreter.NewOptionalStaticType(
+		inter,
+		innerType,
+	)
+}
+
+func (v *SomeValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value {
+	return v
+}
+
+func (v *SomeValue) String() string {
+	return v.value.String()
 }
