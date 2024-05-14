@@ -613,15 +613,15 @@ func newAccountKeysAddFunction(
 					panic(err)
 				}
 
-			hashAlgoValue := invocation.Arguments[1]
-			hashAlgo := NewHashAlgorithmFromValue(inter, locationRange, hashAlgoValue)
+				hashAlgoValue := invocation.Arguments[1]
+				hashAlgo := NewHashAlgorithmFromValue(inter, locationRange, hashAlgoValue)
 
-			weightValue, ok := invocation.Arguments[2].(interpreter.UFix64Value)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+				weightValue, ok := invocation.Arguments[2].(interpreter.UFix64Value)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
 
-			weight := weightValue.ToInt(locationRange)
+				weight := weightValue.ToInt(locationRange)
 
 				var accountKey *AccountKey
 				errors.WrapPanic(func() {
@@ -631,18 +631,18 @@ func newAccountKeysAddFunction(
 					panic(interpreter.WrappedExternalError(err))
 				}
 
-			handler.EmitEvent(
-				inter,
-				AccountKeyAddedFromPublicKeyEventType,
-				[]interpreter.Value{
-					addressValue,
-					publicKeyValue,
-					weightValue,
-					hashAlgoValue,
-					interpreter.NewIntValueFromInt64(inter, int64(accountKey.KeyIndex)),
-				},
-				locationRange,
-			)
+				handler.EmitEvent(
+					inter,
+					AccountKeyAddedFromPublicKeyEventType,
+					[]interpreter.Value{
+						addressValue,
+						publicKeyValue,
+						weightValue,
+						hashAlgoValue,
+						interpreter.NewIntValueFromInt64(inter, int64(accountKey.KeyIndex)),
+					},
+					locationRange,
+				)
 
 				return NewAccountKeyValue(
 					inter,
@@ -1352,21 +1352,21 @@ func newAccountContractsBorrowFunction(
 					return interpreter.Nil
 				}
 
-			// Load the contract and get the contract composite value.
-			// The requested contract may be a contract interface,
-			// in which case there will be no contract composite value.
+				// Load the contract and get the contract composite value.
+				// The requested contract may be a contract interface,
+				// in which case there will be no contract composite value.
 
-			contractLocation := common.NewAddressLocation(inter, address, name)
-			inter = inter.EnsureLoaded(contractLocation)
-			contractValue, err := inter.GetContractComposite(contractLocation)
-			if err != nil {
-				var notDeclaredErr interpreter.NotDeclaredError
-				if goerrors.As(err, &notDeclaredErr) {
-					return interpreter.Nil
+				contractLocation := common.NewAddressLocation(inter, address, name)
+				inter = inter.EnsureLoaded(contractLocation)
+				contractValue, err := inter.GetContractComposite(contractLocation)
+				if err != nil {
+					var notDeclaredErr interpreter.NotDeclaredError
+					if goerrors.As(err, &notDeclaredErr) {
+						return interpreter.Nil
+					}
+
+					panic(err)
 				}
-
-				panic(err)
-			}
 
 				// Check the type
 
