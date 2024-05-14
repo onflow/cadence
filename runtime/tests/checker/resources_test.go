@@ -9418,6 +9418,155 @@ func TestCheckInvalidResourceDestructionInFunction(t *testing.T) {
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }
 
+func TestCheckInvalidResourceCaptureOnLeft(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          var x: @AnyResource? <- nil
+
+          fun () {
+              x <-! []
+          }
+
+          destroy x
+      }
+    `)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+}
+
+func TestCheckInvalidNestedResourceCaptureOnLeft(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("on right", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    fun() {
+                        let y <- self.x
+                        destroy y
+                    }
+                }
+            }
+      `)
+		require.NoError(t, err)
+	})
+
+	t.Run("resource field on right", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R  {
+                var x: @AnyResource?
+                init() {
+                   self.x <- nil
+                }
+                fun foo() {
+                    fun() {
+                        let y <- self.x <- nil
+                        destroy y
+                    }
+                }
+            }
+      `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("on left", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    fun() {
+                        self.x <-! nil
+                    }
+
+                    destroy self.x
+                }
+            }
+    `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("on left method scope", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    self.x <-! nil
+
+                    destroy self.x
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+
+	t.Run("contract self variable on left", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract C {
+                var x: @AnyResource?
+
+                init() {
+                   self.x <- nil
+                }
+
+                fun foo() { 
+                    fun() {
+                        self.x <-! nil
+                    }
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+
+	t.Run("contract self variable on left method scope", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract C {
+                var x: @AnyResource?
+
+                init() {
+                   self.x <- nil
+                }
+
+                fun foo() {
+                    self.x <-! nil
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+}
+
 func TestCheckInvalidationInCondition(t *testing.T) {
 
 	t.Parallel()
