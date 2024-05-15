@@ -300,7 +300,7 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 ) ReferenceValue {
 	config := interpreter.SharedState.Config
 
-	account := config.AccountHandler(AddressValue(capabilityAddress))
+	account := config.AccountHandler(interpreter, AddressValue(capabilityAddress))
 
 	// Account must be of `Account` type.
 	interpreter.ExpectType(
@@ -331,13 +331,14 @@ func (v *AccountCapabilityControllerValue) checkDeleted() {
 }
 
 func (v *AccountCapabilityControllerValue) newHostFunctionValue(
-	gauge common.MemoryGauge,
+	inter *Interpreter,
 	funcType *sema.FunctionType,
 	f func(invocation Invocation) Value,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
-		FunctionValue: NewHostFunctionValue(
-			gauge,
+		FunctionValue: NewBoundHostFunctionValue(
+			inter,
+			v,
 			funcType,
 			func(invocation Invocation) Value {
 				// NOTE: check if controller is already deleted

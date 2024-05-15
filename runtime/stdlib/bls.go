@@ -38,7 +38,9 @@ func newBLSAggregatePublicKeysFunction(
 	gauge common.MemoryGauge,
 	aggregator BLSPublicKeyAggregator,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
+	// TODO: Should create a bound-host function here, but interpreter is not available at this point.
+	// However, this is not a problem for now, since underlying contract doesn't get moved.
+	return interpreter.NewStaticHostFunctionValue(
 		gauge,
 		BLSTypeAggregatePublicKeysFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -113,7 +115,9 @@ func newBLSAggregateSignaturesFunction(
 	gauge common.MemoryGauge,
 	aggregator BLSSignatureAggregator,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
+	// TODO: Should create a bound-host function here, but interpreter is not available at this point.
+	// However, this is not a problem for now, since underlying contract doesn't get moved.
+	return interpreter.NewStaticHostFunctionValue(
 		gauge,
 		BLSTypeAggregateSignaturesFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {

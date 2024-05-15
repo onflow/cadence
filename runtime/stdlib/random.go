@@ -110,7 +110,7 @@ func getRandomBytes(buffer []byte, generator RandomGenerator) {
 var ZeroModuloError = errors.NewDefaultUserError("modulo argument cannot be zero")
 
 func NewRevertibleRandomFunction(generator RandomGenerator) StandardLibraryValue {
-	return NewStandardLibraryFunction(
+	return NewStandardLibraryStaticFunction(
 		revertibleRandomFunctionName,
 		revertibleRandomFunctionType,
 		revertibleRandomFunctionDocString,

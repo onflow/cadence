@@ -95,7 +95,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 					value.Functions = orderedmap.New[interpreter.FunctionOrderedMap](1)
 					value.Functions.Set(
 						"bar",
-						interpreter.NewHostFunctionValue(
+						interpreter.NewStaticHostFunctionValue(
 							inter,
 							&sema.FunctionType{
 								ReturnTypeAnnotation: sema.UIntTypeAnnotation,

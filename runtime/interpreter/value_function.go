@@ -190,7 +190,7 @@ func (f *HostFunctionValue) MeteredString(interpreter *Interpreter, _ SeenRefere
 	return f.String()
 }
 
-func NewUnmeteredHostFunctionValue(
+func NewUnmeteredStaticHostFunctionValue(
 	funcType *sema.FunctionType,
 	function HostFunction,
 ) *HostFunctionValue {
@@ -207,7 +207,10 @@ func NewUnmeteredHostFunctionValue(
 	}
 }
 
-func NewHostFunctionValue(
+// NewStaticHostFunctionValue constructs a host function that is not bounded to any value.
+// For constructing a function bound to a value (e.g: a member function), the output of this method
+// must be wrapped with a bound-function, or `NewBoundHostFunctionValue` method must be used.
+func NewStaticHostFunctionValue(
 	gauge common.MemoryGauge,
 	funcType *sema.FunctionType,
 	function HostFunction,
@@ -215,7 +218,7 @@ func NewHostFunctionValue(
 
 	common.UseMemory(gauge, common.HostFunctionValueMemoryUsage)
 
-	return NewUnmeteredHostFunctionValue(funcType, function)
+	return NewUnmeteredStaticHostFunctionValue(funcType, function)
 }
 
 var _ Value = &HostFunctionValue{}
@@ -325,7 +328,7 @@ func (v *HostFunctionValue) SetNestedVariables(variables map[string]Variable) {
 type BoundFunctionValue struct {
 	Function           FunctionValue
 	Base               *EphemeralReferenceValue
-	Self               *MemberAccessibleValue
+	Self               *Value
 	BoundAuthorization Authorization
 	selfRef            *EphemeralReferenceValue
 }
@@ -336,10 +339,15 @@ var _ FunctionValue = BoundFunctionValue{}
 func NewBoundFunctionValue(
 	interpreter *Interpreter,
 	function FunctionValue,
-	self *MemberAccessibleValue,
+	self *Value,
 	base *EphemeralReferenceValue,
 	boundAuth Authorization,
 ) BoundFunctionValue {
+
+	// If the function is already a bound function, then do not re-wrap.
+	if boundFunc, isBoundFunc := function.(BoundFunctionValue); isBoundFunc {
+		return boundFunc
+	}
 
 	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
 
@@ -457,3 +465,43 @@ func (f BoundFunctionValue) Clone(_ *Interpreter) Value {
 func (BoundFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
+
+// NewBoundHostFunctionValue creates a bound-function value for a host-function.
+func NewBoundHostFunctionValue(
+	interpreter *Interpreter,
+	self Value,
+	funcType *sema.FunctionType,
+	function HostFunction,
+) BoundFunctionValue {
+
+	hostFunc := NewStaticHostFunctionValue(interpreter, funcType, function)
+
+	return NewBoundFunctionValue(
+		interpreter,
+		hostFunc,
+		&self,
+		nil,
+		nil,
+	)
+}
+
+// NewUnmeteredBoundHostFunctionValue creates a bound-function value for a host-function.
+func NewUnmeteredBoundHostFunctionValue(
+	interpreter *Interpreter,
+	self Value,
+	funcType *sema.FunctionType,
+	function HostFunction,
+) BoundFunctionValue {
+
+	hostFunc := NewUnmeteredStaticHostFunctionValue(funcType, function)
+
+	return NewBoundFunctionValue(
+		interpreter,
+		hostFunc,
+		&self,
+		nil,
+		nil,
+	)
+}
+
+type BoundFunctionGenerator func(MemberAccessibleValue) BoundFunctionValue

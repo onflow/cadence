@@ -36,23 +36,14 @@ type ContractNamesGetter func(interpreter *Interpreter, locationRange LocationRa
 func NewAccountContractsValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	addFunction FunctionValue,
-	updateFunction FunctionValue,
-	tryUpdateFunction FunctionValue,
-	getFunction FunctionValue,
-	borrowFunction FunctionValue,
-	removeFunction FunctionValue,
+	addFunction BoundFunctionGenerator,
+	updateFunction BoundFunctionGenerator,
+	tryUpdateFunction BoundFunctionGenerator,
+	getFunction BoundFunctionGenerator,
+	borrowFunction BoundFunctionGenerator,
+	removeFunction BoundFunctionGenerator,
 	namesGetter ContractNamesGetter,
 ) Value {
-
-	fields := map[string]Value{
-		sema.Account_ContractsTypeAddFunctionName:       addFunction,
-		sema.Account_ContractsTypeGetFunctionName:       getFunction,
-		sema.Account_ContractsTypeBorrowFunctionName:    borrowFunction,
-		sema.Account_ContractsTypeRemoveFunctionName:    removeFunction,
-		sema.Account_ContractsTypeUpdateFunctionName:    updateFunction,
-		sema.Account_ContractsTypeTryUpdateFunctionName: tryUpdateFunction,
-	}
 
 	computeField := func(
 		name string,
@@ -76,14 +67,25 @@ func NewAccountContractsValue(
 		return str
 	}
 
-	return NewSimpleCompositeValue(
+	accountContracts := NewSimpleCompositeValue(
 		gauge,
 		account_ContractsTypeID,
 		account_ContractsStaticType,
 		account_ContractsFieldNames,
-		fields,
+		nil,
 		computeField,
 		nil,
 		stringer,
 	)
+
+	accountContracts.Fields = map[string]Value{
+		sema.Account_ContractsTypeAddFunctionName:       addFunction(accountContracts),
+		sema.Account_ContractsTypeGetFunctionName:       getFunction(accountContracts),
+		sema.Account_ContractsTypeBorrowFunctionName:    borrowFunction(accountContracts),
+		sema.Account_ContractsTypeRemoveFunctionName:    removeFunction(accountContracts),
+		sema.Account_ContractsTypeUpdateFunctionName:    updateFunction(accountContracts),
+		sema.Account_ContractsTypeTryUpdateFunctionName: tryUpdateFunction(accountContracts),
+	}
+
+	return accountContracts
 }

@@ -46,7 +46,7 @@ type Logger interface {
 }
 
 func NewLogFunction(logger Logger) StandardLibraryValue {
-	return NewStandardLibraryFunction(
+	return NewStandardLibraryStaticFunction(
 		"log",
 		LogFunctionType,
 		logFunctionDocString,

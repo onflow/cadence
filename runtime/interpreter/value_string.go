@@ -182,8 +182,9 @@ func stringFunctionJoin(invocation Invocation) Value {
 }
 
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
+// Type bound functions are static functions.
 var stringFunction = func() Value {
-	functionValue := NewUnmeteredHostFunctionValue(
+	functionValue := NewUnmeteredStaticHostFunctionValue(
 		sema.StringFunctionType,
 		func(invocation Invocation) Value {
 			return EmptyString
@@ -201,7 +202,7 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeEncodeHexFunctionName,
-		NewUnmeteredHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValue(
 			sema.StringTypeEncodeHexFunctionType,
 			stringFunctionEncodeHex,
 		),
@@ -209,7 +210,7 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeFromUtf8FunctionName,
-		NewUnmeteredHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValue(
 			sema.StringTypeFromUtf8FunctionType,
 			stringFunctionFromUtf8,
 		),
@@ -217,7 +218,7 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeFromCharactersFunctionName,
-		NewUnmeteredHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValue(
 			sema.StringTypeFromCharactersFunctionType,
 			stringFunctionFromCharacters,
 		),
@@ -225,7 +226,7 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeJoinFunctionName,
-		NewUnmeteredHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValue(
 			sema.StringTypeJoinFunctionType,
 			stringFunctionJoin,
 		),

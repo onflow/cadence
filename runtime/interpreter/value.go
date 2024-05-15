@@ -411,8 +411,9 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		})
 
 	case sema.MetaTypeIsSubtypeFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.MetaTypeIsSubtypeFunctionType,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
@@ -998,8 +999,9 @@ func (CharacterValue) ChildStorables() []atree.Storable {
 func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ToStringFunctionType,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
@@ -1343,8 +1345,9 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 		return ByteSliceToByteArrayValue(interpreter, []byte(v.Str))
 
 	case sema.StringTypeConcatFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.StringTypeConcatFunctionType,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
@@ -1357,8 +1360,9 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 		)
 
 	case sema.StringTypeSliceFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.StringTypeSliceFunctionType,
 			func(invocation Invocation) Value {
 				from, ok := invocation.Arguments[0].(IntValue)
@@ -1376,8 +1380,9 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 		)
 
 	case sema.StringTypeDecodeHexFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.StringTypeDecodeHexFunctionType,
 			func(invocation Invocation) Value {
 				return v.DecodeHex(
@@ -1388,8 +1393,9 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 		)
 
 	case sema.StringTypeToLowerFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.StringTypeToLowerFunctionType,
 			func(invocation Invocation) Value {
 				return v.ToLower(invocation.Interpreter)
@@ -1397,8 +1403,9 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 		)
 
 	case sema.StringTypeSplitFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.StringTypeSplitFunctionType,
 			func(invocation Invocation) Value {
 				separator, ok := invocation.Arguments[0].(*StringValue)
@@ -1411,8 +1418,9 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 		)
 
 	case sema.StringTypeReplaceAllFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.StringTypeReplaceAllFunctionType,
 			func(invocation Invocation) Value {
 				of, ok := invocation.Arguments[0].(*StringValue)
@@ -2499,8 +2507,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		return NewIntValueFromInt64(interpreter, int64(v.Count()))
 
 	case "append":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayAppendFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2515,8 +2524,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "appendAll":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayAppendAllFunctionType(
 				v.SemaType(interpreter),
 			),
@@ -2535,8 +2545,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "concat":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayConcatFunctionType(
 				v.SemaType(interpreter),
 			),
@@ -2554,8 +2565,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "insert":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayInsertFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2582,8 +2594,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "remove":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayRemoveFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2606,8 +2619,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "removeFirst":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayRemoveFirstFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2620,8 +2634,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "removeLast":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayRemoveLastFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2634,8 +2649,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "firstIndex":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayFirstIndexFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2649,8 +2665,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "contains":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayContainsFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2664,8 +2681,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case "slice":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArraySliceFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2690,8 +2708,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case sema.ArrayTypeReverseFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayReverseFunctionType(
 				v.SemaType(interpreter),
 			),
@@ -2704,8 +2723,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case sema.ArrayTypeFilterFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayFilterFunctionType(
 				interpreter,
 				v.SemaType(interpreter).ElementType(false),
@@ -2727,8 +2747,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case sema.ArrayTypeMapFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayMapFunctionType(
 				interpreter,
 				v.SemaType(interpreter),
@@ -2756,8 +2777,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case sema.ArrayTypeToVariableSizedFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayToVariableSizedFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -2772,8 +2794,9 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 		)
 
 	case sema.ArrayTypeToConstantSizedFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ArrayToConstantSizedFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
@@ -3597,8 +3620,9 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 	switch name {
 
 	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ToStringFunctionType,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
@@ -3616,8 +3640,9 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 		)
 
 	case sema.ToBigEndianBytesFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ToBigEndianBytesFunctionType,
 			func(invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(
@@ -3628,8 +3653,9 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 		)
 
 	case sema.NumericTypeSaturatingAddFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
@@ -3645,8 +3671,9 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 		)
 
 	case sema.NumericTypeSaturatingSubtractFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
@@ -3662,8 +3689,9 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 		)
 
 	case sema.NumericTypeSaturatingMultiplyFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
@@ -3679,8 +3707,9 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 		)
 
 	case sema.NumericTypeSaturatingDivideFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
 			func(invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
@@ -17051,7 +17080,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	if builtin := v.getBuiltinMember(interpreter, locationRange, name); builtin != nil {
-		return builtin
+		return compositeMember(interpreter, v, builtin)
 	}
 
 	// Give computed fields precedence over stored fields for built-in types
@@ -17062,7 +17091,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	if field := v.GetField(interpreter, locationRange, name); field != nil {
-		return field
+		return compositeMember(interpreter, v, field)
 	}
 
 	if v.NestedVariables != nil {
@@ -17089,6 +17118,15 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	return nil
+}
+
+func compositeMember(interpreter *Interpreter, compositeValue Value, memberValue Value) Value {
+	hostFunc, isHostFunc := memberValue.(*HostFunctionValue)
+	if isHostFunc {
+		return NewBoundFunctionValue(interpreter, hostFunc, &compositeValue, nil, nil)
+	}
+
+	return memberValue
 }
 
 func (v *CompositeValue) isInvalidatedResource(_ *Interpreter) bool {
@@ -17159,7 +17197,7 @@ func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange Loc
 	}
 
 	var base *EphemeralReferenceValue
-	var self MemberAccessibleValue = v
+	var self Value = v
 	if v.Kind == common.CompositeKindAttachment {
 		functionAccess := interpreter.getAccessOfMember(v, name)
 
@@ -17183,6 +17221,9 @@ func (v *CompositeValue) GetFunction(interpreter *Interpreter, locationRange Loc
 		}
 		base, self = attachmentBaseAndSelfValues(interpreter, functionAccess, v, locationRange)
 	}
+
+	// If the function is already a bound function, then do not re-wrap.
+	// `NewBoundFunctionValue` already handles this.
 	return NewBoundFunctionValue(interpreter, function, &self, base, nil)
 }
 
@@ -17195,7 +17236,7 @@ func (v *CompositeValue) OwnerValue(interpreter *Interpreter, locationRange Loca
 
 	config := interpreter.SharedState.Config
 
-	ownerAccount := config.AccountHandler(AddressValue(address))
+	ownerAccount := config.AccountHandler(interpreter, AddressValue(address))
 
 	// Owner must be of `Account` type.
 	interpreter.ExpectType(
@@ -18223,8 +18264,9 @@ func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange 
 }
 
 func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, locationRange LocationRange) Value {
-	return NewHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		v,
 		sema.CompositeForEachAttachmentFunctionType(interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType).GetCompositeKind()),
 		func(invocation Invocation) Value {
 			interpreter := invocation.Interpreter
@@ -19223,8 +19265,9 @@ func (v *DictionaryValue) GetMember(
 			})
 
 	case "remove":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.DictionaryRemoveFunctionType(
 				v.SemaType(interpreter),
 			),
@@ -19240,8 +19283,9 @@ func (v *DictionaryValue) GetMember(
 		)
 
 	case "insert":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.DictionaryInsertFunctionType(
 				v.SemaType(interpreter),
 			),
@@ -19259,8 +19303,9 @@ func (v *DictionaryValue) GetMember(
 		)
 
 	case "containsKey":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.DictionaryContainsKeyFunctionType(
 				v.SemaType(interpreter),
 			),
@@ -19273,8 +19318,9 @@ func (v *DictionaryValue) GetMember(
 			},
 		)
 	case "forEachKey":
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.DictionaryForEachKeyFunctionType(
 				v.SemaType(interpreter),
 			),
@@ -19994,7 +20040,7 @@ func (v NilValue) MeteredString(interpreter *Interpreter, _ SeenReferences, loca
 
 // nilValueMapFunction is created only once per interpreter.
 // Hence, no need to meter, as it's a constant.
-var nilValueMapFunction = NewUnmeteredHostFunctionValue(
+var nilValueMapFunction = NewUnmeteredStaticHostFunctionValue(
 	sema.OptionalTypeMapFunctionType(sema.NeverType),
 	func(invocation Invocation) Value {
 		return Nil
@@ -20184,8 +20230,9 @@ func (v *SomeValue) MeteredString(interpreter *Interpreter, seenReferences SeenR
 func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.OptionalTypeMapFunctionType(
 				interpreter.MustConvertStaticToSemaType(
 					v.value.StaticType(interpreter),
@@ -20611,7 +20658,6 @@ func (v *StorageReferenceValue) GetMember(
 	name string,
 ) Value {
 	self := v.mustReferencedValue(interpreter, locationRange)
-
 	return interpreter.getMember(self, locationRange, name)
 }
 
@@ -21349,8 +21395,9 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name 
 	switch name {
 
 	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.ToStringFunctionType,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
@@ -21371,8 +21418,9 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name 
 		)
 
 	case sema.AddressTypeToBytesFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			interpreter,
+			v,
 			sema.AddressTypeToBytesFunctionType,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter
@@ -21570,8 +21618,9 @@ func (v PathValue) GetMember(inter *Interpreter, locationRange LocationRange, na
 	switch name {
 
 	case sema.ToStringFunctionName:
-		return NewHostFunctionValue(
+		return NewBoundHostFunctionValue(
 			inter,
+			v,
 			sema.ToStringFunctionType,
 			func(invocation Invocation) Value {
 				interpreter := invocation.Interpreter

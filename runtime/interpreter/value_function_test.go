@@ -49,7 +49,7 @@ func TestFunctionStaticType(t *testing.T) {
 			sema.BoolTypeAnnotation,
 		)
 
-		hostFunctionValue := NewHostFunctionValue(
+		hostFunctionValue := NewStaticHostFunctionValue(
 			inter,
 			hostFunctionType,
 			hostFunction,
@@ -83,13 +83,13 @@ func TestFunctionStaticType(t *testing.T) {
 			sema.BoolTypeAnnotation,
 		)
 
-		hostFunctionValue := NewHostFunctionValue(
+		hostFunctionValue := NewStaticHostFunctionValue(
 			inter,
 			hostFunctionType,
 			hostFunction,
 		)
 
-		compositeValue := NewCompositeValue(
+		var compositeValue Value = NewCompositeValue(
 			inter,
 			EmptyLocationRange,
 			utils.TestLocation,
@@ -99,12 +99,10 @@ func TestFunctionStaticType(t *testing.T) {
 			common.MustBytesToAddress([]byte{0}),
 		)
 
-		var self MemberAccessibleValue = compositeValue
-
 		boundFunctionValue := NewBoundFunctionValue(
 			inter,
 			hostFunctionValue,
-			&self,
+			&compositeValue,
 			nil,
 			nil,
 		)

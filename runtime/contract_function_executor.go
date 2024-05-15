@@ -180,7 +180,7 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 		return nil, newError(err, location, codesAndPrograms)
 	}
 
-	var self interpreter.MemberAccessibleValue = contractValue
+	var self interpreter.Value = contractValue
 
 	// prepare invocation
 	invocation := interpreter.NewInvocation(
@@ -250,7 +250,7 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 
 			address := interpreter.NewAddressValue(inter, common.Address(addressValue))
 
-			accountValue := environment.NewAccountValue(address)
+			accountValue := environment.NewAccountValue(inter, address)
 
 			authorization := interpreter.ConvertSemaAccessToStaticAuthorization(
 				inter,

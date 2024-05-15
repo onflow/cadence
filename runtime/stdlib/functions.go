@@ -24,7 +24,8 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func NewStandardLibraryFunction(
+// NewStandardLibraryStaticFunction should only be used for creating static functions.
+func NewStandardLibraryStaticFunction(
 	name string,
 	functionType *sema.FunctionType,
 	docString string,
@@ -39,7 +40,7 @@ func NewStandardLibraryFunction(
 		argumentLabels[i] = parameter.EffectiveArgumentLabel()
 	}
 
-	functionValue := interpreter.NewUnmeteredHostFunctionValue(functionType, function)
+	functionValue := interpreter.NewUnmeteredStaticHostFunctionValue(functionType, function)
 
 	return StandardLibraryValue{
 		Name:           name,
