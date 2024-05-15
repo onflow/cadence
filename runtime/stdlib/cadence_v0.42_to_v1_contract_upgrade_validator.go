@@ -401,12 +401,12 @@ var astFullyEntitledAccountReferenceType = &ast.ReferenceType{
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) checkTypeUpgradability(oldType ast.Type, newType ast.Type, inCapability bool) error {
 
-typeSwitch:
 	switch oldType := oldType.(type) {
 	case *ast.OptionalType:
 		if newOptional, isOptional := newType.(*ast.OptionalType); isOptional {
 			return validator.checkTypeUpgradability(oldType.Type, newOptional.Type, inCapability)
 		}
+
 	case *ast.ReferenceType:
 
 		if newReference, isReference := newType.(*ast.ReferenceType); isReference {
@@ -432,10 +432,12 @@ typeSwitch:
 				return nil
 			}
 		}
+
 	case *ast.IntersectionType:
 		// If the intersection type have doesn't a legacy restricted type,
-		// the interface set must be compatible.
-		if oldType.LegacyRestrictedType == nil {
+		// or if the legacy restricted type is AnyStruct/AnyResource (i.e: {T} or AnyStruct{T} or AnyResource{T})
+		// then the interface set must be compatible.
+		if dropRestrictedType(oldType) {
 			newIntersectionType, ok := newType.(*ast.IntersectionType)
 			if !ok {
 				return newTypeMismatchError(oldType, newType)
@@ -483,20 +485,6 @@ typeSwitch:
 		// they must be upgraded according to the migration rules: i.e. R{I} -> R
 		validator.currentRestrictedTypeUpgradeRestrictions = oldType.Types
 
-		// If the old restricted type is for AnyStruct/AnyResource,
-		// and if there are atleast one restriction, require them to drop the "restricted type".
-		// e.g-1: `AnyStruct{I} -> {I}`
-		// e.g-2: `AnyResource{I} -> {I}`
-		// See: https://github.com/onflow/cadence/issues/3112
-		if restrictedNominalType, isNominal := oldType.LegacyRestrictedType.(*ast.NominalType); isNominal {
-			switch restrictedNominalType.Identifier.Identifier {
-			case "AnyStruct", "AnyResource":
-				if len(oldType.Types) > 0 {
-					break typeSwitch
-				}
-			}
-		}
-
 		// Otherwise require them to drop the "restrictions".
 		// e.g-1: `T{I} -> T`
 		// e.g-2: `AnyStruct{} -> AnyStruct`
@@ -506,6 +494,7 @@ typeSwitch:
 		if newVariableSizedType, isVariableSizedType := newType.(*ast.VariableSizedType); isVariableSizedType {
 			return validator.checkTypeUpgradability(oldType.Type, newVariableSizedType.Type, inCapability)
 		}
+
 	case *ast.ConstantSizedType:
 		if newConstantSizedType, isConstantSizedType := newType.(*ast.ConstantSizedType); isConstantSizedType {
 			if oldType.Size.Value.Cmp(newConstantSizedType.Size.Value) != 0 ||
@@ -514,6 +503,7 @@ typeSwitch:
 			}
 			return validator.checkTypeUpgradability(oldType.Type, newConstantSizedType.Type, inCapability)
 		}
+
 	case *ast.DictionaryType:
 		if newDictionaryType, isDictionaryType := newType.(*ast.DictionaryType); isDictionaryType {
 			err := validator.checkTypeUpgradability(oldType.KeyType, newDictionaryType.KeyType, inCapability)
@@ -522,6 +512,7 @@ typeSwitch:
 			}
 			return validator.checkTypeUpgradability(oldType.ValueType, newDictionaryType.ValueType, inCapability)
 		}
+
 	case *ast.InstantiationType:
 		// if the type is a Capability, allow the borrow type to change according to the normal upgrade rules
 		if oldNominalType, isNominal := oldType.Type.(*ast.NominalType); isNominal &&
@@ -626,6 +617,26 @@ typeSwitch:
 
 	return oldType.CheckEqual(newType, validator)
 
+}
+
+func dropRestrictedType(intersectionType *ast.IntersectionType) bool {
+	if intersectionType.LegacyRestrictedType == nil {
+		return true
+	}
+
+	// If the old restricted type is for AnyStruct/AnyResource,
+	// and if there are atleast one restriction, require them to drop the "restricted type".
+	// e.g-1: `AnyStruct{I} -> {I}`
+	// e.g-2: `AnyResource{I} -> {I}`
+	// See: https://github.com/onflow/cadence/issues/3112
+	if restrictedNominalType, isNominal := intersectionType.LegacyRestrictedType.(*ast.NominalType); isNominal {
+		switch restrictedNominalType.Identifier.Identifier {
+		case "AnyStruct", "AnyResource":
+			return len(intersectionType.Types) > 0
+		}
+	}
+
+	return false
 }
 
 func (validator *CadenceV042ToV1ContractUpdateValidator) checkUserDefinedTypeCustomRules(
