@@ -2788,3 +2788,54 @@ func TestContractUpgradeIsRepresentable(t *testing.T) {
 	test(true)
 	test(false)
 }
+
+func TestContractUpgrade(t *testing.T) {
+
+	t.Parallel()
+
+	const oldCode = `
+        access(all)
+        contract Test {
+
+            access(all)
+            resource A {
+
+                access(self)
+                // NOTE: undefined type
+                let cap: Capability<&B{Undefined}>
+            }
+
+            access(all)
+            resource B {}
+        }
+    `
+
+	const newCode = `
+        access(all)
+        contract Test {
+
+            access(all)
+            entitlement E
+
+            access(all)
+            resource A {
+
+                access(self)
+                let cap: Capability<auth(E) &B>
+
+                init(cap: Capability<auth(E) &B>) {
+                    self.cap = cap
+                }
+            }
+
+            access(all)
+            resource B {}
+        }
+    `
+
+	err := testContractUpdate(t, oldCode, newCode)
+	require.Error(t, err)
+
+	cause := getSingleContractUpdateErrorCause(t, err, "Test")
+	assertFieldAuthorizationMismatchError(t, cause, "A", "cap", "all", "E")
+}

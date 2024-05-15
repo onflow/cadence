@@ -574,7 +574,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		)
 
 		var logs []string
-		valueDeclaration := stdlib.NewStandardLibraryFunction(
+		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			logFunctionType,
 			"",
@@ -686,7 +686,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		)
 
 		var logs []string
-		valueDeclaration := stdlib.NewStandardLibraryFunction(
+		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			logFunctionType,
 			"",
@@ -798,7 +798,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		)
 
 		var logs []string
-		valueDeclaration := stdlib.NewStandardLibraryFunction(
+		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			logFunctionType,
 			"",

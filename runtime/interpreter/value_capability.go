@@ -27,13 +27,14 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-const invalidCapabilityID UInt64Value = 0
+const InvalidCapabilityID UInt64Value = 0
 
 // CapabilityValue
 
 // TODO: remove once migration to Cadence 1.0 / ID capabilities is complete
 type CapabilityValue interface {
 	EquatableValue
+	MemberAccessibleValue
 	atree.Storable
 	isCapabilityValue()
 }
@@ -51,9 +52,6 @@ func NewUnmeteredCapabilityValue(
 	address AddressValue,
 	borrowType StaticType,
 ) *IDCapabilityValue {
-	if id == invalidCapabilityID {
-		panic(InvalidCapabilityIDError{})
-	}
 	return &IDCapabilityValue{
 		ID:         id,
 		Address:    address,
@@ -80,7 +78,7 @@ func NewInvalidCapabilityValue(
 	// Constant because its constituents are already metered.
 	common.UseMemory(memoryGauge, common.CapabilityValueMemoryUsage)
 	return &IDCapabilityValue{
-		ID:         invalidCapabilityID,
+		ID:         InvalidCapabilityID,
 		Address:    address,
 		BorrowType: borrowType,
 	}
@@ -97,7 +95,7 @@ func (*IDCapabilityValue) isValue() {}
 func (*IDCapabilityValue) isCapabilityValue() {}
 
 func (v *IDCapabilityValue) isInvalid() bool {
-	return v.ID == invalidCapabilityID
+	return v.ID == InvalidCapabilityID
 }
 
 func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
@@ -147,12 +145,12 @@ func (v *IDCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange,
 	case sema.CapabilityTypeBorrowFunctionName:
 		// this function will panic already if this conversion fails
 		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-		return interpreter.capabilityBorrowFunction(v.Address, v.ID, borrowType)
+		return interpreter.capabilityBorrowFunction(v, v.Address, v.ID, borrowType)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		// this function will panic already if this conversion fails
 		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-		return interpreter.capabilityCheckFunction(v.Address, v.ID, borrowType)
+		return interpreter.capabilityCheckFunction(v, v.Address, v.ID, borrowType)
 
 	case sema.CapabilityTypeAddressFieldName:
 		return v.Address

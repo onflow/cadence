@@ -50,12 +50,10 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 			// NOTE: important to check move after each type check,
 			// not combined after both type checks!
 
-			entryKeyType := checker.VisitExpression(entry.Key, keyType)
-			checker.checkVariableMove(entry.Key)
+			entryKeyType := checker.VisitExpression(entry.Key, expression, keyType)
 			checker.checkResourceMoveOperation(entry.Key, entryKeyType)
 
-			entryValueType := checker.VisitExpression(entry.Value, valueType)
-			checker.checkVariableMove(entry.Value)
+			entryValueType := checker.VisitExpression(entry.Value, expression, valueType)
 			checker.checkResourceMoveOperation(entry.Value, entryValueType)
 
 			entryTypes[i] = DictionaryEntryType{

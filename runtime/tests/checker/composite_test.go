@@ -633,8 +633,13 @@ func TestCheckCompositeInitializerSelfUse(t *testing.T) {
 			)
 
 			switch kind {
-			case common.CompositeKindStructure, common.CompositeKindContract, common.CompositeKindAttachment:
+			case common.CompositeKindStructure, common.CompositeKindAttachment:
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			case common.CompositeKindResource:
 				errs := RequireCheckerErrors(t, err, 1)
@@ -674,8 +679,13 @@ func TestCheckCompositeFunctionSelfUse(t *testing.T) {
 			)
 
 			switch kind {
-			case common.CompositeKindStructure, common.CompositeKindContract, common.CompositeKindAttachment:
+			case common.CompositeKindStructure, common.CompositeKindAttachment:
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			case common.CompositeKindResource:
 				errs := RequireCheckerErrors(t, err, 1)
@@ -1981,19 +1991,36 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 					)
 
 					firstBody := ""
+					firstCallableFunc := "fun foo()"
 					if !firstIsInterface {
+						usage := "b"
+						if secondKind == common.CompositeKindContract {
+							usage += ".foo()"
+						}
+
 						firstBody = fmt.Sprintf(
-							"{ %s b }",
+							"{ %s %s }",
 							secondKind.DestructionKeyword(),
+							usage,
 						)
+
+						firstCallableFunc += " {}"
 					}
 
 					secondBody := ""
+					secondCallableFunc := "fun foo()"
 					if !secondIsInterface {
+						usage := "a"
+						if firstKind == common.CompositeKindContract {
+							usage += ".foo()"
+						}
+
 						secondBody = fmt.Sprintf(
-							"{ %s a }",
+							"{ %s %s }",
 							firstKind.DestructionKeyword(),
+							usage,
 						)
+						secondCallableFunc += " {}"
 					}
 
 					t.Run(testName, func(t *testing.T) {
@@ -2002,10 +2029,12 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 							`
                               %[1]s %[2]s A {
                                   fun use(_ b: %[3]s%[4]s) %[5]s
+                                  %[11]s
                               }
 
                               %[6]s %[7]s B {
                                   fun use(_ a: %[8]s%[9]s) %[10]s
+                                  %[12]s
                               }
                             `,
 							firstKind.Keyword(),
@@ -2018,6 +2047,8 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 							firstKind.Annotation(),
 							firstTypeAnnotation,
 							secondBody,
+							firstCallableFunc,
+							secondCallableFunc,
 						)
 
 						_, err := ParseAndCheck(t, code)

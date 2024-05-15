@@ -30,7 +30,7 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) (_ struct{}
 
 	switch test := statement.Test.(type) {
 	case ast.Expression:
-		checker.VisitExpression(test, BoolType)
+		checker.VisitExpression(test, statement, BoolType)
 
 		checker.checkConditionalBranches(
 			func() Type {
@@ -90,14 +90,14 @@ func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalEx
 
 	expectedType := checker.expectedType
 
-	checker.VisitExpression(expression.Test, BoolType)
+	checker.VisitExpression(expression.Test, expression, BoolType)
 
 	thenType, elseType := checker.checkConditionalBranches(
 		func() Type {
-			return checker.VisitExpression(expression.Then, expectedType)
+			return checker.VisitExpression(expression.Then, expression, expectedType)
 		},
 		func() Type {
-			return checker.VisitExpression(expression.Else, expectedType)
+			return checker.VisitExpression(expression.Else, expression, expectedType)
 		},
 	)
 

@@ -33,22 +33,14 @@ var account_CapabilitiesStaticType StaticType = PrimitiveStaticTypeAccount_Capab
 func NewAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	getFunction FunctionValue,
-	borrowFunction FunctionValue,
-	existsFunction FunctionValue,
-	publishFunction FunctionValue,
-	unpublishFunction FunctionValue,
+	getFunction BoundFunctionGenerator,
+	borrowFunction BoundFunctionGenerator,
+	existsFunction BoundFunctionGenerator,
+	publishFunction BoundFunctionGenerator,
+	unpublishFunction BoundFunctionGenerator,
 	storageCapabilitiesConstructor func() Value,
 	accountCapabilitiesConstructor func() Value,
 ) Value {
-
-	fields := map[string]Value{
-		sema.Account_CapabilitiesTypeGetFunctionName:       getFunction,
-		sema.Account_CapabilitiesTypeBorrowFunctionName:    borrowFunction,
-		sema.Account_CapabilitiesTypeExistsFunctionName:    existsFunction,
-		sema.Account_CapabilitiesTypePublishFunctionName:   publishFunction,
-		sema.Account_CapabilitiesTypeUnpublishFunctionName: unpublishFunction,
-	}
 
 	var storageCapabilities Value
 	var accountCapabilities Value
@@ -81,14 +73,24 @@ func NewAccountCapabilitiesValue(
 		return str
 	}
 
-	return NewSimpleCompositeValue(
+	capabilities := NewSimpleCompositeValue(
 		gauge,
 		account_CapabilitiesTypeID,
 		account_CapabilitiesStaticType,
 		nil,
-		fields,
+		nil,
 		computeField,
 		nil,
 		stringer,
 	)
+
+	capabilities.Fields = map[string]Value{
+		sema.Account_CapabilitiesTypeGetFunctionName:       getFunction(capabilities),
+		sema.Account_CapabilitiesTypeBorrowFunctionName:    borrowFunction(capabilities),
+		sema.Account_CapabilitiesTypeExistsFunctionName:    existsFunction(capabilities),
+		sema.Account_CapabilitiesTypePublishFunctionName:   publishFunction(capabilities),
+		sema.Account_CapabilitiesTypeUnpublishFunctionName: unpublishFunction(capabilities),
+	}
+
+	return capabilities
 }

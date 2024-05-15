@@ -367,91 +367,91 @@ func TestIntersectionTypeMigration(t *testing.T) {
 		},
 	}
 
-	// Store values
+	test := func(name string, testCase testCase) {
 
-	ledger := NewTestLedger(nil, nil)
-	storage := runtime.NewStorage(ledger, nil)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	inter, err := interpreter.NewInterpreter(
-		nil,
-		utils.TestLocation,
-		&interpreter.Config{
-			Storage:                       storage,
-			AtreeValueValidationEnabled:   true,
-			AtreeStorageValidationEnabled: true,
-		},
-	)
-	require.NoError(t, err)
+			// Store values
 
-	for name, testCase := range testCases {
-		storeTypeValue(
-			inter,
-			testAddress,
-			pathDomain,
-			name,
-			testCase.storedType,
-		)
-	}
+			ledger := NewTestLedger(nil, nil)
+			storage := runtime.NewStorage(ledger, nil)
 
-	err = storage.Commit(inter, true)
-	require.NoError(t, err)
-
-	// Migrate
-
-	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
-	require.NoError(t, err)
-
-	reporter := newTestReporter()
-
-	migration.Migrate(
-		migration.NewValueMigrationsPathMigrator(
-			reporter,
-			NewStaticTypeMigration(),
-		),
-	)
-
-	err = migration.Commit()
-	require.NoError(t, err)
-
-	// Assert
-
-	require.Empty(t, reporter.errors)
-
-	err = storage.CheckHealth()
-	require.NoError(t, err)
-
-	// Assert the migrated values.
-	// Traverse through the storage and see if the values are updated now.
-
-	storageMap := storage.GetStorageMap(testAddress, pathDomain.Identifier(), false)
-	require.NotNil(t, storageMap)
-	require.Greater(t, storageMap.Count(), uint64(0))
-
-	iterator := storageMap.Iterator(inter)
-
-	for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
-		identifier := string(key.(interpreter.StringAtreeValue))
-
-		t.Run(identifier, func(t *testing.T) {
-			testCase, ok := testCases[identifier]
-			require.True(t, ok)
-
-			key := struct {
-				interpreter.StorageKey
-				interpreter.StorageMapKey
-			}{
-				StorageKey: interpreter.StorageKey{
-					Address: testAddress,
-					Key:     pathDomain.Identifier(),
+			inter, err := interpreter.NewInterpreter(
+				nil,
+				utils.TestLocation,
+				&interpreter.Config{
+					Storage:                       storage,
+					AtreeValueValidationEnabled:   true,
+					AtreeStorageValidationEnabled: true,
 				},
-				StorageMapKey: interpreter.StringStorageMapKey(identifier),
-			}
+			)
+			require.NoError(t, err)
+
+			storeTypeValue(
+				inter,
+				testAddress,
+				pathDomain,
+				name,
+				testCase.storedType,
+			)
+
+			err = storage.Commit(inter, true)
+			require.NoError(t, err)
+
+			// Migrate
+
+			migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+			require.NoError(t, err)
+
+			reporter := newTestReporter()
+
+			migration.Migrate(
+				migration.NewValueMigrationsPathMigrator(
+					reporter,
+					NewStaticTypeMigration(),
+				),
+			)
+
+			err = migration.Commit()
+			require.NoError(t, err)
+
+			// Assert
+
+			require.Empty(t, reporter.errors)
+
+			err = storage.CheckHealth()
+			require.NoError(t, err)
+
+			storageMapKey := interpreter.StringStorageMapKey(name)
 
 			if testCase.expectedType == nil {
-				assert.NotContains(t, reporter.migrated, key)
+				assert.Empty(t, reporter.migrated)
 			} else {
-				assert.Contains(t, reporter.migrated, key)
+				assert.Equal(t,
+					map[struct {
+						interpreter.StorageKey
+						interpreter.StorageMapKey
+					}]struct{}{
+						{
+							StorageKey: interpreter.StorageKey{
+								Address: testAddress,
+								Key:     pathDomain.Identifier(),
+							},
+							StorageMapKey: storageMapKey,
+						}: {},
+					},
+					reporter.migrated,
+				)
 			}
+
+			// Assert the migrated values.
+
+			storageMap := storage.GetStorageMap(testAddress, pathDomain.Identifier(), false)
+			require.NotNil(t, storageMap)
+			require.Equal(t, uint64(1), storageMap.Count())
+
+			value := storageMap.ReadValue(nil, storageMapKey)
 
 			var expectedValue interpreter.Value
 			if testCase.expectedType != nil {
@@ -475,6 +475,10 @@ func TestIntersectionTypeMigration(t *testing.T) {
 
 			utils.AssertValuesEqual(t, inter, expectedValue, value)
 		})
+	}
+
+	for name, testCase := range testCases {
+		test(name, testCase)
 	}
 }
 

@@ -81,7 +81,7 @@ func parseCheckAndInterpretWithLogs(
 ) {
 	var logs []string
 
-	logFunction := stdlib.NewStandardLibraryFunction(
+	logFunction := stdlib.NewStandardLibraryStaticFunction(
 		"log",
 		&sema.FunctionType{
 			Parameters: []sema.Parameter{
@@ -1996,7 +1996,7 @@ func TestInterpretHostFunction(t *testing.T) {
 
 	require.NoError(t, err)
 
-	testFunction := stdlib.NewStandardLibraryFunction(
+	testFunction := stdlib.NewStandardLibraryStaticFunction(
 		"test",
 		&sema.FunctionType{
 			Parameters: []sema.Parameter{
@@ -2082,7 +2082,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 	called := false
 
-	testFunction := stdlib.NewStandardLibraryFunction(
+	testFunction := stdlib.NewStandardLibraryStaticFunction(
 		"test",
 		&sema.FunctionType{
 			Parameters: []sema.Parameter{
@@ -2188,7 +2188,7 @@ func TestInterpretHostFunctionWithOptionalArguments(t *testing.T) {
 
 	called := false
 
-	testFunction := stdlib.NewStandardLibraryFunction(
+	testFunction := stdlib.NewStandardLibraryStaticFunction(
 		"test",
 		&sema.FunctionType{
 			Parameters: []sema.Parameter{
@@ -3956,7 +3956,9 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
-		if compositeKind == common.CompositeKindEvent || compositeKind == common.CompositeKindAttachment {
+		if compositeKind == common.CompositeKindEvent ||
+			compositeKind == common.CompositeKindAttachment ||
+			compositeKind == common.CompositeKindContract {
 			continue
 		}
 
@@ -5203,7 +5205,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			ReturnTypeAnnotation: sema.AnyStructTypeAnnotation,
 		}
 
-		valueDeclaration := stdlib.NewStandardLibraryFunction(
+		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
 			"getStorageReference",
 			getStorageReferenceFunctionType,
 			"",
@@ -9126,8 +9128,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
 					return baseActivation
 				},
-				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-					return stdlib.NewAccountValue(nil, nil, address)
+				AccountHandler: func(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
+					return stdlib.NewAccountValue(inter, nil, address)
 				},
 			},
 		},

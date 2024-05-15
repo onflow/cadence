@@ -3150,3 +3150,144 @@ func TestInterpretOptionalReference(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource array host function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                var array: @[R] <- []
+                var arrayRef: auth(Mutate) &[R] = &array as auth(Mutate) &[R]
+
+                // Take an implicit reference to the resource array, using a function pointer
+                var arrayAppend = arrayRef.append
+
+                // Destroy the resource array
+                destroy array
+
+                // Call the function pointer
+                arrayAppend(<- create R())
+            }
+
+            resource R {}
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		invalidatedRefError := interpreter.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, err, &invalidatedRefError)
+	})
+
+	t.Run("struct array host function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main(): [S] {
+                var array: [S] = []
+                var arrayRef: auth(Mutate) &[S] = &array as auth(Mutate) &[S]
+
+                // Take an implicit reference to the struct array, using a function pointer
+                var arrayAppend = arrayRef.append
+
+                // Move the struct array
+                var array2 = array
+
+                // Call the function pointer
+                arrayAppend(S())
+
+                return array
+            }
+
+            struct S {}
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S").(*sema.CompositeType)
+
+		expectedResult := interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			&interpreter.VariableSizedStaticType{
+				Type: interpreter.ConvertSemaToStaticType(nil, sType),
+			},
+			common.ZeroAddress,
+			interpreter.NewCompositeValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				TestLocation,
+				"S",
+				common.CompositeKindStructure,
+				[]interpreter.CompositeField{},
+				common.ZeroAddress,
+			),
+		)
+
+		AssertValuesEqual(t, inter, expectedResult, result)
+	})
+
+	t.Run("resource dictionary host function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                var dictionary: @{String:R} <- {}
+                var dictionaryRef: auth(Mutate) &{String:R} = &dictionary as auth(Mutate) &{String:R}
+
+                // Take an implicit reference to the resource dictionary, using a function pointer
+                var dictionaryInsert = dictionaryRef.insert
+
+                // Destroy the resource dictionary
+                destroy dictionary
+
+                // Call the function pointer
+                destroy dictionaryInsert("r1", <- create R())
+            }
+
+            resource R {}
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		invalidatedRefError := interpreter.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, err, &invalidatedRefError)
+	})
+
+	t.Run("struct host function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main(): Type {
+                var s = S()
+
+                // Take an implicit reference to the struct, using a function pointer
+                var structGetType = s.getType
+
+                // Move/assign the struct
+                var s2 = s
+
+                // Call the function pointer
+                return structGetType()
+            }
+
+            struct S {}
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S").(*sema.CompositeType)
+
+		expectedResult := interpreter.NewTypeValue(
+			inter,
+			interpreter.ConvertSemaToStaticType(nil, sType),
+		)
+
+		AssertValuesEqual(t, inter, expectedResult, result)
+	})
+}

@@ -10639,119 +10639,100 @@ func TestRuntimeNonPublicAccessModifierInInterface(t *testing.T) {
 	require.Len(t, conformanceErr.MemberMismatches, 2)
 }
 
-func TestRuntimeMoveSelfVariable(t *testing.T) {
+func TestRuntimeContractWithInvalidCapability(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("contract", func(t *testing.T) {
-		t.Parallel()
+	runtime := NewTestInterpreterRuntimeWithAttachments()
 
-		contract := []byte(`
-            access(all) contract Foo {
+	address := common.MustBytesToAddress([]byte{0x1})
 
-                access(all) fun moveSelf() {
-                    var x = self!
-                }
+	contract := []byte(`
+		access(all)
+        contract Test {
+
+			access(all) var invalidCap: Capability
+            access(all) var unrelatedStoragePath: StoragePath
+
+            init() {
+                self.invalidCap = self.account.capabilities.get<&AnyResource>(/public/path)
+                self.unrelatedStoragePath = /storage/validPath
             }
-        `)
-
-		runtime := NewTestInterpreterRuntimeWithConfig(Config{
-			AtreeValidationEnabled: false,
-		})
-
-		address := common.MustBytesToAddress([]byte{0x1})
-
-		var contractCode []byte
-
-		runtimeInterface := &TestRuntimeInterface{
-			Storage: NewTestLedger(nil, nil),
-			OnGetSigningAccounts: func() ([]Address, error) {
-				return []Address{address}, nil
-			},
-			OnGetAccountContractCode: func(location common.AddressLocation) ([]byte, error) {
-				return contractCode, nil
-			},
-			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-			OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
-				contractCode = code
-				return nil
-			},
-			OnEmitEvent: func(event cadence.Event) error {
-				return nil
-			},
 		}
+	`)
 
-		nextTransactionLocation := NewTransactionLocationGenerator()
+	script := []byte(`
+        import Test from 0x1
 
-		// Deploy
+        access(all) fun main() {
+            log(Test.unrelatedStoragePath)
+            log(Test.invalidCap)
+        }
+    `)
 
-		deploymentTx := DeploymentTransaction("Foo", contract)
-		err := runtime.ExecuteTransaction(
-			Script{
-				Source: deploymentTx,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-		require.NoError(t, err)
+	deploy := DeploymentTransaction("Test", contract)
 
-		// Execute script
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+	var logs []string
 
-		nextScriptLocation := NewScriptLocationGenerator()
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnProgramLog: func(s string) {
+			logs = append(logs, s)
+		},
+	}
 
-		script := []byte(fmt.Sprintf(`
-            import Foo from %[1]s
+	// Deploy contract
 
-            access(all) fun main(): Void {
-                Foo.moveSelf()
-            }`,
-			address.HexWithPrefix(),
-		))
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.TransactionLocation{},
+		},
+	)
+	require.NoError(t, err)
 
-		_, err = runtime.ExecuteScript(
-			Script{
-				Source: script,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextScriptLocation(),
-			},
-		)
+	// Run script
 
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.NonTransferableValueError{})
-	})
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+	require.NoError(t, err)
 
-	t.Run("transaction", func(t *testing.T) {
-		t.Parallel()
-
-		script := []byte(`
-            transaction {
-                prepare() {
-                    var x = true ? self : self
-                }
-                execute {}
-            }
-        `)
-
-		runtime := NewTestInterpreterRuntime()
-		runtimeInterface := &TestRuntimeInterface{}
-
-		nextTransactionLocation := NewTransactionLocationGenerator()
-
-		err := runtime.ExecuteTransaction(
-			Script{
-				Source: script,
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  nextTransactionLocation(),
-			},
-		)
-
-		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.NonTransferableValueError{})
-	})
+	require.Equal(
+		t,
+		[]string{
+			"/storage/validPath",
+			"Capability<&AnyResource>(address: 0x0000000000000001, id: 0)",
+		},
+		logs,
+	)
 }

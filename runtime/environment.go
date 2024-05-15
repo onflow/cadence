@@ -74,7 +74,7 @@ type Environment interface {
 		error,
 	)
 	CommitStorage(inter *interpreter.Interpreter) error
-	NewAccountValue(address interpreter.AddressValue) interpreter.Value
+	NewAccountValue(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value
 }
 
 // interpreterEnvironmentReconfigured is the portion of interpreterEnvironment
@@ -768,8 +768,11 @@ func (e *interpreterEnvironment) newOnRecordTraceHandler() interpreter.OnRecordT
 	}
 }
 
-func (e *interpreterEnvironment) NewAccountValue(address interpreter.AddressValue) interpreter.Value {
-	return stdlib.NewAccountValue(e, e, address)
+func (e *interpreterEnvironment) NewAccountValue(
+	inter *interpreter.Interpreter,
+	address interpreter.AddressValue,
+) interpreter.Value {
+	return stdlib.NewAccountValue(inter, e, address)
 }
 
 func (e *interpreterEnvironment) ValidatePublicKey(publicKey *stdlib.PublicKey) error {

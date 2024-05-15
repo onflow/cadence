@@ -835,7 +835,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						// use the contract singleton, so it is loaded
 						testFunction = `
 					       access(all) fun test() {
-					            TestImpl
+					            TestImpl.NoOpFunc()
 					       }
                         `
 					} else {
@@ -878,6 +878,8 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
                                              emit Foo(x: x)
 					                     }
 					                 }
+
+					                 access(all) fun NoOpFunc() {}
 					             }
 
 					             %[2]s
@@ -1328,7 +1330,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	valueDeclaration := stdlib.StandardLibraryValue{
 		Name: "check",
 		Type: checkFunctionType,
-		Value: interpreter.NewHostFunctionValue(
+		Value: interpreter.NewStaticHostFunctionValue(
 			nil,
 			checkFunctionType,
 			func(invocation interpreter.Invocation) interpreter.Value {

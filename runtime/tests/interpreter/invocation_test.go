@@ -53,7 +53,7 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 
 	test := func(t *testing.T, code string, expectSelf bool) {
 
-		checkFunction := stdlib.NewStandardLibraryFunction(
+		checkFunction := stdlib.NewStandardLibraryStaticFunction(
 			"check",
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.VoidTypeAnnotation,

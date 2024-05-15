@@ -55,6 +55,7 @@ type StorageMigration struct {
 	name                   string
 	address                common.Address
 	dictionaryKeyConflicts int
+	stacktraceEnabled      bool
 }
 
 func NewStorageMigration(
@@ -79,8 +80,13 @@ func NewStorageMigration(
 	}, nil
 }
 
+func (m *StorageMigration) WithErrorStacktrace(stacktraceEnabled bool) *StorageMigration {
+	m.stacktraceEnabled = stacktraceEnabled
+	return m
+}
+
 func (m *StorageMigration) Commit() error {
-	return m.storage.Commit(m.interpreter, false)
+	return m.storage.NondeterministicCommit(m.interpreter, false)
 }
 
 func (m *StorageMigration) Migrate(migrator StorageMapKeyMigrator) {
@@ -185,12 +191,17 @@ func (m *StorageMigration) MigrateNestedValue(
 				err = fmt.Errorf("%v", r)
 			}
 
+			var stack []byte
+			if m.stacktraceEnabled {
+				stack = debug.Stack()
+			}
+
 			err = StorageMigrationError{
 				StorageKey:    storageKey,
 				StorageMapKey: storageMapKey,
 				Migration:     m.name,
 				Err:           err,
-				Stack:         debug.Stack(),
+				Stack:         stack,
 			}
 
 			if reporter != nil {
@@ -777,12 +788,17 @@ func (m *StorageMigration) migrate(
 				err = fmt.Errorf("%v", r)
 			}
 
+			var stack []byte
+			if m.stacktraceEnabled {
+				stack = debug.Stack()
+			}
+
 			err = StorageMigrationError{
 				StorageKey:    storageKey,
 				StorageMapKey: storageMapKey,
 				Migration:     migration.Name(),
 				Err:           err,
-				Stack:         debug.Stack(),
+				Stack:         stack,
 			}
 		}
 	}()

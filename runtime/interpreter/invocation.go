@@ -26,7 +26,7 @@ import (
 // Invocation
 type Invocation struct {
 	LocationRange      LocationRange
-	Self               *MemberAccessibleValue
+	Self               *Value
 	Base               *EphemeralReferenceValue
 	BoundAuthorization Authorization
 	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
@@ -37,7 +37,7 @@ type Invocation struct {
 
 func NewInvocation(
 	interpreter *Interpreter,
-	self *MemberAccessibleValue,
+	self *Value,
 	base *EphemeralReferenceValue,
 	boundAuth Authorization,
 	arguments []Value,
