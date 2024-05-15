@@ -59,7 +59,7 @@ func (checker *Checker) checkAssignment(
 	if checker.accessedSelfMember(target) == nil {
 		checkValue = checker.VisitExpressionWithReferenceCheck
 	}
-	valueType = checkValue(value, targetType)
+	valueType = checkValue(value, assignment, targetType)
 
 	// NOTE: Visiting the `value` checks the compatibility between value and target types.
 	// Check for the *target* type, so that assignment using non-resource typed value (e.g. `nil`)
@@ -110,7 +110,6 @@ func (checker *Checker) checkAssignment(
 	}
 
 	checker.enforceViewAssignment(assignment, target)
-	checker.checkVariableMove(value)
 
 	checker.recordResourceInvalidation(
 		value,

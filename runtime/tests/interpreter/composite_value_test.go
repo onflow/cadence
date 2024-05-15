@@ -194,7 +194,17 @@ func TestInterpretContractTransfer(t *testing.T) {
 		    `,
 			value,
 		)
-		inter, _ := testAccount(t, address, true, nil, code, sema.Config{})
+		inter, _ := testAccountWithErrorHandler(
+			t,
+			address,
+			true,
+			nil,
+			code,
+			sema.Config{},
+			func(err error) {
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, err, &invalidMoveError)
+			})
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)

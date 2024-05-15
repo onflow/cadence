@@ -27,9 +27,9 @@ import (
 
 // Account.AccountCapabilities
 
-var Account_AccountCapabilitiesTypeID = sema.Account_AccountCapabilitiesType.ID()
-var Account_AccountCapabilitiesStaticType StaticType = PrimitiveStaticTypeAccount_AccountCapabilities // unmetered
-var Account_AccountCapabilitiesFieldNames []string = nil
+var account_AccountCapabilitiesTypeID = sema.Account_AccountCapabilitiesType.ID()
+var account_AccountCapabilitiesStaticType StaticType = PrimitiveStaticTypeAccount_AccountCapabilities // unmetered
+var account_AccountCapabilitiesFieldNames []string = nil
 
 func NewAccountAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
@@ -53,9 +53,9 @@ func NewAccountAccountCapabilitiesValue(
 
 	accountCapabilities := NewSimpleCompositeValue(
 		gauge,
-		Account_AccountCapabilitiesTypeID,
-		Account_AccountCapabilitiesStaticType,
-		Account_AccountCapabilitiesFieldNames,
+		account_AccountCapabilitiesTypeID,
+		account_AccountCapabilitiesStaticType,
+		account_AccountCapabilitiesFieldNames,
 		nil,
 		nil,
 		nil,

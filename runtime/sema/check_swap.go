@@ -31,8 +31,8 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 
 	// Then re-visit the same expressions, this time treat them as the value-expr of the assignment.
 	// The 'expected type' of the two expression would be the types obtained from the previous visit, swapped.
-	leftValueType := checker.VisitExpression(swap.Left, rightTargetType)
-	rightValueType := checker.VisitExpression(swap.Right, leftTargetType)
+	leftValueType := checker.VisitExpression(swap.Left, swap, rightTargetType)
+	rightValueType := checker.VisitExpression(swap.Right, swap, leftTargetType)
 
 	checker.Elaboration.SetSwapStatementTypes(
 		swap,

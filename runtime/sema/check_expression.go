@@ -46,7 +46,48 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 		checker.Elaboration.SetIdentifierInInvocationType(expression, valueType)
 	}
 
+	checker.checkVariableMove(expression, variable)
+
 	return valueType
+}
+
+func (checker *Checker) checkVariableMove(identifierExpression *ast.IdentifierExpression, variable *Variable) {
+
+	reportMaybeInvalidMove := func(declarationKind common.DeclarationKind) {
+		// If the parent is member-access or index-access, then it's OK.
+		// e.g: `v.foo`, `v.bar()`, `v[T]` are OK.
+		switch parent := checker.parent.(type) {
+		case *ast.MemberExpression:
+			// TODO: No need for below check? i.e: should always be true
+			if parent.Expression == identifierExpression {
+				return
+			}
+		case *ast.IndexExpression:
+			// Only `v[foo]` is OK, `foo[v]` is not.
+			if parent.TargetExpression == identifierExpression {
+				return
+			}
+		}
+
+		checker.report(
+			&InvalidMoveError{
+				Name:            variable.Identifier,
+				DeclarationKind: declarationKind,
+				Pos:             identifierExpression.StartPosition(),
+			},
+		)
+	}
+
+	switch ty := variable.Type.(type) {
+	case *TransactionType:
+		reportMaybeInvalidMove(common.DeclarationKindTransaction)
+
+	case CompositeKindedType:
+		kind := ty.GetCompositeKind()
+		if kind == common.CompositeKindContract {
+			reportMaybeInvalidMove(common.DeclarationKindContract)
+		}
+	}
 }
 
 func (checker *Checker) checkReferenceValidity(variable *Variable, hasPosition ast.HasPosition) {
@@ -161,7 +202,7 @@ func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Varia
 func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
 	expression := statement.Expression
 
-	ty := checker.VisitExpression(expression, nil)
+	ty := checker.VisitExpression(expression, statement, nil)
 
 	if ty.IsResourceType() {
 		checker.report(
@@ -270,7 +311,7 @@ func (checker *Checker) visitIndexExpression(
 ) Type {
 
 	targetExpression := indexExpression.TargetExpression
-	targetType := checker.VisitExpression(targetExpression, nil)
+	targetType := checker.VisitExpression(targetExpression, indexExpression, nil)
 
 	// NOTE: check indexed type first for UX reasons
 
@@ -309,6 +350,7 @@ func (checker *Checker) visitIndexExpression(
 		}
 		indexingType := checker.VisitExpression(
 			indexExpression.IndexingExpression,
+			indexExpression,
 			valueIndexedType.IndexingType(),
 		)
 

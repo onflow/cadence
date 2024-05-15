@@ -1188,7 +1188,10 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 
 	var initializerFunction FunctionValue
 	if declaration.Kind() == common.CompositeKindEvent {
-		// Initializer is a static function.
+		// Initializer could ideally be a bound function.
+		// However, since it is created and being called here itself, and
+		// because it is never passed around, it is OK to just create as static function
+		// without  the bound-function wrapper.
 		initializerFunction = NewStaticHostFunctionValue(
 			declarationInterpreter,
 			initializerType,

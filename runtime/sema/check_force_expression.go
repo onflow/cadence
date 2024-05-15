@@ -28,7 +28,7 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) Ty
 	// i.e: if `x!` is `String`, then `x` is expected to be `String?`.
 	expectedType := wrapWithOptionalIfNotNil(checker.expectedType)
 
-	valueType := checker.VisitExpression(expression.Expression, expectedType)
+	valueType := checker.VisitExpression(expression.Expression, expression, expectedType)
 
 	if valueType.IsInvalidType() {
 		return valueType
