@@ -34,19 +34,12 @@ var account_KeysStaticType StaticType = PrimitiveStaticTypeAccount_Keys
 func NewAccountKeysValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	addFunction FunctionValue,
-	getFunction FunctionValue,
-	revokeFunction FunctionValue,
-	forEachFunction FunctionValue,
+	addFunction BoundFunctionGenerator,
+	getFunction BoundFunctionGenerator,
+	revokeFunction BoundFunctionGenerator,
+	forEachFunction BoundFunctionGenerator,
 	getKeysCount AccountKeysCountGetter,
 ) Value {
-
-	fields := map[string]Value{
-		sema.Account_KeysTypeAddFunctionName:     addFunction,
-		sema.Account_KeysTypeGetFunctionName:     getFunction,
-		sema.Account_KeysTypeRevokeFunctionName:  revokeFunction,
-		sema.Account_KeysTypeForEachFunctionName: forEachFunction,
-	}
 
 	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
 		switch name {
@@ -66,16 +59,25 @@ func NewAccountKeysValue(
 		return str
 	}
 
-	return NewSimpleCompositeValue(
+	accountKeys := NewSimpleCompositeValue(
 		gauge,
 		account_KeysTypeID,
 		account_KeysStaticType,
 		nil,
-		fields,
+		nil,
 		computeField,
 		nil,
 		stringer,
 	)
+
+	accountKeys.Fields = map[string]Value{
+		sema.Account_KeysTypeAddFunctionName:     addFunction(accountKeys),
+		sema.Account_KeysTypeGetFunctionName:     getFunction(accountKeys),
+		sema.Account_KeysTypeRevokeFunctionName:  revokeFunction(accountKeys),
+		sema.Account_KeysTypeForEachFunctionName: forEachFunction(accountKeys),
+	}
+
+	return accountKeys
 }
 
 type AccountKeysCountGetter func() UInt64Value

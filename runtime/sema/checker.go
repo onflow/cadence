@@ -125,6 +125,7 @@ type Checker struct {
 	inCreate                           bool
 	isChecked                          bool
 	inAssignment                       bool
+	parent                             ast.Element
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -2299,40 +2300,6 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 	return predeclaredMembers
 }
 
-func (checker *Checker) checkVariableMove(expression ast.Expression) {
-
-	identifierExpression, ok := expression.(*ast.IdentifierExpression)
-	if !ok {
-		return
-	}
-
-	variable := checker.valueActivations.Find(identifierExpression.Identifier.Identifier)
-	if variable == nil {
-		return
-	}
-
-	reportInvalidMove := func(declarationKind common.DeclarationKind) {
-		checker.report(
-			&InvalidMoveError{
-				Name:            variable.Identifier,
-				DeclarationKind: declarationKind,
-				Pos:             identifierExpression.StartPosition(),
-			},
-		)
-	}
-
-	switch ty := variable.Type.(type) {
-	case *TransactionType:
-		reportInvalidMove(common.DeclarationKindTransaction)
-
-	case CompositeKindedType:
-		kind := ty.GetCompositeKind()
-		if kind == common.CompositeKindContract {
-			reportInvalidMove(common.DeclarationKindContract)
-		}
-	}
-}
-
 func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos ast.HasPosition) {
 
 	switch typeAnnotation.TypeAnnotationState() {
@@ -2529,25 +2496,25 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 	)
 }
 
-func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {
+func (checker *Checker) VisitExpression(expr ast.Expression, parent ast.Element, expectedType Type) Type {
 	// Always return 'visibleType' as the type of the expression,
 	// to avoid bubbling up type-errors of inner expressions.
-	visibleType, _ := checker.visitExpression(expr, expectedType)
+	visibleType, _ := checker.visitExpression(expr, parent, expectedType)
 	return visibleType
 }
 
-func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type) (visibleType Type, actualType Type) {
-	return checker.visitExpressionWithForceType(expr, expectedType, true)
+func (checker *Checker) visitExpression(expr ast.Expression, parent ast.Element, expectedType Type) (visibleType Type, actualType Type) {
+	return checker.visitExpressionWithForceType(expr, parent, expectedType, true)
 }
 
-func (checker *Checker) VisitExpressionWithForceType(expr ast.Expression, expectedType Type, forceType bool) Type {
+func (checker *Checker) VisitExpressionWithForceType(expr ast.Expression, parent ast.Element, expectedType Type, forceType bool) Type {
 	// Always return 'visibleType' as the type of the expression,
 	// to avoid bubbling up type-errors of inner expressions.
-	visibleType, _ := checker.visitExpressionWithForceType(expr, expectedType, forceType)
+	visibleType, _ := checker.visitExpressionWithForceType(expr, parent, expectedType, forceType)
 	return visibleType
 }
 
-func (checker *Checker) VisitExpressionWithReferenceCheck(expr ast.Expression, targetType Type) Type {
+func (checker *Checker) VisitExpressionWithReferenceCheck(expr ast.Expression, parent ast.Element, targetType Type) Type {
 
 	// If the target type is or contains a reference type in particular,
 	// we do NOT use it as the expected type,
@@ -2584,7 +2551,7 @@ func (checker *Checker) VisitExpressionWithReferenceCheck(expr ast.Expression, t
 		expectedType = nil
 	}
 
-	visibleType := checker.VisitExpression(expr, expectedType)
+	visibleType := checker.VisitExpression(expr, parent, expectedType)
 
 	// If we did not pass an expected type,
 	// we must manually check that the argument type and the parameter type are compatible.
@@ -2623,6 +2590,7 @@ func (checker *Checker) VisitExpressionWithReferenceCheck(expr ast.Expression, t
 // actualType  - The actual type of the expression.
 func (checker *Checker) visitExpressionWithForceType(
 	expr ast.Expression,
+	parent ast.Element,
 	expectedType Type,
 	forceType bool,
 ) (visibleType Type, actualType Type) {
@@ -2630,11 +2598,15 @@ func (checker *Checker) visitExpressionWithForceType(
 	// Cache the current contextually expected type, and set the `expectedType`
 	// as the new contextually expected type.
 	prevExpectedType := checker.expectedType
+	prevParent := checker.parent
 
+	checker.parent = parent
 	checker.expectedType = expectedType
 	defer func() {
 		// Restore the prev contextually expected type
 		checker.expectedType = prevExpectedType
+		// Restore the prev parent
+		checker.parent = prevParent
 	}()
 
 	actualType = ast.AcceptExpression[Type](expr, checker)

@@ -23,62 +23,72 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/onflow/cadence/runtime/ast"
 )
 
 func TestCheckPathLiteral(t *testing.T) {
 
 	t.Parallel()
 
-	rangeThunk := func() ast.Range {
-		return ast.EmptyRange
-	}
-
 	t.Run("valid domain (storage), valid identifier", func(t *testing.T) {
-		ty, err := CheckPathLiteral("storage", "test", rangeThunk, rangeThunk)
+		t.Parallel()
+
+		ty, err := CheckPathLiteral(nil, "storage", "test", nil, nil)
 		require.NoError(t, err)
 		assert.Equal(t, StoragePathType, ty)
 	})
 
 	t.Run("valid domain (private), valid identifier", func(t *testing.T) {
-		ty, err := CheckPathLiteral("private", "test", rangeThunk, rangeThunk)
+		t.Parallel()
+
+		ty, err := CheckPathLiteral(nil, "private", "test", nil, nil)
 		require.NoError(t, err)
 		assert.Equal(t, PrivatePathType, ty)
 	})
 
 	t.Run("valid domain (public), valid identifier", func(t *testing.T) {
-		ty, err := CheckPathLiteral("public", "test", rangeThunk, rangeThunk)
+		t.Parallel()
+
+		ty, err := CheckPathLiteral(nil, "public", "test", nil, nil)
 		require.NoError(t, err)
 		assert.Equal(t, PublicPathType, ty)
 	})
 
 	t.Run("invalid domain (empty), valid identifier", func(t *testing.T) {
-		_, err := CheckPathLiteral("", "test", rangeThunk, rangeThunk)
+		t.Parallel()
+
+		_, err := CheckPathLiteral(nil, "", "test", nil, nil)
 		var invalidPathDomainError *InvalidPathDomainError
 		require.ErrorAs(t, err, &invalidPathDomainError)
 	})
 
 	t.Run("invalid domain (foo), valid identifier", func(t *testing.T) {
-		_, err := CheckPathLiteral("foo", "test", rangeThunk, rangeThunk)
+		t.Parallel()
+
+		_, err := CheckPathLiteral(nil, "foo", "test", nil, nil)
 		var invalidPathDomainError *InvalidPathDomainError
 		require.ErrorAs(t, err, &invalidPathDomainError)
 	})
 
 	t.Run("valid domain (public), invalid identifier (empty)", func(t *testing.T) {
-		_, err := CheckPathLiteral("public", "", rangeThunk, rangeThunk)
+		t.Parallel()
+
+		_, err := CheckPathLiteral(nil, "public", "", nil, nil)
 		var invalidPathIdentifierError *InvalidPathIdentifierError
 		require.ErrorAs(t, err, &invalidPathIdentifierError)
 	})
 
 	t.Run("valid domain (public), invalid identifier ($)", func(t *testing.T) {
-		_, err := CheckPathLiteral("public", "$", rangeThunk, rangeThunk)
+		t.Parallel()
+
+		_, err := CheckPathLiteral(nil, "public", "$", nil, nil)
 		var invalidPathIdentifierError *InvalidPathIdentifierError
 		require.ErrorAs(t, err, &invalidPathIdentifierError)
 	})
 
 	t.Run("valid domain (public), invalid identifier (0)", func(t *testing.T) {
-		_, err := CheckPathLiteral("public", "0", rangeThunk, rangeThunk)
+		t.Parallel()
+
+		_, err := CheckPathLiteral(nil, "public", "0", nil, nil)
 		var invalidPathIdentifierError *InvalidPathIdentifierError
 		require.ErrorAs(t, err, &invalidPathIdentifierError)
 	})

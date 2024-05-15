@@ -431,7 +431,7 @@ func newMatcherWithGenericTestFunction(
 	// Note: This argument validation is only needed if the matcher was created with a user-provided function.
 	// No need to validate if the matcher is created as a matcher combinator.
 	//
-	matcherTestFunction := interpreter.NewUnmeteredHostFunctionValue(
+	matcherTestFunction := interpreter.NewUnmeteredStaticHostFunctionValue(
 		matcherTestFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter

@@ -39,31 +39,45 @@ func NewDeployedContractValue(
 	name *StringValue,
 	code *ArrayValue,
 ) *SimpleCompositeValue {
-	publicTypesFuncValue := newPublicTypesFunctionValue(inter, address, name)
-	return NewSimpleCompositeValue(
+	deployedContract := NewSimpleCompositeValue(
 		inter,
 		sema.DeployedContractType.TypeID,
 		deployedContractStaticType,
 		deployedContractFieldNames,
 		map[string]Value{
-			sema.DeployedContractTypeAddressFieldName:        address,
-			sema.DeployedContractTypeNameFieldName:           name,
-			sema.DeployedContractTypeCodeFieldName:           code,
-			sema.DeployedContractTypePublicTypesFunctionName: publicTypesFuncValue,
+			sema.DeployedContractTypeAddressFieldName: address,
+			sema.DeployedContractTypeNameFieldName:    name,
+			sema.DeployedContractTypeCodeFieldName:    code,
 		},
 		nil,
 		nil,
 		nil,
 	)
+
+	publicTypesFuncValue := newPublicTypesFunctionValue(
+		inter,
+		deployedContract,
+		address,
+		name,
+	)
+	deployedContract.Fields[sema.DeployedContractTypePublicTypesFunctionName] = publicTypesFuncValue
+
+	return deployedContract
 }
 
-func newPublicTypesFunctionValue(inter *Interpreter, addressValue AddressValue, name *StringValue) FunctionValue {
+func newPublicTypesFunctionValue(
+	inter *Interpreter,
+	self MemberAccessibleValue,
+	addressValue AddressValue,
+	name *StringValue,
+) FunctionValue {
 	// public types only need to be computed once per contract
 	var publicTypes *ArrayValue
 
 	address := addressValue.ToAddress()
-	return NewHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		inter,
+		self,
 		sema.DeployedContractTypePublicTypesFunctionType,
 		func(inv Invocation) Value {
 			if publicTypes == nil {

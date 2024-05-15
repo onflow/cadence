@@ -34,16 +34,10 @@ var account_InboxStaticType StaticType = PrimitiveStaticTypeAccount_Inbox
 func NewAccountInboxValue(
 	gauge common.MemoryGauge,
 	addressValue AddressValue,
-	publishFunction FunctionValue,
-	unpublishFunction FunctionValue,
-	claimFunction FunctionValue,
+	publishFunction BoundFunctionGenerator,
+	unpublishFunction BoundFunctionGenerator,
+	claimFunction BoundFunctionGenerator,
 ) Value {
-
-	fields := map[string]Value{
-		sema.Account_InboxTypePublishFunctionName:   publishFunction,
-		sema.Account_InboxTypeUnpublishFunctionName: unpublishFunction,
-		sema.Account_InboxTypeClaimFunctionName:     claimFunction,
-	}
 
 	var str string
 	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
@@ -55,14 +49,22 @@ func NewAccountInboxValue(
 		return str
 	}
 
-	return NewSimpleCompositeValue(
+	accountInbox := NewSimpleCompositeValue(
 		gauge,
 		account_InboxTypeID,
 		account_InboxStaticType,
 		nil,
-		fields,
+		nil,
 		nil,
 		nil,
 		stringer,
 	)
+
+	accountInbox.Fields = map[string]Value{
+		sema.Account_InboxTypePublishFunctionName:   publishFunction(accountInbox),
+		sema.Account_InboxTypeUnpublishFunctionName: unpublishFunction(accountInbox),
+		sema.Account_InboxTypeClaimFunctionName:     claimFunction(accountInbox),
+	}
+
+	return accountInbox
 }

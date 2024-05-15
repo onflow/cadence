@@ -114,115 +114,112 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 		},
 	}
 
-	// Store values
+	test := func(name string, testCase testCase) {
 
-	ledger := NewTestLedger(nil, nil)
-	storage := runtime.NewStorage(ledger, nil)
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	inter, err := interpreter.NewInterpreter(
-		nil,
-		utils.TestLocation,
-		&interpreter.Config{
-			Storage:                       storage,
-			AtreeValueValidationEnabled:   true,
-			AtreeStorageValidationEnabled: true,
-		},
-	)
-	require.NoError(t, err)
+			// Store values
 
-	for name, testCase := range testCases {
-		storeTypeValue(
-			inter,
-			testAddress,
-			pathDomain,
-			name,
-			testCase.storedType,
-		)
-	}
+			ledger := NewTestLedger(nil, nil)
+			storage := runtime.NewStorage(ledger, nil)
 
-	err = storage.Commit(inter, true)
-	require.NoError(t, err)
+			inter, err := interpreter.NewInterpreter(
+				nil,
+				utils.TestLocation,
+				&interpreter.Config{
+					Storage:                       storage,
+					AtreeValueValidationEnabled:   true,
+					AtreeStorageValidationEnabled: true,
+				},
+			)
+			require.NoError(t, err)
 
-	// Migrate
+			storeTypeValue(
+				inter,
+				testAddress,
+				pathDomain,
+				name,
+				testCase.storedType,
+			)
 
-	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
-	require.NoError(t, err)
+			err = storage.Commit(inter, true)
+			require.NoError(t, err)
 
-	reporter := newTestReporter()
+			// Migrate
 
-	barStaticType := newCompositeType()
-	bazStaticType := newInterfaceType()
+			migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+			require.NoError(t, err)
 
-	migration.Migrate(
-		migration.NewValueMigrationsPathMigrator(
-			reporter,
-			NewStaticTypeMigration().
-				WithCompositeTypeConverter(
-					func(staticType *interpreter.CompositeStaticType) interpreter.StaticType {
-						if staticType.Equal(barStaticType) {
-							return bazStaticType
-						} else {
-							panic(errors.NewUnreachableError())
-						}
-					},
-				).
-				WithInterfaceTypeConverter(
-					func(staticType *interpreter.InterfaceStaticType) interpreter.StaticType {
-						if staticType.Equal(bazStaticType) {
-							return barStaticType
-						} else {
-							panic(errors.NewUnreachableError())
-						}
-					},
+			reporter := newTestReporter()
+
+			barStaticType := newCompositeType()
+			bazStaticType := newInterfaceType()
+
+			migration.Migrate(
+				migration.NewValueMigrationsPathMigrator(
+					reporter,
+					NewStaticTypeMigration().
+						WithCompositeTypeConverter(
+							func(staticType *interpreter.CompositeStaticType) interpreter.StaticType {
+								if staticType.Equal(barStaticType) {
+									return bazStaticType
+								} else {
+									panic(errors.NewUnreachableError())
+								}
+							},
+						).
+						WithInterfaceTypeConverter(
+							func(staticType *interpreter.InterfaceStaticType) interpreter.StaticType {
+								if staticType.Equal(bazStaticType) {
+									return barStaticType
+								} else {
+									panic(errors.NewUnreachableError())
+								}
+							},
+						),
 				),
-		),
-	)
+			)
 
-	err = migration.Commit()
-	require.NoError(t, err)
+			err = migration.Commit()
+			require.NoError(t, err)
 
-	// Assert
+			// Assert
 
-	require.Empty(t, reporter.errors)
+			require.Empty(t, reporter.errors)
 
-	err = storage.CheckHealth()
-	require.NoError(t, err)
+			err = storage.CheckHealth()
+			require.NoError(t, err)
 
-	// Check reported migrated paths
-	for identifier, test := range testCases {
-		key := struct {
-			interpreter.StorageKey
-			interpreter.StorageMapKey
-		}{
-			StorageKey: interpreter.StorageKey{
-				Address: testAddress,
-				Key:     pathDomain.Identifier(),
-			},
-			StorageMapKey: interpreter.StringStorageMapKey(identifier),
-		}
+			storageMapKey := interpreter.StringStorageMapKey(name)
 
-		if test.expectedType == nil {
-			assert.NotContains(t, reporter.migrated, key)
-		} else {
-			assert.Contains(t, reporter.migrated, key)
-		}
-	}
+			if testCase.expectedType == nil {
+				assert.Empty(t, reporter.migrated)
+			} else {
+				assert.Equal(t,
+					map[struct {
+						interpreter.StorageKey
+						interpreter.StorageMapKey
+					}]struct{}{
+						{
+							StorageKey: interpreter.StorageKey{
+								Address: testAddress,
+								Key:     pathDomain.Identifier(),
+							},
+							StorageMapKey: storageMapKey,
+						}: {},
+					},
+					reporter.migrated,
+				)
+			}
 
-	// Assert the migrated values.
-	// Traverse through the storage and see if the values are updated now.
+			// Assert the migrated values.
 
-	storageMap := storage.GetStorageMap(testAddress, pathDomain.Identifier(), false)
-	require.NotNil(t, storageMap)
-	require.Greater(t, storageMap.Count(), uint64(0))
+			storageMap := storage.GetStorageMap(testAddress, pathDomain.Identifier(), false)
+			require.NotNil(t, storageMap)
+			require.Equal(t, uint64(1), storageMap.Count())
 
-	iterator := storageMap.Iterator(inter)
-
-	for key, value := iterator.Next(); key != nil; key, value = iterator.Next() {
-		identifier := string(key.(interpreter.StringAtreeValue))
-
-		t.Run(identifier, func(t *testing.T) {
-			testCase, ok := testCases[identifier]
-			require.True(t, ok)
+			value := storageMap.ReadValue(nil, storageMapKey)
 
 			var expectedType interpreter.StaticType
 			if testCase.expectedType != nil {
@@ -234,5 +231,9 @@ func TestCompositeAndInterfaceTypeMigration(t *testing.T) {
 			expectedValue := interpreter.NewTypeValue(nil, expectedType)
 			utils.AssertValuesEqual(t, inter, expectedValue, value)
 		})
+	}
+
+	for name, testCase := range testCases {
+		test(name, testCase)
 	}
 }

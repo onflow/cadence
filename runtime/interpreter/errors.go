@@ -1119,3 +1119,16 @@ func (InvalidCapabilityIDError) IsInternalError() {}
 func (e InvalidCapabilityIDError) Error() string {
 	return "capability created with invalid ID"
 }
+
+// ReferencedValueChangedError
+type ReferencedValueChangedError struct {
+	LocationRange
+}
+
+var _ errors.UserError = ReferencedValueChangedError{}
+
+func (ReferencedValueChangedError) IsUserError() {}
+
+func (e ReferencedValueChangedError) Error() string {
+	return "referenced value has been changed after taking the reference"
+}

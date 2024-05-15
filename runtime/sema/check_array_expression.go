@@ -20,7 +20,7 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
-func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Type {
+func (checker *Checker) VisitArrayExpression(arrayExpression *ast.ArrayExpression) Type {
 
 	// visit all elements, ensure they are all the same type
 
@@ -29,7 +29,7 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Ty
 	var elementType Type
 	var resultType ArrayType
 
-	elementCount := len(expression.Values)
+	elementCount := len(arrayExpression.Values)
 
 	switch typ := expectedType.(type) {
 
@@ -43,7 +43,7 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Ty
 				&ConstantSizedArrayLiteralSizeError{
 					ExpectedSize: typ.Size,
 					ActualSize:   literalCount,
-					Range:        expression.Range,
+					Range:        arrayExpression.Range,
 				},
 			)
 		}
@@ -68,13 +68,12 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Ty
 	if elementCount > 0 {
 		argumentTypes = make([]Type, elementCount)
 
-		for i, value := range expression.Values {
-			valueType := checker.VisitExpression(value, elementType)
+		for i, element := range arrayExpression.Values {
+			valueType := checker.VisitExpression(element, arrayExpression, elementType)
 
 			argumentTypes[i] = valueType
 
-			checker.checkVariableMove(value)
-			checker.checkResourceMoveOperation(value, valueType)
+			checker.checkResourceMoveOperation(element, valueType)
 		}
 	}
 
@@ -87,7 +86,7 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Ty
 			checker.report(
 				&TypeAnnotationRequiredError{
 					Cause: "cannot infer type from array literal:",
-					Pos:   expression.StartPos,
+					Pos:   arrayExpression.StartPos,
 				},
 			)
 
@@ -100,7 +99,7 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) Ty
 	}
 
 	checker.Elaboration.SetArrayExpressionTypes(
-		expression,
+		arrayExpression,
 		ArrayExpressionTypes{
 			ArgumentTypes: argumentTypes,
 			ArrayType:     resultType,

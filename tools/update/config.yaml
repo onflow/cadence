@@ -9,7 +9,6 @@ repos:
 
 - repo: onflow/flow-go
   needsRelease: false
-  branch: feature/stable-cadence
   mods:
     - path: ""
       deps:

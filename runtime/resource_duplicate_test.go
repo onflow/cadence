@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -204,6 +204,6 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var nonTransferableValueError interpreter.NonTransferableValueError
-	require.ErrorAs(t, err, &nonTransferableValueError)
+	var invalidMoveError *sema.InvalidMoveError
+	require.ErrorAs(t, err, &invalidMoveError)
 }

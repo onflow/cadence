@@ -44,7 +44,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 
 	beforeErrors := len(checker.errors)
 
-	leftHandType, exprActualType := checker.visitExpression(leftHandExpression, expectedType)
+	leftHandType, exprActualType := checker.visitExpression(leftHandExpression, expression, expectedType)
 
 	hasErrors := len(checker.errors) > beforeErrors
 

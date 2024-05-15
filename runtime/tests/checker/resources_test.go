@@ -93,12 +93,18 @@ func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEnum:
 
 				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[1], &invalidMoveError)
 
 			case common.CompositeKindEvent:
 
@@ -171,13 +177,20 @@ func TestCheckFunctionDeclarationParameterWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[1], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -244,11 +257,15 @@ func TestCheckFunctionDeclarationParameterWithoutResourceAnnotation(t *testing.T
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -779,13 +796,20 @@ func TestCheckFunctionExpressionParameterWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[1], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -854,11 +878,16 @@ func TestCheckFunctionExpressionParameterWithoutResourceAnnotation(t *testing.T)
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -1097,7 +1126,6 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
@@ -1105,6 +1133,15 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 3)
+
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[2], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -1175,11 +1212,15 @@ func TestCheckFunctionTypeParameterWithoutResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[1])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -1408,10 +1449,13 @@ func TestCheckFailableCastingWithoutResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{}, errs[1])
 				assert.IsType(t, &sema.InvalidNonIdentifierFailableResourceDowncast{}, errs[2])
 
-			case common.CompositeKindStructure,
-				common.CompositeKindContract:
-
+			case common.CompositeKindStructure:
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			case common.CompositeKindEvent:
 				errs := RequireCheckerErrors(t, err, 1)
@@ -9418,6 +9462,135 @@ func TestCheckInvalidResourceDestructionInFunction(t *testing.T) {
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }
 
+func TestCheckInvalidNestedResourceCaptureOnLeft(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("on right", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    fun() {
+                        let y <- self.x
+                        destroy y
+                    }
+                }
+            }
+      `)
+		require.NoError(t, err)
+	})
+
+	t.Run("resource field on right", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R  {
+                var x: @AnyResource?
+                init() {
+                   self.x <- nil
+                }
+                fun foo() {
+                    fun() {
+                        let y <- self.x <- nil
+                        destroy y
+                    }
+                }
+            }
+      `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("on left", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    fun() {
+                        self.x <-! nil
+                    }
+
+                    destroy self.x
+                }
+            }
+    `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("on left method scope", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    self.x <-! nil
+
+                    destroy self.x
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+
+	t.Run("contract self variable on left", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract C {
+                var x: @AnyResource?
+
+                init() {
+                   self.x <- nil
+                }
+
+                fun foo() { 
+                    fun() {
+                        self.x <-! nil
+                    }
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+
+	t.Run("contract self variable on left method scope", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract C {
+                var x: @AnyResource?
+
+                init() {
+                   self.x <- nil
+                }
+
+                fun foo() {
+                    self.x <-! nil
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+}
+
 func TestCheckInvalidationInCondition(t *testing.T) {
 
 	t.Parallel()
@@ -9674,8 +9847,9 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("function expression", func(t *testing.T) {
@@ -9703,8 +9877,9 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[1])
 	})
 
 	t.Run("array expression", func(t *testing.T) {
@@ -9729,9 +9904,37 @@ func TestCheckBoundFunctionToResource(t *testing.T) {
             }
         `)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[1])
 	})
 
+	t.Run("array expression map function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var f: fun(): Void = fun() {}
+
+                // ArrayExpression trick to capture the bound function
+                [r.sayHi].map(fun(element: fun(): Void): Void {
+                    f = element
+                })
+
+                f() // Bound resource method called here
+
+                destroy r
+            }  
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+	})
 }
 
 func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
@@ -10053,5 +10256,146 @@ func TestCheckIndexingResourceLoss(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 2)
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[1])
+	})
+}
+
+func TestCheckInvalidResourceCaptureOnLeft(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          var x: @AnyResource? <- nil
+          fun () {
+              x <-! []
+          }
+          destroy x
+      }
+    `)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+}
+
+func TestCheckInvalidNestedResourceCapture(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("on right", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    fun() {
+                        let y <- self.x
+                        destroy y
+                    }
+                }
+            }
+      `)
+		require.NoError(t, err)
+	})
+
+	t.Run("resource field on right", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R  {
+                var x: @AnyResource?
+                init() {
+                   self.x <- nil
+                }
+                fun foo() {
+                    fun() {
+                        let y <- self.x <- nil
+                        destroy y
+                    }
+                }
+            }
+      `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("on left", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    fun() {
+                        self.x <-! nil
+                    }
+                    destroy self.x
+                }
+            }
+    `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("on left method scope", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    self.x <-! nil
+                    destroy self.x
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+
+	t.Run("contract self variable on left", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract C {
+                var x: @AnyResource?
+                init() {
+                   self.x <- nil
+                }
+                fun foo() { 
+                    fun() {
+                        self.x <-! nil
+                    }
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+
+	t.Run("contract self variable on left method scope", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract C {
+                var x: @AnyResource?
+                init() {
+                   self.x <- nil
+                }
+                fun foo() {
+                    self.x <-! nil
+                }
+            }
+    `)
+		require.NoError(t, err)
 	})
 }

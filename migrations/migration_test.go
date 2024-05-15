@@ -1703,6 +1703,8 @@ func TestMigrationPanic(t *testing.T) {
 
 	reporter := newTestReporter()
 
+	migration = migration.WithErrorStacktrace(true)
+
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,

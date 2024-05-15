@@ -89,7 +89,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	// check the invoked expression can be invoked
 
 	invokedExpression := invocationExpression.InvokedExpression
-	expressionType := checker.VisitExpression(invokedExpression, nil)
+	expressionType := checker.VisitExpression(invokedExpression, invocationExpression, nil)
 
 	// `inInvocation` should be reset before visiting arguments
 	checker.inInvocation = false
@@ -131,7 +131,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 			argumentTypes = make([]Type, 0, argumentCount)
 
 			for _, argument := range invocationExpression.Arguments {
-				argumentType := checker.VisitExpression(argument.Expression, nil)
+				argumentType := checker.VisitExpression(argument.Expression, invocationExpression, nil)
 				argumentTypes = append(argumentTypes, argumentType)
 			}
 
@@ -469,7 +469,7 @@ func (checker *Checker) checkInvocation(
 
 			parameterTypes[argumentIndex] =
 				checker.checkInvocationRequiredArgument(
-					invocationExpression.Arguments,
+					invocationExpression,
 					argumentIndex,
 					functionType,
 					argumentTypes,
@@ -482,7 +482,7 @@ func (checker *Checker) checkInvocation(
 		for i := minCount; i < argumentCount; i++ {
 			argument := invocationExpression.Arguments[i]
 			// TODO: pass the expected type to support type inferring for parameters
-			argumentTypes[i] = checker.VisitExpression(argument.Expression, nil)
+			argumentTypes[i] = checker.VisitExpression(argument.Expression, invocationExpression, nil)
 		}
 	}
 
@@ -571,7 +571,7 @@ func (checker *Checker) checkTypeParameterInference(
 }
 
 func (checker *Checker) checkInvocationRequiredArgument(
-	arguments ast.Arguments,
+	invocationExpression *ast.InvocationExpression,
 	argumentIndex int,
 	functionType *FunctionType,
 	argumentTypes []Type,
@@ -579,7 +579,7 @@ func (checker *Checker) checkInvocationRequiredArgument(
 ) (
 	parameterType Type,
 ) {
-	argument := arguments[argumentIndex]
+	argument := invocationExpression.Arguments[argumentIndex]
 
 	parameter := functionType.Parameters[argumentIndex]
 	parameterType = parameter.TypeAnnotation.Type
@@ -637,7 +637,7 @@ func (checker *Checker) checkInvocationRequiredArgument(
 			expectedType = nil
 		}
 
-		argumentType = checker.VisitExpression(argument.Expression, expectedType)
+		argumentType = checker.VisitExpression(argument.Expression, invocationExpression, expectedType)
 
 		// If we did not pass an expected type,
 		// we must manually check that the argument type and the parameter type are compatible.
@@ -659,7 +659,7 @@ func (checker *Checker) checkInvocationRequiredArgument(
 		// We will then have to manually check that the argument type is compatible
 		// with the parameter type (see below).
 
-		argumentType = checker.VisitExpression(argument.Expression, nil)
+		argumentType = checker.VisitExpression(argument.Expression, invocationExpression, nil)
 
 		// Try to unify the parameter type with the argument type.
 		// If unification fails, fall back to the parameter type for now.
@@ -807,9 +807,6 @@ func (checker *Checker) checkInvocationArgumentParameterTypeCompatibility(
 }
 
 func (checker *Checker) checkInvocationArgumentMove(argument ast.Expression, argumentType Type) Type {
-
-	checker.checkVariableMove(argument)
 	checker.checkResourceMoveOperation(argument, argumentType)
-
 	return argumentType
 }

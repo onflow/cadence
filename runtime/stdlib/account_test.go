@@ -23,17 +23,12 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 func TestSemaCheckPathLiteralForInternalStorageDomains(t *testing.T) {
 
 	t.Parallel()
-
-	rangeThunk := func() ast.Range {
-		return ast.EmptyRange
-	}
 
 	internalStorageDomains := []string{
 		InboxStorageDomain,
@@ -44,8 +39,11 @@ func TestSemaCheckPathLiteralForInternalStorageDomains(t *testing.T) {
 	}
 
 	test := func(domain string) {
+
 		t.Run(domain, func(t *testing.T) {
-			_, err := sema.CheckPathLiteral(domain, "test", rangeThunk, rangeThunk)
+			t.Parallel()
+
+			_, err := sema.CheckPathLiteral(nil, domain, "test", nil, nil)
 			var invalidPathDomainError *sema.InvalidPathDomainError
 			require.ErrorAs(t, err, &invalidPathDomainError)
 		})

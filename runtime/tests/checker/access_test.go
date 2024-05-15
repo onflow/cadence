@@ -1826,6 +1826,7 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
     `)
 	require.NoError(t, err)
 
+	// these capture x and y because they are created in a different file
 	_, err = ParseAndCheckWithOptions(t,
 		`
            import x, y, createR from "imported"
@@ -1849,7 +1850,9 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 		},
 	)
 
-	errs := RequireCheckerErrors(t, err, 7)
+	errs := RequireCheckerErrors(t, err, 9)
+
+	// For `x`
 
 	require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	assert.Equal(t,
@@ -1859,23 +1862,29 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 
 	require.IsType(t, &sema.ResourceCapturingError{}, errs[1])
 
-	require.IsType(t, &sema.AssignmentToConstantError{}, errs[2])
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[2])
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[3])
 	assert.Equal(t,
 		"x",
-		errs[2].(*sema.AssignmentToConstantError).Name,
+		errs[3].(*sema.AssignmentToConstantError).Name,
 	)
-
-	require.IsType(t, &sema.ResourceCapturingError{}, errs[3])
 
 	require.IsType(t, &sema.ResourceCapturingError{}, errs[4])
 
-	require.IsType(t, &sema.AssignmentToConstantError{}, errs[5])
-	assert.Equal(t,
-		"y",
-		errs[5].(*sema.AssignmentToConstantError).Name,
-	)
+	// For `y`
+
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[5])
 
 	require.IsType(t, &sema.ResourceCapturingError{}, errs[6])
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[7])
+	assert.Equal(t,
+		"y",
+		errs[7].(*sema.AssignmentToConstantError).Name,
+	)
+
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[8])
 }
 
 func TestCheckContractNestedDeclarationPrivateAccess(t *testing.T) {

@@ -241,8 +241,12 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) getInterfaceType(intf *
 func (validator *CadenceV042ToV1ContractUpdateValidator) getIntersectedInterfaces(
 	intersection []*ast.NominalType,
 ) (interfaceTypes []*sema.InterfaceType) {
-	for _, interfaceType := range intersection {
-		interfaceTypes = append(interfaceTypes, validator.getInterfaceType(interfaceType))
+	for _, astInterfaceType := range intersection {
+		interfaceType := validator.getInterfaceType(astInterfaceType)
+		if interfaceType == nil {
+			continue
+		}
+		interfaceTypes = append(interfaceTypes, interfaceType)
 	}
 	return
 }
@@ -288,6 +292,10 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) expectedAuthorizationOf
 	// ignoring the legacy restricted type, as an intersection type appearing in the new contract means it must have originally
 	// been a restricted type with no legacy type
 	interfaces := validator.getIntersectedInterfaces(intersectionTypes)
+
+	if len(interfaces) == 0 {
+		return sema.UnauthorizedAccess
+	}
 
 	intersectionType := sema.NewIntersectionType(nil, nil, interfaces)
 
