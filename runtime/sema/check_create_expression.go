@@ -34,7 +34,7 @@ func (checker *Checker) VisitCreateExpression(expression *ast.CreateExpression) 
 
 	invocation := expression.InvocationExpression
 
-	ty := checker.VisitExpression(invocation, nil)
+	ty := checker.VisitExpression(invocation, expression, nil)
 
 	if ty.IsInvalidType() {
 		return ty

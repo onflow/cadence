@@ -7380,7 +7380,8 @@ func IsPrimitiveOrContainerOfPrimitive(referencedType Type) bool {
 		return IsPrimitiveOrContainerOfPrimitive(ty.Type)
 
 	case *DictionaryType:
-		return IsPrimitiveOrContainerOfPrimitive(ty.ValueType)
+		return IsPrimitiveOrContainerOfPrimitive(ty.KeyType) &&
+			IsPrimitiveOrContainerOfPrimitive(ty.ValueType)
 
 	default:
 		return ty.IsPrimitiveType()

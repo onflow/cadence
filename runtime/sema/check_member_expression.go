@@ -168,7 +168,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 		// is an assignment, but the evaluation of the accessed exprssion itself (i.e. `a.b`)
 		// is not, so we temporarily clear the `inAssignment` status here before restoring it later.
 		accessedType = checker.withAssignment(false, func() Type {
-			return checker.VisitExpression(accessedExpression, nil)
+			return checker.VisitExpression(accessedExpression, expression, nil)
 		})
 	}()
 
@@ -345,16 +345,21 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignme
 	//
 	// This would result in a bound method for a resource, which is invalid.
 
-	if !checker.inInvocation &&
-		member.DeclarationKind == common.DeclarationKindFunction &&
+	if member.DeclarationKind == common.DeclarationKindFunction &&
 		!accessedType.IsInvalidType() &&
 		accessedType.IsResourceType() {
 
-		checker.report(
-			&ResourceMethodBindingError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
-			},
-		)
+		parent := checker.parent
+		parentInvocationExpr, parentIsInvocation := parent.(*ast.InvocationExpression)
+
+		if !parentIsInvocation ||
+			expression != parentInvocationExpr.InvokedExpression {
+			checker.report(
+				&ResourceMethodBindingError{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
+				},
+			)
+		}
 	}
 
 	// If the member,

@@ -3955,7 +3955,9 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
-		if compositeKind == common.CompositeKindEvent || compositeKind == common.CompositeKindAttachment {
+		if compositeKind == common.CompositeKindEvent ||
+			compositeKind == common.CompositeKindAttachment ||
+			compositeKind == common.CompositeKindContract {
 			continue
 		}
 

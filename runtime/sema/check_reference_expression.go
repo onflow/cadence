@@ -59,7 +59,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	beforeErrors := len(checker.errors)
 
-	referencedType, actualType := checker.visitExpression(referencedExpression, expectedLeftType)
+	referencedType, actualType := checker.visitExpression(referencedExpression, referenceExpression, expectedLeftType)
 
 	// check that the type of the referenced value is not itself a reference
 	var requireNoReferenceNesting func(actualType Type)

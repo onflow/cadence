@@ -2087,6 +2087,7 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 
 func (checker *Checker) checkDefaultDestroyEventParam(
 	param Parameter,
+	eventDeclaration ast.CompositeLikeDeclaration,
 	astParam *ast.Parameter,
 	containerType EntitlementSupportingType,
 	containerDeclaration ast.Declaration,
@@ -2113,7 +2114,8 @@ func (checker *Checker) checkDefaultDestroyEventParam(
 			compositeContainer,
 			compositeContainer.baseTypeDocString)
 	}
-	param.DefaultArgument = checker.VisitExpression(paramDefaultArgument, paramType)
+
+	param.DefaultArgument = checker.VisitExpression(paramDefaultArgument, eventDeclaration, paramType)
 
 	// default events must have default arguments for all their parameters; this is enforced in the parser
 	// we want to check that these arguments are all either literals or field accesses, and have primitive types
@@ -2143,7 +2145,13 @@ func (checker *Checker) checkDefaultDestroyEvent(
 	defer checker.leaveValueScope(eventDeclaration.EndPosition, true)
 
 	for index, param := range eventType.ConstructorParameters {
-		checker.checkDefaultDestroyEventParam(param, constructorFunctionParameters[index], containerType, containerDeclaration)
+		checker.checkDefaultDestroyEventParam(
+			param,
+			eventDeclaration,
+			constructorFunctionParameters[index],
+			containerType,
+			containerDeclaration,
+		)
 	}
 }
 

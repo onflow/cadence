@@ -54,7 +54,7 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 		}
 	}
 
-	valueType := checker.VisitExpression(declaration.Value, expectedValueType)
+	valueType := checker.VisitExpression(declaration.Value, declaration, expectedValueType)
 
 	if isOptionalBinding {
 		optionalType, isOptional := valueType.(*OptionalType)
@@ -112,8 +112,6 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 		if declaration.SecondValue != nil {
 			panic(errors.NewUnreachableError())
 		}
-
-		checker.checkVariableMove(declaration.Value)
 
 		// If only one value expression is provided, it is invalidated (if it has a resource type)
 
@@ -203,7 +201,7 @@ func (checker *Checker) visitVariableDeclarationValues(declaration *ast.Variable
 			if recordedResourceInvalidation != nil {
 				checker.resources.RemoveTemporaryMoveInvalidation(recordedResourceInvalidation.resource, recordedResourceInvalidation.invalidation)
 			}
-			checker.VisitExpression(declaration.Value, expectedValueType)
+			checker.VisitExpression(declaration.Value, declaration, expectedValueType)
 		}
 	}
 

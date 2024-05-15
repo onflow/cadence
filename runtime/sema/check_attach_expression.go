@@ -34,14 +34,13 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 	attachment := expression.Attachment
 	baseExpression := expression.Base
 
-	baseType := checker.VisitExpression(baseExpression, checker.expectedType)
+	baseType := checker.VisitExpression(baseExpression, expression, checker.expectedType)
 	attachmentType := checker.checkInvocationExpression(attachment)
 
 	if attachmentType.IsInvalidType() || baseType.IsInvalidType() {
 		return InvalidType
 	}
 
-	checker.checkVariableMove(baseExpression)
 	checker.checkResourceMoveOperation(baseExpression, attachmentType)
 
 	// check that the attachment type is a valid attachment,

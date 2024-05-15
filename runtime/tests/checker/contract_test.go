@@ -744,7 +744,12 @@ func TestCheckBadContractNesting(t *testing.T) {
 func TestCheckContractEnumAccessRestricted(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseAndCheckWithOptions(t, "contract foo{}let x = foo!",
+	_, err := ParseAndCheckWithOptions(t, `
+            contract foo {
+                access(all) fun bar() {}
+            }
+            let x = foo.bar()!
+        `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
 				AccessCheckMode: sema.AccessCheckModeStrict,

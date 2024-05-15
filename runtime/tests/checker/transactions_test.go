@@ -477,10 +477,13 @@ func TestCheckInvalidTransactionSelfMoveReturnFromFunction(t *testing.T) {
      }
    `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
-	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+	var invalidMoveError *sema.InvalidMoveError
+	require.ErrorAs(t, errs[0], &invalidMoveError)
+
+	require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	typeMismatchErr := errs[1].(*sema.TypeMismatchError)
 
 	assert.Equal(t, sema.VoidType, typeMismatchErr.ExpectedType)
 	assert.IsType(t, &sema.TransactionType{}, typeMismatchErr.ActualType)
