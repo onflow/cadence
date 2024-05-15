@@ -19,9 +19,11 @@
 package checker
 
 import (
-	"github.com/onflow/cadence/runtime/sema"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func TestCheckInvalidMoves(t *testing.T) {

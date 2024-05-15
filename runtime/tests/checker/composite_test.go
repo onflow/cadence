@@ -1995,7 +1995,7 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 					if !firstIsInterface {
 						usage := "b"
 						if secondKind == common.CompositeKindContract {
-							usage = usage + ".foo()"
+							usage += ".foo()"
 						}
 
 						firstBody = fmt.Sprintf(
@@ -2004,7 +2004,7 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 							usage,
 						)
 
-						firstCallableFunc = firstCallableFunc + " {}"
+						firstCallableFunc += " {}"
 					}
 
 					secondBody := ""
@@ -2012,7 +2012,7 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 					if !secondIsInterface {
 						usage := "a"
 						if firstKind == common.CompositeKindContract {
-							usage = usage + ".foo()"
+							usage += ".foo()"
 						}
 
 						secondBody = fmt.Sprintf(
@@ -2020,7 +2020,7 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 							firstKind.DestructionKeyword(),
 							usage,
 						)
-						secondCallableFunc = secondCallableFunc + " {}"
+						secondCallableFunc += " {}"
 					}
 
 					t.Run(testName, func(t *testing.T) {
