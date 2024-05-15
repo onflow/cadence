@@ -93,12 +93,18 @@ func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEnum:
 
 				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[1], &invalidMoveError)
 
 			case common.CompositeKindEvent:
 
@@ -171,13 +177,20 @@ func TestCheckFunctionDeclarationParameterWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[1], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -244,11 +257,15 @@ func TestCheckFunctionDeclarationParameterWithoutResourceAnnotation(t *testing.T
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -779,13 +796,20 @@ func TestCheckFunctionExpressionParameterWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[1], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -854,11 +878,16 @@ func TestCheckFunctionExpressionParameterWithoutResourceAnnotation(t *testing.T)
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -1097,7 +1126,6 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
@@ -1105,6 +1133,15 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 3)
+
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[2], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -1175,11 +1212,15 @@ func TestCheckFunctionTypeParameterWithoutResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[1])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -1408,10 +1449,13 @@ func TestCheckFailableCastingWithoutResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{}, errs[1])
 				assert.IsType(t, &sema.InvalidNonIdentifierFailableResourceDowncast{}, errs[2])
 
-			case common.CompositeKindStructure,
-				common.CompositeKindContract:
-
+			case common.CompositeKindStructure:
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			case common.CompositeKindEvent:
 				errs := RequireCheckerErrors(t, err, 1)

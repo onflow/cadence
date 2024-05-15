@@ -1540,9 +1540,12 @@ func TestCheckAttachmentIllegalInit(t *testing.T) {
           let t = optContractRef?.Test()
 		`)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[0])
+		var invalidMoveError *sema.InvalidMoveError
+		require.ErrorAs(t, errs[0], &invalidMoveError)
+
+		assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
 	})
 }
 
@@ -1655,9 +1658,12 @@ func TestCheckAttachmentAttachNonAttachment(t *testing.T) {
 		`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.NotCallableError{}, errs[0])
+		var invalidMoveError *sema.InvalidMoveError
+		require.ErrorAs(t, errs[0], &invalidMoveError)
+
+		assert.IsType(t, &sema.NotCallableError{}, errs[1])
 	})
 }
 
@@ -1773,9 +1779,12 @@ func TestCheckAttachmentAttachToNonComposite(t *testing.T) {
 		`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.NotCallableError{}, errs[0])
+		var invalidMoveError *sema.InvalidMoveError
+		require.ErrorAs(t, errs[0], &invalidMoveError)
+
+		assert.IsType(t, &sema.NotCallableError{}, errs[1])
 	})
 
 	t.Run("attachment", func(t *testing.T) {

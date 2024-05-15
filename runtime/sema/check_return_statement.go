@@ -74,7 +74,6 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 		return
 	}
 
-	checker.checkVariableMove(statement.Expression)
 	checker.checkResourceMoveOperation(statement.Expression, valueType)
 
 	return

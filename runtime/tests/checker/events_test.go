@@ -250,9 +250,12 @@ func TestCheckEmitEvent(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
+		var invalidMoveError *sema.InvalidMoveError
+		require.ErrorAs(t, errs[0], &invalidMoveError)
+
+		assert.IsType(t, &sema.InvalidEventUsageError{}, errs[1])
 	})
 
 	t.Run("emit non-event", func(t *testing.T) {
