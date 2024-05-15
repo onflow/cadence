@@ -444,7 +444,7 @@ func (interpreter *Interpreter) checkInvalidatedStorageReference(
 	// If nil, that means the value has been moved out of storage.
 	if referencedValue == nil {
 		panic(ReferencedValueChangedError{
-			locationRange,
+			LocationRange: locationRange,
 		})
 	}
 }
