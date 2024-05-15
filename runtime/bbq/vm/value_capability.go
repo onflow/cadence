@@ -31,7 +31,7 @@ func init() {
 	// Capability.borrow
 	RegisterTypeBoundFunction(typeName, sema.CapabilityTypeBorrowField, NativeFunctionValue{
 		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(config *Config, value ...Value) Value {
+		Function: func(config *Config, typeArguments []StaticType, value ...Value) Value {
 			// TODO:
 			return NilValue{}
 		},

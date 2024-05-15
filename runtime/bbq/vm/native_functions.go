@@ -48,7 +48,7 @@ func RegisterTypeBoundFunction(typeName, functionName string, functionValue Nati
 func init() {
 	RegisterFunction(commons.LogFunctionName, NativeFunctionValue{
 		ParameterCount: len(stdlib.LogFunctionType.Parameters),
-		Function: func(config *Config, arguments ...Value) Value {
+		Function: func(config *Config, typeArguments []StaticType, arguments ...Value) Value {
 			// TODO: Properly implement
 			fmt.Println(arguments[0].String())
 			return VoidValue{}
@@ -57,7 +57,7 @@ func init() {
 
 	RegisterFunction(commons.PanicFunctionName, NativeFunctionValue{
 		ParameterCount: len(stdlib.PanicFunctionType.Parameters),
-		Function: func(config *Config, arguments ...Value) Value {
+		Function: func(config *Config, typeArguments []StaticType, arguments ...Value) Value {
 			// TODO: Properly implement
 			messageValue, ok := arguments[0].(StringValue)
 			if !ok {
@@ -70,7 +70,7 @@ func init() {
 
 	RegisterFunction(commons.GetAccountFunctionName, NativeFunctionValue{
 		ParameterCount: len(stdlib.PanicFunctionType.Parameters),
-		Function: func(config *Config, arguments ...Value) Value {
+		Function: func(config *Config, typeArguments []StaticType, arguments ...Value) Value {
 			// TODO: Properly implement
 			return VoidValue{}
 		},

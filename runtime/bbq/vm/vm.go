@@ -309,6 +309,9 @@ func opInvoke(vm *VM) {
 	value := vm.pop()
 	stackHeight := len(vm.stack)
 
+	callFrame := vm.callFrame
+	typeArgCount := callFrame.getUint16()
+
 	switch value := value.(type) {
 	case FunctionValue:
 		parameterCount := int(value.Function.ParameterCount)
@@ -317,8 +320,15 @@ func opInvoke(vm *VM) {
 		vm.dropN(parameterCount)
 	case NativeFunctionValue:
 		parameterCount := value.ParameterCount
+
+		var typeArguments []StaticType
+		for i := 0; i < int(typeArgCount); i++ {
+			typeArg := vm.loadType()
+			typeArguments = append(typeArguments, typeArg)
+		}
+
 		arguments := vm.stack[stackHeight-parameterCount:]
-		result := value.Function(vm.config, arguments...)
+		result := value.Function(vm.config, typeArguments, arguments...)
 		vm.push(result)
 	default:
 		panic(errors.NewUnreachableError())

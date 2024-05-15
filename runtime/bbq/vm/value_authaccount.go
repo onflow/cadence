@@ -42,8 +42,8 @@ func init() {
 
 	// AuthAccount.link
 	RegisterTypeBoundFunction(typeName, sema.AuthAccountLinkField, NativeFunctionValue{
-		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(config *Config, value ...Value) Value {
+		ParameterCount: len(sema.AuthAccountTypeLinkFunctionType.Parameters),
+		Function: func(config *Config, typeArguments []StaticType, value ...Value) Value {
 			// TODO:
 			return NilValue{}
 		},
@@ -51,8 +51,8 @@ func init() {
 
 	// AuthAccount.save
 	RegisterTypeBoundFunction(typeName, sema.AuthAccountSaveField, NativeFunctionValue{
-		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(config *Config, value ...Value) Value {
+		ParameterCount: len(sema.AuthAccountTypeSaveFunctionType.Parameters),
+		Function: func(config *Config, typeArguments []StaticType, value ...Value) Value {
 			// TODO:
 			return NilValue{}
 		},
@@ -60,8 +60,8 @@ func init() {
 
 	// AuthAccount.borrow
 	RegisterTypeBoundFunction(typeName, sema.AuthAccountBorrowField, NativeFunctionValue{
-		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(config *Config, args ...Value) Value {
+		ParameterCount: len(sema.AuthAccountTypeBorrowFunctionType.Parameters),
+		Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
 			authAccount, ok := args[0].(*CompositeValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -72,10 +72,7 @@ func init() {
 				panic(errors.NewUnreachableError())
 			}
 
-			// TODO: pass type parameter
-			var typeParameter StaticType
-
-			referenceType, ok := typeParameter.(*interpreter.ReferenceStaticType)
+			referenceType, ok := typeArguments[0].(interpreter.ReferenceStaticType)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -91,7 +88,7 @@ func init() {
 				referenceType.Authorized,
 				common.Address(addressValue),
 				path,
-				typeParameter,
+				referenceType,
 			)
 
 			// Attempt to dereference,

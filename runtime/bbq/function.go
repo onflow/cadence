@@ -19,10 +19,11 @@
 package bbq
 
 type Function struct {
-	Name           string
-	Code           []byte
-	ParameterCount uint16
-	LocalCount     uint16
+	Name               string
+	Code               []byte
+	ParameterCount     uint16
+	TypeParameterCount uint16
+	LocalCount         uint16
 
 	IsCompositeFunction bool
 }

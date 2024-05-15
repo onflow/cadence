@@ -680,7 +680,9 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 		c.loadArguments(expression)
 		// Load function value
 		c.emitVariableLoad(invokedExpr.Identifier.Identifier)
-		c.emit(opcode.Invoke)
+
+		typeArgs := c.loadTypeArguments(expression)
+		c.emit(opcode.Invoke, typeArgs...)
 	case *ast.MemberExpression:
 		memberInfo := c.Elaboration.MemberExpressionMemberInfos[invokedExpr]
 		typeName := TypeName(memberInfo.AccessedType)
@@ -695,7 +697,9 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 			c.loadArguments(expression)
 			// Load function value
 			c.emitVariableLoad(funcName)
-			c.emit(opcode.Invoke)
+
+			typeArgs := c.loadTypeArguments(expression)
+			c.emit(opcode.Invoke, typeArgs...)
 			return
 		}
 
@@ -710,7 +714,8 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 
 			argsCountFirst, argsCountSecond := encodeUint16(uint16(len(expression.Arguments)))
 
-			args := []byte{funcNameSizeFirst, funcNameSizeSecond}
+			args := c.loadTypeArguments(expression)
+			args = append(args, funcNameSizeFirst, funcNameSizeSecond)
 			args = append(args, []byte(funcName)...)
 			args = append(args, argsCountFirst, argsCountSecond)
 
@@ -719,7 +724,9 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 			// Load function value
 			funcName = commons.TypeQualifiedName(typeName, invokedExpr.Identifier.Identifier)
 			c.emitVariableLoad(funcName)
-			c.emit(opcode.Invoke)
+
+			typeArgs := c.loadTypeArguments(expression)
+			c.emit(opcode.Invoke, typeArgs...)
 		}
 	default:
 		panic(errors.NewUnreachableError())
@@ -759,6 +766,32 @@ func (c *Compiler) loadArguments(expression *ast.InvocationExpression) {
 		c.compileExpression(argument.Expression)
 		c.emitCheckType(invocationTypes.ArgumentTypes[index])
 	}
+}
+
+func (c *Compiler) loadTypeArguments(expression *ast.InvocationExpression) []byte {
+	invocationTypes := c.Elaboration.InvocationExpressionTypes[expression]
+
+	if len(expression.TypeArguments) == 0 {
+		return nil
+	}
+
+	var typeArgs []byte
+
+	typeArgsCount := invocationTypes.TypeArguments.Len()
+	if typeArgsCount >= math.MaxUint16 {
+		panic(errors.NewDefaultUserError("invalid number of type arguments: %d", typeArgsCount))
+	}
+
+	first, second := encodeUint16(uint16(typeArgsCount))
+	typeArgs = append(typeArgs, first, second)
+
+	invocationTypes.TypeArguments.Foreach(func(key *sema.TypeParameter, typeParam sema.Type) {
+		index := c.getOrAddType(typeParam)
+		first, second := encodeUint16(index)
+		typeArgs = append(typeArgs, first, second)
+	})
+
+	return typeArgs
 }
 
 func (c *Compiler) VisitMemberExpression(expression *ast.MemberExpression) (_ struct{}) {

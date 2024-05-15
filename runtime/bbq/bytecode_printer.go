@@ -107,6 +107,11 @@ func (p *BytecodePrinter) printCode(codes []byte) {
 			funcName, i = p.getStringOperand(codes, i)
 			p.stringBuilder.WriteString(" " + " " + funcName)
 
+		case opcode.Invoke:
+			//var typeIndex int
+			//typeIndex, i = p.getIntOperand(codes, i)
+			//p.stringBuilder.WriteString(" " + fmt.Sprint(typeIndex))
+
 		// opcodes with no operands
 		default:
 			// do nothing

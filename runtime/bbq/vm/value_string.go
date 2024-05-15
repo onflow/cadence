@@ -59,7 +59,7 @@ func init() {
 
 	RegisterTypeBoundFunction(typeName, StringConcatFunctionName, NativeFunctionValue{
 		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(config *Config, value ...Value) Value {
+		Function: func(config *Config, typeArguments []StaticType, value ...Value) Value {
 			first := value[0].(StringValue)
 			second := value[1].(StringValue)
 			var sb strings.Builder
