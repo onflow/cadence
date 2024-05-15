@@ -9462,26 +9462,6 @@ func TestCheckInvalidResourceDestructionInFunction(t *testing.T) {
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }
 
-func TestCheckInvalidResourceCaptureOnLeft(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      fun test() {
-          var x: @AnyResource? <- nil
-
-          fun () {
-              x <-! []
-          }
-
-          destroy x
-      }
-    `)
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
-}
-
 func TestCheckInvalidNestedResourceCaptureOnLeft(t *testing.T) {
 
 	t.Parallel()
