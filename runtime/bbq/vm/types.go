@@ -34,5 +34,5 @@ func IsSubType(sourceType, targetType StaticType) bool {
 
 	// TODO: Add the remaining subType rules
 
-	return false
+	return true
 }

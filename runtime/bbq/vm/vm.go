@@ -183,13 +183,13 @@ func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) erro
 		}
 	}
 
-	args := make([]Value, 0, len(signers)+1)
-	args = append(args, transaction)
-	args = append(args, signers...)
+	prepareArgs := make([]Value, 0, len(signers)+1)
+	prepareArgs = append(prepareArgs, transaction)
+	prepareArgs = append(prepareArgs, signers...)
 
 	// Invoke 'prepare', if exists.
 	if prepare, ok := vm.globals[commons.TransactionPrepareFunctionName]; ok {
-		_, err = vm.invoke(prepare, args)
+		_, err = vm.invoke(prepare, prepareArgs)
 		if err != nil {
 			return err
 		}
@@ -198,8 +198,9 @@ func (vm *VM) ExecuteTransaction(transactionArgs []Value, signers ...Value) erro
 	// TODO: Invoke pre/post conditions
 
 	// Invoke 'execute', if exists.
+	executeArgs := []Value{transaction}
 	if execute, ok := vm.globals[commons.TransactionExecuteFunctionName]; ok {
-		_, err = vm.invoke(execute, args)
+		_, err = vm.invoke(execute, executeArgs)
 		return err
 	}
 
