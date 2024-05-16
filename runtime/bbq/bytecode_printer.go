@@ -105,12 +105,35 @@ func (p *BytecodePrinter) printCode(codes []byte) {
 		case opcode.InvokeDynamic:
 			var funcName string
 			funcName, i = p.getStringOperand(codes, i)
-			p.stringBuilder.WriteString(" " + " " + funcName)
+			p.stringBuilder.WriteString(" " + funcName)
+
+			// Type parameters
+			var typeParamCount int
+			typeParamCount, i = p.getIntOperand(codes, i)
+			p.stringBuilder.WriteString(" " + fmt.Sprint(typeParamCount))
+
+			var typeIndex int
+			for j := 0; j < typeParamCount; j++ {
+				typeIndex, i = p.getIntOperand(codes, i)
+				p.stringBuilder.WriteString(" " + fmt.Sprint(typeIndex))
+			}
+
+			// Argument count parameters
+			var argsCount int
+			argsCount, i = p.getIntOperand(codes, i)
+			p.stringBuilder.WriteString(" " + fmt.Sprint(argsCount))
 
 		case opcode.Invoke:
-			//var typeIndex int
-			//typeIndex, i = p.getIntOperand(codes, i)
-			//p.stringBuilder.WriteString(" " + fmt.Sprint(typeIndex))
+			// Type parameters
+			var typeParamCount int
+			typeParamCount, i = p.getIntOperand(codes, i)
+			p.stringBuilder.WriteString(" " + fmt.Sprint(typeParamCount))
+
+			var typeIndex int
+			for j := 0; j < typeParamCount; j++ {
+				typeIndex, i = p.getIntOperand(codes, i)
+				p.stringBuilder.WriteString(" " + fmt.Sprint(typeIndex))
+			}
 
 		// opcodes with no operands
 		default:

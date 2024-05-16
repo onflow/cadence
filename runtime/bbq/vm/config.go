@@ -20,11 +20,10 @@ package vm
 
 import (
 	"github.com/onflow/atree"
+	"github.com/onflow/cadence/runtime/bbq/commons"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-
-	"github.com/onflow/cadence/runtime/bbq/commons"
 )
 
 type Config struct {

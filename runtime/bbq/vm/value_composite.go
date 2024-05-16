@@ -127,7 +127,7 @@ func (v *CompositeValue) SetMember(conf *Config, name string, value Value) {
 	//	nil,
 	//)
 
-	interpreterValue := VMValueToInterpreterValue(value)
+	interpreterValue := VMValueToInterpreterValue(conf.Storage, value)
 
 	existingStorable, err := v.dictionary.Set(
 		interpreter.StringAtreeComparator,
@@ -141,10 +141,9 @@ func (v *CompositeValue) SetMember(conf *Config, name string, value Value) {
 	}
 
 	if existingStorable != nil {
-		// TODO:
-		//existingValue := interpreter.StoredValue(nil, existingStorable, context.Storage)
-		//existingValue.DeepRemove(interpreter)
-
+		inter := inter(conf.Storage)
+		existingValue := interpreter.StoredValue(nil, existingStorable, conf.Storage)
+		existingValue.DeepRemove(inter)
 		RemoveReferencedSlab(conf.Storage, existingStorable)
 	}
 }
@@ -222,7 +221,7 @@ func (v *CompositeValue) Transfer(
 
 	if needsStoreTo && v.Kind == common.CompositeKindContract {
 		panic(interpreter.NonTransferableValueError{
-			Value: VMValueToInterpreterValue(v),
+			Value: VMValueToInterpreterValue(conf.Storage, v),
 		})
 	}
 

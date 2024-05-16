@@ -19,6 +19,7 @@
 package vm
 
 import (
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -28,7 +29,7 @@ import (
 // Utility methods to convert between old and new values.
 // These are temporary until all parts of the interpreter are migrated to the vm.
 
-func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Value) Value {
+func InterpreterValueToVMValue(storage atree.SlabStorage, value interpreter.Value) Value {
 	switch value := value.(type) {
 	case interpreter.IntValue:
 		return IntValue{value.BigInt.Int64()}
@@ -47,12 +48,12 @@ func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Va
 	}
 }
 
-var inter = func() *interpreter.Interpreter {
+var inter = func(storage interpreter.Storage) *interpreter.Interpreter {
 	inter, err := interpreter.NewInterpreter(
 		nil,
 		utils.TestLocation,
 		&interpreter.Config{
-			Storage: interpreter.NewInMemoryStorage(nil),
+			Storage: storage,
 		},
 	)
 
@@ -61,9 +62,9 @@ var inter = func() *interpreter.Interpreter {
 	}
 
 	return inter
-}()
+}
 
-func VMValueToInterpreterValue(value Value) interpreter.Value {
+func VMValueToInterpreterValue(storage interpreter.Storage, value Value) interpreter.Value {
 	switch value := value.(type) {
 	case IntValue:
 		return interpreter.NewIntValueFromInt64(nil, value.SmallInt)
@@ -71,7 +72,7 @@ func VMValueToInterpreterValue(value Value) interpreter.Value {
 		return interpreter.NewUnmeteredStringValue(string(value.Str))
 	case *CompositeValue:
 		return interpreter.NewCompositeValue(
-			inter,
+			inter(storage),
 			interpreter.EmptyLocationRange,
 			value.Location,
 			value.QualifiedIdentifier,

@@ -61,10 +61,10 @@ func (v *StorageReferenceValue) StaticType(gauge common.MemoryGauge) StaticType 
 	}
 
 	return interpreter.NewReferenceStaticType(
-		inter,
+		gauge,
 		v.Authorized,
 		v.BorrowedType,
-		(*referencedValue).StaticType(inter),
+		(*referencedValue).StaticType(gauge),
 	)
 }
 

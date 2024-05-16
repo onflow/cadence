@@ -338,10 +338,18 @@ func opInvoke(vm *VM) {
 func opInvokeDynamic(vm *VM) {
 	callframe := vm.callFrame
 	funcName := callframe.getString()
+	typeArgCount := callframe.getUint16()
 	argsCount := callframe.getUint16()
 
 	stackHeight := len(vm.stack)
 	receiver := vm.stack[stackHeight-int(argsCount)-1]
+
+	// TODO:
+	var typeArguments []StaticType
+	for i := 0; i < int(typeArgCount); i++ {
+		typeArg := vm.loadType()
+		typeArguments = append(typeArguments, typeArg)
+	}
 
 	compositeValue := receiver.(*CompositeValue)
 	qualifiedFuncName := commons.TypeQualifiedName(compositeValue.QualifiedIdentifier, funcName)

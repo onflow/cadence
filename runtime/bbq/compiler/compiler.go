@@ -714,9 +714,9 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 
 			argsCountFirst, argsCountSecond := encodeUint16(uint16(len(expression.Arguments)))
 
-			args := c.loadTypeArguments(expression)
-			args = append(args, funcNameSizeFirst, funcNameSizeSecond)
+			args := []byte{funcNameSizeFirst, funcNameSizeSecond}
 			args = append(args, []byte(funcName)...)
+			args = append(args, c.loadTypeArguments(expression)...)
 			args = append(args, argsCountFirst, argsCountSecond)
 
 			c.emit(opcode.InvokeDynamic, args...)
@@ -771,16 +771,18 @@ func (c *Compiler) loadArguments(expression *ast.InvocationExpression) {
 func (c *Compiler) loadTypeArguments(expression *ast.InvocationExpression) []byte {
 	invocationTypes := c.Elaboration.InvocationExpressionTypes[expression]
 
-	if len(expression.TypeArguments) == 0 {
-		return nil
-	}
-
-	var typeArgs []byte
+	//if len(expression.TypeArguments) == 0 {
+	//	first, second := encodeUint16(0)
+	//	typeArgs = append(typeArgs, first, second)
+	//	return typeArgs
+	//}
 
 	typeArgsCount := invocationTypes.TypeArguments.Len()
 	if typeArgsCount >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid number of type arguments: %d", typeArgsCount))
 	}
+
+	var typeArgs []byte
 
 	first, second := encodeUint16(uint16(typeArgsCount))
 	typeArgs = append(typeArgs, first, second)

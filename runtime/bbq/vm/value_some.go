@@ -39,13 +39,13 @@ func NewSomeValueNonCopying(value Value) *SomeValue {
 
 func (*SomeValue) isValue() {}
 
-func (v *SomeValue) StaticType(common.MemoryGauge) StaticType {
-	innerType := v.value.StaticType(inter)
+func (v *SomeValue) StaticType(gauge common.MemoryGauge) StaticType {
+	innerType := v.value.StaticType(gauge)
 	if innerType == nil {
 		return nil
 	}
 	return interpreter.NewOptionalStaticType(
-		inter,
+		gauge,
 		innerType,
 	)
 }

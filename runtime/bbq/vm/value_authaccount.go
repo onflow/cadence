@@ -19,19 +19,25 @@
 package vm
 
 import (
+	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func NewAuthAccountValue() *CompositeValue {
-	return &CompositeValue{
-		Location:            nil,
+func NewAuthAccountValue(
+	address common.Address,
+) *SimpleCompositeValue {
+	return &SimpleCompositeValue{
 		QualifiedIdentifier: sema.AuthAccountType.QualifiedIdentifier(),
 		typeID:              sema.AuthAccountType.ID(),
 		staticType:          interpreter.PrimitiveStaticTypeAuthAccount,
 		Kind:                common.CompositeKindStructure,
+		fields: map[string]Value{
+			sema.AuthAccountAddressField: AddressValue(address),
+			// TODO: add the remaining fields
+		},
 	}
 }
 
@@ -52,17 +58,64 @@ func init() {
 	// AuthAccount.save
 	RegisterTypeBoundFunction(typeName, sema.AuthAccountSaveField, NativeFunctionValue{
 		ParameterCount: len(sema.AuthAccountTypeSaveFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []StaticType, value ...Value) Value {
-			// TODO:
-			return NilValue{}
+		Function: func(config *Config, typeArs []StaticType, args ...Value) Value {
+			authAccount, ok := args[0].(*SimpleCompositeValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			address := authAccount.GetMember(config, sema.AuthAccountAddressField)
+			addressValue, ok := address.(AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			value := args[1]
+
+			path, ok := args[2].(PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			domain := path.Domain.Identifier()
+			identifier := path.Identifier
+
+			// Prevent an overwrite
+
+			//if interpreter.storedValueExists(
+			//	address,
+			//	domain,
+			//	identifier,
+			//) {
+			//	panic("overwrite error")
+			//}
+
+			value = value.Transfer(
+				config,
+				atree.Address(addressValue),
+				true,
+				nil,
+			)
+
+			// Write new value
+
+			WriteStored(
+				config.MemoryGauge,
+				config.Storage,
+				common.Address(addressValue),
+				domain,
+				identifier,
+				value,
+			)
+
+			return VoidValue{}
 		},
 	})
 
 	// AuthAccount.borrow
 	RegisterTypeBoundFunction(typeName, sema.AuthAccountBorrowField, NativeFunctionValue{
 		ParameterCount: len(sema.AuthAccountTypeBorrowFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
-			authAccount, ok := args[0].(*CompositeValue)
+		Function: func(config *Config, typeArgs []StaticType, args ...Value) Value {
+			authAccount, ok := args[0].(*SimpleCompositeValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -72,7 +125,7 @@ func init() {
 				panic(errors.NewUnreachableError())
 			}
 
-			referenceType, ok := typeArguments[0].(interpreter.ReferenceStaticType)
+			referenceType, ok := typeArgs[0].(interpreter.ReferenceStaticType)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -84,11 +137,11 @@ func init() {
 			}
 
 			reference := NewStorageReferenceValue(
-				nil,
+				config.Storage,
 				referenceType.Authorized,
 				common.Address(addressValue),
 				path,
-				referenceType,
+				referenceType.BorrowedType,
 			)
 
 			// Attempt to dereference,

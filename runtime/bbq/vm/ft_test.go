@@ -39,7 +39,11 @@ func TestFTTransfer(t *testing.T) {
 
 	// ---- Deploy FT Contract -----
 
-	ftLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "FungibleToken")
+	storage := interpreter.NewInMemoryStorage(nil)
+
+	address := common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}
+
+	ftLocation := common.NewAddressLocation(nil, address, "FungibleToken")
 	ftChecker, err := ParseAndCheckWithOptions(t, realFungibleTokenContractInterface,
 		ParseAndCheckOptions{Location: ftLocation},
 	)
@@ -54,7 +58,7 @@ func TestFTTransfer(t *testing.T) {
 
 	// ----- Deploy FlowToken Contract -----
 
-	flowTokenLocation := common.NewAddressLocation(nil, common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}, "FlowToken")
+	flowTokenLocation := common.NewAddressLocation(nil, address, "FlowToken")
 	flowTokenChecker, err := ParseAndCheckWithOptions(t, realFlowContract,
 		ParseAndCheckOptions{
 			Location: flowTokenLocation,
@@ -83,15 +87,14 @@ func TestFTTransfer(t *testing.T) {
 	flowTokenProgram := flowTokenCompiler.Compile()
 	printProgram(flowTokenProgram)
 
-	flowTokenVM := NewVM(flowTokenProgram, nil)
-
-	authAcount := NewCompositeValue(
-		nil,
-		"AuthAccount",
-		common.CompositeKindStructure,
-		common.Address{},
-		flowTokenVM.config.Storage,
+	flowTokenVM := NewVM(
+		flowTokenProgram,
+		&Config{
+			Storage: storage,
+		},
 	)
+
+	authAcount := NewAuthAccountValue(address)
 
 	flowTokenContractValue, err := flowTokenVM.InitializeContract(authAcount)
 	require.NoError(t, err)
@@ -130,6 +133,7 @@ func TestFTTransfer(t *testing.T) {
 	}
 
 	vmConfig := &Config{
+		Storage: storage,
 		ImportHandler: func(location common.Location) *bbq.Program {
 			switch location {
 			case ftLocation:
@@ -176,7 +180,7 @@ func TestFTTransfer(t *testing.T) {
 
 	setupTxVM := NewVM(program, vmConfig)
 
-	authorizer := NewAuthAccountValue()
+	authorizer := NewAuthAccountValue(address)
 	err = setupTxVM.ExecuteTransaction(nil, authorizer)
 	require.NoError(t, err)
 
