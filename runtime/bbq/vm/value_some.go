@@ -30,6 +30,7 @@ type SomeValue struct {
 }
 
 var _ Value = &SomeValue{}
+var _ MemberAccessibleValue = &SomeValue{}
 
 func NewSomeValueNonCopying(value Value) *SomeValue {
 	return &SomeValue{
@@ -56,4 +57,13 @@ func (v *SomeValue) Transfer(*Config, atree.Address, bool, atree.Storable) Value
 
 func (v *SomeValue) String() string {
 	return v.value.String()
+}
+func (v *SomeValue) GetMember(config *Config, name string) Value {
+	memberAccessibleValue := (v.value).(MemberAccessibleValue)
+	return memberAccessibleValue.GetMember(config, name)
+}
+
+func (v *SomeValue) SetMember(config *Config, name string, value Value) {
+	memberAccessibleValue := (v.value).(MemberAccessibleValue)
+	memberAccessibleValue.SetMember(config, name, value)
 }

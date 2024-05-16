@@ -34,6 +34,9 @@ type StorageReferenceValue struct {
 	storage              interpreter.Storage
 }
 
+var _ Value = &StorageReferenceValue{}
+var _ MemberAccessibleValue = &StorageReferenceValue{}
+
 func NewStorageReferenceValue(
 	storage interpreter.Storage,
 	authorized bool,
@@ -49,8 +52,6 @@ func NewStorageReferenceValue(
 		storage:              storage,
 	}
 }
-
-var _ Value = &StorageReferenceValue{}
 
 func (*StorageReferenceValue) isValue() {}
 
@@ -105,4 +106,24 @@ func (v *StorageReferenceValue) Transfer(*Config, atree.Address, bool, atree.Sto
 
 func (v *StorageReferenceValue) String() string {
 	return format.StorageReference
+}
+
+func (v *StorageReferenceValue) GetMember(config *Config, name string) Value {
+	referencedValue, err := v.dereference(config.MemoryGauge)
+	if err != nil {
+		panic(err)
+	}
+
+	memberAccessibleValue := (*referencedValue).(MemberAccessibleValue)
+	return memberAccessibleValue.GetMember(config, name)
+}
+
+func (v *StorageReferenceValue) SetMember(config *Config, name string, value Value) {
+	referencedValue, err := v.dereference(config.MemoryGauge)
+	if err != nil {
+		panic(err)
+	}
+
+	memberAccessibleValue := (*referencedValue).(MemberAccessibleValue)
+	memberAccessibleValue.SetMember(config, name, value)
 }

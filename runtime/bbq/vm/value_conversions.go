@@ -20,7 +20,6 @@ package vm
 
 import (
 	"github.com/onflow/atree"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -36,12 +35,11 @@ func InterpreterValueToVMValue(storage atree.SlabStorage, value interpreter.Valu
 	case *interpreter.StringValue:
 		return StringValue{Str: []byte(value.Str)}
 	case *interpreter.CompositeValue:
-		return NewCompositeValue(
+		return newCompositeValueFromOrderedMap(
+			value.Dictionary,
 			value.Location,
 			value.QualifiedIdentifier,
 			value.Kind,
-			common.Address{},
-			storage,
 		)
 	default:
 		panic(errors.NewUnreachableError())
@@ -71,14 +69,13 @@ func VMValueToInterpreterValue(storage interpreter.Storage, value Value) interpr
 	case StringValue:
 		return interpreter.NewUnmeteredStringValue(string(value.Str))
 	case *CompositeValue:
-		return interpreter.NewCompositeValue(
-			inter(storage),
-			interpreter.EmptyLocationRange,
-			value.Location,
-			value.QualifiedIdentifier,
-			value.Kind,
-			nil,
-			common.Address{},
+		return interpreter.NewCompositeValueFromOrderedMap(
+			value.dictionary,
+			interpreter.CompositeTypeInfo{
+				Location:            value.Location,
+				QualifiedIdentifier: value.QualifiedIdentifier,
+				Kind:                value.Kind,
+			},
 		)
 	default:
 		panic(errors.NewUnreachableError())

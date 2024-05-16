@@ -13798,7 +13798,7 @@ func (UFix64Value) Scale() int {
 // CompositeValue
 
 type CompositeValue struct {
-	dictionary          *atree.OrderedMap
+	Dictionary          *atree.OrderedMap
 	Location            common.Location
 	QualifiedIdentifier string
 	Kind                common.CompositeKind
@@ -13907,12 +13907,12 @@ func NewCompositeValue(
 	return v
 }
 
-func newCompositeValueFromOrderedMap(
+func NewCompositeValueFromOrderedMap(
 	dict *atree.OrderedMap,
 	typeInfo CompositeTypeInfo,
 ) *CompositeValue {
 	return &CompositeValue{
-		dictionary:          dict,
+		Dictionary:          dict,
 		Location:            typeInfo.Location,
 		QualifiedIdentifier: typeInfo.QualifiedIdentifier,
 		Kind:                typeInfo.Kind,
@@ -13930,7 +13930,7 @@ func newCompositeValueFromConstructor(
 	common.UseMemory(gauge, elementOverhead)
 	common.UseMemory(gauge, dataUse)
 	common.UseMemory(gauge, metaDataUse)
-	return newCompositeValueFromOrderedMap(constructor(), typeInfo)
+	return NewCompositeValueFromOrderedMap(constructor(), typeInfo)
 }
 
 var _ Value = &CompositeValue{}
@@ -14038,7 +14038,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 	v.isDestroyed = true
 
 	if interpreter.Config.InvalidatedResourceValidationEnabled {
-		v.dictionary = nil
+		v.Dictionary = nil
 	}
 
 	interpreter.updateReferencedResource(
@@ -14053,7 +14053,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 			compositeValue.isDestroyed = true
 
 			if interpreter.Config.InvalidatedResourceValidationEnabled {
-				compositeValue.dictionary = nil
+				compositeValue.Dictionary = nil
 			}
 		},
 	)
@@ -14089,7 +14089,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		return v.OwnerValue(interpreter, locationRange)
 	}
 
-	storable, err := v.dictionary.Get(
+	storable, err := v.Dictionary.Get(
 		StringAtreeComparator,
 		StringAtreeHashInput,
 		StringAtreeValue(name),
@@ -14149,7 +14149,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 }
 
 func (v *CompositeValue) checkInvalidatedResourceUse(locationRange LocationRange) {
-	if v.isDestroyed || (v.dictionary == nil && v.Kind == common.CompositeKindResource) {
+	if v.isDestroyed || (v.Dictionary == nil && v.Kind == common.CompositeKindResource) {
 		panic(InvalidatedResourceError{
 			LocationRange: locationRange,
 		})
@@ -14223,7 +14223,7 @@ func (v *CompositeValue) RemoveMember(
 
 	// No need to clean up storable for passed-in key value,
 	// as atree never calls Storable()
-	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
+	existingKeyStorable, existingValueStorable, err := v.Dictionary.Remove(
 		StringAtreeComparator,
 		StringAtreeHashInput,
 		StringAtreeValue(name),
@@ -14234,7 +14234,7 @@ func (v *CompositeValue) RemoveMember(
 		}
 		panic(errors.NewExternalError(err))
 	}
-	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeValue(v.Dictionary)
 
 	storage := interpreter.Config.Storage
 
@@ -14292,7 +14292,7 @@ func (v *CompositeValue) SetMember(
 		nil,
 	)
 
-	existingStorable, err := v.dictionary.Set(
+	existingStorable, err := v.Dictionary.Set(
 		StringAtreeComparator,
 		StringAtreeHashInput,
 		NewStringAtreeValue(interpreter, name),
@@ -14301,7 +14301,7 @@ func (v *CompositeValue) SetMember(
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
-	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeValue(v.Dictionary)
 
 	if existingStorable != nil {
 		existingValue := StoredValue(interpreter, existingStorable, interpreter.Config.Storage)
@@ -14331,7 +14331,7 @@ func (v *CompositeValue) MeteredString(memoryGauge common.MemoryGauge, seenRefer
 	strLen := emptyCompositeStringLen
 
 	var fields []CompositeField
-	_ = v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
+	_ = v.Dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		field := NewCompositeField(
 			memoryGauge,
 			string(key.(StringAtreeValue)),
@@ -14393,7 +14393,7 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 		v.checkInvalidatedResourceUse(locationRange)
 	}
 
-	storable, err := v.dictionary.Get(
+	storable, err := v.Dictionary.Get(
 		StringAtreeComparator,
 		StringAtreeHashInput,
 		StringAtreeValue(name),
@@ -14405,7 +14405,7 @@ func (v *CompositeValue) GetField(interpreter *Interpreter, locationRange Locati
 		panic(errors.NewExternalError(err))
 	}
 
-	return StoredValue(interpreter, storable, v.dictionary.Storage)
+	return StoredValue(interpreter, storable, v.Dictionary.Storage)
 }
 
 func (v *CompositeValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
@@ -14416,12 +14416,12 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, locationRange LocationR
 
 	if !v.StaticType(interpreter).Equal(otherComposite.StaticType(interpreter)) ||
 		v.Kind != otherComposite.Kind ||
-		v.dictionary.Count() != otherComposite.dictionary.Count() {
+		v.Dictionary.Count() != otherComposite.Dictionary.Count() {
 
 		return false
 	}
 
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.Dictionary.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
@@ -14528,7 +14528,7 @@ func (v *CompositeValue) ConformsToStaticType(
 		return false
 	}
 
-	fieldsLen := int(v.dictionary.Count())
+	fieldsLen := int(v.Dictionary.Count())
 	if v.ComputedFields != nil {
 		fieldsLen += len(v.ComputedFields)
 	}
@@ -14621,7 +14621,7 @@ func (v *CompositeValue) Transfer(
 	storable atree.Storable,
 ) Value {
 
-	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(v.dictionary.Count(), 0)
+	baseUse, elementOverhead, dataUse, metaDataUse := common.NewCompositeMemoryUsages(v.Dictionary.Count(), 0)
 	common.UseMemory(interpreter, baseUse)
 	common.UseMemory(interpreter, elementOverhead)
 	common.UseMemory(interpreter, dataUse)
@@ -14653,7 +14653,7 @@ func (v *CompositeValue) Transfer(
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address
 
-	dictionary := v.dictionary
+	dictionary := v.Dictionary
 
 	needsStoreTo := address != currentAddress
 	isResourceKinded := v.IsResourceKinded(interpreter)
@@ -14665,22 +14665,22 @@ func (v *CompositeValue) Transfer(
 	}
 
 	if needsStoreTo || !isResourceKinded {
-		iterator, err := v.dictionary.Iterator()
+		iterator, err := v.Dictionary.Iterator()
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
 
-		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
+		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.Dictionary.Count(), 0)
 		common.UseMemory(interpreter.Config.MemoryGauge, elementMemoryUse)
 
 		dictionary, err = atree.NewMapFromBatchData(
 			interpreter.Config.Storage,
 			address,
 			atree.NewDefaultDigesterBuilder(),
-			v.dictionary.Type(),
+			v.Dictionary.Type(),
 			StringAtreeComparator,
 			StringAtreeHashInput,
-			v.dictionary.Seed(),
+			v.Dictionary.Seed(),
 			func() (atree.Value, atree.Value, error) {
 
 				atreeKey, atreeValue, err := iterator.Next()
@@ -14705,14 +14705,14 @@ func (v *CompositeValue) Transfer(
 		}
 
 		if remove {
-			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
+			err = v.Dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 				interpreter.RemoveReferencedSlab(nameStorable)
 				interpreter.RemoveReferencedSlab(valueStorable)
 			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
-			interpreter.maybeValidateAtreeValue(v.dictionary)
+			interpreter.maybeValidateAtreeValue(v.Dictionary)
 
 			interpreter.RemoveReferencedSlab(storable)
 		}
@@ -14731,9 +14731,9 @@ func (v *CompositeValue) Transfer(
 		// to be transferred/moved again (see beginning of this function)
 
 		if interpreter.Config.InvalidatedResourceValidationEnabled {
-			v.dictionary = nil
+			v.Dictionary = nil
 		} else {
-			v.dictionary = dictionary
+			v.Dictionary = dictionary
 			res = v
 		}
 
@@ -14747,7 +14747,7 @@ func (v *CompositeValue) Transfer(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-				compositeValue.dictionary = dictionary
+				compositeValue.Dictionary = dictionary
 			},
 		)
 	}
@@ -14759,7 +14759,7 @@ func (v *CompositeValue) Transfer(
 			v.QualifiedIdentifier,
 			v.Kind,
 		)
-		res = newCompositeValueFromOrderedMap(dictionary, info)
+		res = NewCompositeValueFromOrderedMap(dictionary, info)
 		res.InjectedFields = v.InjectedFields
 		res.ComputedFields = v.ComputedFields
 		res.NestedVariables = v.NestedVariables
@@ -14799,22 +14799,22 @@ func (v *CompositeValue) ResourceUUID(interpreter *Interpreter, locationRange Lo
 
 func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 
-	iterator, err := v.dictionary.Iterator()
+	iterator, err := v.Dictionary.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
+	elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.Dictionary.Count(), 0)
 	common.UseMemory(interpreter.Config.MemoryGauge, elementMemoryUse)
 
 	dictionary, err := atree.NewMapFromBatchData(
 		interpreter.Config.Storage,
 		v.StorageID().Address,
 		atree.NewDefaultDigesterBuilder(),
-		v.dictionary.Type(),
+		v.Dictionary.Type(),
 		StringAtreeComparator,
 		StringAtreeHashInput,
-		v.dictionary.Seed(),
+		v.Dictionary.Seed(),
 		func() (atree.Value, atree.Value, error) {
 
 			atreeKey, atreeValue, err := iterator.Next()
@@ -14836,7 +14836,7 @@ func (v *CompositeValue) Clone(interpreter *Interpreter) Value {
 	}
 
 	return &CompositeValue{
-		dictionary:          dictionary,
+		Dictionary:          dictionary,
 		Location:            v.Location,
 		QualifiedIdentifier: v.QualifiedIdentifier,
 		Kind:                v.Kind,
@@ -14873,9 +14873,9 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 
 	// Remove nested values and storables
 
-	storage := v.dictionary.Storage
+	storage := v.Dictionary.Storage
 
-	err := v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
+	err := v.Dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
 		// NOTE: key / field name is stringAtreeValue,
 		// and not a Value, so no need to deep remove
 		interpreter.RemoveReferencedSlab(nameStorable)
@@ -14887,7 +14887,7 @@ func (v *CompositeValue) DeepRemove(interpreter *Interpreter) {
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
-	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeValue(v.Dictionary)
 }
 
 func (v *CompositeValue) GetOwner() common.Address {
@@ -14898,7 +14898,7 @@ func (v *CompositeValue) GetOwner() common.Address {
 // It does NOT iterate over computed fields and functions!
 func (v *CompositeValue) ForEachField(gauge common.MemoryGauge, f func(fieldName string, fieldValue Value)) {
 
-	err := v.dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
+	err := v.Dictionary.Iterate(func(key atree.Value, value atree.Value) (resume bool, err error) {
 		f(
 			string(key.(StringAtreeValue)),
 			MustConvertStoredValue(gauge, value),
@@ -14911,7 +14911,7 @@ func (v *CompositeValue) ForEachField(gauge common.MemoryGauge, f func(fieldName
 }
 
 func (v *CompositeValue) StorageID() atree.StorageID {
-	return v.dictionary.StorageID()
+	return v.Dictionary.StorageID()
 }
 
 func (v *CompositeValue) RemoveField(
@@ -14920,7 +14920,7 @@ func (v *CompositeValue) RemoveField(
 	name string,
 ) {
 
-	existingKeyStorable, existingValueStorable, err := v.dictionary.Remove(
+	existingKeyStorable, existingValueStorable, err := v.Dictionary.Remove(
 		StringAtreeComparator,
 		StringAtreeHashInput,
 		StringAtreeValue(name),
@@ -14931,7 +14931,7 @@ func (v *CompositeValue) RemoveField(
 		}
 		panic(errors.NewExternalError(err))
 	}
-	interpreter.maybeValidateAtreeValue(v.dictionary)
+	interpreter.maybeValidateAtreeValue(v.Dictionary)
 
 	storage := interpreter.Config.Storage
 

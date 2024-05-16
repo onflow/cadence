@@ -328,6 +328,10 @@ func opInvoke(vm *VM) {
 		}
 
 		arguments := vm.stack[stackHeight-parameterCount:]
+
+		// TODO:
+		//vm.dropN(parameterCount)
+
 		result := value.Function(vm.config, typeArguments, arguments...)
 		vm.push(result)
 	default:
@@ -399,7 +403,7 @@ func opSetField(vm *VM) {
 	fieldNameStr := string(fieldName.Str)
 
 	// TODO: support all container types
-	structValue := vm.pop().(*CompositeValue)
+	structValue := vm.pop().(MemberAccessibleValue)
 
 	fieldValue := vm.pop()
 
@@ -410,10 +414,9 @@ func opGetField(vm *VM) {
 	fieldName := vm.pop().(StringValue)
 	fieldNameStr := string(fieldName.Str)
 
-	// TODO: support all container types
-	structValue := vm.pop().(*CompositeValue)
+	memberAccessibleValue := vm.pop().(MemberAccessibleValue)
 
-	fieldValue := structValue.GetMember(vm.config, fieldNameStr)
+	fieldValue := memberAccessibleValue.GetMember(vm.config, fieldNameStr)
 	if fieldValue == nil {
 		panic(interpreter.MissingMemberValueError{
 			Name: fieldNameStr,

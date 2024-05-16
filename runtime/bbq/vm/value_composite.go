@@ -35,6 +35,7 @@ type CompositeValue struct {
 }
 
 var _ Value = &CompositeValue{}
+var _ MemberAccessibleValue = &CompositeValue{}
 
 func NewCompositeValue(
 	location common.Location,
@@ -70,13 +71,15 @@ func NewCompositeValue(
 
 func newCompositeValueFromOrderedMap(
 	dict *atree.OrderedMap,
-	typeInfo interpreter.CompositeTypeInfo,
+	location common.Location,
+	qualifiedIdentifier string,
+	kind common.CompositeKind,
 ) *CompositeValue {
 	return &CompositeValue{
 		dictionary:          dict,
-		Location:            typeInfo.Location,
-		QualifiedIdentifier: typeInfo.QualifiedIdentifier,
-		Kind:                typeInfo.Kind,
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
+		Kind:                kind,
 	}
 }
 

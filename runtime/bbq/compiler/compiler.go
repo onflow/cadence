@@ -831,6 +831,10 @@ func (c *Compiler) VisitBinaryExpression(expression *ast.BinaryExpression) (_ st
 
 	switch expression.Operation {
 	case ast.OperationNilCoalesce:
+		// create a duplicate to perform the equal check.
+		// So if the condition succeeds, then the result will be at the top of the stack.
+		c.emit(opcode.Dup)
+
 		c.emit(opcode.Nil)
 		c.emit(opcode.Equal)
 		jumpToEnd := c.emitUndefinedJump(opcode.JumpIfFalse)

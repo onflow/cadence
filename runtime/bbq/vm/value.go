@@ -35,3 +35,8 @@ type Value interface {
 	) Value
 	String() string
 }
+
+type MemberAccessibleValue interface {
+	GetMember(config *Config, name string) Value
+	SetMember(conf *Config, name string, value Value)
+}
