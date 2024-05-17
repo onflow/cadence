@@ -961,4 +961,30 @@ func TestCheckMemberAccess(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("composite reference, enum field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var status: Status
+                init() {
+                    self.status = Status.Off
+                }
+            }
+
+            enum Status: Int {
+                case On
+                case Off
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var x: Status = testRef.status
+            }
+        `)
+
+		require.NoError(t, err)
+	})
 }
