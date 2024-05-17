@@ -1615,6 +1615,29 @@ func TestCheckBasicEntitlementMappingAccess(t *testing.T) {
 
 		assert.NoError(t, err)
 	})
+
+	t.Run("enum field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            enum Status: Int {
+                case On
+                case Off
+            }
+
+            entitlement mapping M {}
+
+            struct interface S {
+                // enum cases are public.
+                // Hence, using entitlement mappings for enum-typed variables are pointless.
+                // So reject this statically.
+                access(mapping M) let status: Status
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidMappedEntitlementMemberError{}, errs[0])
+	})
 }
 
 func TestCheckInvalidEntitlementAccess(t *testing.T) {
