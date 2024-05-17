@@ -5150,8 +5150,8 @@ func (*CompositeType) IsComparable() bool {
 	return false
 }
 
-func (*CompositeType) ContainFieldsOrElements() bool {
-	return true
+func (t *CompositeType) ContainFieldsOrElements() bool {
+	return t.Kind != common.CompositeKindEnum
 }
 
 func (t *CompositeType) TypeAnnotationState() TypeAnnotationState {

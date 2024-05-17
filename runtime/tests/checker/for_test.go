@@ -507,4 +507,26 @@ func TestCheckReferencesInForLoop(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("Enum array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            enum Status: Int {
+                case On
+                case Off
+            }
+
+            fun main() {
+                var array = [Status.On, Status.Off]
+                var arrayRef = &array as &[Status]
+
+                for element in arrayRef {
+                    let e: Status = element
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
 }
