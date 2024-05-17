@@ -19,7 +19,6 @@
 package vm
 
 import (
-	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -28,7 +27,7 @@ import (
 // Utility methods to convert between old and new values.
 // These are temporary until all parts of the interpreter are migrated to the vm.
 
-func InterpreterValueToVMValue(storage atree.SlabStorage, value interpreter.Value) Value {
+func InterpreterValueToVMValue(value interpreter.Value) Value {
 	switch value := value.(type) {
 	case interpreter.IntValue:
 		return IntValue{value.BigInt.Int64()}
@@ -77,6 +76,25 @@ func VMValueToInterpreterValue(storage interpreter.Storage, value Value) interpr
 				Kind:                value.Kind,
 			},
 		)
+	case *CapabilityValue:
+		return interpreter.NewCapabilityValue(
+			nil,
+			VMValueToInterpreterValue(storage, value.Address).(interpreter.AddressValue),
+			VMValueToInterpreterValue(storage, value.Path).(interpreter.PathValue),
+			value.BorrowType,
+		)
+	case LinkValue:
+		return interpreter.LinkValue{
+			TargetPath: VMValueToInterpreterValue(storage, value.TargetPath).(interpreter.PathValue),
+			Type:       value.StaticType(nil),
+		}
+	case AddressValue:
+		return interpreter.AddressValue(value)
+	case PathValue:
+		return interpreter.PathValue{
+			Domain:     value.Domain,
+			Identifier: value.Identifier,
+		}
 	default:
 		panic(errors.NewUnreachableError())
 	}

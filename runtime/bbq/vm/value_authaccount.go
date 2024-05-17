@@ -49,9 +49,64 @@ func init() {
 	// AuthAccount.link
 	RegisterTypeBoundFunction(typeName, sema.AuthAccountLinkField, NativeFunctionValue{
 		ParameterCount: len(sema.AuthAccountTypeLinkFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []StaticType, value ...Value) Value {
-			// TODO:
-			return NilValue{}
+		Function: func(config *Config, typeArgs []StaticType, args ...Value) Value {
+			borrowType, ok := typeArgs[0].(interpreter.ReferenceStaticType)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			authAccount, ok := args[0].(*SimpleCompositeValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			address := authAccount.GetMember(config, sema.AuthAccountAddressField)
+			addressValue, ok := address.(AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			newCapabilityPath, ok := args[1].(PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			targetPath, ok := args[2].(PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
+			newCapabilityIdentifier := newCapabilityPath.Identifier
+
+			//if interpreter.storedValueExists(
+			//	address,
+			//	newCapabilityDomain,
+			//	newCapabilityIdentifier,
+			//) {
+			//	return Nil
+			//}
+
+			// Write new value
+
+			// Note that this will be metered twice if Atree validation is enabled.
+			linkValue := NewLinkValue(targetPath, borrowType)
+
+			WriteStored(
+				config.MemoryGauge,
+				config.Storage,
+				common.Address(addressValue),
+				newCapabilityDomain,
+				newCapabilityIdentifier,
+				linkValue,
+			)
+
+			return NewSomeValueNonCopying(
+				NewCapabilityValue(
+					addressValue,
+					newCapabilityPath,
+					borrowType,
+				),
+			)
 		},
 	})
 

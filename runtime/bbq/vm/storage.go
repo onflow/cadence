@@ -33,7 +33,7 @@ import (
 func StoredValue(gauge common.MemoryGauge, storable atree.Storable, storage atree.SlabStorage) Value {
 	// Delegate
 	value := interpreter.StoredValue(gauge, storable, storage)
-	return InterpreterValueToVMValue(storage, value)
+	return InterpreterValueToVMValue(value)
 }
 
 func WriteStored(

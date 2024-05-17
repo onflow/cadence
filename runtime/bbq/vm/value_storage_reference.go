@@ -80,7 +80,7 @@ func (v *StorageReferenceValue) dereference(gauge common.MemoryGauge) (*Value, e
 	}
 
 	referenced := accountStorage.ReadValue(gauge, identifier)
-	vmReferencedValue := InterpreterValueToVMValue(v.storage, referenced)
+	vmReferencedValue := InterpreterValueToVMValue(referenced)
 
 	if v.BorrowedType != nil {
 		staticType := vmReferencedValue.StaticType(gauge)
