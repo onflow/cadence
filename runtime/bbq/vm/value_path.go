@@ -32,6 +32,8 @@ type PathValue struct {
 	Identifier string
 }
 
+var EmptyPathValue = PathValue{}
+
 var _ Value = PathValue{}
 
 func (PathValue) isValue() {}

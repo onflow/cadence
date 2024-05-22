@@ -40,6 +40,16 @@ func InterpreterValueToVMValue(value interpreter.Value) Value {
 			value.QualifiedIdentifier,
 			value.Kind,
 		)
+	case interpreter.LinkValue:
+		return NewLinkValue(
+			InterpreterValueToVMValue(value.TargetPath).(PathValue),
+			value.Type,
+		)
+	case interpreter.PathValue:
+		return PathValue{
+			Domain:     value.Domain,
+			Identifier: value.Identifier,
+		}
 	default:
 		panic(errors.NewUnreachableError())
 	}

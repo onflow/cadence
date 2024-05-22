@@ -30,10 +30,27 @@ import (
 //		GetStorageMap(address common.Address, domain string, createIfNotExists bool) *StorageMap
 //		CheckHealth() error
 //	}
+
 func StoredValue(gauge common.MemoryGauge, storable atree.Storable, storage atree.SlabStorage) Value {
 	// Delegate
 	value := interpreter.StoredValue(gauge, storable, storage)
 	return InterpreterValueToVMValue(value)
+}
+
+func ReadStored(
+	gauge common.MemoryGauge,
+	storage interpreter.Storage,
+	address common.Address,
+	domain string,
+	identifier string,
+) Value {
+	accountStorage := storage.GetStorageMap(address, domain, false)
+	if accountStorage == nil {
+		return nil
+	}
+
+	referenced := accountStorage.ReadValue(gauge, identifier)
+	return InterpreterValueToVMValue(referenced)
 }
 
 func WriteStored(

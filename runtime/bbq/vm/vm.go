@@ -356,7 +356,20 @@ func opInvokeDynamic(vm *VM) {
 		typeArguments = append(typeArguments, typeArg)
 	}
 
+	switch typedReceiver := receiver.(type) {
+	case *StorageReferenceValue:
+		referenced, err := typedReceiver.dereference(vm.config.MemoryGauge)
+		if err != nil {
+			panic(err)
+		}
+		receiver = *referenced
+
+		// TODO:
+		//case ReferenceValue
+	}
+
 	compositeValue := receiver.(*CompositeValue)
+
 	qualifiedFuncName := commons.TypeQualifiedName(compositeValue.QualifiedIdentifier, funcName)
 	var functionValue = vm.lookupFunction(compositeValue.Location, qualifiedFuncName)
 
@@ -373,6 +386,10 @@ func opDrop(vm *VM) {
 func opDup(vm *VM) {
 	top := vm.peek()
 	vm.push(top)
+}
+
+func opEmpty(vm *VM) {
+	vm.push(nil)
 }
 
 func opNew(vm *VM) {
@@ -483,6 +500,18 @@ func opEqual(vm *VM) {
 	vm.replaceTop(BoolValue(left == right))
 }
 
+func opUnwrap(vm *VM) {
+	value := vm.peek()
+	someValue, ok := value.(*SomeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	value = someValue.value
+
+	vm.replaceTop(value)
+}
+
 func (vm *VM) run() {
 	for {
 
@@ -536,6 +565,8 @@ func (vm *VM) run() {
 			opDrop(vm)
 		case opcode.Dup:
 			opDup(vm)
+		case opcode.Empty:
+			opEmpty(vm)
 		case opcode.New:
 			opNew(vm)
 		case opcode.SetField:
@@ -554,6 +585,8 @@ func (vm *VM) run() {
 			opNil(vm)
 		case opcode.Equal:
 			opEqual(vm)
+		case opcode.Unwrap:
+			opUnwrap(vm)
 		default:
 			panic(errors.NewUnexpectedError("cannot execute opcode '%s'", op.String()))
 		}

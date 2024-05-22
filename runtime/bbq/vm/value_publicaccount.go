@@ -19,9 +19,26 @@
 package vm
 
 import (
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
+
+func NewPublicAccountValue(
+	address common.Address,
+) *SimpleCompositeValue {
+	return &SimpleCompositeValue{
+		QualifiedIdentifier: sema.PublicAccountType.QualifiedIdentifier(),
+		typeID:              sema.PublicAccountType.ID(),
+		staticType:          interpreter.PrimitiveStaticTypePublicAccount,
+		Kind:                common.CompositeKindStructure,
+		fields: map[string]Value{
+			sema.PublicAccountAddressField: AddressValue(address),
+			// TODO: add the remaining fields
+		},
+	}
+}
 
 // members
 
@@ -30,10 +47,41 @@ func init() {
 
 	// PublicAccount.getCapability
 	RegisterTypeBoundFunction(typeName, sema.PublicAccountGetCapabilityField, NativeFunctionValue{
-		ParameterCount: len(sema.StringTypeConcatFunctionType.Parameters),
-		Function: func(config *Config, typeArguments []StaticType, value ...Value) Value {
-			// TODO:
-			return NilValue{}
+		ParameterCount: len(sema.PublicAccountTypeGetCapabilityFunctionType.Parameters),
+		Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
+			// Get address field from the receiver (PublicAccount)
+			authAccount, ok := args[0].(*SimpleCompositeValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+			address := authAccount.GetMember(config, sema.PublicAccountAddressField)
+			addressValue, ok := address.(AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			// Path argument
+			path, ok := args[1].(PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			//pathStaticType := path.StaticType(config.MemoryGauge)
+			//
+			//if !IsSubType(pathStaticType, pathType) {
+			//	panic(fmt.Errorf("type mismatch"))
+			//}
+
+			// NOTE: the type parameter is optional, for backwards compatibility
+
+			var borrowType *interpreter.ReferenceStaticType
+			if len(typeArguments) > 0 {
+				ty := typeArguments[1]
+				// we handle the nil case for this below
+				borrowType, _ = ty.(*interpreter.ReferenceStaticType)
+			}
+
+			return NewCapabilityValue(addressValue, path, borrowType)
 		},
 	})
 }

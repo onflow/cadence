@@ -71,8 +71,8 @@ func init() {
 	RegisterFunction(commons.GetAccountFunctionName, NativeFunctionValue{
 		ParameterCount: len(stdlib.PanicFunctionType.Parameters),
 		Function: func(config *Config, typeArguments []StaticType, arguments ...Value) Value {
-			// TODO: Properly implement
-			return VoidValue{}
+			address := arguments[0].(AddressValue)
+			return NewPublicAccountValue(common.Address(address))
 		},
 	})
 }

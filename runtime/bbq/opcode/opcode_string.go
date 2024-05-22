@@ -25,30 +25,32 @@ func _() {
 	_ = x[IntLessOrEqual-14]
 	_ = x[IntGreaterOrEqual-15]
 	_ = x[Equal-16]
-	_ = x[GetConstant-17]
-	_ = x[True-18]
-	_ = x[False-19]
-	_ = x[GetLocal-20]
-	_ = x[SetLocal-21]
-	_ = x[GetGlobal-22]
-	_ = x[SetGlobal-23]
-	_ = x[GetField-24]
-	_ = x[SetField-25]
-	_ = x[Invoke-26]
-	_ = x[InvokeDynamic-27]
-	_ = x[Destroy-28]
-	_ = x[Transfer-29]
-	_ = x[Cast-30]
-	_ = x[New-31]
-	_ = x[Path-32]
-	_ = x[Nil-33]
-	_ = x[Drop-34]
-	_ = x[Dup-35]
+	_ = x[Unwrap-17]
+	_ = x[GetConstant-18]
+	_ = x[True-19]
+	_ = x[False-20]
+	_ = x[GetLocal-21]
+	_ = x[SetLocal-22]
+	_ = x[GetGlobal-23]
+	_ = x[SetGlobal-24]
+	_ = x[GetField-25]
+	_ = x[SetField-26]
+	_ = x[Invoke-27]
+	_ = x[InvokeDynamic-28]
+	_ = x[Destroy-29]
+	_ = x[Transfer-30]
+	_ = x[Cast-31]
+	_ = x[New-32]
+	_ = x[Path-33]
+	_ = x[Nil-34]
+	_ = x[Drop-35]
+	_ = x[Dup-36]
+	_ = x[Empty-37]
 }
 
-const _Opcode_name = "UnknownReturnReturnValueJumpJumpIfFalseIntAddIntSubtractIntMultiplyIntDivideIntModIntEqualIntNotEqualIntLessIntGreaterIntLessOrEqualIntGreaterOrEqualEqualGetConstantTrueFalseGetLocalSetLocalGetGlobalSetGlobalGetFieldSetFieldInvokeInvokeDynamicDestroyTransferCastNewPathNilDropDup"
+const _Opcode_name = "UnknownReturnReturnValueJumpJumpIfFalseIntAddIntSubtractIntMultiplyIntDivideIntModIntEqualIntNotEqualIntLessIntGreaterIntLessOrEqualIntGreaterOrEqualEqualUnwrapGetConstantTrueFalseGetLocalSetLocalGetGlobalSetGlobalGetFieldSetFieldInvokeInvokeDynamicDestroyTransferCastNewPathNilDropDupEmpty"
 
-var _Opcode_index = [...]uint16{0, 7, 13, 24, 28, 39, 45, 56, 67, 76, 82, 90, 101, 108, 118, 132, 149, 154, 165, 169, 174, 182, 190, 199, 208, 216, 224, 230, 243, 250, 258, 262, 265, 269, 272, 276, 279}
+var _Opcode_index = [...]uint16{0, 7, 13, 24, 28, 39, 45, 56, 67, 76, 82, 90, 101, 108, 118, 132, 149, 154, 160, 171, 175, 180, 188, 196, 205, 214, 222, 230, 236, 249, 256, 264, 268, 271, 275, 278, 282, 285, 290}
 
 func (i Opcode) String() string {
 	if i >= Opcode(len(_Opcode_index)-1) {

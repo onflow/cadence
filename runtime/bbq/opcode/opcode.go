@@ -43,6 +43,7 @@ const (
 	IntGreaterOrEqual
 
 	Equal
+	Unwrap
 
 	GetConstant
 	True
@@ -67,4 +68,5 @@ const (
 
 	Drop
 	Dup
+	Empty
 )

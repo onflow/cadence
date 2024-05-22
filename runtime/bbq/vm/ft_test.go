@@ -222,7 +222,7 @@ func TestFTTransfer(t *testing.T) {
 
 	args := []Value{
 		IntValue{1},
-		AddressValue(common.Address{0x01}),
+		AddressValue(address),
 	}
 
 	err = tokenTransferTxVM.ExecuteTransaction(args, authorizer)

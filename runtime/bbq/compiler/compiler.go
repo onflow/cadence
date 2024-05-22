@@ -766,6 +766,12 @@ func (c *Compiler) loadArguments(expression *ast.InvocationExpression) {
 		c.compileExpression(argument.Expression)
 		c.emitCheckType(invocationTypes.ArgumentTypes[index])
 	}
+
+	// TODO: Is this needed?
+	// Load empty values for optional parameters, if they are not provided.
+	for i := len(expression.Arguments); i < invocationTypes.ParamCount; i++ {
+		c.emit(opcode.Empty)
+	}
 }
 
 func (c *Compiler) loadTypeArguments(expression *ast.InvocationExpression) []byte {
@@ -837,9 +843,13 @@ func (c *Compiler) VisitBinaryExpression(expression *ast.BinaryExpression) (_ st
 
 		c.emit(opcode.Nil)
 		c.emit(opcode.Equal)
-		jumpToEnd := c.emitUndefinedJump(opcode.JumpIfFalse)
+		elseJump := c.emitUndefinedJump(opcode.JumpIfFalse)
 		c.compileExpression(expression.Right)
-		c.patchJump(jumpToEnd)
+
+		thenJump := c.emitUndefinedJump(opcode.Jump)
+		c.patchJump(elseJump)
+		c.emit(opcode.Unwrap)
+		c.patchJump(thenJump)
 	default:
 		c.compileExpression(expression.Right)
 		c.emit(intBinaryOpcodes[expression.Operation])
