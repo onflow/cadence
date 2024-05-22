@@ -30,10 +30,9 @@ func NewAuthAccountValue(
 	address common.Address,
 ) *SimpleCompositeValue {
 	return &SimpleCompositeValue{
-		QualifiedIdentifier: sema.AuthAccountType.QualifiedIdentifier(),
-		typeID:              sema.AuthAccountType.ID(),
-		staticType:          interpreter.PrimitiveStaticTypeAuthAccount,
-		Kind:                common.CompositeKindStructure,
+		typeID:     sema.AuthAccountType.ID(),
+		staticType: interpreter.PrimitiveStaticTypeAuthAccount,
+		Kind:       common.CompositeKindStructure,
 		fields: map[string]Value{
 			sema.AuthAccountAddressField: AddressValue(address),
 			// TODO: add the remaining fields

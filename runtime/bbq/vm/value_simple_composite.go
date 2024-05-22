@@ -24,25 +24,24 @@ import (
 )
 
 type SimpleCompositeValue struct {
-	fields              map[string]Value
-	QualifiedIdentifier string
-	typeID              common.TypeID
-	staticType          StaticType
-	Kind                common.CompositeKind
+	fields     map[string]Value
+	typeID     common.TypeID
+	staticType StaticType
+	Kind       common.CompositeKind
 }
 
 var _ Value = &CompositeValue{}
 
 func NewSimpleCompositeValue(
-	qualifiedIdentifier string,
 	kind common.CompositeKind,
 	typeID common.TypeID,
+	fields map[string]Value,
 ) *SimpleCompositeValue {
 
 	return &SimpleCompositeValue{
-		QualifiedIdentifier: qualifiedIdentifier,
-		Kind:                kind,
-		typeID:              typeID,
+		Kind:   kind,
+		typeID: typeID,
+		fields: fields,
 	}
 }
 

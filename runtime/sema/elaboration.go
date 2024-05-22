@@ -69,7 +69,6 @@ type InvocationExpressionTypes struct {
 	TypeParameterTypes []Type
 	ReturnType         Type
 	TypeArguments      *TypeParameterTypeOrderedMap
-	ParamCount         int
 }
 
 type ArrayExpressionTypes struct {
