@@ -768,10 +768,10 @@ func (c *Compiler) loadArguments(expression *ast.InvocationExpression) {
 	}
 
 	// TODO: Is this needed?
-	// Load empty values for optional parameters, if they are not provided.
-	for i := len(expression.Arguments); i < invocationTypes.ParamCount; i++ {
-		c.emit(opcode.Empty)
-	}
+	//// Load empty values for optional parameters, if they are not provided.
+	//for i := len(expression.Arguments); i < invocationTypes.ParamCount; i++ {
+	//	c.emit(opcode.Empty)
+	//}
 }
 
 func (c *Compiler) loadTypeArguments(expression *ast.InvocationExpression) []byte {

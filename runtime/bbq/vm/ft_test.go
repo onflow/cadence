@@ -41,24 +41,24 @@ func TestFTTransfer(t *testing.T) {
 
 	storage := interpreter.NewInMemoryStorage(nil)
 
-	address := common.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1}
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+	senderAddress := common.MustBytesToAddress([]byte{0x2})
+	receiverAddress := common.MustBytesToAddress([]byte{0x3})
 
-	ftLocation := common.NewAddressLocation(nil, address, "FungibleToken")
+	ftLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleToken")
 	ftChecker, err := ParseAndCheckWithOptions(t, realFungibleTokenContractInterface,
-		ParseAndCheckOptions{Location: ftLocation},
+		ParseAndCheckOptions{
+			Location: ftLocation,
+		},
 	)
 	require.NoError(t, err)
 
 	ftCompiler := compiler.NewCompiler(ftChecker.Program, ftChecker.Elaboration)
 	ftProgram := ftCompiler.Compile()
 
-	//vm := NewVM(ftProgram, nil)
-	//importedContractValue, err := vm.InitializeContract()
-	//require.NoError(t, err)
-
 	// ----- Deploy FlowToken Contract -----
 
-	flowTokenLocation := common.NewAddressLocation(nil, address, "FlowToken")
+	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
 	flowTokenChecker, err := ParseAndCheckWithOptions(t, realFlowContract,
 		ParseAndCheckOptions{
 			Location: flowTokenLocation,
@@ -94,9 +94,9 @@ func TestFTTransfer(t *testing.T) {
 		},
 	)
 
-	authAcount := NewAuthAccountValue(address)
+	authAccount := NewAuthAccountValue(contractsAddress)
 
-	flowTokenContractValue, err := flowTokenVM.InitializeContract(authAcount)
+	flowTokenContractValue, err := flowTokenVM.InitializeContract(authAccount)
 	require.NoError(t, err)
 
 	// ----- Run setup account transaction -----
@@ -159,44 +159,72 @@ func TestFTTransfer(t *testing.T) {
 		},
 	}
 
-	setupTxChecker, err := ParseAndCheckWithOptions(
+	for _, address := range []common.Address{
+		senderAddress,
+		receiverAddress,
+	} {
+		setupTxChecker, err := ParseAndCheckWithOptions(
+			t,
+			realSetupFlowTokenAccountTransaction,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler:   checkerImportHandler,
+					LocationHandler: singleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		setupTxCompiler := compiler.NewCompiler(setupTxChecker.Program, setupTxChecker.Elaboration)
+		setupTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		setupTxCompiler.Config.ImportHandler = compilerImportHandler
+
+		program := setupTxCompiler.Compile()
+		printProgram(program)
+
+		setupTxVM := NewVM(program, vmConfig)
+
+		authorizer := NewAuthAccountValue(address)
+		err = setupTxVM.ExecuteTransaction(nil, authorizer)
+		require.NoError(t, err)
+	}
+
+	// Mint FLOW to sender
+
+	mintTxChecker, err := ParseAndCheckWithOptions(
 		t,
-		realSetupFlowTokenAccountTransaction,
+		realMintFlowTokenTransaction,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				ImportHandler:   checkerImportHandler,
-				LocationHandler: singleIdentifierLocationResolver(t),
+				ImportHandler:       checkerImportHandler,
+				BaseValueActivation: baseActivation(),
+				LocationHandler:     singleIdentifierLocationResolver(t),
 			},
 		},
 	)
 	require.NoError(t, err)
 
-	setupTxCompiler := compiler.NewCompiler(setupTxChecker.Program, setupTxChecker.Elaboration)
-	setupTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
-	setupTxCompiler.Config.ImportHandler = compilerImportHandler
+	mintTxCompiler := compiler.NewCompiler(mintTxChecker.Program, mintTxChecker.Elaboration)
+	mintTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
+	mintTxCompiler.Config.ImportHandler = compilerImportHandler
 
-	program := setupTxCompiler.Compile()
+	program := mintTxCompiler.Compile()
 	printProgram(program)
 
-	setupTxVM := NewVM(program, vmConfig)
+	mintTxVM := NewVM(program, vmConfig)
 
-	authorizer := NewAuthAccountValue(address)
-	err = setupTxVM.ExecuteTransaction(nil, authorizer)
+	total := int64(1000000)
+
+	mintTxArgs := []Value{
+		AddressValue(senderAddress),
+		IntValue{total},
+	}
+
+	mintTxAuthorizer := NewAuthAccountValue(contractsAddress)
+	err = mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
 	require.NoError(t, err)
 
 	// ----- Run token transfer transaction -----
-
-	// Only need for to make the checker happy
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.PanicFunction)
-	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryFunction(
-		"getAccount",
-		stdlib.GetAccountFunctionType,
-		"",
-		func(invocation interpreter.Invocation) interpreter.Value {
-			return nil
-		},
-	))
 
 	tokenTransferTxChecker, err := ParseAndCheckWithOptions(
 		t,
@@ -204,7 +232,7 @@ func TestFTTransfer(t *testing.T) {
 		ParseAndCheckOptions{
 			Config: &sema.Config{
 				ImportHandler:       checkerImportHandler,
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivation: baseActivation(),
 				LocationHandler:     singleIdentifierLocationResolver(t),
 			},
 		},
@@ -220,13 +248,68 @@ func TestFTTransfer(t *testing.T) {
 
 	tokenTransferTxVM := NewVM(tokenTransferTxProgram, vmConfig)
 
-	args := []Value{
-		IntValue{1},
-		AddressValue(address),
+	transferAmount := int64(1)
+
+	tokenTransferTxArgs := []Value{
+		IntValue{transferAmount},
+		AddressValue(receiverAddress),
 	}
 
-	err = tokenTransferTxVM.ExecuteTransaction(args, authorizer)
+	tokenTransferTxAuthorizer := NewAuthAccountValue(senderAddress)
+	err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 	require.NoError(t, err)
+
+	// Run validation scripts
+
+	for _, address := range []common.Address{
+		senderAddress,
+		receiverAddress,
+	} {
+		validationScriptChecker, err := ParseAndCheckWithOptions(
+			t,
+			realFlowTokenBalanceScript,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler:       checkerImportHandler,
+					BaseValueActivation: baseActivation(),
+					LocationHandler:     singleIdentifierLocationResolver(t),
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		validationScriptCompiler := compiler.NewCompiler(validationScriptChecker.Program, validationScriptChecker.Elaboration)
+		validationScriptCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
+		validationScriptCompiler.Config.ImportHandler = compilerImportHandler
+
+		program := validationScriptCompiler.Compile()
+		printProgram(program)
+
+		validationScriptVM := NewVM(program, vmConfig)
+
+		addressValue := AddressValue(address)
+		result, err := validationScriptVM.Invoke("main", addressValue)
+		require.NoError(t, err)
+
+		if address == senderAddress {
+			assert.Equal(t, IntValue{total - transferAmount}, result)
+		} else {
+			assert.Equal(t, IntValue{transferAmount}, result)
+		}
+	}
+}
+
+func baseActivation() *sema.VariableActivation {
+	// Only need to make the checker happy
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryFunction(
+		"getAccount",
+		stdlib.GetAccountFunctionType,
+		"",
+		nil,
+	))
+	return baseValueActivation
 }
 
 const realFungibleTokenContractInterface = `
@@ -651,5 +734,51 @@ transaction(amount: Int, to: Address) {
         // Deposit the withdrawn tokens in the recipient's receiver
         receiverRef.deposit(from: <-self.sentVault)
     }
+}
+`
+
+const realMintFlowTokenTransaction = `
+import FungibleToken from 0x1
+import FlowToken from 0x1
+
+transaction(recipient: Address, amount: Int) {
+    let signer: AuthAccount
+
+    prepare(signer: AuthAccount) {
+        self.signer = signer
+    }
+
+    execute {
+        var tokenAdmin = self.signer
+            .borrow<&FlowToken.Administrator>(from: /storage/flowTokenAdmin)
+            ?? panic("Signer is not the token admin")
+
+        var tokenReceiver = getAccount(recipient)
+            .getCapability(/public/flowTokenReceiver)
+            .borrow<&{FungibleToken.Receiver}>()
+            ?? panic("Unable to borrow receiver reference")
+
+        let minter <- tokenAdmin.createNewMinter(allowedAmount: amount)
+        let mintedVault <- minter.mintTokens(amount: amount)
+
+        tokenReceiver.deposit(from: <-mintedVault)
+
+        destroy minter
+    }
+}
+`
+
+const realFlowTokenBalanceScript = `
+import FungibleToken from 0x1
+import FlowToken from 0x1
+
+pub fun main(account: Address): Int {
+
+    let vaultRef = getAccount(account)
+        .getCapability(/public/flowTokenBalance)
+        .borrow<&FlowToken.Vault{FungibleToken.Balance}>()
+        ?? panic("Could not borrow Balance reference to the Vault")
+
+    return vaultRef.balance
 }
 `

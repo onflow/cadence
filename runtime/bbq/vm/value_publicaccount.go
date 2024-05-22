@@ -29,10 +29,9 @@ func NewPublicAccountValue(
 	address common.Address,
 ) *SimpleCompositeValue {
 	return &SimpleCompositeValue{
-		QualifiedIdentifier: sema.PublicAccountType.QualifiedIdentifier(),
-		typeID:              sema.PublicAccountType.ID(),
-		staticType:          interpreter.PrimitiveStaticTypePublicAccount,
-		Kind:                common.CompositeKindStructure,
+		typeID:     sema.PublicAccountType.ID(),
+		staticType: interpreter.PrimitiveStaticTypePublicAccount,
+		Kind:       common.CompositeKindStructure,
 		fields: map[string]Value{
 			sema.PublicAccountAddressField: AddressValue(address),
 			// TODO: add the remaining fields
