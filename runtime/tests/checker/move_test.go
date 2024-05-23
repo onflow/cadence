@@ -69,14 +69,33 @@ func TestCheckCastedMove(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-		resource R {}
+	t.Run("force", func(t *testing.T) {
+		t.Parallel()
 
-		fun foo(): @R {
-			let r: @AnyResource <- create R()
-			return <-r as! @R
-		}
-	`)
+		_, err := ParseAndCheck(t, `
+			resource R {}
 
-	require.NoError(t, err)
+			fun foo(): @R {
+				let r: @AnyResource <- create R()
+				return <-r as! @R
+			}
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("static", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {}
+
+			fun foo(): @AnyResource {
+				let r <- create R()
+				return <-r as @AnyResource
+			}
+		`)
+
+		require.NoError(t, err)
+	})
 }
