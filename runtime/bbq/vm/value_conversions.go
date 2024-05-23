@@ -22,7 +22,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 // Utility methods to convert between old and new values.
@@ -70,22 +69,6 @@ func InterpreterValueToVMValue(value interpreter.Value) Value {
 	default:
 		panic(errors.NewUnreachableError())
 	}
-}
-
-var inter = func(storage interpreter.Storage) *interpreter.Interpreter {
-	inter, err := interpreter.NewInterpreter(
-		nil,
-		utils.TestLocation,
-		&interpreter.Config{
-			Storage: storage,
-		},
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	return inter
 }
 
 func VMValueToInterpreterValue(storage interpreter.Storage, value Value) interpreter.Value {

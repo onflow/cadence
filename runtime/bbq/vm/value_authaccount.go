@@ -91,8 +91,7 @@ func init() {
 			linkValue := NewLinkValue(targetPath, borrowType)
 
 			WriteStored(
-				config.MemoryGauge,
-				config.Storage,
+				config,
 				common.Address(addressValue),
 				newCapabilityDomain,
 				newCapabilityIdentifier,
@@ -153,8 +152,7 @@ func init() {
 			// Write new value
 
 			WriteStored(
-				config.MemoryGauge,
-				config.Storage,
+				config,
 				common.Address(addressValue),
 				domain,
 				identifier,

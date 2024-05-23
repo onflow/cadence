@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/atree"
+	"github.com/onflow/cadence/runtime/errors"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -32,7 +33,6 @@ import (
 //	}
 
 func StoredValue(gauge common.MemoryGauge, storable atree.Storable, storage atree.SlabStorage) Value {
-	// Delegate
 	value := interpreter.StoredValue(gauge, storable, storage)
 	return InterpreterValueToVMValue(value)
 }
@@ -54,17 +54,30 @@ func ReadStored(
 }
 
 func WriteStored(
-	gauge common.MemoryGauge,
-	storage interpreter.Storage,
+	config *Config,
 	storageAddress common.Address,
 	domain string,
 	identifier string,
 	value Value,
 ) {
+	storage := config.Storage
 	accountStorage := storage.GetStorageMap(storageAddress, domain, true)
 	interValue := VMValueToInterpreterValue(storage, value)
-	accountStorage.WriteValue(inter(storage), identifier, interValue)
+	accountStorage.WriteValue(config.interpreter(), identifier, interValue)
 	//interpreter.recordStorageMutation()
+}
+
+func RemoveReferencedSlab(storage interpreter.Storage, storable atree.Storable) {
+	storageIDStorable, ok := storable.(atree.StorageIDStorable)
+	if !ok {
+		return
+	}
+
+	storageID := atree.StorageID(storageIDStorable)
+	err := storage.Remove(storageID)
+	if err != nil {
+		panic(errors.NewExternalError(err))
+	}
 }
 
 //

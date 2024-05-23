@@ -988,14 +988,6 @@ func BenchmarkFTTransfer(b *testing.B) {
 	)
 	require.NoError(b, err)
 
-	tokenTransferTxCompiler := compiler.NewCompiler(tokenTransferTxChecker.Program, tokenTransferTxChecker.Elaboration)
-	tokenTransferTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(b)
-	tokenTransferTxCompiler.Config.ImportHandler = compilerImportHandler
-
-	tokenTransferTxProgram := tokenTransferTxCompiler.Compile()
-
-	tokenTransferTxVM := NewVM(tokenTransferTxProgram, vmConfig)
-
 	transferAmount := int64(1)
 
 	tokenTransferTxArgs := []Value{
@@ -1009,6 +1001,13 @@ func BenchmarkFTTransfer(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
+		tokenTransferTxCompiler := compiler.NewCompiler(tokenTransferTxChecker.Program, tokenTransferTxChecker.Elaboration)
+		tokenTransferTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(b)
+		tokenTransferTxCompiler.Config.ImportHandler = compilerImportHandler
+
+		tokenTransferTxProgram := tokenTransferTxCompiler.Compile()
+
+		tokenTransferTxVM := NewVM(tokenTransferTxProgram, vmConfig)
 		err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 		require.NoError(b, err)
 	}

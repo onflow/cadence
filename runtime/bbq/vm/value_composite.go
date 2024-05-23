@@ -144,7 +144,7 @@ func (v *CompositeValue) SetMember(conf *Config, name string, value Value) {
 	}
 
 	if existingStorable != nil {
-		inter := inter(conf.Storage)
+		inter := conf.interpreter()
 		existingValue := interpreter.StoredValue(nil, existingStorable, conf.Storage)
 		existingValue.DeepRemove(inter)
 		RemoveReferencedSlab(conf.Storage, existingStorable)

@@ -19,11 +19,10 @@
 package vm
 
 import (
-	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/bbq/commons"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 type Config struct {
@@ -31,19 +30,29 @@ type Config struct {
 	common.MemoryGauge
 	commons.ImportHandler
 	ContractValueHandler
+
+	inter *interpreter.Interpreter
+}
+
+// TODO: This is temporary. Remove once storing/reading is supported for VM values.
+func (c *Config) interpreter() *interpreter.Interpreter {
+	if c.inter == nil {
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage: c.Storage,
+			},
+		)
+
+		if err != nil {
+			panic(err)
+		}
+
+		c.inter = inter
+	}
+
+	return c.inter
 }
 
 type ContractValueHandler func(conf *Config, location common.Location) *CompositeValue
-
-func RemoveReferencedSlab(storage interpreter.Storage, storable atree.Storable) {
-	storageIDStorable, ok := storable.(atree.StorageIDStorable)
-	if !ok {
-		return
-	}
-
-	storageID := atree.StorageID(storageIDStorable)
-	err := storage.Remove(storageID)
-	if err != nil {
-		panic(errors.NewExternalError(err))
-	}
-}
