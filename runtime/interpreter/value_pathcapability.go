@@ -86,8 +86,28 @@ func (v *PathCapabilityValue) RecursiveString(seenReferences SeenReferences) str
 	}
 }
 
-func (v *PathCapabilityValue) MeteredString(_ *Interpreter, _ SeenReferences, _ LocationRange) string {
-	panic(errors.NewUnreachableError())
+func (v *PathCapabilityValue) MeteredString(
+	interpreter *Interpreter,
+	seenReferences SeenReferences,
+	locationRange LocationRange,
+) string {
+	common.UseMemory(interpreter, common.PathCapabilityValueStringMemoryUsage)
+
+	borrowType := v.BorrowType
+	if borrowType == nil {
+		return fmt.Sprintf(
+			"Capability(address: %s, path: %s)",
+			v.Address.MeteredString(interpreter, seenReferences, locationRange),
+			v.Path.MeteredString(interpreter, seenReferences, locationRange),
+		)
+	} else {
+		return fmt.Sprintf(
+			"Capability<%s>(address: %s, path: %s)",
+			borrowType.String(),
+			v.Address.MeteredString(interpreter, seenReferences, locationRange),
+			v.Path.MeteredString(interpreter, seenReferences, locationRange),
+		)
+	}
 }
 
 func (v *PathCapabilityValue) GetMember(_ *Interpreter, _ LocationRange, _ string) Value {

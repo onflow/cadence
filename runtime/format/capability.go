@@ -33,7 +33,7 @@ func Capability(borrowType string, address string, id string) string {
 
 func StorageCapabilityController(borrowType string, capabilityID string, target string) string {
 	return fmt.Sprintf(
-		"StorageCapabilityController(borrowType: %s, capabilityID: %s, target: %s)",
+		"StorageCapabilityController(borrowType: Type<%s>(), capabilityID: %s, target: %s)",
 		borrowType,
 		capabilityID,
 		target,
@@ -42,7 +42,7 @@ func StorageCapabilityController(borrowType string, capabilityID string, target 
 
 func AccountCapabilityController(borrowType string, capabilityID string) string {
 	return fmt.Sprintf(
-		"AccountCapabilityController(borrowType: %s, capabilityID: %s)",
+		"AccountCapabilityController(borrowType: Type<%s>(), capabilityID: %s)",
 		borrowType,
 		capabilityID,
 	)

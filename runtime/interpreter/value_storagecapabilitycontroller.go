@@ -133,8 +133,8 @@ func (v *StorageCapabilityControllerValue) String() string {
 func (v *StorageCapabilityControllerValue) RecursiveString(seenReferences SeenReferences) string {
 	return format.StorageCapabilityController(
 		v.BorrowType.String(),
-		v.TargetPath.RecursiveString(seenReferences),
 		v.CapabilityID.RecursiveString(seenReferences),
+		v.TargetPath.RecursiveString(seenReferences),
 	)
 }
 

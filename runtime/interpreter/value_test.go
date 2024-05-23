@@ -891,153 +891,217 @@ func TestStringer(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		value    Value
+		value    func(*Interpreter) Value
 		expected string
 	}
 
 	stringerTests := map[string]testCase{
 		"UInt": {
-			value:    NewUnmeteredUIntValueFromUint64(10),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredUIntValueFromUint64(10)
+			},
 			expected: "10",
 		},
 		"UInt8": {
-			value:    NewUnmeteredUInt8Value(8),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredUInt8Value(8)
+			},
 			expected: "8",
 		},
 		"UInt16": {
-			value:    NewUnmeteredUInt16Value(16),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredUInt16Value(16)
+			},
 			expected: "16",
 		},
 		"UInt32": {
-			value:    NewUnmeteredUInt32Value(32),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredUInt32Value(32)
+			},
 			expected: "32",
 		},
 		"UInt64": {
-			value:    NewUnmeteredUInt64Value(64),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredUInt64Value(64)
+			},
 			expected: "64",
 		},
 		"UInt128": {
-			value:    NewUnmeteredUInt128ValueFromUint64(128),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredUInt128ValueFromUint64(128)
+			},
 			expected: "128",
 		},
 		"UInt256": {
-			value:    NewUnmeteredUInt256ValueFromUint64(256),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredUInt256ValueFromUint64(256)
+			},
 			expected: "256",
 		},
 		"Int8": {
-			value:    NewUnmeteredInt8Value(-8),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredInt8Value(-8)
+			},
 			expected: "-8",
 		},
 		"Int16": {
-			value:    NewUnmeteredInt16Value(-16),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredInt16Value(-16)
+			},
 			expected: "-16",
 		},
 		"Int32": {
-			value:    NewUnmeteredInt32Value(-32),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredInt32Value(-32)
+			},
 			expected: "-32",
 		},
 		"Int64": {
-			value:    NewUnmeteredInt64Value(-64),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredInt64Value(-64)
+			},
 			expected: "-64",
 		},
 		"Int128": {
-			value:    NewUnmeteredInt128ValueFromInt64(-128),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredInt128ValueFromInt64(-128)
+			},
 			expected: "-128",
 		},
 		"Int256": {
-			value:    NewUnmeteredInt256ValueFromInt64(-256),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredInt256ValueFromInt64(-256)
+			},
 			expected: "-256",
 		},
 		"Word8": {
-			value:    NewUnmeteredWord8Value(8),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredWord8Value(8)
+			},
 			expected: "8",
 		},
 		"Word16": {
-			value:    NewUnmeteredWord16Value(16),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredWord16Value(16)
+			},
 			expected: "16",
 		},
 		"Word32": {
-			value:    NewUnmeteredWord32Value(32),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredWord32Value(32)
+			},
 			expected: "32",
 		},
 		"Word64": {
-			value:    NewUnmeteredWord64Value(64),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredWord64Value(64)
+			},
 			expected: "64",
 		},
 		"Word128": {
-			value:    NewUnmeteredWord128ValueFromUint64(128),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredWord128ValueFromUint64(128)
+			},
 			expected: "128",
 		},
 		"Word256": {
-			value:    NewUnmeteredWord256ValueFromUint64(256),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredWord256ValueFromUint64(256)
+			},
 			expected: "256",
 		},
 		"UFix64": {
-			value:    NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredUFix64ValueWithInteger(64, EmptyLocationRange)
+			},
 			expected: "64.00000000",
 		},
 		"Fix64": {
-			value:    NewUnmeteredFix64ValueWithInteger(-32, EmptyLocationRange),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredFix64ValueWithInteger(-32, EmptyLocationRange)
+			},
 			expected: "-32.00000000",
 		},
 		"Void": {
-			value:    Void,
+			value: func(_ *Interpreter) Value {
+				return Void
+			},
 			expected: "()",
 		},
 		"true": {
-			value:    TrueValue,
+			value: func(_ *Interpreter) Value {
+				return TrueValue
+			},
 			expected: "true",
 		},
 		"false": {
-			value:    FalseValue,
+			value: func(_ *Interpreter) Value {
+				return FalseValue
+			},
 			expected: "false",
 		},
 		"some": {
-			value:    NewUnmeteredSomeValueNonCopying(TrueValue),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredSomeValueNonCopying(TrueValue)
+			},
 			expected: "true",
 		},
 		"nil": {
-			value:    Nil,
+			value: func(_ *Interpreter) Value {
+				return Nil
+			},
 			expected: "nil",
 		},
 		"String": {
-			value:    NewUnmeteredStringValue("Flow ridah!"),
-			expected: "\"Flow ridah!\"",
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredStringValue("Flow ridah!")
+			},
+			expected: `"Flow ridah!"`,
+		},
+		"Character": {
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredCharacterValue("😀")
+			},
+			expected: `"\u{1f600}"`,
 		},
 		"Array": {
-			value: NewArrayValue(
-				newTestInterpreter(t),
-				EmptyLocationRange,
-				&VariableSizedStaticType{
-					Type: PrimitiveStaticTypeAnyStruct,
-				},
-				common.ZeroAddress,
-				NewUnmeteredIntValueFromInt64(10),
-				NewUnmeteredStringValue("TEST"),
-			),
+			value: func(inter *Interpreter) Value {
+				return NewArrayValue(
+					inter,
+					EmptyLocationRange,
+					&VariableSizedStaticType{
+						Type: PrimitiveStaticTypeAnyStruct,
+					},
+					common.ZeroAddress,
+					NewUnmeteredIntValueFromInt64(10),
+					NewUnmeteredStringValue("TEST"),
+				)
+			},
 			expected: "[10, \"TEST\"]",
 		},
 		"Dictionary": {
-			value: NewDictionaryValue(
-				newTestInterpreter(t),
-				EmptyLocationRange,
-				&DictionaryStaticType{
-					KeyType:   PrimitiveStaticTypeString,
-					ValueType: PrimitiveStaticTypeUInt8,
-				},
-				NewUnmeteredStringValue("a"), NewUnmeteredUInt8Value(42),
-				NewUnmeteredStringValue("b"), NewUnmeteredUInt8Value(99),
-			),
+			value: func(inter *Interpreter) Value {
+				return NewDictionaryValue(
+					inter,
+					EmptyLocationRange,
+					&DictionaryStaticType{
+						KeyType:   PrimitiveStaticTypeString,
+						ValueType: PrimitiveStaticTypeUInt8,
+					},
+					NewUnmeteredStringValue("a"), NewUnmeteredUInt8Value(42),
+					NewUnmeteredStringValue("b"), NewUnmeteredUInt8Value(99),
+				)
+			},
 			expected: `{"b": 99, "a": 42}`,
 		},
 		"Address": {
-			value:    NewUnmeteredAddressValueFromBytes([]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredAddressValueFromBytes([]byte{0, 0, 0, 0, 0, 0, 0, 1})
+			},
 			expected: "0x0000000000000001",
 		},
 		"composite": {
-			value: func() Value {
-				inter := newTestInterpreter(t)
-
+			value: func(inter *Interpreter) Value {
 				fields := []CompositeField{
 					{
 						Name:  "y",
@@ -1054,12 +1118,11 @@ func TestStringer(t *testing.T) {
 					fields,
 					common.ZeroAddress,
 				)
-			}(),
+			},
 			expected: "S.test.Foo(y: \"bar\")",
 		},
 		"composite with custom stringer": {
-			value: func() Value {
-				inter := newTestInterpreter(t)
+			value: func(inter *Interpreter) Value {
 
 				fields := []CompositeField{
 					{
@@ -1083,31 +1146,67 @@ func TestStringer(t *testing.T) {
 				}
 
 				return compositeValue
-			}(),
+			},
 			expected: "y --> bar",
 		},
 		"Path": {
-			value: NewUnmeteredPathValue(
-				common.PathDomainStorage,
-				"foo",
-			),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredPathValue(
+					common.PathDomainStorage,
+					"foo",
+				)
+			},
 			expected: "/storage/foo",
 		},
 		"Type": {
-			value:    NewUnmeteredTypeValue(PrimitiveStaticTypeInt),
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredTypeValue(PrimitiveStaticTypeInt)
+			},
 			expected: "Type<Int>()",
 		},
-		"ID Capability with borrow type": {
-			value: NewUnmeteredCapabilityValue(
-				6,
-				NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
-				PrimitiveStaticTypeInt,
-			),
-			expected: "Capability<Int>(address: 0x0000000102030405, id: 6)",
+		"ID Capability": {
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredCapabilityValue(
+					6,
+					NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
+					&ReferenceStaticType{
+						Authorization:  UnauthorizedAccess,
+						ReferencedType: PrimitiveStaticTypeInt,
+					},
+				)
+			},
+			expected: "Capability<&Int>(address: 0x0000000102030405, id: 6)",
+		},
+		"Path capability with borrow type": {
+			value: func(_ *Interpreter) Value {
+				return &PathCapabilityValue{ //nolint:staticcheck
+					BorrowType: &ReferenceStaticType{
+						Authorization:  UnauthorizedAccess,
+						ReferencedType: PrimitiveStaticTypeInt,
+					},
+					Path: NewUnmeteredPathValue(
+						common.PathDomainStorage,
+						"foo",
+					),
+					Address: NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
+				}
+			},
+			expected: "Capability<&Int>(address: 0x0000000102030405, path: /storage/foo)",
+		},
+		"Path capability without borrow type": {
+			value: func(_ *Interpreter) Value {
+				return &PathCapabilityValue{ //nolint:staticcheck
+					Path: NewUnmeteredPathValue(
+						common.PathDomainStorage,
+						"foo",
+					),
+					Address: NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
+				}
+			},
+			expected: "Capability(address: 0x0000000102030405, path: /storage/foo)",
 		},
 		"Recursive ephemeral reference (array)": {
-			value: func() Value {
-				inter := newTestInterpreter(t)
+			value: func(inter *Interpreter) Value {
 
 				array := NewArrayValue(
 					inter,
@@ -1129,8 +1228,95 @@ func TestStringer(t *testing.T) {
 
 				array.Insert(inter, EmptyLocationRange, 0, arrayRef)
 				return array
-			}(),
+			},
 			expected: `[[...]]`,
+		},
+		"static host function": {
+			value: func(_ *Interpreter) Value {
+				return NewUnmeteredStaticHostFunctionValue(
+					&sema.FunctionType{
+						Parameters: []sema.Parameter{
+							{
+								Label:          "foo",
+								Identifier:     "bar",
+								TypeAnnotation: sema.IntTypeAnnotation,
+							},
+						},
+						ReturnTypeAnnotation: sema.StringTypeAnnotation,
+					},
+					func(invocation Invocation) Value {
+						return NewUnmeteredStringValue("hello")
+					},
+				)
+			},
+			expected: "fun(foo bar: Int): String",
+		},
+		"bound host function": {
+			value: func(inter *Interpreter) Value {
+				self := NewUnmeteredStringValue("self")
+
+				return NewUnmeteredBoundHostFunctionValue(
+					inter,
+					self,
+					&sema.FunctionType{
+						Parameters: []sema.Parameter{
+							{
+								Label:          "foo",
+								Identifier:     "bar",
+								TypeAnnotation: sema.IntTypeAnnotation,
+							},
+						},
+						ReturnTypeAnnotation: sema.StringTypeAnnotation,
+					},
+					func(invocation Invocation) Value {
+						return NewUnmeteredStringValue("hello")
+					},
+				)
+			},
+			expected: "fun(foo bar: Int): String",
+		},
+		"ephemeral reference": {
+			value: func(inter *Interpreter) Value {
+				return NewUnmeteredEphemeralReferenceValue(
+					inter,
+					UnauthorizedAccess,
+					NewUnmeteredStringValue("hello"),
+					&sema.ReferenceType{
+						Authorization: sema.UnauthorizedAccess,
+						Type:          sema.StringType,
+					},
+					EmptyLocationRange,
+				)
+			},
+			expected: `"hello"`,
+		},
+		"storage capability controller": {
+			value: func(inter *Interpreter) Value {
+				return NewUnmeteredStorageCapabilityControllerValue(
+					&ReferenceStaticType{
+						Authorization:  UnauthorizedAccess,
+						ReferencedType: PrimitiveStaticTypeInt,
+					},
+					UInt64Value(42),
+					NewUnmeteredPathValue(
+						common.PathDomainStorage,
+						"foo",
+					),
+				)
+			},
+			expected: "StorageCapabilityController(borrowType: Type<&Int>(), capabilityID: 42, target: /storage/foo)",
+		},
+		"account capability controller": {
+			value: func(inter *Interpreter) Value {
+				return NewUnmeteredAccountCapabilityControllerValue(
+					&ReferenceStaticType{
+						Authorization:  UnauthorizedAccess,
+						ReferencedType: PrimitiveStaticTypeAccount,
+					},
+					UInt64Value(42),
+				)
+			},
+			expected: "AccountCapabilityController(borrowType: Type<&Account>(), capabilityID: 42)",
 		},
 	}
 
@@ -1140,11 +1326,29 @@ func TestStringer(t *testing.T) {
 
 			t.Parallel()
 
+			inter := newTestInterpreter(t)
+
+			value := testCase.value(inter)
 			assert.Equal(t,
 				testCase.expected,
-				testCase.value.String(),
+				value.String(),
+			)
+
+			assert.Equal(t,
+				testCase.expected,
+				value.MeteredString(inter, SeenReferences{}, EmptyLocationRange),
 			)
 		})
+	}
+
+	for name, testCase := range stringerTests {
+		name = fmt.Sprintf("optional %s", name)
+		innerValue := testCase.value
+		testCase.value = func(interpreter *Interpreter) Value {
+			value := innerValue(interpreter)
+			return NewSomeValueNonCopying(nil, value)
+		}
+		stringerTests[name] = testCase
 	}
 
 	for name, testCase := range stringerTests {
