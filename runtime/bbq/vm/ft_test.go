@@ -782,3 +782,232 @@ pub fun main(account: Address): Int {
     return vaultRef.balance
 }
 `
+
+func BenchmarkFTTransfer(b *testing.B) {
+
+	// ---- Deploy FT Contract -----
+
+	storage := interpreter.NewInMemoryStorage(nil)
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+	senderAddress := common.MustBytesToAddress([]byte{0x2})
+	receiverAddress := common.MustBytesToAddress([]byte{0x3})
+
+	ftLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleToken")
+	ftChecker, err := ParseAndCheckWithOptions(b, realFungibleTokenContractInterface,
+		ParseAndCheckOptions{
+			Location: ftLocation,
+		},
+	)
+	require.NoError(b, err)
+
+	ftCompiler := compiler.NewCompiler(ftChecker.Program, ftChecker.Elaboration)
+	ftProgram := ftCompiler.Compile()
+
+	// ----- Deploy FlowToken Contract -----
+
+	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
+	flowTokenChecker, err := ParseAndCheckWithOptions(b, realFlowContract,
+		ParseAndCheckOptions{
+			Location: flowTokenLocation,
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+					switch location {
+					case ftLocation:
+						return sema.ElaborationImport{
+							Elaboration: ftChecker.Elaboration,
+						}, nil
+					default:
+						return nil, fmt.Errorf("cannot find contract in location %s", location)
+					}
+				},
+				LocationHandler: singleIdentifierLocationResolver(b),
+			},
+		},
+	)
+	require.NoError(b, err)
+
+	flowTokenCompiler := compiler.NewCompiler(flowTokenChecker.Program, flowTokenChecker.Elaboration)
+	flowTokenCompiler.Config.ImportHandler = func(location common.Location) *bbq.Program {
+		return ftProgram
+	}
+
+	flowTokenProgram := flowTokenCompiler.Compile()
+
+	flowTokenVM := NewVM(
+		flowTokenProgram,
+		&Config{
+			Storage: storage,
+		},
+	)
+
+	authAccount := NewAuthAccountValue(contractsAddress)
+
+	flowTokenContractValue, err := flowTokenVM.InitializeContract(authAccount)
+	require.NoError(b, err)
+
+	// ----- Run setup account transaction -----
+
+	checkerImportHandler := func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+		require.IsType(b, common.AddressLocation{}, location)
+		addressLocation := location.(common.AddressLocation)
+		var elaboration *sema.Elaboration
+
+		switch addressLocation {
+		case ftLocation:
+			elaboration = ftChecker.Elaboration
+		case flowTokenLocation:
+			elaboration = flowTokenChecker.Elaboration
+		default:
+			assert.FailNow(b, "invalid location")
+		}
+
+		return sema.ElaborationImport{
+			Elaboration: elaboration,
+		}, nil
+	}
+
+	compilerImportHandler := func(location common.Location) *bbq.Program {
+		switch location {
+		case ftLocation:
+			return ftProgram
+		case flowTokenLocation:
+			return flowTokenProgram
+		default:
+			assert.FailNow(b, "invalid location")
+			return nil
+		}
+	}
+
+	vmConfig := &Config{
+		Storage: storage,
+		ImportHandler: func(location common.Location) *bbq.Program {
+			switch location {
+			case ftLocation:
+				return ftProgram
+			case flowTokenLocation:
+				return flowTokenProgram
+			default:
+				assert.FailNow(b, "invalid location")
+				return nil
+			}
+		},
+		ContractValueHandler: func(_ *Config, location common.Location) *CompositeValue {
+			switch location {
+			case ftLocation:
+				// interface
+				return nil
+			case flowTokenLocation:
+				return flowTokenContractValue
+			default:
+				assert.FailNow(b, "invalid location")
+				return nil
+			}
+		},
+	}
+
+	for _, address := range []common.Address{
+		senderAddress,
+		receiverAddress,
+	} {
+		setupTxChecker, err := ParseAndCheckWithOptions(
+			b,
+			realSetupFlowTokenAccountTransaction,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler:   checkerImportHandler,
+					LocationHandler: singleIdentifierLocationResolver(b),
+				},
+			},
+		)
+		require.NoError(b, err)
+
+		setupTxCompiler := compiler.NewCompiler(setupTxChecker.Program, setupTxChecker.Elaboration)
+		setupTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(b)
+		setupTxCompiler.Config.ImportHandler = compilerImportHandler
+
+		program := setupTxCompiler.Compile()
+
+		setupTxVM := NewVM(program, vmConfig)
+
+		authorizer := NewAuthAccountValue(address)
+		err = setupTxVM.ExecuteTransaction(nil, authorizer)
+		require.NoError(b, err)
+	}
+
+	// Mint FLOW to sender
+
+	mintTxChecker, err := ParseAndCheckWithOptions(
+		b,
+		realMintFlowTokenTransaction,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				ImportHandler:       checkerImportHandler,
+				BaseValueActivation: baseActivation(),
+				LocationHandler:     singleIdentifierLocationResolver(b),
+			},
+		},
+	)
+	require.NoError(b, err)
+
+	mintTxCompiler := compiler.NewCompiler(mintTxChecker.Program, mintTxChecker.Elaboration)
+	mintTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(b)
+	mintTxCompiler.Config.ImportHandler = compilerImportHandler
+
+	program := mintTxCompiler.Compile()
+
+	mintTxVM := NewVM(program, vmConfig)
+
+	total := int64(1000000)
+
+	mintTxArgs := []Value{
+		AddressValue(senderAddress),
+		IntValue{total},
+	}
+
+	mintTxAuthorizer := NewAuthAccountValue(contractsAddress)
+	err = mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
+	require.NoError(b, err)
+
+	// ----- Run token transfer transaction -----
+
+	tokenTransferTxChecker, err := ParseAndCheckWithOptions(
+		b,
+		realFlowTokenTransferTransaction,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				ImportHandler:       checkerImportHandler,
+				BaseValueActivation: baseActivation(),
+				LocationHandler:     singleIdentifierLocationResolver(b),
+			},
+		},
+	)
+	require.NoError(b, err)
+
+	tokenTransferTxCompiler := compiler.NewCompiler(tokenTransferTxChecker.Program, tokenTransferTxChecker.Elaboration)
+	tokenTransferTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(b)
+	tokenTransferTxCompiler.Config.ImportHandler = compilerImportHandler
+
+	tokenTransferTxProgram := tokenTransferTxCompiler.Compile()
+
+	tokenTransferTxVM := NewVM(tokenTransferTxProgram, vmConfig)
+
+	transferAmount := int64(1)
+
+	tokenTransferTxArgs := []Value{
+		IntValue{transferAmount},
+		AddressValue(receiverAddress),
+	}
+
+	tokenTransferTxAuthorizer := NewAuthAccountValue(senderAddress)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
+		require.NoError(b, err)
+	}
+
+	b.StopTimer()
+}
