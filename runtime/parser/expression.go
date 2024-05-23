@@ -43,6 +43,7 @@ const (
 	exprLeftBindingPowerBitwiseShift
 	exprLeftBindingPowerAddition
 	exprLeftBindingPowerMultiplication
+	exprLeftBindingPowerMove
 	exprLeftBindingPowerCasting
 	exprLeftBindingPowerUnaryPrefix
 	exprLeftBindingPowerUnaryPostfix
@@ -484,7 +485,7 @@ func init() {
 
 	defineExpr(unaryExpr{
 		tokenType:    lexer.TokenLeftArrow,
-		bindingPower: exprLeftBindingPowerUnaryPrefix,
+		bindingPower: exprLeftBindingPowerMove,
 		operation:    ast.OperationMove,
 	})
 

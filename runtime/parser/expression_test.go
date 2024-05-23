@@ -504,6 +504,41 @@ func TestParseAdvancedExpression(t *testing.T) {
 		)
 	})
 
+	t.Run("move operator, casted", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("<-x as! @T")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.UnaryExpression{
+				Operation: ast.OperationMove,
+				Expression: &ast.CastingExpression{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					TypeAnnotation: &ast.TypeAnnotation{
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "T",
+								Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+							},
+						},
+						StartPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						IsResource: true,
+					},
+					Operation: ast.OperationForceCast,
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
 }
 
 func TestParseArrayExpression(t *testing.T) {

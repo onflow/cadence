@@ -64,3 +64,19 @@ func TestCheckInvalidMoves(t *testing.T) {
 		require.ErrorAs(t, errors[1], &invalidMoveError)
 	})
 }
+
+func TestCheckCastedMove(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		resource R {}
+
+		fun foo(): @R {
+			let r: @AnyResource <- create R()
+			return <-r as! @R
+		}
+	`)
+
+	require.NoError(t, err)
+}
