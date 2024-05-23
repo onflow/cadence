@@ -8,6 +8,7 @@ Snapshot: devnet50-execution-snapshot-for-migration-8-may-22
 Flow-go build: v0.35.7-crescendo-preview.23-atree-inlining (same as last week)
 
 View contracts staged on Testnet: https://f.dnz.dev/0x2ceae959ed1a7e7a/
+
 Great community tool to view up-to-date staging status: https://staging.dnz.dev/
 
 |Account Address | Contract Name | Status |
