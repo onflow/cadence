@@ -187,6 +187,7 @@ func TestFTTransfer(t *testing.T) {
 		authorizer := NewAuthAccountValue(address)
 		err = setupTxVM.ExecuteTransaction(nil, authorizer)
 		require.NoError(t, err)
+		require.Empty(t, setupTxVM.stack)
 	}
 
 	// Mint FLOW to sender
@@ -223,6 +224,7 @@ func TestFTTransfer(t *testing.T) {
 	mintTxAuthorizer := NewAuthAccountValue(contractsAddress)
 	err = mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
 	require.NoError(t, err)
+	require.Empty(t, mintTxVM.stack)
 
 	// ----- Run token transfer transaction -----
 
@@ -258,6 +260,7 @@ func TestFTTransfer(t *testing.T) {
 	tokenTransferTxAuthorizer := NewAuthAccountValue(senderAddress)
 	err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 	require.NoError(t, err)
+	require.Empty(t, tokenTransferTxVM.stack)
 
 	// Run validation scripts
 
@@ -290,6 +293,7 @@ func TestFTTransfer(t *testing.T) {
 		addressValue := AddressValue(address)
 		result, err := validationScriptVM.Invoke("main", addressValue)
 		require.NoError(t, err)
+		require.Empty(t, validationScriptVM.stack)
 
 		if address == senderAddress {
 			assert.Equal(t, IntValue{total - transferAmount}, result)

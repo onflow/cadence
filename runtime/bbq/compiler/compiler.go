@@ -511,7 +511,7 @@ func (c *Compiler) VisitIfStatement(statement *ast.IfStatement) (_ struct{}) {
 	c.compileBlock(statement.Then)
 	elseBlock := statement.Else
 	if elseBlock != nil {
-		thenJump := c.emit(opcode.Jump)
+		thenJump := c.emitUndefinedJump(opcode.Jump)
 		c.patchJump(elseJump)
 		c.compileBlock(elseBlock)
 		c.patchJump(thenJump)
@@ -838,12 +838,17 @@ func (c *Compiler) VisitBinaryExpression(expression *ast.BinaryExpression) (_ st
 	switch expression.Operation {
 	case ast.OperationNilCoalesce:
 		// create a duplicate to perform the equal check.
-		// So if the condition succeeds, then the result will be at the top of the stack.
+		// So if the condition succeeds, then the condition's result will be at the top of the stack.
 		c.emit(opcode.Dup)
 
 		c.emit(opcode.Nil)
 		c.emit(opcode.Equal)
 		elseJump := c.emitUndefinedJump(opcode.JumpIfFalse)
+
+		// Drop the duplicated condition result.
+		// It is not needed for the 'then' path.
+		c.emit(opcode.Drop)
+
 		c.compileExpression(expression.Right)
 
 		thenJump := c.emitUndefinedJump(opcode.Jump)

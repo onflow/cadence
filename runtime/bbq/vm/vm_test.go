@@ -67,6 +67,7 @@ func TestRecursionFib(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, IntValue{SmallInt: 13}, result)
+	require.Empty(t, vm.stack)
 }
 
 func BenchmarkRecursionFib(b *testing.B) {
@@ -129,6 +130,7 @@ func TestImperativeFib(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Equal(t, IntValue{SmallInt: 13}, result)
+	require.Empty(t, vm.stack)
 }
 
 func BenchmarkImperativeFib(b *testing.B) {
@@ -179,6 +181,7 @@ func TestBreak(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, IntValue{SmallInt: 4}, result)
+	require.Empty(t, vm.stack)
 }
 
 func TestContinue(t *testing.T) {
@@ -209,6 +212,61 @@ func TestContinue(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, IntValue{SmallInt: 3}, result)
+	require.Empty(t, vm.stack)
+}
+
+func TestNilCoalesce(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("true", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(): Int {
+                var i: Int? = 2
+                var j = i ?? 3
+                return j
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+
+		vm := NewVM(program, nil)
+
+		result, err := vm.Invoke("test")
+		require.NoError(t, err)
+
+		require.Equal(t, IntValue{SmallInt: 2}, result)
+		require.Empty(t, vm.stack)
+	})
+
+	t.Run("false", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(): Int {
+                var i: Int? = nil
+                var j = i ?? 3
+                return j
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+		printProgram(program)
+
+		vm := NewVM(program, nil)
+
+		result, err := vm.Invoke("test")
+		require.NoError(t, err)
+
+		require.Equal(t, IntValue{SmallInt: 3}, result)
+		require.Empty(t, vm.stack)
+	})
 }
 
 func TestNewStruct(t *testing.T) {
@@ -244,6 +302,7 @@ func TestNewStruct(t *testing.T) {
 
 	result, err := vm.Invoke("test", IntValue{SmallInt: 10})
 	require.NoError(t, err)
+	require.Empty(t, vm.stack)
 
 	require.IsType(t, &CompositeValue{}, result)
 	structValue := result.(*CompositeValue)
@@ -287,6 +346,7 @@ func TestStructMethodCall(t *testing.T) {
 
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
+	require.Empty(t, vm.stack)
 
 	require.Equal(t, StringValue{Str: []byte("Hello from Foo!")}, result)
 }
@@ -469,6 +529,7 @@ func TestImport(t *testing.T) {
 
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
+	require.Empty(t, vm.stack)
 
 	require.Equal(t, StringValue{Str: []byte("global function of the imported program")}, result)
 }
@@ -556,6 +617,8 @@ func TestContractImport(t *testing.T) {
 
 		result, err := vm.Invoke("test")
 		require.NoError(t, err)
+		require.Empty(t, vm.stack)
+
 		require.Equal(t, StringValue{Str: []byte("global function of the imported program")}, result)
 	})
 
@@ -628,6 +691,8 @@ func TestContractImport(t *testing.T) {
 
 		result, err := vm.Invoke("test")
 		require.NoError(t, err)
+		require.Empty(t, vm.stack)
+
 		require.Equal(t, StringValue{Str: []byte("contract function of the imported program")}, result)
 	})
 
@@ -799,6 +864,8 @@ func TestContractImport(t *testing.T) {
 
 		result, err := vm.Invoke("test")
 		require.NoError(t, err)
+		require.Empty(t, vm.stack)
+
 		require.Equal(t, StringValue{Str: []byte("Hello from Foo!")}, result)
 	})
 
@@ -968,6 +1035,8 @@ func TestContractImport(t *testing.T) {
 
 		result, err := vm.Invoke("test")
 		require.NoError(t, err)
+		require.Empty(t, vm.stack)
+
 		require.Equal(t, StringValue{Str: []byte("Successfully withdrew")}, result)
 	})
 }
@@ -1192,6 +1261,7 @@ func TestFunctionOrder(t *testing.T) {
 
 		result, err := vm.Invoke("test")
 		require.NoError(t, err)
+		require.Empty(t, vm.stack)
 
 		require.Equal(t, IntValue{SmallInt: 5}, result)
 	})
@@ -1246,6 +1316,7 @@ func TestFunctionOrder(t *testing.T) {
 
 		result, err := vm.Invoke("init")
 		require.NoError(t, err)
+		require.Empty(t, vm.stack)
 
 		require.IsType(t, &CompositeValue{}, result)
 	})
@@ -1318,6 +1389,8 @@ func TestContractField(t *testing.T) {
 		vm = NewVM(program, vmConfig)
 		result, err := vm.Invoke("test")
 		require.NoError(t, err)
+		require.Empty(t, vm.stack)
+
 		require.Equal(t, StringValue{Str: []byte("PENDING")}, result)
 	})
 
@@ -1386,6 +1459,8 @@ func TestContractField(t *testing.T) {
 
 		result, err := vm.Invoke("test")
 		require.NoError(t, err)
+		require.Empty(t, vm.stack)
+
 		require.Equal(t, StringValue{Str: []byte("UPDATED")}, result)
 
 		fieldValue := importedContractValue.GetMember(vm.config, "status")
@@ -1460,6 +1535,7 @@ func TestNativeFunctions(t *testing.T) {
 
 		_, err = vm.Invoke("test")
 		require.NoError(t, err)
+		require.Empty(t, vm.stack)
 	})
 
 	t.Run("bound function", func(t *testing.T) {
@@ -1478,6 +1554,7 @@ func TestNativeFunctions(t *testing.T) {
 
 		result, err := vm.Invoke("test")
 		require.NoError(t, err)
+		require.Empty(t, vm.stack)
 
 		require.Equal(t, StringValue{Str: []byte("Hello, World!")}, result)
 	})
@@ -1510,6 +1587,7 @@ func TestTransaction(t *testing.T) {
 
 		err = vm.ExecuteTransaction(nil)
 		require.NoError(t, err)
+		require.Empty(t, vm.stack)
 
 		// Rerun the same again using internal functions, to get the access to the transaction value.
 
@@ -1565,6 +1643,7 @@ func TestTransaction(t *testing.T) {
 
 		err = vm.ExecuteTransaction(args)
 		require.NoError(t, err)
+		require.Empty(t, vm.stack)
 
 		// Rerun the same again using internal functions, to get the access to the transaction value.
 
@@ -1684,6 +1763,7 @@ func TestInterfaceMethodCall(t *testing.T) {
 	vm = NewVM(program, vmConfig)
 	result, err := vm.Invoke("test")
 	require.NoError(t, err)
+	require.Empty(t, vm.stack)
 
 	require.Equal(t, StringValue{Str: []byte("Hello from Foo!")}, result)
 }

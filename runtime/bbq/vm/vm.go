@@ -330,10 +330,8 @@ func opInvoke(vm *VM) {
 
 		arguments := vm.stack[stackHeight-parameterCount:]
 
-		// TODO:
-		//vm.dropN(parameterCount)
-
 		result := value.Function(vm.config, typeArguments, arguments...)
+		vm.dropN(parameterCount)
 		vm.push(result)
 	default:
 		panic(errors.NewUnreachableError())
@@ -386,10 +384,6 @@ func opDrop(vm *VM) {
 func opDup(vm *VM) {
 	top := vm.peek()
 	vm.push(top)
-}
-
-func opEmpty(vm *VM) {
-	vm.push(nil)
 }
 
 func opNew(vm *VM) {
@@ -502,14 +496,10 @@ func opEqual(vm *VM) {
 
 func opUnwrap(vm *VM) {
 	value := vm.peek()
-	someValue, ok := value.(*SomeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
+	if someValue, ok := value.(*SomeValue); ok {
+		value = someValue.value
+		vm.replaceTop(value)
 	}
-
-	value = someValue.value
-
-	vm.replaceTop(value)
 }
 
 func (vm *VM) run() {
@@ -565,8 +555,6 @@ func (vm *VM) run() {
 			opDrop(vm)
 		case opcode.Dup:
 			opDup(vm)
-		case opcode.Empty:
-			opEmpty(vm)
 		case opcode.New:
 			opNew(vm)
 		case opcode.SetField:

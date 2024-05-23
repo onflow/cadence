@@ -25,10 +25,14 @@ type Opcode byte
 const (
 	Unknown Opcode = iota
 
+	// Control flow
+
 	Return
 	ReturnValue
 	Jump
 	JumpIfFalse
+
+	// Int operations
 
 	IntAdd
 	IntSubtract
@@ -42,13 +46,23 @@ const (
 	IntLessOrEqual
 	IntGreaterOrEqual
 
+	// Unary/Binary operators
+
 	Equal
 	Unwrap
+	Destroy
+	Transfer
+	Cast
 
-	GetConstant
+	// Value/Constant loading
+
 	True
 	False
+	New
+	Path
+	Nil
 
+	GetConstant
 	GetLocal
 	SetLocal
 	GetGlobal
@@ -56,17 +70,13 @@ const (
 	GetField
 	SetField
 
+	// Invocations
+
 	Invoke
 	InvokeDynamic
-	Destroy
-	Transfer
-	Cast
 
-	New
-	Path
-	Nil
+	// Stack operations
 
 	Drop
 	Dup
-	Empty
 )
