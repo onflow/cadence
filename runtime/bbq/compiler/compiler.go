@@ -51,11 +51,19 @@ type Compiler struct {
 	loops               []*loop
 	currentLoop         *loop
 	staticTypes         [][]byte
-	typesInPool         map[sema.Type]uint16
 	exportedImports     []*bbq.Import
+
+	// Cache alike for staticTypes and constants in the pool.
+	typesInPool     map[sema.Type]uint16
+	constantsInPool map[constantsCacheKey]*constant
 
 	// TODO: initialize
 	memoryGauge common.MemoryGauge
+}
+
+type constantsCacheKey struct {
+	data string
+	kind constantkind.ConstantKind
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Compiler{}
@@ -70,10 +78,11 @@ func NewCompiler(
 		Program:         program,
 		Elaboration:     elaboration,
 		Config:          &Config{},
-		globals:         map[string]*global{},
+		globals:         make(map[string]*global),
 		importedGlobals: indexedNativeFunctions,
 		exportedImports: make([]*bbq.Import, 0),
-		typesInPool:     map[sema.Type]uint16{},
+		typesInPool:     make(map[sema.Type]uint16),
+		constantsInPool: make(map[constantsCacheKey]*constant),
 		compositeTypeStack: &Stack[*sema.CompositeType]{
 			elements: make([]*sema.CompositeType, 0),
 		},
@@ -165,12 +174,23 @@ func (c *Compiler) addConstant(kind constantkind.ConstantKind, data []byte) *con
 	if count >= math.MaxUint16 {
 		panic(errors.NewDefaultUserError("invalid constant declaration"))
 	}
+
+	// Optimization: Reuse the constant if it is already added to the constant pool.
+	cacheKey := constantsCacheKey{
+		data: string(data),
+		kind: kind,
+	}
+	if constant, ok := c.constantsInPool[cacheKey]; ok {
+		return constant
+	}
+
 	constant := &constant{
 		index: uint16(count),
 		kind:  kind,
 		data:  data[:],
 	}
 	c.constants = append(c.constants, constant)
+	c.constantsInPool[cacheKey] = constant
 	return constant
 }
 
