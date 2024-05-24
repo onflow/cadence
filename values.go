@@ -2068,6 +2068,60 @@ func (v TypeValue) String() string {
 	return format.TypeValue(v.StaticType.ID())
 }
 
+// DeprecatedCapability
+
+type DeprecatedCapability struct {
+	BorrowType Type
+	Address    Address
+	ID         UInt64
+}
+
+var _ Value = DeprecatedCapability{}
+
+func NewDeprecatedCapability(
+	id UInt64,
+	address Address,
+	borrowType Type,
+) DeprecatedCapability {
+	return DeprecatedCapability{
+		ID:         id,
+		Address:    address,
+		BorrowType: borrowType,
+	}
+}
+
+func NewDeprecatedMeteredCapability(
+	gauge common.MemoryGauge,
+	id UInt64,
+	address Address,
+	borrowType Type,
+) DeprecatedCapability {
+	common.UseMemory(gauge, common.CadenceCapabilityValueMemoryUsage)
+	return NewDeprecatedCapability(
+		id,
+		address,
+		borrowType,
+	)
+}
+
+func (DeprecatedCapability) isValue() {}
+
+func (v DeprecatedCapability) Type() Type {
+	return NewDeprecatedCapabilityType(v.BorrowType)
+}
+
+func (v DeprecatedCapability) MeteredType(gauge common.MemoryGauge) Type {
+	return NewDeprecatedMeteredCapabilityType(gauge, v.BorrowType)
+}
+
+func (v DeprecatedCapability) String() string {
+	return format.Capability(
+		v.BorrowType.ID(),
+		v.Address.String(),
+		v.ID.String(),
+	)
+}
+
 // Capability
 
 type Capability struct {

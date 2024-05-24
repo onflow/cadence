@@ -1945,7 +1945,7 @@ func NewDeprecatedCapabilityType(borrowType Type) *DeprecatedCapabilityType {
 	return &DeprecatedCapabilityType{BorrowType: borrowType}
 }
 
-func NewMeteredDeprecatedCapabilityType(
+func NewDeprecatedMeteredCapabilityType(
 	gauge common.MemoryGauge,
 	borrowType Type,
 ) *DeprecatedCapabilityType {

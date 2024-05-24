@@ -1300,11 +1300,10 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 	case "Capability":
 		// Backwards-compatibility for format <v1.0.0:
 		if d.backwardsCompatible {
-			if _, hasKey := obj[authorizedKey]; hasKey {
-				return cadence.NewDeprecatedMeteredReferenceType(
+			if _, hasKey := obj[idKey]; hasKey {
+				return cadence.NewDeprecatedMeteredCapabilityType(
 					d.gauge,
-					obj.GetBool(authorizedKey),
-					d.decodeType(obj.Get(typeKey), results),
+					d.decodeType(obj.Get(idKey), results),
 				)
 			}
 		}
@@ -1379,6 +1378,31 @@ func (d *Decoder) decodeTypeValue(valueJSON any) cadence.TypeValue {
 
 func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 	obj := toObject(valueJSON)
+
+	if d.backwardsCompatible {
+		if _, hasKey := obj[idKey]; hasKey {
+			// return the deprecated capability
+			return cadence.NewDeprecatedMeteredCapability(
+				d.gauge,
+				d.decodeUInt64(obj.Get(idKey)),
+				d.decodeAddress(obj.Get(addressKey)),
+				d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
+			)
+		} else {
+			// return the deprecatedPathCapability
+			path, ok := d.decodeJSON(obj.Get(pathKey)).(cadence.Path)
+			if !ok {
+				panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
+			}
+
+			return cadence.NewMeteredPathCapability(
+				d.gauge,
+				d.decodeAddress(obj.Get(addressKey)),
+				path,
+				d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
+			)
+		}
+	}
 
 	return cadence.NewMeteredCapability(
 		d.gauge,
