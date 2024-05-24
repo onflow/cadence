@@ -350,7 +350,7 @@ func Prepare(v cadence.Value) jsonValue {
 		return preparePath(v)
 	case cadence.TypeValue:
 		return prepareTypeValue(v)
-	case cadence.Capability:
+	case cadence.IDCapability:
 		return prepareCapability(v)
 	case cadence.Enum:
 		return prepareEnum(v)
@@ -974,7 +974,7 @@ func prepareTypeValue(typeValue cadence.TypeValue) jsonValue {
 	}
 }
 
-func prepareCapability(capability cadence.Capability) jsonValue {
+func prepareCapability(capability cadence.IDCapability) jsonValue {
 	return jsonValueObject{
 		Type: capabilityTypeStr,
 		Value: jsonCapabilityValue{
