@@ -2073,7 +2073,7 @@ func (v TypeValue) String() string {
 type Capability struct {
 	BorrowType     Type
 	Address        Address
-	DeprecatedPath Path
+	DeprecatedPath Path // Deprecated: removed in v1.0.0
 	ID             UInt64
 }
 
@@ -2083,8 +2083,8 @@ func NewCapability(
 	id UInt64,
 	address Address,
 	borrowType Type,
-) IDCapability {
-	return IDCapability{
+) Capability {
+	return Capability{
 		ID:         id,
 		Address:    address,
 		BorrowType: borrowType,
