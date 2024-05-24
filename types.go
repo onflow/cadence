@@ -1933,6 +1933,50 @@ func (t *CapabilityType) Equal(other Type) bool {
 	return t.BorrowType.Equal(otherType.BorrowType)
 }
 
+// DeprecatedCapabilityType
+// Deprecated: removed in v1.0.0
+type DeprecatedCapabilityType struct {
+	BorrowType Type
+}
+
+var _ Type = &DeprecatedCapabilityType{}
+
+func NewDeprecatedCapabilityType(borrowType Type) *DeprecatedCapabilityType {
+	return &DeprecatedCapabilityType{BorrowType: borrowType}
+}
+
+func NewMeteredDeprecatedCapabilityType(
+	gauge common.MemoryGauge,
+	borrowType Type,
+) *DeprecatedCapabilityType {
+	common.UseMemory(gauge, common.CadenceCapabilityTypeMemoryUsage)
+	return NewDeprecatedCapabilityType(borrowType)
+}
+
+func (*DeprecatedCapabilityType) isType() {}
+
+func (t *DeprecatedCapabilityType) ID() string {
+	var borrowTypeID string
+	borrowType := t.BorrowType
+	if borrowType != nil {
+		borrowTypeID = borrowType.ID()
+	}
+	return sema.FormatCapabilityTypeID(borrowTypeID)
+}
+
+func (t *DeprecatedCapabilityType) Equal(other Type) bool {
+	otherType, ok := other.(*DeprecatedCapabilityType)
+	if !ok {
+		return false
+	}
+
+	if t.BorrowType == nil {
+		return otherType.BorrowType == nil
+	}
+
+	return t.BorrowType.Equal(otherType.BorrowType)
+}
+
 // EnumType
 
 type EnumType struct {
