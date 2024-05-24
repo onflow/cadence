@@ -2134,7 +2134,7 @@ func (v DeprecatedPathCapability) String() string {
 		borrowType = v.BorrowType.ID()
 	}
 
-	return format.PathCapability(
+	return format.DeprecatedPathCapability(
 		borrowType,
 		v.Address.String(),
 		v.Path.String(),

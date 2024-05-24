@@ -22,11 +22,16 @@ import (
 	"fmt"
 )
 
-func PathCapability(address string, id string, path string) string {
+func DeprecatedPathCapability(borrowType string, address string, path string) string {
+	var typeArgument string
+	if borrowType != "" {
+		typeArgument = fmt.Sprintf("<%s>", borrowType)
+	}
+
 	return fmt.Sprintf(
-		"Path(address: %s, id: %s, path %s)",
+		"Capability%s(address: %s, path: %s)",
+		typeArgument,
 		address,
-		id,
 		path,
 	)
 }
