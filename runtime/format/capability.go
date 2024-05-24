@@ -22,6 +22,15 @@ import (
 	"fmt"
 )
 
+func PathCapability(address string, id string, path string) string {
+	return fmt.Sprintf(
+		"Path(address: %s, id: %s, path %s)",
+		address,
+		id,
+		path,
+	)
+}
+
 func Capability(borrowType string, address string, id string) string {
 	return fmt.Sprintf(
 		"Capability<%s>(address: %s, id: %s)",

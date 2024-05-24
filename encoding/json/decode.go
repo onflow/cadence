@@ -1380,17 +1380,8 @@ func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 	obj := toObject(valueJSON)
 
 	if d.backwardsCompatible {
-		if _, hasKey := obj[idKey]; hasKey {
-			// return the deprecated capability
-			return cadence.NewDeprecatedMeteredCapability(
-				d.gauge,
-				d.decodeUInt64(obj.Get(idKey)),
-				d.decodeAddress(obj.Get(addressKey)),
-				d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
-			)
-		} else {
-			// return the deprecatedPathCapability
-			path, ok := d.decodeJSON(obj.Get(pathKey)).(cadence.Path)
+		if _, hasKey := obj[idKey]; !hasKey {
+			path, ok := d.DecodeJSON(obj.Get(pathKey)).(cadence.Path)
 			if !ok {
 				panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
 			}

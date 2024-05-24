@@ -2068,76 +2068,95 @@ func (v TypeValue) String() string {
 	return format.TypeValue(v.StaticType.ID())
 }
 
-// DeprecatedCapability
+// Capability
 
-type DeprecatedCapability struct {
-	BorrowType Type
-	Address    Address
-	ID         UInt64
+type Capability interface {
+	Value
+	isCapability()
 }
 
-var _ Value = DeprecatedCapability{}
+// PathCapability
+// Deprecated: removed in v1.0.0
 
-func NewDeprecatedCapability(
-	id UInt64,
+type DeprecatedPathCapability struct {
+	BorrowType Type
+	Path       Path
+	Address    Address
+}
+
+var _ Value = DeprecatedPathCapability{}
+
+func NewDeprecatedPathCapability(
 	address Address,
+	path Path,
 	borrowType Type,
-) DeprecatedCapability {
-	return DeprecatedCapability{
-		ID:         id,
+) DeprecatedPathCapability {
+	return DeprecatedPathCapability{
+		Path:       path,
 		Address:    address,
 		BorrowType: borrowType,
 	}
 }
 
-func NewDeprecatedMeteredCapability(
+func NewDeprecatedMeteredPathCapability(
 	gauge common.MemoryGauge,
-	id UInt64,
 	address Address,
+	path Path,
 	borrowType Type,
-) DeprecatedCapability {
-	common.UseMemory(gauge, common.CadenceCapabilityValueMemoryUsage)
-	return NewDeprecatedCapability(
-		id,
+) DeprecatedPathCapability {
+	common.UseMemory(gauge, common.PathCapabilityValueStringMemoryUsage) // TODO: confirm if this is right
+	return NewDeprecatedPathCapability(
 		address,
+		path,
 		borrowType,
 	)
 }
 
-func (DeprecatedCapability) isValue() {}
+func (DeprecatedPathCapability) isValue() {}
 
-func (v DeprecatedCapability) Type() Type {
-	return NewDeprecatedCapabilityType(v.BorrowType)
+func (DeprecatedPathCapability) isCapability() {}
+
+func (v DeprecatedPathCapability) Type() Type {
+	return NewCapabilityType(v.BorrowType)
 }
 
-func (v DeprecatedCapability) MeteredType(gauge common.MemoryGauge) Type {
-	return NewDeprecatedMeteredCapabilityType(gauge, v.BorrowType)
+func (v DeprecatedPathCapability) MeteredType(gauge common.MemoryGauge) Type {
+	return NewMeteredCapabilityType(gauge, v.BorrowType)
 }
 
-func (v DeprecatedCapability) String() string {
-	return format.Capability(
-		v.BorrowType.ID(),
+func (DeprecatedPathCapability) ToGoValue() any {
+	return nil
+}
+
+func (v DeprecatedPathCapability) String() string {
+	var borrowType string
+	if v.BorrowType != nil {
+		borrowType = v.BorrowType.ID()
+	}
+
+	return format.PathCapability(
+		borrowType,
 		v.Address.String(),
-		v.ID.String(),
+		v.Path.String(),
 	)
 }
 
-// Capability
+// IDCapability
 
-type Capability struct {
+type IDCapability struct {
 	BorrowType Type
 	Address    Address
 	ID         UInt64
 }
 
-var _ Value = Capability{}
+var _ Value = IDCapability{}
 
 func NewCapability(
 	id UInt64,
 	address Address,
 	borrowType Type,
-) Capability {
-	return Capability{
+) IDCapability {
+	return IDCapability{
 		ID:         id,
 		Address:    address,
 		BorrowType: borrowType,
@@ -2149,7 +2168,7 @@ func NewMeteredCapability(
 	id UInt64,
 	address Address,
 	borrowType Type,
-) Capability {
+) IDCapability {
 	common.UseMemory(gauge, common.CadenceCapabilityValueMemoryUsage)
 	return NewCapability(
 		id,
@@ -2158,17 +2177,19 @@ func NewMeteredCapability(
 	)
 }
 
-func (Capability) isValue() {}
+func (IDCapability) isValue() {}
 
-func (v Capability) Type() Type {
+func (IDCapability) isCapability() {}
+
+func (v IDCapability) Type() Type {
 	return NewCapabilityType(v.BorrowType)
 }
 
-func (v Capability) MeteredType(gauge common.MemoryGauge) Type {
+func (v IDCapability) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredCapabilityType(gauge, v.BorrowType)
 }
 
-func (v Capability) String() string {
+func (v IDCapability) String() string {
 	return format.Capability(
 		v.BorrowType.ID(),
 		v.Address.String(),
