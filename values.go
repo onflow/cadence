@@ -2107,8 +2107,6 @@ func NewMeteredCapability(
 
 func (Capability) isValue() {}
 
-func (Capability) isCapability() {}
-
 func (v Capability) Type() Type {
 	return NewCapabilityType(v.BorrowType)
 }
