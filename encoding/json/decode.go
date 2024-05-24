@@ -1376,7 +1376,7 @@ func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 				panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
 			}
 
-			return cadence.NewMeteredPathCapability(
+			return cadence.NewDeprecatedMeteredPathCapability(
 				d.gauge,
 				d.decodeAddress(obj.Get(addressKey)),
 				path,
