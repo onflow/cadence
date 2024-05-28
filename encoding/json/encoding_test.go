@@ -2800,7 +2800,7 @@ func TestEncodeCapability(t *testing.T) {
 
 func TestDecodeCapability(t *testing.T) {
 
-	t.Run("with backwards compability", func(t *testing.T) {
+	t.Run("with backwards compatibility", func(t *testing.T) {
 		t.Parallel()
 
 		testDecode(
@@ -2827,7 +2827,7 @@ func TestDecodeCapability(t *testing.T) {
 		)
 	})
 
-	t.Run("with backwards compability on a deprecated Path Capabliity", func(t *testing.T) {
+	t.Run("with backwards compatibility on a deprecated Path Capabliity", func(t *testing.T) {
 		t.Parallel()
 
 		testDecode(
@@ -2851,7 +2851,7 @@ func TestDecodeCapability(t *testing.T) {
 			  }
 			}
 		  `,
-			cadence.NewDeprecatedPathCapability(
+			cadence.NewDeprecatedPathCapability( //nolint:staticcheck
 				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 				cadence.Path{
 					Domain:     common.PathDomainPublic,
@@ -2863,7 +2863,7 @@ func TestDecodeCapability(t *testing.T) {
 		)
 	})
 
-	t.Run("deprecated Path Capabliity without backwards compatability", func(t *testing.T) {
+	t.Run("deprecated Path Capability without backwards compatibility", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := Decode(nil, []byte(
