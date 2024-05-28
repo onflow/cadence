@@ -3103,6 +3103,30 @@ func TestPragmaUpdates(t *testing.T) {
 		require.ErrorAs(t, err, &expectedErr)
 	})
 
+	testWithValidators(t, "removedType pragma moved into subdeclaration", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+					access(all) contract Test {
+						#removedType(bar)
+						access(all) struct S {
+
+						}
+					}
+				`
+
+		const newCode = `
+					access(all) contract Test {
+						access(all) struct S {
+							#removedType(bar)
+						}
+					}
+				`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		var expectedErr *stdlib.TypeRemovalPragmaRemovalError
+		require.ErrorAs(t, err, &expectedErr)
+	})
+
 	testWithValidators(t, "reorder removedType pragmas", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
@@ -3221,7 +3245,7 @@ func TestPragmaUpdates(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	testWithValidators(t, "#removedType must remove a type", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "#removedType can be added without removing a type", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
 				access(all) contract Test {
