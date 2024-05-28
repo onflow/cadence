@@ -386,10 +386,10 @@ func newValueTestCases() map[string]valueTestCase {
 					Domain:     common.PathDomainPublic,
 					Identifier: "foo",
 				},
-				IntType,
+				StringType,
 			),
-			expectedType: NewCapabilityType(IntType),
-			string:       "Capability<Int>(address: 0x0000000102030405, path: /public/foo)",
+			expectedType: NewCapabilityType(StringType),
+			string:       "Capability<String>(address: 0x0000000102030405, path: /public/foo)",
 		},
 		"Capability (Path, no borrow type)": {
 			value: NewDeprecatedPathCapability(
