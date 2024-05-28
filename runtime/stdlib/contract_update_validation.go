@@ -20,8 +20,9 @@ package stdlib
 
 import (
 	"fmt"
-	"slices"
 	"sort"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
