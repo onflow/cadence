@@ -106,6 +106,7 @@ const (
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
 	MemoryKindCadenceCapabilityValue
+	MemoryKindCadenceDeprecatedPathCapabilityType // Deprecated: removed in v1.0.0
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types

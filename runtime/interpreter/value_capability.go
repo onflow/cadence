@@ -131,7 +131,7 @@ func (v *IDCapabilityValue) RecursiveString(seenReferences SeenReferences) strin
 }
 
 func (v *IDCapabilityValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
-	common.UseMemory(interpreter, common.CapabilityValueStringMemoryUsage)
+	common.UseMemory(interpreter, common.IDCapabilityValueStringMemoryUsage)
 
 	return format.Capability(
 		v.BorrowType.MeteredString(interpreter),

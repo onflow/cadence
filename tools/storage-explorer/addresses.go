@@ -22,24 +22,28 @@ import (
 	"encoding/json"
 	"sort"
 
-	"github.com/onflow/flow-go/cmd/util/ledger/util"
+	"github.com/onflow/flow-go/cmd/util/ledger/util/registers"
 
 	"github.com/onflow/cadence/runtime/common"
 )
 
-func addressesJSON(payloadSnapshot *util.PayloadSnapshot) ([]byte, error) {
-	addressSet := map[string]struct{}{}
-	for registerID := range payloadSnapshot.Payloads {
-		owner := registerID.Owner
-		if len(owner) > 0 {
-			address := common.Address([]byte(owner)).Hex()
-			addressSet[address] = struct{}{}
-		}
-	}
+func addressesJSON(registersByAccount *registers.ByAccount) ([]byte, error) {
 
-	addresses := make([]string, 0, len(addressSet))
-	for address := range addressSet {
+	var addresses []string
+
+	err := registersByAccount.ForEachAccount(func(accountRegisters *registers.AccountRegisters) error {
+		owner := accountRegisters.Owner()
+		if len(owner) == 0 {
+			return nil
+		}
+
+		address := common.Address([]byte(owner)).Hex()
 		addresses = append(addresses, address)
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	sort.Strings(addresses)

@@ -2798,6 +2798,99 @@ func TestEncodeCapability(t *testing.T) {
 	)
 }
 
+func TestDecodeCapability(t *testing.T) {
+
+	t.Run("with backwards compatibility", func(t *testing.T) {
+		t.Parallel()
+
+		testDecode(
+			t,
+			// language=json
+			`
+		  {
+		    "type": "Capability",
+		    "value": {
+		      "borrowType": {
+		        "kind": "Int"
+		      },
+		      "address": "0x0000000102030405",
+		      "id": "6"
+		    }
+		  }
+        `,
+			cadence.NewCapability(
+				6,
+				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				cadence.IntType,
+			),
+			WithBackwardsCompatibility(),
+		)
+	})
+
+	t.Run("with backwards compatibility on a deprecated Path Capabliity", func(t *testing.T) {
+		t.Parallel()
+
+		testDecode(
+			t,
+			// language=json
+			`
+			{
+			  "type": "Capability",
+			  "value": {
+				"path": {
+				  "type": "Path",
+				  "value": {
+					"domain": "public",
+					"identifier": "foo"
+				  }
+				},
+				"borrowType": {
+				  "kind": "Int"
+				},
+				"address": "0x0000000102030405"
+			  }
+			}
+		  `,
+			cadence.NewDeprecatedPathCapability( //nolint:staticcheck
+				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				cadence.Path{
+					Domain:     common.PathDomainPublic,
+					Identifier: "foo",
+				},
+				cadence.IntType,
+			),
+			WithBackwardsCompatibility(),
+		)
+	})
+
+	t.Run("deprecated Path Capability without backwards compatibility", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := Decode(nil, []byte(
+			`
+			{
+			  "type": "Capability",
+			  "value": {
+				"path": {
+				  "type": "Path",
+				  "value": {
+					"domain": "public",
+					"identifier": "foo"
+				  }
+				},
+				"borrowType": {
+				  "kind": "Int"
+				},
+				"address": "0x0000000102030405"
+			  }
+			}
+		  `,
+		))
+		require.Error(t, err)
+
+	})
+}
+
 func TestDecodeFixedPoints(t *testing.T) {
 
 	t.Parallel()
@@ -3123,29 +3216,37 @@ func TestDecodeDeprecatedTypes(t *testing.T) {
 
 		t.Parallel()
 
-		// Decode with panic if restriction is not supported
-		require.Panics(t, func() {
-			_, err := Decode(nil, []byte(`
-	              {
-	                "type": "Type",
-	                "value": {
-	                  "staticType": {
-	                    "kind": "Restriction",
-	                    "typeID": "Int{String}",
-	                    "type": {
-	                      "kind": "Int"
-	                    },
-	                    "restrictions": [
-	                      {
-	                        "kind": "String"
-	                      }
-	                    ]
-	                  }
-	                }
-	              }
-	            `))
-			require.NoError(t, err)
-		},
+		testDecode(
+			t,
+			// language=json
+			`
+              {
+                "type": "Type",
+                "value": {
+                  "staticType": {
+                    "kind": "Restriction",
+                    "typeID": "Int{String}",
+                    "type": {
+                      "kind": "Int"
+                    },
+                    "restrictions": [
+                      {
+                        "kind": "String"
+                      }
+                    ]
+                  }
+                }
+              }
+            `,
+			cadence.TypeValue{
+				StaticType: &cadence.DeprecatedRestrictedType{
+					Restrictions: []cadence.Type{
+						cadence.StringType,
+					},
+					Type: cadence.IntType,
+				},
+			},
+			WithBackwardsCompatibility(),
 		)
 	})
 }
