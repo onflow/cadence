@@ -379,6 +379,30 @@ func newValueTestCases() map[string]valueTestCase {
 			expectedType: MetaType,
 			string:       "Type<Int>()",
 		},
+		"Capability (Path)": {
+			value: NewDeprecatedPathCapability(
+				BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				Path{
+					Domain:     common.PathDomainPublic,
+					Identifier: "foo",
+				},
+				StringType,
+			),
+			expectedType: NewCapabilityType(StringType),
+			string:       "Capability<String>(address: 0x0000000102030405, path: /public/foo)",
+		},
+		"Capability (Path, no borrow type)": {
+			value: NewDeprecatedPathCapability(
+				BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				Path{
+					Domain:     common.PathDomainPublic,
+					Identifier: "foo",
+				},
+				nil,
+			),
+			expectedType: NewCapabilityType(nil),
+			string:       "Capability(address: 0x0000000102030405, path: /public/foo)",
+		},
 		"Capability (ID)": {
 			value: NewCapability(
 				3,

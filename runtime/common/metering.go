@@ -195,24 +195,25 @@ var (
 
 	// Cadence external values
 
-	CadenceDictionaryValueMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceDictionaryValue)
-	CadenceInclusiveRangeValueMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceInclusiveRangeValue)
-	CadenceArrayValueBaseMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceArrayValueBase)
-	CadenceStructValueBaseMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceStructValueBase)
-	CadenceResourceValueBaseMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceResourceValueBase)
-	CadenceAttachmentValueBaseMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceAttachmentValueBase)
-	CadenceEventValueBaseMemoryUsage      = NewConstantMemoryUsage(MemoryKindCadenceEventValueBase)
-	CadenceContractValueBaseMemoryUsage   = NewConstantMemoryUsage(MemoryKindCadenceContractValueBase)
-	CadenceEnumValueBaseMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadenceEnumValueBase)
-	CadenceAddressValueMemoryUsage        = NewConstantMemoryUsage(MemoryKindCadenceAddressValue)
-	CadenceBoolValueMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceBoolValue)
-	CadenceCapabilityValueMemoryUsage     = NewConstantMemoryUsage(MemoryKindCadenceCapabilityValue)
-	CadenceFunctionValueMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadenceFunctionValue)
-	CadenceKeyValuePairMemoryUsage        = NewConstantMemoryUsage(MemoryKindCadenceKeyValuePair)
-	CadenceOptionalValueMemoryUsage       = NewConstantMemoryUsage(MemoryKindCadenceOptionalValue)
-	CadencePathValueMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadencePathValue)
-	CadenceVoidValueMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceVoidValue)
-	CadenceTypeValueMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceTypeValue)
+	CadenceDictionaryValueMemoryUsage               = NewConstantMemoryUsage(MemoryKindCadenceDictionaryValue)
+	CadenceInclusiveRangeValueMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceInclusiveRangeValue)
+	CadenceArrayValueBaseMemoryUsage                = NewConstantMemoryUsage(MemoryKindCadenceArrayValueBase)
+	CadenceStructValueBaseMemoryUsage               = NewConstantMemoryUsage(MemoryKindCadenceStructValueBase)
+	CadenceResourceValueBaseMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceResourceValueBase)
+	CadenceAttachmentValueBaseMemoryUsage           = NewConstantMemoryUsage(MemoryKindCadenceAttachmentValueBase)
+	CadenceEventValueBaseMemoryUsage                = NewConstantMemoryUsage(MemoryKindCadenceEventValueBase)
+	CadenceContractValueBaseMemoryUsage             = NewConstantMemoryUsage(MemoryKindCadenceContractValueBase)
+	CadenceEnumValueBaseMemoryUsage                 = NewConstantMemoryUsage(MemoryKindCadenceEnumValueBase)
+	CadenceAddressValueMemoryUsage                  = NewConstantMemoryUsage(MemoryKindCadenceAddressValue)
+	CadenceBoolValueMemoryUsage                     = NewConstantMemoryUsage(MemoryKindCadenceBoolValue)
+	CadenceCapabilityValueMemoryUsage               = NewConstantMemoryUsage(MemoryKindCadenceCapabilityValue)
+	CadenceDeprecatedPathCapabilityValueMemoryUsage = NewConstantMemoryUsage(MemoryKindCadenceDeprecatedPathCapabilityType) // Deprecated: removed in v1.0.0
+	CadenceFunctionValueMemoryUsage                 = NewConstantMemoryUsage(MemoryKindCadenceFunctionValue)
+	CadenceKeyValuePairMemoryUsage                  = NewConstantMemoryUsage(MemoryKindCadenceKeyValuePair)
+	CadenceOptionalValueMemoryUsage                 = NewConstantMemoryUsage(MemoryKindCadenceOptionalValue)
+	CadencePathValueMemoryUsage                     = NewConstantMemoryUsage(MemoryKindCadencePathValue)
+	CadenceVoidValueMemoryUsage                     = NewConstantMemoryUsage(MemoryKindCadenceVoidValue)
+	CadenceTypeValueMemoryUsage                     = NewConstantMemoryUsage(MemoryKindCadenceTypeValue)
 
 	// Cadence external types
 
