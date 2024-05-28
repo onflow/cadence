@@ -222,7 +222,7 @@ func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaD
 
 	for _, pragma := range pragmas {
 		invocationExpression, isInvocation := pragma.Expression.(*ast.InvocationExpression)
-		if !isInvocation || len(invocationExpression.Arguments) != 1 {
+		if !isInvocation {
 			continue
 		}
 		invokedIdentifier, isIdentifier := invocationExpression.InvokedExpression.(*ast.IdentifierExpression)

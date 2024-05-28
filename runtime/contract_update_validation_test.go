@@ -3187,6 +3187,42 @@ func TestPragmaUpdates(t *testing.T) {
 		require.ErrorAs(t, err, &expectedErr)
 	})
 
+	testWithValidators(t, "removedType with zero args", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+					access(all) contract Test {
+					}
+				`
+
+		const newCode = `
+					access(all) contract Test {
+						#removedType()
+					}
+				`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+		require.ErrorAs(t, err, &expectedErr)
+	})
+
+	testWithValidators(t, "removedType with two args", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+					access(all) contract Test {
+					}
+				`
+
+		const newCode = `
+					access(all) contract Test {
+						#removedType(x, y)
+					}
+				`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+		require.ErrorAs(t, err, &expectedErr)
+	})
+
 	testWithValidators(t, "#removedType allows type removal", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
