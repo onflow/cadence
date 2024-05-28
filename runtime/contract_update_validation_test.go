@@ -3060,3 +3060,86 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 		)
 	})
 }
+
+func TestPragmaUpdates(t *testing.T) {
+	t.Parallel()
+
+	testWithValidators(t, "Remove pragma", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+	            access(all) contract Test {
+	                #foo(bar)
+					#baz
+	            }
+	        `
+
+		const newCode = `
+	            access(all) contract Test {
+					#baz
+	            }
+	        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		require.NoError(t, err)
+	})
+
+	testWithValidators(t, "Remove removedType pragma", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+				access(all) contract Test {
+					#removedType(bar)
+					#baz
+				}
+			`
+
+		const newCode = `
+				access(all) contract Test {
+					#baz
+				}
+			`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		var expectedErr *stdlib.TypeRemovalPragmaRemovalError
+		require.ErrorAs(t, err, &expectedErr)
+	})
+
+	testWithValidators(t, "malformed removedType pragma integer", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+            access(all) contract Test {
+				#baz
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+				#removedType(3)
+				#baz
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+		require.ErrorAs(t, err, &expectedErr)
+	})
+
+	testWithValidators(t, "malformed removedType qualified name", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+            access(all) contract Test {
+				#baz
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+				#removedType(X.Y)
+				#baz
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+		require.ErrorAs(t, err, &expectedErr)
+	})
+}

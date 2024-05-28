@@ -63,6 +63,8 @@ type memberIndices struct {
 	_attachments []*AttachmentDeclaration
 	// Use `EnumCases()` instead
 	_enumCases []*EnumCaseDeclaration
+	// Use `Pragmas()` instead
+	_pragmas []*PragmaDeclaration
 }
 
 func (i *memberIndices) FieldsByIdentifier(declarations []Declaration) map[string]*FieldDeclaration {
@@ -150,6 +152,11 @@ func (i *memberIndices) EnumCases(declarations []Declaration) []*EnumCaseDeclara
 	return i._enumCases
 }
 
+func (i *memberIndices) Pragmas(declarations []Declaration) []*PragmaDeclaration {
+	i.once.Do(i.initializer(declarations))
+	return i._pragmas
+}
+
 func (i *memberIndices) initializer(declarations []Declaration) func() {
 	return func() {
 		i.init(declarations)
@@ -184,6 +191,7 @@ func (i *memberIndices) init(declarations []Declaration) {
 	i._entitlementMappingsByIdentifier = make(map[string]*EntitlementMappingDeclaration)
 
 	i._enumCases = make([]*EnumCaseDeclaration, 0)
+	i._pragmas = make([]*PragmaDeclaration, 0)
 
 	for _, declaration := range declarations {
 		switch declaration := declaration.(type) {
@@ -225,6 +233,9 @@ func (i *memberIndices) init(declarations []Declaration) {
 
 		case *EnumCaseDeclaration:
 			i._enumCases = append(i._enumCases, declaration)
+
+		case *PragmaDeclaration:
+			i._pragmas = append(i._pragmas, declaration)
 		}
 	}
 }

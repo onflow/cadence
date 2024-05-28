@@ -84,6 +84,10 @@ func (m *Members) EnumCases() []*EnumCaseDeclaration {
 	return m.indices.EnumCases(m.declarations)
 }
 
+func (m *Members) Pragmas() []*PragmaDeclaration {
+	return m.indices.Pragmas(m.declarations)
+}
+
 func (m *Members) FieldsByIdentifier() map[string]*FieldDeclaration {
 	return m.indices.FieldsByIdentifier(m.declarations)
 }
