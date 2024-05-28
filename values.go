@@ -2071,9 +2071,10 @@ func (v TypeValue) String() string {
 // Capability
 
 type Capability struct {
-	BorrowType Type
-	Address    Address
-	ID         UInt64
+	BorrowType     Type
+	Address        Address
+	DeprecatedPath *Path // Deprecated: removed in v1.0.0
+	ID             UInt64
 }
 
 var _ Value = Capability{}
@@ -2115,10 +2116,50 @@ func (v Capability) MeteredType(gauge common.MemoryGauge) Type {
 }
 
 func (v Capability) String() string {
-	return format.Capability(
-		v.BorrowType.ID(),
-		v.Address.String(),
-		v.ID.String(),
+	if v.DeprecatedPath != nil && v.DeprecatedPath.String() != "" {
+		var borrowType string
+		if v.BorrowType != nil {
+			borrowType = v.BorrowType.ID()
+		}
+
+		return format.DeprecatedPathCapability(
+			borrowType,
+			v.Address.String(),
+			v.DeprecatedPath.String(),
+		)
+	} else {
+		return format.Capability(
+			v.BorrowType.ID(),
+			v.Address.String(),
+			v.ID.String(),
+		)
+	}
+}
+
+// Deprecated: removed in v1.0.0
+func NewDeprecatedPathCapability(
+	address Address,
+	path Path,
+	borrowType Type,
+) Capability {
+	return Capability{
+		DeprecatedPath: &path,
+		Address:        address,
+		BorrowType:     borrowType,
+	}
+}
+
+func NewDeprecatedMeteredPathCapability(
+	gauge common.MemoryGauge,
+	address Address,
+	path Path,
+	borrowType Type,
+) Capability {
+	common.UseMemory(gauge, common.CadenceDeprecatedPathCapabilityValueMemoryUsage)
+	return NewDeprecatedPathCapability(
+		address,
+		path,
+		borrowType,
 	)
 }
 

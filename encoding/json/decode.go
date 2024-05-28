@@ -1369,6 +1369,26 @@ func (d *Decoder) decodeTypeValue(valueJSON any) cadence.TypeValue {
 func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 	obj := toObject(valueJSON)
 
+	if d.backwardsCompatible {
+		if _, hasKey := obj[idKey]; !hasKey {
+			path, ok := d.DecodeJSON(obj.Get(pathKey)).(cadence.Path)
+			if !ok {
+				panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
+			}
+
+			return cadence.NewDeprecatedMeteredPathCapability(
+				d.gauge,
+				d.decodeAddress(obj.Get(addressKey)),
+				path,
+				d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
+			)
+		}
+	} else {
+		if _, hasKey := obj[pathKey]; hasKey {
+			panic(errors.NewDefaultUserError("invalid capability: path is not supported"))
+		}
+	}
+
 	return cadence.NewMeteredCapability(
 		d.gauge,
 		d.decodeUInt64(obj.Get(idKey)),
