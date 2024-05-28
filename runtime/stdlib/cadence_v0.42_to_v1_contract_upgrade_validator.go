@@ -741,6 +741,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkNestedDeclarationR
 	nestedDeclaration ast.Declaration,
 	oldContainingDeclaration ast.Declaration,
 	newContainingDeclaration ast.Declaration,
+	removedTypes []ast.Identifier,
 ) {
 
 	// enums can be removed from contract interfaces, as they have no interface equivalent and are not
@@ -755,6 +756,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkNestedDeclarationR
 		nestedDeclaration,
 		oldContainingDeclaration,
 		newContainingDeclaration,
+		removedTypes,
 	)
 }
 

@@ -42,6 +42,7 @@ type UpdateValidator interface {
 		nestedDeclaration ast.Declaration,
 		oldContainingDeclaration ast.Declaration,
 		newContainingDeclaration ast.Declaration,
+		removedTypes []ast.Identifier,
 	)
 	getAccountContractNames(address common.Address) ([]string, error)
 
@@ -216,7 +217,7 @@ func (validator *ContractUpdateValidator) hasErrors() bool {
 	return len(validator.errors) > 0
 }
 
-func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaDeclaration) (removedTypes []*ast.NominalType) {
+func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaDeclaration) (removedTypes []ast.Identifier) {
 	for _, pragma := range pragmas {
 		invocationExpression, isInvocation := pragma.Expression.(*ast.InvocationExpression)
 		if !isInvocation {
@@ -234,7 +235,7 @@ func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaD
 			})
 			continue
 		}
-		removedTypes = append(removedTypes, ast.NewNominalType(nil, removedTypeName.Identifier, []ast.Identifier{}))
+		removedTypes = append(removedTypes, removedTypeName.Identifier)
 	}
 
 	return removedTypes
@@ -335,9 +336,18 @@ func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
 	nestedDeclaration ast.Declaration,
 	_ ast.Declaration,
 	newContainingDeclaration ast.Declaration,
+	removedTypes []ast.Identifier,
 ) {
 	// OK to remove events - they are not stored
 	if nestedDeclaration.DeclarationKind() == common.DeclarationKindEvent {
+		return
+	}
+
+	// OK to remove a type if it is included in a #removedType pragma
+	if nestedDeclaration.DeclarationIdentifier() != nil &&
+		slices.ContainsFunc(removedTypes, func(removedType ast.Identifier) bool {
+			return removedType.Identifier == nestedDeclaration.DeclarationIdentifier().Identifier
+		}) {
 		return
 	}
 
@@ -373,7 +383,9 @@ func checkNestedDeclarations(
 	// #typeRemoval pragmas cannot be removed, so any that appear in the old program must appear in the new program
 	// they can however, be added, so use the new program's type removals for the purposes of checking the upgrade
 	for _, oldRemovedType := range oldRemovedTypes {
-		if !slices.Contains(removedTypes, oldRemovedType) {
+		if !slices.ContainsFunc(removedTypes, func(newRemovedType ast.Identifier) bool {
+			return newRemovedType.Identifier == oldRemovedType.Identifier
+		}) {
 			validator.report(&TypeRemovalPragmaRemovalError{
 				RemovedType: oldRemovedType,
 			})
@@ -443,7 +455,7 @@ func checkNestedDeclarations(
 	})
 
 	for _, declaration := range missingDeclarations {
-		validator.checkNestedDeclarationRemoval(declaration, oldDeclaration, newDeclaration)
+		validator.checkNestedDeclarationRemoval(declaration, oldDeclaration, newDeclaration, removedTypes)
 	}
 
 	// Check enum-cases, if there are any.
@@ -835,7 +847,7 @@ func (e *InvalidTypeRemovalPragmaError) Error() string {
 // TypeRemovalPragmaRemovalError is reported during a contract update
 // if a #removedType pragma is removed
 type TypeRemovalPragmaRemovalError struct {
-	RemovedType *ast.NominalType
+	RemovedType ast.Identifier
 }
 
 var _ errors.UserError = &TypeRemovalPragmaRemovalError{}

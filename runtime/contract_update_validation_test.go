@@ -3067,17 +3067,17 @@ func TestPragmaUpdates(t *testing.T) {
 	testWithValidators(t, "Remove pragma", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
-	            access(all) contract Test {
-	                #foo(bar)
-					#baz
-	            }
-	        `
+		            access(all) contract Test {
+		                #foo(bar)
+						#baz
+		            }
+		        `
 
 		const newCode = `
-	            access(all) contract Test {
-					#baz
-	            }
-	        `
+		            access(all) contract Test {
+						#baz
+		            }
+		        `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		require.NoError(t, err)
@@ -3086,37 +3086,57 @@ func TestPragmaUpdates(t *testing.T) {
 	testWithValidators(t, "Remove removedType pragma", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
-				access(all) contract Test {
-					#removedType(bar)
-					#baz
-				}
-			`
+					access(all) contract Test {
+						#removedType(bar)
+						#baz
+					}
+				`
 
 		const newCode = `
-				access(all) contract Test {
-					#baz
-				}
-			`
+					access(all) contract Test {
+						#baz
+					}
+				`
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		var expectedErr *stdlib.TypeRemovalPragmaRemovalError
 		require.ErrorAs(t, err, &expectedErr)
 	})
 
+	testWithValidators(t, "reorder removedType pragmas", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+					access(all) contract Test {
+						#removedType(bar)
+						#removedType(foo)
+					}
+				`
+
+		const newCode = `
+					access(all) contract Test {
+						#removedType(foo)
+						#removedType(bar)
+					}
+				`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		require.NoError(t, err)
+	})
+
 	testWithValidators(t, "malformed removedType pragma integer", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
-            access(all) contract Test {
-				#baz
-            }
-        `
+	            access(all) contract Test {
+					#baz
+	            }
+	        `
 
 		const newCode = `
-            access(all) contract Test {
-				#removedType(3)
-				#baz
-            }
-        `
+	            access(all) contract Test {
+					#removedType(3)
+					#baz
+	            }
+	        `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		var expectedErr *stdlib.InvalidTypeRemovalPragmaError
@@ -3126,20 +3146,78 @@ func TestPragmaUpdates(t *testing.T) {
 	testWithValidators(t, "malformed removedType qualified name", func(t *testing.T, withC1Upgrade bool) {
 
 		const oldCode = `
-            access(all) contract Test {
-				#baz
-            }
-        `
+	            access(all) contract Test {
+					#baz
+	            }
+	        `
 
 		const newCode = `
-            access(all) contract Test {
-				#removedType(X.Y)
-				#baz
-            }
-        `
+	            access(all) contract Test {
+					#removedType(X.Y)
+					#baz
+	            }
+	        `
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		var expectedErr *stdlib.InvalidTypeRemovalPragmaError
 		require.ErrorAs(t, err, &expectedErr)
+	})
+
+	testWithValidators(t, "#removedType allows type removal", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+				access(all) contract Test {
+					access(all) resource R {}
+				}
+			`
+
+		const newCode = `
+				access(all) contract Test {
+					#removedType(R)
+				}
+			`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		require.NoError(t, err)
+	})
+
+	testWithValidators(t, "#removedType allows two type removals", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+				access(all) contract Test {
+					access(all) resource R {}
+					access(all) struct interface I {}
+				}
+			`
+
+		const newCode = `
+				access(all) contract Test {
+					#removedType(R)
+					#removedType(I)
+				}
+			`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		require.NoError(t, err)
+	})
+
+	testWithValidators(t, "#removedType can be added", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+				access(all) contract Test {
+					#removedType(I)
+					access(all) resource R {}
+				}
+			`
+
+		const newCode = `
+				access(all) contract Test {
+					#removedType(R)
+					#removedType(I)
+				}
+			`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		require.NoError(t, err)
 	})
 }
