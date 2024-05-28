@@ -1385,7 +1385,7 @@ func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 		}
 	} else {
 		if _, hasKey := obj[pathKey]; hasKey {
-			panic(errors.NewDefaultUserError("invalid capability: path is not supported"))
+			panic("invalid capability: path is not supported")
 		}
 	}
 

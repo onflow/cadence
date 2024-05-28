@@ -2866,10 +2866,12 @@ func TestDecodeCapability(t *testing.T) {
 	t.Run("deprecated Path Capabliity without backwards compatability", func(t *testing.T) {
 		t.Parallel()
 
-		testDecode(
-			t,
-			// language=json
-			`
+		require.Panics(t, func() {
+
+			testDecode(
+				t,
+				// language=json
+				`
 			{
 			  "type": "Capability",
 			  "value": {
@@ -2887,15 +2889,16 @@ func TestDecodeCapability(t *testing.T) {
 			  }
 			}
 		  `,
-			cadence.NewDeprecatedPathCapability(
-				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				cadence.Path{
-					Domain:     common.PathDomainPublic,
-					Identifier: "foo",
-				},
-				cadence.IntType,
-			),
-		)
+				cadence.NewDeprecatedPathCapability(
+					cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+					cadence.Path{
+						Domain:     common.PathDomainPublic,
+						Identifier: "foo",
+					},
+					cadence.IntType,
+				),
+			)
+		})
 	})
 
 }
