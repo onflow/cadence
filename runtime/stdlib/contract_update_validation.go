@@ -228,6 +228,13 @@ func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaD
 		if !isIdentifier || invokedIdentifier.Identifier.Identifier != "removedType" {
 			continue
 		}
+		if len(invocationExpression.Arguments) != 1 {
+			validator.report(&InvalidTypeRemovalPragmaError{
+				Expression: pragma.Expression,
+				Range:      ast.NewUnmeteredRangeFromPositioned(pragma.Expression),
+			})
+			continue
+		}
 		removedTypeName, isIdentifer := invocationExpression.Arguments[0].Expression.(*ast.IdentifierExpression)
 		if !isIdentifer {
 			validator.report(&InvalidTypeRemovalPragmaError{
