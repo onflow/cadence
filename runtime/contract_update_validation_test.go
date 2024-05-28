@@ -3220,4 +3220,103 @@ func TestPragmaUpdates(t *testing.T) {
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		require.NoError(t, err)
 	})
+
+	testWithValidators(t, "#removedType must remove a type", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+				access(all) contract Test {
+				}
+			`
+
+		const newCode = `
+				access(all) contract Test {
+					#removedType(X)
+				}
+			`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		require.NoError(t, err)
+	})
+
+	testWithValidators(t, "declarations cannot co-exist with removed type of the same name, composite", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+				access(all) contract Test {
+					access(all) resource R {}
+				}
+			`
+
+		const newCode = `
+				access(all) contract Test {
+					#removedType(R)
+					access(all) resource R {}
+				}
+			`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		var expectedErr *stdlib.UseOfRemovedTypeError
+		require.ErrorAs(t, err, &expectedErr)
+	})
+
+	testWithValidators(t, "declarations cannot co-exist with removed type of the same name, interface", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+				access(all) contract Test {
+					access(all) resource interface R {}
+				}
+			`
+
+		const newCode = `
+				access(all) contract Test {
+					#removedType(R)
+					access(all) resource interface R {}
+				}
+			`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		var expectedErr *stdlib.UseOfRemovedTypeError
+		require.ErrorAs(t, err, &expectedErr)
+	})
+
+	testWithValidators(t, "declarations cannot co-exist with removed type of the same name, attachment", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+				access(all) contract Test {
+					access(all) attachment R for AnyResource {}
+				}
+			`
+
+		const newCode = `
+				access(all) contract Test {
+					#removedType(R)
+					access(all) attachment R for AnyResource {}
+				}
+			`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		var expectedErr *stdlib.UseOfRemovedTypeError
+		require.ErrorAs(t, err, &expectedErr)
+	})
+
+	testWithValidators(t, "#removedType is only scoped to the current declaration, inner", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+				access(all) contract Test {
+					access(all) resource R {}
+					access(all) struct S {}
+				}
+			`
+
+		const newCode = `
+				access(all) contract Test {
+					access(all) struct S {
+						#removedType(R)
+					}
+				}
+			`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		var expectedErr *stdlib.MissingDeclarationError
+		require.ErrorAs(t, err, &expectedErr)
+	})
 }
