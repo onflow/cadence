@@ -2117,8 +2117,13 @@ func (v Capability) MeteredType(gauge common.MemoryGauge) Type {
 
 func (v Capability) String() string {
 	if v.DeprecatedPath != nil && v.DeprecatedPath.String() != "" {
+		var borrowType string
+		if v.BorrowType != nil {
+			borrowType = v.BorrowType.ID()
+		}
+
 		return format.DeprecatedPathCapability(
-			v.BorrowType.ID(),
+			borrowType,
 			v.Address.String(),
 			v.DeprecatedPath.String(),
 		)
