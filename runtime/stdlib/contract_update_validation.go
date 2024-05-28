@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"sort"
 
-	"golang.org/x/exp/slices"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -43,7 +41,7 @@ type UpdateValidator interface {
 		nestedDeclaration ast.Declaration,
 		oldContainingDeclaration ast.Declaration,
 		newContainingDeclaration ast.Declaration,
-		removedTypes []ast.Identifier,
+		removedTypes map[string]struct{},
 	)
 	getAccountContractNames(address common.Address) ([]string, error)
 
@@ -218,10 +216,12 @@ func (validator *ContractUpdateValidator) hasErrors() bool {
 	return len(validator.errors) > 0
 }
 
-func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaDeclaration) (removedTypes []ast.Identifier) {
+func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaDeclaration) map[string]struct{} {
+	removedTypes := map[string]struct{}{}
+
 	for _, pragma := range pragmas {
 		invocationExpression, isInvocation := pragma.Expression.(*ast.InvocationExpression)
-		if !isInvocation {
+		if !isInvocation || len(invocationExpression.Arguments) != 1 {
 			continue
 		}
 		invokedIdentifier, isIdentifier := invocationExpression.InvokedExpression.(*ast.IdentifierExpression)
@@ -236,7 +236,7 @@ func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaD
 			})
 			continue
 		}
-		removedTypes = append(removedTypes, removedTypeName.Identifier)
+		removedTypes[removedTypeName.Identifier.Identifier] = struct{}{}
 	}
 
 	return removedTypes
@@ -337,7 +337,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
 	nestedDeclaration ast.Declaration,
 	_ ast.Declaration,
 	newContainingDeclaration ast.Declaration,
-	removedTypes []ast.Identifier,
+	removedTypes map[string]struct{},
 ) {
 	// OK to remove events - they are not stored
 	if nestedDeclaration.DeclarationKind() == common.DeclarationKindEvent {
@@ -345,10 +345,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
 	}
 
 	// OK to remove a type if it is included in a #removedType pragma
-	if nestedDeclaration.DeclarationIdentifier() != nil &&
-		slices.ContainsFunc(removedTypes, func(removedType ast.Identifier) bool {
-			return removedType.Identifier == nestedDeclaration.DeclarationIdentifier().Identifier
-		}) {
+	if _, present := removedTypes[nestedDeclaration.DeclarationIdentifier().Identifier]; present {
 		return
 	}
 
@@ -373,11 +370,9 @@ func (validator *ContractUpdateValidator) oldTypeID(oldType *ast.NominalType) co
 func checkTypeNotRemoved(
 	validator UpdateValidator,
 	newDeclaration ast.Declaration,
-	removedTypes []ast.Identifier,
+	removedTypes map[string]struct{},
 ) {
-	if slices.ContainsFunc(removedTypes, func(removedType ast.Identifier) bool {
-		return removedType.Identifier == newDeclaration.DeclarationIdentifier().Identifier
-	}) {
+	if _, present := removedTypes[newDeclaration.DeclarationIdentifier().Identifier]; present {
 		validator.report(&UseOfRemovedTypeError{
 			Declaration: newDeclaration,
 			Range:       ast.NewUnmeteredRangeFromPositioned(newDeclaration),
@@ -398,10 +393,8 @@ func checkNestedDeclarations(
 
 	// #typeRemoval pragmas cannot be removed, so any that appear in the old program must appear in the new program
 	// they can however, be added, so use the new program's type removals for the purposes of checking the upgrade
-	for _, oldRemovedType := range oldRemovedTypes {
-		if !slices.ContainsFunc(removedTypes, func(newRemovedType ast.Identifier) bool {
-			return newRemovedType.Identifier == oldRemovedType.Identifier
-		}) {
+	for oldRemovedType, _ := range oldRemovedTypes { //nolint:maprange
+		if _, present := removedTypes[oldRemovedType]; !present {
 			validator.report(&TypeRemovalPragmaRemovalError{
 				RemovedType: oldRemovedType,
 			})
@@ -884,7 +877,7 @@ func (e *UseOfRemovedTypeError) Error() string {
 // TypeRemovalPragmaRemovalError is reported during a contract update
 // if a #removedType pragma is removed
 type TypeRemovalPragmaRemovalError struct {
-	RemovedType ast.Identifier
+	RemovedType string
 }
 
 var _ errors.UserError = &TypeRemovalPragmaRemovalError{}
@@ -894,6 +887,6 @@ func (*TypeRemovalPragmaRemovalError) IsUserError() {}
 func (e *TypeRemovalPragmaRemovalError) Error() string {
 	return fmt.Sprintf(
 		"missing #removedType pragma for %s",
-		e.RemovedType.String(),
+		e.RemovedType,
 	)
 }
