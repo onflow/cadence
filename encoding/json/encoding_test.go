@@ -2807,16 +2807,16 @@ func TestDecodeCapability(t *testing.T) {
 			t,
 			// language=json
 			`
-          {
-            "type": "Capability",
-            "value": {
-              "borrowType": {
-                "kind": "Int"
-              },
-              "address": "0x0000000102030405",
-              "id": "6"
-            }
-          }
+		  {
+		    "type": "Capability",
+		    "value": {
+		      "borrowType": {
+		        "kind": "Int"
+		      },
+		      "address": "0x0000000102030405",
+		      "id": "6"
+		    }
+		  }
         `,
 			cadence.NewCapability(
 				6,
