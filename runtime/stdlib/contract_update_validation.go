@@ -24,6 +24,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -41,7 +42,7 @@ type UpdateValidator interface {
 		nestedDeclaration ast.Declaration,
 		oldContainingDeclaration ast.Declaration,
 		newContainingDeclaration ast.Declaration,
-		removedTypes map[string]struct{},
+		removedTypes *orderedmap.OrderedMap[string, struct{}],
 	)
 	getAccountContractNames(address common.Address) ([]string, error)
 
@@ -216,8 +217,8 @@ func (validator *ContractUpdateValidator) hasErrors() bool {
 	return len(validator.errors) > 0
 }
 
-func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaDeclaration) map[string]struct{} {
-	removedTypes := map[string]struct{}{}
+func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaDeclaration) *orderedmap.OrderedMap[string, struct{}] {
+	removedTypes := orderedmap.New[orderedmap.OrderedMap[string, struct{}]](len(pragmas))
 
 	for _, pragma := range pragmas {
 		invocationExpression, isInvocation := pragma.Expression.(*ast.InvocationExpression)
@@ -243,7 +244,7 @@ func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaD
 			})
 			continue
 		}
-		removedTypes[removedTypeName.Identifier.Identifier] = struct{}{}
+		removedTypes.Set(removedTypeName.Identifier.Identifier, struct{}{})
 	}
 
 	return removedTypes
@@ -344,7 +345,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
 	nestedDeclaration ast.Declaration,
 	_ ast.Declaration,
 	newContainingDeclaration ast.Declaration,
-	removedTypes map[string]struct{},
+	removedTypes *orderedmap.OrderedMap[string, struct{}],
 ) {
 	// OK to remove events - they are not stored
 	if nestedDeclaration.DeclarationKind() == common.DeclarationKindEvent {
@@ -352,7 +353,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
 	}
 
 	// OK to remove a type if it is included in a #removedType pragma
-	if _, present := removedTypes[nestedDeclaration.DeclarationIdentifier().Identifier]; present {
+	if removedTypes.Contains(nestedDeclaration.DeclarationIdentifier().Identifier) {
 		return
 	}
 
@@ -377,9 +378,9 @@ func (validator *ContractUpdateValidator) oldTypeID(oldType *ast.NominalType) co
 func checkTypeNotRemoved(
 	validator UpdateValidator,
 	newDeclaration ast.Declaration,
-	removedTypes map[string]struct{},
+	removedTypes *orderedmap.OrderedMap[string, struct{}],
 ) {
-	if _, present := removedTypes[newDeclaration.DeclarationIdentifier().Identifier]; present {
+	if removedTypes.Contains(newDeclaration.DeclarationIdentifier().Identifier) {
 		validator.report(&UseOfRemovedTypeError{
 			Declaration: newDeclaration,
 			Range:       ast.NewUnmeteredRangeFromPositioned(newDeclaration),
@@ -400,13 +401,13 @@ func checkNestedDeclarations(
 
 	// #typeRemoval pragmas cannot be removed, so any that appear in the old program must appear in the new program
 	// they can however, be added, so use the new program's type removals for the purposes of checking the upgrade
-	for oldRemovedType, _ := range oldRemovedTypes { //nolint:maprange
-		if _, present := removedTypes[oldRemovedType]; !present {
+	oldRemovedTypes.Foreach(func(oldRemovedType string, _ struct{}) {
+		if !removedTypes.Contains(oldRemovedType) {
 			validator.report(&TypeRemovalPragmaRemovalError{
 				RemovedType: oldRemovedType,
 			})
 		}
-	}
+	})
 
 	oldNominalTypeDecls := getNestedNominalTypeDecls(oldDeclaration)
 
