@@ -356,8 +356,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
 
 	// OK to remove a type if it is included in a #removedType pragma, and it is not an interface
 	if removedTypes.Contains(nestedDeclaration.DeclarationIdentifier().Identifier) &&
-		declarationKind != common.DeclarationKindResourceInterface &&
-		declarationKind != common.DeclarationKindStructureInterface {
+		!declarationKind.IsInterfaceDeclaration() {
 		return
 	}
 
