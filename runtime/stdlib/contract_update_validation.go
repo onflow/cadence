@@ -841,7 +841,7 @@ func (*MissingDeclarationError) IsUserError() {}
 func (e *MissingDeclarationError) Error() string {
 	return fmt.Sprintf(
 		"missing %s declaration `%s`",
-		e.Kind,
+		e.Kind.Name(),
 		e.Name,
 	)
 }
