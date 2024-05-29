@@ -3516,3 +3516,217 @@ func TestIntersectionTypeWithIntersectionLegacyType(t *testing.T) {
 		require.Equal(t, expectedType, typeValue.Type)
 	})()
 }
+
+func TestUseAfterMigrationFailure(t *testing.T) {
+
+	t.Parallel()
+
+	locationRange := interpreter.EmptyLocationRange
+
+	ledger := NewTestLedger(nil, nil)
+
+	storageMapKey := interpreter.StringStorageMapKey("dict")
+	newTestValue := func() interpreter.Value {
+		return interpreter.NewUnmeteredStringValue("test")
+	}
+
+	const fooBarQualifiedIdentifier = "Foo.Bar"
+	testAddress := common.Address{0x42}
+	fooAddressLocation := common.NewAddressLocation(nil, testAddress, "Foo")
+
+	newStorageAndInterpreter := func(t *testing.T) (*runtime.Storage, *interpreter.Interpreter) {
+		storage := runtime.NewStorage(ledger, nil)
+		inter, err := interpreter.NewInterpreter(
+			nil,
+			utils.TestLocation,
+			&interpreter.Config{
+				Storage: storage,
+				// NOTE: disabled, because encoded and decoded values are expected to not match
+				AtreeValueValidationEnabled:   false,
+				AtreeStorageValidationEnabled: true,
+			},
+		)
+		require.NoError(t, err)
+
+		return storage, inter
+	}
+
+	newCompositeType := func() *interpreter.CompositeStaticType {
+		return interpreter.NewCompositeStaticType(
+			nil,
+			fooAddressLocation,
+			fooBarQualifiedIdentifier,
+			common.NewTypeIDFromQualifiedName(
+				nil,
+				fooAddressLocation,
+				fooBarQualifiedIdentifier,
+			),
+		)
+	}
+
+	// Prepare
+	(func() {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		dictionaryStaticType := interpreter.NewDictionaryStaticType(
+			nil,
+			interpreter.PrimitiveStaticTypeMetaType,
+			interpreter.PrimitiveStaticTypeString,
+		)
+		dictValue := interpreter.NewDictionaryValue(inter, locationRange, dictionaryStaticType)
+
+		refType := interpreter.NewReferenceStaticType(
+			nil,
+			interpreter.UnauthorizedAccess,
+			newCompositeType(),
+		)
+		refType.HasLegacyIsAuthorized = true
+		refType.LegacyIsAuthorized = true
+
+		legacyRefType := &migrations.LegacyReferenceType{
+			ReferenceStaticType: refType,
+		}
+
+		optType := interpreter.NewOptionalStaticType(
+			nil,
+			legacyRefType,
+		)
+
+		legacyOptType := &migrations.LegacyOptionalType{
+			OptionalStaticType: optType,
+		}
+
+		typeValue := interpreter.NewUnmeteredTypeValue(legacyOptType)
+
+		dictValue.Insert(
+			inter,
+			locationRange,
+			typeValue,
+			newTestValue(),
+		)
+
+		// Note: ID is in the old format
+		assert.Equal(t,
+			common.TypeID("auth&A.4200000000000000.Foo.Bar?"),
+			legacyOptType.ID(),
+		)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			true,
+		)
+
+		storageMap.SetValue(inter,
+			storageMapKey,
+			dictValue.Transfer(
+				inter,
+				locationRange,
+				atree.Address(testAddress),
+				false,
+				nil,
+				nil,
+			),
+		)
+
+		err := storage.Commit(inter, false)
+		require.NoError(t, err)
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+	})()
+
+	// Migrate
+	(func() {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		const importErrorMessage = "cannot import"
+
+		inter.SharedState.Config.ImportLocationHandler =
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+				panic(importErrorMessage)
+			}
+
+		migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+		require.NoError(t, err)
+
+		reporter := newTestReporter()
+
+		migration.Migrate(
+			migration.NewValueMigrationsPathMigrator(
+				reporter,
+				NewEntitlementsMigration(inter),
+			),
+		)
+
+		err = migration.Commit()
+		require.NoError(t, err)
+
+		// Assert
+
+		err = storage.CheckHealth()
+		require.NoError(t, err)
+
+		require.Len(t, reporter.errors, 1)
+
+		assert.ErrorContains(t, reporter.errors[0], importErrorMessage)
+
+		require.Empty(t, reporter.migrated)
+	})()
+
+	// Load
+	(func() {
+
+		storage, inter := newStorageAndInterpreter(t)
+
+		err := storage.CheckHealth()
+		require.NoError(t, err)
+
+		storageMap := storage.GetStorageMap(
+			testAddress,
+			common.PathDomainStorage.Identifier(),
+			false,
+		)
+		storedValue := storageMap.ReadValue(inter, storageMapKey)
+
+		require.IsType(t, &interpreter.DictionaryValue{}, storedValue)
+
+		dictValue := storedValue.(*interpreter.DictionaryValue)
+
+		refType := interpreter.NewReferenceStaticType(
+			nil,
+			interpreter.UnauthorizedAccess,
+			newCompositeType(),
+		)
+		refType.HasLegacyIsAuthorized = true
+		refType.LegacyIsAuthorized = true
+
+		optType := interpreter.NewOptionalStaticType(
+			nil,
+			refType,
+		)
+
+		typeValue := interpreter.NewUnmeteredTypeValue(optType)
+
+		// Note: ID is in the new format
+		assert.Equal(t,
+			common.TypeID("(&A.4200000000000000.Foo.Bar)?"),
+			optType.ID(),
+		)
+
+		assert.Equal(t, 1, dictValue.Count())
+
+		// Key did not get migrated, so is inaccessible using the "new" type value
+		_, ok := dictValue.Get(inter, locationRange, typeValue)
+		require.False(t, ok)
+
+		// But the key is still accessible using the "old" type value
+		legacyKey := migrations.LegacyKey(typeValue)
+
+		value, ok := dictValue.Get(inter, locationRange, legacyKey)
+		require.True(t, ok)
+		require.Equal(t, newTestValue(), value)
+	})()
+}
