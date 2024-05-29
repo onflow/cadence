@@ -3246,19 +3246,57 @@ func TestPragmaUpdates(t *testing.T) {
 		const oldCode = `
 				access(all) contract Test {
 					access(all) resource R {}
-					access(all) struct interface I {}
+					access(all) struct S {}
 				}
 			`
 
 		const newCode = `
 				access(all) contract Test {
 					#removedType(R)
-					#removedType(I)
+					#removedType(S)
 				}
 			`
 
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
 		require.NoError(t, err)
+	})
+
+	testWithValidators(t, "#removedType does not allow resource interface type removal", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+				access(all) contract Test {
+					access(all) resource interface R {}
+				}
+			`
+
+		const newCode = `
+				access(all) contract Test {
+					#removedType(R)
+				}
+			`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		var expectedErr *stdlib.MissingDeclarationError
+		require.ErrorAs(t, err, &expectedErr)
+	})
+
+	testWithValidators(t, "#removedType does not allow struct interface type removal", func(t *testing.T, withC1Upgrade bool) {
+
+		const oldCode = `
+				access(all) contract Test {
+					access(all) struct interface S {}
+				}
+			`
+
+		const newCode = `
+				access(all) contract Test {
+					#removedType(S)
+				}
+			`
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		var expectedErr *stdlib.MissingDeclarationError
+		require.ErrorAs(t, err, &expectedErr)
 	})
 
 	testWithValidators(t, "#removedType can be added", func(t *testing.T, withC1Upgrade bool) {

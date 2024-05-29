@@ -347,19 +347,23 @@ func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
 	newContainingDeclaration ast.Declaration,
 	removedTypes *orderedmap.OrderedMap[string, struct{}],
 ) {
+	declarationKind := nestedDeclaration.DeclarationKind()
+
 	// OK to remove events - they are not stored
-	if nestedDeclaration.DeclarationKind() == common.DeclarationKindEvent {
+	if declarationKind == common.DeclarationKindEvent {
 		return
 	}
 
-	// OK to remove a type if it is included in a #removedType pragma
-	if removedTypes.Contains(nestedDeclaration.DeclarationIdentifier().Identifier) {
+	// OK to remove a type if it is included in a #removedType pragma, and it is not an interface
+	if removedTypes.Contains(nestedDeclaration.DeclarationIdentifier().Identifier) &&
+		declarationKind != common.DeclarationKindResourceInterface &&
+		declarationKind != common.DeclarationKindStructureInterface {
 		return
 	}
 
 	validator.report(&MissingDeclarationError{
 		Name: nestedDeclaration.DeclarationIdentifier().Identifier,
-		Kind: nestedDeclaration.DeclarationKind(),
+		Kind: declarationKind,
 		Range: ast.NewUnmeteredRangeFromPositioned(
 			newContainingDeclaration.DeclarationIdentifier(),
 		),
