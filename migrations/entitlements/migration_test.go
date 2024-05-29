@@ -3564,17 +3564,6 @@ func TestUseAfterMigrationFailure(t *testing.T) {
 		)
 	}
 
-	entitlementSetAuthorization := sema.NewEntitlementSetAccess(
-		[]*sema.EntitlementType{
-			sema.NewEntitlementType(
-				nil,
-				fooAddressLocation,
-				"E",
-			),
-		},
-		sema.Conjunction,
-	)
-
 	// Prepare
 	(func() {
 
@@ -3619,8 +3608,8 @@ func TestUseAfterMigrationFailure(t *testing.T) {
 
 		// Note: ID is in the old format
 		assert.Equal(t,
-			common.TypeID("auth&A.4200000000000000.Foo.Bar"),
-			legacyRefType.ID(),
+			common.TypeID("auth&A.4200000000000000.Foo.Bar?"),
+			legacyOptType.ID(),
 		)
 
 		storageMap := storage.GetStorageMap(
@@ -3638,7 +3627,6 @@ func TestUseAfterMigrationFailure(t *testing.T) {
 				false,
 				nil,
 				nil,
-				true, // dictValue is standalone
 			),
 		)
 
@@ -3681,10 +3669,9 @@ func TestUseAfterMigrationFailure(t *testing.T) {
 		err = storage.CheckHealth()
 		require.NoError(t, err)
 
-		require.Len(t, reporter.errors, 2)
+		require.Len(t, reporter.errors, 1)
 
 		assert.ErrorContains(t, reporter.errors[0], importErrorMessage)
-		assert.ErrorContains(t, reporter.errors[1], "key (Type<&A.4200000000000000.Foo.Bar?>()) not found")
 
 		require.Empty(t, reporter.migrated)
 	})()
@@ -3710,9 +3697,11 @@ func TestUseAfterMigrationFailure(t *testing.T) {
 
 		refType := interpreter.NewReferenceStaticType(
 			nil,
-			interpreter.ConvertSemaAccessToStaticAuthorization(nil, entitlementSetAuthorization),
+			interpreter.UnauthorizedAccess,
 			newCompositeType(),
 		)
+		refType.HasLegacyIsAuthorized = true
+		refType.LegacyIsAuthorized = true
 
 		optType := interpreter.NewOptionalStaticType(
 			nil,
@@ -3723,14 +3712,21 @@ func TestUseAfterMigrationFailure(t *testing.T) {
 
 		// Note: ID is in the new format
 		assert.Equal(t,
-			common.TypeID("(auth(A.4200000000000000.E)&A.4200000000000000.Foo.Bar)?"),
+			common.TypeID("(&A.4200000000000000.Foo.Bar)?"),
 			optType.ID(),
 		)
 
 		assert.Equal(t, 1, dictValue.Count())
 
-		// Key did not get migrated, so is inaccessible
+		// Key did not get migrated, so is inaccessible using the "new" type value
 		_, ok := dictValue.Get(inter, locationRange, typeValue)
 		require.False(t, ok)
+
+		// But the key is still accessible using the "old" type value
+		legacyKey := migrations.LegacyKey(typeValue)
+
+		value, ok := dictValue.Get(inter, locationRange, legacyKey)
+		require.True(t, ok)
+		require.Equal(t, newTestValue(), value)
 	})()
 }

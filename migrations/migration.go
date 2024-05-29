@@ -363,7 +363,7 @@ func (m *StorageMigration) MigrateNestedValue(
 		// The mutating iterator is only able to read new keys,
 		// as it recalculates the stored values' hashes.
 
-		m.migrateDictionaryKeys(
+		keys := m.migrateDictionaryKeys(
 			storageKey,
 			storageMapKey,
 			dictionary,
@@ -379,6 +379,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			valueMigrations,
 			reporter,
 			allowMutation,
+			keys,
 		)
 
 	case *interpreter.PublishedValue:
@@ -468,6 +469,11 @@ func (m *StorageMigration) MigrateNestedValue(
 
 }
 
+type migratedDictionaryKey struct {
+	key      interpreter.Value
+	migrated bool
+}
+
 func (m *StorageMigration) migrateDictionaryKeys(
 	storageKey interpreter.StorageKey,
 	storageMapKey interpreter.StorageMapKey,
@@ -475,7 +481,7 @@ func (m *StorageMigration) migrateDictionaryKeys(
 	valueMigrations []ValueMigration,
 	reporter Reporter,
 	allowMutation bool,
-) {
+) (migratedKeys []migratedDictionaryKey) {
 	inter := m.interpreter
 
 	var existingKeys []interpreter.Value
@@ -504,6 +510,11 @@ func (m *StorageMigration) migrateDictionaryKeys(
 		)
 
 		if newKey == nil {
+			migratedKeys = append(migratedKeys, migratedDictionaryKey{
+				key:      existingKey,
+				migrated: false,
+			})
+
 			continue
 		}
 
@@ -522,7 +533,7 @@ func (m *StorageMigration) migrateDictionaryKeys(
 
 		// Remove the old key-value pair
 
-		existingKey = legacyKey(existingKey)
+		existingKey = LegacyKey(existingKey)
 		existingKeyStorable, existingValueStorable := dictionary.RemoveWithoutTransfer(
 			inter,
 			emptyLocationRange,
@@ -644,8 +655,15 @@ func (m *StorageMigration) migrateDictionaryKeys(
 				newKey,
 				existingValue,
 			)
+
+			migratedKeys = append(migratedKeys, migratedDictionaryKey{
+				key:      newKey,
+				migrated: true,
+			})
 		}
 	}
+
+	return
 }
 
 func (m *StorageMigration) migrateDictionaryValues(
@@ -655,37 +673,21 @@ func (m *StorageMigration) migrateDictionaryValues(
 	valueMigrations []ValueMigration,
 	reporter Reporter,
 	allowMutation bool,
+	migratedDictionaryKeys []migratedDictionaryKey,
 ) {
-
 	inter := m.interpreter
 
-	type keyValuePair struct {
-		key, value interpreter.Value
-	}
+	for _, migratedDictionaryKey := range migratedDictionaryKeys {
 
-	var existingKeysAndValues []keyValuePair
+		existingKey := migratedDictionaryKey.key
+		if !migratedDictionaryKey.migrated {
+			existingKey = LegacyKey(existingKey)
+		}
 
-	dictionary.Iterate(
-		inter,
-		func(key, value interpreter.Value) (resume bool) {
-
-			existingKeysAndValues = append(
-				existingKeysAndValues,
-				keyValuePair{
-					key:   key,
-					value: value,
-				},
-			)
-
-			// Continue iteration
-			return true
-		},
-		emptyLocationRange,
-	)
-
-	for _, existingKeyAndValue := range existingKeysAndValues {
-		existingKey := existingKeyAndValue.key
-		existingValue := existingKeyAndValue.value
+		existingValue, ok := dictionary.Get(inter, emptyLocationRange, existingKey)
+		if !ok {
+			panic(errors.NewUnexpectedError("failed to get existing value for key: %s", existingKey))
+		}
 
 		newValue := m.MigrateNestedValue(
 			storageKey,
@@ -810,8 +812,8 @@ func (m *StorageMigration) migrate(
 	)
 }
 
-// legacyKey return the same type with the "old" hash/ID generation function.
-func legacyKey(key interpreter.Value) interpreter.Value {
+// LegacyKey return the same type with the "old" hash/ID generation function.
+func LegacyKey(key interpreter.Value) interpreter.Value {
 	switch key := key.(type) {
 	case interpreter.TypeValue:
 		legacyType := legacyType(key.Type)
