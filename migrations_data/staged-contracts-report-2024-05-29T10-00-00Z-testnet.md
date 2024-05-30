@@ -1,5 +1,5 @@
-## Cadence 1.0 staged contracts migration results
-Date: 30 May, 2024
+## Cadence 1.0 staged contracts migration results report
+Report date: 30 May, 2024
 
 > [!CAUTION] 
 > **IMPORTANT SECURITY NOTICE**
@@ -18,7 +18,7 @@ Date: 30 May, 2024
 * [View contracts staged on Testnet](https://f.dnz.dev/0x2ceae959ed1a7e7a/)
 * [Great community tool to view up-to-date staging status](https://staging.dnz.dev/)
 
-
+### Migration Report 
 |Account Address | Contract Name | Status |
 | --- | --- | --- | 
 | 0x34f3140b7f54c743 | CricketMoments | &#9989; | 
