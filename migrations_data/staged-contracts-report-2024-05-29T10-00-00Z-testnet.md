@@ -12,7 +12,7 @@ Report date: 30 May, 2024
 * Flow-go build: v0.35.10-crescendo-preview.25-atree-inlining 
 
 > [!NOTE]
-> Developers can use Crescendo migration environment to test your migrated dapp! We notify the community in [Discord Developer UPdates channel]> >(https://discord.com/channels/613813861610684416/811693600403357706) when the environment is available for testing after migration. The Access node endpoint for the migration environment is: `access-001.migrationtestnet1.nodes.onflow.org:9000`.
+> Developers can use Crescendo migration environment to test your migrated dapp! We notify the community in [Discord Developer UPdates channel](https://discord.com/channels/613813861610684416/811693600403357706) when the environment is available for testing after migration. The Access node endpoint for the migration environment is: `access-001.migrationtestnet1.nodes.onflow.org:9000`.
 
 **Useful Tools / Links**
 * [View contracts staged on Testnet](https://f.dnz.dev/0x2ceae959ed1a7e7a/)
