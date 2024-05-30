@@ -1,22 +1,23 @@
 ## Cadence 1.0 staged contracts migration results
 Date: 30 May, 2024
 
-Stats: 369 contracts staged, 339 successfully upgraded, 30 failed to upgrade
-
-Testnet State Snapshot: devnet50-execution-snapshot-for-migration-9-may-29
-
-Flow-go build: v0.35.10-crescendo-preview.25-atree-inlining 
-
-Developers can use Crescendo migration environment to test your migrated dapp! We notify the community in [Discord Developer UPdates channel](https://discord.com/channels/613813861610684416/811693600403357706) when the environment is available for testing after migration. The Access node endpoint for the migration environment is: `access-001.migrationtestnet1.nodes.onflow.org:9000`.
-
-View contracts staged on Testnet: https://f.dnz.dev/0x2ceae959ed1a7e7a/
-
-Great community tool to view up-to-date staging status: https://staging.dnz.dev/
-
 > [!CAUTION] 
-> IMPORTANT SECURITY NOTICE
+> **IMPORTANT SECURITY NOTICE**
+>
 > Some staged contracts might be insecure due to incorrect access modifiers usage.
 > Please make sure you have carefully reviewed and understood the section of [Cadence Migration Guide on Access Modifiers](https://cadence-lang.org/docs/cadence-migration-guide/nft-guide#update-all-pub-access-modfiers)
+
+* Stats: 369 contracts staged, 339 successfully upgraded, 30 failed to upgrade
+* Testnet State Snapshot: devnet50-execution-snapshot-for-migration-9-may-29
+* Flow-go build: v0.35.10-crescendo-preview.25-atree-inlining 
+
+> [!NOTE}
+> Developers can use Crescendo migration environment to test your migrated dapp! We notify the community in [Discord Developer UPdates channel]> >(https://discord.com/channels/613813861610684416/811693600403357706) when the environment is available for testing after migration. The Access node endpoint for the migration environment is: `access-001.migrationtestnet1.nodes.onflow.org:9000`.
+
+** Useful Tools / Links **
+*[View contracts staged on Testnet](https://f.dnz.dev/0x2ceae959ed1a7e7a/)
+*[Great community tool to view up-to-date staging status](https://staging.dnz.dev/)
+
 
 |Account Address | Contract Name | Status |
 | --- | --- | --- | 
