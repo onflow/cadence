@@ -2485,12 +2485,12 @@ func TestDictionaryKeyConflict(t *testing.T) {
 				dictionaryValue,
 			)
 
-			// NOTE: use legacyKey to ensure the key is encoded in old format
+			// NOTE: use LegacyKey to ensure the key is encoded in old format
 
 			dictionaryValue.InsertWithoutTransfer(
 				inter,
 				emptyLocationRange,
-				legacyKey(dictionaryKey1),
+				LegacyKey(dictionaryKey1),
 				interpreter.NewArrayValue(
 					inter,
 					emptyLocationRange,
@@ -2503,7 +2503,7 @@ func TestDictionaryKeyConflict(t *testing.T) {
 			dictionaryValue.InsertWithoutTransfer(
 				inter,
 				emptyLocationRange,
-				legacyKey(dictionaryKey2),
+				LegacyKey(dictionaryKey2),
 				interpreter.NewArrayValue(
 					inter,
 					emptyLocationRange,
@@ -2516,7 +2516,7 @@ func TestDictionaryKeyConflict(t *testing.T) {
 			oldValue1, ok := dictionaryValue.Get(
 				inter,
 				emptyLocationRange,
-				legacyKey(dictionaryKey1),
+				LegacyKey(dictionaryKey1),
 			)
 			require.True(t, ok)
 
@@ -2535,7 +2535,7 @@ func TestDictionaryKeyConflict(t *testing.T) {
 			oldValue2, ok := dictionaryValue.Get(
 				inter,
 				emptyLocationRange,
-				legacyKey(dictionaryKey2),
+				LegacyKey(dictionaryKey2),
 			)
 			require.True(t, ok)
 
