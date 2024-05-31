@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -741,6 +742,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkNestedDeclarationR
 	nestedDeclaration ast.Declaration,
 	oldContainingDeclaration ast.Declaration,
 	newContainingDeclaration ast.Declaration,
+	removedTypes *orderedmap.OrderedMap[string, struct{}],
 ) {
 
 	// enums can be removed from contract interfaces, as they have no interface equivalent and are not
@@ -755,6 +757,7 @@ func (validator *CadenceV042ToV1ContractUpdateValidator) checkNestedDeclarationR
 		nestedDeclaration,
 		oldContainingDeclaration,
 		newContainingDeclaration,
+		removedTypes,
 	)
 }
 

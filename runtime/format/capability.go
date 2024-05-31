@@ -22,6 +22,21 @@ import (
 	"fmt"
 )
 
+// PathCapability returns the string representation of a path capability. Deprecated and removed in v1.0.0.
+func DeprecatedPathCapability(borrowType string, address string, path string) string {
+	var typeArgument string
+	if borrowType != "" {
+		typeArgument = fmt.Sprintf("<%s>", borrowType)
+	}
+
+	return fmt.Sprintf(
+		"Capability%s(address: %s, path: %s)",
+		typeArgument,
+		address,
+		path,
+	)
+}
+
 func Capability(borrowType string, address string, id string) string {
 	return fmt.Sprintf(
 		"Capability<%s>(address: %s, id: %s)",
@@ -33,7 +48,7 @@ func Capability(borrowType string, address string, id string) string {
 
 func StorageCapabilityController(borrowType string, capabilityID string, target string) string {
 	return fmt.Sprintf(
-		"StorageCapabilityController(borrowType: %s, capabilityID: %s, target: %s)",
+		"StorageCapabilityController(borrowType: Type<%s>(), capabilityID: %s, target: %s)",
 		borrowType,
 		capabilityID,
 		target,
@@ -42,7 +57,7 @@ func StorageCapabilityController(borrowType string, capabilityID string, target 
 
 func AccountCapabilityController(borrowType string, capabilityID string) string {
 	return fmt.Sprintf(
-		"AccountCapabilityController(borrowType: %s, capabilityID: %s)",
+		"AccountCapabilityController(borrowType: Type<%s>(), capabilityID: %s)",
 		borrowType,
 		capabilityID,
 	)
