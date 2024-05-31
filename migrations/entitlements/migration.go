@@ -371,6 +371,7 @@ func (m EntitlementsMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
+	_ migrations.ValueMigrationPosition,
 ) (
 	interpreter.Value,
 	error,

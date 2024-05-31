@@ -70,7 +70,11 @@ func (m *LinkValueMigration) Migrate(
 	storageMapKey interpreter.StorageMapKey,
 	value interpreter.Value,
 	inter *interpreter.Interpreter,
-) (interpreter.Value, error) {
+	_ migrations.ValueMigrationPosition,
+) (
+	interpreter.Value,
+	error,
+) {
 
 	pathValue, ok := storageKeyToPathValue(storageKey, storageMapKey)
 	if !ok {
