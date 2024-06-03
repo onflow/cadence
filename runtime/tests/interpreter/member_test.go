@@ -1231,6 +1231,40 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
 	})
 
+	t.Run("entitled struct escalation", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            entitlement E
+
+            struct T {
+                access(E) fun foo() {}
+            }
+
+            struct S {
+                access(mapping Identity) var ref: AnyStruct
+        
+                init(_ a: AnyStruct){
+                    self.ref = a
+                }
+            }
+        
+            fun test() {
+                let t = T()
+                let pubTRef = &t as auth(E) &T
+                var s = &S(pubTRef) as auth(E) &S
+                var member = s.ref
+                var tRef = member as! auth(E) &T
+                tRef.foo()
+            }
+            
+        `)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
+	})
+
 	t.Run("resource entitlement escalation", func(t *testing.T) {
 		t.Parallel()
 
