@@ -1197,4 +1197,97 @@ func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
 	})
+
+	t.Run("struct entitlement escalation", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            entitlement E
+
+            struct T {
+                access(E) fun foo() {}
+            }
+
+            struct S {
+                access(mapping Identity) var ref: AnyStruct
+        
+                init(_ a: AnyStruct){
+                    self.ref = a
+                }
+            }
+        
+            fun test() {
+                let t = T()
+                let pubTRef = &t as &T
+                var s = &S(pubTRef) as auth(E) &S
+                var tRef = s.ref as! auth(E) &T
+                tRef.foo()
+            }
+            
+        `)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
+	})
+
+	t.Run("resource entitlement escalation", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            entitlement E
+
+            resource R {
+                access(E) fun foo() {}
+            }
+
+            struct S {
+                access(mapping Identity) var ref: AnyStruct
+        
+                init(_ a: AnyStruct){
+                    self.ref = a
+                }
+            }
+        
+            fun test() {
+                let r <- create R()
+                let pubRef = &r as &R
+                var s = &S(pubRef) as auth(E) &S
+                var entitledRef = s.ref as! auth(E) &R
+                entitledRef.foo()
+
+                destroy r
+            }
+            
+        `)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
+	})
+
+	t.Run("referenceArray", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            entitlement E
+
+            struct T {
+                access(E) fun foo() {}
+            }
+
+            fun test() {
+                let t1 = T()
+                let t2 = T()
+                let arr: [AnyStruct] = [&t1 as auth(E) &T, &t2 as auth(E) &T]
+                let arrRef = &arr as &[AnyStruct]
+                let tRef = arrRef[0]
+            }
+            
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }
