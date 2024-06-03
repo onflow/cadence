@@ -68,7 +68,12 @@ func (m *CapabilityValueMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) (interpreter.Value, error) {
+	_ migrations.ValueMigrationPosition,
+) (
+	interpreter.Value,
+	error,
+) {
+
 	reporter := m.Reporter
 
 	switch value := value.(type) {
