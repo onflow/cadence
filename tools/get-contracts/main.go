@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,7 +85,7 @@ func main() {
 	client := graphql.NewClient(apiURL, nil).
 		WithRequestModifier(func(r *http.Request) {
 			r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
-			// NOTE: important, default is forbidden by API's bot prevention 
+			// NOTE: important, default is forbidden by API's bot prevention
 			// (https://github.com/Kong/kong/blob/master/kong/plugins/bot-detection/rules.lua)
 			r.Header.Set("User-Agent", "Flow Foundation Cadence Tool")
 		})
