@@ -304,15 +304,25 @@ func (interpreter *Interpreter) memberExpressionGetterSetter(
 // e.g.1: Given type T, this method returns &T.
 // e.g.2: Given T?, this returns (&T)?
 func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.Type, locationRange LocationRange) Value {
+
+	// `resultType` is always an [optional] reference.
+	// This is guaranteed by the checker.
+	referenceType, ok := sema.UnwrapOptionalType(resultType).(*sema.ReferenceType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
 	switch value := value.(type) {
 	case NilValue, ReferenceValue:
 		// Reference to a nil, should return a nil.
 		// If the value is already a reference then return the same reference.
 		// However, we need to make sure that this reference is actually a subtype of the resultType,
 		// since the checker may not be aware that we are "short-circuiting" in this case
+		// Additionally, it is only safe to "compress" reference types like this when the desired
+		// result reference type is unauthorized
 
 		staticType := value.StaticType(interpreter)
-		if !interpreter.IsSubTypeOfSemaType(staticType, resultType) {
+		if referenceType.Authorization != sema.UnauthorizedAccess || !interpreter.IsSubTypeOfSemaType(staticType, resultType) {
 			panic(InvalidMemberReferenceError{
 				ExpectedType:  resultType,
 				ActualType:    interpreter.MustConvertStaticToSemaType(staticType),
@@ -324,13 +334,6 @@ func (interpreter *Interpreter) getReferenceValue(value Value, resultType sema.T
 	case *SomeValue:
 		innerValue := interpreter.getReferenceValue(value.value, resultType, locationRange)
 		return NewSomeValueNonCopying(interpreter, innerValue)
-	}
-
-	// `resultType` is always an [optional] reference.
-	// This is guaranteed by the checker.
-	referenceType, ok := sema.UnwrapOptionalType(resultType).(*sema.ReferenceType)
-	if !ok {
-		panic(errors.NewUnreachableError())
 	}
 
 	auth := interpreter.getEffectiveAuthorization(referenceType)

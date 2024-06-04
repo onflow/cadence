@@ -106,7 +106,11 @@ func (testStringMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) (interpreter.Value, error) {
+	_ ValueMigrationPosition,
+) (
+	interpreter.Value,
+	error,
+) {
 	if value, ok := value.(*interpreter.StringValue); ok {
 		return interpreter.NewUnmeteredStringValue(fmt.Sprintf("updated_%s", value.Str)), nil
 	}
@@ -139,7 +143,11 @@ func (m testInt8Migration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) (interpreter.Value, error) {
+	_ ValueMigrationPosition,
+) (
+	interpreter.Value,
+	error,
+) {
 	int8Value, ok := value.(interpreter.Int8Value)
 	if !ok {
 		return nil, nil
@@ -175,7 +183,11 @@ func (testCapMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) (interpreter.Value, error) {
+	_ ValueMigrationPosition,
+) (
+	interpreter.Value,
+	error,
+) {
 	if value, ok := value.(*interpreter.IDCapabilityValue); ok {
 		return interpreter.NewCapabilityValue(
 			nil,
@@ -211,7 +223,11 @@ func (testCapConMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) (interpreter.Value, error) {
+	_ ValueMigrationPosition,
+) (
+	interpreter.Value,
+	error,
+) {
 
 	switch value := value.(type) {
 	case *interpreter.StorageCapabilityControllerValue:
@@ -988,6 +1004,7 @@ func (m testCompositeValueMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	inter *interpreter.Interpreter,
+	_ ValueMigrationPosition,
 ) (
 	interpreter.Value,
 	error,
@@ -1182,7 +1199,11 @@ func (testContainerMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	inter *interpreter.Interpreter,
-) (interpreter.Value, error) {
+	_ ValueMigrationPosition,
+) (
+	interpreter.Value,
+	error,
+) {
 
 	switch value := value.(type) {
 	case *interpreter.DictionaryValue:
@@ -1645,7 +1666,11 @@ func (m testPanicMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	_ interpreter.Value,
 	_ *interpreter.Interpreter,
-) (interpreter.Value, error) {
+	_ ValueMigrationPosition,
+) (
+	interpreter.Value,
+	error,
+) {
 
 	// NOTE: out-of-bounds access, panic
 	_ = []int{}[0]
@@ -1764,7 +1789,11 @@ func (m *testSkipMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) (interpreter.Value, error) {
+	_ ValueMigrationPosition,
+) (
+	interpreter.Value,
+	error,
+) {
 
 	m.migrationCalls = append(m.migrationCalls, value)
 
@@ -2119,7 +2148,11 @@ func (testPublishedValueMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) (interpreter.Value, error) {
+	_ ValueMigrationPosition,
+) (
+	interpreter.Value,
+	error,
+) {
 
 	if pathCap, ok := value.(*interpreter.PathCapabilityValue); ok { //nolint:staticcheck
 		return pathCap, nil
@@ -2224,7 +2257,11 @@ func (m testDomainsMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	_ interpreter.Value,
 	_ *interpreter.Interpreter,
-) (interpreter.Value, error) {
+	_ ValueMigrationPosition,
+) (
+	interpreter.Value,
+	error,
+) {
 
 	if m.domains != nil {
 		_, ok := m.domains[storageKey.Key]
@@ -2360,7 +2397,11 @@ func (m testDictionaryKeyConflictMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
-) (interpreter.Value, error) {
+	_ ValueMigrationPosition,
+) (
+	interpreter.Value,
+	error,
+) {
 	typeValue, ok := value.(interpreter.TypeValue)
 	if ok {
 		return typeValue, nil
@@ -3418,7 +3459,11 @@ func (testEnumMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	inter *interpreter.Interpreter,
-) (interpreter.Value, error) {
+	_ ValueMigrationPosition,
+) (
+	interpreter.Value,
+	error,
+) {
 	if composite, ok := value.(*interpreter.CompositeValue); ok && composite.Kind == common.CompositeKindEnum {
 		rawValue := composite.GetField(inter, emptyLocationRange, sema.EnumRawValueFieldName)
 		raw := rawValue.(interpreter.UInt8Value)

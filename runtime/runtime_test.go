@@ -10736,3 +10736,114 @@ func TestRuntimeContractWithInvalidCapability(t *testing.T) {
 		logs,
 	)
 }
+
+func TestRuntimeAccountEntitlementEscalation(t *testing.T) {
+
+	t.Parallel()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	runtime := NewTestInterpreterRuntime()
+
+	contract := []byte(`
+		access(all) contract Test{
+
+			access(all) struct S{
+				access(mapping Identity) var s: AnyStruct
+		
+				init(_ a: AnyStruct){
+				self.s = a
+				}
+			}
+		}
+	`)
+
+	deploy := DeploymentTransaction("Test", contract)
+
+	initialTx := []byte(`
+		transaction {
+
+			prepare(acct: auth(Storage) &Account) {
+				acct.storage.save(42, to: /storage/foo)
+			}
+		}
+	`)
+
+	exploitTx := []byte(`
+		import Test from 0x01
+		
+		transaction {
+			prepare(acct: auth(Storage) &Account) {}
+			execute {
+				var a = getAccount(0x1)
+				var r = &Test.S(a) as auth(Storage) &Test.S
+				var rr = r.s as! auth(Storage) &Account
+
+				rr.storage.load<Int>(from: /storage/foo)
+			}
+		}
+	`)
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{addressValue}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnCreateAccount: func(payer Address) (address Address, err error) {
+			return addressValue, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: initialTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		})
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: exploitTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		})
+	require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
+}

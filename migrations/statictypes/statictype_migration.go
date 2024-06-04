@@ -62,9 +62,10 @@ func (m *StaticTypeMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
+	_ migrations.ValueMigrationPosition,
 ) (
-	newValue interpreter.Value,
-	err error,
+	interpreter.Value,
+	error,
 ) {
 
 	switch value := value.(type) {
@@ -72,18 +73,18 @@ func (m *StaticTypeMigration) Migrate(
 		// Type is optional. nil represents "unknown"/"invalid" type
 		ty := value.Type
 		if ty == nil {
-			return
+			return nil, nil
 		}
 		convertedType := m.maybeConvertStaticType(ty, nil)
 		if convertedType == nil {
-			return
+			return nil, nil
 		}
 		return interpreter.NewTypeValue(nil, convertedType), nil
 
 	case *interpreter.IDCapabilityValue:
 		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType, nil)
 		if convertedBorrowType == nil {
-			return
+			return nil, nil
 		}
 		return interpreter.NewUnmeteredCapabilityValue(value.ID, value.Address, convertedBorrowType), nil
 
@@ -91,11 +92,11 @@ func (m *StaticTypeMigration) Migrate(
 		// Type is optional
 		borrowType := value.BorrowType
 		if borrowType == nil {
-			return
+			return nil, nil
 		}
 		convertedBorrowType := m.maybeConvertStaticType(borrowType, nil)
 		if convertedBorrowType == nil {
-			return
+			return nil, nil
 		}
 		return &interpreter.PathCapabilityValue{ //nolint:staticcheck
 			BorrowType: convertedBorrowType,
@@ -106,7 +107,7 @@ func (m *StaticTypeMigration) Migrate(
 	case interpreter.PathLinkValue: //nolint:staticcheck
 		convertedBorrowType := m.maybeConvertStaticType(value.Type, nil)
 		if convertedBorrowType == nil {
-			return
+			return nil, nil
 		}
 		return interpreter.PathLinkValue{ //nolint:staticcheck
 			Type:       convertedBorrowType,
@@ -116,7 +117,7 @@ func (m *StaticTypeMigration) Migrate(
 	case *interpreter.AccountCapabilityControllerValue:
 		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType, nil)
 		if convertedBorrowType == nil {
-			return
+			return nil, nil
 		}
 		borrowType := convertedBorrowType.(*interpreter.ReferenceStaticType)
 		return interpreter.NewUnmeteredAccountCapabilityControllerValue(borrowType, value.CapabilityID), nil
@@ -124,7 +125,7 @@ func (m *StaticTypeMigration) Migrate(
 	case *interpreter.StorageCapabilityControllerValue:
 		convertedBorrowType := m.maybeConvertStaticType(value.BorrowType, nil)
 		if convertedBorrowType == nil {
-			return
+			return nil, nil
 		}
 		borrowType := convertedBorrowType.(*interpreter.ReferenceStaticType)
 		return interpreter.NewUnmeteredStorageCapabilityControllerValue(
@@ -136,7 +137,7 @@ func (m *StaticTypeMigration) Migrate(
 	case *interpreter.ArrayValue:
 		convertedElementType := m.maybeConvertStaticType(value.Type, nil)
 		if convertedElementType == nil {
-			return
+			return nil, nil
 		}
 
 		value.SetType(
@@ -146,7 +147,7 @@ func (m *StaticTypeMigration) Migrate(
 	case *interpreter.DictionaryValue:
 		convertedElementType := m.maybeConvertStaticType(value.Type, nil)
 		if convertedElementType == nil {
-			return
+			return nil, nil
 		}
 
 		value.SetType(
@@ -154,7 +155,7 @@ func (m *StaticTypeMigration) Migrate(
 		)
 	}
 
-	return
+	return nil, nil
 }
 
 func (m *StaticTypeMigration) maybeConvertStaticType(
@@ -586,6 +587,9 @@ func CanSkipStaticTypeMigration(valueType interpreter.StaticType) bool {
 	case interpreter.PrimitiveStaticType:
 
 		switch valueType {
+		case interpreter.PrimitiveStaticTypeMetaType:
+			return false
+
 		case interpreter.PrimitiveStaticTypeBool,
 			interpreter.PrimitiveStaticTypeVoid,
 			interpreter.PrimitiveStaticTypeAddress,

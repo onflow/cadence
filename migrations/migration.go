@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"runtime/debug"
 
+	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -37,10 +39,18 @@ type ValueMigration interface {
 		storageMapKey interpreter.StorageMapKey,
 		value interpreter.Value,
 		interpreter *interpreter.Interpreter,
+		position ValueMigrationPosition,
 	) (newValue interpreter.Value, err error)
 	CanSkip(valueType interpreter.StaticType) bool
 	Domains() map[string]struct{}
 }
+
+type ValueMigrationPosition uint8
+
+const (
+	ValueMigrationPositionOther ValueMigrationPosition = iota
+	ValueMigrationPositionDictionaryKey
+)
 
 type DomainMigration interface {
 	Name() string
@@ -162,6 +172,7 @@ func (m *StorageMigration) NewValueMigrationsPathMigrator(
 				valueMigrations,
 				reporter,
 				true,
+				ValueMigrationPositionOther,
 			)
 		},
 	)
@@ -176,6 +187,7 @@ func (m *StorageMigration) MigrateNestedValue(
 	valueMigrations []ValueMigration,
 	reporter Reporter,
 	allowMutation bool,
+	position ValueMigrationPosition,
 ) (migratedValue interpreter.Value) {
 
 	defer func() {
@@ -240,6 +252,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			valueMigrations,
 			reporter,
 			allowMutation,
+			ValueMigrationPositionOther,
 		)
 		if newInnerValue != nil {
 			migratedValue = interpreter.NewSomeValueNonCopying(inter, newInnerValue)
@@ -264,6 +277,7 @@ func (m *StorageMigration) MigrateNestedValue(
 				valueMigrations,
 				reporter,
 				allowMutation,
+				ValueMigrationPositionOther,
 			)
 
 			if newElement == nil {
@@ -325,6 +339,7 @@ func (m *StorageMigration) MigrateNestedValue(
 				valueMigrations,
 				reporter,
 				allowMutation,
+				ValueMigrationPositionOther,
 			)
 
 			if newValue == nil {
@@ -363,7 +378,7 @@ func (m *StorageMigration) MigrateNestedValue(
 		// The mutating iterator is only able to read new keys,
 		// as it recalculates the stored values' hashes.
 
-		keys := m.migrateDictionaryKeys(
+		m.migrateDictionaryKeys(
 			storageKey,
 			storageMapKey,
 			dictionary,
@@ -379,7 +394,6 @@ func (m *StorageMigration) MigrateNestedValue(
 			valueMigrations,
 			reporter,
 			allowMutation,
-			keys,
 		)
 
 	case *interpreter.PublishedValue:
@@ -391,6 +405,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			valueMigrations,
 			reporter,
 			allowMutation,
+			ValueMigrationPositionOther,
 		)
 		if newInnerValue != nil {
 			newInnerCapability := newInnerValue.(interpreter.CapabilityValue)
@@ -415,6 +430,7 @@ func (m *StorageMigration) MigrateNestedValue(
 			storageKey,
 			storageMapKey,
 			value,
+			position,
 		)
 
 		if err != nil {
@@ -469,11 +485,6 @@ func (m *StorageMigration) MigrateNestedValue(
 
 }
 
-type migratedDictionaryKey struct {
-	key      interpreter.Value
-	migrated bool
-}
-
 func (m *StorageMigration) migrateDictionaryKeys(
 	storageKey interpreter.StorageKey,
 	storageMapKey interpreter.StorageMapKey,
@@ -481,7 +492,7 @@ func (m *StorageMigration) migrateDictionaryKeys(
 	valueMigrations []ValueMigration,
 	reporter Reporter,
 	allowMutation bool,
-) (migratedKeys []migratedDictionaryKey) {
+) {
 	inter := m.interpreter
 
 	var existingKeys []interpreter.Value
@@ -508,14 +519,10 @@ func (m *StorageMigration) migrateDictionaryKeys(
 			reporter,
 			// NOTE: Mutation of keys is not allowed.
 			false,
+			ValueMigrationPositionDictionaryKey,
 		)
 
 		if newKey == nil {
-			migratedKeys = append(migratedKeys, migratedDictionaryKey{
-				key:      existingKey,
-				migrated: false,
-			})
-
 			continue
 		}
 
@@ -532,14 +539,25 @@ func (m *StorageMigration) migrateDictionaryKeys(
 
 		// We only reach here because key needs to be migrated.
 
-		// Remove the old key-value pair
+		// Remove the old key-value pair.
 
-		existingKey = LegacyKey(existingKey)
-		existingKeyStorable, existingValueStorable := dictionary.RemoveWithoutTransfer(
-			inter,
-			emptyLocationRange,
-			existingKey,
-		)
+		var existingKeyStorable, existingValueStorable atree.Storable
+
+		legacyKey := LegacyKey(existingKey)
+		if legacyKey != nil {
+			existingKeyStorable, existingValueStorable = dictionary.RemoveWithoutTransfer(
+				inter,
+				emptyLocationRange,
+				legacyKey,
+			)
+		}
+		if existingKeyStorable == nil {
+			existingKeyStorable, existingValueStorable = dictionary.RemoveWithoutTransfer(
+				inter,
+				emptyLocationRange,
+				existingKey,
+			)
+		}
 		if existingKeyStorable == nil {
 			panic(errors.NewUnexpectedError(
 				"failed to remove old value for migrated key: %s",
@@ -590,6 +608,7 @@ func (m *StorageMigration) migrateDictionaryKeys(
 				valueMigrations,
 				reporter,
 				allowMutation,
+				ValueMigrationPositionOther,
 			)
 
 			var valueToSet interpreter.Value
@@ -656,15 +675,8 @@ func (m *StorageMigration) migrateDictionaryKeys(
 				newKey,
 				existingValue,
 			)
-
-			migratedKeys = append(migratedKeys, migratedDictionaryKey{
-				key:      newKey,
-				migrated: true,
-			})
 		}
 	}
-
-	return
 }
 
 func (m *StorageMigration) migrateDictionaryValues(
@@ -674,21 +686,37 @@ func (m *StorageMigration) migrateDictionaryValues(
 	valueMigrations []ValueMigration,
 	reporter Reporter,
 	allowMutation bool,
-	migratedDictionaryKeys []migratedDictionaryKey,
 ) {
+
 	inter := m.interpreter
 
-	for _, migratedDictionaryKey := range migratedDictionaryKeys {
+	type keyValuePair struct {
+		key, value interpreter.Value
+	}
 
-		existingKey := migratedDictionaryKey.key
-		if !migratedDictionaryKey.migrated {
-			existingKey = LegacyKey(existingKey)
-		}
+	var existingKeysAndValues []keyValuePair
 
-		existingValue, ok := dictionary.Get(inter, emptyLocationRange, existingKey)
-		if !ok {
-			panic(errors.NewUnexpectedError("failed to get existing value for key: %s", existingKey))
-		}
+	dictionary.Iterate(
+		inter,
+		func(key, value interpreter.Value) (resume bool) {
+
+			existingKeysAndValues = append(
+				existingKeysAndValues,
+				keyValuePair{
+					key:   key,
+					value: value,
+				},
+			)
+
+			// Continue iteration
+			return true
+		},
+		emptyLocationRange,
+	)
+
+	for _, existingKeyAndValue := range existingKeysAndValues {
+		existingKey := existingKeyAndValue.key
+		existingValue := existingKeyAndValue.value
 
 		newValue := m.MigrateNestedValue(
 			storageKey,
@@ -697,6 +725,7 @@ func (m *StorageMigration) migrateDictionaryValues(
 			valueMigrations,
 			reporter,
 			allowMutation,
+			ValueMigrationPositionOther,
 		)
 
 		if newValue == nil {
@@ -772,6 +801,7 @@ func (m *StorageMigration) migrate(
 	storageKey interpreter.StorageKey,
 	storageMapKey interpreter.StorageMapKey,
 	value interpreter.Value,
+	position ValueMigrationPosition,
 ) (
 	converted interpreter.Value,
 	err error,
@@ -810,6 +840,7 @@ func (m *StorageMigration) migrate(
 		storageMapKey,
 		value,
 		m.interpreter,
+		position,
 	)
 }
 
@@ -833,7 +864,7 @@ func LegacyKey(key interpreter.Value) interpreter.Value {
 		}
 	}
 
-	return key
+	return nil
 }
 
 func legacyType(staticType interpreter.StaticType) interpreter.StaticType {

@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/migrations/statictypes"
+	"github.com/onflow/cadence/migrations/type_keys"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -690,6 +691,7 @@ func (m testEntitlementsMigration) Migrate(
 	_ interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
+	_ migrations.ValueMigrationPosition,
 ) (
 	interpreter.Value,
 	error,
@@ -731,6 +733,7 @@ func convertEntireTestValue(
 		},
 		reporter,
 		true,
+		migrations.ValueMigrationPositionOther,
 	)
 
 	err = migration.Commit()
@@ -2864,6 +2867,7 @@ func TestConvertMigratedAccountTypes(t *testing.T) {
 					nil,
 					value,
 					inter,
+					migrations.ValueMigrationPositionOther,
 				)
 			require.NoError(t, err)
 			require.NotNil(t, newValue)
@@ -3661,6 +3665,7 @@ func TestUseAfterMigrationFailure(t *testing.T) {
 			migration.NewValueMigrationsPathMigrator(
 				reporter,
 				NewEntitlementsMigration(inter),
+				type_keys.NewTypeKeyMigration(),
 			),
 		)
 
@@ -3676,7 +3681,21 @@ func TestUseAfterMigrationFailure(t *testing.T) {
 
 		assert.ErrorContains(t, reporter.errors[0], importErrorMessage)
 
-		require.Empty(t, reporter.migrated)
+		assert.Equal(t,
+			map[struct {
+				interpreter.StorageKey
+				interpreter.StorageMapKey
+			}]struct{}{
+				{
+					StorageKey: interpreter.StorageKey{
+						Address: testAddress,
+						Key:     common.PathDomainStorage.Identifier(),
+					},
+					StorageMapKey: interpreter.StringStorageMapKey("dict"),
+				}: {},
+			},
+			reporter.migrated,
+		)
 	})()
 
 	// Load
@@ -3721,15 +3740,9 @@ func TestUseAfterMigrationFailure(t *testing.T) {
 
 		assert.Equal(t, 1, dictValue.Count())
 
-		// Key did not get migrated, so is inaccessible using the "new" type value
+		// Key did not get migrated, but got still re-stored in new format,
+		// so it can be loaded and used after the migration failure
 		_, ok := dictValue.Get(inter, locationRange, typeValue)
-		require.False(t, ok)
-
-		// But the key is still accessible using the "old" type value
-		legacyKey := migrations.LegacyKey(typeValue)
-
-		value, ok := dictValue.Get(inter, locationRange, legacyKey)
 		require.True(t, ok)
-		require.Equal(t, newTestValue(), value)
 	})()
 }
