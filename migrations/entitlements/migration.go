@@ -23,19 +23,30 @@ import (
 
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/migrations/statictypes"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 type EntitlementsMigration struct {
-	Interpreter *interpreter.Interpreter
+	Interpreter       *interpreter.Interpreter
+	migratedTypeCache migrations.StaticTypeCache
 }
 
 var _ migrations.ValueMigration = EntitlementsMigration{}
 
 func NewEntitlementsMigration(inter *interpreter.Interpreter) EntitlementsMigration {
+	staticTypeCache := migrations.NewDefaultStaticTypeCache()
+	return NewEntitlementsMigrationWithCache(inter, staticTypeCache)
+}
+
+func NewEntitlementsMigrationWithCache(
+	inter *interpreter.Interpreter,
+	migratedTypeCache migrations.StaticTypeCache,
+) EntitlementsMigration {
 	return EntitlementsMigration{
-		Interpreter: inter,
+		Interpreter:       inter,
+		migratedTypeCache: migratedTypeCache,
 	}
 }
 
@@ -74,6 +85,20 @@ func (m EntitlementsMigration) ConvertToEntitledType(
 	}
 
 	inter := m.Interpreter
+	migratedTypeCache := m.migratedTypeCache
+
+	key, err := migrations.NewStaticTypeKey(staticType)
+	if err != nil {
+		panic(errors.NewUnexpectedErrorFromCause(err))
+	}
+
+	if migratedType, exists := migratedTypeCache.Get(key); exists {
+		return migratedType.StaticType, migratedType.Error
+	}
+
+	defer func() {
+		migratedTypeCache.Set(key, resultType, err)
+	}()
 
 	switch t := staticType.(type) {
 	case *interpreter.ReferenceStaticType:

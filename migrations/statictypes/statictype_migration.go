@@ -31,6 +31,7 @@ import (
 type StaticTypeMigration struct {
 	compositeTypeConverter CompositeTypeConverterFunc
 	interfaceTypeConverter InterfaceTypeConverterFunc
+	migratedTypeCache      migrations.StaticTypeCache
 }
 
 type CompositeTypeConverterFunc func(*interpreter.CompositeStaticType) interpreter.StaticType
@@ -39,7 +40,14 @@ type InterfaceTypeConverterFunc func(*interpreter.InterfaceStaticType) interpret
 var _ migrations.ValueMigration = &StaticTypeMigration{}
 
 func NewStaticTypeMigration() *StaticTypeMigration {
-	return &StaticTypeMigration{}
+	staticTypeCache := migrations.NewDefaultStaticTypeCache()
+	return NewStaticTypeMigrationWithCache(staticTypeCache)
+}
+
+func NewStaticTypeMigrationWithCache(migratedTypeCache migrations.StaticTypeCache) *StaticTypeMigration {
+	return &StaticTypeMigration{
+		migratedTypeCache: migratedTypeCache,
+	}
 }
 
 func (m *StaticTypeMigration) WithCompositeTypeConverter(converterFunc CompositeTypeConverterFunc) *StaticTypeMigration {
@@ -164,6 +172,29 @@ func (m *StaticTypeMigration) maybeConvertStaticType(
 ) (
 	resultType interpreter.StaticType,
 ) {
+	// Consult the cache and cache the result at the root of the migration,
+	// i.e. when the parent type is nil.
+	//
+	// Parse of the migration, e.g. the intersection type migration depends on the parent type.
+	// For example, `{Ts}` in `&{Ts}` is migrated differently from `{Ts}`.
+
+	if parentType == nil {
+		migratedTypeCache := m.migratedTypeCache
+
+		key, err := migrations.NewStaticTypeKey(staticType)
+		if err != nil {
+			panic(errors.NewUnexpectedErrorFromCause(err))
+		}
+
+		if cachedType, exists := migratedTypeCache.Get(key); exists {
+			return cachedType.StaticType
+		}
+
+		defer func() {
+			migratedTypeCache.Set(key, resultType, nil)
+		}()
+	}
+
 	switch staticType := staticType.(type) {
 	case *interpreter.ConstantSizedStaticType:
 		convertedType := m.maybeConvertStaticType(staticType.Type, staticType)
