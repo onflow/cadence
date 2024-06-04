@@ -3,11 +3,11 @@ module github.com/onflow/cadence/tools/unkeyed
 go 1.22
 
 require (
-	golang.org/x/exp/typeparams v0.0.0-20230203172020-98cc5a0785f9
-	golang.org/x/tools v0.6.0
+	golang.org/x/exp/typeparams v0.0.0-20240314144324-c7f7c6466f7f
+	golang.org/x/tools v0.21.0
 )
 
 require (
-	golang.org/x/mod v0.8.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/mod v0.17.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
 )
