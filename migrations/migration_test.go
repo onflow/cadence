@@ -3032,10 +3032,11 @@ func TestMigrateNestedValue(t *testing.T) {
 		value,
 		[]ValueMigration{
 			newTestMigration(inter, func(
-				key interpreter.StorageKey,
-				mapKey interpreter.StorageMapKey,
+				_ interpreter.StorageKey,
+				_ interpreter.StorageMapKey,
 				value interpreter.Value,
-				inter *interpreter.Interpreter,
+				_ *interpreter.Interpreter,
+				_ ValueMigrationPosition,
 			) (
 				interpreter.Value,
 				error,
@@ -3052,6 +3053,7 @@ func TestMigrateNestedValue(t *testing.T) {
 		},
 		reporter,
 		true,
+		ValueMigrationPositionOther,
 	)
 
 	err = migration.Commit()
@@ -3300,10 +3302,11 @@ func TestMigrateNestedComposite(t *testing.T) {
 		value,
 		[]ValueMigration{
 			newTestMigration(inter, func(
-				key interpreter.StorageKey,
-				mapKey interpreter.StorageMapKey,
+				_ interpreter.StorageKey,
+				_ interpreter.StorageMapKey,
 				value interpreter.Value,
-				inter *interpreter.Interpreter,
+				_ *interpreter.Interpreter,
+				_ ValueMigrationPosition,
 			) (
 				interpreter.Value,
 				error,
@@ -3320,6 +3323,7 @@ func TestMigrateNestedComposite(t *testing.T) {
 		},
 		reporter,
 		true,
+		ValueMigrationPositionOther,
 	)
 
 	err = migration.Commit()
@@ -3356,7 +3360,7 @@ func checkHealth(t *testing.T, account common.Address, storedValues map[string][
 	}
 
 	// Load atree slabs
-	err := loadAtreeSlabsInStorge(storage, account, storedValues)
+	err := loadAtreeSlabsInStorage(storage, storedValues)
 	require.NoError(t, err)
 
 	err = storage.CheckHealth()
@@ -3368,6 +3372,7 @@ type migrateFunc func(
 	interpreter.StorageMapKey,
 	interpreter.Value,
 	*interpreter.Interpreter,
+	ValueMigrationPosition,
 ) (interpreter.Value, error)
 
 type testMigration struct {
@@ -3393,12 +3398,13 @@ func (m testMigration) Migrate(
 	mapKey interpreter.StorageMapKey,
 	value interpreter.Value,
 	inter *interpreter.Interpreter,
+	position ValueMigrationPosition,
 ) (
 	interpreter.Value,
 	error,
 ) {
 	if m.migrate != nil {
-		return m.migrate(key, mapKey, value, inter)
+		return m.migrate(key, mapKey, value, inter, position)
 	}
 	return nil, nil
 }
@@ -3411,7 +3417,7 @@ func (testMigration) Domains() map[string]struct{} {
 	return nil
 }
 
-func loadAtreeSlabsInStorge(storage *runtime.Storage, account common.Address, storedValues map[string][]byte) error {
+func loadAtreeSlabsInStorage(storage *runtime.Storage, storedValues map[string][]byte) error {
 	splitKey := func(s string) (owner string, key string, err error) {
 		results := strings.Split(s, "|")
 		if len(results) != 2 {

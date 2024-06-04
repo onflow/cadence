@@ -133,6 +133,7 @@ func TestTypeKeyMigration(t *testing.T) {
 					false,
 					nil,
 					nil,
+					true, // value is standalone
 				)
 
 				inter.WriteStored(

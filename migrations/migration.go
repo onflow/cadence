@@ -698,6 +698,7 @@ func (m *StorageMigration) migrateDictionaryValues(
 
 	dictionary.Iterate(
 		inter,
+		emptyLocationRange,
 		func(key, value interpreter.Value) (resume bool) {
 
 			existingKeysAndValues = append(
@@ -711,7 +712,6 @@ func (m *StorageMigration) migrateDictionaryValues(
 			// Continue iteration
 			return true
 		},
-		emptyLocationRange,
 	)
 
 	for _, existingKeyAndValue := range existingKeysAndValues {
