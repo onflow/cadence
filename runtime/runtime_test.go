@@ -11104,3 +11104,83 @@ func TestRuntimeAccountAnyStructReference(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.NonStorableValueError{})
 	})
 }
+
+func TestRuntimeAccountDoubleReference(t *testing.T) {
+
+	t.Parallel()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	runtime := NewTestInterpreterRuntime()
+
+	contract := []byte(`
+		access(all) contract C{
+
+			init() {
+				var acc = self.account.storage.borrow<auth(Storage) &(&Account)>(from:/storage/x)!
+			}
+		}
+	`)
+
+	deploy := DeploymentTransaction("C", contract)
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{addressValue}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnCreateAccount: func(payer Address) (address Address, err error) {
+			return addressValue, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	storage, inter, err := runtime.Storage(Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	accountReferenceValue := stdlib.NewAccountReferenceValue(
+		inter,
+		nil,
+		interpreter.NewAddressValue(nil, addressValue),
+		interpreter.UnauthorizedAccess,
+		interpreter.EmptyLocationRange,
+	)
+
+	storageMap := storage.GetStorageMap(addressValue, "storage", true)
+	storageMap.WriteValue(inter, interpreter.StringStorageMapKey("x"), accountReferenceValue)
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	var nestedReferenceError *interpreter.NestedReferenceError
+	require.NoError(t, err, &nestedReferenceError)
+}

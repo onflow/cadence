@@ -4528,6 +4528,12 @@ func (interpreter *Interpreter) authAccountBorrowFunction(
 			if value == nil {
 				return Nil
 			}
+			if reference, isReference := (*value).(ReferenceValue); isReference {
+				panic(NestedReferenceError{
+					Value:         reference,
+					LocationRange: invocation.LocationRange,
+				})
+			}
 
 			return NewSomeValueNonCopying(interpreter, reference)
 		},
