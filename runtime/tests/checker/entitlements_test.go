@@ -6191,6 +6191,48 @@ func TestCheckIdentityMapping(t *testing.T) {
 		// available for the reference typed field.
 		require.Equal(t, 0, auth.Entitlements.Len())
 	})
+
+	t.Run("initializer", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement X
+
+            struct S {
+                access(mapping Identity) let x: auth(mapping Identity) &String
+                init(_ str: auth(X) &String) {
+                    self.x = str // this should not be possible, as Identity may grant any entitlement, not just X
+                }
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("initializer with included Identity", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement X
+
+            entitlement mapping M {
+                include Identity
+            }
+
+            struct S {
+                access(mapping M) let x: auth(mapping M) &String
+                init(_ str: auth(X) &String) {
+                    self.x = str // this should not be possible, as Identity may grant any entitlement, not just X
+                }
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
 }
 
 func TestCheckMappingDefinitionWithInclude(t *testing.T) {
@@ -7170,6 +7212,54 @@ func TestInterpretMappingEscalation(t *testing.T) {
 
 		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+	t.Run("escalate", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+            entitlement Z
+
+            entitlement mapping M {
+                X -> Z 
+                X -> Y
+            }
+
+			access(all) struct Attacker {
+                access(mapping Identity) var s: auth(mapping Identity) &AnyStruct
+            
+                init(_ a: auth(Z) &AnyStruct){
+                    self.s = a
+                }
+            }
+
+            struct Nested {
+                access(X | Y) fun foo() {}
+                access(X | Z) fun bar() {}
+            }
+
+			struct Attackee {
+                access(mapping M) let nested: Nested
+                init() {
+                    self.nested = Nested()
+                }
+            }
+
+			fun main(): Void {
+				let attackee = Attackee()
+                let attackeeRef = &attackee as auth(Z) &Attackee
+                let attacker = Attacker(attackeeRef)
+                let attackerRef = &attacker as auth(X) &Attacker
+                let exploit: auth(X) &Attackee = attackerRef.s as! auth(X) &Attackee
+                exploit.nested.foo()
+			} 
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+
 	})
 
 	t.Run("field assign", func(t *testing.T) {
