@@ -232,11 +232,20 @@ class Updater {
     async fetchLatestReleaseTagName(fullRepoName: string): Promise<string | null> {
         try {
             const [owner, repoName] = fullRepoName.split('/')
-            const release = await this.octokit.rest.repos.getLatestRelease({
+            // Heuristic: Fetch as many releases on the first page as possible,
+            // and find the latest release by sorting the releases by semver
+            const releases = await this.octokit.rest.repos.listReleases({
                 owner,
                 repo: repoName,
+                per_page: 100
             })
-            return release.data.tag_name
+            const release = releases.data.sort((a, b) => {
+                return a.created_at.localeCompare(b.created_at)
+            }).pop()
+            if (release === undefined) {
+                return null
+            }
+            return release.tag_name
         } catch (e) {
             if (e instanceof RequestError) {
                 if (e.status === 404) {
