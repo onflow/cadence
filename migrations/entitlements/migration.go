@@ -28,14 +28,23 @@ import (
 )
 
 type EntitlementsMigration struct {
-	Interpreter *interpreter.Interpreter
+	Interpreter       *interpreter.Interpreter
+	migratedTypeCache migrations.StaticTypeCache
 }
 
 var _ migrations.ValueMigration = EntitlementsMigration{}
 
 func NewEntitlementsMigration(inter *interpreter.Interpreter) EntitlementsMigration {
+	return NewEntitlementsMigrationWithCache(inter, nil)
+}
+
+func NewEntitlementsMigrationWithCache(
+	inter *interpreter.Interpreter,
+	migratedTypeCache migrations.StaticTypeCache,
+) EntitlementsMigration {
 	return EntitlementsMigration{
-		Interpreter: inter,
+		Interpreter:       inter,
+		migratedTypeCache: migratedTypeCache,
 	}
 }
 
@@ -74,6 +83,21 @@ func (m EntitlementsMigration) ConvertToEntitledType(
 	}
 
 	inter := m.Interpreter
+	migratedTypeCache := m.migratedTypeCache
+
+	if migratedTypeCache != nil {
+		// Only cache if cache key generation succeeds.
+		// Some static types, like function types, are not encodable.
+		if key, keyErr := migrations.NewStaticTypeKey(staticType); keyErr == nil {
+			if migratedType, exists := migratedTypeCache.Get(key); exists {
+				return migratedType.StaticType, migratedType.Error
+			}
+
+			defer func() {
+				migratedTypeCache.Set(key, resultType, err)
+			}()
+		}
+	}
 
 	switch t := staticType.(type) {
 	case *interpreter.ReferenceStaticType:
