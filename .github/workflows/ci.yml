@@ -13,7 +13,7 @@ on:
       - 'v**'
 
 env:
-  GO_VERSION: '1.20'
+  GO_VERSION: '1.22'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}

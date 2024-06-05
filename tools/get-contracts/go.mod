@@ -1,6 +1,6 @@
 module github.com/onflow/cadence/tools/get-contracts
 
-go 1.20
+go 1.22
 
 require github.com/hasura/go-graphql-client v0.10.2
 
