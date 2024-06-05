@@ -180,19 +180,19 @@ func (m *StaticTypeMigration) maybeConvertStaticType(
 
 	if parentType == nil {
 		migratedTypeCache := m.migratedTypeCache
+		if migratedTypeCache != nil {
+			// Only cache if cache key generation succeeds.
+			// Some static types, like function types, are not encodable.
+			if key, keyErr := migrations.NewStaticTypeKey(staticType); keyErr == nil {
+				if cachedType, exists := migratedTypeCache.Get(key); exists {
+					return cachedType.StaticType
+				}
 
-		key, err := migrations.NewStaticTypeKey(staticType)
-		if err != nil {
-			panic(errors.NewUnexpectedErrorFromCause(err))
+				defer func() {
+					migratedTypeCache.Set(key, resultType, nil)
+				}()
+			}
 		}
-
-		if cachedType, exists := migratedTypeCache.Get(key); exists {
-			return cachedType.StaticType
-		}
-
-		defer func() {
-			migratedTypeCache.Set(key, resultType, nil)
-		}()
 	}
 
 	switch staticType := staticType.(type) {

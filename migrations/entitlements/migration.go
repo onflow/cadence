@@ -23,7 +23,6 @@ import (
 
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/migrations/statictypes"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -87,18 +86,19 @@ func (m EntitlementsMigration) ConvertToEntitledType(
 	inter := m.Interpreter
 	migratedTypeCache := m.migratedTypeCache
 
-	key, err := migrations.NewStaticTypeKey(staticType)
-	if err != nil {
-		panic(errors.NewUnexpectedErrorFromCause(err))
-	}
+	if migratedTypeCache != nil {
+		// Only cache if cache key generation succeeds.
+		// Some static types, like function types, are not encodable.
+		if key, keyErr := migrations.NewStaticTypeKey(staticType); keyErr == nil {
+			if migratedType, exists := migratedTypeCache.Get(key); exists {
+				return migratedType.StaticType, migratedType.Error
+			}
 
-	if migratedType, exists := migratedTypeCache.Get(key); exists {
-		return migratedType.StaticType, migratedType.Error
+			defer func() {
+				migratedTypeCache.Set(key, resultType, err)
+			}()
+		}
 	}
-
-	defer func() {
-		migratedTypeCache.Set(key, resultType, err)
-	}()
 
 	switch t := staticType.(type) {
 	case *interpreter.ReferenceStaticType:
