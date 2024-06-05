@@ -251,6 +251,10 @@ func (v *SimpleCompositeValue) Storable(_ atree.SlabStorage, _ atree.Address, _ 
 	return NonStorable{Value: v}, nil
 }
 
+func (*SimpleCompositeValue) IsStorable() bool {
+	return false
+}
+
 func (*SimpleCompositeValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }

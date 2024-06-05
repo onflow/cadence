@@ -151,7 +151,7 @@ func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange Loca
 }
 
 func (*PathCapabilityValue) IsStorable() bool {
-	panic(errors.NewUnreachableError())
+	return true
 }
 
 func (v *PathCapabilityValue) Storable(

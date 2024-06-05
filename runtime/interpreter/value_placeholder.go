@@ -71,6 +71,10 @@ func (f placeholderValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint6
 	return NonStorable{Value: f}, nil
 }
 
+func (placeholderValue) IsStorable() bool {
+	return false
+}
+
 func (placeholderValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }

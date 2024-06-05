@@ -2662,6 +2662,12 @@ func (interpreter *Interpreter) WriteStored(
 	key StorageMapKey,
 	value Value,
 ) (existed bool) {
+	if value != nil && !value.IsStorable() {
+		panic(&NonStorableValueError{
+			Value: value,
+		})
+	}
+
 	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, true)
 	return accountStorage.WriteValue(interpreter, key, value)
 }

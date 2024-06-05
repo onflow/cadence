@@ -137,6 +137,10 @@ func (f *InterpretedFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address
 	return NonStorable{Value: f}, nil
 }
 
+func (_ InterpretedFunctionValue) IsStorable() bool {
+	return false
+}
+
 func (*InterpretedFunctionValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
@@ -287,6 +291,10 @@ func (f *HostFunctionValue) ConformsToStaticType(
 
 func (f *HostFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
+}
+
+func (_ HostFunctionValue) IsStorable() bool {
+	return false
 }
 
 func (*HostFunctionValue) NeedsStoreTo(_ atree.Address) bool {
@@ -463,6 +471,10 @@ func (f BoundFunctionValue) ConformsToStaticType(
 
 func (f BoundFunctionValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return NonStorable{Value: f}, nil
+}
+
+func (_ BoundFunctionValue) IsStorable() bool {
+	return false
 }
 
 func (BoundFunctionValue) NeedsStoreTo(_ atree.Address) bool {

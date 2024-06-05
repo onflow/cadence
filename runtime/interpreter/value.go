@@ -142,6 +142,7 @@ type Value interface {
 	// NOTE: memory metering is unnecessary for Clone methods
 	Clone(interpreter *Interpreter) Value
 	IsImportable(interpreter *Interpreter, locationRange LocationRange) bool
+	IsStorable() bool
 }
 
 // ValueIndexableValue
@@ -511,6 +512,10 @@ func (v TypeValue) StoredValue(_ atree.SlabStorage) (atree.Value, error) {
 	return v, nil
 }
 
+func (_ TypeValue) IsStorable() bool {
+	return true
+}
+
 func (TypeValue) ChildStorables() []atree.Storable {
 	return nil
 }
@@ -591,6 +596,10 @@ func (v VoidValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 
 func (v VoidValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return v, nil
+}
+
+func (_ VoidValue) IsStorable() bool {
+	return true
 }
 
 func (VoidValue) NeedsStoreTo(_ atree.Address) bool {
@@ -764,6 +773,10 @@ func (v BoolValue) ConformsToStaticType(
 
 func (v BoolValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return v, nil
+}
+
+func (_ BoolValue) IsStorable() bool {
+	return true
 }
 
 func (BoolValue) NeedsStoreTo(_ atree.Address) bool {
@@ -952,6 +965,10 @@ func (v CharacterValue) ConformsToStaticType(
 
 func (v CharacterValue) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return v, nil
+}
+
+func (_ CharacterValue) IsStorable() bool {
+	return true
 }
 
 func (CharacterValue) NeedsStoreTo(_ atree.Address) bool {
@@ -1550,6 +1567,10 @@ func (v *StringValue) ReplaceAll(inter *Interpreter, _ LocationRange, of string,
 
 func (v *StringValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
+}
+
+func (*StringValue) IsStorable() bool {
+	return true
 }
 
 func (*StringValue) NeedsStoreTo(_ atree.Address) bool {
@@ -2952,6 +2973,10 @@ func (v *ArrayValue) Storable(
 	return v.array.Storable(storage, address, maxInlineSize)
 }
 
+func (*ArrayValue) IsStorable() bool {
+	return true
+}
+
 func (v *ArrayValue) IsReferenceTrackedResourceKindedValue() {}
 
 func (v *ArrayValue) Transfer(
@@ -4304,6 +4329,10 @@ func (v IntValue) Storable(storage atree.SlabStorage, address atree.Address, max
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
+func (IntValue) IsStorable() bool {
+	return true
+}
+
 func (IntValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
@@ -4942,6 +4971,10 @@ func (v Int8Value) ConformsToStaticType(
 
 func (v Int8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return v, nil
+}
+
+func (Int8Value) IsStorable() bool {
+	return true
 }
 
 func (Int8Value) NeedsStoreTo(_ atree.Address) bool {
@@ -5586,6 +5619,10 @@ func (v Int16Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
+func (Int16Value) IsStorable() bool {
+	return true
+}
+
 func (Int16Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
@@ -6228,6 +6265,10 @@ func (v Int32Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (at
 	return v, nil
 }
 
+func (Int32Value) IsStorable() bool {
+	return true
+}
+
 func (Int32Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
@@ -6860,6 +6901,10 @@ func (v Int64Value) ConformsToStaticType(
 
 func (v Int64Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return v, nil
+}
+
+func (Int64Value) IsStorable() bool {
+	return true
 }
 
 func (Int64Value) NeedsStoreTo(_ atree.Address) bool {
@@ -7606,6 +7651,10 @@ func (v Int128Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
+func (Int128Value) IsStorable() bool {
+	return true
+}
+
 func (Int128Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
@@ -8347,6 +8396,10 @@ func (v Int256Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (a
 	return v, nil
 }
 
+func (Int256Value) IsStorable() bool {
+	return true
+}
+
 func (Int256Value) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
@@ -8976,6 +9029,10 @@ func (v UIntValue) Storable(storage atree.SlabStorage, address atree.Address, ma
 	return maybeLargeImmutableStorable(v, storage, address, maxInlineSize)
 }
 
+func (UIntValue) IsStorable() bool {
+	return true
+}
+
 func (UIntValue) NeedsStoreTo(_ atree.Address) bool {
 	return false
 }
@@ -9560,6 +9617,10 @@ func (v UInt8Value) ConformsToStaticType(
 
 func (v UInt8Value) Storable(_ atree.SlabStorage, _ atree.Address, _ uint64) (atree.Storable, error) {
 	return v, nil
+}
+
+func (UInt8Value) IsStorable() bool {
+	return true
 }
 
 func (UInt8Value) NeedsStoreTo(_ atree.Address) bool {
@@ -19682,6 +19743,10 @@ func (v *DictionaryValue) Storable(
 	return v.dictionary.Storable(storage, address, maxInlineSize)
 }
 
+func (*DictionaryValue) IsStorable() bool {
+	return true
+}
+
 func (v *DictionaryValue) IsReferenceTrackedResourceKindedValue() {}
 
 func (v *DictionaryValue) Transfer(
@@ -20343,6 +20408,10 @@ func (v *SomeValue) Storable(
 		address,
 		maxInlineSize,
 	)
+}
+
+func (v *SomeValue) IsStorable() bool {
+	return v.value.IsStorable()
 }
 
 func (v *SomeValue) NeedsStoreTo(address atree.Address) bool {

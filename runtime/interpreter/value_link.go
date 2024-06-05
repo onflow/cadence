@@ -109,7 +109,7 @@ func (v PathLinkValue) Equal(interpreter *Interpreter, locationRange LocationRan
 }
 
 func (PathLinkValue) IsStorable() bool {
-	panic(errors.NewUnreachableError())
+	return true
 }
 
 func (v PathLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {
@@ -231,7 +231,7 @@ func (v AccountLinkValue) Equal(_ *Interpreter, _ LocationRange, other Value) bo
 }
 
 func (AccountLinkValue) IsStorable() bool {
-	panic(errors.NewUnreachableError())
+	return true
 }
 
 func (v AccountLinkValue) Storable(storage atree.SlabStorage, address atree.Address, maxInlineSize uint64) (atree.Storable, error) {

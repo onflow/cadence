@@ -10842,3 +10842,201 @@ func TestRuntimeAccountEntitlementEscalation(t *testing.T) {
 		})
 	require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
 }
+
+func TestRuntimeAccountAnyStructReference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("reference", func(t *testing.T) {
+		t.Parallel()
+
+		addressValue := Address{
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+		}
+
+		runtime := NewTestInterpreterRuntime()
+
+		contract := []byte(`
+		access(all) contract C{
+
+			init() {
+				var a = getAccount(0x01)
+				self.account.storage.save(a as AnyStruct, to:/storage/x)
+				var acc = self.account.storage.borrow<auth(Storage) &(&Account)>(from:/storage/x)!
+				destroy  acc.storage.load<@AnyResource>(from: /storage/flowTokenVault)
+				self.account.storage.load<AnyStruct>(from: /storage/x)
+			}
+		}
+	`)
+
+		deploy := DeploymentTransaction("C", contract)
+
+		accountCodes := map[Location][]byte{}
+		var events []cadence.Event
+
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{addressValue}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnCreateAccount: func(payer Address) (address Address, err error) {
+				return addressValue, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deploy,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		var nonStorableValueError *interpreter.NonStorableValueError
+		require.ErrorAs(t, err, &nonStorableValueError)
+	})
+
+	t.Run("reference array", func(t *testing.T) {
+		t.Parallel()
+
+		addressValue := Address{
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+		}
+
+		runtime := NewTestInterpreterRuntime()
+
+		contract := []byte(`
+		access(all) contract C{
+
+			init() {
+				var a = [getAccount(0x01)]
+				self.account.storage.save(a as AnyStruct, to:/storage/x)
+			}
+		}
+	`)
+
+		deploy := DeploymentTransaction("C", contract)
+
+		accountCodes := map[Location][]byte{}
+		var events []cadence.Event
+
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{addressValue}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnCreateAccount: func(payer Address) (address Address, err error) {
+				return addressValue, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deploy,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.ErrorAs(t, err, &interpreter.NonStorableValueError{})
+	})
+
+	t.Run("reference dict", func(t *testing.T) {
+		t.Parallel()
+
+		addressValue := Address{
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+		}
+
+		runtime := NewTestInterpreterRuntime()
+
+		contract := []byte(`
+		access(all) contract C{
+
+			init() {
+				var a = {"": getAccount(0x01)}
+				self.account.storage.save(a as AnyStruct, to:/storage/x)
+			}
+		}
+	`)
+
+		deploy := DeploymentTransaction("C", contract)
+
+		accountCodes := map[Location][]byte{}
+		var events []cadence.Event
+
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{addressValue}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnCreateAccount: func(payer Address) (address Address, err error) {
+				return addressValue, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deploy,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.ErrorAs(t, err, &interpreter.NonStorableValueError{})
+	})
+}
