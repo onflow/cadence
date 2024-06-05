@@ -40,8 +40,7 @@ type InterfaceTypeConverterFunc func(*interpreter.InterfaceStaticType) interpret
 var _ migrations.ValueMigration = &StaticTypeMigration{}
 
 func NewStaticTypeMigration() *StaticTypeMigration {
-	staticTypeCache := migrations.NewDefaultStaticTypeCache()
-	return NewStaticTypeMigrationWithCache(staticTypeCache)
+	return NewStaticTypeMigrationWithCache(nil)
 }
 
 func NewStaticTypeMigrationWithCache(migratedTypeCache migrations.StaticTypeCache) *StaticTypeMigration {

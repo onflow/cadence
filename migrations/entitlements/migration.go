@@ -35,8 +35,7 @@ type EntitlementsMigration struct {
 var _ migrations.ValueMigration = EntitlementsMigration{}
 
 func NewEntitlementsMigration(inter *interpreter.Interpreter) EntitlementsMigration {
-	staticTypeCache := migrations.NewDefaultStaticTypeCache()
-	return NewEntitlementsMigrationWithCache(inter, staticTypeCache)
+	return NewEntitlementsMigrationWithCache(inter, nil)
 }
 
 func NewEntitlementsMigrationWithCache(
