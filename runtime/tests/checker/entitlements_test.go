@@ -6080,7 +6080,7 @@ func TestCheckIdentityMapping(t *testing.T) {
 
                 init() {
                     let x = X()
-                    self.x1 = &x as auth(A, B, C) &X
+                    self.x1 = &x
                     self.x2 = nil
                 }
             }
@@ -6209,6 +6209,41 @@ func TestCheckIdentityMapping(t *testing.T) {
 		errors := RequireCheckerErrors(t, err, 1)
 		var typeMismatchError *sema.TypeMismatchError
 		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("initializer with owned value", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement X
+
+            struct S {
+                access(mapping Identity) let x: [String]
+                init(_ str: [String]) {
+                    self.x = str // this should be possible, as the string array is owned here
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("initializer with inferred reference type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement X
+
+            struct S {
+                access(mapping Identity) let x: auth(mapping Identity) &String
+                init(_ str: String) {
+                    self.x = &str // this should be possible, as we own the string and thus inference is able to give the &str 
+                    // reference the appropriate type
+                }
+            }
+        `)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("initializer with included Identity", func(t *testing.T) {

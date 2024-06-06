@@ -256,7 +256,7 @@ type EntitlementMapAccess struct {
 	Type         *EntitlementMapType
 	domain       EntitlementSetAccess
 	domainOnce   sync.Once
-	codomain     EntitlementSetAccess
+	codomain     Access
 	codomainOnce sync.Once
 	images       sync.Map
 }
@@ -352,7 +352,7 @@ func (e *EntitlementMapAccess) Domain() EntitlementSetAccess {
 	return e.domain
 }
 
-func (e *EntitlementMapAccess) Codomain() EntitlementSetAccess {
+func (e *EntitlementMapAccess) Codomain() Access {
 	e.codomainOnce.Do(func() {
 		codomain := common.MappedSliceWithNoDuplicates(
 			e.Type.Relations,
@@ -464,6 +464,9 @@ func (a PrimitiveAccess) Equal(other Access) bool {
 }
 
 func (a PrimitiveAccess) PermitsAccess(otherAccess Access) bool {
+	if ast.PrimitiveAccess(a) == ast.AccessNone {
+		return false
+	}
 	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
 		return ast.PrimitiveAccess(a) >= ast.PrimitiveAccess(otherPrimitive)
 	}
