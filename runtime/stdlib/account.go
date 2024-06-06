@@ -2040,17 +2040,17 @@ func newAccountContractsRemoveFunction(
 				// NOTE: *DO NOT* call setProgram – the program removal
 				// should not be effective during the execution, only after
 
-				existingProgram, err := parser.ParseProgram(gauge, code, parser.Config{})
-
-				// If the existing code is not parsable (i.e: `err != nil`),
-				// that shouldn't be a reason to fail the contract removal.
-				// Therefore, validate only if the code is a valid one.
-				if err == nil && containsEnumsInProgram(existingProgram) {
-					panic(&ContractRemovalError{
-						Name:          name,
-						LocationRange: locationRange,
-					})
-				}
+				//existingProgram, err := parser.ParseProgram(gauge, code, parser.Config{})
+				//
+				//// If the existing code is not parsable (i.e: `err != nil`),
+				//// that shouldn't be a reason to fail the contract removal.
+				//// Therefore, validate only if the code is a valid one.
+				//if err == nil && containsEnumsInProgram(existingProgram) {
+				//	panic(&ContractRemovalError{
+				//		Name:          name,
+				//		LocationRange: locationRange,
+				//	})
+				//}
 
 				errors.WrapPanic(func() {
 					err = handler.RemoveAccountContractCode(location)
