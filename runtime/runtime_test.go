@@ -10910,8 +10910,7 @@ func TestRuntimeAccountAnyStructReference(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		var nonStorableValueError *interpreter.NonStorableValueError
-		require.ErrorAs(t, err, &nonStorableValueError)
+		require.ErrorAs(t, err, &interpreter.NonStorableValueError{})
 	})
 
 	t.Run("function", func(t *testing.T) {
@@ -10974,8 +10973,7 @@ func TestRuntimeAccountAnyStructReference(t *testing.T) {
 				Location:  nextTransactionLocation(),
 			},
 		)
-		var nonStorableValueError *interpreter.NonStorableValueError
-		require.ErrorAs(t, err, &nonStorableValueError)
+		require.ErrorAs(t, err, &interpreter.NonStorableValueError{})
 	})
 
 	t.Run("reference array", func(t *testing.T) {
