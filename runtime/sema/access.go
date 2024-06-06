@@ -326,7 +326,13 @@ func (e *EntitlementMapAccess) PermitsAccess(other Access) bool {
 	// the input entitlement. It is only safe for `R` to give out these entitlements if it actually
 	// possesses them, so we require the initializing value to have every possible entitlement that may
 	// be produced by the map
+	//
+	// However, if the map is or includes the `Identity`, there is no possible set that is permitted by
+	// this map, since the theoretical codomain of the Identity map is infinite
 	case EntitlementSetAccess:
+		if e.Type.IncludesIdentity {
+			return false
+		}
 		return e.Codomain().PermitsAccess(otherAccess)
 	default:
 		return false
