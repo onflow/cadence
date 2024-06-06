@@ -2663,7 +2663,7 @@ func (interpreter *Interpreter) WriteStored(
 	value Value,
 ) (existed bool) {
 	if value != nil && !value.IsStorable() {
-		panic(&NonStorableValueError{
+		panic(NonStorableValueError{
 			Value: value,
 		})
 	}
