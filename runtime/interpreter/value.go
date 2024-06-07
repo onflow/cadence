@@ -20601,6 +20601,13 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRa
 		return nil, nil
 	}
 
+	if reference, isReference := referenced.(ReferenceValue); isReference {
+		panic(NestedReferenceError{
+			Value:         reference,
+			LocationRange: locationRange,
+		})
+	}
+
 	if v.BorrowedType != nil {
 		staticType := referenced.StaticType(interpreter)
 
