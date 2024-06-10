@@ -25,6 +25,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
@@ -659,6 +660,29 @@ func (Unauthorized) Equal(auth Authorization) bool {
 	return ok
 }
 
+type Inaccessible struct{}
+
+var InaccessibleAccess Authorization = Inaccessible{}
+
+func (Inaccessible) isAuthorization() {}
+
+func (Inaccessible) String() string {
+	return ""
+}
+
+func (Inaccessible) MeteredString(_ common.MemoryGauge) string {
+	return ""
+}
+
+func (Inaccessible) ID() TypeID {
+	panic(errors.NewUnreachableError())
+}
+
+func (Inaccessible) Equal(auth Authorization) bool {
+	_, ok := auth.(Inaccessible)
+	return ok
+}
+
 type EntitlementSetAuthorization struct {
 	Entitlements *sema.TypeIDOrderedSet
 	SetKind      sema.EntitlementSetKind
@@ -1049,6 +1073,9 @@ func ConvertSemaAccessToStaticAuthorization(
 		if access.Equal(sema.UnauthorizedAccess) {
 			return UnauthorizedAccess
 		}
+		if access.Equal(sema.PrimitiveAccess(ast.AccessNone)) {
+			return InaccessibleAccess
+		}
 
 	case sema.EntitlementSetAccess:
 		var entitlements []common.TypeID
@@ -1123,6 +1150,9 @@ func ConvertStaticAuthorizationToSemaAccess(
 	switch auth := auth.(type) {
 	case Unauthorized:
 		return sema.UnauthorizedAccess, nil
+
+	case Inaccessible:
+		return sema.PrimitiveAccess(ast.AccessNone), nil
 
 	case EntitlementMapAuthorization:
 		entitlement, err := handler.GetEntitlementMapType(auth.TypeID)

@@ -225,6 +225,7 @@ const (
 	CBORTagEntitlementMapStaticAuthorization
 	CBORTagEntitlementSetStaticAuthorization
 	CBORTagInclusiveRangeStaticType
+	CBORTagInaccessibleStaticAuthorization
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -1310,6 +1311,17 @@ func (t Unauthorized) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagUnauthorizedStaticAuthorization,
+	})
+	if err != nil {
+		return err
+	}
+	return e.EncodeNil()
+}
+
+func (t Inaccessible) Encode(e *cbor.StreamEncoder) error {
+	err := e.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagInaccessibleStaticAuthorization,
 	})
 	if err != nil {
 		return err

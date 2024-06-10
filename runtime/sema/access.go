@@ -465,7 +465,7 @@ func (a PrimitiveAccess) Equal(other Access) bool {
 
 func (a PrimitiveAccess) PermitsAccess(otherAccess Access) bool {
 	if ast.PrimitiveAccess(a) == ast.AccessNone {
-		return false
+		return PrimitiveAccess(ast.AccessNone) == otherAccess
 	}
 	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
 		return ast.PrimitiveAccess(a) >= ast.PrimitiveAccess(otherPrimitive)
