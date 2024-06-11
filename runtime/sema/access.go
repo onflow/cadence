@@ -256,7 +256,7 @@ type EntitlementMapAccess struct {
 	Type         *EntitlementMapType
 	domain       EntitlementSetAccess
 	domainOnce   sync.Once
-	codomain     Access
+	codomain     EntitlementSetAccess
 	codomainOnce sync.Once
 	images       sync.Map
 }
