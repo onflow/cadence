@@ -716,3 +716,58 @@ func TestCheckImportVirtual(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func TestCheckImportContract(t *testing.T) {
+
+	t.Parallel()
+
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		`
+        access(all) contract Foo {
+            access(all) let x: [Int]
+            // access(all) let y: [Int]
+
+            access(all) fun answer(): Int {
+                return 42
+            }
+
+            access(all) struct Bar {
+            }
+
+            init() {
+                self.x = []
+                // self.y = []
+            }
+        }`,
+		ParseAndCheckOptions{
+			Location: utils.ImportedLocation,
+		},
+	)
+
+	require.NoError(t, err)
+
+	_, err = ParseAndCheckWithOptions(t,
+		`
+        import Foo from "imported"
+
+        access(all) fun main() {
+            var x: &[Int] = Foo.x
+            Foo.x[0] = 3
+            Foo.x.append(4)
+
+            var bar: Foo.Bar = Foo.Bar()
+        }
+        `,
+		ParseAndCheckOptions{
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+			},
+		},
+	)
+
+	require.NoError(t, err)
+}

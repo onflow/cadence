@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -83,6 +84,30 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 
 	for _, name := range names {
 		variable := variables[name]
+
+		value := variable.GetValue(interpreter)
+
+		// If the variable is a contract value, then import it as a reference.
+		// This must be done at the type of importing, rather than when declaring the contract value.
+		compositeValue, ok := value.(*CompositeValue)
+		if ok && compositeValue.Kind == common.CompositeKindContract {
+			staticType := compositeValue.StaticType(interpreter)
+			semaType, err := interpreter.ConvertStaticToSemaType(staticType)
+			if err != nil {
+				panic(err)
+			}
+
+			contractReference := NewEphemeralReferenceValue(
+				interpreter,
+				UnauthorizedAccess,
+				compositeValue,
+				semaType,
+				LocationRange{
+					Location: interpreter.Location,
+				},
+			)
+			variable = NewVariableWithValue(interpreter, contractReference)
+		}
 
 		interpreter.setVariable(name, variable)
 		interpreter.Globals.Set(name, variable)
