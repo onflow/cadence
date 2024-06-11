@@ -6946,6 +6946,7 @@ var _ ValueIndexableType = &ReferenceType{}
 var _ TypeIndexableType = &ReferenceType{}
 
 var UnauthorizedAccess Access = PrimitiveAccess(ast.AccessAll)
+var InaccessibleAccess Access = PrimitiveAccess(ast.AccessNone)
 
 func NewReferenceType(
 	memoryGauge common.MemoryGauge,

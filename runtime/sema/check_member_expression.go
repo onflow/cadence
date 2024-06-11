@@ -487,7 +487,7 @@ func (checker *Checker) mapAccess(
 		//  possibly be authorized enough to write to it
 		if checker.inAssignment {
 			if mappedAccess.Type.IncludesIdentity {
-				return true, PrimitiveAccess(ast.AccessNone)
+				return true, InaccessibleAccess
 			}
 			return true, mappedAccess.Codomain()
 		}
@@ -499,7 +499,7 @@ func (checker *Checker) mapAccess(
 	default:
 		if mappedAccess.Type.IncludesIdentity {
 			if checker.inAssignment {
-				return true, PrimitiveAccess(ast.AccessNone)
+				return true, InaccessibleAccess
 			}
 			access := AllSupportedEntitlements(resultingType)
 			if access != nil {
