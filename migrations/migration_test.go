@@ -245,6 +245,9 @@ func (testCapConMigration) Migrate(
 
 	case interpreter.UInt64Value:
 		return value + 10, nil
+
+	case interpreter.NilValue:
+		return value, nil
 	}
 
 	return nil, nil
@@ -829,11 +832,20 @@ func TestCapConMigration(t *testing.T) {
 		false,
 	)
 
-	capSet := pathCapStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("foo"))
-	require.IsType(t, &interpreter.DictionaryValue{}, capSet)
-	capSetDict := capSet.(*interpreter.DictionaryValue)
+	pathCapSet := pathCapStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("foo"))
+	require.IsType(t, &interpreter.DictionaryValue{}, pathCapSet)
+	capSetDict := pathCapSet.(*interpreter.DictionaryValue)
 	assert.Equal(t, 1, capSetDict.Count())
 	assert.True(t, bool(capSetDict.ContainsKey(inter, emptyLocationRange, interpreter.UInt64Value(1))))
+
+	accountCapStorageMap := storage.GetStorageMap(
+		testAddress,
+		stdlib.AccountCapabilityStorageDomain,
+		false,
+	)
+
+	accountCapEntry := accountCapStorageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(2))
+	assert.NotNil(t, accountCapEntry)
 
 	// Migrate
 
@@ -854,9 +866,43 @@ func TestCapConMigration(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.migrated, 3)
-
 	require.Empty(t, reporter.errors)
+	assert.Equal(t,
+		map[struct {
+			interpreter.StorageKey
+			interpreter.StorageMapKey
+		}][]string{
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(1),
+			}: {"testCapConMigration"},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress,
+					Key:     stdlib.CapabilityControllerStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(2),
+			}: {"testCapConMigration"},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress,
+					Key:     stdlib.PathCapabilityStorageDomain,
+				},
+				StorageMapKey: interpreter.StringStorageMapKey("foo"),
+			}: {"testCapConMigration", "testCapConMigration"},
+			{
+				StorageKey: interpreter.StorageKey{
+					Address: testAddress,
+					Key:     stdlib.AccountCapabilityStorageDomain,
+				},
+				StorageMapKey: interpreter.Uint64StorageMapKey(2),
+			}: {"testCapConMigration"},
+		},
+		reporter.migrated,
+	)
 
 	err = storage.CheckHealth()
 	require.NoError(t, err)
@@ -889,12 +935,20 @@ func TestCapConMigration(t *testing.T) {
 		false,
 	)
 
-	capSet = pathCapStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("foo"))
-	require.IsType(t, &interpreter.DictionaryValue{}, capSet)
-	capSetDict = capSet.(*interpreter.DictionaryValue)
+	pathCapSet = pathCapStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("foo"))
+	require.IsType(t, &interpreter.DictionaryValue{}, pathCapSet)
+	capSetDict = pathCapSet.(*interpreter.DictionaryValue)
 	assert.Equal(t, 1, capSetDict.Count())
 	assert.True(t, bool(capSetDict.ContainsKey(inter, emptyLocationRange, interpreter.UInt64Value(11))))
 
+	accountCapStorageMap = storage.GetStorageMap(
+		testAddress,
+		stdlib.AccountCapabilityStorageDomain,
+		false,
+	)
+
+	accountCapEntry = accountCapStorageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(2))
+	assert.NotNil(t, accountCapEntry)
 }
 
 func TestContractMigration(t *testing.T) {
