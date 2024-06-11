@@ -769,5 +769,11 @@ func TestCheckImportContract(t *testing.T) {
 		},
 	)
 
-	require.NoError(t, err)
+	errs := RequireCheckerErrors(t, err, 2)
+
+	assignmentError := &sema.UnauthorizedReferenceAssignmentError{}
+	assert.ErrorAs(t, errs[0], &assignmentError)
+
+	accessError := &sema.InvalidAccessError{}
+	assert.ErrorAs(t, errs[1], &accessError)
 }

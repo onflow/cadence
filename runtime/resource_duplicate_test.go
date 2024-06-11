@@ -29,7 +29,7 @@ import (
 	"github.com/onflow/cadence/encoding/json"
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/interpreter"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -171,17 +171,21 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
               // Move vault into the contract
               Holder.setContent(<-vault)
 
-              // Save the contract into storage (invalid, even if same account)
+              // Save the contract reference into storage.
+              // This won't error, since the validation happens at the end of the transaction.
               acct.storage.save(Holder as AnyStruct, to: /storage/holder)
 
               // Move vault back out of the contract
               let vault2 <- Holder.swapContent(nil)
               let unwrappedVault2 <- vault2!
 
-              // Load the contract back from storage
-              let dupeContract = acct.storage.load<AnyStruct>(from: /storage/holder)! as! Holder
+              // Load the contract reference back from storage.
+              // Given the value is a reference, this won't duplicate the contract value.
+              let dupeContract = acct.storage.load<AnyStruct>(from: /storage/holder)! as! &Holder
 
-              // Move the vault of of the duplicated contract
+              // Move the vault of of the contract.
+              // The 'dupeVault' must be nil, since it was moved out of the contract
+              // in the above step.
               let dupeVault <- dupeContract.swapContent(nil)
               let unwrappedDupeVault <- dupeVault!
 
@@ -204,6 +208,6 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var invalidMoveError *sema.InvalidMoveError
-	require.ErrorAs(t, err, &invalidMoveError)
+	var forceNilError interpreter.ForceNilError
+	require.ErrorAs(t, err, &forceNilError)
 }

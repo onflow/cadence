@@ -84,6 +84,9 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 
 	for _, name := range names {
 		variable := variables[name]
+		if variable == nil {
+			continue
+		}
 
 		value := variable.GetValue(interpreter)
 
