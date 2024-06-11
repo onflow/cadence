@@ -39,4 +39,6 @@ type Config struct {
 	AttachmentsEnabled bool
 	// LegacyContractUpgradeEnabled enabled specifies whether to use the old parser when parsing an old contract
 	LegacyContractUpgradeEnabled bool
+	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates
+	ContractUpdateTypeRemovalEnabled bool
 }

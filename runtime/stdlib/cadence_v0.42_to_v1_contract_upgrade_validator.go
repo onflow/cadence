@@ -71,10 +71,21 @@ func NewCadenceV042ToV1ContractUpdateValidator(
 
 var _ UpdateValidator = &CadenceV042ToV1ContractUpdateValidator{}
 
+func (validator *CadenceV042ToV1ContractUpdateValidator) isTypeRemovalEnabled() bool {
+	return validator.underlyingUpdateValidator.isTypeRemovalEnabled()
+}
+
 func (validator *CadenceV042ToV1ContractUpdateValidator) WithUserDefinedTypeChangeChecker(
 	typeChangeCheckFunc func(oldTypeID common.TypeID, newTypeID common.TypeID) (checked, valid bool),
 ) *CadenceV042ToV1ContractUpdateValidator {
 	validator.checkUserDefinedType = typeChangeCheckFunc
+	return validator
+}
+
+func (validator *CadenceV042ToV1ContractUpdateValidator) WithTypeRemovalEnabled(
+	enabled bool,
+) UpdateValidator {
+	validator.underlyingUpdateValidator.WithTypeRemovalEnabled(enabled)
 	return validator
 }
 
