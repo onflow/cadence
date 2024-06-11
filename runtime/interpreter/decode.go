@@ -1658,6 +1658,12 @@ func (d TypeDecoder) decodeStaticAuthorization() (Authorization, error) {
 			return nil, err
 		}
 		return UnauthorizedAccess, nil
+	case CBORTagInaccessibleStaticAuthorization:
+		err := d.decoder.DecodeNil()
+		if err != nil {
+			return nil, err
+		}
+		return InaccessibleAccess, nil
 	case CBORTagEntitlementMapStaticAuthorization:
 		typeID, err := d.decoder.DecodeString()
 		if err != nil {

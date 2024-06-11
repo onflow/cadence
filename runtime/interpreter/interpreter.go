@@ -4991,7 +4991,7 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(
 
 		default:
 			var access sema.Access
-			if mappedAccess.Type == sema.IdentityType {
+			if mappedAccess.Type.IncludesIdentity {
 				access = sema.AllSupportedEntitlements(resultingType)
 			}
 

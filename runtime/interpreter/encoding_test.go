@@ -3587,7 +3587,7 @@ func TestCBORTagValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("No new types added in between", func(t *testing.T) {
-		require.Equal(t, byte(226), byte(CBORTag_Count))
+		require.Equal(t, byte(231), byte(CBORTag_Count))
 	})
 }
 

@@ -3024,7 +3024,7 @@ func TestInterpretIdentityMapping(t *testing.T) {
 
                 init() {
                     let x = X()
-                    self.x1 = &x as auth(A, B, C) &X
+                    self.x1 = &x
                     self.x2 = nil
                 }
             }
