@@ -127,6 +127,18 @@ func (m *StorageMigration) Migrate(migrator StorageMapKeyMigrator) {
 		stdlib.CapabilityControllerStorageDomain,
 		migrator,
 	)
+
+	accountStorage.MigrateStringKeys(
+		m.interpreter,
+		stdlib.PathCapabilityStorageDomain,
+		migrator,
+	)
+
+	accountStorage.MigrateUint64Keys(
+		m.interpreter,
+		stdlib.AccountCapabilityStorageDomain,
+		migrator,
+	)
 }
 
 func (m *StorageMigration) NewValueMigrationsPathMigrator(
