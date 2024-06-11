@@ -643,11 +643,11 @@ var FullyEntitledAccountAccess = ConvertSemaAccessToStaticAuthorization(nil, sem
 func (Unauthorized) isAuthorization() {}
 
 func (Unauthorized) String() string {
-	return ""
+	return "Unauthorized"
 }
 
-func (Unauthorized) MeteredString(_ common.MemoryGauge) string {
-	return ""
+func (a Unauthorized) MeteredString(_ common.MemoryGauge) string {
+	return "Unauthorized"
 }
 
 func (Unauthorized) ID() TypeID {
@@ -666,11 +666,11 @@ var InaccessibleAccess Authorization = Inaccessible{}
 func (Inaccessible) isAuthorization() {}
 
 func (Inaccessible) String() string {
-	return ""
+	return "Inaccessible"
 }
 
 func (Inaccessible) MeteredString(_ common.MemoryGauge) string {
-	return ""
+	return "Inaccessible"
 }
 
 func (Inaccessible) ID() TypeID {
@@ -854,7 +854,10 @@ func (t *ReferenceStaticType) String() string {
 
 func (t *ReferenceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
 	typeStr := t.ReferencedType.MeteredString(memoryGauge)
-	authString := t.Authorization.MeteredString(memoryGauge)
+	authString := ""
+	if !t.Authorization.Equal(InaccessibleAccess) && !t.Authorization.Equal(UnauthorizedAccess) {
+		authString = t.Authorization.MeteredString(memoryGauge)
+	}
 
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(typeStr)+1+len(authString)))
 	return fmt.Sprintf("%s&%s", authString, typeStr)
