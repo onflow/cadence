@@ -483,7 +483,12 @@ func (checker *Checker) mapAccess(
 		//  we could use this to then extract a `auth(Insert, Remove) &[T]` reference to that array by accessing `member`
 		//  on an owned copy of `S`. As such, when in an assignment, we return the full codomain here as the "granted authorization"
 		//  of the access expression, since the checker will later enforce that the incoming reference value is a subtype of that full codomain.
+		//  However, if the map is or includes the `Identity` map, the theoretical codomain of that map is infinite, and so no reference can
+		//  possibly be authorized enough to write to it
 		if checker.inAssignment {
+			if mappedAccess.Type.IncludesIdentity {
+				return true, InaccessibleAccess
+			}
 			return true, mappedAccess.Codomain()
 		}
 		return true, grantedAccess
@@ -492,7 +497,10 @@ func (checker *Checker) mapAccess(
 		return checker.mapAccess(mappedAccess, ty.Type, resultingType, accessRange)
 
 	default:
-		if mappedAccess.Type == IdentityType {
+		if mappedAccess.Type.IncludesIdentity {
+			if checker.inAssignment {
+				return true, InaccessibleAccess
+			}
 			access := AllSupportedEntitlements(resultingType)
 			if access != nil {
 				return true, access
