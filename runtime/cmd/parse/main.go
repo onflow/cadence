@@ -84,6 +84,7 @@ type jsonOutput struct {
 
 func newJSONOutput(file *os.File, count int) *jsonOutput {
 	return &jsonOutput{
+		file:    file,
 		results: make([]result, 0, count),
 	}
 }
