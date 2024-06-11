@@ -72,4 +72,6 @@ type Config struct {
 	CapabilityBorrowHandler CapabilityBorrowHandlerFunc
 	// LegacyContractUpgradeEnabled specifies whether to fall back to the old parser when attempting a contract upgrade
 	LegacyContractUpgradeEnabled bool
+	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates
+	ContractUpdateTypeRemovalEnabled bool
 }
