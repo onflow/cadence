@@ -224,8 +224,14 @@ const (
 	CBORTagUnauthorizedStaticAuthorization
 	CBORTagEntitlementMapStaticAuthorization
 	CBORTagEntitlementSetStaticAuthorization
-	CBORTagInclusiveRangeStaticType
 	CBORTagInaccessibleStaticAuthorization
+
+	_
+	_
+	_
+	_
+
+	CBORTagInclusiveRangeStaticType
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
