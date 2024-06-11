@@ -242,6 +242,9 @@ func (testCapConMigration) Migrate(
 			value.BorrowType,
 			value.CapabilityID+10,
 		), nil
+
+	case interpreter.UInt64Value:
+		return value + 10, nil
 	}
 
 	return nil, nil
@@ -798,27 +801,39 @@ func TestCapConMigration(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	storageMap := storage.GetStorageMap(
+	capConStorageMap := storage.GetStorageMap(
 		testAddress,
 		stdlib.CapabilityControllerStorageDomain,
 		false,
 	)
 
-	assert.Equal(t, uint64(2), storageMap.Count())
+	assert.Equal(t, uint64(2), capConStorageMap.Count())
 
-	controller1 := storageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(1))
+	controller1 := capConStorageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(1))
 	require.IsType(t, &interpreter.StorageCapabilityControllerValue{}, controller1)
 	assert.Equal(t,
 		interpreter.UInt64Value(1),
 		controller1.(*interpreter.StorageCapabilityControllerValue).CapabilityID,
 	)
 
-	controller2 := storageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(2))
+	controller2 := capConStorageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(2))
 	require.IsType(t, &interpreter.AccountCapabilityControllerValue{}, controller2)
 	assert.Equal(t,
 		interpreter.UInt64Value(2),
 		controller2.(*interpreter.AccountCapabilityControllerValue).CapabilityID,
 	)
+
+	pathCapStorageMap := storage.GetStorageMap(
+		testAddress,
+		stdlib.PathCapabilityStorageDomain,
+		false,
+	)
+
+	capSet := pathCapStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("foo"))
+	require.IsType(t, &interpreter.DictionaryValue{}, capSet)
+	capSetDict := capSet.(*interpreter.DictionaryValue)
+	assert.Equal(t, 1, capSetDict.Count())
+	assert.True(t, bool(capSetDict.ContainsKey(inter, emptyLocationRange, interpreter.UInt64Value(1))))
 
 	// Migrate
 
@@ -839,34 +854,47 @@ func TestCapConMigration(t *testing.T) {
 
 	// Assert
 
-	assert.Len(t, reporter.migrated, 2)
+	assert.Len(t, reporter.migrated, 3)
 
 	require.Empty(t, reporter.errors)
 
 	err = storage.CheckHealth()
 	require.NoError(t, err)
 
-	storageMap = storage.GetStorageMap(
+	capConStorageMap = storage.GetStorageMap(
 		testAddress,
 		stdlib.CapabilityControllerStorageDomain,
 		false,
 	)
 
-	assert.Equal(t, uint64(2), storageMap.Count())
+	assert.Equal(t, uint64(2), capConStorageMap.Count())
 
-	controller1 = storageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(1))
+	controller1 = capConStorageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(1))
 	require.IsType(t, &interpreter.StorageCapabilityControllerValue{}, controller1)
 	assert.Equal(t,
 		interpreter.UInt64Value(11),
 		controller1.(*interpreter.StorageCapabilityControllerValue).CapabilityID,
 	)
 
-	controller2 = storageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(2))
+	controller2 = capConStorageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(2))
 	require.IsType(t, &interpreter.AccountCapabilityControllerValue{}, controller2)
 	assert.Equal(t,
 		interpreter.UInt64Value(12),
 		controller2.(*interpreter.AccountCapabilityControllerValue).CapabilityID,
 	)
+
+	pathCapStorageMap = storage.GetStorageMap(
+		testAddress,
+		stdlib.PathCapabilityStorageDomain,
+		false,
+	)
+
+	capSet = pathCapStorageMap.ReadValue(nil, interpreter.StringStorageMapKey("foo"))
+	require.IsType(t, &interpreter.DictionaryValue{}, capSet)
+	capSetDict = capSet.(*interpreter.DictionaryValue)
+	assert.Equal(t, 1, capSetDict.Count())
+	assert.True(t, bool(capSetDict.ContainsKey(inter, emptyLocationRange, interpreter.UInt64Value(11))))
+
 }
 
 func TestContractMigration(t *testing.T) {
