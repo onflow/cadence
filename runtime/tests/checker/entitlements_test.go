@@ -6101,6 +6101,68 @@ func TestCheckIdentityMapping(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
+	t.Run("owned value, with insufficient entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            struct X {
+               access(A | B) var s: String
+
+               init() {
+                   self.s = "hello"
+               }
+
+               access(C) fun foo() {}
+            }
+
+            struct Y {
+
+                // Reference
+                access(mapping Identity) var x1: auth(mapping Identity) &X
+
+                // Optional reference
+                access(mapping Identity) var x2: auth(mapping Identity) &X?
+
+                // Function returning a reference
+                access(mapping Identity) fun getX(): auth(mapping Identity) &X {
+                    let x = X()
+                    return &x as auth(mapping Identity) &X
+                }
+
+                // Function returning an optional reference
+                access(mapping Identity) fun getOptionalX(): auth(mapping Identity) &X? {
+                    let x: X? = X()
+                    return &x as auth(mapping Identity) &X?
+                }
+
+                init() {
+                    let x = X()
+                    self.x1 = &x as auth(A, B, C) &X
+                    self.x2 = nil
+                }
+            }
+
+            fun main() {
+                let y = Y()
+
+                let ref1: auth(A, B, C) &X = y.x1
+
+                let ref2: auth(A, B, C) &X? = y.x2
+
+                let ref3: auth(A, B, C) &X = y.getX()
+
+                let ref4: auth(A, B, C) &X? = y.getOptionalX()
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
 	t.Run("owned value, with entitlements, function typed field", func(t *testing.T) {
 		t.Parallel()
 
