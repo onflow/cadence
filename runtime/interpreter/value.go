@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20942,6 +20942,13 @@ func (v *StorageReferenceValue) dereference(interpreter *Interpreter, locationRa
 	referenced := interpreter.ReadStored(address, domain, storageMapKey)
 	if referenced == nil {
 		return nil, nil
+	}
+
+	if reference, isReference := referenced.(ReferenceValue); isReference {
+		panic(NestedReferenceError{
+			Value:         reference,
+			LocationRange: locationRange,
+		})
 	}
 
 	if v.BorrowedType != nil {

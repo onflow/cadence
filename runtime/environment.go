@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -184,15 +184,16 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled),
 		// see interpreterEnvironment.CommitStorage
-		AtreeStorageValidationEnabled: false,
-		Debugger:                      e.config.Debugger,
-		OnStatement:                   e.newOnStatementHandler(),
-		OnMeterComputation:            e.newOnMeterComputation(),
-		OnFunctionInvocation:          e.newOnFunctionInvocationHandler(),
-		OnInvokedFunctionReturn:       e.newOnInvokedFunctionReturnHandler(),
-		CapabilityBorrowHandler:       stdlib.BorrowCapabilityController,
-		CapabilityCheckHandler:        stdlib.CheckCapabilityController,
-		LegacyContractUpgradeEnabled:  e.config.LegacyContractUpgradeEnabled,
+		AtreeStorageValidationEnabled:    false,
+		Debugger:                         e.config.Debugger,
+		OnStatement:                      e.newOnStatementHandler(),
+		OnMeterComputation:               e.newOnMeterComputation(),
+		OnFunctionInvocation:             e.newOnFunctionInvocationHandler(),
+		OnInvokedFunctionReturn:          e.newOnInvokedFunctionReturnHandler(),
+		CapabilityBorrowHandler:          stdlib.BorrowCapabilityController,
+		CapabilityCheckHandler:           stdlib.CheckCapabilityController,
+		LegacyContractUpgradeEnabled:     e.config.LegacyContractUpgradeEnabled,
+		ContractUpdateTypeRemovalEnabled: e.config.ContractUpdateTypeRemovalEnabled,
 	}
 }
 

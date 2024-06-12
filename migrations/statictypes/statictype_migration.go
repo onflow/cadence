@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,7 @@ import (
 type StaticTypeMigration struct {
 	compositeTypeConverter CompositeTypeConverterFunc
 	interfaceTypeConverter InterfaceTypeConverterFunc
+	migratedTypeCache      migrations.StaticTypeCache
 }
 
 type CompositeTypeConverterFunc func(*interpreter.CompositeStaticType) interpreter.StaticType
@@ -39,7 +40,13 @@ type InterfaceTypeConverterFunc func(*interpreter.InterfaceStaticType) interpret
 var _ migrations.ValueMigration = &StaticTypeMigration{}
 
 func NewStaticTypeMigration() *StaticTypeMigration {
-	return &StaticTypeMigration{}
+	return NewStaticTypeMigrationWithCache(nil)
+}
+
+func NewStaticTypeMigrationWithCache(migratedTypeCache migrations.StaticTypeCache) *StaticTypeMigration {
+	return &StaticTypeMigration{
+		migratedTypeCache: migratedTypeCache,
+	}
 }
 
 func (m *StaticTypeMigration) WithCompositeTypeConverter(converterFunc CompositeTypeConverterFunc) *StaticTypeMigration {
@@ -164,6 +171,29 @@ func (m *StaticTypeMigration) maybeConvertStaticType(
 ) (
 	resultType interpreter.StaticType,
 ) {
+	// Consult the cache and cache the result at the root of the migration,
+	// i.e. when the parent type is nil.
+	//
+	// Parse of the migration, e.g. the intersection type migration depends on the parent type.
+	// For example, `{Ts}` in `&{Ts}` is migrated differently from `{Ts}`.
+
+	if parentType == nil {
+		migratedTypeCache := m.migratedTypeCache
+		if migratedTypeCache != nil {
+			// Only cache if cache key generation succeeds.
+			// Some static types, like function types, are not encodable.
+			if key, keyErr := migrations.NewStaticTypeKey(staticType); keyErr == nil {
+				if cachedType, exists := migratedTypeCache.Get(key); exists {
+					return cachedType.StaticType
+				}
+
+				defer func() {
+					migratedTypeCache.Set(key, resultType, nil)
+				}()
+			}
+		}
+	}
+
 	switch staticType := staticType.(type) {
 	case *interpreter.ConstantSizedStaticType:
 		convertedType := m.maybeConvertStaticType(staticType.Type, staticType)

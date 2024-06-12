@@ -23,7 +23,7 @@ on:
       - 'v**'
 
 env:
-  GO_VERSION: '1.20'
+  GO_VERSION: '1.22'
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.base || github.run_id }}

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1754,6 +1754,12 @@ func (d TypeDecoder) decodeStaticAuthorization() (Authorization, error) {
 			return nil, err
 		}
 		return UnauthorizedAccess, nil
+	case CBORTagInaccessibleStaticAuthorization:
+		err := d.decoder.DecodeNil()
+		if err != nil {
+			return nil, err
+		}
+		return InaccessibleAccess, nil
 	case CBORTagEntitlementMapStaticAuthorization:
 		typeID, err := d.decoder.DecodeString()
 		if err != nil {

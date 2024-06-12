@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,9 @@ type UpdateValidator interface {
 		oldDeclaration ast.Declaration,
 		newDeclaration ast.Declaration,
 	) bool
+
+	isTypeRemovalEnabled() bool
+	WithTypeRemovalEnabled(enabled bool) UpdateValidator
 }
 
 type checkConformanceFunc func(
@@ -68,6 +71,7 @@ type ContractUpdateValidator struct {
 	importLocations              map[ast.Identifier]common.Location
 	accountContractNamesProvider AccountContractNamesProvider
 	errors                       []error
+	typeRemovalEnabled           bool
 }
 
 // ContractUpdateValidator should implement ast.TypeEqualityChecker
@@ -93,6 +97,15 @@ func NewContractUpdateValidator(
 		importLocations:              map[ast.Identifier]common.Location{},
 		TypeComparator:               &TypeComparator{},
 	}
+}
+
+func (validator *ContractUpdateValidator) isTypeRemovalEnabled() bool {
+	return validator.typeRemovalEnabled
+}
+
+func (validator *ContractUpdateValidator) WithTypeRemovalEnabled(enabled bool) UpdateValidator {
+	validator.typeRemovalEnabled = enabled
+	return validator
 }
 
 func (validator *ContractUpdateValidator) getCurrentDeclaration() ast.Declaration {
@@ -354,10 +367,12 @@ func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
 		return
 	}
 
-	// OK to remove a type if it is included in a #removedType pragma, and it is not an interface
-	if removedTypes.Contains(nestedDeclaration.DeclarationIdentifier().Identifier) &&
-		!declarationKind.IsInterfaceDeclaration() {
-		return
+	if validator.typeRemovalEnabled {
+		// OK to remove a type if it is included in a #removedType pragma, and it is not an interface
+		if removedTypes.Contains(nestedDeclaration.DeclarationIdentifier().Identifier) &&
+			!declarationKind.IsInterfaceDeclaration() {
+			return
+		}
 	}
 
 	validator.report(&MissingDeclarationError{
@@ -383,6 +398,10 @@ func checkTypeNotRemoved(
 	newDeclaration ast.Declaration,
 	removedTypes *orderedmap.OrderedMap[string, struct{}],
 ) {
+	if !validator.isTypeRemovalEnabled() {
+		return
+	}
+
 	if removedTypes.Contains(newDeclaration.DeclarationIdentifier().Identifier) {
 		validator.report(&UseOfRemovedTypeError{
 			Declaration: newDeclaration,
@@ -398,19 +417,22 @@ func checkNestedDeclarations(
 	checkConformance checkConformanceFunc,
 ) {
 
-	// process pragmas first, as they determine whether types can later be removed
-	oldRemovedTypes := collectRemovedTypePragmas(validator, oldDeclaration.DeclarationMembers().Pragmas())
-	removedTypes := collectRemovedTypePragmas(validator, newDeclaration.DeclarationMembers().Pragmas())
+	var removedTypes *orderedmap.OrderedMap[string, struct{}]
+	if validator.isTypeRemovalEnabled() {
+		// process pragmas first, as they determine whether types can later be removed
+		oldRemovedTypes := collectRemovedTypePragmas(validator, oldDeclaration.DeclarationMembers().Pragmas())
+		removedTypes = collectRemovedTypePragmas(validator, newDeclaration.DeclarationMembers().Pragmas())
 
-	// #typeRemoval pragmas cannot be removed, so any that appear in the old program must appear in the new program
-	// they can however, be added, so use the new program's type removals for the purposes of checking the upgrade
-	oldRemovedTypes.Foreach(func(oldRemovedType string, _ struct{}) {
-		if !removedTypes.Contains(oldRemovedType) {
-			validator.report(&TypeRemovalPragmaRemovalError{
-				RemovedType: oldRemovedType,
-			})
-		}
-	})
+		// #typeRemoval pragmas cannot be removed, so any that appear in the old program must appear in the new program
+		// they can however, be added, so use the new program's type removals for the purposes of checking the upgrade
+		oldRemovedTypes.Foreach(func(oldRemovedType string, _ struct{}) {
+			if !removedTypes.Contains(oldRemovedType) {
+				validator.report(&TypeRemovalPragmaRemovalError{
+					RemovedType: oldRemovedType,
+				})
+			}
+		})
+	}
 
 	oldNominalTypeDecls := getNestedNominalTypeDecls(oldDeclaration)
 

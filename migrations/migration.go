@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -125,6 +125,18 @@ func (m *StorageMigration) Migrate(migrator StorageMapKeyMigrator) {
 	accountStorage.MigrateUint64Keys(
 		m.interpreter,
 		stdlib.CapabilityControllerStorageDomain,
+		migrator,
+	)
+
+	accountStorage.MigrateStringKeys(
+		m.interpreter,
+		stdlib.PathCapabilityStorageDomain,
+		migrator,
+	)
+
+	accountStorage.MigrateUint64Keys(
+		m.interpreter,
+		stdlib.AccountCapabilityStorageDomain,
 		migrator,
 	)
 }

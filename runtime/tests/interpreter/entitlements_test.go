@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3024,7 +3024,7 @@ func TestInterpretIdentityMapping(t *testing.T) {
 
                 init() {
                     let x = X()
-                    self.x1 = &x as auth(A, B, C) &X
+                    self.x1 = &x
                     self.x2 = nil
                 }
             }

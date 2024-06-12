@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -682,11 +682,11 @@ var FullyEntitledAccountAccess = ConvertSemaAccessToStaticAuthorization(nil, sem
 func (Unauthorized) isAuthorization() {}
 
 func (Unauthorized) String() string {
-	return ""
+	return "Unauthorized"
 }
 
-func (Unauthorized) MeteredString(_ common.MemoryGauge) string {
-	return ""
+func (a Unauthorized) MeteredString(_ common.MemoryGauge) string {
+	return "Unauthorized"
 }
 
 func (Unauthorized) ID() TypeID {
@@ -695,6 +695,29 @@ func (Unauthorized) ID() TypeID {
 
 func (Unauthorized) Equal(auth Authorization) bool {
 	_, ok := auth.(Unauthorized)
+	return ok
+}
+
+type Inaccessible struct{}
+
+var InaccessibleAccess Authorization = Inaccessible{}
+
+func (Inaccessible) isAuthorization() {}
+
+func (Inaccessible) String() string {
+	return "Inaccessible"
+}
+
+func (Inaccessible) MeteredString(_ common.MemoryGauge) string {
+	return "Inaccessible"
+}
+
+func (Inaccessible) ID() TypeID {
+	panic(errors.NewUnreachableError())
+}
+
+func (Inaccessible) Equal(auth Authorization) bool {
+	_, ok := auth.(Inaccessible)
 	return ok
 }
 
@@ -870,7 +893,10 @@ func (t *ReferenceStaticType) String() string {
 
 func (t *ReferenceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
 	typeStr := t.ReferencedType.MeteredString(memoryGauge)
-	authString := t.Authorization.MeteredString(memoryGauge)
+	authString := ""
+	if !t.Authorization.Equal(InaccessibleAccess) && !t.Authorization.Equal(UnauthorizedAccess) {
+		authString = t.Authorization.MeteredString(memoryGauge)
+	}
 
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(typeStr)+1+len(authString)))
 	return fmt.Sprintf("%s&%s", authString, typeStr)
@@ -1090,6 +1116,9 @@ func ConvertSemaAccessToStaticAuthorization(
 		if access.Equal(sema.UnauthorizedAccess) {
 			return UnauthorizedAccess
 		}
+		if access.Equal(sema.InaccessibleAccess) {
+			return InaccessibleAccess
+		}
 
 	case sema.EntitlementSetAccess:
 		var entitlements []common.TypeID
@@ -1164,6 +1193,9 @@ func ConvertStaticAuthorizationToSemaAccess(
 	switch auth := auth.(type) {
 	case Unauthorized:
 		return sema.UnauthorizedAccess, nil
+
+	case Inaccessible:
+		return sema.InaccessibleAccess, nil
 
 	case EntitlementMapAuthorization:
 		entitlement, err := handler.GetEntitlementMapType(auth.TypeID)

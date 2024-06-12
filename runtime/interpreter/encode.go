@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -224,6 +224,13 @@ const (
 	CBORTagUnauthorizedStaticAuthorization
 	CBORTagEntitlementMapStaticAuthorization
 	CBORTagEntitlementSetStaticAuthorization
+	CBORTagInaccessibleStaticAuthorization
+
+	_
+	_
+	_
+	_
+
 	CBORTagInclusiveRangeStaticType
 
 	// !!! *WARNING* !!!
@@ -1355,6 +1362,17 @@ func (t Unauthorized) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
 		0xd8, CBORTagUnauthorizedStaticAuthorization,
+	})
+	if err != nil {
+		return err
+	}
+	return e.EncodeNil()
+}
+
+func (t Inaccessible) Encode(e *cbor.StreamEncoder) error {
+	err := e.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagInaccessibleStaticAuthorization,
 	})
 	if err != nil {
 		return err
