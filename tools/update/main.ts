@@ -30,11 +30,13 @@ function semVerAtLeast(actualVersion: string, expectedVersion: string): boolean 
 }
 
 function extractVersionCommit(version: string): string | null {
-    const parts = version.split('-')
-    if (parts.length <= 1) {
-        return null
-    }
-    return parts[parts.length-1]
+    // Parse commit from Go's generated pseudo-version.
+    // They end with '<timestamp>-<commit>'.
+    // See https://go.dev/ref/mod#glos-pseudo-version
+    const match = version.match(/\d{14}-([0-9a-f]{12})$/)
+    if (!match)
+        return null;
+    return match[1]
 }
 
 function capitalizeFirstLetter(string: string): string {
