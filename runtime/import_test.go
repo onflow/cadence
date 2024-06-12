@@ -425,8 +425,7 @@ func TestRuntimeContractImport(t *testing.T) {
                 return 42
             }
 
-            access(all) struct Bar {
-            }
+            access(all) struct Bar {}
 
             init() {
                 self.x = []
@@ -440,8 +439,8 @@ func TestRuntimeContractImport(t *testing.T) {
         import Foo from 0x01
 
         access(all) fun main() {
+            var foo: &Foo = Foo
             var x: &[Int] = Foo.x
-
             var bar: Foo.Bar = Foo.Bar()
         }
     `)
@@ -499,14 +498,4 @@ func TestRuntimeContractImport(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-
-	// Script
-	//
-	//var checkerErr *sema.CheckerError
-	//require.ErrorAs(t, err, &checkerErr)
-	//
-	//errs := checker.RequireCheckerErrors(t, checkerErr, 1)
-	//
-	//var importedProgramErr *sema.ImportedProgramError
-	//require.ErrorAs(t, errs[0], &importedProgramErr)
 }

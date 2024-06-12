@@ -721,59 +721,105 @@ func TestCheckImportContract(t *testing.T) {
 
 	t.Parallel()
 
-	importedChecker, err := ParseAndCheckWithOptions(t,
-		`
-        access(all) contract Foo {
-            access(all) let x: [Int]
-            // access(all) let y: [Int]
+	t.Run("valid", func(t *testing.T) {
 
-            access(all) fun answer(): Int {
-                return 42
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+            access(all) contract Foo {
+                access(all) let x: [Int]
+
+                access(all) fun answer(): Int {
+                    return 42
+                }
+
+                access(all) struct Bar {}
+
+                init() {
+                    self.x = []
+                }
+            }`,
+			ParseAndCheckOptions{
+				Location: utils.ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+            import Foo from "imported"
+
+            access(all) fun main() {
+                var foo: &Foo = Foo
+                var x: &[Int] = Foo.x
+                var bar: Foo.Bar = Foo.Bar()
             }
-
-            access(all) struct Bar {
-            }
-
-            init() {
-                self.x = []
-                // self.y = []
-            }
-        }`,
-		ParseAndCheckOptions{
-			Location: utils.ImportedLocation,
-		},
-	)
-
-	require.NoError(t, err)
-
-	_, err = ParseAndCheckWithOptions(t,
-		`
-        import Foo from "imported"
-
-        access(all) fun main() {
-            var x: &[Int] = Foo.x
-            Foo.x[0] = 3
-            Foo.x.append(4)
-
-            var bar: Foo.Bar = Foo.Bar()
-        }
-        `,
-		ParseAndCheckOptions{
-			Config: &sema.Config{
-				ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
-					return sema.ElaborationImport{
-						Elaboration: importedChecker.Elaboration,
-					}, nil
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
 				},
 			},
-		},
-	)
+		)
 
-	errs := RequireCheckerErrors(t, err, 2)
+		require.NoError(t, err)
+	})
 
-	assignmentError := &sema.UnauthorizedReferenceAssignmentError{}
-	assert.ErrorAs(t, errs[0], &assignmentError)
+	t.Run("invalid", func(t *testing.T) {
 
-	accessError := &sema.InvalidAccessError{}
-	assert.ErrorAs(t, errs[1], &accessError)
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+            access(all) contract Foo {
+                access(all) let x: [Int]
+
+                access(all) fun answer(): Int {
+                    return 42
+                }
+
+                access(all) struct Bar {}
+
+                init() {
+                    self.x = []
+                }
+            }`,
+			ParseAndCheckOptions{
+				Location: utils.ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+            import Foo from "imported"
+
+            access(all) fun main() {
+                Foo.x[0] = 3
+                Foo.x.append(4)
+            }
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assignmentError := &sema.UnauthorizedReferenceAssignmentError{}
+		assert.ErrorAs(t, errs[0], &assignmentError)
+
+		accessError := &sema.InvalidAccessError{}
+		assert.ErrorAs(t, errs[1], &accessError)
+	})
+
 }
