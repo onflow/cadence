@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -211,6 +211,7 @@ type PrimitiveAccess uint8
 
 const (
 	AccessNotSpecified PrimitiveAccess = iota
+	AccessNone                         // "top" access, only used for mapping operations, not actually expressible in the language
 	AccessSelf
 	AccessContract
 	AccessAccount
@@ -256,6 +257,8 @@ func (a PrimitiveAccess) Keyword() string {
 		return "access(contract)"
 	case AccessPubSettableLegacy:
 		return "pub(set)"
+	case AccessNone:
+		return "inaccessible"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -275,6 +278,8 @@ func (a PrimitiveAccess) Description() string {
 		return "contract"
 	case AccessPubSettableLegacy:
 		return "legacy public settable"
+	case AccessNone:
+		return "inaccessible"
 	}
 
 	panic(errors.NewUnreachableError())

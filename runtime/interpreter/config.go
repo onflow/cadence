@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,4 +72,6 @@ type Config struct {
 	CapabilityBorrowHandler CapabilityBorrowHandlerFunc
 	// LegacyContractUpgradeEnabled specifies whether to fall back to the old parser when attempting a contract upgrade
 	LegacyContractUpgradeEnabled bool
+	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates
+	ContractUpdateTypeRemovalEnabled bool
 }

@@ -51,10 +51,11 @@ Above will update the rest of the dependencies to:
 - flow-go-sdk `v0.31.0`
 - flow-go `v0.26.0`
 
-Instead of the version, it is also possible to provide a commit id.
+Instead of the version, it is also possible to provide a commit,
+in Go's expected format, i.e. the first 12 characters of the commit hash.
 
 ```sh
-GH_TOKEN=`gh auth token` ts-node main.ts update --version v0.30.0 --versions onflow/flow-go@<commit_id>
+GH_TOKEN=`gh auth token` ts-node main.ts update --version v0.30.0 --versions onflow/flow-go@<commit>
 ```
 
 #### Configuring dependencies
@@ -195,20 +196,15 @@ Go to the link that is shown at the end to create a new GitHub (pre-)release for
 
 Once the GitHub release has been published, re-run the `update` subcommand. The tool will determine that the next dependency needs to be updated.
 
-> [!NOTE]
-> The update tool only considers proper releases (i.e. not pre-releases)! (this is a GitHub API limitation)
->
-> When updating to pre-releases, the version of a downstream has to be specified manually! This is not needed normally.
-
 Versions are specified using the `--versions` flag, comma-separated.
 
 ```shell
 GH_TOKEN=`gh auth token` ts-node main.ts update \
-    --version v1.0.0-M8 \
-    --versions onflow/flow-go-sdk@v1.0.0-M5
+    --version v1.0.0-M8
 ```
 
-Again, the tool will determine the next downstream dependency that needs to get updated. This time is the `lint` module in the  `onflow/cadence-tools` repo.
+Again, the tool will determine the next downstream dependency that needs to get updated.
+This time is the `lint` module in the  `onflow/cadence-tools` repo.
 
 <details>
 <summary>
@@ -266,14 +262,14 @@ Checking repo onflow/cadence-tools ...
 
 - Some downstream dependencies, like `flow-go`, are not tagged/released.
 
-  Use the latest commit instead.
+  Use the latest commit instead, in Go's expected format, i.e. the first 12 characters of the commit hash.
 
   For example, to `flow-emulator` depends on `flow-go`, and it can be updated using:
 
   ```shell
   $ GH_TOKEN=`gh auth token` ts-node main.ts update \
       --version v1.0.0-M8 \
-      --versions onflow/flow-go-sdk@v1.0.0-M5,onflow/cadence-tools/lint@v1.0.0-M5,onflow/flow-go@3677206d445c
+      --versions onflow/flow-go@3677206d445c
   ```
 
 - Some downstream dependencies are modules in the same repo.

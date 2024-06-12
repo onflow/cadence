@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -6080,7 +6080,7 @@ func TestCheckIdentityMapping(t *testing.T) {
 
                 init() {
                     let x = X()
-                    self.x1 = &x as auth(A, B, C) &X
+                    self.x1 = &x
                     self.x2 = nil
                 }
             }
@@ -6099,6 +6099,68 @@ func TestCheckIdentityMapping(t *testing.T) {
         `)
 
 		assert.NoError(t, err)
+	})
+
+	t.Run("owned value, with insufficient entitlements", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement A
+            entitlement B
+            entitlement C
+
+            struct X {
+               access(A | B) var s: String
+
+               init() {
+                   self.s = "hello"
+               }
+
+               access(C) fun foo() {}
+            }
+
+            struct Y {
+
+                // Reference
+                access(mapping Identity) var x1: auth(mapping Identity) &X
+
+                // Optional reference
+                access(mapping Identity) var x2: auth(mapping Identity) &X?
+
+                // Function returning a reference
+                access(mapping Identity) fun getX(): auth(mapping Identity) &X {
+                    let x = X()
+                    return &x as auth(mapping Identity) &X
+                }
+
+                // Function returning an optional reference
+                access(mapping Identity) fun getOptionalX(): auth(mapping Identity) &X? {
+                    let x: X? = X()
+                    return &x as auth(mapping Identity) &X?
+                }
+
+                init() {
+                    let x = X()
+                    self.x1 = &x as auth(A, B, C) &X
+                    self.x2 = nil
+                }
+            }
+
+            fun main() {
+                let y = Y()
+
+                let ref1: auth(A, B, C) &X = y.x1
+
+                let ref2: auth(A, B, C) &X? = y.x2
+
+                let ref3: auth(A, B, C) &X = y.getX()
+
+                let ref4: auth(A, B, C) &X? = y.getOptionalX()
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
 	})
 
 	t.Run("owned value, with entitlements, function typed field", func(t *testing.T) {
@@ -6190,6 +6252,83 @@ func TestCheckIdentityMapping(t *testing.T) {
 		// Entitlements of function return type `X` must NOT be
 		// available for the reference typed field.
 		require.Equal(t, 0, auth.Entitlements.Len())
+	})
+
+	t.Run("initializer", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement X
+
+            struct S {
+                access(mapping Identity) let x: auth(mapping Identity) &String
+                init(_ str: auth(X) &String) {
+                    self.x = str // this should not be possible, as Identity may grant any entitlement, not just X
+                }
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
+	})
+
+	t.Run("initializer with owned value", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement X
+
+            struct S {
+                access(mapping Identity) let x: [String]
+                init(_ str: [String]) {
+                    self.x = str // this should be possible, as the string array is owned here
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("initializer with inferred reference type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement X
+
+            struct S {
+                access(mapping Identity) let x: auth(mapping Identity) &String
+                init(_ str: String) {
+                    self.x = &str // this should be possible, as we own the string and thus inference is able to give the &str 
+                    // reference the appropriate type
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("initializer with included Identity", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            entitlement X
+
+            entitlement mapping M {
+                include Identity
+            }
+
+            struct S {
+                access(mapping M) let x: auth(mapping M) &String
+                init(_ str: auth(X) &String) {
+                    self.x = str // this should not be possible, as Identity may grant any entitlement, not just X
+                }
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		var typeMismatchError *sema.TypeMismatchError
+		require.ErrorAs(t, errors[0], &typeMismatchError)
 	})
 }
 
@@ -7170,6 +7309,54 @@ func TestInterpretMappingEscalation(t *testing.T) {
 
 		errors := RequireCheckerErrors(t, err, 1)
 		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+	})
+
+	t.Run("escalate", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement X
+			entitlement Y
+            entitlement Z
+
+            entitlement mapping M {
+                X -> Z 
+                X -> Y
+            }
+
+			access(all) struct Attacker {
+                access(mapping Identity) var s: auth(mapping Identity) &AnyStruct
+            
+                init(_ a: auth(Z) &AnyStruct){
+                    self.s = a
+                }
+            }
+
+            struct Nested {
+                access(X | Y) fun foo() {}
+                access(X | Z) fun bar() {}
+            }
+
+			struct Attackee {
+                access(mapping M) let nested: Nested
+                init() {
+                    self.nested = Nested()
+                }
+            }
+
+			fun main(): Void {
+				let attackee = Attackee()
+                let attackeeRef = &attackee as auth(Z) &Attackee
+                let attacker = Attacker(attackeeRef)
+                let attackerRef = &attacker as auth(X) &Attacker
+                let exploit: auth(X) &Attackee = attackerRef.s as! auth(X) &Attackee
+                exploit.nested.foo()
+			} 
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.TypeMismatchError{}, errors[0])
+
 	})
 
 	t.Run("field assign", func(t *testing.T) {

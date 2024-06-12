@@ -1,2 +1,2 @@
-maprange.so: go.mod
+maprange.so: go.mod *.go
 	go build -buildmode=plugin .

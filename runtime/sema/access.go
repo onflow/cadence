@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -326,7 +326,13 @@ func (e *EntitlementMapAccess) PermitsAccess(other Access) bool {
 	// the input entitlement. It is only safe for `R` to give out these entitlements if it actually
 	// possesses them, so we require the initializing value to have every possible entitlement that may
 	// be produced by the map
+	//
+	// However, if the map is or includes the `Identity`, there is no possible set that is permitted by
+	// this map, since the theoretical codomain of the Identity map is infinite
 	case EntitlementSetAccess:
+		if e.Type.IncludesIdentity {
+			return false
+		}
 		return e.Codomain().PermitsAccess(otherAccess)
 	default:
 		return false
@@ -346,7 +352,7 @@ func (e *EntitlementMapAccess) Domain() EntitlementSetAccess {
 	return e.domain
 }
 
-func (e *EntitlementMapAccess) Codomain() EntitlementSetAccess {
+func (e *EntitlementMapAccess) Codomain() Access {
 	e.codomainOnce.Do(func() {
 		codomain := common.MappedSliceWithNoDuplicates(
 			e.Type.Relations,
@@ -458,6 +464,9 @@ func (a PrimitiveAccess) Equal(other Access) bool {
 }
 
 func (a PrimitiveAccess) PermitsAccess(otherAccess Access) bool {
+	if a == InaccessibleAccess {
+		return otherAccess == InaccessibleAccess
+	}
 	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
 		return ast.PrimitiveAccess(a) >= ast.PrimitiveAccess(otherPrimitive)
 	}

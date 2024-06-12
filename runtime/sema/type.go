@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -6946,6 +6946,7 @@ var _ ValueIndexableType = &ReferenceType{}
 var _ TypeIndexableType = &ReferenceType{}
 
 var UnauthorizedAccess Access = PrimitiveAccess(ast.AccessAll)
+var InaccessibleAccess Access = PrimitiveAccess(ast.AccessNone)
 
 func NewReferenceType(
 	memoryGauge common.MemoryGauge,
@@ -9263,10 +9264,14 @@ func NewEntitlementRelation(
 }
 
 type EntitlementMapType struct {
-	Location          common.Location
-	containerType     Type
-	Identifier        string
-	Relations         []EntitlementRelation
+	Location      common.Location
+	containerType Type
+	Identifier    string
+	Relations     []EntitlementRelation
+
+	// Whether this map type includes the special identity relation,
+	// which maps every input to itself. The `Identity` mapping itself
+	// is defined as the empty map type that includes the identity relation
 	IncludesIdentity  bool
 	resolveInclusions sync.Once
 }

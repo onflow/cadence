@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,10 +82,8 @@ func newContractRemovalTransaction(contractName string) string {
 	)
 }
 
-func newContractDeploymentTransactor(t *testing.T, withC1Upgrade bool) func(code string) error {
-	config := DefaultTestInterpreterConfig
-	config.AttachmentsEnabled = true
-	config.LegacyContractUpgradeEnabled = withC1Upgrade
+func newContractDeploymentTransactor(t *testing.T, config Config) func(code string) error {
+
 	rt := NewTestInterpreterRuntimeWithConfig(config)
 
 	accountCodes := map[Location][]byte{}
@@ -133,8 +131,8 @@ func newContractDeploymentTransactor(t *testing.T, withC1Upgrade bool) func(code
 
 // testDeployAndUpdate deploys a contract in one transaction,
 // then updates the contract in another transaction
-func testDeployAndUpdate(t *testing.T, name string, oldCode string, newCode string, withC1Upgrade bool) error {
-	executeTransaction := newContractDeploymentTransactor(t, withC1Upgrade)
+func testDeployAndUpdate(t *testing.T, name string, oldCode string, newCode string, config Config) error {
+	executeTransaction := newContractDeploymentTransactor(t, config)
 	err := executeTransaction(newContractAddTransaction(name, oldCode))
 	require.NoError(t, err)
 
@@ -143,28 +141,67 @@ func testDeployAndUpdate(t *testing.T, name string, oldCode string, newCode stri
 
 // testDeployAndRemove deploys a contract in one transaction,
 // then removes the contract in another transaction
-func testDeployAndRemove(t *testing.T, name string, code string, withC1Upgrade bool) error {
-	executeTransaction := newContractDeploymentTransactor(t, withC1Upgrade)
+func testDeployAndRemove(t *testing.T, name string, code string, config Config) error {
+	executeTransaction := newContractDeploymentTransactor(t, config)
 	err := executeTransaction(newContractAddTransaction(name, code))
 	require.NoError(t, err)
 
 	return executeTransaction(newContractRemovalTransaction(name))
 }
 
-func testWithValidators(t *testing.T, name string, testFunc func(t *testing.T, withC1Upgrade bool)) {
+func testWithValidators(t *testing.T, name string, testFunc func(t *testing.T, config Config)) {
 	for _, withC1Upgrade := range []bool{true, false} {
 		withC1Upgrade := withC1Upgrade
 		name := name
 
 		if withC1Upgrade {
-			name = fmt.Sprintf("%s (with c1 validator)", name)
+			name = fmt.Sprintf("%s (with C1 validator)", name)
 		}
 
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			testFunc(t, withC1Upgrade)
+			config := DefaultTestInterpreterConfig
+			config.LegacyContractUpgradeEnabled = withC1Upgrade
+			testFunc(t, config)
 		})
+	}
+}
+
+func testWithValidatorsAndTypeRemovalEnabled(
+	t *testing.T,
+	name string,
+	testFunc func(t *testing.T, config Config),
+) {
+	for _, withC1Upgrade := range []bool{true, false} {
+		withC1Upgrade := withC1Upgrade
+		name := name
+
+		for _, withTypeRemovalEnabled := range []bool{true, false} {
+			withTypeRemovalEnabled := withTypeRemovalEnabled
+			name := name
+
+			switch {
+			case withC1Upgrade && withTypeRemovalEnabled:
+				name = fmt.Sprintf("%s (with C1 validator and type removal enabled)", name)
+
+			case withC1Upgrade:
+				name = fmt.Sprintf("%s (with C1 validator)", name)
+
+			case withTypeRemovalEnabled:
+				name = fmt.Sprintf("%s (with type removal enabled)", name)
+			}
+
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				config := DefaultTestInterpreterConfig
+				config.LegacyContractUpgradeEnabled = withC1Upgrade
+				config.ContractUpdateTypeRemovalEnabled = withTypeRemovalEnabled
+
+				testFunc(t, config)
+			})
+		}
 	}
 }
 
@@ -172,7 +209,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Parallel()
 
-	testWithValidators(t, "change field type", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "change field type", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -192,14 +229,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "Test", "a", "String", "Int")
 	})
 
-	testWithValidators(t, "add field", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "add field", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -223,14 +260,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertExtraneousFieldError(t, cause, "Test", "b")
 	})
 
-	testWithValidators(t, "remove field", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "remove field", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -254,11 +291,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
 
-	testWithValidators(t, "change nested decl field type", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "change nested decl field type", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -300,14 +337,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "TestResource", "b", "Int", "String")
 	})
 
-	testWithValidators(t, "add field to nested decl", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "add field to nested decl", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -351,14 +388,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertExtraneousFieldError(t, cause, "TestResource", "c")
 	})
 
-	testWithValidators(t, "change indirect field type", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "change indirect field type", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -402,14 +439,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "TestStruct", "b", "Int", "String")
 	})
 
-	testWithValidators(t, "circular types refs", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "circular types refs", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -477,14 +514,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "Bar", "d", "Bar?", "String")
 	})
 
-	testWithValidators(t, "qualified vs unqualified nominal type", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "qualified vs unqualified nominal type", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -528,11 +565,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
 
-	testWithValidators(t, "change imported nominal type to local", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "change imported nominal type to local", func(t *testing.T, config Config) {
 
 		const importCode = `
     	    	    access(all) contract TestImport {
@@ -549,7 +586,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		executeTransaction := newContractDeploymentTransactor(t, withC1Upgrade)
+		executeTransaction := newContractDeploymentTransactor(t, config)
 
 		err := executeTransaction(newContractAddTransaction("TestImport", importCode))
 		require.NoError(t, err)
@@ -598,7 +635,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertFieldTypeMismatchError(t, cause, "Test", "x", "TestImport.TestStruct", "TestStruct")
 	})
 
-	testWithValidators(t, "change imported field nominal type location", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "change imported field nominal type location", func(t *testing.T, config Config) {
 
 		runtime := NewTestInterpreterRuntime()
 
@@ -762,7 +799,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertFieldTypeMismatchError(t, cause, "Test", "x", "TestImport.TestStruct", "TestImport.TestStruct")
 	})
 
-	testWithValidators(t, "change imported non-field nominal type location", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "change imported non-field nominal type location", func(t *testing.T, config Config) {
 
 		runtime := NewTestInterpreterRuntime()
 
@@ -918,7 +955,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	testWithValidators(t, "change imported field nominal type location implicitly", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "change imported field nominal type location implicitly", func(t *testing.T, config Config) {
 
 		runtime := NewTestInterpreterRuntime()
 
@@ -1105,7 +1142,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertFieldTypeMismatchError(t, cause, "Test", "x", "TestImport.TestStruct", "TestImport.TestStruct")
 	})
 
-	testWithValidators(t, "contract interface update", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "contract interface update", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract interface Test {
@@ -1121,14 +1158,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "Test", "a", "String", "Int")
 	})
 
-	testWithValidators(t, "convert interface to contract", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "convert interface to contract", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract interface Test {
@@ -1152,7 +1189,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -1165,7 +1202,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		)
 	})
 
-	testWithValidators(t, "convert contract to interface", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "convert contract to interface", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1189,7 +1226,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -1202,7 +1239,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		)
 	})
 
-	testWithValidators(t, "change non stored", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "change non stored", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1278,7 +1315,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 
 		// Changing unused public composite types should also fail, since those could be
 		// referred by anyone in the chain, and may cause data inconsistency.
@@ -1288,7 +1325,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertFieldTypeMismatchError(t, cause, "UnusedStruct", "a", "Int", "String")
 	})
 
-	testWithValidators(t, "change enum type", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "change enum type", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1322,14 +1359,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertConformanceMismatchError(t, cause, "Foo", "UInt8")
 	})
 
-	testWithValidators(t, "change nested interface", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "change nested interface", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1363,14 +1400,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
        `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertFieldTypeMismatchError(t, cause, "TestStruct", "a", "String", "Int")
 	})
 
-	testWithValidators(t, "change nested interface to struct", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "change nested interface to struct", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1392,7 +1429,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -1405,7 +1442,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		)
 	})
 
-	testWithValidators(t, "adding a nested struct", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "adding a nested struct", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1424,11 +1461,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
        `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
 
-	testWithValidators(t, "removing a nested struct", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "removing a nested struct", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1447,14 +1484,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertMissingDeclarationError(t, cause, "TestStruct")
 	})
 
-	testWithValidators(t, "add and remove field", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "add and remove field", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1474,14 +1511,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertExtraneousFieldError(t, cause, "Test", "b")
 	})
 
-	testWithValidators(t, "multiple errors", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "multiple errors", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1517,7 +1554,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		updateErr := getContractUpdateError(t, err, "Test")
@@ -1537,7 +1574,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		)
 	})
 
-	testWithValidators(t, "check error messages", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "check error messages", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1573,7 +1610,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		const expectedError = "error: mismatching field `a` in `Test`\n" +
@@ -1597,7 +1634,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		require.Contains(t, err.Error(), expectedError)
 	})
 
-	testWithValidators(t, "Test reference types", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Test reference types", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1637,11 +1674,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
 
-	testWithValidators(t, "Test function type", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Test function type", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -1677,13 +1714,13 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "error: field add has non-storable type: fun(Int, Int): Int")
 	})
 
-	testWithValidators(t, "Test conformance", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Test conformance", func(t *testing.T, config Config) {
 
 		const importCode = `
     	    	    access(all) contract TestImport {
@@ -1693,7 +1730,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		executeTransaction := newContractDeploymentTransactor(t, withC1Upgrade)
+		executeTransaction := newContractDeploymentTransactor(t, config)
 		err := executeTransaction(newContractAddTransaction("TestImport", importCode))
 		require.NoError(t, err)
 
@@ -1862,7 +1899,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, false)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, DefaultTestInterpreterConfig)
 		require.NoError(t, err)
 	})
 
@@ -1976,11 +2013,13 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, true)
+		config := DefaultTestInterpreterConfig
+		config.LegacyContractUpgradeEnabled = true
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
 
-	testWithValidators(t, "Test intersection types", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Test intersection types", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2040,11 +2079,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
 
-	testWithValidators(t, "Test invalid intersection types change", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Test invalid intersection types change", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2096,7 +2135,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		assert.Contains(t, err.Error(), "access(all) var a: {TestInterface}"+
@@ -2108,7 +2147,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 			"incompatible type annotations. expected `{TestInterface}`, found `TestStruct`")
 	})
 
-	testWithValidators(t, "enum valid", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "enum valid", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2128,11 +2167,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
 
-	testWithValidators(t, "enum remove case", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "enum remove case", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2151,14 +2190,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertMissingEnumCasesError(t, cause, "Foo", 2, 1)
 	})
 
-	testWithValidators(t, "enum add case", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "enum add case", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2179,11 +2218,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
 
-	testWithValidators(t, "enum swap cases", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "enum swap cases", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2205,7 +2244,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		updateErr := getContractUpdateError(t, err, "Test")
@@ -2219,7 +2258,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertEnumCaseMismatchError(t, childErrors[2], "left", "up")
 	})
 
-	testWithValidators(t, "Remove and add struct", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Remove and add struct", func(t *testing.T, config Config) {
 
 		const oldCode = `
     	    	    access(all) contract Test {
@@ -2241,7 +2280,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		executeTransaction := newContractDeploymentTransactor(t, withC1Upgrade)
+		executeTransaction := newContractDeploymentTransactor(t, config)
 
 		err := executeTransaction(newContractAddTransaction("Test", oldCode))
 		require.NoError(t, err)
@@ -2272,7 +2311,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertFieldTypeMismatchError(t, cause, "TestStruct", "a", "Int", "String")
 	})
 
-	testWithValidators(t, "Rename struct", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Rename struct", func(t *testing.T, config Config) {
 
 		const oldCode = `
     	    	    access(all) contract Test {
@@ -2304,14 +2343,14 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
 		assertMissingDeclarationError(t, cause, "TestStruct")
 	})
 
-	testWithValidators(t, "Remove contract with enum", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Remove contract with enum", func(t *testing.T, config Config) {
 
 		const code = `
     	    	    access(all) contract Test {
@@ -2320,13 +2359,13 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		err := testDeployAndRemove(t, "Test", code, withC1Upgrade)
+		err := testDeployAndRemove(t, "Test", code, config)
 		RequireError(t, err)
 
 		assertContractRemovalError(t, err, "Test")
 	})
 
-	testWithValidators(t, "Remove contract without enum", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Remove contract without enum", func(t *testing.T, config Config) {
 
 		const code = `
     	    	    access(all) contract Test {
@@ -2340,11 +2379,11 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
     	    	    }
     	    	`
 
-		err := testDeployAndRemove(t, "Test", code, withC1Upgrade)
+		err := testDeployAndRemove(t, "Test", code, config)
 		require.NoError(t, err)
 	})
 
-	testWithValidators(t, "removing multiple nested structs", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "removing multiple nested structs", func(t *testing.T, config Config) {
 
 		const oldCode = `
     	    	    access(all) contract Test {
@@ -2362,7 +2401,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 		for i := 0; i < 1000; i++ {
 
-			err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 			RequireError(t, err)
 
 			updateErr := getContractUpdateError(t, err, "Test")
@@ -2377,7 +2416,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		}
 	})
 
-	testWithValidators(t, "Remove event", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Remove event", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2392,7 +2431,7 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
 }
@@ -2510,7 +2549,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 
 	t.Parallel()
 
-	testWithValidators(t, "Adding conformance", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Adding conformance", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2547,11 +2586,11 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
 
-	testWithValidators(t, "Adding conformance with new fields", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Adding conformance with new fields", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2587,7 +2626,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -2595,7 +2634,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		assertExtraneousFieldError(t, cause, "Foo", "name")
 	})
 
-	testWithValidators(t, "Removing conformance, one", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Removing conformance, one", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2629,7 +2668,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -2637,7 +2676,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		assertConformanceMismatchError(t, cause, "Foo", "Bar")
 	})
 
-	testWithValidators(t, "Removing conformance, multiple", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Removing conformance, multiple", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all)
@@ -2687,7 +2726,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		RequireError(t, err)
 
 		cause := getSingleContractUpdateErrorCause(t, err, "Test")
@@ -2695,7 +2734,7 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
 		assertConformanceMismatchError(t, cause, "Foo", "Baz")
 	})
 
-	testWithValidators(t, "Change conformance order", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "Change conformance order", func(t *testing.T, config Config) {
 
 		const oldCode = `
             access(all) contract Test {
@@ -2735,11 +2774,11 @@ func TestRuntimeContractUpdateConformanceChanges(t *testing.T) {
             }
         `
 
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
 
-	testWithValidators(t, "missing comma in parameter list of old contract", func(t *testing.T, withC1Upgrade bool) {
+	testWithValidators(t, "missing comma in parameter list of old contract", func(t *testing.T, config Config) {
 
 		address := common.MustBytesToAddress([]byte{0x42})
 
@@ -3061,360 +3100,482 @@ func TestRuntimeContractUpdateProgramCaching(t *testing.T) {
 	})
 }
 
-func TestPragmaUpdates(t *testing.T) {
+func TestTypeRemovalPragmaUpdates(t *testing.T) {
 	t.Parallel()
 
-	testWithValidators(t, "Remove pragma", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-		            access(all) contract Test {
-		                #foo(bar)
-						#baz
-		            }
-		        `
-
-		const newCode = `
-		            access(all) contract Test {
-						#baz
-		            }
-		        `
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		require.NoError(t, err)
-	})
-
-	testWithValidators(t, "Remove removedType pragma", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-					access(all) contract Test {
-						#removedType(bar)
-						#baz
-					}
-				`
-
-		const newCode = `
-					access(all) contract Test {
-						#baz
-					}
-				`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		var expectedErr *stdlib.TypeRemovalPragmaRemovalError
-		require.ErrorAs(t, err, &expectedErr)
-	})
-
-	testWithValidators(t, "removedType pragma moved into subdeclaration", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-					access(all) contract Test {
-						#removedType(bar)
-						access(all) struct S {
-
-						}
-					}
-				`
-
-		const newCode = `
-					access(all) contract Test {
-						access(all) struct S {
-							#removedType(bar)
-						}
-					}
-				`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		var expectedErr *stdlib.TypeRemovalPragmaRemovalError
-		require.ErrorAs(t, err, &expectedErr)
-	})
-
-	testWithValidators(t, "reorder removedType pragmas", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-					access(all) contract Test {
-						#removedType(bar)
-						#removedType(foo)
-					}
-				`
-
-		const newCode = `
-					access(all) contract Test {
-						#removedType(foo)
-						#removedType(bar)
-					}
-				`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		require.NoError(t, err)
-	})
-
-	testWithValidators(t, "malformed removedType pragma integer", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-	            access(all) contract Test {
-					#baz
-	            }
-	        `
-
-		const newCode = `
-	            access(all) contract Test {
-					#removedType(3)
-					#baz
-	            }
-	        `
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		var expectedErr *stdlib.InvalidTypeRemovalPragmaError
-		require.ErrorAs(t, err, &expectedErr)
-	})
-
-	testWithValidators(t, "malformed removedType qualified name", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-	            access(all) contract Test {
-					#baz
-	            }
-	        `
-
-		const newCode = `
-	            access(all) contract Test {
-					#removedType(X.Y)
-					#baz
-	            }
-	        `
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		var expectedErr *stdlib.InvalidTypeRemovalPragmaError
-		require.ErrorAs(t, err, &expectedErr)
-	})
-
-	testWithValidators(t, "removedType with zero args", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-					access(all) contract Test {
-					}
-				`
-
-		const newCode = `
-					access(all) contract Test {
-						#removedType()
-					}
-				`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		var expectedErr *stdlib.InvalidTypeRemovalPragmaError
-		require.ErrorAs(t, err, &expectedErr)
-	})
-
-	testWithValidators(t, "removedType with two args", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-					access(all) contract Test {
-					}
-				`
-
-		const newCode = `
-					access(all) contract Test {
-						#removedType(x, y)
-					}
-				`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		var expectedErr *stdlib.InvalidTypeRemovalPragmaError
-		require.ErrorAs(t, err, &expectedErr)
-	})
-
-	testWithValidators(t, "#removedType allows type removal", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-				access(all) contract Test {
-					access(all) resource R {}
-				}
-			`
-
-		const newCode = `
-				access(all) contract Test {
-					#removedType(R)
-				}
-			`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		require.NoError(t, err)
-	})
-
-	testWithValidators(t, "#removedType allows two type removals", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-				access(all) contract Test {
-					access(all) resource R {}
-					access(all) struct S {}
-				}
-			`
-
-		const newCode = `
-				access(all) contract Test {
-					#removedType(R)
-					#removedType(S)
-				}
-			`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		require.NoError(t, err)
-	})
-
-	testWithValidators(t, "#removedType does not allow resource interface type removal", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-				access(all) contract Test {
-					access(all) resource interface R {}
-				}
-			`
-
-		const newCode = `
-				access(all) contract Test {
-					#removedType(R)
-				}
-			`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		var expectedErr *stdlib.MissingDeclarationError
-		require.ErrorAs(t, err, &expectedErr)
-	})
-
-	testWithValidators(t, "#removedType does not allow struct interface type removal", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-				access(all) contract Test {
-					access(all) struct interface S {}
-				}
-			`
-
-		const newCode = `
-				access(all) contract Test {
-					#removedType(S)
-				}
-			`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		var expectedErr *stdlib.MissingDeclarationError
-		require.ErrorAs(t, err, &expectedErr)
-	})
-
-	testWithValidators(t, "#removedType can be added", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-				access(all) contract Test {
-					#removedType(I)
-					access(all) resource R {}
-				}
-			`
-
-		const newCode = `
-				access(all) contract Test {
-					#removedType(R)
-					#removedType(I)
-				}
-			`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		require.NoError(t, err)
-	})
-
-	testWithValidators(t, "#removedType can be added without removing a type", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-				access(all) contract Test {
-				}
-			`
-
-		const newCode = `
-				access(all) contract Test {
-					#removedType(X)
-				}
-			`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		require.NoError(t, err)
-	})
-
-	testWithValidators(t, "declarations cannot co-exist with removed type of the same name, composite", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-				access(all) contract Test {
-					access(all) resource R {}
-				}
-			`
-
-		const newCode = `
-				access(all) contract Test {
-					#removedType(R)
-					access(all) resource R {}
-				}
-			`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		var expectedErr *stdlib.UseOfRemovedTypeError
-		require.ErrorAs(t, err, &expectedErr)
-	})
-
-	testWithValidators(t, "declarations cannot co-exist with removed type of the same name, interface", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-				access(all) contract Test {
-					access(all) resource interface R {}
-				}
-			`
-
-		const newCode = `
-				access(all) contract Test {
-					#removedType(R)
-					access(all) resource interface R {}
-				}
-			`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		var expectedErr *stdlib.UseOfRemovedTypeError
-		require.ErrorAs(t, err, &expectedErr)
-	})
-
-	testWithValidators(t, "declarations cannot co-exist with removed type of the same name, attachment", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-				access(all) contract Test {
-					access(all) attachment R for AnyResource {}
-				}
-			`
-
-		const newCode = `
-				access(all) contract Test {
-					#removedType(R)
-					access(all) attachment R for AnyResource {}
-				}
-			`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		var expectedErr *stdlib.UseOfRemovedTypeError
-		require.ErrorAs(t, err, &expectedErr)
-	})
-
-	testWithValidators(t, "#removedType is only scoped to the current declaration, inner", func(t *testing.T, withC1Upgrade bool) {
-
-		const oldCode = `
-				access(all) contract Test {
-					access(all) resource R {}
-					access(all) struct S {}
-				}
-			`
-
-		const newCode = `
-				access(all) contract Test {
-					access(all) struct S {
-						#removedType(R)
-					}
-				}
-			`
-
-		err := testDeployAndUpdate(t, "Test", oldCode, newCode, withC1Upgrade)
-		var expectedErr *stdlib.MissingDeclarationError
-		require.ErrorAs(t, err, &expectedErr)
-	})
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"Remove pragma",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    #foo(bar)
+                    #baz
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #baz
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"Remove removedType pragma",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    #removedType(bar)
+                    #baz
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #baz
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			if config.ContractUpdateTypeRemovalEnabled {
+				var expectedErr *stdlib.TypeRemovalPragmaRemovalError
+				require.ErrorAs(t, err, &expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"removedType pragma moved into sub-declaration",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    #removedType(bar)
+                    access(all) struct S {
+
+                    }
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    access(all) struct S {
+                        #removedType(bar)
+                    }
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			if config.ContractUpdateTypeRemovalEnabled {
+				var expectedErr *stdlib.TypeRemovalPragmaRemovalError
+				require.ErrorAs(t, err, &expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"reorder removedType pragmas",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    #removedType(bar)
+                    #removedType(foo)
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(foo)
+                    #removedType(bar)
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"malformed removedType pragma integer",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    #baz
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(3)
+                    #baz
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			if config.ContractUpdateTypeRemovalEnabled {
+				var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+				require.ErrorAs(t, err, &expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(
+		t,
+		"malformed removedType qualified name",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    #baz
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(X.Y)
+                    #baz
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			if config.ContractUpdateTypeRemovalEnabled {
+				var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+				require.ErrorAs(t, err, &expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"removedType with zero args",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType()
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			if config.ContractUpdateTypeRemovalEnabled {
+
+				var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+				require.ErrorAs(t, err, &expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"removedType with two args",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(x, y)
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			if config.ContractUpdateTypeRemovalEnabled {
+				var expectedErr *stdlib.InvalidTypeRemovalPragmaError
+				require.ErrorAs(t, err, &expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"#removedType allows type removal",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) resource R {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(R)
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			if config.ContractUpdateTypeRemovalEnabled {
+				require.NoError(t, err)
+			} else {
+				var expectedErr *stdlib.MissingDeclarationError
+				require.ErrorAs(t, err, &expectedErr)
+			}
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"#removedType allows two type removals",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) resource R {}
+                    access(all) struct S {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(R)
+                    #removedType(S)
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			if config.ContractUpdateTypeRemovalEnabled {
+				require.NoError(t, err)
+			} else {
+				var expectedErr *stdlib.MissingDeclarationError
+				require.ErrorAs(t, err, &expectedErr)
+			}
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"#removedType does not allow resource interface type removal",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) resource interface R {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(R)
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			var expectedErr *stdlib.MissingDeclarationError
+			require.ErrorAs(t, err, &expectedErr)
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"#removedType does not allow struct interface type removal",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) struct interface S {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(S)
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			var expectedErr *stdlib.MissingDeclarationError
+			require.ErrorAs(t, err, &expectedErr)
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"#removedType can be added",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    #removedType(I)
+                    access(all) resource R {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(R)
+                    #removedType(I)
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			if config.ContractUpdateTypeRemovalEnabled {
+				require.NoError(t, err)
+			} else {
+				var expectedErr *stdlib.MissingDeclarationError
+				require.ErrorAs(t, err, &expectedErr)
+			}
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"#removedType can be added without removing a type",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(X)
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"declarations cannot co-exist with removed type of the same name, composite",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) resource R {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(R)
+                    access(all) resource R {}
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			if config.ContractUpdateTypeRemovalEnabled {
+				var expectedErr *stdlib.UseOfRemovedTypeError
+				require.ErrorAs(t, err, &expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"declarations cannot co-exist with removed type of the same name, interface",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) resource interface R {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(R)
+                    access(all) resource interface R {}
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			if config.ContractUpdateTypeRemovalEnabled {
+				var expectedErr *stdlib.UseOfRemovedTypeError
+				require.ErrorAs(t, err, &expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"declarations cannot co-exist with removed type of the same name, attachment",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) attachment R for AnyResource {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    #removedType(R)
+                    access(all) attachment R for AnyResource {}
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			if config.ContractUpdateTypeRemovalEnabled {
+				var expectedErr *stdlib.UseOfRemovedTypeError
+				require.ErrorAs(t, err, &expectedErr)
+			} else {
+				require.NoError(t, err)
+			}
+		},
+	)
+
+	testWithValidatorsAndTypeRemovalEnabled(t,
+		"#removedType is only scoped to the current declaration, inner",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) resource R {}
+                    access(all) struct S {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    access(all) struct S {
+                        #removedType(R)
+                    }
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			var expectedErr *stdlib.MissingDeclarationError
+			require.ErrorAs(t, err, &expectedErr)
+		},
+	)
 }

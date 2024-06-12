@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1642,6 +1642,7 @@ func changeAccountContracts(
 
 		memoryGauge := invocation.Interpreter.SharedState.Config.MemoryGauge
 		legacyUpgradeEnabled := invocation.Interpreter.SharedState.Config.LegacyContractUpgradeEnabled
+		contractUpdateTypeRemovalEnabled := invocation.Interpreter.SharedState.Config.ContractUpdateTypeRemovalEnabled
 
 		var oldProgram *ast.Program
 
@@ -1687,6 +1688,9 @@ func changeAccountContracts(
 				program.Program,
 			)
 		}
+
+		validator = validator.WithTypeRemovalEnabled(contractUpdateTypeRemovalEnabled)
+
 		err = validator.Validate()
 		handleContractUpdateError(err)
 	}

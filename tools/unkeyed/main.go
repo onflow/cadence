@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,14 +27,10 @@ func main() {
 	singlechecker.Main(Analyzer)
 }
 
-type analyzerPlugin struct{}
-
-func (*analyzerPlugin) GetAnalyzers() []*analysis.Analyzer {
+// This must be defined and named 'New' for golangci-lint,
+// see https://golangci-lint.run/plugins/go-plugins/#create-a-plugin
+func New(_ any) ([]*analysis.Analyzer, error) {
 	return []*analysis.Analyzer{
 		Analyzer,
-	}
+	}, nil
 }
-
-// This must be defined and named 'AnalyzerPlugin' for golangci-lint,
-// see https://golangci-lint.run/contributing/new-linters/#how-to-write-a-custom-linter
-var AnalyzerPlugin analyzerPlugin
