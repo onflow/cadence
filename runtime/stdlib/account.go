@@ -1338,6 +1338,10 @@ func newAccountContractsBorrowFunction(
 					panic(errors.NewUnreachableError())
 				}
 
+				if referenceType.Authorization != sema.UnauthorizedAccess {
+					panic(errors.NewDefaultUserError("cannot borrow a reference with an authorization"))
+				}
+
 				// Check if the contract exists
 
 				var code []byte

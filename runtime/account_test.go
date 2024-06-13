@@ -1970,6 +1970,84 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("borrow existing contract with entitlement authorization", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewTestInterpreterRuntime()
+
+		accountCodes := map[Location][]byte{}
+		var events []cadence.Event
+
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{{0, 0, 0, 0, 0, 0, 0, 0x42}}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		// Deploy contract
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction("Hello", []byte(`
+
+                  access(all) contract Hello {
+
+                      access(all) entitlement E
+
+                      access(all) fun hello(): String {
+                          return "Hello!"
+                      }
+                  }
+                `)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Test usage
+
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                  import Hello from 0x42
+
+                  transaction {
+                      prepare(acc: &Account) {
+                          let hello = acc.contracts.borrow<auth(Hello.E) &Hello>(name: "Hello")
+                          assert(hello == nil)
+                      }
+                  }
+              `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.ErrorContains(t, err, "cannot borrow a reference with an authorization")
+	})
+
 	t.Run("borrow non-existing contract", func(t *testing.T) {
 		t.Parallel()
 
@@ -2130,6 +2208,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 
 		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[0])
 	})
+
 }
 
 func TestRuntimePublicAccountContracts(t *testing.T) {
