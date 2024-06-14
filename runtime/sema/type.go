@@ -329,7 +329,12 @@ type LocatedType interface {
 type ParameterizedType interface {
 	Type
 	TypeParameters() []*TypeParameter
-	Instantiate(memoryGauge common.MemoryGauge, typeArguments []Type, astTypeArguments []*ast.TypeAnnotation, report func(err error)) Type
+	Instantiate(
+		memoryGauge common.MemoryGauge,
+		typeArguments []Type,
+		astTypeArguments []*ast.TypeAnnotation,
+		report func(err error),
+	) Type
 	BaseType() Type
 	TypeArguments() []Type
 }
@@ -6709,21 +6714,38 @@ func (t *InclusiveRangeType) Instantiate(
 	astTypeArguments []*ast.TypeAnnotation,
 	report func(err error),
 ) Type {
-	memberType := typeArguments[0]
 
-	if astTypeArguments == nil || astTypeArguments[0] == nil {
-		panic(errors.NewUnreachableError())
+	const typeParameterCount = 1
+
+	getRange := func() ast.Range {
+		if astTypeArguments == nil || len(astTypeArguments) != typeParameterCount {
+			return ast.EmptyRange
+		}
+		return ast.NewRangeFromPositioned(memoryGauge, astTypeArguments[0])
 	}
-	paramAstRange := ast.NewRangeFromPositioned(memoryGauge, astTypeArguments[0])
+
+	typeArgumentCount := len(typeArguments)
+
+	var memberType Type
+	if typeArgumentCount == typeParameterCount {
+		memberType = typeArguments[0]
+	} else {
+		report(&InvalidTypeArgumentCountError{
+			TypeParameterCount: typeParameterCount,
+			TypeArgumentCount:  typeArgumentCount,
+			Range:              getRange(),
+		})
+	}
 
 	// memberType must only be a leaf integer type.
 	for _, ty := range AllNonLeafIntegerTypes {
 		if memberType == ty {
 			report(&InvalidTypeArgumentError{
 				TypeArgumentName: inclusiveRangeTypeParameter.Name,
-				Range:            paramAstRange,
+				Range:            getRange(),
 				Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
 			})
+			break
 		}
 	}
 
@@ -6786,18 +6808,17 @@ func (t *InclusiveRangeType) GetMembers() map[string]MemberResolver {
 }
 
 func InclusiveRangeContainsFunctionType(elementType Type) *FunctionType {
-	return &FunctionType{
-		Parameters: []Parameter{
+	return NewSimpleFunctionType(
+		FunctionPurityView,
+		[]Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "element",
 				TypeAnnotation: NewTypeAnnotation(elementType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			BoolType,
-		),
-	}
+		BoolTypeAnnotation,
+	)
 }
 
 func (t *InclusiveRangeType) initializeMemberResolvers() {
