@@ -119,12 +119,40 @@ func dumpBuiltinTypes() {
 	)
 
 	for _, ty := range types {
-		id := ty.QualifiedString()
-		fmt.Printf("- %s\n", id)
+		dumpType(ty)
+	}
+}
 
-		if *includeMembers {
-			dumpTypeMembers(ty)
+func dumpType(ty sema.Type) {
+
+	// If the type is parameterized, instantiate it with generic types
+	if parameterizedType, ok := ty.(sema.ParameterizedType); ok {
+		typeParameters := parameterizedType.TypeParameters()
+		typeArguments := parameterizedType.TypeArguments()
+
+		var newTypeArguments []sema.Type
+
+		for typeParameterIndex, typeParameter := range typeParameters {
+			var typeArgument sema.Type
+			if typeParameterIndex < len(typeArguments) {
+				typeArgument = typeArguments[typeParameterIndex]
+			}
+			if typeArgument == nil {
+				typeArgument = &sema.GenericType{
+					TypeParameter: typeParameter,
+				}
+			}
+			newTypeArguments = append(newTypeArguments, typeArgument)
 		}
+
+		ty = sema.MustInstantiate(parameterizedType, newTypeArguments...)
+	}
+
+	id := ty.QualifiedString()
+	fmt.Printf("- %s\n", id)
+
+	if *includeMembers {
+		dumpTypeMembers(ty)
 	}
 }
 
