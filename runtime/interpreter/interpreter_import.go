@@ -88,19 +88,24 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 			continue
 		}
 
-		value := variable.GetValue(interpreter)
+		// Lazily load the value
+		getter := func() Value {
+			value := variable.GetValue(interpreter)
 
-		// If the variable is a contract value, then import it as a reference.
-		// This must be done at the type of importing, rather than when declaring the contract value.
-		compositeValue, ok := value.(*CompositeValue)
-		if ok && compositeValue.Kind == common.CompositeKindContract {
+			// If the variable is a contract value, then import it as a reference.
+			// This must be done at the type of importing, rather than when declaring the contract value.
+			compositeValue, ok := value.(*CompositeValue)
+			if !ok || compositeValue.Kind != common.CompositeKindContract {
+				return value
+			}
+
 			staticType := compositeValue.StaticType(interpreter)
 			semaType, err := interpreter.ConvertStaticToSemaType(staticType)
 			if err != nil {
 				panic(err)
 			}
 
-			contractReference := NewEphemeralReferenceValue(
+			return NewEphemeralReferenceValue(
 				interpreter,
 				UnauthorizedAccess,
 				compositeValue,
@@ -109,11 +114,10 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 					Location: interpreter.Location,
 				},
 			)
-			variable = NewVariableWithValue(interpreter, contractReference)
 		}
 
-		interpreter.setVariable(name, variable)
-		interpreter.Globals.Set(name, variable)
+		importedVariable := NewVariableWithGetter(interpreter, getter)
+		interpreter.setVariable(name, importedVariable)
+		interpreter.Globals.Set(name, importedVariable)
 	}
-
 }
