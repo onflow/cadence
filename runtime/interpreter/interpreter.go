@@ -3908,7 +3908,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 		),
 	},
 	{
-		name: "InclusiveRangeType",
+		name: sema.InclusiveRangeTypeFunctionName,
 		converter: NewUnmeteredStaticHostFunctionValue(
 			sema.InclusiveRangeTypeFunctionType,
 			func(invocation Invocation) Value {

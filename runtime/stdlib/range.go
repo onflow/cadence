@@ -50,6 +50,7 @@ var inclusiveRangeConstructorFunctionType = func() *sema.FunctionType {
 	)
 
 	return &sema.FunctionType{
+		Purity: sema.FunctionPurityView,
 		TypeParameters: []*sema.TypeParameter{
 			typeParameter,
 		},
