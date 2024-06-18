@@ -477,3 +477,34 @@ func TestCheckInvalidTransactionSelfMoveIntoDictionaryLiteral(t *testing.T) {
 
 	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
 }
+
+func TestCheckInvalidTransactionResourceLoss(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	access(all) resource R{}
+    transaction {
+		var r: @R?
+	  
+		prepare() {
+			  self.r <- nil
+		}
+	  
+		execute {
+			let writeback = fun() {
+				self.r <-! create R()
+			}
+	  
+			var x <- self.r
+	  
+			destroy x
+			writeback()
+		}
+	  }	  
+   `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+}
