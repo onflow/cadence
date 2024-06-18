@@ -53,8 +53,7 @@ repos:
         - onflow/flow-emulator
 
 - repo: onflow/flowkit
-  needsRelease: false
-  branch: feature/stable-cadence
+  needsRelease: true
   mods:
     - path: ""
       deps:
