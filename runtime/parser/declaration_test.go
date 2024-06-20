@@ -9642,7 +9642,7 @@ func TestSoftKeywordsInFunctionDeclaration(t *testing.T) {
 		})
 	}
 
-	for _, keyword := range softKeywords {
+	for _, keyword := range SoftKeywords {
 		testSoftKeyword(keyword)
 	}
 }

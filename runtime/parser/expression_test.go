@@ -6496,7 +6496,7 @@ func TestParseIdentifiers(t *testing.T) {
 func TestParseHardKeywords(t *testing.T) {
 	t.Parallel()
 
-	testParseIdentifiersWith(t, hardKeywords, func(t *testing.T, keyword string, err error) {
+	testParseIdentifiersWith(t, HardKeywords, func(t *testing.T, keyword string, err error) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -6512,7 +6512,7 @@ func TestParseHardKeywords(t *testing.T) {
 func TestParseSoftKeywords(t *testing.T) {
 	t.Parallel()
 
-	testParseIdentifiersWith(t, softKeywords, func(t *testing.T, _ string, err error) {
+	testParseIdentifiersWith(t, SoftKeywords, func(t *testing.T, _ string, err error) {
 		require.Empty(t, err)
 	})
 }
