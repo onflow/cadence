@@ -2492,7 +2492,7 @@ func TestDecodeFields(t *testing.T) {
 			Description: "should err when mapping to invalid type",
 		},
 		{Value: &struct {
-			a Int `cadence:"intField"` // nolint: unused
+			a Int `cadence:"intField"`
 		}{},
 			ExpectedErr: "cannot set field a",
 			Description: "should err when mapping to private field",

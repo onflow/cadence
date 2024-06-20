@@ -740,13 +740,13 @@ type CompositeType interface {
 
 // linked in by packages that need access to CompositeType.setCompositeFields,
 // e.g. JSON and CCF codecs
-func setCompositeTypeFields(compositeType CompositeType, fields []Field) {
+func setCompositeTypeFields(compositeType CompositeType, fields []Field) { //nolint:unused
 	compositeType.setCompositeFields(fields)
 }
 
 // linked in by packages that need access to CompositeType.compositeFields,
 // e.g. JSON and CCF codecs
-func getCompositeTypeFields(compositeType CompositeType) []Field {
+func getCompositeTypeFields(compositeType CompositeType) []Field { //nolint:unused
 	return compositeType.compositeFields()
 }
 
@@ -1180,13 +1180,13 @@ type InterfaceType interface {
 
 // linked in by packages that need access to InterfaceType.interfaceFields,
 // e.g. JSON and CCF codecs
-func getInterfaceTypeFields(interfaceType InterfaceType) []Field {
+func getInterfaceTypeFields(interfaceType InterfaceType) []Field { //nolint:unused
 	return interfaceType.interfaceFields()
 }
 
 // linked in by packages that need access to InterfaceType.setInterfaceFields,
 // e.g. JSON and CCF codecs
-func setInterfaceTypeFields(interfaceType InterfaceType, fields []Field) {
+func setInterfaceTypeFields(interfaceType InterfaceType, fields []Field) { //nolint:unused
 	interfaceType.setInterfaceFields(fields)
 }
 
