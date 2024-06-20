@@ -1572,6 +1572,8 @@ func FieldsMappedByName(v Composite) map[string]Value {
 			fieldName = fields[i].Identifier
 		} else if attachment, ok := fieldValue.(Attachment); ok {
 			fieldName = interpreter.AttachmentMemberName(attachment.Type().ID())
+		} else {
+			panic(errors.NewUnreachableError())
 		}
 		fieldsMap[fieldName] = fieldValue
 	}
