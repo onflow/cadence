@@ -2690,7 +2690,7 @@ func TestSoftKeywordsInStatement(t *testing.T) {
 		})
 	}
 
-	for _, keyword := range softKeywords {
+	for _, keyword := range SoftKeywords {
 		// it's not worth the additional complexity to support assigning to `remove` or `attach`-named
 		// variables, so we just accept this as a parsing error
 		if keyword == KeywordAttach || keyword == KeywordRemove {

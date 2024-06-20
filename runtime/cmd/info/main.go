@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
@@ -70,6 +71,10 @@ var commands = map[string]command{
 	"dump-builtin-values": {
 		help:    "Dumps all built-in values",
 		handler: dumpBuiltinValues,
+	},
+	"dump-hard-keywords": {
+		help:    "Dumps all hard keywords",
+		handler: dumpHardKeywords,
 	},
 }
 
@@ -288,6 +293,12 @@ func dumpBuiltinValues() {
 		if *includeMembers {
 			dumpTypeMembers(ty)
 		}
+	}
+}
+
+func dumpHardKeywords() {
+	for _, keyword := range parser.HardKeywords {
+		fmt.Printf("- %s\n", keyword)
 	}
 }
 
