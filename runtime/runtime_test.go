@@ -640,19 +640,20 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			args: encodeArgs([]cadence.Value{
 				cadence.
 					NewStruct([]cadence.Value{cadence.String("bar")}).
-					WithType(&cadence.StructType{
-						Location: common.AddressLocation{
+					WithType(cadence.NewStructType(
+						common.AddressLocation{
 							Address: common.MustBytesToAddress([]byte{0x1}),
 							Name:    "C",
 						},
-						QualifiedIdentifier: "C.Foo",
-						Fields: []cadence.Field{
+						"C.Foo",
+						[]cadence.Field{
 							{
 								Identifier: "y",
 								Type:       cadence.StringType,
 							},
 						},
-					}),
+						nil,
+					)),
 			}),
 			expectedLogs: []string{`"bar"`},
 		},
@@ -688,19 +689,20 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				cadence.NewArray([]cadence.Value{
 					cadence.
 						NewStruct([]cadence.Value{cadence.String("bar")}).
-						WithType(&cadence.StructType{
-							Location: common.AddressLocation{
+						WithType(cadence.NewStructType(
+							common.AddressLocation{
 								Address: common.MustBytesToAddress([]byte{0x1}),
 								Name:    "C",
 							},
-							QualifiedIdentifier: "C.Foo",
-							Fields: []cadence.Field{
+							"C.Foo",
+							[]cadence.Field{
 								{
 									Identifier: "y",
 									Type:       cadence.StringType,
 								},
 							},
-						}),
+							nil,
+						)),
 				}),
 			}),
 			expectedLogs: []string{`"bar"`},
@@ -989,16 +991,17 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			args: encodeArgs([]cadence.Value{
 				cadence.
 					NewStruct([]cadence.Value{cadence.String("bar")}).
-					WithType(&cadence.StructType{
-						Location:            common.ScriptLocation{},
-						QualifiedIdentifier: "Foo",
-						Fields: []cadence.Field{
+					WithType(cadence.NewStructType(
+						common.ScriptLocation{},
+						"Foo",
+						[]cadence.Field{
 							{
 								Identifier: "y",
 								Type:       cadence.StringType,
 							},
 						},
-					}),
+						nil,
+					)),
 			}),
 			expectedLogs: []string{`"bar"`},
 		},
@@ -1022,16 +1025,17 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				cadence.NewArray([]cadence.Value{
 					cadence.
 						NewStruct([]cadence.Value{cadence.String("bar")}).
-						WithType(&cadence.StructType{
-							Location:            common.ScriptLocation{},
-							QualifiedIdentifier: "Foo",
-							Fields: []cadence.Field{
+						WithType(cadence.NewStructType(
+							common.ScriptLocation{},
+							"Foo",
+							[]cadence.Field{
 								{
 									Identifier: "y",
 									Type:       cadence.StringType,
 								},
 							},
-						}),
+							nil,
+						)),
 				}),
 			}),
 			expectedLogs: []string{`"bar"`},

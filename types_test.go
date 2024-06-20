@@ -2272,10 +2272,10 @@ func TestDecodeFields(t *testing.T) {
 				},
 			},
 		},
-	).WithType(&EventType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "SimpleEvent",
-		Fields: []Field{
+	).WithType(NewEventType(
+		utils.TestLocation,
+		"SimpleEvent",
+		[]Field{
 			{
 				Identifier: "intField",
 				Type:       IntType,
@@ -2369,7 +2369,8 @@ func TestDecodeFields(t *testing.T) {
 				),
 			},
 		},
-	})
+		nil,
+	))
 
 	type eventStruct struct {
 		Int                            Int                     `cadence:"intField"`

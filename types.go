@@ -426,44 +426,71 @@ func NewField(identifier string, typ Type) Field {
 	}
 }
 
-// SearchFieldByName searches for the field with the given name in the composite type,
-// and returns the value of the field, or nil if the field is not found.
+// SearchCompositeFieldTypeByName searches for the field with the given name in the composite type,
+// and returns the type of the field, or nil if the field is not found.
 //
 // WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
-// Prefer using FieldsMappedByName if you need to access multiple fields.
-func SearchFieldByName(v Composite, fieldName string) Value {
-	fieldValues := v.getFieldValues()
-	fields := v.GetFields()
+// Prefer using CompositeFieldTypesMappedByName if you need to access multiple fields.
+func SearchCompositeFieldTypeByName(compositeType CompositeType, fieldName string) Type {
+	fields := compositeType.compositeFields()
 
-	if fieldValues == nil || fields == nil {
+	if fields == nil {
 		return nil
 	}
 
-	for i, field := range v.GetFields() {
+	for _, field := range fields {
 		if field.Identifier == fieldName {
-			return fieldValues[i]
+			return field.Type
 		}
 	}
 	return nil
 }
 
-func FieldsMappedByName(v Composite) map[string]Value {
-	fieldValues := v.getFieldValues()
-	fields := v.GetFields()
+func CompositeFieldTypesMappedByName(compositeType CompositeType) map[string]Type {
+	fields := compositeType.compositeFields()
 
-	if fieldValues == nil || fields == nil {
+	if fields == nil {
 		return nil
 	}
 
-	fieldsMap := make(map[string]Value, len(fields))
-	for i, fieldValue := range fieldValues {
-		var fieldName string
-		if i < len(fields) {
-			fieldName = fields[i].Identifier
-		} else if attachment, ok := fieldValue.(Attachment); ok {
-			fieldName = interpreter.AttachmentMemberName(attachment.Type().ID())
+	fieldsMap := make(map[string]Type, len(fields))
+	for _, field := range fields {
+		fieldsMap[field.Identifier] = field.Type
+	}
+
+	return fieldsMap
+}
+
+// SearchInterfaceFieldTypeByName searches for the field with the given name in the interface type,
+// and returns the type of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using InterfaceFieldTypesMappedByName if you need to access multiple fields.
+func SearchInterfaceFieldTypeByName(interfaceType InterfaceType, fieldName string) Type {
+	fields := interfaceType.interfaceFields()
+
+	if fields == nil {
+		return nil
+	}
+
+	for _, field := range fields {
+		if field.Identifier == fieldName {
+			return field.Type
 		}
-		fieldsMap[fieldName] = fieldValue
+	}
+	return nil
+}
+
+func InterfaceFieldTypesMappedByName(interfaceType InterfaceType) map[string]Type {
+	fields := interfaceType.interfaceFields()
+
+	if fields == nil {
+		return nil
+	}
+
+	fieldsMap := make(map[string]Type, len(fields))
+	for _, field := range fields {
+		fieldsMap[field.Identifier] = field.Type
 	}
 
 	return fieldsMap
@@ -699,12 +726,28 @@ func NewTypeParameter(
 
 type CompositeType interface {
 	Type
+
 	isCompositeType()
+	compositeFields() []Field
+	setCompositeFields([]Field)
+
 	CompositeTypeLocation() common.Location
 	CompositeTypeQualifiedIdentifier() string
-	CompositeFields() []Field
-	SetCompositeFields([]Field)
 	CompositeInitializers() [][]Parameter
+	SearchFieldByName(fieldName string) Type
+	FieldsMappedByName() map[string]Type
+}
+
+// linked in by packages that need access to CompositeType.setCompositeFields,
+// e.g. JSON and CCF codecs
+func setCompositeTypeFields(compositeType CompositeType, fields []Field) {
+	compositeType.setCompositeFields(fields)
+}
+
+// linked in by packages that need access to CompositeType.compositeFields,
+// e.g. JSON and CCF codecs
+func getCompositeTypeFields(compositeType CompositeType) []Field {
+	return compositeType.compositeFields()
 }
 
 // StructType
@@ -712,7 +755,7 @@ type CompositeType interface {
 type StructType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -725,7 +768,7 @@ func NewStructType(
 	return &StructType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -757,12 +800,12 @@ func (t *StructType) CompositeTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *StructType) CompositeFields() []Field {
-	return t.Fields
+func (t *StructType) compositeFields() []Field {
+	return t.fields
 }
 
-func (t *StructType) SetCompositeFields(fields []Field) {
-	t.Fields = fields
+func (t *StructType) setCompositeFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *StructType) CompositeInitializers() [][]Parameter {
@@ -779,12 +822,20 @@ func (t *StructType) Equal(other Type) bool {
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
+func (t *StructType) SearchFieldByName(fieldName string) Type {
+	return SearchCompositeFieldTypeByName(t, fieldName)
+}
+
+func (t *StructType) FieldsMappedByName() map[string]Type {
+	return CompositeFieldTypesMappedByName(t)
+}
+
 // ResourceType
 
 type ResourceType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -797,7 +848,7 @@ func NewResourceType(
 	return &ResourceType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -829,12 +880,12 @@ func (t *ResourceType) CompositeTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *ResourceType) CompositeFields() []Field {
-	return t.Fields
+func (t *ResourceType) compositeFields() []Field {
+	return t.fields
 }
 
-func (t *ResourceType) SetCompositeFields(fields []Field) {
-	t.Fields = fields
+func (t *ResourceType) setCompositeFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *ResourceType) CompositeInitializers() [][]Parameter {
@@ -851,20 +902,28 @@ func (t *ResourceType) Equal(other Type) bool {
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
+func (t *ResourceType) SearchFieldByName(fieldName string) Type {
+	return SearchCompositeFieldTypeByName(t, fieldName)
+}
+
+func (t *ResourceType) FieldsMappedByName() map[string]Type {
+	return CompositeFieldTypesMappedByName(t)
+}
+
 // AttachmentType
 
 type AttachmentType struct {
 	Location            common.Location
 	BaseType            Type
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
 func NewAttachmentType(
 	location common.Location,
-	baseType Type,
 	qualifiedIdentifier string,
+	baseType Type,
 	fields []Field,
 	initializers [][]Parameter,
 ) *AttachmentType {
@@ -872,7 +931,7 @@ func NewAttachmentType(
 		Location:            location,
 		BaseType:            baseType,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -880,16 +939,16 @@ func NewAttachmentType(
 func NewMeteredAttachmentType(
 	gauge common.MemoryGauge,
 	location common.Location,
-	baseType Type,
 	qualifiedIdentifier string,
+	baseType Type,
 	fields []Field,
 	initializers [][]Parameter,
 ) *AttachmentType {
 	common.UseMemory(gauge, common.CadenceAttachmentTypeMemoryUsage)
 	return NewAttachmentType(
 		location,
-		baseType,
 		qualifiedIdentifier,
+		baseType,
 		fields,
 		initializers,
 	)
@@ -911,12 +970,12 @@ func (t *AttachmentType) CompositeTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *AttachmentType) CompositeFields() []Field {
-	return t.Fields
+func (t *AttachmentType) compositeFields() []Field {
+	return t.fields
 }
 
-func (t *AttachmentType) SetCompositeFields(fields []Field) {
-	t.Fields = fields
+func (t *AttachmentType) setCompositeFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *AttachmentType) CompositeInitializers() [][]Parameter {
@@ -937,12 +996,20 @@ func (t *AttachmentType) Equal(other Type) bool {
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
+func (t *AttachmentType) SearchFieldByName(fieldName string) Type {
+	return SearchCompositeFieldTypeByName(t, fieldName)
+}
+
+func (t *AttachmentType) FieldsMappedByName() map[string]Type {
+	return CompositeFieldTypesMappedByName(t)
+}
+
 // EventType
 
 type EventType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializer         []Parameter
 }
 
@@ -955,7 +1022,7 @@ func NewEventType(
 	return &EventType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializer:         initializer,
 	}
 }
@@ -987,12 +1054,12 @@ func (t *EventType) CompositeTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *EventType) CompositeFields() []Field {
-	return t.Fields
+func (t *EventType) compositeFields() []Field {
+	return t.fields
 }
 
-func (t *EventType) SetCompositeFields(fields []Field) {
-	t.Fields = fields
+func (t *EventType) setCompositeFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *EventType) CompositeInitializers() [][]Parameter {
@@ -1009,12 +1076,20 @@ func (t *EventType) Equal(other Type) bool {
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
+func (t *EventType) SearchFieldByName(fieldName string) Type {
+	return SearchCompositeFieldTypeByName(t, fieldName)
+}
+
+func (t *EventType) FieldsMappedByName() map[string]Type {
+	return CompositeFieldTypesMappedByName(t)
+}
+
 // ContractType
 
 type ContractType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -1027,7 +1102,7 @@ func NewContractType(
 	return &ContractType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -1059,12 +1134,12 @@ func (t *ContractType) CompositeTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *ContractType) CompositeFields() []Field {
-	return t.Fields
+func (t *ContractType) compositeFields() []Field {
+	return t.fields
 }
 
-func (t *ContractType) SetCompositeFields(fields []Field) {
-	t.Fields = fields
+func (t *ContractType) setCompositeFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *ContractType) CompositeInitializers() [][]Parameter {
@@ -1081,16 +1156,38 @@ func (t *ContractType) Equal(other Type) bool {
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
+func (t *ContractType) SearchFieldByName(fieldName string) Type {
+	return SearchCompositeFieldTypeByName(t, fieldName)
+}
+
+func (t *ContractType) FieldsMappedByName() map[string]Type {
+	return CompositeFieldTypesMappedByName(t)
+}
+
 // InterfaceType
 
 type InterfaceType interface {
 	Type
+
 	isInterfaceType()
+	interfaceFields() []Field
+	setInterfaceFields(fields []Field)
+
 	InterfaceTypeLocation() common.Location
 	InterfaceTypeQualifiedIdentifier() string
-	InterfaceFields() []Field
-	SetInterfaceFields(fields []Field)
 	InterfaceInitializers() [][]Parameter
+}
+
+// linked in by packages that need access to InterfaceType.interfaceFields,
+// e.g. JSON and CCF codecs
+func getInterfaceTypeFields(interfaceType InterfaceType) []Field {
+	return interfaceType.interfaceFields()
+}
+
+// linked in by packages that need access to InterfaceType.setInterfaceFields,
+// e.g. JSON and CCF codecs
+func setInterfaceTypeFields(interfaceType InterfaceType, fields []Field) {
+	interfaceType.setInterfaceFields(fields)
 }
 
 // StructInterfaceType
@@ -1098,7 +1195,7 @@ type InterfaceType interface {
 type StructInterfaceType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -1111,7 +1208,7 @@ func NewStructInterfaceType(
 	return &StructInterfaceType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -1143,12 +1240,12 @@ func (t *StructInterfaceType) InterfaceTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *StructInterfaceType) InterfaceFields() []Field {
-	return t.Fields
+func (t *StructInterfaceType) interfaceFields() []Field {
+	return t.fields
 }
 
-func (t *StructInterfaceType) SetInterfaceFields(fields []Field) {
-	t.Fields = fields
+func (t *StructInterfaceType) setInterfaceFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *StructInterfaceType) InterfaceInitializers() [][]Parameter {
@@ -1170,7 +1267,7 @@ func (t *StructInterfaceType) Equal(other Type) bool {
 type ResourceInterfaceType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -1183,7 +1280,7 @@ func NewResourceInterfaceType(
 	return &ResourceInterfaceType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -1215,12 +1312,12 @@ func (t *ResourceInterfaceType) InterfaceTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *ResourceInterfaceType) InterfaceFields() []Field {
-	return t.Fields
+func (t *ResourceInterfaceType) interfaceFields() []Field {
+	return t.fields
 }
 
-func (t *ResourceInterfaceType) SetInterfaceFields(fields []Field) {
-	t.Fields = fields
+func (t *ResourceInterfaceType) setInterfaceFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *ResourceInterfaceType) InterfaceInitializers() [][]Parameter {
@@ -1242,7 +1339,7 @@ func (t *ResourceInterfaceType) Equal(other Type) bool {
 type ContractInterfaceType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -1255,7 +1352,7 @@ func NewContractInterfaceType(
 	return &ContractInterfaceType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -1287,12 +1384,12 @@ func (t *ContractInterfaceType) InterfaceTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *ContractInterfaceType) InterfaceFields() []Field {
-	return t.Fields
+func (t *ContractInterfaceType) interfaceFields() []Field {
+	return t.fields
 }
 
-func (t *ContractInterfaceType) SetInterfaceFields(fields []Field) {
-	t.Fields = fields
+func (t *ContractInterfaceType) setInterfaceFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *ContractInterfaceType) InterfaceInitializers() [][]Parameter {
@@ -1939,7 +2036,7 @@ type EnumType struct {
 	Location            common.Location
 	QualifiedIdentifier string
 	RawType             Type
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -1954,7 +2051,7 @@ func NewEnumType(
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
 		RawType:             rawType,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -1987,12 +2084,12 @@ func (t *EnumType) CompositeTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *EnumType) CompositeFields() []Field {
-	return t.Fields
+func (t *EnumType) compositeFields() []Field {
+	return t.fields
 }
 
-func (t *EnumType) SetCompositeFields(fields []Field) {
-	t.Fields = fields
+func (t *EnumType) setCompositeFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *EnumType) CompositeInitializers() [][]Parameter {
@@ -2007,4 +2104,12 @@ func (t *EnumType) Equal(other Type) bool {
 
 	return t.Location == otherType.Location &&
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
+}
+
+func (t *EnumType) SearchFieldByName(fieldName string) Type {
+	return SearchCompositeFieldTypeByName(t, fieldName)
+}
+
+func (t *EnumType) FieldsMappedByName() map[string]Type {
+	return CompositeFieldTypesMappedByName(t)
 }
