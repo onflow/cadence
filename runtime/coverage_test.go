@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeNewLocationCoverage(t *testing.T) {
@@ -1768,7 +1769,7 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 
 	t.Parallel()
 
-	importedScript := []byte(`
+	contract := []byte(`
 	  access(all) contract FooContract {
 	    access(all) resource interface Receiver {
 	    }
@@ -1776,7 +1777,7 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 	`)
 
 	script := []byte(`
-	  import "FooContract"
+	  import FooContract from 0x1
 	  access(all) fun main(): Int {
 		Type<@{FooContract.Receiver}>().identifier
 		return 42
@@ -1784,30 +1785,58 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 	`)
 
 	coverageReport := NewCoverageReport()
-
-	scriptlocation := common.ScriptLocation{0x1b, 0x2c}
-
-	runtimeInterface := &TestRuntimeInterface{
-		OnGetCode: func(location Location) (bytes []byte, err error) {
-			switch location {
-			case common.StringLocation("FooContract"):
-				return importedScript, nil
-			default:
-				return nil, fmt.Errorf("unknown import location: %s", location)
-			}
-		},
-	}
 	runtime := NewInterpreterRuntime(Config{
 		CoverageReport: coverageReport,
 	})
-	coverageReport.ExcludeLocation(scriptlocation)
+
+	scriptLocation := common.ScriptLocation{0x1b, 0x2c}
+
+	transactionLocation := NewTransactionLocationGenerator()
+	txLocation := transactionLocation()
+
+	authorizers := []Address{{0, 0, 0, 0, 0, 0, 0, 1}}
+	accountCodes := map[Location][]byte{}
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return authorizers, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+	}
+
+	coverageReport.ExcludeLocation(txLocation)
+	deploy := utils.DeploymentTransaction("FooContract", contract)
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface:      runtimeInterface,
+			Location:       txLocation,
+			CoverageReport: coverageReport,
+		},
+	)
+	require.NoError(t, err)
+
+	coverageReport.ExcludeLocation(scriptLocation)
 	value, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface:      runtimeInterface,
-			Location:       scriptlocation,
+			Location:       scriptLocation,
 			CoverageReport: coverageReport,
 		},
 	)

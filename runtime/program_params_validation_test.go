@@ -698,17 +698,48 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		storage := NewTestLedger(nil, nil)
 
+		authorizers := []Address{{0, 0, 0, 0, 0, 0, 0, 1}}
+		accountCodes := map[Location][]byte{}
+
 		runtimeInterface := &TestRuntimeInterface{
 			Storage:           storage,
 			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
 			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-				return contracts[location], nil
+				return accountCodes[location], nil
 			},
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return authorizers, nil
+			},
 		}
 		addPublicKeyValidation(runtimeInterface, nil)
+
+		transactionLocation := NewTransactionLocationGenerator()
+		for location, contract := range contracts {
+			deploy := DeploymentTransaction(location.Name, contract)
+			err := rt.ExecuteTransaction(
+				Script{
+					Source: deploy,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  transactionLocation(),
+				},
+			)
+
+			require.NoError(t, err)
+		}
+
+		authorizers = nil
 
 		return rt.ExecuteTransaction(
 			Script{
@@ -717,7 +748,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
+				Location:  transactionLocation(),
 			},
 		)
 	}
