@@ -399,12 +399,12 @@ func exportCompositeValue(
 	// NOTE: use the exported type's fields to ensure fields in type
 	// and value are in sync
 
-	fieldNames := t.CompositeFields()
+	fields := getCompositeTypeFields(t)
 
-	makeFields := func() ([]cadence.Value, error) {
-		fields := make([]cadence.Value, len(fieldNames))
+	makeFieldsValues := func() ([]cadence.Value, error) {
+		fieldValues := make([]cadence.Value, len(fields))
 
-		for i, field := range fieldNames {
+		for i, field := range fields {
 			fieldName := field.Identifier
 
 			var fieldValue interpreter.Value
@@ -434,7 +434,7 @@ func exportCompositeValue(
 			if err != nil {
 				return nil, err
 			}
-			fields[i] = exportedFieldValue
+			fieldValues[i] = exportedFieldValue
 		}
 
 		if composite, ok := v.(*interpreter.CompositeValue); ok {
@@ -448,11 +448,11 @@ func exportCompositeValue(
 				if err != nil {
 					return nil, err
 				}
-				fields = append(fields, exportedAttachmentValue)
+				fieldValues = append(fieldValues, exportedAttachmentValue)
 			}
 		}
 
-		return fields, nil
+		return fieldValues, nil
 	}
 
 	compositeKind := compositeType.Kind
@@ -464,8 +464,8 @@ func exportCompositeValue(
 	case common.CompositeKindStructure:
 		structure, err := cadence.NewMeteredStruct(
 			inter,
-			len(fieldNames),
-			makeFields,
+			len(fields),
+			makeFieldsValues,
 		)
 		if err != nil {
 			return nil, err
@@ -475,8 +475,8 @@ func exportCompositeValue(
 	case common.CompositeKindResource:
 		resource, err := cadence.NewMeteredResource(
 			inter,
-			len(fieldNames),
-			makeFields,
+			len(fields),
+			makeFieldsValues,
 		)
 		if err != nil {
 			return nil, err
@@ -486,8 +486,8 @@ func exportCompositeValue(
 	case common.CompositeKindAttachment:
 		attachment, err := cadence.NewMeteredAttachment(
 			inter,
-			len(fieldNames),
-			makeFields,
+			len(fields),
+			makeFieldsValues,
 		)
 		if err != nil {
 			return nil, err
@@ -497,8 +497,8 @@ func exportCompositeValue(
 	case common.CompositeKindEvent:
 		event, err := cadence.NewMeteredEvent(
 			inter,
-			len(fieldNames),
-			makeFields,
+			len(fields),
+			makeFieldsValues,
 		)
 		if err != nil {
 			return nil, err
@@ -508,8 +508,8 @@ func exportCompositeValue(
 	case common.CompositeKindContract:
 		contract, err := cadence.NewMeteredContract(
 			inter,
-			len(fieldNames),
-			makeFields,
+			len(fields),
+			makeFieldsValues,
 		)
 		if err != nil {
 			return nil, err
@@ -519,8 +519,8 @@ func exportCompositeValue(
 	case common.CompositeKindEnum:
 		enum, err := cadence.NewMeteredEnum(
 			inter,
-			len(fieldNames),
-			makeFields,
+			len(fields),
+			makeFieldsValues,
 		)
 		if err != nil {
 			return nil, err
@@ -776,8 +776,11 @@ func ImportValue(
 	}.importValue(value, expectedType)
 }
 
-//go:linkname getFieldValues github.com/onflow/cadence.getFieldValues
-func getFieldValues(cadence.Composite) []cadence.Value
+//go:linkname getCompositeFieldValues github.com/onflow/cadence.getCompositeFieldValues
+func getCompositeFieldValues(cadence.Composite) []cadence.Value
+
+//go:linkname getCompositeTypeFields github.com/onflow/cadence.getCompositeTypeFields
+func getCompositeTypeFields(cadence.CompositeType) []cadence.Field
 
 func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) (interpreter.Value, error) {
 	switch v := value.(type) {
@@ -850,32 +853,32 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 			common.CompositeKindStructure,
 			v.StructType.Location,
 			v.StructType.QualifiedIdentifier,
-			v.StructType.Fields,
-			getFieldValues(v),
+			getCompositeTypeFields(v.StructType),
+			getCompositeFieldValues(v),
 		)
 	case cadence.Resource:
 		return i.importCompositeValue(
 			common.CompositeKindResource,
 			v.ResourceType.Location,
 			v.ResourceType.QualifiedIdentifier,
-			v.ResourceType.Fields,
-			getFieldValues(v),
+			getCompositeTypeFields(v.ResourceType),
+			getCompositeFieldValues(v),
 		)
 	case cadence.Event:
 		return i.importCompositeValue(
 			common.CompositeKindEvent,
 			v.EventType.Location,
 			v.EventType.QualifiedIdentifier,
-			v.EventType.Fields,
-			getFieldValues(v),
+			getCompositeTypeFields(v.EventType),
+			getCompositeFieldValues(v),
 		)
 	case cadence.Enum:
 		return i.importCompositeValue(
 			common.CompositeKindEnum,
 			v.EnumType.Location,
 			v.EnumType.QualifiedIdentifier,
-			v.EnumType.Fields,
-			getFieldValues(v),
+			getCompositeTypeFields(v.EnumType),
+			getCompositeFieldValues(v),
 		)
 	case *cadence.InclusiveRange:
 		return i.importInclusiveRangeValue(v, expectedType)

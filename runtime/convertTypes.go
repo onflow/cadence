@@ -342,8 +342,8 @@ func exportCompositeType(
 		result = cadence.NewMeteredAttachmentType(
 			gauge,
 			t.Location,
-			ExportMeteredType(gauge, t.GetBaseType(), results),
 			t.QualifiedIdentifier(),
+			ExportMeteredType(gauge, t.GetBaseType(), results),
 			fields,
 			nil,
 		)

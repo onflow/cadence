@@ -640,7 +640,7 @@ func (e *Encoder) encodeValue(
 // encodeVoid encodes cadence.Void as
 // language=CDDL
 // void-value = nil
-func (e *Encoder) encodeVoid(v cadence.Void) error {
+func (e *Encoder) encodeVoid(_ cadence.Void) error {
 	return e.enc.EncodeNil()
 }
 
@@ -1022,8 +1022,8 @@ func (e *Encoder) encodeInclusiveRange(v *cadence.InclusiveRange, tids ccfTypeID
 	return e.encodeValue(v.Step, staticElementType, tids)
 }
 
-//go:linkname getFieldValues github.com/onflow/cadence.getFieldValues
-func getFieldValues(cadence.Composite) []cadence.Value
+//go:linkname getCompositeFieldValues github.com/onflow/cadence.getCompositeFieldValues
+func getCompositeFieldValues(cadence.Composite) []cadence.Value
 
 // encodeStruct encodes cadence.Struct as
 // language=CDDL
@@ -1031,7 +1031,7 @@ func getFieldValues(cadence.Composite) []cadence.Value
 func (e *Encoder) encodeStruct(v cadence.Struct, tids ccfTypeIDByCadenceType) error {
 	return e.encodeComposite(
 		v.StructType,
-		getFieldValues(v),
+		getCompositeFieldValues(v),
 		tids,
 	)
 }
@@ -1042,7 +1042,7 @@ func (e *Encoder) encodeStruct(v cadence.Struct, tids ccfTypeIDByCadenceType) er
 func (e *Encoder) encodeResource(v cadence.Resource, tids ccfTypeIDByCadenceType) error {
 	return e.encodeComposite(
 		v.ResourceType,
-		getFieldValues(v),
+		getCompositeFieldValues(v),
 		tids,
 	)
 }
@@ -1053,7 +1053,7 @@ func (e *Encoder) encodeResource(v cadence.Resource, tids ccfTypeIDByCadenceType
 func (e *Encoder) encodeEvent(v cadence.Event, tids ccfTypeIDByCadenceType) error {
 	return e.encodeComposite(
 		v.EventType,
-		getFieldValues(v),
+		getCompositeFieldValues(v),
 		tids,
 	)
 }
@@ -1064,7 +1064,7 @@ func (e *Encoder) encodeEvent(v cadence.Event, tids ccfTypeIDByCadenceType) erro
 func (e *Encoder) encodeContract(v cadence.Contract, tids ccfTypeIDByCadenceType) error {
 	return e.encodeComposite(
 		v.ContractType,
-		getFieldValues(v),
+		getCompositeFieldValues(v),
 		tids,
 	)
 }
@@ -1075,7 +1075,7 @@ func (e *Encoder) encodeContract(v cadence.Contract, tids ccfTypeIDByCadenceType
 func (e *Encoder) encodeEnum(v cadence.Enum, tids ccfTypeIDByCadenceType) error {
 	return e.encodeComposite(
 		v.EnumType,
-		getFieldValues(v),
+		getCompositeFieldValues(v),
 		tids,
 	)
 }
@@ -1086,7 +1086,7 @@ func (e *Encoder) encodeEnum(v cadence.Enum, tids ccfTypeIDByCadenceType) error 
 func (e *Encoder) encodeAttachment(v cadence.Attachment, tids ccfTypeIDByCadenceType) error {
 	return e.encodeComposite(
 		v.AttachmentType,
-		getFieldValues(v),
+		getCompositeFieldValues(v),
 		tids,
 	)
 }
@@ -1099,7 +1099,7 @@ func (e *Encoder) encodeComposite(
 	fields []cadence.Value,
 	tids ccfTypeIDByCadenceType,
 ) error {
-	staticFieldTypes := typ.CompositeFields()
+	staticFieldTypes := getCompositeTypeFields(typ)
 
 	if len(staticFieldTypes) != len(fields) {
 		panic(cadenceErrors.NewUnexpectedError(
@@ -1564,7 +1564,7 @@ func (e *Encoder) encodeStructTypeValue(typ *cadence.StructType, visited ccfType
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
-		typ.Fields,
+		getCompositeTypeFields(typ),
 		typ.Initializers,
 		visited,
 		rawTagNum,
@@ -1582,7 +1582,7 @@ func (e *Encoder) encodeResourceTypeValue(typ *cadence.ResourceType, visited ccf
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
-		typ.Fields,
+		getCompositeTypeFields(typ),
 		typ.Initializers,
 		visited,
 		rawTagNum,
@@ -1600,7 +1600,7 @@ func (e *Encoder) encodeEventTypeValue(typ *cadence.EventType, visited ccfTypeID
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
-		typ.Fields,
+		getCompositeTypeFields(typ),
 		[][]cadence.Parameter{typ.Initializer},
 		visited,
 		rawTagNum,
@@ -1618,7 +1618,7 @@ func (e *Encoder) encodeContractTypeValue(typ *cadence.ContractType, visited ccf
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
-		typ.Fields,
+		getCompositeTypeFields(typ),
 		typ.Initializers,
 		visited,
 		rawTagNum,
@@ -1636,7 +1636,7 @@ func (e *Encoder) encodeEnumTypeValue(typ *cadence.EnumType, visited ccfTypeIDBy
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		typ.RawType,
-		typ.Fields,
+		getCompositeTypeFields(typ),
 		typ.Initializers,
 		visited,
 		rawTagNum,
@@ -1654,7 +1654,7 @@ func (e *Encoder) encodeAttachmentTypeValue(typ *cadence.AttachmentType, visited
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		typ.BaseType,
-		typ.Fields,
+		getCompositeTypeFields(typ),
 		typ.Initializers,
 		visited,
 		rawTagNum,
@@ -1672,7 +1672,7 @@ func (e *Encoder) encodeStructInterfaceTypeValue(typ *cadence.StructInterfaceTyp
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
-		typ.Fields,
+		getInterfaceTypeFields(typ),
 		typ.Initializers,
 		visited,
 		rawTagNum,
@@ -1690,7 +1690,7 @@ func (e *Encoder) encodeResourceInterfaceTypeValue(typ *cadence.ResourceInterfac
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
-		typ.Fields,
+		getInterfaceTypeFields(typ),
 		typ.Initializers,
 		visited,
 		rawTagNum,
@@ -1708,7 +1708,7 @@ func (e *Encoder) encodeContractInterfaceTypeValue(typ *cadence.ContractInterfac
 	return e.encodeCompositeTypeValue(
 		typ.ID(),
 		nil,
-		typ.Fields,
+		getInterfaceTypeFields(typ),
 		typ.Initializers,
 		visited,
 		rawTagNum,
@@ -2182,7 +2182,7 @@ func (e *Encoder) getSortedFieldIndex(t cadence.CompositeType) []int {
 	// NOTE: bytewiseFieldIdentifierSorter doesn't sort fields in place.
 	// bytewiseFieldIdentifierSorter.indexes is used as sorted fieldTypes
 	// index.
-	sorter := newBytewiseFieldSorter(t.CompositeFields())
+	sorter := newBytewiseFieldSorter(getCompositeTypeFields(t))
 
 	sort.Sort(sorter)
 

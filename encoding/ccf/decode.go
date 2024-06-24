@@ -24,6 +24,7 @@ import (
 	"math"
 	"math/big"
 	goRuntime "runtime"
+	_ "unsafe"
 
 	"github.com/fxamacker/cbor/v2"
 
@@ -1210,11 +1211,17 @@ func (d *Decoder) decodeComposite(fieldTypes []cadence.Field, types *cadenceType
 	return fieldValues, nil
 }
 
+//go:linkname getCompositeTypeFields github.com/onflow/cadence.getCompositeTypeFields
+func getCompositeTypeFields(cadence.CompositeType) []cadence.Field
+
+//go:linkname getInterfaceTypeFields github.com/onflow/cadence.getInterfaceTypeFields
+func getInterfaceTypeFields(cadence.InterfaceType) []cadence.Field
+
 // decodeStruct decodes encoded composite-value as
 // language=CDDL
 // composite-value = [* (field: value)]
 func (d *Decoder) decodeStruct(typ *cadence.StructType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
-	fieldValues, err := d.decodeComposite(typ.Fields, types)
+	fieldValues, err := d.decodeComposite(getCompositeTypeFields(typ), types)
 	if err != nil {
 		return nil, err
 	}
@@ -1238,7 +1245,7 @@ func (d *Decoder) decodeStruct(typ *cadence.StructType, types *cadenceTypeByCCFT
 // language=CDDL
 // composite-value = [* (field: value)]
 func (d *Decoder) decodeResource(typ *cadence.ResourceType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
-	fieldValues, err := d.decodeComposite(typ.Fields, types)
+	fieldValues, err := d.decodeComposite(getCompositeTypeFields(typ), types)
 	if err != nil {
 		return nil, err
 	}
@@ -1262,7 +1269,7 @@ func (d *Decoder) decodeResource(typ *cadence.ResourceType, types *cadenceTypeBy
 // language=CDDL
 // composite-value = [* (field: value)]
 func (d *Decoder) decodeEvent(typ *cadence.EventType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
-	fieldValues, err := d.decodeComposite(typ.Fields, types)
+	fieldValues, err := d.decodeComposite(getCompositeTypeFields(typ), types)
 	if err != nil {
 		return nil, err
 	}
@@ -1286,7 +1293,7 @@ func (d *Decoder) decodeEvent(typ *cadence.EventType, types *cadenceTypeByCCFTyp
 // language=CDDL
 // composite-value = [* (field: value)]
 func (d *Decoder) decodeContract(typ *cadence.ContractType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
-	fieldValues, err := d.decodeComposite(typ.Fields, types)
+	fieldValues, err := d.decodeComposite(getCompositeTypeFields(typ), types)
 	if err != nil {
 		return nil, err
 	}
@@ -1310,7 +1317,7 @@ func (d *Decoder) decodeContract(typ *cadence.ContractType, types *cadenceTypeBy
 // language=CDDL
 // composite-value = [* (field: value)]
 func (d *Decoder) decodeEnum(typ *cadence.EnumType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
-	fieldValues, err := d.decodeComposite(typ.Fields, types)
+	fieldValues, err := d.decodeComposite(getCompositeTypeFields(typ), types)
 	if err != nil {
 		return nil, err
 	}
@@ -1334,7 +1341,7 @@ func (d *Decoder) decodeEnum(typ *cadence.EnumType, types *cadenceTypeByCCFTypeI
 // language=CDDL
 // composite-value = [* (field: value)]
 func (d *Decoder) decodeAttachment(typ *cadence.AttachmentType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
-	fieldValues, err := d.decodeComposite(typ.Fields, types)
+	fieldValues, err := d.decodeComposite(getCompositeTypeFields(typ), types)
 	if err != nil {
 		return nil, err
 	}
@@ -1780,8 +1787,8 @@ func (d *Decoder) decodeAttachmentTypeValue(visited *cadenceTypeByCCFTypeID) (ca
 		return cadence.NewMeteredAttachmentType(
 			d.gauge,
 			location,
-			typ,
 			qualifiedIdentifier,
+			typ,
 			nil,
 			nil,
 		), nil
@@ -1894,6 +1901,12 @@ type compositeTypeValue struct {
 	rawInitializers []byte
 }
 
+//go:linkname setCompositeTypeFields github.com/onflow/cadence.setCompositeTypeFields
+func setCompositeTypeFields(cadence.CompositeType, []cadence.Field)
+
+//go:linkname setInterfaceTypeFields github.com/onflow/cadence.setInterfaceTypeFields
+func setInterfaceTypeFields(cadence.InterfaceType, []cadence.Field)
+
 // decodeCompositeTypeValue decodes composite-type-value.
 // See _decodeCompositeTypeValue for details.
 func (d *Decoder) decodeCompositeTypeValue(
@@ -1943,11 +1956,11 @@ func (d *Decoder) decodeCompositeTypeValue(
 
 	switch compositeType := compositeType.(type) {
 	case *cadence.StructType:
-		compositeType.Fields = fields
+		setCompositeTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 
 	case *cadence.ResourceType:
-		compositeType.Fields = fields
+		setCompositeTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 
 	case *cadence.EventType:
@@ -1957,31 +1970,31 @@ func (d *Decoder) decodeCompositeTypeValue(
 				len(initializers),
 			)
 		}
-		compositeType.Fields = fields
+		setCompositeTypeFields(compositeType, fields)
 		compositeType.Initializer = initializers[0]
 
 	case *cadence.ContractType:
-		compositeType.Fields = fields
+		setCompositeTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 
 	case *cadence.EnumType:
-		compositeType.Fields = fields
+		setCompositeTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 
 	case *cadence.AttachmentType:
-		compositeType.Fields = fields
+		setCompositeTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 
 	case *cadence.StructInterfaceType:
-		compositeType.Fields = fields
+		setInterfaceTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 
 	case *cadence.ResourceInterfaceType:
-		compositeType.Fields = fields
+		setInterfaceTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 
 	case *cadence.ContractInterfaceType:
-		compositeType.Fields = fields
+		setInterfaceTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 	}
 

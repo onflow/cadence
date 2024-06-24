@@ -52,12 +52,15 @@ func TestEpochSetupEvent(t *testing.T) {
 
 	evtType, ok := decodedValue.Type().(*cadence.EventType)
 	require.True(t, ok)
-	require.Len(t, evtType.Fields, 9)
+
+	typeFields := evtType.FieldsMappedByName()
+
+	require.Len(t, typeFields, 9)
 
 	// field 0: counter
 	require.Equal(t,
-		"counter",
-		evtType.Fields[0].Identifier,
+		cadence.UInt64Type,
+		typeFields["counter"],
 	)
 	require.Equal(t,
 		cadence.UInt64(1),
@@ -65,9 +68,9 @@ func TestEpochSetupEvent(t *testing.T) {
 	)
 
 	// field 1: nodeInfo
-	require.Equal(t,
-		"nodeInfo",
-		evtType.Fields[1].Identifier,
+	require.IsType(t,
+		cadence.NewVariableSizedArrayType(newFlowIDTableStakingNodeInfoStructType()),
+		typeFields["nodeInfo"],
 	)
 	nodeInfos, ok := fields["nodeInfo"].(cadence.Array)
 	require.True(t, ok)
@@ -75,8 +78,8 @@ func TestEpochSetupEvent(t *testing.T) {
 
 	// field 2: firstView
 	require.Equal(t,
-		"firstView",
-		evtType.Fields[2].Identifier,
+		cadence.UInt64Type,
+		typeFields["firstView"],
 	)
 	require.Equal(t,
 		cadence.UInt64(100),
@@ -85,8 +88,8 @@ func TestEpochSetupEvent(t *testing.T) {
 
 	// field 3: finalView
 	require.Equal(t,
-		"finalView",
-		evtType.Fields[3].Identifier,
+		cadence.UInt64Type,
+		typeFields["finalView"],
 	)
 	require.Equal(t,
 		cadence.UInt64(200),
@@ -95,8 +98,8 @@ func TestEpochSetupEvent(t *testing.T) {
 
 	// field 4: collectorClusters
 	require.Equal(t,
-		"collectorClusters",
-		evtType.Fields[4].Identifier,
+		cadence.NewVariableSizedArrayType(newFlowClusterQCClusterStructType()),
+		typeFields["collectorClusters"],
 	)
 	epochCollectors, ok := fields["collectorClusters"].(cadence.Array)
 	require.True(t, ok)
@@ -104,8 +107,8 @@ func TestEpochSetupEvent(t *testing.T) {
 
 	// field 5: randomSource
 	require.Equal(t,
-		"randomSource",
-		evtType.Fields[5].Identifier,
+		cadence.StringType,
+		typeFields["randomSource"],
 	)
 	require.Equal(t,
 		cadence.String("01020304"),
@@ -114,8 +117,8 @@ func TestEpochSetupEvent(t *testing.T) {
 
 	// field 6: DKGPhase1FinalView
 	require.Equal(t,
-		"DKGPhase1FinalView",
-		evtType.Fields[6].Identifier,
+		cadence.UInt64Type,
+		typeFields["DKGPhase1FinalView"],
 	)
 	require.Equal(t,
 		cadence.UInt64(150),
@@ -124,8 +127,8 @@ func TestEpochSetupEvent(t *testing.T) {
 
 	// field 7: DKGPhase2FinalView
 	require.Equal(t,
-		"DKGPhase2FinalView",
-		evtType.Fields[7].Identifier,
+		cadence.UInt64Type,
+		typeFields["DKGPhase2FinalView"],
 	)
 	require.Equal(t,
 		cadence.UInt64(160),
@@ -134,8 +137,8 @@ func TestEpochSetupEvent(t *testing.T) {
 
 	// field 8: DKGPhase3FinalView
 	require.Equal(t,
-		"DKGPhase3FinalView",
-		evtType.Fields[8].Identifier,
+		cadence.UInt64Type,
+		typeFields["DKGPhase3FinalView"],
 	)
 	require.Equal(t,
 		cadence.UInt64(170),
@@ -156,12 +159,14 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	nodeInfoType, ok := node0.Type().(*cadence.StructType)
 	require.True(t, ok)
-	require.Len(t, nodeInfoType.Fields, 14)
+
+	node0FieldTypes := nodeInfoType.FieldsMappedByName()
+	require.Len(t, node0FieldTypes, 14)
 
 	// field 0: id
 	require.Equal(t,
-		"id",
-		nodeInfoType.Fields[0].Identifier,
+		cadence.StringType,
+		node0FieldTypes["id"],
 	)
 	require.Equal(t,
 		cadence.String("0000000000000000000000000000000000000000000000000000000000000001"),
@@ -170,8 +175,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 1: role
 	require.Equal(t,
-		"role",
-		nodeInfoType.Fields[1].Identifier,
+		cadence.UInt8Type,
+		node0FieldTypes["role"],
 	)
 	require.Equal(t,
 		cadence.UInt8(1),
@@ -180,8 +185,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 2: networkingAddress
 	require.Equal(t,
-		"networkingAddress",
-		nodeInfoType.Fields[2].Identifier,
+		cadence.StringType,
+		node0FieldTypes["networkingAddress"],
 	)
 	require.Equal(t,
 		cadence.String("1.flow.com"),
@@ -190,8 +195,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 3: networkingKey
 	require.Equal(t,
-		"networkingKey",
-		nodeInfoType.Fields[3].Identifier,
+		cadence.StringType,
+		node0FieldTypes["networkingKey"],
 	)
 	require.Equal(t,
 		cadence.String("378dbf45d85c614feb10d8bd4f78f4b6ef8eec7d987b937e123255444657fb3da031f232a507e323df3a6f6b8f50339c51d188e80c0e7a92420945cc6ca893fc"),
@@ -200,8 +205,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 4: stakingKey
 	require.Equal(t,
-		"stakingKey",
-		nodeInfoType.Fields[4].Identifier,
+		cadence.StringType,
+		node0FieldTypes["stakingKey"],
 	)
 	require.Equal(t,
 		cadence.String("af4aade26d76bb2ab15dcc89adcef82a51f6f04b3cb5f4555214b40ec89813c7a5f95776ea4fe449de48166d0bbc59b919b7eabebaac9614cf6f9461fac257765415f4d8ef1376a2365ec9960121888ea5383d88a140c24c29962b0a14e4e4e7"),
@@ -210,8 +215,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 5: tokensStaked
 	require.Equal(t,
-		"tokensStaked",
-		nodeInfoType.Fields[5].Identifier,
+		cadence.UFix64Type,
+		node0FieldTypes["tokensStaked"],
 	)
 	require.Equal(t,
 		ufix64FromString("0.00000000"),
@@ -220,8 +225,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 6: tokensCommitted
 	require.Equal(t,
-		"tokensCommitted",
-		nodeInfoType.Fields[6].Identifier,
+		cadence.UFix64Type,
+		node0FieldTypes["tokensCommitted"],
 	)
 	require.Equal(t,
 		ufix64FromString("1350000.00000000"),
@@ -230,8 +235,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 7: tokensUnstaking
 	require.Equal(t,
-		"tokensUnstaking",
-		nodeInfoType.Fields[7].Identifier,
+		cadence.UFix64Type,
+		node0FieldTypes["tokensUnstaking"],
 	)
 	require.Equal(t,
 		ufix64FromString("0.00000000"),
@@ -240,8 +245,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 8: tokensUnstaked
 	require.Equal(t,
-		"tokensUnstaked",
-		nodeInfoType.Fields[8].Identifier,
+		cadence.UFix64Type,
+		node0FieldTypes["tokensUnstaked"],
 	)
 	require.Equal(t,
 		ufix64FromString("0.00000000"),
@@ -250,8 +255,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 9: tokensRewarded
 	require.Equal(t,
-		"tokensRewarded",
-		nodeInfoType.Fields[9].Identifier,
+		cadence.UFix64Type,
+		node0FieldTypes["tokensRewarded"],
 	)
 	require.Equal(t,
 		ufix64FromString("0.00000000"),
@@ -259,28 +264,41 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 	)
 
 	// field 10: delegators
-	require.Equal(t, "delegators", nodeInfoType.Fields[10].Identifier)
+	require.Equal(t,
+		cadence.NewVariableSizedArrayType(cadence.UInt32Type),
+		node0FieldTypes["delegators"],
+	)
 	delegators, ok := node0Fields["delegators"].(cadence.Array)
 
 	require.True(t, ok)
 	require.Len(t, delegators.Values, 0)
 
 	// field 11: delegatorIDCounter
-	require.Equal(t, "delegatorIDCounter", nodeInfoType.Fields[11].Identifier)
+	require.Equal(
+		t,
+		cadence.UInt32Type,
+		node0FieldTypes["delegatorIDCounter"],
+	)
 	require.Equal(t,
 		cadence.UInt32(0),
 		node0Fields["delegatorIDCounter"],
 	)
 
 	// field 12: tokensRequestedToUnstake
-	require.Equal(t, "tokensRequestedToUnstake", nodeInfoType.Fields[12].Identifier)
+	require.Equal(t,
+		cadence.UFix64Type,
+		node0FieldTypes["tokensRequestedToUnstake"],
+	)
 	require.Equal(t,
 		ufix64FromString("0.00000000"),
 		node0Fields["tokensRequestedToUnstake"],
 	)
 
 	// field 13: initialWeight
-	require.Equal(t, "initialWeight", nodeInfoType.Fields[13].Identifier)
+	require.Equal(t,
+		cadence.UInt64Type,
+		node0FieldTypes["initialWeight"],
+	)
 	require.Equal(t,
 		cadence.UInt64(100),
 		node0Fields["initialWeight"],
@@ -295,10 +313,15 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	nodeInfoType, ok = node6.Type().(*cadence.StructType)
 	require.True(t, ok)
-	require.Len(t, nodeInfoType.Fields, 14)
+
+	node6FieldTypes := nodeInfoType.FieldsMappedByName()
+	require.Len(t, node6FieldTypes, 14)
 
 	// field 0: id
-	require.Equal(t, "id", nodeInfoType.Fields[0].Identifier)
+	require.Equal(t,
+		cadence.StringType,
+		node6FieldTypes["id"],
+	)
 	require.Equal(t,
 		cadence.String("0000000000000000000000000000000000000000000000000000000000000031"),
 		node6Fields["id"],
@@ -306,8 +329,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 1: role
 	require.Equal(t,
-		"role",
-		nodeInfoType.Fields[1].Identifier,
+		cadence.UInt8Type,
+		node6FieldTypes["role"],
 	)
 	require.Equal(t,
 		cadence.UInt8(4),
@@ -316,8 +339,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 2: networkingAddress
 	require.Equal(t,
-		"networkingAddress",
-		nodeInfoType.Fields[2].Identifier,
+		cadence.StringType,
+		node6FieldTypes["networkingAddress"],
 	)
 	require.Equal(t,
 		cadence.String("31.flow.com"),
@@ -326,8 +349,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 3: networkingKey
 	require.Equal(t,
-		"networkingKey",
-		nodeInfoType.Fields[3].Identifier,
+		cadence.StringType,
+		node6FieldTypes["networkingKey"],
 	)
 	require.Equal(t,
 		cadence.String("697241208dcc9142b6f53064adc8ff1c95760c68beb2ba083c1d005d40181fd7a1b113274e0163c053a3addd47cd528ec6a1f190cf465aac87c415feaae011ae"),
@@ -336,8 +359,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 4: stakingKey
 	require.Equal(t,
-		"stakingKey",
-		nodeInfoType.Fields[4].Identifier,
+		cadence.StringType,
+		node6FieldTypes["stakingKey"],
 	)
 	require.Equal(t,
 		cadence.String("b1f97d0a06020eca97352e1adde72270ee713c7daf58da7e74bf72235321048b4841bdfc28227964bf18e371e266e32107d238358848bcc5d0977a0db4bda0b4c33d3874ff991e595e0f537c7b87b4ddce92038ebc7b295c9ea20a1492302aa7"),
@@ -346,8 +369,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 5: tokensStaked
 	require.Equal(t,
-		"tokensStaked",
-		nodeInfoType.Fields[5].Identifier,
+		cadence.UFix64Type,
+		node6FieldTypes["tokensStaked"],
 	)
 	require.Equal(t,
 		ufix64FromString("0.00000000"),
@@ -356,8 +379,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 6: tokensCommitted
 	require.Equal(t,
-		"tokensCommitted",
-		nodeInfoType.Fields[6].Identifier,
+		cadence.UFix64Type,
+		node6FieldTypes["tokensCommitted"],
 	)
 	require.Equal(t,
 		ufix64FromString("1350000.00000000"),
@@ -366,8 +389,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 7: tokensUnstaking
 	require.Equal(t,
-		"tokensUnstaking",
-		nodeInfoType.Fields[7].Identifier,
+		cadence.UFix64Type,
+		node6FieldTypes["tokensUnstaking"],
 	)
 	require.Equal(t,
 		ufix64FromString("0.00000000"),
@@ -376,8 +399,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 8: tokensUnstaked
 	require.Equal(t,
-		"tokensUnstaked",
-		nodeInfoType.Fields[8].Identifier,
+		cadence.UFix64Type,
+		node6FieldTypes["tokensUnstaked"],
 	)
 	require.Equal(t,
 		ufix64FromString("0.00000000"),
@@ -386,8 +409,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 9: tokensRewarded
 	require.Equal(t,
-		"tokensRewarded",
-		nodeInfoType.Fields[9].Identifier,
+		cadence.UFix64Type,
+		node6FieldTypes["tokensRewarded"],
 	)
 	require.Equal(t,
 		ufix64FromString("0.00000000"),
@@ -396,8 +419,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 10: delegators
 	require.Equal(t,
-		"delegators",
-		nodeInfoType.Fields[10].Identifier,
+		cadence.NewVariableSizedArrayType(cadence.UInt32Type),
+		node6FieldTypes["delegators"],
 	)
 	delegators, ok = node6Fields["delegators"].(cadence.Array)
 	require.True(t, ok)
@@ -405,8 +428,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 11: delegatorIDCounter
 	require.Equal(t,
-		"delegatorIDCounter",
-		nodeInfoType.Fields[11].Identifier,
+		cadence.UInt32Type,
+		node6FieldTypes["delegatorIDCounter"],
 	)
 	require.Equal(t,
 		cadence.UInt32(0),
@@ -415,8 +438,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 12: tokensRequestedToUnstake
 	require.Equal(t,
-		"tokensRequestedToUnstake",
-		nodeInfoType.Fields[12].Identifier,
+		cadence.UFix64Type,
+		node6FieldTypes["tokensRequestedToUnstake"],
 	)
 	require.Equal(t,
 		ufix64FromString("0.00000000"),
@@ -425,8 +448,8 @@ func testNodeInfos(t *testing.T, nodeInfos cadence.Array) {
 
 	// field 13: initialWeight
 	require.Equal(t,
-		"initialWeight",
-		nodeInfoType.Fields[13].Identifier,
+		cadence.UInt64Type,
+		node6FieldTypes["initialWeight"],
 	)
 	require.Equal(t,
 		cadence.UInt64(100),
@@ -441,15 +464,17 @@ func testEpochCollectors(t *testing.T, collectors cadence.Array) {
 	collector0, ok := collectors.Values[0].(cadence.Struct)
 	require.True(t, ok)
 
-	collectorType, ok := collector0.Type().(*cadence.StructType)
+	collector0Type, ok := collector0.Type().(*cadence.StructType)
 	require.True(t, ok)
 
 	collector0Fields := cadence.FieldsMappedByName(collector0)
 
+	collector0FieldTypes := collector0Type.FieldsMappedByName()
+
 	// field 0: index
 	require.Equal(t,
-		"index",
-		collectorType.Fields[0].Identifier,
+		cadence.UInt16Type,
+		collector0FieldTypes["index"],
 	)
 	require.Equal(t,
 		cadence.UInt16(0),
@@ -458,8 +483,8 @@ func testEpochCollectors(t *testing.T, collectors cadence.Array) {
 
 	// field 1: nodeWeights
 	require.Equal(t,
-		"nodeWeights",
-		collectorType.Fields[1].Identifier,
+		cadence.NewDictionaryType(cadence.StringType, cadence.UInt64Type),
+		collector0FieldTypes["nodeWeights"],
 	)
 	weights, ok := collector0Fields["nodeWeights"].(cadence.Dictionary)
 	require.True(t, ok)
@@ -482,8 +507,8 @@ func testEpochCollectors(t *testing.T, collectors cadence.Array) {
 
 	// field 2: totalWeight
 	require.Equal(t,
-		"totalWeight",
-		collectorType.Fields[2].Identifier,
+		cadence.UInt64Type,
+		collector0FieldTypes["totalWeight"],
 	)
 	require.Equal(t,
 		cadence.NewUInt64(100),
@@ -492,8 +517,8 @@ func testEpochCollectors(t *testing.T, collectors cadence.Array) {
 
 	// field 3: generatedVotes
 	require.Equal(t,
-		"generatedVotes",
-		collectorType.Fields[3].Identifier,
+		cadence.NewDictionaryType(cadence.StringType, newFlowClusterQCVoteStructType()),
+		collector0FieldTypes["generatedVotes"],
 	)
 	generatedVotes, ok := collector0Fields["generatedVotes"].(cadence.Dictionary)
 	require.True(t, ok)
@@ -501,8 +526,8 @@ func testEpochCollectors(t *testing.T, collectors cadence.Array) {
 
 	// field 4: uniqueVoteMessageTotalWeights
 	require.Equal(t,
-		"uniqueVoteMessageTotalWeights",
-		collectorType.Fields[4].Identifier,
+		cadence.NewDictionaryType(cadence.StringType, cadence.UInt64Type),
+		collector0FieldTypes["uniqueVoteMessageTotalWeights"],
 	)
 	uniqueVoteMessageTotalWeights, ok := collector0Fields["uniqueVoteMessageTotalWeights"].(cadence.Dictionary)
 	require.True(t, ok)
@@ -512,15 +537,16 @@ func testEpochCollectors(t *testing.T, collectors cadence.Array) {
 	collector1, ok := collectors.Values[1].(cadence.Struct)
 	require.True(t, ok)
 
-	collectorType, ok = collector1.Type().(*cadence.StructType)
+	collector1Type, ok := collector1.Type().(*cadence.StructType)
 	require.True(t, ok)
 
-	collector1Fields := cadence.FieldsMappedByName(collector1)
+	collector1Fields := collector1.FieldsMappedByName()
+	collector1FieldTypes := collector1Type.FieldsMappedByName()
 
 	// field 0: index
 	require.Equal(t,
-		"index",
-		collectorType.Fields[0].Identifier,
+		cadence.UInt16Type,
+		collector1FieldTypes["index"],
 	)
 	require.Equal(t,
 		cadence.UInt16(1),
@@ -529,8 +555,8 @@ func testEpochCollectors(t *testing.T, collectors cadence.Array) {
 
 	// field 1: nodeWeights
 	require.Equal(t,
-		"nodeWeights",
-		collectorType.Fields[1].Identifier,
+		cadence.NewDictionaryType(cadence.StringType, cadence.UInt64Type),
+		collector1FieldTypes["nodeWeights"],
 	)
 	weights, ok = collector1Fields["nodeWeights"].(cadence.Dictionary)
 	require.True(t, ok)
@@ -552,8 +578,8 @@ func testEpochCollectors(t *testing.T, collectors cadence.Array) {
 
 	// field 2: totalWeight
 	require.Equal(t,
-		"totalWeight",
-		collectorType.Fields[2].Identifier,
+		cadence.UInt64Type,
+		collector1FieldTypes["totalWeight"],
 	)
 	require.Equal(t,
 		cadence.NewUInt64(0),
@@ -562,8 +588,8 @@ func testEpochCollectors(t *testing.T, collectors cadence.Array) {
 
 	// field 3: generatedVotes
 	require.Equal(t,
-		"generatedVotes",
-		collectorType.Fields[3].Identifier,
+		cadence.NewDictionaryType(cadence.StringType, newFlowClusterQCVoteStructType()),
+		collector1FieldTypes["generatedVotes"],
 	)
 	generatedVotes, ok = collector1Fields["generatedVotes"].(cadence.Dictionary)
 	require.True(t, ok)
@@ -571,8 +597,8 @@ func testEpochCollectors(t *testing.T, collectors cadence.Array) {
 
 	// field 4: uniqueVoteMessageTotalWeights
 	require.Equal(t,
-		"uniqueVoteMessageTotalWeights",
-		collectorType.Fields[4].Identifier,
+		cadence.NewDictionaryType(cadence.StringType, cadence.UInt64Type),
+		collector1FieldTypes["uniqueVoteMessageTotalWeights"],
 	)
 	uniqueVoteMessageTotalWeights, ok = collector1Fields["uniqueVoteMessageTotalWeights"].(cadence.Dictionary)
 	require.True(t, ok)
@@ -603,12 +629,14 @@ func TestEpochCommitEvent(t *testing.T) {
 
 	evtType, ok := decodedValue.Type().(*cadence.EventType)
 	require.True(t, ok)
-	require.Len(t, evtType.Fields, 3)
+
+	fieldTypes := evtType.FieldsMappedByName()
+	require.Len(t, fieldTypes, 3)
 
 	// field 0: counter
 	require.Equal(t,
-		"counter",
-		evtType.Fields[0].Identifier,
+		cadence.UInt64Type,
+		fieldTypes["counter"],
 	)
 	require.Equal(t,
 		cadence.UInt64(1),
@@ -617,8 +645,8 @@ func TestEpochCommitEvent(t *testing.T) {
 
 	// field 1: clusterQCs
 	require.Equal(t,
-		"clusterQCs",
-		evtType.Fields[1].Identifier,
+		cadence.NewVariableSizedArrayType(newFlowClusterQCClusterQCStructType()),
+		fieldTypes["clusterQCs"],
 	)
 	clusterQCs, ok := fields["clusterQCs"].(cadence.Array)
 	require.True(t, ok)
@@ -626,8 +654,8 @@ func TestEpochCommitEvent(t *testing.T) {
 
 	// field 2: dkgPubKeys
 	require.Equal(t,
-		"dkgPubKeys",
-		evtType.Fields[2].Identifier,
+		cadence.NewVariableSizedArrayType(cadence.StringType),
+		fieldTypes["dkgPubKeys"],
 	)
 	dkgPubKeys, ok := fields["dkgPubKeys"].(cadence.Array)
 	require.True(t, ok)
@@ -652,10 +680,14 @@ func testClusterQCs(t *testing.T, clusterQCs cadence.Array) {
 	clusterQCType, ok := clusterQC0.Type().(*cadence.StructType)
 	require.True(t, ok)
 
-	clusterQC0Fields := cadence.FieldsMappedByName(clusterQC0)
+	clusterQC0Fields := clusterQC0.FieldsMappedByName()
+	clusterQC0FieldTypes := clusterQCType.FieldsMappedByName()
 
 	// field 0: index
-	require.Equal(t, "index", clusterQCType.Fields[0].Identifier)
+	require.Equal(t,
+		cadence.UInt16Type,
+		clusterQC0FieldTypes["index"],
+	)
 	require.Equal(t,
 		cadence.UInt16(0),
 		clusterQC0Fields["index"],
@@ -663,8 +695,8 @@ func testClusterQCs(t *testing.T, clusterQCs cadence.Array) {
 
 	// field 1: voteSignatures
 	require.Equal(t,
-		"voteSignatures",
-		clusterQCType.Fields[1].Identifier,
+		cadence.NewVariableSizedArrayType(cadence.StringType),
+		clusterQC0FieldTypes["voteSignatures"],
 	)
 	sigs, ok := clusterQC0Fields["voteSignatures"].(cadence.Array)
 	require.True(t, ok)
@@ -678,8 +710,8 @@ func testClusterQCs(t *testing.T, clusterQCs cadence.Array) {
 
 	// field 2: voteMessage
 	require.Equal(t,
-		"voteMessage",
-		clusterQCType.Fields[2].Identifier,
+		cadence.StringType,
+		clusterQC0FieldTypes["voteMessage"],
 	)
 	require.Equal(t,
 		cadence.String("irrelevant_for_these_purposes"),
@@ -688,8 +720,8 @@ func testClusterQCs(t *testing.T, clusterQCs cadence.Array) {
 
 	// field 3: voterIDs
 	require.Equal(t,
-		"voterIDs",
-		clusterQCType.Fields[3].Identifier,
+		cadence.NewVariableSizedArrayType(cadence.StringType),
+		clusterQC0FieldTypes["voterIDs"],
 	)
 	ids, ok := clusterQC0Fields["voterIDs"].(cadence.Array)
 	require.True(t, ok)
@@ -706,15 +738,16 @@ func testClusterQCs(t *testing.T, clusterQCs cadence.Array) {
 	clusterQC1, ok := clusterQCs.Values[1].(cadence.Struct)
 	require.True(t, ok)
 
-	clusterQCType, ok = clusterQC1.Type().(*cadence.StructType)
+	clusterQC1Type, ok := clusterQC1.Type().(*cadence.StructType)
 	require.True(t, ok)
 
-	clusterQC1Fields := cadence.FieldsMappedByName(clusterQC1)
+	clusterQC1Fields := clusterQC1.FieldsMappedByName()
+	clusterQC1FieldTypes := clusterQC1Type.FieldsMappedByName()
 
 	// field 0: index
 	require.Equal(t,
-		"index",
-		clusterQCType.Fields[0].Identifier,
+		cadence.UInt16Type,
+		clusterQC1FieldTypes["index"],
 	)
 	require.Equal(t,
 		cadence.UInt16(1),
@@ -723,8 +756,8 @@ func testClusterQCs(t *testing.T, clusterQCs cadence.Array) {
 
 	// field 1: voteSignatures
 	require.Equal(t,
-		"voteSignatures",
-		clusterQCType.Fields[1].Identifier,
+		cadence.NewVariableSizedArrayType(cadence.StringType),
+		clusterQC1FieldTypes["voteSignatures"],
 	)
 	sigs, ok = clusterQC1Fields["voteSignatures"].(cadence.Array)
 	require.True(t, ok)
@@ -738,8 +771,8 @@ func testClusterQCs(t *testing.T, clusterQCs cadence.Array) {
 
 	// field 2: voteMessage
 	require.Equal(t,
-		"voteMessage",
-		clusterQCType.Fields[2].Identifier,
+		cadence.StringType,
+		clusterQC1FieldTypes["voteMessage"],
 	)
 	require.Equal(t,
 		cadence.String("irrelevant_for_these_purposes"),
@@ -748,8 +781,8 @@ func testClusterQCs(t *testing.T, clusterQCs cadence.Array) {
 
 	// field 3: voterIDs
 	require.Equal(t,
-		"voterIDs",
-		clusterQCType.Fields[3].Identifier,
+		cadence.NewVariableSizedArrayType(cadence.StringType),
+		clusterQC1FieldTypes["voterIDs"],
 	)
 	ids, ok = clusterQC1Fields["voterIDs"].(cadence.Array)
 	require.True(t, ok)
@@ -786,12 +819,14 @@ func TestVersionBeaconEvent(t *testing.T) {
 
 	evtType, ok := decodedValue.Type().(*cadence.EventType)
 	require.True(t, ok)
-	require.Len(t, evtType.Fields, 2)
+
+	fieldTypes := evtType.FieldsMappedByName()
+	require.Len(t, fieldTypes, 2)
 
 	// field 0: versionBoundaries
 	require.Equal(t,
-		"versionBoundaries",
-		evtType.Fields[0].Identifier,
+		cadence.NewVariableSizedArrayType(newNodeVersionBeaconVersionBoundaryStructType()),
+		fieldTypes["versionBoundaries"],
 	)
 	versionBoundaries, ok := fields["versionBoundaries"].(cadence.Array)
 	require.True(t, ok)
@@ -799,8 +834,8 @@ func TestVersionBeaconEvent(t *testing.T) {
 
 	// field 1: sequence
 	require.Equal(t,
-		"sequence",
-		evtType.Fields[1].Identifier,
+		cadence.UInt64Type,
+		fieldTypes["sequence"],
 	)
 	require.Equal(t,
 		cadence.UInt64(5),
@@ -819,12 +854,14 @@ func testVersionBoundaries(t *testing.T, versionBoundaries cadence.Array) {
 
 	boundaryType, ok := boundary.Type().(*cadence.StructType)
 	require.True(t, ok)
-	require.Len(t, boundaryType.Fields, 2)
+
+	fieldTypes := boundaryType.FieldsMappedByName()
+	require.Len(t, fieldTypes, 2)
 
 	// field 0: blockHeight
 	require.Equal(t,
-		"blockHeight",
-		boundaryType.Fields[0].Identifier,
+		cadence.UInt64Type,
+		fieldTypes["blockHeight"],
 	)
 	require.Equal(t,
 		cadence.UInt64(44),
@@ -833,8 +870,8 @@ func testVersionBoundaries(t *testing.T, versionBoundaries cadence.Array) {
 
 	// field 1: version
 	require.Equal(t,
-		"version",
-		boundaryType.Fields[1].Identifier,
+		newNodeVersionBeaconSemverStructType(),
+		fieldTypes["version"],
 	)
 	version, ok := fields["version"].(cadence.Struct)
 	require.True(t, ok)
@@ -848,12 +885,14 @@ func testSemver(t *testing.T, version cadence.Struct) {
 
 	semverType, ok := version.Type().(*cadence.StructType)
 	require.True(t, ok)
-	require.Len(t, semverType.Fields, 4)
+
+	fieldTypes := semverType.FieldsMappedByName()
+	require.Len(t, fieldTypes, 4)
 
 	// field 0: preRelease
 	require.Equal(t,
-		"preRelease",
-		semverType.Fields[0].Identifier,
+		cadence.NewOptionalType(cadence.StringType),
+		fieldTypes["preRelease"],
 	)
 	require.Equal(t,
 		cadence.NewOptional(cadence.String("")),
@@ -862,8 +901,8 @@ func testSemver(t *testing.T, version cadence.Struct) {
 
 	// field 1: major
 	require.Equal(t,
-		"major",
-		semverType.Fields[1].Identifier,
+		cadence.UInt8Type,
+		fieldTypes["major"],
 	)
 	require.Equal(t,
 		cadence.UInt8(2),
@@ -872,8 +911,8 @@ func testSemver(t *testing.T, version cadence.Struct) {
 
 	// field 2: minor
 	require.Equal(t,
-		"minor",
-		semverType.Fields[2].Identifier,
+		cadence.UInt8Type,
+		fieldTypes["minor"],
 	)
 	require.Equal(t,
 		cadence.UInt8(13),
@@ -882,8 +921,8 @@ func testSemver(t *testing.T, version cadence.Struct) {
 
 	// field 3: patch
 	require.Equal(t,
-		"patch",
-		semverType.Fields[3].Identifier,
+		cadence.UInt8Type,
+		fieldTypes["patch"],
 	)
 	require.Equal(t,
 		cadence.UInt8(7),
@@ -1416,10 +1455,10 @@ func newFlowClusterQCVoteStructType() cadence.Type {
 	address, _ := common.HexToAddress("01cf0e2f2f715450")
 	location := common.NewAddressLocation(nil, address, "FlowClusterQC")
 
-	return &cadence.StructType{
-		Location:            location,
-		QualifiedIdentifier: "FlowClusterQC.Vote",
-		Fields: []cadence.Field{
+	return cadence.NewStructType(
+		location,
+		"FlowClusterQC.Vote",
+		[]cadence.Field{
 			{
 				Identifier: "nodeID",
 				Type:       cadence.StringType,
@@ -1441,7 +1480,8 @@ func newFlowClusterQCVoteStructType() cadence.Type {
 				Type:       cadence.UInt64Type,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func newFlowClusterQCClusterStructType() *cadence.StructType {
@@ -1451,10 +1491,10 @@ func newFlowClusterQCClusterStructType() *cadence.StructType {
 	address, _ := common.HexToAddress("01cf0e2f2f715450")
 	location := common.NewAddressLocation(nil, address, "FlowClusterQC")
 
-	return &cadence.StructType{
-		Location:            location,
-		QualifiedIdentifier: "FlowClusterQC.Cluster",
-		Fields: []cadence.Field{
+	return cadence.NewStructType(
+		location,
+		"FlowClusterQC.Cluster",
+		[]cadence.Field{
 			{
 				Identifier: "index",
 				Type:       cadence.UInt16Type,
@@ -1476,7 +1516,8 @@ func newFlowClusterQCClusterStructType() *cadence.StructType {
 				Type:       cadence.NewDictionaryType(cadence.StringType, cadence.UInt64Type),
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func newFlowIDTableStakingNodeInfoStructType() *cadence.StructType {
@@ -1486,10 +1527,10 @@ func newFlowIDTableStakingNodeInfoStructType() *cadence.StructType {
 	address, _ := common.HexToAddress("01cf0e2f2f715450")
 	location := common.NewAddressLocation(nil, address, "FlowIDTableStaking")
 
-	return &cadence.StructType{
-		Location:            location,
-		QualifiedIdentifier: "FlowIDTableStaking.NodeInfo",
-		Fields: []cadence.Field{
+	return cadence.NewStructType(
+		location,
+		"FlowIDTableStaking.NodeInfo",
+		[]cadence.Field{
 			{
 				Identifier: "id",
 				Type:       cadence.StringType,
@@ -1547,7 +1588,8 @@ func newFlowIDTableStakingNodeInfoStructType() *cadence.StructType {
 				Type:       cadence.UInt64Type,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func newFlowEpochEpochSetupEventType() *cadence.EventType {
@@ -1557,10 +1599,10 @@ func newFlowEpochEpochSetupEventType() *cadence.EventType {
 	address, _ := common.HexToAddress("01cf0e2f2f715450")
 	location := common.NewAddressLocation(nil, address, "FlowEpoch")
 
-	return &cadence.EventType{
-		Location:            location,
-		QualifiedIdentifier: "FlowEpoch.EpochSetup",
-		Fields: []cadence.Field{
+	return cadence.NewEventType(
+		location,
+		"FlowEpoch.EpochSetup",
+		[]cadence.Field{
 			{
 				Identifier: "counter",
 				Type:       cadence.UInt64Type,
@@ -1598,7 +1640,8 @@ func newFlowEpochEpochSetupEventType() *cadence.EventType {
 				Type:       cadence.UInt64Type,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func newFlowEpochEpochCommittedEventType() *cadence.EventType {
@@ -1608,10 +1651,10 @@ func newFlowEpochEpochCommittedEventType() *cadence.EventType {
 	address, _ := common.HexToAddress("01cf0e2f2f715450")
 	location := common.NewAddressLocation(nil, address, "FlowEpoch")
 
-	return &cadence.EventType{
-		Location:            location,
-		QualifiedIdentifier: "FlowEpoch.EpochCommitted",
-		Fields: []cadence.Field{
+	return cadence.NewEventType(
+		location,
+		"FlowEpoch.EpochCommitted",
+		[]cadence.Field{
 			{
 				Identifier: "counter",
 				Type:       cadence.UInt64Type,
@@ -1625,7 +1668,8 @@ func newFlowEpochEpochCommittedEventType() *cadence.EventType {
 				Type:       cadence.NewVariableSizedArrayType(cadence.StringType),
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func newFlowClusterQCClusterQCStructType() *cadence.StructType {
@@ -1635,10 +1679,10 @@ func newFlowClusterQCClusterQCStructType() *cadence.StructType {
 	address, _ := common.HexToAddress("01cf0e2f2f715450")
 	location := common.NewAddressLocation(nil, address, "FlowClusterQC")
 
-	return &cadence.StructType{
-		Location:            location,
-		QualifiedIdentifier: "FlowClusterQC.ClusterQC",
-		Fields: []cadence.Field{
+	return cadence.NewStructType(
+		location,
+		"FlowClusterQC.ClusterQC",
+		[]cadence.Field{
 			{
 				Identifier: "index",
 				Type:       cadence.UInt16Type,
@@ -1656,7 +1700,8 @@ func newFlowClusterQCClusterQCStructType() *cadence.StructType {
 				Type:       cadence.NewVariableSizedArrayType(cadence.StringType),
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func newNodeVersionBeaconVersionBeaconEventType() *cadence.EventType {
@@ -1666,10 +1711,10 @@ func newNodeVersionBeaconVersionBeaconEventType() *cadence.EventType {
 	address, _ := common.HexToAddress("01cf0e2f2f715450")
 	location := common.NewAddressLocation(nil, address, "NodeVersionBeacon")
 
-	return &cadence.EventType{
-		Location:            location,
-		QualifiedIdentifier: "NodeVersionBeacon.VersionBeacon",
-		Fields: []cadence.Field{
+	return cadence.NewEventType(
+		location,
+		"NodeVersionBeacon.VersionBeacon",
+		[]cadence.Field{
 			{
 				Identifier: "versionBoundaries",
 				Type:       cadence.NewVariableSizedArrayType(newNodeVersionBeaconVersionBoundaryStructType()),
@@ -1679,7 +1724,8 @@ func newNodeVersionBeaconVersionBeaconEventType() *cadence.EventType {
 				Type:       cadence.UInt64Type,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func newNodeVersionBeaconVersionBoundaryStructType() *cadence.StructType {
@@ -1689,10 +1735,10 @@ func newNodeVersionBeaconVersionBoundaryStructType() *cadence.StructType {
 	address, _ := common.HexToAddress("01cf0e2f2f715450")
 	location := common.NewAddressLocation(nil, address, "NodeVersionBeacon")
 
-	return &cadence.StructType{
-		Location:            location,
-		QualifiedIdentifier: "NodeVersionBeacon.VersionBoundary",
-		Fields: []cadence.Field{
+	return cadence.NewStructType(
+		location,
+		"NodeVersionBeacon.VersionBoundary",
+		[]cadence.Field{
 			{
 				Identifier: "blockHeight",
 				Type:       cadence.UInt64Type,
@@ -1702,7 +1748,8 @@ func newNodeVersionBeaconVersionBoundaryStructType() *cadence.StructType {
 				Type:       newNodeVersionBeaconSemverStructType(),
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func newNodeVersionBeaconSemverStructType() *cadence.StructType {
@@ -1712,10 +1759,10 @@ func newNodeVersionBeaconSemverStructType() *cadence.StructType {
 	address, _ := common.HexToAddress("01cf0e2f2f715450")
 	location := common.NewAddressLocation(nil, address, "NodeVersionBeacon")
 
-	return &cadence.StructType{
-		Location:            location,
-		QualifiedIdentifier: "NodeVersionBeacon.Semver",
-		Fields: []cadence.Field{
+	return cadence.NewStructType(
+		location,
+		"NodeVersionBeacon.Semver",
+		[]cadence.Field{
 			{
 				Identifier: "preRelease",
 				Type:       cadence.NewOptionalType(cadence.StringType),
@@ -1733,7 +1780,8 @@ func newNodeVersionBeaconSemverStructType() *cadence.StructType {
 				Type:       cadence.UInt8Type,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func ufix64FromString(s string) cadence.UFix64 {

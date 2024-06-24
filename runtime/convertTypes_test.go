@@ -53,18 +53,21 @@ func TestRuntimeExportRecursiveType(t *testing.T) {
 		VariableKind:    ast.VariableKindVariable,
 	})
 
-	expected := &cadence.ResourceType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
-			{
-				Identifier: "foo",
-			},
+	fields := []cadence.Field{
+		{
+			Identifier: "foo",
 		},
 	}
 
+	expected := cadence.NewResourceType(
+		utils.TestLocation,
+		"Foo",
+		fields,
+		nil,
+	)
+
 	// NOTE: recursion should be kept
-	expected.Fields[0].Type = expected
+	fields[0].Type = expected
 
 	assert.Equal(t,
 		expected,
@@ -108,18 +111,21 @@ func BenchmarkExportType(b *testing.B) {
 			VariableKind:    ast.VariableKindVariable,
 		})
 
-		expected := &cadence.ResourceType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "foo",
-				},
+		fields := []cadence.Field{
+			{
+				Identifier: "foo",
 			},
 		}
 
+		expected := cadence.NewResourceType(
+			utils.TestLocation,
+			"Foo",
+			fields,
+			nil,
+		)
+
 		// NOTE: recursion should be kept
-		expected.Fields[0].Type = expected
+		fields[0].Type = expected
 
 		exportedType := ExportType(ty, map[sema.TypeID]cadence.Type{})
 		assert.Equal(b, expected, exportedType)

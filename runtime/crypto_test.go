@@ -361,16 +361,18 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 				Arguments: encodeArgs([]cadence.Value{
 					cadence.NewEnum([]cadence.Value{
 						cadence.UInt8(algo.RawValue()),
-					}).WithType(&cadence.EnumType{
-						QualifiedIdentifier: "SignatureAlgorithm",
-						RawType:             cadence.UInt8Type,
-						Fields: []cadence.Field{
+					}).WithType(cadence.NewEnumType(
+						nil,
+						"SignatureAlgorithm",
+						cadence.UInt8Type,
+						[]cadence.Field{
 							{
 								Identifier: "rawValue",
 								Type:       cadence.UInt8Type,
 							},
 						},
-					}),
+						nil,
+					)),
 				}),
 			},
 			Context{
@@ -440,16 +442,18 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 				Arguments: encodeArgs([]cadence.Value{
 					cadence.NewEnum([]cadence.Value{
 						cadence.UInt8(algo.RawValue()),
-					}).WithType(&cadence.EnumType{
-						QualifiedIdentifier: "HashAlgorithm",
-						RawType:             cadence.UInt8Type,
-						Fields: []cadence.Field{
+					}).WithType(cadence.NewEnumType(
+						nil,
+						"HashAlgorithm",
+						cadence.UInt8Type,
+						[]cadence.Field{
 							{
 								Identifier: "rawValue",
 								Type:       cadence.UInt8Type,
 							},
 						},
-					}),
+						nil,
+					)),
 				}),
 			},
 			Context{
@@ -799,7 +803,7 @@ func TestRuntimeTraversingMerkleProof(t *testing.T) {
 				return hex.DecodeString("b6979620706f8c652cfb6bf6e923f5156eadd5abaf4022a0b19d52ada089475f")
 			}
 
-			return nil, errors.New("Unknown input to the hash method")
+			return nil, errors.New("unknown input to the hash method")
 		},
 		OnProgramLog: func(message string) {
 			logMessages = append(logMessages, message)
