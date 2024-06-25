@@ -44,6 +44,8 @@ func newWebAssemblyCompileAndInstantiateFunction(
 				panic(err)
 			}
 
+			// TODO meter
+
 			module, err := handler.CompileWebAssembly(bytes)
 			if err != nil {
 				panic(err)

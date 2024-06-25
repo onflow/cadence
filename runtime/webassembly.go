@@ -55,7 +55,24 @@ func NewWasmtimeWebAssemblyModule(bytes []byte) (stdlib.WebAssemblyModule, error
 	config.SetCraneliftFlag("enable_nan_canonicalization", "true")
 
 	engine := wasmtime.NewEngineWithConfig(config)
+
 	store := wasmtime.NewStore(engine)
+
+	// TODO: define memory limit
+	const todoMemoryLimit = 2 * 1024 * 1024
+	// TODO: define table elements limit
+	const tableElementsLimit = 10_000
+	// TODO: define tables limit
+	const todoTablesLimit = 1
+	// TODO: define memories limit
+	const todoMemoriesLimit = 1
+	store.Limiter(
+		todoMemoryLimit,
+		tableElementsLimit,
+		-1,
+		todoTablesLimit,
+		todoMemoriesLimit,
+	)
 
 	module, err := wasmtime.NewModule(engine, bytes)
 	if err != nil {
