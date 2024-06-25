@@ -4,7 +4,6 @@ go 1.22
 
 require (
 	github.com/bits-and-blooms/bitset v1.5.0
-	github.com/bytecodealliance/wasmtime-go/v12 v12.0.0
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/dave/dst v0.27.2
 	github.com/fxamacker/cbor/v2 v2.4.1-0.20230228173756-c0c9f774e40c
@@ -31,6 +30,7 @@ require (
 
 require (
 	github.com/SaveTheRbtz/mph v0.1.1-0.20240117162131-4166ec7869bc
+	github.com/bytecodealliance/wasmtime-go/v22 v22.0.0
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/kodova/html-to-markdown v1.0.1
 	github.com/onflow/crypto v0.25.0

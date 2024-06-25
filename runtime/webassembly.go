@@ -21,7 +21,7 @@ package runtime
 import (
 	"fmt"
 
-	"github.com/bytecodealliance/wasmtime-go/v12"
+	"github.com/bytecodealliance/wasmtime-go/v22"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -187,12 +187,11 @@ func newWasmtimeFunctionWebAssemblyExport(
 
 			// Call the function, with metering
 
-			fuelConsumedBefore, _ := store.FuelConsumed()
-
 			// TODO: get remaining computation and convert to fuel.
 			//   needs e.g. invocation.Interpreter.RemainingComputation()
-			const todoAvailableFuel = 1000
-			err := store.AddFuel(todoAvailableFuel)
+			const todoAvailableFuel uint64 = 1000
+			fuelBefore := todoAvailableFuel
+			err := store.SetFuel(fuelBefore)
 			if err != nil {
 				// TODO: wrap error
 				panic(err)
@@ -204,26 +203,13 @@ func newWasmtimeFunctionWebAssemblyExport(
 				panic(err)
 			}
 
-			fuelConsumedAfter, _ := store.FuelConsumed()
-			fuelDelta := fuelConsumedAfter - fuelConsumedBefore
+			fuelAfter, err := store.GetFuel()
+			if err != nil {
+				panic(err)
+			}
 
+			fuelDelta := fuelBefore - fuelAfter
 			inter.ReportComputation(common.ComputationKindWebAssemblyFuel, uint(fuelDelta))
-
-			remainingFuel, err := store.ConsumeFuel(0)
-			if err != nil {
-				// TODO: wrap error
-				panic(err)
-			}
-
-			remainingFuel, err = store.ConsumeFuel(remainingFuel)
-			if err != nil {
-				// TODO: wrap error
-				panic(err)
-			}
-
-			if remainingFuel != 0 {
-				panic(errors.NewUnreachableError())
-			}
 
 			// Return the result
 
