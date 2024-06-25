@@ -44,7 +44,9 @@ func NewWasmtimeWebAssemblyModule(bytes []byte) (stdlib.WebAssemblyModule, error
 	config.SetWasmBulkMemory(true)
 	config.SetWasmThreads(false)
 	config.SetWasmReferenceTypes(false)
-	config.SetWasmSIMD(false)
+	// TODO: disable all SIMD related functionality.
+	//   Depends on https://github.com/bytecodealliance/wasmtime-go/pull/224
+	//   config.SetWasmSIMD(false)
 	config.SetWasmMemory64(false)
 	config.SetWasmMultiMemory(false)
 	config.SetWasmMultiValue(false)
