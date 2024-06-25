@@ -110,7 +110,7 @@ func (i WasmtimeWebAssemblyInstance) GetExport(gauge common.MemoryGauge, name st
 	}
 
 	function := extern.Func()
-	if function != nil {
+	if function == nil {
 		// TODO: improve error
 		return nil, errors.NewDefaultUserError("invalid export: not a function")
 	}
