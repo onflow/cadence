@@ -29,7 +29,6 @@ import (
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 
-	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -73,10 +72,8 @@ func TestRuntimeWebAssemblyAdd(t *testing.T) {
 	var webAssemblyFuelComputationMeterings []uint
 
 	runtimeInterface := &TestRuntimeInterface{
-		Storage: NewTestLedger(nil, nil),
-		OnCompileWebAssembly: func(bytes []byte) (stdlib.WebAssemblyModule, error) {
-			return NewWasmtimeWebAssemblyModule(bytes)
-		},
+		Storage:              NewTestLedger(nil, nil),
+		OnCompileWebAssembly: NewWasmtimeWebAssemblyModule,
 		OnDecodeArgument: func(b []byte, _ cadence.Type) (cadence.Value, error) {
 			return json.Decode(nil, b)
 		},
