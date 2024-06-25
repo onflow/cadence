@@ -2,7 +2,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,8 +46,8 @@ var WebAssemblyTypeCompileAndInstantiateFunctionType = &sema.FunctionType{
 }
 
 const WebAssemblyTypeCompileAndInstantiateFunctionDocString = `
-Compile WebAssembly binary code into a Module
-and instantiate it with the given imports.
+Compile WebAssembly binary code into a Module and instantiate it.
+Imports are not supported.
 `
 
 const WebAssembly_InstantiatedSourceTypeInstanceFieldName = "instance"
@@ -117,6 +117,9 @@ var WebAssembly_InstanceTypeGetExportFunctionType = &sema.FunctionType{
 
 const WebAssembly_InstanceTypeGetExportFunctionDocString = `
 Get the exported value.
+The type must match the type of the exported value.
+If the export with the given name does not exist,
+of if the type does not match, then the function will panic.
 `
 
 const WebAssembly_InstanceTypeName = "Instance"

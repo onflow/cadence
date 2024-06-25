@@ -55,7 +55,10 @@ func NewREPL() (*REPL, error) {
 	codes := map[Location][]byte{}
 
 	standardLibraryHandler := &cmd.StandardLibraryHandler{}
-	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(standardLibraryHandler)
+	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(
+		standardLibraryHandler,
+		stdlib.DefaultStandardLibraryOptions,
+	)
 
 	checkerConfig := cmd.DefaultCheckerConfig(checkers, codes, standardLibraryValues)
 	checkerConfig.AccessCheckMode = sema.AccessCheckModeNotSpecifiedUnrestricted

@@ -1048,7 +1048,10 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
-		for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(nil) {
+		for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(
+			nil,
+			stdlib.DefaultStandardLibraryOptions,
+		) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}

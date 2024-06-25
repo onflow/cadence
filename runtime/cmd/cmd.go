@@ -179,6 +179,7 @@ func PrepareInterpreter(filename string, debugger *interpreter.Debugger) (*inter
 
 	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(
 		&StandardLibraryHandler{},
+		stdlib.DefaultStandardLibraryOptions,
 	)
 
 	checker, must := PrepareChecker(

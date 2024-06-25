@@ -161,11 +161,6 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	env.InterpreterConfig = env.newInterpreterConfig()
 	env.CheckerConfig = env.newCheckerConfig()
 
-	if config.WebAssemblyEnabled {
-		env.DeclareValue(stdlib.NewWebAssemblyContract(nil, env), nil)
-		env.DeclareType(stdlib.WebAssemblyContractType, nil)
-	}
-
 	env.compositeValueFunctionsHandlers = stdlib.DefaultStandardLibraryCompositeValueFunctionHandlers(env)
 
 	return env
@@ -217,18 +212,32 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 	}
 }
 
+func StandardLibraryOptionsFromConfig(config Config) stdlib.StandardLibraryOptions {
+	return stdlib.StandardLibraryOptions{
+		WebAssemblyEnabled: config.WebAssemblyEnabled,
+	}
+}
+
 func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 	env := newInterpreterEnvironment(config)
-	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env) {
+	options := StandardLibraryOptionsFromConfig(config)
+	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env, options) {
 		env.DeclareValue(valueDeclaration, nil)
+	}
+	for _, typeDeclaration := range stdlib.DefaultStandardLibraryTypes(options) {
+		env.DeclareType(typeDeclaration, nil)
 	}
 	return env
 }
 
 func NewScriptInterpreterEnvironment(config Config) Environment {
 	env := newInterpreterEnvironment(config)
-	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
+	options := StandardLibraryOptionsFromConfig(config)
+	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env, options) {
 		env.DeclareValue(valueDeclaration, nil)
+	}
+	for _, typeDeclaration := range stdlib.DefaultStandardLibraryTypes(options) {
+		env.DeclareType(typeDeclaration, nil)
 	}
 	return env
 }
