@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Flow Foundation
+ * Copyright Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package errors
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	"golang.org/x/xerrors"
 )
@@ -141,7 +142,8 @@ func (e MemoryError) Error() string {
 //
 // NOTE: This error is not used for errors occur due to bugs in a user-provided program.
 type UnexpectedError struct {
-	Err error
+	Err   error
+	Stack []byte
 }
 
 var _ InternalError = UnexpectedError{}
@@ -150,13 +152,15 @@ func (UnexpectedError) IsInternalError() {}
 
 func NewUnexpectedError(message string, arg ...any) UnexpectedError {
 	return UnexpectedError{
-		Err: fmt.Errorf(message, arg...),
+		Err:   fmt.Errorf(message, arg...),
+		Stack: debug.Stack(),
 	}
 }
 
 func NewUnexpectedErrorFromCause(err error) UnexpectedError {
 	return UnexpectedError{
-		Err: err,
+		Err:   err,
+		Stack: debug.Stack(),
 	}
 }
 
@@ -165,7 +169,7 @@ func (e UnexpectedError) Unwrap() error {
 }
 
 func (e UnexpectedError) Error() string {
-	return fmt.Sprintf("internal error: %s", e.Err.Error())
+	return fmt.Sprintf("internal error: %s\n%s", e.Err.Error(), e.Stack)
 }
 
 // DefaultUserError is the default implementation of UserError interface.
