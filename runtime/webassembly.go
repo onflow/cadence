@@ -107,11 +107,13 @@ func (i WasmtimeWebAssemblyInstance) GetExport(gauge common.MemoryGauge, name st
 		return nil, nil
 	}
 
-	if function := extern.Func(); function != nil {
-		return newWasmtimeFunctionWebAssemblyExport(gauge, function, i.Store)
+	function := extern.Func()
+	if function != nil {
+		// TODO: improve error
+		return nil, errors.NewDefaultUserError("invalid export: not a function")
 	}
 
-	return nil, fmt.Errorf("unsupported export")
+	return newWasmtimeFunctionWebAssemblyExport(gauge, function, i.Store)
 }
 
 func newWasmtimeFunctionWebAssemblyExport(
@@ -168,6 +170,34 @@ func newWasmtimeFunctionWebAssemblyExport(
 		return nil, fmt.Errorf("unsupported export: function has more than one result")
 	}
 
+	metered := func(inter *interpreter.Interpreter, f func() (any, error)) (any, error) {
+		// TODO: get remaining computation and convert to fuel.
+		//   needs e.g. invocation.Interpreter.RemainingComputation()
+		const todoAvailableFuel uint64 = 1000
+
+		fuelBefore := todoAvailableFuel
+		err := store.SetFuel(fuelBefore)
+		if err != nil {
+			// TODO: wrap error
+			panic(err)
+		}
+
+		callResult, callErr := f()
+
+		// IMPORTANT: always report consumed fuel, even if there was an error
+
+		fuelAfter, err := store.GetFuel()
+		if err != nil {
+			// TODO: wrap error
+			panic(err)
+		}
+
+		fuelDelta := fuelBefore - fuelAfter
+		inter.ReportComputation(common.ComputationKindWebAssemblyFuel, uint(fuelDelta))
+
+		return callResult, callErr
+	}
+
 	hostFunctionValue := interpreter.NewStaticHostFunctionValue(
 		gauge,
 		functionType,
@@ -200,29 +230,20 @@ func newWasmtimeFunctionWebAssemblyExport(
 
 			// Call the function, with metering
 
-			// TODO: get remaining computation and convert to fuel.
-			//   needs e.g. invocation.Interpreter.RemainingComputation()
-			const todoAvailableFuel uint64 = 1000
-			fuelBefore := todoAvailableFuel
-			err := store.SetFuel(fuelBefore)
-			if err != nil {
-				// TODO: wrap error
-				panic(err)
-			}
-
-			result, err := function.Call(store, convertedArguments...)
-			if err != nil {
-				// TODO: wrap error
-				panic(err)
-			}
-
-			fuelAfter, err := store.GetFuel()
+			result, err := metered(
+				inter,
+				func() (any, error) {
+					res, err := function.Call(store, convertedArguments...)
+					if err != nil {
+						// TODO: wrap error
+						return nil, err
+					}
+					return res, nil
+				},
+			)
 			if err != nil {
 				panic(err)
 			}
-
-			fuelDelta := fuelBefore - fuelAfter
-			inter.ReportComputation(common.ComputationKindWebAssemblyFuel, uint(fuelDelta))
 
 			// Return the result
 

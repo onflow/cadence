@@ -107,6 +107,7 @@ func newWebAssemblyInstanceGetExportFunction(
 				panic(err)
 			}
 			if export == nil {
+				// TODO: improve error
 				panic(errors.NewDefaultUserError(
 					"WebAssembly module does not have an export with name '%s'",
 					name,
