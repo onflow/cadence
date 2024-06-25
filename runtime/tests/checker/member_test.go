@@ -988,3 +988,25 @@ func TestCheckMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCheckContractFieldAccessInSameContract(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        contract Foo {
+
+            var array: [Int]
+
+            init() {
+                self.array = []
+            }
+
+            access(all) fun bar() {
+                // Should return the concrete value, not a reference.
+                var foo: [Int] = Foo.array
+            }
+        }`,
+	)
+
+	require.NoError(t, err)
+}

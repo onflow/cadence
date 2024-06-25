@@ -456,13 +456,6 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 		return InvalidType
 	}
 
-	leftInner := leftOptional.Type
-
-	if leftInner == NeverType {
-		return rightType
-	}
-	canNarrow := false
-
 	if !rightIsInvalid {
 
 		if rightType.IsResourceType() {
@@ -473,25 +466,7 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 				},
 			)
 		}
-
-		if !IsSubType(rightType, leftOptional) {
-
-			checker.report(
-				&InvalidBinaryOperandError{
-					Operation:    operation,
-					Side:         common.OperandSideRight,
-					ExpectedType: leftOptional,
-					ActualType:   rightType,
-					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Right),
-				},
-			)
-		} else {
-			canNarrow = IsSubType(rightType, leftInner)
-		}
 	}
 
-	if !canNarrow {
-		return leftOptional
-	}
-	return leftInner
+	return LeastCommonSuperType(leftOptional.Type, rightType)
 }

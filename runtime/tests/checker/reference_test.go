@@ -1941,7 +1941,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             import Foo from "imported"
 
             access(all) fun test() {
-                let xRef = &Foo.field as &AnyResource
+                let xRef: &AnyResource = Foo.field
                 xRef
             }
         `,

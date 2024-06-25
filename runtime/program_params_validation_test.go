@@ -59,19 +59,22 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 
 	newFooStruct := func() cadence.Struct {
 		return cadence.NewStruct([]cadence.Value{}).
-			WithType(&cadence.StructType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Foo",
-				Fields:              []cadence.Field{},
-			})
+			WithType(cadence.NewStructType(
+				common.ScriptLocation{},
+				"Foo",
+				[]cadence.Field{},
+				nil,
+			))
 	}
 
 	newPublicAccountKeys := func() cadence.Struct {
 		return cadence.NewStruct([]cadence.Value{}).
-			WithType(&cadence.StructType{
-				QualifiedIdentifier: "Account.Keys",
-				Fields:              []cadence.Field{},
-			})
+			WithType(cadence.NewStructType(
+				nil,
+				"Account.Keys",
+				[]cadence.Field{},
+				nil,
+			))
 	}
 
 	executeScript := func(t *testing.T, script string, arg cadence.Value) (err error) {
@@ -666,22 +669,25 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 	newFooStruct := func() cadence.Struct {
 		return cadence.NewStruct([]cadence.Value{}).
-			WithType(&cadence.StructType{
-				Location: common.AddressLocation{
+			WithType(cadence.NewStructType(
+				common.AddressLocation{
 					Address: common.MustBytesToAddress([]byte{0x1}),
 					Name:    "C",
 				},
-				QualifiedIdentifier: "C.Foo",
-				Fields:              []cadence.Field{},
-			})
+				"C.Foo",
+				[]cadence.Field{},
+				nil,
+			))
 	}
 
 	newPublicAccountKeys := func() cadence.Struct {
 		return cadence.NewStruct([]cadence.Value{}).
-			WithType(&cadence.StructType{
-				QualifiedIdentifier: "Account.Keys",
-				Fields:              []cadence.Field{},
-			})
+			WithType(cadence.NewStructType(
+				nil,
+				"Account.Keys",
+				[]cadence.Field{},
+				nil,
+			))
 	}
 
 	executeTransaction := func(
@@ -698,17 +704,48 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		storage := NewTestLedger(nil, nil)
 
+		authorizers := []Address{{0, 0, 0, 0, 0, 0, 0, 1}}
+		accountCodes := map[Location][]byte{}
+
 		runtimeInterface := &TestRuntimeInterface{
 			Storage:           storage,
 			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
 			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-				return contracts[location], nil
+				return accountCodes[location], nil
 			},
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return authorizers, nil
+			},
 		}
 		addPublicKeyValidation(runtimeInterface, nil)
+
+		transactionLocation := NewTransactionLocationGenerator()
+		for location, contract := range contracts {
+			deploy := DeploymentTransaction(location.Name, contract)
+			err := rt.ExecuteTransaction(
+				Script{
+					Source: deploy,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  transactionLocation(),
+				},
+			)
+
+			require.NoError(t, err)
+		}
+
+		authorizers = nil
 
 		return rt.ExecuteTransaction(
 			Script{
@@ -717,7 +754,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
+				Location:  transactionLocation(),
 			},
 		)
 	}
@@ -1262,19 +1299,20 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		arg := cadence.NewStruct([]cadence.Value{
 			capability,
-		}).WithType(&cadence.StructType{
-			Location: common.AddressLocation{
+		}).WithType(cadence.NewStructType(
+			common.AddressLocation{
 				Address: address,
 				Name:    "C",
 			},
-			QualifiedIdentifier: "C.S",
-			Fields: []cadence.Field{
+			"C.S",
+			[]cadence.Field{
 				{
 					Identifier: "cap",
 					Type:       &cadence.CapabilityType{},
 				},
 			},
-		})
+			nil,
+		))
 
 		err := executeTransaction(t, script, contracts, arg)
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})

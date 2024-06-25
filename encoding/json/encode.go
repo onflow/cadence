@@ -604,15 +604,21 @@ func prepareInclusiveRange(v *cadence.InclusiveRange) jsonValue {
 	}
 }
 
-//go:linkname getFieldValues github.com/onflow/cadence.getFieldValues
-func getFieldValues(cadence.Composite) []cadence.Value
+//go:linkname getCompositeFieldValues github.com/onflow/cadence.getCompositeFieldValues
+func getCompositeFieldValues(cadence.Composite) []cadence.Value
+
+//go:linkname getCompositeTypeFields github.com/onflow/cadence.getCompositeTypeFields
+func getCompositeTypeFields(cadence.CompositeType) []cadence.Field
+
+//go:linkname getInterfaceTypeFields github.com/onflow/cadence.getInterfaceTypeFields
+func getInterfaceTypeFields(cadence.InterfaceType) []cadence.Field
 
 func prepareStruct(v cadence.Struct) jsonValue {
 	return prepareComposite(
 		structTypeStr,
 		v.StructType.ID(),
-		v.StructType.Fields,
-		getFieldValues(v),
+		getCompositeTypeFields(v.StructType),
+		getCompositeFieldValues(v),
 	)
 }
 
@@ -620,8 +626,8 @@ func prepareResource(v cadence.Resource) jsonValue {
 	return prepareComposite(
 		resourceTypeStr,
 		v.ResourceType.ID(),
-		v.ResourceType.Fields,
-		getFieldValues(v),
+		getCompositeTypeFields(v.ResourceType),
+		getCompositeFieldValues(v),
 	)
 }
 
@@ -629,8 +635,8 @@ func prepareEvent(v cadence.Event) jsonValue {
 	return prepareComposite(
 		eventTypeStr,
 		v.EventType.ID(),
-		v.EventType.Fields,
-		getFieldValues(v),
+		getCompositeTypeFields(v.EventType),
+		getCompositeFieldValues(v),
 	)
 }
 
@@ -638,8 +644,8 @@ func prepareContract(v cadence.Contract) jsonValue {
 	return prepareComposite(
 		contractTypeStr,
 		v.ContractType.ID(),
-		v.ContractType.Fields,
-		getFieldValues(v),
+		getCompositeTypeFields(v.ContractType),
+		getCompositeFieldValues(v),
 	)
 }
 
@@ -647,8 +653,8 @@ func prepareEnum(v cadence.Enum) jsonValue {
 	return prepareComposite(
 		enumTypeStr,
 		v.EnumType.ID(),
-		v.EnumType.Fields,
-		getFieldValues(v),
+		getCompositeTypeFields(v.EnumType),
+		getCompositeFieldValues(v),
 	)
 }
 
@@ -656,13 +662,13 @@ func prepareAttachment(v cadence.Attachment) jsonValue {
 	return prepareComposite(
 		attachmentTypeStr,
 		v.AttachmentType.ID(),
-		v.AttachmentType.Fields,
-		getFieldValues(v),
+		getCompositeTypeFields(v.AttachmentType),
+		getCompositeFieldValues(v),
 	)
 }
 
 func prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cadence.Value) jsonValue {
-	// Ensure there are _at least _ as many field values as field types.
+	// Ensure there are _at least_ as many field values as field types.
 	// There might be more field values in the case of attachments.
 	if len(fields) < len(fieldTypes) {
 		panic(fmt.Errorf(
@@ -860,7 +866,7 @@ func PrepareType(typ cadence.Type, results TypePreparationResults) jsonValue {
 			Kind:         "Struct",
 			Type:         "",
 			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
-			Fields:       prepareFields(typ.Fields, results),
+			Fields:       prepareFields(getCompositeTypeFields(typ), results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
 	case *cadence.ResourceType:
@@ -868,7 +874,7 @@ func PrepareType(typ cadence.Type, results TypePreparationResults) jsonValue {
 			Kind:         "Resource",
 			Type:         "",
 			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
-			Fields:       prepareFields(typ.Fields, results),
+			Fields:       prepareFields(getCompositeTypeFields(typ), results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
 	case *cadence.EventType:
@@ -876,7 +882,7 @@ func PrepareType(typ cadence.Type, results TypePreparationResults) jsonValue {
 			Kind:         "Event",
 			Type:         "",
 			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
-			Fields:       prepareFields(typ.Fields, results),
+			Fields:       prepareFields(getCompositeTypeFields(typ), results),
 			Initializers: [][]jsonParameterType{prepareParameters(typ.Initializer, results)},
 		}
 	case *cadence.ContractType:
@@ -884,7 +890,7 @@ func PrepareType(typ cadence.Type, results TypePreparationResults) jsonValue {
 			Kind:         "Contract",
 			Type:         "",
 			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
-			Fields:       prepareFields(typ.Fields, results),
+			Fields:       prepareFields(getCompositeTypeFields(typ), results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
 	case *cadence.StructInterfaceType:
@@ -892,7 +898,7 @@ func PrepareType(typ cadence.Type, results TypePreparationResults) jsonValue {
 			Kind:         "StructInterface",
 			Type:         "",
 			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
-			Fields:       prepareFields(typ.Fields, results),
+			Fields:       prepareFields(getInterfaceTypeFields(typ), results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
 	case *cadence.ResourceInterfaceType:
@@ -900,7 +906,7 @@ func PrepareType(typ cadence.Type, results TypePreparationResults) jsonValue {
 			Kind:         "ResourceInterface",
 			Type:         "",
 			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
-			Fields:       prepareFields(typ.Fields, results),
+			Fields:       prepareFields(getInterfaceTypeFields(typ), results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
 	case *cadence.ContractInterfaceType:
@@ -908,7 +914,7 @@ func PrepareType(typ cadence.Type, results TypePreparationResults) jsonValue {
 			Kind:         "ContractInterface",
 			Type:         "",
 			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
-			Fields:       prepareFields(typ.Fields, results),
+			Fields:       prepareFields(getInterfaceTypeFields(typ), results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 		}
 	case *cadence.FunctionType:
@@ -948,7 +954,7 @@ func PrepareType(typ cadence.Type, results TypePreparationResults) jsonValue {
 		return jsonNominalType{
 			Kind:         "Enum",
 			TypeID:       string(common.NewTypeIDFromQualifiedName(nil, typ.Location, typ.QualifiedIdentifier)),
-			Fields:       prepareFields(typ.Fields, results),
+			Fields:       prepareFields(getCompositeTypeFields(typ), results),
 			Initializers: prepareInitializers(typ.Initializers, results),
 			Type:         PrepareType(typ.RawType, results),
 		}

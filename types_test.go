@@ -2272,10 +2272,10 @@ func TestDecodeFields(t *testing.T) {
 				},
 			},
 		},
-	).WithType(&EventType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "SimpleEvent",
-		Fields: []Field{
+	).WithType(NewEventType(
+		utils.TestLocation,
+		"SimpleEvent",
+		[]Field{
 			{
 				Identifier: "intField",
 				Type:       IntType,
@@ -2369,7 +2369,8 @@ func TestDecodeFields(t *testing.T) {
 				),
 			},
 		},
-	})
+		nil,
+	))
 
 	type eventStruct struct {
 		Int                            Int                     `cadence:"intField"`
@@ -2491,7 +2492,7 @@ func TestDecodeFields(t *testing.T) {
 			Description: "should err when mapping to invalid type",
 		},
 		{Value: &struct {
-			a Int `cadence:"intField"` // nolint: unused
+			a Int `cadence:"intField"`
 		}{},
 			ExpectedErr: "cannot set field a",
 			Description: "should err when mapping to private field",

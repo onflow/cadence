@@ -10399,3 +10399,21 @@ func TestCheckInvalidNestedResourceCapture(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCheckInvalidOptionalResourceCoalescingRightSideNilLeftSide(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+       resource R {}
+       fun test() {
+           let rs: @[R?] <- [nil, nil]
+           rs[0] <-! create R()
+           rs[1] <-! nil ?? rs[0]
+           destroy rs
+       }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
+}

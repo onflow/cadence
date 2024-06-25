@@ -53,8 +53,7 @@ repos:
         - onflow/flow-emulator
 
 - repo: onflow/flowkit
-  needsRelease: false
-  branch: feature/stable-cadence
+  needsRelease: true
   mods:
     - path: ""
       deps:
@@ -79,7 +78,6 @@ repos:
 
 - repo: onflow/flixkit-go
   needsRelease: true
-  branch: feature/stable-cadence
   mods:
     - path: ""
       deps:
@@ -106,7 +104,6 @@ repos:
 
 - repo: onflow/flow-cli
   needsRelease: true
-  branch: feature/stable-cadence
   mods:
     - path: ""
       deps:

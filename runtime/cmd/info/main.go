@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
@@ -70,6 +71,10 @@ var commands = map[string]command{
 	"dump-builtin-values": {
 		help:    "Dumps all built-in values",
 		handler: dumpBuiltinValues,
+	},
+	"dump-hard-keywords": {
+		help:    "Dumps all hard keywords",
+		handler: dumpHardKeywords,
 	},
 }
 
@@ -119,12 +124,40 @@ func dumpBuiltinTypes() {
 	)
 
 	for _, ty := range types {
-		id := ty.QualifiedString()
-		fmt.Printf("- %s\n", id)
+		dumpType(ty)
+	}
+}
 
-		if *includeMembers {
-			dumpTypeMembers(ty)
+func dumpType(ty sema.Type) {
+
+	// If the type is parameterized, instantiate it with generic types
+	if parameterizedType, ok := ty.(sema.ParameterizedType); ok {
+		typeParameters := parameterizedType.TypeParameters()
+		typeArguments := parameterizedType.TypeArguments()
+
+		var newTypeArguments []sema.Type
+
+		for typeParameterIndex, typeParameter := range typeParameters {
+			var typeArgument sema.Type
+			if typeParameterIndex < len(typeArguments) {
+				typeArgument = typeArguments[typeParameterIndex]
+			}
+			if typeArgument == nil {
+				typeArgument = &sema.GenericType{
+					TypeParameter: typeParameter,
+				}
+			}
+			newTypeArguments = append(newTypeArguments, typeArgument)
 		}
+
+		ty = sema.MustInstantiate(parameterizedType, newTypeArguments...)
+	}
+
+	id := ty.QualifiedString()
+	fmt.Printf("- %s\n", id)
+
+	if *includeMembers {
+		dumpTypeMembers(ty)
 	}
 }
 
@@ -260,6 +293,12 @@ func dumpBuiltinValues() {
 		if *includeMembers {
 			dumpTypeMembers(ty)
 		}
+	}
+}
+
+func dumpHardKeywords() {
+	for _, keyword := range parser.HardKeywords {
+		fmt.Printf("- %s\n", keyword)
 	}
 }
 

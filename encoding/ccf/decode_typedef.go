@@ -133,7 +133,7 @@ func (d *Decoder) decodeTypeDefs() (*cadenceTypeByCCFTypeID, error) {
 
 		switch typ := typ.(type) {
 		case cadence.CompositeType:
-			typ.SetCompositeFields(fields)
+			setCompositeTypeFields(typ, fields)
 
 		default:
 			return nil, fmt.Errorf("unsupported type %s (%T) in composite-typedef", typ.ID(), typ)
@@ -269,8 +269,8 @@ func (d *Decoder) decodeTypeDef(
 			return cadence.NewMeteredAttachmentType(
 				d.gauge,
 				location,
-				nil,
 				identifier,
+				nil,
 				nil,
 				nil,
 			)

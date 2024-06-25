@@ -1521,14 +1521,64 @@ func NewMeteredKeyValuePair(gauge common.MemoryGauge, key, value Value) KeyValue
 
 type Composite interface {
 	Value
-	GetFields() []Field
+
+	isComposite()
+	getFields() []Field
 	getFieldValues() []Value
+
+	SearchFieldByName(fieldName string) Value
+	FieldsMappedByName() map[string]Value
 }
 
-// linked in by packages that need access to getFieldValues,
+// linked in by packages that need access to Composite.getFieldValues,
 // e.g. JSON and CCF codecs
-func getFieldValues(composite Composite) []Value { //nolint:unused
+func getCompositeFieldValues(composite Composite) []Value { //nolint:unused
 	return composite.getFieldValues()
+}
+
+// SearchFieldByName searches for the field with the given name in the composite type,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func SearchFieldByName(v Composite, fieldName string) Value {
+	fieldValues := v.getFieldValues()
+	fields := v.getFields()
+
+	if fieldValues == nil || fields == nil {
+		return nil
+	}
+
+	for i, field := range fields {
+		if field.Identifier == fieldName {
+			return fieldValues[i]
+		}
+	}
+	return nil
+}
+
+func FieldsMappedByName(v Composite) map[string]Value {
+	fieldValues := v.getFieldValues()
+	fields := v.getFields()
+
+	if fieldValues == nil || fields == nil {
+		return nil
+	}
+
+	fieldsMap := make(map[string]Value, len(fields))
+	for i, fieldValue := range fieldValues {
+		var fieldName string
+		if i < len(fields) {
+			fieldName = fields[i].Identifier
+		} else if attachment, ok := fieldValue.(Attachment); ok {
+			fieldName = interpreter.AttachmentMemberName(attachment.Type().ID())
+		} else {
+			panic(errors.NewUnreachableError())
+		}
+		fieldsMap[fieldName] = fieldValue
+	}
+
+	return fieldsMap
 }
 
 // Struct
@@ -1563,6 +1613,8 @@ func NewMeteredStruct(
 
 func (Struct) isValue() {}
 
+func (Struct) isComposite() {}
+
 func (v Struct) Type() Type {
 	if v.StructType == nil {
 		// Return nil Type instead of Type referencing nil *StructType,
@@ -1584,21 +1636,34 @@ func (v Struct) WithType(typ *StructType) Struct {
 func (v Struct) String() string {
 	return formatComposite(
 		v.StructType.ID(),
-		v.StructType.Fields,
+		v.StructType.fields,
 		v.fields,
 	)
 }
 
-func (v Struct) GetFields() []Field {
+func (v Struct) getFields() []Field {
 	if v.StructType == nil {
 		return nil
 	}
 
-	return v.StructType.Fields
+	return v.StructType.fields
 }
 
 func (v Struct) getFieldValues() []Value {
 	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the struct,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Struct) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Struct) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 func formatComposite(typeID string, fields []Field, values []Value) string {
@@ -1653,6 +1718,8 @@ func NewMeteredResource(
 
 func (Resource) isValue() {}
 
+func (Resource) isComposite() {}
+
 func (v Resource) Type() Type {
 	if v.ResourceType == nil {
 		// Return nil Type instead of Type referencing nil *ResourceType,
@@ -1674,21 +1741,34 @@ func (v Resource) WithType(typ *ResourceType) Resource {
 func (v Resource) String() string {
 	return formatComposite(
 		v.ResourceType.ID(),
-		v.ResourceType.Fields,
+		v.ResourceType.fields,
 		v.fields,
 	)
 }
 
-func (v Resource) GetFields() []Field {
+func (v Resource) getFields() []Field {
 	if v.ResourceType == nil {
 		return nil
 	}
 
-	return v.ResourceType.Fields
+	return v.ResourceType.fields
 }
 
 func (v Resource) getFieldValues() []Value {
 	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the resource,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Resource) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Resource) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 // Attachment
@@ -1722,6 +1802,8 @@ func NewMeteredAttachment(
 
 func (Attachment) isValue() {}
 
+func (Attachment) isComposite() {}
+
 func (v Attachment) Type() Type {
 	if v.AttachmentType == nil {
 		// Return nil Type instead of Type referencing nil *AttachmentType,
@@ -1743,21 +1825,34 @@ func (v Attachment) WithType(typ *AttachmentType) Attachment {
 func (v Attachment) String() string {
 	return formatComposite(
 		v.AttachmentType.ID(),
-		v.AttachmentType.Fields,
+		v.AttachmentType.fields,
 		v.fields,
 	)
 }
 
-func (v Attachment) GetFields() []Field {
+func (v Attachment) getFields() []Field {
 	if v.AttachmentType == nil {
 		return nil
 	}
 
-	return v.AttachmentType.Fields
+	return v.AttachmentType.fields
 }
 
 func (v Attachment) getFieldValues() []Value {
 	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the attachment,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Attachment) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Attachment) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 // Event
@@ -1791,6 +1886,8 @@ func NewMeteredEvent(
 
 func (Event) isValue() {}
 
+func (Event) isComposite() {}
+
 func (v Event) Type() Type {
 	if v.EventType == nil {
 		// Return nil Type instead of Type referencing nil *EventType,
@@ -1812,21 +1909,34 @@ func (v Event) WithType(typ *EventType) Event {
 func (v Event) String() string {
 	return formatComposite(
 		v.EventType.ID(),
-		v.EventType.Fields,
+		v.EventType.fields,
 		v.fields,
 	)
 }
 
-func (v Event) GetFields() []Field {
+func (v Event) getFields() []Field {
 	if v.EventType == nil {
 		return nil
 	}
 
-	return v.EventType.Fields
+	return v.EventType.fields
 }
 
 func (v Event) getFieldValues() []Value {
 	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the event,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Event) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Event) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 // Contract
@@ -1860,6 +1970,8 @@ func NewMeteredContract(
 
 func (Contract) isValue() {}
 
+func (Contract) isComposite() {}
+
 func (v Contract) Type() Type {
 	if v.ContractType == nil {
 		// Return nil Type instead of Type referencing nil *ContractType,
@@ -1881,21 +1993,34 @@ func (v Contract) WithType(typ *ContractType) Contract {
 func (v Contract) String() string {
 	return formatComposite(
 		v.ContractType.ID(),
-		v.ContractType.Fields,
+		v.ContractType.fields,
 		v.fields,
 	)
 }
 
-func (v Contract) GetFields() []Field {
+func (v Contract) getFields() []Field {
 	if v.ContractType == nil {
 		return nil
 	}
 
-	return v.ContractType.Fields
+	return v.ContractType.fields
 }
 
 func (v Contract) getFieldValues() []Value {
 	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the contract,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Contract) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Contract) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 // InclusiveRange
@@ -2193,6 +2318,8 @@ func NewMeteredEnum(
 
 func (Enum) isValue() {}
 
+func (Enum) isComposite() {}
+
 func (v Enum) Type() Type {
 	if v.EnumType == nil {
 		// Return nil Type instead of Type referencing nil *EnumType,
@@ -2214,21 +2341,34 @@ func (v Enum) WithType(typ *EnumType) Enum {
 func (v Enum) String() string {
 	return formatComposite(
 		v.EnumType.ID(),
-		v.EnumType.Fields,
+		v.EnumType.fields,
 		v.fields,
 	)
 }
 
-func (v Enum) GetFields() []Field {
+func (v Enum) getFields() []Field {
 	if v.EnumType == nil {
 		return nil
 	}
 
-	return v.EnumType.Fields
+	return v.EnumType.fields
 }
 
 func (v Enum) getFieldValues() []Value {
 	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the enum,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Enum) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Enum) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 // Function
