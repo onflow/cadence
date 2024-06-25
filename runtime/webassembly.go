@@ -37,7 +37,20 @@ type WasmtimeWebAssemblyModule struct {
 
 func NewWasmtimeWebAssemblyModule(bytes []byte) (stdlib.WebAssemblyModule, error) {
 	config := wasmtime.NewConfig()
+
 	config.SetConsumeFuel(true)
+	config.SetMaxWasmStack(512 * 1024)
+
+	config.SetWasmBulkMemory(true)
+	config.SetWasmThreads(false)
+	config.SetWasmReferenceTypes(false)
+	config.SetWasmSIMD(false)
+	config.SetWasmMemory64(false)
+	config.SetWasmMultiMemory(false)
+	config.SetWasmMultiValue(false)
+
+	config.SetStrategy(wasmtime.StrategyCranelift)
+	config.SetCraneliftFlag("enable_nan_canonicalization", "true")
 
 	engine := wasmtime.NewEngineWithConfig(config)
 	store := wasmtime.NewStore(engine)
