@@ -168,9 +168,9 @@ var allKeywords = []string{
 	KeywordIs,
 }
 
-// softKeywords are keywords that can be used as identifiers anywhere,
+// SoftKeywords are keywords that can be used as identifiers anywhere,
 // without any restriction or ambiguity.
-var softKeywords = []string{
+var SoftKeywords = []string{
 	KeywordFrom,
 	KeywordAccount,
 	KeywordAll,
@@ -181,12 +181,12 @@ var softKeywords = []string{
 	KeywordType,
 }
 
-var softKeywordsTable = mph.Build(softKeywords)
+var softKeywordsTable = mph.Build(SoftKeywords)
 
-// hardKeywords are restricted from being used as identifiers in certain places.
+// HardKeywords are restricted from being used as identifiers in certain places.
 // i.e: places where ambiguity can exist, such as composite declaration names, function names, etc.
 // However, they are not restricted to be used as fields names, and many other places.
-var hardKeywords = filter(
+var HardKeywords = filter(
 	allKeywords,
 	func(keyword string) bool {
 		_, ok := softKeywordsTable.Lookup(keyword)
@@ -194,7 +194,7 @@ var hardKeywords = filter(
 	},
 )
 
-var hardKeywordsTable = mph.Build(hardKeywords)
+var hardKeywordsTable = mph.Build(HardKeywords)
 
 func IsHardKeyword(identifier string) bool {
 	_, ok := hardKeywordsTable.Lookup(identifier)

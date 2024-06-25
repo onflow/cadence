@@ -640,19 +640,20 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			args: encodeArgs([]cadence.Value{
 				cadence.
 					NewStruct([]cadence.Value{cadence.String("bar")}).
-					WithType(&cadence.StructType{
-						Location: common.AddressLocation{
+					WithType(cadence.NewStructType(
+						common.AddressLocation{
 							Address: common.MustBytesToAddress([]byte{0x1}),
 							Name:    "C",
 						},
-						QualifiedIdentifier: "C.Foo",
-						Fields: []cadence.Field{
+						"C.Foo",
+						[]cadence.Field{
 							{
 								Identifier: "y",
 								Type:       cadence.StringType,
 							},
 						},
-					}),
+						nil,
+					)),
 			}),
 			expectedLogs: []string{`"bar"`},
 		},
@@ -688,19 +689,20 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				cadence.NewArray([]cadence.Value{
 					cadence.
 						NewStruct([]cadence.Value{cadence.String("bar")}).
-						WithType(&cadence.StructType{
-							Location: common.AddressLocation{
+						WithType(cadence.NewStructType(
+							common.AddressLocation{
 								Address: common.MustBytesToAddress([]byte{0x1}),
 								Name:    "C",
 							},
-							QualifiedIdentifier: "C.Foo",
-							Fields: []cadence.Field{
+							"C.Foo",
+							[]cadence.Field{
 								{
 									Identifier: "y",
 									Type:       cadence.StringType,
 								},
 							},
-						}),
+							nil,
+						)),
 				}),
 			}),
 			expectedLogs: []string{`"bar"`},
@@ -717,14 +719,21 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 
 			storage := NewTestLedger(nil, nil)
 
+			authorizers := []Address{{0, 0, 0, 0, 0, 0, 0, 1}}
+			accountCodes := map[Location][]byte{}
+
 			runtimeInterface := &TestRuntimeInterface{
 				Storage: storage,
 				OnGetSigningAccounts: func() ([]Address, error) {
-					return tc.authorizers, nil
+					return authorizers, nil
 				},
 				OnResolveLocation: NewSingleIdentifierLocationResolver(t),
 				OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-					return tc.contracts[location], nil
+					return accountCodes[location], nil
+				},
+				OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+					accountCodes[location] = code
+					return nil
 				},
 				OnProgramLog: func(message string) {
 					loggedMessages = append(loggedMessages, message)
@@ -732,7 +741,28 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
 					return json.Decode(nil, b)
 				},
+				OnEmitEvent: func(event cadence.Event) error {
+					return nil
+				},
 			}
+
+			transactionLocation := NewTransactionLocationGenerator()
+			for location, contract := range tc.contracts {
+				deploy := DeploymentTransaction(location.Name, contract)
+				err := rt.ExecuteTransaction(
+					Script{
+						Source: deploy,
+					},
+					Context{
+						Interface: runtimeInterface,
+						Location:  transactionLocation(),
+					},
+				)
+
+				require.NoError(t, err)
+			}
+
+			authorizers = tc.authorizers
 
 			err := rt.ExecuteTransaction(
 				Script{
@@ -741,7 +771,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  common.TransactionLocation{},
+					Location:  transactionLocation(),
 				},
 			)
 
@@ -989,16 +1019,17 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			args: encodeArgs([]cadence.Value{
 				cadence.
 					NewStruct([]cadence.Value{cadence.String("bar")}).
-					WithType(&cadence.StructType{
-						Location:            common.ScriptLocation{},
-						QualifiedIdentifier: "Foo",
-						Fields: []cadence.Field{
+					WithType(cadence.NewStructType(
+						common.ScriptLocation{},
+						"Foo",
+						[]cadence.Field{
 							{
 								Identifier: "y",
 								Type:       cadence.StringType,
 							},
 						},
-					}),
+						nil,
+					)),
 			}),
 			expectedLogs: []string{`"bar"`},
 		},
@@ -1022,16 +1053,17 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				cadence.NewArray([]cadence.Value{
 					cadence.
 						NewStruct([]cadence.Value{cadence.String("bar")}).
-						WithType(&cadence.StructType{
-							Location:            common.ScriptLocation{},
-							QualifiedIdentifier: "Foo",
-							Fields: []cadence.Field{
+						WithType(cadence.NewStructType(
+							common.ScriptLocation{},
+							"Foo",
+							[]cadence.Field{
 								{
 									Identifier: "y",
 									Type:       cadence.StringType,
 								},
 							},
-						}),
+							nil,
+						)),
 				}),
 			}),
 			expectedLogs: []string{`"bar"`},

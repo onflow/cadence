@@ -1323,10 +1323,10 @@ func TestEncodeStruct(t *testing.T) {
 
 	t.Parallel()
 
-	simpleStructType := &cadence.StructType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "FooStruct",
-		Fields: []cadence.Field{
+	simpleStructType := cadence.NewStructType(
+		utils.TestLocation,
+		"FooStruct",
+		[]cadence.Field{
 			{
 				Identifier: "a",
 				Type:       cadence.IntType,
@@ -1336,7 +1336,8 @@ func TestEncodeStruct(t *testing.T) {
 				Type:       cadence.StringType,
 			},
 		},
-	}
+		nil,
+	)
 
 	simpleStruct := encodeTest{
 		"Simple",
@@ -1375,10 +1376,10 @@ func TestEncodeStruct(t *testing.T) {
 
 	fooResourceType := newFooResourceType()
 
-	resourceStructType := &cadence.StructType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "FooStruct",
-		Fields: []cadence.Field{
+	resourceStructType := cadence.NewStructType(
+		utils.TestLocation,
+		"FooStruct",
+		[]cadence.Field{
 			{
 				Identifier: "a",
 				Type:       cadence.StringType,
@@ -1388,7 +1389,8 @@ func TestEncodeStruct(t *testing.T) {
 				Type:       fooResourceType,
 			},
 		},
-	}
+		nil,
+	)
 
 	resourceStruct := encodeTest{
 		"Resources",
@@ -1483,10 +1485,10 @@ func TestEncodeEvent(t *testing.T) {
 
 	t.Parallel()
 
-	simpleEventType := &cadence.EventType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "FooEvent",
-		Fields: []cadence.Field{
+	simpleEventType := cadence.NewEventType(
+		utils.TestLocation,
+		"FooEvent",
+		[]cadence.Field{
 			{
 				Identifier: "a",
 				Type:       cadence.IntType,
@@ -1496,7 +1498,8 @@ func TestEncodeEvent(t *testing.T) {
 				Type:       cadence.StringType,
 			},
 		},
-	}
+		nil,
+	)
 
 	simpleEvent := encodeTest{
 		"Simple",
@@ -1535,10 +1538,10 @@ func TestEncodeEvent(t *testing.T) {
 
 	fooResourceType := newFooResourceType()
 
-	resourceEventType := &cadence.EventType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "FooEvent",
-		Fields: []cadence.Field{
+	resourceEventType := cadence.NewEventType(
+		utils.TestLocation,
+		"FooEvent",
+		[]cadence.Field{
 			{
 				Identifier: "a",
 				Type:       cadence.StringType,
@@ -1548,7 +1551,8 @@ func TestEncodeEvent(t *testing.T) {
 				Type:       fooResourceType,
 			},
 		},
-	}
+		nil,
+	)
 
 	resourceEvent := encodeTest{
 		"Resources",
@@ -1607,10 +1611,10 @@ func TestEncodeContract(t *testing.T) {
 
 	t.Parallel()
 
-	simpleContractType := &cadence.ContractType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "FooContract",
-		Fields: []cadence.Field{
+	simpleContractType := cadence.NewContractType(
+		utils.TestLocation,
+		"FooContract",
+		[]cadence.Field{
 			{
 				Identifier: "a",
 				Type:       cadence.IntType,
@@ -1620,7 +1624,8 @@ func TestEncodeContract(t *testing.T) {
 				Type:       cadence.StringType,
 			},
 		},
-	}
+		nil,
+	)
 
 	simpleContract := encodeTest{
 		"Simple",
@@ -1659,10 +1664,10 @@ func TestEncodeContract(t *testing.T) {
 
 	fooResourceType := newFooResourceType()
 
-	resourceContractType := &cadence.ContractType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "FooContract",
-		Fields: []cadence.Field{
+	resourceContractType := cadence.NewContractType(
+		utils.TestLocation,
+		"FooContract",
+		[]cadence.Field{
 			{
 				Identifier: "a",
 				Type:       cadence.StringType,
@@ -1672,7 +1677,8 @@ func TestEncodeContract(t *testing.T) {
 				Type:       fooResourceType,
 			},
 		},
-	}
+		nil,
+	)
 
 	resourceContract := encodeTest{
 		"Resources",
@@ -1896,17 +1902,17 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.StructType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "S",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewStructType(
+					utils.TestLocation,
+					"S",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{{Label: "foo", Identifier: "bar", Type: cadence.IntType}},
 						{{Label: "qux", Identifier: "baz", Type: cadence.StringType}},
 					},
-				},
+				),
 			},
 			// language=json
 			`
@@ -1957,17 +1963,17 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.ResourceType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "R",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewResourceType(
+					utils.TestLocation,
+					"R",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{{Label: "foo", Identifier: "bar", Type: cadence.IntType}},
 						{{Label: "qux", Identifier: "baz", Type: cadence.StringType}},
 					},
-				},
+				),
 			},
 			// language=json
 			`
@@ -2018,17 +2024,17 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.ContractType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "C",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewContractType(
+					utils.TestLocation,
+					"C",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{{Label: "foo", Identifier: "bar", Type: cadence.IntType}},
 						{{Label: "qux", Identifier: "baz", Type: cadence.StringType}},
 					},
-				},
+				),
 			},
 			// language=json
 			`
@@ -2079,17 +2085,17 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.StructInterfaceType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "S",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewStructInterfaceType(
+					utils.TestLocation,
+					"S",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{{Label: "foo", Identifier: "bar", Type: cadence.IntType}},
 						{{Label: "qux", Identifier: "baz", Type: cadence.StringType}},
 					},
-				},
+				),
 			},
 			// language=json
 			`
@@ -2140,17 +2146,17 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.ResourceInterfaceType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "R",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewResourceInterfaceType(
+					utils.TestLocation,
+					"R",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{{Label: "foo", Identifier: "bar", Type: cadence.IntType}},
 						{{Label: "qux", Identifier: "baz", Type: cadence.StringType}},
 					},
-				},
+				),
 			},
 			// language=json
 			`
@@ -2201,17 +2207,17 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.ContractInterfaceType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "C",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewContractInterfaceType(
+					utils.TestLocation,
+					"C",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{{Label: "foo", Identifier: "bar", Type: cadence.IntType}},
 						{{Label: "qux", Identifier: "baz", Type: cadence.StringType}},
 					},
-				},
+				),
 			},
 			// language=json
 			`
@@ -2262,17 +2268,17 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.EventType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "E",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewEventType(
+					utils.TestLocation,
+					"E",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializer: []cadence.Parameter{
+					[]cadence.Parameter{
 						{Label: "foo", Identifier: "bar", Type: cadence.IntType},
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 					},
-				},
+				),
 			},
 			// language=json
 			`
@@ -2321,18 +2327,18 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.EnumType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "E",
-					RawType:             cadence.StringType,
-					Fields: []cadence.Field{
+				StaticType: cadence.NewEnumType(
+					utils.TestLocation,
+					"E",
+					cadence.StringType,
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{{Label: "foo", Identifier: "bar", Type: cadence.IntType}},
 						{{Label: "qux", Identifier: "baz", Type: cadence.StringType}},
 					},
-				},
+				),
 			},
 			// language=json
 			`
@@ -3255,17 +3261,19 @@ func TestExportRecursiveType(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &cadence.ResourceType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
-			{
-				Identifier: "foo",
-			},
+	fields := []cadence.Field{
+		{
+			Identifier: "foo",
 		},
 	}
+	ty := cadence.NewResourceType(
+		utils.TestLocation,
+		"Foo",
+		fields,
+		nil,
+	)
 
-	ty.Fields[0].Type = &cadence.OptionalType{
+	fields[0].Type = &cadence.OptionalType{
 		Type: ty,
 	}
 
@@ -3304,18 +3312,19 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 
 		t.Parallel()
 
-		ty := &cadence.ResourceType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "foo",
-				},
+		fields := []cadence.Field{
+			{
+				Identifier: "foo",
 			},
-			Initializers: [][]cadence.Parameter{},
 		}
+		ty := cadence.NewResourceType(
+			utils.TestLocation,
+			"Foo",
+			fields,
+			[][]cadence.Parameter{},
+		)
 
-		ty.Fields[0].Type = &cadence.OptionalType{
+		fields[0].Type = &cadence.OptionalType{
 			Type: ty,
 		}
 
@@ -3355,17 +3364,17 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 
 		t.Parallel()
 
-		fooTy := &cadence.ResourceType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields:              []cadence.Field{},
-			Initializers:        [][]cadence.Parameter{},
-		}
+		fooTy := cadence.NewResourceType(
+			utils.TestLocation,
+			"Foo",
+			[]cadence.Field{},
+			[][]cadence.Parameter{},
+		)
 
-		barTy := &cadence.ResourceType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Bar",
-			Fields: []cadence.Field{
+		barTy := cadence.NewResourceType(
+			utils.TestLocation,
+			"Bar",
+			[]cadence.Field{
 				{
 					Identifier: "foo1",
 					Type:       fooTy,
@@ -3375,8 +3384,8 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 					Type:       fooTy,
 				},
 			},
-			Initializers: [][]cadence.Parameter{},
-		}
+			[][]cadence.Parameter{},
+		)
 
 		testEncodeAndDecode(
 			t,
@@ -3578,16 +3587,17 @@ func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value, opti
 }
 
 func newFooResourceType() *cadence.ResourceType {
-	return &cadence.ResourceType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
+	return cadence.NewResourceType(
+		utils.TestLocation,
+		"Foo",
+		[]cadence.Field{
 			{
 				Identifier: "bar",
 				Type:       cadence.IntType,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func TestNonUTF8StringEncoding(t *testing.T) {

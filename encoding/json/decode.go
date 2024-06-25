@@ -25,6 +25,7 @@ import (
 	"io"
 	"math/big"
 	"strconv"
+	_ "unsafe"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
@@ -1076,6 +1077,12 @@ func (d *Decoder) decodeAuthorization(authorizationJSON any) cadence.Authorizati
 	panic(errors.NewDefaultUserError("invalid kind in authorization: %s", kind))
 }
 
+//go:linkname setCompositeTypeFields github.com/onflow/cadence.setCompositeTypeFields
+func setCompositeTypeFields(cadence.CompositeType, []cadence.Field)
+
+//go:linkname setInterfaceTypeFields github.com/onflow/cadence.setInterfaceTypeFields
+func setInterfaceTypeFields(cadence.InterfaceType, []cadence.Field)
+
 func (d *Decoder) decodeNominalType(
 	obj jsonObject,
 	kind, typeID string,
@@ -1185,9 +1192,9 @@ func (d *Decoder) decodeNominalType(
 
 	switch {
 	case compositeType != nil:
-		compositeType.SetCompositeFields(fields)
+		setCompositeTypeFields(compositeType, fields)
 	case interfaceType != nil:
-		interfaceType.SetInterfaceFields(fields)
+		setInterfaceTypeFields(interfaceType, fields)
 	}
 
 	return result

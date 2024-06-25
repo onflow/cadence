@@ -136,7 +136,7 @@ func (e *Encoder) encodeCompositeType(typ cadence.CompositeType, tids ccfTypeIDB
 //	    ]
 //	]
 func (e *Encoder) encodeCompositeTypeFields(typ cadence.CompositeType, tids ccfTypeIDByCadenceType) error {
-	fieldTypes := typ.CompositeFields()
+	fieldTypes := getCompositeTypeFields(typ)
 
 	// Encode array head with number of fields.
 	err := e.enc.EncodeArrayHead(uint64(len(fieldTypes)))

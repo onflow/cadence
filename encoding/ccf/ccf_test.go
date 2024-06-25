@@ -97,10 +97,10 @@ func TestEncodeOptional(t *testing.T) {
 	// as tests may run in parallel
 
 	newStructType := func() *cadence.StructType {
-		return &cadence.StructType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
+		return cadence.NewStructType(
+			utils.TestLocation,
+			"Foo",
+			[]cadence.Field{
 				{
 					Identifier: "a",
 					Type:       cadence.NewOptionalType(cadence.IntType),
@@ -114,14 +114,15 @@ func TestEncodeOptional(t *testing.T) {
 					Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewOptionalType(cadence.IntType))),
 				},
 			},
-		}
+			nil,
+		)
 	}
 
 	newStructTypeWithOptionalAbstractField := func() *cadence.StructType {
-		return &cadence.StructType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
+		return cadence.NewStructType(
+			utils.TestLocation,
+			"Foo",
+			[]cadence.Field{
 				{
 					Identifier: "a",
 					Type:       cadence.NewOptionalType(cadence.AnyStructType),
@@ -135,7 +136,8 @@ func TestEncodeOptional(t *testing.T) {
 					Type:       cadence.NewOptionalType(cadence.NewOptionalType(cadence.NewOptionalType(cadence.AnyStructType))),
 				},
 			},
-		}
+			nil,
+		)
 	}
 
 	testAllEncodeAndDecode(t, []encodeTest{
@@ -802,16 +804,17 @@ func TestEncodeOptional(t *testing.T) {
 			name: "struct with non-nil optional abstract fields",
 			val: func() cadence.Value {
 				structTypeWithOptionalAbstractField := newStructTypeWithOptionalAbstractField()
-				simpleStructType := &cadence.StructType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "FooStruct",
-					Fields: []cadence.Field{
+				simpleStructType := cadence.NewStructType(
+					utils.TestLocation,
+					"FooStruct",
+					[]cadence.Field{
 						{
 							Identifier: "bar",
 							Type:       cadence.IntType,
 						},
 					},
-				}
+					nil,
+				)
 				return cadence.NewStruct([]cadence.Value{
 					cadence.NewOptional(cadence.NewInt(1)),
 					cadence.NewOptional(cadence.NewOptional(cadence.NewInt(2))),
@@ -3570,10 +3573,12 @@ func TestEncodeArray(t *testing.T) {
 	resourceInterfaceTypeArray := encodeTest{
 		name: "Resource Interface Array",
 		val: func() cadence.Value {
-			resourceInterfaceType := &cadence.ResourceInterfaceType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "Bar",
-			}
+			resourceInterfaceType := cadence.NewResourceInterfaceType(
+				utils.TestLocation,
+				"Bar",
+				nil,
+				nil,
+			)
 			fooResourceType := newFooResourceType()
 			foooResourceTypeWithAbstractField := newFoooResourceTypeWithAbstractField()
 			return cadence.NewArray([]cadence.Value{
@@ -3922,20 +3927,23 @@ func TestEncodeArray(t *testing.T) {
 	structInterfaceTypeArray := encodeTest{
 		name: "Struct Interface Array",
 		val: func() cadence.Value {
-			structInterfaceType := &cadence.StructInterfaceType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooStructInterface",
-			}
-			structType := &cadence.StructType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooStruct",
-				Fields: []cadence.Field{
+			structInterfaceType := cadence.NewStructInterfaceType(
+				utils.TestLocation,
+				"FooStructInterface",
+				nil,
+				nil,
+			)
+			structType := cadence.NewStructType(
+				utils.TestLocation,
+				"FooStruct",
+				[]cadence.Field{
 					{
 						Identifier: "a",
 						Type:       cadence.IntType,
 					},
 				},
-			}
+				nil,
+			)
 			return cadence.NewArray([]cadence.Value{
 				cadence.NewStruct([]cadence.Value{
 					cadence.NewInt(1),
@@ -4064,20 +4072,23 @@ func TestEncodeArray(t *testing.T) {
 	contractInterfaceTypeArray := encodeTest{
 		name: "Contract Interface Array",
 		val: func() cadence.Value {
-			contractInterfaceType := &cadence.ContractInterfaceType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooContractInterface",
-			}
-			contractType := &cadence.ContractType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooContract",
-				Fields: []cadence.Field{
+			contractInterfaceType := cadence.NewContractInterfaceType(
+				utils.TestLocation,
+				"FooContractInterface",
+				nil,
+				nil,
+			)
+			contractType := cadence.NewContractType(
+				utils.TestLocation,
+				"FooContract",
+				[]cadence.Field{
 					{
 						Identifier: "a",
 						Type:       cadence.IntType,
 					},
 				},
-			}
+				nil,
+			)
 			return cadence.NewArray([]cadence.Value{
 				cadence.NewContract([]cadence.Value{
 					cadence.NewInt(1),
@@ -5400,11 +5411,12 @@ func TestEncodeStruct(t *testing.T) {
 	noFieldStruct := encodeTest{
 		name: "no field",
 		val: func() cadence.Value {
-			noFieldStructType := &cadence.StructType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooStruct",
-				Fields:              []cadence.Field{},
-			}
+			noFieldStructType := cadence.NewStructType(
+				utils.TestLocation,
+				"FooStruct",
+				[]cadence.Field{},
+				nil,
+			)
 			return cadence.NewStruct(
 				[]cadence.Value{},
 			).WithType(noFieldStructType)
@@ -5458,10 +5470,10 @@ func TestEncodeStruct(t *testing.T) {
 	simpleStruct := encodeTest{
 		name: "Simple",
 		val: func() cadence.Value {
-			simpleStructType := &cadence.StructType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooStruct",
-				Fields: []cadence.Field{
+			simpleStructType := cadence.NewStructType(
+				utils.TestLocation,
+				"FooStruct",
+				[]cadence.Field{
 					{
 						Identifier: "a",
 						Type:       cadence.IntType,
@@ -5471,7 +5483,8 @@ func TestEncodeStruct(t *testing.T) {
 						Type:       cadence.StringType,
 					},
 				},
-			}
+				nil,
+			)
 			return cadence.NewStruct(
 				[]cadence.Value{
 					cadence.NewInt(1),
@@ -5808,10 +5821,10 @@ func TestEncodeEvent(t *testing.T) {
 	simpleEvent := encodeTest{
 		name: "Simple",
 		val: func() cadence.Value {
-			simpleEventType := &cadence.EventType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooEvent",
-				Fields: []cadence.Field{
+			simpleEventType := cadence.NewEventType(
+				utils.TestLocation,
+				"FooEvent",
+				[]cadence.Field{
 					{
 						Identifier: "a",
 						Type:       cadence.IntType,
@@ -5821,7 +5834,8 @@ func TestEncodeEvent(t *testing.T) {
 						Type:       cadence.StringType,
 					},
 				},
-			}
+				nil,
+			)
 			return cadence.NewEvent(
 				[]cadence.Value{
 					cadence.NewInt(1),
@@ -5911,10 +5925,10 @@ func TestEncodeEvent(t *testing.T) {
 	abstractEvent := encodeTest{
 		name: "abstract event",
 		val: func() cadence.Value {
-			abstractEventType := &cadence.EventType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooEvent",
-				Fields: []cadence.Field{
+			abstractEventType := cadence.NewEventType(
+				utils.TestLocation,
+				"FooEvent",
+				[]cadence.Field{
 					{
 						Identifier: "a",
 						Type:       cadence.IntType,
@@ -5924,17 +5938,19 @@ func TestEncodeEvent(t *testing.T) {
 						Type:       cadence.AnyStructType,
 					},
 				},
-			}
-			simpleStructType := &cadence.StructType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooStruct",
-				Fields: []cadence.Field{
+				nil,
+			)
+			simpleStructType := cadence.NewStructType(
+				utils.TestLocation,
+				"FooStruct",
+				[]cadence.Field{
 					{
 						Identifier: "c",
 						Type:       cadence.StringType,
 					},
 				},
-			}
+				nil,
+			)
 			return cadence.NewEvent(
 				[]cadence.Value{
 					cadence.NewInt(1),
@@ -6071,10 +6087,10 @@ func TestEncodeEvent(t *testing.T) {
 		name: "Resources",
 		val: func() cadence.Value {
 			fooResourceType := newFooResourceType()
-			resourceEventType := &cadence.EventType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooEvent",
-				Fields: []cadence.Field{
+			resourceEventType := cadence.NewEventType(
+				utils.TestLocation,
+				"FooEvent",
+				[]cadence.Field{
 					{
 						Identifier: "a",
 						Type:       cadence.StringType,
@@ -6084,7 +6100,8 @@ func TestEncodeEvent(t *testing.T) {
 						Type:       fooResourceType,
 					},
 				},
-			}
+				nil,
+			)
 			return cadence.NewEvent(
 				[]cadence.Value{
 					cadence.String("foo"),
@@ -6239,10 +6256,10 @@ func TestEncodeContract(t *testing.T) {
 	simpleContract := encodeTest{
 		name: "Simple",
 		val: func() cadence.Value {
-			simpleContractType := &cadence.ContractType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooContract",
-				Fields: []cadence.Field{
+			simpleContractType := cadence.NewContractType(
+				utils.TestLocation,
+				"FooContract",
+				[]cadence.Field{
 					{
 						Identifier: "a",
 						Type:       cadence.IntType,
@@ -6252,7 +6269,8 @@ func TestEncodeContract(t *testing.T) {
 						Type:       cadence.StringType,
 					},
 				},
-			}
+				nil,
+			)
 			return cadence.NewContract(
 				[]cadence.Value{
 					cadence.NewInt(1),
@@ -6342,20 +6360,21 @@ func TestEncodeContract(t *testing.T) {
 	abstractContract := encodeTest{
 		name: "abstract contract",
 		val: func() cadence.Value {
-			simpleStructType := &cadence.StructType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooStruct",
-				Fields: []cadence.Field{
+			simpleStructType := cadence.NewStructType(
+				utils.TestLocation,
+				"FooStruct",
+				[]cadence.Field{
 					{
 						Identifier: "c",
 						Type:       cadence.StringType,
 					},
 				},
-			}
-			abstractContractType := &cadence.ContractType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooContract",
-				Fields: []cadence.Field{
+				nil,
+			)
+			abstractContractType := cadence.NewContractType(
+				utils.TestLocation,
+				"FooContract",
+				[]cadence.Field{
 					{
 						Identifier: "a",
 						Type:       cadence.IntType,
@@ -6365,7 +6384,8 @@ func TestEncodeContract(t *testing.T) {
 						Type:       cadence.AnyStructType,
 					},
 				},
-			}
+				nil,
+			)
 			return cadence.NewContract(
 				[]cadence.Value{
 					cadence.NewInt(1),
@@ -6502,10 +6522,10 @@ func TestEncodeContract(t *testing.T) {
 		name: "Resources",
 		val: func() cadence.Value {
 			fooResourceType := newFooResourceType()
-			resourceContractType := &cadence.ContractType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooContract",
-				Fields: []cadence.Field{
+			resourceContractType := cadence.NewContractType(
+				utils.TestLocation,
+				"FooContract",
+				[]cadence.Field{
 					{
 						Identifier: "a",
 						Type:       cadence.StringType,
@@ -6515,7 +6535,8 @@ func TestEncodeContract(t *testing.T) {
 						Type:       fooResourceType,
 					},
 				},
-			}
+				nil,
+			)
 			return cadence.NewContract(
 				[]cadence.Value{
 					cadence.String("foo"),
@@ -6653,16 +6674,18 @@ func TestEncodeEnum(t *testing.T) {
 	simpleEnum := encodeTest{
 		name: "Simple",
 		val: func() cadence.Value {
-			simpleEnumType := &cadence.EnumType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooEnum",
-				Fields: []cadence.Field{
+			simpleEnumType := cadence.NewEnumType(
+				utils.TestLocation,
+				"FooEnum",
+				nil,
+				[]cadence.Field{
 					{
 						Identifier: "raw",
 						Type:       cadence.UInt8Type,
 					},
 				},
-			}
+				nil,
+			)
 			return cadence.NewEnum(
 				[]cadence.Value{
 					cadence.NewUInt8(1),
@@ -6738,11 +6761,13 @@ func TestEncodeAttachment(t *testing.T) {
 	noFieldAttachment := encodeTest{
 		name: "no field",
 		val: func() cadence.Value {
-			attachmentType := &cadence.AttachmentType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooAttachment",
-				Fields:              []cadence.Field{},
-			}
+			attachmentType := cadence.NewAttachmentType(
+				utils.TestLocation,
+				"FooAttachment",
+				nil,
+				[]cadence.Field{},
+				nil,
+			)
 			return cadence.NewAttachment(
 				[]cadence.Value{},
 			).WithType(attachmentType)
@@ -6797,16 +6822,18 @@ func TestEncodeAttachment(t *testing.T) {
 	primitiveFieldAttachment := encodeTest{
 		name: "simple",
 		val: func() cadence.Value {
-			attachmentType := &cadence.AttachmentType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooAttachment",
-				Fields: []cadence.Field{
+			attachmentType := cadence.NewAttachmentType(
+				utils.TestLocation,
+				"FooAttachment",
+				nil,
+				[]cadence.Field{
 					{
 						Identifier: "i",
 						Type:       cadence.UInt8Type,
 					},
 				},
-			}
+				nil,
+			)
 			return cadence.NewAttachment(
 				[]cadence.Value{
 					cadence.NewUInt8(1),
@@ -6876,20 +6903,22 @@ func TestEncodeAttachment(t *testing.T) {
 	structFieldAttachment := encodeTest{
 		name: "struct field",
 		val: func() cadence.Value {
-			structType := &cadence.StructType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooStruct",
-				Fields: []cadence.Field{
+			structType := cadence.NewStructType(
+				utils.TestLocation,
+				"FooStruct",
+				[]cadence.Field{
 					{
 						Identifier: "bar",
 						Type:       cadence.IntType,
 					},
 				},
-			}
-			attachmentType := &cadence.AttachmentType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooAttachment",
-				Fields: []cadence.Field{
+				nil,
+			)
+			attachmentType := cadence.NewAttachmentType(
+				utils.TestLocation,
+				"FooAttachment",
+				nil,
+				[]cadence.Field{
 					{
 						Identifier: "a",
 						Type:       cadence.StringType,
@@ -6899,7 +6928,8 @@ func TestEncodeAttachment(t *testing.T) {
 						Type:       structType,
 					},
 				},
-			}
+				nil,
+			)
 			return cadence.NewAttachment(
 				[]cadence.Value{
 					cadence.String("foo"),
@@ -7475,16 +7505,17 @@ func TestEncodeValueOfReferenceType(t *testing.T) {
 	// as tests may run in parallel
 
 	newSimpleStructType := func() *cadence.StructType {
-		return &cadence.StructType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
+		return cadence.NewStructType(
+			utils.TestLocation,
+			"Foo",
+			[]cadence.Field{
 				{
 					Identifier: "a",
 					Type:       cadence.StringType,
 				},
 			},
-		}
+			nil,
+		)
 	}
 
 	// ["a", "b"] with static type []&String
@@ -8806,12 +8837,12 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.StructType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "S",
-					Fields:              []cadence.Field{},
-					Initializers:        [][]cadence.Parameter{},
-				},
+				StaticType: cadence.NewStructType(
+					utils.TestLocation,
+					"S",
+					[]cadence.Field{},
+					[][]cadence.Parameter{},
+				),
 			},
 			[]byte{
 				// language=json, format=json-cdc
@@ -8855,20 +8886,20 @@ func TestEncodeType(t *testing.T) {
 		t.Parallel()
 
 		val := cadence.TypeValue{
-			StaticType: &cadence.StructType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "S",
-				Fields: []cadence.Field{
+			StaticType: cadence.NewStructType(
+				utils.TestLocation,
+				"S",
+				[]cadence.Field{
 					{Identifier: "foo", Type: cadence.IntType},
 					{Identifier: "bar", Type: cadence.IntType},
 				},
-				Initializers: [][]cadence.Parameter{
+				[][]cadence.Parameter{
 					{
 						{Label: "foo", Identifier: "bar", Type: cadence.IntType},
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 					},
 				},
-			},
+			),
 		}
 
 		expectedCBOR := []byte{
@@ -8978,20 +9009,20 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecodeEx(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.StructType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "S",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewStructType(
+					utils.TestLocation,
+					"S",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 						{Identifier: "bar", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{
 							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
 							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
-				},
+				),
 			},
 			[]byte{
 				// language=json, format=json-cdc
@@ -9079,20 +9110,20 @@ func TestEncodeType(t *testing.T) {
 				0x01,
 			},
 			cadence.TypeValue{
-				StaticType: &cadence.StructType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "S",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewStructType(
+					utils.TestLocation,
+					"S",
+					[]cadence.Field{
 						{Identifier: "bar", Type: cadence.IntType},
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{
 							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
 							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
-				},
+				),
 			},
 		)
 	})
@@ -9100,30 +9131,30 @@ func TestEncodeType(t *testing.T) {
 	t.Run("with static resource of composite fields and initializers", func(t *testing.T) {
 		t.Parallel()
 
-		fooTy := &cadence.ResourceType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields:              []cadence.Field{},
-			Initializers:        [][]cadence.Parameter{},
-		}
+		fooTy := cadence.NewResourceType(
+			utils.TestLocation,
+			"Foo",
+			[]cadence.Field{},
+			[][]cadence.Parameter{},
+		)
 
-		fooTy2 := &cadence.ResourceType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Foo2",
-			Fields:              []cadence.Field{},
-			Initializers:        [][]cadence.Parameter{},
-		}
+		fooTy2 := cadence.NewResourceType(
+			utils.TestLocation,
+			"Foo2",
+			[]cadence.Field{},
+			[][]cadence.Parameter{},
+		)
 
-		barTy := &cadence.ResourceType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Bar",
-			Fields: []cadence.Field{
+		barTy := cadence.NewResourceType(
+			utils.TestLocation,
+			"Bar",
+			[]cadence.Field{
 				{
 					Identifier: "foo1",
 					Type:       fooTy,
 				},
 			},
-			Initializers: [][]cadence.Parameter{
+			[][]cadence.Parameter{
 				{
 					cadence.Parameter{
 						Type:       fooTy2,
@@ -9132,7 +9163,7 @@ func TestEncodeType(t *testing.T) {
 					},
 				},
 			},
-		}
+		)
 
 		testEncodeAndDecode(
 			t,
@@ -9240,19 +9271,19 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.ResourceType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "R",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewResourceType(
+					utils.TestLocation,
+					"R",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{
 							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
 							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
-				},
+				),
 			},
 			[]byte{
 				// language=json, format=json-cdc
@@ -9338,19 +9369,19 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.ContractType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "C",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewContractType(
+					utils.TestLocation,
+					"C",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{
 							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
 							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
-				},
+				),
 			},
 			[]byte{
 				// language=json, format=json-cdc
@@ -9436,19 +9467,19 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.StructInterfaceType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "S",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewStructInterfaceType(
+					utils.TestLocation,
+					"S",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{
 							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
 							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
-				},
+				),
 			},
 			[]byte{
 				// language=json, format=json-cdc
@@ -9534,19 +9565,19 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.ResourceInterfaceType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "R",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewResourceInterfaceType(
+					utils.TestLocation,
+					"R",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{
 							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
 							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
-				},
+				),
 			},
 			[]byte{
 				// language=json, format=json-cdc
@@ -9632,19 +9663,19 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.ContractInterfaceType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "C",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewContractInterfaceType(
+					utils.TestLocation,
+					"C",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{
 							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
 							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
-				},
+				),
 			},
 			[]byte{
 				// language=json, format=json-cdc
@@ -9730,17 +9761,17 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.EventType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "E",
-					Fields: []cadence.Field{
+				StaticType: cadence.NewEventType(
+					utils.TestLocation,
+					"E",
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializer: []cadence.Parameter{
+					[]cadence.Parameter{
 						{Label: "foo", Identifier: "bar", Type: cadence.IntType},
 						{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 					},
-				},
+				),
 			},
 			[]byte{
 				// language=json, format=json-cdc
@@ -9826,20 +9857,20 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.EnumType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "E",
-					RawType:             cadence.StringType,
-					Fields: []cadence.Field{
+				StaticType: cadence.NewEnumType(
+					utils.TestLocation,
+					"E",
+					cadence.StringType,
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{
 							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
 							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
-				},
+				),
 			},
 			[]byte{
 				// language=json, format=json-cdc
@@ -9927,20 +9958,20 @@ func TestEncodeType(t *testing.T) {
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.AttachmentType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "A",
-					BaseType:            cadence.StringType,
-					Fields: []cadence.Field{
+				StaticType: cadence.NewAttachmentType(
+					utils.TestLocation,
+					"A",
+					cadence.StringType,
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{
 							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
 							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
-				},
+				),
 			},
 			[]byte{
 				// language=json, format=json-cdc
@@ -10025,32 +10056,32 @@ func TestEncodeType(t *testing.T) {
 	t.Run("with static attachment of resource base type", func(t *testing.T) {
 		t.Parallel()
 
-		baseType := &cadence.ResourceType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "FooBase",
-			Fields: []cadence.Field{
+		baseType := cadence.NewResourceType(
+			utils.TestLocation,
+			"FooBase",
+			[]cadence.Field{
 				{Identifier: "bar", Type: cadence.StringType},
 			},
-			Initializers: [][]cadence.Parameter{},
-		}
+			[][]cadence.Parameter{},
+		)
 
 		testEncodeAndDecode(
 			t,
 			cadence.TypeValue{
-				StaticType: &cadence.AttachmentType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "A",
-					BaseType:            baseType,
-					Fields: []cadence.Field{
+				StaticType: cadence.NewAttachmentType(
+					utils.TestLocation,
+					"A",
+					baseType,
+					[]cadence.Field{
 						{Identifier: "foo", Type: cadence.IntType},
 					},
-					Initializers: [][]cadence.Parameter{
+					[][]cadence.Parameter{
 						{
 							{Label: "foo", Identifier: "bar", Type: cadence.IntType},
 							{Label: "qux", Identifier: "baz", Type: cadence.StringType},
 						},
 					},
-				},
+				),
 			},
 			[]byte{
 				// language=json, format=json-cdc
@@ -11016,16 +11047,17 @@ func TestEncodeCapability(t *testing.T) {
 	t.Run("array of unparameterized Capability", func(t *testing.T) {
 		t.Parallel()
 
-		simpleStructType := &cadence.StructType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "FooStruct",
-			Fields: []cadence.Field{
+		simpleStructType := cadence.NewStructType(
+			utils.TestLocation,
+			"FooStruct",
+			[]cadence.Field{
 				{
 					Identifier: "bar",
 					Type:       cadence.IntType,
 				},
 			},
-		}
+			nil,
+		)
 
 		capability1 := cadence.Capability{
 			ID:         42,
@@ -11682,17 +11714,19 @@ func TestExportRecursiveType(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &cadence.ResourceType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
-			{
-				Identifier: "foo",
-			},
+	fields := []cadence.Field{
+		{
+			Identifier: "foo",
 		},
 	}
+	ty := cadence.NewResourceType(
+		utils.TestLocation,
+		"Foo",
+		fields,
+		nil,
+	)
 
-	ty.Fields[0].Type = &cadence.OptionalType{
+	fields[0].Type = &cadence.OptionalType{
 		Type: ty,
 	}
 
@@ -11773,18 +11807,19 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 
 		t.Parallel()
 
-		ty := &cadence.ResourceType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "foo",
-				},
+		fields := []cadence.Field{
+			{
+				Identifier: "foo",
 			},
-			Initializers: [][]cadence.Parameter{},
 		}
+		ty := cadence.NewResourceType(
+			utils.TestLocation,
+			"Foo",
+			fields,
+			[][]cadence.Parameter{},
+		)
 
-		ty.Fields[0].Type = &cadence.OptionalType{
+		fields[0].Type = &cadence.OptionalType{
 			Type: ty,
 		}
 
@@ -11926,14 +11961,16 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 		t.Parallel()
 
 		// structType is generated by fuzzer.
+		fields := []cadence.Field{{}}
+
 		structType := cadence.NewStructType(
 			common.StringLocation("foo"),
 			"Foo",
-			[]cadence.Field{{}},
+			fields,
 			[][]cadence.Parameter{{{}}},
 		)
 
-		structType.Fields[0] = cadence.Field{
+		fields[0] = cadence.Field{
 			Type:       &cadence.OptionalType{Type: structType},
 			Identifier: "aa",
 		}
@@ -12021,24 +12058,24 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 
 		t.Parallel()
 
-		fooTy := &cadence.ResourceType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields:              []cadence.Field{},
-			Initializers:        [][]cadence.Parameter{},
-		}
+		fooTy := cadence.NewResourceType(
+			utils.TestLocation,
+			"Foo",
+			[]cadence.Field{},
+			[][]cadence.Parameter{},
+		)
 
-		fooTy2 := &cadence.ResourceType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Foo2",
-			Fields:              []cadence.Field{},
-			Initializers:        [][]cadence.Parameter{},
-		}
+		fooTy2 := cadence.NewResourceType(
+			utils.TestLocation,
+			"Foo2",
+			[]cadence.Field{},
+			[][]cadence.Parameter{},
+		)
 
-		barTy := &cadence.ResourceType{
-			Location:            utils.TestLocation,
-			QualifiedIdentifier: "Bar",
-			Fields: []cadence.Field{
+		barTy := cadence.NewResourceType(
+			utils.TestLocation,
+			"Bar",
+			[]cadence.Field{
 				{
 					Identifier: "foo1",
 					Type:       fooTy,
@@ -12048,7 +12085,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 					Type:       fooTy,
 				},
 			},
-			Initializers: [][]cadence.Parameter{
+			[][]cadence.Parameter{
 				{
 					cadence.Parameter{
 						Type:       &cadence.OptionalType{Type: fooTy},
@@ -12062,7 +12099,7 @@ func TestExportTypeValueRecursiveType(t *testing.T) {
 					},
 				},
 			},
-		}
+		)
 
 		testEncodeAndDecode(
 			t,
@@ -12708,10 +12745,10 @@ func testDecode(t *testing.T, actualCBOR []byte, expectedVal cadence.Value) {
 
 // TODO: make resource (illegal nesting)
 func newResourceStructType() *cadence.StructType {
-	return &cadence.StructType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "FooStruct",
-		Fields: []cadence.Field{
+	return cadence.NewStructType(
+		utils.TestLocation,
+		"FooStruct",
+		[]cadence.Field{
 			{
 				Identifier: "a",
 				Type:       cadence.StringType,
@@ -12721,27 +12758,29 @@ func newResourceStructType() *cadence.StructType {
 				Type:       newFooResourceType(),
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func newFooResourceType() *cadence.ResourceType {
-	return &cadence.ResourceType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
+	return cadence.NewResourceType(
+		utils.TestLocation,
+		"Foo",
+		[]cadence.Field{
 			{
 				Identifier: "bar",
 				Type:       cadence.IntType,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func newFoooResourceTypeWithAbstractField() *cadence.ResourceType {
-	return &cadence.ResourceType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "Fooo",
-		Fields: []cadence.Field{
+	return cadence.NewResourceType(
+		utils.TestLocation,
+		"Fooo",
+		[]cadence.Field{
 			{
 				Identifier: "bar",
 				Type:       cadence.IntType,
@@ -12751,7 +12790,8 @@ func newFoooResourceTypeWithAbstractField() *cadence.ResourceType {
 				Type:       cadence.AnyStructType,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func TestEncodeBuiltinComposites(t *testing.T) {
@@ -12766,10 +12806,12 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 	testCases := []testCase{
 		{
 			name: "Struct",
-			typ: &cadence.StructType{
-				Location:            nil,
-				QualifiedIdentifier: "Foo",
-			},
+			typ: cadence.NewStructType(
+				nil,
+				"Foo",
+				nil,
+				nil,
+			),
 			encoded: []byte{
 				// language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Struct","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
@@ -12808,10 +12850,12 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 		},
 		{
 			name: "StructInterface",
-			typ: &cadence.StructInterfaceType{
-				Location:            nil,
-				QualifiedIdentifier: "Foo",
-			},
+			typ: cadence.NewStructInterfaceType(
+				nil,
+				"Foo",
+				nil,
+				nil,
+			),
 			encoded: []byte{
 				// language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"StructInterface","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
@@ -12850,10 +12894,12 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 		},
 		{
 			name: "Resource",
-			typ: &cadence.ResourceType{
-				Location:            nil,
-				QualifiedIdentifier: "Foo",
-			},
+			typ: cadence.NewResourceType(
+				nil,
+				"Foo",
+				nil,
+				nil,
+			),
 			encoded: []byte{
 				// language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Resource","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
@@ -12892,10 +12938,12 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 		},
 		{
 			name: "ResourceInterface",
-			typ: &cadence.ResourceInterfaceType{
-				Location:            nil,
-				QualifiedIdentifier: "Foo",
-			},
+			typ: cadence.NewResourceInterfaceType(
+				nil,
+				"Foo",
+				nil,
+				nil,
+			),
 			encoded: []byte{
 				// language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"ResourceInterface","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
@@ -12934,10 +12982,12 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 		},
 		{
 			name: "Contract",
-			typ: &cadence.ContractType{
-				Location:            nil,
-				QualifiedIdentifier: "Foo",
-			},
+			typ: cadence.NewContractType(
+				nil,
+				"Foo",
+				nil,
+				nil,
+			),
 			encoded: []byte{
 				// language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Contract","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
@@ -12976,10 +13026,12 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 		},
 		{
 			name: "ContractInterface",
-			typ: &cadence.ContractInterfaceType{
-				Location:            nil,
-				QualifiedIdentifier: "Foo",
-			},
+			typ: cadence.NewContractInterfaceType(
+				nil,
+				"Foo",
+				nil,
+				nil,
+			),
 			encoded: []byte{
 				// language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"ContractInterface","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
@@ -13018,10 +13070,13 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 		},
 		{
 			name: "Enum",
-			typ: &cadence.EnumType{
-				Location:            nil,
-				QualifiedIdentifier: "Foo",
-			},
+			typ: cadence.NewEnumType(
+				nil,
+				"Foo",
+				nil,
+				nil,
+				nil,
+			),
 			encoded: []byte{
 				// language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Enum","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
@@ -13060,10 +13115,12 @@ func TestEncodeBuiltinComposites(t *testing.T) {
 		},
 		{
 			name: "Event",
-			typ: &cadence.EventType{
-				Location:            nil,
-				QualifiedIdentifier: "Foo",
-			},
+			typ: cadence.NewEventType(
+				nil,
+				"Foo",
+				nil,
+				nil,
+			),
 			encoded: []byte{
 				// language=json, format=json-cdc
 				// {"type":"Type","value":{"staticType":{"kind":"Event","typeID":"Foo","fields":[],"initializers":[],"type":""}}}
@@ -13122,17 +13179,19 @@ func TestExportFunctionValue(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &cadence.ResourceType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
-			{
-				Identifier: "foo",
-			},
+	fields := []cadence.Field{
+		{
+			Identifier: "foo",
 		},
 	}
+	ty := cadence.NewResourceType(
+		utils.TestLocation,
+		"Foo",
+		fields,
+		nil,
+	)
 
-	ty.Fields[0].Type = &cadence.OptionalType{
+	fields[0].Type = &cadence.OptionalType{
 		Type: ty,
 	}
 
@@ -14003,10 +14062,10 @@ func newFlowFeesFeesDeductedEventType() *cadence.EventType {
 	address, _ := common.HexToAddress("f919ee77447b7497")
 	location := common.NewAddressLocation(nil, address, "FlowFees")
 
-	return &cadence.EventType{
-		Location:            location,
-		QualifiedIdentifier: "FlowFees.FeesDeducted",
-		Fields: []cadence.Field{
+	return cadence.NewEventType(
+		location,
+		"FlowFees.FeesDeducted",
+		[]cadence.Field{
 			{
 				Identifier: "amount",
 				Type:       cadence.UFix64Type,
@@ -14020,7 +14079,8 @@ func newFlowFeesFeesDeductedEventType() *cadence.EventType {
 				Type:       cadence.UFix64Type,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func createFlowFeesFeesDeductedEvent() cadence.Event {
@@ -14047,16 +14107,17 @@ func newFlowFeesTokensWithdrawnEventType() *cadence.EventType {
 	address, _ := common.HexToAddress("f919ee77447b7497")
 	location := common.NewAddressLocation(nil, address, "FlowFees")
 
-	return &cadence.EventType{
-		Location:            location,
-		QualifiedIdentifier: "FlowFees.TokensWithdrawn",
-		Fields: []cadence.Field{
+	return cadence.NewEventType(
+		location,
+		"FlowFees.TokensWithdrawn",
+		[]cadence.Field{
 			{
 				Identifier: "amount",
 				Type:       cadence.UFix64Type,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func createFlowFeesTokensWithdrawnEvent() cadence.Event {
@@ -14079,10 +14140,10 @@ func newFlowTokenTokensDepositedEventType() *cadence.EventType {
 	address, _ := common.HexToAddress("1654653399040a61")
 	location := common.NewAddressLocation(nil, address, "FlowToken")
 
-	return &cadence.EventType{
-		Location:            location,
-		QualifiedIdentifier: "FlowToken.TokensDeposited",
-		Fields: []cadence.Field{
+	return cadence.NewEventType(
+		location,
+		"FlowToken.TokensDeposited",
+		[]cadence.Field{
 			{
 				Identifier: "amount",
 				Type:       cadence.UFix64Type,
@@ -14094,7 +14155,8 @@ func newFlowTokenTokensDepositedEventType() *cadence.EventType {
 				},
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func createFlowTokenTokensDepositedEventNoReceiver() cadence.Event {
@@ -14137,16 +14199,17 @@ func newFlowTokenTokensMintedEventType() *cadence.EventType {
 	address, _ := common.HexToAddress("1654653399040a61")
 	location := common.NewAddressLocation(nil, address, "FlowToken")
 
-	return &cadence.EventType{
-		Location:            location,
-		QualifiedIdentifier: "FlowToken.TokensMinted",
-		Fields: []cadence.Field{
+	return cadence.NewEventType(
+		location,
+		"FlowToken.TokensMinted",
+		[]cadence.Field{
 			{
 				Identifier: "amount",
 				Type:       cadence.UFix64Type,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func createFlowTokenTokensMintedEvent() cadence.Event {
@@ -14169,10 +14232,10 @@ func newFlowTokenTokensWithdrawnEventType() *cadence.EventType {
 	address, _ := common.HexToAddress("1654653399040a61")
 	location := common.NewAddressLocation(nil, address, "FlowToken")
 
-	return &cadence.EventType{
-		Location:            location,
-		QualifiedIdentifier: "FlowToken.TokensWithdrawn",
-		Fields: []cadence.Field{
+	return cadence.NewEventType(
+		location,
+		"FlowToken.TokensWithdrawn",
+		[]cadence.Field{
 			{
 				Identifier: "amount",
 				Type:       cadence.UFix64Type,
@@ -14184,7 +14247,8 @@ func newFlowTokenTokensWithdrawnEventType() *cadence.EventType {
 				},
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func createFlowTokenTokensWithdrawnEvent() cadence.Event {
@@ -14211,10 +14275,10 @@ func newFlowIDTableStakingDelegatorRewardsPaidEventType() *cadence.EventType {
 	address, _ := common.HexToAddress("8624b52f9ddcd04a")
 	location := common.NewAddressLocation(nil, address, "FlowIDTableStaking")
 
-	return &cadence.EventType{
-		Location:            location,
-		QualifiedIdentifier: "FlowIDTableStaking.DelegatorRewardsPaid",
-		Fields: []cadence.Field{
+	return cadence.NewEventType(
+		location,
+		"FlowIDTableStaking.DelegatorRewardsPaid",
+		[]cadence.Field{
 			{
 				Identifier: "nodeID",
 				Type:       cadence.StringType,
@@ -14228,7 +14292,8 @@ func newFlowIDTableStakingDelegatorRewardsPaidEventType() *cadence.EventType {
 				Type:       cadence.UFix64Type,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func createFlowIDTableStakingDelegatorRewardsPaidEvent() cadence.Event {
@@ -14255,10 +14320,10 @@ func newFlowIDTableStakingEpochTotalRewardsPaidEventType() *cadence.EventType {
 	address, _ := common.HexToAddress("8624b52f9ddcd04a")
 	location := common.NewAddressLocation(nil, address, "FlowIDTableStaking")
 
-	return &cadence.EventType{
-		Location:            location,
-		QualifiedIdentifier: "FlowIDTableStaking.EpochTotalRewardsPaid",
-		Fields: []cadence.Field{
+	return cadence.NewEventType(
+		location,
+		"FlowIDTableStaking.EpochTotalRewardsPaid",
+		[]cadence.Field{
 			{
 				Identifier: "total",
 				Type:       cadence.UFix64Type,
@@ -14276,7 +14341,8 @@ func newFlowIDTableStakingEpochTotalRewardsPaidEventType() *cadence.EventType {
 				Type:       cadence.UFix64Type,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func createFlowIDTableStakingEpochTotalRewardsPaidEvent() cadence.Event {
@@ -14305,16 +14371,17 @@ func newFlowIDTableStakingNewWeeklyPayoutEventType() *cadence.EventType {
 	address, _ := common.HexToAddress("8624b52f9ddcd04a")
 	location := common.NewAddressLocation(nil, address, "FlowIDTableStaking")
 
-	return &cadence.EventType{
-		Location:            location,
-		QualifiedIdentifier: "FlowIDTableStaking.NewWeeklyPayout",
-		Fields: []cadence.Field{
+	return cadence.NewEventType(
+		location,
+		"FlowIDTableStaking.NewWeeklyPayout",
+		[]cadence.Field{
 			{
 				Identifier: "newPayout",
 				Type:       cadence.UFix64Type,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func createFlowIDTableStakingNewWeeklyPayoutEvent() cadence.Event {
@@ -14337,10 +14404,10 @@ func newFlowIDTableStakingRewardsPaidEventType() *cadence.EventType {
 	address, _ := common.HexToAddress("8624b52f9ddcd04a")
 	location := common.NewAddressLocation(nil, address, "FlowIDTableStaking")
 
-	return &cadence.EventType{
-		Location:            location,
-		QualifiedIdentifier: "FlowIDTableStaking.RewardsPaid",
-		Fields: []cadence.Field{
+	return cadence.NewEventType(
+		location,
+		"FlowIDTableStaking.RewardsPaid",
+		[]cadence.Field{
 			{
 				Identifier: "nodeID",
 				Type:       cadence.StringType,
@@ -14350,7 +14417,8 @@ func newFlowIDTableStakingRewardsPaidEventType() *cadence.EventType {
 				Type:       cadence.UFix64Type,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func createFlowIDTableStakingRewardsPaidEvent() cadence.Event {

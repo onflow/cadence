@@ -116,23 +116,24 @@ func TestCadenceTypeByCCFTypeID(t *testing.T) {
 }
 
 func simpleStructType() *cadence.StructType {
-	return &cadence.StructType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "FooStruct",
-		Fields: []cadence.Field{
+	return cadence.NewStructType(
+		utils.TestLocation,
+		"FooStruct",
+		[]cadence.Field{
 			{
 				Identifier: "a",
 				Type:       cadence.IntType,
 			},
 		},
-	}
+		nil,
+	)
 }
 
 func simpleStructType2() *cadence.StructType {
-	return &cadence.StructType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "FooStruct2",
-		Fields: []cadence.Field{
+	return cadence.NewStructType(
+		utils.TestLocation,
+		"FooStruct2",
+		[]cadence.Field{
 			{
 				Identifier: "a",
 				Type:       cadence.IntType,
@@ -142,5 +143,6 @@ func simpleStructType2() *cadence.StructType {
 				Type:       cadence.StringType,
 			},
 		},
-	}
+		nil,
+	)
 }

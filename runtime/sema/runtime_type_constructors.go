@@ -183,20 +183,19 @@ var CapabilityTypeFunctionType = NewSimpleFunctionType(
 	OptionalMetaTypeAnnotation,
 )
 
-var InclusiveRangeTypeFunctionType = &FunctionType{
-	Parameters: []Parameter{
+const InclusiveRangeTypeFunctionName = "InclusiveRangeType"
+
+var InclusiveRangeTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: MetaType,
-		},
-	),
-}
+	OptionalMetaTypeAnnotation,
+)
 
 var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
@@ -264,7 +263,7 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	},
 
 	{
-		Name:  "InclusiveRangeType",
+		Name:  InclusiveRangeTypeFunctionName,
 		Value: InclusiveRangeTypeFunctionType,
 		DocString: `Creates a run-time type representing an inclusive range type of the given run-time member type. 
 		Returns nil if the member type is not a valid inclusive range member type.`,
