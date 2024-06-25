@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 package stdlib
 
 import (
-	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -77,10 +77,8 @@ func newPublicKeyValidationHandler(validator PublicKeyValidator) interpreter.Pub
 
 func NewPublicKeyConstructor(
 	publicKeyValidator PublicKeyValidator,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 ) StandardLibraryValue {
-	return NewStandardLibraryFunction(
+	return NewStandardLibraryStaticFunction(
 		sema.PublicKeyTypeName,
 		publicKeyConstructorFunctionType,
 		publicKeyConstructorFunctionDocString,
@@ -105,8 +103,6 @@ func NewPublicKeyConstructor(
 				publicKey,
 				signAlgo,
 				publicKeyValidator,
-				publicKeySignatureVerifier,
-				blsPoPVerifier,
 			)
 		},
 	)
@@ -118,8 +114,6 @@ func NewPublicKeyFromFields(
 	publicKey *interpreter.ArrayValue,
 	signAlgo *interpreter.SimpleCompositeValue,
 	publicKeyValidator PublicKeyValidator,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		inter,
@@ -127,8 +121,6 @@ func NewPublicKeyFromFields(
 		publicKey,
 		signAlgo,
 		newPublicKeyValidationHandler(publicKeyValidator),
-		newPublicKeyVerifySignatureFunction(inter, publicKeySignatureVerifier),
-		newPublicKeyVerifyPoPFunction(inter, blsPoPVerifier),
 	)
 }
 
@@ -140,8 +132,6 @@ func NewPublicKeyValue(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	publicKey *PublicKey,
-	publicKeySignatureVerifier PublicKeySignatureVerifier,
-	blsPoPVerifier BLSPoPVerifier,
 ) *interpreter.CompositeValue {
 	return interpreter.NewPublicKeyValue(
 		inter,
@@ -155,8 +145,6 @@ func NewPublicKeyValue(
 		),
 		// public keys converted from "native" (non-interpreter) keys are assumed to be already validated
 		assumePublicKeyIsValid,
-		newPublicKeyVerifySignatureFunction(inter, publicKeySignatureVerifier),
-		newPublicKeyVerifyPoPFunction(inter, blsPoPVerifier),
 	)
 }
 
@@ -223,11 +211,13 @@ type PublicKeySignatureVerifier interface {
 }
 
 func newPublicKeyVerifySignatureFunction(
-	gauge common.MemoryGauge,
-	verififier PublicKeySignatureVerifier,
-) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
-		gauge,
+	inter *interpreter.Interpreter,
+	publicKeyValue *interpreter.CompositeValue,
+	verifier PublicKeySignatureVerifier,
+) interpreter.BoundFunctionValue {
+	return interpreter.NewBoundHostFunctionValue(
+		inter,
+		publicKeyValue,
 		sema.PublicKeyVerifyFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
@@ -250,7 +240,10 @@ func newPublicKeyVerifySignatureFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			publicKeyValue := *invocation.Self
+			publicKeyValue, ok := (*invocation.Self).(interpreter.MemberAccessibleValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
 			inter := invocation.Interpreter
 
@@ -283,7 +276,7 @@ func newPublicKeyVerifySignatureFunction(
 
 			var valid bool
 			errors.WrapPanic(func() {
-				valid, err = verififier.VerifySignature(
+				valid, err = verifier.VerifySignature(
 					signature,
 					domainSeparationTag,
 					signedData,
@@ -308,11 +301,13 @@ type BLSPoPVerifier interface {
 }
 
 func newPublicKeyVerifyPoPFunction(
-	gauge common.MemoryGauge,
+	inter *interpreter.Interpreter,
+	publicKeyValue *interpreter.CompositeValue,
 	verifier BLSPoPVerifier,
-) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
-		gauge,
+) interpreter.BoundFunctionValue {
+	return interpreter.NewBoundHostFunctionValue(
+		inter,
+		publicKeyValue,
 		sema.PublicKeyVerifyPoPFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
@@ -320,7 +315,10 @@ func newPublicKeyVerifyPoPFunction(
 				panic(errors.NewUnreachableError())
 			}
 
-			publicKeyValue := *invocation.Self
+			publicKeyValue, ok := (*invocation.Self).(interpreter.MemberAccessibleValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
 			inter := invocation.Interpreter
 
@@ -352,4 +350,29 @@ func newPublicKeyVerifyPoPFunction(
 			return interpreter.AsBoolValue(valid)
 		},
 	)
+}
+
+type PublicKeyFunctionsHandler interface {
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+}
+
+func PublicKeyFunctions(
+	inter *interpreter.Interpreter,
+	publicKeyValue *interpreter.CompositeValue,
+	handler PublicKeyFunctionsHandler,
+) *interpreter.FunctionOrderedMap {
+	functions := orderedmap.New[interpreter.FunctionOrderedMap](2)
+
+	functions.Set(
+		sema.PublicKeyTypeVerifyFunctionName,
+		newPublicKeyVerifySignatureFunction(inter, publicKeyValue, handler),
+	)
+
+	functions.Set(
+		sema.PublicKeyTypeVerifyPoPFunctionName,
+		newPublicKeyVerifyPoPFunction(inter, publicKeyValue, handler),
+	)
+
+	return functions
 }

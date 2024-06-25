@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,17 +65,33 @@ const (
 	KeywordDefault     = "default"
 	KeywordEnum        = "enum"
 	KeywordView        = "view"
-	keywordAttachment  = "attachment"
-	keywordAttach      = "attach"
-	keywordRemove      = "remove"
-	keywordTo          = "to"
-	KeywordWith        = "with"
+	KeywordAttachment  = "attachment"
+	KeywordAttach      = "attach"
+	KeywordRemove      = "remove"
+	KeywordTo          = "to"
 	KeywordRequire     = "require"
 	KeywordStatic      = "static"
 	KeywordNative      = "native"
 	KeywordPub         = "pub"
 	KeywordPriv        = "priv"
 	KeywordInclude     = "include"
+	KeywordTry         = "try"
+	KeywordCatch       = "catch"
+	KeywordFinally     = "finally"
+	KeywordGoto        = "goto"
+	KeywordConst       = "const"
+	KeywordExport      = "export"
+	KeywordThrow       = "throw"
+	KeywordThrows      = "throws"
+	KeywordRequires    = "requires"
+	KeywordWhere       = "where"
+	KeywordFinal       = "final"
+	KeywordInternal    = "internal"
+	KeywordTypealias   = "typealias"
+	KeywordType        = "type"
+	KeywordRepeat      = "repeat"
+	KeywordGuard       = "guard"
+	KeywordIs          = "is"
 	// NOTE: ensure to update allKeywords when adding a new keyword
 )
 
@@ -122,31 +138,55 @@ var allKeywords = []string{
 	KeywordDefault,
 	KeywordEnum,
 	KeywordView,
-	KeywordWith,
 	KeywordMapping,
 	KeywordRequire,
-	keywordAttach,
-	keywordAttachment,
-	keywordTo,
-	keywordRemove,
+	KeywordAttach,
+	KeywordAttachment,
+	KeywordTo,
+	KeywordRemove,
+	KeywordStatic,
+	KeywordNative,
+	KeywordPub,
+	KeywordPriv,
 	KeywordInclude,
+	KeywordTry,
+	KeywordCatch,
+	KeywordFinally,
+	KeywordGoto,
+	KeywordConst,
+	KeywordExport,
+	KeywordThrow,
+	KeywordThrows,
+	KeywordRequires,
+	KeywordWhere,
+	KeywordFinal,
+	KeywordInternal,
+	KeywordTypealias,
+	KeywordType,
+	KeywordRepeat,
+	KeywordGuard,
+	KeywordIs,
 }
 
-// Keywords that can be used in identifier position without ambiguity.
-var softKeywords = []string{
+// SoftKeywords are keywords that can be used as identifiers anywhere,
+// without any restriction or ambiguity.
+var SoftKeywords = []string{
 	KeywordFrom,
 	KeywordAccount,
 	KeywordAll,
 	KeywordView,
-	keywordAttach,
-	keywordRemove,
-	keywordTo,
+	KeywordAttach,
+	KeywordRemove,
+	KeywordTo,
+	KeywordType,
 }
 
-var softKeywordsTable = mph.Build(softKeywords)
+var softKeywordsTable = mph.Build(SoftKeywords)
 
-// Keywords that aren't allowed in identifier position.
-var hardKeywords = filter(
+// HardKeywords are restricted from being used as identifiers in certain places.
+// i.e: places where ambiguity can exist, such as composite declaration names, function names, etc.
+// However, they are not restricted to be used as fields names, and many other places.
+var HardKeywords = filter(
 	allKeywords,
 	func(keyword string) bool {
 		_, ok := softKeywordsTable.Lookup(keyword)
@@ -154,7 +194,12 @@ var hardKeywords = filter(
 	},
 )
 
-var hardKeywordsTable = mph.Build(hardKeywords)
+var hardKeywordsTable = mph.Build(HardKeywords)
+
+func IsHardKeyword(identifier string) bool {
+	_, ok := hardKeywordsTable.Lookup(identifier)
+	return ok
+}
 
 func filter[T comparable](items []T, f func(T) bool) []T {
 	result := make([]T, 0, len(items))

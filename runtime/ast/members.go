@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,6 +84,10 @@ func (m *Members) EnumCases() []*EnumCaseDeclaration {
 	return m.indices.EnumCases(m.declarations)
 }
 
+func (m *Members) Pragmas() []*PragmaDeclaration {
+	return m.indices.Pragmas(m.declarations)
+}
+
 func (m *Members) FieldsByIdentifier() map[string]*FieldDeclaration {
 	return m.indices.FieldsByIdentifier(m.declarations)
 }
@@ -114,19 +118,6 @@ func (m *Members) InterfacesByIdentifier() map[string]*InterfaceDeclaration {
 
 func (m *Members) Initializers() []*SpecialFunctionDeclaration {
 	return m.indices.Initializers(m.declarations)
-}
-
-func (m *Members) Destructors() []*SpecialFunctionDeclaration {
-	return m.indices.Destructors(m.declarations)
-}
-
-// Destructor returns the first destructor, if any
-func (m *Members) Destructor() *SpecialFunctionDeclaration {
-	destructors := m.Destructors()
-	if len(destructors) == 0 {
-		return nil
-	}
-	return destructors[0]
 }
 
 func (m *Members) FieldPosition(name string, compositeKind common.CompositeKind) Position {

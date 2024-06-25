@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,6 +68,7 @@ const (
 	MemoryKindVariableSizedStaticType
 	MemoryKindConstantSizedStaticType
 	MemoryKindDictionaryStaticType
+	MemoryKindInclusiveRangeStaticType
 	MemoryKindOptionalStaticType
 	MemoryKindIntersectionStaticType
 	MemoryKindEntitlementSetStaticAccess
@@ -88,6 +89,7 @@ const (
 	MemoryKindCadenceArrayValueBase
 	MemoryKindCadenceArrayValueLength
 	MemoryKindCadenceDictionaryValue
+	MemoryKindCadenceInclusiveRangeValue
 	MemoryKindCadenceKeyValuePair
 	MemoryKindCadenceStructValueBase
 	MemoryKindCadenceStructValueSize
@@ -104,13 +106,16 @@ const (
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
 	MemoryKindCadenceCapabilityValue
+	MemoryKindCadenceDeprecatedPathCapabilityType // Deprecated: removed in v1.0.0
 	MemoryKindCadenceFunctionValue
 
 	// Cadence Types
 	MemoryKindCadenceOptionalType
+	MemoryKindCadenceDeprecatedRestrictedType // Deprecated: removed in v1.0.0
 	MemoryKindCadenceVariableSizedArrayType
 	MemoryKindCadenceConstantSizedArrayType
 	MemoryKindCadenceDictionaryType
+	MemoryKindCadenceInclusiveRangeType
 	MemoryKindCadenceField
 	MemoryKindCadenceParameter
 	MemoryKindCadenceTypeParameter
@@ -244,6 +249,7 @@ const (
 	MemoryKindEntitlementMapSemaType
 	MemoryKindEntitlementRelationSemaType
 	MemoryKindCapabilitySemaType
+	MemoryKindInclusiveRangeSemaType
 
 	// ordered-map
 	MemoryKindOrderedMap

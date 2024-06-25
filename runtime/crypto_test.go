@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,8 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 
           return keyList.verify(
               signatureSet: signatureSet,
-              signedData: "0506".decodeHex()
+              signedData: "0506".decodeHex(),
+              domainSeparationTag: "foo"
           )
       }
     `)
@@ -88,7 +89,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 		) (bool, error) {
 			called = true
 			assert.Equal(t, []byte{3, 4}, signature)
-			assert.Equal(t, "FLOW-V0.0-user", tag)
+			assert.Equal(t, "foo", tag)
 			assert.Equal(t, []byte{5, 6}, signedData)
 			assert.Equal(t, []byte{1, 2}, publicKey)
 			assert.Equal(t, SignatureAlgorithmECDSA_P256, signatureAlgorithm)
@@ -275,8 +276,12 @@ func TestRuntimeHashingAlgorithmExport(t *testing.T) {
 		require.IsType(t, cadence.Enum{}, value)
 		enumValue := value.(cadence.Enum)
 
-		require.Len(t, enumValue.Fields, 1)
-		assert.Equal(t, cadence.NewUInt8(algo.RawValue()), enumValue.Fields[0])
+		fields := cadence.FieldsMappedByName(enumValue)
+		require.Len(t, fields, 1)
+		assert.Equal(t,
+			cadence.NewUInt8(algo.RawValue()),
+			fields[sema.EnumRawValueFieldName],
+		)
 	}
 
 	for _, algo := range sema.HashAlgorithms {
@@ -316,8 +321,12 @@ func TestRuntimeSignatureAlgorithmExport(t *testing.T) {
 		require.IsType(t, cadence.Enum{}, value)
 		enumValue := value.(cadence.Enum)
 
-		require.Len(t, enumValue.Fields, 1)
-		assert.Equal(t, cadence.NewUInt8(algo.RawValue()), enumValue.Fields[0])
+		fields := cadence.FieldsMappedByName(enumValue)
+		require.Len(t, fields, 1)
+		assert.Equal(t,
+			cadence.NewUInt8(algo.RawValue()),
+			fields[sema.EnumRawValueFieldName],
+		)
 	}
 
 	for _, algo := range sema.SignatureAlgorithms {
@@ -352,16 +361,18 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 				Arguments: encodeArgs(
 					cadence.NewEnum([]cadence.Value{
 						cadence.UInt8(algo.RawValue()),
-					}).WithType(&cadence.EnumType{
-						QualifiedIdentifier: "SignatureAlgorithm",
-						RawType:             cadence.UInt8Type,
-						Fields: []cadence.Field{
+					}).WithType(cadence.NewEnumType(
+						nil,
+						"SignatureAlgorithm",
+						cadence.UInt8Type,
+						[]cadence.Field{
 							{
 								Identifier: "rawValue",
 								Type:       cadence.UInt8Type,
 							},
 						},
-					}),
+				nil,
+					)),
 				),
 			},
 			Context{
@@ -431,16 +442,18 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 				Arguments: encodeArgs(
 					cadence.NewEnum([]cadence.Value{
 						cadence.UInt8(algo.RawValue()),
-					}).WithType(&cadence.EnumType{
-						QualifiedIdentifier: "HashAlgorithm",
-						RawType:             cadence.UInt8Type,
-						Fields: []cadence.Field{
+					}).WithType(cadence.NewEnumType(
+						nil,
+						"HashAlgorithm",
+						cadence.UInt8Type,
+						[]cadence.Field{
 							{
 								Identifier: "rawValue",
 								Type:       cadence.UInt8Type,
 							},
 						},
-					}),
+				nil,
+					)),
 				),
 			},
 			Context{
@@ -654,6 +667,7 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	fields := cadence.FieldsMappedByName(result.(cadence.Optional).Value.(cadence.Struct))
 	assert.Equal(t,
 		cadence.NewArray([]cadence.Value{
 			cadence.UInt8(1),
@@ -663,7 +677,7 @@ func TestRuntimeBLSAggregatePublicKeys(t *testing.T) {
 		}).WithType(&cadence.VariableSizedArrayType{
 			ElementType: cadence.UInt8Type,
 		}),
-		result.(cadence.Optional).Value.(cadence.Struct).Fields[0],
+		fields[sema.PublicKeyTypePublicKeyFieldName],
 	)
 
 	assert.True(t, called)
@@ -789,7 +803,7 @@ func TestRuntimeTraversingMerkleProof(t *testing.T) {
 				return hex.DecodeString("b6979620706f8c652cfb6bf6e923f5156eadd5abaf4022a0b19d52ada089475f")
 			}
 
-			return nil, errors.New("Unknown input to the hash method")
+			return nil, errors.New("unknown input to the hash method")
 		},
 		OnProgramLog: func(message string) {
 			logMessages = append(logMessages, message)

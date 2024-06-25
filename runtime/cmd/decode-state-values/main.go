@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -268,6 +268,8 @@ func load() {
 
 	var slabNotFoundErrCount int
 
+	locationRange := interpreter.EmptyLocationRange
+
 	for storageKey, data := range storage { //nolint:maprange
 		_ = bar.Add(1)
 
@@ -277,7 +279,15 @@ func load() {
 		var address atree.Address
 		copy(address[:], storageKey[0])
 
-		err := loadStorageKey(key, address, data, inter, slabStorage)
+		err := loadStorageKey(
+			key,
+			address,
+			data,
+			inter,
+			slabStorage,
+			locationRange,
+		)
+
 		var slabNotFoundErr *atree.SlabNotFoundError
 		if errors.As(err, &slabNotFoundErr) {
 			slabNotFoundErrCount++
@@ -293,6 +303,7 @@ func loadStorageKey(
 	data []byte,
 	inter *interpreter.Interpreter,
 	slabStorage *slabStorage,
+	locationRange interpreter.LocationRange,
 ) (err error) {
 
 	defer func() {
@@ -387,6 +398,7 @@ func loadStorageKey(
 
 					return true
 				},
+				locationRange,
 			)
 
 			if *checkValuesFlag {

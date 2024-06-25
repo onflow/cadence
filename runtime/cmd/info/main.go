@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	"golang.org/x/exp/slices"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
@@ -70,6 +72,10 @@ var commands = map[string]command{
 		help:    "Dumps all built-in values",
 		handler: dumpBuiltinValues,
 	},
+	"dump-hard-keywords": {
+		help:    "Dumps all hard keywords",
+		handler: dumpHardKeywords,
+	},
 }
 
 func dumpBuiltinTypes() {
@@ -112,18 +118,46 @@ func dumpBuiltinTypes() {
 
 	slices.SortFunc(
 		types,
-		func(a, b sema.Type) bool {
-			return a.QualifiedString() < b.QualifiedString()
+		func(a, b sema.Type) int {
+			return strings.Compare(a.QualifiedString(), b.QualifiedString())
 		},
 	)
 
 	for _, ty := range types {
-		id := ty.QualifiedString()
-		fmt.Printf("- %s\n", id)
+		dumpType(ty)
+	}
+}
 
-		if *includeMembers {
-			dumpTypeMembers(ty)
+func dumpType(ty sema.Type) {
+
+	// If the type is parameterized, instantiate it with generic types
+	if parameterizedType, ok := ty.(sema.ParameterizedType); ok {
+		typeParameters := parameterizedType.TypeParameters()
+		typeArguments := parameterizedType.TypeArguments()
+
+		var newTypeArguments []sema.Type
+
+		for typeParameterIndex, typeParameter := range typeParameters {
+			var typeArgument sema.Type
+			if typeParameterIndex < len(typeArguments) {
+				typeArgument = typeArguments[typeParameterIndex]
+			}
+			if typeArgument == nil {
+				typeArgument = &sema.GenericType{
+					TypeParameter: typeParameter,
+				}
+			}
+			newTypeArguments = append(newTypeArguments, typeArgument)
 		}
+
+		ty = sema.MustInstantiate(parameterizedType, newTypeArguments...)
+	}
+
+	id := ty.QualifiedString()
+	fmt.Printf("- %s\n", id)
+
+	if *includeMembers {
+		dumpTypeMembers(ty)
 	}
 }
 
@@ -151,8 +185,8 @@ func dumpTypeMembers(ty sema.Type) {
 
 	slices.SortFunc(
 		namedResolvers,
-		func(a, b namedResolver) bool {
-			return a.name < b.name
+		func(a, b namedResolver) int {
+			return strings.Compare(a.name, b.name)
 		},
 	)
 
@@ -233,8 +267,8 @@ func dumpBuiltinValues() {
 
 	slices.SortFunc(
 		valueTypes,
-		func(a, b valueType) bool {
-			return a.name < b.name
+		func(a, b valueType) int {
+			return strings.Compare(a.name, b.name)
 		},
 	)
 
@@ -262,6 +296,12 @@ func dumpBuiltinValues() {
 	}
 }
 
+func dumpHardKeywords() {
+	for _, keyword := range parser.HardKeywords {
+		fmt.Printf("- %s\n", keyword)
+	}
+}
+
 func printAvailableCommands() {
 	type commandHelp struct {
 		name string
@@ -283,8 +323,8 @@ func printAvailableCommands() {
 
 	slices.SortFunc(
 		commandHelps,
-		func(a, b commandHelp) bool {
-			return a.name < b.name
+		func(a, b commandHelp) int {
+			return strings.Compare(a.name, b.name)
 		},
 	)
 

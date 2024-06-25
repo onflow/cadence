@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,7 @@ const (
 	exprLeftBindingPowerBitwiseShift
 	exprLeftBindingPowerAddition
 	exprLeftBindingPowerMultiplication
+	exprLeftBindingPowerMove
 	exprLeftBindingPowerCasting
 	exprLeftBindingPowerUnaryPrefix
 	exprLeftBindingPowerUnaryPostfix
@@ -484,8 +485,14 @@ func init() {
 
 	defineExpr(unaryExpr{
 		tokenType:    lexer.TokenLeftArrow,
-		bindingPower: exprLeftBindingPowerUnaryPrefix,
+		bindingPower: exprLeftBindingPowerMove,
 		operation:    ast.OperationMove,
+	})
+
+	defineExpr(unaryExpr{
+		tokenType:    lexer.TokenStar,
+		bindingPower: exprLeftBindingPowerUnaryPrefix,
+		operation:    ast.OperationMul,
 	})
 
 	defineExpr(postfixExpr{
@@ -639,6 +646,12 @@ func defineLessThanOrTypeArgumentsExpression() {
 				return invocationExpression, nil, false
 
 			} else {
+
+				// if the error specifically occurred during parsing restricted types,
+				// this is still an invocation and we should report that error instead
+				if _, isRestrictedTypeErr := err.(*RestrictedTypeError); isRestrictedTypeErr {
+					return nil, err, true
+				}
 
 				// The previous attempt to parse an invocation failed,
 				// replay the buffered tokens.
@@ -811,7 +824,7 @@ func defineIdentifierExpression() {
 					token.Range.StartPos,
 				), nil
 
-			case keywordAttach:
+			case KeywordAttach:
 				return parseAttachExpressionRemainder(p, token)
 
 			case KeywordView:
@@ -954,7 +967,7 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 
 	p.skipSpaceAndComments()
 
-	if !p.isToken(p.current, lexer.TokenIdentifier, keywordTo) {
+	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordTo) {
 		return nil, p.syntaxError(
 			"expected 'to', got %s",
 			p.current.Type,
@@ -971,37 +984,7 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 
 	p.skipSpaceAndComments()
 
-	var entitlements []*ast.NominalType
-	if p.isToken(p.current, lexer.TokenIdentifier, KeywordWith) {
-		// consume the `with` token
-		p.nextSemanticToken()
-
-		_, err = p.mustOne(lexer.TokenParenOpen)
-		if err != nil {
-			return nil, err
-		}
-
-		entitlements, _, err = parseNominalTypes(p, lexer.TokenParenClose, lexer.TokenComma)
-		for _, entitlement := range entitlements {
-			_, err = rejectAccessKeywords(p, func() (*ast.NominalType, error) {
-				return entitlement, nil
-			})
-			if err != nil {
-				return nil, err
-			}
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		_, err = p.mustOne(lexer.TokenParenClose)
-		if err != nil {
-			return nil, err
-		}
-		p.skipSpaceAndComments()
-	}
-
-	return ast.NewAttachExpression(p.memoryGauge, base, attachment, entitlements, token.StartPos), nil
+	return ast.NewAttachExpression(p.memoryGauge, base, attachment, token.StartPos), nil
 }
 
 // Invocation Expression Grammar:

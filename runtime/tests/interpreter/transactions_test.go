@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -252,8 +254,8 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess)
-		signer2 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{2}, interpreter.UnauthorizedAccess)
+		signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
+		signer2 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{2}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
 
 		// first transaction
 		err := inter.InvokeTransaction(0, signer1)
@@ -293,6 +295,7 @@ func TestInterpretTransactions(t *testing.T) {
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
 		)
 
 		prepareArguments := []interpreter.Value{account}
@@ -302,7 +305,7 @@ func TestInterpretTransactions(t *testing.T) {
 		err := inter.InvokeTransaction(0, arguments...)
 		require.NoError(t, err)
 
-		values := inter.Globals.Get("values").GetValue()
+		values := inter.Globals.Get("values").GetValue(inter)
 
 		require.IsType(t, &interpreter.ArrayValue{}, values)
 
@@ -316,5 +319,121 @@ func TestInterpretTransactions(t *testing.T) {
 			},
 			ArrayElements(inter, values.(*interpreter.ArrayValue)),
 		)
+	})
+}
+
+func TestRuntimeInvalidTransferInExecute(t *testing.T) {
+
+	t.Parallel()
+
+	inter, _ := parseCheckAndInterpretWithOptions(t, `
+		access(all) resource Dummy {}
+
+		transaction {
+			var vaults: @[AnyResource]
+			var account: auth(Storage) &Account
+
+			prepare(account: auth(Storage) &Account) {
+				self.vaults <- [<-create Dummy(), <-create Dummy()]
+				self.account = account
+			}
+
+			execute {
+				let x = fun(): @[AnyResource] {
+					var x <- self.vaults <- [<-create Dummy()]
+					return <-x
+				}
+
+				var t <-  self.vaults[0] <- self.vaults 
+				destroy t
+				self.account.storage.save(<- x(), to: /storage/x42)
+			}
+		}
+	`, ParseCheckAndInterpretOptions{
+		HandleCheckerError: func(err error) {
+			errs := checker.RequireCheckerErrors(t, err, 1)
+			require.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+		},
+	})
+
+	signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
+	err := inter.InvokeTransaction(0, signer1)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+}
+
+func TestRuntimeInvalidRecursiveTransferInExecute(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Array", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			transaction {
+				var arr: @[AnyResource]
+
+				prepare() {
+					self.arr <- []
+				}
+
+				execute {
+					self.arr.append(<-self.arr)
+				}
+			}
+		`)
+
+		err := inter.InvokeTransaction(0)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("Dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			transaction {
+				var dict: @{String: AnyResource}
+
+				prepare() {
+					self.dict <- {}
+				}
+
+				execute {
+					destroy self.dict.insert(key: "", <-self.dict)
+				}
+			}
+		`)
+
+		err := inter.InvokeTransaction(0)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			resource R {
+				fun foo(_ r: @R) {
+					destroy r
+				}
+			}
+
+			transaction {
+				var r: @R
+
+				prepare() {
+					self.r <- create R()
+				}
+
+				execute {
+					self.r.foo(<-self.r) 
+				}
+			}
+		`)
+
+		err := inter.InvokeTransaction(0)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }

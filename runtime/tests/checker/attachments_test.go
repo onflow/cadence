@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -540,33 +540,10 @@ func TestCheckAttachmentWithMembers(t *testing.T) {
 				init(x: @R) {
 					self.x <- x
 				}
-				destroy() {
-					destroy self.x
-				}
 			}`,
 		)
 
 		require.NoError(t, err)
-	})
-
-	t.Run("resource field no destroy", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			resource R {}
-			attachment Test for R {
-				let x: @R
-				init(x: @R) {
-					self.x <- x
-				}
-			}`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.MissingDestructorError{}, errs[0])
 	})
 
 	t.Run("resource field in struct", func(t *testing.T) {
@@ -581,16 +558,12 @@ func TestCheckAttachmentWithMembers(t *testing.T) {
 				init(x: @R) {
 					self.x <- x
 				}
-				destroy() {
-					destroy self.x
-				}
 			}`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidResourceFieldError{}, errs[0])
-		assert.IsType(t, &sema.InvalidDestructorError{}, errs[1])
 	})
 
 	t.Run("field with same name as base type", func(t *testing.T) {
@@ -639,28 +612,10 @@ func TestCheckAttachmentWithMembers(t *testing.T) {
 			`
 			resource R {}
 			attachment Test for R {
-				destroy() {}
 			}`,
 		)
 
 		require.NoError(t, err)
-	})
-
-	t.Run("destroy in struct", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			struct S {}
-			attachment Test for S {
-				destroy() {}
-			}`,
-		)
-
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidDestructorError{}, errs[0])
 	})
 }
 
@@ -1025,25 +980,6 @@ func TestCheckAttachmentBase(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("destroy", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, err := ParseAndCheck(t,
-			`
-			resource R {
-				fun foo() {}
-			}
-			attachment Test for R {
-				destroy() {
-					base.foo()
-				}
-			}`,
-		)
-
-		require.NoError(t, err)
-	})
-
 	t.Run("interface base", func(t *testing.T) {
 
 		t.Parallel()
@@ -1394,6 +1330,29 @@ func TestCheckAttachmentSelfTyping(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("self access restricted", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			entitlement E
+			resource R {
+				access(E) fun foo() {}
+			}
+			attachment Test for R {
+				access(E) fun bar() {}
+				fun foo(t: &Test) {
+					t.bar()
+				}
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+	})
 }
 
 func TestCheckAttachmentType(t *testing.T) {
@@ -1539,11 +1498,11 @@ func TestCheckAttachmentIllegalInit(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t,
-			`attachment Test for AnyStruct {}
-			let t = Test()
-		`,
-		)
+		_, err := ParseAndCheck(t, `
+            attachment Test for AnyStruct {}
+
+            let t = Test()
+        `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
@@ -1554,18 +1513,39 @@ func TestCheckAttachmentIllegalInit(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t,
-			`attachment Test for AnyResource {}
-			access(all) fun foo() {
-				let t <- Test()
-				destroy t
-			}
-		`,
-		)
+		_, err := ParseAndCheck(t, `
+            attachment Test for AnyResource {}
+
+            fun foo() {
+                let t <- Test()
+                destroy t
+            }
+        `)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[0])
+	})
+
+	t.Run("optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          contract C {
+              attachment Test for AnyStruct {}
+          }
+
+          let optContractRef: &C? = &C as &C
+          let t = optContractRef?.Test()
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		var invalidMoveError *sema.InvalidMoveError
+		require.ErrorAs(t, errs[0], &invalidMoveError)
+
+		assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
 	})
 }
 
@@ -1678,9 +1658,12 @@ func TestCheckAttachmentAttachNonAttachment(t *testing.T) {
 		`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.NotCallableError{}, errs[0])
+		var invalidMoveError *sema.InvalidMoveError
+		require.ErrorAs(t, errs[0], &invalidMoveError)
+
+		assert.IsType(t, &sema.NotCallableError{}, errs[1])
 	})
 }
 
@@ -1796,9 +1779,12 @@ func TestCheckAttachmentAttachToNonComposite(t *testing.T) {
 		`,
 		)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.NotCallableError{}, errs[0])
+		var invalidMoveError *sema.InvalidMoveError
+		require.ErrorAs(t, errs[0], &invalidMoveError)
+
+		assert.IsType(t, &sema.NotCallableError{}, errs[1])
 	})
 
 	t.Run("attachment", func(t *testing.T) {
@@ -2624,7 +2610,7 @@ func TestCheckAttachmentAnyAttachmentTypes(t *testing.T) {
 			},
 			{
 				setupCode:       "contract interface CI {}",
-				subType:         "CI",
+				subType:         "{CI}",
 				expectedSuccess: false,
 			},
 		}
@@ -3865,14 +3851,12 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 
 		_, err := ParseAndCheck(t,
 			`
-				access(all) resource R {}
-
-				entitlement mapping M {
-					Mutate -> Insert
+				access(all) resource R {
+					access(Mutate) fun foo() {}
 				}
 
-				access(M) attachment A for R {
-					access(Identity) let x: [String]
+				access(all) attachment A for R {
+					access(mapping Identity) let x: [String]
 					init() {
 						self.x = ["x"]
 					}
@@ -3886,7 +3870,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("in base", func(t *testing.T) {
@@ -3897,6 +3882,7 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 			`
 				access(all) resource R {
 					access(all) fun foo() {
+						// this only works because A supports all the entitlements of R
 						self[A]!.x.append("y")
 					}
 				}
@@ -3939,24 +3925,20 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 		)
 	})
 
-	t.Run("in base, with entitlements", func(t *testing.T) {
+	t.Run("identity mapping in attachment", func(t *testing.T) {
 
 		t.Parallel()
 
 		_, err := ParseAndCheck(t,
 			`
-				entitlement mapping M {
-					Mutate -> Insert
-				}
-
 				access(all) resource R {
-					access(all) fun foo() {
+					access(Insert) fun foo() {
 						var xRef = self[A]!.x
 						xRef.append("y")
 					}
 				}
-				access(M) attachment A for R {
-					access(Identity) let x: [String]
+				access(all) attachment A for R {
+					access(mapping Identity) let x: [String]
 					init() {
 						self.x = ["x"]
 					}
@@ -3964,7 +3946,8 @@ func TestCheckAttachmentsExternalMutation(t *testing.T) {
 				`,
 		)
 
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
 	})
 
 	t.Run("in self, through base", func(t *testing.T) {
@@ -4093,6 +4076,289 @@ func TestCheckAttachmentBaseNonMember(t *testing.T) {
 		)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("entitlement mapped field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement G
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) fun foo() {}
+					access(G) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(mapping M) let x: [String]
+					init() {
+						self.x = ["x"]
+					}
+				}
+				fun foo() {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let x: auth(F) &[String] = a.x
+					destroy r
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("entitlement mapped function self value cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) fun foo() {}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(F) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						if let concreteSelf = self as? auth(F) &A {
+							return &concreteSelf.x
+						} 
+						return &1
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("entitlement mapped function self value cast invalid access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) fun foo() {}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(E) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						if let concreteSelf = self as? auth(F) &A {
+							return &concreteSelf.x
+						} 
+						return &1
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		require.IsType(t, &sema.InvalidAccessError{}, errs[1])
+	})
+
+	t.Run("entitlement mapped function base value cast", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(F) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(E) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						if let concreteBase = base as? auth(F) &R {
+							return &concreteBase.x
+						} 
+						return &1
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+	})
+
+	t.Run("entitlement mapped function base value cast invalid access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						if let concreteBase = base as? auth(F) &R {
+							return &concreteBase.x
+						} 
+						return &1
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
+	})
+
+	t.Run("entitlement mapped function self value access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) fun foo() {}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(E) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						return &self.x
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+				`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
+	})
+
+	t.Run("entitlement mapped function base value access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`	
+				entitlement E
+				entitlement F
+				entitlement mapping M {
+					E -> F
+				}
+
+				access(all) resource R {
+					access(E) let x: Int
+					init() {
+						self.x = 3
+					}
+					access(F) fun bar() {}
+				}
+				access(all) attachment A for R {
+					access(mapping M) fun foo(): auth(mapping M) &Int {
+						return &base.x
+					}
+				}
+				fun foo(): &Int {
+					let r <- attach A() to <- create R()
+					let a = r[A]!
+					let i = a.foo()
+					destroy r
+					return i
+				}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.InvalidAttachmentMappedEntitlementMemberError{}, errs[0])
+		assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
 	})
 }
 
@@ -4515,16 +4781,15 @@ func TestCheckAttachmentForEachAttachment(t *testing.T) {
 			`
 			entitlement F
 			entitlement E
-			entitlement mapping M {
-				E -> F
-			}
 			fun bar (attachmentRef: &AnyResourceAttachment) {
 				if let a = attachmentRef as? auth(F) &A {
 					a.foo()
 				}
 			}
-			resource R {}
-			access(M) attachment A for R {
+			resource R {
+				access(F) fun foo() {}
+			}
+			access(all) attachment A for R {
 				access(F) fun foo() {}
 			}
 			access(all) fun foo(s: @R) {
@@ -4577,4 +4842,184 @@ func TestCheckAttachmentRemoveLossTracking(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
+}
+
+func TestCheckAttachmentPurity(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			view fun foo(s: S) {
+				s[Test]
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			view fun foo(s: S) {
+				let s2 = attach Test() to s
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("attach with constructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {
+				init() {}
+			}
+			view fun foo(s: S) {
+				let s2 = attach Test() to s
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("attach with pure constructor", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {
+				view init() {}
+			}
+			view fun foo(s: S) {
+				let s2 = attach Test() to s
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("remove", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			view fun foo(s: S) {
+				remove Test from s
+			}`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("remove from global", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			var s: S = S()
+			view fun foo() {
+				remove Test from s
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("remove from field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			struct S {}
+			attachment Test for S {}
+			struct Container {
+				let s: S
+				init() {
+					self.s = S()
+				}
+				view fun foo() {
+					remove Test from self.s
+				}
+			}
+			`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+
+	t.Run("remove from resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+			resource R {}
+			attachment Test for R {}
+			view fun foo(r: @R): @R {
+				remove Test from r
+				return <-r
+			}`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.PurityError{}, errs[0])
+	})
+}
+
+func TestCheckAccessOnNonEntitlementSupportingBaseCreatesUnauthorizedReference(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		access(all) contract Test {
+			access(all) resource R {}
+			access(all) attachment A for R {}
+			access(all) fun makeRWithA(): @R {
+				return <- attach A() to <-create R()
+			}
+		}
+		access(all) fun main(): &Test.A? {
+			let r <- Test.makeRWithA()
+			var a = r[Test.A]
+
+			a = returnSameRef(a)
+
+			destroy r
+			return a
+		}
+
+		access(all) fun returnSameRef(_ ref: &Test.A?): &Test.A? {
+			return ref
+		}
+    `)
+
+	require.NoError(t, err)
 }

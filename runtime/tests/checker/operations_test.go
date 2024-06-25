@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestCheckInvalidUnaryBooleanNegationOfInteger(t *testing.T) {
@@ -337,6 +338,9 @@ type operationWithTypeTests struct {
 func TestCheckNonIntegerComparisonOperations(t *testing.T) {
 	t.Parallel()
 
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+
 	allOperationTests := []operationWithTypeTests{
 		{
 			operations: []ast.Operation{
@@ -363,6 +367,16 @@ func TestCheckNonIntegerComparisonOperations(t *testing.T) {
 				{sema.BoolType, "1.2", "\"bcd\"", "Fix64", "String", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
+				{
+					sema.BoolType,
+					"InclusiveRange(1, 2)",
+					"InclusiveRange(3, 4)",
+					"InclusiveRange<Int>",
+					"InclusiveRange<Int>",
+					[]error{
+						&sema.InvalidBinaryOperandsError{},
+					},
+				},
 			},
 		},
 	}
@@ -378,7 +392,7 @@ func TestCheckNonIntegerComparisonOperations(t *testing.T) {
 
 				t.Run(testName, func(t *testing.T) {
 
-					_, err := ParseAndCheck(t,
+					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`fun test(): %s { 
 								let a: %s = %s
@@ -387,6 +401,13 @@ func TestCheckNonIntegerComparisonOperations(t *testing.T) {
 							}`,
 							test.ty, test.leftType, test.left, test.rightType, test.right, operation.Symbol(),
 						),
+						ParseAndCheckOptions{
+							Config: &sema.Config{
+								BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+									return baseValueActivation
+								},
+							},
+						},
 					)
 
 					errs := RequireCheckerErrors(t, err, len(test.expectedErrors))
@@ -563,9 +584,10 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 				),
 			)
 
-			if compositeKind == common.CompositeKindEnum {
+			switch compositeKind {
+			case common.CompositeKindEnum:
 				require.NoError(t, err)
-			} else if compositeKind == common.CompositeKindAttachment {
+			case common.CompositeKindAttachment:
 				errs := RequireCheckerErrors(t, err, 5)
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
@@ -573,7 +595,17 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[2])
 				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[3])
 				assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[4])
-			} else {
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 3)
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
+				require.ErrorAs(t, errs[1], &invalidMoveError)
+
+				assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[2])
+
+			default:
 				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
@@ -600,6 +632,7 @@ func TestCheckNumericSuperTypeBinaryOperations(t *testing.T) {
 		sema.SignedNumberType,
 		sema.IntegerType,
 		sema.SignedIntegerType,
+		sema.FixedSizeUnsignedIntegerType,
 		sema.FixedPointType,
 		sema.SignedFixedPointType,
 	}

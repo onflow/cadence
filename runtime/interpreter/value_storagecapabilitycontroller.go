@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ type CapabilityControllerValue interface {
 		interpreter *Interpreter,
 		capabilityAddress common.Address,
 		resultBorrowType *sema.ReferenceType,
+		locationRange LocationRange,
 	) ReferenceValue
 	ControllerCapabilityID() UInt64Value
 }
@@ -60,7 +61,7 @@ type StorageCapabilityControllerValue struct {
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
 	// when the controller is loaded for borrowing/checking
-	GetCapability func(inter *Interpreter) *CapabilityValue
+	GetCapability func(inter *Interpreter) *IDCapabilityValue
 	GetTag        func(inter *Interpreter) *StringValue
 	SetTag        func(inter *Interpreter, tag *StringValue)
 	Delete        func(inter *Interpreter, locationRange LocationRange)
@@ -108,11 +109,11 @@ func (v *StorageCapabilityControllerValue) CapabilityControllerBorrowType() *Ref
 	return v.BorrowType
 }
 
-func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *StorageCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitStorageCapabilityControllerValue(interpreter, v)
 }
 
-func (v *StorageCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *StorageCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
 	walkChild(v.TargetPath)
 	walkChild(v.CapabilityID)
 }
@@ -121,7 +122,7 @@ func (v *StorageCapabilityControllerValue) StaticType(_ *Interpreter) StaticType
 	return PrimitiveStaticTypeStorageCapabilityController
 }
 
-func (*StorageCapabilityControllerValue) IsImportable(_ *Interpreter) bool {
+func (*StorageCapabilityControllerValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -132,21 +133,22 @@ func (v *StorageCapabilityControllerValue) String() string {
 func (v *StorageCapabilityControllerValue) RecursiveString(seenReferences SeenReferences) string {
 	return format.StorageCapabilityController(
 		v.BorrowType.String(),
-		v.TargetPath.RecursiveString(seenReferences),
 		v.CapabilityID.RecursiveString(seenReferences),
+		v.TargetPath.RecursiveString(seenReferences),
 	)
 }
 
 func (v *StorageCapabilityControllerValue) MeteredString(
-	memoryGauge common.MemoryGauge,
+	interpreter *Interpreter,
 	seenReferences SeenReferences,
+	locationRange LocationRange,
 ) string {
-	common.UseMemory(memoryGauge, common.StorageCapabilityControllerValueStringMemoryUsage)
+	common.UseMemory(interpreter, common.StorageCapabilityControllerValueStringMemoryUsage)
 
 	return format.StorageCapabilityController(
-		v.BorrowType.MeteredString(memoryGauge),
-		v.CapabilityID.MeteredString(memoryGauge, seenReferences),
-		v.TargetPath.MeteredString(memoryGauge, seenReferences),
+		v.BorrowType.MeteredString(interpreter),
+		v.CapabilityID.MeteredString(interpreter, seenReferences, locationRange),
+		v.TargetPath.MeteredString(interpreter, seenReferences, locationRange),
 	)
 }
 
@@ -329,6 +331,7 @@ func (v *StorageCapabilityControllerValue) ReferenceValue(
 	interpreter *Interpreter,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
+	_ LocationRange,
 ) ReferenceValue {
 	authorization := ConvertSemaAccessToStaticAuthorization(
 		interpreter,
@@ -352,13 +355,14 @@ func (v *StorageCapabilityControllerValue) checkDeleted() {
 }
 
 func (v *StorageCapabilityControllerValue) newHostFunctionValue(
-	gauge common.MemoryGauge,
+	inter *Interpreter,
 	funcType *sema.FunctionType,
 	f func(invocation Invocation) Value,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
-		FunctionValue: NewHostFunctionValue(
-			gauge,
+		FunctionValue: NewBoundHostFunctionValue(
+			inter,
+			v,
 			funcType,
 			func(invocation Invocation) Value {
 				// NOTE: check if controller is already deleted

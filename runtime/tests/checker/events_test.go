@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,12 +22,13 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/tests/utils"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/sema"
@@ -75,9 +76,9 @@ func TestCheckEventDeclaration(t *testing.T) {
 				case common.CompositeKindResource:
 					errs := RequireCheckerErrors(t, err, 3)
 
-					assert.IsType(t, &sema.ResourceLossError{}, errs[0])
-					assert.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[1])
-					assert.IsType(t, &sema.InvalidResourceFieldError{}, errs[2])
+					require.IsType(t, &sema.ResourceLossError{}, errs[0])
+					require.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[1])
+					require.IsType(t, &sema.InvalidResourceFieldError{}, errs[2])
 
 				case common.CompositeKindStructure:
 					require.NoError(t, err)
@@ -85,8 +86,8 @@ func TestCheckEventDeclaration(t *testing.T) {
 				case common.CompositeKindAttachment:
 					errs := RequireCheckerErrors(t, err, 2)
 
-					assert.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[1])
-					assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
+					require.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[1])
+					require.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 				default:
 					panic(errors.NewUnreachableError())
@@ -136,7 +137,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 				},
 			)
 
-			if sema.IsValidDictionaryKeyType(ty) {
+			if sema.IsSubType(ty, sema.HashableStructType) {
 				tests = append(tests,
 					&sema.DictionaryType{
 						KeyType:   ty,
@@ -195,8 +196,8 @@ func TestCheckEventDeclaration(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.RedeclarationError{}, errs[0])
-		assert.IsType(t, &sema.RedeclarationError{}, errs[1])
+		require.IsType(t, &sema.RedeclarationError{}, errs[0])
+		require.IsType(t, &sema.RedeclarationError{}, errs[1])
 	})
 
 }
@@ -205,7 +206,9 @@ func TestCheckEmitEvent(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("ValidEvent", func(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             event Transfer(to: Int, from: Int)
 
@@ -217,7 +220,9 @@ func TestCheckEmitEvent(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("MissingEmitStatement", func(t *testing.T) {
+	t.Run("missing emit statement", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             event Transfer(to: Int, from: Int)
 
@@ -228,10 +233,34 @@ func TestCheckEmitEvent(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
+		require.IsType(t, &sema.InvalidEventUsageError{}, errs[0])
 	})
 
-	t.Run("EmitNonEvent", func(t *testing.T) {
+	t.Run("missing emit statement, optional chaining", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract C {
+                event Transfer(to: Int, from: Int)
+            }
+
+            fun test() {
+                let optContractRef: &C? = &C as &C
+                optContractRef?.Transfer(to: 1, from: 2)
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		var invalidMoveError *sema.InvalidMoveError
+		require.ErrorAs(t, errs[0], &invalidMoveError)
+
+		assert.IsType(t, &sema.InvalidEventUsageError{}, errs[1])
+	})
+
+	t.Run("emit non-event", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             fun notAnEvent(): Int { return 1 }
 
@@ -242,10 +271,12 @@ func TestCheckEmitEvent(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.EmitNonEventError{}, errs[0])
+		require.IsType(t, &sema.EmitNonEventError{}, errs[0])
 	})
 
-	t.Run("EmitNotDeclared", func(t *testing.T) {
+	t.Run("emit not-declared", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
             fun test() {
               emit notAnEvent()
@@ -254,10 +285,11 @@ func TestCheckEmitEvent(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 
-	t.Run("EmitImported", func(t *testing.T) {
+	t.Run("emit imported", func(t *testing.T) {
+		t.Parallel()
 
 		importedChecker, err := ParseAndCheckWithOptions(t,
 			`
@@ -289,7 +321,7 @@ func TestCheckEmitEvent(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.EmitImportedEventError{}, errs[0])
+		require.IsType(t, &sema.EmitImportedEventError{}, errs[0])
 	})
 }
 
@@ -369,7 +401,7 @@ func TestCheckDeclareEventInInterface(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 
 	t.Run("declare and emit type mismatch", func(t *testing.T) {
@@ -388,7 +420,7 @@ func TestCheckDeclareEventInInterface(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("declare and emit qualified", func(t *testing.T) {
@@ -409,7 +441,7 @@ func TestCheckDeclareEventInInterface(t *testing.T) {
         `)
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
 
 	t.Run("declare and emit in pre-condition", func(t *testing.T) {
@@ -480,4 +512,999 @@ func TestCheckDeclareEventInInterface(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+}
+
+func TestCheckDefaultEventDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed()
+			}
+        `)
+		require.NoError(t, err)
+
+		variable, exists := checker.Elaboration.GetGlobalType("R")
+		require.True(t, exists)
+
+		require.IsType(t, variable.Type, &sema.CompositeType{})
+		require.Equal(t, "ResourceDestroyed", variable.Type.(*sema.CompositeType).DefaultDestroyEvent.Identifier)
+	})
+
+	t.Run("allowed in resource interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			resource interface R {
+				event ResourceDestroyed()
+			}
+        `)
+		require.NoError(t, err)
+
+		variable, exists := checker.Elaboration.GetGlobalType("R")
+		require.True(t, exists)
+
+		require.IsType(t, variable.Type, &sema.InterfaceType{})
+		require.Equal(t, "ResourceDestroyed", variable.Type.(*sema.InterfaceType).DefaultDestroyEvent.Identifier)
+	})
+
+	t.Run("fail in struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			struct R {
+				event ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+	})
+
+	t.Run("fail in struct interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			struct interface R {
+				event ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+	})
+
+	t.Run("fail in contract", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract R {
+				event ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+	})
+
+	t.Run("fail in contract interface", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			contract interface R {
+				event ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+	})
+
+	t.Run("allowed in resource attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			attachment A for AnyResource {
+				event ResourceDestroyed()
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("not allowed in struct attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			attachment A for AnyStruct {
+				event ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DefaultDestroyEventInNonResourceError{}, errs[0])
+	})
+
+	t.Run("nested declarations after first disallowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed()
+				event OtherEvent()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	})
+
+	t.Run("cannot declare two default events", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed()
+				event ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 4)
+
+		require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+		require.IsType(t, &sema.RedeclarationError{}, errs[1])
+		require.IsType(t, &sema.RedeclarationError{}, errs[2])
+		require.IsType(t, &sema.RedeclarationError{}, errs[3])
+	})
+
+	t.Run("explicit emit disallowed", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed()
+				fun foo() {
+					emit ResourceDestroyed()
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.EmitDefaultDestroyEventError{}, errs[0])
+	})
+
+	t.Run("explicit emit disallowed outside", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed()
+			}
+
+			fun foo() {
+				emit R.ResourceDestroyed()
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.EmitDefaultDestroyEventError{}, errs[0])
+	})
+}
+
+func TestCheckDefaultEventParamChecking(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: String = "foo")
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("3 param", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: String = "foo", id: UInt16? = 4, condition: Bool = true)
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("type error", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Int = "foo")
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				let field : String
+				event ResourceDestroyed(name: String = self.field)
+
+				init() {
+					self.field = ""
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("address", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				let field : Address
+				event ResourceDestroyed(name: Address? = self.field)
+
+				init() {
+					self.field = 0x1
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Address? = nil)
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Type = Type<@R>())
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[1])
+		require.Equal(t, errs[1].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidExpression)
+	})
+
+	t.Run("raw type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Type = R)
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 3)
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[1])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[2])
+	})
+
+	t.Run("address expr", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Address = 0x1)
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("path expr", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: PublicPath = /public/foo)
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("float", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: UFix64 = 0.0034)
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("field type mismatch", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: String = self.field)
+
+				let field : Int
+
+				init() {
+					self.field = 3
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("self", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: @R = self)
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 4)
+
+		require.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
+		require.IsType(t, &sema.ResourceLossError{}, errs[1])
+		require.IsType(t, &sema.InvalidEventParameterTypeError{}, errs[2])
+		require.IsType(t, &sema.InvalidResourceFieldError{}, errs[3])
+	})
+
+	t.Run("array field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				let field : [Int]
+				event ResourceDestroyed(name: [Int] = self.field)
+
+				init() {
+					self.field = [3]
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DefaultDestroyInvalidParameterError{}, errs[0])
+	})
+
+	t.Run("function call", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: Int  = self.fn())
+
+				fun fn(): Int {
+					return 3
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidExpression)
+	})
+
+	t.Run("external field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			let r2 <- create R2()
+			let ref = &r2 as &R2
+			
+			resource R {
+				event ResourceDestroyed(name: UFix64 = ref.field)
+			}
+
+			resource R2 {
+				let field : UFix64 
+				init() {
+					self.field = 0.0034
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidIdentifier)
+	})
+
+	t.Run("double nested field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				let s: S 
+				event ResourceDestroyed(name: UFix64 = self.s.field)
+				init() {
+					self.s = S()
+				}
+			}
+
+			struct S {
+				let field : UFix64 
+				init() {
+					self.field = 0.0034
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("function call member", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			fun getS(): S {
+				return S()
+			}
+
+			resource R {
+				event ResourceDestroyed(name: UFix64 = getS().field)
+			}
+
+			struct S {
+				let field : UFix64 
+				init() {
+					self.field = 0.0034
+				}
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidExpression)
+	})
+
+	t.Run("method call member", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				fun getS(): S {
+					return S()
+				}	
+				event ResourceDestroyed(name: UFix64 = self.getS().field)
+			}
+
+			struct S {
+				let field : UFix64 
+				init() {
+					self.field = 0.0034
+				}
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidExpression)
+	})
+
+	t.Run("array index expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				var arr : [String] 
+				event ResourceDestroyed(name: String? = self.arr[0])
+
+				init() {
+					self.arr = []
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.NonDictionaryIndexExpression)
+	})
+
+	t.Run("array reference index expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				var arr : &[String] 
+				event ResourceDestroyed(name: String? = self.arr[0])
+
+				init() {
+					self.arr = &[]
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[1])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
+		require.Equal(t, errs[1].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.NonDictionaryIndexExpression)
+	})
+
+	t.Run("dict index expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				let dict : {Int: String} 
+				event ResourceDestroyed(name: String? = self.dict[0])
+
+				init() {
+					self.dict = {}
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("dict reference index expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				let dict : &{Int: String} 
+				event ResourceDestroyed(name: String? = self.dict[0])
+
+				init() {
+					self.dict = &{}
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
+	})
+
+	t.Run("function call dict index expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				event ResourceDestroyed(name: String? = self.get()[0])
+				fun get(): {Int: String} {
+					return {}
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidExpression)
+	})
+
+	t.Run("function call dict indexed expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			resource R {
+				let dict : {Int: String} 
+				event ResourceDestroyed(name: String? = self.dict[0+1])
+
+				init() {
+					self.dict = {}
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidExpression)
+	})
+
+	t.Run("external var expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			var index: Int = 3
+			resource R {
+				let dict : {Int: String} 
+				event ResourceDestroyed(name: String? = self.dict[index])
+
+				init() {
+					self.dict = {}
+				}
+			}
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidIdentifier)
+	})
+
+	t.Run("attachment index expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			attachment A for R {
+				let name: String
+				init() {
+					self.name = "foo"
+				}
+			}
+
+			resource R {
+				event ResourceDestroyed(name: String? = self[A]?.name)
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment with base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			attachment A for R {
+				event ResourceDestroyed(name: Int  = base.field)
+			}
+
+			resource R {
+				let field : Int
+
+				init() {
+					self.field = 3
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("field name conflict", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			attachment A for R {
+				event ResourceDestroyed(name: Int = self.self, x: String = base.base)
+				let self: Int
+				let base: String
+				init() {
+					self.base = "foo"
+					self.self = 3
+				}
+			}
+			resource R {
+				let base: String
+				init() {
+					self.base = "foo"
+				}
+				event ResourceDestroyed(name: String? = self[A]?.base, x: Int? = self[A]?.self)
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment with entitled base", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement E
+
+			attachment A for R {
+				event ResourceDestroyed(name: Int  = base.field)
+			}
+
+			resource R {
+				access(E) let field : Int
+
+				init() {
+					self.field = 3
+				}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("attachment with entitled self", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			entitlement E
+
+			access(all) attachment A for R {
+				access(E) let field : Int
+				event ResourceDestroyed(name: Int  = self.field)
+				init() {
+					self.field = 3
+				}
+			}
+
+			resource R {
+				access(E) fun foo() {}
+			}
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("dead reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) resource InnerResource {
+				access(all) var i: Int
+				access(all) init() { self.i = 123 }
+			}
+
+			access(all) resource IndestructibleTroll {
+				access(all) var ref: &InnerResource
+
+				access(all) init() {
+					var r <- create InnerResource()
+					self.ref = &r as &InnerResource
+					destroy r
+				}
+
+				// Make the event parameter dependent on the dead reference
+				access(all) event ResourceDestroyed(x: Int? = self.ref.i)
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
+	})
+
+	t.Run("dead reference in dict", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) resource InnerResource {
+				access(all) var i: Int
+				access(all) init() { self.i = 123 }
+			}
+
+			access(all) resource IndestructibleTroll {
+				access(all) var dict: {Int: &InnerResource}
+
+				access(all) init() {
+					self.dict = {}
+				}
+
+				// Make the event parameter dependent on the dead reference
+				access(all) event ResourceDestroyed(x: Int? = self.dict[0]?.i)
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
+	})
+
+	t.Run("nested dead reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) resource InnerInnerResource {
+				access(all) var i: Int
+				access(all) init() { self.i = 123 }
+			}
+
+			access(all) resource InnerResource {
+				access(all) var innerRef: &InnerInnerResource
+				access(all) init() { 
+					var r <- create InnerInnerResource()
+					self.innerRef = &r
+					destroy r
+				}
+			}
+
+			access(all) resource IndestructibleTroll {
+				access(all) var dict: @{Int: InnerResource}
+
+				access(all) init() {
+					self.dict <- {}
+				}
+
+				// Make the event parameter dependent on the dead reference
+				access(all) event ResourceDestroyed(x: Int? = self.dict[0]?.innerRef?.i)
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
+	})
+
+	t.Run("nested dead reference attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		access(all) attachment Attachment for InnerResource {
+			access(all) var i: Int
+			access(all) init() { self.i = 123 }
+		}
+
+		access(all) resource InnerResource {}
+
+		access(all) resource IndestructibleTroll {
+			access(all) var ref: &InnerResource
+
+			access(all) init() {
+				var r <- create InnerResource()
+				self.ref = &r
+				destroy r
+			}
+
+			// Make the event parameter dependent on the dead reference
+			access(all) event ResourceDestroyed(x: Int? = self.ref[Attachment]?.i )
+		}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.ReferenceTypedMemberAccess)
+	})
+
+	t.Run("base outside attachment", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+			access(all) resource R {
+				access(all) var i: Int
+				access(all) init() {
+					self.i = 123
+				}
+			}
+			access(all) var globalArray: @[R] <- [<- create R()]
+			access(all) var base: &R = &globalArray[0] // strategically named variable
+			access(all) var dummy: @R <- globalArray.removeLast() // invalidate the ref
+
+			access(all) resource IndestructibleTroll {
+				// Reference the fake "base" variable
+				access(all) event ResourceDestroyed( x: Int? = base.i)
+			}
+			access(all) fun main() {
+				var troll <- create IndestructibleTroll()
+				destroy troll
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidIdentifier)
+	})
+
+	t.Run("non-attachment type name", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) contract Contract {
+				access(all) var i: Int
+				access(all) init() { self.i = 1}
+			}
+			access(all) resource IndestructibleTroll {
+				access(all) event ResourceDestroyed( x: Int? = Contract.i)
+			}
+			access(all) fun main() {
+				var troll <- create IndestructibleTroll()
+				destroy troll
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidIdentifier)
+	})
+
+	t.Run("base contract type name", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) contract base {
+				access(all) var i: Int
+				access(all) init() { self.i = 1}
+			}
+			access(all) resource IndestructibleTroll {
+				access(all) event ResourceDestroyed( x: Int? = base.i)
+			}
+			access(all) fun main() {
+				var troll <- create IndestructibleTroll()
+				destroy troll
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.DefaultDestroyInvalidArgumentError{}, errs[0])
+		require.Equal(t, errs[0].(*sema.DefaultDestroyInvalidArgumentError).Kind, sema.InvalidIdentifier)
+	})
+
+	t.Run("attachment same name as variable", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) attachment varName for IndestructibleTroll {
+				access(all) var i: Int
+				access(all) init() { self.i = 1}
+			}
+
+			access(all) resource R {
+				access(all) var i: Int
+				access(all) init() {
+					self.i = 123
+				}
+			}
+			access(all) var globalArray: @[R] <- [<- create R()]
+			access(all) var varName: &R = &globalArray[0] // strategically named variable
+			access(all) var dummy: @R <- globalArray.removeLast() // invalidate the ref
+
+			access(all) resource IndestructibleTroll {
+				access(all) event ResourceDestroyed( x: Int? = varName.i)
+			}
+			access(all) fun main() {
+				var troll <- create IndestructibleTroll()
+				destroy troll
+			}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.RedeclarationError{}, errs[0])
+		require.IsType(t, &sema.NotDeclaredMemberError{}, errs[1])
+	})
 }

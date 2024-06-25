@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,37 +34,41 @@ var account_AccountCapabilitiesFieldNames []string = nil
 func NewAccountAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	getControllerFunction FunctionValue,
-	getControllersFunction FunctionValue,
-	forEachControllerFunction FunctionValue,
-	issueFunction FunctionValue,
-) Value {
-
-	fields := map[string]Value{
-		sema.Account_AccountCapabilitiesTypeGetControllerFunctionName:     getControllerFunction,
-		sema.Account_AccountCapabilitiesTypeGetControllersFunctionName:    getControllersFunction,
-		sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction,
-		sema.Account_AccountCapabilitiesTypeIssueFunctionName:             issueFunction,
-	}
+	getControllerFunction BoundFunctionGenerator,
+	getControllersFunction BoundFunctionGenerator,
+	forEachControllerFunction BoundFunctionGenerator,
+	issueFunction BoundFunctionGenerator,
+	issueWithTypeFunction BoundFunctionGenerator,
+) *SimpleCompositeValue {
 
 	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AccountAccountCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, seenReferences)
+			common.UseMemory(interpreter, common.AccountAccountCapabilitiesStringMemoryUsage)
+			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.AccountCapabilities(%s)", addressStr)
 		}
 		return str
 	}
 
-	return NewSimpleCompositeValue(
+	accountCapabilities := NewSimpleCompositeValue(
 		gauge,
 		account_AccountCapabilitiesTypeID,
 		account_AccountCapabilitiesStaticType,
 		account_AccountCapabilitiesFieldNames,
-		fields,
+		nil,
 		nil,
 		nil,
 		stringer,
 	)
+
+	accountCapabilities.Fields = map[string]Value{
+		sema.Account_AccountCapabilitiesTypeGetControllerFunctionName:     getControllerFunction(accountCapabilities),
+		sema.Account_AccountCapabilitiesTypeGetControllersFunctionName:    getControllersFunction(accountCapabilities),
+		sema.Account_AccountCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction(accountCapabilities),
+		sema.Account_AccountCapabilitiesTypeIssueFunctionName:             issueFunction(accountCapabilities),
+		sema.Account_AccountCapabilitiesTypeIssueWithTypeFunctionName:     issueWithTypeFunction(accountCapabilities),
+	}
+
+	return accountCapabilities
 }

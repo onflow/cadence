@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func expectSuccess(t *testing.T, err error) {
@@ -772,7 +771,7 @@ func TestCheckAccessInterfaceFunction(t *testing.T) {
 				if compositeKind == common.CompositeKindContract {
 					identifier = "TestImpl"
 				} else {
-					interfaceType := AsInterfaceType("Test", compositeKind)
+					interfaceType := "{Test}"
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -990,7 +989,7 @@ func TestCheckAccessInterfaceFieldRead(t *testing.T) {
 				if compositeKind == common.CompositeKindContract {
 					identifier = "TestImpl"
 				} else {
-					interfaceType := AsInterfaceType("Test", compositeKind)
+					interfaceType := "{Test}"
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -1237,7 +1236,7 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 					identifier = "TestImpl"
 				} else {
 
-					interfaceType := AsInterfaceType("Test", compositeKind)
+					interfaceType := "{Test}"
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -1363,10 +1362,6 @@ func TestCheckAccessCompositeFieldVariableDeclarationWithSecondValue(t *testing.
                                   self.a <- create A()
                               }
 
-                              destroy() {
-                                  destroy self.a
-                              }
-
                               access(all) fun test() {
                                   let oldA <- self.a <- create A()
                                   destroy oldA
@@ -1469,10 +1464,6 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
 
                               init() {
                                   self.a <- create A()
-                              }
-
-                              destroy() {
-                                  destroy self.a
                               }
 
                               access(all) fun test() {
@@ -1835,6 +1826,7 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
     `)
 	require.NoError(t, err)
 
+	// these capture x and y because they are created in a different file
 	_, err = ParseAndCheckWithOptions(t,
 		`
            import x, y, createR from "imported"
@@ -1858,7 +1850,9 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 		},
 	)
 
-	errs := RequireCheckerErrors(t, err, 5)
+	errs := RequireCheckerErrors(t, err, 9)
+
+	// For `x`
 
 	require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	assert.Equal(t,
@@ -1868,19 +1862,29 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 
 	require.IsType(t, &sema.ResourceCapturingError{}, errs[1])
 
-	require.IsType(t, &sema.AssignmentToConstantError{}, errs[2])
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[2])
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[3])
 	assert.Equal(t,
 		"x",
-		errs[2].(*sema.AssignmentToConstantError).Name,
+		errs[3].(*sema.AssignmentToConstantError).Name,
 	)
 
-	require.IsType(t, &sema.ResourceCapturingError{}, errs[3])
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[4])
 
-	require.IsType(t, &sema.AssignmentToConstantError{}, errs[4])
+	// For `y`
+
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[5])
+
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[6])
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[7])
 	assert.Equal(t,
 		"y",
-		errs[4].(*sema.AssignmentToConstantError).Name,
+		errs[7].(*sema.AssignmentToConstantError).Name,
 	)
+
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[8])
 }
 
 func TestCheckContractNestedDeclarationPrivateAccess(t *testing.T) {

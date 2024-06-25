@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,14 +26,11 @@ var PathType = &SimpleType{
 	TypeTag:       PathTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
-	IsSuperTypeOf: func(subType Type) bool {
-		return IsSubType(subType, StoragePathType) ||
-			IsSubType(subType, CapabilityPathType)
-	},
 }
 
 var PathTypeAnnotation = NewTypeAnnotation(PathType)
@@ -46,6 +43,7 @@ var StoragePathType = &SimpleType{
 	TypeTag:       StoragePathTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    false,
 	Exportable:    true,
@@ -62,14 +60,11 @@ var CapabilityPathType = &SimpleType{
 	TypeTag:       CapabilityPathTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
-	IsSuperTypeOf: func(subType Type) bool {
-		return IsSubType(subType, PrivatePathType) ||
-			IsSubType(subType, PublicPathType)
-	},
 }
 
 var CapabilityPathTypeAnnotation = NewTypeAnnotation(CapabilityPathType)
@@ -82,6 +77,7 @@ var PublicPathType = &SimpleType{
 	TypeTag:       PublicPathTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    false,
 	Exportable:    true,
@@ -98,6 +94,7 @@ var PrivatePathType = &SimpleType{
 	TypeTag:       PrivatePathTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    false,
 	Exportable:    true,

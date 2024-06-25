@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,12 +35,9 @@ var StorableType = &SimpleType{
 	// for e.g. parameters, return types, fields, etc.
 	IsResource: false,
 	Storable:   true,
+	Primitive:  false,
 	Equatable:  false,
 	Comparable: false,
 	Exportable: false,
 	Importable: false,
-	IsSuperTypeOf: func(subType Type) bool {
-		storableResults := map[*Member]bool{}
-		return subType.IsStorable(storableResults)
-	},
 }

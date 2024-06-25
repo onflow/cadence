@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -305,7 +305,7 @@ func TestParseReferenceType(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected token '('",
+					Message: "expected authorization (entitlement list)",
 					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
 				},
 			},
@@ -322,14 +322,12 @@ func TestParseReferenceType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
-				Authorization: &ast.Authorization{
-					EntitlementSet: &ast.ConjunctiveEntitlementSet{
-						Elements: []*ast.NominalType{
-							{
-								Identifier: ast.Identifier{
-									Identifier: "X",
-									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
-								},
+				Authorization: &ast.ConjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
 							},
 						},
 					},
@@ -355,20 +353,18 @@ func TestParseReferenceType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
-				Authorization: &ast.Authorization{
-					EntitlementSet: &ast.ConjunctiveEntitlementSet{
-						Elements: []*ast.NominalType{
-							{
-								Identifier: ast.Identifier{
-									Identifier: "X",
-									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
-								},
+				Authorization: &ast.ConjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
 							},
-							{
-								Identifier: ast.Identifier{
-									Identifier: "Y",
-									Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
-								},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "Y",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
 							},
 						},
 					},
@@ -394,20 +390,18 @@ func TestParseReferenceType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.ReferenceType{
-				Authorization: &ast.Authorization{
-					EntitlementSet: &ast.DisjunctiveEntitlementSet{
-						Elements: []*ast.NominalType{
-							{
-								Identifier: ast.Identifier{
-									Identifier: "X",
-									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
-								},
+				Authorization: &ast.DisjunctiveEntitlementSet{
+					Elements: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
 							},
-							{
-								Identifier: ast.Identifier{
-									Identifier: "Y",
-									Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
-								},
+						},
+						{
+							Identifier: ast.Identifier{
+								Identifier: "Y",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
 							},
 						},
 					},
@@ -472,6 +466,52 @@ func TestParseReferenceType(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("authorized, map", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseType("auth ( mapping X ) & Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceType{
+				Authorization: &ast.MappedAccess{
+					EntitlementMap: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "X",
+							Pos:        ast.Position{Line: 1, Column: 15, Offset: 15},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+				},
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("authorized, map no name", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseType("auth( mapping ) &Int")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token in type: ')'",
+					Pos:     ast.Position{Offset: 15, Line: 1, Column: 15},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseOptionalReferenceType(t *testing.T) {
@@ -515,9 +555,11 @@ func TestParseIntersectionType(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "restricted types have been removed; replace with the concrete type or an equivalent intersection type",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				&RestrictedTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+					},
 				},
 			},
 			errs,
@@ -531,9 +573,11 @@ func TestParseIntersectionType(t *testing.T) {
 		_, errs := testParseType("T{U}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "restricted types have been removed; replace with the concrete type or an equivalent intersection type",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				&RestrictedTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+					},
 				},
 			},
 			errs,
@@ -547,9 +591,11 @@ func TestParseIntersectionType(t *testing.T) {
 		_, errs := testParseType("T{U , V }")
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "restricted types have been removed; replace with the concrete type or an equivalent intersection type",
-					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				&RestrictedTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+						EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+					},
 				},
 			},
 			errs,
@@ -2851,7 +2897,7 @@ func TestParseAuthorizedReferenceTypeWithNoEntitlements(t *testing.T) {
 	utils.AssertEqualWithDiff(t,
 		[]error{
 			&SyntaxError{
-				Message: "expected token '('",
+				Message: "expected authorization (entitlement list)",
 				Pos:     ast.Position{Offset: 20, Line: 2, Column: 19},
 			},
 		},

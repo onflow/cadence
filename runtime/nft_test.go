@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -507,10 +507,6 @@ access(all) contract TopShot: NonFungibleToken {
 
             emit MomentMinted(momentID: self.id, playID: playID, setID: self.data.setID, serialNumber: self.data.serialNumber)
         }
-
-        destroy() {
-            emit MomentDestroyed(id: self.id)
-        }
     }
 
     // Admin is a special authorization resource that
@@ -699,15 +695,6 @@ access(all) contract TopShot: NonFungibleToken {
             } else {
                 return nil
             }
-        }
-
-        // If a transaction destroys the Collection object,
-        // All the NFTs contained within are also destroyed
-        // Kind of like when Damien Lillard destroys the hopes and
-        // dreams of the entire city of Houston
-        //
-        destroy() {
-            destroy self.ownedNFTs
         }
     }
 
@@ -1042,12 +1029,6 @@ access(all) contract TopShotShardedCollection {
             let bucket = id % self.numBuckets
 
             return self.collections[bucket]?.borrowMoment(id: id) ?? nil
-        }
-
-        // If a transaction destroys the Collection object,
-        // All the NFTs contained within are also destroyed
-        destroy() {
-            destroy self.collections
         }
     }
 

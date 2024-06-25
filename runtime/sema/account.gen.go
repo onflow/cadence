@@ -2,7 +2,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1233,21 +1233,20 @@ var Account_CapabilitiesTypeGetFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: MustInstantiate(
-				&CapabilityType{},
-				&GenericType{
-					TypeParameter: Account_CapabilitiesTypeGetFunctionTypeParameterT,
-				},
-			),
-		},
+		MustInstantiate(
+			&CapabilityType{},
+			&GenericType{
+				TypeParameter: Account_CapabilitiesTypeGetFunctionTypeParameterT,
+			},
+		),
 	),
 }
 
 const Account_CapabilitiesTypeGetFunctionDocString = `
 Returns the capability at the given public path.
-Returns nil if the capability does not exist,
-or if the given type is not a supertype of the capability's borrow type.
+If the capability does not exist,
+or if the given type is not a supertype of the capability's borrow type,
+returns an "invalid" capability with ID 0 that will always fail to ` + "`check`" + ` or ` + "`borrow`" + `
 `
 
 const Account_CapabilitiesTypeBorrowFunctionName = "borrow"
@@ -1284,7 +1283,7 @@ var Account_CapabilitiesTypeBorrowFunctionType = &FunctionType{
 const Account_CapabilitiesTypeBorrowFunctionDocString = `
 Borrows the capability at the given public path.
 Returns nil if the capability does not exist, or cannot be borrowed using the given type.
-The function is equivalent to ` + "`get(path)?.borrow()`" + `.
+The function is equivalent to ` + "`get(path).borrow()`" + `.
 `
 
 const Account_CapabilitiesTypeExistsFunctionName = "exists"
@@ -1477,6 +1476,29 @@ const Account_StorageCapabilitiesTypeIssueFunctionDocString = `
 Issue/create a new storage capability.
 `
 
+const Account_StorageCapabilitiesTypeIssueWithTypeFunctionName = "issueWithType"
+
+var Account_StorageCapabilitiesTypeIssueWithTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: NewTypeAnnotation(StoragePathType),
+		},
+		{
+			Identifier:     "type",
+			TypeAnnotation: NewTypeAnnotation(MetaType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&CapabilityType{},
+	),
+}
+
+const Account_StorageCapabilitiesTypeIssueWithTypeFunctionDocString = `
+Issue/create a new storage capability.
+`
+
 const Account_StorageCapabilitiesTypeGetControllerFunctionName = "getController"
 
 var Account_StorageCapabilitiesTypeGetControllerFunctionType = &FunctionType{
@@ -1599,6 +1621,16 @@ func init() {
 		NewUnmeteredFunctionMember(
 			Account_StorageCapabilitiesType,
 			newEntitlementAccess(
+				[]Type{CapabilitiesType, StorageCapabilitiesType, IssueStorageCapabilityControllerType},
+				Disjunction,
+			),
+			Account_StorageCapabilitiesTypeIssueWithTypeFunctionName,
+			Account_StorageCapabilitiesTypeIssueWithTypeFunctionType,
+			Account_StorageCapabilitiesTypeIssueWithTypeFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			Account_StorageCapabilitiesType,
+			newEntitlementAccess(
 				[]Type{CapabilitiesType, StorageCapabilitiesType, GetStorageCapabilityControllerType},
 				Disjunction,
 			),
@@ -1657,6 +1689,25 @@ var Account_AccountCapabilitiesTypeIssueFunctionType = &FunctionType{
 }
 
 const Account_AccountCapabilitiesTypeIssueFunctionDocString = `
+Issue/create a new account capability.
+`
+
+const Account_AccountCapabilitiesTypeIssueWithTypeFunctionName = "issueWithType"
+
+var Account_AccountCapabilitiesTypeIssueWithTypeFunctionType = &FunctionType{
+	Parameters: []Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "type",
+			TypeAnnotation: NewTypeAnnotation(MetaType),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&CapabilityType{},
+	),
+}
+
+const Account_AccountCapabilitiesTypeIssueWithTypeFunctionDocString = `
 Issue/create a new account capability.
 `
 
@@ -1767,6 +1818,16 @@ func init() {
 			Account_AccountCapabilitiesTypeIssueFunctionName,
 			Account_AccountCapabilitiesTypeIssueFunctionType,
 			Account_AccountCapabilitiesTypeIssueFunctionDocString,
+		),
+		NewUnmeteredFunctionMember(
+			Account_AccountCapabilitiesType,
+			newEntitlementAccess(
+				[]Type{CapabilitiesType, AccountCapabilitiesType, IssueAccountCapabilityControllerType},
+				Disjunction,
+			),
+			Account_AccountCapabilitiesTypeIssueWithTypeFunctionName,
+			Account_AccountCapabilitiesTypeIssueWithTypeFunctionType,
+			Account_AccountCapabilitiesTypeIssueWithTypeFunctionDocString,
 		),
 		NewUnmeteredFunctionMember(
 			Account_AccountCapabilitiesType,

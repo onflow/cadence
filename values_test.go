@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -221,6 +221,14 @@ func newValueTestCases() map[string]valueTestCase {
 			},
 			string: "{\"key\": \"value\"}",
 		},
+		"InclusiveRange": {
+			value:       NewInclusiveRange(NewInt(85), NewInt(-85), NewInt(-2)),
+			exampleType: NewInclusiveRangeType(IntType),
+			withType: func(value Value, ty Type) Value {
+				return value.(*InclusiveRange).WithType(ty.(*InclusiveRangeType))
+			},
+			string: "InclusiveRange<Int>(start: 85, end: -85, step: -2)",
+		},
 		"Bytes": {
 			value:        NewBytes([]byte{0x1, 0x2}),
 			string:       "[0x1, 0x2]",
@@ -233,16 +241,17 @@ func newValueTestCases() map[string]valueTestCase {
 		},
 		"struct": {
 			value: NewStruct([]Value{String("bar")}),
-			exampleType: &StructType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooStruct",
-				Fields: []Field{
+			exampleType: NewStructType(
+				utils.TestLocation,
+				"FooStruct",
+				[]Field{
 					{
 						Identifier: "y",
 						Type:       StringType,
 					},
 				},
-			},
+				nil,
+			),
 			withType: func(value Value, ty Type) Value {
 				return value.(Struct).WithType(ty.(*StructType))
 			},
@@ -250,16 +259,17 @@ func newValueTestCases() map[string]valueTestCase {
 		},
 		"resource": {
 			value: NewResource([]Value{NewInt(1)}),
-			exampleType: &ResourceType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooResource",
-				Fields: []Field{
+			exampleType: NewResourceType(
+				utils.TestLocation,
+				"FooResource",
+				[]Field{
 					{
 						Identifier: "bar",
 						Type:       IntType,
 					},
 				},
-			},
+				nil,
+			),
 			withType: func(value Value, ty Type) Value {
 				return value.(Resource).WithType(ty.(*ResourceType))
 			},
@@ -272,10 +282,10 @@ func newValueTestCases() map[string]valueTestCase {
 					String("foo"),
 				},
 			),
-			exampleType: &EventType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooEvent",
-				Fields: []Field{
+			exampleType: NewEventType(
+				utils.TestLocation,
+				"FooEvent",
+				[]Field{
 					{
 						Identifier: "a",
 						Type:       IntType,
@@ -285,7 +295,8 @@ func newValueTestCases() map[string]valueTestCase {
 						Type:       StringType,
 					},
 				},
-			},
+				nil,
+			),
 			withType: func(value Value, ty Type) Value {
 				return value.(Event).WithType(ty.(*EventType))
 			},
@@ -293,16 +304,17 @@ func newValueTestCases() map[string]valueTestCase {
 		},
 		"contract": {
 			value: NewContract([]Value{String("bar")}),
-			exampleType: &ContractType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooContract",
-				Fields: []Field{
+			exampleType: NewContractType(
+				utils.TestLocation,
+				"FooContract",
+				[]Field{
 					{
 						Identifier: "y",
 						Type:       StringType,
 					},
 				},
-			},
+				nil,
+			),
 			withType: func(value Value, ty Type) Value {
 				return value.(Contract).WithType(ty.(*ContractType))
 			},
@@ -310,16 +322,18 @@ func newValueTestCases() map[string]valueTestCase {
 		},
 		"enum": {
 			value: NewEnum([]Value{UInt8(1)}),
-			exampleType: &EnumType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooEnum",
-				Fields: []Field{
+			exampleType: NewEnumType(
+				utils.TestLocation,
+				"FooEnum",
+				nil,
+				[]Field{
 					{
 						Identifier: sema.EnumRawValueFieldName,
 						Type:       UInt8Type,
 					},
 				},
-			},
+				nil,
+			),
 			withType: func(value Value, ty Type) Value {
 				return value.(Enum).WithType(ty.(*EnumType))
 			},
@@ -327,16 +341,18 @@ func newValueTestCases() map[string]valueTestCase {
 		},
 		"attachment": {
 			value: NewAttachment([]Value{NewInt(1)}),
-			exampleType: &AttachmentType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooAttachment",
-				Fields: []Field{
+			exampleType: NewAttachmentType(
+				utils.TestLocation,
+				"FooAttachment",
+				nil,
+				[]Field{
 					{
 						Identifier: "bar",
 						Type:       IntType,
 					},
 				},
-			},
+				nil,
+			),
 			withType: func(value Value, ty Type) Value {
 				return value.(Attachment).WithType(ty.(*AttachmentType))
 			},
@@ -370,6 +386,30 @@ func newValueTestCases() map[string]valueTestCase {
 			value:        TypeValue{StaticType: IntType},
 			expectedType: MetaType,
 			string:       "Type<Int>()",
+		},
+		"Capability (Path)": {
+			value: NewDeprecatedPathCapability(
+				BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				Path{
+					Domain:     common.PathDomainPublic,
+					Identifier: "foo",
+				},
+				StringType,
+			),
+			expectedType: NewCapabilityType(StringType),
+			string:       "Capability<String>(address: 0x0000000102030405, path: /public/foo)",
+		},
+		"Capability (Path, no borrow type)": {
+			value: NewDeprecatedPathCapability(
+				BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				Path{
+					Domain:     common.PathDomainPublic,
+					Identifier: "foo",
+				},
+				nil,
+			),
+			expectedType: NewCapabilityType(nil),
+			string:       "Capability(address: 0x0000000102030405, path: /public/foo)",
 		},
 		"Capability (ID)": {
 			value: NewCapability(
@@ -634,7 +674,7 @@ func TestNumberValue_ToBigEndianBytes(t *testing.T) {
 	for _, integerType := range sema.AllNumberTypes {
 		switch integerType {
 		case sema.NumberType, sema.SignedNumberType,
-			sema.IntegerType, sema.SignedIntegerType,
+			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
@@ -879,7 +919,7 @@ func TestValue_Type(t *testing.T) {
 	}
 }
 
-func TestValue_HasFields(t *testing.T) {
+func TestComposite(t *testing.T) {
 	t.Parallel()
 
 	test := func(name string, testCase valueTestCase) {
@@ -889,14 +929,14 @@ func TestValue_HasFields(t *testing.T) {
 			switch value.(type) {
 			case Event, Struct, Contract, Enum, Resource, Attachment:
 				valueWithType := testCase.withType(value, testCase.exampleType)
-				assert.Implements(t, (*HasFields)(nil), valueWithType)
-				fieldedValueWithType := valueWithType.(HasFields)
-				assert.NotNil(t, fieldedValueWithType.GetFieldValues())
-				assert.NotNil(t, fieldedValueWithType.GetFields())
+				require.Implements(t, (*Composite)(nil), valueWithType)
+				fieldedValueWithType := valueWithType.(Composite)
+				assert.NotNil(t, fieldedValueWithType.getFieldValues())
+				assert.NotNil(t, fieldedValueWithType.getFields())
 
-				fieldedValue := value.(HasFields)
+				fieldedValue := value.(Composite)
 
-				assert.Nil(t, fieldedValue.GetFields())
+				assert.Nil(t, fieldedValue.getFields())
 			}
 		})
 
@@ -916,13 +956,13 @@ func TestEvent_GetFieldByName(t *testing.T) {
 			String("foo"),
 		},
 	)
-	assert.Nil(t, GetFieldsMappedByName(simpleEvent))
-	assert.Nil(t, GetFieldByName(simpleEvent, "a"))
+	assert.Nil(t, FieldsMappedByName(simpleEvent))
+	assert.Nil(t, SearchFieldByName(simpleEvent, "a"))
 
-	simpleEventWithType := simpleEvent.WithType(&EventType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "SimpleEvent",
-		Fields: []Field{
+	simpleEventWithType := simpleEvent.WithType(NewEventType(
+		utils.TestLocation,
+		"SimpleEvent",
+		[]Field{
 			{
 				Identifier: "a",
 				Type:       IntType,
@@ -932,14 +972,18 @@ func TestEvent_GetFieldByName(t *testing.T) {
 				Type:       StringType,
 			},
 		},
-	})
+		nil,
+	))
 
-	assert.Equal(t, NewInt(1), GetFieldByName(simpleEventWithType, "a").(Int))
-	assert.Equal(t, String("foo"), GetFieldByName(simpleEventWithType, "b").(String))
-	assert.Nil(t, GetFieldByName(simpleEventWithType, "c"))
+	assert.Equal(t, NewInt(1), SearchFieldByName(simpleEventWithType, "a"))
+	assert.Equal(t, String("foo"), SearchFieldByName(simpleEventWithType, "b"))
+	assert.Nil(t, SearchFieldByName(simpleEventWithType, "c"))
 
-	assert.Equal(t, map[string]Value{
-		"a": NewInt(1),
-		"b": String("foo"),
-	}, GetFieldsMappedByName(simpleEventWithType))
+	assert.Equal(t,
+		map[string]Value{
+			"a": NewInt(1),
+			"b": String("foo"),
+		},
+		FieldsMappedByName(simpleEventWithType),
+	)
 }

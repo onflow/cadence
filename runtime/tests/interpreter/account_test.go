@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -373,6 +373,19 @@ func (t *testAccountHandler) GetAccountContractNames(address common.Address) ([]
 	return t.getAccountContractNames(address)
 }
 
+func (t *testAccountHandler) StartContractAddition(common.AddressLocation) {
+	// NO-OP
+}
+
+func (t *testAccountHandler) EndContractAddition(common.AddressLocation) {
+	// NO-OP
+}
+
+func (t *testAccountHandler) IsContractBeingAdded(common.AddressLocation) bool {
+	// NO-OP
+	return false
+}
+
 func testAccountWithErrorHandler(
 	t *testing.T,
 	address interpreter.AddressValue,
@@ -397,6 +410,7 @@ func testAccountWithErrorHandler(
 			interpreter.FullyEntitledAccountAccess,
 			account,
 			sema.AccountType,
+			interpreter.EmptyLocationRange,
 		),
 		Kind: common.DeclarationKindConstant,
 	}
@@ -412,6 +426,7 @@ func testAccountWithErrorHandler(
 			interpreter.UnauthorizedAccess,
 			account,
 			sema.AccountType,
+			interpreter.EmptyLocationRange,
 		),
 		Kind: common.DeclarationKindConstant,
 	}
@@ -429,14 +444,17 @@ func testAccountWithErrorHandler(
 	accountValueDeclaration.Name = "account"
 	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
-	if checkerConfig.BaseValueActivation == nil {
-		checkerConfig.BaseValueActivation = sema.BaseValueActivation
-	}
-	baseValueActivation := sema.NewVariableActivation(checkerConfig.BaseValueActivation)
+	valueDeclarations = append(valueDeclarations, stdlib.InclusiveRangeConstructorFunction)
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	for _, valueDeclaration := range valueDeclarations {
 		baseValueActivation.DeclareValue(valueDeclaration)
 	}
-	checkerConfig.BaseValueActivation = baseValueActivation
+
+	require.Nil(t, checkerConfig.BaseValueActivationHandler)
+	checkerConfig.BaseValueActivationHandler = func(_ common.Location) *sema.VariableActivation {
+		return baseValueActivation
+	}
 
 	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	for _, valueDeclaration := range valueDeclarations {
@@ -448,11 +466,12 @@ func testAccountWithErrorHandler(
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &checkerConfig,
 			Config: &interpreter.Config{
-				BaseActivation:                       baseActivation,
-				ContractValueHandler:                 makeContractValueHandler(nil, nil, nil),
-				InvalidatedResourceValidationEnabled: true,
-				AccountHandler: func(address interpreter.AddressValue) interpreter.Value {
-					return stdlib.NewAccountValue(nil, nil, address)
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+				ContractValueHandler: makeContractValueHandler(nil, nil, nil),
+				AccountHandler: func(inter *interpreter.Interpreter, address interpreter.AddressValue) interpreter.Value {
+					return stdlib.NewAccountValue(inter, nil, address)
 				},
 			},
 			HandleCheckerError: checkerErrorHandler,

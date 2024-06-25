@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -281,7 +281,7 @@ func TestCheckInterfaceUse(t *testing.T) {
 			body = "()"
 		}
 
-		annotationType := AsInterfaceType("Test", kind)
+		annotationType := "{Test}"
 
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -320,7 +320,7 @@ func TestCheckInterfaceConformanceNoRequirements(t *testing.T) {
 			body = "()"
 		}
 
-		annotationType := AsInterfaceType("Test", compositeKind)
+		annotationType := "{Test}"
 
 		var useCode string
 		if compositeKind != common.CompositeKindContract {
@@ -386,7 +386,7 @@ func TestCheckInvalidInterfaceConformanceIncompatibleCompositeKinds(t *testing.T
 				secondBody = "()"
 			}
 
-			firstKindInterfaceType := AsInterfaceType("Test", firstKind)
+			firstKindInterfaceType := "{Test}"
 
 			// NOTE: type mismatch is only tested when both kinds are not contracts
 			// (which can not be passed by value)
@@ -455,7 +455,7 @@ func TestCheckInvalidInterfaceConformanceUndeclared(t *testing.T) {
 			continue
 		}
 
-		interfaceType := AsInterfaceType("Test", compositeKind)
+		interfaceType := "{Test}"
 
 		var useCode string
 		if compositeKind != common.CompositeKindContract {
@@ -557,7 +557,7 @@ func TestCheckInterfaceFieldUse(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			interfaceType := AsInterfaceType("Test", compositeKind)
+			interfaceType := "{Test}"
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
@@ -602,7 +602,7 @@ func TestCheckInvalidInterfaceUndeclaredFieldUse(t *testing.T) {
 			continue
 		}
 
-		interfaceType := AsInterfaceType("Test", compositeKind)
+		interfaceType := "{Test}"
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
@@ -648,7 +648,7 @@ func TestCheckInterfaceFunctionUse(t *testing.T) {
 		if compositeKind != common.CompositeKindContract {
 			identifier = "test"
 
-			interfaceType := AsInterfaceType("Test", compositeKind)
+			interfaceType := "{Test}"
 
 			setupCode = fmt.Sprintf(
 				`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -704,7 +704,7 @@ func TestCheckInvalidInterfaceUndeclaredFunctionUse(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			interfaceType := AsInterfaceType("Test", compositeKind)
+			interfaceType := "{Test}"
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
@@ -1695,6 +1695,13 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
 
+	config := &sema.Config{
+		AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+		BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+			return baseValueActivation
+		},
+	}
+
 	b.ReportAllocs()
 	b.ResetTimer()
 
@@ -1703,10 +1710,7 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 			program,
 			TestLocation,
 			nil,
-			&sema.Config{
-				AccessCheckMode:     sema.AccessCheckModeNotSpecifiedUnrestricted,
-				BaseValueActivation: baseValueActivation,
-			},
+			config,
 		)
 		if err != nil {
 			b.Fatal(err)
@@ -1894,9 +1898,7 @@ func TestCheckMultipleInterfaceSingleInterfaceDefaultImplementation(t *testing.T
           }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.DefaultFunctionConflictError{}, errs[0])
+		require.NoError(t, err)
 	})
 }
 
@@ -3017,12 +3019,28 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		require.NoError(t, err)
+	})
 
-		memberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, "hello", memberConflictError.MemberName)
-		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
+	t.Run("default impl in child, declaration in parent, concrete type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct interface A {
+                access(all) fun hello()
+            }
+
+            struct interface B: A {
+                access(all) fun hello() {
+                    var a = 1
+                }
+            }
+
+            struct C: B {}
+        `)
+
+		require.NoError(t, err)
 	})
 
 	t.Run("default impl in both", func(t *testing.T) {
@@ -3073,7 +3091,7 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             }
         `)
 
-		errs := RequireCheckerErrors(t, err, 3)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		memberConflictError := &sema.InterfaceMemberConflictError{}
 		require.ErrorAs(t, errs[0], &memberConflictError)
@@ -3082,11 +3100,6 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
 		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
 
 		require.ErrorAs(t, errs[1], &memberConflictError)
-		assert.Equal(t, "C", memberConflictError.InterfaceType.QualifiedIdentifier())
-		assert.Equal(t, "hello", memberConflictError.MemberName)
-		assert.Equal(t, "B", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
-
-		require.ErrorAs(t, errs[2], &memberConflictError)
 		assert.Equal(t, "C", memberConflictError.InterfaceType.QualifiedIdentifier())
 		assert.Equal(t, "hello", memberConflictError.MemberName)
 		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
@@ -3360,13 +3373,7 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             struct interface D: A, B, C {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-
-		memberConflictError := &sema.InterfaceMemberConflictError{}
-		require.ErrorAs(t, errs[0], &memberConflictError)
-		assert.Equal(t, "hello", memberConflictError.MemberName)
-		assert.Equal(t, "A", memberConflictError.ConflictingInterfaceType.QualifiedIdentifier())
-		assert.Equal(t, "C", memberConflictError.InterfaceType.QualifiedIdentifier())
+		require.NoError(t, err)
 	})
 
 	t.Run("all three formats of function, concrete type", func(t *testing.T) {
@@ -3393,10 +3400,7 @@ func TestCheckInterfaceDefaultMethodsInheritance(t *testing.T) {
             struct D: A, B, C {}
         `)
 
-		errs := RequireCheckerErrors(t, err, 1)
-
-		defaultFunctionConflictError := &sema.DefaultFunctionConflictError{}
-		require.ErrorAs(t, errs[0], &defaultFunctionConflictError)
+		require.NoError(t, err)
 	})
 }
 
@@ -3693,7 +3697,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
             contract S: B {}
 
-            fun foo(a: [S]): [A] {
+            fun foo(a: [S]): [{A}] {
                 return a   // must be covariant
             }
         `)
@@ -3712,7 +3716,7 @@ func TestCheckInheritedInterfacesSubtyping(t *testing.T) {
 
             contract S: B {}
 
-            fun foo(a: [B]): [A] {
+            fun foo(a: [{B}]): [{A}] {
                 return a  // must be covariant
             }
         `)

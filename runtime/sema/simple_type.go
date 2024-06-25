@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,6 @@ type ValueIndexingInfo struct {
 // SimpleType represents a simple nominal type.
 type SimpleType struct {
 	ValueIndexingInfo   ValueIndexingInfo
-	IsSuperTypeOf       func(subType Type) bool
 	NestedTypes         *StringTypeOrderedMap
 	memberResolvers     map[string]MemberResolver
 	Members             func(*SimpleType) map[string]MemberResolver
@@ -49,6 +48,7 @@ type SimpleType struct {
 	Equatable           bool
 	Comparable          bool
 	Storable            bool
+	Primitive           bool
 	IsResource          bool
 	ContainFields       bool
 }
@@ -83,8 +83,16 @@ func (t *SimpleType) IsResourceType() bool {
 	return t.IsResource
 }
 
+func (t *SimpleType) IsPrimitiveType() bool {
+	return t.Primitive
+}
+
 func (t *SimpleType) IsInvalidType() bool {
 	return t == InvalidType
+}
+
+func (*SimpleType) IsOrContainsReferenceType() bool {
+	return false
 }
 
 func (t *SimpleType) IsStorable(_ map[*Member]bool) bool {
@@ -119,7 +127,13 @@ func (t *SimpleType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
-func (*SimpleType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*SimpleType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -176,4 +190,8 @@ func (t *SimpleType) CompositeKind() common.CompositeKind {
 	} else {
 		return common.CompositeKindStructure
 	}
+}
+
+func (t *SimpleType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }

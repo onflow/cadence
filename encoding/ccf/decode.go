@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"math"
 	"math/big"
 	goRuntime "runtime"
+	_ "unsafe"
 
 	"github.com/fxamacker/cbor/v2"
 
@@ -143,6 +144,9 @@ type DecOptions struct {
 	// EnforceSortIntersectionTypes specifies how decoder should enforce sort order of restricted types.
 	EnforceSortIntersectionTypes EnforceSortMode
 
+	// EnforceSortEntitlementTypes specifies how decoder should enforce sort order of entitlement types.
+	EnforceSortEntitlementTypes EnforceSortMode
+
 	// CBORDecMode will default to defaultCBORDecMode if nil.  The decoding mode contains
 	// immutable decoding options (cbor.DecOptions) and is safe for concurrent use.
 	CBORDecMode cbor.DecMode
@@ -151,15 +155,17 @@ type DecOptions struct {
 // EventsDecMode is CCF decoding mode for events which contains
 // immutable CCF decoding options.  It is safe for concurrent use.
 var EventsDecMode = &decMode{
-	enforceSortCompositeFields: EnforceSortNone,
-	enforceSortRestrictedTypes: EnforceSortNone,
-	cborDecMode:                defaultCBORDecMode,
+	enforceSortCompositeFields:  EnforceSortNone,
+	enforceSortRestrictedTypes:  EnforceSortNone,
+	enforceSortEntitlementTypes: EnforceSortNone,
+	cborDecMode:                 defaultCBORDecMode,
 }
 
 type decMode struct {
-	enforceSortCompositeFields EnforceSortMode
-	enforceSortRestrictedTypes EnforceSortMode
-	cborDecMode                cbor.DecMode
+	enforceSortCompositeFields  EnforceSortMode
+	enforceSortRestrictedTypes  EnforceSortMode
+	enforceSortEntitlementTypes EnforceSortMode
+	cborDecMode                 cbor.DecMode
 }
 
 // DecMode returns CCF decoding mode which contains immutable decoding options.
@@ -168,16 +174,23 @@ func (opts DecOptions) DecMode() (DecMode, error) {
 	if !opts.EnforceSortCompositeFields.valid() {
 		return nil, fmt.Errorf("ccf: invalid EnforceSortCompositeFields %d", opts.EnforceSortCompositeFields)
 	}
+
 	if !opts.EnforceSortIntersectionTypes.valid() {
 		return nil, fmt.Errorf("ccf: invalid EnforceSortRestrictedTypes %d", opts.EnforceSortIntersectionTypes)
 	}
+
+	if !opts.EnforceSortEntitlementTypes.valid() {
+		return nil, fmt.Errorf("ccf: invalid EnforceSortEntitlementTypes %d", opts.EnforceSortEntitlementTypes)
+	}
+
 	if opts.CBORDecMode == nil {
 		opts.CBORDecMode = defaultCBORDecMode
 	}
 	return &decMode{
-		enforceSortCompositeFields: opts.EnforceSortCompositeFields,
-		enforceSortRestrictedTypes: opts.EnforceSortIntersectionTypes,
-		cborDecMode:                opts.CBORDecMode,
+		enforceSortCompositeFields:  opts.EnforceSortCompositeFields,
+		enforceSortRestrictedTypes:  opts.EnforceSortIntersectionTypes,
+		enforceSortEntitlementTypes: opts.EnforceSortEntitlementTypes,
+		cborDecMode:                 opts.CBORDecMode,
 	}, nil
 }
 
@@ -358,6 +371,7 @@ func (d *Decoder) decodeTypeAndValue(types *cadenceTypeByCCFTypeID) (cadence.Val
 //	/ path-value
 //	/ path-capability-value
 //	/ id-capability-value
+//	/ inclusiverange-value
 //	/ function-value
 //	/ type-value
 //
@@ -545,9 +559,15 @@ func (d *Decoder) decodeValue(t cadence.Type, types *cadenceTypeByCCFTypeID) (ca
 	case *cadence.EnumType:
 		return d.decodeEnum(t, types)
 
+	case *cadence.AttachmentType:
+		return d.decodeAttachment(t, types)
+
 	case *cadence.ReferenceType:
 		// When static type is a reference type, encoded value is its deferenced type.
 		return d.decodeValue(t.Type, types)
+
+	case *cadence.InclusiveRangeType:
+		return d.decodeInclusiveRange(t, types)
 
 	default:
 		nt, err := d.dec.NextType()
@@ -1191,11 +1211,17 @@ func (d *Decoder) decodeComposite(fieldTypes []cadence.Field, types *cadenceType
 	return fieldValues, nil
 }
 
+//go:linkname getCompositeTypeFields github.com/onflow/cadence.getCompositeTypeFields
+func getCompositeTypeFields(cadence.CompositeType) []cadence.Field
+
+//go:linkname getInterfaceTypeFields github.com/onflow/cadence.getInterfaceTypeFields
+func getInterfaceTypeFields(cadence.InterfaceType) []cadence.Field
+
 // decodeStruct decodes encoded composite-value as
 // language=CDDL
 // composite-value = [* (field: value)]
 func (d *Decoder) decodeStruct(typ *cadence.StructType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
-	fieldValues, err := d.decodeComposite(typ.Fields, types)
+	fieldValues, err := d.decodeComposite(getCompositeTypeFields(typ), types)
 	if err != nil {
 		return nil, err
 	}
@@ -1219,7 +1245,7 @@ func (d *Decoder) decodeStruct(typ *cadence.StructType, types *cadenceTypeByCCFT
 // language=CDDL
 // composite-value = [* (field: value)]
 func (d *Decoder) decodeResource(typ *cadence.ResourceType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
-	fieldValues, err := d.decodeComposite(typ.Fields, types)
+	fieldValues, err := d.decodeComposite(getCompositeTypeFields(typ), types)
 	if err != nil {
 		return nil, err
 	}
@@ -1243,7 +1269,7 @@ func (d *Decoder) decodeResource(typ *cadence.ResourceType, types *cadenceTypeBy
 // language=CDDL
 // composite-value = [* (field: value)]
 func (d *Decoder) decodeEvent(typ *cadence.EventType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
-	fieldValues, err := d.decodeComposite(typ.Fields, types)
+	fieldValues, err := d.decodeComposite(getCompositeTypeFields(typ), types)
 	if err != nil {
 		return nil, err
 	}
@@ -1267,7 +1293,7 @@ func (d *Decoder) decodeEvent(typ *cadence.EventType, types *cadenceTypeByCCFTyp
 // language=CDDL
 // composite-value = [* (field: value)]
 func (d *Decoder) decodeContract(typ *cadence.ContractType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
-	fieldValues, err := d.decodeComposite(typ.Fields, types)
+	fieldValues, err := d.decodeComposite(getCompositeTypeFields(typ), types)
 	if err != nil {
 		return nil, err
 	}
@@ -1291,7 +1317,7 @@ func (d *Decoder) decodeContract(typ *cadence.ContractType, types *cadenceTypeBy
 // language=CDDL
 // composite-value = [* (field: value)]
 func (d *Decoder) decodeEnum(typ *cadence.EnumType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
-	fieldValues, err := d.decodeComposite(typ.Fields, types)
+	fieldValues, err := d.decodeComposite(getCompositeTypeFields(typ), types)
 	if err != nil {
 		return nil, err
 	}
@@ -1308,6 +1334,76 @@ func (d *Decoder) decodeEnum(typ *cadence.EnumType, types *cadenceTypeByCCFTypeI
 	}
 
 	// typ is already metered at creation.
+	return v.WithType(typ), nil
+}
+
+// decodeAttachment decodes encoded composite-value as
+// language=CDDL
+// composite-value = [* (field: value)]
+func (d *Decoder) decodeAttachment(typ *cadence.AttachmentType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
+	fieldValues, err := d.decodeComposite(getCompositeTypeFields(typ), types)
+	if err != nil {
+		return nil, err
+	}
+
+	v, err := cadence.NewMeteredAttachment(
+		d.gauge,
+		len(fieldValues),
+		func() ([]cadence.Value, error) {
+			return fieldValues, nil
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// typ is already metered at creation.
+	return v.WithType(typ), nil
+}
+
+// decodeInclusiveRange decodes encoded inclusiverange-value as
+// language=CDDL
+// inclusiverange-value = [
+//
+//	start: value,
+//	end: value,
+//	step: value,
+//
+// ]
+func (d *Decoder) decodeInclusiveRange(typ *cadence.InclusiveRangeType, types *cadenceTypeByCCFTypeID) (cadence.Value, error) {
+	// Decode array head of length 3.
+	err := decodeCBORArrayWithKnownSize(d.dec, 3)
+	if err != nil {
+		return nil, err
+	}
+
+	elementType := typ.ElementType
+
+	// Decode start.
+	start, err := d.decodeValue(elementType, types)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode end.
+	end, err := d.decodeValue(elementType, types)
+	if err != nil {
+		return nil, err
+	}
+
+	// Decode step.
+	step, err := d.decodeValue(elementType, types)
+	if err != nil {
+		return nil, err
+	}
+
+	v := cadence.NewMeteredInclusiveRange(
+		d.gauge,
+		start,
+		end,
+		step,
+	)
+
 	return v.WithType(typ), nil
 }
 
@@ -1423,11 +1519,13 @@ func (d *Decoder) decodeCapability(typ *cadence.CapabilityType, types *cadenceTy
 //	/ varsized-array-type-value
 //	/ constsized-array-type-value
 //	/ dict-type-value
+//	/ inclusiverange-type-value
 //	/ struct-type-value
 //	/ resource-type-value
 //	/ contract-type-value
 //	/ event-type-value
 //	/ enum-type-value
+//	/ attachment-type-value
 //	/ struct-interface-type-value
 //	/ resource-interface-type-value
 //	/ contract-interface-type-value
@@ -1463,11 +1561,14 @@ func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type
 	case CBORTagDictTypeValue:
 		return d.decodeDictType(visited, d.decodeTypeValue)
 
+	case CBORTagInclusiveRangeTypeValue:
+		return d.decodeInclusiveRangeType(visited, d.decodeTypeValue)
+
 	case CBORTagCapabilityTypeValue:
 		return d.decodeCapabilityType(visited, d.decodeNullableTypeValue)
 
 	case CBORTagReferenceTypeValue:
-		return d.decodeReferenceType(visited, d.decodeTypeValue)
+		return d.decodeReferenceType(visited, d.decodeTypeValue, false)
 
 	case CBORTagIntersectionTypeValue:
 		return d.decodeIntersectionType(visited, d.decodeTypeValue)
@@ -1489,6 +1590,9 @@ func (d *Decoder) decodeTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type
 
 	case CBORTagEnumTypeValue:
 		return d.decodeEnumTypeValue(visited)
+
+	case CBORTagAttachmentTypeValue:
+		return d.decodeAttachmentTypeValue(visited)
 
 	case CBORTagStructInterfaceTypeValue:
 		return d.decodeStructInterfaceTypeValue(visited)
@@ -1665,6 +1769,34 @@ func (d *Decoder) decodeEnumTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.
 	return d.decodeCompositeTypeValue(visited, ctr)
 }
 
+// decodeAttachmentTypeValue decodes attachment-type-value as
+// language=CDDL
+// attachment-type-value =
+//
+//	; cbor-tag-attachment-type-value
+//	#6.213(composite-type-value)
+func (d *Decoder) decodeAttachmentTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type, error) {
+	ctr := func(
+		location common.Location,
+		qualifiedIdentifier string,
+		typ cadence.Type,
+	) (cadence.Type, error) {
+		if typ == nil {
+			return nil, fmt.Errorf("encoded attachment-type-value has nil base type")
+		}
+		return cadence.NewMeteredAttachmentType(
+			d.gauge,
+			location,
+			qualifiedIdentifier,
+			typ,
+			nil,
+			nil,
+		), nil
+	}
+
+	return d.decodeCompositeTypeValue(visited, ctr)
+}
+
 // decodeStructInterfaceTypeValue decodes struct-inteface-type-value as
 // language=CDDL
 // struct-interface-type-value =
@@ -1769,6 +1901,12 @@ type compositeTypeValue struct {
 	rawInitializers []byte
 }
 
+//go:linkname setCompositeTypeFields github.com/onflow/cadence.setCompositeTypeFields
+func setCompositeTypeFields(cadence.CompositeType, []cadence.Field)
+
+//go:linkname setInterfaceTypeFields github.com/onflow/cadence.setInterfaceTypeFields
+func setInterfaceTypeFields(cadence.InterfaceType, []cadence.Field)
+
 // decodeCompositeTypeValue decodes composite-type-value.
 // See _decodeCompositeTypeValue for details.
 func (d *Decoder) decodeCompositeTypeValue(
@@ -1792,16 +1930,6 @@ func (d *Decoder) decodeCompositeTypeValue(
 	if compositeType == nil {
 		// Sanity check that compositeType isn't nil.
 		return nil, errors.New("unexpected nil composite type value")
-	}
-
-	// "Deterministic CCF Encoding Requirements" in CCF specs:
-	//
-	//   "composite-type-value.id MUST be identical to the zero-based encoding order type-value."
-	if compTypeValue.ccfID != newCCFTypeIDFromUint64(uint64(visited.count())) {
-		return nil, fmt.Errorf(
-			"encoded composite-type-value's CCF type ID %d doesn't match zero-based encoding order composite-type-value",
-			compTypeValue.ccfID,
-		)
 	}
 
 	newType := visited.add(compTypeValue.ccfID, compositeType)
@@ -1828,11 +1956,11 @@ func (d *Decoder) decodeCompositeTypeValue(
 
 	switch compositeType := compositeType.(type) {
 	case *cadence.StructType:
-		compositeType.Fields = fields
+		setCompositeTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 
 	case *cadence.ResourceType:
-		compositeType.Fields = fields
+		setCompositeTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 
 	case *cadence.EventType:
@@ -1842,27 +1970,31 @@ func (d *Decoder) decodeCompositeTypeValue(
 				len(initializers),
 			)
 		}
-		compositeType.Fields = fields
+		setCompositeTypeFields(compositeType, fields)
 		compositeType.Initializer = initializers[0]
 
 	case *cadence.ContractType:
-		compositeType.Fields = fields
+		setCompositeTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 
 	case *cadence.EnumType:
-		compositeType.Fields = fields
+		setCompositeTypeFields(compositeType, fields)
+		compositeType.Initializers = initializers
+
+	case *cadence.AttachmentType:
+		setCompositeTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 
 	case *cadence.StructInterfaceType:
-		compositeType.Fields = fields
+		setInterfaceTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 
 	case *cadence.ResourceInterfaceType:
-		compositeType.Fields = fields
+		setInterfaceTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 
 	case *cadence.ContractInterfaceType:
-		compositeType.Fields = fields
+		setInterfaceTypeFields(compositeType, fields)
 		compositeType.Initializers = initializers
 	}
 
@@ -1906,6 +2038,18 @@ func (d *Decoder) _decodeCompositeTypeValue(visited *cadenceTypeByCCFTypeID) (*c
 	if err != nil {
 		return nil, err
 	}
+
+	// "Deterministic CCF Encoding Requirements" in CCF specs:
+	//
+	//   "composite-type-value.id MUST be identical to the zero-based encoding order type-value."
+	if !visited.isNextCCFTypeID(ccfID) {
+		return nil, fmt.Errorf(
+			"encoded composite-type-value's CCF type ID %d doesn't match zero-based encoding order composite-type-value",
+			ccfID,
+		)
+	}
+
+	visited.addCCFTypeID(ccfID)
 
 	// element 1: cadence-type-id
 	_, location, identifier, err := d.decodeCadenceTypeID()
@@ -2155,6 +2299,11 @@ func (d *Decoder) decodeParameterTypeValue(visited *cadenceTypeByCCFTypeID) (cad
 	return cadence.NewParameter(label, identifier, t), nil
 }
 
+const (
+	functionTypeArrayCount           = 3
+	functionTypeWithPurityArrayCount = 4
+)
+
 // decodeFunctionTypeValue decodes encoded function-value as
 // language=CDDL
 // function-value = [
@@ -2173,13 +2322,18 @@ func (d *Decoder) decodeParameterTypeValue(visited *cadenceTypeByCCFTypeID) (cad
 //	    ]
 //	]
 //	return-type: type-value
+//	purity: int (optional)
 //
 // ]
 func (d *Decoder) decodeFunctionTypeValue(visited *cadenceTypeByCCFTypeID) (cadence.Type, error) {
-	// Decode array head of length 3
-	err := decodeCBORArrayWithKnownSize(d.dec, 3)
+	// Decode array head for element count
+	c, err := d.dec.DecodeArrayHead()
 	if err != nil {
 		return nil, err
+	}
+
+	if c != functionTypeArrayCount && c != functionTypeWithPurityArrayCount {
+		return nil, fmt.Errorf("CBOR array of function-value has %d elements (expected 3 or 4 elements)", c)
 	}
 
 	// element 0: type parameters
@@ -2204,8 +2358,20 @@ func (d *Decoder) decodeFunctionTypeValue(visited *cadenceTypeByCCFTypeID) (cade
 		return nil, errors.New("unexpected nil function return type")
 	}
 
-	// TODO:
 	purity := cadence.FunctionPurityUnspecified
+
+	// optional element 3: purity
+	if c == functionTypeWithPurityArrayCount {
+		rawPurity, err := d.dec.DecodeInt64()
+		if err != nil {
+			return nil, err
+		}
+
+		purity, err = cadence.NewFunctionaryPurity(int(rawPurity))
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return cadence.NewMeteredFunctionType(
 		d.gauge,

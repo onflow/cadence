@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,7 @@ type rawFieldsWithCCFTypeID struct {
 //		  / contract-type
 //		  / event-type
 //		  / enum-type
+//		  / attachment-type
 //		  / struct-interface-type
 //		  / resource-interface-type
 //		  / contract-interface-type
@@ -132,7 +133,7 @@ func (d *Decoder) decodeTypeDefs() (*cadenceTypeByCCFTypeID, error) {
 
 		switch typ := typ.(type) {
 		case cadence.CompositeType:
-			typ.SetCompositeFields(fields)
+			setCompositeTypeFields(typ, fields)
 
 		default:
 			return nil, fmt.Errorf("unsupported type %s (%T) in composite-typedef", typ.ID(), typ)
@@ -168,6 +169,11 @@ func (d *Decoder) decodeTypeDefs() (*cadenceTypeByCCFTypeID, error) {
 //
 //	; cbor-tag-enum-type
 //	#6.164(composite-type)
+//
+// attachment-type =
+//
+//	; cbor-tag-attachment-type
+//	#6.165(composite-type)
 //
 // struct-interface-type =
 //
@@ -248,6 +254,19 @@ func (d *Decoder) decodeTypeDef(
 	case CBORTagEnumType:
 		ctr := func(location common.Location, identifier string) cadence.Type {
 			return cadence.NewMeteredEnumType(
+				d.gauge,
+				location,
+				identifier,
+				nil,
+				nil,
+				nil,
+			)
+		}
+		return d.decodeCompositeType(types, ctr)
+
+	case CBORTagAttachmentType:
+		ctr := func(location common.Location, identifier string) cadence.Type {
+			return cadence.NewMeteredAttachmentType(
 				d.gauge,
 				location,
 				identifier,

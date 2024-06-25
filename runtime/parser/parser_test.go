@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -506,7 +506,7 @@ func TestParseBuffering(t *testing.T) {
 
           fun isneg(x: SignedFixedPoint): Bool {   /* I kinda forget what this is all about */
               return x                             /* but we probably need to figure it out */
-                     <                             /* ************/((TODO?{/*))************ *//
+                     <                             /* ************/((TODO?/*))************ *//
                     -x                             /* maybe it says NaNs are not negative?  */
           }
         `
@@ -515,7 +515,7 @@ func TestParseBuffering(t *testing.T) {
 			[]error{
 				&SyntaxError{
 					Message: "expected token identifier",
-					Pos:     ast.Position{Offset: 399, Line: 9, Column: 95},
+					Pos:     ast.Position{Offset: 398, Line: 9, Column: 94},
 				},
 			},
 			err.(Error).Errors,
@@ -538,9 +538,11 @@ func TestParseBuffering(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			[]error{
-				&SyntaxError{
-					Message: "expected token identifier",
-					Pos:     ast.Position{Offset: 146, Line: 4, Column: 63},
+				&RestrictedTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 138, Line: 4, Column: 55},
+						EndPos:   ast.Position{Offset: 139, Line: 4, Column: 56},
+					},
 				},
 			},
 			err.(Error).Errors,

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ func TestType_ID(t *testing.T) {
 			&OptionalType{
 				Type: StringType,
 			},
-			"String?",
+			"(String)?",
 		},
 		{
 			&VariableSizedArrayType{
@@ -148,6 +148,16 @@ func TestType_ID(t *testing.T) {
 				ReturnType: StringType,
 			},
 			"fun(Int):String",
+		},
+		{
+			&FunctionType{
+				Parameters: []Parameter{
+					{Type: IntType},
+				},
+				ReturnType: StringType,
+				Purity:     FunctionPurityView,
+			},
+			"view fun(Int):String",
 		},
 		{
 			&EventType{
@@ -1526,6 +1536,36 @@ func TestTypeEquality(t *testing.T) {
 			target := AnyType
 			assert.False(t, source.Equal(target))
 		})
+
+		t.Run("different purity", func(t *testing.T) {
+			t.Parallel()
+
+			source := &FunctionType{
+				Purity:     FunctionPurityView,
+				ReturnType: StringType,
+				Parameters: []Parameter{
+					{
+						Type: IntType,
+					},
+					{
+						Type: BoolType,
+					},
+				},
+			}
+			target := &FunctionType{
+				Purity:     FunctionPurityUnspecified, // default
+				ReturnType: StringType,
+				Parameters: []Parameter{
+					{
+						Type: IntType,
+					},
+					{
+						Type: BoolType,
+					},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
 	})
 
 	t.Run("reference type", func(t *testing.T) {
@@ -1557,6 +1597,158 @@ func TestTypeEquality(t *testing.T) {
 				Authorization: UnauthorizedAccess,
 			}
 			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different auth conjunction set", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Conjunction,
+					Entitlements: []common.TypeID{
+						"foo",
+					},
+				},
+			}
+			target := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Conjunction,
+					Entitlements: []common.TypeID{
+						"bar",
+					},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different auth disjunction set", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Disjunction,
+					Entitlements: []common.TypeID{
+						"foo",
+					},
+				},
+			}
+			target := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Disjunction,
+					Entitlements: []common.TypeID{
+						"bar",
+					},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different auth conjunction set", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Conjunction,
+					Entitlements: []common.TypeID{
+						"foo",
+						"bar",
+					},
+				},
+			}
+			target := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Conjunction,
+					Entitlements: []common.TypeID{
+						"bar",
+						"baz",
+					},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different auth disjunction set", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Disjunction,
+					Entitlements: []common.TypeID{
+						"foo",
+						"bar",
+					},
+				},
+			}
+			target := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Disjunction,
+					Entitlements: []common.TypeID{
+						"bar",
+						"baz",
+					},
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different auth conjunction set order", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Conjunction,
+					Entitlements: []common.TypeID{
+						"foo",
+						"bar",
+					},
+				},
+			}
+			target := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Conjunction,
+					Entitlements: []common.TypeID{
+						"bar",
+						"foo",
+					},
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different auth disjunction set order", func(t *testing.T) {
+			t.Parallel()
+
+			source := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Disjunction,
+					Entitlements: []common.TypeID{
+						"foo",
+						"bar",
+					},
+				},
+			}
+			target := &ReferenceType{
+				Type: IntType,
+				Authorization: &EntitlementSetAuthorization{
+					Kind: Disjunction,
+					Entitlements: []common.TypeID{
+						"bar",
+						"foo",
+					},
+				},
+			}
+			assert.True(t, source.Equal(target))
 		})
 
 		t.Run("auth vs non-auth", func(t *testing.T) {
@@ -1697,6 +1889,214 @@ func TestTypeEquality(t *testing.T) {
 
 			source := &IntersectionType{
 				Types: []Type{
+					AnyType,
+				},
+			}
+			target := AnyType
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("deprecated reference type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: false,
+			}
+			target := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: false,
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different referenced type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: false,
+			}
+			target := &DeprecatedReferenceType{
+				Type:       StringType,
+				Authorized: false,
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("auth vs non-auth", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: false,
+			}
+			target := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: true,
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("non-auth vs auth", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: true,
+			}
+			target := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: false,
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedReferenceType{
+				Type:       IntType,
+				Authorized: true,
+			}
+			target := AnyType
+			assert.False(t, source.Equal(target))
+		})
+	})
+
+	t.Run("deprecated restricted type", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("equal", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					IntType,
+				},
+			}
+			target := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					IntType,
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different restrictions order", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					IntType,
+				},
+			}
+			target := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					IntType,
+					AnyType,
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("duplicate restrictions", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					IntType,
+					AnyType,
+					IntType,
+				},
+			}
+			target := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					IntType,
+					AnyType,
+				},
+			}
+			assert.True(t, source.Equal(target))
+		})
+
+		t.Run("different inner type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					IntType,
+				},
+			}
+			target := &DeprecatedRestrictedType{
+				Type: StringType,
+				Restrictions: []Type{
+					AnyType,
+					IntType,
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different restrictions", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					IntType,
+				},
+			}
+			target := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					StringType,
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different restrictions length", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+				},
+			}
+			target := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
+					AnyType,
+					StringType,
+				},
+			}
+			assert.False(t, source.Equal(target))
+		})
+
+		t.Run("different type", func(t *testing.T) {
+			t.Parallel()
+
+			source := &DeprecatedRestrictedType{
+				Type: IntType,
+				Restrictions: []Type{
 					AnyType,
 				},
 			}
@@ -1872,10 +2272,10 @@ func TestDecodeFields(t *testing.T) {
 				},
 			},
 		},
-	).WithType(&EventType{
-		Location:            utils.TestLocation,
-		QualifiedIdentifier: "SimpleEvent",
-		Fields: []Field{
+	).WithType(NewEventType(
+		utils.TestLocation,
+		"SimpleEvent",
+		[]Field{
 			{
 				Identifier: "intField",
 				Type:       IntType,
@@ -1969,7 +2369,8 @@ func TestDecodeFields(t *testing.T) {
 				),
 			},
 		},
-	})
+		nil,
+	))
 
 	type eventStruct struct {
 		Int                            Int                     `cadence:"intField"`
@@ -2091,7 +2492,7 @@ func TestDecodeFields(t *testing.T) {
 			Description: "should err when mapping to invalid type",
 		},
 		{Value: &struct {
-			a Int `cadence:"intField"` // nolint: unused
+			a Int `cadence:"intField"`
 		}{},
 			ExpectedErr: "cannot set field a",
 			Description: "should err when mapping to private field",

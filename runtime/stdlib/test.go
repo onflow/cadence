@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,21 +100,29 @@ func getFunctionTypeFromMember(funcMember *sema.Member, funcName string) *sema.F
 	return functionType
 }
 
-func getNestedTypeConstructorValue(parent interpreter.Value, typeName string) *interpreter.HostFunctionValue {
+func getNestedTypeConstructorValue(
+	inter *interpreter.Interpreter,
+	parent interpreter.Value,
+	typeName string,
+) *interpreter.HostFunctionValue {
 	compositeValue, ok := parent.(*interpreter.CompositeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
 	constructorVar := compositeValue.NestedVariables[typeName]
-	constructor, ok := constructorVar.GetValue().(*interpreter.HostFunctionValue)
+	constructor, ok := constructorVar.GetValue(inter).(*interpreter.HostFunctionValue)
 	if !ok {
 		panic(errors.NewUnexpectedError("invalid type for constructor"))
 	}
 	return constructor
 }
 
-func arrayValueToSlice(inter *interpreter.Interpreter, value interpreter.Value) ([]interpreter.Value, error) {
+func arrayValueToSlice(
+	inter *interpreter.Interpreter,
+	value interpreter.Value,
+	locationRange interpreter.LocationRange,
+) ([]interpreter.Value, error) {
 	array, ok := value.(*interpreter.ArrayValue)
 	if !ok {
 		return nil, errors.NewDefaultUserError("value is not an array")
@@ -122,10 +130,15 @@ func arrayValueToSlice(inter *interpreter.Interpreter, value interpreter.Value) 
 
 	result := make([]interpreter.Value, 0, array.Count())
 
-	array.Iterate(inter, func(element interpreter.Value) (resume bool) {
-		result = append(result, element)
-		return true
-	})
+	array.Iterate(
+		inter,
+		func(element interpreter.Value) (resume bool) {
+			result = append(result, element)
+			return true
+		},
+		false,
+		locationRange,
+	)
 
 	return result, nil
 }
@@ -146,10 +159,10 @@ func newScriptResult(
 	var status interpreter.Value
 	if result.Error == nil {
 		succeededVar := resultStatusConstructor.NestedVariables[testResultStatusTypeSucceededCaseName]
-		status = succeededVar.GetValue()
+		status = succeededVar.GetValue(inter)
 	} else {
 		failedVar := resultStatusConstructor.NestedVariables[testResultStatusTypeFailedCaseName]
-		status = failedVar.GetValue()
+		status = failedVar.GetValue(inter)
 	}
 
 	errValue := newErrorValue(inter, result.Error)
@@ -175,7 +188,7 @@ func newScriptResult(
 
 func getConstructor(inter *interpreter.Interpreter, typeName string) *interpreter.HostFunctionValue {
 	resultStatusConstructorVar := inter.FindVariable(typeName)
-	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue().(*interpreter.HostFunctionValue)
+	resultStatusConstructor, ok := resultStatusConstructorVar.GetValue(inter).(*interpreter.HostFunctionValue)
 	if !ok {
 		panic(errors.NewUnexpectedError("invalid type for constructor of '%s'", typeName))
 	}
@@ -183,7 +196,11 @@ func getConstructor(inter *interpreter.Interpreter, typeName string) *interprete
 	return resultStatusConstructor
 }
 
-func addressArrayValueToSlice(inter *interpreter.Interpreter, accountsValue interpreter.Value) []common.Address {
+func addressArrayValueToSlice(
+	inter *interpreter.Interpreter,
+	accountsValue interpreter.Value,
+	locationRange interpreter.LocationRange,
+) []common.Address {
 	accountsArray, ok := accountsValue.(*interpreter.ArrayValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -191,16 +208,21 @@ func addressArrayValueToSlice(inter *interpreter.Interpreter, accountsValue inte
 
 	addresses := make([]common.Address, 0)
 
-	accountsArray.Iterate(inter, func(element interpreter.Value) (resume bool) {
-		address, ok := element.(interpreter.AddressValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+	accountsArray.Iterate(
+		inter,
+		func(element interpreter.Value) (resume bool) {
+			address, ok := element.(interpreter.AddressValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		addresses = append(addresses, common.Address(address))
+			addresses = append(addresses, common.Address(address))
 
-		return true
-	})
+			return true
+		},
+		false,
+		locationRange,
+	)
 
 	return addresses
 }
@@ -218,18 +240,23 @@ func accountsArrayValueToSlice(
 
 	accounts := make([]*Account, 0)
 
-	accountsArray.Iterate(inter, func(element interpreter.Value) (resume bool) {
-		accountValue, ok := element.(interpreter.MemberAccessibleValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
+	accountsArray.Iterate(
+		inter,
+		func(element interpreter.Value) (resume bool) {
+			accountValue, ok := element.(interpreter.MemberAccessibleValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 
-		account := accountFromValue(inter, accountValue, locationRange)
+			account := accountFromValue(inter, accountValue, locationRange)
 
-		accounts = append(accounts, account)
+			accounts = append(accounts, account)
 
-		return true
-	})
+			return true
+		},
+		false,
+		locationRange,
+	)
 
 	return accounts
 }
@@ -280,10 +307,10 @@ func newTransactionResult(inter *interpreter.Interpreter, result *TransactionRes
 	var status interpreter.Value
 	if result.Error == nil {
 		succeededVar := resultStatusConstructor.NestedVariables[testResultStatusTypeSucceededCaseName]
-		status = succeededVar.GetValue()
+		status = succeededVar.GetValue(inter)
 	} else {
 		failedVar := resultStatusConstructor.NestedVariables[testResultStatusTypeFailedCaseName]
-		status = failedVar.GetValue()
+		status = failedVar.GetValue(inter)
 	}
 
 	// Create a 'TransactionResult' by calling its constructor.
@@ -355,11 +382,14 @@ func newMatcherWithAnyStructTestFunction(
 	testFunc interpreter.FunctionValue,
 ) interpreter.Value {
 
+	inter := invocation.Interpreter
+
 	matcherConstructor := getNestedTypeConstructorValue(
+		inter,
 		*invocation.Self,
 		testMatcherTypeName,
 	)
-	matcher, err := invocation.Interpreter.InvokeExternally(
+	matcher, err := inter.InvokeExternally(
 		matcherConstructor,
 		matcherConstructor.Type,
 		[]interpreter.Value{
@@ -401,7 +431,7 @@ func newMatcherWithGenericTestFunction(
 	// Note: This argument validation is only needed if the matcher was created with a user-provided function.
 	// No need to validate if the matcher is created as a matcher combinator.
 	//
-	matcherTestFunction := interpreter.NewUnmeteredHostFunctionValue(
+	matcherTestFunction := interpreter.NewUnmeteredStaticHostFunctionValue(
 		matcherTestFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			inter := invocation.Interpreter

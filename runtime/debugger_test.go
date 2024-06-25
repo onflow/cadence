@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ func TestRuntimeDebugger(t *testing.T) {
 	variable := activation.Find("answer")
 	require.NotNil(t, variable)
 
-	value := variable.GetValue()
+	value := variable.GetValue(stop.Interpreter)
 	require.Equal(
 		t,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
@@ -192,7 +192,7 @@ func TestRuntimeDebuggerBreakpoints(t *testing.T) {
 	variable := activation.Find("answer")
 	require.NotNil(t, variable)
 
-	value := variable.GetValue()
+	value := variable.GetValue(stop.Interpreter)
 	require.Equal(
 		t,
 		interpreter.NewUnmeteredIntValueFromInt64(42),

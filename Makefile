@@ -1,7 +1,7 @@
 #
 # Cadence - The resource-oriented smart contract programming language
 #
-# Copyright Dapper Labs, Inc.
+# Copyright Flow Foundation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,15 +45,15 @@ build: build-tools ./runtime/cmd/parse/parse ./runtime/cmd/parse/parse.wasm ./ru
 	go build -o $@ ./runtime/cmd/main
 
 .PHONY: build-tools
-build-tools: build-analysis build-batch-script
+build-tools: build-analysis build-get-contracts
 
 .PHONY: build-analysis
 build-analysis:
 	(cd ./tools/analysis && go build .)
 
-.PHONY: build-batch-script
-build-batch-script:
-	(cd ./tools/batch-script && go build .)
+.PHONY: build-get-contracts
+build-get-contracts:
+	(cd ./tools/get-contracts && go build .)
 
 .PHONY: ci
 ci:

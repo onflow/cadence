@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
 func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) Type {
@@ -35,14 +34,13 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 	attachment := expression.Attachment
 	baseExpression := expression.Base
 
-	baseType := checker.VisitExpression(baseExpression, checker.expectedType)
+	baseType := checker.VisitExpression(baseExpression, expression, checker.expectedType)
 	attachmentType := checker.checkInvocationExpression(attachment)
 
 	if attachmentType.IsInvalidType() || baseType.IsInvalidType() {
 		return InvalidType
 	}
 
-	checker.checkVariableMove(baseExpression)
 	checker.checkResourceMoveOperation(baseExpression, attachmentType)
 
 	// check that the attachment type is a valid attachment,
@@ -106,39 +104,6 @@ func (checker *Checker) VisitAttachExpression(expression *ast.AttachExpression) 
 	}
 
 	checker.Elaboration.SetAttachTypes(expression, attachmentCompositeType)
-
-	// compute the set of all the entitlements provided to this attachment
-	providedEntitlements := orderedmap.New[EntitlementOrderedSet](len(expression.Entitlements))
-	for _, entitlement := range expression.Entitlements {
-		nominalType := checker.convertNominalType(entitlement)
-		if entitlementType, isEntitlement := nominalType.(*EntitlementType); isEntitlement {
-			_, present := providedEntitlements.Set(entitlementType, struct{}{})
-			if present {
-				checker.report(&DuplicateEntitlementProvidedError{
-					Range:       ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
-					Entitlement: entitlementType,
-				})
-			}
-			continue
-		}
-		checker.report(&InvalidNonEntitlementProvidedError{
-			Range:       ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
-			InvalidType: nominalType,
-		})
-	}
-
-	// if the attachment requires entitlements, check that they are provided as requested
-	if attachmentCompositeType.RequiredEntitlements != nil {
-		attachmentCompositeType.RequiredEntitlements.Foreach(func(key *EntitlementType, _ struct{}) {
-			if !providedEntitlements.Contains(key) {
-				checker.report(&RequiredEntitlementNotProvidedError{
-					Range:               ast.NewRangeFromPositioned(checker.memoryGauge, expression),
-					AttachmentType:      attachmentCompositeType,
-					RequiredEntitlement: key,
-				})
-			}
-		})
-	}
 
 	return baseType
 }

@@ -16,12 +16,12 @@ on:
       chain:
         required: true
         type: string
-      url:
+    secrets:
+      FLOWDIVER_API_KEY:
         required: true
-        type: string
 
 env:
-  GO_VERSION: '1.20'
+  GO_VERSION: '1.22'
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.base-branch || github.run_id }}-${{ inputs.chain }}
@@ -35,9 +35,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          # Checkout the branch where the compatibility check tool is available.
-          # Usually this is the master branch.
-          ref: master
 
       - uses: actions/setup-go@v3
         with:
@@ -64,9 +61,11 @@ jobs:
 
       - name: Download contracts
         if: ${{ steps.restore-cached-contracts.outputs.cache-hit != 'true' }}
-        working-directory: ./tools/batch-script
+        env:
+          FLOWDIVER_API_KEY: ${{ secrets.FLOWDIVER_API_KEY }}
+        working-directory: ./tools/get-contracts
         run: |
-          go run ./cmd/get_contracts/main.go --chain=${{ inputs.chain }} --u=${{ inputs.url }} > ../../tmp/contracts.csv
+          go run . --chain=${{ inputs.chain }} --apiKey="$FLOWDIVER_API_KEY" > ../../tmp/contracts.csv
 
       - name: Cache Contracts
         id: cache-contracts

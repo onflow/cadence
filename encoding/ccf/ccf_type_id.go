@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package ccf
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 
 	"github.com/onflow/cadence"
@@ -44,6 +45,13 @@ func (id ccfTypeID) Equal(other ccfTypeID) bool {
 	return id == other
 }
 
+func (id ccfTypeID) next() ccfTypeID {
+	if id == math.MaxUint64 {
+		panic(fmt.Errorf("failed to create next CCF type id: reached max limit for id"))
+	}
+	return id + 1
+}
+
 // ccfTypeIDByCadenceType maps a Cadence type ID to a CCF type ID
 //
 // IMPORTANT: Don't use cadence.Type as map key because all Cadence composite/interface
@@ -62,24 +70,37 @@ func (types ccfTypeIDByCadenceType) id(t cadence.Type) (ccfTypeID, error) {
 type cadenceTypeByCCFTypeID struct {
 	types           map[ccfTypeID]cadence.Type
 	referencedTypes map[ccfTypeID]struct{}
+	nextCCFTypeID   ccfTypeID
 }
 
 func newCadenceTypeByCCFTypeID() *cadenceTypeByCCFTypeID {
-	return &cadenceTypeByCCFTypeID{
-		types:           make(map[ccfTypeID]cadence.Type),
-		referencedTypes: make(map[ccfTypeID]struct{}),
-	}
+	// types and referencedTypes are created lazily.
+	return &cadenceTypeByCCFTypeID{}
+}
+
+func (ids *cadenceTypeByCCFTypeID) isNextCCFTypeID(id ccfTypeID) bool {
+	return ids.nextCCFTypeID.Equal(id)
+}
+
+func (ids *cadenceTypeByCCFTypeID) addCCFTypeID(id ccfTypeID) {
+	ids.nextCCFTypeID = id.next()
 }
 
 func (ids *cadenceTypeByCCFTypeID) add(id ccfTypeID, typ cadence.Type) bool {
 	if ids.has(id) {
 		return false
 	}
+	if ids.types == nil {
+		ids.types = make(map[ccfTypeID]cadence.Type)
+	}
 	ids.types[id] = typ
 	return true
 }
 
 func (ids *cadenceTypeByCCFTypeID) reference(id ccfTypeID) {
+	if ids.referencedTypes == nil {
+		ids.referencedTypes = make(map[ccfTypeID]struct{})
+	}
 	ids.referencedTypes[id] = struct{}{}
 }
 
@@ -94,10 +115,6 @@ func (ids *cadenceTypeByCCFTypeID) typ(id ccfTypeID) (cadence.Type, error) {
 func (ids *cadenceTypeByCCFTypeID) has(id ccfTypeID) bool {
 	_, ok := ids.types[id]
 	return ok
-}
-
-func (ids *cadenceTypeByCCFTypeID) count() int {
-	return len(ids.types)
 }
 
 func (ids *cadenceTypeByCCFTypeID) hasUnreferenced() bool {

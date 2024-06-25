@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"bytes"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 // bytewiseFieldSorter
@@ -148,6 +149,46 @@ func (t bytewiseCadenceTypeSorter) Less(i, j int) bool {
 
 	iID := t.types[i].ID()
 	jID := t.types[j].ID()
+
+	if len(iID) != len(jID) {
+		return len(iID) < len(jID)
+	}
+	return iID <= jID
+}
+
+// bytewiseCadenceTypeIDSorter
+
+// bytewiseCadenceTypeIDSorter is used to sort Cadence TypeID.
+type bytewiseCadenceTypeIDSorter struct {
+	// NOTE: DON'T sort type ids in place because it isn't a copy.
+	// Instead, sort indexes by Cadence type id.
+	types []common.TypeID
+	// indexes represents sorted indexes of fields
+	indexes []int
+}
+
+func newBytewiseCadenceTypeIDSorter(types []common.TypeID) bytewiseCadenceTypeIDSorter {
+	indexes := make([]int, len(types))
+	for i := 0; i < len(indexes); i++ {
+		indexes[i] = i
+	}
+	return bytewiseCadenceTypeIDSorter{types: types, indexes: indexes}
+}
+
+func (t bytewiseCadenceTypeIDSorter) Len() int {
+	return len(t.indexes)
+}
+
+func (t bytewiseCadenceTypeIDSorter) Swap(i, j int) {
+	t.indexes[i], t.indexes[j] = t.indexes[j], t.indexes[i]
+}
+
+func (t bytewiseCadenceTypeIDSorter) Less(i, j int) bool {
+	i = t.indexes[i]
+	j = t.indexes[j]
+
+	iID := t.types[i]
+	jID := t.types[j]
 
 	if len(iID) != len(jID) {
 		return len(iID) < len(jID)

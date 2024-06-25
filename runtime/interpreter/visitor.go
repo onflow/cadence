@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +56,7 @@ type Visitor interface {
 	VisitEphemeralReferenceValue(interpreter *Interpreter, value *EphemeralReferenceValue)
 	VisitAddressValue(interpreter *Interpreter, value AddressValue)
 	VisitPathValue(interpreter *Interpreter, value PathValue)
-	VisitCapabilityValue(interpreter *Interpreter, value *CapabilityValue)
+	VisitCapabilityValue(interpreter *Interpreter, value *IDCapabilityValue)
 	VisitPublishedValue(interpreter *Interpreter, value *PublishedValue)
 	VisitInterpretedFunctionValue(interpreter *Interpreter, value *InterpretedFunctionValue)
 	VisitHostFunctionValue(interpreter *Interpreter, value *HostFunctionValue)
@@ -103,7 +103,7 @@ type EmptyVisitor struct {
 	EphemeralReferenceValueVisitor          func(interpreter *Interpreter, value *EphemeralReferenceValue)
 	AddressValueVisitor                     func(interpreter *Interpreter, value AddressValue)
 	PathValueVisitor                        func(interpreter *Interpreter, value PathValue)
-	CapabilityValueVisitor                  func(interpreter *Interpreter, value *CapabilityValue)
+	CapabilityValueVisitor                  func(interpreter *Interpreter, value *IDCapabilityValue)
 	PublishedValueVisitor                   func(interpreter *Interpreter, value *PublishedValue)
 	InterpretedFunctionValueVisitor         func(interpreter *Interpreter, value *InterpretedFunctionValue)
 	HostFunctionValueVisitor                func(interpreter *Interpreter, value *HostFunctionValue)
@@ -373,7 +373,7 @@ func (v EmptyVisitor) VisitPathValue(interpreter *Interpreter, value PathValue) 
 	v.PathValueVisitor(interpreter, value)
 }
 
-func (v EmptyVisitor) VisitCapabilityValue(interpreter *Interpreter, value *CapabilityValue) {
+func (v EmptyVisitor) VisitCapabilityValue(interpreter *Interpreter, value *IDCapabilityValue) {
 	if v.CapabilityValueVisitor == nil {
 		return
 	}

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -91,9 +92,10 @@ func TestInterpretVirtualImport(t *testing.T) {
 						nil,
 						common.ZeroAddress,
 					)
-
-					value.Functions = map[string]interpreter.FunctionValue{
-						"bar": interpreter.NewHostFunctionValue(
+					value.Functions = orderedmap.New[interpreter.FunctionOrderedMap](1)
+					value.Functions.Set(
+						"bar",
+						interpreter.NewStaticHostFunctionValue(
 							inter,
 							&sema.FunctionType{
 								ReturnTypeAnnotation: sema.UIntTypeAnnotation,
@@ -102,7 +104,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 								return interpreter.NewUnmeteredUInt64Value(42)
 							},
 						),
-					}
+					)
 
 					elaboration := sema.NewElaboration(nil)
 					elaboration.SetCompositeType(
@@ -386,7 +388,7 @@ func TestInterpretResourceConstructionThroughIndirectImport(t *testing.T) {
 	err = inter.Interpret()
 	require.NoError(t, err)
 
-	rConstructor := subInterpreter.Globals.Get("R").GetValue()
+	rConstructor := subInterpreter.Globals.Get("R").GetValue(inter)
 
 	_, err = inter.Invoke("test", rConstructor)
 	RequireError(t, err)

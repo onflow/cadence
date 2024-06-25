@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,11 @@ func StringAtreeValueHashInput(v atree.Value, _ []byte) ([]byte, error) {
 	return []byte(v.(StringAtreeValue)), nil
 }
 
-func StringAtreeValueComparator(_ atree.SlabStorage, value atree.Value, otherStorable atree.Storable) (bool, error) {
-	result := value.(StringAtreeValue) == otherStorable.(StringAtreeValue)
+func StringAtreeValueComparator(storage atree.SlabStorage, value atree.Value, otherStorable atree.Storable) (bool, error) {
+	otherValue, err := otherStorable.StoredValue(storage)
+	if err != nil {
+		return false, err
+	}
+	result := value.(StringAtreeValue) == otherValue.(StringAtreeValue)
 	return result, nil
 }

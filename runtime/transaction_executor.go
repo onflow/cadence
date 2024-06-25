@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -206,7 +206,7 @@ func (executor *interpreterTransactionExecutor) authorizerValues(
 
 		addressValue := interpreter.NewAddressValue(inter, address)
 
-		accountValue := executor.environment.NewAccountValue(addressValue)
+		accountValue := executor.environment.NewAccountValue(inter, addressValue)
 
 		referenceType, ok := parameter.TypeAnnotation.Type.(*sema.ReferenceType)
 		if !ok || referenceType.Type != sema.AccountType {
@@ -223,6 +223,8 @@ func (executor *interpreterTransactionExecutor) authorizerValues(
 			authorization,
 			accountValue,
 			sema.AccountType,
+			// okay to pass an empty range here because the account value is never a reference, so this can't fail
+			interpreter.EmptyLocationRange,
 		)
 
 		authorizerValues = append(authorizerValues, accountReferenceValue)

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,6 @@ type Value interface {
 	isValue()
 	Type() Type
 	MeteredType(gauge common.MemoryGauge) Type
-	ToGoValue() any
 	fmt.Stringer
 }
 
@@ -73,10 +72,6 @@ func (Void) Type() Type {
 
 func (v Void) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (Void) ToGoValue() any {
-	return nil
 }
 
 func (Void) String() string {
@@ -129,16 +124,6 @@ func (o Optional) MeteredType(gauge common.MemoryGauge) Type {
 	)
 }
 
-func (o Optional) ToGoValue() any {
-	if o.Value == nil {
-		return nil
-	}
-
-	value := o.Value.ToGoValue()
-
-	return value
-}
-
 func (o Optional) String() string {
 	if o.Value == nil {
 		return format.Nil
@@ -169,10 +154,6 @@ func (Bool) Type() Type {
 
 func (v Bool) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Bool) ToGoValue() any {
-	return bool(v)
 }
 
 func (v Bool) String() string {
@@ -213,10 +194,6 @@ func (v String) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v String) ToGoValue() any {
-	return string(v)
-}
-
 func (v String) String() string {
 	return format.String(string(v))
 }
@@ -240,10 +217,6 @@ func (Bytes) Type() Type {
 
 func (v Bytes) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Bytes) ToGoValue() any {
-	return []byte(v)
 }
 
 func (v Bytes) String() string {
@@ -286,10 +259,6 @@ func (v Character) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Character) ToGoValue() any {
-	return string(v)
-}
-
 func (v Character) String() string {
 	return format.String(string(v))
 }
@@ -330,10 +299,6 @@ func (Address) Type() Type {
 
 func (Address) MeteredType(common.MemoryGauge) Type {
 	return AddressType
-}
-
-func (v Address) ToGoValue() any {
-	return [AddressLength]byte(v)
 }
 
 func (v Address) Bytes() []byte {
@@ -388,10 +353,6 @@ func (v Int) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Int) ToGoValue() any {
-	return v.Big()
-}
-
 func (v Int) Int() int {
 	return int(v.Value.Int64())
 }
@@ -426,10 +387,6 @@ func NewMeteredInt8(memoryGauge common.MemoryGauge, v int8) Int8 {
 }
 
 func (Int8) isValue() {}
-
-func (v Int8) ToGoValue() any {
-	return int8(v)
-}
 
 func (Int8) Type() Type {
 	return Int8Type
@@ -474,10 +431,6 @@ func (v Int16) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Int16) ToGoValue() any {
-	return int16(v)
-}
-
 func (v Int16) ToBigEndianBytes() []byte {
 	b := make([]byte, 2)
 	binary.BigEndian.PutUint16(b, uint16(v))
@@ -515,10 +468,6 @@ func (v Int32) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Int32) ToGoValue() any {
-	return int32(v)
-}
-
 func (v Int32) ToBigEndianBytes() []byte {
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, uint32(v))
@@ -554,10 +503,6 @@ func (Int64) Type() Type {
 
 func (v Int64) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Int64) ToGoValue() any {
-	return int64(v)
 }
 
 func (v Int64) ToBigEndianBytes() []byte {
@@ -616,10 +561,6 @@ func (Int128) Type() Type {
 
 func (v Int128) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Int128) ToGoValue() any {
-	return v.Big()
 }
 
 func (v Int128) Int() int {
@@ -686,10 +627,6 @@ func (v Int256) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Int256) ToGoValue() any {
-	return v.Big()
-}
-
 func (v Int256) Int() int {
 	return int(v.Value.Int64())
 }
@@ -749,10 +686,6 @@ func (v UInt) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v UInt) ToGoValue() any {
-	return v.Big()
-}
-
 func (v UInt) Int() int {
 	return int(v.Value.Uint64())
 }
@@ -796,10 +729,6 @@ func (v UInt8) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v UInt8) ToGoValue() any {
-	return uint8(v)
-}
-
 func (v UInt8) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
@@ -833,10 +762,6 @@ func (UInt16) Type() Type {
 
 func (v UInt16) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v UInt16) ToGoValue() any {
-	return uint16(v)
 }
 
 func (v UInt16) ToBigEndianBytes() []byte {
@@ -876,10 +801,6 @@ func (v UInt32) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v UInt32) ToGoValue() any {
-	return uint32(v)
-}
-
 func (v UInt32) ToBigEndianBytes() []byte {
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, uint32(v))
@@ -915,10 +836,6 @@ func (UInt64) Type() Type {
 
 func (v UInt64) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v UInt64) ToGoValue() any {
-	return uint64(v)
 }
 
 func (v UInt64) ToBigEndianBytes() []byte {
@@ -977,10 +894,6 @@ func (UInt128) Type() Type {
 
 func (v UInt128) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v UInt128) ToGoValue() any {
-	return v.Big()
 }
 
 func (v UInt128) Int() int {
@@ -1047,10 +960,6 @@ func (v UInt256) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v UInt256) ToGoValue() any {
-	return v.Big()
-}
-
 func (v UInt256) Int() int {
 	return int(v.Value.Uint64())
 }
@@ -1094,10 +1003,6 @@ func (v Word8) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Word8) ToGoValue() any {
-	return uint8(v)
-}
-
 func (v Word8) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
 }
@@ -1131,10 +1036,6 @@ func (Word16) Type() Type {
 
 func (v Word16) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Word16) ToGoValue() any {
-	return uint16(v)
 }
 
 func (v Word16) ToBigEndianBytes() []byte {
@@ -1174,10 +1075,6 @@ func (v Word32) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Word32) ToGoValue() any {
-	return uint32(v)
-}
-
 func (v Word32) ToBigEndianBytes() []byte {
 	b := make([]byte, 4)
 	binary.BigEndian.PutUint32(b, uint32(v))
@@ -1213,10 +1110,6 @@ func (Word64) Type() Type {
 
 func (v Word64) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Word64) ToGoValue() any {
-	return uint64(v)
 }
 
 func (v Word64) ToBigEndianBytes() []byte {
@@ -1275,10 +1168,6 @@ func (Word128) Type() Type {
 
 func (v Word128) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Word128) ToGoValue() any {
-	return v.Big()
 }
 
 func (v Word128) Int() int {
@@ -1343,10 +1232,6 @@ func (Word256) Type() Type {
 
 func (v Word256) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Word256) ToGoValue() any {
-	return v.Big()
 }
 
 func (v Word256) Int() int {
@@ -1416,10 +1301,6 @@ func (Fix64) Type() Type {
 
 func (v Fix64) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
-}
-
-func (v Fix64) ToGoValue() any {
-	return int64(v)
 }
 
 func (v Fix64) ToBigEndianBytes() []byte {
@@ -1492,10 +1373,6 @@ func (v UFix64) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v UFix64) ToGoValue() any {
-	return uint64(v)
-}
-
 func (v UFix64) ToBigEndianBytes() []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(v))
@@ -1549,16 +1426,6 @@ func (v Array) MeteredType(common.MemoryGauge) Type {
 func (v Array) WithType(arrayType ArrayType) Array {
 	v.ArrayType = arrayType
 	return v
-}
-
-func (v Array) ToGoValue() any {
-	ret := make([]any, len(v.Values))
-
-	for i, e := range v.Values {
-		ret[i] = e.ToGoValue()
-	}
-
-	return ret
 }
 
 func (v Array) String() string {
@@ -1616,16 +1483,6 @@ func (v Dictionary) WithType(dictionaryType *DictionaryType) Dictionary {
 	return v
 }
 
-func (v Dictionary) ToGoValue() any {
-	ret := map[any]any{}
-
-	for _, p := range v.Pairs {
-		ret[p.Key.ToGoValue()] = p.Value.ToGoValue()
-	}
-
-	return ret
-}
-
 func (v Dictionary) String() string {
 	pairs := make([]struct {
 		Key   string
@@ -1660,17 +1517,82 @@ func NewMeteredKeyValuePair(gauge common.MemoryGauge, key, value Value) KeyValue
 	}
 }
 
+// Composite
+
+type Composite interface {
+	Value
+
+	isComposite()
+	getFields() []Field
+	getFieldValues() []Value
+
+	SearchFieldByName(fieldName string) Value
+	FieldsMappedByName() map[string]Value
+}
+
+// linked in by packages that need access to Composite.getFieldValues,
+// e.g. JSON and CCF codecs
+func getCompositeFieldValues(composite Composite) []Value { //nolint:unused
+	return composite.getFieldValues()
+}
+
+// SearchFieldByName searches for the field with the given name in the composite type,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func SearchFieldByName(v Composite, fieldName string) Value {
+	fieldValues := v.getFieldValues()
+	fields := v.getFields()
+
+	if fieldValues == nil || fields == nil {
+		return nil
+	}
+
+	for i, field := range fields {
+		if field.Identifier == fieldName {
+			return fieldValues[i]
+		}
+	}
+	return nil
+}
+
+func FieldsMappedByName(v Composite) map[string]Value {
+	fieldValues := v.getFieldValues()
+	fields := v.getFields()
+
+	if fieldValues == nil || fields == nil {
+		return nil
+	}
+
+	fieldsMap := make(map[string]Value, len(fields))
+	for i, fieldValue := range fieldValues {
+		var fieldName string
+		if i < len(fields) {
+			fieldName = fields[i].Identifier
+		} else if attachment, ok := fieldValue.(Attachment); ok {
+			fieldName = interpreter.AttachmentMemberName(attachment.Type().ID())
+		} else {
+			panic(errors.NewUnreachableError())
+		}
+		fieldsMap[fieldName] = fieldValue
+	}
+
+	return fieldsMap
+}
+
 // Struct
 
 type Struct struct {
 	StructType *StructType
-	Fields     []Value
+	fields     []Value
 }
 
 var _ Value = Struct{}
+var _ Composite = Struct{}
 
 func NewStruct(fields []Value) Struct {
-	return Struct{Fields: fields}
+	return Struct{fields: fields}
 }
 
 func NewMeteredStruct(
@@ -1691,6 +1613,8 @@ func NewMeteredStruct(
 
 func (Struct) isValue() {}
 
+func (Struct) isComposite() {}
+
 func (v Struct) Type() Type {
 	if v.StructType == nil {
 		// Return nil Type instead of Type referencing nil *StructType,
@@ -1709,34 +1633,37 @@ func (v Struct) WithType(typ *StructType) Struct {
 	return v
 }
 
-func (v Struct) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
-
-	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
-}
-
 func (v Struct) String() string {
 	return formatComposite(
 		v.StructType.ID(),
-		v.StructType.Fields,
-		v.Fields,
+		v.StructType.fields,
+		v.fields,
 	)
 }
 
-func (v Struct) GetFields() []Field {
+func (v Struct) getFields() []Field {
 	if v.StructType == nil {
 		return nil
 	}
 
-	return v.StructType.Fields
+	return v.StructType.fields
 }
 
-func (v Struct) GetFieldValues() []Value {
-	return v.Fields
+func (v Struct) getFieldValues() []Value {
+	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the struct,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Struct) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Struct) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 func formatComposite(typeID string, fields []Field, values []Value) string {
@@ -1764,13 +1691,14 @@ func formatComposite(typeID string, fields []Field, values []Value) string {
 
 type Resource struct {
 	ResourceType *ResourceType
-	Fields       []Value
+	fields       []Value
 }
 
 var _ Value = Resource{}
+var _ Composite = Resource{}
 
 func NewResource(fields []Value) Resource {
-	return Resource{Fields: fields}
+	return Resource{fields: fields}
 }
 
 func NewMeteredResource(
@@ -1790,6 +1718,8 @@ func NewMeteredResource(
 
 func (Resource) isValue() {}
 
+func (Resource) isComposite() {}
+
 func (v Resource) Type() Type {
 	if v.ResourceType == nil {
 		// Return nil Type instead of Type referencing nil *ResourceType,
@@ -1808,47 +1738,51 @@ func (v Resource) WithType(typ *ResourceType) Resource {
 	return v
 }
 
-func (v Resource) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
-
-	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
-}
-
 func (v Resource) String() string {
 	return formatComposite(
 		v.ResourceType.ID(),
-		v.ResourceType.Fields,
-		v.Fields,
+		v.ResourceType.fields,
+		v.fields,
 	)
 }
 
-func (v Resource) GetFields() []Field {
+func (v Resource) getFields() []Field {
 	if v.ResourceType == nil {
 		return nil
 	}
 
-	return v.ResourceType.Fields
+	return v.ResourceType.fields
 }
 
-func (v Resource) GetFieldValues() []Value {
-	return v.Fields
+func (v Resource) getFieldValues() []Value {
+	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the resource,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Resource) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Resource) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 // Attachment
 
 type Attachment struct {
 	AttachmentType *AttachmentType
-	Fields         []Value
+	fields         []Value
 }
 
 var _ Value = Attachment{}
+var _ Composite = Attachment{}
 
 func NewAttachment(fields []Value) Attachment {
-	return Attachment{Fields: fields}
+	return Attachment{fields: fields}
 }
 
 func NewMeteredAttachment(
@@ -1868,6 +1802,8 @@ func NewMeteredAttachment(
 
 func (Attachment) isValue() {}
 
+func (Attachment) isComposite() {}
+
 func (v Attachment) Type() Type {
 	if v.AttachmentType == nil {
 		// Return nil Type instead of Type referencing nil *AttachmentType,
@@ -1886,47 +1822,51 @@ func (v Attachment) WithType(typ *AttachmentType) Attachment {
 	return v
 }
 
-func (v Attachment) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
-
-	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
-}
-
 func (v Attachment) String() string {
 	return formatComposite(
 		v.AttachmentType.ID(),
-		v.AttachmentType.Fields,
-		v.Fields,
+		v.AttachmentType.fields,
+		v.fields,
 	)
 }
 
-func (v Attachment) GetFields() []Field {
+func (v Attachment) getFields() []Field {
 	if v.AttachmentType == nil {
 		return nil
 	}
 
-	return v.AttachmentType.Fields
+	return v.AttachmentType.fields
 }
 
-func (v Attachment) GetFieldValues() []Value {
-	return v.Fields
+func (v Attachment) getFieldValues() []Value {
+	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the attachment,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Attachment) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Attachment) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 // Event
 
 type Event struct {
 	EventType *EventType
-	Fields    []Value
+	fields    []Value
 }
 
 var _ Value = Event{}
+var _ Composite = Event{}
 
 func NewEvent(fields []Value) Event {
-	return Event{Fields: fields}
+	return Event{fields: fields}
 }
 
 func NewMeteredEvent(
@@ -1946,6 +1886,8 @@ func NewMeteredEvent(
 
 func (Event) isValue() {}
 
+func (Event) isComposite() {}
+
 func (v Event) Type() Type {
 	if v.EventType == nil {
 		// Return nil Type instead of Type referencing nil *EventType,
@@ -1964,46 +1906,51 @@ func (v Event) WithType(typ *EventType) Event {
 	return v
 }
 
-func (v Event) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
-
-	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
-}
 func (v Event) String() string {
 	return formatComposite(
 		v.EventType.ID(),
-		v.EventType.Fields,
-		v.Fields,
+		v.EventType.fields,
+		v.fields,
 	)
 }
 
-func (v Event) GetFields() []Field {
+func (v Event) getFields() []Field {
 	if v.EventType == nil {
 		return nil
 	}
 
-	return v.EventType.Fields
+	return v.EventType.fields
 }
 
-func (v Event) GetFieldValues() []Value {
-	return v.Fields
+func (v Event) getFieldValues() []Value {
+	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the event,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Event) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Event) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 // Contract
 
 type Contract struct {
 	ContractType *ContractType
-	Fields       []Value
+	fields       []Value
 }
 
 var _ Value = Contract{}
+var _ Composite = Contract{}
 
 func NewContract(fields []Value) Contract {
-	return Contract{Fields: fields}
+	return Contract{fields: fields}
 }
 
 func NewMeteredContract(
@@ -2023,6 +1970,8 @@ func NewMeteredContract(
 
 func (Contract) isValue() {}
 
+func (Contract) isComposite() {}
+
 func (v Contract) Type() Type {
 	if v.ContractType == nil {
 		// Return nil Type instead of Type referencing nil *ContractType,
@@ -2041,34 +1990,115 @@ func (v Contract) WithType(typ *ContractType) Contract {
 	return v
 }
 
-func (v Contract) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
-
-	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
-}
-
 func (v Contract) String() string {
 	return formatComposite(
 		v.ContractType.ID(),
-		v.ContractType.Fields,
-		v.Fields,
+		v.ContractType.fields,
+		v.fields,
 	)
 }
 
-func (v Contract) GetFields() []Field {
+func (v Contract) getFields() []Field {
 	if v.ContractType == nil {
 		return nil
 	}
 
-	return v.ContractType.Fields
+	return v.ContractType.fields
 }
 
-func (v Contract) GetFieldValues() []Value {
-	return v.Fields
+func (v Contract) getFieldValues() []Value {
+	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the contract,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Contract) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Contract) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
+}
+
+// InclusiveRange
+
+type InclusiveRange struct {
+	InclusiveRangeType *InclusiveRangeType
+	Start              Value
+	End                Value
+	Step               Value
+	fields             []Field
+}
+
+var _ Value = &InclusiveRange{}
+
+func NewInclusiveRange(start, end, step Value) *InclusiveRange {
+	return &InclusiveRange{
+		Start: start,
+		End:   end,
+		Step:  step,
+	}
+}
+
+func NewMeteredInclusiveRange(
+	gauge common.MemoryGauge,
+	start, end, step Value,
+) *InclusiveRange {
+	common.UseMemory(gauge, common.CadenceInclusiveRangeValueMemoryUsage)
+	return NewInclusiveRange(start, end, step)
+}
+
+func (*InclusiveRange) isValue() {}
+
+func (v *InclusiveRange) Type() Type {
+	if v.InclusiveRangeType == nil {
+		// Return nil Type instead of Type referencing nil *InclusiveRangeType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
+	return v.InclusiveRangeType
+}
+
+func (v *InclusiveRange) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v *InclusiveRange) WithType(typ *InclusiveRangeType) *InclusiveRange {
+	v.InclusiveRangeType = typ
+	return v
+}
+
+func (v *InclusiveRange) String() string {
+	if v.InclusiveRangeType == nil {
+		return ""
+	}
+
+	if v.fields == nil {
+		elementType := v.InclusiveRangeType.ElementType
+		v.fields = []Field{
+			{
+				Identifier: sema.InclusiveRangeTypeStartFieldName,
+				Type:       elementType,
+			},
+			{
+				Identifier: sema.InclusiveRangeTypeEndFieldName,
+				Type:       elementType,
+			},
+			{
+				Identifier: sema.InclusiveRangeTypeStepFieldName,
+				Type:       elementType,
+			},
+		}
+	}
+
+	return formatComposite(
+		v.InclusiveRangeType.ID(),
+		v.fields,
+		[]Value{v.Start, v.End, v.Step},
+	)
 }
 
 // Path
@@ -2123,10 +2153,6 @@ func (v Path) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (Path) ToGoValue() any {
-	return nil
-}
-
 func (v Path) String() string {
 	return format.Path(
 		v.Domain.Identifier(),
@@ -2163,10 +2189,6 @@ func (v TypeValue) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (TypeValue) ToGoValue() any {
-	return nil
-}
-
 func (v TypeValue) String() string {
 	return format.TypeValue(v.StaticType.ID())
 }
@@ -2174,9 +2196,10 @@ func (v TypeValue) String() string {
 // Capability
 
 type Capability struct {
-	BorrowType Type
-	Address    Address
-	ID         UInt64
+	BorrowType     Type
+	Address        Address
+	DeprecatedPath *Path // Deprecated: removed in v1.0.0
+	ID             UInt64
 }
 
 var _ Value = Capability{}
@@ -2217,28 +2240,65 @@ func (v Capability) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredCapabilityType(gauge, v.BorrowType)
 }
 
-func (Capability) ToGoValue() any {
-	return nil
+func (v Capability) String() string {
+	if v.DeprecatedPath != nil && v.DeprecatedPath.String() != "" {
+		var borrowType string
+		if v.BorrowType != nil {
+			borrowType = v.BorrowType.ID()
+		}
+
+		return format.DeprecatedPathCapability(
+			borrowType,
+			v.Address.String(),
+			v.DeprecatedPath.String(),
+		)
+	} else {
+		return format.Capability(
+			v.BorrowType.ID(),
+			v.Address.String(),
+			v.ID.String(),
+		)
+	}
 }
 
-func (v Capability) String() string {
-	return format.Capability(
-		v.BorrowType.ID(),
-		v.Address.String(),
-		v.ID.String(),
+// Deprecated: removed in v1.0.0
+func NewDeprecatedPathCapability(
+	address Address,
+	path Path,
+	borrowType Type,
+) Capability {
+	return Capability{
+		DeprecatedPath: &path,
+		Address:        address,
+		BorrowType:     borrowType,
+	}
+}
+
+func NewDeprecatedMeteredPathCapability(
+	gauge common.MemoryGauge,
+	address Address,
+	path Path,
+	borrowType Type,
+) Capability {
+	common.UseMemory(gauge, common.CadenceDeprecatedPathCapabilityValueMemoryUsage)
+	return NewDeprecatedPathCapability(
+		address,
+		path,
+		borrowType,
 	)
 }
 
 // Enum
 type Enum struct {
 	EnumType *EnumType
-	Fields   []Value
+	fields   []Value
 }
 
 var _ Value = Enum{}
+var _ Composite = Enum{}
 
 func NewEnum(fields []Value) Enum {
-	return Enum{Fields: fields}
+	return Enum{fields: fields}
 }
 
 func NewMeteredEnum(
@@ -2258,6 +2318,8 @@ func NewMeteredEnum(
 
 func (Enum) isValue() {}
 
+func (Enum) isComposite() {}
+
 func (v Enum) Type() Type {
 	if v.EnumType == nil {
 		// Return nil Type instead of Type referencing nil *EnumType,
@@ -2276,34 +2338,37 @@ func (v Enum) WithType(typ *EnumType) Enum {
 	return v
 }
 
-func (v Enum) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
-
-	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
-}
-
 func (v Enum) String() string {
 	return formatComposite(
 		v.EnumType.ID(),
-		v.EnumType.Fields,
-		v.Fields,
+		v.EnumType.fields,
+		v.fields,
 	)
 }
 
-func (v Enum) GetFields() []Field {
+func (v Enum) getFields() []Field {
 	if v.EnumType == nil {
 		return nil
 	}
 
-	return v.EnumType.Fields
+	return v.EnumType.fields
 }
 
-func (v Enum) GetFieldValues() []Value {
-	return v.Fields
+func (v Enum) getFieldValues() []Value {
+	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the enum,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Enum) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Enum) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 // Function
@@ -2337,10 +2402,6 @@ func (v Function) Type() Type {
 
 func (v Function) MeteredType(common.MemoryGauge) Type {
 	return v.FunctionType
-}
-
-func (Function) ToGoValue() any {
-	return nil
 }
 
 func (v Function) String() string {

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -533,8 +533,9 @@ func (p *parser) mustNotKeyword(errMsgContext string, token lexer.Token) (ast.Id
 
 	ident := p.tokenToIdentifier(token)
 
-	if _, ok := hardKeywordsTable.Lookup(ident.Identifier); ok {
-		return nonIdentifierErr("keyword " + ident.Identifier)
+	identifier := ident.Identifier
+	if IsHardKeyword(identifier) {
+		return nonIdentifierErr("keyword " + identifier)
 	}
 	return ident, nil
 }

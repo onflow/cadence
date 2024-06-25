@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -137,6 +137,8 @@ const ( // Cadence simple type IDs
 	SimpleTypeIssueAccountCapabilityController
 	SimpleTypeCapabilitiesMapping
 	SimpleTypeAccountMapping
+	SimpleTypeHashableStruct
+	SimpleTypeFixedSizeUnsignedInteger
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -161,11 +163,13 @@ func initSimpleTypeIDBiMap() (m *bimap.BiMap[cadence.PrimitiveType, SimpleType])
 	m.Insert(cadence.BoolType, SimpleTypeBool)
 	m.Insert(cadence.StringType, SimpleTypeString)
 	m.Insert(cadence.CharacterType, SimpleTypeCharacter)
+	m.Insert(cadence.HashableStructType, SimpleTypeHashableStruct)
 
 	m.Insert(cadence.NumberType, SimpleTypeNumber)
 	m.Insert(cadence.SignedNumberType, SimpleTypeSignedNumber)
 	m.Insert(cadence.IntegerType, SimpleTypeInteger)
 	m.Insert(cadence.SignedIntegerType, SimpleTypeSignedInteger)
+	m.Insert(cadence.FixedSizeUnsignedIntegerType, SimpleTypeFixedSizeUnsignedInteger)
 	m.Insert(cadence.FixedPointType, SimpleTypeFixedPoint)
 	m.Insert(cadence.SignedFixedPointType, SimpleTypeSignedFixedPoint)
 

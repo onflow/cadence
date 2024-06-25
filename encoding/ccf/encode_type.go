@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 package ccf
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/onflow/cadence"
@@ -39,6 +40,7 @@ type encodeTypeFn func(typ cadence.Type, tids ccfTypeIDByCadenceType) error
 //	/ reference-type
 //	/ intersection-type
 //	/ capability-type
+//	/ inclusiverange-type
 //	/ type-ref
 //
 // All exported Cadence types need to be supported by this function,
@@ -62,6 +64,9 @@ func (e *Encoder) encodeInlineType(typ cadence.Type, tids ccfTypeIDByCadenceType
 	case *cadence.DictionaryType:
 		return e.encodeDictType(typ, tids)
 
+	case *cadence.InclusiveRangeType:
+		return e.encodeInclusiveRangeType(typ, tids)
+
 	case cadence.CompositeType, cadence.InterfaceType:
 		id, err := tids.id(typ)
 		if err != nil {
@@ -70,7 +75,7 @@ func (e *Encoder) encodeInlineType(typ cadence.Type, tids ccfTypeIDByCadenceType
 		return e.encodeTypeRef(id)
 
 	case *cadence.ReferenceType:
-		return e.encodeReferenceType(typ, tids)
+		return e.encodeReferenceType(typ, tids, true)
 
 	case *cadence.IntersectionType:
 		return e.encodeIntersectionType(typ, tids)
@@ -296,21 +301,18 @@ func (e *Encoder) encodeDictTypeWithRawTag(
 	return encodeTypeFn(typ.ElementType, tids)
 }
 
-// encodeReferenceType encodes cadence.ReferenceType as
+// encodeInclusiveRangeType encodes cadence.InclusiveRangeType as
 // language=CDDL
-// reference-type =
+// inclusiverange-type =
 //
-//	; cbor-tag-reference-type
-//	#6.142([
-//	  authorized: bool,
-//	  type: inline-type,
-//	])
-func (e *Encoder) encodeReferenceType(
-	typ *cadence.ReferenceType,
+// ; cbor-tag-inclusiverange-type
+// #6.145(inline-type)
+func (e *Encoder) encodeInclusiveRangeType(
+	typ *cadence.InclusiveRangeType,
 	tids ccfTypeIDByCadenceType,
 ) error {
-	rawTagNum := []byte{0xd8, CBORTagReferenceType}
-	return e.encodeReferenceTypeWithRawTag(
+	rawTagNum := []byte{0xd8, CBORTagInclusiveRangeType}
+	return e.encodeInclusiveRangeTypeWithRawTag(
 		typ,
 		tids,
 		e.encodeInlineType,
@@ -318,11 +320,251 @@ func (e *Encoder) encodeReferenceType(
 	)
 }
 
+// encodeInclusiveRangeTypeWithRawTag encodes cadence.InclusiveRangeType
+// with given tag number and encode type function.
+func (e *Encoder) encodeInclusiveRangeTypeWithRawTag(
+	typ *cadence.InclusiveRangeType,
+	tids ccfTypeIDByCadenceType,
+	encodeTypeFn encodeTypeFn,
+	rawTagNumber []byte,
+) error {
+	// Encode CBOR tag number.
+	err := e.enc.EncodeRawBytes(rawTagNumber)
+	if err != nil {
+		return err
+	}
+
+	// Encode element type with given encodeTypeFn
+	return encodeTypeFn(typ.ElementType, tids)
+}
+
+// encodeReferenceType encodes cadence.ReferenceType as
+// language=CDDL
+// reference-type =
+//
+//	; cbor-tag-reference-type
+//	#6.142([
+//	  authorized: authorization-type,
+//	  type: inline-type,
+//	])
+func (e *Encoder) encodeReferenceType(
+	typ *cadence.ReferenceType,
+	tids ccfTypeIDByCadenceType,
+	isType bool,
+) error {
+	rawTagNum := []byte{0xd8, CBORTagReferenceType}
+	return e.encodeReferenceTypeWithRawTag(
+		typ,
+		tids,
+		e.encodeInlineType,
+		rawTagNum,
+		isType,
+	)
+}
+
+// encodeAuthorization encodes cadence.Authorization as
+// language=CDDL
+// authorization-type =
+//
+//	unauthorized-type
+//	/ entitlement-set-authorization-type
+//	/ entitlement-map-authorization-type
+//
+// unauthorized-type = nil
+//
+// entitlement-set-authorization-type =
+//
+//	; cbor-tag-entitlement-set-authorization-type
+//	#6.146([
+//	    kind: uint8,
+//	    entitlements: +[string]
+//	])
+//
+// entitlement-map-authorization-type =
+//
+//	; cbor-tag-entitlement-map-authorization-type
+//	#6.147(entitlement: string)
+//
+// authorization-type-value =
+//
+//	unauthorized-type-value
+//	/ entitlement-set-authorization-type-value
+//	/ entitlement-map-authorization-type-value
+//
+// unauthorized-type-value = nil
+//
+// entitlement-set-authorization-type-value =
+//
+//	; cbor-tag-entitlement-set-authorization-type-value
+//	#6.195([
+//	    kind: uint8,
+//	    entitlements: +[string]
+//	])
+//
+// entitlement-map-authorization-type-value =
+//
+//	; cbor-tag-entitlement-map-authorization-type-value
+//	#6.196(entitlement: string)
 func (e *Encoder) encodeAuthorization(
 	auth cadence.Authorization,
+	isType bool,
 ) error {
-	// TODO: implement this
-	return e.enc.EncodeNil()
+	switch auth := auth.(type) {
+	case cadence.Unauthorized:
+		return e.enc.EncodeNil()
+
+	case *cadence.EntitlementSetAuthorization:
+		var rawTagNum []byte
+		if isType {
+			rawTagNum = []byte{0xd8, CBORTagEntitlementSetAuthorizationAccessType}
+		} else {
+			rawTagNum = []byte{0xd8, CBORTagEntitlementSetAuthorizationAccessTypeValue}
+		}
+		return e.encodeEntitlementSetAuthorizationWithRawTag(auth, rawTagNum)
+
+	case cadence.EntitlementMapAuthorization:
+		var rawTagNum []byte
+		if isType {
+			rawTagNum = []byte{0xd8, CBORTagEntitlementMapAuthorizationAccessType}
+		} else {
+			rawTagNum = []byte{0xd8, CBORTagEntitlementMapAuthorizationAccessTypeValue}
+		}
+		return e.encodeEntitlementMapAuthorizationWithRawTag(auth, rawTagNum)
+
+	default:
+		panic(cadenceErrors.NewUnexpectedError("cannot encode unsupported Authorization (%T) type", auth))
+	}
+}
+
+// encodeEntitlementSetAuthorization encodes cadence.EntitlementSetAuthorization as
+// language=CDDL
+// entitlement-set-authorization-type =
+//
+//	; cbor-tag-entitlement-set-authorization-type
+//	#6.146([
+//	    kind: uint8,
+//	    entitlements: +[string]
+//	])
+//
+// or
+//
+// entitlement-set-authorization-type-value =
+//
+//	; cbor-tag-entitlement-set-authorization-type-value
+//	#6.195([
+//	    kind: uint8,
+//	    entitlements: +[string]
+//	])
+func (e *Encoder) encodeEntitlementSetAuthorizationWithRawTag(
+	auth *cadence.EntitlementSetAuthorization,
+	rawTagNum []byte,
+) error {
+	// Encode CBOR tag number.
+	err := e.enc.EncodeRawBytes(rawTagNum)
+	if err != nil {
+		return err
+	}
+
+	// Encode array head of length 2.
+	err = e.enc.EncodeArrayHead(entitlementSetAuthorizationArraySize)
+	if err != nil {
+		return err
+	}
+
+	// element 0: kind
+	kindRawValue, exist := entitlementSetKindRawValueByCadenceType(auth.Kind)
+	if !exist {
+		return fmt.Errorf("unexpected entitlement set kind %v for Authorization type", auth.Kind)
+	}
+
+	err = e.enc.EncodeUint64(uint64(kindRawValue))
+	if err != nil {
+		return err
+	}
+
+	entitlements := auth.Entitlements
+
+	// element 1: array of entitlements
+	err = e.enc.EncodeArrayHead(uint64(len(entitlements)))
+	if err != nil {
+		return err
+	}
+
+	switch e.em.sortEntitlementTypes {
+	case SortNone:
+		for _, entitlement := range entitlements {
+			// Encode entitlement type.
+			err = e.enc.EncodeString(string(entitlement))
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+
+	case SortBytewiseLexical:
+		switch len(entitlements) {
+		case 0:
+			// Short-circuit if there are no entitlements.
+			return nil
+
+		case 1:
+			// Avoid overhead of sorting if there is only one entitlement.
+			err = e.enc.EncodeString(string(entitlements[0]))
+			if err != nil {
+				return err
+			}
+
+		default:
+			// "Deterministic CCF Encoding Requirements" in CCF specs:
+			//
+			//   "Elements in entitlement-set-authorization-type.entitlements MUST be sorted"
+			//   "Elements in entitlement-set-authorization-type-value.entitlements MUST be sorted"
+			sorter := newBytewiseCadenceTypeIDSorter(entitlements)
+
+			sort.Sort(sorter)
+
+			for _, index := range sorter.indexes {
+				// Encode entitlement type.
+				err = e.enc.EncodeString(string(entitlements[index]))
+				if err != nil {
+					return err
+				}
+			}
+
+			return nil
+		}
+
+	default:
+		panic(cadenceErrors.NewUnexpectedError("unsupported sort option for entitlement types: %d", e.em.sortEntitlementTypes))
+	}
+
+	return nil
+}
+
+// encodeEntitlementMapAuthorization encodes cadence.EntitlementMapAuthorization as
+// language=CDDL
+// entitlement-map-authorization-type =
+//
+//	; cbor-tag-entitlement-map-authorization-type
+//	#6.147(entitlement: string)
+//
+// or
+//
+// entitlement-map-authorization-type-value =
+//
+//	; cbor-tag-entitlement-map-authorization-type-value
+//	#6.196(entitlement: string)
+func (e *Encoder) encodeEntitlementMapAuthorizationWithRawTag(
+	auth cadence.EntitlementMapAuthorization,
+	rawTagNum []byte,
+) error {
+	// Encode CBOR tag number.
+	err := e.enc.EncodeRawBytes(rawTagNum)
+	if err != nil {
+		return err
+	}
+
+	return e.enc.EncodeString(string(auth.TypeID))
 }
 
 // encodeReferenceTypeWithRawTag encodes cadence.ReferenceType
@@ -332,6 +574,7 @@ func (e *Encoder) encodeReferenceTypeWithRawTag(
 	tids ccfTypeIDByCadenceType,
 	encodeTypeFn encodeTypeFn,
 	rawTagNumber []byte,
+	isType bool,
 ) error {
 	// Encode CBOR tag number.
 	err := e.enc.EncodeRawBytes(rawTagNumber)
@@ -346,7 +589,7 @@ func (e *Encoder) encodeReferenceTypeWithRawTag(
 	}
 
 	// element 0: authorization
-	err = e.encodeAuthorization(typ.Authorization)
+	err = e.encodeAuthorization(typ.Authorization, isType)
 	if err != nil {
 		return err
 	}

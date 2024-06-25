@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,15 @@
 
 package stdlib
 
+import (
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+)
+
 type StandardLibraryHandler interface {
 	Logger
-	UnsafeRandomGenerator
+	RandomGenerator
 	BlockAtHeightProvider
 	CurrentBlockProvider
 	AccountCreator
@@ -38,13 +44,14 @@ func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibr
 		PanicFunction,
 		SignatureAlgorithmConstructor,
 		RLPContract,
+		InclusiveRangeConstructorFunction,
 		NewLogFunction(handler),
-		NewUnsafeRandomFunction(handler),
+		NewRevertibleRandomFunction(handler),
 		NewGetBlockFunction(handler),
 		NewGetCurrentBlockFunction(handler),
 		NewGetAccountFunction(handler),
 		NewAccountConstructor(handler),
-		NewPublicKeyConstructor(handler, handler, handler),
+		NewPublicKeyConstructor(handler),
 		NewBLSContract(nil, handler),
 		NewHashAlgorithmConstructor(handler),
 	}
@@ -55,4 +62,26 @@ func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []Standa
 		DefaultStandardLibraryValues(handler),
 		NewGetAuthAccountFunction(handler),
 	)
+}
+
+type CompositeValueFunctionsHandler func(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	compositeValue *interpreter.CompositeValue,
+) *interpreter.FunctionOrderedMap
+
+type CompositeValueFunctionsHandlers map[common.TypeID]CompositeValueFunctionsHandler
+
+func DefaultStandardLibraryCompositeValueFunctionHandlers(
+	handler StandardLibraryHandler,
+) CompositeValueFunctionsHandlers {
+	return CompositeValueFunctionsHandlers{
+		sema.PublicKeyType.ID(): func(
+			inter *interpreter.Interpreter,
+			_ interpreter.LocationRange,
+			publicKeyValue *interpreter.CompositeValue,
+		) *interpreter.FunctionOrderedMap {
+			return PublicKeyFunctions(inter, publicKeyValue, handler)
+		},
+	}
 }

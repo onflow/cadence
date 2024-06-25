@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,6 @@ package interpreter
 
 import (
 	"github.com/onflow/atree"
-
-	"github.com/onflow/cadence/runtime/common"
 )
 
 // placeholderValue
@@ -41,15 +39,15 @@ func (f placeholderValue) RecursiveString(_ SeenReferences) string {
 	return ""
 }
 
-func (f placeholderValue) MeteredString(_ common.MemoryGauge, _ SeenReferences) string {
+func (f placeholderValue) MeteredString(_ *Interpreter, _ SeenReferences, _ LocationRange) string {
 	return ""
 }
 
-func (f placeholderValue) Accept(_ *Interpreter, _ Visitor) {
+func (f placeholderValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange) {
 	// NO-OP
 }
 
-func (f placeholderValue) Walk(_ *Interpreter, _ func(Value)) {
+func (f placeholderValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -57,7 +55,7 @@ func (f placeholderValue) StaticType(_ *Interpreter) StaticType {
 	return PrimitiveStaticTypeNever
 }
 
-func (placeholderValue) IsImportable(_ *Interpreter) bool {
+func (placeholderValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -620,7 +620,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 		if compositeKind == common.CompositeKindContract {
 			identifier = "TestImpl"
 		} else {
-			interfaceType := AsInterfaceType("Test", compositeKind)
+			interfaceType := "{Test}"
 
 			setupCode = fmt.Sprintf(
 				`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -835,11 +835,11 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						// use the contract singleton, so it is loaded
 						testFunction = `
 					       access(all) fun test() {
-					            TestImpl
+					            TestImpl.NoOpFunc()
 					       }
                         `
 					} else {
-						interfaceType := AsInterfaceType("Test", compositeKind)
+						interfaceType := "{Test}"
 
 						testFunction =
 							fmt.Sprintf(
@@ -878,6 +878,8 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
                                              emit Foo(x: x)
 					                     }
 					                 }
+
+					                 access(all) fun NoOpFunc() {}
 					             }
 
 					             %[2]s
@@ -983,7 +985,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 	}
 }
 
-func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *testing.T) {
+func TestInterpretResourceInterfaceInitializerPreConditions(t *testing.T) {
 
 	t.Parallel()
 
@@ -1002,13 +1004,6 @@ func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *test
                   pre {
                       x > 1: "invalid init"
                       emit InitPre(x: x)
-                  }
-              }
-
-              destroy() {
-                  pre {
-                      self.x < 3: "invalid destroy"
-                      emit DestroyPre(x: self.x)
                   }
               }
           }
@@ -1061,30 +1056,6 @@ func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *test
 		inter, getEvents := newInterpreter(t)
 		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(2))
 		require.NoError(t, err)
-
-		require.Len(t, getEvents(), 2)
-	})
-
-	t.Run("3", func(t *testing.T) {
-		t.Parallel()
-
-		inter, getEvents := newInterpreter(t)
-		_, err := inter.Invoke("test", interpreter.NewUnmeteredIntValueFromInt64(3))
-		RequireError(t, err)
-
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		interpreterErr := err.(interpreter.Error)
-
-		require.IsType(t,
-			interpreter.ConditionError{},
-			interpreterErr.Err,
-		)
-		conditionError := interpreterErr.Err.(interpreter.ConditionError)
-
-		assert.Equal(t, "invalid destroy", conditionError.Message)
 
 		require.Len(t, getEvents(), 1)
 	})
@@ -1359,7 +1330,7 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
 	valueDeclaration := stdlib.StandardLibraryValue{
 		Name: "check",
 		Type: checkFunctionType,
-		Value: interpreter.NewHostFunctionValue(
+		Value: interpreter.NewStaticHostFunctionValue(
 			nil,
 			checkFunctionType,
 			func(invocation interpreter.Invocation) interpreter.Value {
@@ -1403,10 +1374,6 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
                   check(r)
                   return true
               }
-
-              destroy() {
-                  destroy self.resources
-              }
           }
 
           fun test(): Bool {
@@ -1426,10 +1393,14 @@ func TestInterpretFunctionWithPostConditionAndResourceResult(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 			},
 		},
 	)

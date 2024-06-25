@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ func init() {
 
 	for _, integerType := range sema.AllIntegerTypes {
 		switch integerType {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -95,7 +95,7 @@ func TestInterpretPlusOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -124,7 +124,7 @@ func TestInterpretMinusOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -153,7 +153,7 @@ func TestInterpretMulOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -182,7 +182,7 @@ func TestInterpretDivOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -211,7 +211,7 @@ func TestInterpretModOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}

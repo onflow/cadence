@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,43 +81,5 @@ func TestCheckInvalidCompositeInitializerOverloading(t *testing.T) {
 				assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 			})
 		}
-	}
-}
-
-func TestCheckInvalidResourceDestructorOverloading(t *testing.T) {
-
-	t.Parallel()
-
-	interfacePossibilities := []bool{true, false}
-
-	for _, isInterface := range interfacePossibilities {
-
-		interfaceKeyword := ""
-		body := ""
-		if isInterface {
-			interfaceKeyword = "interface"
-		} else {
-			body = "{}"
-		}
-
-		t.Run(interfaceKeyword, func(t *testing.T) {
-
-			_, err := ParseAndCheck(t,
-				fmt.Sprintf(
-					`
-                      resource %[1]s X {
-                          destroy() %[2]s
-                          destroy(y: Int) %[2]s
-                      }
-                    `,
-					interfaceKeyword,
-					body,
-				),
-			)
-
-			errs := RequireCheckerErrors(t, err, 1)
-
-			assert.IsType(t, &sema.UnsupportedOverloadingError{}, errs[0])
-		})
 	}
 }

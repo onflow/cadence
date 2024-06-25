@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -764,7 +764,7 @@ func TestCheckMemberAccess(t *testing.T) {
             }
 
             struct S {
-                access(M) let foo: [String]
+                access(mapping M) let foo: [String]
                 init() {
                     self.foo = []
                 }
@@ -796,13 +796,13 @@ func TestCheckMemberAccess(t *testing.T) {
                 C -> D
             }
             struct Foo {
-                access(FooMapping) let bars: [Bar]
+                access(mapping FooMapping) let bars: [Bar]
                 init() {
                     self.bars = [Bar()]
                 }
             }
             struct Bar {
-                access(BarMapping) let baz: Baz
+                access(mapping BarMapping) let baz: Baz
                 init() {
                     self.baz = Baz()
                 }
@@ -843,14 +843,14 @@ func TestCheckMemberAccess(t *testing.T) {
             }
 
             struct Foo {
-                access(FooMapping) let bars: [Bar]
+                access(mapping FooMapping) let bars: [Bar]
                 init() {
                     self.bars = [Bar()]
                 }
             }
 
             struct Bar {
-                access(BarMapping) let baz: Baz
+                access(mapping BarMapping) let baz: Baz
                 init() {
                     self.baz = Baz()
                 }
@@ -940,18 +940,11 @@ func TestCheckMemberAccess(t *testing.T) {
 
 		// Test all built-in composite types
 		for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
-			if !ty.IsDefined() {
+			if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 				continue
 			}
 
 			semaType := ty.SemaType()
-
-			// Some primitive static types are deprecated,
-			// and only exist for migration purposes,
-			// so do not have an equivalent sema type
-			if semaType == nil {
-				continue
-			}
 
 			if !semaType.ContainFieldsOrElements() ||
 				semaType.IsResourceType() {
@@ -968,4 +961,52 @@ func TestCheckMemberAccess(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("composite reference, enum field", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            struct Test {
+                var status: Status
+                init() {
+                    self.status = Status.Off
+                }
+            }
+
+            enum Status: Int {
+                case On
+                case Off
+            }
+
+            fun test() {
+                let test = Test()
+                let testRef = &test as &Test
+                var x: Status = testRef.status
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckContractFieldAccessInSameContract(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        contract Foo {
+
+            var array: [Int]
+
+            init() {
+                self.array = []
+            }
+
+            access(all) fun bar() {
+                // Should return the concrete value, not a reference.
+                var foo: [Int] = Foo.array
+            }
+        }`,
+	)
+
+	require.NoError(t, err)
 }

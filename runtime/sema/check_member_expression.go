@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import (
 
 // NOTE: only called if the member expression is *not* an assignment
 func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) Type {
-	accessedType, memberType, member, isOptional := checker.visitMember(expression)
+	accessedType, memberType, member, isOptional := checker.visitMember(expression, false)
 
 	if !accessedType.IsInvalidType() {
 		memberAccessType := accessedType
@@ -111,21 +111,30 @@ func (checker *Checker) getReferenceType(typ Type, substituteAuthorization bool,
 	return NewReferenceType(checker.memoryGauge, auth, typ)
 }
 
-func shouldReturnReference(parentType, memberType Type) bool {
-	if _, isReference := referenceType(parentType); !isReference {
+func shouldReturnReference(parentType, memberType Type, isAssignment bool) bool {
+	if isAssignment {
+		return false
+	}
+
+	if _, isReference := MaybeReferenceType(parentType); !isReference {
 		return false
 	}
 
 	return memberType.ContainFieldsOrElements()
 }
 
-func referenceType(typ Type) (*ReferenceType, bool) {
+func MaybeReferenceType(typ Type) (*ReferenceType, bool) {
 	unwrappedType := UnwrapOptionalType(typ)
 	refType, isReference := unwrappedType.(*ReferenceType)
 	return refType, isReference
 }
 
-func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedType Type, resultingType Type, member *Member, isOptional bool) {
+func (checker *Checker) visitMember(expression *ast.MemberExpression, isAssignment bool) (
+	accessedType Type,
+	resultingType Type,
+	member *Member,
+	isOptional bool,
+) {
 	memberInfo, ok := checker.Elaboration.MemberExpressionMemberAccessInfo(expression)
 	if ok {
 		return memberInfo.AccessedType, memberInfo.ResultingType, memberInfo.Member, memberInfo.IsOptional
@@ -155,7 +164,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			checker.currentMemberExpression = previousMemberExpression
 		}()
 
-		accessedType = checker.VisitExpression(accessedExpression, nil)
+		// in an statement like `a.b.c = x`, the entire statement itself
+		// is an assignment, but the evaluation of the accessed exprssion itself (i.e. `a.b`)
+		// is not, so we temporarily clear the `inAssignment` status here before restoring it later.
+		accessedType = checker.withAssignment(false, func() Type {
+			return checker.VisitExpression(accessedExpression, expression, nil)
+		})
 	}()
 
 	checker.checkUnusedExpressionResourceLoss(accessedType, accessedExpression)
@@ -198,8 +212,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			return
 		}
 
-		targetRange := ast.NewRangeFromPositioned(checker.memoryGauge, expression.Expression)
-		member = resolver.Resolve(checker.memoryGauge, identifier, targetRange, checker.report)
+		member = resolver.Resolve(
+			checker.memoryGauge,
+			identifier,
+			expression.Expression,
+			checker.report,
+		)
 		resultingType = member.TypeAnnotation.Type
 	}
 
@@ -312,12 +330,6 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		switch ty := resultingType.(type) {
 		case *ReferenceType:
 			return NewReferenceType(checker.memoryGauge, resultingAuthorization, ty.Type)
-		case *OptionalType:
-			switch innerTy := ty.Type.(type) {
-			case *ReferenceType:
-				return NewOptionalType(checker.memoryGauge,
-					NewReferenceType(checker.memoryGauge, resultingAuthorization, innerTy.Type))
-			}
 		}
 		return resultingType
 	}
@@ -325,16 +337,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 	shouldSubstituteAuthorization := !member.Access.Equal(resultingAuthorization)
 
 	if shouldSubstituteAuthorization {
-		switch ty := resultingType.(type) {
-		case *FunctionType:
-			resultingType = NewSimpleFunctionType(
-				ty.Purity,
-				ty.Parameters,
-				NewTypeAnnotation(substituteConcreteAuthorization(ty.ReturnTypeAnnotation.Type)),
-			)
-		default:
-			resultingType = substituteConcreteAuthorization(resultingType)
-		}
+		resultingType = resultingType.Map(checker.memoryGauge, make(map[*TypeParameter]*TypeParameter), substituteConcreteAuthorization)
 	}
 
 	// Check that the member access is not to a function of resource type
@@ -342,17 +345,21 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 	//
 	// This would result in a bound method for a resource, which is invalid.
 
-	if !checker.inAssignment &&
-		!checker.inInvocation &&
-		member.DeclarationKind == common.DeclarationKindFunction &&
+	if member.DeclarationKind == common.DeclarationKindFunction &&
 		!accessedType.IsInvalidType() &&
 		accessedType.IsResourceType() {
 
-		checker.report(
-			&ResourceMethodBindingError{
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
-			},
-		)
+		parent := checker.parent
+		parentInvocationExpr, parentIsInvocation := parent.(*ast.InvocationExpression)
+
+		if !parentIsInvocation ||
+			expression != parentInvocationExpr.InvokedExpression {
+			checker.report(
+				&ResourceMethodBindingError{
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, expression),
+				},
+			)
+		}
 	}
 
 	// If the member,
@@ -367,7 +374,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 	// i.e: `accessedSelfMember == nil`
 
 	if accessedSelfMember == nil &&
-		shouldReturnReference(accessedType, resultingType) &&
+		shouldReturnReference(accessedType, resultingType, isAssignment) &&
 		member.DeclarationKind == common.DeclarationKindField {
 
 		// Get a reference to the type
@@ -382,7 +389,9 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 // in the current location of the checker, along with the authorzation with which the result can be used
 func (checker *Checker) isReadableMember(accessedType Type, member *Member, resultingType Type, accessRange func() ast.Range) (bool, Access) {
 	if checker.Config.AccessCheckMode.IsReadableAccess(member.Access) ||
-		checker.containerTypes[member.ContainerType] {
+		// only allow references unrestricted access to members in their own container that are not entitled
+		// this prevents rights escalation attacks on entitlements
+		(member.Access.IsPrimitiveAccess() && checker.containerTypes[member.ContainerType]) {
 
 		if mappedAccess, isMappedAccess := member.Access.(*EntitlementMapAccess); isMappedAccess {
 			return checker.mapAccess(mappedAccess, accessedType, resultingType, accessRange)
@@ -474,7 +483,12 @@ func (checker *Checker) mapAccess(
 		//  we could use this to then extract a `auth(Insert, Remove) &[T]` reference to that array by accessing `member`
 		//  on an owned copy of `S`. As such, when in an assignment, we return the full codomain here as the "granted authorization"
 		//  of the access expression, since the checker will later enforce that the incoming reference value is a subtype of that full codomain.
+		//  However, if the map is or includes the `Identity` map, the theoretical codomain of that map is infinite, and so no reference can
+		//  possibly be authorized enough to write to it
 		if checker.inAssignment {
+			if mappedAccess.Type.IncludesIdentity {
+				return true, InaccessibleAccess
+			}
 			return true, mappedAccess.Codomain()
 		}
 		return true, grantedAccess
@@ -483,7 +497,10 @@ func (checker *Checker) mapAccess(
 		return checker.mapAccess(mappedAccess, ty.Type, resultingType, accessRange)
 
 	default:
-		if mappedAccess.Type == IdentityType {
+		if mappedAccess.Type.IncludesIdentity {
+			if checker.inAssignment {
+				return true, InaccessibleAccess
+			}
 			access := AllSupportedEntitlements(resultingType)
 			if access != nil {
 				return true, access
@@ -517,12 +534,8 @@ func allSupportedEntitlements(typ Type, isInnerType bool) Access {
 			return allSupportedEntitlements(typ.ReturnTypeAnnotation.Type, true)
 		}
 	case EntitlementSupportingType:
-		supportedEntitlements := typ.SupportedEntitlements()
-		if supportedEntitlements != nil && supportedEntitlements.Len() > 0 {
-			access := EntitlementSetAccess{
-				SetKind:      Conjunction,
-				Entitlements: supportedEntitlements,
-			}
+		access := typ.SupportedEntitlements().Access()
+		if access != UnauthorizedAccess {
 			return access
 		}
 	}

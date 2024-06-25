@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ type AccountCapabilityControllerValue struct {
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads
 	// when the controller is loaded for borrowing/checking
-	GetCapability func(inter *Interpreter) *CapabilityValue
+	GetCapability func(inter *Interpreter) *IDCapabilityValue
 	GetTag        func(inter *Interpreter) *StringValue
 	SetTag        func(inter *Interpreter, tag *StringValue)
 	Delete        func(inter *Interpreter, locationRange LocationRange)
@@ -88,11 +88,11 @@ func (v *AccountCapabilityControllerValue) CapabilityControllerBorrowType() *Ref
 	return v.BorrowType
 }
 
-func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *AccountCapabilityControllerValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitAccountCapabilityControllerValue(interpreter, v)
 }
 
-func (v *AccountCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value)) {
+func (v *AccountCapabilityControllerValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
 	walkChild(v.CapabilityID)
 }
 
@@ -100,7 +100,7 @@ func (v *AccountCapabilityControllerValue) StaticType(_ *Interpreter) StaticType
 	return PrimitiveStaticTypeAccountCapabilityController
 }
 
-func (*AccountCapabilityControllerValue) IsImportable(_ *Interpreter) bool {
+func (*AccountCapabilityControllerValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -116,14 +116,15 @@ func (v *AccountCapabilityControllerValue) RecursiveString(seenReferences SeenRe
 }
 
 func (v *AccountCapabilityControllerValue) MeteredString(
-	memoryGauge common.MemoryGauge,
+	interpreter *Interpreter,
 	seenReferences SeenReferences,
+	locationRange LocationRange,
 ) string {
-	common.UseMemory(memoryGauge, common.AccountCapabilityControllerValueStringMemoryUsage)
+	common.UseMemory(interpreter, common.AccountCapabilityControllerValueStringMemoryUsage)
 
 	return format.AccountCapabilityController(
-		v.BorrowType.MeteredString(memoryGauge),
-		v.CapabilityID.MeteredString(memoryGauge, seenReferences),
+		v.BorrowType.MeteredString(interpreter),
+		v.CapabilityID.MeteredString(interpreter, seenReferences, locationRange),
 	)
 }
 
@@ -295,10 +296,11 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 	interpreter *Interpreter,
 	capabilityAddress common.Address,
 	resultBorrowType *sema.ReferenceType,
+	locationRange LocationRange,
 ) ReferenceValue {
 	config := interpreter.SharedState.Config
 
-	account := config.AccountHandler(AddressValue(capabilityAddress))
+	account := config.AccountHandler(interpreter, AddressValue(capabilityAddress))
 
 	// Account must be of `Account` type.
 	interpreter.ExpectType(
@@ -316,6 +318,7 @@ func (v *AccountCapabilityControllerValue) ReferenceValue(
 		authorization,
 		account,
 		resultBorrowType.Type,
+		locationRange,
 	)
 }
 
@@ -328,13 +331,14 @@ func (v *AccountCapabilityControllerValue) checkDeleted() {
 }
 
 func (v *AccountCapabilityControllerValue) newHostFunctionValue(
-	gauge common.MemoryGauge,
+	inter *Interpreter,
 	funcType *sema.FunctionType,
 	f func(invocation Invocation) Value,
 ) FunctionValue {
 	return deletionCheckedFunctionValue{
-		FunctionValue: NewHostFunctionValue(
-			gauge,
+		FunctionValue: NewBoundHostFunctionValue(
+			inter,
+			v,
 			funcType,
 			func(invocation Invocation) Value {
 				// NOTE: check if controller is already deleted

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
@@ -32,449 +31,11 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestRuntimeResourceDuplicationUsingDestructorIteration(t *testing.T) {
-	t.Parallel()
-
-	t.Run("Reported error", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-          // This Vault class is from Flow docs, used as our "victim" in this example
-          access(all) resource Vault {
-              // Balance of a user's Vault
-              // we use unsigned fixed point numbers for balances
-              // because they can represent decimals and do not allow negative values
-              access(all) var balance: UFix64
-
-              init(balance: UFix64) {
-                  self.balance = balance
-              }
-
-              access(all) fun withdraw(amount: UFix64): @Vault {
-                  self.balance = self.balance - amount
-                  return <-create Vault(balance: amount)
-              }
-
-              access(all) fun deposit(from: @Vault) {
-                  self.balance = self.balance + from.balance
-                  destroy from
-              }
-          }
-
-          // --- this code actually makes use of the vuln ---
-          access(all) resource DummyResource {
-              access(all) var dictRef: auth(Mutate) &{Bool: AnyResource};
-              access(all) var arrRef: auth(Mutate) &[Vault];
-              access(all) var victim: @Vault;
-              init(dictRef: auth(Mutate) &{Bool: AnyResource}, arrRef: auth(Mutate) &[Vault], victim: @Vault) {
-                  self.dictRef = dictRef;
-                  self.arrRef = arrRef;
-                  self.victim <- victim;
-              }
-
-              destroy() {
-                  self.arrRef.append(<- self.victim)
-                  self.dictRef[false] <-> self.dictRef[true]; // This screws up the destruction order
-              }
-          }
-
-          access(all) fun duplicateResource(victim1: @Vault, victim2: @Vault): @[Vault]{
-              let arr : @[Vault] <- [];
-              let dict: @{Bool: DummyResource} <- { }
-              let ref = &dict as auth(Mutate) &{Bool: AnyResource};
-              let arrRef = &arr as auth(Mutate) &[Vault];
-
-              var v1: @DummyResource? <- create DummyResource(dictRef: ref, arrRef: arrRef, victim: <- victim1);
-              dict[false] <-> v1;
-              destroy v1;
-
-              var v2: @DummyResource? <- create DummyResource(dictRef: ref, arrRef: arrRef, victim: <- victim2);
-              dict[true] <-> v2;
-              destroy v2;
-
-              destroy dict // Trigger the destruction chain where dict[false] will be destructed twice
-              return <- arr;
-          }
-
-          // --- end of vuln code ---
-
-          access(all) fun main() {
-
-              var v1 <- create Vault(balance: 1000.0); // This will be duplicated
-              var v2 <- create Vault(balance: 1.0); // This will be lost
-              var v3 <- create Vault(balance: 0.0); // We'll collect the spoils here
-
-              // The call will return an array of [v1, v1]
-              var res <- duplicateResource(victim1: <- v1, victim2: <-v2)
-
-              v3.deposit(from: <- res.removeLast());
-              v3.deposit(from: <- res.removeLast());
-              destroy res;
-
-              log(v3.balance);
-              destroy v3;
-          }
-        `
-
-		runtime := NewTestInterpreterRuntime()
-
-		accountCodes := map[common.Location][]byte{}
-
-		var events []cadence.Event
-
-		signerAccount := common.MustBytesToAddress([]byte{0x1})
-
-		storage := NewTestLedger(nil, nil)
-
-		runtimeInterface := &TestRuntimeInterface{
-			OnGetCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location], nil
-			},
-			Storage: storage,
-			OnGetSigningAccounts: func() ([]Address, error) {
-				return []Address{signerAccount}, nil
-			},
-			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-				return accountCodes[location], nil
-			},
-			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-				accountCodes[location] = code
-				return nil
-			},
-			OnEmitEvent: func(event cadence.Event) error {
-				events = append(events, event)
-				return nil
-			},
-			OnProgramLog: func(s string) {
-				assert.Fail(t, "we should not reach this point")
-			},
-			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(nil, b)
-			},
-		}
-
-		_, err := runtime.ExecuteScript(
-			Script{
-				Source:    []byte(script),
-				Arguments: [][]byte{},
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-			},
-		)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-
-		errs := checker.RequireCheckerErrors(t, checkerErr, 2)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-	})
-
-	t.Run("simplified", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-          access(all) resource Vault {
-              access(all) var balance: UFix64
-              access(all) var dictRef: auth(Mutate) &{Bool: Vault};
-
-              init(balance: UFix64, _ dictRef: auth(Mutate) &{Bool: Vault}) {
-                  self.balance = balance
-                  self.dictRef = dictRef;
-              }
-
-              access(all) fun withdraw(amount: UFix64): @Vault {
-                  self.balance = self.balance - amount
-                  return <-create Vault(balance: amount, self.dictRef)
-              }
-
-              access(all) fun deposit(from: @Vault) {
-                  self.balance = self.balance + from.balance
-                  destroy from
-              }
-
-              destroy() {
-                  self.dictRef[false] <-> self.dictRef[true]; // This screws up the destruction order
-              }
-          }
-
-          access(all) fun main(): UFix64 {
-
-              let dict: @{Bool: Vault} <- { }
-              let dictRef = &dict as auth(Mutate) &{Bool: Vault};
-
-              var v1 <- create Vault(balance: 1000.0, dictRef); // This will be duplicated
-              var v2 <- create Vault(balance: 1.0, dictRef); // This will be lost
-
-              var v1Ref = &v1 as &Vault
-
-              destroy dict.insert(key: false, <- v1)
-              destroy dict.insert(key: true, <- v2)
-
-              destroy dict;
-
-              // v1 is not destroyed!
-              return v1Ref.balance
-          }
-        `
-
-		runtime := NewTestInterpreterRuntime()
-
-		accountCodes := map[common.Location][]byte{}
-
-		var events []cadence.Event
-
-		signerAccount := common.MustBytesToAddress([]byte{0x1})
-
-		storage := NewTestLedger(nil, nil)
-
-		runtimeInterface := &TestRuntimeInterface{
-			OnGetCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location], nil
-			},
-			Storage: storage,
-			OnGetSigningAccounts: func() ([]Address, error) {
-				return []Address{signerAccount}, nil
-			},
-			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-				return accountCodes[location], nil
-			},
-			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-				accountCodes[location] = code
-				return nil
-			},
-			OnEmitEvent: func(event cadence.Event) error {
-				events = append(events, event)
-				return nil
-			},
-			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(nil, b)
-			},
-		}
-
-		_, err := runtime.ExecuteScript(
-			Script{
-				Source:    []byte(script),
-				Arguments: [][]byte{},
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-			},
-		)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-
-		errs := checker.RequireCheckerErrors(t, checkerErr, 3)
-
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		assert.IsType(t, &sema.InvalidatedResourceReferenceError{}, errs[2])
-	})
-
-	t.Run("forEachKey", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-          access(all) resource R{}
-
-          access(all) fun main() {
-              var dict: @{Int: R} <- {}
-
-              var r1: @R? <- create R()
-              var r2: @R? <- create R()
-              var r3: @R? <- create R()
-
-              dict[0] <-> r1
-              dict[1] <-> r2
-              dict[2] <-> r3
-
-              destroy r1
-              destroy r2
-              destroy r3
-
-              let acc = getAuthAccount<auth(Storage) &Account>(0x1)
-              acc.storage.save(<-dict, to: /storage/foo)
-
-              let ref = acc.storage.borrow<auth(Mutate) &{Int: R}>(from: /storage/foo)!
-
-              ref.forEachKey(fun(i: Int): Bool {
-                  var r4: @R? <- create R()
-                  ref[i+1] <-> r4
-                  destroy r4
-                  return true
-              })
-          }
-        `
-
-		runtime := NewTestInterpreterRuntime()
-
-		accountCodes := map[common.Location][]byte{}
-
-		var events []cadence.Event
-
-		signerAccount := common.MustBytesToAddress([]byte{0x1})
-
-		storage := NewTestLedger(nil, nil)
-
-		runtimeInterface := &TestRuntimeInterface{
-			OnGetCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location], nil
-			},
-			Storage: storage,
-			OnGetSigningAccounts: func() ([]Address, error) {
-				return []Address{signerAccount}, nil
-			},
-			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-				return accountCodes[location], nil
-			},
-			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-				accountCodes[location] = code
-				return nil
-			},
-			OnEmitEvent: func(event cadence.Event) error {
-				events = append(events, event)
-				return nil
-			},
-			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(nil, b)
-			},
-		}
-
-		_, err := runtime.ExecuteScript(
-			Script{
-				Source:    []byte(script),
-				Arguments: [][]byte{},
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-			},
-		)
-
-		errs := checker.RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	})
-
-	t.Run("array", func(t *testing.T) {
-
-		t.Parallel()
-
-		script := `
-        access(all) resource Vault {
-            access(all) var balance: UFix64
-            access(all) var arrRef: auth(Mutate) &[Vault]
-
-            init(balance: UFix64, _ arrRef: auth(Mutate) &[Vault]) {
-                self.balance = balance
-                self.arrRef = arrRef;
-            }
-
-            access(all) fun withdraw(amount: UFix64): @Vault {
-                self.balance = self.balance - amount
-                return <-create Vault(balance: amount, self.arrRef)
-            }
-
-            access(all) fun deposit(from: @Vault) {
-                self.balance = self.balance + from.balance
-                destroy from
-            }
-
-            destroy() {
-                self.arrRef.append(<-create Vault(balance: 0.0, self.arrRef))
-            }
-        }
-
-        access(all) fun main(): UFix64 {
-
-            let arr: @[Vault] <- []
-            let arrRef = &arr as auth(Mutate) &[Vault];
-
-            var v1 <- create Vault(balance: 1000.0, arrRef); // This will be duplicated
-            var v2 <- create Vault(balance: 1.0, arrRef); // This will be lost
-
-            var v1Ref = &v1 as &Vault
-
-            arr.append(<- v1)
-            arr.append(<- v2)
-
-            destroy arr
-
-            // v1 is not destroyed!
-            return v1Ref.balance
-        }`
-
-		runtime := NewTestInterpreterRuntime()
-
-		accountCodes := map[common.Location][]byte{}
-
-		var events []cadence.Event
-
-		signerAccount := common.MustBytesToAddress([]byte{0x1})
-
-		storage := NewTestLedger(nil, nil)
-
-		runtimeInterface := &TestRuntimeInterface{
-			OnGetCode: func(location Location) (bytes []byte, err error) {
-				return accountCodes[location], nil
-			},
-			Storage: storage,
-			OnGetSigningAccounts: func() ([]Address, error) {
-				return []Address{signerAccount}, nil
-			},
-			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-				return accountCodes[location], nil
-			},
-			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-				accountCodes[location] = code
-				return nil
-			},
-			OnEmitEvent: func(event cadence.Event) error {
-				events = append(events, event)
-				return nil
-			},
-			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-				return json.Decode(nil, b)
-			},
-		}
-
-		_, err := runtime.ExecuteScript(
-			Script{
-				Source:    []byte(script),
-				Arguments: [][]byte{},
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  common.ScriptLocation{},
-			},
-		)
-		RequireError(t, err)
-
-		var checkerErr *sema.CheckerError
-		require.ErrorAs(t, err, &checkerErr)
-
-		errs := checker.RequireCheckerErrors(t, checkerErr, 1)
-
-		assert.IsType(t, &sema.InvalidatedResourceReferenceError{}, errs[0])
-	})
-}
-
-func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
+func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.T) {
 
 	t.Parallel()
 
@@ -611,17 +172,21 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
               // Move vault into the contract
               Holder.setContent(<-vault)
 
-              // Save the contract into storage (invalid, even if same account)
+              // Save the contract reference into storage.
+              // This won't error, since the validation happens at the end of the transaction.
               acct.storage.save(Holder as AnyStruct, to: /storage/holder)
 
               // Move vault back out of the contract
               let vault2 <- Holder.swapContent(nil)
               let unwrappedVault2 <- vault2!
 
-              // Load the contract back from storage
-              let dupeContract = acct.storage.load<AnyStruct>(from: /storage/holder)! as! Holder
+              // Load the contract reference back from storage.
+              // Given the value is a reference, this won't duplicate the contract value.
+              let dupeContract = acct.storage.load<AnyStruct>(from: /storage/holder)! as! &Holder
 
-              // Move the vault of of the duplicated contract
+              // Move the vault of of the contract.
+              // The 'dupeVault' must be nil, since it was moved out of the contract
+              // in the above step.
               let dupeVault <- dupeContract.swapContent(nil)
               let unwrappedDupeVault <- dupeVault!
 
@@ -644,6 +209,162 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var nonTransferableValueError interpreter.NonTransferableValueError
-	require.ErrorAs(t, err, &nonTransferableValueError)
+	var forceNilError interpreter.ForceNilError
+	require.ErrorAs(t, err, &forceNilError)
+}
+
+func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	accountCodes := map[common.Location][]byte{}
+
+	var events []cadence.Event
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	storage := NewTestLedger(nil, nil)
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: storage,
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy Fungible Token contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction(
+				"FungibleToken",
+				[]byte(modifiedFungibleTokenContractInterface),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Deploy Flow Token contract
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(fmt.Sprintf(
+				`
+                  transaction {
+
+                      prepare(signer: auth(Storage, Contracts, Capabilities) &Account) {
+                          signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
+                      }
+                  }
+                `,
+				hex.EncodeToString([]byte(modifiedFlowContract)),
+			)),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Deploy Holder contract
+
+	signerAccount = common.MustBytesToAddress([]byte{0x2})
+
+	const holderContract = `
+      import FlowToken from 0x1
+
+      access(all) contract Holder {
+
+          access(all) var content: @FlowToken.Vault?
+
+          init() {
+              self.content <- nil
+          }
+
+          access(all) fun setContent(_ vault: @FlowToken.Vault?) {
+            self.content <-! vault
+          }
+
+          access(all) fun swapContent(_ vault: @FlowToken.Vault?): @FlowToken.Vault? {
+            let oldVault <- self.content <- vault
+            return <-oldVault
+          }
+
+          access(all) fun duplicate(acct: auth(Storage) &Account) {
+              // Create vault
+              let vault <- FlowToken.createEmptyVault() as! @FlowToken.Vault?
+
+              // Move vault into the contract
+              Holder.setContent(<-vault)
+
+              // Save the contract into storage (invalid, even if same account).
+              // Given here it access the enclosing contract itself (not an imported contract),
+              // the concrete contract value is available.
+              acct.storage.save(Holder as AnyStruct, to: /storage/holder)
+
+              // Move vault back out of the contract
+              let vault2 <- Holder.swapContent(nil)
+              let unwrappedVault2 <- vault2!
+
+              // Load the contract reference back from storage.
+              // Given the value is a reference, this won't duplicate the contract value.
+              let dupeContract = acct.storage.load<AnyStruct>(from: /storage/holder)! as! &Holder
+
+              // Move the vault of of the contract.
+              // The 'dupeVault' must be nil, since it was moved out of the contract
+              // in the above step.
+              let dupeVault <- dupeContract.swapContent(nil)
+              let unwrappedDupeVault <- dupeVault!
+
+              // Deposit the duplicated vault into the original vault
+              unwrappedVault2.deposit(from: <- unwrappedDupeVault)
+
+              destroy unwrappedVault2
+          }
+
+      }
+    `
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction(
+				"Holder",
+				[]byte(holderContract),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	var invalidMoveError *sema.InvalidMoveError
+	require.ErrorAs(t, err, &invalidMoveError)
 }

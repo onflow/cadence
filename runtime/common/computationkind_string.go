@@ -24,7 +24,7 @@ func _() {
 	_ = x[ComputationKindEncodeValue-1080]
 	_ = x[ComputationKindSTDLIBPanic-1100]
 	_ = x[ComputationKindSTDLIBAssert-1101]
-	_ = x[ComputationKindSTDLIBUnsafeRandom-1102]
+	_ = x[ComputationKindSTDLIBRevertibleRandom-1102]
 	_ = x[ComputationKindSTDLIBRLPDecodeString-1108]
 	_ = x[ComputationKindSTDLIBRLPDecodeList-1109]
 	_ = x[ComputationKindWebAssemblyFuel-1112]
@@ -37,7 +37,7 @@ const (
 	_ComputationKind_name_3 = "CreateArrayValueTransferArrayValueDestroyArrayValue"
 	_ComputationKind_name_4 = "CreateDictionaryValueTransferDictionaryValueDestroyDictionaryValue"
 	_ComputationKind_name_5 = "EncodeValue"
-	_ComputationKind_name_6 = "STDLIBPanicSTDLIBAssertSTDLIBUnsafeRandom"
+	_ComputationKind_name_6 = "STDLIBPanicSTDLIBAssertSTDLIBRevertibleRandom"
 	_ComputationKind_name_7 = "STDLIBRLPDecodeStringSTDLIBRLPDecodeList"
 	_ComputationKind_name_8 = "WebAssemblyFuel"
 )
@@ -47,7 +47,7 @@ var (
 	_ComputationKind_index_2 = [...]uint8{0, 20, 42, 63}
 	_ComputationKind_index_3 = [...]uint8{0, 16, 34, 51}
 	_ComputationKind_index_4 = [...]uint8{0, 21, 44, 66}
-	_ComputationKind_index_6 = [...]uint8{0, 11, 23, 41}
+	_ComputationKind_index_6 = [...]uint8{0, 11, 23, 45}
 	_ComputationKind_index_7 = [...]uint8{0, 21, 40}
 )
 

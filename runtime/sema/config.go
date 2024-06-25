@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,16 +26,16 @@ type Config struct {
 	// ValidTopLevelDeclarationsHandler is used to determine the kinds of declarations
 	// which are valid at the top-level for a given location
 	ValidTopLevelDeclarationsHandler ValidTopLevelDeclarationsHandlerFunc
-	BaseTypeActivation               *VariableActivation
+	BaseTypeActivationHandler        ActivationHandlerFunc
+	BaseValueActivationHandler       ActivationHandlerFunc
 	// ImportHandler is used to resolve unresolved imports
-	ImportHandler       ImportHandlerFunc
-	BaseValueActivation *VariableActivation
+	ImportHandler ImportHandlerFunc
 	// CheckHandler is the function which is used for the checking of a program
 	CheckHandler CheckHandlerFunc
 	// LocationHandler is used to resolve locations
 	LocationHandler LocationHandlerFunc
 	// AccessCheckMode is the mode for access control checks.
-	// It determines how access modifiers how existing and missing acess modifiers are treated
+	// It determines how access modifiers how existing and missing access modifiers are treated
 	AccessCheckMode AccessCheckMode
 	// ExtendedElaborationEnabled determines if extended elaboration information is generated
 	ExtendedElaborationEnabled bool

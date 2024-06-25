@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const typeSeparatorSpaceDoc = prettier.Text(": ")
@@ -535,22 +536,18 @@ func (t *FunctionType) CheckEqual(other Type, checker TypeEqualityChecker) error
 }
 
 // ReferenceType
-
-type Authorization struct {
-	EntitlementSet EntitlementSet `json:"EntitlementSet"`
-}
-
 type ReferenceType struct {
-	Type          Type           `json:"ReferencedType"`
-	StartPos      Position       `json:"-"`
-	Authorization *Authorization `json:"Authorization"`
+	Type             Type     `json:"ReferencedType"`
+	StartPos         Position `json:"-"`
+	LegacyAuthorized bool
+	Authorization    Authorization `json:"Authorization"`
 }
 
 var _ Type = &ReferenceType{}
 
 func NewReferenceType(
 	memoryGauge common.MemoryGauge,
-	authorization *Authorization,
+	authorization Authorization,
 	typ Type,
 	startPos Position,
 ) *ReferenceType {
@@ -577,26 +574,38 @@ func (t *ReferenceType) EndPosition(memoryGauge common.MemoryGauge) Position {
 }
 
 const referenceTypeAuthKeywordDoc = prettier.Text("auth")
+const referenceTypeMappingKeywordDoc = prettier.Text("mapping ")
 const referenceTypeSymbolDoc = prettier.Text("&")
 
 func (t *ReferenceType) Doc() prettier.Doc {
 	var doc prettier.Concat
 	if t.Authorization != nil {
 		doc = append(doc, referenceTypeAuthKeywordDoc)
-		entitlementSet := t.Authorization.EntitlementSet
-		if entitlementSet != nil && len(entitlementSet.Entitlements()) > 0 {
-			entitlements := entitlementSet.Entitlements()
-			// TODO: add indentation, improve separators. follow e.g. ParameterList.Doc()
-			doc = append(doc, prettier.Text("("))
-			for i, entitlement := range entitlements {
-				doc = append(doc, entitlement.Doc())
-				if i < len(entitlements)-1 {
-					doc = append(doc, prettier.Text(entitlementSet.Separator().String()), prettier.Space)
+		doc = append(doc, prettier.Text("("))
+		switch authorization := t.Authorization.(type) {
+		case EntitlementSet:
+			if len(authorization.Entitlements()) > 0 {
+				entitlements := authorization.Entitlements()
+				// TODO: add indentation, improve separators. follow e.g. ParameterList.Doc()
+				for i, entitlement := range entitlements {
+					doc = append(doc, entitlement.Doc())
+					if i < len(entitlements)-1 {
+						doc = append(doc, prettier.Text(authorization.Separator().String()), prettier.Space)
+					}
 				}
 			}
-			doc = append(doc, prettier.Text(")"))
+		case *MappedAccess:
+			doc = append(doc,
+				referenceTypeMappingKeywordDoc,
+				authorization.EntitlementMap.Doc(),
+			)
+		default:
+			panic(errors.NewUnreachableError())
 		}
-		doc = append(doc, prettier.Space)
+		doc = append(doc,
+			prettier.Text(")"),
+			prettier.Space,
+		)
 	}
 
 	return append(
@@ -626,7 +635,8 @@ func (t *ReferenceType) CheckEqual(other Type, checker TypeEqualityChecker) erro
 // IntersectionType
 
 type IntersectionType struct {
-	Types []*NominalType
+	LegacyRestrictedType Type // Deprecated
+	Types                []*NominalType
 	Range
 }
 

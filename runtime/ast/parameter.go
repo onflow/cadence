@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,17 @@ package ast
 import (
 	"encoding/json"
 
+	"github.com/turbolent/prettier"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
 type Parameter struct {
-	TypeAnnotation *TypeAnnotation
-	Label          string
-	Identifier     Identifier
-	StartPos       Position `json:"-"`
+	TypeAnnotation  *TypeAnnotation
+	DefaultArgument Expression
+	Label           string
+	Identifier      Identifier
+	StartPos        Position `json:"-"`
 }
 
 func NewParameter(
@@ -36,14 +39,16 @@ func NewParameter(
 	label string,
 	identifier Identifier,
 	typeAnnotation *TypeAnnotation,
+	defaultArgument Expression,
 	startPos Position,
 ) *Parameter {
 	common.UseMemory(gauge, common.ParameterMemoryUsage)
 	return &Parameter{
-		Label:          label,
-		Identifier:     identifier,
-		TypeAnnotation: typeAnnotation,
-		StartPos:       startPos,
+		Label:           label,
+		Identifier:      identifier,
+		TypeAnnotation:  typeAnnotation,
+		DefaultArgument: defaultArgument,
+		StartPos:        startPos,
 	}
 }
 
@@ -65,7 +70,14 @@ func (p *Parameter) StartPosition() Position {
 }
 
 func (p *Parameter) EndPosition(memoryGauge common.MemoryGauge) Position {
+	if p.HasDefaultArgument() {
+		return p.DefaultArgument.EndPosition(memoryGauge)
+	}
 	return p.TypeAnnotation.EndPosition(memoryGauge)
+}
+
+func (p *Parameter) HasDefaultArgument() bool {
+	return p.DefaultArgument != nil
 }
 
 func (p *Parameter) MarshalJSON() ([]byte, error) {
@@ -77,4 +89,36 @@ func (p *Parameter) MarshalJSON() ([]byte, error) {
 		Range: NewUnmeteredRangeFromPositioned(p),
 		Alias: (*Alias)(p),
 	})
+}
+
+const parameterDefaultArgumentSeparator = "="
+
+func (p *Parameter) Doc() prettier.Doc {
+	var parameterDoc prettier.Concat
+
+	if p.Label != "" {
+		parameterDoc = append(
+			parameterDoc,
+			prettier.Text(p.Label),
+			prettier.Space,
+		)
+	}
+
+	parameterDoc = append(
+		parameterDoc,
+		prettier.Text(p.Identifier.Identifier),
+		typeSeparatorSpaceDoc,
+		p.TypeAnnotation.Doc(),
+	)
+
+	if p.DefaultArgument != nil {
+		parameterDoc = append(parameterDoc,
+			prettier.Space,
+			prettier.Text(parameterDefaultArgumentSeparator),
+			prettier.Space,
+			p.DefaultArgument.Doc(),
+		)
+	}
+
+	return parameterDoc
 }

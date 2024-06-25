@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -112,14 +112,17 @@ type LocationFilter func(location Location) bool
 // locations from coverage collection.
 type CoverageReport struct {
 	// Contains a *LocationCoverage per location.
-	Coverage map[common.Location]*LocationCoverage `json:"-"`
+	Coverage map[common.Location]*LocationCoverage
 	// Contains locations whose programs are already inspected.
-	Locations map[common.Location]struct{} `json:"-"`
+	Locations map[common.Location]struct{}
 	// Contains locations excluded from coverage collection.
-	ExcludedLocations map[common.Location]struct{} `json:"-"`
+	ExcludedLocations map[common.Location]struct{}
 	// This filter can be used to inject custom logic on
 	// each location/program inspection.
-	LocationFilter LocationFilter `json:"-"`
+	locationFilter LocationFilter
+	// Contains a mapping with source paths for each
+	// location.
+	locationMappings map[string]string
 }
 
 // WithLocationFilter sets the LocationFilter for the current
@@ -127,7 +130,15 @@ type CoverageReport struct {
 func (r *CoverageReport) WithLocationFilter(
 	locationFilter LocationFilter,
 ) {
-	r.LocationFilter = locationFilter
+	r.locationFilter = locationFilter
+}
+
+// WithLocationMappings sets the LocationMappings for the current
+// CoverageReport.
+func (r *CoverageReport) WithLocationMappings(
+	locationMappings map[string]string,
+) {
+	r.locationMappings = locationMappings
 }
 
 // ExcludeLocation adds the given location to the map of excluded
@@ -167,7 +178,7 @@ func (r *CoverageReport) AddLineHit(location Location, line int) {
 // If the CoverageReport.LocationFilter is present, and calling it with the given
 // location results to false, the method call also results in a NO-OP.
 func (r *CoverageReport) InspectProgram(location Location, program *ast.Program) {
-	if r.LocationFilter != nil && !r.LocationFilter(location) {
+	if r.locationFilter != nil && !r.locationFilter(location) {
 		return
 	}
 	if r.IsLocationExcluded(location) {
@@ -405,8 +416,6 @@ func NewCoverageReport() *CoverageReport {
 	}
 }
 
-type crAlias CoverageReport
-
 // To avoid the overhead of having the Percentage & MissedLines
 // as fields in the LocationCoverage struct, we simply populate
 // this lcAlias struct, with the corresponding methods, upon marshalling.
@@ -423,7 +432,8 @@ type lcAlias struct {
 func (r *CoverageReport) MarshalJSON() ([]byte, error) {
 	coverage := make(map[string]lcAlias, len(r.Coverage))
 	for location, locationCoverage := range r.Coverage { // nolint:maprange
-		coverage[location.ID()] = lcAlias{
+		locationSource := r.sourcePathForLocation(location)
+		coverage[locationSource] = lcAlias{
 			LineHits:    locationCoverage.LineHits,
 			MissedLines: locationCoverage.MissedLines(),
 			Statements:  locationCoverage.Statements,
@@ -433,11 +443,9 @@ func (r *CoverageReport) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Coverage          map[string]lcAlias `json:"coverage"`
 		ExcludedLocations []string           `json:"excluded_locations"`
-		*crAlias
 	}{
 		Coverage:          coverage,
 		ExcludedLocations: r.ExcludedLocationIDs(),
-		crAlias:           (*crAlias)(r),
 	})
 }
 
@@ -448,10 +456,7 @@ func (r *CoverageReport) UnmarshalJSON(data []byte) error {
 	cr := &struct {
 		Coverage          map[string]lcAlias `json:"coverage"`
 		ExcludedLocations []string           `json:"excluded_locations"`
-		*crAlias
-	}{
-		crAlias: (*crAlias)(r),
-	}
+	}{}
 
 	if err := json.Unmarshal(data, cr); err != nil {
 		return err
@@ -505,7 +510,8 @@ func (r *CoverageReport) MarshalLCOV() ([]byte, error) {
 	buf := new(bytes.Buffer)
 	for _, location := range locations {
 		coverage := r.Coverage[location]
-		_, err := fmt.Fprintf(buf, "TN:\nSF:%s\n", location.ID())
+		locationSource := r.sourcePathForLocation(location)
+		_, err := fmt.Fprintf(buf, "TN:\nSF:%s\n", locationSource)
 		if err != nil {
 			return nil, err
 		}
@@ -538,4 +544,28 @@ func (r *CoverageReport) MarshalLCOV() ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+// Given a common.Location, returns its mapped source, if any.
+// Defaults to the location's ID().
+func (r *CoverageReport) sourcePathForLocation(location common.Location) string {
+	var locationIdentifier string
+
+	switch loc := location.(type) {
+	case common.AddressLocation:
+		locationIdentifier = loc.Name
+	case common.StringLocation:
+		locationIdentifier = loc.String()
+	case common.IdentifierLocation:
+		locationIdentifier = loc.String()
+	default:
+		locationIdentifier = loc.ID()
+	}
+
+	locationSource, ok := r.locationMappings[locationIdentifier]
+	if !ok {
+		locationSource = location.ID()
+	}
+
+	return locationSource
 }

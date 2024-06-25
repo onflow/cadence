@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,18 +52,11 @@ func TestTypeConversion(t *testing.T) {
 	}
 
 	for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
-		if !ty.IsDefined() {
+		if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 			continue
 		}
 
 		semaType := ty.SemaType()
-
-		// Some primitive static types are deprecated,
-		// and only exist for migration purposes,
-		// so do not have an equivalent sema type
-		if semaType == nil {
-			continue
-		}
 
 		if _, ok := semaType.(*sema.CapabilityType); ok {
 			continue

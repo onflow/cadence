@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -219,16 +219,14 @@ func TestCheckAccountStorageSave(t *testing.T) {
 
 			if domain == common.PathDomainStorage {
 
+				errs := RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			} else {
 				errs := RequireCheckerErrors(t, err, 2)
 
-				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-			} else {
-				errs := RequireCheckerErrors(t, err, 3)
-
-				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-				require.IsType(t, &sema.TypeMismatchError{}, errs[2])
 			}
 		})
 
@@ -254,16 +252,14 @@ func TestCheckAccountStorageSave(t *testing.T) {
 
 			if domain == common.PathDomainStorage {
 
+				errs := RequireCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			} else {
 				errs := RequireCheckerErrors(t, err, 2)
 
-				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-			} else {
-				errs := RequireCheckerErrors(t, err, 3)
-
-				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-				require.IsType(t, &sema.TypeMismatchError{}, errs[2])
 			}
 		})
 	}
@@ -980,10 +976,11 @@ func TestCheckAccountContractsNames(t *testing.T) {
           }
         `)
 
-		errors := RequireCheckerErrors(t, err, 2)
+		errors := RequireCheckerErrors(t, err, 3)
 
 		assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errors[0])
 		assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errors[1])
+		assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errors[2])
 	})
 }
 
@@ -1682,7 +1679,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 		_, err := ParseAndCheck(t, `
           fun test(capabilities: &Account.Capabilities) {
 
-              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
+              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)
 
               let ref: &Int = capabilities.borrow<&Int>(/public/foo)!
           }
@@ -1697,7 +1694,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 		_, err := ParseAndCheck(t, `
           fun test(capabilities: auth(Capabilities) &Account.Capabilities) {
 
-              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
+              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)
 
               let ref: &Int = capabilities.borrow<&Int>(/public/foo)!
 
@@ -1716,7 +1713,7 @@ func TestCheckAccountCapabilities(t *testing.T) {
 		_, err := ParseAndCheck(t, `
            fun test(capabilities: &Account.Capabilities) {
 
-              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)!
+              let cap: Capability<&Int> = capabilities.get<&Int>(/public/foo)
 
               capabilities.publish(cap, at: /public/bar)
 
@@ -1728,6 +1725,39 @@ func TestCheckAccountCapabilities(t *testing.T) {
 
 		require.IsType(t, &sema.InvalidAccessError{}, errors[0])
 		require.IsType(t, &sema.InvalidAccessError{}, errors[1])
+	})
+
+	t.Run("Never type argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(capabilities: &Account.Capabilities) {
+              capabilities.get<Never>(/public/foo)
+          }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var invalidTypeArgumentErr *sema.InvalidTypeArgumentError
+		require.ErrorAs(t, errs[0], &invalidTypeArgumentErr)
+		assert.Equal(t,
+			"Type argument for `get` cannot be `Never`",
+			invalidTypeArgumentErr.SecondaryError(),
+		)
+	})
+
+	t.Run("missing type argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(capabilities: &Account.Capabilities) {
+              capabilities.get(/public/foo)
+          }
+        `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
 	})
 }
 

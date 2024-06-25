@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -111,6 +111,11 @@ type ExpressionTypes struct {
 	ExpectedType Type
 }
 
+type ForStatementTypes struct {
+	IndexVariableType Type
+	ValueVariableType Type
+}
+
 type Elaboration struct {
 	interfaceTypesAndDeclarationsBiMap      *bimap.BiMap[*InterfaceType, *ast.InterfaceDeclaration]
 	entitlementTypesAndDeclarationsBiMap    *bimap.BiMap[*EntitlementType, *ast.EntitlementDeclaration]
@@ -118,6 +123,7 @@ type Elaboration struct {
 
 	fixedPointExpressionTypes         map[*ast.FixedPointExpression]Type
 	swapStatementTypes                map[*ast.SwapStatement]SwapStatementTypes
+	forStatementTypes                 map[*ast.ForStatement]ForStatementTypes
 	assignmentStatementTypes          map[*ast.AssignmentStatement]AssignmentStatementTypes
 	compositeDeclarationTypes         map[ast.CompositeLikeDeclaration]*CompositeType
 	compositeTypeDeclarations         map[*CompositeType]ast.CompositeLikeDeclaration
@@ -142,6 +148,7 @@ type Elaboration struct {
 	nestedResourceMoveExpressions       map[ast.Expression]struct{}
 	compositeNestedDeclarations         map[ast.CompositeLikeDeclaration]map[string]ast.Declaration
 	interfaceNestedDeclarations         map[*ast.InterfaceDeclaration]map[string]ast.Declaration
+	defaultDestroyDeclarations          map[ast.Declaration]ast.CompositeLikeDeclaration
 	postConditionsRewrites              map[*ast.Conditions]PostConditionsRewrite
 	emitStatementEventTypes             map[*ast.EmitStatement]*CompositeType
 	compositeTypes                      map[TypeID]*CompositeType
@@ -729,6 +736,23 @@ func (e *Elaboration) SetInterfaceNestedDeclarations(
 	e.interfaceNestedDeclarations[declaration] = nestedDeclaration
 }
 
+func (e *Elaboration) DefaultDestroyDeclaration(declaration ast.Declaration) ast.CompositeLikeDeclaration {
+	if e.defaultDestroyDeclarations == nil {
+		return nil
+	}
+	return e.defaultDestroyDeclarations[declaration]
+}
+
+func (e *Elaboration) SetDefaultDestroyDeclaration(
+	declaration ast.Declaration,
+	eventDeclaration ast.CompositeLikeDeclaration,
+) {
+	if e.defaultDestroyDeclarations == nil {
+		e.defaultDestroyDeclarations = map[ast.Declaration]ast.CompositeLikeDeclaration{}
+	}
+	e.defaultDestroyDeclarations[declaration] = eventDeclaration
+}
+
 func (e *Elaboration) PostConditionsRewrite(conditions *ast.Conditions) (rewrite PostConditionsRewrite) {
 	if e.postConditionsRewrites == nil {
 		return
@@ -1031,4 +1055,18 @@ func (e *Elaboration) GetSemanticAccess(access ast.Access) (semaAccess Access, p
 	}
 	semaAccess, present = e.semanticAccesses[access]
 	return
+}
+
+func (e *Elaboration) SetForStatementType(statement *ast.ForStatement, types ForStatementTypes) {
+	if e.forStatementTypes == nil {
+		e.forStatementTypes = map[*ast.ForStatement]ForStatementTypes{}
+	}
+	e.forStatementTypes[statement] = types
+}
+
+func (e *Elaboration) ForStatementType(statement *ast.ForStatement) (types ForStatementTypes) {
+	if e.forStatementTypes == nil {
+		return
+	}
+	return e.forStatementTypes[statement]
 }

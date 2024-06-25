@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ type Logger interface {
 }
 
 func NewLogFunction(logger Logger) StandardLibraryValue {
-	return NewStandardLibraryFunction(
+	return NewStandardLibraryStaticFunction(
 		"log",
 		LogFunctionType,
 		logFunctionDocString,
@@ -54,8 +54,8 @@ func NewLogFunction(logger Logger) StandardLibraryValue {
 			value := invocation.Arguments[0]
 			locationRange := invocation.LocationRange
 
-			memoryGauge := invocation.Interpreter
-			message := value.MeteredString(memoryGauge, interpreter.SeenReferences{})
+			inter := invocation.Interpreter
+			message := value.MeteredString(inter, interpreter.SeenReferences{}, locationRange)
 
 			var err error
 			errors.WrapPanic(func() {

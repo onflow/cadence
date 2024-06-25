@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 package sema
 
 import (
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -221,8 +222,12 @@ const (
 	storageCapabilityControllerTypeMask
 	accountCapabilityControllerTypeMask
 
+	fixedSizeUnsignedIntegerTypeMask
+
 	interfaceTypeMask
 	functionTypeMask
+	hashableStructMask
+	inclusiveRangeTypeMask
 
 	invalidTypeMask
 )
@@ -240,20 +245,23 @@ var (
 				Or(Int128TypeTag).
 				Or(Int256TypeTag)
 
+	FixedSizeUnsignedIntegerTypeTag = newTypeTagFromUpperMask(fixedSizeUnsignedIntegerTypeMask).
+					Or(UInt8TypeTag).
+					Or(UInt16TypeTag).
+					Or(UInt32TypeTag).
+					Or(UInt64TypeTag).
+					Or(UInt128TypeTag).
+					Or(UInt256TypeTag).
+					Or(Word8TypeTag).
+					Or(Word16TypeTag).
+					Or(Word32TypeTag).
+					Or(Word64TypeTag).
+					Or(Word128TypeTag).
+					Or(Word256TypeTag)
+
 	UnsignedIntegerTypeTag = newTypeTagFromLowerMask(unsignedIntegerTypeMask).
 				Or(UIntTypeTag).
-				Or(UInt8TypeTag).
-				Or(UInt16TypeTag).
-				Or(UInt32TypeTag).
-				Or(UInt64TypeTag).
-				Or(UInt128TypeTag).
-				Or(UInt256TypeTag).
-				Or(Word8TypeTag).
-				Or(Word16TypeTag).
-				Or(Word32TypeTag).
-				Or(Word64TypeTag).
-				Or(Word128TypeTag).
-				Or(Word256TypeTag)
+				Or(FixedSizeUnsignedIntegerTypeTag)
 
 	IntegerTypeTag = newTypeTagFromLowerMask(integerTypeMask).
 			Or(SignedIntegerTypeTag).
@@ -338,12 +346,23 @@ var (
 
 	IntersectionTypeTag                = newTypeTagFromUpperMask(intersectionTypeMask)
 	CapabilityTypeTag                  = newTypeTagFromUpperMask(capabilityTypeMask)
+	InclusiveRangeTypeTag              = newTypeTagFromUpperMask(inclusiveRangeTypeMask)
 	InvalidTypeTag                     = newTypeTagFromUpperMask(invalidTypeMask)
 	TransactionTypeTag                 = newTypeTagFromUpperMask(transactionTypeMask)
 	AnyResourceAttachmentTypeTag       = newTypeTagFromUpperMask(anyResourceAttachmentMask)
 	AnyStructAttachmentTypeTag         = newTypeTagFromUpperMask(anyStructAttachmentMask)
 	StorageCapabilityControllerTypeTag = newTypeTagFromUpperMask(storageCapabilityControllerTypeMask)
 	AccountCapabilityControllerTypeTag = newTypeTagFromUpperMask(accountCapabilityControllerTypeMask)
+
+	HashableStructTypeTag = newTypeTagFromUpperMask(hashableStructMask).
+				Or(AddressTypeTag).
+				Or(NeverTypeTag).
+				Or(BoolTypeTag).
+				Or(CharacterTypeTag).
+				Or(StringTypeTag).
+				Or(MetaTypeTag).
+				Or(NumberTypeTag).
+				Or(PathTypeTag)
 
 	// AnyStructTypeTag only includes the types that are pre-known
 	// to belong to AnyStruct type. This is more of an optimization.
@@ -368,7 +387,9 @@ var (
 				Or(CapabilityTypeTag).
 				Or(FunctionTypeTag).
 				Or(StorageCapabilityControllerTypeTag).
-				Or(AccountCapabilityControllerTypeTag)
+				Or(AccountCapabilityControllerTypeTag).
+				Or(HashableStructTypeTag).
+				Or(InclusiveRangeTypeTag)
 
 	AnyResourceTypeTag = newTypeTagFromLowerMask(anyResourceTypeMask).
 				Or(AnyResourceAttachmentTypeTag)
@@ -489,6 +510,8 @@ func findCommonSuperType(joinedTypeTag TypeTag, types ...Type) Type {
 		return InvalidType
 	case joinedTypeTag.BelongsTo(SignedIntegerTypeTag):
 		return SignedIntegerType
+	case joinedTypeTag.BelongsTo(FixedSizeUnsignedIntegerTypeTag):
+		return FixedSizeUnsignedIntegerType
 	case joinedTypeTag.BelongsTo(IntegerTypeTag):
 		return IntegerType
 	case joinedTypeTag.BelongsTo(SignedFixedPointTypeTag):
@@ -649,9 +672,9 @@ func findSuperTypeFromLowerMask(joinedTypeTag TypeTag, types []Type) Type {
 		return commonSuperTypeOfVariableSizedArrays(types)
 	case dictionaryTypeMask:
 		return commonSuperTypeOfDictionaries(types)
-	case referenceTypeMask,
-		genericTypeMask:
-
+	case referenceTypeMask:
+		return commonSuperTypeOfReferences(types)
+	case genericTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
 	default:
 		// not homogenous. Return nil and continue on advanced checks.
@@ -670,8 +693,12 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 		intersectionTypeMask,
 		transactionTypeMask,
 		interfaceTypeMask,
-		functionTypeMask:
+		functionTypeMask,
+		inclusiveRangeTypeMask:
 		return getSuperTypeOfDerivedTypes(types)
+
+	case hashableStructMask:
+		return HashableStructType
 
 	case anyResourceAttachmentMask:
 		return AnyResourceAttachmentType
@@ -685,8 +712,137 @@ func findSuperTypeFromUpperMask(joinedTypeTag TypeTag, types []Type) Type {
 	case accountCapabilityControllerTypeMask:
 		return AccountCapabilityControllerType
 
+	case fixedSizeUnsignedIntegerTypeMask:
+		return FixedSizeUnsignedIntegerType
+
 	default:
 		return nil
+	}
+}
+
+func leastCommonAccess(accessA, accessB Access) Access {
+	setAccessA, isSetAccessA := accessA.(EntitlementSetAccess)
+	setAccessB, isSetAccessB := accessB.(EntitlementSetAccess)
+
+	if !isSetAccessA || !isSetAccessB {
+		return UnauthorizedAccess
+	}
+
+	switch setAccessA.SetKind {
+	case Conjunction:
+		switch setAccessB.SetKind {
+		case Conjunction:
+			// least common access of two non-disjoint conjunctions is their intersection
+			// e.g. the least common supertype of (E, F) and (E, G)  is just E
+			intersection := orderedmap.KeySetIntersection(setAccessA.Entitlements, setAccessB.Entitlements)
+			if intersection.Len() != 0 {
+				return NewAccessFromEntitlementOrderedSet(intersection, Conjunction)
+			}
+			// if the intersection is completely empty (i.e. the two sets are totally disjoint)
+			// the least common supertype is the union of one element arbitrarily chosen from each conjunction.
+			// E.g., `(A | C)`, `(A | D)`, `(B | C)`, and `(B | D)`
+			// are all equally valid least common supertypes of (A, B)` and `(C, D)`.
+			//
+			// To get a more consistent behavior here,
+			// we take the least common supertype of all the possible least common supertypes from the previous step,
+			// which luckily here is just the union of the elements of the conjunctions converted to a disjunction.
+			// e.g. the least common supertype of E and F is `(E | F)`
+			// and the least common supertype of `(A, B)` and `(C, D)` is `(A | B | C | D)`
+			union := orderedmap.KeySetUnion(setAccessA.Entitlements, setAccessB.Entitlements)
+			return NewAccessFromEntitlementOrderedSet(union, Disjunction)
+
+		case Disjunction:
+			// least common supertype of a non-disjoint conjunction and a disjunction is
+			// just the disjunction. This is because, in this case, the disjunction is
+			// already a supertype of the conjunction
+			// e.g. the least common access of `(E, F)` and `(E | G)` is `(E | G)`
+			if setAccessB.PermitsAccess(setAccessA) {
+				return setAccessB
+			}
+
+			// if the conjunction and disjunction are completely disjoint, their least common supertype
+			// is the union of the disjunction and an arbitrary element chosen from the conjunction.
+			// E.g. `(E | G | H)` and `(F | G | H)` are both valid least common supertypes of `(E, F)` and `(G | H)`
+			//
+			// In order to have a consistent behavior here,
+			// we take the least common supertype of all the possible least common supertypes from the previous step,
+			// which luckily here is just the union of the elements of the disjunction and the conjunction.
+			// E.g. our computed supertype of `(E, F)` and `(G | H)` is `(E | F | G | H)`
+			union := orderedmap.KeySetUnion(setAccessA.Entitlements, setAccessB.Entitlements)
+			return NewAccessFromEntitlementOrderedSet(union, Disjunction)
+		}
+
+	case Disjunction:
+		switch setAccessB.SetKind {
+		case Conjunction:
+			// symmetric with the other case where A is a conjunction and B is a disjunction
+			return leastCommonAccess(accessB, accessA)
+		case Disjunction:
+			// least common access of two disjunctions is their union
+			// e.g. the least common supertype of (E | F) and (E | G) is (E | F | G)
+			union := orderedmap.KeySetUnion(setAccessA.Entitlements, setAccessB.Entitlements)
+			return NewAccessFromEntitlementOrderedSet(union, Disjunction)
+		}
+	}
+
+	panic(errors.NewUnreachableError())
+}
+
+func commonSuperTypeOfReferences(types []Type) Type {
+	var references []*ReferenceType
+
+	// check that all the referenced types are equal
+	// before computing authorization supertype
+	var prevReferenceType *ReferenceType
+	for _, typ := range types {
+		// 'Never' type doesn't affect the supertype.
+		// Hence, ignore them
+		if typ == NeverType {
+			continue
+		}
+
+		referenceType, ok := typ.(*ReferenceType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		references = append(references, referenceType)
+
+		if prevReferenceType == nil {
+			prevReferenceType = referenceType
+			continue
+		}
+
+		if !referenceType.Type.Equal(prevReferenceType.Type) {
+			return commonSuperTypeOfHeterogeneousTypes(types)
+		}
+	}
+
+	if len(references) == 0 {
+		return commonSuperTypeOfHeterogeneousTypes(types)
+	}
+
+	referencedType := references[0].Type
+
+	// compute the least common authorization of the list of references
+	// the "supertype" operation for access is commutative and associative,
+	// so we can just apply the operation by reducing the list
+	var superAuthorization Access
+	for _, refTyp := range references {
+		if superAuthorization == nil {
+			superAuthorization = refTyp.Authorization
+			continue
+		}
+		// this is the "top" access, so if we are already here, just end the loop early
+		if superAuthorization == UnauthorizedAccess {
+			break
+		}
+		superAuthorization = leastCommonAccess(superAuthorization, refTyp.Authorization)
+	}
+
+	return &ReferenceType{
+		Type:          referencedType,
+		Authorization: superAuthorization,
 	}
 }
 
@@ -827,7 +983,7 @@ func commonSuperTypeOfDictionaries(types []Type) Type {
 		return InvalidType
 	}
 
-	if !IsValidDictionaryKeyType(keySuperType) {
+	if !IsSubType(keySuperType, HashableStructType) {
 		return commonSuperTypeOfHeterogeneousTypes(types)
 	}
 
@@ -838,11 +994,13 @@ func commonSuperTypeOfDictionaries(types []Type) Type {
 }
 
 func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
-	var hasStructs, hasResources bool
+	var hasStructs, hasResources, allHashableStructs bool
+	allHashableStructs = true
 	for _, typ := range types {
 		isResource := typ.IsResourceType()
 		hasResources = hasResources || isResource
 		hasStructs = hasStructs || !isResource
+		allHashableStructs = allHashableStructs && IsHashableStructType(typ)
 
 		if hasResources && hasStructs {
 			return AnyType
@@ -851,6 +1009,10 @@ func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
 
 	if hasResources {
 		return AnyResourceType
+	}
+
+	if allHashableStructs {
+		return HashableStructType
 	}
 
 	return AnyStructType

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,6 +65,8 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		nil,
 	)
 
+	self.isTransaction = true
+
 	// Construct a raw HostFunctionValue without a type,
 	// instead of using NewHostFunctionValue, which requires a type.
 	//
@@ -76,9 +78,9 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		Function: func(invocation Invocation) Value {
 			interpreter.activations.PushNewWithParent(lexicalScope)
 
-			self := MemberAccessibleValue(self)
+			self := Value(self)
 			invocation.Self = &self
-			interpreter.declareVariable(sema.SelfIdentifier, self)
+			interpreter.declareSelfVariable(self, invocation.LocationRange)
 
 			if declaration.ParameterList != nil {
 				// If the transaction has a parameter list of N parameters,
@@ -132,12 +134,18 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				preConditions = *declaration.PreConditions
 			}
 
+			declarationLocationRange := LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: declaration,
+			}
+
 			return interpreter.visitFunctionBody(
 				postConditionsRewrite.BeforeStatements,
 				preConditions,
 				body,
 				postConditionsRewrite.RewrittenPostConditions,
 				sema.VoidType,
+				declarationLocationRange,
 			)
 		},
 	}

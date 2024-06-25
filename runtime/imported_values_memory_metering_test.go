@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -185,6 +185,18 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 
 		script := []byte(`
             access(all) fun main(x: UInt256) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		executeScript(t, script, meter, cadence.NewUInt256(2))
+		assert.Equal(t, uint64(32), meter[common.MemoryKindBigInt])
+	})
+
+	t.Run("FixedSizeUnsignedInteger", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun main(x: FixedSizeUnsignedInteger) {}
         `)
 
 		meter := make(map[common.MemoryKind]uint64)
@@ -399,6 +411,29 @@ func TestRuntimeImportedValueMemoryMetering(t *testing.T) {
 		executeScript(t, script, meter, structValue)
 		assert.Equal(t, uint64(1), meter[common.MemoryKindCompositeValueBase])
 		assert.Equal(t, uint64(71), meter[common.MemoryKindRawString])
+	})
+
+	t.Run("InclusiveRange", func(t *testing.T) {
+		t.Parallel()
+
+		script := []byte(`
+            access(all) fun main(x: InclusiveRange<Int>) {}
+        `)
+
+		meter := make(map[common.MemoryKind]uint64)
+		inclusiveRangeValue := &cadence.InclusiveRange{
+			InclusiveRangeType: &cadence.InclusiveRangeType{
+				ElementType: cadence.IntType,
+			},
+			Start: cadence.NewInt(1),
+			End:   cadence.NewInt(50),
+			Step:  cadence.NewInt(2),
+		}
+
+		executeScript(t, script, meter, inclusiveRangeValue)
+		assert.Equal(t, uint64(1), meter[common.MemoryKindCompositeValueBase])
+		assert.Equal(t, uint64(1), meter[common.MemoryKindInclusiveRangeStaticType])
+		assert.Equal(t, uint64(1), meter[common.MemoryKindCadenceInclusiveRangeValue])
 	})
 }
 

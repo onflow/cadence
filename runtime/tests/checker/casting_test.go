@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -4439,6 +4439,21 @@ func TestCheckStaticCastElaboration(t *testing.T) {
 			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 2)
 			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
 				assert.Equal(t, sema.AnyStructType, cast.ExpectedType)
+			}
+		})
+
+		t.Run("Fixed size unsigned integer literal", func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheckWithAny(t, `
+                let x = 45 as FixedSizeUnsignedInteger
+            `)
+
+			require.NoError(t, err)
+
+			require.Len(t, checker.Elaboration.AllStaticCastTypes(), 1)
+			for _, cast := range checker.Elaboration.AllStaticCastTypes() { // nolint:maprange
+				assert.Equal(t, sema.FixedSizeUnsignedIntegerType, cast.TargetType)
 			}
 		})
 

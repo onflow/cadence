@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,11 @@
  */
 
 package ccf
+
+import (
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/common/bimap"
+)
 
 // CCF uses CBOR tag numbers 128-255, which are unassigned by [IANA]
 // (https://www.iana.org/assignments/cbor-tags/cbor-tags.xhtml).
@@ -64,9 +69,9 @@ const (
 	CBORTagReferenceType
 	CBORTagIntersectionType
 	CBORTagCapabilityType
-	_
-	_
-	_
+	CBORTagInclusiveRangeType
+	CBORTagEntitlementSetAuthorizationAccessType
+	CBORTagEntitlementMapAuthorizationAccessType
 	_
 	_
 	_
@@ -86,7 +91,7 @@ const (
 	CBORTagEventType
 	CBORTagContractType
 	CBORTagEnumType
-	_
+	CBORTagAttachmentType
 	_
 	_
 	_
@@ -120,9 +125,9 @@ const (
 	CBORTagIntersectionTypeValue
 	CBORTagCapabilityTypeValue
 	CBORTagFunctionTypeValue
-	_
-	_
-	_
+	CBORTagInclusiveRangeTypeValue // InclusiveRange is stored as a composite value.
+	CBORTagEntitlementSetAuthorizationAccessTypeValue
+	CBORTagEntitlementMapAuthorizationAccessTypeValue
 	_
 	_
 	_
@@ -141,7 +146,7 @@ const (
 	CBORTagEventTypeValue
 	CBORTagContractTypeValue
 	CBORTagEnumTypeValue
-	_
+	CBORTagAttachmentTypeValue
 	_
 	_
 	_
@@ -163,3 +168,29 @@ const (
 	_
 	_
 )
+
+type entitlementSetKind uint64
+
+const (
+	conjunction entitlementSetKind = iota
+	disjunction
+)
+
+func initEntitlementSetKindBiMap() (m *bimap.BiMap[cadence.EntitlementSetKind, entitlementSetKind]) {
+	m = bimap.NewBiMap[cadence.EntitlementSetKind, entitlementSetKind]()
+
+	m.Insert(cadence.Conjunction, conjunction)
+	m.Insert(cadence.Disjunction, disjunction)
+
+	return
+}
+
+var entitlementSetKindBiMap *bimap.BiMap[cadence.EntitlementSetKind, entitlementSetKind] = initEntitlementSetKindBiMap()
+
+func entitlementSetKindRawValueByCadenceType(typ cadence.EntitlementSetKind) (entitlementSetKind, bool) {
+	return entitlementSetKindBiMap.Get(typ)
+}
+
+func entitlementSetKindCadenceTypeByRawValue(rawValue entitlementSetKind) (cadence.EntitlementSetKind, bool) {
+	return entitlementSetKindBiMap.GetInverse(rawValue)
+}

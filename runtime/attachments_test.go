@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -230,7 +230,7 @@ func TestRuntimeAccountAttachmentExportFailure(t *testing.T) {
 		},
 	)
 	require.Error(t, err)
-	require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
 
 func TestRuntimeAccountAttachmentExport(t *testing.T) {
@@ -395,9 +395,16 @@ func TestRuntimeAccountAttachedExport(t *testing.T) {
 	require.NoError(t, err)
 
 	require.IsType(t, cadence.Resource{}, v)
-	require.Len(t, v.(cadence.Resource).Fields, 2)
-	require.IsType(t, cadence.Attachment{}, v.(cadence.Resource).Fields[1])
-	require.Equal(t, "A.0000000000000001.Test.A()", v.(cadence.Resource).Fields[1].String())
+	fields := cadence.FieldsMappedByName(v.(cadence.Resource))
+	require.Len(t, fields, 2)
+
+	attachment := fields["$A.0000000000000001.Test.A"]
+	require.IsType(t, cadence.Attachment{}, attachment)
+	require.Equal(
+		t,
+		"A.0000000000000001.Test.A()",
+		attachment.String(),
+	)
 }
 
 func TestRuntimeAccountAttachmentSaveAndBorrow(t *testing.T) {

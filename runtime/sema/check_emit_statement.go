@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,15 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) (_ stru
 		checker.report(
 			&EmitNonEventError{
 				Type:  ty,
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.InvocationExpression),
+			},
+		)
+		return
+	}
+
+	if ast.IsResourceDestructionDefaultEvent(compositeType.Identifier) {
+		checker.report(
+			&EmitDefaultDestroyEventError{
 				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.InvocationExpression),
 			},
 		)

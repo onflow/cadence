@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -133,7 +133,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testR() {
                   let path = /public/r
-                  let cap = self.account.capabilities.get<&R>(path)!
+                  let cap = self.account.capabilities.get<&R>(path)
 
                   assert(self.account.capabilities.exists(path))
 
@@ -162,7 +162,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testRAsR2() {
                   let path = /public/rAsR2
-                  let cap = self.account.capabilities.get<&R2>(path)!
+                  let cap = self.account.capabilities.get<&R2>(path)
 
                   assert(self.account.capabilities.exists(path))
 
@@ -185,7 +185,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testRAsS() {
                   let path = /public/rAsS
-                  let cap = self.account.capabilities.get<&S>(path)!
+                  let cap = self.account.capabilities.get<&S>(path)
 
                   assert(self.account.capabilities.exists(path))
 
@@ -208,7 +208,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testNonExistentTarget() {
                   let path = /public/nonExistentTarget
-                  let cap = self.account.capabilities.get<&R>(path)!
+                  let cap = self.account.capabilities.get<&R>(path)
 
                   assert(self.account.capabilities.exists(path))
 
@@ -231,13 +231,28 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testNonExistent() {
                   let path = /public/nonExistent
-                  assert(self.account.capabilities.get<&AnyResource>(path) == nil)
+
+                  let cap = self.account.capabilities.get<&R>(path)
+                  assert(cap.id == 0)
+                  assert(cap as? Capability<&R> != nil)
+                  assert(cap as? Capability<&AnyResource> != nil)
+                  assert(cap.borrow() == nil)
+                  assert(cap.address == 0x1)
+                  assert(cap.check() == false)
+
+                  let cap2 = self.account.capabilities.get<&AnyResource>(path)
+                  assert(cap2.id == 0)
+                  assert(cap2 as? Capability<&AnyResource> != nil)
+                  assert(cap2.borrow() == nil)
+                  assert(cap2.address == 0x1)
+                  assert(cap2.check() == false)
+
                   assert(!self.account.capabilities.exists(path))
               }
 
               access(all)
               fun testSwap(): Int {
-                 let ref = self.account.capabilities.get<&R>(/public/r)!.borrow()!
+                 let ref = self.account.capabilities.get<&R>(/public/r).borrow()!
 
                  let r <- self.account.storage.load<@R>(from: /storage/r)
                  destroy r
@@ -385,7 +400,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testS() {
                   let path = /public/s
-                  let cap = self.account.capabilities.get<&S>(path)!
+                  let cap = self.account.capabilities.get<&S>(path)
 
                   assert(self.account.capabilities.exists(path))
 
@@ -414,7 +429,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testSAsS2() {
                   let path = /public/sAsS2
-                  let cap = self.account.capabilities.get<&S2>(path)!
+                  let cap = self.account.capabilities.get<&S2>(path)
 
                   assert(self.account.capabilities.exists(path))
 
@@ -437,7 +452,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testSAsR() {
                   let path = /public/sAsR
-                  let cap = self.account.capabilities.get<&R>(path)!
+                  let cap = self.account.capabilities.get<&R>(path)
 
                   assert(self.account.capabilities.exists(path))
 
@@ -460,7 +475,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testNonExistentTarget() {
                   let path = /public/nonExistentTarget
-                  let cap = self.account.capabilities.get<&S>(path)!
+                  let cap = self.account.capabilities.get<&S>(path)
 
                   assert(self.account.capabilities.exists(path))
 
@@ -483,13 +498,28 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               access(all)
               fun testNonExistent() {
                   let path = /public/nonExistent
-                  assert(self.account.capabilities.get<&AnyStruct>(path) == nil)
+
+                  let cap = self.account.capabilities.get<&S>(path)
+                  assert(cap.id == 0)
+                  assert(cap as? Capability<&S> != nil)
+                  assert(cap as? Capability<&AnyStruct> != nil)
+                  assert(cap.borrow() == nil)
+                  assert(cap.address == 0x1)
+                  assert(cap.check() == false)
+
+                  let cap2 = self.account.capabilities.get<&AnyStruct>(path)
+                  assert(cap2.id == 0)
+                  assert(cap2 as? Capability<&AnyStruct> != nil)
+                  assert(cap2.borrow() == nil)
+                  assert(cap2.address == 0x1)
+                  assert(cap2.check() == false)
+
                   assert(!self.account.capabilities.exists(path))
               }
 
               access(all)
               fun testSwap(): Int {
-                 let ref = self.account.capabilities.get<&S>(/public/s)!.borrow()!
+                 let ref = self.account.capabilities.get<&S>(/public/s).borrow()!
 
                  self.account.storage.load<S>(from: /storage/s)
 

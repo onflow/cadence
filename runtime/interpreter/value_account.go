@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,10 +104,10 @@ func NewAccountValue(
 	}
 
 	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AccountValueStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, seenReferences)
+			common.UseMemory(interpreter, common.AccountValueStringMemoryUsage)
+			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
 			str = fmt.Sprintf("Account(%s)", addressStr)
 		}
 		return str

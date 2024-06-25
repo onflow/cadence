@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"math/big"
+	_ "unsafe"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
@@ -98,9 +99,9 @@ func exportValueWithInterpreter(
 	case interpreter.CharacterValue:
 		return cadence.NewMeteredCharacter(
 			inter,
-			common.NewCadenceCharacterMemoryUsage(len(v)),
+			common.NewCadenceCharacterMemoryUsage(len(v.Str)),
 			func() string {
-				return string(v)
+				return v.Str
 			},
 		)
 	case *interpreter.ArrayValue:
@@ -229,7 +230,7 @@ func exportValueWithInterpreter(
 		return exportPathValue(inter, v)
 	case interpreter.TypeValue:
 		return exportTypeValue(v, inter), nil
-	case *interpreter.CapabilityValue:
+	case *interpreter.IDCapabilityValue:
 		return exportCapabilityValue(v, inter)
 	case *interpreter.EphemeralReferenceValue:
 		// Break recursion through references
@@ -239,10 +240,8 @@ func exportValueWithInterpreter(
 		defer delete(seenReferences, v)
 		seenReferences[v] = struct{}{}
 
-		referencedValue := v.MustReferencedValue(inter, locationRange)
-
 		return exportValueWithInterpreter(
-			referencedValue,
+			v.Value,
 			inter,
 			locationRange,
 			seenReferences,
@@ -318,23 +317,28 @@ func exportArrayValue(
 			values := make([]cadence.Value, 0, v.Count())
 
 			var err error
-			v.Iterate(inter, func(value interpreter.Value) (resume bool) {
-				var exportedValue cadence.Value
-				exportedValue, err = exportValueWithInterpreter(
-					value,
-					inter,
-					locationRange,
-					seenReferences,
-				)
-				if err != nil {
-					return false
-				}
-				values = append(
-					values,
-					exportedValue,
-				)
-				return true
-			})
+			v.Iterate(
+				inter,
+				func(value interpreter.Value) (resume bool) {
+					var exportedValue cadence.Value
+					exportedValue, err = exportValueWithInterpreter(
+						value,
+						inter,
+						locationRange,
+						seenReferences,
+					)
+					if err != nil {
+						return false
+					}
+					values = append(
+						values,
+						exportedValue,
+					)
+					return true
+				},
+				false,
+				locationRange,
+			)
 
 			if err != nil {
 				return nil, err
@@ -374,6 +378,16 @@ func exportCompositeValue(
 		}
 	}
 
+	switch semaType := semaType.(type) {
+	case *sema.CompositeType:
+		// Continue.
+	case *sema.InclusiveRangeType:
+		// InclusiveRange is stored as a CompositeValue but isn't a CompositeType.
+		return exportCompositeValueAsInclusiveRange(v, semaType, inter, locationRange, seenReferences)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
 	compositeType, ok := semaType.(*sema.CompositeType)
 	if !ok {
 		panic(errors.NewUnreachableError())
@@ -385,12 +399,12 @@ func exportCompositeValue(
 	// NOTE: use the exported type's fields to ensure fields in type
 	// and value are in sync
 
-	fieldNames := t.CompositeFields()
+	fields := getCompositeTypeFields(t)
 
-	makeFields := func() ([]cadence.Value, error) {
-		fields := make([]cadence.Value, len(fieldNames))
+	makeFieldsValues := func() ([]cadence.Value, error) {
+		fieldValues := make([]cadence.Value, len(fields))
 
-		for i, field := range fieldNames {
+		for i, field := range fields {
 			fieldName := field.Identifier
 
 			var fieldValue interpreter.Value
@@ -406,10 +420,8 @@ func exportCompositeValue(
 
 			case *interpreter.CompositeValue:
 				fieldValue = v.GetField(inter, locationRange, fieldName)
-				if fieldValue == nil && v.ComputedFields != nil {
-					if computedField, ok := v.ComputedFields[fieldName]; ok {
-						fieldValue = computedField(inter, locationRange)
-					}
+				if fieldValue == nil {
+					fieldValue = v.GetComputedField(inter, locationRange, fieldName)
 				}
 			}
 
@@ -422,7 +434,7 @@ func exportCompositeValue(
 			if err != nil {
 				return nil, err
 			}
-			fields[i] = exportedFieldValue
+			fieldValues[i] = exportedFieldValue
 		}
 
 		if composite, ok := v.(*interpreter.CompositeValue); ok {
@@ -436,11 +448,11 @@ func exportCompositeValue(
 				if err != nil {
 					return nil, err
 				}
-				fields = append(fields, exportedAttachmentValue)
+				fieldValues = append(fieldValues, exportedAttachmentValue)
 			}
 		}
 
-		return fields, nil
+		return fieldValues, nil
 	}
 
 	compositeKind := compositeType.Kind
@@ -452,8 +464,8 @@ func exportCompositeValue(
 	case common.CompositeKindStructure:
 		structure, err := cadence.NewMeteredStruct(
 			inter,
-			len(fieldNames),
-			makeFields,
+			len(fields),
+			makeFieldsValues,
 		)
 		if err != nil {
 			return nil, err
@@ -463,8 +475,8 @@ func exportCompositeValue(
 	case common.CompositeKindResource:
 		resource, err := cadence.NewMeteredResource(
 			inter,
-			len(fieldNames),
-			makeFields,
+			len(fields),
+			makeFieldsValues,
 		)
 		if err != nil {
 			return nil, err
@@ -474,8 +486,8 @@ func exportCompositeValue(
 	case common.CompositeKindAttachment:
 		attachment, err := cadence.NewMeteredAttachment(
 			inter,
-			len(fieldNames),
-			makeFields,
+			len(fields),
+			makeFieldsValues,
 		)
 		if err != nil {
 			return nil, err
@@ -485,8 +497,8 @@ func exportCompositeValue(
 	case common.CompositeKindEvent:
 		event, err := cadence.NewMeteredEvent(
 			inter,
-			len(fieldNames),
-			makeFields,
+			len(fields),
+			makeFieldsValues,
 		)
 		if err != nil {
 			return nil, err
@@ -496,8 +508,8 @@ func exportCompositeValue(
 	case common.CompositeKindContract:
 		contract, err := cadence.NewMeteredContract(
 			inter,
-			len(fieldNames),
-			makeFields,
+			len(fields),
+			makeFieldsValues,
 		)
 		if err != nil {
 			return nil, err
@@ -507,8 +519,8 @@ func exportCompositeValue(
 	case common.CompositeKindEnum:
 		enum, err := cadence.NewMeteredEnum(
 			inter,
-			len(fieldNames),
-			makeFields,
+			len(fields),
+			makeFieldsValues,
 		)
 		if err != nil {
 			return nil, err
@@ -582,7 +594,7 @@ func exportDictionaryValue(
 				)
 
 				return true
-			})
+			}, locationRange)
 
 			if err != nil {
 				return nil, err
@@ -598,6 +610,63 @@ func exportDictionaryValue(
 	exportType := ExportType(v.SemaType(inter), map[sema.TypeID]cadence.Type{}).(*cadence.DictionaryType)
 
 	return dictionary.WithType(exportType), err
+}
+
+func exportCompositeValueAsInclusiveRange(
+	v interpreter.Value,
+	inclusiveRangeType *sema.InclusiveRangeType,
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	seenReferences seenReferences,
+) (
+	*cadence.InclusiveRange,
+	error,
+) {
+	compositeValue, ok := v.(*interpreter.CompositeValue)
+	if !ok {
+		// InclusiveRange is stored as a CompositeValue.
+		panic(errors.NewUnreachableError())
+	}
+
+	getNonComputedField := func(fieldName string) (cadence.Value, error) {
+		fieldValue := compositeValue.GetField(inter, locationRange, fieldName)
+		if fieldValue == nil {
+			// Bug if the field is absent.
+			panic(errors.NewUnreachableError())
+		}
+
+		return exportValueWithInterpreter(
+			fieldValue,
+			inter,
+			locationRange,
+			seenReferences,
+		)
+	}
+
+	startValue, err := getNonComputedField(sema.InclusiveRangeTypeStartFieldName)
+	if err != nil {
+		return &cadence.InclusiveRange{}, err
+	}
+
+	endValue, err := getNonComputedField(sema.InclusiveRangeTypeEndFieldName)
+	if err != nil {
+		return &cadence.InclusiveRange{}, err
+	}
+
+	stepValue, err := getNonComputedField(sema.InclusiveRangeTypeStepFieldName)
+	if err != nil {
+		return &cadence.InclusiveRange{}, err
+	}
+
+	inclusiveRange := cadence.NewMeteredInclusiveRange(
+		inter,
+		startValue,
+		endValue,
+		stepValue,
+	)
+
+	t := exportInclusiveRangeType(inter, inclusiveRangeType, map[sema.TypeID]cadence.Type{})
+	return inclusiveRange.WithType(t), err
 }
 
 func exportPathValue(gauge common.MemoryGauge, v interpreter.PathValue) (cadence.Path, error) {
@@ -620,7 +689,7 @@ func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) ca
 }
 
 func exportCapabilityValue(
-	v *interpreter.CapabilityValue,
+	v *interpreter.IDCapabilityValue,
 	inter *interpreter.Interpreter,
 ) (cadence.Capability, error) {
 	borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
@@ -707,6 +776,12 @@ func ImportValue(
 	}.importValue(value, expectedType)
 }
 
+//go:linkname getCompositeFieldValues github.com/onflow/cadence.getCompositeFieldValues
+func getCompositeFieldValues(cadence.Composite) []cadence.Value
+
+//go:linkname getCompositeTypeFields github.com/onflow/cadence.getCompositeTypeFields
+func getCompositeTypeFields(cadence.CompositeType) []cadence.Field
+
 func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) (interpreter.Value, error) {
 	switch v := value.(type) {
 	case cadence.Void:
@@ -778,33 +853,35 @@ func (i valueImporter) importValue(value cadence.Value, expectedType sema.Type) 
 			common.CompositeKindStructure,
 			v.StructType.Location,
 			v.StructType.QualifiedIdentifier,
-			v.StructType.Fields,
-			v.Fields,
+			getCompositeTypeFields(v.StructType),
+			getCompositeFieldValues(v),
 		)
 	case cadence.Resource:
 		return i.importCompositeValue(
 			common.CompositeKindResource,
 			v.ResourceType.Location,
 			v.ResourceType.QualifiedIdentifier,
-			v.ResourceType.Fields,
-			v.Fields,
+			getCompositeTypeFields(v.ResourceType),
+			getCompositeFieldValues(v),
 		)
 	case cadence.Event:
 		return i.importCompositeValue(
 			common.CompositeKindEvent,
 			v.EventType.Location,
 			v.EventType.QualifiedIdentifier,
-			v.EventType.Fields,
-			v.Fields,
+			getCompositeTypeFields(v.EventType),
+			getCompositeFieldValues(v),
 		)
 	case cadence.Enum:
 		return i.importCompositeValue(
 			common.CompositeKindEnum,
 			v.EnumType.Location,
 			v.EnumType.QualifiedIdentifier,
-			v.EnumType.Fields,
-			v.Fields,
+			getCompositeTypeFields(v.EnumType),
+			getCompositeFieldValues(v),
 		)
+	case *cadence.InclusiveRange:
+		return i.importInclusiveRangeValue(v, expectedType)
 	case cadence.TypeValue:
 		return i.importTypeValue(v.StaticType)
 	case cadence.Capability:
@@ -1097,7 +1174,7 @@ func (i valueImporter) importCapability(
 	address cadence.Address,
 	borrowType cadence.Type,
 ) (
-	*interpreter.CapabilityValue,
+	*interpreter.IDCapabilityValue,
 	error,
 ) {
 	_, ok := borrowType.(*cadence.ReferenceType)
@@ -1270,7 +1347,7 @@ func (i valueImporter) importDictionaryValue(
 		keySuperType := sema.LeastCommonSuperType(keyTypes...)
 		valueSuperType := sema.LeastCommonSuperType(valueTypes...)
 
-		if !sema.IsValidDictionaryKeyType(keySuperType) {
+		if !sema.IsSubType(keySuperType, sema.HashableStructType) {
 			return nil, errors.NewDefaultUserError(
 				"cannot import dictionary: keys does not belong to the same type",
 			)
@@ -1292,6 +1369,95 @@ func (i valueImporter) importDictionaryValue(
 		locationRange,
 		dictionaryStaticType,
 		keysAndValues...,
+	), nil
+}
+
+func (i valueImporter) importInclusiveRangeValue(
+	v *cadence.InclusiveRange,
+	expectedType sema.Type,
+) (
+	*interpreter.CompositeValue,
+	error,
+) {
+
+	var memberType sema.Type
+
+	inclusiveRangeType, ok := expectedType.(*sema.InclusiveRangeType)
+	if ok {
+		memberType = inclusiveRangeType.MemberType
+	}
+
+	inter := i.inter
+	locationRange := i.locationRange
+
+	// start, end, and step. The order matters.
+	members := make([]interpreter.IntegerValue, 3)
+
+	// import members.
+	for index, value := range []cadence.Value{v.Start, v.End, v.Step} {
+		importedValue, err := i.importValue(value, memberType)
+		if err != nil {
+			return nil, err
+		}
+		importedIntegerValue, ok := importedValue.(interpreter.IntegerValue)
+		if !ok {
+			return nil, errors.NewDefaultUserError(
+				"cannot import InclusiveRange: start, end and step must be integers",
+			)
+		}
+
+		members[index] = importedIntegerValue
+	}
+
+	startValue := members[0]
+	endValue := members[1]
+	stepValue := members[2]
+
+	startType := startValue.StaticType(inter)
+
+	if inclusiveRangeType == nil {
+		memberSemaType, err := inter.ConvertStaticToSemaType(startType)
+		if err != nil {
+			return nil, err
+		}
+
+		memberType = memberSemaType
+		inclusiveRangeType = sema.NewInclusiveRangeType(
+			inter,
+			memberType,
+		)
+	}
+
+	inclusiveRangeStaticType, ok := interpreter.ConvertSemaToStaticType(
+		inter,
+		inclusiveRangeType,
+	).(interpreter.InclusiveRangeStaticType)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	// Ensure that start, end and step have the same static type.
+	// Usually this validation would be done outside of this function in ConformsToStaticType but
+	// we do it here because the NewInclusiveRangeValueWithStep constructor performs validations
+	// which involve comparisons between these values and hence they need to be of the same static
+	// type.
+
+	if !startType.Equal(endValue.StaticType(inter)) ||
+		!startType.Equal(stepValue.StaticType(inter)) {
+
+		return nil, errors.NewDefaultUserError(
+			"cannot import InclusiveRange: start, end and step must be of the same type",
+		)
+	}
+
+	return interpreter.NewInclusiveRangeValueWithStep(
+		inter,
+		locationRange,
+		startValue,
+		endValue,
+		stepValue,
+		inclusiveRangeStaticType,
+		inclusiveRangeType,
 	), nil
 }
 
@@ -1448,8 +1614,6 @@ func (i valueImporter) importPublicKey(
 		i.locationRange,
 		publicKeyValue,
 		signAlgoValue,
-		i.standardLibraryHandler,
-		i.standardLibraryHandler,
 		i.standardLibraryHandler,
 	), nil
 }

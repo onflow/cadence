@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ var AnyResourceAttachmentType = &SimpleType{
 	TypeID:        AnyResourceAttachmentTypeName,
 	TypeTag:       AnyResourceAttachmentTypeTag,
 	IsResource:    true,
+	Primitive:     false,
 	// The actual storability of a value is checked at run-time
 	Storable:   true,
 	Equatable:  false,
@@ -45,6 +46,7 @@ var AnyStructAttachmentType = &SimpleType{
 	TypeID:        AnyStructAttachmentTypeName,
 	TypeTag:       AnyStructAttachmentTypeTag,
 	IsResource:    false,
+	Primitive:     false,
 	// The actual storability of a value is checked at run-time
 	Storable:   true,
 	Equatable:  false,

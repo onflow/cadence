@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -217,7 +217,7 @@ func TestRuntimeAccountEntitlementSaveAndLoadFail(t *testing.T) {
 	require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 }
 
-func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
+func TestRuntimeAccountEntitlementAttachment(t *testing.T) {
 	t.Parallel()
 
 	storage := NewTestLedger(nil, nil)
@@ -226,16 +226,13 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 
 	deployTx := DeploymentTransaction("Test", []byte(`
         access(all) contract Test {
-            access(all) entitlement X
             access(all) entitlement Y
 
-            access(all) entitlement mapping M {
-                X -> Y
-            }
+            access(all) resource R {
+				access(Y) fun foo() {}
+			}
 
-            access(all) resource R {}
-
-            access(M) attachment A for R {
+            access(all) attachment A for R {
                 access(Y) fun foo() {}
             }
 
@@ -252,7 +249,7 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
             prepare(signer: auth(Storage, Capabilities) &Account) {
                 let r <- Test.createRWithA()
                 signer.storage.save(<-r, to: /storage/foo)
-                let cap = signer.capabilities.storage.issue<auth(Test.X) &Test.R>(/storage/foo)
+                let cap = signer.capabilities.storage.issue<auth(Test.Y) &Test.R>(/storage/foo)
                 signer.capabilities.publish(cap, at: /public/foo)
             }
         }
@@ -263,7 +260,7 @@ func TestRuntimeAccountEntitlementAttachmentMap(t *testing.T) {
 
         transaction {
             prepare(signer: &Account) {
-                let ref = signer.capabilities.borrow<auth(Test.X) &Test.R>(/public/foo)!
+                let ref = signer.capabilities.borrow<auth(Test.Y) &Test.R>(/public/foo)!
                 ref[Test.A]!.foo()
             }
         }
@@ -542,7 +539,7 @@ func TestRuntimeAccountEntitlementCapabilityCasting(t *testing.T) {
         import Test from 0x1
         transaction {
             prepare(signer: &Account) {
-                let capX = signer.capabilities.get<auth(Test.X) &Test.R>(/public/foo)!
+                let capX = signer.capabilities.get<auth(Test.X) &Test.R>(/public/foo)
                 let upCap = capX as Capability<&Test.R>
                 let downCap = upCap as! Capability<auth(Test.X) &Test.R>
             }
@@ -650,8 +647,8 @@ func TestRuntimeAccountEntitlementCapabilityDictionary(t *testing.T) {
         import Test from 0x1
         transaction {
             prepare(signer: &Account) {
-                let capX = signer.capabilities.get<auth(Test.X) &Test.R>(/public/foo)!
-                let capY = signer.capabilities.get<auth(Test.Y) &Test.R>(/public/bar)!
+                let capX = signer.capabilities.get<auth(Test.X) &Test.R>(/public/foo)
+                let capY = signer.capabilities.get<auth(Test.Y) &Test.R>(/public/bar)
 
                 let dict: {Type: Capability<&Test.R>} = {}
                 dict[capX.getType()] = capX
@@ -765,8 +762,8 @@ func TestRuntimeAccountEntitlementGenericCapabilityDictionary(t *testing.T) {
         import Test from 0x1
         transaction {
             prepare(signer: &Account) {
-                let capX = signer.capabilities.get<auth(Test.X) &Test.R>(/public/foo)!
-                let capY = signer.capabilities.get<auth(Test.Y) &Test.R>(/public/bar)!
+                let capX = signer.capabilities.get<auth(Test.X) &Test.R>(/public/foo)
+                let capY = signer.capabilities.get<auth(Test.Y) &Test.R>(/public/bar)
 
                 let dict: {Type: Capability} = {}
                 dict[capX.getType()] = capX
@@ -991,7 +988,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
               let issuedCap = account.capabilities.storage.issue<auth(X) &S>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
 
-              let cap: Capability<auth(X) &S> = account.capabilities.get<auth(X) &S>(/public/foo)!
+              let cap: Capability<auth(X) &S> = account.capabilities.get<auth(X) &S>(/public/foo)
 
               let runtimeType = cap.getType()
 
@@ -1020,7 +1017,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
               let issuedCap = account.capabilities.storage.issue<&S>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
 
-              let cap: Capability<&S> = account.capabilities.get<&S>(/public/foo)!
+              let cap: Capability<&S> = account.capabilities.get<&S>(/public/foo)
 
               let runtimeType = cap.getType()
               let upcastCap = cap as Capability<&AnyStruct>
@@ -1053,7 +1050,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
               let issuedCap = account.capabilities.storage.issue<auth(X, Y) &R>(/storage/foo)
               account.capabilities.publish(issuedCap, at: /public/foo)
 
-              let cap = account.capabilities.get<auth(X | Y) &R>(/public/foo)!
+              let cap = account.capabilities.get<auth(X | Y) &R>(/public/foo)
               assert(cap.check())
           }
         `)
@@ -1112,7 +1109,7 @@ func TestRuntimeCapabilityEntitlements(t *testing.T) {
               account.capabilities.publish(issuedCap, at: /public/foo)
 
               let cap = account.capabilities.get<auth(X, Y) &R>(/public/foo)
-              assert(cap == nil)
+              assert(!cap.check())
           }
         `)
 	})
@@ -1172,7 +1169,7 @@ func TestRuntimeImportedEntitlementMapInclude(t *testing.T) {
             }
 
             access(all) struct S {
-                access(M) fun performMap(): auth(M) &Int {
+                access(mapping M) fun performMap(): auth(mapping M) &Int {
                     return &1
                 }
             } 

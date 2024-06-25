@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,11 +51,11 @@ func (checker *Checker) checkCondition(condition ast.Condition) {
 	case *ast.TestCondition:
 
 		// check test expression is boolean
-		checker.VisitExpression(condition.Test, BoolType)
+		checker.VisitExpression(condition.Test, condition, BoolType)
 
 		// check message expression results in a string
 		if condition.Message != nil {
-			checker.VisitExpression(condition.Message, StringType)
+			checker.VisitExpression(condition.Message, condition, StringType)
 		}
 
 	case *ast.EmitCondition:

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -113,14 +113,14 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 									t,
 									inter,
 									test.expected,
-									inter.Globals.Get("x").GetValue(),
+									inter.Globals.Get("x").GetValue(inter),
 								)
 
 								AssertValuesEqual(
 									t,
 									inter,
 									test.expected,
-									inter.Globals.Get("y").GetValue(),
+									inter.Globals.Get("y").GetValue(inter),
 								)
 
 								AssertValuesEqual(
@@ -129,7 +129,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 									interpreter.NewUnmeteredSomeValueNonCopying(
 										test.expected,
 									),
-									inter.Globals.Get("z").GetValue(),
+									inter.Globals.Get("z").GetValue(inter),
 								)
 							})
 						}
@@ -219,7 +219,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 							t,
 							inter,
 							interpreter.Void,
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals.Get("x").GetValue(inter),
 						)
 
 						AssertValuesEqual(
@@ -228,7 +228,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								interpreter.Void,
 							),
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 					})
 				}
@@ -313,7 +313,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 							t,
 							inter,
 							interpreter.NewUnmeteredStringValue("test"),
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals.Get("x").GetValue(inter),
 						)
 
 						AssertValuesEqual(
@@ -322,7 +322,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								interpreter.NewUnmeteredStringValue("test"),
 							),
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 					})
 				}
@@ -406,7 +406,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 							t,
 							inter,
 							interpreter.TrueValue,
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals.Get("x").GetValue(inter),
 						)
 
 						AssertValuesEqual(
@@ -415,7 +415,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								interpreter.TrueValue,
 							),
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 					})
 				}
@@ -503,7 +503,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 							t,
 							inter,
 							addressValue,
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 
 						AssertValuesEqual(
@@ -512,7 +512,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								addressValue,
 							),
-							inter.Globals.Get("z").GetValue(),
+							inter.Globals.Get("z").GetValue(inter),
 						)
 					})
 				}
@@ -597,17 +597,17 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 
 						assert.IsType(t,
 							&interpreter.CompositeValue{},
-							inter.Globals.Get("x").GetValue(),
+							inter.Globals.Get("x").GetValue(inter),
 						)
 
 						require.IsType(t,
 							&interpreter.SomeValue{},
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 
 						require.IsType(t,
 							&interpreter.CompositeValue{},
-							inter.Globals.Get("y").GetValue().(*interpreter.SomeValue).
+							inter.Globals.Get("y").GetValue(inter).(*interpreter.SomeValue).
 								InnerValue(inter, interpreter.EmptyLocationRange),
 						)
 					})
@@ -1100,7 +1100,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							t,
 							inter,
 							expectedValue,
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 
 						if targetType == sema.AnyStructType && !returnsOptional {
@@ -1109,7 +1109,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 								t,
 								inter,
 								expectedValue,
-								inter.Globals.Get("z").GetValue(),
+								inter.Globals.Get("z").GetValue(inter),
 							)
 
 						} else {
@@ -1119,7 +1119,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 								interpreter.NewUnmeteredSomeValueNonCopying(
 									expectedValue,
 								),
-								inter.Globals.Get("z").GetValue(),
+								inter.Globals.Get("z").GetValue(inter),
 							)
 						}
 
@@ -1206,7 +1206,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							interpreter.NewUnmeteredIntValueFromInt64(42),
 						}
 
-						yValue := inter.Globals.Get("y").GetValue()
+						yValue := inter.Globals.Get("y").GetValue(inter)
 						require.IsType(t, yValue, &interpreter.ArrayValue{})
 						yArray := yValue.(*interpreter.ArrayValue)
 
@@ -1217,7 +1217,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 							ArrayElements(inter, yArray),
 						)
 
-						zValue := inter.Globals.Get("z").GetValue()
+						zValue := inter.Globals.Get("z").GetValue(inter)
 						require.IsType(t, zValue, &interpreter.SomeValue{})
 						zSome := zValue.(*interpreter.SomeValue)
 
@@ -1377,7 +1377,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							t,
 							inter,
 							expectedDictionary,
-							inter.Globals.Get("y").GetValue(),
+							inter.Globals.Get("y").GetValue(inter),
 						)
 
 						AssertValuesEqual(
@@ -1386,7 +1386,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 							interpreter.NewUnmeteredSomeValueNonCopying(
 								expectedDictionary,
 							),
-							inter.Globals.Get("z").GetValue(),
+							inter.Globals.Get("z").GetValue(inter),
 						)
 					})
 				}
@@ -1446,6 +1446,68 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 						operation.Symbol(),
 					),
 				)
+
+				result, err := inter.Invoke("test")
+
+				if returnsOptional {
+					require.NoError(t, err)
+					AssertValuesEqual(
+						t,
+						inter,
+						interpreter.Nil,
+						result,
+					)
+				} else {
+					RequireError(t, err)
+
+					require.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+				}
+			})
+		})
+	}
+}
+
+func TestInterpretDynamicCastingInclusiveRange(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.InclusiveRangeConstructorFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.InclusiveRangeConstructorFunction)
+
+	options := ParseCheckAndInterpretOptions{
+		CheckerConfig: &sema.Config{
+			BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+				return baseValueActivation
+			},
+		},
+		Config: &interpreter.Config{
+			BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+				return baseActivation
+			},
+		},
+	}
+
+	for operation, returnsOptional := range dynamicCastingOperations {
+
+		t.Run(operation.Symbol(), func(t *testing.T) {
+			t.Run("invalid cast", func(t *testing.T) {
+
+				inter, err := parseCheckAndInterpretWithOptions(t,
+					fmt.Sprintf(
+						`
+							fun test(): InclusiveRange<UInt256>? {
+								let x: InclusiveRange<Int> = InclusiveRange(10, 20)
+								return x %s InclusiveRange<UInt256>
+							}
+						`,
+						operation.Symbol(),
+					),
+					options,
+				)
+				require.NoError(t, err)
 
 				result, err := inter.Invoke("test")
 
@@ -3326,7 +3388,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 	test := func(
 		name string,
-		newCapabilityValue func(borrowType interpreter.StaticType) *interpreter.CapabilityValue,
+		newCapabilityValue func(borrowType interpreter.StaticType) *interpreter.IDCapabilityValue,
 	) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -3384,10 +3446,14 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 			options := ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			}
 
@@ -3419,7 +3485,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 									t,
 									inter,
 									capabilityValue,
-									inter.Globals.Get("x").GetValue(),
+									inter.Globals.Get("x").GetValue(inter),
 								)
 
 								AssertValuesEqual(
@@ -3428,7 +3494,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 									interpreter.NewUnmeteredSomeValueNonCopying(
 										capabilityValue,
 									),
-									inter.Globals.Get("y").GetValue(),
+									inter.Globals.Get("y").GetValue(inter),
 								)
 							})
 						}
@@ -3483,7 +3549,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 	}
 
 	test("capability",
-		func(borrowType interpreter.StaticType) *interpreter.CapabilityValue {
+		func(borrowType interpreter.StaticType) *interpreter.IDCapabilityValue {
 			return interpreter.NewUnmeteredCapabilityValue(
 				4,
 				interpreter.AddressValue{},
@@ -3493,7 +3559,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 	)
 }
 
-func TestInterpretResourceConstructorCast(t *testing.T) {
+func TestInterpretDynamicCastingResourceConstructor(t *testing.T) {
 
 	t.Parallel()
 
@@ -3520,7 +3586,7 @@ func TestInterpretResourceConstructorCast(t *testing.T) {
 	}
 }
 
-func TestInterpretFunctionTypeCasting(t *testing.T) {
+func TestInterpretDynamicCastingFunctionType(t *testing.T) {
 
 	t.Parallel()
 
@@ -3647,11 +3713,32 @@ func TestInterpretFunctionTypeCasting(t *testing.T) {
 	})
 }
 
-func TestInterpretReferenceCasting(t *testing.T) {
+func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("array", func(t *testing.T) {
+	t.Run("top-level", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            fun test() {
+                let x = bar()
+                let y = &x as &AnyStruct
+                let z = y as! &{foo}
+            }
+
+            struct interface foo {}
+
+            struct bar: foo {}
+        `
+
+		inter := parseCheckAndInterpret(t, code)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+
+	t.Run("nested in array", func(t *testing.T) {
 		t.Parallel()
 
 		code := `
@@ -3674,7 +3761,7 @@ func TestInterpretReferenceCasting(t *testing.T) {
 		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
 	})
 
-	t.Run("dictionary", func(t *testing.T) {
+	t.Run("nested in dictionary", func(t *testing.T) {
 		t.Parallel()
 
 		code := `
@@ -3695,5 +3782,91 @@ func TestInterpretReferenceCasting(t *testing.T) {
 		RequireError(t, err)
 
 		assert.ErrorAs(t, err, &interpreter.ForceCastTypeMismatchError{})
+	})
+
+	t.Run("use of storage reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		type testCase struct {
+			operation       ast.Operation
+			returnsOptional bool
+		}
+
+		test := func(testCase testCase) {
+
+			t.Run(testCase.operation.Symbol(), func(t *testing.T) {
+				t.Parallel()
+
+				address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+				memberAccessOperation := "."
+				if testCase.returnsOptional {
+					memberAccessOperation = "?."
+				}
+
+				inter, _ := testAccount(
+					t,
+					address,
+					true,
+					nil,
+					fmt.Sprintf(
+						`
+                          resource FakeArray {
+                              fun reverse(): @[AnyResource] {
+                                  return <- []
+                              }
+                          }
+
+                          fun test() {
+                              account.storage.save(<-create FakeArray(), to: /storage/flipflop)
+
+                              // Instead of borrowing as FakeArray, borrow as AnyResource
+                              let ref = account.storage.borrow<&AnyResource>(from: /storage/flipflop)!
+
+                              // NOTE: dynamically cast. This succeeds as expected
+                              let ref2 = ref %s &FakeArray
+
+                              // replace fake array with proper array
+                              destroy <- account.storage.load<@FakeArray>(from: /storage/flipflop)
+                              account.storage.save(<- ([] as @[AnyResource]), to: /storage/flipflop)
+
+                              // NOTE: USE the casted array. the dereference SHOULD FAIL
+                              let reversed <- ref2%sreverse()
+                              destroy reversed
+                          }
+                        `,
+						testCase.operation.Symbol(),
+						memberAccessOperation,
+					),
+					sema.Config{},
+				)
+
+				_, err := inter.Invoke("test")
+				RequireError(t, err)
+
+				// StorageReferenceValue.ReferencedValue turns the ForceCastTypeMismatchError
+				// of the failed dereference into a DereferenceError
+				var dereferenceError interpreter.DereferenceError
+				require.ErrorAs(t, err, &dereferenceError)
+
+				assert.Equal(t, 22, dereferenceError.LocationRange.StartPosition().Line)
+			})
+		}
+
+		testCases := []testCase{
+			{
+				operation:       ast.OperationForceCast,
+				returnsOptional: false,
+			},
+			{
+				operation:       ast.OperationFailableCast,
+				returnsOptional: true,
+			},
+		}
+
+		for _, testCase := range testCases {
+			test(testCase)
+		}
 	})
 }

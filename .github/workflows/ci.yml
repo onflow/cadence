@@ -13,7 +13,7 @@ on:
       - 'v**'
 
 env:
-  GO_VERSION: '1.20'
+  GO_VERSION: '1.22'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -39,11 +39,17 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
+      - name: Install Flow CLI
+        run: sh -ci "$(curl -fsSL https://raw.githubusercontent.com/onflow/flow-cli/master/install.sh)"
+
       - name: Build
         run: make -j8 build
 
       - name: Test
         run: make ci
+
+      - name: Cadence Testing Framework
+        run: cd runtime/stdlib/contracts && flow-c1 test --cover --covercode="contracts" crypto_test.cdc
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v2
@@ -88,10 +94,13 @@ jobs:
   semgrep:
     name: Semgrep
     runs-on: ubuntu-latest
+    container:
+      image: returntocorp/semgrep
+    # Skip any PR created by dependabot to avoid permission issues:
+    if: (github.actor != 'dependabot[bot]')
     steps:
       - name: Clone
         uses: actions/checkout@v3
 
-      - uses: returntocorp/semgrep-action@v1
-        with:
-          config: semgrep.yaml
+      - name: semgrep ci
+        run: semgrep ci --config semgrep.yaml

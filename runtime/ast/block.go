@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -138,9 +138,9 @@ func (*FunctionBlock) ElementType() ElementType {
 }
 
 func (b *FunctionBlock) Walk(walkChild func(Element)) {
-	// TODO: pre-conditions
+	b.PreConditions.Walk(walkChild)
 	walkChild(b.Block)
-	// TODO: post-conditions
+	b.PostConditions.Walk(walkChild)
 }
 
 func (b *FunctionBlock) MarshalJSON() ([]byte, error) {
@@ -231,6 +231,7 @@ func (b *FunctionBlock) HasConditions() bool {
 // Condition
 
 type Condition interface {
+	Element
 	isCondition()
 	CodeElement() Element
 	Doc() prettier.Doc
@@ -242,6 +243,17 @@ type Condition interface {
 type TestCondition struct {
 	Test    Expression
 	Message Expression
+}
+
+func (c TestCondition) ElementType() ElementType {
+	return ElementTypeUnknown
+}
+
+func (c TestCondition) Walk(walkChild func(Element)) {
+	walkChild(c.Test)
+	if c.Message != nil {
+		walkChild(c.Message)
+	}
 }
 
 var _ Condition = TestCondition{}
@@ -333,6 +345,14 @@ func (c *EmitCondition) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (c *EmitCondition) ElementType() ElementType {
+	return (*EmitStatement)(c).ElementType()
+}
+
+func (c *EmitCondition) Walk(walkChild func(Element)) {
+	(*EmitStatement)(c).Walk(walkChild)
+}
+
 // Conditions
 
 type Conditions []Condition
@@ -367,5 +387,15 @@ func (c *Conditions) Doc(keywordDoc prettier.Doc) prettier.Doc {
 			prettier.HardLine{},
 			blockEndDoc,
 		},
+	}
+}
+
+func (c *Conditions) Walk(walkChild func(Element)) {
+	if c.IsEmpty() {
+		return
+	}
+
+	for _, condition := range *c {
+		walkChild(condition)
 	}
 }

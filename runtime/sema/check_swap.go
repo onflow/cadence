@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,8 +31,8 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 
 	// Then re-visit the same expressions, this time treat them as the value-expr of the assignment.
 	// The 'expected type' of the two expression would be the types obtained from the previous visit, swapped.
-	leftValueType := checker.VisitExpression(swap.Left, rightTargetType)
-	rightValueType := checker.VisitExpression(swap.Right, leftTargetType)
+	leftValueType := checker.VisitExpression(swap.Left, swap, rightTargetType)
+	rightValueType := checker.VisitExpression(swap.Right, swap, leftTargetType)
 
 	checker.Elaboration.SetSwapStatementTypes(
 		swap,
@@ -48,6 +48,34 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 
 	if rightValueType.IsResourceType() {
 		checker.elaborateNestedResourceMoveExpression(swap.Right)
+	}
+
+	// If the left or right side is an index expression,
+	// and the indexed type (type of the target expression) is a resource type,
+	// then the target expression must be considered as a nested resource move expression.
+	//
+	// This is because the evaluation of the index expression
+	// should not be able to access/move the target resource.
+	//
+	// For example, if a side is `a.b[c()]`, then `a.b` is the target expression.
+	// If `a.b` is a resource, then `c()` should not be able to access/move it.
+
+	for _, side := range []ast.Expression{swap.Left, swap.Right} {
+		if indexExpression, ok := side.(*ast.IndexExpression); ok {
+			indexExpressionTypes := checker.Elaboration.IndexExpressionTypes(indexExpression)
+
+			// If the indexed type is a resource type,
+			// then the target expression must be considered as a nested resource move expression.
+			//
+			// The index expression might have been invalid,
+			// so the indexed type might be unavailable.
+
+			indexedType := indexExpressionTypes.IndexedType
+			if indexedType != nil && indexedType.IsResourceType() {
+				targetExpression := indexExpression.TargetExpression
+				checker.elaborateNestedResourceMoveExpression(targetExpression)
+			}
+		}
 	}
 
 	return

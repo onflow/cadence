@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,31 @@ func TestPrimitiveAccess_MarshalJSON(t *testing.T) {
 
 		assert.JSONEq(t, fmt.Sprintf(`"%s"`, access), string(actual))
 	}
+}
+
+func TestMappedAccess_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	e := NewNominalType(nil, NewIdentifier(nil, "E", Position{Offset: 1, Line: 2, Column: 3}), []Identifier{})
+
+	access := NewMappedAccess(e, Position{Offset: 0, Line: 0, Column: 0})
+	actual, err := json.Marshal(access)
+	require.NoError(t, err)
+
+	assert.JSONEq(t, `{
+		"EntitlementMap": {
+			"Type": "NominalType",
+			"Identifier": {
+				"Identifier": "E",
+				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+				"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+			},
+			"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+			"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+		},
+		"EndPos": {"Offset": 1, "Line": 2, "Column": 3}
+	}`, string(actual))
 }
 
 func TestEntitlementAccess_MarshalJSON(t *testing.T) {

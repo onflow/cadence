@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -180,7 +180,7 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 		return nil, newError(err, location, codesAndPrograms)
 	}
 
-	var self interpreter.MemberAccessibleValue = contractValue
+	var self interpreter.Value = contractValue
 
 	// prepare invocation
 	invocation := interpreter.NewInvocation(
@@ -250,7 +250,7 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 
 			address := interpreter.NewAddressValue(inter, common.Address(addressValue))
 
-			accountValue := environment.NewAccountValue(address)
+			accountValue := environment.NewAccountValue(inter, address)
 
 			authorization := interpreter.ConvertSemaAccessToStaticAuthorization(
 				inter,
@@ -262,6 +262,7 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 				authorization,
 				accountValue,
 				sema.AccountType,
+				locationRange,
 			)
 
 			return accountReferenceValue, nil

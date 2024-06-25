@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -209,6 +209,21 @@ var AccountEventContractParameter = sema.Parameter{
 	TypeAnnotation: sema.StringTypeAnnotation,
 }
 
+var AccountEventKeyWeightParameter = sema.Parameter{
+	Identifier:     "weight",
+	TypeAnnotation: sema.UFix64TypeAnnotation,
+}
+
+var AccountEventHashAlgorithmParameter = sema.Parameter{
+	Identifier:     "hashAlgorithm",
+	TypeAnnotation: sema.HashAlgorithmTypeAnnotation,
+}
+
+var AccountEventKeyIndexParameter = sema.Parameter{
+	Identifier:     "keyIndex",
+	TypeAnnotation: sema.IntTypeAnnotation,
+}
+
 var AccountCreatedEventType = newFlowEventType(
 	"AccountCreated",
 	AccountEventAddressParameter,
@@ -218,6 +233,9 @@ var AccountKeyAddedFromPublicKeyEventType = newFlowEventType(
 	"AccountKeyAdded",
 	AccountEventAddressParameter,
 	AccountEventPublicKeyParameterAsCompositeType,
+	AccountEventKeyWeightParameter,
+	AccountEventHashAlgorithmParameter,
+	AccountEventKeyIndexParameter,
 )
 
 var AccountKeyRemovedFromPublicKeyIndexEventType = newFlowEventType(

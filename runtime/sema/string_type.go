@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,6 +55,7 @@ var StringType = &SimpleType{
 	TypeTag:       StringTypeTag,
 	IsResource:    false,
 	Storable:      true,
+	Primitive:     true,
 	Equatable:     true,
 	Comparable:    true,
 	Exportable:    true,
@@ -116,6 +117,12 @@ func init() {
 				StringTypeSplitFunctionType,
 				StringTypeSplitFunctionDocString,
 			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeReplaceAllFunctionName,
+				StringTypeReplaceAllFunctionType,
+				StringTypeReplaceAllFunctionDocString,
+			),
 		})
 	}
 }
@@ -161,6 +168,13 @@ Returns a new string containing the slice of the characters in the given string 
 This function creates a new string whose length is ` + "`upTo - from`" + `.
 It does not modify the original string.
 If either of the parameters are out of the bounds of the string, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail
+`
+
+const StringTypeReplaceAllFunctionName = "replaceAll"
+const StringTypeReplaceAllFunctionDocString = `
+Returns a new string after replacing all the occurrences of parameter ` + "`of` with the parameter `with`" + `.
+
+If ` + "`with`" + ` is empty, it matches at the beginning of the string and after each UTF-8 sequence, yielding k+1 replacements for a string of length k.
 `
 
 // ByteArrayType represents the type [UInt8]
@@ -360,4 +374,19 @@ var StringTypeSplitFunctionType = NewSimpleFunctionType(
 			Type: StringType,
 		},
 	),
+)
+
+var StringTypeReplaceAllFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Identifier:     "of",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+		{
+			Identifier:     "with",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+	},
+	StringTypeAnnotation,
 )

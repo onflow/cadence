@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"io"
 	"math/big"
 	"strconv"
+	_ "unsafe"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
@@ -40,6 +41,8 @@ type Decoder struct {
 	// allowUnstructuredStaticTypes controls if the decoding
 	// of a static type as a type ID (cadence.TypeID) is allowed
 	allowUnstructuredStaticTypes bool
+	// backwardsCompatible controls if the decoder can decode old versions of the JSON encoding
+	backwardsCompatible bool
 }
 
 type Option func(*Decoder)
@@ -50,6 +53,15 @@ type Option func(*Decoder)
 func WithAllowUnstructuredStaticTypes(allow bool) Option {
 	return func(decoder *Decoder) {
 		decoder.allowUnstructuredStaticTypes = allow
+	}
+}
+
+// WithBackwardsCompatibility returns a new Decoder Option
+// which enables backwards compatibility mode, where the decoding
+// of old versions of the JSON encoding is allowed
+func WithBackwardsCompatibility() Option {
+	return func(decoder *Decoder) {
+		decoder.backwardsCompatible = true
 	}
 }
 
@@ -107,7 +119,7 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 		}
 	}()
 
-	value = d.decodeJSON(jsonMap)
+	value = d.DecodeJSON(jsonMap)
 	return value, nil
 }
 
@@ -128,9 +140,11 @@ const (
 	addressKey           = "address"
 	pathKey              = "path"
 	authorizationKey     = "authorization"
+	authorizedKey        = "authorized" // Deprecated. The authorized flag got replaced by the authorization field.
 	entitlementsKey      = "entitlements"
 	sizeKey              = "size"
 	typeIDKey            = "typeID"
+	restrictionsKey      = "restrictions" // Deprecated. Restricted types are removed in v1.0.0
 	intersectionTypesKey = "types"
 	labelKey             = "label"
 	parametersKey        = "parameters"
@@ -139,9 +153,13 @@ const (
 	typeBoundKey         = "typeBound"
 	purityKey            = "purity"
 	functionTypeKey      = "functionType"
+	elementKey           = "element"
+	startKey             = "start"
+	endKey               = "end"
+	stepKey              = "step"
 )
 
-func (d *Decoder) decodeJSON(v any) cadence.Value {
+func (d *Decoder) DecodeJSON(v any) cadence.Value {
 	obj := toObject(v)
 
 	typeStr := obj.GetString(typeKey)
@@ -225,6 +243,8 @@ func (d *Decoder) decodeJSON(v any) cadence.Value {
 		return d.decodeEvent(valueJSON)
 	case contractTypeStr:
 		return d.decodeContract(valueJSON)
+	case inclusiveRangeTypeStr:
+		return d.decodeInclusiveRange(valueJSON)
 	case pathTypeStr:
 		return d.decodePath(valueJSON)
 	case typeTypeStr:
@@ -254,7 +274,7 @@ func (d *Decoder) decodeOptional(valueJSON any) cadence.Optional {
 		return cadence.NewMeteredOptional(d.gauge, nil)
 	}
 
-	return cadence.NewMeteredOptional(d.gauge, d.decodeJSON(valueJSON))
+	return cadence.NewMeteredOptional(d.gauge, d.DecodeJSON(valueJSON))
 }
 
 func (d *Decoder) decodeBool(valueJSON any) cadence.Bool {
@@ -640,7 +660,7 @@ func (d *Decoder) decodeArray(valueJSON any) cadence.Array {
 		func() ([]cadence.Value, error) {
 			values := make([]cadence.Value, len(v))
 			for i, val := range v {
-				values[i] = d.decodeJSON(val)
+				values[i] = d.DecodeJSON(val)
 			}
 			return values, nil
 		},
@@ -869,6 +889,26 @@ func (d *Decoder) decodeEnum(valueJSON any) cadence.Enum {
 	))
 }
 
+func (d *Decoder) decodeInclusiveRange(valueJSON any) *cadence.InclusiveRange {
+	obj := toObject(valueJSON)
+
+	start := obj.GetValue(d, startKey)
+	end := obj.GetValue(d, endKey)
+	step := obj.GetValue(d, stepKey)
+
+	value := cadence.NewMeteredInclusiveRange(
+		d.gauge,
+		start,
+		end,
+		step,
+	)
+
+	return value.WithType(cadence.NewMeteredInclusiveRangeType(
+		d.gauge,
+		start.Type(),
+	))
+}
+
 func (d *Decoder) decodePath(valueJSON any) cadence.Path {
 	obj := toObject(valueJSON)
 
@@ -1037,6 +1077,12 @@ func (d *Decoder) decodeAuthorization(authorizationJSON any) cadence.Authorizati
 	panic(errors.NewDefaultUserError("invalid kind in authorization: %s", kind))
 }
 
+//go:linkname setCompositeTypeFields github.com/onflow/cadence.setCompositeTypeFields
+func setCompositeTypeFields(cadence.CompositeType, []cadence.Field)
+
+//go:linkname setInterfaceTypeFields github.com/onflow/cadence.setInterfaceTypeFields
+func setInterfaceTypeFields(cadence.InterfaceType, []cadence.Field)
+
 func (d *Decoder) decodeNominalType(
 	obj jsonObject,
 	kind, typeID string,
@@ -1146,9 +1192,9 @@ func (d *Decoder) decodeNominalType(
 
 	switch {
 	case compositeType != nil:
-		compositeType.SetCompositeFields(fields)
+		setCompositeTypeFields(compositeType, fields)
 	case interfaceType != nil:
-		interfaceType.SetInterfaceFields(fields)
+		setInterfaceTypeFields(interfaceType, fields)
 	}
 
 	return result
@@ -1178,7 +1224,7 @@ var simpleTypes = func() map[string]cadence.Type {
 	typeMap["Bytes"] = cadence.TheBytesType
 
 	for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
-		if !ty.IsDefined() {
+		if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 			continue
 		}
 
@@ -1188,13 +1234,6 @@ var simpleTypes = func() map[string]cadence.Type {
 		}
 
 		semaType := ty.SemaType()
-
-		// Some primitive static types are deprecated,
-		// and only exist for migration purposes,
-		// so do not have an equivalent sema type
-		if semaType == nil {
-			continue
-		}
 
 		typeMap[string(semaType.ID())] = cadenceType
 	}
@@ -1247,6 +1286,19 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.gauge,
 			d.decodeType(obj.Get(typeKey), results),
 		)
+	case "Restriction":
+		// Backwards-compatibility for format <v1.0.0:
+		if !d.backwardsCompatible {
+			panic("Restriction kind is not supported")
+		}
+
+		restrictionsValue := obj.Get(restrictionsKey)
+		typeValue := obj.Get(typeKey)
+		return d.decodeDeprecatedRestrictedType(
+			typeValue,
+			toSlice(restrictionsValue),
+			results,
+		)
 	case "VariableSizedArray":
 		return cadence.NewMeteredVariableSizedArrayType(
 			d.gauge,
@@ -1263,6 +1315,11 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.decodeType(obj.Get(keyKey), results),
 			d.decodeType(obj.Get(valueKey), results),
 		)
+	case "InclusiveRange":
+		return cadence.NewMeteredInclusiveRangeType(
+			d.gauge,
+			d.decodeType(obj.Get(elementKey), results),
+		)
 	case "ConstantSizedArray":
 		size := toUInt(obj.Get(sizeKey))
 		return cadence.NewMeteredConstantSizedArrayType(
@@ -1271,6 +1328,17 @@ func (d *Decoder) decodeType(valueJSON any, results typeDecodingResults) cadence
 			d.decodeType(obj.Get(typeKey), results),
 		)
 	case "Reference":
+		// Backwards-compatibility for format <v1.0.0:
+		if d.backwardsCompatible {
+			if _, hasKey := obj[authorizedKey]; hasKey {
+				return cadence.NewDeprecatedMeteredReferenceType(
+					d.gauge,
+					obj.GetBool(authorizedKey),
+					d.decodeType(obj.Get(typeKey), results),
+				)
+			}
+		}
+
 		return cadence.NewMeteredReferenceType(
 			d.gauge,
 			d.decodeAuthorization(obj.Get(authorizationKey)),
@@ -1308,11 +1376,52 @@ func (d *Decoder) decodeTypeValue(valueJSON any) cadence.TypeValue {
 func (d *Decoder) decodeCapability(valueJSON any) cadence.Capability {
 	obj := toObject(valueJSON)
 
+	if d.backwardsCompatible {
+		if _, hasKey := obj[idKey]; !hasKey {
+			path, ok := d.DecodeJSON(obj.Get(pathKey)).(cadence.Path)
+			if !ok {
+				panic(errors.NewDefaultUserError("invalid capability: missing or invalid path"))
+			}
+
+			return cadence.NewDeprecatedMeteredPathCapability(
+				d.gauge,
+				d.decodeAddress(obj.Get(addressKey)),
+				path,
+				d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
+			)
+		}
+	} else {
+		if _, hasKey := obj[pathKey]; hasKey {
+			panic(errors.NewDefaultUserError("invalid capability: path is not supported"))
+		}
+	}
+
 	return cadence.NewMeteredCapability(
 		d.gauge,
 		d.decodeUInt64(obj.Get(idKey)),
 		d.decodeAddress(obj.Get(addressKey)),
 		d.decodeType(obj.Get(borrowTypeKey), typeDecodingResults{}),
+	)
+}
+
+// Deprecated: do not use in new code, only for backwards compatibility
+// Restricted types got removed in v1.0.0
+func (d *Decoder) decodeDeprecatedRestrictedType(
+	typeValue any,
+	restrictionsValue []any,
+	results typeDecodingResults,
+) cadence.Type {
+	typ := d.decodeType(typeValue, results)
+
+	restrictions := make([]cadence.Type, 0, len(restrictionsValue))
+	for _, restriction := range restrictionsValue {
+		restrictions = append(restrictions, d.decodeType(restriction, results))
+	}
+
+	return cadence.NewDeprecatedMeteredRestrictedType(
+		d.gauge,
+		typ,
+		restrictions,
 	)
 }
 
@@ -1346,7 +1455,7 @@ func (obj jsonObject) GetSlice(key string) []any {
 
 func (obj jsonObject) GetValue(d *Decoder, key string) cadence.Value {
 	v := obj.Get(key)
-	return d.decodeJSON(v)
+	return d.DecodeJSON(v)
 }
 
 // JSON conversion helpers

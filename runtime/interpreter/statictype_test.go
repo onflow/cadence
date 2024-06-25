@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -688,6 +688,56 @@ func TestDictionaryStaticType_Equal(t *testing.T) {
 	})
 }
 
+func TestInclusiveRangeStaticType_Equal(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("equal", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.True(t,
+			InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt256,
+			}.Equal(
+				InclusiveRangeStaticType{
+					ElementType: PrimitiveStaticTypeInt256,
+				},
+			),
+		)
+	})
+
+	t.Run("different member types", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt,
+			}.Equal(
+				InclusiveRangeStaticType{
+					ElementType: PrimitiveStaticTypeWord256,
+				},
+			),
+		)
+	})
+
+	t.Run("different kind", func(t *testing.T) {
+
+		t.Parallel()
+
+		require.False(t,
+			InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt,
+			}.Equal(
+				&VariableSizedStaticType{
+					Type: PrimitiveStaticTypeInt,
+				},
+			),
+		)
+	})
+}
+
 func TestIntersectionStaticType_Equal(t *testing.T) {
 
 	t.Parallel()
@@ -919,10 +969,11 @@ func TestStaticTypeConversion(t *testing.T) {
 	testFunctionType := &sema.FunctionType{}
 
 	type testCase struct {
-		name         string
-		semaType     sema.Type
-		staticType   StaticType
-		getInterface func(
+		name           string
+		semaType       sema.Type
+		staticType     StaticType
+		noSemaToStatic bool
+		getInterface   func(
 			t *testing.T,
 			location common.Location,
 			qualifiedIdentifier string,
@@ -1019,6 +1070,11 @@ func TestStaticTypeConversion(t *testing.T) {
 			name:       "SignedInteger",
 			semaType:   sema.SignedIntegerType,
 			staticType: PrimitiveStaticTypeSignedInteger,
+		},
+		{
+			name:       "FixedSizeUnsignedInteger",
+			semaType:   sema.FixedSizeUnsignedIntegerType,
+			staticType: PrimitiveStaticTypeFixedSizeUnsignedInteger,
 		},
 
 		{
@@ -1541,67 +1597,32 @@ func TestStaticTypeConversion(t *testing.T) {
 				Type: testFunctionType,
 			},
 		},
-
+		{
+			name:       "HashableStruct",
+			semaType:   sema.HashableStructType,
+			staticType: PrimitiveStaticTypeHashableStruct,
+		},
+		{
+			name: "InclusiveRange",
+			semaType: &sema.InclusiveRangeType{
+				MemberType: sema.IntType,
+			},
+			staticType: InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt,
+			},
+		},
 		// Deprecated primitive static types, only exist for migration purposes
 		{
-			name:       "AuthAccount",
-			semaType:   nil,
-			staticType: PrimitiveStaticTypeAuthAccount,
+			name:           "AuthAccount",
+			semaType:       sema.FullyEntitledAccountReferenceType,
+			staticType:     PrimitiveStaticTypeAuthAccount,
+			noSemaToStatic: true,
 		},
 		{
-			name:       "PublicAccount",
-			semaType:   nil,
-			staticType: PrimitiveStaticTypePublicAccount,
-		},
-		{
-			name:       "AuthAccount.Contracts",
-			staticType: PrimitiveStaticTypeAuthAccountContracts,
-			semaType:   nil,
-		},
-		{
-			name:       "PublicAccount.Contracts",
-			staticType: PrimitiveStaticTypePublicAccountContracts,
-			semaType:   nil,
-		},
-		{
-			name:       "AuthAccount.Keys",
-			staticType: PrimitiveStaticTypeAuthAccountKeys,
-			semaType:   nil,
-		},
-		{
-			name:       "PublicAccount.Keys",
-			staticType: PrimitiveStaticTypePublicAccountKeys,
-			semaType:   nil,
-		},
-		{
-			name:       "AuthAccount.Inbox",
-			staticType: PrimitiveStaticTypeAuthAccountInbox,
-			semaType:   nil,
-		},
-		{
-			name:       "AuthAccount.StorageCapabilities",
-			staticType: PrimitiveStaticTypeAuthAccountStorageCapabilities,
-			semaType:   nil,
-		},
-		{
-			name:       "AuthAccount.AccountCapabilities",
-			staticType: PrimitiveStaticTypeAuthAccountAccountCapabilities,
-			semaType:   nil,
-		},
-		{
-			name:       "AuthAccount.Capabilities",
-			staticType: PrimitiveStaticTypeAuthAccountCapabilities,
-			semaType:   nil,
-		},
-		{
-			name:       "PublicAccount.Capabilities",
-			staticType: PrimitiveStaticTypePublicAccountCapabilities,
-			semaType:   nil,
-		},
-		{
-			name:       "AccountKey",
-			staticType: PrimitiveStaticTypeAccountKey,
-			semaType:   nil,
+			name:           "PublicAccount",
+			semaType:       sema.AccountReferenceType,
+			staticType:     PrimitiveStaticTypePublicAccount,
+			noSemaToStatic: true,
 		},
 	}
 
@@ -1612,7 +1633,7 @@ func TestStaticTypeConversion(t *testing.T) {
 
 			// Test sema to static
 
-			if test.semaType != nil {
+			if !test.noSemaToStatic {
 				convertedStaticType := ConvertSemaToStaticType(nil, test.semaType)
 				require.Equal(t,
 					test.staticType,
@@ -1622,9 +1643,9 @@ func TestStaticTypeConversion(t *testing.T) {
 
 			// Test static to sema
 
-			getInterface := test.getInterface
-			if getInterface == nil {
-				getInterface = func(
+			getInterfaceType := test.getInterface
+			if getInterfaceType == nil {
+				getInterfaceType = func(
 					_ *testing.T,
 					_ common.Location,
 					_ string,
@@ -1635,40 +1656,48 @@ func TestStaticTypeConversion(t *testing.T) {
 				}
 			}
 
-			getComposite := test.getComposite
-			if getComposite == nil {
-				getComposite = func(
+			getCompositeType := test.getComposite
+			if getCompositeType == nil {
+				getCompositeType = func(
 					_ *testing.T,
 					_ common.Location,
 					_ string,
 					_ TypeID,
 				) (*sema.CompositeType, error) {
-					require.FailNow(t, "getComposite should not be called")
+					require.FailNow(t, "getCompositeType should not be called")
 					return nil, nil
 				}
 			}
 
-			getEntitlement := func(_ common.TypeID) (*sema.EntitlementType, error) {
-				require.FailNow(t, "getComposite should not be called")
-				return nil, nil
-			}
-
-			getEntitlementMap := func(_ common.TypeID) (*sema.EntitlementMapType, error) {
-				require.FailNow(t, "getComposite should not be called")
-				return nil, nil
+			handler := staticTypeConversionHandler{
+				getInterfaceType: func(
+					location common.Location,
+					qualifiedIdentifier string,
+					typeID TypeID,
+				) (*sema.InterfaceType, error) {
+					return getInterfaceType(t, location, qualifiedIdentifier, typeID)
+				},
+				getCompositeType: func(
+					location common.Location,
+					qualifiedIdentifier string,
+					typeID TypeID,
+				) (*sema.CompositeType, error) {
+					return getCompositeType(t, location, qualifiedIdentifier, typeID)
+				},
+				getEntitlementType: func(_ common.TypeID) (*sema.EntitlementType, error) {
+					require.FailNow(t, "getEntitlementType should not be called")
+					return nil, nil
+				},
+				getEntitlementMapType: func(_ common.TypeID) (*sema.EntitlementMapType, error) {
+					require.FailNow(t, "getEntitlementMapType should not be called")
+					return nil, nil
+				},
 			}
 
 			convertedSemaType, err := ConvertStaticToSemaType(
 				nil,
 				test.staticType,
-				func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error) {
-					return getInterface(t, location, qualifiedIdentifier, typeID)
-				},
-				func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error) {
-					return getComposite(t, location, qualifiedIdentifier, typeID)
-				},
-				getEntitlement,
-				getEntitlementMap,
+				handler,
 			)
 			require.NoError(t, err)
 			require.Equal(t,
@@ -1686,7 +1715,7 @@ func TestStaticTypeConversion(t *testing.T) {
 	}
 
 	for ty := PrimitiveStaticType(1); ty < PrimitiveStaticType_Count; ty++ {
-		if !ty.IsDefined() {
+		if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 			continue
 		}
 		if _, ok := testedStaticTypes[ty]; !ok {
@@ -1694,6 +1723,39 @@ func TestStaticTypeConversion(t *testing.T) {
 		}
 	}
 
+}
+
+type staticTypeConversionHandler struct {
+	getInterfaceType      func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error)
+	getCompositeType      func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error)
+	getEntitlementType    func(typeID common.TypeID) (*sema.EntitlementType, error)
+	getEntitlementMapType func(typeID common.TypeID) (*sema.EntitlementMapType, error)
+}
+
+var _ StaticTypeConversionHandler = staticTypeConversionHandler{}
+
+func (s staticTypeConversionHandler) GetInterfaceType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID TypeID,
+) (*sema.InterfaceType, error) {
+	return s.getInterfaceType(location, qualifiedIdentifier, typeID)
+}
+
+func (s staticTypeConversionHandler) GetCompositeType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID TypeID,
+) (*sema.CompositeType, error) {
+	return s.getCompositeType(location, qualifiedIdentifier, typeID)
+}
+
+func (s staticTypeConversionHandler) GetEntitlementType(typeID TypeID) (*sema.EntitlementType, error) {
+	return s.getEntitlementType(typeID)
+}
+
+func (s staticTypeConversionHandler) GetEntitlementMapType(typeID TypeID) (*sema.EntitlementMapType, error) {
+	return s.getEntitlementMapType(typeID)
 }
 
 func TestIntersectionStaticType_ID(t *testing.T) {
@@ -2285,4 +2347,137 @@ func TestReferenceStaticType_String(t *testing.T) {
 			referenceType.String(),
 		)
 	})
+}
+
+func TestStaticType_IsDeprecated(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		name     string
+		ty       StaticType
+		expected bool
+		genTy    func(innerType PrimitiveStaticType) StaticType
+	}
+
+	tests := []testCase{
+		{
+			name: "Capability, with type",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &CapabilityStaticType{
+					BorrowType: innerType,
+				}
+			},
+		},
+		{
+			name:     "Capability, without type",
+			ty:       &CapabilityStaticType{},
+			expected: false,
+		},
+		{
+			name: "Variable-sized array",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &VariableSizedStaticType{
+					Type: innerType,
+				}
+			},
+		},
+		{
+			name: "Constant-sized array",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &ConstantSizedStaticType{
+					Type: innerType,
+					Size: 42,
+				}
+			},
+		},
+		{
+			name: "Optional",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &OptionalStaticType{
+					Type: innerType,
+				}
+			},
+		},
+		{
+			name: "Reference",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &ReferenceStaticType{
+					ReferencedType: innerType,
+				}
+			},
+		},
+		{
+			name: "Dictionary, key",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &DictionaryStaticType{
+					KeyType:   innerType,
+					ValueType: PrimitiveStaticTypeVoid,
+				}
+			},
+		},
+		{
+			name: "Dictionary, value",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &DictionaryStaticType{
+					KeyType:   PrimitiveStaticTypeVoid,
+					ValueType: innerType,
+				}
+			},
+		},
+		{
+			name:     "Function",
+			ty:       FunctionStaticType{},
+			expected: false,
+		},
+		{
+			name:     "Interface",
+			ty:       &InterfaceStaticType{},
+			expected: false,
+		},
+		{
+			name:     "Composite",
+			ty:       &CompositeStaticType{},
+			expected: false,
+		},
+		{
+			name: "InclusiveRange",
+			genTy: func(innerType PrimitiveStaticType) StaticType {
+				return &InclusiveRangeStaticType{
+					ElementType: innerType,
+				}
+			},
+		},
+	}
+
+	test := func(test testCase) {
+		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			if test.genTy != nil {
+				for ty := PrimitiveStaticType(1); ty < PrimitiveStaticType_Count; ty++ {
+					if !ty.IsDefined() {
+						continue
+					}
+
+					t.Run(ty.String(), func(t *testing.T) {
+						assert.Equal(t,
+							ty.IsDeprecated(),
+							test.genTy(ty).IsDeprecated(), //nolint:staticcheck
+						)
+					})
+				}
+			} else {
+				assert.Equal(t,
+					test.expected,
+					test.ty.IsDeprecated(), //nolint:staticcheck
+				)
+			}
+		})
+	}
+
+	for _, testCase := range tests {
+		test(testCase)
+	}
 }

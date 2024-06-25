@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -153,7 +153,7 @@ func TestRuntimeParseLiteral(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewArray([]cadence.Value{}),
+			cadence.NewArray([]cadence.Value{}).WithType(cadence.NewVariableSizedArrayType(cadence.BoolType)),
 			value,
 		)
 	})
@@ -168,7 +168,7 @@ func TestRuntimeParseLiteral(t *testing.T) {
 		require.Equal(t,
 			cadence.NewArray([]cadence.Value{
 				cadence.NewBool(true),
-			}),
+			}).WithType(cadence.NewVariableSizedArrayType(cadence.BoolType)),
 			value,
 		)
 	})
@@ -192,22 +192,25 @@ func TestRuntimeParseLiteral(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewArray([]cadence.Value{}),
+			cadence.NewArray(
+				[]cadence.Value{},
+			).WithType(cadence.NewConstantSizedArrayType(0, cadence.BoolType)),
 			value,
 		)
+
 	})
 
 	t.Run("ConstantSizedArray, one element", func(t *testing.T) {
 		value, err := ParseLiteral(
 			`[true]`,
-			&sema.ConstantSizedType{Type: sema.BoolType},
+			&sema.ConstantSizedType{Type: sema.BoolType, Size: 1},
 			NewTestInterpreter(t),
 		)
 		require.NoError(t, err)
 		require.Equal(t,
 			cadence.NewArray([]cadence.Value{
 				cadence.NewBool(true),
-			}),
+			}).WithType(cadence.NewConstantSizedArrayType(1, cadence.BoolType)),
 			value,
 		)
 	})
@@ -234,7 +237,7 @@ func TestRuntimeParseLiteral(t *testing.T) {
 		)
 		require.NoError(t, err)
 		require.Equal(t,
-			cadence.NewDictionary([]cadence.KeyValuePair{}),
+			cadence.NewDictionary([]cadence.KeyValuePair{}).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.BoolType)),
 			value,
 		)
 	})
@@ -255,7 +258,7 @@ func TestRuntimeParseLiteral(t *testing.T) {
 					Key:   cadence.String("hello"),
 					Value: cadence.NewBool(true),
 				},
-			}),
+			}).WithType(cadence.NewDictionaryType(cadence.StringType, cadence.BoolType)),
 			value,
 		)
 	})

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -405,4 +405,97 @@ func TestRuntimeCheckCyclicImportToSelfDuringDeploy(t *testing.T) {
 
 	errs := checker.RequireCheckerErrors(t, checkerErr, 1)
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
+}
+
+func TestRuntimeContractImport(t *testing.T) {
+
+	t.Parallel()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	runtime := NewTestInterpreterRuntime()
+
+	contract := []byte(`
+        access(all) contract Foo {
+            access(all) let x: [Int]
+
+            access(all) fun answer(): Int {
+                return 42
+            }
+
+            access(all) struct Bar {}
+
+            init() {
+                self.x = []
+            }
+        }`,
+	)
+
+	deploy := DeploymentTransaction("Foo", contract)
+
+	script := []byte(`
+        import Foo from 0x01
+
+        access(all) fun main() {
+            var foo: &Foo = Foo
+            var x: &[Int] = Foo.x
+            var bar: Foo.Bar = Foo.Bar()
+        }
+    `)
+
+	accountCodes := map[Location][]byte{}
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{addressValue}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnCreateAccount: func(payer Address) (address Address, err error) {
+			return addressValue, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
 }

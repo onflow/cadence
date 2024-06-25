@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,24 +58,23 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 	}
 
 	newFooStruct := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: &cadence.StructType{
-				Location:            common.ScriptLocation{},
-				QualifiedIdentifier: "Foo",
-				Fields:              []cadence.Field{},
-			},
-			Fields: []cadence.Value{},
-		}
+		return cadence.NewStruct([]cadence.Value{}).
+			WithType(cadence.NewStructType(
+				common.ScriptLocation{},
+				"Foo",
+				[]cadence.Field{},
+				nil,
+			))
 	}
 
 	newPublicAccountKeys := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: &cadence.StructType{
-				QualifiedIdentifier: "Account.Keys",
-				Fields:              []cadence.Field{},
-			},
-			Fields: []cadence.Value{},
-		}
+		return cadence.NewStruct([]cadence.Value{}).
+			WithType(cadence.NewStructType(
+				nil,
+				"Account.Keys",
+				[]cadence.Field{},
+				nil,
+			))
 	}
 
 	executeScript := func(t *testing.T, script string, arg cadence.Value) (err error) {
@@ -290,6 +289,104 @@ func TestRuntimeScriptParameterTypeValidation(t *testing.T) {
 		)
 
 		assert.NoError(t, err)
+	})
+
+	t.Run("InclusiveRange<Int16>", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			access(all) fun main(arg: InclusiveRange<Int16>) {
+			}
+		`
+
+		err := executeScript(
+			t,
+			script,
+			cadence.NewInclusiveRange(cadence.NewInt16(1), cadence.NewInt16(2), cadence.NewInt16(1)),
+		)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("InclusiveRange<UInt16> as AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			access(all) fun main(arg: AnyStruct) {
+			}
+		`
+
+		err := executeScript(
+			t,
+			script,
+			cadence.NewInclusiveRange(
+				cadence.NewUInt16(1),
+				cadence.NewUInt16(2),
+				cadence.NewUInt16(1),
+			),
+		)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("Invalid InclusiveRange<Integer>", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			access(all) fun main(arg: InclusiveRange<Integer>) {
+			}
+		`
+
+		err := executeScript(
+			t,
+			script,
+			cadence.NewInclusiveRange(cadence.NewInt16(1), cadence.NewInt16(2), cadence.NewInt16(1)),
+		)
+
+		var checkerError *sema.CheckerError
+		require.ErrorAs(t, err, &checkerError)
+
+		errs := checker.RequireCheckerErrors(t, checkerError, 1)
+		assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+	})
+
+	t.Run("Invalid InclusiveRange<Int16> with mixed value types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			access(all) fun main(arg: InclusiveRange<Int16>) {
+			}
+		`
+
+		err := executeScript(
+			t,
+			script,
+			cadence.NewInclusiveRange(cadence.NewInt16(1), cadence.NewUInt(2), cadence.NewUInt(1)),
+		)
+
+		var entryPointErr *InvalidEntryPointArgumentError
+		require.ErrorAs(t, err, &entryPointErr)
+	})
+
+	t.Run("Invalid InclusiveRange<Integer> with mixed value types", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+			access(all) fun main(arg: InclusiveRange<Integer>) {
+			}
+		`
+
+		err := executeScript(
+			t,
+			script,
+			cadence.NewInclusiveRange(cadence.NewInt16(1), cadence.NewUInt(2), cadence.NewUInt(1)),
+		)
+
+		var checkerError *sema.CheckerError
+		require.ErrorAs(t, err, &checkerError)
+
+		errs := checker.RequireCheckerErrors(t, checkerError, 1)
+		assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
 	})
 
 	t.Run("Capability", func(t *testing.T) {
@@ -571,27 +668,26 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 	}
 
 	newFooStruct := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: &cadence.StructType{
-				Location: common.AddressLocation{
+		return cadence.NewStruct([]cadence.Value{}).
+			WithType(cadence.NewStructType(
+				common.AddressLocation{
 					Address: common.MustBytesToAddress([]byte{0x1}),
 					Name:    "C",
 				},
-				QualifiedIdentifier: "C.Foo",
-				Fields:              []cadence.Field{},
-			},
-			Fields: []cadence.Value{},
-		}
+				"C.Foo",
+				[]cadence.Field{},
+				nil,
+			))
 	}
 
 	newPublicAccountKeys := func() cadence.Struct {
-		return cadence.Struct{
-			StructType: &cadence.StructType{
-				QualifiedIdentifier: "Account.Keys",
-				Fields:              []cadence.Field{},
-			},
-			Fields: []cadence.Value{},
-		}
+		return cadence.NewStruct([]cadence.Value{}).
+			WithType(cadence.NewStructType(
+				nil,
+				"Account.Keys",
+				[]cadence.Field{},
+				nil,
+			))
 	}
 
 	executeTransaction := func(
@@ -608,17 +704,48 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 
 		storage := NewTestLedger(nil, nil)
 
+		authorizers := []Address{{0, 0, 0, 0, 0, 0, 0, 1}}
+		accountCodes := map[Location][]byte{}
+
 		runtimeInterface := &TestRuntimeInterface{
 			Storage:           storage,
 			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
 			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-				return contracts[location], nil
+				return accountCodes[location], nil
 			},
 			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return json.Decode(nil, b)
 			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return authorizers, nil
+			},
 		}
 		addPublicKeyValidation(runtimeInterface, nil)
+
+		transactionLocation := NewTransactionLocationGenerator()
+		for location, contract := range contracts {
+			deploy := DeploymentTransaction(location.Name, contract)
+			err := rt.ExecuteTransaction(
+				Script{
+					Source: deploy,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  transactionLocation(),
+				},
+			)
+
+			require.NoError(t, err)
+		}
+
+		authorizers = nil
 
 		return rt.ExecuteTransaction(
 			Script{
@@ -627,7 +754,7 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  common.TransactionLocation{},
+				Location:  transactionLocation(),
 			},
 		)
 	}
@@ -1170,24 +1297,22 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 			cadence.NewReferenceType(cadence.UnauthorizedAccess, cadence.AccountType),
 		)
 
-		arg := cadence.Struct{
-			StructType: &cadence.StructType{
-				Location: common.AddressLocation{
-					Address: address,
-					Name:    "C",
-				},
-				QualifiedIdentifier: "C.S",
-				Fields: []cadence.Field{
-					{
-						Identifier: "cap",
-						Type:       &cadence.CapabilityType{},
-					},
+		arg := cadence.NewStruct([]cadence.Value{
+			capability,
+		}).WithType(cadence.NewStructType(
+			common.AddressLocation{
+				Address: address,
+				Name:    "C",
+			},
+			"C.S",
+			[]cadence.Field{
+				{
+					Identifier: "cap",
+					Type:       &cadence.CapabilityType{},
 				},
 			},
-			Fields: []cadence.Value{
-				capability,
-			},
-		}
+			nil,
+		))
 
 		err := executeTransaction(t, script, contracts, arg)
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})

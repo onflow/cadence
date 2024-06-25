@@ -31,7 +31,7 @@ func newWebAssemblyCompileAndInstantiateFunction(
 	gauge common.MemoryGauge,
 	handler WebAssemblyContractHandler,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
+	return interpreter.NewStaticHostFunctionValue(
 		gauge,
 		WebAssemblyTypeCompileAndInstantiateFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -56,18 +56,20 @@ func newWebAssemblyCompileAndInstantiateFunction(
 
 			instanceValue := NewWebAssemblyInstanceValue(gauge, instance)
 			instanceReferenceValue := interpreter.NewEphemeralReferenceValue(
-				gauge,
+				inter,
 				interpreter.UnauthorizedAccess,
 				instanceValue,
 				WebAssembly_InstanceType,
+				locationRange,
 			)
 
 			instantiatedSourceValue := NewWebAssemblyInstantiatedSourceValue(gauge, instanceReferenceValue)
 			return interpreter.NewEphemeralReferenceValue(
-				gauge,
+				inter,
 				interpreter.UnauthorizedAccess,
 				instantiatedSourceValue,
 				WebAssembly_InstantiatedSourceType,
+				locationRange,
 			)
 		},
 	)
@@ -77,7 +79,8 @@ func newWebAssemblyInstanceGetExportFunction(
 	gauge common.MemoryGauge,
 	instance WebAssemblyInstance,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
+	// TODO: make bound
+	return interpreter.NewStaticHostFunctionValue(
 		gauge,
 		WebAssembly_InstanceTypeGetExportFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {

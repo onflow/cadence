@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +60,7 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 	// If the return statement has a return value,
 	// check that the value's type matches the enclosing function's return type
 
-	valueType := checker.VisitExpression(statement.Expression, returnType)
+	valueType := checker.VisitExpression(statement.Expression, statement, returnType)
 
 	checker.Elaboration.SetReturnStatementTypes(
 		statement,
@@ -74,7 +74,6 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 		return
 	}
 
-	checker.checkVariableMove(statement.Expression)
 	checker.checkResourceMoveOperation(statement.Expression, valueType)
 
 	return

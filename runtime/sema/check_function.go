@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,7 +100,15 @@ func (checker *Checker) visitFunctionDeclaration(
 	access := checker.accessFromAstAccess(declaration.Access)
 
 	if functionType == nil {
-		functionType = checker.functionType(declaration.Purity, access, declaration.ParameterList, declaration.ReturnTypeAnnotation)
+
+		functionType = checker.functionType(
+			declaration.IsNative(),
+			declaration.Purity,
+			access,
+			declaration.TypeParameterList,
+			declaration.ParameterList,
+			declaration.ReturnTypeAnnotation,
+		)
 
 		if options.declareFunction {
 			checker.declareFunctionDeclaration(declaration, functionType)
@@ -202,19 +210,23 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
-				if mappedAccess, isMappedAccess := access.(*EntitlementMapAccess); isMappedAccess {
-					checker.entitlementMappingInScope = mappedAccess.Type
-				}
+				func() {
+					oldMappedAccess := checker.entitlementMappingInScope
+					if mappedAccess, isMappedAccess := access.(*EntitlementMapAccess); isMappedAccess {
+						checker.entitlementMappingInScope = mappedAccess.Type
+					} else {
+						checker.entitlementMappingInScope = nil
+					}
+					defer func() { checker.entitlementMappingInScope = oldMappedAccess }()
 
-				checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
-					checker.visitFunctionBlock(
-						functionBlock,
-						functionType.ReturnTypeAnnotation,
-						checkResourceLoss,
-					)
-				})
-
-				checker.entitlementMappingInScope = nil
+					checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
+						checker.visitFunctionBlock(
+							functionBlock,
+							functionType.ReturnTypeAnnotation,
+							checkResourceLoss,
+						)
+					})
+				}()
 
 				if mustExit {
 					returnType := functionType.ReturnTypeAnnotation.Type
@@ -385,13 +397,13 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 		var resultType Type
 		if returnType.IsResourceType() {
 
-			var innerType Type = returnType
+			innerType := returnType
 			optType, isOptional := returnType.(*OptionalType)
 			if isOptional {
 				innerType = optType.Type
 			}
 
-			var auth Access = UnauthorizedAccess
+			auth := UnauthorizedAccess
 			// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned.
 			// To create a "fully authorized" reference, we scan the resource type and produce a conjunction of all the entitlements mentioned within.
 			// So, for example,
@@ -411,12 +423,7 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 			// here the `result` value in the `post` block will have type `auth(E, X, Y) &R`
 			if entitlementSupportingType, ok := innerType.(EntitlementSupportingType); ok {
 				supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
-				if supportedEntitlements.Len() > 0 {
-					auth = EntitlementSetAccess{
-						SetKind:      Conjunction,
-						Entitlements: supportedEntitlements,
-					}
-				}
+				auth = supportedEntitlements.Access()
 			}
 
 			resultType = &ReferenceType{
@@ -489,8 +496,10 @@ func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpressi
 
 	// TODO: infer
 	functionType := checker.functionType(
+		false,
 		expression.Purity,
 		UnauthorizedAccess,
+		nil,
 		expression.ParameterList,
 		expression.ReturnTypeAnnotation,
 	)

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,16 +38,37 @@ func NewAccountStorageValue(
 	storageCapacityGet func(interpreter *Interpreter) UInt64Value,
 ) Value {
 
-	var forEachStoredFunction *HostFunctionValue
-	var forEachPublicFunction *HostFunctionValue
-	var typeFunction *HostFunctionValue
-	var loadFunction *HostFunctionValue
-	var copyFunction *HostFunctionValue
-	var saveFunction *HostFunctionValue
-	var borrowFunction *HostFunctionValue
-	var checkFunction *HostFunctionValue
+	var str string
+	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+		if str == "" {
+			common.UseMemory(interpreter, common.AccountStorageStringMemoryUsage)
+			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
+			str = fmt.Sprintf("Account.Storage(%s)", addressStr)
+		}
+		return str
+	}
 
-	computeField := func(name string, inter *Interpreter, locationRange LocationRange) Value {
+	storageValue := NewSimpleCompositeValue(
+		gauge,
+		account_StorageTypeID,
+		account_StorageStaticType,
+		nil,
+		nil,
+		nil,
+		nil,
+		stringer,
+	)
+
+	var forEachStoredFunction FunctionValue
+	var forEachPublicFunction FunctionValue
+	var typeFunction FunctionValue
+	var loadFunction FunctionValue
+	var copyFunction FunctionValue
+	var saveFunction FunctionValue
+	var borrowFunction FunctionValue
+	var checkFunction FunctionValue
+
+	storageValue.ComputeField = func(name string, inter *Interpreter, locationRange LocationRange) Value {
 		switch name {
 		case sema.Account_StorageTypePublicPathsFieldName:
 			return inter.publicAccountPaths(address, locationRange)
@@ -58,6 +79,7 @@ func NewAccountStorageValue(
 		case sema.Account_StorageTypeForEachPublicFunctionName:
 			if forEachPublicFunction == nil {
 				forEachPublicFunction = inter.newStorageIterationFunction(
+					storageValue,
 					sema.Account_StorageTypeForEachPublicFunctionType,
 					address,
 					common.PathDomainPublic,
@@ -69,6 +91,7 @@ func NewAccountStorageValue(
 		case sema.Account_StorageTypeForEachStoredFunctionName:
 			if forEachStoredFunction == nil {
 				forEachStoredFunction = inter.newStorageIterationFunction(
+					storageValue,
 					sema.Account_StorageTypeForEachStoredFunctionType,
 					address,
 					common.PathDomainStorage,
@@ -85,37 +108,37 @@ func NewAccountStorageValue(
 
 		case sema.Account_StorageTypeTypeFunctionName:
 			if typeFunction == nil {
-				typeFunction = inter.authAccountTypeFunction(address)
+				typeFunction = inter.authAccountTypeFunction(storageValue, address)
 			}
 			return typeFunction
 
 		case sema.Account_StorageTypeLoadFunctionName:
 			if loadFunction == nil {
-				loadFunction = inter.authAccountLoadFunction(address)
+				loadFunction = inter.authAccountLoadFunction(storageValue, address)
 			}
 			return loadFunction
 
 		case sema.Account_StorageTypeCopyFunctionName:
 			if copyFunction == nil {
-				copyFunction = inter.authAccountCopyFunction(address)
+				copyFunction = inter.authAccountCopyFunction(storageValue, address)
 			}
 			return copyFunction
 
 		case sema.Account_StorageTypeSaveFunctionName:
 			if saveFunction == nil {
-				saveFunction = inter.authAccountSaveFunction(address)
+				saveFunction = inter.authAccountSaveFunction(storageValue, address)
 			}
 			return saveFunction
 
 		case sema.Account_StorageTypeBorrowFunctionName:
 			if borrowFunction == nil {
-				borrowFunction = inter.authAccountBorrowFunction(address)
+				borrowFunction = inter.authAccountBorrowFunction(storageValue, address)
 			}
 			return borrowFunction
 
 		case sema.Account_StorageTypeCheckFunctionName:
 			if checkFunction == nil {
-				checkFunction = inter.authAccountCheckFunction(address)
+				checkFunction = inter.authAccountCheckFunction(storageValue, address)
 			}
 			return checkFunction
 		}
@@ -123,24 +146,5 @@ func NewAccountStorageValue(
 		return nil
 	}
 
-	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-		if str == "" {
-			common.UseMemory(memoryGauge, common.AccountStorageStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, seenReferences)
-			str = fmt.Sprintf("Account.Storage(%s)", addressStr)
-		}
-		return str
-	}
-
-	return NewSimpleCompositeValue(
-		gauge,
-		account_StorageTypeID,
-		account_StorageStaticType,
-		nil,
-		nil,
-		computeField,
-		nil,
-		stringer,
-	)
+	return storageValue
 }

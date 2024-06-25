@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,35 +34,37 @@ var account_InboxStaticType StaticType = PrimitiveStaticTypeAccount_Inbox
 func NewAccountInboxValue(
 	gauge common.MemoryGauge,
 	addressValue AddressValue,
-	publishFunction FunctionValue,
-	unpublishFunction FunctionValue,
-	claimFunction FunctionValue,
+	publishFunction BoundFunctionGenerator,
+	unpublishFunction BoundFunctionGenerator,
+	claimFunction BoundFunctionGenerator,
 ) Value {
 
-	fields := map[string]Value{
-		sema.Account_InboxTypePublishFunctionName:   publishFunction,
-		sema.Account_InboxTypeUnpublishFunctionName: unpublishFunction,
-		sema.Account_InboxTypeClaimFunctionName:     claimFunction,
-	}
-
 	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AccountInboxStringMemoryUsage)
-			addressStr := addressValue.MeteredString(memoryGauge, seenReferences)
+			common.UseMemory(interpreter, common.AccountInboxStringMemoryUsage)
+			addressStr := addressValue.MeteredString(interpreter, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.Inbox(%s)", addressStr)
 		}
 		return str
 	}
 
-	return NewSimpleCompositeValue(
+	accountInbox := NewSimpleCompositeValue(
 		gauge,
 		account_InboxTypeID,
 		account_InboxStaticType,
 		nil,
-		fields,
+		nil,
 		nil,
 		nil,
 		stringer,
 	)
+
+	accountInbox.Fields = map[string]Value{
+		sema.Account_InboxTypePublishFunctionName:   publishFunction(accountInbox),
+		sema.Account_InboxTypeUnpublishFunctionName: unpublishFunction(accountInbox),
+		sema.Account_InboxTypeClaimFunctionName:     claimFunction(accountInbox),
+	}
+
+	return accountInbox
 }

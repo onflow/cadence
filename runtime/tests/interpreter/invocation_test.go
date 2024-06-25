@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -52,7 +53,7 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 
 	test := func(t *testing.T, code string, expectSelf bool) {
 
-		checkFunction := stdlib.NewStandardLibraryFunction(
+		checkFunction := stdlib.NewStandardLibraryStaticFunction(
 			"check",
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
@@ -81,12 +82,16 @@ func TestInterpretSelfDeclaration(t *testing.T) {
 
 		inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{
 			Config: &interpreter.Config{
-				Storage:        newUnmeteredInMemoryStorage(),
-				BaseActivation: baseActivation,
+				Storage: newUnmeteredInMemoryStorage(),
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 			},
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-				AccessCheckMode:     sema.AccessCheckModeNotSpecifiedUnrestricted,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
 			},
 		})
 		require.NoError(t, err)

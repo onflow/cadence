@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,10 @@ type Config struct {
 	CoverageReport *CoverageReport
 	// AttachmentsEnabled specifies if attachments are enabled
 	AttachmentsEnabled bool
+	// LegacyContractUpgradeEnabled enabled specifies whether to use the old parser when parsing an old contract
+	LegacyContractUpgradeEnabled bool
+	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates
+	ContractUpdateTypeRemovalEnabled bool
 	// WebAssemblyEnabled specifies if the WebAssembly API is enabled
 	WebAssemblyEnabled bool
 }

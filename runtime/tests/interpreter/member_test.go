@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -409,7 +409,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
-				ref := interpreter.NewUnmeteredEphemeralReferenceValue(interpreter.UnauthorizedAccess, value, sType)
+				ref := interpreter.NewUnmeteredEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, value, sType, interpreter.EmptyLocationRange)
 
 				_, err = inter.Invoke("get", ref)
 				require.NoError(t, err)
@@ -456,7 +456,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
-				ref := interpreter.NewUnmeteredEphemeralReferenceValue(interpreter.UnauthorizedAccess, value, sType)
+				ref := interpreter.NewUnmeteredEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, value, sType, interpreter.EmptyLocationRange)
 
 				_, err = inter.Invoke("get", ref)
 				RequireError(t, err)
@@ -498,7 +498,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
-				ref := interpreter.NewUnmeteredEphemeralReferenceValue(interpreter.UnauthorizedAccess, value, sType)
+				ref := interpreter.NewUnmeteredEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, value, sType, interpreter.EmptyLocationRange)
 
 				_, err = inter.Invoke(
 					"get",
@@ -543,7 +543,7 @@ func TestInterpretMemberAccessType(t *testing.T) {
 
 				sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S")
 
-				ref := interpreter.NewUnmeteredEphemeralReferenceValue(interpreter.UnauthorizedAccess, value, sType)
+				ref := interpreter.NewUnmeteredEphemeralReferenceValue(inter, interpreter.UnauthorizedAccess, value, sType, interpreter.EmptyLocationRange)
 
 				_, err = inter.Invoke(
 					"get",
@@ -700,18 +700,12 @@ func TestInterpretMemberAccess(t *testing.T) {
                 init() {
                     self.bar <- create Bar()
                 }
-                destroy() {
-                    destroy self.bar
-                }
             }
 
             resource Bar {
                 var baz: @Baz
                 init() {
                     self.baz <- create Baz()
-                }
-                destroy() {
-                    destroy self.baz
                 }
             }
 
@@ -1075,7 +1069,7 @@ func TestInterpretMemberAccess(t *testing.T) {
             }
 
             struct S {
-                access(M) let foo: [String]
+                access(mapping M) let foo: [String]
                 init() {
                     self.foo = []
                 }
@@ -1133,18 +1127,11 @@ func TestInterpretMemberAccess(t *testing.T) {
 
 		// Test all built-in composite types
 		for ty := interpreter.PrimitiveStaticType(1); ty < interpreter.PrimitiveStaticType_Count; ty++ {
-			if !ty.IsDefined() {
+			if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 				continue
 			}
 
 			semaType := ty.SemaType()
-
-			// Some primitive static types are deprecated,
-			// and only exist for migration purposes,
-			// so do not have an equivalent sema type
-			if semaType == nil {
-				continue
-			}
 
 			if !semaType.ContainFieldsOrElements() ||
 				semaType.IsResourceType() {
@@ -1160,5 +1147,181 @@ func TestInterpretMemberAccess(t *testing.T) {
 				test(t, typeName)
 			})
 		}
+	})
+}
+
+func TestInterpretNestedReferenceMemberAccess(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("indexing", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            fun test() {
+                let r <- create R()
+                let arrayRef = &[&r as &R] as &[AnyStruct]
+                let ref: &AnyStruct = arrayRef[0]  // <--- run-time error here
+                destroy r
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
+	})
+
+	t.Run("field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            struct Container {
+                let value: AnyStruct
+            
+                init(value: AnyStruct) {
+                    self.value = value
+                }
+            }
+            
+            fun test() {
+                let r <- create R()
+                let containerRef = &Container(value: &r as &R) as &Container
+                let ref: &AnyStruct = containerRef.value  // <--- run-time error here
+                destroy r
+            }        
+        `)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
+	})
+
+	t.Run("struct entitlement escalation", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            entitlement E
+
+            struct T {
+                access(E) fun foo() {}
+            }
+
+            struct S {
+                access(mapping Identity) var ref: AnyStruct
+        
+                init(_ a: AnyStruct){
+                    self.ref = a
+                }
+            }
+        
+            fun test() {
+                let t = T()
+                let pubTRef = &t as &T
+                var s = &S(pubTRef) as auth(E) &S
+                var tRef = s.ref as! auth(E) &T
+                tRef.foo()
+            }
+            
+        `)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
+	})
+
+	t.Run("entitled struct escalation", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            entitlement E
+
+            struct T {
+                access(E) fun foo() {}
+            }
+
+            struct S {
+                access(mapping Identity) var ref: AnyStruct
+        
+                init(_ a: AnyStruct){
+                    self.ref = a
+                }
+            }
+        
+            fun test() {
+                let t = T()
+                let pubTRef = &t as auth(E) &T
+                var s = &S(pubTRef) as auth(E) &S
+                var member = s.ref
+                var tRef = member as! auth(E) &T
+                tRef.foo()
+            }
+            
+        `)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
+	})
+
+	t.Run("resource entitlement escalation", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            entitlement E
+
+            resource R {
+                access(E) fun foo() {}
+            }
+
+            struct S {
+                access(mapping Identity) var ref: AnyStruct
+        
+                init(_ a: AnyStruct){
+                    self.ref = a
+                }
+            }
+        
+            fun test() {
+                let r <- create R()
+                let pubRef = &r as &R
+                var s = &S(pubRef) as auth(E) &S
+                var entitledRef = s.ref as! auth(E) &R
+                entitledRef.foo()
+
+                destroy r
+            }
+            
+        `)
+
+		_, err := inter.Invoke("test")
+		require.ErrorAs(t, err, &interpreter.InvalidMemberReferenceError{})
+	})
+
+	t.Run("referenceArray", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+
+            entitlement E
+
+            struct T {
+                access(E) fun foo() {}
+            }
+
+            fun test() {
+                let t1 = T()
+                let t2 = T()
+                let arr: [AnyStruct] = [&t1 as auth(E) &T, &t2 as auth(E) &T]
+                let arrRef = &arr as &[AnyStruct]
+                let tRef = arrRef[0]
+            }
+            
+        `)
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
 	})
 }

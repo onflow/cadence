@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/onflow/atree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -51,9 +52,9 @@ func TestRuntimeAccountKeyConstructor(t *testing.T) {
             let key = AccountKey(
                 PublicKey(
                     publicKey: "0102".decodeHex(),
-                    signAlgo: "SignatureAlgorithmECDSA_P256"
+                    signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
                 ),
-                hashAlgorithm: "HashAlgorithmSHA3_256",
+                hashAlgorithm: HashAlgorithm.SHA3_256,
                 weight: 1.7
             )
 
@@ -224,7 +225,7 @@ type accountTestEnvironment struct {
 func newAccountTestEnv() accountTestEnvironment {
 	storage := newTestAccountKeyStorage()
 	rt := NewTestInterpreterRuntime()
-	rtInterface := getAccountKeyTestRuntimeInterface(storage)
+	rtInterface := newAccountKeyTestRuntimeInterface(storage)
 
 	addPublicKeyValidation(rtInterface, nil)
 
@@ -470,34 +471,49 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 
 	rt := NewTestInterpreterRuntime()
 
-	pubKey := newBytesValue([]byte{1, 2, 3})
+	pubKey1 := []byte{1, 2, 3}
+	pubKey1Value := newBytesValue(pubKey1)
+
+	pubKey2 := []byte{4, 5, 6}
+	pubKey2Value := newBytesValue(pubKey2)
 
 	const code = `
-       transaction(publicKey: [UInt8]) {
+       transaction(publicKey1: [UInt8], publicKey2: [UInt8]) {
            prepare(signer: auth(BorrowValue) &Account) {
                let acct = Account(payer: signer)
                acct.keys.add(
                    publicKey: PublicKey(
-                       publicKey: publicKey,
+                       publicKey: publicKey1,
                        signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
                    ),
                    hashAlgorithm: HashAlgorithm.SHA3_256,
                    weight: 100.0
+               )
+               acct.keys.add(
+                   publicKey: PublicKey(
+                       publicKey: publicKey2,
+                       signatureAlgorithm: SignatureAlgorithm.ECDSA_secp256k1
+                   ),
+                   hashAlgorithm: HashAlgorithm.SHA2_256,
+                   weight: 0.0
                )
            }
        }
    `
 
 	storage := newTestAccountKeyStorage()
-	runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+	runtimeInterface := newAccountKeyTestRuntimeInterface(storage)
 	addPublicKeyValidation(runtimeInterface, nil)
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := rt.ExecuteTransaction(
 		Script{
-			Source:    []byte(code),
-			Arguments: encodeArgs(pubKey),
+			Source: []byte(code),
+			Arguments: encodeArgs(
+				pubKey1Value,
+				pubKey2Value,
+			),
 		},
 		Context{
 			Location:  nextTransactionLocation(),
@@ -506,18 +522,125 @@ func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
 	)
 
 	require.NoError(t, err)
-	assert.Len(t, storage.keys, 1)
+	assert.Len(t, storage.keys, 2)
 
-	require.Len(t, storage.events, 2)
+	require.Len(t, storage.events, 3)
 
-	assert.EqualValues(t,
-		stdlib.AccountCreatedEventType.ID(),
+	assert.Equal(t,
+		string(stdlib.AccountCreatedEventType.ID()),
 		storage.events[0].Type().ID(),
 	)
 
-	assert.EqualValues(t,
-		stdlib.AccountKeyAddedFromPublicKeyEventType.ID(),
-		storage.events[1].Type().ID(),
+	key0AddedEvent := storage.events[1]
+	key1AddedEvent := storage.events[2]
+
+	assert.Equal(t,
+		string(stdlib.AccountKeyAddedFromPublicKeyEventType.ID()),
+		key0AddedEvent.Type().ID(),
+	)
+	assert.Equal(t,
+		string(stdlib.AccountKeyAddedFromPublicKeyEventType.ID()),
+		key1AddedEvent.Type().ID(),
+	)
+
+	key0AddedEventFields := cadence.FieldsMappedByName(key0AddedEvent)
+	key1AddedEventFields := cadence.FieldsMappedByName(key1AddedEvent)
+
+	// address
+	assert.Equal(t,
+		cadence.Address(accountKeyTestAddress),
+		key0AddedEventFields[stdlib.AccountEventAddressParameter.Identifier],
+	)
+	assert.Equal(t,
+		cadence.Address(accountKeyTestAddress),
+		key1AddedEventFields[stdlib.AccountEventAddressParameter.Identifier],
+	)
+
+	// public key
+	assert.Equal(t,
+		cadence.NewStruct([]cadence.Value{
+			// Public key (bytes)
+			newBytesValue(pubKey1),
+
+			// Signature Algo
+			newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+		}).WithType(PublicKeyType),
+		key0AddedEventFields[stdlib.AccountEventPublicKeyParameterAsCompositeType.Identifier],
+	)
+	assert.Equal(t,
+		cadence.NewStruct([]cadence.Value{
+			// Public key (bytes)
+			newBytesValue(pubKey2),
+
+			// Signature Algo
+			newSignAlgoValue(sema.SignatureAlgorithmECDSA_secp256k1),
+		}).WithType(PublicKeyType),
+		key1AddedEventFields[stdlib.AccountEventPublicKeyParameterAsCompositeType.Identifier],
+	)
+
+	// key weight
+	key0Weight, err := cadence.NewUFix64("100.0")
+	require.NoError(t, err)
+	key1Weight, err := cadence.NewUFix64("0.0")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		key0Weight,
+		key0AddedEventFields[stdlib.AccountEventKeyWeightParameter.Identifier],
+	)
+	assert.Equal(t,
+		sema.UFix64TypeName,
+		key0AddedEventFields[stdlib.AccountEventKeyWeightParameter.Identifier].Type().ID(),
+	)
+
+	assert.Equal(t,
+		key1Weight,
+		key1AddedEventFields[stdlib.AccountEventKeyWeightParameter.Identifier],
+	)
+	assert.Equal(t,
+		sema.UFix64TypeName,
+		key1AddedEventFields[stdlib.AccountEventKeyWeightParameter.Identifier].Type().ID(),
+	)
+
+	// key hash algorithm
+	key0HashAlgo := key0AddedEventFields[stdlib.AccountEventHashAlgorithmParameter.Identifier].(cadence.Enum)
+	key0HashAlgoFields := cadence.FieldsMappedByName(key0HashAlgo)
+	assert.Equal(t,
+		cadence.UInt8(sema.HashAlgorithmSHA3_256),
+		key0HashAlgoFields[sema.EnumRawValueFieldName],
+	)
+	assert.Equal(t,
+		sema.HashAlgorithmTypeName,
+		key0AddedEventFields[stdlib.AccountEventHashAlgorithmParameter.Identifier].Type().ID(),
+	)
+
+	key1HashAlgo := key1AddedEventFields[stdlib.AccountEventHashAlgorithmParameter.Identifier].(cadence.Enum)
+	key1HashAlgoFields := cadence.FieldsMappedByName(key1HashAlgo)
+	assert.Equal(t,
+		cadence.UInt8(sema.HashAlgorithmSHA2_256),
+		key1HashAlgoFields[sema.EnumRawValueFieldName],
+	)
+	assert.Equal(t,
+		sema.HashAlgorithmTypeName,
+		key1AddedEventFields[stdlib.AccountEventHashAlgorithmParameter.Identifier].Type().ID(),
+	)
+
+	// key index
+	assert.Equal(t,
+		cadence.NewInt(0),
+		key0AddedEventFields[stdlib.AccountEventKeyIndexParameter.Identifier],
+	)
+	assert.Equal(t,
+		sema.IntTypeName,
+		key0AddedEventFields[stdlib.AccountEventKeyIndexParameter.Identifier].Type().ID(),
+	)
+	assert.Equal(t,
+		cadence.NewInt(1),
+		key1AddedEventFields[stdlib.AccountEventKeyIndexParameter.Identifier],
+	)
+	assert.Equal(t,
+		sema.IntTypeName,
+		key1AddedEventFields[stdlib.AccountEventKeyIndexParameter.Identifier].Type().ID(),
 	)
 }
 
@@ -776,10 +899,12 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Enum{}, optionalValue.Value)
 	builtinStruct := optionalValue.Value.(cadence.Enum)
 
-	require.Len(t, builtinStruct.Fields, 1)
+	fields := cadence.FieldsMappedByName(builtinStruct)
+
+	require.Len(t, fields, 1)
 	assert.Equal(t,
 		cadence.NewUInt8(HashAlgorithmSHA3_256.RawValue()),
-		builtinStruct.Fields[0],
+		fields[sema.EnumRawValueFieldName],
 	)
 
 	// Check key2
@@ -789,10 +914,11 @@ func TestRuntimeHashAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Enum{}, optionalValue.Value)
 	builtinStruct = optionalValue.Value.(cadence.Enum)
 
-	require.Len(t, builtinStruct.Fields, 1)
+	fields = cadence.FieldsMappedByName(builtinStruct)
+	require.Len(t, fields, 1)
 	assert.Equal(t,
 		cadence.NewUInt8(HashAlgorithmSHA3_256.RawValue()),
-		builtinStruct.Fields[0],
+		fields[sema.EnumRawValueFieldName],
 	)
 
 	// Check key3
@@ -848,10 +974,11 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Enum{}, optionalValue.Value)
 	builtinStruct := optionalValue.Value.(cadence.Enum)
 
-	require.Len(t, builtinStruct.Fields, 1)
+	fields := cadence.FieldsMappedByName(builtinStruct)
+	require.Len(t, fields, 1)
 	assert.Equal(t,
 		cadence.NewUInt8(SignatureAlgorithmECDSA_secp256k1.RawValue()),
-		builtinStruct.Fields[0],
+		fields[sema.EnumRawValueFieldName],
 	)
 
 	// Check key2
@@ -861,10 +988,11 @@ func TestRuntimeSignatureAlgorithm(t *testing.T) {
 	require.IsType(t, cadence.Enum{}, optionalValue.Value)
 	builtinStruct = optionalValue.Value.(cadence.Enum)
 
-	require.Len(t, builtinStruct.Fields, 1)
+	fields = cadence.FieldsMappedByName(builtinStruct)
+	require.Len(t, fields, 1)
 	assert.Equal(t,
 		cadence.NewUInt8(SignatureAlgorithmECDSA_secp256k1.RawValue()),
-		builtinStruct.Fields[0],
+		fields[sema.EnumRawValueFieldName],
 	)
 
 	// Check key3
@@ -916,46 +1044,42 @@ func accountKeyExportedValue(
 		panic(err)
 	}
 
-	return cadence.Struct{
-		StructType: AccountKeyType,
-		Fields: []cadence.Value{
-			// Key index
-			cadence.NewInt(index),
+	return cadence.NewStruct([]cadence.Value{
+		// Key index
+		cadence.NewInt(index),
 
-			// Public Key (struct)
-			cadence.Struct{
-				StructType: PublicKeyType,
-				Fields: []cadence.Value{
-					// Public key (bytes)
-					newBytesValue(publicKeyBytes),
+		// Public Key (struct)
+		cadence.NewStruct([]cadence.Value{
+			// Public key (bytes)
+			newBytesValue(publicKeyBytes),
 
-					// Signature Algo
-					newSignAlgoValue(signAlgo),
-				},
-			},
+			// Signature Algo
+			newSignAlgoValue(signAlgo),
+		}).WithType(PublicKeyType),
 
-			// Hash algo
-			cadence.NewEnum([]cadence.Value{
-				cadence.NewUInt8(hashAlgo.RawValue()),
-			}).WithType(HashAlgoType),
+		// Hash algo
+		cadence.NewEnum([]cadence.Value{
+			cadence.NewUInt8(hashAlgo.RawValue()),
+		}).WithType(HashAlgoType),
 
-			// Weight
-			weightUFix64,
+		// Weight
+		weightUFix64,
 
-			// IsRevoked
-			cadence.NewBool(isRevoked),
-		},
-	}
+		// IsRevoked
+		cadence.NewBool(isRevoked),
+	}).WithType(AccountKeyType)
 }
 
-func getAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *TestRuntimeInterface {
+var accountKeyTestAddress = Address{42}
+
+func newAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *TestRuntimeInterface {
 	return &TestRuntimeInterface{
 		Storage: NewTestLedger(nil, nil),
 		OnGetSigningAccounts: func() ([]Address, error) {
-			return []Address{{42}}, nil
+			return []Address{accountKeyTestAddress}, nil
 		},
 		OnCreateAccount: func(payer Address) (address Address, err error) {
-			return Address{42}, nil
+			return accountKeyTestAddress, nil
 		},
 		OnAddAccountKey: func(address Address, publicKey *stdlib.PublicKey, hashAlgo HashAlgorithm, weight int) (*stdlib.AccountKey, error) {
 			index := len(storage.keys)
@@ -1167,16 +1291,13 @@ func TestRuntimePublicKey(t *testing.T) {
 		value, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
 
-		expected := cadence.Struct{
-			StructType: PublicKeyType,
-			Fields: []cadence.Value{
-				// Public key (bytes)
-				newBytesValue([]byte{1, 2}),
+		expected := cadence.NewStruct([]cadence.Value{
+			// Public key (bytes)
+			newBytesValue([]byte{1, 2}),
 
-				// Signature Algo
-				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
-			},
-		}
+			// Signature Algo
+			newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+		}).WithType(PublicKeyType)
 
 		assert.Equal(t, expected, value)
 	})
@@ -1269,7 +1390,7 @@ func TestRuntimePublicKey(t *testing.T) {
 
 			var invoked bool
 
-			runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+			runtimeInterface := newAccountKeyTestRuntimeInterface(storage)
 			runtimeInterface.OnValidatePublicKey = func(publicKey *stdlib.PublicKey) error {
 				invoked = true
 				return nil
@@ -1354,7 +1475,7 @@ func TestRuntimePublicKey(t *testing.T) {
 
 		var invoked bool
 
-		runtimeInterface := getAccountKeyTestRuntimeInterface(storage)
+		runtimeInterface := newAccountKeyTestRuntimeInterface(storage)
 		runtimeInterface.OnVerifySignature = func(
 			_ []byte,
 			_ string,
@@ -1432,16 +1553,13 @@ func TestRuntimePublicKey(t *testing.T) {
 		value, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
 
-		expected := cadence.Struct{
-			StructType: PublicKeyType,
-			Fields: []cadence.Value{
-				// Public key (bytes)
-				newBytesValue([]byte{1, 2}),
+		expected := cadence.NewStruct([]cadence.Value{
+			// Public key (bytes)
+			newBytesValue([]byte{1, 2}),
 
-				// Signature Algo
-				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
-			},
-		}
+			// Signature Algo
+			newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+		}).WithType(PublicKeyType)
 
 		assert.Equal(t, expected, value)
 	})
@@ -1473,19 +1591,15 @@ func TestRuntimePublicKey(t *testing.T) {
 		value, err := executeScript(script, runtimeInterface)
 		require.NoError(t, err)
 
-		expected := cadence.Struct{
-			StructType: PublicKeyType,
-			Fields: []cadence.Value{
-				// Public key (bytes)
-				newBytesValue([]byte{1, 2}),
-				// Signature Algo
-				newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
-			},
-		}
+		expected := cadence.NewStruct([]cadence.Value{
+			// Public key (bytes)
+			newBytesValue([]byte{1, 2}),
+			// Signature Algo
+			newSignAlgoValue(sema.SignatureAlgorithmECDSA_P256),
+		}).WithType(PublicKeyType)
 
 		assert.Equal(t, expected, value)
 	})
-
 }
 
 func TestRuntimeAuthAccountContracts(t *testing.T) {
@@ -1655,7 +1769,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 
                   transaction {
                       prepare(acc: &Account) {
-                          let hello = acc.contracts.borrow<&HelloInterface>(name: "Hello")
+                          let hello = acc.contracts.borrow<&{HelloInterface}>(name: "Hello")
                           assert(hello?.hello() == "Hello!")
                       }
                   }
@@ -1746,7 +1860,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 
                   transaction {
                       prepare(acc: &Account) {
-                          let hello = acc.contracts.borrow<&HelloInterface>(name: "Hello")
+                          let hello = acc.contracts.borrow<&{HelloInterface}>(name: "Hello")
                           assert(hello == nil)
                       }
                   }
@@ -1758,6 +1872,180 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
+	})
+
+	t.Run("borrow existing contract interface", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewTestInterpreterRuntime()
+
+		accountCodes := map[Location][]byte{}
+		var events []cadence.Event
+
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{{0, 0, 0, 0, 0, 0, 0, 0x42}}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		// Deploy contract interface
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction("HelloInterface", []byte(`
+                  access(all) contract interface HelloInterface {
+
+                      access(all) fun hello(): String
+                  }
+                `)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Deploy concrete contract
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction("Hello", []byte(`
+                  import HelloInterface from 0x42
+
+                  access(all) contract Hello: HelloInterface {
+
+                      access(all) fun hello(): String {
+                          return "Hello!"
+                      }
+                  }
+                `)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Test usage
+
+		// NOTE: name is contract interface, i.e. no stored contract composite.
+		// This should not panic, but still return nil
+
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                  import HelloInterface from 0x42
+
+                  transaction {
+                      prepare(acc: &Account) {
+                          let hello = acc.contracts.borrow<&{HelloInterface}>(name: "HelloInterface")
+                          assert(hello == nil)
+                      }
+                  }
+              `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("borrow existing contract with entitlement authorization", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewTestInterpreterRuntime()
+
+		accountCodes := map[Location][]byte{}
+		var events []cadence.Event
+
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
+				return accountCodes[location], nil
+			},
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{{0, 0, 0, 0, 0, 0, 0, 0x42}}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				return accountCodes[location], nil
+			},
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		// Deploy contract
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: DeploymentTransaction("Hello", []byte(`
+
+                  access(all) contract Hello {
+
+                      access(all) entitlement E
+
+                      access(all) fun hello(): String {
+                          return "Hello!"
+                      }
+                  }
+                `)),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		// Test usage
+
+		err = rt.ExecuteTransaction(
+			Script{
+				Source: []byte(`
+                  import Hello from 0x42
+
+                  transaction {
+                      prepare(acc: &Account) {
+                          let hello = acc.contracts.borrow<auth(Hello.E) &Hello>(name: "Hello")
+                          assert(hello == nil)
+                      }
+                  }
+              `),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.ErrorContains(t, err, "cannot borrow a reference with an authorization")
 	})
 
 	t.Run("borrow non-existing contract", func(t *testing.T) {
@@ -1920,6 +2208,7 @@ func TestRuntimeAuthAccountContracts(t *testing.T) {
 
 		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[0])
 	})
+
 }
 
 func TestRuntimePublicAccountContracts(t *testing.T) {
@@ -2227,4 +2516,67 @@ type fakeError struct{}
 
 func (fakeError) Error() string {
 	return "fake error for testing"
+}
+
+// TestRuntimePublicKeyPublicKeyField tests PublicKey's `publicKey` field.
+// It is a computed field, which always returns a copy of the stored raw public key ([UInt8]).
+//
+// This test ensures that the field can be accessed even after the PublicKey value has been transferred (copied),
+// and the original PublicKey value has been removed.
+func TestRuntimePublicKeyPublicKeyField(t *testing.T) {
+
+	t.Parallel()
+
+	inter := NewTestInterpreter(t)
+
+	locationRange := interpreter.EmptyLocationRange
+
+	publicKey := interpreter.NewCompositeValue(
+		inter,
+		locationRange,
+		nil,
+		sema.PublicKeyType.Identifier,
+		common.CompositeKindStructure,
+		[]interpreter.CompositeField{
+			{
+				Name: sema.PublicKeyTypePublicKeyFieldName,
+				Value: interpreter.NewArrayValue(
+					inter,
+					locationRange,
+					interpreter.ByteArrayStaticType,
+					common.ZeroAddress,
+					interpreter.NewUnmeteredUInt8Value(1),
+				),
+			},
+		},
+		common.ZeroAddress,
+	)
+
+	publicKeyArray1 := publicKey.GetMember(
+		inter,
+		locationRange,
+		sema.PublicKeyTypePublicKeyFieldName,
+	)
+
+	publicKey2 := publicKey.Transfer(
+		inter,
+		locationRange,
+		atree.Address{},
+		false,
+		nil,
+		nil,
+	).(*interpreter.CompositeValue)
+
+	publicKey.DeepRemove(inter)
+
+	publicKeyArray2 := publicKey2.GetMember(
+		inter,
+		locationRange,
+		sema.PublicKeyTypePublicKeyFieldName,
+	)
+
+	require.True(t,
+		publicKeyArray2.(interpreter.EquatableValue).
+			Equal(inter, locationRange, publicKeyArray1),
+	)
 }

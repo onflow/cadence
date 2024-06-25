@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +19,10 @@
 package interpreter
 
 import (
-	"github.com/onflow/atree"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func (interpreter *Interpreter) evalStatement(statement ast.Statement) StatementResult {
@@ -151,66 +150,22 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 	thenBlock, elseBlock *ast.Block,
 ) StatementResult {
 
-	// NOTE: It is *REQUIRED* that the getter for the value is used
-	// instead of just evaluating value expression,
-	// as the value may be an access expression (member access, index access),
-	// which implicitly removes a resource.
-	//
-	// Performing the removal from the container is essential
-	// (and just evaluating the expression does not perform the removal),
-	// because if there is a second value,
-	// the assignment to the value will cause an overwrite of the value.
-	// If the resource was not moved ou of the container,
-	// its contents get deleted.
-
-	getterSetter := interpreter.assignmentGetterSetter(declaration.Value)
-
-	const allowMissing = false
-	value := getterSetter.get(allowMissing)
-	if value == nil {
-		panic(errors.NewUnreachableError())
-	}
-
-	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes(declaration)
-	valueType := variableDeclarationTypes.ValueType
-
-	if declaration.SecondValue != nil {
-		secondValueType := variableDeclarationTypes.SecondValueType
-
-		interpreter.visitAssignment(
-			declaration.Transfer.Operation,
-			declaration.Value,
-			valueType,
-			declaration.SecondValue,
-			secondValueType,
-			declaration,
-		)
-	}
+	value := interpreter.visitVariableDeclaration(declaration, true)
 
 	if someValue, ok := value.(*SomeValue); ok {
-
-		targetType := variableDeclarationTypes.TargetType
 		locationRange := LocationRange{
 			Location:    interpreter.Location,
 			HasPosition: declaration.Value,
 		}
+
 		innerValue := someValue.InnerValue(interpreter, locationRange)
-		transferredUnwrappedValue := interpreter.transferAndConvert(
-			innerValue,
-			valueType,
-			targetType,
-			locationRange,
-		)
 
 		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
 
-		// Assignment can also be a resource move.
-		interpreter.invalidateResource(innerValue)
-
 		interpreter.declareVariable(
 			declaration.Identifier.Identifier,
-			transferredUnwrappedValue,
+			innerValue,
 		)
 
 		return interpreter.visitBlock(thenBlock)
@@ -313,7 +268,7 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 
 var intOne = NewUnmeteredIntValueFromInt64(1)
 
-func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) StatementResult {
+func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) (result StatementResult) {
 
 	interpreter.activations.PushNewWithCurrent()
 	defer interpreter.activations.Pop()
@@ -324,42 +279,50 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) S
 	}
 
 	value := interpreter.evalExpression(statement.Value)
-	transferredValue := value.Transfer(
-		interpreter,
-		locationRange,
-		atree.Address{},
-		false,
-		nil,
-		nil,
-	)
 
-	iterable, ok := transferredValue.(IterableValue)
+	// Do not transfer the iterable value.
+	// Instead, transfer each iterating element.
+	// This is done in `ForEach` method.
+
+	iterable, ok := value.(IterableValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	iterator := iterable.Iterator(interpreter)
+	forStmtTypes := interpreter.Program.Elaboration.ForStatementType(statement)
 
 	var index IntValue
 	if statement.Index != nil {
 		index = NewIntValueFromInt64(interpreter, 0)
 	}
 
-	for {
-		value := iterator.Next(interpreter)
-		if value == nil {
-			return nil
-		}
-
+	executeBody := func(value Value) (resume bool) {
 		statementResult, done := interpreter.visitForStatementBody(statement, index, value)
 		if done {
-			return statementResult
+			result = statementResult
 		}
+
+		resume = !done
 
 		if statement.Index != nil {
 			index = index.Plus(interpreter, intOne, locationRange).(IntValue)
 		}
+
+		return
 	}
+
+	// Transfer the elements before pass onto the loop-body.
+	const transferElements = true
+
+	iterable.ForEach(
+		interpreter,
+		forStmtTypes.ValueVariableType,
+		executeBody,
+		transferElements,
+		locationRange,
+	)
+
+	return
 }
 
 func (interpreter *Interpreter) visitForStatementBody(
@@ -403,18 +366,7 @@ func (interpreter *Interpreter) visitForStatementBody(
 	return nil, false
 }
 
-func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) StatementResult {
-	event, ok := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
-
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: statement,
-	}
+func (interpreter *Interpreter) emitEvent(event *CompositeValue, eventType *sema.CompositeType, locationRange LocationRange) {
 
 	config := interpreter.SharedState.Config
 
@@ -429,6 +381,23 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement) StatementResult {
+
+	event, ok := interpreter.evalExpression(statement.InvocationExpression).(*CompositeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	eventType := interpreter.Program.Elaboration.EmitStatementEventType(statement)
+
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: statement,
+	}
+
+	interpreter.emitEvent(event, eventType, locationRange)
 
 	return nil
 }
@@ -490,18 +459,14 @@ func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration)
 // then declares the variable with the name bound to the value
 func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.VariableDeclaration) StatementResult {
 
-	interpreter.visitVariableDeclaration(
-		declaration,
-		func(identifier string, value Value) {
+	value := interpreter.visitVariableDeclaration(declaration, false)
 
-			// NOTE: lexical scope, always declare a new variable.
-			// Do not find an existing variable and assign the value!
+	// NOTE: lexical scope, always declare a new variable.
+	// Do not find an existing variable and assign the value!
 
-			_ = interpreter.declareVariable(
-				identifier,
-				value,
-			)
-		},
+	_ = interpreter.declareVariable(
+		declaration.Identifier.Identifier,
+		value,
 	)
 
 	return nil
@@ -509,8 +474,8 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 
 func (interpreter *Interpreter) visitVariableDeclaration(
 	declaration *ast.VariableDeclaration,
-	valueCallback func(identifier string, value Value),
-) {
+	isOptionalBinding bool,
+) Value {
 
 	variableDeclarationTypes := interpreter.Program.Elaboration.VariableDeclarationTypes(declaration)
 	targetType := variableDeclarationTypes.TargetType
@@ -526,10 +491,15 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 	// (and just evaluating the expression does not perform the removal),
 	// because if there is a second value,
 	// the assignment to the value will cause an overwrite of the value.
-	// If the resource was not moved ou of the container,
+	// If the resource was not moved out of the container,
 	// its contents get deleted.
 
-	getterSetter := interpreter.assignmentGetterSetter(declaration.Value)
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: declaration.Value,
+	}
+
+	getterSetter := interpreter.assignmentGetterSetter(declaration.Value, locationRange)
 
 	const allowMissing = false
 	result := getterSetter.get(allowMissing)
@@ -537,33 +507,34 @@ func (interpreter *Interpreter) visitVariableDeclaration(
 		panic(errors.NewUnreachableError())
 	}
 
+	if isOptionalBinding {
+		targetType = &sema.OptionalType{
+			Type: targetType,
+		}
+	}
+
+	transferredValue := interpreter.transferAndConvert(
+		result,
+		valueType,
+		targetType,
+		locationRange,
+	)
+
 	// Assignment is a potential resource move.
 	interpreter.invalidateResource(result)
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: declaration.Value,
+	if declaration.SecondValue != nil {
+		interpreter.visitAssignment(
+			declaration.Transfer.Operation,
+			getterSetter,
+			valueType,
+			declaration.SecondValue,
+			secondValueType,
+			declaration,
+		)
 	}
 
-	transferredValue := interpreter.transferAndConvert(result, valueType, targetType, locationRange)
-
-	valueCallback(
-		declaration.Identifier.Identifier,
-		transferredValue,
-	)
-
-	if declaration.SecondValue == nil {
-		return
-	}
-
-	interpreter.visitAssignment(
-		declaration.Transfer.Operation,
-		declaration.Value,
-		valueType,
-		declaration.SecondValue,
-		secondValueType,
-		declaration,
-	)
+	return transferredValue
 }
 
 func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.AssignmentStatement) StatementResult {
@@ -574,9 +545,16 @@ func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.Assignm
 	target := assignment.Target
 	value := assignment.Value
 
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: target,
+	}
+
+	getterSetter := interpreter.assignmentGetterSetter(target, locationRange)
+
 	interpreter.visitAssignment(
 		assignment.Transfer.Operation,
-		target, targetType,
+		getterSetter, targetType,
 		value, valueType,
 		assignment,
 	)
@@ -594,11 +572,21 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 
 	// Evaluate the left side (target and key)
 
-	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left)
+	leftLocationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: swap.Left,
+	}
+
+	leftGetterSetter := interpreter.assignmentGetterSetter(swap.Left, leftLocationRange)
 
 	// Evaluate the right side (target and key)
 
-	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right)
+	rightLocationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: swap.Right,
+	}
+
+	rightGetterSetter := interpreter.assignmentGetterSetter(swap.Right, rightLocationRange)
 
 	// Get left and right values
 
@@ -613,17 +601,11 @@ func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) Stat
 	// Set right value to left target,
 	// and left value to right target
 
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: swap.Right,
-	}
-	transferredRightValue := interpreter.transferAndConvert(rightValue, rightType, leftType, locationRange)
+	interpreter.checkInvalidatedResourceOrResourceReference(rightValue, swap.Right)
+	transferredRightValue := interpreter.transferAndConvert(rightValue, rightType, leftType, rightLocationRange)
 
-	locationRange = LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: swap.Left,
-	}
-	transferredLeftValue := interpreter.transferAndConvert(leftValue, leftType, rightType, locationRange)
+	interpreter.checkInvalidatedResourceOrResourceReference(leftValue, swap.Left)
+	transferredLeftValue := interpreter.transferAndConvert(leftValue, leftType, rightType, leftLocationRange)
 
 	leftGetterSetter.set(transferredRightValue)
 	rightGetterSetter.set(transferredLeftValue)

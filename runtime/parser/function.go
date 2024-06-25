@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 	return ast.FunctionPurityUnspecified
 }
 
-func parseParameterList(p *parser) (*ast.ParameterList, error) {
+func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterList, error) {
 	var parameters []*ast.Parameter
 
 	p.skipSpaceAndComments()
@@ -63,7 +63,7 @@ func parseParameterList(p *parser) (*ast.ParameterList, error) {
 					Pos: p.current.StartPos,
 				})
 			}
-			parameter, err := parseParameter(p)
+			parameter, err := parseParameter(p, expectDefaultArguments)
 			if err != nil {
 				return nil, err
 			}
@@ -120,7 +120,7 @@ func parseParameterList(p *parser) (*ast.ParameterList, error) {
 	), nil
 }
 
-func parseParameter(p *parser) (*ast.Parameter, error) {
+func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, error) {
 	p.skipSpaceAndComments()
 
 	startPos := p.current.StartPos
@@ -167,11 +167,36 @@ func parseParameter(p *parser) (*ast.Parameter, error) {
 		return nil, err
 	}
 
+	p.skipSpaceAndComments()
+
+	var defaultArgument ast.Expression
+
+	if expectDefaultArgument {
+		if !p.current.Is(lexer.TokenEqual) {
+			return nil, p.syntaxError(
+				"expected a default argument after type annotation, got %s",
+				p.current.Type,
+			)
+		}
+
+		// Skip the =
+		p.nextSemanticToken()
+
+		defaultArgument, err = parseExpression(p, lowestBindingPower)
+		if err != nil {
+			return nil, err
+		}
+
+	} else if p.current.Is(lexer.TokenEqual) {
+		return nil, p.syntaxError("cannot use a default argument for this function")
+	}
+
 	return ast.NewParameter(
 		p.memoryGauge,
 		argumentLabel,
 		identifier,
 		typeAnnotation,
+		defaultArgument,
 		startPos,
 	), nil
 }
@@ -362,7 +387,7 @@ func parseFunctionParameterListAndRest(
 ) {
 	// Parameter list
 
-	parameterList, err = parseParameterList(p)
+	parameterList, err = parseParameterList(p, false)
 	if err != nil {
 		return
 	}

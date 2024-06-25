@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,6 +54,15 @@ func TestOptionalSubtyping(t *testing.T) {
 			IsSubType(
 				&OptionalType{Type: Int8Type},
 				&OptionalType{Type: IntegerType},
+			),
+		)
+	})
+
+	t.Run("UInt8? <: FixedSizedUnsignedInteger?", func(t *testing.T) {
+		assert.True(t,
+			IsSubType(
+				&OptionalType{Type: UInt8Type},
+				&OptionalType{Type: FixedSizeUnsignedIntegerType},
 			),
 		)
 	})

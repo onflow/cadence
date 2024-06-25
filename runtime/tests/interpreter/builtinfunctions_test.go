@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ func TestInterpretToString(t *testing.T) {
 				t,
 				inter,
 				interpreter.NewUnmeteredStringValue("42"),
-				inter.Globals.Get("y").GetValue(),
+				inter.Globals.Get("y").GetValue(inter),
 			)
 		})
 	}
@@ -72,7 +72,7 @@ func TestInterpretToString(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("0x0000000000000042"),
-			inter.Globals.Get("y").GetValue(),
+			inter.Globals.Get("y").GetValue(inter),
 		)
 	})
 
@@ -108,7 +108,7 @@ func TestInterpretToString(t *testing.T) {
 				t,
 				inter,
 				expected,
-				inter.Globals.Get("y").GetValue(),
+				inter.Globals.Get("y").GetValue(inter),
 			)
 		})
 	}
@@ -146,7 +146,7 @@ func TestInterpretToBytes(t *testing.T) {
 				interpreter.NewUnmeteredUInt8Value(0x34),
 				interpreter.NewUnmeteredUInt8Value(0x56),
 			),
-			inter.Globals.Get("y").GetValue(),
+			inter.Globals.Get("y").GetValue(inter),
 		)
 	})
 }
@@ -559,7 +559,7 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 	for _, integerType := range sema.AllNumberTypes {
 		switch integerType {
 		case sema.NumberType, sema.SignedNumberType,
-			sema.IntegerType, sema.SignedIntegerType,
+			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
@@ -588,7 +588,7 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 					),
 				)
 
-				result := inter.Globals.Get("result").GetValue()
+				result := inter.Globals.Get("result").GetValue(inter)
 
 				AssertValuesEqual(
 					t,
@@ -894,7 +894,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 	for _, integerType := range sema.AllNumberTypes {
 		switch integerType {
 		case sema.NumberType, sema.SignedNumberType,
-			sema.IntegerType, sema.SignedIntegerType,
+			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
@@ -930,13 +930,13 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 					t,
 					inter,
 					expected,
-					inter.Globals.Get("result").GetValue(),
+					inter.Globals.Get("result").GetValue(inter),
 				)
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.TrueValue,
-					inter.Globals.Get("roundTripEqual").GetValue(),
+					inter.Globals.Get("roundTripEqual").GetValue(inter),
 				)
 			})
 		}
@@ -960,7 +960,7 @@ func TestInterpretFromBigEndianBytes(t *testing.T) {
 					t,
 					inter,
 					interpreter.NilValue{},
-					inter.Globals.Get("result").GetValue(),
+					inter.Globals.Get("result").GetValue(inter),
 				)
 			})
 		}

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -573,7 +574,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		)
 
 		var logs []string
-		valueDeclaration := stdlib.NewStandardLibraryFunction(
+		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			logFunctionType,
 			"",
@@ -647,10 +648,14 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -681,7 +686,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		)
 
 		var logs []string
-		valueDeclaration := stdlib.NewStandardLibraryFunction(
+		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			logFunctionType,
 			"",
@@ -755,10 +760,14 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -789,7 +798,7 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		)
 
 		var logs []string
-		valueDeclaration := stdlib.NewStandardLibraryFunction(
+		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			logFunctionType,
 			"",
@@ -842,10 +851,14 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
         `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation:       baseActivation,
+					BaseActivationHandler: func(common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 					ContractValueHandler: makeContractValueHandler(nil, nil, nil),
 				},
 			},

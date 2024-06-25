@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -78,16 +78,6 @@ func AssertEqualWithDiff(t *testing.T, expected, actual any) {
 			pp.Sprint(actual),
 			s.String(),
 		)
-	}
-
-}
-
-func AsInterfaceType(name string, kind common.CompositeKind) string {
-	switch kind {
-	case common.CompositeKindResource, common.CompositeKindStructure:
-		return fmt.Sprintf("{%s}", name)
-	default:
-		return name
 	}
 }
 
@@ -255,7 +245,7 @@ func DictionaryKeyValues(inter *interpreter.Interpreter, dict *interpreter.Dicti
 		i++
 
 		return true
-	})
+	}, interpreter.EmptyLocationRange)
 	return result
 }
 
@@ -299,7 +289,7 @@ func DictionaryEntries[K, V any](
 			Value: value,
 		}
 		return iterStatus
-	})
+	}, interpreter.EmptyLocationRange)
 
 	return res, iterStatus
 }

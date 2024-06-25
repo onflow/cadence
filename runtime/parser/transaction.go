@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var err error
 
 	if p.current.Is(lexer.TokenParenOpen) {
-		parameterList, err = parseParameterList(p)
+		parameterList, err = parseParameterList(p, false)
 		if err != nil {
 			return nil, err
 		}

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -56,10 +57,10 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	// determine which identifiers are imported /
 	// which variables need to be declared
 
-	var variables map[string]*Variable
+	var variables map[string]Variable
 	identifierLength := len(resolvedLocation.Identifiers)
 	if identifierLength > 0 {
-		variables = make(map[string]*Variable, identifierLength)
+		variables = make(map[string]Variable, identifierLength)
 		for _, identifier := range resolvedLocation.Identifiers {
 			variables[identifier.Identifier] =
 				subInterpreter.Globals.Get(identifier.Identifier)
@@ -83,9 +84,40 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 
 	for _, name := range names {
 		variable := variables[name]
+		if variable == nil {
+			continue
+		}
 
-		interpreter.setVariable(name, variable)
-		interpreter.Globals.Set(name, variable)
+		// Lazily load the value
+		getter := func() Value {
+			value := variable.GetValue(interpreter)
+
+			// If the variable is a contract value, then import it as a reference.
+			// This must be done at the type of importing, rather than when declaring the contract value.
+			compositeValue, ok := value.(*CompositeValue)
+			if !ok || compositeValue.Kind != common.CompositeKindContract {
+				return value
+			}
+
+			staticType := compositeValue.StaticType(interpreter)
+			semaType, err := interpreter.ConvertStaticToSemaType(staticType)
+			if err != nil {
+				panic(err)
+			}
+
+			return NewEphemeralReferenceValue(
+				interpreter,
+				UnauthorizedAccess,
+				compositeValue,
+				semaType,
+				LocationRange{
+					Location: interpreter.Location,
+				},
+			)
+		}
+
+		importedVariable := NewVariableWithGetter(interpreter, getter)
+		interpreter.setVariable(name, importedVariable)
+		interpreter.Globals.Set(name, importedVariable)
 	}
-
 }

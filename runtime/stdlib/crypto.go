@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -169,7 +169,7 @@ func cryptoAlgorithmEnumValueAndCaseValues[T sema.CryptoAlgorithm](
 
 	caseCount := len(enumCases)
 	caseValues := make([]interpreter.EnumCase, caseCount)
-	constructorNestedVariables := make(map[string]*interpreter.Variable, caseCount)
+	constructorNestedVariables := make(map[string]interpreter.Variable, caseCount)
 	cases = make(map[interpreter.UInt8Value]interpreter.MemberAccessibleValue, caseCount)
 
 	for i, enumCase := range enumCases {

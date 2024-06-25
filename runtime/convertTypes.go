@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,6 +58,8 @@ func ExportMeteredType(
 			return cadence.IntegerType
 		case sema.SignedIntegerType:
 			return cadence.SignedIntegerType
+		case sema.FixedSizeUnsignedIntegerType:
+			return cadence.FixedSizeUnsignedIntegerType
 		case sema.FixedPointType:
 			return cadence.FixedPointType
 		case sema.SignedFixedPointType:
@@ -132,6 +134,8 @@ func ExportMeteredType(
 			return cadence.AnyType
 		case sema.AnyStructType:
 			return cadence.AnyStructType
+		case sema.HashableStructType:
+			return cadence.HashableStructType
 		case sema.AnyResourceType:
 			return cadence.AnyResourceType
 		case sema.AnyStructAttachmentType:
@@ -254,6 +258,8 @@ func ExportMeteredType(
 			return exportIntersectionType(gauge, t, results)
 		case *sema.CapabilityType:
 			return exportCapabilityType(gauge, t, results)
+		case *sema.InclusiveRangeType:
+			return exportInclusiveRangeType(gauge, t, results)
 		}
 
 		panic(fmt.Sprintf("cannot export type %s", t))
@@ -336,8 +342,8 @@ func exportCompositeType(
 		result = cadence.NewMeteredAttachmentType(
 			gauge,
 			t.Location,
-			ExportMeteredType(gauge, t.GetBaseType(), results),
 			t.QualifiedIdentifier(),
+			ExportMeteredType(gauge, t.GetBaseType(), results),
 			fields,
 			nil,
 		)
@@ -477,6 +483,19 @@ func exportDictionaryType(
 	)
 }
 
+func exportInclusiveRangeType(
+	gauge common.MemoryGauge,
+	t *sema.InclusiveRangeType,
+	results map[sema.TypeID]cadence.Type,
+) *cadence.InclusiveRangeType {
+	convertedMemberType := ExportMeteredType(gauge, t.MemberType, results)
+
+	return cadence.NewMeteredInclusiveRangeType(
+		gauge,
+		convertedMemberType,
+	)
+}
+
 func exportFunctionType(
 	gauge common.MemoryGauge,
 	t *sema.FunctionType,
@@ -564,7 +583,7 @@ func exportAuthorization(
 		access.Entitlements.Foreach(func(key *sema.EntitlementType, _ struct{}) {
 			entitlements = append(entitlements, key.ID())
 		})
-		return cadence.EntitlementSetAuthorization{
+		return &cadence.EntitlementSetAuthorization{
 			Entitlements: entitlements,
 			Kind:         access.SetKind,
 		}
@@ -629,11 +648,31 @@ func importInterfaceType(memoryGauge common.MemoryGauge, t cadence.InterfaceType
 	)
 }
 
-func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) *interpreter.CompositeStaticType {
-	return interpreter.NewCompositeStaticTypeComputeTypeID(
+func importCompositeType(memoryGauge common.MemoryGauge, t cadence.CompositeType) interpreter.StaticType {
+	location := t.CompositeTypeLocation()
+	qualifiedIdentifier := t.CompositeTypeQualifiedIdentifier()
+
+	typeID := common.NewTypeIDFromQualifiedName(
 		memoryGauge,
-		t.CompositeTypeLocation(),
-		t.CompositeTypeQualifiedIdentifier(),
+		location,
+		qualifiedIdentifier,
+	)
+
+	if location == nil {
+		primitiveStaticType := interpreter.PrimitiveStaticTypeFromTypeID(typeID)
+
+		if primitiveStaticType != interpreter.PrimitiveStaticTypeUnknown &&
+			!primitiveStaticType.IsDeprecated() { //nolint:staticcheck
+
+			return primitiveStaticType
+		}
+	}
+
+	return interpreter.NewCompositeStaticType(
+		memoryGauge,
+		location,
+		qualifiedIdentifier,
+		typeID,
 	)
 }
 
@@ -643,7 +682,7 @@ func importAuthorization(memoryGauge common.MemoryGauge, auth cadence.Authorizat
 		return interpreter.UnauthorizedAccess
 	case cadence.EntitlementMapAuthorization:
 		return interpreter.NewEntitlementMapAuthorization(memoryGauge, auth.TypeID)
-	case cadence.EntitlementSetAuthorization:
+	case *cadence.EntitlementSetAuthorization:
 		return interpreter.NewEntitlementSetAuthorization(
 			memoryGauge,
 			func() []common.TypeID { return auth.Entitlements },
@@ -687,7 +726,11 @@ func ImportType(memoryGauge common.MemoryGauge, t cadence.Type) interpreter.Stat
 			ImportType(memoryGauge, t.KeyType),
 			ImportType(memoryGauge, t.ElementType),
 		)
-
+	case *cadence.InclusiveRangeType:
+		return interpreter.NewInclusiveRangeStaticType(
+			memoryGauge,
+			ImportType(memoryGauge, t.ElementType),
+		)
 	case *cadence.StructType,
 		*cadence.ResourceType,
 		*cadence.EventType,

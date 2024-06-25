@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,7 +87,9 @@ func NewREPL() (*REPL, error) {
 			defer func() { uuid++ }()
 			return uuid, nil
 		},
-		BaseActivation: baseActivation,
+		BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+			return baseActivation
+		},
 		OnEventEmitted: standardLibraryHandler.NewOnEventEmittedHandler(),
 	}
 
@@ -299,7 +301,7 @@ func (r *REPL) Accept(code []byte, eval bool) (inputIsComplete bool, err error) 
 			var expressionType sema.Type
 			expressionStatement, isExpression := statement.(*ast.ExpressionStatement)
 			if isExpression {
-				expressionType = r.checker.VisitExpression(expressionStatement.Expression, nil)
+				expressionType = r.checker.VisitExpression(expressionStatement.Expression, expressionStatement, nil)
 				if !eval && expressionType != sema.InvalidType {
 					r.onExpressionType(expressionType)
 				}
@@ -342,7 +344,7 @@ func (r *REPL) Suggestions() (result []REPLSuggestion) {
 		names[name] = variable.Type.String()
 	})
 
-	_ = r.checker.Config.BaseValueActivation.ForEach(func(name string, variable *sema.Variable) error {
+	_ = r.checker.Config.BaseValueActivationHandler(nil).ForEach(func(name string, variable *sema.Variable) error {
 		if names[name] == "" {
 			names[name] = variable.Type.String()
 		}
@@ -373,7 +375,7 @@ func (r *REPL) GetGlobal(name string) interpreter.Value {
 	if variable == nil {
 		return nil
 	}
-	return variable.GetValue()
+	return variable.GetValue(r.inter)
 }
 
 func (r *REPL) ExportValue(value interpreter.Value) (cadence.Value, error) {

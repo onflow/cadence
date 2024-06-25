@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -384,7 +384,7 @@ func TestIntersectionType_GetMember(t *testing.T) {
 
 		require.Contains(t, actualMembers, fieldName)
 
-		actualMember := actualMembers[fieldName].Resolve(nil, fieldName, ast.Range{}, nil)
+		actualMember := actualMembers[fieldName].Resolve(nil, fieldName, ast.EmptyRange, nil)
 
 		assert.Same(t, interfaceMember, actualMember)
 	})
@@ -649,10 +649,9 @@ func TestCommonSuperType(t *testing.T) {
 	testLeastCommonSuperType := func(t *testing.T, tests []testCase) {
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				assert.Equal(
+				assert.True(
 					t,
-					test.expectedSuperType,
-					LeastCommonSuperType(test.types...),
+					test.expectedSuperType.Equal(LeastCommonSuperType(test.types...)),
 				)
 			})
 		}
@@ -772,8 +771,17 @@ func TestCommonSuperType(t *testing.T) {
 				types: []Type{
 					UInt8Type,
 					UInt128Type,
+					UIntType,
 				},
 				expectedSuperType: IntegerType,
+			},
+			{
+				name: "fixed size unsigned integers",
+				types: []Type{
+					UInt8Type,
+					UInt128Type,
+				},
+				expectedSuperType: FixedSizeUnsignedIntegerType,
 			},
 			{
 				name: "heterogeneous simple types",
@@ -781,7 +789,7 @@ func TestCommonSuperType(t *testing.T) {
 					StringType,
 					Int8Type,
 				},
-				expectedSuperType: AnyStructType,
+				expectedSuperType: HashableStructType,
 			},
 			{
 				name: "all nil",
@@ -1036,7 +1044,7 @@ func TestCommonSuperType(t *testing.T) {
 					stringArray,
 					&VariableSizedType{Type: BoolType},
 				},
-				expectedSuperType: &VariableSizedType{Type: AnyStructType},
+				expectedSuperType: &VariableSizedType{Type: HashableStructType},
 			},
 			{
 				name: "simple-typed array & resource array",
@@ -1160,7 +1168,7 @@ func TestCommonSuperType(t *testing.T) {
 				},
 				expectedSuperType: &DictionaryType{
 					KeyType:   StringType,
-					ValueType: AnyStructType,
+					ValueType: HashableStructType,
 				},
 			},
 			{
@@ -1228,8 +1236,26 @@ func TestCommonSuperType(t *testing.T) {
 		testLeastCommonSuperType(t, tests)
 	})
 
-	t.Run("References types", func(t *testing.T) {
+	t.Run("Reference types", func(t *testing.T) {
 		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		entitlementE := NewEntitlementType(nil, testLocation, "E")
+		entitlementF := NewEntitlementType(nil, testLocation, "F")
+		entitlementG := NewEntitlementType(nil, testLocation, "G")
+		entitlementM := NewEntitlementMapType(nil, testLocation, "E")
+
+		entitlementsEOnly := NewEntitlementSetAccess([]*EntitlementType{entitlementE}, Conjunction)
+		entitlementsEAndF := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementF}, Conjunction)
+		entitlementsEAndG := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementG}, Conjunction)
+		entitlementsFAndG := NewEntitlementSetAccess([]*EntitlementType{entitlementF, entitlementG}, Conjunction)
+		entitlementsEAndFAndG := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementG, entitlementF}, Conjunction)
+		entitlementsEOrFOrG := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementF, entitlementG}, Disjunction)
+		entitlementsEOrG := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementG}, Disjunction)
+		entitlementsEOrF := NewEntitlementSetAccess([]*EntitlementType{entitlementE, entitlementF}, Disjunction)
+		entitlementsFOrG := NewEntitlementSetAccess([]*EntitlementType{entitlementG, entitlementF}, Disjunction)
+		entitlementsM := NewEntitlementMapAccess(entitlementM)
 
 		tests := []testCase{
 			{
@@ -1304,8 +1330,197 @@ func TestCommonSuperType(t *testing.T) {
 						Authorization: EntitlementSetAccess{},
 					},
 				},
-				// maybe have this be unauthorized instead of anystruct?
-				expectedSuperType: AnyStructType,
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: UnauthorizedAccess,
+				},
+			},
+			{
+				name: "E and (E, F)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOnly,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEAndF,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOnly,
+				},
+			},
+			{
+				name: "E and (F, G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOnly,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsFAndG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrFOrG,
+				},
+			},
+			{
+				name: "E and (E | G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOnly,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOrG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrG,
+				},
+			},
+			{
+				name: "E and (F | G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOnly,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsFOrG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrFOrG,
+				},
+			},
+			{
+				name: "(F | G) and E",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsFOrG,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOnly,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrFOrG,
+				},
+			},
+			{
+				name: "(E, F) and (E | G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEAndF,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOrG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrG,
+				},
+			},
+			{
+				name: "(E, F) and (E, G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEAndF,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEAndG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOnly,
+				},
+			},
+			{
+				name: "(E, F) and (E, F, G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEAndF,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEAndFAndG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEAndF,
+				},
+			},
+			{
+				name: "(E | G) and (E | F)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOrG,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOrF,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrFOrG,
+				},
+			},
+			{
+				name: "(E | G) and (E | F | G)",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOrG,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOrFOrG,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: entitlementsEOrFOrG,
+				},
+			},
+			{
+				name: "M and E",
+				types: []Type{
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsEOnly,
+					},
+					&ReferenceType{
+						Type:          Int8Type,
+						Authorization: entitlementsM,
+					},
+				},
+				expectedSuperType: &ReferenceType{
+					Type:          Int8Type,
+					Authorization: UnauthorizedAccess,
+				},
 			},
 		}
 
@@ -1349,7 +1564,7 @@ func TestCommonSuperType(t *testing.T) {
 					StoragePathType,
 					StringType,
 				},
-				expectedSuperType: AnyStructType,
+				expectedSuperType: HashableStructType,
 			},
 		}
 
@@ -1618,7 +1833,9 @@ func TestCommonSuperType(t *testing.T) {
 					Int8Type,
 					StringType,
 				},
-				expectedSuperType: AnyStructType,
+				expectedSuperType: &OptionalType{
+					Type: HashableStructType,
+				},
 			},
 			{
 				name: "nil with simple type",
@@ -1637,7 +1854,9 @@ func TestCommonSuperType(t *testing.T) {
 					Int8Type,
 					StringType,
 				},
-				expectedSuperType: AnyStructType,
+				expectedSuperType: &OptionalType{
+					Type: HashableStructType,
+				},
 			},
 			{
 				name: "multi-level simple optional types",
@@ -1699,6 +1918,332 @@ func TestCommonSuperType(t *testing.T) {
 	})
 }
 
+func TestIsPrimitive(t *testing.T) {
+	t.Parallel()
+
+	resourceType := &CompositeType{
+		Location:   nil,
+		Identifier: "Foo",
+		Kind:       common.CompositeKindResource,
+	}
+
+	type testCase struct {
+		expectedIsPrimitive bool
+		name                string
+		ty                  Type
+	}
+
+	testIsPrimitive := func(t *testing.T, tests []testCase) {
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				assert.Equal(t, test.expectedIsPrimitive, test.ty.IsPrimitiveType())
+			})
+		}
+	}
+
+	t.Run("number types", func(t *testing.T) {
+		t.Parallel()
+
+		var tests []testCase
+		for _, ty := range AllNumberTypes {
+			tests = append(tests, testCase{
+				expectedIsPrimitive: true,
+				name:                string(ty.ID()),
+				ty:                  ty,
+			})
+		}
+
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("simple types", func(t *testing.T) {
+		t.Parallel()
+
+		var tests []testCase
+		for _, ty := range []Type{
+			CharacterType,
+			BoolType,
+			StringType,
+			TheAddressType,
+			PrivatePathType,
+			PublicPathType,
+			StoragePathType,
+			VoidType,
+		} {
+			tests = append(tests, testCase{
+				expectedIsPrimitive: true,
+				name:                string(ty.ID()),
+				ty:                  ty,
+			})
+		}
+
+		for _, ty := range []Type{
+			&GenericType{TypeParameter: &TypeParameter{Name: "T"}},
+			&TransactionType{},
+		} {
+			tests = append(tests, testCase{
+				expectedIsPrimitive: false,
+				name:                string(ty.ID()),
+				ty:                  ty,
+			})
+		}
+
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("Optional types", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		structType := &CompositeType{
+			Location:   testLocation,
+			Identifier: "T",
+			Kind:       common.CompositeKindStructure,
+			Members:    &StringMemberOrderedMap{},
+		}
+
+		optionalStructType := &OptionalType{
+			Type: structType,
+		}
+
+		doubleOptionalStructType := &OptionalType{
+			Type: &OptionalType{
+				Type: structType,
+			},
+		}
+
+		var tests []testCase
+		for _, ty := range []Type{
+			CharacterType,
+			BoolType,
+			StringType,
+			TheAddressType,
+			PrivatePathType,
+			PublicPathType,
+			StoragePathType,
+			VoidType,
+		} {
+			tests = append(tests, testCase{
+				expectedIsPrimitive: true,
+				name:                fmt.Sprintf("Optional<%s>", string(ty.ID())),
+				ty:                  &OptionalType{Type: ty},
+			})
+
+			tests = append(tests, testCase{
+				expectedIsPrimitive: true,
+				name:                fmt.Sprintf("Optional<Optional<%s>>", string(ty.ID())),
+				ty:                  &OptionalType{Type: &OptionalType{Type: ty}},
+			})
+		}
+
+		tests = append(tests, testCase{
+			expectedIsPrimitive: false,
+			name:                "Optional<Struct>",
+			ty:                  optionalStructType,
+		})
+
+		tests = append(tests, testCase{
+			expectedIsPrimitive: false,
+			name:                "Optional<Optional<Struct>>",
+			ty:                  doubleOptionalStructType,
+		})
+
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("Arrays", func(t *testing.T) {
+		t.Parallel()
+
+		var tests []testCase
+		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			// Entitlements are not typical types. So skip.
+			if _, ok := BuiltinEntitlements[name]; ok {
+				return nil
+			}
+			if _, ok := BuiltinEntitlementMappings[name]; ok {
+				return nil
+			}
+
+			typ := variable.Type
+
+			tests = append(tests, testCase{
+				name:                fmt.Sprintf("VariableSizedType<%s>", name),
+				ty:                  &VariableSizedType{Type: typ},
+				expectedIsPrimitive: false,
+			})
+
+			tests = append(tests, testCase{
+				name:                fmt.Sprintf("ConstantSizedType<%s>", name),
+				ty:                  &ConstantSizedType{Type: typ, Size: 1},
+				expectedIsPrimitive: false,
+			})
+
+			return nil
+		})
+
+		require.NoError(t, err)
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("Dictionaries", func(t *testing.T) {
+		t.Parallel()
+
+		stringStringDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: StringType,
+		}
+
+		stringBoolDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: BoolType,
+		}
+
+		stringResourceDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: resourceType,
+		}
+
+		nestedResourceDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: stringResourceDictionary,
+		}
+
+		nestedStringDictionary := &DictionaryType{
+			KeyType:   StringType,
+			ValueType: stringStringDictionary,
+		}
+
+		tests := []testCase{
+			{
+				name:                "Dictionary<String,String>",
+				ty:                  stringStringDictionary,
+				expectedIsPrimitive: false,
+			},
+			{
+				name:                "Dictionary<String,Bool>",
+				ty:                  stringBoolDictionary,
+				expectedIsPrimitive: false,
+			},
+			{
+				name:                "Dictionary<String,Resource>",
+				ty:                  stringResourceDictionary,
+				expectedIsPrimitive: false,
+			},
+			{
+				name:                "Dictionary<String,Dictionary<String,Resource>",
+				ty:                  nestedResourceDictionary,
+				expectedIsPrimitive: false,
+			},
+			{
+				name:                "Dictionary<String,Dictionary<String,String>",
+				ty:                  nestedStringDictionary,
+				expectedIsPrimitive: false,
+			},
+		}
+
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("References types", func(t *testing.T) {
+		t.Parallel()
+
+		var tests []testCase
+		err := BaseTypeActivation.ForEach(func(name string, variable *Variable) error {
+			// Entitlements are not typical types. So skip.
+			if _, ok := BuiltinEntitlements[name]; ok {
+				return nil
+			}
+			if _, ok := BuiltinEntitlementMappings[name]; ok {
+				return nil
+			}
+
+			typ := variable.Type
+
+			tests = append(tests, testCase{
+				name:                fmt.Sprintf("ReferenceType<%s>", name),
+				ty:                  &ReferenceType{Type: typ},
+				expectedIsPrimitive: false,
+			})
+
+			return nil
+		})
+
+		require.NoError(t, err)
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("Capability types", func(t *testing.T) {
+		t.Parallel()
+
+		testLocation := common.StringLocation("test")
+
+		interfaceType1 := &InterfaceType{
+			Location:      testLocation,
+			Identifier:    "I1",
+			CompositeKind: common.CompositeKindStructure,
+			Members:       &StringMemberOrderedMap{},
+		}
+
+		capType := &CapabilityType{
+			BorrowType: &IntersectionType{
+				Types: []*InterfaceType{interfaceType1},
+			},
+		}
+
+		tests := []testCase{
+			{
+				name:                "CapabilityType",
+				ty:                  capType,
+				expectedIsPrimitive: false,
+			},
+		}
+
+		testIsPrimitive(t, tests)
+	})
+
+	t.Run("Function types", func(t *testing.T) {
+		t.Parallel()
+
+		funcType1 := &FunctionType{
+			Purity: FunctionPurityImpure,
+			Parameters: []Parameter{
+				{
+					TypeAnnotation: StringTypeAnnotation,
+				},
+			},
+			ReturnTypeAnnotation: Int8TypeAnnotation,
+			Members:              &StringMemberOrderedMap{},
+		}
+
+		funcType2 := &FunctionType{
+			Purity: FunctionPurityImpure,
+			Parameters: []Parameter{
+				{
+					TypeAnnotation: IntTypeAnnotation,
+				},
+			},
+			ReturnTypeAnnotation: PublicPathTypeAnnotation,
+			Members:              &StringMemberOrderedMap{},
+		}
+
+		tests := []testCase{
+			{
+				name:                "Function(String): Int8",
+				ty:                  funcType1,
+				expectedIsPrimitive: false,
+			},
+			{
+				name:                "Function(Int): PublicPath",
+				ty:                  funcType2,
+				expectedIsPrimitive: false,
+			},
+		}
+
+		testIsPrimitive(t, tests)
+	})
+}
+
 func TestTypeInclusions(t *testing.T) {
 
 	t.Parallel()
@@ -1740,6 +2285,16 @@ func TestTypeInclusions(t *testing.T) {
 		for _, typ := range AllUnsignedIntegerTypes {
 			t.Run(typ.String(), func(t *testing.T) {
 				assert.True(t, UnsignedIntegerTypeTag.ContainsAny(typ.Tag()))
+			})
+		}
+	})
+
+	t.Run("FixedSizeUnsignedInteger", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range AllFixedSizeUnsignedIntegerTypes {
+			t.Run(typ.String(), func(t *testing.T) {
+				assert.True(t, FixedSizeUnsignedIntegerTypeTag.ContainsAny(typ.Tag()))
 			})
 		}
 	})
@@ -1904,7 +2459,7 @@ func TestMapType(t *testing.T) {
 			for _, i := range typ.Types {
 				interfaces = append(interfaces, &InterfaceType{Identifier: i.Identifier + "f"})
 			}
-			return NewIntersectionType(nil, interfaces)
+			return NewIntersectionType(nil, nil, interfaces)
 		}
 		return ty
 	}
@@ -1963,12 +2518,14 @@ func TestMapType(t *testing.T) {
 
 		original := NewIntersectionType(
 			nil,
+			nil,
 			[]*InterfaceType{
 				{Identifier: "foo"},
 				{Identifier: "bar"},
 			},
 		)
 		mapped := NewIntersectionType(
+			nil,
 			nil,
 			[]*InterfaceType{
 				{Identifier: "foof"},
@@ -2162,7 +2719,7 @@ func TestReferenceType_String(t *testing.T) {
 
 		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
-			"auth(M) &Int",
+			"auth(mapping M) &Int",
 			referenceType.String(),
 		)
 	})
@@ -2216,7 +2773,7 @@ func TestReferenceType_QualifiedString(t *testing.T) {
 
 		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
-			"auth(M) &Int",
+			"auth(mapping M) &Int",
 			referenceType.QualifiedString(),
 		)
 	})
@@ -2252,7 +2809,7 @@ func TestReferenceType_QualifiedString(t *testing.T) {
 
 		referenceType := NewReferenceType(nil, access, IntType)
 		assert.Equal(t,
-			"auth(C.M) &Int",
+			"auth(mapping C.M) &Int",
 			referenceType.QualifiedString(),
 		)
 	})
@@ -2298,6 +2855,7 @@ func TestIntersectionType_ID(t *testing.T) {
 
 		intersectionType := NewIntersectionType(
 			nil,
+			nil,
 			[]*InterfaceType{
 				{
 					Location:   testLocation,
@@ -2315,6 +2873,7 @@ func TestIntersectionType_ID(t *testing.T) {
 		t.Parallel()
 
 		intersectionType := NewIntersectionType(
+			nil,
 			nil,
 			[]*InterfaceType{
 				// NOTE: order
@@ -2352,6 +2911,7 @@ func TestIntersectionType_ID(t *testing.T) {
 
 		intersectionType := NewIntersectionType(
 			nil,
+			nil,
 			[]*InterfaceType{
 				// NOTE: order
 				interfaceType2,
@@ -2376,6 +2936,7 @@ func TestIntersectionType_String(t *testing.T) {
 
 		intersectionType := NewIntersectionType(
 			nil,
+			nil,
 			[]*InterfaceType{
 				{
 					Location:   testLocation,
@@ -2393,6 +2954,7 @@ func TestIntersectionType_String(t *testing.T) {
 		t.Parallel()
 
 		intersectionType := NewIntersectionType(
+			nil,
 			nil,
 			[]*InterfaceType{
 				// NOTE: order
@@ -2429,6 +2991,7 @@ func TestIntersectionType_QualifiedString(t *testing.T) {
 
 		intersectionType := NewIntersectionType(
 			nil,
+			nil,
 			[]*InterfaceType{
 				{
 					Location:   testLocation,
@@ -2446,6 +3009,7 @@ func TestIntersectionType_QualifiedString(t *testing.T) {
 		t.Parallel()
 
 		intersectionType := NewIntersectionType(
+			nil,
 			nil,
 			[]*InterfaceType{
 				// NOTE: order
@@ -2483,6 +3047,7 @@ func TestIntersectionType_QualifiedString(t *testing.T) {
 
 		intersectionType := NewIntersectionType(
 			nil,
+			nil,
 			[]*InterfaceType{
 				// NOTE: order
 				interfaceType2,
@@ -2495,4 +3060,138 @@ func TestIntersectionType_QualifiedString(t *testing.T) {
 			intersectionType.QualifiedString(),
 		)
 	})
+}
+
+func TestType_IsOrContainsReference(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		name     string
+		ty       Type
+		expected bool
+		genTy    func(innerType Type) Type
+	}
+
+	someNonReferenceType := VoidType
+
+	tests := []testCase{
+		{
+			name: "Capability, with type",
+			genTy: func(innerType Type) Type {
+				return &CapabilityType{
+					BorrowType: innerType,
+				}
+			},
+		},
+		{
+			name:     "Capability, without type",
+			ty:       &CapabilityType{},
+			expected: false,
+		},
+		{
+			name: "Variable-sized array",
+			genTy: func(innerType Type) Type {
+				return &VariableSizedType{
+					Type: innerType,
+				}
+			},
+		},
+		{
+			name: "Constant-sized array",
+			genTy: func(innerType Type) Type {
+				return &ConstantSizedType{
+					Type: innerType,
+					Size: 42,
+				}
+			},
+		},
+		{
+			name: "Optional",
+			genTy: func(innerType Type) Type {
+				return &OptionalType{
+					Type: innerType,
+				}
+			},
+		},
+		{
+			name: "Reference",
+			genTy: func(innerType Type) Type {
+				return &ReferenceType{
+					Type: innerType,
+				}
+			},
+		},
+		{
+			name: "Dictionary, key",
+			genTy: func(innerType Type) Type {
+				return &DictionaryType{
+					KeyType:   innerType,
+					ValueType: someNonReferenceType,
+				}
+			},
+		},
+		{
+			name: "Dictionary, value",
+			genTy: func(innerType Type) Type {
+				return &DictionaryType{
+					KeyType:   someNonReferenceType,
+					ValueType: innerType,
+				}
+			},
+		},
+		{
+			name:     "Function",
+			ty:       &FunctionType{},
+			expected: false,
+		},
+		{
+			name:     "Interface",
+			ty:       &InterfaceType{},
+			expected: false,
+		},
+		{
+			name:     "Composite",
+			ty:       &CompositeType{},
+			expected: false,
+		},
+		{
+			name: "InclusiveRange",
+			genTy: func(innerType Type) Type {
+				return &InclusiveRangeType{
+					MemberType: innerType,
+				}
+			},
+		},
+	}
+
+	test := func(test testCase) {
+		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			if test.genTy != nil {
+
+				itself := test.genTy(someNonReferenceType)
+
+				_, ok := itself.(*ReferenceType)
+				assert.Equal(t, ok, itself.IsOrContainsReferenceType())
+
+				assert.True(t,
+					test.genTy(&ReferenceType{
+						Type: someNonReferenceType,
+					}).IsOrContainsReferenceType(),
+				)
+			} else {
+				assert.Equal(t,
+					test.expected,
+					test.ty.IsOrContainsReferenceType(),
+				)
+			}
+		})
+	}
+
+	for _, testCase := range tests {
+		test(testCase)
+	}
 }

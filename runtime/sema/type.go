@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import (
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -105,6 +104,11 @@ type Type interface {
 	QualifiedString() string
 	Equal(other Type) bool
 
+	// IsPrimitiveType returns true if the type is itself a primitive,
+	// Note that the container of a primitive type (e.g. optionals, arrays, dictionaries, etc.)
+	// are not a primitive.
+	IsPrimitiveType() bool
+
 	// IsResourceType returns true if the type is itself a resource (a `CompositeType` with resource kind),
 	// or it contains a resource type (e.g. for optionals, arrays, dictionaries, etc.)
 	IsResourceType() bool
@@ -112,6 +116,10 @@ type Type interface {
 	// IsInvalidType returns true if the type is itself the invalid type (see `InvalidType`),
 	// or it contains an invalid type (e.g. for optionals, arrays, dictionaries, etc.)
 	IsInvalidType() bool
+
+	// IsOrContainsReferenceType returns true if the type is itself a reference type,
+	// or it contains a reference type (e.g. for optionals, arrays, dictionaries, etc.)
+	IsOrContainsReferenceType() bool
 
 	// IsStorable returns true if the type is allowed to be a stored,
 	// e.g. in a field of a composite type.
@@ -186,7 +194,8 @@ type Type interface {
 		other Type,
 		typeParameters *TypeParameterTypeOrderedMap,
 		report func(err error),
-		outerRange ast.Range,
+		memoryGauge common.MemoryGauge,
+		outerRange ast.HasPosition,
 	) bool
 
 	// Resolve returns a type that is free of generic types (see `GenericType`),
@@ -203,6 +212,8 @@ type Type interface {
 	// i.e. `[T]` would map to `f([f(T)])`, but the internals of composite types are not
 	// inspected, as they appear simply as nominal types in annotations
 	Map(memoryGauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type
+
+	CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error))
 }
 
 // ValueIndexableType is a type which can be indexed into using a value
@@ -226,7 +237,7 @@ type MemberResolver struct {
 	Resolve func(
 		memoryGauge common.MemoryGauge,
 		identifier string,
-		targetRange ast.Range,
+		targetRange ast.HasPosition,
 		report func(error),
 	) *Member
 	Kind common.DeclarationKind
@@ -241,7 +252,7 @@ type NominalType interface {
 // entitlement supporting types
 type EntitlementSupportingType interface {
 	Type
-	SupportedEntitlements() *EntitlementOrderedSet
+	SupportedEntitlements() *EntitlementSet
 }
 
 // ContainedType is a type which might have a container type
@@ -304,6 +315,7 @@ func TypeActivationNestedType(typeActivation *VariableActivation, qualifiedIdent
 // CompositeKindedType is a type which has a composite kind
 type CompositeKindedType interface {
 	Type
+	EntitlementSupportingType
 	GetCompositeKind() common.CompositeKind
 }
 
@@ -317,18 +329,53 @@ type LocatedType interface {
 type ParameterizedType interface {
 	Type
 	TypeParameters() []*TypeParameter
-	Instantiate(typeArguments []Type, report func(err error)) Type
+	Instantiate(
+		memoryGauge common.MemoryGauge,
+		typeArguments []Type,
+		astTypeArguments []*ast.TypeAnnotation,
+		report func(err error),
+	) Type
 	BaseType() Type
 	TypeArguments() []Type
 }
 
 func MustInstantiate(t ParameterizedType, typeArguments ...Type) Type {
 	return t.Instantiate(
+		nil, /* memoryGauge */
 		typeArguments,
+		nil, /* astTypeArguments */
 		func(err error) {
 			panic(errors.NewUnexpectedErrorFromCause(err))
 		},
 	)
+}
+
+func CheckParameterizedTypeInstantiated(
+	t ParameterizedType,
+	pos ast.HasPosition,
+	memoryGauge common.MemoryGauge,
+	report func(err error),
+) {
+	typeArgs := t.TypeArguments()
+	typeParameters := t.TypeParameters()
+
+	// The check for the argument and parameter count already happens in the checker, so we skip that here.
+
+	// Ensure that each non-optional typeparameter is non-nil.
+	for index, typeParam := range typeParameters {
+		if !typeParam.Optional && typeArgs[index] == nil {
+			report(
+				&MissingTypeArgumentError{
+					TypeArgumentName: typeParam.Name,
+					Range: ast.NewRange(
+						memoryGauge,
+						pos.StartPosition(),
+						pos.EndPosition(memoryGauge),
+					),
+				},
+			)
+		}
+	}
 }
 
 // TypeAnnotation
@@ -544,7 +591,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	members[IsInstanceFunctionName] = MemberResolver{
 		Kind: common.DeclarationKindFunction,
-		Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+		Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
 			return NewPublicFunctionMember(
 				memoryGauge,
 				ty,
@@ -559,7 +606,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	members[GetTypeFunctionName] = MemberResolver{
 		Kind: common.DeclarationKindFunction,
-		Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+		Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
 			return NewPublicFunctionMember(
 				memoryGauge,
 				ty,
@@ -576,7 +623,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 		members[ToStringFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
 				return NewPublicFunctionMember(
 					memoryGauge,
 					ty,
@@ -594,7 +641,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 		members[ToBigEndianBytesFunctionName] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
 				return NewPublicFunctionMember(
 					memoryGauge,
 					ty,
@@ -650,7 +697,7 @@ func (t *OptionalType) QualifiedString() string {
 }
 
 func FormatOptionalTypeID[T ~string](elementTypeID T) T {
-	return T(fmt.Sprintf("%s?", elementTypeID))
+	return T(fmt.Sprintf("(%s)?", elementTypeID))
 }
 
 func (t *OptionalType) ID() TypeID {
@@ -669,8 +716,16 @@ func (t *OptionalType) IsResourceType() bool {
 	return t.Type.IsResourceType()
 }
 
+func (t *OptionalType) IsPrimitiveType() bool {
+	return t.Type.IsPrimitiveType()
+}
+
 func (t *OptionalType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
+}
+
+func (t *OptionalType) IsOrContainsReferenceType() bool {
+	return t.Type.IsOrContainsReferenceType()
 }
 
 func (t *OptionalType) IsStorable(results map[*Member]bool) bool {
@@ -716,7 +771,8 @@ func (t *OptionalType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	otherOptional, ok := other.(*OptionalType)
@@ -724,7 +780,13 @@ func (t *OptionalType) Unify(
 		return false
 	}
 
-	return t.Type.Unify(otherOptional.Type, typeParameters, report, outerRange)
+	return t.Type.Unify(
+		otherOptional.Type,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *OptionalType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -739,11 +801,15 @@ func (t *OptionalType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type 
 	}
 }
 
-func (t *OptionalType) SupportedEntitlements() *EntitlementOrderedSet {
+func (t *OptionalType) SupportedEntitlements() *EntitlementSet {
 	if entitlementSupportingType, ok := t.Type.(EntitlementSupportingType); ok {
 		return entitlementSupportingType.SupportedEntitlements()
 	}
 	return nil
+}
+
+func (t *OptionalType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	t.Type.CheckInstantiated(pos, memoryGauge, report)
 }
 
 const optionalTypeMapFunctionDocString = `
@@ -766,33 +832,41 @@ func (t *OptionalType) GetMembers() map[string]MemberResolver {
 
 func (t *OptionalType) initializeMembers() {
 	t.memberResolversOnce.Do(func() {
-		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
-			OptionalTypeMapFunctionName: {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+		t.memberResolvers = withBuiltinMembers(
+			t,
+			map[string]MemberResolver{
+				OptionalTypeMapFunctionName: {
+					Kind: common.DeclarationKindFunction,
+					Resolve: func(
+						memoryGauge common.MemoryGauge,
+						identifier string,
+						targetRange ast.HasPosition,
+						report func(error),
+					) *Member {
 
-					// It's invalid for an optional of a resource to have a `map` function
+						// It's invalid for an optional of a resource to have a `map` function
 
-					if t.Type.IsResourceType() {
-						report(
-							&InvalidResourceOptionalMemberError{
-								Name:            identifier,
-								DeclarationKind: common.DeclarationKindFunction,
-								Range:           targetRange,
-							},
+						if t.Type.IsResourceType() {
+							report(
+								&InvalidResourceOptionalMemberError{
+									Name:            identifier,
+									DeclarationKind: common.DeclarationKindFunction,
+									Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+								},
+							)
+						}
+
+						return NewPublicFunctionMember(
+							memoryGauge,
+							t,
+							identifier,
+							OptionalTypeMapFunctionType(t.Type),
+							optionalTypeMapFunctionDocString,
 						)
-					}
-
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						OptionalTypeMapFunctionType(t.Type),
-						optionalTypeMapFunctionDocString,
-					)
+					},
 				},
 			},
-		})
+		)
 	})
 }
 
@@ -878,7 +952,15 @@ func (*GenericType) IsResourceType() bool {
 	return false
 }
 
+func (*GenericType) IsPrimitiveType() bool {
+	return false
+}
+
 func (*GenericType) IsInvalidType() bool {
+	return false
+}
+
+func (*GenericType) IsOrContainsReferenceType() bool {
 	return false
 }
 
@@ -918,7 +1000,8 @@ func (t *GenericType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	if unifiedType, ok := typeParameters.Get(t.TypeParameter); ok {
@@ -933,7 +1016,7 @@ func (t *GenericType) Unify(
 					TypeParameter: t.TypeParameter,
 					ExpectedType:  unifiedType,
 					ActualType:    other,
-					Range:         outerRange,
+					Range:         ast.NewRangeFromPositioned(memoryGauge, outerRange),
 				},
 			)
 		}
@@ -946,7 +1029,7 @@ func (t *GenericType) Unify(
 		// If the type parameter corresponding to the type argument has a type bound,
 		// then check that the argument's type is a subtype of the type bound.
 
-		err := t.TypeParameter.checkTypeBound(other, outerRange)
+		err := t.TypeParameter.checkTypeBound(other, memoryGauge, outerRange)
 		if err != nil {
 			report(err)
 		}
@@ -963,7 +1046,7 @@ func (t *GenericType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
 	return ty
 }
 
-func (t *GenericType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
+func (t *GenericType) Map(_ common.MemoryGauge, typeParamMap map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
 	if param, ok := typeParamMap[t.TypeParameter]; ok {
 		return f(&GenericType{
 			TypeParameter: param,
@@ -974,6 +1057,12 @@ func (t *GenericType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeParame
 
 func (t *GenericType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
+}
+
+func (t *GenericType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	if t.TypeParameter.TypeBound != nil {
+		t.TypeParameter.TypeBound.CheckInstantiated(pos, memoryGauge, report)
+	}
 }
 
 // IntegerRangedType
@@ -1041,7 +1130,7 @@ func addSaturatingArithmeticFunctions(t SaturatingArithmeticType, members map[st
 	addArithmeticFunction := func(name string, docString string) {
 		members[name] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, _ string, _ ast.HasPosition, _ func(error)) *Member {
 				return NewPublicFunctionMember(
 					memoryGauge,
 					t,
@@ -1094,6 +1183,7 @@ type SaturatingArithmeticSupport struct {
 type NumericType struct {
 	minInt               *big.Int
 	maxInt               *big.Int
+	byteSize             int
 	memberResolvers      map[string]MemberResolver
 	name                 string
 	tag                  TypeTag
@@ -1122,6 +1212,11 @@ func (t *NumericType) WithTag(tag TypeTag) *NumericType {
 func (t *NumericType) WithIntRange(min *big.Int, max *big.Int) *NumericType {
 	t.minInt = min
 	t.maxInt = max
+	return t
+}
+
+func (t *NumericType) WithByteSize(size int) *NumericType {
+	t.byteSize = size
 	return t
 }
 
@@ -1178,7 +1273,15 @@ func (*NumericType) IsResourceType() bool {
 	return false
 }
 
+func (*NumericType) IsPrimitiveType() bool {
+	return true
+}
+
 func (*NumericType) IsInvalidType() bool {
+	return false
+}
+
+func (*NumericType) IsOrContainsReferenceType() bool {
 	return false
 }
 
@@ -1222,7 +1325,17 @@ func (t *NumericType) MaxInt() *big.Int {
 	return t.maxInt
 }
 
-func (*NumericType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (t *NumericType) ByteSize() int {
+	return t.byteSize
+}
+
+func (*NumericType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -1256,6 +1369,10 @@ func (t *NumericType) AsSuperType() *NumericType {
 
 func (t *NumericType) IsSuperType() bool {
 	return t.isSuperType
+}
+
+func (*NumericType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }
 
 // FixedPointNumericType represents all the types in the fixed-point range.
@@ -1367,7 +1484,15 @@ func (*FixedPointNumericType) IsResourceType() bool {
 	return false
 }
 
+func (*FixedPointNumericType) IsPrimitiveType() bool {
+	return true
+}
+
 func (*FixedPointNumericType) IsInvalidType() bool {
+	return false
+}
+
+func (*FixedPointNumericType) IsOrContainsReferenceType() bool {
 	return false
 }
 
@@ -1423,7 +1548,13 @@ func (t *FixedPointNumericType) Scale() uint {
 	return t.scale
 }
 
-func (*FixedPointNumericType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*FixedPointNumericType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -1459,6 +1590,10 @@ func (t *FixedPointNumericType) IsSuperType() bool {
 	return t.isSuperType
 }
 
+func (*FixedPointNumericType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
+}
+
 // Numeric types
 
 var (
@@ -1491,6 +1626,11 @@ var (
 
 	SignedIntegerTypeAnnotation = NewTypeAnnotation(SignedIntegerType)
 
+	// FixedSizeUnsignedIntegerType represents the super-type of all unsigned integer types which have a fixed size.
+	FixedSizeUnsignedIntegerType = NewNumericType(FixedSizeUnsignedIntegerTypeName).
+					WithTag(FixedSizeUnsignedIntegerTypeTag).
+					AsSuperType()
+
 	// IntType represents the arbitrary-precision integer type `Int`
 	IntType = NewNumericType(IntTypeName).
 		WithTag(IntTypeTag)
@@ -1501,6 +1641,7 @@ var (
 	Int8Type = NewNumericType(Int8TypeName).
 			WithTag(Int8TypeTag).
 			WithIntRange(Int8TypeMinInt, Int8TypeMaxInt).
+			WithByteSize(1).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1514,6 +1655,7 @@ var (
 	Int16Type = NewNumericType(Int16TypeName).
 			WithTag(Int16TypeTag).
 			WithIntRange(Int16TypeMinInt, Int16TypeMaxInt).
+			WithByteSize(2).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1527,6 +1669,7 @@ var (
 	Int32Type = NewNumericType(Int32TypeName).
 			WithTag(Int32TypeTag).
 			WithIntRange(Int32TypeMinInt, Int32TypeMaxInt).
+			WithByteSize(4).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1540,6 +1683,7 @@ var (
 	Int64Type = NewNumericType(Int64TypeName).
 			WithTag(Int64TypeTag).
 			WithIntRange(Int64TypeMinInt, Int64TypeMaxInt).
+			WithByteSize(8).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1553,6 +1697,7 @@ var (
 	Int128Type = NewNumericType(Int128TypeName).
 			WithTag(Int128TypeTag).
 			WithIntRange(Int128TypeMinIntBig, Int128TypeMaxIntBig).
+			WithByteSize(16).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1566,6 +1711,7 @@ var (
 	Int256Type = NewNumericType(Int256TypeName).
 			WithTag(Int256TypeTag).
 			WithIntRange(Int256TypeMinIntBig, Int256TypeMaxIntBig).
+			WithByteSize(32).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1590,6 +1736,7 @@ var (
 	UInt8Type = NewNumericType(UInt8TypeName).
 			WithTag(UInt8TypeTag).
 			WithIntRange(UInt8TypeMinInt, UInt8TypeMaxInt).
+			WithByteSize(1).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1603,6 +1750,7 @@ var (
 	UInt16Type = NewNumericType(UInt16TypeName).
 			WithTag(UInt16TypeTag).
 			WithIntRange(UInt16TypeMinInt, UInt16TypeMaxInt).
+			WithByteSize(2).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1616,6 +1764,7 @@ var (
 	UInt32Type = NewNumericType(UInt32TypeName).
 			WithTag(UInt32TypeTag).
 			WithIntRange(UInt32TypeMinInt, UInt32TypeMaxInt).
+			WithByteSize(4).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1629,6 +1778,7 @@ var (
 	UInt64Type = NewNumericType(UInt64TypeName).
 			WithTag(UInt64TypeTag).
 			WithIntRange(UInt64TypeMinInt, UInt64TypeMaxInt).
+			WithByteSize(8).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1642,6 +1792,7 @@ var (
 	UInt128Type = NewNumericType(UInt128TypeName).
 			WithTag(UInt128TypeTag).
 			WithIntRange(UInt128TypeMinIntBig, UInt128TypeMaxIntBig).
+			WithByteSize(16).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1655,6 +1806,7 @@ var (
 	UInt256Type = NewNumericType(UInt256TypeName).
 			WithTag(UInt256TypeTag).
 			WithIntRange(UInt256TypeMinIntBig, UInt256TypeMaxIntBig).
+			WithByteSize(32).
 			WithSaturatingFunctions(SaturatingArithmeticSupport{
 			Add:      true,
 			Subtract: true,
@@ -1667,6 +1819,7 @@ var (
 	// which does NOT check for overflow and underflow
 	Word8Type = NewNumericType(Word8TypeName).
 			WithTag(Word8TypeTag).
+			WithByteSize(1).
 			WithIntRange(Word8TypeMinInt, Word8TypeMaxInt)
 
 	Word8TypeAnnotation = NewTypeAnnotation(Word8Type)
@@ -1675,6 +1828,7 @@ var (
 	// which does NOT check for overflow and underflow
 	Word16Type = NewNumericType(Word16TypeName).
 			WithTag(Word16TypeTag).
+			WithByteSize(2).
 			WithIntRange(Word16TypeMinInt, Word16TypeMaxInt)
 
 	Word16TypeAnnotation = NewTypeAnnotation(Word16Type)
@@ -1683,6 +1837,7 @@ var (
 	// which does NOT check for overflow and underflow
 	Word32Type = NewNumericType(Word32TypeName).
 			WithTag(Word32TypeTag).
+			WithByteSize(4).
 			WithIntRange(Word32TypeMinInt, Word32TypeMaxInt)
 
 	Word32TypeAnnotation = NewTypeAnnotation(Word32Type)
@@ -1691,6 +1846,7 @@ var (
 	// which does NOT check for overflow and underflow
 	Word64Type = NewNumericType(Word64TypeName).
 			WithTag(Word64TypeTag).
+			WithByteSize(8).
 			WithIntRange(Word64TypeMinInt, Word64TypeMaxInt)
 
 	Word64TypeAnnotation = NewTypeAnnotation(Word64Type)
@@ -1699,6 +1855,7 @@ var (
 	// which does NOT check for overflow and underflow
 	Word128Type = NewNumericType(Word128TypeName).
 			WithTag(Word128TypeTag).
+			WithByteSize(16).
 			WithIntRange(Word128TypeMinIntBig, Word128TypeMaxIntBig)
 
 	Word128TypeAnnotation = NewTypeAnnotation(Word128Type)
@@ -1707,6 +1864,7 @@ var (
 	// which does NOT check for overflow and underflow
 	Word256Type = NewNumericType(Word256TypeName).
 			WithTag(Word256TypeTag).
+			WithByteSize(32).
 			WithIntRange(Word256TypeMinIntBig, Word256TypeMaxIntBig)
 
 	Word256TypeAnnotation = NewTypeAnnotation(Word256Type)
@@ -1998,7 +2156,21 @@ Returns a new array with contents in the reversed order.
 Available if the array element type is not resource-kinded.
 `
 
-var insertableEntitledAccess = NewEntitlementSetAccess(
+const ArrayTypeToVariableSizedFunctionName = "toVariableSized"
+
+const arrayTypeToVariableSizedFunctionDocString = `
+Returns a new variable-sized array with the copy of the contents of the given array.
+Available if the array is constant sized and the element type is not resource-kinded.
+`
+
+const ArrayTypeToConstantSizedFunctionName = "toConstantSized"
+
+const arrayTypeToConstantSizedFunctionDocString = `
+Returns a new constant-sized array with the copy of the contents of the given array.
+Available if the array is variable-sized and the element type is not resource-kinded.
+`
+
+var insertMutateEntitledAccess = NewEntitlementSetAccess(
 	[]*EntitlementType{
 		InsertType,
 		MutateType,
@@ -2006,7 +2178,7 @@ var insertableEntitledAccess = NewEntitlementSetAccess(
 	Disjunction,
 )
 
-var removableEntitledAccess = NewEntitlementSetAccess(
+var removeMutateEntitledAccess = NewEntitlementSetAccess(
 	[]*EntitlementType{
 		RemoveType,
 		MutateType,
@@ -2032,7 +2204,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 	members := map[string]MemberResolver{
 		"contains": {
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				targetRange ast.HasPosition,
+				report func(error),
+			) *Member {
 
 				elementType := arrayType.ElementType(false)
 
@@ -2044,7 +2221,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 						&InvalidResourceArrayMemberError{
 							Name:            identifier,
 							DeclarationKind: common.DeclarationKindFunction,
-							Range:           targetRange,
+							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
 						},
 					)
 				}
@@ -2055,7 +2232,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					report(
 						&NotEquatableTypeError{
 							Type:  elementType,
-							Range: targetRange,
+							Range: ast.NewRangeFromPositioned(memoryGauge, targetRange),
 						},
 					)
 				}
@@ -2071,7 +2248,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		},
 		"length": {
 			Kind: common.DeclarationKindField,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.HasPosition, _ func(error)) *Member {
 				return NewPublicConstantFieldMember(
 					memoryGauge,
 					arrayType,
@@ -2083,7 +2260,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		},
 		"firstIndex": {
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				targetRange ast.HasPosition,
+				report func(error),
+			) *Member {
 
 				elementType := arrayType.ElementType(false)
 
@@ -2095,7 +2277,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 						&InvalidResourceArrayMemberError{
 							Name:            identifier,
 							DeclarationKind: common.DeclarationKindFunction,
-							Range:           targetRange,
+							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
 						},
 					)
 				}
@@ -2106,7 +2288,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 					report(
 						&NotEquatableTypeError{
 							Type:  elementType,
-							Range: targetRange,
+							Range: ast.NewRangeFromPositioned(memoryGauge, targetRange),
 						},
 					)
 				}
@@ -2122,7 +2304,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		},
 		ArrayTypeReverseFunctionName: {
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				targetRange ast.HasPosition,
+				report func(error),
+			) *Member {
 				elementType := arrayType.ElementType(false)
 
 				// It is impossible for a resource to be present in two arrays.
@@ -2131,7 +2318,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 						&InvalidResourceArrayMemberError{
 							Name:            identifier,
 							DeclarationKind: common.DeclarationKindFunction,
-							Range:           targetRange,
+							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
 						},
 					)
 				}
@@ -2147,7 +2334,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		},
 		ArrayTypeFilterFunctionName: {
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				targetRange ast.HasPosition,
+				report func(error),
+			) *Member {
 
 				elementType := arrayType.ElementType(false)
 
@@ -2156,7 +2348,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 						&InvalidResourceArrayMemberError{
 							Name:            identifier,
 							DeclarationKind: common.DeclarationKindFunction,
-							Range:           targetRange,
+							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
 						},
 					)
 				}
@@ -2172,7 +2364,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 		},
 		ArrayTypeMapFunctionName: {
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				targetRange ast.HasPosition,
+				report func(error),
+			) *Member {
 				elementType := arrayType.ElementType(false)
 
 				// TODO: maybe allow for resource element type as a reference.
@@ -2181,7 +2378,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 						&InvalidResourceArrayMemberError{
 							Name:            identifier,
 							DeclarationKind: common.DeclarationKindFunction,
-							Range:           targetRange,
+							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
 						},
 					)
 				}
@@ -2203,12 +2400,17 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 		members["append"] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				targetRange ast.HasPosition,
+				report func(error),
+			) *Member {
 				elementType := arrayType.ElementType(false)
 				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
-					insertableEntitledAccess,
+					insertMutateEntitledAccess,
 					identifier,
 					ArrayAppendFunctionType(elementType),
 					arrayTypeAppendFunctionDocString,
@@ -2218,7 +2420,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 		members["appendAll"] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				targetRange ast.HasPosition,
+				report func(error),
+			) *Member {
 
 				elementType := arrayType.ElementType(false)
 
@@ -2227,7 +2434,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 						&InvalidResourceArrayMemberError{
 							Name:            identifier,
 							DeclarationKind: common.DeclarationKindFunction,
-							Range:           targetRange,
+							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
 						},
 					)
 				}
@@ -2235,7 +2442,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
-					insertableEntitledAccess,
+					insertMutateEntitledAccess,
 					identifier,
 					ArrayAppendAllFunctionType(arrayType),
 					arrayTypeAppendAllFunctionDocString,
@@ -2245,7 +2452,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 		members["concat"] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				targetRange ast.HasPosition,
+				report func(error),
+			) *Member {
 
 				// TODO: maybe allow for resource element type
 
@@ -2256,7 +2468,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 						&InvalidResourceArrayMemberError{
 							Name:            identifier,
 							DeclarationKind: common.DeclarationKindFunction,
-							Range:           targetRange,
+							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
 						},
 					)
 				}
@@ -2273,7 +2485,12 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 		members["slice"] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				targetRange ast.HasPosition,
+				report func(error),
+			) *Member {
 
 				elementType := arrayType.ElementType(false)
 
@@ -2282,7 +2499,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 						&InvalidResourceArrayMemberError{
 							Name:            identifier,
 							DeclarationKind: common.DeclarationKindFunction,
-							Range:           targetRange,
+							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
 						},
 					)
 				}
@@ -2299,14 +2516,19 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 		members["insert"] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				_ ast.HasPosition,
+				_ func(error),
+			) *Member {
 
 				elementType := arrayType.ElementType(false)
 
 				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
-					insertableEntitledAccess,
+					insertMutateEntitledAccess,
 					identifier,
 					ArrayInsertFunctionType(elementType),
 					arrayTypeInsertFunctionDocString,
@@ -2316,14 +2538,19 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 		members["remove"] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				_ ast.HasPosition,
+				_ func(error),
+			) *Member {
 
 				elementType := arrayType.ElementType(false)
 
 				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
-					removableEntitledAccess,
+					removeMutateEntitledAccess,
 					identifier,
 					ArrayRemoveFunctionType(elementType),
 					arrayTypeRemoveFunctionDocString,
@@ -2333,14 +2560,19 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 		members["removeFirst"] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				_ ast.HasPosition,
+				_ func(error),
+			) *Member {
 
 				elementType := arrayType.ElementType(false)
 
 				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
-					removableEntitledAccess,
+					removeMutateEntitledAccess,
 					identifier,
 					ArrayRemoveFirstFunctionType(elementType),
 					arrayTypeRemoveFirstFunctionDocString,
@@ -2350,17 +2582,85 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 
 		members["removeLast"] = MemberResolver{
 			Kind: common.DeclarationKindFunction,
-			Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				_ ast.HasPosition,
+				_ func(error),
+			) *Member {
 
 				elementType := arrayType.ElementType(false)
 
 				return NewFunctionMember(
 					memoryGauge,
 					arrayType,
-					removableEntitledAccess,
+					removeMutateEntitledAccess,
 					identifier,
 					ArrayRemoveLastFunctionType(elementType),
 					arrayTypeRemoveLastFunctionDocString,
+				)
+			},
+		}
+
+		members[ArrayTypeToConstantSizedFunctionName] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				targetRange ast.HasPosition,
+				report func(error),
+			) *Member {
+				elementType := arrayType.ElementType(false)
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					memoryGauge,
+					arrayType,
+					identifier,
+					ArrayToConstantSizedFunctionType(elementType),
+					arrayTypeToConstantSizedFunctionDocString,
+				)
+			},
+		}
+	}
+
+	if _, ok := arrayType.(*ConstantSizedType); ok {
+
+		members[ArrayTypeToVariableSizedFunctionName] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(
+				memoryGauge common.MemoryGauge,
+				identifier string,
+				targetRange ast.HasPosition,
+				report func(error),
+			) *Member {
+				elementType := arrayType.ElementType(false)
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					memoryGauge,
+					arrayType,
+					identifier,
+					ArrayToVariableSizedFunctionType(elementType),
+					arrayTypeToVariableSizedFunctionDocString,
 				)
 			},
 		}
@@ -2504,6 +2804,73 @@ func ArraySliceFunctionType(elementType Type) *FunctionType {
 			Type: elementType,
 		}),
 	)
+}
+
+func ArrayToVariableSizedFunctionType(elementType Type) *FunctionType {
+	return NewSimpleFunctionType(
+		FunctionPurityView,
+		[]Parameter{},
+		NewTypeAnnotation(&VariableSizedType{
+			Type: elementType,
+		}),
+	)
+}
+
+func ArrayToConstantSizedFunctionType(elementType Type) *FunctionType {
+	// Ideally this should have a typebound of [T; _] but since we don't know
+	// the size of the ConstantSizedArray, we omit specifying the bound.
+	typeParameter := &TypeParameter{
+		Name: "T",
+	}
+
+	typeAnnotation := NewTypeAnnotation(
+		&GenericType{
+			TypeParameter: typeParameter,
+		},
+	)
+
+	return &FunctionType{
+		Purity: FunctionPurityView,
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: typeAnnotation.Type,
+			},
+		),
+		TypeArgumentsCheck: func(
+			memoryGauge common.MemoryGauge,
+			typeArguments *TypeParameterTypeOrderedMap,
+			astTypeArguments []*ast.TypeAnnotation,
+			invocationRange ast.HasPosition,
+			report func(error),
+		) {
+			typeArg, ok := typeArguments.Get(typeParameter)
+			if !ok || typeArg == nil {
+				// Invalid, already reported by checker
+				return
+			}
+
+			constArrayType, ok := typeArg.(*ConstantSizedType)
+			if !ok || constArrayType.Type != elementType {
+				errorRange := invocationRange
+				if len(astTypeArguments) > 0 {
+					errorRange = astTypeArguments[0]
+				}
+
+				report(&InvalidTypeArgumentError{
+					TypeArgumentName: typeParameter.Name,
+					Range:            ast.NewRangeFromPositioned(memoryGauge, errorRange),
+					Details: fmt.Sprintf(
+						"Type argument for %s must be [%s; _]",
+						ArrayTypeToConstantSizedFunctionName,
+						elementType,
+					),
+				})
+			}
+		},
+	}
 }
 
 func ArrayReverseFunctionType(arrayType ArrayType) *FunctionType {
@@ -2662,8 +3029,16 @@ func (t *VariableSizedType) IsResourceType() bool {
 	return t.Type.IsResourceType()
 }
 
+func (t *VariableSizedType) IsPrimitiveType() bool {
+	return false
+}
+
 func (t *VariableSizedType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
+}
+
+func (t *VariableSizedType) IsOrContainsReferenceType() bool {
+	return t.Type.IsOrContainsReferenceType()
 }
 
 func (t *VariableSizedType) IsStorable(results map[*Member]bool) bool {
@@ -2725,7 +3100,8 @@ func (t *VariableSizedType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	otherArray, ok := other.(*VariableSizedType)
@@ -2733,7 +3109,13 @@ func (t *VariableSizedType) Unify(
 		return false
 	}
 
-	return t.Type.Unify(otherArray.Type, typeParameters, report, outerRange)
+	return t.Type.Unify(
+		otherArray.Type,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *VariableSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -2747,17 +3129,21 @@ func (t *VariableSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) 
 	}
 }
 
-func (t *VariableSizedType) SupportedEntitlements() *EntitlementOrderedSet {
+func (t *VariableSizedType) SupportedEntitlements() *EntitlementSet {
 	return arrayDictionaryEntitlements
 }
 
-var arrayDictionaryEntitlements = func() *EntitlementOrderedSet {
-	set := orderedmap.New[EntitlementOrderedSet](3)
-	set.Set(MutateType, struct{}{})
-	set.Set(InsertType, struct{}{})
-	set.Set(RemoveType, struct{}{})
+var arrayDictionaryEntitlements = func() *EntitlementSet {
+	set := &EntitlementSet{}
+	set.Add(MutateType)
+	set.Add(InsertType)
+	set.Add(RemoveType)
 	return set
 }()
+
+func (t *VariableSizedType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	t.ElementType(false).CheckInstantiated(pos, memoryGauge, report)
+}
 
 // ConstantSizedType is a constant sized array type
 type ConstantSizedType struct {
@@ -2833,8 +3219,16 @@ func (t *ConstantSizedType) IsResourceType() bool {
 	return t.Type.IsResourceType()
 }
 
+func (t *ConstantSizedType) IsPrimitiveType() bool {
+	return false
+}
+
 func (t *ConstantSizedType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
+}
+
+func (t *ConstantSizedType) IsOrContainsReferenceType() bool {
+	return t.Type.IsOrContainsReferenceType()
 }
 
 func (t *ConstantSizedType) IsStorable(results map[*Member]bool) bool {
@@ -2897,7 +3291,8 @@ func (t *ConstantSizedType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	otherArray, ok := other.(*ConstantSizedType)
@@ -2909,7 +3304,13 @@ func (t *ConstantSizedType) Unify(
 		return false
 	}
 
-	return t.Type.Unify(otherArray.Type, typeParameters, report, outerRange)
+	return t.Type.Unify(
+		otherArray.Type,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *ConstantSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -2924,8 +3325,12 @@ func (t *ConstantSizedType) Resolve(typeArguments *TypeParameterTypeOrderedMap) 
 	}
 }
 
-func (t *ConstantSizedType) SupportedEntitlements() *EntitlementOrderedSet {
+func (t *ConstantSizedType) SupportedEntitlements() *EntitlementSet {
 	return arrayDictionaryEntitlements
+}
+
+func (t *ConstantSizedType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	t.ElementType(false).CheckInstantiated(pos, memoryGauge, report)
 }
 
 // Parameter
@@ -2954,9 +3359,10 @@ func formatParameter(spaces bool, label, identifier, typeAnnotation string) stri
 }
 
 type Parameter struct {
-	TypeAnnotation TypeAnnotation
-	Label          string
-	Identifier     string
+	TypeAnnotation  TypeAnnotation
+	DefaultArgument Type
+	Label           string
+	Identifier      string
 }
 
 func (p Parameter) String() string {
@@ -3038,7 +3444,7 @@ func (p TypeParameter) Equal(other *TypeParameter) bool {
 	return p.Optional == other.Optional
 }
 
-func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
+func (p TypeParameter) checkTypeBound(ty Type, memoryGauge common.MemoryGauge, typeRange ast.HasPosition) error {
 	if p.TypeBound == nil ||
 		p.TypeBound.IsInvalidType() ||
 		ty.IsInvalidType() {
@@ -3050,7 +3456,7 @@ func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 		return &TypeMismatchError{
 			ExpectedType: p.TypeBound,
 			ActualType:   ty,
-			Range:        typeRange,
+			Range:        ast.NewRangeFromPositioned(memoryGauge, typeRange),
 		}
 	}
 
@@ -3156,6 +3562,7 @@ type FunctionType struct {
 	ReturnTypeAnnotation     TypeAnnotation
 	Arity                    *Arity
 	ArgumentExpressionsCheck ArgumentExpressionsCheck
+	TypeArgumentsCheck       TypeArgumentsCheck
 	Members                  *StringMemberOrderedMap
 	TypeParameters           []*TypeParameter
 	Parameters               []Parameter
@@ -3381,6 +3788,10 @@ func (*FunctionType) IsResourceType() bool {
 	return false
 }
 
+func (t *FunctionType) IsPrimitiveType() bool {
+	return false
+}
+
 func (t *FunctionType) IsInvalidType() bool {
 
 	for _, typeParameter := range t.TypeParameters {
@@ -3399,6 +3810,10 @@ func (t *FunctionType) IsInvalidType() bool {
 	}
 
 	return t.ReturnTypeAnnotation.Type.IsInvalidType()
+}
+
+func (*FunctionType) IsOrContainsReferenceType() bool {
+	return false
 }
 
 func (t *FunctionType) IsStorable(_ map[*Member]bool) bool {
@@ -3555,7 +3970,8 @@ func (t *FunctionType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) (
 	result bool,
 ) {
@@ -3585,6 +4001,7 @@ func (t *FunctionType) Unify(
 			otherParameter.TypeAnnotation.Type,
 			typeParameters,
 			report,
+			memoryGauge,
 			outerRange,
 		)
 		result = result || parameterUnified
@@ -3596,6 +4013,7 @@ func (t *FunctionType) Unify(
 		otherFunction.ReturnTypeAnnotation.Type,
 		typeParameters,
 		report,
+		memoryGauge,
 		outerRange,
 	)
 
@@ -3716,10 +4134,30 @@ func (t *FunctionType) initializeMemberResolvers() {
 	})
 }
 
+func (t *FunctionType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	for _, tyParam := range t.TypeParameters {
+		tyParam.TypeBound.CheckInstantiated(pos, memoryGauge, report)
+	}
+
+	for _, param := range t.Parameters {
+		param.TypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+	}
+
+	t.ReturnTypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+}
+
 type ArgumentExpressionsCheck func(
 	checker *Checker,
 	argumentExpressions []ast.Expression,
-	invocationRange ast.Range,
+	invocationRange ast.HasPosition,
+)
+
+type TypeArgumentsCheck func(
+	memoryGauge common.MemoryGauge,
+	typeArguments *TypeParameterTypeOrderedMap,
+	astTypeArguments []*ast.TypeAnnotation,
+	invocationRange ast.HasPosition,
+	report func(err error),
 )
 
 // BaseTypeActivation is the base activation that contains
@@ -3758,6 +4196,8 @@ func init() {
 			StorageCapabilityControllerType,
 			AccountCapabilityControllerType,
 			DeploymentResultType,
+			HashableStructType,
+			&InclusiveRangeType{},
 		},
 	)
 
@@ -3844,9 +4284,8 @@ var AllSignedIntegerTypes = []Type{
 	Int256Type,
 }
 
-var AllUnsignedIntegerTypes = []Type{
+var AllFixedSizeUnsignedIntegerTypes = []Type{
 	// UInt*
-	UIntType,
 	UInt8Type,
 	UInt16Type,
 	UInt32Type,
@@ -3862,13 +4301,23 @@ var AllUnsignedIntegerTypes = []Type{
 	Word256Type,
 }
 
+var AllUnsignedIntegerTypes = common.Concat(
+	AllFixedSizeUnsignedIntegerTypes,
+	[]Type{
+		UIntType,
+	},
+)
+
+var AllNonLeafIntegerTypes = []Type{
+	IntegerType,
+	SignedIntegerType,
+	FixedSizeUnsignedIntegerType,
+}
+
 var AllIntegerTypes = common.Concat(
 	AllUnsignedIntegerTypes,
 	AllSignedIntegerTypes,
-	[]Type{
-		IntegerType,
-		SignedIntegerType,
-	},
+	AllNonLeafIntegerTypes,
 )
 
 var AllNumberTypes = common.Concat(
@@ -3907,7 +4356,7 @@ func init() {
 
 		switch numberType {
 		case NumberType, SignedNumberType,
-			IntegerType, SignedIntegerType,
+			IntegerType, SignedIntegerType, FixedSizeUnsignedIntegerType,
 			FixedPointType, SignedFixedPointType:
 			continue
 
@@ -4062,7 +4511,7 @@ var AddressConversionFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: AddressTypeAnnotation,
-	ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
+	ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.HasPosition) {
 		if len(argumentExpressions) < 1 {
 			return
 		}
@@ -4149,7 +4598,7 @@ func init() {
 }
 
 func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressionsCheck {
-	return func(checker *Checker, arguments []ast.Expression, invocationRange ast.Range) {
+	return func(checker *Checker, arguments []ast.Expression, invocationRange ast.HasPosition) {
 		if len(arguments) < 1 {
 			return
 		}
@@ -4163,8 +4612,11 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 					checker.Elaboration.SetNumberConversionArgumentTypes(
 						argument,
 						NumberConversionArgumentTypes{
-							Type:  targetType,
-							Range: invocationRange,
+							Type: targetType,
+							Range: ast.NewRangeFromPositioned(
+								checker.memoryGauge,
+								invocationRange,
+							),
 						},
 					)
 				}
@@ -4176,8 +4628,11 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 					checker.Elaboration.SetNumberConversionArgumentTypes(
 						argument,
 						NumberConversionArgumentTypes{
-							Type:  targetType,
-							Range: invocationRange,
+							Type: targetType,
+							Range: ast.NewRangeFromPositioned(
+								checker.memoryGauge,
+								invocationRange,
+							),
 						},
 					)
 				}
@@ -4291,10 +4746,10 @@ type CompositeType struct {
 	// in a language with support for algebraic data types,
 	// we would implement this as an argument to the CompositeKind type constructor.
 	// Alas, this is Go, so for now these fields are only non-nil when Kind is CompositeKindAttachment
-	baseType                    Type
-	baseTypeDocString           string
-	RequiredEntitlements        *EntitlementOrderedSet
-	AttachmentEntitlementAccess *EntitlementMapAccess
+	baseType          Type
+	baseTypeDocString string
+
+	DefaultDestroyEvent *CompositeType
 
 	cachedIdentifiers *struct {
 		TypeID              TypeID
@@ -4317,8 +4772,9 @@ type CompositeType struct {
 	ConstructorPurity                    FunctionPurity
 	HasComputedMembers                   bool
 	// Only applicable for native composite types
-	ImportableBuiltin     bool
-	supportedEntitlements *EntitlementOrderedSet
+	ImportableBuiltin         bool
+	supportedEntitlementsOnce sync.Once
+	supportedEntitlements     *EntitlementSet
 }
 
 var _ Type = &CompositeType{}
@@ -4426,6 +4882,23 @@ func isAttachmentType(t Type) bool {
 		t == AnyStructAttachmentType
 }
 
+func IsHashableStructType(t Type) bool {
+	switch typ := t.(type) {
+	case *AddressType:
+		return true
+	case *CompositeType:
+		return typ.Kind == common.CompositeKindEnum
+	default:
+		switch typ {
+		case NeverType, BoolType, CharacterType, StringType, MetaType, HashableStructType:
+			return true
+		default:
+			return IsSubType(typ, NumberType) ||
+				IsSubType(typ, PathType)
+		}
+	}
+}
+
 func (t *CompositeType) GetBaseType() Type {
 	return t.baseType
 }
@@ -4488,27 +4961,77 @@ func (t *CompositeType) MemberMap() *StringMemberOrderedMap {
 	return t.Members
 }
 
-func (t *CompositeType) SupportedEntitlements() (set *EntitlementOrderedSet) {
-	supportedEntitlements := t.supportedEntitlements
-	if supportedEntitlements != nil {
-		return supportedEntitlements
-	}
+func newCompositeOrInterfaceSupportedEntitlementSet(
+	members *StringMemberOrderedMap,
+	effectiveInterfaceConformanceSet *InterfaceSet,
+) *EntitlementSet {
+	set := &EntitlementSet{}
 
-	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
-	t.Members.Foreach(func(_ string, member *Member) {
+	// We need to handle conjunctions and disjunctions separately, in two passes,
+	// as adding entitlements after disjunctions does not remove disjunctions from the set,
+	// whereas adding disjunctions after entitlements does.
+
+	// First pass: Handle maps and conjunctions
+	members.Foreach(func(_ string, member *Member) {
 		switch access := member.Access.(type) {
 		case *EntitlementMapAccess:
-			set.SetAll(access.Domain().Entitlements)
+			// Domain is a conjunction, add all entitlements
+			domain := access.Domain()
+			if domain.SetKind != Conjunction {
+				panic(errors.NewUnreachableError())
+			}
+			domain.Entitlements.
+				Foreach(func(entitlementType *EntitlementType, _ struct{}) {
+					set.Add(entitlementType)
+				})
+
 		case EntitlementSetAccess:
-			set.SetAll(access.Entitlements)
+			// Disjunctions are handled in a second pass
+			if access.SetKind == Conjunction {
+				access.Entitlements.Foreach(func(entitlementType *EntitlementType, _ struct{}) {
+					set.Add(entitlementType)
+				})
+			}
 		}
 	})
-	t.EffectiveInterfaceConformanceSet().ForEach(func(it *InterfaceType) {
-		set.SetAll(it.SupportedEntitlements())
+
+	// Second pass: Handle disjunctions
+	for pair := members.Oldest(); pair != nil; pair = pair.Next() {
+		member := pair.Value
+
+		if access, ok := member.Access.(EntitlementSetAccess); ok &&
+			access.SetKind == Disjunction {
+
+			set.AddDisjunction(access.Entitlements)
+		}
+	}
+
+	effectiveInterfaceConformanceSet.ForEach(func(it *InterfaceType) {
+		set.Merge(it.SupportedEntitlements())
 	})
 
-	t.supportedEntitlements = set
 	return set
+}
+
+func (t *CompositeType) SupportedEntitlements() *EntitlementSet {
+	t.supportedEntitlementsOnce.Do(func() {
+
+		set := newCompositeOrInterfaceSupportedEntitlementSet(
+			t.Members,
+			t.EffectiveInterfaceConformanceSet(),
+		)
+
+		// attachments support at least the entitlements supported by their base,
+		// and we must ensure there is no recursive case
+		if entitlementSupportingBase, isEntitlementSupportingBase :=
+			t.GetBaseType().(EntitlementSupportingType); isEntitlementSupportingBase && entitlementSupportingBase != t {
+
+			set.Merge(entitlementSupportingBase.SupportedEntitlements())
+		}
+
+		t.supportedEntitlements = set
+	})
+	return t.supportedEntitlements
 }
 
 func (t *CompositeType) IsResourceType() bool {
@@ -4521,7 +5044,15 @@ func (t *CompositeType) IsResourceType() bool {
 			t.baseType.IsResourceType())
 }
 
+func (t *CompositeType) IsPrimitiveType() bool {
+	return false
+}
+
 func (*CompositeType) IsInvalidType() bool {
+	return false
+}
+
+func (*CompositeType) IsOrContainsReferenceType() bool {
 	return false
 }
 
@@ -4624,8 +5155,8 @@ func (*CompositeType) IsComparable() bool {
 	return false
 }
 
-func (*CompositeType) ContainFieldsOrElements() bool {
-	return true
+func (t *CompositeType) ContainFieldsOrElements() bool {
+	return t.Kind != common.CompositeKindEnum
 }
 
 func (t *CompositeType) TypeAnnotationState() TypeAnnotationState {
@@ -4639,7 +5170,13 @@ func (t *CompositeType) RewriteWithIntersectionTypes() (result Type, rewritten b
 	return t, false
 }
 
-func (*CompositeType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*CompositeType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	// TODO:
 	return false
 }
@@ -4665,10 +5202,9 @@ func (t *CompositeType) TypeIndexingElementType(indexingType Type, _ func() ast.
 	var access Access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
-		attachmentEntitlementAccess := attachment.AttachmentEntitlementAccess
-		if attachmentEntitlementAccess != nil {
-			access = attachmentEntitlementAccess.Codomain()
-		}
+		// when accessed on an owned value, the produced attachment reference is entitled to all the
+		// entitlements it supports
+		access = attachment.SupportedEntitlements().Access()
 	}
 
 	return &OptionalType{
@@ -4761,7 +5297,12 @@ func (t *CompositeType) initializerMemberResolversFunc() func() {
 		if t.Kind.SupportsAttachments() {
 			memberResolvers[CompositeForEachAttachmentFunctionName] = MemberResolver{
 				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
+				Resolve: func(
+					memoryGauge common.MemoryGauge,
+					identifier string,
+					_ ast.HasPosition,
+					_ func(error),
+				) *Member {
 					return NewPublicFunctionMember(
 						memoryGauge,
 						t,
@@ -4837,6 +5378,20 @@ func (t *CompositeType) InitializerEffectiveArgumentLabels() []string {
 		)
 	}
 	return argumentLabels
+}
+
+func (t *CompositeType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	if t.EnumRawType != nil {
+		t.EnumRawType.CheckInstantiated(pos, memoryGauge, report)
+	}
+
+	if t.baseType != nil {
+		t.baseType.CheckInstantiated(pos, memoryGauge, report)
+	}
+
+	for _, typ := range t.ExplicitInterfaceConformances {
+		typ.CheckInstantiated(pos, memoryGauge, report)
+	}
 }
 
 // Member
@@ -5151,7 +5706,10 @@ type InterfaceType struct {
 	ExplicitInterfaceConformances    []*InterfaceType
 	effectiveInterfaceConformances   []Conformance
 	effectiveInterfaceConformanceSet *InterfaceSet
-	supportedEntitlements            *EntitlementOrderedSet
+	supportedEntitlementsOnce        sync.Once
+	supportedEntitlements            *EntitlementSet
+
+	DefaultDestroyEvent *CompositeType
 }
 
 var _ Type = &InterfaceType{}
@@ -5258,29 +5816,14 @@ func (t *InterfaceType) MemberMap() *StringMemberOrderedMap {
 	return t.Members
 }
 
-func (t *InterfaceType) SupportedEntitlements() (set *EntitlementOrderedSet) {
-	supportedEntitlements := t.supportedEntitlements
-	if supportedEntitlements != nil {
-		return supportedEntitlements
-	}
-
-	set = orderedmap.New[EntitlementOrderedSet](t.Members.Len())
-	t.Members.Foreach(func(_ string, member *Member) {
-		switch access := member.Access.(type) {
-		case *EntitlementMapAccess:
-			access.Domain().Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
-				set.Set(entitlement, struct{}{})
-			})
-		case EntitlementSetAccess:
-			access.Entitlements.Foreach(func(entitlement *EntitlementType, _ struct{}) {
-				set.Set(entitlement, struct{}{})
-			})
-		}
+func (t *InterfaceType) SupportedEntitlements() *EntitlementSet {
+	t.supportedEntitlementsOnce.Do(func() {
+		t.supportedEntitlements = newCompositeOrInterfaceSupportedEntitlementSet(
+			t.Members,
+			t.EffectiveInterfaceConformanceSet(),
+		)
 	})
-	// TODO: include inherited entitlements
-
-	t.supportedEntitlements = set
-	return set
+	return t.supportedEntitlements
 }
 
 func (t *InterfaceType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
@@ -5314,7 +5857,15 @@ func (t *InterfaceType) IsResourceType() bool {
 	return t.CompositeKind == common.CompositeKindResource
 }
 
-func (t *InterfaceType) IsInvalidType() bool {
+func (*InterfaceType) IsPrimitiveType() bool {
+	return false
+}
+
+func (*InterfaceType) IsInvalidType() bool {
+	return false
+}
+
+func (*InterfaceType) IsOrContainsReferenceType() bool {
 	return false
 }
 
@@ -5385,19 +5936,18 @@ func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 }
 
 func (t *InterfaceType) RewriteWithIntersectionTypes() (Type, bool) {
-	switch t.CompositeKind {
-	case common.CompositeKindResource, common.CompositeKindStructure:
-		return &IntersectionType{
-			Types: []*InterfaceType{t},
-		}, true
-
-	default:
-		return t, false
-	}
-
+	return &IntersectionType{
+		Types: []*InterfaceType{t},
+	}, true
 }
 
-func (*InterfaceType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*InterfaceType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	// TODO:
 	return false
 }
@@ -5494,6 +6044,12 @@ func distinctConformances(
 	return collectedConformances
 }
 
+func (t *InterfaceType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	for _, param := range t.InitializerParameters {
+		param.TypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+	}
+}
+
 // DictionaryType consists of the key and value type
 // for all key-value pairs in the dictionary:
 // All keys have to be a subtype of the key type,
@@ -5570,9 +6126,18 @@ func (t *DictionaryType) IsResourceType() bool {
 		t.ValueType.IsResourceType()
 }
 
+func (t *DictionaryType) IsPrimitiveType() bool {
+	return false
+}
+
 func (t *DictionaryType) IsInvalidType() bool {
 	return t.KeyType.IsInvalidType() ||
 		t.ValueType.IsInvalidType()
+}
+
+func (t *DictionaryType) IsOrContainsReferenceType() bool {
+	return t.KeyType.IsOrContainsReferenceType() ||
+		t.ValueType.IsOrContainsReferenceType()
 }
 
 func (t *DictionaryType) IsStorable(results map[*Member]bool) bool {
@@ -5631,6 +6196,11 @@ func (t *DictionaryType) RewriteWithIntersectionTypes() (Type, bool) {
 	}
 }
 
+func (t *DictionaryType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	t.KeyType.CheckInstantiated(pos, memoryGauge, report)
+	t.ValueType.CheckInstantiated(pos, memoryGauge, report)
+}
+
 const dictionaryTypeContainsKeyFunctionDocString = `
 Returns true if the given key is in the dictionary
 `
@@ -5683,129 +6253,167 @@ func (t *DictionaryType) GetMembers() map[string]MemberResolver {
 func (t *DictionaryType) initializeMemberResolvers() {
 	t.memberResolversOnce.Do(func() {
 
-		t.memberResolvers = withBuiltinMembers(t, map[string]MemberResolver{
-			"containsKey": {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
+		t.memberResolvers = withBuiltinMembers(
+			t,
+			map[string]MemberResolver{
+				"containsKey": {
+					Kind: common.DeclarationKindFunction,
+					Resolve: func(
+						memoryGauge common.MemoryGauge,
+						identifier string,
+						targetRange ast.HasPosition,
+						report func(error),
+					) *Member {
 
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						DictionaryContainsKeyFunctionType(t),
-						dictionaryTypeContainsKeyFunctionDocString,
-					)
-				},
-			},
-			"length": {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						IntType,
-						dictionaryTypeLengthFieldDocString,
-					)
-				},
-			},
-			"keys": {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
-					// TODO: maybe allow for resource key type
-
-					if t.KeyType.IsResourceType() {
-						report(
-							&InvalidResourceDictionaryMemberError{
-								Name:            identifier,
-								DeclarationKind: common.DeclarationKindField,
-								Range:           targetRange,
-							},
+						return NewPublicFunctionMember(
+							memoryGauge,
+							t,
+							identifier,
+							DictionaryContainsKeyFunctionType(t),
+							dictionaryTypeContainsKeyFunctionDocString,
 						)
-					}
-
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						&VariableSizedType{Type: t.KeyType},
-						dictionaryTypeKeysFieldDocString,
-					)
+					},
 				},
-			},
-			"values": {
-				Kind: common.DeclarationKindField,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
-					// TODO: maybe allow for resource value type
-
-					if t.ValueType.IsResourceType() {
-						report(
-							&InvalidResourceDictionaryMemberError{
-								Name:            identifier,
-								DeclarationKind: common.DeclarationKindField,
-								Range:           targetRange,
-							},
+				"length": {
+					Kind: common.DeclarationKindField,
+					Resolve: func(
+						memoryGauge common.MemoryGauge,
+						identifier string,
+						_ ast.HasPosition,
+						_ func(error),
+					) *Member {
+						return NewPublicConstantFieldMember(
+							memoryGauge,
+							t,
+							identifier,
+							IntType,
+							dictionaryTypeLengthFieldDocString,
 						)
-					}
+					},
+				},
+				"keys": {
+					Kind: common.DeclarationKindField,
+					Resolve: func(
+						memoryGauge common.MemoryGauge,
+						identifier string,
+						targetRange ast.HasPosition,
+						report func(error),
+					) *Member {
+						// TODO: maybe allow for resource key type
 
-					return NewPublicConstantFieldMember(
-						memoryGauge,
-						t,
-						identifier,
-						&VariableSizedType{Type: t.ValueType},
-						dictionaryTypeValuesFieldDocString,
-					)
-				},
-			},
-			"insert": {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewFunctionMember(
-						memoryGauge,
-						t,
-						insertableEntitledAccess,
-						identifier,
-						DictionaryInsertFunctionType(t),
-						dictionaryTypeInsertFunctionDocString,
-					)
-				},
-			},
-			"remove": {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, _ ast.Range, _ func(error)) *Member {
-					return NewFunctionMember(
-						memoryGauge,
-						t,
-						removableEntitledAccess,
-						identifier,
-						DictionaryRemoveFunctionType(t),
-						dictionaryTypeRemoveFunctionDocString,
-					)
-				},
-			},
-			"forEachKey": {
-				Kind: common.DeclarationKindFunction,
-				Resolve: func(memoryGauge common.MemoryGauge, identifier string, targetRange ast.Range, report func(error)) *Member {
-					if t.KeyType.IsResourceType() {
-						report(
-							&InvalidResourceDictionaryMemberError{
-								Name:            identifier,
-								DeclarationKind: common.DeclarationKindField,
-								Range:           targetRange,
-							},
+						if t.KeyType.IsResourceType() {
+							report(
+								&InvalidResourceDictionaryMemberError{
+									Name:            identifier,
+									DeclarationKind: common.DeclarationKindField,
+									Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+								},
+							)
+						}
+
+						return NewPublicConstantFieldMember(
+							memoryGauge,
+							t,
+							identifier,
+							&VariableSizedType{Type: t.KeyType},
+							dictionaryTypeKeysFieldDocString,
 						)
-					}
+					},
+				},
+				"values": {
+					Kind: common.DeclarationKindField,
+					Resolve: func(
+						memoryGauge common.MemoryGauge,
+						identifier string,
+						targetRange ast.HasPosition,
+						report func(error),
+					) *Member {
+						// TODO: maybe allow for resource value type
 
-					return NewPublicFunctionMember(
-						memoryGauge,
-						t,
-						identifier,
-						DictionaryForEachKeyFunctionType(t),
-						dictionaryTypeForEachKeyFunctionDocString,
-					)
+						if t.ValueType.IsResourceType() {
+							report(
+								&InvalidResourceDictionaryMemberError{
+									Name:            identifier,
+									DeclarationKind: common.DeclarationKindField,
+									Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+								},
+							)
+						}
+
+						return NewPublicConstantFieldMember(
+							memoryGauge,
+							t,
+							identifier,
+							&VariableSizedType{Type: t.ValueType},
+							dictionaryTypeValuesFieldDocString,
+						)
+					},
+				},
+				"insert": {
+					Kind: common.DeclarationKindFunction,
+					Resolve: func(
+						memoryGauge common.MemoryGauge,
+						identifier string,
+						_ ast.HasPosition,
+						_ func(error),
+					) *Member {
+						return NewFunctionMember(
+							memoryGauge,
+							t,
+							insertMutateEntitledAccess,
+							identifier,
+							DictionaryInsertFunctionType(t),
+							dictionaryTypeInsertFunctionDocString,
+						)
+					},
+				},
+				"remove": {
+					Kind: common.DeclarationKindFunction,
+					Resolve: func(
+						memoryGauge common.MemoryGauge,
+						identifier string,
+						_ ast.HasPosition,
+						_ func(error),
+					) *Member {
+						return NewFunctionMember(
+							memoryGauge,
+							t,
+							removeMutateEntitledAccess,
+							identifier,
+							DictionaryRemoveFunctionType(t),
+							dictionaryTypeRemoveFunctionDocString,
+						)
+					},
+				},
+				"forEachKey": {
+					Kind: common.DeclarationKindFunction,
+					Resolve: func(
+						memoryGauge common.MemoryGauge,
+						identifier string,
+						targetRange ast.HasPosition,
+						report func(error),
+					) *Member {
+						if t.KeyType.IsResourceType() {
+							report(
+								&InvalidResourceDictionaryMemberError{
+									Name:            identifier,
+									DeclarationKind: common.DeclarationKindField,
+									Range:           ast.NewRangeFromPositioned(memoryGauge, targetRange),
+								},
+							)
+						}
+
+						return NewPublicFunctionMember(
+							memoryGauge,
+							t,
+							identifier,
+							DictionaryForEachKeyFunctionType(t),
+							dictionaryTypeForEachKeyFunctionDocString,
+						)
+					},
 				},
 			},
-		})
+		)
 	})
 }
 
@@ -5916,7 +6524,8 @@ func (t *DictionaryType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 
 	otherDictionary, ok := other.(*DictionaryType)
@@ -5924,8 +6533,22 @@ func (t *DictionaryType) Unify(
 		return false
 	}
 
-	keyUnified := t.KeyType.Unify(otherDictionary.KeyType, typeParameters, report, outerRange)
-	valueUnified := t.ValueType.Unify(otherDictionary.ValueType, typeParameters, report, outerRange)
+	keyUnified := t.KeyType.Unify(
+		otherDictionary.KeyType,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
+
+	valueUnified := t.ValueType.Unify(
+		otherDictionary.ValueType,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
+
 	return keyUnified || valueUnified
 }
 
@@ -5946,8 +6569,389 @@ func (t *DictionaryType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Typ
 	}
 }
 
-func (t *DictionaryType) SupportedEntitlements() *EntitlementOrderedSet {
+func (t *DictionaryType) SupportedEntitlements() *EntitlementSet {
 	return arrayDictionaryEntitlements
+}
+
+// InclusiveRangeType
+
+type InclusiveRangeType struct {
+	MemberType          Type
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
+}
+
+var _ Type = &InclusiveRangeType{}
+var _ ParameterizedType = &InclusiveRangeType{}
+
+func NewInclusiveRangeType(memoryGauge common.MemoryGauge, elementType Type) *InclusiveRangeType {
+	common.UseMemory(memoryGauge, common.DictionarySemaTypeMemoryUsage)
+	return &InclusiveRangeType{
+		MemberType: elementType,
+	}
+}
+
+func (*InclusiveRangeType) IsType() {}
+
+func (*InclusiveRangeType) Tag() TypeTag {
+	return InclusiveRangeTypeTag
+}
+
+func (t *InclusiveRangeType) String() string {
+	memberString := ""
+	if t.MemberType != nil {
+		memberString = fmt.Sprintf("<%s>", t.MemberType.String())
+	}
+	return fmt.Sprintf(
+		"InclusiveRange%s",
+		memberString,
+	)
+}
+
+func (t *InclusiveRangeType) QualifiedString() string {
+	memberString := ""
+	if t.MemberType != nil {
+		memberString = fmt.Sprintf("<%s>", t.MemberType.QualifiedString())
+	}
+	return fmt.Sprintf(
+		"InclusiveRange%s",
+		memberString,
+	)
+}
+
+func InclusiveRangeTypeID(memberTypeID string) TypeID {
+	if memberTypeID != "" {
+		memberTypeID = fmt.Sprintf("<%s>", memberTypeID)
+	}
+	return TypeID(fmt.Sprintf(
+		"InclusiveRange%s",
+		memberTypeID,
+	))
+}
+
+func (t *InclusiveRangeType) ID() TypeID {
+	var memberTypeID string
+	if t.MemberType != nil {
+		memberTypeID = string(t.MemberType.ID())
+	}
+	return InclusiveRangeTypeID(memberTypeID)
+}
+
+func (t *InclusiveRangeType) Equal(other Type) bool {
+	otherRange, ok := other.(*InclusiveRangeType)
+	if !ok {
+		return false
+	}
+	if otherRange.MemberType == nil {
+		return t.MemberType == nil
+	}
+
+	return otherRange.MemberType.Equal(t.MemberType)
+}
+
+func (*InclusiveRangeType) IsResourceType() bool {
+	return false
+}
+func (t *InclusiveRangeType) IsInvalidType() bool {
+	return t.MemberType != nil && t.MemberType.IsInvalidType()
+}
+
+func (t *InclusiveRangeType) IsOrContainsReferenceType() bool {
+	return t.MemberType != nil && t.MemberType.IsOrContainsReferenceType()
+}
+
+func (*InclusiveRangeType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (t *InclusiveRangeType) IsExportable(results map[*Member]bool) bool {
+	return t.MemberType.IsExportable(results)
+}
+
+func (t *InclusiveRangeType) IsImportable(results map[*Member]bool) bool {
+	return t.MemberType.IsImportable(results)
+}
+
+func (t *InclusiveRangeType) IsEquatable() bool {
+	return t.MemberType.IsEquatable()
+}
+
+func (*InclusiveRangeType) IsComparable() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) TypeAnnotationState() TypeAnnotationState {
+	if t.MemberType == nil {
+		return TypeAnnotationStateValid
+	}
+
+	return t.MemberType.TypeAnnotationState()
+}
+
+func (t *InclusiveRangeType) RewriteWithIntersectionTypes() (Type, bool) {
+	if t.MemberType == nil {
+		return t, false
+	}
+	rewrittenMemberType, rewritten := t.MemberType.RewriteWithIntersectionTypes()
+	if rewritten {
+		return &InclusiveRangeType{
+			MemberType: rewrittenMemberType,
+		}, true
+	}
+	return t, false
+}
+
+func (t *InclusiveRangeType) BaseType() Type {
+	if t.MemberType == nil {
+		return nil
+	}
+	return &InclusiveRangeType{}
+}
+
+func (t *InclusiveRangeType) Instantiate(
+	memoryGauge common.MemoryGauge,
+	typeArguments []Type,
+	astTypeArguments []*ast.TypeAnnotation,
+	report func(err error),
+) Type {
+
+	const typeParameterCount = 1
+
+	getRange := func() ast.Range {
+		if astTypeArguments == nil || len(astTypeArguments) != typeParameterCount {
+			return ast.EmptyRange
+		}
+		return ast.NewRangeFromPositioned(memoryGauge, astTypeArguments[0])
+	}
+
+	typeArgumentCount := len(typeArguments)
+
+	var memberType Type
+	if typeArgumentCount == typeParameterCount {
+		memberType = typeArguments[0]
+	} else {
+		report(&InvalidTypeArgumentCountError{
+			TypeParameterCount: typeParameterCount,
+			TypeArgumentCount:  typeArgumentCount,
+			Range:              getRange(),
+		})
+	}
+
+	// memberType must only be a leaf integer type.
+	for _, ty := range AllNonLeafIntegerTypes {
+		if memberType == ty {
+			report(&InvalidTypeArgumentError{
+				TypeArgumentName: inclusiveRangeTypeParameter.Name,
+				Range:            getRange(),
+				Details:          fmt.Sprintf("Creation of InclusiveRange<%s> is disallowed", memberType),
+			})
+			break
+		}
+	}
+
+	return &InclusiveRangeType{
+		MemberType: memberType,
+	}
+}
+
+func (t *InclusiveRangeType) TypeArguments() []Type {
+	memberType := t.MemberType
+	return []Type{
+		memberType,
+	}
+}
+
+func (t *InclusiveRangeType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	CheckParameterizedTypeInstantiated(t, pos, memoryGauge, report)
+}
+
+var inclusiveRangeTypeParameter = &TypeParameter{
+	Name:      "T",
+	TypeBound: IntegerType,
+}
+
+func (*InclusiveRangeType) TypeParameters() []*TypeParameter {
+	return []*TypeParameter{
+		inclusiveRangeTypeParameter,
+	}
+}
+
+const InclusiveRangeTypeStartFieldName = "start"
+const inclusiveRangeTypeStartFieldDocString = `
+The start of the InclusiveRange sequence
+`
+const InclusiveRangeTypeEndFieldName = "end"
+const inclusiveRangeTypeEndFieldDocString = `
+The end of the InclusiveRange sequence
+`
+
+const InclusiveRangeTypeStepFieldName = "step"
+const inclusiveRangeTypeStepFieldDocString = `
+The step size of the InclusiveRange sequence
+`
+
+var InclusiveRangeTypeFieldNames = []string{
+	InclusiveRangeTypeStartFieldName,
+	InclusiveRangeTypeEndFieldName,
+	InclusiveRangeTypeStepFieldName,
+}
+
+const InclusiveRangeTypeContainsFunctionName = "contains"
+
+const inclusiveRangeTypeContainsFunctionDocString = `
+Returns true if the given integer is in the InclusiveRange sequence
+`
+
+func (t *InclusiveRangeType) GetMembers() map[string]MemberResolver {
+	t.initializeMemberResolvers()
+	return t.memberResolvers
+}
+
+func InclusiveRangeContainsFunctionType(elementType Type) *FunctionType {
+	return NewSimpleFunctionType(
+		FunctionPurityView,
+		[]Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "element",
+				TypeAnnotation: NewTypeAnnotation(elementType),
+			},
+		},
+		BoolTypeAnnotation,
+	)
+}
+
+func (t *InclusiveRangeType) initializeMemberResolvers() {
+	t.memberResolversOnce.Do(func() {
+		t.memberResolvers = withBuiltinMembers(
+			t,
+			map[string]MemberResolver{
+				InclusiveRangeTypeStartFieldName: {
+					Kind: common.DeclarationKindField,
+					Resolve: func(
+						memoryGauge common.MemoryGauge,
+						identifier string,
+						_ ast.HasPosition,
+						_ func(error),
+					) *Member {
+						return NewPublicConstantFieldMember(
+							memoryGauge,
+							t,
+							identifier,
+							t.MemberType,
+							inclusiveRangeTypeStartFieldDocString,
+						)
+					},
+				},
+				InclusiveRangeTypeEndFieldName: {
+					Kind: common.DeclarationKindField,
+					Resolve: func(
+						memoryGauge common.MemoryGauge,
+						identifier string,
+						_ ast.HasPosition,
+						_ func(error),
+					) *Member {
+						return NewPublicConstantFieldMember(
+							memoryGauge,
+							t,
+							identifier,
+							t.MemberType,
+							inclusiveRangeTypeEndFieldDocString,
+						)
+					},
+				},
+				InclusiveRangeTypeStepFieldName: {
+					Kind: common.DeclarationKindField,
+					Resolve: func(
+						memoryGauge common.MemoryGauge,
+						identifier string,
+						_ ast.HasPosition,
+						_ func(error),
+					) *Member {
+						return NewPublicConstantFieldMember(
+							memoryGauge,
+							t,
+							identifier,
+							t.MemberType,
+							inclusiveRangeTypeStepFieldDocString,
+						)
+					},
+				},
+				InclusiveRangeTypeContainsFunctionName: {
+					Kind: common.DeclarationKindFunction,
+					Resolve: func(
+						memoryGauge common.MemoryGauge,
+						identifier string,
+						targetRange ast.HasPosition,
+						report func(error),
+					) *Member {
+						elementType := t.MemberType
+
+						return NewPublicFunctionMember(
+							memoryGauge,
+							t,
+							identifier,
+							InclusiveRangeContainsFunctionType(elementType),
+							inclusiveRangeTypeContainsFunctionDocString,
+						)
+					},
+				},
+			},
+		)
+	})
+}
+
+func (*InclusiveRangeType) AllowsValueIndexingAssignment() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) Unify(
+	other Type,
+	typeParameters *TypeParameterTypeOrderedMap,
+	report func(err error),
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
+) bool {
+	otherRange, ok := other.(*InclusiveRangeType)
+	if !ok {
+		return false
+	}
+
+	return t.MemberType.Unify(
+		otherRange.MemberType,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
+}
+
+func (t *InclusiveRangeType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
+	memberType := t.MemberType.Resolve(typeArguments)
+	if memberType == nil {
+		return nil
+	}
+
+	return &InclusiveRangeType{
+		MemberType: memberType,
+	}
+}
+
+func (t *InclusiveRangeType) IsPrimitiveType() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) ContainFieldsOrElements() bool {
+	return false
+}
+
+func (t *InclusiveRangeType) Map(
+	gauge common.MemoryGauge,
+	typeParamMap map[*TypeParameter]*TypeParameter,
+	f func(Type) Type,
+) Type {
+	mappedMemberType := t.MemberType.Map(gauge, typeParamMap, f)
+	return f(NewInclusiveRangeType(gauge, mappedMemberType))
 }
 
 // ReferenceType represents the reference to a value
@@ -5963,6 +6967,7 @@ var _ ValueIndexableType = &ReferenceType{}
 var _ TypeIndexableType = &ReferenceType{}
 
 var UnauthorizedAccess Access = PrimitiveAccess(ast.AccessAll)
+var InaccessibleAccess Access = PrimitiveAccess(ast.AccessNone)
 
 func NewReferenceType(
 	memoryGauge common.MemoryGauge,
@@ -6011,6 +7016,9 @@ func (t *ReferenceType) String() string {
 	if t.Authorization != UnauthorizedAccess {
 		authorization = t.Authorization.String()
 	}
+	if _, isMapping := t.Authorization.(*EntitlementMapAccess); isMapping {
+		authorization = "mapping " + authorization
+	}
 	return formatReferenceType(" ", authorization, t.Type.String())
 }
 
@@ -6021,6 +7029,9 @@ func (t *ReferenceType) QualifiedString() string {
 	var authorization string
 	if t.Authorization != UnauthorizedAccess {
 		authorization = t.Authorization.QualifiedString()
+	}
+	if _, isMapping := t.Authorization.(*EntitlementMapAccess); isMapping {
+		authorization = "mapping " + authorization
 	}
 	return formatReferenceType(" ", authorization, t.Type.QualifiedString())
 }
@@ -6056,8 +7067,16 @@ func (t *ReferenceType) IsResourceType() bool {
 	return false
 }
 
+func (t *ReferenceType) IsPrimitiveType() bool {
+	return false
+}
+
 func (t *ReferenceType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
+}
+
+func (*ReferenceType) IsOrContainsReferenceType() bool {
+	return true
 }
 
 func (t *ReferenceType) IsStorable(_ map[*Member]bool) bool {
@@ -6125,22 +7144,18 @@ func (t *ReferenceType) isTypeIndexableType() bool {
 	return ok && referencedType.isTypeIndexableType()
 }
 
-func (t *ReferenceType) TypeIndexingElementType(indexingType Type, astRange func() ast.Range) (Type, error) {
+func (t *ReferenceType) TypeIndexingElementType(indexingType Type, _ func() ast.Range) (Type, error) {
 	_, ok := t.Type.(TypeIndexableType)
 	if !ok {
 		return nil, nil
 	}
 
 	var access Access = UnauthorizedAccess
-	switch attachment := indexingType.(type) {
+	switch indexingType.(type) {
 	case *CompositeType:
-		if attachment.AttachmentEntitlementAccess != nil {
-			var err error
-			access, err = attachment.AttachmentEntitlementAccess.Image(t.Authorization, astRange)
-			if err != nil {
-				return nil, err
-			}
-		}
+		// attachment access on a composite reference yields a reference to the attachment entitled to the same
+		// entitlements as that reference
+		access = t.Authorization
 	}
 
 	return &OptionalType{
@@ -6192,14 +7207,21 @@ func (t *ReferenceType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 	otherReference, ok := other.(*ReferenceType)
 	if !ok {
 		return false
 	}
 
-	return t.Type.Unify(otherReference.Type, typeParameters, report, outerRange)
+	return t.Type.Unify(
+		otherReference.Type,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *ReferenceType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -6212,6 +7234,10 @@ func (t *ReferenceType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type
 		Authorization: t.Authorization,
 		Type:          newInnerType,
 	}
+}
+
+func (t *ReferenceType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	t.Type.CheckInstantiated(pos, memoryGauge, report)
 }
 
 const AddressTypeName = "Address"
@@ -6255,7 +7281,15 @@ func (*AddressType) IsResourceType() bool {
 	return false
 }
 
+func (*AddressType) IsPrimitiveType() bool {
+	return true
+}
+
 func (*AddressType) IsInvalidType() bool {
+	return false
+}
+
+func (*AddressType) IsOrContainsReferenceType() bool {
 	return false
 }
 
@@ -6306,12 +7340,22 @@ func (*AddressType) IsSuperType() bool {
 	return false
 }
 
-func (*AddressType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*AddressType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
 func (t *AddressType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+func (*AddressType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }
 
 const AddressTypeToBytesFunctionName = `toBytes`
@@ -6347,6 +7391,23 @@ func (t *AddressType) initializeMemberResolvers() {
 		})
 		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
 	})
+}
+
+func IsPrimitiveOrContainerOfPrimitive(referencedType Type) bool {
+	switch ty := referencedType.(type) {
+	case *VariableSizedType:
+		return IsPrimitiveOrContainerOfPrimitive(ty.Type)
+
+	case *ConstantSizedType:
+		return IsPrimitiveOrContainerOfPrimitive(ty.Type)
+
+	case *DictionaryType:
+		return IsPrimitiveOrContainerOfPrimitive(ty.KeyType) &&
+			IsPrimitiveOrContainerOfPrimitive(ty.ValueType)
+
+	default:
+		return ty.IsPrimitiveType()
+	}
 }
 
 // IsSubType determines if the given subtype is a subtype
@@ -6446,6 +7507,21 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 	case AnyStructAttachmentType:
 		return !subType.IsResourceType() && isAttachmentType(subType)
 
+	case HashableStructType:
+		return IsHashableStructType(subType)
+
+	case PathType:
+		return IsSubType(subType, StoragePathType) ||
+			IsSubType(subType, CapabilityPathType)
+
+	case StorableType:
+		storableResults := map[*Member]bool{}
+		return subType.IsStorable(storableResults)
+
+	case CapabilityPathType:
+		return IsSubType(subType, PrivatePathType) ||
+			IsSubType(subType, PublicPathType)
+
 	case NumberType:
 		switch subType {
 		case NumberType, SignedNumberType:
@@ -6465,15 +7541,13 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	case IntegerType:
 		switch subType {
-		case IntegerType, SignedIntegerType,
-			UIntType,
-			UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
-			Word8Type, Word16Type, Word32Type, Word64Type, Word128Type, Word256Type:
+		case IntegerType, SignedIntegerType, FixedSizeUnsignedIntegerType,
+			UIntType:
 
 			return true
 
 		default:
-			return IsSubType(subType, SignedIntegerType)
+			return IsSubType(subType, SignedIntegerType) || IsSubType(subType, FixedSizeUnsignedIntegerType)
 		}
 
 	case SignedIntegerType:
@@ -6481,6 +7555,17 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		case SignedIntegerType,
 			IntType,
 			Int8Type, Int16Type, Int32Type, Int64Type, Int128Type, Int256Type:
+
+			return true
+
+		default:
+			return false
+		}
+
+	case FixedSizeUnsignedIntegerType:
+		switch subType {
+		case UInt8Type, UInt16Type, UInt32Type, UInt64Type, UInt128Type, UInt256Type,
+			Word8Type, Word16Type, Word32Type, Word64Type, Word128Type, Word256Type:
 
 			return true
 
@@ -6625,21 +7710,164 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		return true
 
 	case *IntersectionType:
-		switch typedSubType := subType.(type) {
-		case *IntersectionType:
 
-			// A intersection type `{Us}` is a subtype of a intersection type `{Vs}` / `{Vs}` / `{Vs}`:
-			// when `Vs` is a subset of `Us`.
+		// TODO: replace with
+		//
+		//switch typedSubType := subType.(type) {
+		//case *IntersectionType:
+		//
+		//	// An intersection type `{Us}` is a subtype of an intersection type `{Vs}` / `{Vs}` / `{Vs}`:
+		//	// when `Vs` is a subset of `Us`.
+		//
+		//	return typedSuperType.EffectiveIntersectionSet().
+		//		IsSubsetOf(typedSubType.EffectiveIntersectionSet())
+		//
+		//case *CompositeType:
+		//	// A type `T` is a subtype of an intersection type `{Us}` / `{Us}` / `{Us}`:
+		//	// when `T` conforms to `Us`.
+		//
+		//	return typedSuperType.EffectiveIntersectionSet().
+		//		IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
+		//}
 
-			return typedSuperType.EffectiveIntersectionSet().
-				IsSubsetOf(typedSubType.EffectiveIntersectionSet())
+		intersectionSuperType := typedSuperType.LegacyType //nolint:staticcheck
 
-		case *CompositeType:
-			// A type `T` is a subtype of a intersection type `{Us}` / `{Us}` / `{Us}`:
-			// when `T` conforms to `Us`.
+		switch intersectionSuperType {
+		case nil, AnyResourceType, AnyStructType, AnyType:
 
-			return typedSuperType.EffectiveIntersectionSet().
-				IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
+			switch subType {
+			case AnyResourceType:
+				// `AnyResource` is a subtype of an intersection type
+				// - `AnyResource{Us}`: not statically;
+				// - `AnyStruct{Us}`: never.
+				// - `Any{Us}`: not statically;
+
+				return false
+
+			case AnyStructType:
+				// `AnyStruct` is a subtype of an intersection type
+				// - `AnyStruct{Us}`: not statically.
+				// - `AnyResource{Us}`: never;
+				// - `Any{Us}`: not statically.
+
+				return false
+
+			case AnyType:
+				// `Any` is a subtype of an intersection type
+				// - `Any{Us}: not statically.`
+				// - `AnyStruct{Us}`: never;
+				// - `AnyResource{Us}`: never;
+
+				return false
+			}
+
+			switch typedSubType := subType.(type) {
+			case *IntersectionType:
+
+				// An intersection type `T{Us}`
+				// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+
+				intersectionSubtype := typedSubType.LegacyType //nolint:staticcheck
+				switch intersectionSubtype {
+				case nil:
+					// An intersection type `{Us}` is a subtype of an intersection type `{Vs}` / `{Vs}` / `{Vs}`:
+					// when `Vs` is a subset of `Us`.
+
+					return typedSuperType.EffectiveIntersectionSet().
+						IsSubsetOf(typedSubType.EffectiveIntersectionSet())
+
+				case AnyResourceType, AnyStructType, AnyType:
+					// When `T == AnyResource || T == AnyStruct || T == Any`:
+					// if the intersection type of the subtype
+					// is a subtype of the intersection supertype,
+					// and `Vs` is a subset of `Us`.
+
+					if intersectionSuperType != nil &&
+						!IsSubType(intersectionSubtype, intersectionSuperType) {
+
+						return false
+					}
+
+					return typedSuperType.EffectiveIntersectionSet().
+						IsSubsetOf(typedSubType.EffectiveIntersectionSet())
+				}
+
+				if intersectionSubtype, ok := intersectionSubtype.(*CompositeType); ok {
+					// When `T != AnyResource && T != AnyStruct && T != Any`:
+					// if the intersection type of the subtype
+					// is a subtype of the intersection supertype,
+					// and `T` conforms to `Vs`.
+					// `Us` and `Vs` do *not* have to be subsets.
+
+					if intersectionSuperType != nil &&
+						!IsSubType(intersectionSubtype, intersectionSuperType) {
+
+						return false
+					}
+
+					return typedSuperType.EffectiveIntersectionSet().
+						IsSubsetOf(intersectionSubtype.EffectiveInterfaceConformanceSet())
+				}
+
+			case *CompositeType:
+				// A type `T`
+				// is a subtype of an intersection type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
+				// if `T` is a subtype of the intersection supertype,
+				// and `T` conforms to `Us`.
+
+				if intersectionSuperType != nil &&
+					!IsSubType(typedSubType, intersectionSuperType) {
+
+					return false
+				}
+
+				return typedSuperType.EffectiveIntersectionSet().
+					IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
+			}
+
+		default:
+			// Supertype (intersection) has a non-Any* legacy type
+
+			switch typedSubType := subType.(type) {
+			case *IntersectionType:
+
+				// An intersection type `T{Us}`
+				// is a subtype of an intersection type `V{Ws}`:
+
+				intersectionSubType := typedSubType.LegacyType //nolint:staticcheck
+				switch intersectionSubType {
+				case nil, AnyResourceType, AnyStructType, AnyType:
+					// When `T == AnyResource || T == AnyStruct || T == Any`:
+					// not statically.
+					return false
+				}
+
+				if intersectionSubType, ok := intersectionSubType.(*CompositeType); ok {
+					// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
+					//
+					// `Us` and `Ws` do *not* have to be subsets:
+					// The owner may freely restrict and unrestrict.
+
+					return intersectionSubType == intersectionSuperType
+				}
+
+			case *CompositeType:
+				// A type `T`
+				// is a subtype of an intersection type `U{Vs}`: if `T <: U`.
+				//
+				// The owner may freely restrict.
+
+				return IsSubType(typedSubType, intersectionSuperType)
+			}
+
+			switch subType {
+			case AnyResourceType, AnyStructType, AnyType:
+				// A type `T`
+				// is a subtype of an intersection type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
+				// not statically.
+
+				return false
+			}
 		}
 
 	case *CompositeType:
@@ -6647,11 +7875,31 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		// NOTE: type equality case (composite type `T` is subtype of composite type `U`)
 		// is already handled at beginning of function
 
-		switch subType.(type) {
+		switch typedSubType := subType.(type) {
 		case *IntersectionType:
 
-			// A intersection type `{Us}` is never a subtype of a type `V`:
-			return false
+			// TODO: bring back once legacy type is removed
+			// An intersection type `{Us}` is never a subtype of a type `V`:
+			//return false
+
+			// TODO: remove support for legacy type
+			// An intersection type `T{Us}`
+			// is a subtype of a type `V`:
+
+			legacyType := typedSubType.LegacyType
+			switch legacyType {
+			case nil, AnyResourceType, AnyStructType, AnyType:
+				// When `T == AnyResource || T == AnyStruct || T == Any`: not statically.
+				return false
+			}
+
+			if intersectionSubType, ok := legacyType.(*CompositeType); ok {
+				// When `T != AnyResource && T != AnyStruct`: if `T == V`.
+				//
+				// The owner may freely unrestrict.
+
+				return intersectionSubType == typedSuperType
+			}
 
 		case *CompositeType:
 			// Non-equal composite types are never subtypes of each other
@@ -6663,7 +7911,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 		switch typedSubType := subType.(type) {
 		case *CompositeType:
 
-			// A composite type `T` is a subtype of a interface type `V`:
+			// A composite type `T` is a subtype of an interface type `V`:
 			// if `T` conforms to `V`, and `V` and `T` are of the same kind
 
 			if typedSubType.Kind != typedSuperType.CompositeKind {
@@ -6673,15 +7921,17 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 			return typedSubType.EffectiveInterfaceConformanceSet().
 				Contains(typedSuperType)
 
-		// An interface type is a supertype of a intersection type if at least one value
+		// An interface type is a supertype of an intersection type if at least one value
 		// in the intersection set is a subtype of the interface supertype.
-
-		// This particular case comes up when checking attachment access; enabling the following expression to typechecking:
-		// resource interface I { /* ... */ }
-		// attachment A for I { /* ... */ }
-
-		// let i : {I} = ... // some operation constructing `i`
-		// let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that {I} <: I
+		//
+		// This particular case comes up when checking attachment access;
+		// enabling the following expression to type-checking:
+		//
+		//   resource interface I { /* ... */ }
+		//   attachment A for I { /* ... */ }
+		//
+		//   let i : {I} = ... // some operation constructing `i`
+		//   let a = i[A] // must here check that `i`'s type is a subtype of `A`'s base type, or that {I} <: I
 		case *IntersectionType:
 			return typedSubType.EffectiveIntersectionSet().Contains(typedSuperType)
 
@@ -6721,12 +7971,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 				}
 			}
 		}
-
-	case *SimpleType:
-		if typedSuperType.IsSuperTypeOf == nil {
-			return false
-		}
-		return typedSuperType.IsSuperTypeOf(subType)
 	}
 
 	// TODO: enforce type arguments, remove this rule
@@ -6857,7 +8101,15 @@ func (*TransactionType) IsResourceType() bool {
 	return false
 }
 
+func (*TransactionType) IsPrimitiveType() bool {
+	return false
+}
+
 func (*TransactionType) IsInvalidType() bool {
+	return false
+}
+
+func (*TransactionType) IsOrContainsReferenceType() bool {
 	return false
 }
 
@@ -6912,12 +8164,28 @@ func (t *TransactionType) initializeMemberResolvers() {
 	})
 }
 
-func (*TransactionType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*TransactionType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
 func (t *TransactionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+func (t *TransactionType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	for _, param := range t.PrepareParameters {
+		param.TypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+	}
+
+	for _, param := range t.Parameters {
+		param.TypeAnnotation.Type.CheckInstantiated(pos, memoryGauge, report)
+	}
 }
 
 // IntersectionType
@@ -6929,13 +8197,17 @@ type IntersectionType struct {
 	effectiveIntersectionSetOnce sync.Once
 	memberResolvers              map[string]MemberResolver
 	memberResolversOnce          sync.Once
-	supportedEntitlements        *EntitlementOrderedSet
+	supportedEntitlementsOnce    sync.Once
+	supportedEntitlements        *EntitlementSet
+	// Deprecated
+	LegacyType Type
 }
 
 var _ Type = &IntersectionType{}
 
-func NewIntersectionType(memoryGauge common.MemoryGauge, types []*InterfaceType) *IntersectionType {
-	if len(types) == 0 {
+// TODO: remove `legacyType` once all uses of it are removed
+func NewIntersectionType(memoryGauge common.MemoryGauge, legacyType Type, types []*InterfaceType) *IntersectionType {
+	if len(types) == 0 && legacyType == nil {
 		panic(errors.NewUnreachableError())
 	}
 
@@ -6948,7 +8220,8 @@ func NewIntersectionType(memoryGauge common.MemoryGauge, types []*InterfaceType)
 	common.UseMemory(memoryGauge, entriesUsage)
 
 	return &IntersectionType{
-		Types: types,
+		Types:      types,
+		LegacyType: legacyType, //nolint:staticcheck
 	}
 }
 
@@ -7056,9 +8329,23 @@ func (t *IntersectionType) IsResourceType() bool {
 	return t.Types[0].IsResourceType()
 }
 
+func (*IntersectionType) IsPrimitiveType() bool {
+	return false
+}
+
 func (t *IntersectionType) IsInvalidType() bool {
 	for _, typ := range t.Types {
 		if typ.IsInvalidType() {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (t *IntersectionType) IsOrContainsReferenceType() bool {
+	for _, typ := range t.Types {
+		if typ.IsOrContainsReferenceType() {
 			return true
 		}
 	}
@@ -7135,6 +8422,7 @@ func (t *IntersectionType) Map(gauge common.MemoryGauge, typeParamMap map[*TypeP
 
 	return f(NewIntersectionType(
 		gauge,
+		t.LegacyType, //nolint:staticcheck
 		intersectionTypes,
 	))
 }
@@ -7149,8 +8437,8 @@ func (t *IntersectionType) initializeMemberResolvers() {
 
 		memberResolvers := map[string]MemberResolver{}
 
-		// Return the members of all typs.
-		// The invariant that typs may not have overlapping members is not checked here,
+		// Return the members of all types.
+		// The invariant that types may not have overlapping members is not checked here,
 		// but implicitly when the resource declaration's conformances are checked.
 
 		for _, typ := range t.Types {
@@ -7165,22 +8453,27 @@ func (t *IntersectionType) initializeMemberResolvers() {
 	})
 }
 
-func (t *IntersectionType) SupportedEntitlements() (set *EntitlementOrderedSet) {
-	if t.supportedEntitlements != nil {
-		return t.supportedEntitlements
-	}
-
-	// an intersection type supports all the entitlements of its interfaces
-	set = orderedmap.New[EntitlementOrderedSet](t.EffectiveIntersectionSet().Len())
-	t.EffectiveIntersectionSet().ForEach(func(it *InterfaceType) {
-		set.SetAll(it.SupportedEntitlements())
+func (t *IntersectionType) SupportedEntitlements() *EntitlementSet {
+	t.supportedEntitlementsOnce.Do(func() {
+		// an intersection type supports all the entitlements of its interfaces
+		set := &EntitlementSet{}
+		t.EffectiveIntersectionSet().
+			ForEach(func(interfaceType *InterfaceType) {
+				set.Merge(interfaceType.SupportedEntitlements())
+			})
+		t.supportedEntitlements = set
 	})
 
-	t.supportedEntitlements = set
-	return set
+	return t.supportedEntitlements
 }
 
-func (*IntersectionType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*IntersectionType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	// TODO: how do we unify the intersection sets?
 	return false
 }
@@ -7190,11 +8483,14 @@ func (t *IntersectionType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
-// intersection types must be type indexable, because this is how we handle access control for attachments.
+// Intersection types must be type indexable, because this is how we handle access control for attachments.
 // Specifically, because in `v[A]`, `v` must be a subtype of `A`'s declared base,
-// if `v` is a intersection type `{I}`, only attachments declared for `I` or a supertype can be accessed on `v`.
+// if `v` is an intersection type `{I}`, only attachments declared for `I` or a supertype can be accessed on `v`.
+//
 // Attachments declared for concrete types implementing `I` cannot be accessed.
-// A good elucidating example here is that an attachment declared for `Vault` cannot be accessed on a value of type `&{Provider}`
+//
+// A good elucidating example here is that an attachment declared for `Vault`
+// cannot be accessed on a value of type `&{Provider}`
 func (t *IntersectionType) isTypeIndexableType() bool {
 	// resources and structs only can be indexed for attachments, but all intersection types
 	// are necessarily structs and resources, we return true
@@ -7205,9 +8501,9 @@ func (t *IntersectionType) TypeIndexingElementType(indexingType Type, _ func() a
 	var access Access = UnauthorizedAccess
 	switch attachment := indexingType.(type) {
 	case *CompositeType:
-		if attachment.AttachmentEntitlementAccess != nil {
-			access = attachment.AttachmentEntitlementAccess.Codomain()
-		}
+		// when accessed on an owned value, the produced attachment reference is entitled to all the
+		// entitlements it supports
+		access = attachment.SupportedEntitlements().Access()
 	}
 
 	return &OptionalType{
@@ -7223,6 +8519,10 @@ func (t *IntersectionType) IsValidIndexingType(ty Type) bool {
 	return isComposite &&
 		IsSubType(t, attachmentType.baseType) &&
 		attachmentType.IsResourceType() == t.IsResourceType()
+}
+
+func (t *IntersectionType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// No-OP
 }
 
 // CapabilityType
@@ -7306,11 +8606,23 @@ func (*CapabilityType) IsResourceType() bool {
 	return false
 }
 
+func (*CapabilityType) IsPrimitiveType() bool {
+	return false
+}
+
 func (t *CapabilityType) IsInvalidType() bool {
 	if t.BorrowType == nil {
 		return false
 	}
 	return t.BorrowType.IsInvalidType()
+
+}
+
+func (t *CapabilityType) IsOrContainsReferenceType() bool {
+	if t.BorrowType == nil {
+		return false
+	}
+	return t.BorrowType.IsOrContainsReferenceType()
 }
 
 func (t *CapabilityType) TypeAnnotationState() TypeAnnotationState {
@@ -7363,7 +8675,8 @@ func (t *CapabilityType) Unify(
 	other Type,
 	typeParameters *TypeParameterTypeOrderedMap,
 	report func(err error),
-	outerRange ast.Range,
+	memoryGauge common.MemoryGauge,
+	outerRange ast.HasPosition,
 ) bool {
 	otherCap, ok := other.(*CapabilityType)
 	if !ok {
@@ -7374,7 +8687,13 @@ func (t *CapabilityType) Unify(
 		return false
 	}
 
-	return t.BorrowType.Unify(otherCap.BorrowType, typeParameters, report, outerRange)
+	return t.BorrowType.Unify(
+		otherCap.BorrowType,
+		typeParameters,
+		report,
+		memoryGauge,
+		outerRange,
+	)
 }
 
 func (t *CapabilityType) Resolve(typeArguments *TypeParameterTypeOrderedMap) Type {
@@ -7402,7 +8721,12 @@ func (t *CapabilityType) TypeParameters() []*TypeParameter {
 	}
 }
 
-func (t *CapabilityType) Instantiate(typeArguments []Type, _ func(err error)) Type {
+func (t *CapabilityType) Instantiate(
+	_ common.MemoryGauge,
+	typeArguments []Type,
+	_ []*ast.TypeAnnotation,
+	_ func(err error),
+) Type {
 	borrowType := typeArguments[0]
 	return &CapabilityType{
 		BorrowType: borrowType,
@@ -7427,6 +8751,10 @@ func (t *CapabilityType) TypeArguments() []Type {
 	return []Type{
 		borrowType,
 	}
+}
+
+func (t *CapabilityType) CheckInstantiated(pos ast.HasPosition, memoryGauge common.MemoryGauge, report func(err error)) {
+	CheckParameterizedTypeInstantiated(t, pos, memoryGauge, report)
 }
 
 func CapabilityTypeBorrowFunctionType(borrowType Type) *FunctionType {
@@ -7767,7 +9095,7 @@ func MembersMapAsResolvers(members *StringMemberOrderedMap) map[string]MemberRes
 	members.Foreach(func(name string, member *Member) {
 		resolvers[name] = MemberResolver{
 			Kind: member.DeclarationKind,
-			Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(_ common.MemoryGauge, _ string, _ ast.HasPosition, _ func(error)) *Member {
 				return member
 			},
 		}
@@ -7783,7 +9111,7 @@ func MembersAsResolvers(members []*Member) map[string]MemberResolver {
 		member := loopMember
 		resolvers[member.Identifier.Identifier] = MemberResolver{
 			Kind: member.DeclarationKind,
-			Resolve: func(_ common.MemoryGauge, _ string, _ ast.Range, _ func(error)) *Member {
+			Resolve: func(_ common.MemoryGauge, _ string, _ ast.HasPosition, _ func(error)) *Member {
 				return member
 			},
 		}
@@ -7805,6 +9133,7 @@ type EntitlementType struct {
 	Location      common.Location
 	containerType Type
 	Identifier    string
+	isInvalid     bool
 }
 
 var _ Type = &EntitlementType{}
@@ -7870,19 +9199,27 @@ func (t *EntitlementType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
+func (*EntitlementType) IsPrimitiveType() bool {
+	return false
+}
+
 func (t *EntitlementType) IsInvalidType() bool {
+	return t.isInvalid
+}
+
+func (*EntitlementType) IsOrContainsReferenceType() bool {
 	return false
 }
 
-func (t *EntitlementType) IsStorable(_ map[*Member]bool) bool {
+func (*EntitlementType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
-func (t *EntitlementType) IsExportable(_ map[*Member]bool) bool {
+func (*EntitlementType) IsExportable(_ map[*Member]bool) bool {
 	return false
 }
 
-func (t *EntitlementType) IsImportable(_ map[*Member]bool) bool {
+func (*EntitlementType) IsImportable(_ map[*Member]bool) bool {
 	return false
 }
 
@@ -7910,12 +9247,22 @@ func (t *EntitlementType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
-func (*EntitlementType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*EntitlementType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
 func (t *EntitlementType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
+}
+
+func (t *EntitlementType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// No-OP
 }
 
 // EntitlementMapType
@@ -7938,10 +9285,14 @@ func NewEntitlementRelation(
 }
 
 type EntitlementMapType struct {
-	Location          common.Location
-	containerType     Type
-	Identifier        string
-	Relations         []EntitlementRelation
+	Location      common.Location
+	containerType Type
+	Identifier    string
+	Relations     []EntitlementRelation
+
+	// Whether this map type includes the special identity relation,
+	// which maps every input to itself. The `Identity` mapping itself
+	// is defined as the empty map type that includes the identity relation
 	IncludesIdentity  bool
 	resolveInclusions sync.Once
 }
@@ -8013,19 +9364,27 @@ func (t *EntitlementMapType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
-func (t *EntitlementMapType) IsInvalidType() bool {
+func (*EntitlementMapType) IsPrimitiveType() bool {
 	return false
 }
 
-func (t *EntitlementMapType) IsStorable(_ map[*Member]bool) bool {
+func (*EntitlementMapType) IsInvalidType() bool {
 	return false
 }
 
-func (t *EntitlementMapType) IsExportable(_ map[*Member]bool) bool {
+func (*EntitlementMapType) IsOrContainsReferenceType() bool {
 	return false
 }
 
-func (t *EntitlementMapType) IsImportable(_ map[*Member]bool) bool {
+func (*EntitlementMapType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*EntitlementMapType) IsExportable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*EntitlementMapType) IsImportable(_ map[*Member]bool) bool {
 	return false
 }
 
@@ -8053,7 +9412,13 @@ func (t *EntitlementMapType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
-func (*EntitlementMapType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*EntitlementMapType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -8101,7 +9466,7 @@ func (t *EntitlementMapType) resolveEntitlementMappingInclusions(
 				})
 				continue
 			}
-			if _, isCylical := visitedMaps[includedMapType]; isCylical {
+			if _, isCyclical := visitedMaps[includedMapType]; isCyclical {
 				checker.report(&CyclicEntitlementMappingError{
 					Map:          t,
 					IncludedType: includedMapType,
@@ -8128,6 +9493,10 @@ func (t *EntitlementMapType) resolveEntitlementMappingInclusions(
 			includedMaps[includedMapType] = struct{}{}
 		}
 	})
+}
+
+func (t *EntitlementMapType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }
 
 var NativeCompositeTypes = map[string]*CompositeType{}

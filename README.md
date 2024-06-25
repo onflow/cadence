@@ -43,5 +43,5 @@ Check out the [Cadence Docs](https://docs.onflow.org/cadence/language/).
 
 If you would like to contribute to Cadence, have a look at the [contributing guide](https://github.com/onflow/cadence/blob/master/CONTRIBUTING.md).
 
-Development documentation can be found in the [/docs directory](https://github.com/onflow/flow/tree/master/docs).
+Development documentation can be found in the [`/docs` directory](https://github.com/onflow/cadence/tree/master/docs).
 For example, it contains the source for the language reference.

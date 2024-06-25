@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +71,9 @@ func newHashAlgorithmHashFunction(
 	hashAlgoValue interpreter.MemberAccessibleValue,
 	hasher Hasher,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	// TODO: should ideally create a bound-host function.
+	// But the interpreter is not available at this point.
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		sema.HashAlgorithmTypeHashFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			dataValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
@@ -99,7 +101,9 @@ func newHashAlgorithmHashWithTagFunction(
 	hashAlgorithmValue interpreter.MemberAccessibleValue,
 	hasher Hasher,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewUnmeteredHostFunctionValue(
+	// TODO: should ideally create a bound-host function.
+	// But the interpreter is not available at this point.
+	return interpreter.NewUnmeteredStaticHostFunctionValue(
 		sema.HashAlgorithmTypeHashWithTagFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
 

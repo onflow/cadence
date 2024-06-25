@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,48 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 		checker.Elaboration.SetIdentifierInInvocationType(expression, valueType)
 	}
 
+	checker.checkVariableMove(expression, variable)
+
 	return valueType
+}
+
+func (checker *Checker) checkVariableMove(identifierExpression *ast.IdentifierExpression, variable *Variable) {
+
+	reportMaybeInvalidMove := func(declarationKind common.DeclarationKind) {
+		// If the parent is member-access or index-access, then it's OK.
+		// e.g: `v.foo`, `v.bar()`, `v[T]` are OK.
+		switch parent := checker.parent.(type) {
+		case *ast.MemberExpression:
+			// TODO: No need for below check? i.e: should always be true
+			if parent.Expression == identifierExpression {
+				return
+			}
+		case *ast.IndexExpression:
+			// Only `v[foo]` is OK, `foo[v]` is not.
+			if parent.TargetExpression == identifierExpression {
+				return
+			}
+		}
+
+		checker.report(
+			&InvalidMoveError{
+				Name:            variable.Identifier,
+				DeclarationKind: declarationKind,
+				Pos:             identifierExpression.StartPosition(),
+			},
+		)
+	}
+
+	switch ty := variable.Type.(type) {
+	case *TransactionType:
+		reportMaybeInvalidMove(common.DeclarationKindTransaction)
+
+	case CompositeKindedType:
+		kind := ty.GetCompositeKind()
+		if kind == common.CompositeKindContract {
+			reportMaybeInvalidMove(common.DeclarationKindContract)
+		}
+	}
 }
 
 func (checker *Checker) checkReferenceValidity(variable *Variable, hasPosition ast.HasPosition) {
@@ -161,7 +202,7 @@ func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Varia
 func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
 	expression := statement.Expression
 
-	ty := checker.VisitExpression(expression, nil)
+	ty := checker.VisitExpression(expression, statement, nil)
 
 	if ty.IsResourceType() {
 		checker.report(
@@ -270,7 +311,7 @@ func (checker *Checker) visitIndexExpression(
 ) Type {
 
 	targetExpression := indexExpression.TargetExpression
-	targetType := checker.VisitExpression(targetExpression, nil)
+	targetType := checker.VisitExpression(targetExpression, indexExpression, nil)
 
 	// NOTE: check indexed type first for UX reasons
 
@@ -309,6 +350,7 @@ func (checker *Checker) visitIndexExpression(
 		}
 		indexingType := checker.VisitExpression(
 			indexExpression.IndexingExpression,
+			indexExpression,
 			valueIndexedType.IndexingType(),
 		)
 
@@ -321,7 +363,7 @@ func (checker *Checker) visitIndexExpression(
 		//   2) is container-typed,
 		// then the element type should also be a reference.
 		returnReference := false
-		if !isAssignment && shouldReturnReference(valueIndexedType, elementType) {
+		if shouldReturnReference(valueIndexedType, elementType, isAssignment) {
 			// For index expressions, element are un-authorized.
 			elementType = checker.getReferenceType(elementType, false, UnauthorizedAccess)
 
@@ -354,13 +396,17 @@ func (checker *Checker) visitIndexExpression(
 			)
 			return InvalidType
 		}
+
 		elementType := checker.checkTypeIndexingExpression(typeIndexedType, indexExpression)
 		if elementType == InvalidType {
 			checker.report(
 				&InvalidTypeIndexingError{
 					BaseType:           typeIndexedType,
 					IndexingExpression: indexExpression.IndexingExpression,
-					Range:              ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression.IndexingExpression),
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						indexExpression.IndexingExpression,
+					),
 				},
 			)
 		}
@@ -372,9 +418,11 @@ func (checker *Checker) visitIndexExpression(
 }
 
 func (checker *Checker) checkTypeIndexingExpression(
-	base TypeIndexableType,
+	targetType TypeIndexableType,
 	indexExpression *ast.IndexExpression,
 ) Type {
+
+	targetExpression := indexExpression.TargetExpression
 
 	if !checker.Config.AttachmentsEnabled {
 		checker.report(&AttachmentsNotEnabledError{
@@ -386,21 +434,25 @@ func (checker *Checker) checkTypeIndexingExpression(
 	if expressionType == nil {
 		return InvalidType
 	}
+
 	nominalTypeExpression, isNominalType := expressionType.(*ast.NominalType)
 	if !isNominalType {
 		return InvalidType
 	}
+
 	nominalType := checker.convertNominalType(nominalTypeExpression)
 
-	if !base.IsValidIndexingType(nominalType) {
+	if !targetType.IsValidIndexingType(nominalType) {
 		return InvalidType
 	}
 
 	checker.Elaboration.SetAttachmentAccessTypes(indexExpression, nominalType)
 
+	checker.checkUnusedExpressionResourceLoss(targetType, targetExpression)
+
 	// at this point, the base is known to be a struct/resource,
 	// and the attachment is known to be a valid attachment for that base
-	indexedType, err := base.TypeIndexingElementType(nominalType, func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression) })
+	indexedType, err := targetType.TypeIndexingElementType(nominalType, func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression) })
 	if err != nil {
 		checker.report(err)
 		return InvalidType

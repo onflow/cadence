@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ const (
 	DeclarationKindEvent
 	DeclarationKindField
 	DeclarationKindInitializer
-	DeclarationKindDestructor
+	DeclarationKindDestructorLegacy
 	DeclarationKindStructureInterface
 	DeclarationKindResourceInterface
 	DeclarationKindContractInterface
@@ -117,8 +117,8 @@ func (k DeclarationKind) Name() string {
 		return "field"
 	case DeclarationKindInitializer:
 		return "initializer"
-	case DeclarationKindDestructor:
-		return "destructor"
+	case DeclarationKindDestructorLegacy:
+		return "legacy destructor"
 	case DeclarationKindAttachment:
 		return "attachment"
 	case DeclarationKindStructureInterface:
@@ -176,7 +176,7 @@ func (k DeclarationKind) Keywords() string {
 		return "event"
 	case DeclarationKindInitializer:
 		return "init"
-	case DeclarationKindDestructor:
+	case DeclarationKindDestructorLegacy: // Deprecated
 		return "destroy"
 	case DeclarationKindAttachment:
 		return "attachment"

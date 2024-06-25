@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,11 @@ import (
 //	; cbor-tag-enum-type
 //	#6.164(composite-type)
 //
+// attachment-type =
+//
+//	; cbor-tag-attachment-type
+//	#6.165(composite-type)
+//
 // composite-type = [
 //
 //	id: id,
@@ -85,6 +90,9 @@ func (e *Encoder) encodeCompositeType(typ cadence.CompositeType, tids ccfTypeIDB
 
 	case *cadence.EnumType:
 		cborTagNum = CBORTagEnumType
+
+	case *cadence.AttachmentType:
+		cborTagNum = CBORTagAttachmentType
 
 	default:
 		panic(cadenceErrors.NewUnexpectedError("unexpected composite type %s (%T)", typ.ID(), typ))
@@ -128,7 +136,7 @@ func (e *Encoder) encodeCompositeType(typ cadence.CompositeType, tids ccfTypeIDB
 //	    ]
 //	]
 func (e *Encoder) encodeCompositeTypeFields(typ cadence.CompositeType, tids ccfTypeIDByCadenceType) error {
-	fieldTypes := typ.CompositeFields()
+	fieldTypes := getCompositeTypeFields(typ)
 
 	// Encode array head with number of fields.
 	err := e.enc.EncodeArrayHead(uint64(len(fieldTypes)))

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,12 +93,18 @@ func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentUsageError{}, errs[1])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEnum:
 
 				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[1], &invalidMoveError)
 
 			case common.CompositeKindEvent:
 
@@ -171,13 +177,20 @@ func TestCheckFunctionDeclarationParameterWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[1], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -244,11 +257,15 @@ func TestCheckFunctionDeclarationParameterWithoutResourceAnnotation(t *testing.T
 
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -618,15 +635,6 @@ func TestCheckFieldDeclarationWithResourceAnnotation(t *testing.T) {
 
 			t.Parallel()
 
-			destructor := ""
-			if kind == common.CompositeKindResource {
-				destructor = `
-                  destroy() {
-                      destroy self.t
-                  }
-                `
-			}
-
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
@@ -637,13 +645,10 @@ func TestCheckFieldDeclarationWithResourceAnnotation(t *testing.T) {
                           init(t: @T) {
                               self.t %[2]s t
                           }
-
-                          %[3]s
                       }
                     `,
 					kind.Keyword(),
 					kind.TransferOperator(),
-					destructor,
 				),
 			)
 
@@ -690,15 +695,6 @@ func TestCheckFieldDeclarationWithoutResourceAnnotation(t *testing.T) {
 
 			t.Parallel()
 
-			destructor := ""
-			if kind == common.CompositeKindResource {
-				destructor = `
-                  destroy() {
-                      destroy self.t
-                  }
-                `
-			}
-
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
@@ -709,13 +705,10 @@ func TestCheckFieldDeclarationWithoutResourceAnnotation(t *testing.T) {
                           init(t: T) {
                               self.t %[2]s t
                           }
-
-                          %[3]s
                       }
                     `,
 					kind.Keyword(),
 					kind.TransferOperator(),
-					destructor,
 				),
 			)
 
@@ -803,13 +796,20 @@ func TestCheckFunctionExpressionParameterWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[1], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -878,11 +878,16 @@ func TestCheckFunctionExpressionParameterWithoutResourceAnnotation(t *testing.T)
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -1121,7 +1126,6 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[0])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
@@ -1129,6 +1133,15 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 3)
+
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
+
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[2], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -1199,11 +1212,15 @@ func TestCheckFunctionTypeParameterWithoutResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidAttachmentAnnotationError{}, errs[1])
 
 			case common.CompositeKindStructure,
-				common.CompositeKindContract,
 				common.CompositeKindEvent,
 				common.CompositeKindEnum:
 
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -1432,10 +1449,13 @@ func TestCheckFailableCastingWithoutResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{}, errs[1])
 				assert.IsType(t, &sema.InvalidNonIdentifierFailableResourceDowncast{}, errs[2])
 
-			case common.CompositeKindStructure,
-				common.CompositeKindContract:
-
+			case common.CompositeKindStructure:
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			case common.CompositeKindEvent:
 				errs := RequireCheckerErrors(t, err, 1)
@@ -3121,7 +3141,7 @@ func testResourceNesting(
 
 		innerTypeAnnotation := "T"
 		if innerIsInterface {
-			innerTypeAnnotation = AsInterfaceType("T", innerCompositeKind)
+			innerTypeAnnotation = "{T}"
 		}
 
 		// Prepare the initializer, if needed.
@@ -3142,18 +3162,6 @@ func testResourceNesting(
 			)
 		}
 
-		destructor := ""
-		if !outerIsInterface &&
-			outerCompositeKind == common.CompositeKindResource &&
-			innerCompositeKind == common.CompositeKindResource {
-
-			destructor = `
-              destroy() {
-                  destroy self.t
-              }
-            `
-		}
-
 		innerBody := "{}"
 		if innerCompositeKind == common.CompositeKindEvent {
 			innerBody = "()"
@@ -3169,12 +3177,11 @@ func testResourceNesting(
 
 		program := fmt.Sprintf(
 			`
-              %[1]s %[2]s T%[10]s %[3]s
+              %[1]s %[2]s T%[9]s %[3]s
 
               %[4]s %[5]s U {
                   let t: %[6]s%[7]s
                   %[8]s
-                  %[9]s
               }
             `,
 			innerCompositeKind.Keyword(),
@@ -3185,7 +3192,6 @@ func testResourceNesting(
 			innerCompositeKind.Annotation(),
 			innerTypeAnnotation,
 			initializer,
-			destructor,
 			innerConformances,
 		)
 
@@ -3383,7 +3389,7 @@ func TestCheckInvalidResourceInterfaceUseAsType(t *testing.T) {
 }
 
 // TestCheckResourceInterfaceUseAsType test if a resource
-// is a subtype of a intersection AnyResource type.
+// is a subtype of an intersection AnyResource type.
 func TestCheckResourceInterfaceUseAsType(t *testing.T) {
 
 	t.Parallel()
@@ -3538,10 +3544,6 @@ func TestCheckInvalidResourceFieldMoveThroughVariableDeclaration(t *testing.T) {
           init(foo: @Foo) {
               self.foo <- foo
           }
-
-          destroy() {
-              destroy self.foo
-          }
       }
 
       fun test(): @[Foo] {
@@ -3576,10 +3578,6 @@ func TestCheckInvalidResourceFieldMoveThroughParameter(t *testing.T) {
 
           init(foo: @Foo) {
               self.foo <- foo
-          }
-
-          destroy() {
-              destroy self.foo
           }
       }
 
@@ -3621,10 +3619,6 @@ func TestCheckInvalidResourceFieldMoveSelf(t *testing.T) {
           fun test() {
              absorb(<-self.y)
           }
-
-          destroy() {
-              destroy self.y
-          }
       }
 
       fun absorb(_ y: @Y) {
@@ -3635,33 +3629,6 @@ func TestCheckInvalidResourceFieldMoveSelf(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[0])
-}
-
-func TestCheckInvalidResourceFieldUseAfterDestroy(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      resource Y {}
-
-      resource X {
-
-          var y: @Y
-
-          init() {
-              self.y <- create Y()
-          }
-
-          destroy() {
-              destroy self.y
-              destroy self.y
-          }
-      }
-    `)
-
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
 
 func TestCheckResourceArrayAppend(t *testing.T) {
@@ -4042,10 +4009,6 @@ func TestCheckInvalidResourceConstantResourceFieldSwap(t *testing.T) {
           init(foo: @Foo) {
               self.foo <- foo
           }
-
-          destroy() {
-              destroy self.foo
-          }
       }
 
       fun test() {
@@ -4077,9 +4040,6 @@ func TestCheckResourceVariableResourceFieldSwap(t *testing.T) {
               self.foo <- foo
           }
 
-          destroy() {
-              destroy self.foo
-          }
       }
 
       fun test() {
@@ -4107,10 +4067,6 @@ func TestCheckInvalidResourceFieldDestroy(t *testing.T) {
 
          init(foo: @Foo) {
              self.foo <- foo
-         }
-
-         destroy() {
-             destroy self.foo
          }
      }
 
@@ -4204,10 +4160,6 @@ func TestCheckResourceFieldUseAndDestruction(t *testing.T) {
          fun use() {
             let ri <- self.ris.remove(key: "first")
             absorb(<-ri)
-         }
-
-         destroy() {
-             destroy self.ris
          }
      }
 
@@ -5761,10 +5713,6 @@ func TestCheckOptionalResourceBindingWithSecondValue(t *testing.T) {
 
           init() {
               self.r <- create R()
-          }
-
-          destroy () {
-              destroy self.r
           }
 
           fun duplicate(): @R? {
@@ -9512,4 +9460,960 @@ func TestCheckInvalidResourceDestructionInFunction(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+}
+
+func TestCheckInvalidNestedResourceCaptureOnLeft(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("on right", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    fun() {
+                        let y <- self.x
+                        destroy y
+                    }
+                }
+            }
+      `)
+		require.NoError(t, err)
+	})
+
+	t.Run("resource field on right", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R  {
+                var x: @AnyResource?
+                init() {
+                   self.x <- nil
+                }
+                fun foo() {
+                    fun() {
+                        let y <- self.x <- nil
+                        destroy y
+                    }
+                }
+            }
+      `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("on left", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    fun() {
+                        self.x <-! nil
+                    }
+
+                    destroy self.x
+                }
+            }
+    `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("on left method scope", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    self.x <-! nil
+
+                    destroy self.x
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+
+	t.Run("contract self variable on left", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract C {
+                var x: @AnyResource?
+
+                init() {
+                   self.x <- nil
+                }
+
+                fun foo() { 
+                    fun() {
+                        self.x <-! nil
+                    }
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+
+	t.Run("contract self variable on left method scope", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract C {
+                var x: @AnyResource?
+
+                init() {
+                   self.x <- nil
+                }
+
+                fun foo() {
+                    self.x <-! nil
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckInvalidationInCondition(t *testing.T) {
+
+	t.Parallel()
+
+	testKind := func(kind ast.ConditionKind) {
+		t.Run(kind.Name(), func(t *testing.T) {
+
+			t.Parallel()
+
+			t.Run("global function", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      fun drop(_ r: @R): Bool {
+                          destroy r
+                          return true
+                      }
+
+                      fun test(_ r: @R) {
+                          %s {
+                              drop(<-r)
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.PurityError{}, errs[0])
+			})
+
+			t.Run("in composite", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      fun drop(_ r: @R): Bool {
+                          destroy r
+                          return true
+                      }
+
+                      struct S {
+                          fun test(_ r: @R) {
+                              %s {
+                                  drop(<-r)
+                              }
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+				errs := RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.PurityError{}, errs[0])
+			})
+
+			t.Run("in interface, definite invalidation", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      fun drop(_ r: @R): Bool {
+                          destroy r
+                          return true
+                      }
+
+                      struct interface S {
+                          fun test(_ r: @R) {
+                              %s {
+                                  drop(<-r)
+                              }
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+
+				errs := RequireCheckerErrors(t, err, 2)
+				assert.IsType(t, &sema.PurityError{}, errs[0])
+				assert.IsType(t, &sema.InvalidInterfaceConditionResourceInvalidationError{}, errs[1])
+			})
+
+			t.Run("in interface, temporary invalidation", func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheck(t, fmt.Sprintf(
+					`
+                      resource R {}
+
+                      struct interface SI {
+                          fun drop(_ r: @R) {
+                              %s {
+                                  r.isInstance(Type<@R>())
+                              }
+                          }
+                      }
+                    `,
+					kind.Keyword(),
+				))
+				require.NoError(t, err)
+			})
+		})
+	}
+
+	for kind := ast.ConditionKindUnknown + 1; int(kind) < ast.ConditionKindCount(); kind++ {
+		testKind(kind)
+	}
+}
+
+func TestCheckBoundFunctionToResource(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+
+                let bypass = fun(x: (fun(): Void)): (fun(): Void) {
+                    return x
+                }
+
+                // This is forbidden (ResourceMethodBindingError):
+                //    var f = r.sayHi
+                // Passing to a function invocation as an argument should also be forbidden
+                var f = bypass(r.sayHi)
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+	})
+
+	t.Run("nested invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+
+                let bypass = fun(x: (fun(): Void)): (fun(): (fun(): Void)) {
+                    return fun(): (fun(): Void) {
+                        return x
+                    }
+                }
+
+                // This is forbidden (ResourceMethodBindingError):
+                //    var f = r.sayHi
+                // Passing to a function invocation as an argument should also be forbidden
+                var f = bypass(r.sayHi)()
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+	})
+
+	t.Run("nested valid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+
+                let bypass = fun(x: Void): (fun(): Void) {
+                    return fun(): Void {
+                        return x
+                    }
+                }
+
+                // It's okay to use in an argument, as long as it's another invocation.
+                bypass(r.sayHi())()
+
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("inside index expr", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var array: [(fun(): Void)] = []
+
+                let bypass = fun(x: (fun(): Void)): Int {
+                    return 0
+                }
+
+                array[bypass(r.sayHi)]()
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+	})
+
+	t.Run("as index", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var array: [(fun(): Void)] = []
+
+                let bypass = fun(x: (fun(): Void)): Int {
+                    return 0
+                }
+
+                array[r.sayHi]()
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("function expression", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var array: [(fun(): Void)] = []
+
+                let bypass = fun(x: (fun(): Void)): Int {
+                    return 0
+                }
+
+                var i = fun(): Int {
+                    var f = r.sayHi
+                    return 0
+                }()
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[1])
+	})
+
+	t.Run("array expression", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var array: [(fun(): Void)] = []
+
+                let bypass = fun(x: (fun(): Void)): Int {
+                    return 0
+                }
+
+                [r.sayHi, r.sayHi][0]()
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[1])
+	})
+
+	t.Run("array expression map function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun sayHi() {}
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var f: fun(): Void = fun() {}
+
+                // ArrayExpression trick to capture the bound function
+                [r.sayHi].map(fun(element: fun(): Void): Void {
+                    f = element
+                })
+
+                f() // Bound resource method called here
+
+                destroy r
+            }  
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+	})
+}
+
+func TestCheckBoundFunctionToResourceInAssignment(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid assignment", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                var f: (fun(): Void)
+
+                init() {
+                    self.f = fun() {}
+                }
+
+                fun assignNewValue() {
+                    self.f = fun() {}
+                }
+            }
+
+            access(all) fun someFunc(_ f: (fun(): Void)): Int {
+                return 0
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var arr: [Int] = [1]
+
+                // Must not report an error
+                r.f = fun(): Void {}
+
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("simple invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) fun f() {}
+            }
+
+            access(all) fun someFunc(_ f: (fun(): Void)): Int {
+                return 0
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var arr: [Int] = [1]
+
+                // Must report an error!
+                arr[someFunc(r.f)]  = 2
+
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
+	})
+}
+
+func TestCheckIfLetElseBranchConfusion(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        access(all) resource Victim{}
+
+        access(all) fun main() {
+            var r: @Victim? <- nil
+            var r2: @Victim?  <- create Victim()
+            if let dummy <- r <- r2 {
+                // unreachable token destroys to please checker
+                destroy dummy
+                destroy r
+            } else {
+                // Error: r2 is invalid here
+
+                var ref = &r as &Victim?
+                var arr: @[Victim?]<- [<- r, <- r2]
+                destroy arr
+            }
+        }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
+func TestCheckOptionalBindingElseBranch(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		access(all) resource Victim {}
+
+		access(all) fun main() {
+
+			var r: @Victim? <- nil
+			var r2: @Victim?  <- create Victim()
+
+			if let dummy <- r <- r2 {
+				// unreachable token destroys to please checker
+				destroy dummy
+				destroy r
+			} else {
+				// checker failed to notice that r2 is invalid here
+				var ref = &r as &Victim?
+				var arr: @[Victim?]<- [
+                    <- r,
+                    <- r2
+                ]
+				destroy arr
+			}
+		}
+   `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+}
+
+func TestCheckResourceSecondValueTransfer(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("basic array invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            access(all) fun main() {
+                let vaults: @[AnyResource] <- [<-[]]
+                let old <- vaults[0] <- vaults
+                destroy old
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("basic array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            access(all) fun main() {
+                let vaults: @[AnyResource] <- [<-[]]
+                let bar <- create R()
+                let old <- vaults[0] <- bar
+                destroy old
+                destroy vaults
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("basic function call invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            access(all) fun foo(_ r: @R): @R {
+                return <-r 
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                let r2 <- r <- foo(<-r)
+                destroy r2
+                // note that r is still "valid" after the two value transfer so we must destroy it
+                destroy r
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("basic function call valid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            access(all) fun foo(_ r: @R): @R {
+                return <-r 
+            }
+
+            access(all) fun main() {
+                var r <- create R()
+                var bar <- create R()
+                let r2 <- r <- foo(<-bar)
+                destroy r2
+                destroy r
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R{}
+
+            access(all) fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
+                arrRef.append(<- copy2!)
+                return <- create R()
+            }
+            
+            access(all) fun main() {
+                var victim: @R? <- create R()
+                var arr: @[R] <- []
+            
+                // In the optional binding below, the 'victim' must be invalidated
+                // before evaluation of the collect() call
+                let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R])
+            
+                // Panics when trying to destroy
+                destroy copy1
+                destroy arr    
+                destroy victim
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("regression", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R{}
+
+            access(all) fun collect(copy2: @R?, _ arrRef: auth(Mutate) &[R]): @R {
+                arrRef.append(<- copy2!)
+                return <- create R()
+            }
+            
+            access(all) fun main() {
+                var victim: @R? <- create R()
+                var arr: @[R] <- []
+            
+                if let copy1 <- victim <- collect(copy2: <- victim, &arr as auth(Mutate) &[R]) {
+                    var ignore = &victim as &R?
+                    arr.append(<- copy1)
+                    destroy victim
+                } else {
+                    destroy victim // Never executed
+                }
+                
+                destroy arr
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		// we'd like to only report one error here (i.e. in `copy2: <- victim`, not `&victim as &R?`)
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+}
+
+func TestCheckIndexingResourceLoss(t *testing.T) {
+	t.Parallel()
+
+	t.Run("type indexing", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+           resource R {}
+
+           attachment A for R {}
+
+           fun createR(): @R {
+               return <- create R()
+           }
+
+           fun test() {
+               createR()[A]
+           }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("value indexing", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+           resource R {}
+
+           fun createArray(): @[R] {
+               return <-[
+                 <-create R(),
+                 <-create R()
+               ]
+           }
+
+           fun test() {
+               let first <- createArray()[0]
+               destroy first
+           }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[1])
+	})
+}
+
+func TestCheckInvalidResourceCaptureOnLeft(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          var x: @AnyResource? <- nil
+          fun () {
+              x <-! []
+          }
+          destroy x
+      }
+    `)
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+}
+
+func TestCheckInvalidNestedResourceCapture(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("on right", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    fun() {
+                        let y <- self.x
+                        destroy y
+                    }
+                }
+            }
+      `)
+		require.NoError(t, err)
+	})
+
+	t.Run("resource field on right", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            resource R  {
+                var x: @AnyResource?
+                init() {
+                   self.x <- nil
+                }
+                fun foo() {
+                    fun() {
+                        let y <- self.x <- nil
+                        destroy y
+                    }
+                }
+            }
+      `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("on left", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    fun() {
+                        self.x <-! nil
+                    }
+                    destroy self.x
+                }
+            }
+    `)
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("on left method scope", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    self.x <-! nil
+                    destroy self.x
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+
+	t.Run("contract self variable on left", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract C {
+                var x: @AnyResource?
+                init() {
+                   self.x <- nil
+                }
+                fun foo() { 
+                    fun() {
+                        self.x <-! nil
+                    }
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+
+	t.Run("contract self variable on left method scope", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            contract C {
+                var x: @AnyResource?
+                init() {
+                   self.x <- nil
+                }
+                fun foo() {
+                    self.x <-! nil
+                }
+            }
+    `)
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckInvalidOptionalResourceCoalescingRightSideNilLeftSide(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+       resource R {}
+       fun test() {
+           let rs: @[R?] <- [nil, nil]
+           rs[0] <-! create R()
+           rs[1] <-! nil ?? rs[0]
+           destroy rs
+       }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
 }

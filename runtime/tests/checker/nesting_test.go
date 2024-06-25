@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -197,9 +197,11 @@ func TestCheckCompositeDeclarationNestedTypeScopingInsideNestedOuter(t *testing.
           struct X {
 
               fun test() {
-                  Test
+                  Test.foo()
               }
           }
+
+          fun foo() {}
       }
    `)
 
@@ -328,7 +330,9 @@ func TestCheckNestedTypeInvalidChildType(t *testing.T) {
 				`let u: T.U = nil`,
 				ParseAndCheckOptions{
 					Config: &sema.Config{
-						BaseTypeActivation: baseTypeActivation,
+						BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseTypeActivation
+						},
 					},
 				},
 			)

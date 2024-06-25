@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,12 @@ import (
 // and that the members and nested declarations for the interface type were declared
 // through `declareInterfaceMembers`.
 func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDeclaration) (_ struct{}) {
+
+	wasInInterface := checker.inInterface
+	checker.inInterface = true
+	defer func() {
+		checker.inInterface = wasInInterface
+	}()
 
 	const kind = ContainerKindInterface
 	interfaceType := checker.Elaboration.InterfaceDeclarationType(declaration)
@@ -134,15 +140,12 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		fieldPositionGetter,
 	)
 
-	checker.checkDestructors(
-		declaration.Members.Destructors(),
-		declaration.Members.FieldsByIdentifier(),
-		interfaceType.Members,
-		interfaceType,
-		declaration.DeclarationKind(),
-		declaration.DeclarationDocString(),
-		kind,
-	)
+	if !interfaceType.IsResourceType() && interfaceType.DefaultDestroyEvent != nil {
+		checker.report(&DefaultDestroyEventInNonResourceError{
+			Kind:  declaration.DeclarationKind().Name(),
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, declaration),
+		})
+	}
 
 	// NOTE: visit entitlements, then interfaces, then composites
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
@@ -160,6 +163,9 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 		// However, the error will be reported later in `declareNestedDeclarations``
 		if nestedComposite.Kind() == common.CompositeKindEvent {
 			checker.visitCompositeLikeDeclaration(nestedComposite)
+		}
+		if interfaceType.DefaultDestroyEvent != nil {
+			checker.checkDefaultDestroyEvent(interfaceType.DefaultDestroyEvent, nestedComposite, interfaceType, declaration)
 		}
 	}
 
@@ -218,7 +224,9 @@ func (checker *Checker) checkInterfaceFunctions(
 			checker.enterValueScope()
 			defer checker.leaveValueScope(function.EndPosition, false)
 
-			checker.declareSelfValue(selfType, selfDocString)
+			fnAccess := checker.effectiveMemberAccess(checker.accessFromAstAccess(function.Access), ContainerKindInterface)
+
+			checker.declareSelfValue(fnAccess, selfType, selfDocString)
 
 			mustExit := false
 			checkResourceLoss := false
@@ -390,7 +398,9 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 
 	compositeKind := declaration.Kind()
 
-	eventMembers := orderedmap.New[StringMemberOrderedMap](len(declaration.Members.Composites()))
+	declarationMembers := declaration.Members
+
+	eventMembers := orderedmap.New[StringMemberOrderedMap](len(declarationMembers.Composites()))
 
 	(func() { // Activate new scope for nested declarations
 
@@ -404,10 +414,18 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 
 		checker.declareInterfaceNestedTypes(declaration)
 
+		// Declare nested types' explicit conformances
+		for _, nestedInterfaceDeclaration := range declarationMembers.Interfaces() {
+			// resolve conformances
+			nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
+			nestedInterfaceType.ExplicitInterfaceConformances =
+				checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
+		}
+
 		// Declare members
 
 		members, fields, origins := checker.defaultMembersAndOrigins(
-			declaration.Members,
+			declarationMembers,
 			interfaceType,
 			ContainerKindInterface,
 			declaration.DeclarationKind(),
@@ -426,23 +444,32 @@ func (checker *Checker) declareInterfaceMembersAndValue(declaration *ast.Interfa
 		// NOTE: determine initializer parameter types while nested types are in scope,
 		// and after declaring nested types as the initializer may use nested type in parameters
 
-		initializers := declaration.Members.Initializers()
+		initializers := declarationMembers.Initializers()
 		interfaceType.InitializerParameters = checker.initializerParameters(initializers)
 		interfaceType.InitializerPurity = checker.initializerPurity(compositeKind, initializers)
 
 		// Declare nested declarations' members
-		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
-			// resolve conformances
-			nestedInterfaceType := checker.Elaboration.InterfaceDeclarationType(nestedInterfaceDeclaration)
-			nestedInterfaceType.ExplicitInterfaceConformances =
-				checker.explicitInterfaceConformances(nestedInterfaceDeclaration, nestedInterfaceType)
-
+		for _, nestedInterfaceDeclaration := range declarationMembers.Interfaces() {
 			checker.declareInterfaceMembersAndValue(nestedInterfaceDeclaration)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+		for _, nestedCompositeDeclaration := range declarationMembers.Composites() {
 			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
-				checker.declareNestedEvent(nestedCompositeDeclaration, eventMembers, interfaceType)
+				if nestedCompositeDeclaration.IsResourceDestructionDefaultEvent() {
+
+					checker.Elaboration.SetDefaultDestroyDeclaration(declaration, nestedCompositeDeclaration)
+
+					// Find the value declaration
+					nestedEvent :=
+						checker.typeActivations.Find(nestedCompositeDeclaration.Identifier.Identifier)
+					defaultEventComposite, ok := nestedEvent.Type.(*CompositeType)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+					interfaceType.DefaultDestroyEvent = defaultEventComposite
+				} else {
+					checker.declareNestedEvent(nestedCompositeDeclaration, eventMembers, interfaceType)
+				}
 			}
 		}
 	})()
@@ -598,7 +625,7 @@ func (checker *Checker) checkInterfaceConformance(
 
 		var isDuplicate bool
 
-		// Check if the members coming from other conformances have conflicts.
+		// Check if the members coming from other conformances (siblings) have conflicts.
 		inheritedMembers, ok := inheritedMembersByName[name]
 		if ok {
 			for _, conflictingMember := range inheritedMembers {
@@ -609,6 +636,7 @@ func (checker *Checker) checkInterfaceConformance(
 					conflictingInterface,
 					conflictingMember,
 					interfaceDeclaration.Identifier,
+					false, // conflicting member is a sibling
 				)
 			}
 		}
@@ -622,6 +650,7 @@ func (checker *Checker) checkInterfaceConformance(
 				conformance,
 				conformanceMember,
 				declarationMember.Identifier,
+				true, // conflicting member is an inherited member
 			)
 		}
 
@@ -639,6 +668,7 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 	conflictingInterfaceType *InterfaceType,
 	conflictingMember *Member,
 	hasPosition ast.HasPosition,
+	isConflictingMemberInherited bool,
 ) (isDuplicate bool) {
 
 	reportMemberConflictError := func() {
@@ -672,24 +702,31 @@ func (checker *Checker) checkDuplicateInterfaceMember(
 	// Having conflicting identical functions with:
 	//  - (1) and (1) - OK
 	//  - (1) and (2) - OK
-	//  - (1) and (3) - Not OK
+	//  - (1) and (3) - OK
+	//  - (2) and (1) - OK
 	//  - (2) and (2) - OK
 	//  - (2) and (3) - OK
+	//  - (3) and (1) - Not OK (order matters)
+	//  - (3) and (2) - OK
 	//  - (3) and (3) - Not OK
 
-	if interfaceMember.HasImplementation {
-		if conflictingMember.HasImplementation || !conflictingMember.HasConditions {
-			reportMemberConflictError()
-			return
-		}
+	if interfaceMember.HasImplementation && conflictingMember.HasImplementation {
+		reportMemberConflictError()
+		return
 	}
 
-	if conflictingMember.HasImplementation {
-		if !interfaceMember.HasConditions {
-			reportMemberConflictError()
-			return
-		}
+	// If the conflicting member is an inherited member, it is OK to override
+	// the inherited declaration, by a default implementation.
+	// However, a default implementation cannot be overridden by an empty declaration.
+
+	if isConflictingMemberInherited &&
+		conflictingMember.HasImplementation && !interfaceMember.HasConditions {
+		reportMemberConflictError()
+		return
 	}
+
+	// If the conflicting member is not an inherited one, (i.e.a member from a sibling conformance)
+	// then default implementation takes the precedence.
 
 	return
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -320,10 +320,10 @@ func defineReferenceType() {
 func defineIntersectionOrDictionaryType() {
 
 	// For the null denotation it is not clear after the start
-	// if it is a intersection type or a dictionary type.
+	// if it is an intersection type or a dictionary type.
 	//
 	// If a colon is seen it is a dictionary type.
-	// If no colon is seen it is a intersection type.
+	// If no colon is seen it is an intersection type.
 
 	setTypeNullDenotation(
 		lexer.TokenBraceOpen,
@@ -503,7 +503,7 @@ func defineIntersectionOrDictionaryType() {
 				return left, nil, true
 			}
 
-			return nil, p.syntaxError("restricted types have been removed; replace with the concrete type or an equivalent intersection type"), true
+			return nil, &RestrictedTypeError{Range: p.current.Range}, true
 		},
 	)
 }
@@ -916,23 +916,23 @@ func defineIdentifierTypes() {
 
 				var authorization ast.Authorization
 
-				_, err := p.mustOne(lexer.TokenParenOpen)
-				if err != nil {
-					return nil, err
+				if p.current.Is(lexer.TokenParenOpen) {
+					p.next()
+
+					p.skipSpaceAndComments()
+
+					var err error
+					authorization, err = parseAuthorization(p)
+					if err != nil {
+						return nil, err
+					}
+				} else {
+					p.reportSyntaxError("expected authorization (entitlement list)")
 				}
 
-				entitlements, err := parseEntitlementList(p)
-				if err != nil {
-					return nil, err
-				}
-				authorization.EntitlementSet = entitlements
-				_, err = p.mustOne(lexer.TokenParenClose)
-				if err != nil {
-					return nil, err
-				}
 				p.skipSpaceAndComments()
 
-				_, err = p.mustOne(lexer.TokenAmpersand)
+				_, err := p.mustOne(lexer.TokenAmpersand)
 				if err != nil {
 					return nil, err
 				}
@@ -944,7 +944,7 @@ func defineIdentifierTypes() {
 
 				return ast.NewReferenceType(
 					p.memoryGauge,
-					&authorization,
+					authorization,
 					right,
 					token.StartPos,
 				), nil
@@ -975,6 +975,37 @@ func defineIdentifierTypes() {
 			return parseNominalTypeRemainder(p, token)
 		},
 	)
+}
+
+func parseAuthorization(p *parser) (auth ast.Authorization, err error) {
+	keyword := p.currentTokenSource()
+	switch string(keyword) {
+	case KeywordMapping:
+		keywordPos := p.current.StartPos
+		// Skip the keyword
+		p.nextSemanticToken()
+
+		entitlementMapName, err := parseNominalType(p, lowestBindingPower)
+		if err != nil {
+			return nil, err
+		}
+		auth = ast.NewMappedAccess(entitlementMapName, keywordPos)
+		p.skipSpaceAndComments()
+
+	default:
+		entitlements, err := parseEntitlementList(p)
+		if err != nil {
+			return nil, err
+		}
+		auth = entitlements
+	}
+
+	_, err = p.mustOne(lexer.TokenParenClose)
+	if err != nil {
+		return nil, err
+	}
+
+	return auth, nil
 }
 
 // parse a function type starting after the `fun` keyword.

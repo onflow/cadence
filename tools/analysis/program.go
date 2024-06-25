@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,10 +27,11 @@ import (
 )
 
 type Program struct {
-	Location    common.Location
-	Program     *ast.Program
-	Elaboration *sema.Elaboration
-	Code        []byte
+	Location  common.Location
+	Program   *ast.Program
+	Checker   *sema.Checker
+	Code      []byte
+	LoadError error
 }
 
 // Run runs the given DAG of analyzers in parallel

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -195,11 +195,14 @@ const (
 	// Storage
 
 	CBORTagPathValue
-	_ // DO NOT REPLACE! used to be used for path capabilities
+	// Deprecated: CBORTagPathCapabilityValue
+	CBORTagPathCapabilityValue
 	_ // DO NOT REPLACE! used to be used for storage references
-	_ // DO NOT REPLACE! used to be used for path links
+	// Deprecated: CBORTagPathLinkValue
+	CBORTagPathLinkValue
 	CBORTagPublishedValue
-	_ // DO NOT REPLACE! used to be used for account links
+	// Deprecated: CBORTagAccountLinkValue
+	CBORTagAccountLinkValue
 	CBORTagStorageCapabilityControllerValue
 	CBORTagAccountCapabilityControllerValue
 	CBORTagCapabilityValue
@@ -221,6 +224,14 @@ const (
 	CBORTagUnauthorizedStaticAuthorization
 	CBORTagEntitlementMapStaticAuthorization
 	CBORTagEntitlementSetStaticAuthorization
+	CBORTagInaccessibleStaticAuthorization
+
+	_
+	_
+	_
+	_
+
+	CBORTagInclusiveRangeStaticType
 
 	// !!! *WARNING* !!!
 	// ADD NEW TYPES *BEFORE* THIS WARNING.
@@ -263,7 +274,7 @@ func (v CharacterValue) Encode(e *atree.Encoder) error {
 	if err != nil {
 		return err
 	}
-	return e.CBOR.EncodeString(string(v))
+	return e.CBOR.EncodeString(v.Str)
 }
 
 // Encode encodes the value as a CBOR string
@@ -775,7 +786,7 @@ const (
 	encodedCapabilityValueLength = 3
 )
 
-// Encode encodes CapabilityValue as
+// Encode encodes IDCapabilityValue as
 //
 //	cbor.Tag{
 //				Number: CBORTagCapabilityValue,
@@ -785,7 +796,7 @@ const (
 //						encodedCapabilityValueBorrowTypeFieldKey: StaticType(v.BorrowType),
 //					},
 //	}
-func (v *CapabilityValue) Encode(e *atree.Encoder) error {
+func (v *IDCapabilityValue) Encode(e *atree.Encoder) error {
 	// Encode tag number and array head
 	err := e.CBOR.EncodeRawBytes([]byte{
 		// tag number
@@ -1313,6 +1324,17 @@ func (t Unauthorized) Encode(e *cbor.StreamEncoder) error {
 	return e.EncodeNil()
 }
 
+func (t Inaccessible) Encode(e *cbor.StreamEncoder) error {
+	err := e.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagInaccessibleStaticAuthorization,
+	})
+	if err != nil {
+		return err
+	}
+	return e.EncodeNil()
+}
+
 func (a EntitlementMapAuthorization) Encode(e *cbor.StreamEncoder) error {
 	err := e.EncodeRawBytes([]byte{
 		// tag number
@@ -1442,6 +1464,25 @@ func (t *DictionaryStaticType) Encode(e *cbor.StreamEncoder) error {
 	}
 	// Encode value type at array index encodedDictionaryStaticTypeValueTypeFieldKey
 	return t.ValueType.Encode(e)
+}
+
+// Encode encodes InclusiveRangeStaticType as
+//
+//	cbor.Tag{
+//			Number: CBORTagInclusiveRangeStaticType,
+//			Content: StaticType(v.Type),
+//	}
+func (t InclusiveRangeStaticType) Encode(e *cbor.StreamEncoder) error {
+	// Encode tag number and array head
+	err := e.EncodeRawBytes([]byte{
+		// tag number
+		0xd8, CBORTagInclusiveRangeStaticType,
+	})
+	if err != nil {
+		return err
+	}
+
+	return t.ElementType.Encode(e)
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64

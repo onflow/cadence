@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -178,6 +178,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 		checker.valueActivations,
 		resolvedLocation.Identifiers,
 		allValueElements,
+		true,
 	)
 
 	// Attempt to import the requested type declarations
@@ -187,6 +188,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 		checker.typeActivations,
 		resolvedLocation.Identifiers,
 		allTypeElements,
+		false,
 	)
 
 	// For each identifier, report if the import is invalid due to
@@ -300,6 +302,7 @@ func (checker *Checker) importElements(
 	valueActivations *VariableActivations,
 	requestedIdentifiers []ast.Identifier,
 	availableElements *StringImportElementOrderedMap,
+	importValues bool,
 ) (
 	found map[ast.Identifier]bool,
 	invalidAccessed map[ast.Identifier]ImportElement,
@@ -351,9 +354,19 @@ func (checker *Checker) importElements(
 				}
 			}
 
+			elementType := element.Type
+
+			if importValues {
+				// Imported contract values must be imported as a reference.
+				compositeType, ok := elementType.(*CompositeType)
+				if ok && compositeType.Kind == common.CompositeKindContract {
+					elementType = NewReferenceType(checker.memoryGauge, UnauthorizedAccess, compositeType)
+				}
+			}
+
 			_, err := valueActivations.declare(variableDeclaration{
 				identifier: name,
-				ty:         element.Type,
+				ty:         elementType,
 				// TODO: implies that type is "re-exported"
 				access: access,
 				kind:   element.DeclarationKind,

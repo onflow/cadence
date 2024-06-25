@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,11 +76,17 @@ func TestInterpretTransferCheck(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseTypeActivation:  baseTypeActivation,
-					BaseValueActivation: baseValueActivation,
+					BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseTypeActivation
+					},
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)

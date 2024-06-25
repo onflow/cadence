@@ -155,7 +155,7 @@ func newWasmtimeFunctionWebAssemblyExport(
 		return nil, fmt.Errorf("unsupported export: function has more than one result")
 	}
 
-	hostFunctionValue := interpreter.NewHostFunctionValue(
+	hostFunctionValue := interpreter.NewStaticHostFunctionValue(
 		gauge,
 		functionType,
 		func(invocation interpreter.Invocation) interpreter.Value {

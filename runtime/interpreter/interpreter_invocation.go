@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -140,7 +140,7 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 
 	// Make `self` available, if any
 	if invocation.Self != nil {
-		interpreter.declareVariable(sema.SelfIdentifier, *invocation.Self)
+		interpreter.declareSelfVariable(*invocation.Self, invocation.LocationRange)
 	}
 	if invocation.Base != nil {
 		interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
@@ -153,13 +153,14 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 		}()
 	}
 
-	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)
+	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments, invocation.LocationRange)
 }
 
 // NOTE: assumes the function's activation (or an extension of it) is pushed!
 func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	function *InterpretedFunctionValue,
 	arguments []Value,
+	declarationLocationRange LocationRange,
 ) Value {
 	defer func() {
 		// Only unwind the call stack if there was no error
@@ -182,6 +183,7 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		},
 		function.PostConditions,
 		function.Type.ReturnTypeAnnotation.Type,
+		declarationLocationRange,
 	)
 }
 

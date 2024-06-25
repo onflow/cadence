@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -596,9 +597,6 @@ func TestInterpretNestedAttach(t *testing.T) {
                 self.y <- y
                 self.i = base.i
             }
-            destroy() {
-                destroy self.y
-            }
         }
         attachment B for Y { }
         fun test(): Int {
@@ -637,9 +635,6 @@ func TestInterpretNestedAttachFunction(t *testing.T) {
             init(_ y: @Y) {
                 self.y <- y
                 self.i = base.i
-            }
-            destroy() {
-                destroy self.y
             }
         }
         attachment B for Y { }
@@ -1245,110 +1240,109 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            var destructorRun = false
-            resource R {}
+		var events []*interpreter.CompositeValue
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            resource R {
+                event ResourceDestroyed()
+            }
             attachment A for R {
-                destroy() {
-                    destructorRun = true
-                }
+                event ResourceDestroyed()
             }
             fun test() {
                 let r <- create R()
                 let r2 <- attach A() to <-r
                 destroy r2
             }
-        `)
-
-		_, err := inter.Invoke("test")
+        `, ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					_ *sema.CompositeType,
+				) error {
+					events = append(events, event)
+					return nil
+				},
+			},
+			CheckerConfig: &sema.Config{
+				AttachmentsEnabled: true,
+			},
+		})
 		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.TrueValue, inter.Globals.Get("destructorRun").GetValue())
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.Len(t, events, 2)
+		require.Equal(t, "A.ResourceDestroyed", events[0].QualifiedIdentifier)
+		require.Equal(t, "R.ResourceDestroyed", events[1].QualifiedIdentifier)
 	})
 
 	t.Run("base destructor executed last", func(t *testing.T) {
 
 		t.Parallel()
 
-		inter := parseCheckAndInterpret(t, `
-            var lastDestructorRun = ""
+		var events []*interpreter.CompositeValue
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
             resource R {
-                destroy() {
-                    lastDestructorRun = "R"
-                }
+                event ResourceDestroyed()
             }
-            attachment A for R {
-                destroy() {
-                    lastDestructorRun = "A"
-                }
+            attachment A for R { 
+                event ResourceDestroyed()
             }
             attachment B for R {
-                destroy() {
-                    lastDestructorRun = "B"
-                }
+                event ResourceDestroyed()
             }
             attachment C for R {
-                destroy() {
-                    lastDestructorRun = "C"
-                }
+                event ResourceDestroyed()
             }
             fun test() {
                 let r <- create R()
                 let r2 <- attach A() to <- attach B() to <- attach C() to <-r
                 destroy r2
             }
-        `)
-
-		_, err := inter.Invoke("test")
+        `, ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					_ *sema.CompositeType,
+				) error {
+					events = append(events, event)
+					return nil
+				},
+			},
+			CheckerConfig: &sema.Config{
+				AttachmentsEnabled: true,
+			},
+		})
 		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.NewUnmeteredStringValue("R"), inter.Globals.Get("lastDestructorRun").GetValue())
-	})
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
 
-	t.Run("base destructor cannot add mutate attachments mid-destroy", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-            resource R {
-                fun foo() {
-                    remove B from self
-                }
-                destroy() {}
-            }
-            attachment A for R {
-                destroy() {
-                   
-                }
-            }
-            attachment B for R {
-                destroy() {}
-            }
-            attachment C for R {
-                destroy() {
-                    base.foo()
-                }
-            }
-            fun test() {
-                let r <- create R()
-                let r2 <- attach A() to <- attach B() to <- attach C() to <-r
-                destroy r2
-            }
-        `)
-
-		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.AttachmentIterationMutationError{})
+		require.Len(t, events, 4)
+		// the only part of this order that is important is that `R` is last
+		require.Equal(t, "B.ResourceDestroyed", events[0].QualifiedIdentifier)
+		require.Equal(t, "C.ResourceDestroyed", events[1].QualifiedIdentifier)
+		require.Equal(t, "A.ResourceDestroyed", events[2].QualifiedIdentifier)
+		require.Equal(t, "R.ResourceDestroyed", events[3].QualifiedIdentifier)
 	})
 
 	t.Run("remove runs destroy", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
-            var destructorRun = false
-            resource R {}
+		var events []*interpreter.CompositeValue
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            resource R {
+                event ResourceDestroyed()
+            }
             attachment A for R {
-                destroy() {
-                    destructorRun = true
-                }
+                event ResourceDestroyed()
             }
             fun test(): @R {
                 let r <- create R()
@@ -1356,32 +1350,48 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 remove A from r2
                 return <-r2
             }
-        `)
-
-		_, err := inter.Invoke("test")
+        `, ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					_ *sema.CompositeType,
+				) error {
+					events = append(events, event)
+					return nil
+				},
+			},
+			CheckerConfig: &sema.Config{
+				AttachmentsEnabled: true,
+			},
+		})
 		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.TrueValue, inter.Globals.Get("destructorRun").GetValue())
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.Len(t, events, 1)
+		require.Equal(t, "A.ResourceDestroyed", events[0].QualifiedIdentifier)
 	})
 
 	t.Run("remove runs resource field destroy", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
-            var destructorRun = false
-            resource R {}
+		var events []*interpreter.CompositeValue
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            resource R {
+                event ResourceDestroyed()
+            }
             resource R2 {
-                destroy() {
-                    destructorRun = true
-                }
+                event ResourceDestroyed()
             }
             attachment A for R {
+                event ResourceDestroyed()
                 let r2: @R2
                 init() {
                     self.r2 <- create R2()
                 }
-                destroy() {
-                    destroy self.r2
-                }
             }
             fun test(): @R {
                 let r <- create R()
@@ -1389,32 +1399,51 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 remove A from r2
                 return <-r2
             }
-        `)
-
-		_, err := inter.Invoke("test")
+        `, ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					_ *sema.CompositeType,
+				) error {
+					events = append(events, event)
+					return nil
+				},
+			},
+			CheckerConfig: &sema.Config{
+				AttachmentsEnabled: true,
+			},
+		})
 		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.TrueValue, inter.Globals.Get("destructorRun").GetValue())
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.Len(t, events, 2)
+		require.Equal(t, "R2.ResourceDestroyed", events[0].QualifiedIdentifier)
+		require.Equal(t, "A.ResourceDestroyed", events[1].QualifiedIdentifier)
 	})
 
 	t.Run("nested attachments destroyed", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t, `
-            var destructorRun = false
-            resource R {}
-            resource R2 {}
+		var events []*interpreter.CompositeValue
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            resource R {
+                event ResourceDestroyed()
+            }
+            resource R2 {
+                event ResourceDestroyed()
+            }
             attachment B for R2 {
-                destroy() {
-                    destructorRun = true
-                }
+                event ResourceDestroyed()
             }
             attachment A for R {
+                event ResourceDestroyed()
                 let r2: @R2
                 init() {
                     self.r2 <- attach B() to <-create R2()
-                }
-                destroy() {
-                    destroy self.r2
                 }
             }
             fun test(): @R {
@@ -1423,12 +1452,93 @@ func TestInterpretAttachmentDestructor(t *testing.T) {
                 remove A from r2
                 return <-r2
             }
-        `)
-
-		_, err := inter.Invoke("test")
+        `, ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					_ *sema.CompositeType,
+				) error {
+					events = append(events, event)
+					return nil
+				},
+			},
+			CheckerConfig: &sema.Config{
+				AttachmentsEnabled: true,
+			},
+		})
 		require.NoError(t, err)
 
-		AssertValuesEqual(t, inter, interpreter.TrueValue, inter.Globals.Get("destructorRun").GetValue())
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.Len(t, events, 3)
+		require.Equal(t, "B.ResourceDestroyed", events[0].QualifiedIdentifier)
+		require.Equal(t, "R2.ResourceDestroyed", events[1].QualifiedIdentifier)
+		require.Equal(t, "A.ResourceDestroyed", events[2].QualifiedIdentifier)
+	})
+
+	t.Run("attachment default args properly scoped", func(t *testing.T) {
+
+		t.Parallel()
+
+		var events []*interpreter.CompositeValue
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            resource R {
+                var foo: String
+                event ResourceDestroyed()
+                init() {
+                    self.foo = "baz"
+                }
+                fun setFoo(arg: String) {
+                    self.foo = arg
+                }
+            }
+            attachment A for R {
+                var bar: Int
+                event ResourceDestroyed(foo: String = base.foo, bar: Int = self.bar)
+                init() {
+                    self.bar = 1
+                }
+                fun setBar(arg: Int) {
+                    self.bar = arg
+                }
+            }
+            fun test() {
+                let r <- create R()
+                let r2 <- attach A() to <-r
+                r2.setFoo(arg: "foo")
+                r2[A]!.setBar(arg: 2)
+                destroy r2
+            }
+        `, ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				OnEventEmitted: func(
+					_ *interpreter.Interpreter,
+					_ interpreter.LocationRange,
+					event *interpreter.CompositeValue,
+					_ *sema.CompositeType,
+				) error {
+					events = append(events, event)
+					return nil
+				},
+			},
+			CheckerConfig: &sema.Config{
+				AttachmentsEnabled: true,
+			},
+		})
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.Len(t, events, 2)
+		require.Equal(t, "A.ResourceDestroyed", events[0].QualifiedIdentifier)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("foo"), events[0].GetField(inter, interpreter.EmptyLocationRange, "foo"))
+		require.Equal(t, interpreter.NewIntValueFromInt64(nil, 2), events[0].GetField(inter, interpreter.EmptyLocationRange, "bar"))
+		require.Equal(t, "R.ResourceDestroyed", events[1].QualifiedIdentifier)
 	})
 }
 
@@ -1507,7 +1617,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		})
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("nested", func(t *testing.T) {
@@ -1522,9 +1632,6 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 let r: @R 
                 init(r: @R) {
                     self.r <- r
-                }
-                destroy() {
-                    destroy self.r
                 }
             }
             attachment A for R {
@@ -1621,9 +1728,6 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
                 init(r: @R) {
                     self.r <- r
                 }
-                destroy() {
-                    destroy self.r
-                }
             }
             attachment A for R {
                 fun foo(): Int { return 3 }
@@ -1642,7 +1746,7 @@ func TestInterpretAttachmentResourceReferenceInvalidation(t *testing.T) {
 		})
 
 		_, err := inter.Invoke("test")
-		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("self reference", func(t *testing.T) {
@@ -1845,6 +1949,45 @@ func TestInterpretAttachmentDefensiveCheck(t *testing.T) {
 	})
 }
 
+func TestInterpretAttachmentSelfAccessMembers(t *testing.T) {
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+            access(all) resource R{
+                access(all) fun baz() {}
+            }
+            access(all) attachment A for R{
+                access(all) fun foo() {}
+                access(self) fun qux1() {
+                    self.foo()
+                    base.baz()
+                }
+                access(contract) fun qux2() {
+                    self.foo()
+                    base.baz()
+                }
+                access(account) fun qux3() {
+                    self.foo()
+                    base.baz()
+                }
+                access(all) fun bar() {
+                    self.qux1()
+                    self.qux2()
+                    self.qux3()
+                }
+            }
+            
+            access(all) fun main() {
+                var r <- attach A() to <- create R()
+                r[A]!.bar()
+                destroy r
+            }
+        `)
+
+	_, err := inter.Invoke("main")
+	require.NoError(t, err)
+}
+
 func TestInterpretForEachAttachment(t *testing.T) {
 
 	t.Parallel()
@@ -1942,32 +2085,23 @@ func TestInterpretForEachAttachment(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-            entitlement E 
             entitlement F
-            entitlement X
             entitlement Y
-            entitlement mapping M {
-                E -> F
+            struct S {
+                access(F, Y) fun foo() {}
             }
-            entitlement mapping N {
-                X -> Y
-            }
-            entitlement mapping O {
-                E -> Y
-            }
-            struct S {}
-            access(M) attachment A for S {
+            access(all) attachment A for S {
                 access(F) fun foo(_ x: Int): Int { return 7 + x }
             }
-            access(N) attachment B for S {
+            access(all) attachment B for S {
                 access(Y) fun foo(): Int { return 10 }
             }
-            access(O) attachment C for S {
+            access(all) attachment C for S {
                 access(Y) fun foo(_ x: Int): Int { return 8 + x }
             }
             fun test(): Int {
                 var s = attach C() to attach B() to attach A() to S()
-                let ref = &s as auth(E) &S
+                let ref = &s as auth(F, Y) &S
                 var i = 0
                 ref.forEachAttachment(fun(attachmentRef: &AnyStructAttachment) {
                     if let a = attachmentRef as? auth(F) &A {
@@ -1989,6 +2123,49 @@ func TestInterpretForEachAttachment(t *testing.T) {
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredIntValueFromInt64(0), value)
 	})
 
+	t.Run("bound function", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement F
+
+            access(all) struct S {
+                access(F) let x: Int
+                init() {
+                    self.x = 3
+                }
+            }
+            access(all) attachment A for S {
+                access(F) var funcPtr: fun(): auth(F) &Int;
+                init() {
+                    self.funcPtr = self.foo
+                }
+                access(F) fun foo(): auth(F) &Int {
+                    return &base.x
+                }
+            }
+            fun test(): &Int {
+                let r = attach A() to S()
+                let rRef = &r as auth(F) &S
+                let a = rRef[A]!
+                let i = a.foo()
+                return i
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.EphemeralReferenceValue{}, value)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(3),
+			value.(*interpreter.EphemeralReferenceValue).Value,
+		)
+	})
+
 	t.Run("access fields", func(t *testing.T) {
 
 		t.Parallel()
@@ -2006,18 +2183,12 @@ func TestInterpretForEachAttachment(t *testing.T) {
                 init(_ name: String) {
                     self.r <- create Sub(name)
                 }
-                destroy() {
-                    destroy self.r
-                }
             }
             attachment B for R {}
             attachment C for R {
                 let r: @Sub
                 init(_ name: String) {
                     self.r <- create Sub(name)
-                }
-                destroy() {
-                    destroy self.r
                 }
             }
             fun test(): String {
@@ -2282,8 +2453,6 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 	for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 		stdlib.NewPublicKeyConstructor(
 			assumeValidPublicKeyValidator{},
-			nil,
-			nil,
 		),
 		stdlib.SignatureAlgorithmConstructor,
 	} {
@@ -2310,11 +2479,15 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-				AttachmentsEnabled:  true,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+				AttachmentsEnabled: true,
 			},
 			Config: &interpreter.Config{
-				BaseActivation: baseActivation,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 			},
 		},
 	)
@@ -2322,4 +2495,41 @@ func TestInterpretBuiltinCompositeAttachment(t *testing.T) {
 
 	_, err = inter.Invoke("main")
 	require.NoError(t, err)
+}
+
+func TestInterpretAttachmentSelfInvalidationInIteration(t *testing.T) {
+	t.Parallel()
+
+	t.Run("with iteration", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource R{
+                init() {}
+            }
+            access(all) attachment A for R{
+                access(all) fun zombieFunction() {}
+            }
+            
+            access(all) fun main() {
+                var r <- create R()
+                var r2 <- attach A() to <- r
+                var aRef: &A? = nil
+                r2.forEachAttachment(fun(a: &AnyResourceAttachment) {
+                    aRef = (a as! &A)
+                })
+                remove A from r2
+                
+                // Should not succeed, the attachment pointed to by aRef was destroyed
+                aRef!.zombieFunction()
+                destroy r2
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		require.Error(t, err)
+
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
 }

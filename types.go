@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ package cadence
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -123,6 +124,7 @@ var AnyStructType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyStruct)
 var AnyResourceType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyResource)
 var AnyStructAttachmentType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyStructAttachment)
 var AnyResourceAttachmentType = PrimitiveType(interpreter.PrimitiveStaticTypeAnyResourceAttachment)
+var HashableStructType = PrimitiveType(interpreter.PrimitiveStaticTypeHashableStruct)
 
 var BoolType = PrimitiveType(interpreter.PrimitiveStaticTypeBool)
 var AddressType = PrimitiveType(interpreter.PrimitiveStaticTypeAddress)
@@ -136,6 +138,7 @@ var SignedNumberType = PrimitiveType(interpreter.PrimitiveStaticTypeSignedNumber
 
 var IntegerType = PrimitiveType(interpreter.PrimitiveStaticTypeInteger)
 var SignedIntegerType = PrimitiveType(interpreter.PrimitiveStaticTypeSignedInteger)
+var FixedSizeUnsignedIntegerType = PrimitiveType(interpreter.PrimitiveStaticTypeFixedSizeUnsignedInteger)
 
 var FixedPointType = PrimitiveType(interpreter.PrimitiveStaticTypeFixedPoint)
 var SignedFixedPointType = PrimitiveType(interpreter.PrimitiveStaticTypeSignedFixedPoint)
@@ -361,6 +364,52 @@ func (t *DictionaryType) Equal(other Type) bool {
 		t.ElementType.Equal(otherType.ElementType)
 }
 
+// InclusiveRangeType
+
+type InclusiveRangeType struct {
+	ElementType Type
+	typeID      string
+}
+
+var _ Type = &InclusiveRangeType{}
+
+func NewInclusiveRangeType(
+	elementType Type,
+) *InclusiveRangeType {
+	return &InclusiveRangeType{
+		ElementType: elementType,
+	}
+}
+
+func NewMeteredInclusiveRangeType(
+	gauge common.MemoryGauge,
+	elementType Type,
+) *InclusiveRangeType {
+	common.UseMemory(gauge, common.CadenceInclusiveRangeTypeMemoryUsage)
+	return NewInclusiveRangeType(elementType)
+}
+
+func (*InclusiveRangeType) isType() {}
+
+func (t *InclusiveRangeType) ID() string {
+	if t.typeID == "" {
+		t.typeID = fmt.Sprintf(
+			"InclusiveRange<%s>",
+			t.ElementType.ID(),
+		)
+	}
+	return t.typeID
+}
+
+func (t *InclusiveRangeType) Equal(other Type) bool {
+	otherType, ok := other.(*InclusiveRangeType)
+	if !ok {
+		return false
+	}
+
+	return t.ElementType.Equal(otherType.ElementType)
+}
+
 // Field
 
 type Field struct {
@@ -377,44 +426,78 @@ func NewField(identifier string, typ Type) Field {
 	}
 }
 
-type HasFields interface {
-	GetFields() []Field
-	GetFieldValues() []Value
-}
+// SearchCompositeFieldTypeByName searches for the field with the given name in the composite type,
+// and returns the type of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using CompositeFieldTypesMappedByName if you need to access multiple fields.
+func SearchCompositeFieldTypeByName(compositeType CompositeType, fieldName string) Type {
+	fields := compositeType.compositeFields()
 
-func GetFieldByName(v HasFields, fieldName string) Value {
-	fieldValues := v.GetFieldValues()
-	fields := v.GetFields()
-
-	if fieldValues == nil || fields == nil {
+	if fields == nil {
 		return nil
 	}
 
-	for i, field := range v.GetFields() {
+	for _, field := range fields {
 		if field.Identifier == fieldName {
-			return v.GetFieldValues()[i]
+			return field.Type
 		}
 	}
 	return nil
 }
 
-func GetFieldsMappedByName(v HasFields) map[string]Value {
-	fieldValues := v.GetFieldValues()
-	fields := v.GetFields()
+func CompositeFieldTypesMappedByName(compositeType CompositeType) map[string]Type {
+	fields := compositeType.compositeFields()
 
-	if fieldValues == nil || fields == nil {
+	if fields == nil {
 		return nil
 	}
 
-	fieldsMap := make(map[string]Value, len(fields))
-	for i, field := range fields {
-		fieldsMap[field.Identifier] = fieldValues[i]
+	fieldsMap := make(map[string]Type, len(fields))
+	for _, field := range fields {
+		fieldsMap[field.Identifier] = field.Type
 	}
+
+	return fieldsMap
+}
+
+// SearchInterfaceFieldTypeByName searches for the field with the given name in the interface type,
+// and returns the type of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using InterfaceFieldTypesMappedByName if you need to access multiple fields.
+func SearchInterfaceFieldTypeByName(interfaceType InterfaceType, fieldName string) Type {
+	fields := interfaceType.interfaceFields()
+
+	if fields == nil {
+		return nil
+	}
+
+	for _, field := range fields {
+		if field.Identifier == fieldName {
+			return field.Type
+		}
+	}
+	return nil
+}
+
+func InterfaceFieldTypesMappedByName(interfaceType InterfaceType) map[string]Type {
+	fields := interfaceType.interfaceFields()
+
+	if fields == nil {
+		return nil
+	}
+
+	fieldsMap := make(map[string]Type, len(fields))
+	for _, field := range fields {
+		fieldsMap[field.Identifier] = field.Type
+	}
+
 	return fieldsMap
 }
 
 // DecodeFields decodes a HasFields into a struct
-func DecodeFields(hasFields HasFields, s interface{}) error {
+func DecodeFields(composite Composite, s interface{}) error {
 	v := reflect.ValueOf(s)
 	if !v.IsValid() || v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
 		return fmt.Errorf("s must be a pointer to a struct")
@@ -423,7 +506,7 @@ func DecodeFields(hasFields HasFields, s interface{}) error {
 	v = v.Elem()
 	t := v.Type()
 
-	fieldsMap := GetFieldsMappedByName(hasFields)
+	fieldsMap := FieldsMappedByName(composite)
 
 	for i := 0; i < v.NumField(); i++ {
 		structField := t.Field(i)
@@ -488,7 +571,7 @@ func decodeOptional(valueType reflect.Type, cadenceField Value) (*reflect.Value,
 	}
 
 	// if optional is nil, skip and default the field to nil
-	if optional.ToGoValue() == nil {
+	if optional.Value == nil {
 		zeroValue := reflect.Zero(valueType)
 		return &zeroValue, nil
 	}
@@ -643,12 +726,28 @@ func NewTypeParameter(
 
 type CompositeType interface {
 	Type
+
 	isCompositeType()
+	compositeFields() []Field
+	setCompositeFields([]Field)
+
 	CompositeTypeLocation() common.Location
 	CompositeTypeQualifiedIdentifier() string
-	CompositeFields() []Field
-	SetCompositeFields([]Field)
 	CompositeInitializers() [][]Parameter
+	SearchFieldByName(fieldName string) Type
+	FieldsMappedByName() map[string]Type
+}
+
+// linked in by packages that need access to CompositeType.setCompositeFields,
+// e.g. JSON and CCF codecs
+func setCompositeTypeFields(compositeType CompositeType, fields []Field) { //nolint:unused
+	compositeType.setCompositeFields(fields)
+}
+
+// linked in by packages that need access to CompositeType.compositeFields,
+// e.g. JSON and CCF codecs
+func getCompositeTypeFields(compositeType CompositeType) []Field { //nolint:unused
+	return compositeType.compositeFields()
 }
 
 // StructType
@@ -656,7 +755,7 @@ type CompositeType interface {
 type StructType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -669,7 +768,7 @@ func NewStructType(
 	return &StructType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -701,12 +800,12 @@ func (t *StructType) CompositeTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *StructType) CompositeFields() []Field {
-	return t.Fields
+func (t *StructType) compositeFields() []Field {
+	return t.fields
 }
 
-func (t *StructType) SetCompositeFields(fields []Field) {
-	t.Fields = fields
+func (t *StructType) setCompositeFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *StructType) CompositeInitializers() [][]Parameter {
@@ -723,12 +822,20 @@ func (t *StructType) Equal(other Type) bool {
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
+func (t *StructType) SearchFieldByName(fieldName string) Type {
+	return SearchCompositeFieldTypeByName(t, fieldName)
+}
+
+func (t *StructType) FieldsMappedByName() map[string]Type {
+	return CompositeFieldTypesMappedByName(t)
+}
+
 // ResourceType
 
 type ResourceType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -741,7 +848,7 @@ func NewResourceType(
 	return &ResourceType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -773,12 +880,12 @@ func (t *ResourceType) CompositeTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *ResourceType) CompositeFields() []Field {
-	return t.Fields
+func (t *ResourceType) compositeFields() []Field {
+	return t.fields
 }
 
-func (t *ResourceType) SetCompositeFields(fields []Field) {
-	t.Fields = fields
+func (t *ResourceType) setCompositeFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *ResourceType) CompositeInitializers() [][]Parameter {
@@ -795,20 +902,28 @@ func (t *ResourceType) Equal(other Type) bool {
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
+func (t *ResourceType) SearchFieldByName(fieldName string) Type {
+	return SearchCompositeFieldTypeByName(t, fieldName)
+}
+
+func (t *ResourceType) FieldsMappedByName() map[string]Type {
+	return CompositeFieldTypesMappedByName(t)
+}
+
 // AttachmentType
 
 type AttachmentType struct {
 	Location            common.Location
 	BaseType            Type
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
 func NewAttachmentType(
 	location common.Location,
-	baseType Type,
 	qualifiedIdentifier string,
+	baseType Type,
 	fields []Field,
 	initializers [][]Parameter,
 ) *AttachmentType {
@@ -816,7 +931,7 @@ func NewAttachmentType(
 		Location:            location,
 		BaseType:            baseType,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -824,16 +939,16 @@ func NewAttachmentType(
 func NewMeteredAttachmentType(
 	gauge common.MemoryGauge,
 	location common.Location,
-	baseType Type,
 	qualifiedIdentifier string,
+	baseType Type,
 	fields []Field,
 	initializers [][]Parameter,
 ) *AttachmentType {
 	common.UseMemory(gauge, common.CadenceAttachmentTypeMemoryUsage)
 	return NewAttachmentType(
 		location,
-		baseType,
 		qualifiedIdentifier,
+		baseType,
 		fields,
 		initializers,
 	)
@@ -855,12 +970,12 @@ func (t *AttachmentType) CompositeTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *AttachmentType) CompositeFields() []Field {
-	return t.Fields
+func (t *AttachmentType) compositeFields() []Field {
+	return t.fields
 }
 
-func (t *AttachmentType) SetCompositeFields(fields []Field) {
-	t.Fields = fields
+func (t *AttachmentType) setCompositeFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *AttachmentType) CompositeInitializers() [][]Parameter {
@@ -881,12 +996,20 @@ func (t *AttachmentType) Equal(other Type) bool {
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
+func (t *AttachmentType) SearchFieldByName(fieldName string) Type {
+	return SearchCompositeFieldTypeByName(t, fieldName)
+}
+
+func (t *AttachmentType) FieldsMappedByName() map[string]Type {
+	return CompositeFieldTypesMappedByName(t)
+}
+
 // EventType
 
 type EventType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializer         []Parameter
 }
 
@@ -899,7 +1022,7 @@ func NewEventType(
 	return &EventType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializer:         initializer,
 	}
 }
@@ -931,12 +1054,12 @@ func (t *EventType) CompositeTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *EventType) CompositeFields() []Field {
-	return t.Fields
+func (t *EventType) compositeFields() []Field {
+	return t.fields
 }
 
-func (t *EventType) SetCompositeFields(fields []Field) {
-	t.Fields = fields
+func (t *EventType) setCompositeFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *EventType) CompositeInitializers() [][]Parameter {
@@ -953,12 +1076,20 @@ func (t *EventType) Equal(other Type) bool {
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
+func (t *EventType) SearchFieldByName(fieldName string) Type {
+	return SearchCompositeFieldTypeByName(t, fieldName)
+}
+
+func (t *EventType) FieldsMappedByName() map[string]Type {
+	return CompositeFieldTypesMappedByName(t)
+}
+
 // ContractType
 
 type ContractType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -971,7 +1102,7 @@ func NewContractType(
 	return &ContractType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -1003,12 +1134,12 @@ func (t *ContractType) CompositeTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *ContractType) CompositeFields() []Field {
-	return t.Fields
+func (t *ContractType) compositeFields() []Field {
+	return t.fields
 }
 
-func (t *ContractType) SetCompositeFields(fields []Field) {
-	t.Fields = fields
+func (t *ContractType) setCompositeFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *ContractType) CompositeInitializers() [][]Parameter {
@@ -1025,16 +1156,38 @@ func (t *ContractType) Equal(other Type) bool {
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
 }
 
+func (t *ContractType) SearchFieldByName(fieldName string) Type {
+	return SearchCompositeFieldTypeByName(t, fieldName)
+}
+
+func (t *ContractType) FieldsMappedByName() map[string]Type {
+	return CompositeFieldTypesMappedByName(t)
+}
+
 // InterfaceType
 
 type InterfaceType interface {
 	Type
+
 	isInterfaceType()
+	interfaceFields() []Field
+	setInterfaceFields(fields []Field)
+
 	InterfaceTypeLocation() common.Location
 	InterfaceTypeQualifiedIdentifier() string
-	InterfaceFields() []Field
-	SetInterfaceFields(fields []Field)
 	InterfaceInitializers() [][]Parameter
+}
+
+// linked in by packages that need access to InterfaceType.interfaceFields,
+// e.g. JSON and CCF codecs
+func getInterfaceTypeFields(interfaceType InterfaceType) []Field { //nolint:unused
+	return interfaceType.interfaceFields()
+}
+
+// linked in by packages that need access to InterfaceType.setInterfaceFields,
+// e.g. JSON and CCF codecs
+func setInterfaceTypeFields(interfaceType InterfaceType, fields []Field) { //nolint:unused
+	interfaceType.setInterfaceFields(fields)
 }
 
 // StructInterfaceType
@@ -1042,7 +1195,7 @@ type InterfaceType interface {
 type StructInterfaceType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -1055,7 +1208,7 @@ func NewStructInterfaceType(
 	return &StructInterfaceType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -1087,12 +1240,12 @@ func (t *StructInterfaceType) InterfaceTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *StructInterfaceType) InterfaceFields() []Field {
-	return t.Fields
+func (t *StructInterfaceType) interfaceFields() []Field {
+	return t.fields
 }
 
-func (t *StructInterfaceType) SetInterfaceFields(fields []Field) {
-	t.Fields = fields
+func (t *StructInterfaceType) setInterfaceFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *StructInterfaceType) InterfaceInitializers() [][]Parameter {
@@ -1114,7 +1267,7 @@ func (t *StructInterfaceType) Equal(other Type) bool {
 type ResourceInterfaceType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -1127,7 +1280,7 @@ func NewResourceInterfaceType(
 	return &ResourceInterfaceType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -1159,12 +1312,12 @@ func (t *ResourceInterfaceType) InterfaceTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *ResourceInterfaceType) InterfaceFields() []Field {
-	return t.Fields
+func (t *ResourceInterfaceType) interfaceFields() []Field {
+	return t.fields
 }
 
-func (t *ResourceInterfaceType) SetInterfaceFields(fields []Field) {
-	t.Fields = fields
+func (t *ResourceInterfaceType) setInterfaceFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *ResourceInterfaceType) InterfaceInitializers() [][]Parameter {
@@ -1186,7 +1339,7 @@ func (t *ResourceInterfaceType) Equal(other Type) bool {
 type ContractInterfaceType struct {
 	Location            common.Location
 	QualifiedIdentifier string
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -1199,7 +1352,7 @@ func NewContractInterfaceType(
 	return &ContractInterfaceType{
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -1231,12 +1384,12 @@ func (t *ContractInterfaceType) InterfaceTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *ContractInterfaceType) InterfaceFields() []Field {
-	return t.Fields
+func (t *ContractInterfaceType) interfaceFields() []Field {
+	return t.fields
 }
 
-func (t *ContractInterfaceType) SetInterfaceFields(fields []Field) {
-	t.Fields = fields
+func (t *ContractInterfaceType) setInterfaceFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *ContractInterfaceType) InterfaceInitializers() [][]Parameter {
@@ -1260,7 +1413,17 @@ type FunctionPurity int
 const (
 	FunctionPurityUnspecified FunctionPurity = iota
 	FunctionPurityView
+
+	// DO NOT add item after maxFunctionPurity
+	maxFunctionPurity
 )
+
+func NewFunctionaryPurity(rawPurity int) (FunctionPurity, error) {
+	if rawPurity < 0 || rawPurity >= int(maxFunctionPurity) {
+		return FunctionPurityUnspecified, fmt.Errorf("failed to convert %d to FunctionPurity", rawPurity)
+	}
+	return FunctionPurity(rawPurity), nil
+}
 
 type FunctionType struct {
 	TypeParameters []TypeParameter
@@ -1370,6 +1533,12 @@ func (t *FunctionType) Equal(other Type) bool {
 		}
 	}
 
+	// Purity
+
+	if t.Purity != otherType.Purity {
+		return false
+	}
+
 	return t.ReturnType.Equal(otherType.ReturnType)
 }
 
@@ -1402,30 +1571,32 @@ const Conjunction = sema.Conjunction
 const Disjunction = sema.Disjunction
 
 type EntitlementSetAuthorization struct {
-	Entitlements []common.TypeID
-	Kind         EntitlementSetKind
+	Entitlements       []common.TypeID
+	Kind               EntitlementSetKind
+	entitlementSet     map[common.TypeID]struct{}
+	entitlementSetOnce sync.Once
 }
 
-var _ Authorization = EntitlementSetAuthorization{}
+var _ Authorization = &EntitlementSetAuthorization{}
 
 func NewEntitlementSetAuthorization(
 	gauge common.MemoryGauge,
 	entitlements []common.TypeID,
 	kind EntitlementSetKind,
-) EntitlementSetAuthorization {
+) *EntitlementSetAuthorization {
 	common.UseMemory(gauge, common.MemoryUsage{
 		Kind:   common.MemoryKindCadenceEntitlementSetAccess,
 		Amount: uint64(len(entitlements)),
 	})
-	return EntitlementSetAuthorization{
+	return &EntitlementSetAuthorization{
 		Entitlements: entitlements,
 		Kind:         kind,
 	}
 }
 
-func (EntitlementSetAuthorization) isAuthorization() {}
+func (*EntitlementSetAuthorization) isAuthorization() {}
 
-func (e EntitlementSetAuthorization) ID() string {
+func (e *EntitlementSetAuthorization) ID() string {
 	entitlementTypeIDs := make([]string, 0, len(e.Entitlements))
 	for _, typeID := range e.Entitlements {
 		entitlementTypeIDs = append(
@@ -1438,21 +1609,38 @@ func (e EntitlementSetAuthorization) ID() string {
 	return sema.FormatEntitlementSetTypeID(entitlementTypeIDs, e.Kind)
 }
 
-func (e EntitlementSetAuthorization) Equal(auth Authorization) bool {
+func (e *EntitlementSetAuthorization) Equal(auth Authorization) bool {
 	switch auth := auth.(type) {
-	case EntitlementSetAuthorization:
+	case *EntitlementSetAuthorization:
 		if len(e.Entitlements) != len(auth.Entitlements) {
 			return false
 		}
 
-		for i, entitlement := range e.Entitlements {
-			if auth.Entitlements[i] != entitlement {
+		// sets are equivalent if they contain the same elements, regardless of order
+		otherEntitlementSet := auth.getEntitlementSet()
+
+		for _, entitlement := range e.Entitlements {
+			if _, exist := otherEntitlementSet[entitlement]; !exist {
 				return false
 			}
 		}
 		return e.Kind == auth.Kind
 	}
 	return false
+}
+
+func (t *EntitlementSetAuthorization) initializeEntitlementSet() {
+	t.entitlementSetOnce.Do(func() {
+		t.entitlementSet = make(map[common.TypeID]struct{}, len(t.Entitlements))
+		for _, e := range t.Entitlements {
+			t.entitlementSet[e] = struct{}{}
+		}
+	})
+}
+
+func (t *EntitlementSetAuthorization) getEntitlementSet() map[common.TypeID]struct{} {
+	t.initializeEntitlementSet()
+	return t.entitlementSet
 }
 
 type EntitlementMapAuthorization struct {
@@ -1531,6 +1719,193 @@ func (t *ReferenceType) Equal(other Type) bool {
 
 	return t.Authorization.Equal(otherType.Authorization) &&
 		t.Type.Equal(otherType.Type)
+}
+
+// DeprecatedReferenceType
+// Deprecated: removed in v1.0.0
+type DeprecatedReferenceType struct {
+	Type       Type
+	Authorized bool
+	typeID     string
+}
+
+var _ Type = &DeprecatedReferenceType{}
+
+func NewDeprecatedReferenceType(
+	authorized bool,
+	typ Type,
+) *DeprecatedReferenceType {
+	return &DeprecatedReferenceType{
+		Authorized: authorized,
+		Type:       typ,
+	}
+}
+
+func NewDeprecatedMeteredReferenceType(
+	gauge common.MemoryGauge,
+	authorized bool,
+	typ Type,
+) *DeprecatedReferenceType {
+	common.UseMemory(gauge, common.CadenceReferenceTypeMemoryUsage)
+	return NewDeprecatedReferenceType(authorized, typ)
+}
+
+func (*DeprecatedReferenceType) isType() {}
+
+func (t *DeprecatedReferenceType) ID() string {
+	if t.typeID == "" {
+		t.typeID = formatDeprecatedReferenceTypeID(t.Authorized, t.Type.ID()) //nolint:staticcheck
+	}
+	return t.typeID
+}
+
+func (t *DeprecatedReferenceType) Equal(other Type) bool {
+	otherType, ok := other.(*DeprecatedReferenceType)
+	if !ok {
+		return false
+	}
+
+	return t.Authorized == otherType.Authorized &&
+		t.Type.Equal(otherType.Type)
+}
+
+// Deprecated: use FormatReferenceTypeID
+func formatDeprecatedReferenceTypeID(authorized bool, typeString string) string {
+	return formatDeprecatedReferenceType("", authorized, typeString)
+}
+
+// Deprecated: use FormatReferenceTypeID
+func formatDeprecatedReferenceType(
+	separator string,
+	authorized bool,
+	typeString string,
+) string {
+	var builder strings.Builder
+	if authorized {
+		builder.WriteString("auth")
+		builder.WriteString(separator)
+	}
+	builder.WriteByte('&')
+	builder.WriteString(typeString)
+	return builder.String()
+}
+
+// DeprecatedRestrictedType
+// Deprecated: removed in v1.0.0
+type DeprecatedRestrictedType struct {
+	typeID             string
+	Type               Type
+	Restrictions       []Type
+	restrictionSet     DeprecatedRestrictionSet
+	restrictionSetOnce sync.Once
+}
+
+// Deprecated: removed in v1.0.0
+type DeprecatedRestrictionSet = map[Type]struct{}
+
+func NewDeprecatedRestrictedType(
+	typ Type,
+	restrictions []Type,
+) *DeprecatedRestrictedType {
+	return &DeprecatedRestrictedType{
+		Type:         typ,
+		Restrictions: restrictions,
+	}
+}
+
+func NewDeprecatedMeteredRestrictedType(
+	gauge common.MemoryGauge,
+	typ Type,
+	restrictions []Type,
+) *DeprecatedRestrictedType {
+	common.UseMemory(gauge, common.CadenceDeprecatedRestrictedTypeMemoryUsage)
+	return NewDeprecatedRestrictedType(typ, restrictions)
+}
+
+func (*DeprecatedRestrictedType) isType() {}
+
+func (t *DeprecatedRestrictedType) ID() string {
+	if t.typeID == "" {
+		var restrictionStrings []string
+		restrictionCount := len(t.Restrictions)
+		if restrictionCount > 0 {
+			restrictionStrings = make([]string, 0, restrictionCount)
+			for _, restriction := range t.Restrictions {
+				restrictionStrings = append(restrictionStrings, restriction.ID())
+			}
+		}
+		var typeString string
+		if t.Type != nil {
+			typeString = t.Type.ID()
+		}
+		t.typeID = formatDeprecatedRestrictedTypeID(typeString, restrictionStrings)
+	}
+	return t.typeID
+}
+
+func (t *DeprecatedRestrictedType) Equal(other Type) bool {
+	otherType, ok := other.(*DeprecatedRestrictedType)
+	if !ok {
+		return false
+	}
+
+	if t.Type == nil && otherType.Type != nil {
+		return false
+	}
+	if t.Type != nil && otherType.Type == nil {
+		return false
+	}
+	if t.Type != nil && !t.Type.Equal(otherType.Type) {
+		return false
+	}
+
+	restrictionSet := t.RestrictionSet()
+	otherRestrictionSet := otherType.RestrictionSet()
+
+	if len(restrictionSet) != len(otherRestrictionSet) {
+		return false
+	}
+
+	for restriction := range restrictionSet { //nolint:maprange
+		_, ok := otherRestrictionSet[restriction]
+		if !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (t *DeprecatedRestrictedType) initializeRestrictionSet() {
+	t.restrictionSetOnce.Do(func() {
+		t.restrictionSet = make(DeprecatedRestrictionSet, len(t.Restrictions))
+		for _, restriction := range t.Restrictions {
+			t.restrictionSet[restriction] = struct{}{}
+		}
+	})
+}
+
+func (t *DeprecatedRestrictedType) RestrictionSet() DeprecatedRestrictionSet {
+	t.initializeRestrictionSet()
+	return t.restrictionSet
+}
+
+func formatDeprecatedRestrictedType(typeString string, restrictionStrings []string) string {
+	var result strings.Builder
+	result.WriteString(typeString)
+	result.WriteByte('{')
+	for i, restrictionString := range restrictionStrings {
+		if i > 0 {
+			result.WriteByte(',')
+		}
+		result.WriteString(restrictionString)
+	}
+	result.WriteByte('}')
+	return result.String()
+}
+
+func formatDeprecatedRestrictedTypeID(typeString string, restrictionStrings []string) string {
+	return formatDeprecatedRestrictedType(typeString, restrictionStrings)
 }
 
 // IntersectionType
@@ -1661,7 +2036,7 @@ type EnumType struct {
 	Location            common.Location
 	QualifiedIdentifier string
 	RawType             Type
-	Fields              []Field
+	fields              []Field
 	Initializers        [][]Parameter
 }
 
@@ -1676,7 +2051,7 @@ func NewEnumType(
 		Location:            location,
 		QualifiedIdentifier: qualifiedIdentifier,
 		RawType:             rawType,
-		Fields:              fields,
+		fields:              fields,
 		Initializers:        initializers,
 	}
 }
@@ -1709,12 +2084,12 @@ func (t *EnumType) CompositeTypeQualifiedIdentifier() string {
 	return t.QualifiedIdentifier
 }
 
-func (t *EnumType) CompositeFields() []Field {
-	return t.Fields
+func (t *EnumType) compositeFields() []Field {
+	return t.fields
 }
 
-func (t *EnumType) SetCompositeFields(fields []Field) {
-	t.Fields = fields
+func (t *EnumType) setCompositeFields(fields []Field) {
+	t.fields = fields
 }
 
 func (t *EnumType) CompositeInitializers() [][]Parameter {
@@ -1729,4 +2104,12 @@ func (t *EnumType) Equal(other Type) bool {
 
 	return t.Location == otherType.Location &&
 		t.QualifiedIdentifier == otherType.QualifiedIdentifier
+}
+
+func (t *EnumType) SearchFieldByName(fieldName string) Type {
+	return SearchCompositeFieldTypeByName(t, fieldName)
+}
+
+func (t *EnumType) FieldsMappedByName() map[string]Type {
+	return CompositeFieldTypesMappedByName(t)
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,10 +37,6 @@ type memberIndices struct {
 	_specialFunctions []*SpecialFunctionDeclaration
 	// Use `Initializers()` instead
 	_initializers []*SpecialFunctionDeclaration
-	// Semantically only one destructor is allowed,
-	// but the program might illegally declare multiple.
-	// Use `Destructors()` instead
-	_destructors []*SpecialFunctionDeclaration
 	// Use `Functions()`
 	_functions []*FunctionDeclaration
 	// Use `FunctionsByIdentifier()` instead
@@ -67,6 +63,8 @@ type memberIndices struct {
 	_attachments []*AttachmentDeclaration
 	// Use `EnumCases()` instead
 	_enumCases []*EnumCaseDeclaration
+	// Use `Pragmas()` instead
+	_pragmas []*PragmaDeclaration
 }
 
 func (i *memberIndices) FieldsByIdentifier(declarations []Declaration) map[string]*FieldDeclaration {
@@ -107,11 +105,6 @@ func (i *memberIndices) EntitlementMappingsByIdentifier(declarations []Declarati
 func (i *memberIndices) Initializers(declarations []Declaration) []*SpecialFunctionDeclaration {
 	i.once.Do(i.initializer(declarations))
 	return i._initializers
-}
-
-func (i *memberIndices) Destructors(declarations []Declaration) []*SpecialFunctionDeclaration {
-	i.once.Do(i.initializer(declarations))
-	return i._destructors
 }
 
 func (i *memberIndices) Fields(declarations []Declaration) []*FieldDeclaration {
@@ -159,6 +152,11 @@ func (i *memberIndices) EnumCases(declarations []Declaration) []*EnumCaseDeclara
 	return i._enumCases
 }
 
+func (i *memberIndices) Pragmas(declarations []Declaration) []*PragmaDeclaration {
+	i.once.Do(i.initializer(declarations))
+	return i._pragmas
+}
+
 func (i *memberIndices) initializer(declarations []Declaration) func() {
 	return func() {
 		i.init(declarations)
@@ -175,7 +173,6 @@ func (i *memberIndices) init(declarations []Declaration) {
 	i._functionsByIdentifier = make(map[string]*FunctionDeclaration)
 
 	i._specialFunctions = make([]*SpecialFunctionDeclaration, 0)
-	i._destructors = make([]*SpecialFunctionDeclaration, 0)
 	i._initializers = make([]*SpecialFunctionDeclaration, 0)
 
 	i._composites = make([]*CompositeDeclaration, 0)
@@ -194,6 +191,7 @@ func (i *memberIndices) init(declarations []Declaration) {
 	i._entitlementMappingsByIdentifier = make(map[string]*EntitlementMappingDeclaration)
 
 	i._enumCases = make([]*EnumCaseDeclaration, 0)
+	i._pragmas = make([]*PragmaDeclaration, 0)
 
 	for _, declaration := range declarations {
 		switch declaration := declaration.(type) {
@@ -211,8 +209,6 @@ func (i *memberIndices) init(declarations []Declaration) {
 			switch declaration.Kind {
 			case common.DeclarationKindInitializer:
 				i._initializers = append(i._initializers, declaration)
-			case common.DeclarationKindDestructor:
-				i._destructors = append(i._destructors, declaration)
 			}
 
 		case *EntitlementDeclaration:
@@ -237,6 +233,9 @@ func (i *memberIndices) init(declarations []Declaration) {
 
 		case *EnumCaseDeclaration:
 			i._enumCases = append(i._enumCases, declaration)
+
+		case *PragmaDeclaration:
+			i._pragmas = append(i._pragmas, declaration)
 		}
 	}
 }

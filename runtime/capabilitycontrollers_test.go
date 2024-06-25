@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,11 @@
 package runtime_test
 
 import (
+	"encoding/binary"
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
@@ -37,7 +39,7 @@ import (
 func TestRuntimeCapabilityControllers(t *testing.T) {
 	t.Parallel()
 
-	test := func(tx string) (
+	testWithSignerCount := func(t *testing.T, tx string, signerCount int) (
 		err error,
 		storage *Storage,
 	) {
@@ -122,7 +124,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `),
 		)
 
-		signer := common.MustBytesToAddress([]byte{0x1})
+		if signerCount < 1 {
+			signerCount = 1
+		}
+
+		testSigners := make([]Address, signerCount)
+		for signerIndex := 0; signerIndex < signerCount; signerIndex++ {
+			binary.BigEndian.PutUint64(
+				testSigners[signerIndex][:],
+				uint64(signerIndex+1),
+			)
+		}
+
+		signers := []Address{testSigners[0]}
 
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
@@ -134,7 +148,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				return nil
 			},
 			OnGetSigningAccounts: func() ([]Address, error) {
-				return []Address{signer}, nil
+				return signers, nil
 			},
 			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
 			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
@@ -164,6 +178,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 		// Call contract
 
+		signers = testSigners
+
 		err = rt.ExecuteTransaction(
 			Script{
 				Source: []byte(tx),
@@ -179,6 +195,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		})
 
 		return
+	}
+
+	test := func(t *testing.T, tx string) (
+		err error,
+		storage *Storage,
+	) {
+		return testWithSignerCount(t, tx, 1)
 	}
 
 	authAccountType := sema.FullyEntitledAccountReferenceType
@@ -200,6 +223,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -208,12 +232,15 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                     let path = /public/x
 
                                     // Act
-                                    let gotCap: Capability<&AnyStruct>? =
+                                    let gotCap: Capability<&AnyStruct> =
                                         %[1]s.capabilities.get<&AnyStruct>(path)
 
                                     // Assert
                                     assert(!%[1]s.capabilities.exists(path))
-                                    assert(gotCap == nil)
+                                    assert(gotCap.id == 0)
+                                    assert(gotCap.borrow() == nil)
+                                    assert(gotCap.check() == false)
+                                    assert(gotCap.address == 0x1)
                                 }
                             }
                         `,
@@ -229,6 +256,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -249,7 +277,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Test.R> =
-                                          %[1]s.capabilities.get<&Test.R>(publicPath)!
+                                          %[1]s.capabilities.get<&Test.R>(publicPath)
 
                                       // Assert
                                       assert(%[1]s.capabilities.exists(publicPath))
@@ -267,6 +295,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("account capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -282,7 +311,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Account> =
-                                          %[1]s.capabilities.get<&Account>(publicPath)!
+                                          %[1]s.capabilities.get<&Account>(publicPath)
 
                                       // Assert
                                       assert(%[1]s.capabilities.exists(publicPath))
@@ -306,6 +335,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("storage capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -326,7 +356,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Test.R> =
-                                          %[1]s.capabilities.get<&Test.R>(publicPath)!
+                                          %[1]s.capabilities.get<&Test.R>(publicPath)
                                       let ref: &Test.R = gotCap.borrow()!
 
                                       // Assert
@@ -347,6 +377,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("account capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -362,7 +393,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
                                       // Act
                                       let gotCap: Capability<&Account> =
-                                          %[1]s.capabilities.get<&Account>(publicPath)!
+                                          %[1]s.capabilities.get<&Account>(publicPath)
                                       let ref: &Account = gotCap.borrow()!
 
                                       // Assert
@@ -388,6 +419,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("storage capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -407,13 +439,16 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let gotCap: Capability<auth(Test.X) &Test.R>? =
+                                      let gotCap: Capability<auth(Test.X) &Test.R> =
                                           %[1]s.capabilities.get<auth(Test.X) &Test.R>(publicPath)
 
                                       // Assert
                                       assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
-                                      assert(gotCap == nil)
+                                      assert(gotCap.id == 0)
+                                      assert(gotCap.borrow() == nil)
+                                      assert(gotCap.check() == false)
+                                      assert(gotCap.address == 0x1)
                                   }
                               }
                             `,
@@ -426,6 +461,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("account capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -442,13 +478,16 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let gotCap: Capability<&Test.R>? =
+                                      let gotCap: Capability<&Test.R> =
                                           %[1]s.capabilities.get<&Test.R>(publicPath)
 
                                       // Assert
                                       assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
-                                      assert(gotCap == nil)
+                                      assert(gotCap.id == 0)
+                                      assert(gotCap.borrow() == nil)
+                                      assert(gotCap.check() == false)
+                                      assert(gotCap.address == 0x1)
                                   }
                               }
                             `,
@@ -466,6 +505,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("storage capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -485,13 +525,16 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let gotCap: Capability<&Test.S>? =
+                                      let gotCap: Capability<&Test.S> =
                                           %[1]s.capabilities.get<&Test.S>(publicPath)
 
                                       // Assert
                                       assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
-                                      assert(gotCap == nil)
+                                      assert(gotCap.id == 0)
+                                      assert(gotCap.borrow() == nil)
+                                      assert(gotCap.check() == false)
+                                      assert(gotCap.address == 0x1)
                                   }
                               }
                             `,
@@ -504,6 +547,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("account capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -518,13 +562,16 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       signer.capabilities.publish(issuedCap, at: publicPath)
 
                                       // Act
-                                      let gotCap: Capability<&AnyResource>? =
+                                      let gotCap: Capability<&AnyResource> =
                                           %[1]s.capabilities.get<&AnyResource>(publicPath)
 
                                       // Assert
                                       assert(%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
-                                      assert(gotCap == nil)
+                                      assert(gotCap.id == 0)
+                                      assert(gotCap.borrow() == nil)
+                                      assert(gotCap.check() == false)
+                                      assert(gotCap.address == 0x1)
                                   }
                               }
                             `,
@@ -541,6 +588,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -561,14 +609,17 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let unpublishedcap = signer.capabilities.unpublish(publicPath)
 
                                       // Act
-                                      let gotCap: Capability<&Test.R>? =
+                                      let gotCap: Capability<&Test.R> =
                                           %[1]s.capabilities.get<&Test.R>(publicPath)
 
                                       // Assert
                                       assert(!%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(unpublishedcap!.id == expectedCapID)
-                                      assert(gotCap == nil)
+                                      assert(gotCap.id == 0)
+                                      assert(gotCap.borrow() == nil)
+                                      assert(gotCap.check() == false)
+                                      assert(gotCap.address == 0x1)
                                   }
                               }
                             `,
@@ -580,6 +631,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("account capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -595,14 +647,17 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                                       let unpublishedcap = signer.capabilities.unpublish(publicPath)
 
                                       // Act
-                                      let gotCap: Capability<&Account>? =
+                                      let gotCap: Capability<&Account> =
                                           %[1]s.capabilities.get<&Account>(publicPath)
 
                                       // Assert
                                       assert(!%[1]s.capabilities.exists(publicPath))
                                       assert(issuedCap.id == expectedCapID)
                                       assert(unpublishedcap!.id == expectedCapID)
-                                      assert(gotCap == nil)
+                                      assert(gotCap.id == 0)
+                                      assert(gotCap.borrow() == nil)
+                                      assert(gotCap.check() == false)
+                                      assert(gotCap.address == 0x1)
                                   }
                               }
                             `,
@@ -619,6 +674,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					fmt.Sprintf(
 						// language=cadence
 						`
@@ -645,6 +701,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -681,6 +738,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("account capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -718,6 +776,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("storage capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -755,6 +814,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("account capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -794,6 +854,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("storage capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -831,6 +892,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Run("account capability", func(t *testing.T) {
 
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -867,6 +929,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -905,6 +968,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("account capability", func(t *testing.T) {
 					err, _ := test(
+						t,
 						fmt.Sprintf(
 							// language=cadence
 							`
@@ -945,6 +1009,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 					t.Run("storage capability", func(t *testing.T) {
 						err, _ := test(
+							t,
 							// language=cadence
 							`
                               import Test from 0x1
@@ -974,6 +1039,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 					t.Run("storage capability", func(t *testing.T) {
 						err, _ := test(
+							t,
 							// language=cadence
 							`
                               transaction {
@@ -999,11 +1065,94 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					})
 				})
 
+				t.Run("publish different account", func(t *testing.T) {
+
+					t.Parallel()
+
+					t.Run("storage capability", func(t *testing.T) {
+
+						err, _ := testWithSignerCount(
+							t,
+							// language=cadence
+							`
+                               transaction {
+                                   prepare(
+                                       signer1: auth(Capabilities) &Account,
+                                       signer2: auth(Capabilities) &Account
+                                   ) {
+                                       let publicPath = /public/r
+                                       let storagePath = /storage/r
+
+                                       // Arrange
+                                       let issuedCap: Capability<&AnyStruct> =
+                                           signer1.capabilities.storage.issue<&AnyStruct>(storagePath)
+
+                                       // Act
+                                       signer2.capabilities.publish(issuedCap, at: publicPath)
+                                   }
+                               }
+                             `,
+							2,
+						)
+						RequireError(t, err)
+
+						var publishingError interpreter.CapabilityAddressPublishingError
+						require.ErrorAs(t, err, &publishingError)
+						assert.Equal(t,
+							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x2}),
+							publishingError.AccountAddress,
+						)
+						assert.Equal(t,
+							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+							publishingError.CapabilityAddress,
+						)
+					})
+
+					t.Run("account capability", func(t *testing.T) {
+
+						err, _ := testWithSignerCount(
+							t,
+							// language=cadence
+							`
+                              transaction {
+                                  prepare(
+                                      signer1: auth(Capabilities) &Account,
+                                      signer2: auth(Capabilities) &Account
+                                  ) {
+                                      let publicPath = /public/r
+
+                                      // Arrange
+                                      let issuedCap: Capability<&Account> =
+                                          signer1.capabilities.account.issue<&Account>()
+
+                                      // Act
+                                      signer2.capabilities.publish(issuedCap, at: publicPath)
+                                  }
+                              }
+                            `,
+							2,
+						)
+						RequireError(t, err)
+
+						var publishingError interpreter.CapabilityAddressPublishingError
+						require.ErrorAs(t, err, &publishingError)
+						assert.Equal(t,
+							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x2}),
+							publishingError.AccountAddress,
+						)
+						assert.Equal(t,
+							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+							publishingError.CapabilityAddress,
+						)
+					})
+				})
+
 				t.Run("unpublish non-existing", func(t *testing.T) {
 
 					t.Parallel()
 
 					err, _ := test(
+						t,
 						// language=cadence
 						`
                           transaction {
@@ -1041,6 +1190,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1072,11 +1222,69 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			require.NoError(t, err)
 		})
 
+		t.Run("issue, multiple controllers to various paths, with same or different type, type value", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				t,
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          let storagePath1 = /storage/r
+                          let storagePath2 = /storage/r2
+
+                          // Act
+                          let issuedCap1: Capability<&Test.R> = signer.capabilities.storage
+                              .issueWithType(storagePath1, type: Type<&Test.R>()) as! Capability<&Test.R>
+                          let issuedCap2: Capability<&Test.R> = signer.capabilities.storage
+                              .issueWithType(storagePath1, type: Type<&Test.R>()) as! Capability<&Test.R>
+                          let issuedCap3: Capability<&Test.R> = signer.capabilities.storage
+                              .issueWithType(storagePath1, type: Type<&Test.R>()) as! Capability<&Test.R>
+                          let issuedCap4: Capability<&Test.R> = signer.capabilities.storage
+                              .issueWithType(storagePath2, type: Type<&Test.R>()) as! Capability<&Test.R>
+
+                          // Assert
+                          assert(issuedCap1.id == 1)
+                          assert(issuedCap2.id == 2)
+                          assert(issuedCap3.id == 3)
+                          assert(issuedCap4.id == 4)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("issue with type value, invalid type", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				t,
+				// language=cadence
+				`
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          signer.capabilities.storage.issueWithType(/storage/test, type: Type<Int>())
+                      }
+                  }
+                `,
+			)
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.InvalidCapabilityIssueTypeError{})
+		})
+
 		t.Run("getController, non-existing", func(t *testing.T) {
 
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1102,6 +1310,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1128,6 +1337,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1185,6 +1395,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1240,6 +1451,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1270,6 +1482,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1338,6 +1551,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1377,6 +1591,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1410,6 +1625,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1446,6 +1662,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1479,6 +1696,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1520,6 +1738,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1543,11 +1762,61 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			require.NoError(t, err)
 		})
 
+		t.Run("issue, multiple controllers, with same or different type, type value", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				t,
+				// language=cadence
+				`
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          // Act
+                          let issuedCap1: Capability<&Account> = signer.capabilities.account
+                              .issueWithType(Type<&Account>()) as! Capability<&Account>
+                          let issuedCap2: Capability<&Account> = signer.capabilities.account
+                              .issueWithType(Type<&Account>()) as! Capability<&Account>
+                          let issuedCap3: Capability<&Account> = signer.capabilities.account
+                              .issueWithType(Type<&Account>()) as! Capability<&Account>
+
+                          // Assert
+                          assert(issuedCap1.id == 1)
+                          assert(issuedCap2.id == 2)
+                          assert(issuedCap3.id == 3)
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
+
+		t.Run("issue with type value, invalid type", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _ := test(
+				t,
+				// language=cadence
+				`
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          signer.capabilities.account.issueWithType(Type<Int>())
+                      }
+                  }
+                `,
+			)
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.InvalidCapabilityIssueTypeError{})
+		})
+
 		t.Run("getController, non-existing", func(t *testing.T) {
 
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1573,6 +1842,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1599,6 +1869,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1640,6 +1911,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1686,6 +1958,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1714,6 +1987,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1764,6 +2038,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1798,6 +2073,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1829,6 +2105,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1857,6 +2134,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1888,6 +2166,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -1920,6 +2199,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -1957,6 +2237,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -2001,6 +2282,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2105,6 +2387,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2144,6 +2427,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2186,6 +2470,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2231,6 +2516,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2270,6 +2556,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2300,6 +2587,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2330,6 +2618,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2360,6 +2649,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, storage := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2395,6 +2685,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       import Test from 0x1
@@ -2438,6 +2729,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   import Test from 0x1
@@ -2471,6 +2763,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Parallel()
 
 			err, _ := test(
+				t,
 				// language=cadence
 				`
                   transaction {
@@ -2511,6 +2804,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       transaction {
@@ -2546,6 +2840,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       transaction {
@@ -2572,6 +2867,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				err, _ := test(
+					t,
 					// language=cadence
 					`
                       transaction {

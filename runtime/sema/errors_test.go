@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,13 @@
 package sema
 
 import (
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/cadence/runtime/parser"
 )
 
 func TestErrorMessageExpectedActualTypes(t *testing.T) {
@@ -65,5 +69,61 @@ func TestErrorMessageExpectedActualTypes(t *testing.T) {
 		assert.Equal(t, "A.0000000000000001.Bar.Foo", expected)
 		assert.Equal(t, "A.0000000000000002.Bar.Foo", actual)
 
+	})
+}
+
+func TestUnwrappingCheckerError(t *testing.T) {
+	t.Parallel()
+
+	targetErr := fmt.Errorf("target error")
+
+	t.Run("unwrap matches child", func(t *testing.T) {
+		t.Parallel()
+
+		err := CheckerError{
+			Errors: []error{
+				fmt.Errorf("first error"),
+				targetErr,
+			},
+		}
+
+		assert.True(t, errors.Is(err, targetErr))
+	})
+
+	t.Run("unwrap matches wrapped child", func(t *testing.T) {
+		t.Parallel()
+
+		err := CheckerError{
+			Errors: []error{
+				fmt.Errorf("first error"),
+				fmt.Errorf("wrapped error: %w", &InvalidPragmaError{}),
+			},
+		}
+
+		var pragmaErr *InvalidPragmaError
+		assert.True(t, errors.As(err, &pragmaErr))
+	})
+
+	t.Run("unwrap finds wrapped grandchild", func(t *testing.T) {
+		t.Parallel()
+
+		err := CheckerError{
+			Errors: []error{
+				fmt.Errorf("first error"),
+				fmt.Errorf("wrapped error: %w", &parser.Error{
+					Errors: []error{
+						fmt.Errorf("first parser error"),
+						targetErr,
+					},
+				}),
+			},
+		}
+
+		var parserErr *parser.Error
+		assert.True(t, errors.As(err, &parserErr))
+		assert.True(t, errors.Is(err, targetErr))
+
+		var pragmaErr *InvalidPragmaError
+		assert.False(t, errors.As(err, &pragmaErr))
 	})
 }

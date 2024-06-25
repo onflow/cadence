@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ func TestInterpretPath(t *testing.T) {
 					Domain:     domain,
 					Identifier: "random",
 				},
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 	}
@@ -91,11 +91,11 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 					Domain:     domain,
 					Identifier: "foo",
 				},
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 
-		t.Run(fmt.Sprintf("invalid identifier 2: %s", domain.Identifier()), func(t *testing.T) {
+		t.Run(fmt.Sprintf("syntactically invalid identifier 2: %s", domain.Identifier()), func(t *testing.T) {
 
 			t.Parallel()
 
@@ -104,19 +104,22 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
-                      let x = %[1]s(identifier: "2")
+                      let x = %[1]s(identifier: "2")!
                     `,
 					domainType.String(),
 				),
 			)
 
 			assert.Equal(t,
-				interpreter.Nil,
-				inter.Globals.Get("x").GetValue(),
+				interpreter.PathValue{
+					Domain:     domain,
+					Identifier: "2",
+				},
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 
-		t.Run(fmt.Sprintf("invalid identifier -: %s", domain.Identifier()), func(t *testing.T) {
+		t.Run(fmt.Sprintf("syntactically invalid identifier -: %s", domain.Identifier()), func(t *testing.T) {
 
 			t.Parallel()
 
@@ -125,15 +128,18 @@ func TestInterpretConvertStringToPath(t *testing.T) {
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(
 					`
-                      let x = %[1]s(identifier: "fo-o")
+                      let x = %[1]s(identifier: "fo-o")!
                     `,
 					domainType.String(),
 				),
 			)
 
 			assert.Equal(t,
-				interpreter.Nil,
-				inter.Globals.Get("x").GetValue(),
+				interpreter.PathValue{
+					Domain:     domain,
+					Identifier: "fo-o",
+				},
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 	}

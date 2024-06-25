@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,19 +23,17 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) Type {
 
 	ty, err := CheckPathLiteral(
+		checker.memoryGauge,
 		expression.Domain.Identifier,
 		expression.Identifier.Identifier,
-		func() ast.Range {
-			return ast.NewRangeFromPositioned(checker.memoryGauge, expression.Domain)
-		},
-		func() ast.Range {
-			return ast.NewRangeFromPositioned(checker.memoryGauge, expression.Identifier)
-		},
+		expression.Domain,
+		expression.Identifier,
 	)
 
 	checker.report(err)
@@ -45,14 +43,20 @@ func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) Type
 
 var isValidIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`).MatchString
 
-func CheckPathLiteral(domainString, identifier string, domainRangeThunk, idRangeThunk func() ast.Range) (Type, error) {
+func CheckPathLiteral(
+	gauge common.MemoryGauge,
+	domain string,
+	identifier string,
+	domainRange ast.HasPosition,
+	identifierRange ast.HasPosition,
+) (Type, error) {
 
 	// Check that the domain is valid
-	domain := common.PathDomainFromIdentifier(domainString)
-	if domain == common.PathDomainUnknown {
+	pathDomain := common.PathDomainFromIdentifier(domain)
+	if pathDomain == common.PathDomainUnknown {
 		return PathType, &InvalidPathDomainError{
-			ActualDomain: domainString,
-			Range:        domainRangeThunk(),
+			ActualDomain: domain,
+			Range:        ast.NewRangeFromPositioned(gauge, domainRange),
 		}
 	}
 
@@ -60,11 +64,11 @@ func CheckPathLiteral(domainString, identifier string, domainRangeThunk, idRange
 	if !isValidIdentifier(identifier) {
 		return PathType, &InvalidPathIdentifierError{
 			ActualIdentifier: identifier,
-			Range:            idRangeThunk(),
+			Range:            ast.NewRangeFromPositioned(gauge, identifierRange),
 		}
 	}
 
-	switch domain {
+	switch pathDomain {
 	case common.PathDomainStorage:
 		return StoragePathType, nil
 	case common.PathDomainPublic:
@@ -72,6 +76,6 @@ func CheckPathLiteral(domainString, identifier string, domainRangeThunk, idRange
 	case common.PathDomainPrivate:
 		return PrivatePathType, nil
 	default:
-		return PathType, nil
+		panic(errors.NewUnreachableError())
 	}
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ type StaticType interface {
 	Encode(e *cbor.StreamEncoder) error
 	MeteredString(memoryGauge common.MemoryGauge) string
 	ID() TypeID
+	IsDeprecated() bool
 }
 
 type TypeID = common.TypeID
@@ -129,6 +130,10 @@ func (t *CompositeStaticType) ID() TypeID {
 	return t.TypeID
 }
 
+func (*CompositeStaticType) IsDeprecated() bool {
+	return false
+}
+
 // InterfaceStaticType
 
 type InterfaceStaticType struct {
@@ -205,6 +210,10 @@ func (t *InterfaceStaticType) ID() TypeID {
 	return t.TypeID
 }
 
+func (*InterfaceStaticType) IsDeprecated() bool {
+	return false
+}
+
 // ArrayStaticType
 
 type ArrayStaticType interface {
@@ -267,6 +276,65 @@ func (t *VariableSizedStaticType) Equal(other StaticType) bool {
 
 func (t *VariableSizedStaticType) ID() TypeID {
 	return sema.FormatVariableSizedTypeID(t.Type.ID())
+}
+
+func (t *VariableSizedStaticType) IsDeprecated() bool {
+	return t.Type.IsDeprecated()
+}
+
+// InclusiveRangeStaticType
+
+type InclusiveRangeStaticType struct {
+	ElementType StaticType
+}
+
+var _ StaticType = InclusiveRangeStaticType{}
+var _ atree.TypeInfo = InclusiveRangeStaticType{}
+
+func NewInclusiveRangeStaticType(
+	memoryGauge common.MemoryGauge,
+	elementType StaticType,
+) InclusiveRangeStaticType {
+	common.UseMemory(memoryGauge, common.InclusiveRangeStaticTypeMemoryUsage)
+
+	return InclusiveRangeStaticType{
+		ElementType: elementType,
+	}
+}
+
+func (InclusiveRangeStaticType) isStaticType() {}
+
+func (InclusiveRangeStaticType) elementSize() uint {
+	return UnknownElementSize
+}
+
+func (t InclusiveRangeStaticType) String() string {
+	return t.MeteredString(nil)
+}
+
+func (t InclusiveRangeStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
+	common.UseMemory(memoryGauge, common.InclusiveRangeStaticTypeStringMemoryUsage)
+
+	elementStr := t.ElementType.MeteredString(memoryGauge)
+
+	return fmt.Sprintf("InclusiveRange<%s>", elementStr)
+}
+
+func (t InclusiveRangeStaticType) Equal(other StaticType) bool {
+	otherRangeType, ok := other.(InclusiveRangeStaticType)
+	if !ok {
+		return false
+	}
+
+	return t.ElementType.Equal(otherRangeType.ElementType)
+}
+
+func (t InclusiveRangeStaticType) ID() TypeID {
+	return sema.InclusiveRangeTypeID(string(t.ElementType.ID()))
+}
+
+func (t InclusiveRangeStaticType) IsDeprecated() bool {
+	return t.ElementType.IsDeprecated()
 }
 
 // ConstantSizedStaticType
@@ -335,6 +403,10 @@ func (t *ConstantSizedStaticType) ID() TypeID {
 	return sema.FormatConstantSizedTypeID(t.Type.ID(), t.Size)
 }
 
+func (t *ConstantSizedStaticType) IsDeprecated() bool {
+	return t.Type.IsDeprecated()
+}
+
 // DictionaryStaticType
 
 type DictionaryStaticType struct {
@@ -392,6 +464,11 @@ func (t *DictionaryStaticType) ID() TypeID {
 	)
 }
 
+func (t *DictionaryStaticType) IsDeprecated() bool {
+	return t.KeyType.IsDeprecated() ||
+		t.ValueType.IsDeprecated()
+}
+
 // OptionalStaticType
 
 type OptionalStaticType struct {
@@ -437,6 +514,10 @@ func (t *OptionalStaticType) Equal(other StaticType) bool {
 
 func (t *OptionalStaticType) ID() TypeID {
 	return sema.FormatOptionalTypeID(t.Type.ID())
+}
+
+func (t *OptionalStaticType) IsDeprecated() bool {
+	return t.Type.IsDeprecated()
 }
 
 var NilStaticType = &OptionalStaticType{
@@ -532,6 +613,16 @@ func (t *IntersectionStaticType) ID() TypeID {
 	return sema.FormatIntersectionTypeID(interfaceTypeIDs)
 }
 
+func (t *IntersectionStaticType) IsDeprecated() bool {
+	for _, typ := range t.Types {
+		if typ.IsDeprecated() {
+			return true
+		}
+	}
+
+	return false
+}
+
 // Authorization
 
 type Authorization interface {
@@ -552,11 +643,11 @@ var FullyEntitledAccountAccess = ConvertSemaAccessToStaticAuthorization(nil, sem
 func (Unauthorized) isAuthorization() {}
 
 func (Unauthorized) String() string {
-	return ""
+	return "Unauthorized"
 }
 
-func (Unauthorized) MeteredString(_ common.MemoryGauge) string {
-	return ""
+func (a Unauthorized) MeteredString(_ common.MemoryGauge) string {
+	return "Unauthorized"
 }
 
 func (Unauthorized) ID() TypeID {
@@ -565,6 +656,29 @@ func (Unauthorized) ID() TypeID {
 
 func (Unauthorized) Equal(auth Authorization) bool {
 	_, ok := auth.(Unauthorized)
+	return ok
+}
+
+type Inaccessible struct{}
+
+var InaccessibleAccess Authorization = Inaccessible{}
+
+func (Inaccessible) isAuthorization() {}
+
+func (Inaccessible) String() string {
+	return "Inaccessible"
+}
+
+func (Inaccessible) MeteredString(_ common.MemoryGauge) string {
+	return "Inaccessible"
+}
+
+func (Inaccessible) ID() TypeID {
+	panic(errors.NewUnreachableError())
+}
+
+func (Inaccessible) Equal(auth Authorization) bool {
+	_, ok := auth.(Inaccessible)
 	return ok
 }
 
@@ -706,9 +820,11 @@ func (a EntitlementMapAuthorization) Equal(other Authorization) bool {
 // ReferenceStaticType
 
 type ReferenceStaticType struct {
+	Authorization Authorization
 	// ReferencedType is type of the referenced value (the type of the target)
-	ReferencedType StaticType
-	Authorization  Authorization
+	ReferencedType        StaticType
+	HasLegacyIsAuthorized bool
+	LegacyIsAuthorized    bool
 }
 
 var _ StaticType = &ReferenceStaticType{}
@@ -738,7 +854,10 @@ func (t *ReferenceStaticType) String() string {
 
 func (t *ReferenceStaticType) MeteredString(memoryGauge common.MemoryGauge) string {
 	typeStr := t.ReferencedType.MeteredString(memoryGauge)
-	authString := t.Authorization.MeteredString(memoryGauge)
+	authString := ""
+	if !t.Authorization.Equal(InaccessibleAccess) && !t.Authorization.Equal(UnauthorizedAccess) {
+		authString = t.Authorization.MeteredString(memoryGauge)
+	}
 
 	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(len(typeStr)+1+len(authString)))
 	return fmt.Sprintf("%s&%s", authString, typeStr)
@@ -763,6 +882,10 @@ func (t *ReferenceStaticType) ID() TypeID {
 		authorization,
 		t.ReferencedType.ID(),
 	)
+}
+
+func (t *ReferenceStaticType) IsDeprecated() bool {
+	return t.ReferencedType.IsDeprecated()
 }
 
 // CapabilityStaticType
@@ -830,6 +953,13 @@ func (t *CapabilityStaticType) ID() TypeID {
 	return sema.FormatCapabilityTypeID(borrowTypeID)
 }
 
+func (t *CapabilityStaticType) IsDeprecated() bool {
+	if t.BorrowType == nil {
+		return false
+	}
+	return t.BorrowType.IsDeprecated()
+}
+
 // Conversion
 
 func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) StaticType {
@@ -869,10 +999,17 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 			}
 		}
 
-		return NewIntersectionStaticType(
+		intersectionType := NewIntersectionStaticType(
 			memoryGauge,
 			intersectedTypes,
 		)
+
+		legacyType := t.LegacyType //nolint:staticcheck
+		if legacyType != nil {
+			intersectionType.LegacyType = ConvertSemaToStaticType(memoryGauge, legacyType)
+		}
+
+		return intersectionType
 
 	case *sema.ReferenceType:
 		return ConvertSemaReferenceTypeToStaticReferenceType(memoryGauge, t)
@@ -885,6 +1022,10 @@ func ConvertSemaToStaticType(memoryGauge common.MemoryGauge, t sema.Type) Static
 		}
 		borrowType := ConvertSemaToStaticType(memoryGauge, t.BorrowType)
 		return NewCapabilityStaticType(memoryGauge, borrowType)
+
+	case *sema.InclusiveRangeType:
+		memberType := ConvertSemaToStaticType(memoryGauge, t.MemberType)
+		return NewInclusiveRangeStaticType(memoryGauge, memberType)
 
 	case *sema.FunctionType:
 		return NewFunctionStaticType(memoryGauge, t)
@@ -933,6 +1074,9 @@ func ConvertSemaAccessToStaticAuthorization(
 	case sema.PrimitiveAccess:
 		if access.Equal(sema.UnauthorizedAccess) {
 			return UnauthorizedAccess
+		}
+		if access.Equal(sema.InaccessibleAccess) {
+			return InaccessibleAccess
 		}
 
 	case sema.EntitlementSetAccess:
@@ -999,14 +1143,21 @@ func ConvertSemaInterfaceTypeToStaticInterfaceType(
 func ConvertStaticAuthorizationToSemaAccess(
 	memoryGauge common.MemoryGauge,
 	auth Authorization,
-	getEntitlement func(typeID common.TypeID) (*sema.EntitlementType, error),
-	getEntitlementMapType func(typeID common.TypeID) (*sema.EntitlementMapType, error),
-) (sema.Access, error) {
+	handler StaticAuthorizationConversionHandler,
+) (
+	sema.Access,
+	error,
+) {
+
 	switch auth := auth.(type) {
 	case Unauthorized:
 		return sema.UnauthorizedAccess, nil
+
+	case Inaccessible:
+		return sema.InaccessibleAccess, nil
+
 	case EntitlementMapAuthorization:
-		entitlement, err := getEntitlementMapType(auth.TypeID)
+		entitlement, err := handler.GetEntitlementMapType(auth.TypeID)
 		if err != nil {
 			return nil, err
 		}
@@ -1015,7 +1166,7 @@ func ConvertStaticAuthorizationToSemaAccess(
 	case EntitlementSetAuthorization:
 		var entitlements []*sema.EntitlementType
 		err := auth.Entitlements.ForeachWithError(func(id common.TypeID, value struct{}) error {
-			entitlement, err := getEntitlement(id)
+			entitlement, err := handler.GetEntitlementType(id)
 			if err != nil {
 				return err
 			}
@@ -1031,29 +1182,42 @@ func ConvertStaticAuthorizationToSemaAccess(
 	panic(errors.NewUnreachableError())
 }
 
+type StaticAuthorizationConversionHandler interface {
+	GetEntitlementType(typeID TypeID) (*sema.EntitlementType, error)
+	GetEntitlementMapType(typeID TypeID) (*sema.EntitlementMapType, error)
+}
+
+type StaticTypeConversionHandler interface {
+	StaticAuthorizationConversionHandler
+	GetInterfaceType(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error)
+	GetCompositeType(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error)
+}
+
 func ConvertStaticToSemaType(
 	memoryGauge common.MemoryGauge,
 	typ StaticType,
-	getInterface func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.InterfaceType, error),
-	getComposite func(location common.Location, qualifiedIdentifier string, typeID TypeID) (*sema.CompositeType, error),
-	getEntitlement func(typeID TypeID) (*sema.EntitlementType, error),
-	getEntitlementMapType func(typeID TypeID) (*sema.EntitlementMapType, error),
+	handler StaticTypeConversionHandler,
 ) (_ sema.Type, err error) {
 	switch t := typ.(type) {
 	case *CompositeStaticType:
-		return getComposite(t.Location, t.QualifiedIdentifier, t.TypeID)
+		return handler.GetCompositeType(
+			t.Location,
+			t.QualifiedIdentifier,
+			t.TypeID,
+		)
 
 	case *InterfaceStaticType:
-		return getInterface(t.Location, t.QualifiedIdentifier, t.TypeID)
+		return handler.GetInterfaceType(
+			t.Location,
+			t.QualifiedIdentifier,
+			t.TypeID,
+		)
 
 	case *VariableSizedStaticType:
 		ty, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.Type,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 		if err != nil {
 			return nil, err
@@ -1064,10 +1228,7 @@ func ConvertStaticToSemaType(
 		ty, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.Type,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 		if err != nil {
 			return nil, err
@@ -1083,10 +1244,7 @@ func ConvertStaticToSemaType(
 		keyType, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.KeyType,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 		if err != nil {
 			return nil, err
@@ -1095,10 +1253,7 @@ func ConvertStaticToSemaType(
 		valueType, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.ValueType,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 		if err != nil {
 			return nil, err
@@ -1110,14 +1265,26 @@ func ConvertStaticToSemaType(
 			valueType,
 		), nil
 
+	case InclusiveRangeStaticType:
+		elementType, err := ConvertStaticToSemaType(
+			memoryGauge,
+			t.ElementType,
+			handler,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		return sema.NewInclusiveRangeType(
+			memoryGauge,
+			elementType,
+		), nil
+
 	case *OptionalStaticType:
 		ty, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.Type,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 		if err != nil {
 			return nil, err
@@ -1125,6 +1292,19 @@ func ConvertStaticToSemaType(
 		return sema.NewOptionalType(memoryGauge, ty), err
 
 	case *IntersectionStaticType:
+		var convertedLegacyType sema.Type
+		legacyType := t.LegacyType
+		if legacyType != nil {
+			convertedLegacyType, err = ConvertStaticToSemaType(
+				memoryGauge,
+				legacyType,
+				handler,
+			)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		var intersectedTypes []*sema.InterfaceType
 
 		typeCount := len(t.Types)
@@ -1132,7 +1312,11 @@ func ConvertStaticToSemaType(
 			intersectedTypes = make([]*sema.InterfaceType, typeCount)
 
 			for i, typ := range t.Types {
-				intersectedTypes[i], err = getInterface(typ.Location, typ.QualifiedIdentifier, typ.TypeID)
+				intersectedTypes[i], err = handler.GetInterfaceType(
+					typ.Location,
+					typ.QualifiedIdentifier,
+					typ.TypeID,
+				)
 				if err != nil {
 					return nil, err
 				}
@@ -1141,6 +1325,7 @@ func ConvertStaticToSemaType(
 
 		return sema.NewIntersectionType(
 			memoryGauge,
+			convertedLegacyType,
 			intersectedTypes,
 		), nil
 
@@ -1148,10 +1333,7 @@ func ConvertStaticToSemaType(
 		ty, err := ConvertStaticToSemaType(
 			memoryGauge,
 			t.ReferencedType,
-			getInterface,
-			getComposite,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 		if err != nil {
 			return nil, err
@@ -1160,8 +1342,7 @@ func ConvertStaticToSemaType(
 		access, err := ConvertStaticAuthorizationToSemaAccess(
 			memoryGauge,
 			t.Authorization,
-			getEntitlement,
-			getEntitlementMapType,
+			handler,
 		)
 
 		if err != nil {
@@ -1176,10 +1357,7 @@ func ConvertStaticToSemaType(
 			borrowType, err = ConvertStaticToSemaType(
 				memoryGauge,
 				t.BorrowType,
-				getInterface,
-				getComposite,
-				getEntitlement,
-				getEntitlementMapType,
+				handler,
 			)
 			if err != nil {
 				return nil, err
@@ -1218,10 +1396,10 @@ func NewFunctionStaticType(
 	}
 }
 
-func (t FunctionStaticType) ReturnType(interpreter *Interpreter) StaticType {
+func (t FunctionStaticType) ReturnType(gauge common.MemoryGauge) StaticType {
 	var returnType StaticType
 	if t.Type.ReturnTypeAnnotation.Type != nil {
-		returnType = ConvertSemaToStaticType(interpreter, t.Type.ReturnTypeAnnotation.Type)
+		returnType = ConvertSemaToStaticType(gauge, t.Type.ReturnTypeAnnotation.Type)
 	}
 
 	return returnType
@@ -1256,6 +1434,12 @@ func (t FunctionStaticType) Equal(other StaticType) bool {
 func (t FunctionStaticType) ID() TypeID {
 	return t.Type.ID()
 }
+
+func (FunctionStaticType) IsDeprecated() bool {
+	return false
+}
+
+// TypeParameter
 
 type TypeParameter struct {
 	TypeBound StaticType

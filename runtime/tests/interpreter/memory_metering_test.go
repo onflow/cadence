@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -118,10 +118,10 @@ func TestInterpretArrayMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(30), meter.getMemory(common.MemoryKindArrayValueBase))
-		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
-		assert.Equal(t, uint64(9), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
+		assert.Equal(t, uint64(26), meter.getMemory(common.MemoryKindArrayValueBase))
+		assert.Equal(t, uint64(22), meter.getMemory(common.MemoryKindAtreeArrayDataSlab))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindAtreeArrayMetaDataSlab))
+		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindAtreeArrayElementOverhead))
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
 
 		// 4 Int8: 1 for type, 3 for values
@@ -442,7 +442,7 @@ func TestInterpretDictionaryMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindDictionaryValueBase))
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindDictionaryValueBase))
 		assert.Equal(t, uint64(8), meter.getMemory(common.MemoryKindVariable))
 
 		// 4 Int8: 1 for type, 3 for values
@@ -677,7 +677,7 @@ func TestInterpretCompositeMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(27), meter.getMemory(common.MemoryKindCompositeValueBase))
+		assert.Equal(t, uint64(24), meter.getMemory(common.MemoryKindCompositeValueBase))
 		assert.Equal(t, uint64(18), meter.getMemory(common.MemoryKindAtreeMapDataSlab))
 		assert.Equal(t, uint64(0), meter.getMemory(common.MemoryKindAtreeMapElementOverhead))
 		assert.Equal(t, uint64(480), meter.getMemory(common.MemoryKindAtreeMapPreAllocatedElement))
@@ -706,10 +706,11 @@ func TestInterpretSimpleCompositeMetering(t *testing.T) {
 		address := common.MustBytesToAddress([]byte{0x1})
 
 		account := stdlib.NewAccountReferenceValue(
-			meter,
+			inter,
 			nil,
 			interpreter.AddressValue(address),
 			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("main", account)
@@ -1057,10 +1058,14 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			script,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 			meter,
@@ -1091,8 +1096,6 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 			stdlib.NewPublicKeyConstructor(
 				assumeValidPublicKeyValidator{},
-				nil,
-				nil,
 			),
 			stdlib.SignatureAlgorithmConstructor,
 		} {
@@ -1106,10 +1109,14 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			script,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 			meter,
@@ -1120,7 +1127,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 1 host function created for 'decodeHex' of String value
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindHostFunctionValue))
+		assert.Equal(t, uint64(1), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 
 	t.Run("multiple public key creation", func(t *testing.T) {
@@ -1145,8 +1152,6 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		for _, valueDeclaration := range []stdlib.StandardLibraryValue{
 			stdlib.NewPublicKeyConstructor(
 				assumeValidPublicKeyValidator{},
-				nil,
-				nil,
 			),
 			stdlib.SignatureAlgorithmConstructor,
 		} {
@@ -1160,10 +1165,14 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 			script,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 			meter,
@@ -1174,7 +1183,7 @@ func TestInterpretHostFunctionMetering(t *testing.T) {
 		require.NoError(t, err)
 
 		// 2 = 2x 1 host function created for 'decodeHex' of String value
-		assert.Equal(t, uint64(6), meter.getMemory(common.MemoryKindHostFunctionValue))
+		assert.Equal(t, uint64(2), meter.getMemory(common.MemoryKindHostFunctionValue))
 	})
 }
 
@@ -6679,7 +6688,7 @@ func TestInterpretStorageReferenceValueMetering(t *testing.T) {
 			1,
 			sema.Conjunction,
 		)
-		account := stdlib.NewAccountReferenceValue(meter, nil, interpreter.AddressValue(address), authorization)
+		account := stdlib.NewAccountReferenceValue(inter, nil, interpreter.AddressValue(address), authorization, interpreter.EmptyLocationRange)
 
 		_, err := inter.Invoke("main", account)
 		require.NoError(t, err)
@@ -8045,7 +8054,7 @@ func TestInterpretFunctionStaticType(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(3), meter.getMemory(common.MemoryKindFunctionStaticType))
+		assert.Equal(t, uint64(4), meter.getMemory(common.MemoryKindFunctionStaticType))
 	})
 }
 
@@ -8440,8 +8449,8 @@ func TestInterpretASTMetering(t *testing.T) {
 		_, err := inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint64(201), meter.getMemory(common.MemoryKindPosition))
-		assert.Equal(t, uint64(110), meter.getMemory(common.MemoryKindRange))
+		assert.Equal(t, uint64(200), meter.getMemory(common.MemoryKindPosition))
+		assert.Equal(t, uint64(109), meter.getMemory(common.MemoryKindRange))
 	})
 
 	t.Run("locations", func(t *testing.T) {
@@ -8625,10 +8634,11 @@ func TestInterpretStorageMapMetering(t *testing.T) {
 		sema.Conjunction,
 	)
 	account := stdlib.NewAccountReferenceValue(
-		meter,
+		inter,
 		nil,
 		address,
 		authorization,
+		interpreter.EmptyLocationRange,
 	)
 
 	_, err := inter.Invoke("main", account)
@@ -8646,7 +8656,7 @@ func TestInterpretValueStringConversion(t *testing.T) {
 
 		var loggedString string
 
-		logFunction := stdlib.NewStandardLibraryFunction(
+		logFunction := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			&sema.FunctionType{
 				Parameters: []sema.Parameter{
@@ -8663,7 +8673,11 @@ func TestInterpretValueStringConversion(t *testing.T) {
 				// Reset gauge, to only capture the values metered during string conversion
 				meter.meter = make(map[common.MemoryKind]uint64)
 
-				loggedString = invocation.Arguments[0].MeteredString(invocation.Interpreter, interpreter.SeenReferences{})
+				loggedString = invocation.Arguments[0].MeteredString(
+					invocation.Interpreter,
+					interpreter.SeenReferences{},
+					invocation.LocationRange,
+				)
 				return interpreter.Void
 			},
 		)
@@ -8677,10 +8691,14 @@ func TestInterpretValueStringConversion(t *testing.T) {
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
 			meter,
@@ -8982,7 +9000,7 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 
 		var loggedString string
 
-		logFunction := stdlib.NewStandardLibraryFunction(
+		logFunction := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			&sema.FunctionType{
 				Parameters: []sema.Parameter{
@@ -8999,7 +9017,11 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 				// Reset gauge, to only capture the values metered during string conversion
 				meter.meter = make(map[common.MemoryKind]uint64)
 
-				loggedString = invocation.Arguments[0].MeteredString(invocation.Interpreter, interpreter.SeenReferences{})
+				loggedString = invocation.Arguments[0].MeteredString(
+					invocation.Interpreter,
+					interpreter.SeenReferences{},
+					invocation.LocationRange,
+				)
 				return interpreter.Void
 			},
 		)
@@ -9013,10 +9035,14 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 		inter, err := parseCheckAndInterpretWithOptionsAndMemoryMetering(t, script,
 			ParseCheckAndInterpretOptions{
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
 			meter,
@@ -9037,6 +9063,10 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 
 		for primitiveStaticType := range interpreter.PrimitiveStaticTypes {
 
+			if !primitiveStaticType.IsDefined() || primitiveStaticType.IsDeprecated() { //nolint:staticcheck
+				continue
+			}
+
 			switch primitiveStaticType {
 			case interpreter.PrimitiveStaticTypeAny,
 				interpreter.PrimitiveStaticTypeUnknown,
@@ -9045,13 +9075,6 @@ func TestInterpretStaticTypeStringConversion(t *testing.T) {
 			}
 
 			semaType := primitiveStaticType.SemaType()
-
-			// Some primitive static types are deprecated,
-			// and only exist for migration purposes,
-			// so do not have an equivalent sema type
-			if semaType == nil {
-				continue
-			}
 
 			switch semaType.(type) {
 			case *sema.EntitlementType,

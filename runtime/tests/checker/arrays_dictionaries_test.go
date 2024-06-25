@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckDictionary(t *testing.T) {
@@ -133,7 +132,11 @@ func TestCheckInvalidDictionaryKeys(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-      let z = {"a": 1, true: 2}
+      let f = fun (_ x: Int): Int {
+		return x + 10
+	  }
+
+      let z = {f: 1, true: 2}
 	`)
 
 	errs := RequireCheckerErrors(t, err, 1)
@@ -1460,24 +1463,18 @@ func TestCheckArraySubtyping(t *testing.T) {
 
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
-			body := "{}"
-			if kind == common.CompositeKindEvent {
-				body = "()"
-			}
-
-			interfaceType := AsInterfaceType("I", kind)
+			interfaceType := "{I}"
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s interface I %[2]s
-                      %[1]s S: I %[2]s
+                      %[1]s interface I {}
+                      %[1]s S: I {}
 
-                      let xs: %[3]s[S] %[4]s []
-                      let ys: %[3]s[%[5]s] %[4]s xs
+                      let xs: %[2]s[S] %[3]s []
+                      let ys: %[2]s[%[4]s] %[3]s xs
 	                `,
 					kind.Keyword(),
-					body,
 					kind.Annotation(),
 					kind.TransferOperator(),
 					interfaceType,
@@ -1519,8 +1516,6 @@ func TestCheckDictionarySubtyping(t *testing.T) {
 				body = "()"
 			}
 
-			interfaceType := AsInterfaceType("I", kind)
-
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
@@ -1528,13 +1523,12 @@ func TestCheckDictionarySubtyping(t *testing.T) {
                       %[1]s S: I %[2]s
 
                       let xs: %[3]s{String: S} %[4]s {}
-                      let ys: %[3]s{String: %[5]s} %[4]s xs
+                      let ys: %[3]s{String: {I}} %[4]s xs
 	                `,
 					kind.Keyword(),
 					body,
 					kind.Annotation(),
 					kind.TransferOperator(),
-					interfaceType,
 				),
 			)
 
@@ -2473,4 +2467,220 @@ func TestCheckDictionaryFunctionEntitlements(t *testing.T) {
 			assert.ErrorAs(t, errors[1], &invalidAccessError)
 		})
 	})
+}
+
+func TestCheckArrayToVariableSized(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun testInt() {
+			let x: [Int; 4] = [1, 2, 3, 100]
+			let y: [Int] = x.toVariableSized()
+		}
+
+		fun testString() {
+			let x: [String; 4] = ["ab", "cd", "ef", "gh"]
+			let y: [String] = x.toVariableSized()
+		}
+	`)
+
+	require.NoError(t, err)
+}
+
+func TestCheckArrayToVariableSizedInvalidArgs(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x: [Int16; 3] = [1, 2, 3]
+			let y = x.toVariableSized(100)
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ExcessiveArgumentsError{}, errs[0])
+}
+
+func TestCheckVariableSizedArrayToVariableSizedInvalid(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() : [Int] {
+			let xs: [Int] = [1, 2, 3]
+
+			return xs.toVariableSized()
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
+func TestCheckResourceArrayToVariableSizedInvalid(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		resource X {}
+
+		fun test() : @[X] {
+			let xs: @[X; 1] <- [<-create X()]
+
+			let varsized_xs <- xs.toVariableSized()
+			destroy xs
+			return <-varsized_xs
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+}
+
+func TestCheckArrayToConstantSized(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun testInt() {
+			let x: [Int] = [1, 2, 3, 100]
+			let y: [Int; 4]? = x.toConstantSized<[Int;4]>()
+		}
+
+		fun testString() {
+			let x: [String] = ["ab", "cd", "ef", "gh"]
+			let y: [String; 4]? = x.toConstantSized<[String; 4]>()
+			let y_incorrect_size: [String; 3]? = x.toConstantSized<[String; 3]>()
+		}
+	`)
+
+	require.NoError(t, err)
+}
+
+func TestCheckArrayToConstantSizedInvalidArgs(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x: [Int16] = [1, 2, 3]
+			let y = x.toConstantSized<[Int16; 3]>(100)
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ExcessiveArgumentsError{}, errs[0])
+}
+
+func TestCheckArrayToConstantSizedInvalidTypeArgument(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x: [Int16] = [1, 2, 3]
+			let y = x.toConstantSized<String>()
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+}
+
+func TestCheckArrayToConstantSizedInvalidTypeArgumentInnerType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x: [Int16] = [1, 2, 3]
+			let y = x.toConstantSized<[Int; 3]>()
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidTypeArgumentError{}, errs[0])
+}
+
+func TestCheckConstantSizedArrayToConstantSizedInvalid(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() : [Int; 3]? {
+			let xs: [Int; 3] = [1, 2, 3]
+
+			return xs.toConstantSized<[Int; 3]>()
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
+func TestCheckResourceArrayToConstantSizedInvalid(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		resource X {}
+
+		fun test() : @[X;1]? {
+			let xs: @[X] <- [<-create X()]
+
+			let constsized_xs <- xs.toConstantSized<@[X; 1]>()
+			destroy xs
+			return <-constsized_xs
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidResourceArrayMemberError{}, errs[0])
+}
+
+func TestCheckArrayToConstantSizedMissingTypeArgument(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun test() {
+			let x: [Int16] = [1, 2, 3]
+			let y = x.toConstantSized()
+		}
+	`)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+}
+
+func TestCheckArrayReferenceTypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		entitlement E
+		entitlement F 
+		entitlement G
+
+		fun test(): [auth(E) &Int] {
+			let ef = &1 as auth(E, F) &Int
+			let eg = &1 as auth(E, G) &Int
+			let arr = [ef, eg]
+			return arr
+		}
+	
+	`)
+
+	require.NoError(t, err)
 }

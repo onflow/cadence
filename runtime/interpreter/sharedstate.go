@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ type SharedState struct {
 	callStack              *CallStack
 	// TODO: ideally this would be a weak map, but Go has no weak references
 	referencedResourceKindedValues              ReferencedResourceKindedValues
-	resourceVariables                           map[ResourceKindedValue]*Variable
+	resourceVariables                           map[ResourceKindedValue]Variable
 	inStorageIteration                          bool
 	storageMutatedDuringIteration               bool
 	CapabilityControllerIterations              map[AddressPath]int
@@ -59,8 +59,8 @@ func NewSharedState(config *Config) *SharedState {
 		},
 		inStorageIteration:             false,
 		storageMutatedDuringIteration:  false,
-		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
-		resourceVariables:              map[ResourceKindedValue]*Variable{},
+		referencedResourceKindedValues: map[atree.StorageID]map[*EphemeralReferenceValue]struct{}{},
+		resourceVariables:              map[ResourceKindedValue]Variable{},
 		CapabilityControllerIterations: map[AddressPath]int{},
 		containerValueIteration:        map[atree.StorageID]struct{}{},
 		destroyedResources:             map[atree.StorageID]struct{}{},

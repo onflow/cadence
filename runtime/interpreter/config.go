@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,14 +49,16 @@ type Config struct {
 	UUIDHandler UUIDHandlerFunc
 	// CompositeTypeHandler is used to load composite types
 	CompositeTypeHandler CompositeTypeHandlerFunc
-	BaseActivation       *VariableActivation
-	Debugger             *Debugger
+	// InterfaceTypeHandler is used to load interface types
+	InterfaceTypeHandler InterfaceTypeHandlerFunc
+	// CompositeValueFunctionsHandler is used to load composite value functions
+	CompositeValueFunctionsHandler CompositeValueFunctionsHandlerFunc
+	BaseActivationHandler          func(location common.Location) *VariableActivation
+	Debugger                       *Debugger
 	// OnStatement is triggered when a statement is about to be executed
 	OnStatement OnStatementFunc
 	// OnLoopIteration is triggered when a loop iteration is about to be executed
 	OnLoopIteration OnLoopIterationFunc
-	// InvalidatedResourceValidationEnabled determines if the validation of invalidated resources is enabled
-	InvalidatedResourceValidationEnabled bool
 	// TracingEnabled determines if tracing is enabled.
 	// Tracing reports certain operations, e.g. composite value transfers
 	TracingEnabled bool
@@ -68,4 +70,8 @@ type Config struct {
 	CapabilityCheckHandler CapabilityCheckHandlerFunc
 	// CapabilityBorrowHandler is used to borrow ID capabilities
 	CapabilityBorrowHandler CapabilityBorrowHandlerFunc
+	// LegacyContractUpgradeEnabled specifies whether to fall back to the old parser when attempting a contract upgrade
+	LegacyContractUpgradeEnabled bool
+	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates
+	ContractUpdateTypeRemovalEnabled bool
 }

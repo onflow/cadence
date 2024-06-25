@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -448,7 +449,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
           let ref = &r as &R?
         `)
 
-		value := inter.Globals.Get("ref").GetValue()
+		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).
@@ -467,7 +468,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
           let ref = &s as &S?
         `)
 
-		value := inter.Globals.Get("ref").GetValue()
+		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).
@@ -484,7 +485,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
           let ref = &i as &Int?
         `)
 
-		value := inter.Globals.Get("ref").GetValue()
+		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).
@@ -501,7 +502,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
           let ref = &i as &Int?
         `)
 
-		value := inter.Globals.Get("ref").GetValue()
+		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, &interpreter.SomeValue{}, value)
 
 		innerValue := value.(*interpreter.SomeValue).
@@ -518,7 +519,7 @@ func TestInterpretReferenceExpressionOfOptional(t *testing.T) {
           let ref = &i as &Int?
         `)
 
-		value := inter.Globals.Get("ref").GetValue()
+		value := inter.Globals.Get("ref").GetValue(inter)
 		require.IsType(t, interpreter.Nil, value)
 	})
 }
@@ -648,6 +649,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				func() []common.TypeID { return []common.TypeID{"Mutate"} },
@@ -658,6 +660,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
+			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", arrayRef)
@@ -753,6 +756,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef1 := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				func() []common.TypeID { return []common.TypeID{"Mutate"} },
@@ -763,6 +767,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
+			interpreter.EmptyLocationRange,
 		)
 
 		// Resource array in account 0x02
@@ -777,6 +782,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef2 := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				func() []common.TypeID { return []common.TypeID{"Mutate"} },
@@ -787,6 +793,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
+			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", arrayRef1, arrayRef2)
@@ -848,6 +855,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				func() []common.TypeID { return []common.TypeID{"Mutate"} },
@@ -858,6 +866,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
+			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", arrayRef)
@@ -972,6 +981,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 		)
 
 		arrayRef := interpreter.NewUnmeteredEphemeralReferenceValue(
+			inter,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
 				func() []common.TypeID { return []common.TypeID{"Mutate"} },
@@ -982,6 +992,7 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: rType,
 			},
+			interpreter.EmptyLocationRange,
 		)
 
 		_, err = inter.Invoke("setup", arrayRef)
@@ -1186,18 +1197,12 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                     self.id = 1
                     self.bar <-create Bar()
                 }
-                destroy() {
-                    destroy self.bar
-                }
             }
 
             resource Bar {
                 let baz: @Baz
                 init() {
                     self.baz <-create Baz()
-                }
-                destroy() {
-                    destroy self.baz
                 }
             }
 
@@ -1310,9 +1315,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 init() {
                     self.optionalBar <-create Bar()
                 }
-                destroy() {
-                    destroy self.optionalBar
-                }
             }
 
             resource Bar {
@@ -1357,9 +1359,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 let bar: @Bar
                 init() {
                     self.bar <-create Bar()
-                }
-                destroy() {
-                    destroy self.bar
                 }
             }
 
@@ -1445,9 +1444,6 @@ func TestInterpretResourceReferenceInvalidationOnMove(t *testing.T) {
                 let bar: @Bar
                 init() {
                     self.bar <-create Bar()
-                }
-                destroy() {
-                    destroy self.bar
                 }
             }
 
@@ -1565,7 +1561,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 
 	t.Run("ref source is field", func(t *testing.T) {
@@ -1608,7 +1604,7 @@ func TestInterpretResourceReferenceInvalidationOnDestroy(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.DestroyedResourceError{})
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 
 	})
 }
@@ -1640,19 +1636,19 @@ func TestInterpretReferenceTrackingOnInvocation(t *testing.T) {
           fooRef.something()
 
           // just to trick the checker
-		  fooRef = returnSameRef(fooRef)
+          fooRef = returnSameRef(fooRef)
 
           // Moving the resource should update the tracking
           var newFoo <- foo
 
-      	  fooRef.id
+            fooRef.id
 
-      	  destroy newFoo
+            destroy newFoo
       }
     `)
 
 	_, err := inter.Invoke("main")
-	require.Error(t, err)
+	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 }
@@ -1732,5 +1728,1566 @@ func TestInterpretInvalidatedReferenceToOptional(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("main")
-	require.NoError(t, err)
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+}
+
+func TestInterpretReferenceToReference(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            fun main() {
+                let x = &1 as &Int
+                let y = &x as & &Int
+            }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := checker.RequireCheckerErrors(t, err, 1)
+				require.IsType(t, &sema.NestedReferenceError{}, errs[0])
+			},
+		})
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
+
+	t.Run("upcast to anystruct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                let x = &1 as &Int as AnyStruct
+                let y = &x as &AnyStruct
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
+
+	t.Run("optional", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+            fun main() {
+                let x: (&Int)? = &1 as &Int
+                let y: (&(&Int))? = &x 
+            }
+        `, ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := checker.RequireCheckerErrors(t, err, 1)
+				require.IsType(t, &sema.NestedReferenceError{}, errs[0])
+			},
+		})
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
+
+	t.Run("upcast to optional anystruct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                let x = &1 as &Int as AnyStruct?
+                let y = &x as &AnyStruct?
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
+
+	t.Run("reference to storage reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+            resource R {}
+
+            fun test(): Void {
+
+                let r <- [<- create R()]
+                account.storage.save(<-r, to: /storage/foo)
+                let unauthRef = account.storage.borrow<&[R]>(from: /storage/foo)!
+
+                let maskedUnauthRef = unauthRef as AnyStruct
+                let doubleRef = &maskedUnauthRef as auth(Mutate) &AnyStruct
+                let typedDoubleRef : auth(Mutate) &(&[R]) = doubleRef as! auth(Mutate) &(&[R])
+            }`, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
+
+	t.Run("nested optional reference as AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                var array: [Foo] = []
+                var optionalArrayRef: (&[Foo])? = &array as &[Foo]
+                var anyStructValue = optionalArrayRef as AnyStruct
+                var ref = &anyStructValue as &AnyStruct
+            }
+
+            struct Foo {}
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.NestedReferenceError{})
+	})
+}
+
+func TestInterpretDereference(t *testing.T) {
+	t.Parallel()
+
+	runTestCase := func(
+		t *testing.T,
+		name, code string,
+		expectedValueFunc func(*interpreter.Interpreter) interpreter.Value,
+	) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			inter := parseCheckAndInterpret(t, code)
+
+			value, err := inter.Invoke("main")
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				expectedValueFunc(inter),
+				value,
+			)
+		})
+	}
+
+	t.Run("Integers", func(t *testing.T) {
+		t.Parallel()
+
+		expectedValues := map[sema.Type]interpreter.IntegerValue{
+			sema.IntType:     interpreter.NewUnmeteredIntValueFromInt64(42),
+			sema.UIntType:    interpreter.NewUnmeteredUIntValueFromUint64(42),
+			sema.UInt8Type:   interpreter.NewUnmeteredUInt8Value(42),
+			sema.UInt16Type:  interpreter.NewUnmeteredUInt16Value(42),
+			sema.UInt32Type:  interpreter.NewUnmeteredUInt32Value(42),
+			sema.UInt64Type:  interpreter.NewUnmeteredUInt64Value(42),
+			sema.UInt128Type: interpreter.NewUnmeteredUInt128ValueFromUint64(42),
+			sema.UInt256Type: interpreter.NewUnmeteredUInt256ValueFromUint64(42),
+			sema.Word8Type:   interpreter.NewUnmeteredWord8Value(42),
+			sema.Word16Type:  interpreter.NewUnmeteredWord16Value(42),
+			sema.Word32Type:  interpreter.NewUnmeteredWord32Value(42),
+			sema.Word64Type:  interpreter.NewUnmeteredWord64Value(42),
+			sema.Word128Type: interpreter.NewUnmeteredWord128ValueFromUint64(42),
+			sema.Word256Type: interpreter.NewUnmeteredWord256ValueFromUint64(42),
+			sema.Int8Type:    interpreter.NewUnmeteredInt8Value(42),
+			sema.Int16Type:   interpreter.NewUnmeteredInt16Value(42),
+			sema.Int32Type:   interpreter.NewUnmeteredInt32Value(42),
+			sema.Int64Type:   interpreter.NewUnmeteredInt64Value(42),
+			sema.Int128Type:  interpreter.NewUnmeteredInt128ValueFromInt64(42),
+			sema.Int256Type:  interpreter.NewUnmeteredInt256ValueFromInt64(42),
+		}
+
+		for _, typ := range sema.AllIntegerTypes {
+			// Only test leaf types
+			switch typ {
+			case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
+				continue
+			}
+
+			integerType := typ
+			typString := typ.QualifiedString()
+
+			runTestCase(
+				t,
+				typString,
+				fmt.Sprintf(
+					`
+                        fun main(): %[1]s {
+                            let x: &%[1]s = &42
+                            return *x
+                        }
+                    `,
+					integerType,
+				),
+				func(_ *interpreter.Interpreter) interpreter.Value {
+					return expectedValues[integerType]
+				},
+			)
+		}
+	})
+
+	t.Run("Fixed-point numbers", func(t *testing.T) {
+		t.Parallel()
+
+		expectedValues := map[sema.Type]interpreter.FixedPointValue{
+			sema.UFix64Type: interpreter.NewUnmeteredUFix64Value(4224_000_000),
+			sema.Fix64Type:  interpreter.NewUnmeteredFix64Value(4224_000_000),
+		}
+
+		for _, typ := range sema.AllFixedPointTypes {
+			// Only test leaf types
+			switch typ {
+			case sema.FixedPointType, sema.SignedFixedPointType:
+				continue
+			}
+
+			fixedPointType := typ
+			typString := typ.QualifiedString()
+
+			runTestCase(
+				t,
+				typString,
+				fmt.Sprintf(
+					`
+                        fun main(): %[1]s {
+                            let x: &%[1]s = &42.24
+                            return *x
+                        }
+                    `,
+					fixedPointType,
+				),
+				func(_ *interpreter.Interpreter) interpreter.Value {
+					return expectedValues[fixedPointType]
+				},
+			)
+		}
+	})
+
+	t.Run("Variable-sized array of integers", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range sema.AllIntegerTypes {
+			// Only test leaf types
+			switch typ {
+			case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
+				continue
+			}
+
+			integerType := typ
+			typString := typ.QualifiedString()
+
+			createArrayValue := func(
+				inter *interpreter.Interpreter,
+				innerStaticType interpreter.StaticType,
+				values ...interpreter.Value,
+			) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					&interpreter.VariableSizedStaticType{
+						Type: innerStaticType,
+					},
+					common.ZeroAddress,
+					values...,
+				)
+			}
+
+			t.Run(fmt.Sprintf("[%s]", typString), func(t *testing.T) {
+				inter := parseCheckAndInterpret(
+					t,
+					fmt.Sprintf(
+						`
+                            let originalArray: [%[1]s] = [1, 2, 3]
+
+                            fun main(): [%[1]s] {
+                                let ref: &[%[1]s] = &originalArray
+
+                                // Even a temporary value shouldn't affect originalArray.
+                                (*ref).append(4)
+
+                                let deref = *ref
+                                deref.append(4)
+                                return deref
+                            }
+                        `,
+						integerType,
+					),
+				)
+
+				value, err := inter.Invoke("main")
+				require.NoError(t, err)
+
+				var expectedValue, expectedOriginalValue interpreter.Value
+				switch integerType {
+				// Int*
+				case sema.IntType:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt,
+						interpreter.NewUnmeteredIntValueFromInt64(1),
+						interpreter.NewUnmeteredIntValueFromInt64(2),
+						interpreter.NewUnmeteredIntValueFromInt64(3),
+						interpreter.NewUnmeteredIntValueFromInt64(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt,
+						interpreter.NewUnmeteredIntValueFromInt64(1),
+						interpreter.NewUnmeteredIntValueFromInt64(2),
+						interpreter.NewUnmeteredIntValueFromInt64(3),
+					)
+
+				case sema.Int8Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt8,
+						interpreter.NewUnmeteredInt8Value(1),
+						interpreter.NewUnmeteredInt8Value(2),
+						interpreter.NewUnmeteredInt8Value(3),
+						interpreter.NewUnmeteredInt8Value(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt8,
+						interpreter.NewUnmeteredInt8Value(1),
+						interpreter.NewUnmeteredInt8Value(2),
+						interpreter.NewUnmeteredInt8Value(3),
+					)
+
+				case sema.Int16Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt16,
+						interpreter.NewUnmeteredInt16Value(1),
+						interpreter.NewUnmeteredInt16Value(2),
+						interpreter.NewUnmeteredInt16Value(3),
+						interpreter.NewUnmeteredInt16Value(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt16,
+						interpreter.NewUnmeteredInt16Value(1),
+						interpreter.NewUnmeteredInt16Value(2),
+						interpreter.NewUnmeteredInt16Value(3),
+					)
+
+				case sema.Int32Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt32,
+						interpreter.NewUnmeteredInt32Value(1),
+						interpreter.NewUnmeteredInt32Value(2),
+						interpreter.NewUnmeteredInt32Value(3),
+						interpreter.NewUnmeteredInt32Value(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt32,
+						interpreter.NewUnmeteredInt32Value(1),
+						interpreter.NewUnmeteredInt32Value(2),
+						interpreter.NewUnmeteredInt32Value(3),
+					)
+
+				case sema.Int64Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt64,
+						interpreter.NewUnmeteredInt64Value(1),
+						interpreter.NewUnmeteredInt64Value(2),
+						interpreter.NewUnmeteredInt64Value(3),
+						interpreter.NewUnmeteredInt64Value(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt64,
+						interpreter.NewUnmeteredInt64Value(1),
+						interpreter.NewUnmeteredInt64Value(2),
+						interpreter.NewUnmeteredInt64Value(3),
+					)
+
+				case sema.Int128Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt128,
+						interpreter.NewUnmeteredInt128ValueFromInt64(1),
+						interpreter.NewUnmeteredInt128ValueFromInt64(2),
+						interpreter.NewUnmeteredInt128ValueFromInt64(3),
+						interpreter.NewUnmeteredInt128ValueFromInt64(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt128,
+						interpreter.NewUnmeteredInt128ValueFromInt64(1),
+						interpreter.NewUnmeteredInt128ValueFromInt64(2),
+						interpreter.NewUnmeteredInt128ValueFromInt64(3),
+					)
+
+				case sema.Int256Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt256,
+						interpreter.NewUnmeteredInt256ValueFromInt64(1),
+						interpreter.NewUnmeteredInt256ValueFromInt64(2),
+						interpreter.NewUnmeteredInt256ValueFromInt64(3),
+						interpreter.NewUnmeteredInt256ValueFromInt64(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt256,
+						interpreter.NewUnmeteredInt256ValueFromInt64(1),
+						interpreter.NewUnmeteredInt256ValueFromInt64(2),
+						interpreter.NewUnmeteredInt256ValueFromInt64(3),
+					)
+
+				// UInt*
+				case sema.UIntType:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt,
+						interpreter.NewUnmeteredUIntValueFromUint64(1),
+						interpreter.NewUnmeteredUIntValueFromUint64(2),
+						interpreter.NewUnmeteredUIntValueFromUint64(3),
+						interpreter.NewUnmeteredUIntValueFromUint64(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt,
+						interpreter.NewUnmeteredUIntValueFromUint64(1),
+						interpreter.NewUnmeteredUIntValueFromUint64(2),
+						interpreter.NewUnmeteredUIntValueFromUint64(3),
+					)
+
+				case sema.UInt8Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt8,
+						interpreter.NewUnmeteredUInt8Value(1),
+						interpreter.NewUnmeteredUInt8Value(2),
+						interpreter.NewUnmeteredUInt8Value(3),
+						interpreter.NewUnmeteredUInt8Value(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt8,
+						interpreter.NewUnmeteredUInt8Value(1),
+						interpreter.NewUnmeteredUInt8Value(2),
+						interpreter.NewUnmeteredUInt8Value(3),
+					)
+
+				case sema.UInt16Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt16,
+						interpreter.NewUnmeteredUInt16Value(1),
+						interpreter.NewUnmeteredUInt16Value(2),
+						interpreter.NewUnmeteredUInt16Value(3),
+						interpreter.NewUnmeteredUInt16Value(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt16,
+						interpreter.NewUnmeteredUInt16Value(1),
+						interpreter.NewUnmeteredUInt16Value(2),
+						interpreter.NewUnmeteredUInt16Value(3),
+					)
+
+				case sema.UInt32Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt32,
+						interpreter.NewUnmeteredUInt32Value(1),
+						interpreter.NewUnmeteredUInt32Value(2),
+						interpreter.NewUnmeteredUInt32Value(3),
+						interpreter.NewUnmeteredUInt32Value(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt32,
+						interpreter.NewUnmeteredUInt32Value(1),
+						interpreter.NewUnmeteredUInt32Value(2),
+						interpreter.NewUnmeteredUInt32Value(3),
+					)
+
+				case sema.UInt64Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt64,
+						interpreter.NewUnmeteredUInt64Value(1),
+						interpreter.NewUnmeteredUInt64Value(2),
+						interpreter.NewUnmeteredUInt64Value(3),
+						interpreter.NewUnmeteredUInt64Value(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt64,
+						interpreter.NewUnmeteredUInt64Value(1),
+						interpreter.NewUnmeteredUInt64Value(2),
+						interpreter.NewUnmeteredUInt64Value(3),
+					)
+
+				case sema.UInt128Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt128,
+						interpreter.NewUnmeteredUInt128ValueFromUint64(1),
+						interpreter.NewUnmeteredUInt128ValueFromUint64(2),
+						interpreter.NewUnmeteredUInt128ValueFromUint64(3),
+						interpreter.NewUnmeteredUInt128ValueFromUint64(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt128,
+						interpreter.NewUnmeteredUInt128ValueFromUint64(1),
+						interpreter.NewUnmeteredUInt128ValueFromUint64(2),
+						interpreter.NewUnmeteredUInt128ValueFromUint64(3),
+					)
+
+				case sema.UInt256Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt256,
+						interpreter.NewUnmeteredUInt256ValueFromUint64(1),
+						interpreter.NewUnmeteredUInt256ValueFromUint64(2),
+						interpreter.NewUnmeteredUInt256ValueFromUint64(3),
+						interpreter.NewUnmeteredUInt256ValueFromUint64(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt256,
+						interpreter.NewUnmeteredUInt256ValueFromUint64(1),
+						interpreter.NewUnmeteredUInt256ValueFromUint64(2),
+						interpreter.NewUnmeteredUInt256ValueFromUint64(3),
+					)
+
+				// Word*
+				case sema.Word8Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord8,
+						interpreter.NewUnmeteredWord8Value(1),
+						interpreter.NewUnmeteredWord8Value(2),
+						interpreter.NewUnmeteredWord8Value(3),
+						interpreter.NewUnmeteredWord8Value(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord8,
+						interpreter.NewUnmeteredWord8Value(1),
+						interpreter.NewUnmeteredWord8Value(2),
+						interpreter.NewUnmeteredWord8Value(3),
+					)
+
+				case sema.Word16Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord16,
+						interpreter.NewUnmeteredWord16Value(1),
+						interpreter.NewUnmeteredWord16Value(2),
+						interpreter.NewUnmeteredWord16Value(3),
+						interpreter.NewUnmeteredWord16Value(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord16,
+						interpreter.NewUnmeteredWord16Value(1),
+						interpreter.NewUnmeteredWord16Value(2),
+						interpreter.NewUnmeteredWord16Value(3),
+					)
+
+				case sema.Word32Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord32,
+						interpreter.NewUnmeteredWord32Value(1),
+						interpreter.NewUnmeteredWord32Value(2),
+						interpreter.NewUnmeteredWord32Value(3),
+						interpreter.NewUnmeteredWord32Value(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord32,
+						interpreter.NewUnmeteredWord32Value(1),
+						interpreter.NewUnmeteredWord32Value(2),
+						interpreter.NewUnmeteredWord32Value(3),
+					)
+
+				case sema.Word64Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord64,
+						interpreter.NewUnmeteredWord64Value(1),
+						interpreter.NewUnmeteredWord64Value(2),
+						interpreter.NewUnmeteredWord64Value(3),
+						interpreter.NewUnmeteredWord64Value(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord64,
+						interpreter.NewUnmeteredWord64Value(1),
+						interpreter.NewUnmeteredWord64Value(2),
+						interpreter.NewUnmeteredWord64Value(3),
+					)
+
+				case sema.Word128Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord128,
+						interpreter.NewUnmeteredWord128ValueFromUint64(1),
+						interpreter.NewUnmeteredWord128ValueFromUint64(2),
+						interpreter.NewUnmeteredWord128ValueFromUint64(3),
+						interpreter.NewUnmeteredWord128ValueFromUint64(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord128,
+						interpreter.NewUnmeteredWord128ValueFromUint64(1),
+						interpreter.NewUnmeteredWord128ValueFromUint64(2),
+						interpreter.NewUnmeteredWord128ValueFromUint64(3),
+					)
+
+				case sema.Word256Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord256,
+						interpreter.NewUnmeteredWord256ValueFromUint64(1),
+						interpreter.NewUnmeteredWord256ValueFromUint64(2),
+						interpreter.NewUnmeteredWord256ValueFromUint64(3),
+						interpreter.NewUnmeteredWord256ValueFromUint64(4),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord256,
+						interpreter.NewUnmeteredWord256ValueFromUint64(1),
+						interpreter.NewUnmeteredWord256ValueFromUint64(2),
+						interpreter.NewUnmeteredWord256ValueFromUint64(3),
+					)
+				}
+
+				AssertValuesEqual(
+					t,
+					inter,
+					expectedValue,
+					value,
+				)
+
+				AssertValuesEqual(
+					t,
+					inter,
+					expectedOriginalValue,
+					inter.Globals.Get("originalArray").GetValue(inter),
+				)
+			})
+		}
+	})
+
+	t.Run("Constant-sized array of integers", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range sema.AllIntegerTypes {
+			// Only test leaf types
+			switch typ {
+			case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
+				continue
+			}
+
+			integerType := typ
+			typString := typ.QualifiedString()
+
+			createArrayValue := func(
+				inter *interpreter.Interpreter,
+				innerStaticType interpreter.StaticType,
+				values ...interpreter.Value,
+			) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					&interpreter.ConstantSizedStaticType{
+						Type: innerStaticType,
+						Size: 3,
+					},
+					common.ZeroAddress,
+					values...,
+				)
+			}
+
+			t.Run(fmt.Sprintf("[%s]", typString), func(t *testing.T) {
+				inter := parseCheckAndInterpret(
+					t,
+					fmt.Sprintf(
+						`
+                            let originalArray: [%[1]s; 3] = [1, 2, 3]
+
+                            fun main(): [%[1]s; 3] {
+                                let ref: &[%[1]s; 3] = &originalArray
+
+                                let deref = *ref
+                                deref[2] = 30
+                                return deref
+                            }
+                        `,
+						integerType,
+					),
+				)
+
+				value, err := inter.Invoke("main")
+				require.NoError(t, err)
+
+				var expectedValue, expectedOriginalValue interpreter.Value
+				switch integerType {
+				// Int*
+				case sema.IntType:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt,
+						interpreter.NewUnmeteredIntValueFromInt64(1),
+						interpreter.NewUnmeteredIntValueFromInt64(2),
+						interpreter.NewUnmeteredIntValueFromInt64(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt,
+						interpreter.NewUnmeteredIntValueFromInt64(1),
+						interpreter.NewUnmeteredIntValueFromInt64(2),
+						interpreter.NewUnmeteredIntValueFromInt64(3),
+					)
+
+				case sema.Int8Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt8,
+						interpreter.NewUnmeteredInt8Value(1),
+						interpreter.NewUnmeteredInt8Value(2),
+						interpreter.NewUnmeteredInt8Value(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt8,
+						interpreter.NewUnmeteredInt8Value(1),
+						interpreter.NewUnmeteredInt8Value(2),
+						interpreter.NewUnmeteredInt8Value(3),
+					)
+
+				case sema.Int16Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt16,
+						interpreter.NewUnmeteredInt16Value(1),
+						interpreter.NewUnmeteredInt16Value(2),
+						interpreter.NewUnmeteredInt16Value(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt16,
+						interpreter.NewUnmeteredInt16Value(1),
+						interpreter.NewUnmeteredInt16Value(2),
+						interpreter.NewUnmeteredInt16Value(3),
+					)
+
+				case sema.Int32Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt32,
+						interpreter.NewUnmeteredInt32Value(1),
+						interpreter.NewUnmeteredInt32Value(2),
+						interpreter.NewUnmeteredInt32Value(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt32,
+						interpreter.NewUnmeteredInt32Value(1),
+						interpreter.NewUnmeteredInt32Value(2),
+						interpreter.NewUnmeteredInt32Value(3),
+					)
+
+				case sema.Int64Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt64,
+						interpreter.NewUnmeteredInt64Value(1),
+						interpreter.NewUnmeteredInt64Value(2),
+						interpreter.NewUnmeteredInt64Value(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt64,
+						interpreter.NewUnmeteredInt64Value(1),
+						interpreter.NewUnmeteredInt64Value(2),
+						interpreter.NewUnmeteredInt64Value(3),
+					)
+
+				case sema.Int128Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt128,
+						interpreter.NewUnmeteredInt128ValueFromInt64(1),
+						interpreter.NewUnmeteredInt128ValueFromInt64(2),
+						interpreter.NewUnmeteredInt128ValueFromInt64(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt128,
+						interpreter.NewUnmeteredInt128ValueFromInt64(1),
+						interpreter.NewUnmeteredInt128ValueFromInt64(2),
+						interpreter.NewUnmeteredInt128ValueFromInt64(3),
+					)
+
+				case sema.Int256Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt256,
+						interpreter.NewUnmeteredInt256ValueFromInt64(1),
+						interpreter.NewUnmeteredInt256ValueFromInt64(2),
+						interpreter.NewUnmeteredInt256ValueFromInt64(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeInt256,
+						interpreter.NewUnmeteredInt256ValueFromInt64(1),
+						interpreter.NewUnmeteredInt256ValueFromInt64(2),
+						interpreter.NewUnmeteredInt256ValueFromInt64(3),
+					)
+
+				// UInt*
+				case sema.UIntType:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt,
+						interpreter.NewUnmeteredUIntValueFromUint64(1),
+						interpreter.NewUnmeteredUIntValueFromUint64(2),
+						interpreter.NewUnmeteredUIntValueFromUint64(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt,
+						interpreter.NewUnmeteredUIntValueFromUint64(1),
+						interpreter.NewUnmeteredUIntValueFromUint64(2),
+						interpreter.NewUnmeteredUIntValueFromUint64(3),
+					)
+
+				case sema.UInt8Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt8,
+						interpreter.NewUnmeteredUInt8Value(1),
+						interpreter.NewUnmeteredUInt8Value(2),
+						interpreter.NewUnmeteredUInt8Value(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt8,
+						interpreter.NewUnmeteredUInt8Value(1),
+						interpreter.NewUnmeteredUInt8Value(2),
+						interpreter.NewUnmeteredUInt8Value(3),
+					)
+
+				case sema.UInt16Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt16,
+						interpreter.NewUnmeteredUInt16Value(1),
+						interpreter.NewUnmeteredUInt16Value(2),
+						interpreter.NewUnmeteredUInt16Value(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt16,
+						interpreter.NewUnmeteredUInt16Value(1),
+						interpreter.NewUnmeteredUInt16Value(2),
+						interpreter.NewUnmeteredUInt16Value(3),
+					)
+
+				case sema.UInt32Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt32,
+						interpreter.NewUnmeteredUInt32Value(1),
+						interpreter.NewUnmeteredUInt32Value(2),
+						interpreter.NewUnmeteredUInt32Value(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt32,
+						interpreter.NewUnmeteredUInt32Value(1),
+						interpreter.NewUnmeteredUInt32Value(2),
+						interpreter.NewUnmeteredUInt32Value(3),
+					)
+
+				case sema.UInt64Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt64,
+						interpreter.NewUnmeteredUInt64Value(1),
+						interpreter.NewUnmeteredUInt64Value(2),
+						interpreter.NewUnmeteredUInt64Value(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt64,
+						interpreter.NewUnmeteredUInt64Value(1),
+						interpreter.NewUnmeteredUInt64Value(2),
+						interpreter.NewUnmeteredUInt64Value(3),
+					)
+
+				case sema.UInt128Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt128,
+						interpreter.NewUnmeteredUInt128ValueFromUint64(1),
+						interpreter.NewUnmeteredUInt128ValueFromUint64(2),
+						interpreter.NewUnmeteredUInt128ValueFromUint64(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt128,
+						interpreter.NewUnmeteredUInt128ValueFromUint64(1),
+						interpreter.NewUnmeteredUInt128ValueFromUint64(2),
+						interpreter.NewUnmeteredUInt128ValueFromUint64(3),
+					)
+
+				case sema.UInt256Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt256,
+						interpreter.NewUnmeteredUInt256ValueFromUint64(1),
+						interpreter.NewUnmeteredUInt256ValueFromUint64(2),
+						interpreter.NewUnmeteredUInt256ValueFromUint64(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeUInt256,
+						interpreter.NewUnmeteredUInt256ValueFromUint64(1),
+						interpreter.NewUnmeteredUInt256ValueFromUint64(2),
+						interpreter.NewUnmeteredUInt256ValueFromUint64(3),
+					)
+
+				// Word*
+				case sema.Word8Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord8,
+						interpreter.NewUnmeteredWord8Value(1),
+						interpreter.NewUnmeteredWord8Value(2),
+						interpreter.NewUnmeteredWord8Value(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord8,
+						interpreter.NewUnmeteredWord8Value(1),
+						interpreter.NewUnmeteredWord8Value(2),
+						interpreter.NewUnmeteredWord8Value(3),
+					)
+
+				case sema.Word16Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord16,
+						interpreter.NewUnmeteredWord16Value(1),
+						interpreter.NewUnmeteredWord16Value(2),
+						interpreter.NewUnmeteredWord16Value(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord16,
+						interpreter.NewUnmeteredWord16Value(1),
+						interpreter.NewUnmeteredWord16Value(2),
+						interpreter.NewUnmeteredWord16Value(3),
+					)
+
+				case sema.Word32Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord32,
+						interpreter.NewUnmeteredWord32Value(1),
+						interpreter.NewUnmeteredWord32Value(2),
+						interpreter.NewUnmeteredWord32Value(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord32,
+						interpreter.NewUnmeteredWord32Value(1),
+						interpreter.NewUnmeteredWord32Value(2),
+						interpreter.NewUnmeteredWord32Value(3),
+					)
+
+				case sema.Word64Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord64,
+						interpreter.NewUnmeteredWord64Value(1),
+						interpreter.NewUnmeteredWord64Value(2),
+						interpreter.NewUnmeteredWord64Value(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord64,
+						interpreter.NewUnmeteredWord64Value(1),
+						interpreter.NewUnmeteredWord64Value(2),
+						interpreter.NewUnmeteredWord64Value(3),
+					)
+
+				case sema.Word128Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord128,
+						interpreter.NewUnmeteredWord128ValueFromUint64(1),
+						interpreter.NewUnmeteredWord128ValueFromUint64(2),
+						interpreter.NewUnmeteredWord128ValueFromUint64(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord128,
+						interpreter.NewUnmeteredWord128ValueFromUint64(1),
+						interpreter.NewUnmeteredWord128ValueFromUint64(2),
+						interpreter.NewUnmeteredWord128ValueFromUint64(3),
+					)
+
+				case sema.Word256Type:
+					expectedValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord256,
+						interpreter.NewUnmeteredWord256ValueFromUint64(1),
+						interpreter.NewUnmeteredWord256ValueFromUint64(2),
+						interpreter.NewUnmeteredWord256ValueFromUint64(30),
+					)
+					expectedOriginalValue = createArrayValue(
+						inter,
+						interpreter.PrimitiveStaticTypeWord256,
+						interpreter.NewUnmeteredWord256ValueFromUint64(1),
+						interpreter.NewUnmeteredWord256ValueFromUint64(2),
+						interpreter.NewUnmeteredWord256ValueFromUint64(3),
+					)
+				}
+
+				AssertValuesEqual(
+					t,
+					inter,
+					expectedValue,
+					value,
+				)
+
+				AssertValuesEqual(
+					t,
+					inter,
+					expectedOriginalValue,
+					inter.Globals.Get("originalArray").GetValue(inter),
+				)
+			})
+		}
+	})
+
+	t.Run("Dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("{Int: String}", func(t *testing.T) {
+			inter := parseCheckAndInterpret(
+				t,
+				`
+                    fun main(): {Int: String} {
+                        let original = {1: "ABC", 2: "DEF"}
+                        let x: &{Int : String} = &original
+                        return *x
+                    }
+                `,
+			)
+
+			value, err := inter.Invoke("main")
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					&interpreter.DictionaryStaticType{
+						KeyType:   interpreter.PrimitiveStaticTypeInt,
+						ValueType: interpreter.PrimitiveStaticTypeString,
+					},
+					interpreter.NewUnmeteredIntValueFromInt64(1),
+					interpreter.NewUnmeteredStringValue("ABC"),
+					interpreter.NewUnmeteredIntValueFromInt64(2),
+					interpreter.NewUnmeteredStringValue("DEF"),
+				),
+				value,
+			)
+		})
+
+		t.Run("{Int: [String]}", func(t *testing.T) {
+			inter := parseCheckAndInterpret(
+				t,
+				`
+                    fun main(): {Int: [String]} {
+                        let original = {1: ["ABC", "XYZ"], 2: ["DEF"]}
+                        let x: &{Int: [String]} = &original
+                        return *x
+                    }
+                `,
+			)
+
+			value, err := inter.Invoke("main")
+			require.NoError(t, err)
+
+			AssertValuesEqual(
+				t,
+				inter,
+				interpreter.NewDictionaryValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					&interpreter.DictionaryStaticType{
+						KeyType: interpreter.PrimitiveStaticTypeInt,
+						ValueType: &interpreter.VariableSizedStaticType{
+							Type: interpreter.PrimitiveStaticTypeString,
+						},
+					},
+					interpreter.NewUnmeteredIntValueFromInt64(1),
+					interpreter.NewArrayValue(
+						inter,
+						interpreter.EmptyLocationRange,
+						&interpreter.VariableSizedStaticType{
+							Type: interpreter.PrimitiveStaticTypeString,
+						},
+						common.ZeroAddress,
+						interpreter.NewUnmeteredStringValue("ABC"),
+						interpreter.NewUnmeteredStringValue("XYZ"),
+					),
+					interpreter.NewUnmeteredIntValueFromInt64(2),
+					interpreter.NewArrayValue(
+						inter,
+						interpreter.EmptyLocationRange,
+						&interpreter.VariableSizedStaticType{
+							Type: interpreter.PrimitiveStaticTypeString,
+						},
+						common.ZeroAddress,
+						interpreter.NewUnmeteredStringValue("DEF"),
+					),
+				),
+				value,
+			)
+		})
+	})
+
+	t.Run("Character", func(t *testing.T) {
+		t.Parallel()
+
+		runTestCase(
+			t,
+			"Character",
+			`
+                fun main(): Character {
+                    let original: Character = "S"
+                    let x: &Character = &original
+                    return *x
+                }
+            `,
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredCharacterValue("S")
+			},
+		)
+	})
+
+	t.Run("String", func(t *testing.T) {
+		t.Parallel()
+
+		runTestCase(
+			t,
+			"String",
+			`
+                fun main(): String {
+                    let original: String = "STxy"
+                    let x: &String = &original
+                    return *x
+                }
+            `,
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredStringValue("STxy")
+			},
+		)
+	})
+
+	runTestCase(
+		t,
+		"Bool",
+		`
+            fun main(): Bool {
+                let original: Bool = true
+                let x: &Bool = &original
+                return *x
+            }
+        `,
+		func(_ *interpreter.Interpreter) interpreter.Value {
+			return interpreter.BoolValue(true)
+		},
+	)
+
+	address, err := common.HexToAddress("0x0000000000000231")
+	assert.NoError(t, err)
+
+	runTestCase(
+		t,
+		"Address",
+		`
+            fun main(): Address {
+                let original: Address = 0x0000000000000231
+                let x: &Address = &original
+                return *x
+            }
+        `,
+		func(_ *interpreter.Interpreter) interpreter.Value {
+			return interpreter.NewAddressValue(nil, address)
+		},
+	)
+
+	t.Run("Path", func(t *testing.T) {
+		t.Parallel()
+
+		runTestCase(
+			t,
+			"PrivatePath",
+			`
+                fun main(): Path {
+                    let original: Path = /private/temp
+                    let x: &Path = &original
+                    return *x
+                }
+            `,
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredPathValue(common.PathDomainPrivate, "temp")
+			},
+		)
+
+		runTestCase(
+			t,
+			"PublicPath",
+			`
+                fun main(): Path {
+                    let original: Path = /public/temp
+                    let x: &Path = &original
+                    return *x
+                }
+            `,
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "temp")
+			},
+		)
+	})
+
+	t.Run("Optional", func(t *testing.T) {
+		t.Parallel()
+
+		runTestCase(
+			t,
+			"nil",
+			`
+              fun main(): Int? {
+                  let ref: &Int? = nil
+                  return *ref
+              }
+            `,
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.Nil
+			},
+		)
+
+		runTestCase(
+			t,
+			"some",
+			`
+              fun main(): Int? {
+                  let ref: &Int? = &42 as &Int
+                  return *ref
+              }
+            `,
+			func(_ *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewUnmeteredSomeValueNonCopying(
+					interpreter.NewIntValueFromInt64(nil, 42),
+				)
+			},
+		)
+	})
+
+	t.Run("Resource", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("direct", func(t *testing.T) {
+			t.Parallel()
+
+			inter, err := parseCheckAndInterpretWithOptions(t,
+				`
+                  resource R {}
+
+                  fun main() {
+                      let r1 <- create R()
+                      let r1Ref: &R = &r1
+                      let r2 <- *r1Ref
+                      destroy r1
+                      destroy r2
+                  }
+                `,
+				ParseCheckAndInterpretOptions{
+					HandleCheckerError: func(err error) {
+						errs := checker.RequireCheckerErrors(t, err, 1)
+
+						require.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			_, err = inter.Invoke("main")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ResourceReferenceDereferenceError{})
+		})
+
+		t.Run("array", func(t *testing.T) {
+			t.Parallel()
+
+			inter, err := parseCheckAndInterpretWithOptions(t,
+				`
+                  resource R {}
+
+                  fun main() {
+                      let rs1 <- [<- create R()]
+                      let rs1Ref: &[R] = &rs1
+                      let rs2 <- *rs1Ref
+                      destroy rs1
+                      destroy rs2
+                  }
+                `,
+				ParseCheckAndInterpretOptions{
+					HandleCheckerError: func(err error) {
+						errs := checker.RequireCheckerErrors(t, err, 1)
+
+						require.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
+					},
+				},
+			)
+			require.NoError(t, err)
+
+			_, err = inter.Invoke("main")
+			RequireError(t, err)
+
+			require.ErrorAs(t, err, &interpreter.ResourceReferenceDereferenceError{})
+		})
+	})
+
+}
+
+func TestInterpretOptionalReference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("present", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+          fun present(): &Int {
+              let x: Int? = 1
+              let y = &x as &Int?
+              return y!
+          }
+        `)
+
+		value, err := inter.Invoke("present")
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			&interpreter.EphemeralReferenceValue{
+				Value:         interpreter.NewUnmeteredIntValueFromInt64(1),
+				BorrowedType:  sema.IntType,
+				Authorization: interpreter.UnauthorizedAccess,
+			},
+			value,
+		)
+
+	})
+
+	t.Run("absent", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun absent(): &Int {
+              let x: Int? = nil
+              let y = &x as &Int?
+              return y!
+          }
+        `)
+
+		_, err := inter.Invoke("absent")
+		RequireError(t, err)
+
+		var forceNilError interpreter.ForceNilError
+		require.ErrorAs(t, err, &forceNilError)
+	})
+
+	t.Run("nested optional reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                var dict: {String: Foo?} = {}
+                var ref: (&Foo)?? = &dict["foo"] as &Foo??
+            }
+
+            struct Foo {}
+        `)
+
+		_, err := inter.Invoke("main")
+		require.NoError(t, err)
+	})
+}
+
+func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource array host function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                var array: @[R] <- []
+                var arrayRef: auth(Mutate) &[R] = &array as auth(Mutate) &[R]
+
+                // Take an implicit reference to the resource array, using a function pointer
+                var arrayAppend = arrayRef.append
+
+                // Destroy the resource array
+                destroy array
+
+                // Call the function pointer
+                arrayAppend(<- create R())
+            }
+
+            resource R {}
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		invalidatedRefError := interpreter.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, err, &invalidatedRefError)
+	})
+
+	t.Run("struct array host function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main(): [S] {
+                var array: [S] = []
+                var arrayRef: auth(Mutate) &[S] = &array as auth(Mutate) &[S]
+
+                // Take an implicit reference to the struct array, using a function pointer
+                var arrayAppend = arrayRef.append
+
+                // Move the struct array
+                var array2 = array
+
+                // Call the function pointer
+                arrayAppend(S())
+
+                return array
+            }
+
+            struct S {}
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S").(*sema.CompositeType)
+
+		expectedResult := interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			&interpreter.VariableSizedStaticType{
+				Type: interpreter.ConvertSemaToStaticType(nil, sType),
+			},
+			common.ZeroAddress,
+			interpreter.NewCompositeValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				TestLocation,
+				"S",
+				common.CompositeKindStructure,
+				[]interpreter.CompositeField{},
+				common.ZeroAddress,
+			),
+		)
+
+		AssertValuesEqual(t, inter, expectedResult, result)
+	})
+
+	t.Run("resource dictionary host function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main() {
+                var dictionary: @{String:R} <- {}
+                var dictionaryRef: auth(Mutate) &{String:R} = &dictionary as auth(Mutate) &{String:R}
+
+                // Take an implicit reference to the resource dictionary, using a function pointer
+                var dictionaryInsert = dictionaryRef.insert
+
+                // Destroy the resource dictionary
+                destroy dictionary
+
+                // Call the function pointer
+                destroy dictionaryInsert("r1", <- create R())
+            }
+
+            resource R {}
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		invalidatedRefError := interpreter.InvalidatedResourceReferenceError{}
+		assert.ErrorAs(t, err, &invalidatedRefError)
+	})
+
+	t.Run("struct host function", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun main(): Type {
+                var s = S()
+
+                // Take an implicit reference to the struct, using a function pointer
+                var structGetType = s.getType
+
+                // Move/assign the struct
+                var s2 = s
+
+                // Call the function pointer
+                return structGetType()
+            }
+
+            struct S {}
+        `)
+
+		result, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		sType := checker.RequireGlobalType(t, inter.Program.Elaboration, "S").(*sema.CompositeType)
+
+		expectedResult := interpreter.NewTypeValue(
+			inter,
+			interpreter.ConvertSemaToStaticType(nil, sType),
+		)
+
+		AssertValuesEqual(t, inter, expectedResult, result)
+	})
 }

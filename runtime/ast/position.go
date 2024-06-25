@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,6 +109,11 @@ type HasPosition interface {
 	EndPosition(memoryGauge common.MemoryGauge) Position
 }
 
+func RangeContains(memoryGauge common.MemoryGauge, a, b HasPosition) bool {
+	return a.StartPosition().Compare(b.StartPosition()) <= 0 &&
+		a.EndPosition(memoryGauge).Compare(b.EndPosition(memoryGauge)) >= 0
+}
+
 // Range
 
 type Range struct {
@@ -141,6 +146,10 @@ func (e Range) EndPosition(common.MemoryGauge) Position {
 // NewRangeFromPositioned
 
 func NewRangeFromPositioned(memoryGauge common.MemoryGauge, hasPosition HasPosition) Range {
+	if hasPosition == nil {
+		return EmptyRange
+	}
+
 	return NewRange(
 		memoryGauge,
 		hasPosition.StartPosition(),

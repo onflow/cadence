@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ func init() {
 	for _, integerType := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch integerType {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -97,21 +97,21 @@ func TestInterpretIntegerConversions(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				value,
-				inter.Globals.Get("y").GetValue(),
+				inter.Globals.Get("y").GetValue(inter),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				interpreter.TrueValue,
-				inter.Globals.Get("z").GetValue(),
+				inter.Globals.Get("z").GetValue(inter),
 			)
 
 		})
@@ -149,7 +149,7 @@ func TestInterpretWordOverflowConversions(t *testing.T) {
 			require.Equal(
 				t,
 				"0",
-				inter.Globals.Get("y").GetValue().String(),
+				inter.Globals.Get("y").GetValue(inter).String(),
 			)
 		})
 	}
@@ -185,7 +185,7 @@ func TestInterpretWordUnderflowConversions(t *testing.T) {
 			require.Equal(
 				t,
 				value.String(),
-				inter.Globals.Get("y").GetValue().String(),
+				inter.Globals.Get("y").GetValue(inter).String(),
 			)
 		})
 	}
@@ -209,7 +209,7 @@ func TestInterpretAddressConversion(t *testing.T) {
 			interpreter.AddressValue{
 				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 			},
-			inter.Globals.Get("x").GetValue(),
+			inter.Globals.Get("x").GetValue(inter),
 		)
 
 	})
@@ -228,7 +228,7 @@ func TestInterpretAddressConversion(t *testing.T) {
 			interpreter.AddressValue{
 				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
 			},
-			inter.Globals.Get("x").GetValue(),
+			inter.Globals.Get("x").GetValue(inter),
 		)
 	})
 
@@ -288,7 +288,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 
 		})
@@ -316,7 +316,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclarationOptional(t *t
 				t,
 				inter,
 				interpreter.NewUnmeteredSomeValueNonCopying(value),
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 	}
@@ -346,7 +346,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 
 			_, err := inter.Invoke("test")
@@ -357,7 +357,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 				t,
 				inter,
 				numberValue.Plus(inter, numberValue, interpreter.EmptyLocationRange),
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 	}
@@ -387,7 +387,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 				t,
 				inter,
 				interpreter.NewUnmeteredSomeValueNonCopying(value),
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 
 			_, err := inter.Invoke("test")
@@ -401,7 +401,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 				interpreter.NewUnmeteredSomeValueNonCopying(
 					numberValue.Plus(inter, numberValue, interpreter.EmptyLocationRange),
 				),
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 	}
@@ -431,7 +431,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgument(t *testing.
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 	}
@@ -461,7 +461,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgumentOptional(t *
 				t,
 				inter,
 				interpreter.NewUnmeteredSomeValueNonCopying(value),
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 	}
@@ -705,7 +705,7 @@ func TestInterpretIntegerConversion(t *testing.T) {
 	for _, ty := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -805,7 +805,7 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 			t,
 			inter,
 			expected,
-			inter.Globals.Get("x").GetValue(),
+			inter.Globals.Get("x").GetValue(inter),
 		)
 	}
 
@@ -891,7 +891,7 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 	for _, ty := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 

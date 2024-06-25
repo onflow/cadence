@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,8 +44,10 @@ func TestCheckStorable(t *testing.T) {
 			code,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
-					BaseValueActivation: baseValueActivation,
-					AttachmentsEnabled:  true,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+					AttachmentsEnabled: true,
 				},
 			},
 		)
@@ -85,7 +87,7 @@ func TestCheckStorable(t *testing.T) {
 			)
 		}
 
-		if sema.IsValidDictionaryKeyType(ty) {
+		if sema.IsSubType(ty, sema.HashableStructType) {
 			nestedTypes = append(nestedTypes,
 				&sema.DictionaryType{
 					KeyType:   ty,
@@ -134,6 +136,7 @@ func TestCheckStorable(t *testing.T) {
 		sema.NeverType,
 		sema.VoidType,
 		sema.AccountType,
+		&sema.InclusiveRangeType{MemberType: sema.IntType},
 	}
 
 	// Capabilities of non-storable types are storable
@@ -270,7 +273,6 @@ func TestCheckStorable(t *testing.T) {
 				var interfaceKeyword string
 				var baseType string
 				var initializer string
-				var destructor string
 
 				if isInterface {
 					interfaceKeyword = "interface"
@@ -297,14 +299,6 @@ func TestCheckStorable(t *testing.T) {
 						typeName,
 						transferOperation.Operator(),
 					)
-
-					if isResource {
-						destructor = `
-                              destroy() {
-                                  destroy self.value
-                              }
-                        `
-					}
 				}
 
 				if compositeKind == common.CompositeKindAttachment {
@@ -320,14 +314,11 @@ func TestCheckStorable(t *testing.T) {
                               let value: %[1]s%[2]s
 
                               %[3]s
-
-                              %[4]s
                           }
                         `,
 						typeAnnotation,
 						typeName,
 						initializer,
-						destructor,
 					)
 				}
 

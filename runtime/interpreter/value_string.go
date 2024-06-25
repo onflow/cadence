@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -88,20 +88,25 @@ func stringFunctionFromCharacters(invocation Invocation) Value {
 	common.UseMemory(inter, common.NewStringMemoryUsage(0))
 	var builder strings.Builder
 
-	argument.Iterate(inter, func(element Value) (resume bool) {
-		character := element.(CharacterValue)
-		// Construct directly instead of using NewStringMemoryUsage to avoid
-		// having to decrement by 1 due to double counting of empty string.
-		common.UseMemory(inter,
-			common.MemoryUsage{
-				Kind:   common.MemoryKindStringValue,
-				Amount: uint64(len(character)),
-			},
-		)
-		builder.WriteString(string(character))
+	argument.Iterate(
+		inter,
+		func(element Value) (resume bool) {
+			character := element.(CharacterValue)
+			// Construct directly instead of using NewStringMemoryUsage to avoid
+			// having to decrement by 1 due to double counting of empty string.
+			common.UseMemory(inter,
+				common.MemoryUsage{
+					Kind:   common.MemoryKindStringValue,
+					Amount: uint64(len(character.Str)),
+				},
+			)
+			builder.WriteString(character.Str)
 
-		return true
-	})
+			return true
+		},
+		false,
+		invocation.LocationRange,
+	)
 
 	return NewUnmeteredStringValue(builder.String())
 }
@@ -131,45 +136,55 @@ func stringFunctionJoin(invocation Invocation) Value {
 	var builder strings.Builder
 	first := true
 
-	stringArray.Iterate(inter, func(element Value) (resume bool) {
-		// Add separator
-		if !first {
+	stringArray.Iterate(
+		inter,
+		func(element Value) (resume bool) {
+
+			// Meter computation for iterating the array.
+			inter.ReportComputation(common.ComputationKindLoop, 1)
+
+			// Add separator
+			if !first {
+				// Construct directly instead of using NewStringMemoryUsage to avoid
+				// having to decrement by 1 due to double counting of empty string.
+				common.UseMemory(inter,
+					common.MemoryUsage{
+						Kind:   common.MemoryKindStringValue,
+						Amount: uint64(len(separator.Str)),
+					},
+				)
+				builder.WriteString(separator.Str)
+			}
+			first = false
+
+			str, ok := element.(*StringValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
 			// Construct directly instead of using NewStringMemoryUsage to avoid
 			// having to decrement by 1 due to double counting of empty string.
 			common.UseMemory(inter,
 				common.MemoryUsage{
 					Kind:   common.MemoryKindStringValue,
-					Amount: uint64(len(separator.Str)),
+					Amount: uint64(len(str.Str)),
 				},
 			)
-			builder.WriteString(separator.Str)
-		}
-		first = false
+			builder.WriteString(str.Str)
 
-		str, ok := element.(*StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		// Construct directly instead of using NewStringMemoryUsage to avoid
-		// having to decrement by 1 due to double counting of empty string.
-		common.UseMemory(inter,
-			common.MemoryUsage{
-				Kind:   common.MemoryKindStringValue,
-				Amount: uint64(len(str.Str)),
-			},
-		)
-		builder.WriteString(str.Str)
-
-		return true
-	})
+			return true
+		},
+		false,
+		invocation.LocationRange,
+	)
 
 	return NewUnmeteredStringValue(builder.String())
 }
 
 // stringFunction is the `String` function. It is stateless, hence it can be re-used across interpreters.
+// Type bound functions are static functions.
 var stringFunction = func() Value {
-	functionValue := NewUnmeteredHostFunctionValue(
+	functionValue := NewUnmeteredStaticHostFunctionValue(
 		sema.StringFunctionType,
 		func(invocation Invocation) Value {
 			return EmptyString
@@ -178,7 +193,7 @@ var stringFunction = func() Value {
 
 	addMember := func(name string, value Value) {
 		if functionValue.NestedVariables == nil {
-			functionValue.NestedVariables = map[string]*Variable{}
+			functionValue.NestedVariables = map[string]Variable{}
 		}
 		// these variables are not needed to be metered as they are only ever declared once,
 		// and can be considered base interpreter overhead
@@ -187,7 +202,7 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeEncodeHexFunctionName,
-		NewUnmeteredHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValue(
 			sema.StringTypeEncodeHexFunctionType,
 			stringFunctionEncodeHex,
 		),
@@ -195,7 +210,7 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeFromUtf8FunctionName,
-		NewUnmeteredHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValue(
 			sema.StringTypeFromUtf8FunctionType,
 			stringFunctionFromUtf8,
 		),
@@ -203,7 +218,7 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeFromCharactersFunctionName,
-		NewUnmeteredHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValue(
 			sema.StringTypeFromCharactersFunctionType,
 			stringFunctionFromCharacters,
 		),
@@ -211,7 +226,7 @@ var stringFunction = func() Value {
 
 	addMember(
 		sema.StringTypeJoinFunctionName,
-		NewUnmeteredHostFunctionValue(
+		NewUnmeteredStaticHostFunctionValue(
 			sema.StringTypeJoinFunctionType,
 			stringFunctionJoin,
 		),

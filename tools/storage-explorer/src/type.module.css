@@ -1,0 +1,18 @@
+.type {
+    font-size: .875rem;
+    line-height: 1.25rem;
+    padding: .1rem .6rem;
+    border-radius: 6px;
+}
+
+.type-container {
+    border: 1px solid rgba(59, 130, 246, .5);
+    background-color: rgb(239, 246, 255);
+    color: rgb(29, 78, 216);
+}
+
+.type-leaf {
+    border: 1px solid rgb(16, 185, 129, .2);
+    background-color: rgba(16, 185, 129, 0.1);
+    color: rgb(5 150 105);
+}

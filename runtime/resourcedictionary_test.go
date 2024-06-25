@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,8 @@ const resourceDictionaryContract = `
 
      access(all) resource R {
 
+		 access(all) event ResourceDestroyed(value: Int = self.value)
+
          access(all) var value: Int
 
          init(_ value: Int) {
@@ -46,11 +48,6 @@ const resourceDictionaryContract = `
 
          access(all) fun increment() {
              self.value = self.value + 1
-         }
-
-         destroy() {
-             log("destroying R")
-             log(self.value)
          }
      }
 
@@ -79,10 +76,6 @@ const resourceDictionaryContract = `
 		 access(all) fun forceInsert(_ id: String, _ r: @R) {
 			self.rs[id] <-! r
 		 }
-
-         destroy() {
-             destroy self.rs
-         }
      }
 
      access(all) fun createC(): @C {
@@ -264,6 +257,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
    `)
 
 	loggedMessages = nil
+	events = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -279,12 +273,12 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"3",
-			`"destroying R"`,
-			"3",
 			"4",
 		},
 		loggedMessages,
 	)
+	require.Len(t, events, 1)
+	require.Equal(t, "A.000000000000cade.Test.R.ResourceDestroyed(value: 3)", events[0].String())
 
 	// Remove the key
 
@@ -303,6 +297,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
    `)
 
 	loggedMessages = nil
+	events = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -318,12 +313,12 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"4",
-			`"destroying R"`,
-			"4",
 			"nil",
 		},
 		loggedMessages,
 	)
+	require.Len(t, events, 1)
+	require.Equal(t, "A.000000000000cade.Test.R.ResourceDestroyed(value: 4)", events[0].String())
 
 	// Read the deleted key
 
@@ -363,6 +358,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
    `)
 
 	loggedMessages = nil
+	events = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -378,11 +374,12 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"1",
-			`"destroying R"`,
-			"1",
 		},
 		loggedMessages,
 	)
+	require.Len(t, events, 1)
+	require.Equal(t, "A.000000000000cade.Test.R.ResourceDestroyed(value: 1)", events[0].String())
+
 }
 
 func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
@@ -428,10 +425,6 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 			 access(all) fun forceInsert(_ id: String, _ r: @R) {
 				self.rs[id] <-! r
 			 }
-
-             destroy() {
-                 destroy self.rs
-             }
          }
 
          access(all) fun createC2(): @C2 {
@@ -448,10 +441,6 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
              init() {
                  self.c2s <- {}
-             }
-
-             destroy() {
-                 destroy self.c2s
              }
          }
 
@@ -626,10 +615,6 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
              init() {
                  self.rs <- {}
-             }
-
-             destroy() {
-                 destroy self.rs
              }
          }
 
@@ -993,15 +978,14 @@ func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		[]string{
-			`"destroying R"`,
-			"2",
-			`"destroying R"`,
-			"1",
-		},
-		loggedMessages,
-	)
+	require.Len(t, events, 3)
+	require.Equal(t, "flow.AccountContractAdded", events[0].EventType.ID())
+	require.Equal(t, "A.0000000000000001.Test.R.ResourceDestroyed", events[1].EventType.ID())
+	require.Equal(t, "A.0000000000000001.Test.R.ResourceDestroyed", events[2].EventType.ID())
+	event2Fields := cadence.FieldsMappedByName(events[1])
+	event3Fields := cadence.FieldsMappedByName(events[2])
+	require.Equal(t, "2", event2Fields["value"].String())
+	require.Equal(t, "1", event3Fields["value"].String())
 }
 
 func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {

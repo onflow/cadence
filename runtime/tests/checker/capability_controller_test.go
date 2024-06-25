@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,9 @@ func TestCheckStorageCapabilityController(t *testing.T) {
 			code,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
-					BaseValueActivation: baseActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -105,7 +107,9 @@ func TestCheckAccountCapabilityController(t *testing.T) {
 			code,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
-					BaseValueActivation: baseActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)

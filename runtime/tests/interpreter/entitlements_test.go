@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1124,7 +1124,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			X -> Y
 		}
 		struct S {
-			access(M) let foo: auth(M) &Int
+			access(mapping M) let foo: auth(mapping M) &Int
 			init() {
 				self.foo = &2 as auth(Y) &Int
 			}
@@ -1174,7 +1174,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			E -> F
 		}
 		struct S {
-			access(M) let foo: auth(M) &Int
+			access(mapping M) let foo: auth(mapping M) &Int
 			init() {
 				self.foo = &3 as auth(F, Y) &Int
 			}
@@ -1225,7 +1225,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			E -> F
 		}
 		struct S {
-			access(M) let foo: auth(M) &Int
+			access(mapping M) let foo: auth(mapping M) &Int
 			init() {
 				self.foo = &3 as auth(F, Y) &Int
 			}
@@ -1275,7 +1275,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			E -> F
 		}
 		struct S {
-			access(M) let foo: auth(M) &Int
+			access(mapping M) let foo: auth(mapping M) &Int
 			init() {
 				self.foo = &3 as auth(F, Y) &Int
 			}
@@ -1325,7 +1325,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			E -> F
 		}
 		struct S {
-			access(M) let foo: auth(M) &Int
+			access(mapping M) let foo: auth(mapping M) &Int
 			init() {
 				self.foo = &3 as auth(F, Y, Q) &Int
 			}
@@ -1374,7 +1374,7 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 			E -> F
 		}
 		struct S {
-			access(M) let foo: auth(M) &Int
+			access(mapping M) let foo: auth(mapping M) &Int
 			init() {
 				self.foo = &3 as auth(F, Y) &Int
 			}
@@ -1427,8 +1427,8 @@ func TestInterpretEntitlementMappingFields(t *testing.T) {
 		}
 		struct S {
 			access(self) let myFoo: Int
-			access(M) fun foo(): auth(M) &Int {
-				return &self.myFoo as auth(M) &Int
+			access(mapping M) fun foo(): auth(mapping M) &Int {
+				return &self.myFoo as auth(mapping M) &Int
 			}
 			init() {
 				self.myFoo = 3
@@ -1484,8 +1484,8 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			X -> Y
 		}
 		struct S {
-			access(M) fun foo(): auth(M) &Int {
-				return &1 as auth(M) &Int
+			access(mapping M) fun foo(): auth(mapping M) &Int {
+				return &1 as auth(mapping M) &Int
 			}
 		}
 		fun test(): auth(Y) &Int {
@@ -1522,7 +1522,7 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			X -> Y
 		}
 		struct S {
-			access(M) fun foo(): auth(M) &Int {
+			access(mapping M) fun foo(): auth(mapping M) &Int {
 				return &1 as auth(Y, Z) &Int
 			}
 		}
@@ -1557,8 +1557,8 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			X -> Z
 		}
 		struct S {
-			access(M) fun foo(): auth(M) &Int {
-				return &1 as auth(M) &Int
+			access(mapping M) fun foo(): auth(mapping M) &Int {
+				return &1 as auth(mapping M) &Int
 			}
 		}
 		fun test(): auth(Y, Z) &Int {
@@ -1596,8 +1596,8 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			X -> Z
 		}
 		struct S {
-			access(M) fun foo(): auth(M) &Int {
-				return &1 as auth(M) &Int
+			access(mapping M) fun foo(): auth(mapping M) &Int {
+				return &1 as auth(mapping M) &Int
 			}
 		}
 		fun test(): auth(Y, Z) &Int {
@@ -1636,10 +1636,10 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			E -> F
 		}
 		struct S {
-			access(M) fun foo(): auth(M) &Int? {
+			access(mapping M) fun foo(): auth(mapping M) &Int? {
 				let ref = &1 as auth(F) &Int
 				// here M is substituted for F, so this works
-				if let r = ref as? auth(M) &Int {
+				if let r = ref as? auth(mapping M) &Int {
 					return r
 				} else {
 					return nil
@@ -1682,10 +1682,10 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			E -> F
 		}
 		struct S {
-			access(M) fun foo(): auth(M) &Int? {
+			access(mapping M) fun foo(): auth(mapping M) &Int? {
 				let ref = &1 as auth(F) &Int
 				// here M is substituted for Y, so this fails
-				if let r = ref as? auth(M) &Int {
+				if let r = ref as? auth(mapping M) &Int {
 					return r
 				} else {
 					return nil
@@ -1724,9 +1724,9 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			E -> F
 		}
 		struct S {
-			access(M) fun foo(): auth(M) &Int? {
+			access(mapping M) fun foo(): auth(mapping M) &Int? {
 				let x = [&1 as auth(Y) &Int]
-				let y = x as! [auth(M) &Int]
+				let y = x as! [auth(mapping M) &Int]
 				return y[0]
 			}
 		}
@@ -1761,9 +1761,9 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			E -> F
 		}
 		struct S {
-			access(M) fun foo(): auth(M) &Int? {
+			access(mapping M) fun foo(): auth(mapping M) &Int? {
 				let x = [&1 as auth(Y) &Int]
-				let y = x as! [auth(M) &Int]
+				let y = x as! [auth(mapping M) &Int]
 				return y[0]
 			}
 		}
@@ -1794,9 +1794,9 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			E -> F
 		}
 		struct S {
-			access(M) fun foo(): auth(M) &Int? {
+			access(mapping M) fun foo(): auth(mapping M) &Int? {
 				let ref = &1 as auth(F) &Int
-				if let r = ref as? auth(M) &Int {
+				if let r = ref as? auth(mapping M) &Int {
 					return r
 				} else {
 					return nil
@@ -1837,8 +1837,8 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 				}
 			}
 			struct S {
-				access(M) let t: auth(M) &T
-				access(M) fun foo(): auth(M) &Int {
+				access(mapping M) let t: auth(mapping M) &T
+				access(mapping M) fun foo(): auth(mapping M) &Int {
 					// success because we have self is fully entitled to the domain of M
 					return self.t.getRef() 
 				}
@@ -1882,12 +1882,12 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 				Y -> Z
 			}
 			struct T {
-				access(N) fun getRef(): auth(N) &Int {
-					return &1 as auth(N) &Int
+				access(mapping N) fun getRef(): auth(mapping N) &Int {
+					return &1 as auth(mapping N) &Int
 				}
 			}
 			struct S {
-				access(M) let t: auth(M) &T
+				access(mapping M) let t: auth(mapping M) &T
 				access(X) fun foo(): auth(Z) &Int {
 					return self.t.getRef() 
 				}
@@ -1934,13 +1934,13 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 				X -> Z
 			}
 			struct T {
-				access(N) fun getRef(): auth(N) &Int {
-					return &1 as auth(N) &Int
+				access(mapping N) fun getRef(): auth(mapping N) &Int {
+					return &1 as auth(mapping N) &Int
 				}
 			}
 			struct S {
-				access(M) let t: auth(M) &T
-				access(NM) fun foo(): auth(NM) &Int {
+				access(mapping M) let t: auth(mapping M) &T
+				access(mapping NM) fun foo(): auth(mapping NM) &Int {
 					return self.t.getRef() 
 				}
 				init() {
@@ -1989,13 +1989,13 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 				X -> Z
 			}
 			struct T {
-				access(N) fun getRef(): auth(N) &Int {
-					return &1 as auth(N) &Int
+				access(mapping N) fun getRef(): auth(mapping N) &Int {
+					return &1 as auth(mapping N) &Int
 				}
 			}
 			struct S {
-				access(M) let t: auth(M) &T
-				access(NM) fun foo(): auth(NM) &Int {
+				access(mapping M) let t: auth(mapping M) &T
+				access(mapping NM) fun foo(): auth(mapping NM) &Int {
 					return self.t.getRef() 
 				}
 				init() {
@@ -2046,13 +2046,13 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 				A -> B
 			}
 			struct T {
-				access(N) fun getRef(): auth(N) &Int {
-					return &1 as auth(N) &Int
+				access(mapping N) fun getRef(): auth(mapping N) &Int {
+					return &1 as auth(mapping N) &Int
 				}
 			}
 			struct S {
-				access(M) let t: auth(M) &T
-				access(NM) fun foo(): auth(NM) &Int {
+				access(mapping M) let t: auth(mapping M) &T
+				access(mapping NM) fun foo(): auth(mapping NM) &Int {
 					return self.t.getRef() 
 				}
 				init() {
@@ -2079,6 +2079,83 @@ func TestInterpretEntitlementMappingAccessors(t *testing.T) {
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
+
+	t.Run("accessor function with mapped ref arg", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+            entitlement H
+            entitlement mapping M {
+                E -> F
+                G -> H
+            }
+            struct S {
+                access(mapping M) fun foo(_ arg: auth(mapping M) &Int): auth(mapping M) &Int {
+					return arg
+				}
+            }
+
+            fun test(): auth(F) &Int {
+				let s = S()
+				let sRef = &s as auth(E) &S
+                return sRef.foo(&1 as auth(F) &Int)
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"S.test.F"} },
+				1,
+				sema.Conjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("accessor function with full mapped ref arg", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            entitlement E
+            entitlement F
+            entitlement G
+            entitlement H
+            entitlement mapping M {
+                E -> F
+                G -> H
+            }
+            struct S {
+                access(mapping M) fun foo(_ arg: auth(mapping M) &Int): auth(mapping M) &Int {
+					return arg
+				}
+            }
+
+            fun test(): auth(F, H) &Int {
+				let s = S()
+                return s.foo(&1 as auth(F, H) &Int)
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"S.test.F", "S.test.H"} },
+				2,
+				sema.Conjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
 }
 
 func TestInterpretEntitledAttachments(t *testing.T) {
@@ -2089,15 +2166,12 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-			entitlement X
 			entitlement Y 
 			entitlement Z 
-			entitlement mapping M {
-				X -> Y
-				X -> Z
+			struct S {
+				access(Y, Z) fun foo() {}
 			}
-			struct S {}
-			access(M) attachment A for S {}
+			access(all) attachment A for S {}
 			fun test(): auth(Y, Z) &A {
 				let s = attach A() to S()
 				return s[A]!
@@ -2123,20 +2197,17 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-			entitlement X
 			entitlement Y 
 			entitlement Z 
-			entitlement mapping M {
-				X -> Y
-				X -> Z
+			struct S {
+				access(Y | Z) fun foo() {}
 			}
-			struct S {}
-			access(M) attachment A for S {
-				access(Y | Z) fun entitled(): auth(Y, Z) &A {
+			access(all) attachment A for S {
+				access(Y | Z) fun entitled(): auth(Y | Z) &A {
 					return self
 				} 
 			}
-			fun test(): auth(Y, Z) &A {
+			fun test(): auth(Y | Z) &A {
 				let s = attach A() to S()
 				return s[A]!.entitled()
 			}
@@ -2151,7 +2222,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 				nil,
 				func() []common.TypeID { return []common.TypeID{"S.test.Y", "S.test.Z"} },
 				2,
-				sema.Conjunction,
+				sema.Disjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
@@ -2161,55 +2232,18 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-			entitlement X
 			entitlement Y 
 			entitlement Z 
-			entitlement mapping M {
-				X -> Y
-				X -> Z
+			struct S {
+				access(Y | Z) fun foo() {}
 			}
-			struct S {}
-			access(M) attachment A for S {
-				access(Y | Z) fun entitled(): &S {
+			access(all) attachment A for S {
+				access(Y | Z) fun entitled(): auth(Y | Z) &S {
 					return base
 				} 
 			}
-			fun test(): &S {
+			fun test(): auth(Y | Z) &S {
 				let s = attach A() to S()
-				return s[A]!.entitled()
-			}
-		`)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		require.True(
-			t,
-			interpreter.UnauthorizedAccess.Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
-		)
-	})
-
-	t.Run("basic call return authorized base", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-			entitlement X
-			entitlement Y 
-			entitlement Z 
-			entitlement mapping M {
-				X -> Y
-				X -> Z
-			}
-			struct S {}
-			access(M) attachment A for S {
-				require entitlement X
-				access(Y | Z) fun entitled(): auth(X) &S {
-					return base
-				} 
-			}
-			fun test(): auth(X) &S {
-				let s = attach A() to S() with (X)
 				return s[A]!.entitled()
 			}
 		`)
@@ -2221,9 +2255,81 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				func() []common.TypeID { return []common.TypeID{"S.test.X"} },
-				1,
-				sema.Conjunction,
+				func() []common.TypeID { return []common.TypeID{"S.test.Y", "S.test.Z"} },
+				2,
+				sema.Disjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("basic call unbound method", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement Y 
+			entitlement Z 
+			struct S {
+				access(Y | Z) fun foo() {}
+			}
+			access(all) attachment A for S {
+				access(Y | Z) fun entitled(): auth(Y | Z) &A {
+					return self
+				} 
+			}
+			fun test(): auth(Y | Z) &A {
+				let s = attach A() to S()
+				let foo = s[A]!.entitled
+				return foo()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"S.test.Y", "S.test.Z"} },
+				2,
+				sema.Disjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
+	t.Run("basic call unbound method base", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement Y 
+			entitlement Z 
+			struct S {
+				access(Y | Z) fun foo() {}
+			}
+			access(all) attachment A for S {
+				access(Y | Z) fun entitled(): auth(Y | Z) &S {
+					return base
+				} 
+			}
+			fun test(): auth(Y | Z) &S {
+				let s = attach A() to S()
+				let foo = s[A]!.entitled
+				return foo()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"S.test.Y", "S.test.Z"} },
+				2,
+				sema.Disjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
@@ -2234,21 +2340,13 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
 			entitlement X
-			entitlement Y 
-			entitlement Z 
 			entitlement E
-			entitlement F
 			entitlement G
-			entitlement mapping M {
-				X -> Y
-				X -> Z
-				E -> F
-				X -> F
-				E -> G
+			struct S {
+				access(X, E, G) fun foo() {}
 			}
-			struct S {}
-			access(M) attachment A for S {}
-			fun test(): auth(F, G) &A {
+			access(all) attachment A for S {}
+			fun test(): auth(E) &A {
 				let s = attach A() to S()
 				let ref = &s as auth(E) &S
 				return ref[A]!
@@ -2262,8 +2360,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				func() []common.TypeID { return []common.TypeID{"S.test.F", "S.test.G"} },
-				2,
+				func() []common.TypeID { return []common.TypeID{"S.test.E"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2275,25 +2373,17 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
 			entitlement X
-			entitlement Y 
-			entitlement Z 
 			entitlement E
-			entitlement F
 			entitlement G
-			entitlement mapping M {
-				X -> Y
-				X -> Z
-				E -> F
-				X -> F
-				E -> G
+			struct S {
+				access(X, E, G) fun foo() {}
 			}
-			struct S {}
-			access(M) attachment A for S {
-				access(F | Z) fun entitled(): auth(Y, Z, F, G) &A {
+			access(all) attachment A for S {
+				access(E | G) fun entitled(): auth(E | G) &A {
 					return self
 				} 
 			}
-			fun test(): auth(Y, Z, F, G) &A {
+			fun test(): auth(E | G) &A {
 				let s = attach A() to S()
 				let ref = &s as auth(E) &S
 				return ref[A]!.entitled()
@@ -2307,81 +2397,32 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				func() []common.TypeID { return []common.TypeID{"S.test.F", "S.test.G", "S.test.Y", "S.test.Z"} },
-				4,
-				sema.Conjunction,
+				func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.G"} },
+				2,
+				sema.Disjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
 	})
 
-	t.Run("basic ref call return base", func(t *testing.T) {
+	t.Run("basic ref call conjunction", func(t *testing.T) {
 
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
 			entitlement X
-			entitlement Y 
-			entitlement Z 
 			entitlement E
-			entitlement F
 			entitlement G
-			entitlement mapping M {
-				X -> Y
-				X -> Z
-				E -> F
-				X -> F
-				E -> G
+			struct S {
+				access(X, E, G) fun foo() {}
 			}
-			struct S {}
-			access(M) attachment A for S {
-				access(F | Z) fun entitled(): &S {
-					return base
+			access(all) attachment A for S {
+				access(E) fun entitled(): auth(E) &A {
+					return self
 				} 
 			}
-			fun test(): &S {
+			fun test(): auth(E) &A {
 				let s = attach A() to S()
-				let ref = &s as auth(E) &S
-				return ref[A]!.entitled()
-			}
-		`)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		require.True(
-			t,
-			interpreter.UnauthorizedAccess.Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
-		)
-	})
-
-	t.Run("basic ref call return entitled base", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-			entitlement X
-			entitlement Y 
-			entitlement Z 
-			entitlement E
-			entitlement F
-			entitlement G
-			entitlement mapping M {
-				X -> Y
-				X -> Z
-				E -> F
-				X -> F
-				E -> G
-			}
-			struct S {}
-			access(M) attachment A for S {
-				require entitlement E
-				access(F | Z) fun entitled(): auth(E) &S {
-					return base
-				} 
-			}
-			fun test(): auth(E) &S {
-				let s = attach A() to S() with(E)
-				let ref = &s as auth(E) &S
+				let ref = &s as auth(E, G) &S
 				return ref[A]!.entitled()
 			}
 		`)
@@ -2400,30 +2441,61 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		)
 	})
 
+	t.Run("basic ref call return base", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement X
+			entitlement E
+			entitlement G
+			struct S {
+				access(X, E, G) fun foo() {}
+			}
+			access(all) attachment A for S {
+				access(X | E) fun entitled(): auth(X | E) &S {
+					return base
+				} 
+			}
+			fun test(): auth(X | E) &S {
+				let s = attach A() to S()
+				let ref = &s as auth(E) &S
+				return ref[A]!.entitled()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.True(
+			t,
+			interpreter.NewEntitlementSetAuthorization(
+				nil,
+				func() []common.TypeID { return []common.TypeID{"S.test.E", "S.test.X"} },
+				2,
+				sema.Disjunction,
+			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+
 	t.Run("basic intersection access", func(t *testing.T) {
 
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
 			entitlement X
-			entitlement Y 
-			entitlement Z 
 			entitlement E
-			entitlement F
 			entitlement G
-			entitlement mapping M {
-				X -> Y
-				X -> Z
-				E -> F
-				X -> F
-				E -> G
+			struct S: I {
+				access(X, E, G) fun foo() {}
 			}
-			struct S: I {}
-			struct interface I {}
-			access(M) attachment A for I {}
-			fun test(): auth(F, G) &A {
+			struct interface I {
+				access(X, E, G) fun foo()
+			}
+			access(all) attachment A for I {}
+			fun test(): auth(G) &A {
 				let s = attach A() to S()
-				let ref = &s as auth(E) &{I}
+				let ref = &s as auth(G) &{I}
 				return ref[A]!
 			}
 		`)
@@ -2435,8 +2507,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				func() []common.TypeID { return []common.TypeID{"S.test.F", "S.test.G"} },
-				2,
+				func() []common.TypeID { return []common.TypeID{"S.test.G"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2450,21 +2522,13 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
-			entitlement Y 
-			entitlement Z 
 			entitlement E
-			entitlement F
 			entitlement G
-			entitlement mapping M {
-				X -> Y
-				X -> Z
-				E -> F
-				X -> F
-				E -> G
+			resource R {
+				access(X, E, G) fun foo() {}
 			}
-			resource R {}
-			access(M) attachment A for R {}
-			fun test(): auth(F, G) &A {
+			access(all) attachment A for R {}
+			fun test(): auth(E) &A {
 				let r <- attach A() to <-create R()
 				account.storage.save(<-r, to: /storage/foo)
 				let ref = account.storage.borrow<auth(E) &R>(from: /storage/foo)!
@@ -2481,8 +2545,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				func() []common.TypeID { return []common.TypeID{"S.test.F", "S.test.G"} },
-				2,
+				func() []common.TypeID { return []common.TypeID{"S.test.E"} },
+				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2496,28 +2560,20 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
-			entitlement Y 
-			entitlement Z 
 			entitlement E
-			entitlement F
 			entitlement G
-			entitlement mapping M {
-				X -> Y
-				X -> Z
-				E -> F
-				X -> F
-				E -> G
+			resource R {
+				access(X, E, G) fun foo() {}
 			}
-			resource R {}
-			access(M) attachment A for R {
-				access(F | Z) fun entitled(): auth(F, G, Y, Z) &A {
+			access(all) attachment A for R {
+				access(X, E) fun entitled(): auth(X, E) &A {
 					return self
 				} 
 			}
-			fun test(): auth(F, G, Y, Z) &A {
+			fun test(): auth(X, E) &A {
 				let r <- attach A() to <-create R()
 				account.storage.save(<-r, to: /storage/foo)
-				let ref = account.storage.borrow<auth(E) &R>(from: /storage/foo)!
+				let ref = account.storage.borrow<auth(X, E, G) &R>(from: /storage/foo)!
 				return ref[A]!.entitled()
 			}
 		`, sema.Config{
@@ -2531,8 +2587,8 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				func() []common.TypeID { return []common.TypeID{"S.test.F", "S.test.G", "S.test.Y", "S.test.Z"} },
-				4,
+				func() []common.TypeID { return []common.TypeID{"S.test.X", "S.test.E"} },
+				2,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
 		)
@@ -2546,29 +2602,20 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 
 		inter, _ := testAccount(t, address, true, nil, `
 			entitlement X
-			entitlement Y 
-			entitlement Z 
 			entitlement E
-			entitlement F
 			entitlement G
-			entitlement mapping M {
-				X -> Y
-				X -> Z
-				E -> F
-				X -> F
-				E -> G
+			resource R {
+				access(X, E, G) fun foo() {}
 			}
-			resource R {}
-			access(M) attachment A for R {
-				require entitlement X
-				access(F | Z) fun entitled(): auth(X) &R {
+			access(all) attachment A for R {
+				access(X) fun entitled(): auth(X) &R {
 					return base
 				} 
 			}
 			fun test(): auth(X) &R {
-				let r <- attach A() to <-create R() with (X)
+				let r <- attach A() to <-create R()
 				account.storage.save(<-r, to: /storage/foo)
-				let ref = account.storage.borrow<auth(E) &R>(from: /storage/foo)!
+				let ref = account.storage.borrow<auth(E, X, G) &R>(from: /storage/foo)!
 				return ref[A]!.entitled()
 			}
 		`, sema.Config{
@@ -2589,39 +2636,25 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		)
 	})
 
-	t.Run("fully entitled in init and destroy", func(t *testing.T) {
+	t.Run("fully entitled in init", func(t *testing.T) {
 
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
 			entitlement X
-			entitlement Y 
-			entitlement Z 
 			entitlement E
-			entitlement F
 			entitlement G
-			entitlement mapping M {
-				X -> Y
-				X -> Z
-				E -> F
-				X -> F
-				E -> G
+			resource R {
+				access(X, E, G) fun foo() {}
 			}
-			resource R {}
-			access(M) attachment A for R {
-				require entitlement E
-				require entitlement X
+			access(all) attachment A for R {
 				init() {
-					let x = self as! auth(Y, Z, F, G) &A
-					let y = base as! auth(X, E) &R
-				}
-				destroy() {
-					let x = self as! auth(Y, Z, F, G) &A
-					let y = base as! auth(X, E) &R
+					let x = self as! auth(X, E, G) &A
+					let y = base as! auth(X, E, G) &R
 				}
 			}
 			fun test() {
-				let r <- attach A() to <-create R() with (E, X)
+				let r <- attach A() to <-create R()
 				destroy r
 			}
 		`)
@@ -2630,28 +2663,20 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("composed mapped attachment access", func(t *testing.T) {
+	t.Run("composed attachment access", func(t *testing.T) {
 
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-			entitlement X
-			entitlement Y 
 			entitlement Z
-			entitlement E
-			entitlement F
-			entitlement G
-			entitlement mapping M {
-				X -> Y
-				E -> F
+			entitlement Y
+			struct S {
+				access(Y) fun foo() {}
 			}
-			entitlement mapping N {
-				Z -> X
-				G -> F
+			struct T {
+				access(Z) fun foo() {}
 			}
-			struct S {}
-			struct T {}
-			access(M) attachment A for S {
+			access(all) attachment A for S {
 				access(self) let t: T
 				init(t: T) {
 					self.t = t
@@ -2660,10 +2685,10 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 					return &self.t as auth(Z) &T
 				}
 			}
-			access(N) attachment B for T {}
-			fun test(): auth(X) &B {
+			access(all) attachment B for T {}
+			fun test(): auth(Z) &B {
 				let s = attach A(t: attach B() to T()) to S()
-				let ref = &s as auth(X) &S
+				let ref = &s as auth(Y) &S
 				return ref[A]!.getT()[B]!
 			}
 		`)
@@ -2675,7 +2700,7 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			t,
 			interpreter.NewEntitlementSetAuthorization(
 				nil,
-				func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+				func() []common.TypeID { return []common.TypeID{"S.test.Z"} },
 				1,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
@@ -2695,9 +2720,9 @@ func TestInterpretEntitledAttachments(t *testing.T) {
 			}
 
 			struct S {
-				access(M) fun foo(): auth(M) &AnyStruct {
+				access(mapping M) fun foo(): auth(mapping M) &AnyStruct {
 					let a: AnyStruct = "hello"
-					return &a as auth(M) &AnyStruct
+					return &a as auth(mapping M) &AnyStruct
 				}
 			}
 
@@ -2863,9 +2888,9 @@ func TestInterpretIdentityMapping(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct S {
-                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                access(mapping Identity) fun foo(): auth(mapping Identity) &AnyStruct {
                     let a: AnyStruct = "hello"
-                    return &a as auth(Identity) &AnyStruct
+                    return &a as auth(mapping Identity) &AnyStruct
                 }
             }
 
@@ -2886,9 +2911,9 @@ func TestInterpretIdentityMapping(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct S {
-                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                access(mapping Identity) fun foo(): auth(mapping Identity) &AnyStruct {
                     let a: AnyStruct = "hello"
-                    return &a as auth(Identity) &AnyStruct
+                    return &a as auth(mapping Identity) &AnyStruct
                 }
             }
 
@@ -2911,9 +2936,9 @@ func TestInterpretIdentityMapping(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct S {
-                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                access(mapping Identity) fun foo(): auth(mapping Identity) &AnyStruct {
                     let a: AnyStruct = "hello"
-                    return &a as auth(Identity) &AnyStruct
+                    return &a as auth(mapping Identity) &AnyStruct
                 }
             }
 
@@ -2940,9 +2965,9 @@ func TestInterpretIdentityMapping(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
             struct S {
-                access(Identity) fun foo(): auth(Identity) &AnyStruct {
+                access(mapping Identity) fun foo(): auth(mapping Identity) &AnyStruct {
                     let a: AnyStruct = "hello"
-                    return &a as auth(Identity) &AnyStruct
+                    return &a as auth(mapping Identity) &AnyStruct
                 }
             }
 
@@ -2980,26 +3005,26 @@ func TestInterpretIdentityMapping(t *testing.T) {
             struct Y {
 
                 // Reference
-                access(Identity) var x1: auth(Identity) &X
+                access(mapping Identity) var x1: auth(mapping Identity) &X
 
                 // Optional reference
-                access(Identity) var x2: auth(Identity) &X?
+                access(mapping Identity) var x2: auth(mapping Identity) &X?
 
                 // Function returning a reference
-                access(Identity) fun getX(): auth(Identity) &X {
+                access(mapping Identity) fun getX(): auth(mapping Identity) &X {
                     let x = X()
-                    return &x as auth(Identity) &X
+                    return &x as auth(mapping Identity) &X
                 }
 
                 // Function returning an optional reference
-                access(Identity) fun getOptionalX(): auth(Identity) &X? {
+                access(mapping Identity) fun getOptionalX(): auth(mapping Identity) &X? {
                     let x: X? = X()
-                    return &x as auth(Identity) &X?
+                    return &x as auth(mapping Identity) &X?
                 }
 
                 init() {
                     let x = X()
-                    self.x1 = &x as auth(A, B, C) &X
+                    self.x1 = &x
                     self.x2 = nil
                 }
             }
@@ -3022,7 +3047,7 @@ func TestInterpretIdentityMapping(t *testing.T) {
 	})
 }
 
-func TestInterpretMappingInclude(t *testing.T) {
+func NoTestInterpretMappingInclude(t *testing.T) {
 
 	t.Parallel()
 
@@ -3039,7 +3064,7 @@ func TestInterpretMappingInclude(t *testing.T) {
 		}
 
 		struct S {
-			access(M) fun foo(): auth(M) &Int {
+			access(mapping M) fun foo(): auth(mapping M) &Int {
 				return &3
 			}
 		}
@@ -3083,7 +3108,7 @@ func TestInterpretMappingInclude(t *testing.T) {
 		}
 
 		struct S {
-			access(M) fun foo(): auth(M) &Int {
+			access(mapping M) fun foo(): auth(mapping M) &Int {
 				return &3
 			}
 		}
@@ -3133,7 +3158,7 @@ func TestInterpretMappingInclude(t *testing.T) {
 			}
 
 			struct S {
-				access(M) fun foo(): auth(M) &Int {
+				access(mapping M) fun foo(): auth(mapping M) &Int {
 					return &3
 				}
 			}
@@ -3189,7 +3214,7 @@ func TestInterpretMappingInclude(t *testing.T) {
 			}
 
 			struct S {
-				access(M) fun foo(): auth(M) &Int {
+				access(mapping M) fun foo(): auth(mapping M) &Int {
 					return &3
 				}
 			}
@@ -3249,7 +3274,7 @@ func TestInterpretMappingInclude(t *testing.T) {
 			}
 
 			struct S {
-				access(M) fun foo(): auth(M) &Int {
+				access(mapping M) fun foo(): auth(mapping M) &Int {
 					return &3
 				}
 			}
@@ -3277,6 +3302,146 @@ func TestInterpretMappingInclude(t *testing.T) {
 				3,
 				sema.Conjunction,
 			).Equal(value.(*interpreter.EphemeralReferenceValue).Authorization),
+		)
+	})
+}
+
+func TestInterpretEntitlementMappingComplexFields(t *testing.T) {
+	t.Parallel()
+
+	t.Run("array field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement Inner1
+			entitlement Inner2
+			entitlement Outer1
+			entitlement Outer2
+
+			entitlement mapping MyMap {
+				Outer1 -> Inner1
+				Outer2 -> Inner2
+			}
+			struct InnerObj {
+				access(Inner1) fun first(): Int { return 9999 }
+				access(Inner2) fun second(): Int { return 8888 }
+			}
+
+			struct Carrier {
+				access(mapping MyMap) let arr: [auth(mapping MyMap) &InnerObj]
+				init() {
+					self.arr = [&InnerObj()]
+				}
+			}    
+
+			fun test(): Int {
+				let x = Carrier().arr[0]
+				return x.first() + x.second()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(9999+8888),
+			value,
+		)
+	})
+
+	t.Run("dictionary field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			entitlement Inner1
+			entitlement Inner2
+			entitlement Outer1
+			entitlement Outer2
+
+			entitlement mapping MyMap {
+				Outer1 -> Inner1
+				Outer2 -> Inner2
+			}
+			struct InnerObj {
+				access(Inner1) fun first(): Int { return 9999 }
+				access(Inner2) fun second(): Int { return 8888 }
+			}
+
+			struct Carrier {
+				access(mapping MyMap) let dict: {String: auth(mapping MyMap) &InnerObj}
+				init() {
+                    self.dict = {"": &InnerObj()}
+                }
+			}    
+
+			fun test(): Int {
+				let x = Carrier().dict[""]!
+				return x.first() + x.second()
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(9999+8888),
+			value,
+		)
+	})
+
+	t.Run("lambda array field", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		entitlement Inner1
+		entitlement Inner2
+		entitlement Outer1
+		entitlement Outer2
+
+		entitlement mapping MyMap {
+			Outer1 -> Inner1
+			Outer2 -> Inner2
+		}
+		struct InnerObj {
+			access(Inner1) fun first(): Int { return 9999 }
+			access(Inner2) fun second(): Int { return 8888 }
+		}
+
+		struct Carrier {
+			access(mapping MyMap) let fnArr: [fun(auth(mapping MyMap) &InnerObj): auth(mapping MyMap) &InnerObj]
+			init() {
+				let innerObj = &InnerObj() as auth(Inner1, Inner2) &InnerObj
+				self.fnArr = [fun(_ x: &InnerObj): auth(Inner1, Inner2) &InnerObj {
+					return innerObj
+				}]
+			}
+		 
+		}    
+
+		fun test(): Int {
+			let carrier = Carrier()
+			let ref1 = &carrier as auth(Outer1) &Carrier
+			let ref2 = &carrier as auth(Outer2) &Carrier
+			return ref1.fnArr[0](&InnerObj() as auth(Inner1) &InnerObj).first() + 
+			ref2.fnArr[0](&InnerObj() as auth(Inner2) &InnerObj).second() 
+		}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(9999+8888),
+			value,
 		)
 	})
 }

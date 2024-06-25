@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -88,18 +88,18 @@ func (f *InterpretedFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
+func (f *InterpretedFunctionValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
 	// TODO: Meter sema.Type String conversion
 	typeString := f.Type.String()
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(8+len(typeString)))
+	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(8+len(typeString)))
 	return f.String()
 }
 
-func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (f *InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitInterpretedFunctionValue(interpreter, f)
 }
 
-func (f *InterpretedFunctionValue) Walk(_ *Interpreter, _ func(Value)) {
+func (f *InterpretedFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -107,7 +107,7 @@ func (f *InterpretedFunctionValue) StaticType(interpreter *Interpreter) StaticTy
 	return ConvertSemaToStaticType(interpreter, f.Type)
 }
 
-func (*InterpretedFunctionValue) IsImportable(_ *Interpreter) bool {
+func (*InterpretedFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -173,7 +173,7 @@ type HostFunction func(invocation Invocation) Value
 
 type HostFunctionValue struct {
 	Function        HostFunction
-	NestedVariables map[string]*Variable
+	NestedVariables map[string]Variable
 	Type            *sema.FunctionType
 }
 
@@ -185,12 +185,12 @@ func (f *HostFunctionValue) RecursiveString(_ SeenReferences) string {
 	return f.String()
 }
 
-func (f *HostFunctionValue) MeteredString(memoryGauge common.MemoryGauge, _ SeenReferences) string {
-	common.UseMemory(memoryGauge, common.HostFunctionValueStringMemoryUsage)
+func (f *HostFunctionValue) MeteredString(interpreter *Interpreter, _ SeenReferences, locationRange LocationRange) string {
+	common.UseMemory(interpreter, common.HostFunctionValueStringMemoryUsage)
 	return f.String()
 }
 
-func NewUnmeteredHostFunctionValue(
+func NewUnmeteredStaticHostFunctionValue(
 	funcType *sema.FunctionType,
 	function HostFunction,
 ) *HostFunctionValue {
@@ -207,7 +207,10 @@ func NewUnmeteredHostFunctionValue(
 	}
 }
 
-func NewHostFunctionValue(
+// NewStaticHostFunctionValue constructs a host function that is not bounded to any value.
+// For constructing a function bound to a value (e.g: a member function), the output of this method
+// must be wrapped with a bound-function, or `NewBoundHostFunctionValue` method must be used.
+func NewStaticHostFunctionValue(
 	gauge common.MemoryGauge,
 	funcType *sema.FunctionType,
 	function HostFunction,
@@ -215,7 +218,7 @@ func NewHostFunctionValue(
 
 	common.UseMemory(gauge, common.HostFunctionValueMemoryUsage)
 
-	return NewUnmeteredHostFunctionValue(funcType, function)
+	return NewUnmeteredStaticHostFunctionValue(funcType, function)
 }
 
 var _ Value = &HostFunctionValue{}
@@ -225,11 +228,11 @@ var _ ContractValue = &HostFunctionValue{}
 
 func (*HostFunctionValue) isValue() {}
 
-func (f *HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (f *HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitHostFunctionValue(interpreter, f)
 }
 
-func (f *HostFunctionValue) Walk(_ *Interpreter, _ func(Value)) {
+func (f *HostFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -237,7 +240,7 @@ func (f *HostFunctionValue) StaticType(interpreter *Interpreter) StaticType {
 	return ConvertSemaToStaticType(interpreter, f.Type)
 }
 
-func (*HostFunctionValue) IsImportable(_ *Interpreter) bool {
+func (*HostFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -255,10 +258,10 @@ func (f *HostFunctionValue) invoke(invocation Invocation) Value {
 	return f.Function(invocation)
 }
 
-func (f *HostFunctionValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (f *HostFunctionValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 	if f.NestedVariables != nil {
 		if variable, ok := f.NestedVariables[name]; ok {
-			return variable.GetValue()
+			return variable.GetValue(inter)
 		}
 	}
 	return nil
@@ -317,7 +320,7 @@ func (*HostFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
 
-func (v *HostFunctionValue) SetNestedVariables(variables map[string]*Variable) {
+func (v *HostFunctionValue) SetNestedVariables(variables map[string]Variable) {
 	v.NestedVariables = variables
 }
 
@@ -325,8 +328,9 @@ func (v *HostFunctionValue) SetNestedVariables(variables map[string]*Variable) {
 type BoundFunctionValue struct {
 	Function           FunctionValue
 	Base               *EphemeralReferenceValue
-	Self               *MemberAccessibleValue
+	Self               *Value
 	BoundAuthorization Authorization
+	selfRef            ReferenceValue
 }
 
 var _ Value = BoundFunctionValue{}
@@ -335,16 +339,34 @@ var _ FunctionValue = BoundFunctionValue{}
 func NewBoundFunctionValue(
 	interpreter *Interpreter,
 	function FunctionValue,
-	self *MemberAccessibleValue,
+	self *Value,
 	base *EphemeralReferenceValue,
 	boundAuth Authorization,
 ) BoundFunctionValue {
 
+	// If the function is already a bound function, then do not re-wrap.
+	if boundFunc, isBoundFunc := function.(BoundFunctionValue); isBoundFunc {
+		return boundFunc
+	}
+
 	common.UseMemory(interpreter, common.BoundFunctionValueMemoryUsage)
+
+	// Since 'self' work as an implicit reference, create an explicit one and hold it.
+	// This reference is later used to check the validity of the referenced value/resource.
+	var selfRef ReferenceValue
+	if reference, isReference := (*self).(ReferenceValue); isReference {
+		// For attachments, 'self' is already a reference.
+		// So no need to create a reference again.
+		selfRef = reference
+	} else {
+		semaType := interpreter.MustSemaTypeOfValue(*self)
+		selfRef = NewEphemeralReferenceValue(interpreter, boundAuth, *self, semaType, EmptyLocationRange)
+	}
 
 	return BoundFunctionValue{
 		Function:           function,
 		Self:               self,
+		selfRef:            selfRef,
 		Base:               base,
 		BoundAuthorization: boundAuth,
 	}
@@ -360,15 +382,15 @@ func (f BoundFunctionValue) RecursiveString(seenReferences SeenReferences) strin
 	return f.Function.RecursiveString(seenReferences)
 }
 
-func (f BoundFunctionValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
-	return f.Function.MeteredString(memoryGauge, seenReferences)
+func (f BoundFunctionValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
+	return f.Function.MeteredString(interpreter, seenReferences, locationRange)
 }
 
-func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitBoundFunctionValue(interpreter, f)
 }
 
-func (f BoundFunctionValue) Walk(_ *Interpreter, _ func(Value)) {
+func (f BoundFunctionValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
 	// NO-OP
 }
 
@@ -376,7 +398,7 @@ func (f BoundFunctionValue) StaticType(inter *Interpreter) StaticType {
 	return f.Function.StaticType(inter)
 }
 
-func (BoundFunctionValue) IsImportable(_ *Interpreter) bool {
+func (BoundFunctionValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
 	return false
 }
 
@@ -387,15 +409,44 @@ func (f BoundFunctionValue) FunctionType() *sema.FunctionType {
 }
 
 func (f BoundFunctionValue) invoke(invocation Invocation) Value {
-	self := f.Self
-	invocation.Self = self
-	if self != nil {
-		invocation.Interpreter.checkReferencedResourceNotMovedOrDestroyed(*self, invocation.LocationRange)
-	}
-
+	invocation.Self = f.Self
 	invocation.Base = f.Base
 	invocation.BoundAuthorization = f.BoundAuthorization
+
+	locationRange := invocation.LocationRange
+	inter := invocation.Interpreter
+
+	// Check if the 'self' is not invalidated.
+	if storageRef, isStorageRef := f.selfRef.(*StorageReferenceValue); isStorageRef {
+		inter.checkInvalidatedStorageReference(storageRef, locationRange)
+	} else {
+		inter.checkInvalidatedResourceOrResourceReference(f.selfRef, locationRange)
+	}
+
 	return f.Function.invoke(invocation)
+}
+
+// checkInvalidatedStorageReference checks whether a storage reference is valid, by
+// comparing the referenced-value against the cached-referenced-value.
+// A storage reference can be invalid for both resources and non-resource values.
+func (interpreter *Interpreter) checkInvalidatedStorageReference(
+	storageRef *StorageReferenceValue,
+	locationRange LocationRange,
+) {
+
+	referencedValue := storageRef.ReferencedValue(
+		interpreter,
+		locationRange,
+		true,
+	)
+
+	// `storageRef.ReferencedValue` above already checks for the type validity, if it's not nil.
+	// If nil, that means the value has been moved out of storage.
+	if referencedValue == nil {
+		panic(ReferencedValueChangedError{
+			LocationRange: locationRange,
+		})
+	}
 }
 
 func (f BoundFunctionValue) ConformsToStaticType(
@@ -444,3 +495,43 @@ func (f BoundFunctionValue) Clone(_ *Interpreter) Value {
 func (BoundFunctionValue) DeepRemove(_ *Interpreter) {
 	// NO-OP
 }
+
+// NewBoundHostFunctionValue creates a bound-function value for a host-function.
+func NewBoundHostFunctionValue(
+	interpreter *Interpreter,
+	self Value,
+	funcType *sema.FunctionType,
+	function HostFunction,
+) BoundFunctionValue {
+
+	hostFunc := NewStaticHostFunctionValue(interpreter, funcType, function)
+
+	return NewBoundFunctionValue(
+		interpreter,
+		hostFunc,
+		&self,
+		nil,
+		nil,
+	)
+}
+
+// NewUnmeteredBoundHostFunctionValue creates a bound-function value for a host-function.
+func NewUnmeteredBoundHostFunctionValue(
+	interpreter *Interpreter,
+	self Value,
+	funcType *sema.FunctionType,
+	function HostFunction,
+) BoundFunctionValue {
+
+	hostFunc := NewUnmeteredStaticHostFunctionValue(funcType, function)
+
+	return NewBoundFunctionValue(
+		interpreter,
+		hostFunc,
+		&self,
+		nil,
+		nil,
+	)
+}
+
+type BoundFunctionGenerator func(MemberAccessibleValue) BoundFunctionValue

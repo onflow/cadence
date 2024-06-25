@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredFix64Value(-42000000),
-		inter.Globals.Get("x").GetValue(),
+		inter.Globals.Get("x").GetValue(inter),
 	)
 }
 
@@ -90,21 +90,21 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				value,
-				inter.Globals.Get("y").GetValue(),
+				inter.Globals.Get("y").GetValue(inter),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				interpreter.TrueValue,
-				inter.Globals.Get("z").GetValue(),
+				inter.Globals.Get("z").GetValue(inter),
 			)
 
 		})
@@ -159,14 +159,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					fixedPointValue,
-					inter.Globals.Get("x").GetValue(),
+					inter.Globals.Get("x").GetValue(inter),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					integerValue,
-					inter.Globals.Get("y").GetValue(),
+					inter.Globals.Get("y").GetValue(inter),
 				)
 			})
 		}
@@ -198,14 +198,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					expected,
-					inter.Globals.Get("x").GetValue(),
+					inter.Globals.Get("x").GetValue(inter),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					expected,
-					inter.Globals.Get("y").GetValue(),
+					inter.Globals.Get("y").GetValue(inter),
 				)
 			})
 		}
@@ -238,14 +238,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					expected,
-					inter.Globals.Get("x").GetValue(),
+					inter.Globals.Get("x").GetValue(inter),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					expected,
-					inter.Globals.Get("y").GetValue(),
+					inter.Globals.Get("y").GetValue(inter),
 				)
 			})
 		}
@@ -271,14 +271,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					interpreter.NewUnmeteredFix64Value(value*sema.Fix64Factor),
-					inter.Globals.Get("x").GetValue(),
+					inter.Globals.Get("x").GetValue(inter),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.NewUnmeteredUFix64Value(uint64(value*sema.Fix64Factor)),
-					inter.Globals.Get("y").GetValue(),
+					inter.Globals.Get("y").GetValue(inter),
 				)
 			})
 		}
@@ -304,14 +304,14 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 					t,
 					inter,
 					interpreter.NewUnmeteredUFix64Value(uint64(value*sema.Fix64Factor)),
-					inter.Globals.Get("x").GetValue(),
+					inter.Globals.Get("x").GetValue(inter),
 				)
 
 				AssertValuesEqual(
 					t,
 					inter,
 					interpreter.NewUnmeteredFix64Value(value*sema.Fix64Factor),
-					inter.Globals.Get("y").GetValue(),
+					inter.Globals.Get("y").GetValue(inter),
 				)
 			})
 		}
@@ -558,13 +558,13 @@ func TestInterpretFixedPointMinMax(t *testing.T) {
 			t,
 			inter,
 			test.min,
-			inter.Globals.Get("min").GetValue(),
+			inter.Globals.Get("min").GetValue(inter),
 		)
 		RequireValuesEqual(
 			t,
 			inter,
 			test.max,
-			inter.Globals.Get("max").GetValue(),
+			inter.Globals.Get("max").GetValue(inter),
 		)
 	}
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ func init() {
 
 	for _, integerType := range sema.AllIntegerTypes {
 		switch integerType {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -130,7 +130,7 @@ func TestInterpretBitwiseOr(t *testing.T) {
 				t,
 				inter,
 				valueFunc(0b00010101),
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -159,7 +159,7 @@ func TestInterpretBitwiseXor(t *testing.T) {
 				t,
 				inter,
 				valueFunc(0b00000101),
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -188,7 +188,7 @@ func TestInterpretBitwiseAnd(t *testing.T) {
 				t,
 				inter,
 				valueFunc(0b00010000),
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -217,7 +217,7 @@ func TestInterpretBitwiseLeftShift(t *testing.T) {
 				t,
 				inter,
 				valueFunc(0b01100000),
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -246,7 +246,7 @@ func TestInterpretBitwiseRightShift(t *testing.T) {
 				t,
 				inter,
 				valueFunc(0b00001100),
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}

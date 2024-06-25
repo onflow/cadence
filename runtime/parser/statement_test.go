@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -2690,10 +2690,10 @@ func TestSoftKeywordsInStatement(t *testing.T) {
 		})
 	}
 
-	for _, keyword := range softKeywords {
+	for _, keyword := range SoftKeywords {
 		// it's not worth the additional complexity to support assigning to `remove` or `attach`-named
 		// variables, so we just accept this as a parsing error
-		if keyword == keywordAttach || keyword == keywordRemove {
+		if keyword == KeywordAttach || keyword == KeywordRemove {
 			continue
 		}
 		testSoftKeyword(keyword)

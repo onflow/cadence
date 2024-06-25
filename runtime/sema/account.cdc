@@ -324,14 +324,15 @@ struct Account {
         let account: Account.AccountCapabilities
 
         /// Returns the capability at the given public path.
-        /// Returns nil if the capability does not exist,
-        /// or if the given type is not a supertype of the capability's borrow type.
+        /// If the capability does not exist,
+        /// or if the given type is not a supertype of the capability's borrow type,
+        /// returns an "invalid" capability with ID 0 that will always fail to `check` or `borrow`
         access(all)
-        view fun get<T: &Any>(_ path: PublicPath): Capability<T>?
+        view fun get<T: &Any>(_ path: PublicPath): Capability<T>
 
         /// Borrows the capability at the given public path.
         /// Returns nil if the capability does not exist, or cannot be borrowed using the given type.
-        /// The function is equivalent to `get(path)?.borrow()`.
+        /// The function is equivalent to `get(path).borrow()`.
         access(all)
         view fun borrow<T: &Any>(_ path: PublicPath): T?
 
@@ -362,6 +363,10 @@ struct Account {
         access(Capabilities | StorageCapabilities | IssueStorageCapabilityController)
         fun issue<T: &Any>(_ path: StoragePath): Capability<T>
 
+        /// Issue/create a new storage capability.
+       access(Capabilities | StorageCapabilities | IssueStorageCapabilityController)
+       fun issueWithType(_ path: StoragePath, type: Type): Capability
+
         /// Get the storage capability controller for the capability with the specified ID.
         ///
         /// Returns nil if the ID does not reference an existing storage capability.
@@ -391,9 +396,14 @@ struct Account {
 
     access(all)
     struct AccountCapabilities {
+
         /// Issue/create a new account capability.
         access(Capabilities | AccountCapabilities | IssueAccountCapabilityController)
         fun issue<T: &Account>(): Capability<T>
+
+        /// Issue/create a new account capability.
+        access(Capabilities | AccountCapabilities | IssueAccountCapabilityController)
+        fun issueWithType(_ type: Type): Capability
 
         /// Get capability controller for capability with the specified ID.
         ///

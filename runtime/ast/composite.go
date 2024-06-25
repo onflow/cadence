@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,12 @@ type CompositeLikeDeclaration interface {
 	ConformingDeclaration
 	isCompositeLikeDeclaration()
 	Kind() common.CompositeKind
+}
+
+const ResourceDestructionDefaultEventName = "ResourceDestroyed"
+
+func IsResourceDestructionDefaultEvent(identifier string) bool {
+	return identifier == ResourceDestructionDefaultEventName
 }
 
 type CompositeDeclaration struct {
@@ -278,6 +284,11 @@ func (d *CompositeDeclaration) Kind() common.CompositeKind {
 
 func (d *CompositeDeclaration) ConformanceList() []*NominalType {
 	return d.Conformances
+}
+
+func (d *CompositeDeclaration) IsResourceDestructionDefaultEvent() bool {
+	return d.CompositeKind == common.CompositeKindEvent &&
+		IsResourceDestructionDefaultEvent(d.Identifier.Identifier)
 }
 
 // FieldDeclarationFlags

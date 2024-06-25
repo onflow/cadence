@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,4 +51,15 @@ func (k ConditionKind) Name() string {
 
 func (k ConditionKind) MarshalJSON() ([]byte, error) {
 	return json.Marshal(k.String())
+}
+
+func (k ConditionKind) Keyword() string {
+	switch k {
+	case ConditionKindPre:
+		return "pre"
+	case ConditionKindPost:
+		return "post"
+	}
+
+	panic(errors.NewUnreachableError())
 }

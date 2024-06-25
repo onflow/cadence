@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,13 @@
 package sema
 
 const (
-	NumberTypeName           = "Number"
-	SignedNumberTypeName     = "SignedNumber"
-	IntegerTypeName          = "Integer"
-	SignedIntegerTypeName    = "SignedInteger"
-	FixedPointTypeName       = "FixedPoint"
-	SignedFixedPointTypeName = "SignedFixedPoint"
+	NumberTypeName                   = "Number"
+	SignedNumberTypeName             = "SignedNumber"
+	IntegerTypeName                  = "Integer"
+	SignedIntegerTypeName            = "SignedInteger"
+	FixedSizeUnsignedIntegerTypeName = "FixedSizeUnsignedInteger"
+	FixedPointTypeName               = "FixedPoint"
+	SignedFixedPointTypeName         = "SignedFixedPoint"
 
 	IntTypeName    = "Int"
 	Int8TypeName   = "Int8"

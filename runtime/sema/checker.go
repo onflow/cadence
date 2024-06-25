@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,9 @@ var beforeType = func() *FunctionType {
 	}
 }()
 
-type ValidTopLevelDeclarationsHandlerFunc = func(common.Location) common.DeclarationKindSet
+type ValidTopLevelDeclarationsHandlerFunc func(common.Location) common.DeclarationKindSet
+
+type ActivationHandlerFunc func(common.Location) *VariableActivation
 
 type CheckHandlerFunc func(checker *Checker, check func())
 
@@ -117,11 +119,13 @@ type Checker struct {
 	purityCheckScopes                  []PurityCheckScope
 	entitlementMappingInScope          *EntitlementMapType
 	inCondition                        bool
+	inInterface                        bool
 	allowSelfResourceFieldInvalidation bool
-	inAssignment                       bool
 	inInvocation                       bool
 	inCreate                           bool
 	isChecked                          bool
+	inAssignment                       bool
+	parent                             ast.Element
 }
 
 var _ ast.DeclarationVisitor[struct{}] = &Checker{}
@@ -133,6 +137,21 @@ var baseFunctionType = NewSimpleFunctionType(
 	nil,
 	VoidTypeAnnotation,
 )
+
+func NewVariableActivationsFromHandler(
+	handler ActivationHandlerFunc,
+	location common.Location,
+	defaultActivation *VariableActivation,
+) *VariableActivations {
+	var activation *VariableActivation
+	if handler != nil {
+		activation = handler(location)
+	}
+	if activation == nil {
+		activation = defaultActivation
+	}
+	return NewVariableActivations(activation)
+}
 
 func NewChecker(
 	program *ast.Program,
@@ -174,19 +193,19 @@ func NewChecker(
 
 	// Initialize value activations
 
-	baseValueActivation := config.BaseValueActivation
-	if baseValueActivation == nil {
-		baseValueActivation = BaseValueActivation
-	}
-	checker.valueActivations = NewVariableActivations(baseValueActivation)
+	checker.valueActivations = NewVariableActivationsFromHandler(
+		config.BaseValueActivationHandler,
+		location,
+		BaseValueActivation,
+	)
 
 	// Initialize type activations
 
-	baseTypeActivation := config.BaseTypeActivation
-	if baseTypeActivation == nil {
-		baseTypeActivation = BaseTypeActivation
-	}
-	checker.typeActivations = NewVariableActivations(baseTypeActivation)
+	checker.typeActivations = NewVariableActivationsFromHandler(
+		config.BaseTypeActivationHandler,
+		location,
+		BaseTypeActivation,
+	)
 
 	// Initialize position info, if enabled
 	if checker.Config.PositionInfoEnabled {
@@ -492,8 +511,10 @@ func (checker *Checker) checkTopLevelDeclarationValidity(
 
 func (checker *Checker) declareGlobalFunctionDeclaration(declaration *ast.FunctionDeclaration) {
 	functionType := checker.functionType(
+		declaration.IsNative(),
 		declaration.Purity,
 		UnauthorizedAccess,
+		declaration.TypeParameterList,
 		declaration.ParameterList,
 		declaration.ReturnTypeAnnotation,
 	)
@@ -917,40 +938,45 @@ func CheckIntersectionType(
 
 		// The intersections may not have clashing members
 
-		// TODO: also include interface conformances' members
-		//   once interfaces can have conformances
+		checkClashingMember := func(interfaceType *InterfaceType) {
+			interfaceType.Members.Foreach(func(name string, member *Member) {
 
-		interfaceType.Members.Foreach(func(name string, member *Member) {
-			if previousDeclaringInterfaceType, ok := memberSet[name]; ok {
+				if previousDeclaringInterfaceType, ok := memberSet[name]; ok {
 
-				// If there is an overlap in members, ensure the members have the same type
+					// If there is an overlap in members, ensure the members have the same type
 
-				memberType := member.TypeAnnotation.Type
+					memberType := member.TypeAnnotation.Type
 
-				prevMemberType, ok := previousDeclaringInterfaceType.Members.Get(name)
-				if !ok {
-					panic(errors.NewUnreachableError())
+					prevMemberType, ok := previousDeclaringInterfaceType.Members.Get(name)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					previousMemberType := prevMemberType.TypeAnnotation.Type
+
+					if !memberType.IsInvalidType() &&
+						!previousMemberType.IsInvalidType() &&
+						!memberType.Equal(previousMemberType) {
+
+						report(func(t *ast.IntersectionType) error {
+							return &IntersectionMemberClashError{
+								Name:                  name,
+								RedeclaringType:       interfaceType,
+								OriginalDeclaringType: previousDeclaringInterfaceType,
+								Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
+							}
+						})
+					}
+				} else {
+					memberSet[name] = interfaceType
 				}
+			})
+		}
 
-				previousMemberType := prevMemberType.TypeAnnotation.Type
+		checkClashingMember(interfaceType)
 
-				if !memberType.IsInvalidType() &&
-					!previousMemberType.IsInvalidType() &&
-					!memberType.Equal(previousMemberType) {
-
-					report(func(t *ast.IntersectionType) error {
-						return &IntersectionMemberClashError{
-							Name:                  name,
-							RedeclaringType:       interfaceType,
-							OriginalDeclaringType: previousDeclaringInterfaceType,
-							Range:                 ast.NewRangeFromPositioned(memoryGauge, t.Types[i]),
-						}
-					})
-				}
-			} else {
-				memberSet[name] = interfaceType
-			}
-		})
+		interfaceType.EffectiveInterfaceConformanceSet().
+			ForEach(checkClashingMember)
 	}
 
 	// If no intersection type is given, infer `AnyResource`/`AnyStruct`
@@ -962,18 +988,22 @@ func CheckIntersectionType(
 		// the type is ambiguous.
 
 		report(func(t *ast.IntersectionType) error {
-			return &AmbiguousIntersectionTypeError{Range: ast.NewRangeFromPositioned(memoryGauge, t)}
+			return &AmbiguousIntersectionTypeError{
+				Range: ast.NewRangeFromPositioned(memoryGauge, t),
+			}
 		})
 		return InvalidType
 
-	case common.CompositeKindResource, common.CompositeKindStructure:
+	case common.CompositeKindResource,
+		common.CompositeKindStructure,
+		common.CompositeKindContract:
 		break
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
 
-	return NewIntersectionType(memoryGauge, types)
+	return NewIntersectionType(memoryGauge, nil, types)
 }
 
 func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
@@ -991,8 +1021,7 @@ func (checker *Checker) convertIntersectionType(t *ast.IntersectionType) Type {
 		if ok {
 			intersectedCompositeKind = intersectedInterfaceType.CompositeKind
 		}
-		if !ok || (intersectedCompositeKind != common.CompositeKindResource &&
-			intersectedCompositeKind != common.CompositeKindStructure) {
+		if !ok || !intersectedCompositeKind.SupportsInterfaces() {
 
 			if !intersectedResult.IsInvalidType() {
 				checker.report(&InvalidIntersectedTypeError{
@@ -1026,9 +1055,14 @@ func (checker *Checker) convertReferenceType(t *ast.ReferenceType) Type {
 	var ty Type
 
 	if t.Authorization != nil {
-		access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: t.Authorization.EntitlementSet})
-		switch mapAccess := access.(type) {
-		case *EntitlementMapAccess:
+		switch auth := t.Authorization.(type) {
+		case ast.EntitlementSet:
+			access = checker.accessFromAstAccess(ast.EntitlementAccess{EntitlementSet: auth})
+		case *ast.MappedAccess:
+			access = checker.accessFromAstAccess(auth)
+		}
+
+		if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
 			// mapped auth types are only allowed in the annotations of composite fields and accessor functions
 			if checker.entitlementMappingInScope == nil || !checker.entitlementMappingInScope.Equal(mapAccess.Type) {
 				checker.report(&InvalidMappedAuthorizationOutsideOfFieldError{
@@ -1052,7 +1086,7 @@ func (checker *Checker) convertDictionaryType(t *ast.DictionaryType) Type {
 	keyType := checker.ConvertType(t.KeyType)
 	valueType := checker.ConvertType(t.ValueType)
 
-	if !IsValidDictionaryKeyType(keyType) {
+	if !IsSubType(keyType, HashableStructType) {
 		checker.report(
 			&InvalidDictionaryKeyTypeError{
 				Type:  keyType,
@@ -1251,31 +1285,115 @@ func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation
 }
 
 func (checker *Checker) functionType(
+	isNative bool,
 	purity ast.FunctionPurity,
 	access Access,
+	typeParameterList *ast.TypeParameterList,
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
 ) *FunctionType {
+
+	oldMappedAccess := checker.entitlementMappingInScope
+	if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
+		checker.entitlementMappingInScope = mapAccess.Type
+	} else {
+		checker.entitlementMappingInScope = nil
+	}
+	defer func() { checker.entitlementMappingInScope = oldMappedAccess }()
+
+	// Convert type parameters (if any)
+
+	var convertedTypeParameters []*TypeParameter
+	if typeParameterList != nil {
+
+		// Only native functions may have type parameters at the moment
+		if !isNative && !typeParameterList.IsEmpty() {
+			checker.report(&InvalidTypeParameterizedNonNativeFunctionError{
+				Range: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					typeParameterList,
+				),
+			})
+		}
+
+		checker.typeActivations.Enter()
+		defer checker.typeActivations.Leave(func(gauge common.MemoryGauge) ast.Position {
+			if returnTypeAnnotation != nil {
+				return returnTypeAnnotation.EndPosition(gauge)
+			} else {
+				return parameterList.EndPos
+			}
+		})
+
+		// All type parameters are converted at once,
+		// so type bounds may currently not refer to previous type parameters
+
+		convertedTypeParameters = checker.typeParameters(typeParameterList)
+
+		for typeParameterIndex, typeParameter := range typeParameterList.TypeParameters {
+			convertedTypeParameter := convertedTypeParameters[typeParameterIndex]
+
+			genericType := &GenericType{
+				TypeParameter: convertedTypeParameter,
+			}
+
+			_, err := checker.typeActivations.declareType(typeDeclaration{
+				identifier:               typeParameter.Identifier,
+				ty:                       genericType,
+				declarationKind:          common.DeclarationKindTypeParameter,
+				allowOuterScopeShadowing: false,
+			})
+			checker.report(err)
+
+		}
+	}
+
+	// Convert parameters
+
 	convertedParameters := checker.parameters(parameterList)
+
+	// Convert return type
 
 	convertedReturnTypeAnnotation := VoidTypeAnnotation
 	if returnTypeAnnotation != nil {
-		// to allow entitlement mapping types to be used in the return annotation only of
-		// a mapped accessor function, we introduce a "variable" into the typing scope while
-		// checking the return
-		if mapAccess, isMapAccess := access.(*EntitlementMapAccess); isMapAccess {
-			checker.entitlementMappingInScope = mapAccess.Type
-		}
 		convertedReturnTypeAnnotation =
 			checker.ConvertTypeAnnotation(returnTypeAnnotation)
-		checker.entitlementMappingInScope = nil
 	}
 
 	return &FunctionType{
 		Purity:               PurityFromAnnotation(purity),
+		TypeParameters:       convertedTypeParameters,
 		Parameters:           convertedParameters,
 		ReturnTypeAnnotation: convertedReturnTypeAnnotation,
 	}
+}
+
+func (checker *Checker) typeParameters(typeParameterList *ast.TypeParameterList) []*TypeParameter {
+
+	var typeParameters []*TypeParameter
+
+	typeParameterCount := len(typeParameterList.TypeParameters)
+	if typeParameterCount > 0 {
+		typeParameters = make([]*TypeParameter, typeParameterCount)
+
+		for i, typeParameter := range typeParameterList.TypeParameters {
+
+			typeBoundAnnotation := typeParameter.TypeBound
+			var convertedTypeBound Type
+			if typeBoundAnnotation != nil {
+				convertedTypeBoundAnnotation := checker.ConvertTypeAnnotation(typeBoundAnnotation)
+				checker.checkTypeAnnotation(convertedTypeBoundAnnotation, typeBoundAnnotation)
+				convertedTypeBound = convertedTypeBoundAnnotation.Type
+			}
+
+			typeParameters[i] = &TypeParameter{
+				Name:      typeParameter.Identifier.Identifier,
+				TypeBound: convertedTypeBound,
+			}
+		}
+	}
+
+	return typeParameters
 }
 
 func (checker *Checker) parameters(parameterList *ast.ParameterList) []Parameter {
@@ -1412,6 +1530,20 @@ func (checker *Checker) recordResourceInvalidation(
 		return nil
 	}
 
+	// Invalidations in interface functions are not allowed,
+	// except for temporary moves
+	if invalidationKind != ResourceInvalidationKindMoveTemporary &&
+		checker.inCondition &&
+		checker.inInterface {
+
+		checker.report(&InvalidInterfaceConditionResourceInvalidationError{
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				expression,
+			),
+		})
+	}
+
 	reportInvalidNestedMove := func() {
 		checker.report(
 			&InvalidNestedResourceMoveError{
@@ -1425,19 +1557,27 @@ func (checker *Checker) recordResourceInvalidation(
 
 	accessedSelfMember := checker.accessedSelfMember(expression)
 
+	// Normally a field members cannot be invalidated,
+	// and this check typically prevents invalidations of this kind.
+	// However, during second value transfers we would like to be able to invalidate member and index
+	// expressions purely for the duration of checking the second value expression in the transfer.
+	// To enable this, nested move errors are not reported when the move kind of the invalidation is `Temporary`.
 	switch expression.(type) {
 	case *ast.MemberExpression:
 
-		if accessedSelfMember == nil ||
-			!checker.allowSelfResourceFieldInvalidation {
+		if (accessedSelfMember == nil ||
+			!checker.allowSelfResourceFieldInvalidation) &&
+			invalidationKind != ResourceInvalidationKindMoveTemporary {
 
 			reportInvalidNestedMove()
 			return nil
 		}
 
 	case *ast.IndexExpression:
-		reportInvalidNestedMove()
-		return nil
+		if invalidationKind != ResourceInvalidationKindMoveTemporary {
+			reportInvalidNestedMove()
+			return nil
+		}
 	}
 
 	invalidation := ResourceInvalidation{
@@ -1792,12 +1932,7 @@ func (checker *Checker) checkEntitlementMapAccess(
 	containerKind *common.CompositeKind,
 	startPos ast.Position,
 ) {
-	// attachments may be declared with an entitlement map access
-	if declarationKind == common.DeclarationKindAttachment {
-		return
-	}
-
-	// otherwise, mapped entitlements may only be used in structs, resources and attachments
+	// mapped entitlements may only be used in structs, resources and attachments
 	if containerKind == nil ||
 		(*containerKind != common.CompositeKindResource &&
 			*containerKind != common.CompositeKindStructure &&
@@ -1810,7 +1945,17 @@ func (checker *Checker) checkEntitlementMapAccess(
 		return
 	}
 
-	// mapped entitlement fields must be, one of:
+	// due to potential security issues, entitlement mappings are disabled on attachments for now
+	if *containerKind == common.CompositeKindAttachment {
+		checker.report(
+			&InvalidAttachmentMappedEntitlementMemberError{
+				Pos: startPos,
+			},
+		)
+		return
+	}
+
+	// mapped entitlement fields must be one of:
 	// 1) An [optional] reference that is authorized to the same mapped entitlement.
 	// 2) A function that return an [optional] reference authorized to the same mapped entitlement.
 	// 3) A container - So if the parent is a reference, entitlements can be granted to the resulting field reference.
@@ -1932,6 +2077,31 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 	case ast.PrimitiveAccess:
 		return PrimitiveAccess(access)
 
+	case *ast.MappedAccess:
+		semaAccess, hasAccess := checker.Elaboration.GetSemanticAccess(access)
+		if hasAccess {
+			return semaAccess
+		}
+		defer func() {
+			checker.Elaboration.SetSemanticAccess(access, result)
+		}()
+
+		switch nominalType := checker.convertNominalType(access.EntitlementMap).(type) {
+		case *EntitlementMapType:
+			result = NewEntitlementMapAccess(nominalType)
+		default:
+			if nominalType != InvalidType {
+				checker.report(
+					&InvalidEntitlementMappingTypeError{
+						Type: nominalType,
+						Pos:  access.EntitlementMap.Identifier.Pos,
+					},
+				)
+			}
+			result = PrimitiveAccess(ast.AccessNotSpecified)
+		}
+		return
+
 	case ast.EntitlementAccess:
 		semaAccess, hasAccess := checker.Elaboration.GetSemanticAccess(access)
 		if hasAccess {
@@ -1942,62 +2112,44 @@ func (checker *Checker) accessFromAstAccess(access ast.Access) (result Access) {
 		}()
 
 		astEntitlements := access.EntitlementSet.Entitlements()
-		nominalType := checker.convertNominalType(astEntitlements[0])
 
-		switch nominalType := nominalType.(type) {
-		case *EntitlementType:
-			semanticEntitlements := make([]*EntitlementType, 0, len(astEntitlements))
-			semanticEntitlements = append(semanticEntitlements, nominalType)
+		semanticEntitlements := make([]*EntitlementType, 0, len(astEntitlements))
 
-			for _, entitlement := range astEntitlements[1:] {
-				nominalType := checker.convertNominalType(entitlement)
-				entitlementType, ok := nominalType.(*EntitlementType)
-				if !ok {
-					// don't duplicate errors when the type here is invalid, as this will have triggered an error before
-					if nominalType != InvalidType {
+		for _, entitlement := range astEntitlements {
+			nominalType := checker.convertNominalType(entitlement)
+			entitlementType, ok := nominalType.(*EntitlementType)
+			if !ok {
+				// don't duplicate errors when the type here is invalid, as this will have triggered an error before
+				if nominalType != InvalidType {
+					if _, isMap := nominalType.(*EntitlementMapType); isMap {
+						checker.report(
+							&MappingAccessMissingKeywordError{
+								Type:  nominalType,
+								Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
+							},
+						)
+					} else {
 						checker.report(
 							&InvalidNonEntitlementAccessError{
 								Range: ast.NewRangeFromPositioned(checker.memoryGauge, entitlement),
 							},
 						)
 					}
-					result = PrimitiveAccess(ast.AccessNotSpecified)
-					return
 				}
-				semanticEntitlements = append(semanticEntitlements, entitlementType)
+				// construct a new "entitlement" type from the nominal type in the AST, but mark it as invalid for better error messages
+				entitlementType = NewEntitlementType(checker.memoryGauge, checker.Location, entitlement.Identifier.Identifier)
+				entitlementType.isInvalid = true
 			}
-			if access.EntitlementSet.Separator() == ast.Conjunction {
-				result = NewEntitlementSetAccess(semanticEntitlements, Conjunction)
-				return
-			}
-			result = NewEntitlementSetAccess(semanticEntitlements, Disjunction)
-			return
-		case *EntitlementMapType:
-			// 0-length entitlement lists are rejected by the parser
-			if len(astEntitlements) != 1 {
-				checker.report(
-					&InvalidMultipleMappedEntitlementError{
-						Pos: astEntitlements[1].Identifier.Pos,
-					},
-				)
-				result = PrimitiveAccess(ast.AccessNotSpecified)
-				return
-			}
-			result = NewEntitlementMapAccess(nominalType)
-			return
-		default:
-			// don't duplicate errors when the type here is invalid, as this will have triggered an error before
-			if nominalType != InvalidType {
-				checker.report(
-					&InvalidNonEntitlementAccessError{
-						Range: ast.NewRangeFromPositioned(checker.memoryGauge, astEntitlements[0]),
-					},
-				)
-			}
-			result = PrimitiveAccess(ast.AccessNotSpecified)
+			semanticEntitlements = append(semanticEntitlements, entitlementType)
+		}
+		if access.EntitlementSet.Separator() == ast.Conjunction {
+			result = NewEntitlementSetAccess(semanticEntitlements, Conjunction)
 			return
 		}
+		result = NewEntitlementSetAccess(semanticEntitlements, Disjunction)
+		return
 	}
+
 	panic(errors.NewUnreachableError())
 }
 
@@ -2148,40 +2300,6 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 	return predeclaredMembers
 }
 
-func (checker *Checker) checkVariableMove(expression ast.Expression) {
-
-	identifierExpression, ok := expression.(*ast.IdentifierExpression)
-	if !ok {
-		return
-	}
-
-	variable := checker.valueActivations.Find(identifierExpression.Identifier.Identifier)
-	if variable == nil {
-		return
-	}
-
-	reportInvalidMove := func(declarationKind common.DeclarationKind) {
-		checker.report(
-			&InvalidMoveError{
-				Name:            variable.Identifier,
-				DeclarationKind: declarationKind,
-				Pos:             identifierExpression.StartPosition(),
-			},
-		)
-	}
-
-	switch ty := variable.Type.(type) {
-	case *TransactionType:
-		reportInvalidMove(common.DeclarationKindTransaction)
-
-	case CompositeKindedType:
-		kind := ty.GetCompositeKind()
-		if kind == common.CompositeKindContract {
-			reportInvalidMove(common.DeclarationKindContract)
-		}
-	}
-}
-
 func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos ast.HasPosition) {
 
 	switch typeAnnotation.TypeAnnotationState() {
@@ -2216,6 +2334,7 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation TypeAnnotation, pos a
 	}
 
 	checker.checkInvalidInterfaceAsType(typeAnnotation.Type, pos)
+	typeAnnotation.Type.CheckInstantiated(pos, checker.memoryGauge, checker.report)
 }
 
 func (checker *Checker) checkInvalidInterfaceAsType(ty Type, pos ast.HasPosition) {
@@ -2246,7 +2365,7 @@ func (checker *Checker) TypeActivationDepth() int {
 func (checker *Checker) effectiveMemberAccess(access Access, containerKind ContainerKind) Access {
 	switch containerKind {
 	case ContainerKindComposite:
-		return checker.effectiveCompositeMemberAccess(access)
+		return checker.EffectiveCompositeMemberAccess(access)
 	case ContainerKindInterface:
 		return checker.effectiveInterfaceMemberAccess(access)
 	default:
@@ -2262,7 +2381,7 @@ func (checker *Checker) effectiveInterfaceMemberAccess(access Access) Access {
 	}
 }
 
-func (checker *Checker) effectiveCompositeMemberAccess(access Access) Access {
+func (checker *Checker) EffectiveCompositeMemberAccess(access Access) Access {
 	if !access.Equal(PrimitiveAccess(ast.AccessNotSpecified)) {
 		return access
 	}
@@ -2340,7 +2459,8 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 
 				err := typeParameter.checkTypeBound(
 					typeArgument,
-					ast.NewRangeFromPositioned(checker.memoryGauge, rawTypeArgument),
+					checker.memoryGauge,
+					rawTypeArgument,
 				)
 				checker.report(err)
 			}
@@ -2368,24 +2488,88 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 		return ty
 	}
 
-	return parameterizedType.Instantiate(typeArguments, checker.report)
+	return parameterizedType.Instantiate(
+		checker.memoryGauge,
+		typeArguments,
+		t.TypeArguments,
+		checker.report,
+	)
 }
 
-func (checker *Checker) VisitExpression(expr ast.Expression, expectedType Type) Type {
+func (checker *Checker) VisitExpression(expr ast.Expression, parent ast.Element, expectedType Type) Type {
 	// Always return 'visibleType' as the type of the expression,
 	// to avoid bubbling up type-errors of inner expressions.
-	visibleType, _ := checker.visitExpression(expr, expectedType)
+	visibleType, _ := checker.visitExpression(expr, parent, expectedType)
 	return visibleType
 }
 
-func (checker *Checker) visitExpression(expr ast.Expression, expectedType Type) (visibleType Type, actualType Type) {
-	return checker.visitExpressionWithForceType(expr, expectedType, true)
+func (checker *Checker) visitExpression(expr ast.Expression, parent ast.Element, expectedType Type) (visibleType Type, actualType Type) {
+	return checker.visitExpressionWithForceType(expr, parent, expectedType, true)
 }
 
-func (checker *Checker) VisitExpressionWithForceType(expr ast.Expression, expectedType Type, forceType bool) Type {
+func (checker *Checker) VisitExpressionWithForceType(expr ast.Expression, parent ast.Element, expectedType Type, forceType bool) Type {
 	// Always return 'visibleType' as the type of the expression,
 	// to avoid bubbling up type-errors of inner expressions.
-	visibleType, _ := checker.visitExpressionWithForceType(expr, expectedType, forceType)
+	visibleType, _ := checker.visitExpressionWithForceType(expr, parent, expectedType, forceType)
+	return visibleType
+}
+
+func (checker *Checker) VisitExpressionWithReferenceCheck(expr ast.Expression, parent ast.Element, targetType Type) Type {
+
+	// If the target type is or contains a reference type in particular,
+	// we do NOT use it as the expected type,
+	// to require an explicit type annotation and not infer it.
+	//
+	// This is done to avoid the following situation:
+	//
+	// For arguments in invocations, and for values of assignments,
+	// the target type is not obvious, which is potentially dangerous
+	// if the invoked function or assigned field is defined in a different location,
+	// and the target type potentially requires an authorization.
+	//
+	// For example, consider:
+	//
+	//   // defined elsewhere, is going to mutate the passed array
+	//   fun foo(ints: auth(Mutate) &[Int]) {}
+	//
+	//   let ints = [1, 2, 3]
+	//   // would implicitly allow mutation
+	//   foo(&ints)
+	//
+	// A programmer should be able to look at a piece of code,
+	// and reason locally about whether a type will be inferred for a value
+	// based solely on how that value is used syntactically,
+	// not needing to worry about the actual or expected type of the value.
+	//
+	// Requiring an explicit type for *all* references,
+	// independent of if they require an authorization or not,
+	// is simple and allows the developer to see locally, and purely syntactically,
+	// that they are passing a reference and thus must annotate it.
+
+	expectedType := targetType
+	if expectedType.IsOrContainsReferenceType() {
+		expectedType = nil
+	}
+
+	visibleType := checker.VisitExpression(expr, parent, expectedType)
+
+	// If we did not pass an expected type,
+	// we must manually check that the argument type and the parameter type are compatible.
+
+	if expectedType == nil &&
+		!visibleType.IsInvalidType() &&
+		!IsSubType(visibleType, targetType) {
+
+		checker.report(
+			&TypeMismatchError{
+				ExpectedType: targetType,
+				ActualType:   visibleType,
+				Expression:   expr,
+				Range:        checker.expressionRange(expr),
+			},
+		)
+	}
+
 	return visibleType
 }
 
@@ -2406,6 +2590,7 @@ func (checker *Checker) VisitExpressionWithForceType(expr ast.Expression, expect
 // actualType  - The actual type of the expression.
 func (checker *Checker) visitExpressionWithForceType(
 	expr ast.Expression,
+	parent ast.Element,
 	expectedType Type,
 	forceType bool,
 ) (visibleType Type, actualType Type) {
@@ -2413,11 +2598,15 @@ func (checker *Checker) visitExpressionWithForceType(
 	// Cache the current contextually expected type, and set the `expectedType`
 	// as the new contextually expected type.
 	prevExpectedType := checker.expectedType
+	prevParent := checker.parent
 
+	checker.parent = parent
 	checker.expectedType = expectedType
 	defer func() {
 		// Restore the prev contextually expected type
 		checker.expectedType = prevExpectedType
+		// Restore the prev parent
+		checker.parent = prevParent
 	}()
 
 	actualType = ast.AcceptExpression[Type](expr, checker)

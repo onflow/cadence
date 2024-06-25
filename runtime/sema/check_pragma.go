@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,47 +20,88 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
+// VisitPragmaDeclaration checks that the pragma declaration is valid.
+// It is valid if the root expression is an identifier or invocation.
+// Invocations must
 func (checker *Checker) VisitPragmaDeclaration(declaration *ast.PragmaDeclaration) (_ struct{}) {
 
 	switch expression := declaration.Expression.(type) {
-	case *ast.InvocationExpression:
-		// Type arguments are not supported for pragmas
-		if len(expression.TypeArguments) > 0 {
-			checker.report(&InvalidPragmaError{
-				Message: "type arguments are not supported",
-				Range: ast.NewRangeFromPositioned(
-					checker.memoryGauge,
-					expression.TypeArguments[0],
-				),
-			})
-		}
-
-		// Ensure arguments are string expressions
-		for _, arg := range expression.Arguments {
-			_, ok := arg.Expression.(*ast.StringExpression)
-			if !ok {
-				checker.report(&InvalidPragmaError{
-					Message: "invalid non-string argument",
-					Range: ast.NewRangeFromPositioned(
-						checker.memoryGauge,
-						arg.Expression,
-					),
-				})
-			}
-		}
-
 	case *ast.IdentifierExpression:
-		// NO-OP
+		// valid, NO-OP
+
+	case *ast.InvocationExpression:
+		checker.checkPragmaInvocationExpression(expression)
 
 	default:
 		checker.report(&InvalidPragmaError{
-			Message: "pragma must be identifier or invocation expression",
+			Message: "expression must be literal, identifier, or invocation",
 			Range: ast.NewRangeFromPositioned(
 				checker.memoryGauge,
-				declaration,
+				expression,
 			),
 		})
 	}
 
 	return
+}
+
+func (checker *Checker) checkPragmaInvocationExpression(expression *ast.InvocationExpression) {
+	// Invoked expression must be an identifier
+	if _, ok := expression.InvokedExpression.(*ast.IdentifierExpression); !ok {
+		checker.report(&InvalidPragmaError{
+			Message: "invoked expression must be an identifier",
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				expression.InvokedExpression,
+			),
+		})
+	}
+
+	// Type arguments are not supported for pragmas
+	if len(expression.TypeArguments) > 0 {
+		checker.report(&InvalidPragmaError{
+			Message: "type arguments are not supported",
+			Range: ast.NewRangeFromPositioned(
+				checker.memoryGauge,
+				expression.TypeArguments[0],
+			),
+		})
+	}
+
+	// Ensure arguments are valid
+	for _, arg := range expression.Arguments {
+		checker.checkPragmaArgumentExpression(arg.Expression)
+	}
+}
+
+func (checker *Checker) checkPragmaArgumentExpression(expression ast.Expression) {
+	switch expression := expression.(type) {
+	case *ast.InvocationExpression:
+		checker.checkPragmaInvocationExpression(expression)
+		return
+
+	case *ast.StringExpression,
+		*ast.IntegerExpression,
+		*ast.FixedPointExpression,
+		*ast.ArrayExpression,
+		*ast.DictionaryExpression,
+		*ast.NilExpression,
+		*ast.BoolExpression,
+		*ast.PathExpression:
+
+		return
+
+	case *ast.UnaryExpression:
+		if expression.Operation == ast.OperationMinus {
+			return
+		}
+	}
+
+	checker.report(&InvalidPragmaError{
+		Message: "expression in invocation must be literal or invocation",
+		Range: ast.NewRangeFromPositioned(
+			checker.memoryGauge,
+			expression,
+		),
+	})
 }

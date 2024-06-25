@@ -22,7 +22,7 @@ func _() {
 	_ = x[DeclarationKindEvent-11]
 	_ = x[DeclarationKindField-12]
 	_ = x[DeclarationKindInitializer-13]
-	_ = x[DeclarationKindDestructor-14]
+	_ = x[DeclarationKindDestructorLegacy-14]
 	_ = x[DeclarationKindStructureInterface-15]
 	_ = x[DeclarationKindResourceInterface-16]
 	_ = x[DeclarationKindContractInterface-17]
@@ -41,9 +41,9 @@ func _() {
 	_ = x[DeclarationKindAttachment-30]
 }
 
-const _DeclarationKind_name = "DeclarationKindUnknownDeclarationKindValueDeclarationKindFunctionDeclarationKindVariableDeclarationKindConstantDeclarationKindTypeDeclarationKindParameterDeclarationKindArgumentLabelDeclarationKindStructureDeclarationKindResourceDeclarationKindContractDeclarationKindEventDeclarationKindFieldDeclarationKindInitializerDeclarationKindDestructorDeclarationKindStructureInterfaceDeclarationKindResourceInterfaceDeclarationKindContractInterfaceDeclarationKindEntitlementDeclarationKindEntitlementMappingDeclarationKindImportDeclarationKindSelfDeclarationKindBaseDeclarationKindTransactionDeclarationKindPrepareDeclarationKindExecuteDeclarationKindTypeParameterDeclarationKindPragmaDeclarationKindEnumDeclarationKindEnumCaseDeclarationKindAttachment"
+const _DeclarationKind_name = "DeclarationKindUnknownDeclarationKindValueDeclarationKindFunctionDeclarationKindVariableDeclarationKindConstantDeclarationKindTypeDeclarationKindParameterDeclarationKindArgumentLabelDeclarationKindStructureDeclarationKindResourceDeclarationKindContractDeclarationKindEventDeclarationKindFieldDeclarationKindInitializerDeclarationKindDestructorLegacyDeclarationKindStructureInterfaceDeclarationKindResourceInterfaceDeclarationKindContractInterfaceDeclarationKindEntitlementDeclarationKindEntitlementMappingDeclarationKindImportDeclarationKindSelfDeclarationKindBaseDeclarationKindTransactionDeclarationKindPrepareDeclarationKindExecuteDeclarationKindTypeParameterDeclarationKindPragmaDeclarationKindEnumDeclarationKindEnumCaseDeclarationKindAttachment"
 
-var _DeclarationKind_index = [...]uint16{0, 22, 42, 65, 88, 111, 130, 154, 182, 206, 229, 252, 272, 292, 318, 343, 376, 408, 440, 466, 499, 520, 539, 558, 584, 606, 628, 656, 677, 696, 719, 744}
+var _DeclarationKind_index = [...]uint16{0, 22, 42, 65, 88, 111, 130, 154, 182, 206, 229, 252, 272, 292, 318, 349, 382, 414, 446, 472, 505, 526, 545, 564, 590, 612, 634, 662, 683, 702, 725, 750}
 
 func (i DeclarationKind) String() string {
 	if i >= DeclarationKind(len(_DeclarationKind_index)-1) {

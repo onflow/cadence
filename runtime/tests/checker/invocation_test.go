@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -315,7 +315,7 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryFunction(
+	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
 		"foo",
 		&sema.FunctionType{
 			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
@@ -333,7 +333,9 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
         `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
 	)
@@ -354,8 +356,8 @@ func TestCheckArgumentLabels(t *testing.T) {
 			_, err := ParseAndCheck(t, `
               fun test(foo bar: Int, baz: String) {}
 
-	          let t = test(x: 1, "2")
-	        `)
+              let t = test(x: 1, "2")
+            `)
 
 			errs := RequireCheckerErrors(t, err, 2)
 
@@ -409,12 +411,12 @@ func TestCheckArgumentLabels(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
-	          struct Test {
+              struct Test {
                   fun test(foo bar: Int, baz: String) {}
-	          }
+              }
 
-	          let t = Test().test(x: 1, "2")
-	        `)
+              let t = Test().test(x: 1, "2")
+            `)
 
 			errs := RequireCheckerErrors(t, err, 2)
 
@@ -428,9 +430,9 @@ func TestCheckArgumentLabels(t *testing.T) {
 
 			importedChecker, err := ParseAndCheckWithOptions(t,
 				`
-	              struct Test {
+                  struct Test {
                       fun test(foo bar: Int, baz: String) {}
-	              }
+                  }
                 `,
 				ParseAndCheckOptions{
 					Location: utils.ImportedLocation,
@@ -474,8 +476,8 @@ func TestCheckArgumentLabels(t *testing.T) {
                   init(foo bar: Int, baz: String) {}
               }
 
-	          let t = Test(x: 1, "2")
-	        `)
+              let t = Test(x: 1, "2")
+            `)
 
 			errs := RequireCheckerErrors(t, err, 2)
 
@@ -531,14 +533,14 @@ func TestCheckArgumentLabels(t *testing.T) {
 			t.Parallel()
 
 			_, err := ParseAndCheck(t, `
-	          contract C {
+              contract C {
                   struct S {
                       init(foo bar: Int, baz: String) {}
                   }
-	          }
+              }
 
-	          let t = C.S(x: 1, "2")
-	        `)
+              let t = C.S(x: 1, "2")
+            `)
 
 			errs := RequireCheckerErrors(t, err, 2)
 
@@ -552,11 +554,11 @@ func TestCheckArgumentLabels(t *testing.T) {
 
 			importedChecker, err := ParseAndCheckWithOptions(t,
 				`
-	              contract C {
+                  contract C {
                       struct S {
                           init(foo bar: Int, baz: String) {}
                       }
-	              }
+                  }
                 `,
 				ParseAndCheckOptions{
 					Location: utils.ImportedLocation,

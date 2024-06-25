@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,19 +34,12 @@ var account_KeysStaticType StaticType = PrimitiveStaticTypeAccount_Keys
 func NewAccountKeysValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	addFunction FunctionValue,
-	getFunction FunctionValue,
-	revokeFunction FunctionValue,
-	forEachFunction FunctionValue,
+	addFunction BoundFunctionGenerator,
+	getFunction BoundFunctionGenerator,
+	revokeFunction BoundFunctionGenerator,
+	forEachFunction BoundFunctionGenerator,
 	getKeysCount AccountKeysCountGetter,
 ) Value {
-
-	fields := map[string]Value{
-		sema.Account_KeysTypeAddFunctionName:     addFunction,
-		sema.Account_KeysTypeGetFunctionName:     getFunction,
-		sema.Account_KeysTypeRevokeFunctionName:  revokeFunction,
-		sema.Account_KeysTypeForEachFunctionName: forEachFunction,
-	}
 
 	computeField := func(name string, _ *Interpreter, _ LocationRange) Value {
 		switch name {
@@ -57,25 +50,34 @@ func NewAccountKeysValue(
 	}
 
 	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AccountKeysStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, seenReferences)
+			common.UseMemory(interpreter, common.AccountKeysStringMemoryUsage)
+			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.Keys(%s)", addressStr)
 		}
 		return str
 	}
 
-	return NewSimpleCompositeValue(
+	accountKeys := NewSimpleCompositeValue(
 		gauge,
 		account_KeysTypeID,
 		account_KeysStaticType,
 		nil,
-		fields,
+		nil,
 		computeField,
 		nil,
 		stringer,
 	)
+
+	accountKeys.Fields = map[string]Value{
+		sema.Account_KeysTypeAddFunctionName:     addFunction(accountKeys),
+		sema.Account_KeysTypeGetFunctionName:     getFunction(accountKeys),
+		sema.Account_KeysTypeRevokeFunctionName:  revokeFunction(accountKeys),
+		sema.Account_KeysTypeForEachFunctionName: forEachFunction(accountKeys),
+	}
+
+	return accountKeys
 }
 
 type AccountKeysCountGetter func() UInt64Value

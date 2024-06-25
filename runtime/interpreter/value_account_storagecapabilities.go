@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,37 +34,41 @@ var account_StorageCapabilitiesFieldNames []string = nil
 func NewAccountStorageCapabilitiesValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	getControllerFunction FunctionValue,
-	getControllersFunction FunctionValue,
-	forEachControllerFunction FunctionValue,
-	issueFunction FunctionValue,
+	getControllerFunction BoundFunctionGenerator,
+	getControllersFunction BoundFunctionGenerator,
+	forEachControllerFunction BoundFunctionGenerator,
+	issueFunction BoundFunctionGenerator,
+	issueWithTypeFunction BoundFunctionGenerator,
 ) Value {
 
-	fields := map[string]Value{
-		sema.Account_StorageCapabilitiesTypeGetControllerFunctionName:     getControllerFunction,
-		sema.Account_StorageCapabilitiesTypeGetControllersFunctionName:    getControllersFunction,
-		sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction,
-		sema.Account_StorageCapabilitiesTypeIssueFunctionName:             issueFunction,
-	}
-
 	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AccountStorageCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, seenReferences)
+			common.UseMemory(interpreter, common.AccountStorageCapabilitiesStringMemoryUsage)
+			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.StorageCapabilities(%s)", addressStr)
 		}
 		return str
 	}
 
-	return NewSimpleCompositeValue(
+	storageCapabilities := NewSimpleCompositeValue(
 		gauge,
 		account_StorageCapabilitiesTypeID,
 		account_StorageCapabilitiesStaticType,
 		account_StorageCapabilitiesFieldNames,
-		fields,
+		nil,
 		nil,
 		nil,
 		stringer,
 	)
+
+	storageCapabilities.Fields = map[string]Value{
+		sema.Account_StorageCapabilitiesTypeGetControllerFunctionName:     getControllerFunction(storageCapabilities),
+		sema.Account_StorageCapabilitiesTypeGetControllersFunctionName:    getControllersFunction(storageCapabilities),
+		sema.Account_StorageCapabilitiesTypeForEachControllerFunctionName: forEachControllerFunction(storageCapabilities),
+		sema.Account_StorageCapabilitiesTypeIssueFunctionName:             issueFunction(storageCapabilities),
+		sema.Account_StorageCapabilitiesTypeIssueWithTypeFunctionName:     issueWithTypeFunction(storageCapabilities),
+	}
+
+	return storageCapabilities
 }

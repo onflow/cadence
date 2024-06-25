@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -150,6 +150,9 @@ func (om *OrderedMap[K, V]) Delete(key K) (oldValue V, present bool) {
 
 // Len returns the length of the ordered map.
 func (om *OrderedMap[K, V]) Len() int {
+	if om == nil {
+		return 0
+	}
 	return len(om.pairs)
 }
 
@@ -252,6 +255,27 @@ func (om *OrderedMap[K, V]) KeySetIsDisjointFrom(other *OrderedMap[K, V]) bool {
 		isDisjoint = isDisjoint && !other.Contains(key)
 	})
 	return isDisjoint
+}
+
+// KeySetIntersection returns a map containing the intersection of the keys in the two maps
+// this is only well defined for sets (i.e. maps without meaningful values)
+func KeySetIntersection[K comparable, V any](om *OrderedMap[K, V], other *OrderedMap[K, V]) *OrderedMap[K, V] {
+	intersection := New[OrderedMap[K, V]](len(om.pairs))
+	om.Foreach(func(key K, value V) {
+		if other.Contains(key) {
+			intersection.Set(key, value)
+		}
+	})
+	return intersection
+}
+
+// KeySetUnion returns a map containing the union of the keys in the two maps
+// this is only well defined for sets (i.e. maps without meaningful values)
+func KeySetUnion[K comparable, V any](om *OrderedMap[K, V], other *OrderedMap[K, V]) *OrderedMap[K, V] {
+	union := New[OrderedMap[K, V]](len(om.pairs))
+	union.SetAll(om)
+	union.SetAll(other)
+	return union
 }
 
 // Pair is an entry in an OrderedMap

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,7 +97,7 @@ func parseStatement(p *parser) (ast.Statement, error) {
 			return parseForStatement(p)
 		case KeywordEmit:
 			return parseEmitStatement(p)
-		case keywordRemove:
+		case KeywordRemove:
 			return parseRemoveStatement(p)
 
 		case KeywordView:

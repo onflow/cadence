@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,25 +97,29 @@ func (ct *compositeTypes) traverseValue(v cadence.Value) {
 		}
 
 	case cadence.Struct:
-		for _, field := range v.Fields {
+		for _, field := range getCompositeFieldValues(v) {
 			ct.traverseValue(field)
 		}
 
 	case cadence.Resource:
-		for _, field := range v.Fields {
+		for _, field := range getCompositeFieldValues(v) {
 			ct.traverseValue(field)
 		}
 
 	case cadence.Event:
-		for _, field := range v.Fields {
+		for _, field := range getCompositeFieldValues(v) {
 			ct.traverseValue(field)
 		}
 
 	case cadence.Contract:
-		for _, field := range v.Fields {
+		for _, field := range getCompositeFieldValues(v) {
 			ct.traverseValue(field)
 		}
 
+	case cadence.Attachment:
+		for _, field := range getCompositeFieldValues(v) {
+			ct.traverseValue(field)
+		}
 	}
 }
 
@@ -152,14 +156,14 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		}
 		return check
 
-	case cadence.CompositeType: // struct, resource, event, contract, enum
+	case cadence.CompositeType: // struct, resource, event, contract, enum, attachment
 		newType := ct.add(typ)
 		if !newType {
 			return ct.abstractTypes[typ.ID()]
 		}
 
 		check := false
-		fields := typ.CompositeFields()
+		fields := getCompositeTypeFields(typ)
 		for _, field := range fields {
 			checkField := ct.traverseType(field.Type)
 			check = check || checkField
@@ -181,7 +185,8 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		return true
 
 	case cadence.BytesType,
-		*cadence.FunctionType:
+		*cadence.FunctionType,
+		*cadence.InclusiveRangeType:
 		// TODO: Maybe there are more types that we can skip checking runtime type for composite type.
 
 		return false
@@ -225,6 +230,7 @@ func (ct *compositeTypes) traverseType(typ cadence.Type) (checkRuntimeType bool)
 		cadence.SignedNumberType,
 		cadence.IntegerType,
 		cadence.SignedIntegerType,
+		cadence.FixedSizeUnsignedIntegerType,
 		cadence.FixedPointType,
 		cadence.SignedFixedPointType:
 

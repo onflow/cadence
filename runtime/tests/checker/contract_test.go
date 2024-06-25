@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -744,7 +744,12 @@ func TestCheckBadContractNesting(t *testing.T) {
 func TestCheckContractEnumAccessRestricted(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseAndCheckWithOptions(t, "contract foo{}let x = foo!",
+	_, err := ParseAndCheckWithOptions(t, `
+            contract foo {
+                access(all) fun bar() {}
+            }
+            let x = foo.bar()!
+        `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
 				AccessCheckMode: sema.AccessCheckModeStrict,

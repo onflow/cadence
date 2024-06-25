@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeNewLocationCoverage(t *testing.T) {
@@ -621,6 +622,117 @@ func TestRuntimeCoverageReportWithAddressLocation(t *testing.T) {
 	  }
 	`
 	require.JSONEq(t, expected, string(actual))
+}
+
+func TestCoverageReportWithLocationMappings(t *testing.T) {
+
+	t.Parallel()
+
+	script := []byte(`
+	  access(all) fun answer(): Int {
+	    var i = 0
+	    while i < 42 {
+	      i = i + 1
+	    }
+	    return i
+	  }
+	`)
+
+	program, err := parser.ParseProgram(nil, script, parser.Config{})
+	require.NoError(t, err)
+
+	locationMappings := map[string]string{
+		"Answer": "cadence/scripts/answer.cdc",
+	}
+	coverageReport := NewCoverageReport()
+	coverageReport.WithLocationMappings(locationMappings)
+
+	t.Run("with AddressLocation", func(t *testing.T) {
+		location := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{1, 2}),
+			Name:    "Answer",
+		}
+		coverageReport.InspectProgram(location, program)
+
+		actual, err := json.Marshal(coverageReport)
+		require.NoError(t, err)
+
+		expected := `
+		  {
+		    "coverage": {
+		      "cadence/scripts/answer.cdc": {
+		        "line_hits": {
+		          "3": 0,
+		          "4": 0,
+		          "5": 0,
+		          "7": 0
+		        },
+		        "missed_lines": [3, 4, 5, 7],
+		        "statements": 4,
+		        "percentage": "0.0%"
+		      }
+		    },
+		    "excluded_locations": []
+		  }
+		`
+		require.JSONEq(t, expected, string(actual))
+	})
+
+	t.Run("with StringLocation", func(t *testing.T) {
+		location := common.StringLocation("Answer")
+		coverageReport.InspectProgram(location, program)
+
+		actual, err := json.Marshal(coverageReport)
+		require.NoError(t, err)
+
+		expected := `
+		  {
+		    "coverage": {
+		      "cadence/scripts/answer.cdc": {
+		        "line_hits": {
+		          "3": 0,
+		          "4": 0,
+		          "5": 0,
+		          "7": 0
+		        },
+		        "missed_lines": [3, 4, 5, 7],
+		        "statements": 4,
+		        "percentage": "0.0%"
+		      }
+		    },
+		    "excluded_locations": []
+		  }
+		`
+		require.JSONEq(t, expected, string(actual))
+	})
+
+	t.Run("with IdentifierLocation", func(t *testing.T) {
+		location := common.IdentifierLocation("Answer")
+		coverageReport.InspectProgram(location, program)
+
+		actual, err := json.Marshal(coverageReport)
+		require.NoError(t, err)
+
+		expected := `
+		  {
+		    "coverage": {
+		      "cadence/scripts/answer.cdc": {
+		        "line_hits": {
+		          "3": 0,
+		          "4": 0,
+		          "5": 0,
+		          "7": 0
+		        },
+		        "missed_lines": [3, 4, 5, 7],
+		        "statements": 4,
+		        "percentage": "0.0%"
+		      }
+		    },
+		    "excluded_locations": []
+		  }
+		`
+		require.JSONEq(t, expected, string(actual))
+	})
 }
 
 func TestRuntimeCoverageReportReset(t *testing.T) {
@@ -1657,7 +1769,7 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 
 	t.Parallel()
 
-	importedScript := []byte(`
+	contract := []byte(`
 	  access(all) contract FooContract {
 	    access(all) resource interface Receiver {
 	    }
@@ -1665,7 +1777,7 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 	`)
 
 	script := []byte(`
-	  import "FooContract"
+	  import FooContract from 0x1
 	  access(all) fun main(): Int {
 		Type<@{FooContract.Receiver}>().identifier
 		return 42
@@ -1673,30 +1785,58 @@ func TestRuntimeCoverageWithNoStatements(t *testing.T) {
 	`)
 
 	coverageReport := NewCoverageReport()
-
-	scriptlocation := common.ScriptLocation{0x1b, 0x2c}
-
-	runtimeInterface := &TestRuntimeInterface{
-		OnGetCode: func(location Location) (bytes []byte, err error) {
-			switch location {
-			case common.StringLocation("FooContract"):
-				return importedScript, nil
-			default:
-				return nil, fmt.Errorf("unknown import location: %s", location)
-			}
-		},
-	}
 	runtime := NewInterpreterRuntime(Config{
 		CoverageReport: coverageReport,
 	})
-	coverageReport.ExcludeLocation(scriptlocation)
+
+	scriptLocation := common.ScriptLocation{0x1b, 0x2c}
+
+	transactionLocation := NewTransactionLocationGenerator()
+	txLocation := transactionLocation()
+
+	authorizers := []Address{{0, 0, 0, 0, 0, 0, 0, 1}}
+	accountCodes := map[Location][]byte{}
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return authorizers, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+	}
+
+	coverageReport.ExcludeLocation(txLocation)
+	deploy := utils.DeploymentTransaction("FooContract", contract)
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface:      runtimeInterface,
+			Location:       txLocation,
+			CoverageReport: coverageReport,
+		},
+	)
+	require.NoError(t, err)
+
+	coverageReport.ExcludeLocation(scriptLocation)
 	value, err := runtime.ExecuteScript(
 		Script{
 			Source: script,
 		},
 		Context{
 			Interface:      runtimeInterface,
-			Location:       scriptlocation,
+			Location:       scriptLocation,
 			CoverageReport: coverageReport,
 		},
 	)
@@ -1794,43 +1934,44 @@ func TestRuntimeCoverageReportLCOVFormat(t *testing.T) {
 	  }
 	`)
 
-	coverageReport := NewCoverageReport()
-	scriptlocation := common.ScriptLocation{}
-	coverageReport.ExcludeLocation(scriptlocation)
+	t.Run("without location mappings", func(t *testing.T) {
+		coverageReport := NewCoverageReport()
+		scriptlocation := common.ScriptLocation{}
+		coverageReport.ExcludeLocation(scriptlocation)
 
-	runtimeInterface := &TestRuntimeInterface{
-		OnGetCode: func(location Location) (bytes []byte, err error) {
-			switch location {
-			case common.StringLocation("IntegerTraits"):
-				return integerTraits, nil
-			default:
-				return nil, fmt.Errorf("unknown import location: %s", location)
-			}
-		},
-	}
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
+				switch location {
+				case common.StringLocation("IntegerTraits"):
+					return integerTraits, nil
+				default:
+					return nil, fmt.Errorf("unknown import location: %s", location)
+				}
+			},
+		}
 
-	config := DefaultTestInterpreterConfig
-	config.CoverageReport = coverageReport
-	runtime := NewTestInterpreterRuntimeWithConfig(config)
+		config := DefaultTestInterpreterConfig
+		config.CoverageReport = coverageReport
+		runtime := NewTestInterpreterRuntimeWithConfig(config)
 
-	value, err := runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface:      runtimeInterface,
-			Location:       scriptlocation,
-			CoverageReport: coverageReport,
-		},
-	)
-	require.NoError(t, err)
+		value, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:      runtimeInterface,
+				Location:       scriptlocation,
+				CoverageReport: coverageReport,
+			},
+		)
+		require.NoError(t, err)
 
-	assert.Equal(t, cadence.NewInt(42), value)
+		assert.Equal(t, cadence.NewInt(42), value)
 
-	actual, err := coverageReport.MarshalLCOV()
-	require.NoError(t, err)
+		actual, err := coverageReport.MarshalLCOV()
+		require.NoError(t, err)
 
-	expected := `TN:
+		expected := `TN:
 SF:S.IntegerTraits
 DA:9,1
 DA:13,10
@@ -1850,11 +1991,84 @@ LF:14
 LH:14
 end_of_record
 `
-	require.Equal(t, expected, string(actual))
 
-	assert.Equal(
-		t,
-		"Coverage: 100.0% of statements",
-		coverageReport.String(),
-	)
+		require.Equal(t, expected, string(actual))
+
+		assert.Equal(
+			t,
+			"Coverage: 100.0% of statements",
+			coverageReport.String(),
+		)
+	})
+
+	t.Run("with location mappings", func(t *testing.T) {
+		locationMappings := map[string]string{
+			"IntegerTraits": "cadence/contracts/IntegerTraits.cdc",
+		}
+		coverageReport := NewCoverageReport()
+		coverageReport.WithLocationMappings(locationMappings)
+		scriptlocation := common.ScriptLocation{}
+		coverageReport.ExcludeLocation(scriptlocation)
+
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetCode: func(location Location) (bytes []byte, err error) {
+				switch location {
+				case common.StringLocation("IntegerTraits"):
+					return integerTraits, nil
+				default:
+					return nil, fmt.Errorf("unknown import location: %s", location)
+				}
+			},
+		}
+
+		config := DefaultTestInterpreterConfig
+		config.CoverageReport = coverageReport
+		runtime := NewTestInterpreterRuntimeWithConfig(config)
+
+		value, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface:      runtimeInterface,
+				Location:       scriptlocation,
+				CoverageReport: coverageReport,
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, cadence.NewInt(42), value)
+
+		actual, err := coverageReport.MarshalLCOV()
+		require.NoError(t, err)
+
+		expected := `TN:
+SF:cadence/contracts/IntegerTraits.cdc
+DA:9,1
+DA:13,10
+DA:14,1
+DA:15,9
+DA:16,1
+DA:17,8
+DA:18,1
+DA:19,7
+DA:20,1
+DA:21,6
+DA:22,1
+DA:25,5
+DA:26,4
+DA:29,1
+LF:14
+LH:14
+end_of_record
+`
+		require.Equal(t, expected, string(actual))
+
+		assert.Equal(
+			t,
+			"Coverage: 100.0% of statements",
+			coverageReport.String(),
+		)
+	})
+
 }

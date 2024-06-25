@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	checker.enterValueScope()
 	defer checker.leaveValueScope(declaration.EndPosition, true)
 
-	checker.declareSelfValue(transactionType, "")
+	checker.declareSelfValue(UnauthorizedAccess, transactionType, "")
 
 	if declaration.ParameterList != nil {
 		checker.checkTransactionParameters(declaration, transactionType.Parameters)

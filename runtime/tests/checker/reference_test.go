@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1180,7 +1180,7 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
         `)
 
 		errs := RequireCheckerErrors(t, err, 1)
-		assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("mismatched type", func(t *testing.T) {
@@ -1313,15 +1313,15 @@ func TestCheckInvalidDictionaryAccessOptionalReference(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		access(all) struct S {
-			access(all) let foo: Number
-			init() {
-				self.foo = 0
-			}
-		}
-		let dict: {String: S} = {}
-		let s = &dict[""] as &S?
-		let n = s.foo
+        access(all) struct S {
+            access(all) let foo: Number
+            init() {
+                self.foo = 0
+            }
+        }
+        let dict: {String: S} = {}
+        let s = &dict[""] as &S?
+        let n = s.foo
     `)
 
 	errs := RequireCheckerErrors(t, err, 1)
@@ -1334,14 +1334,14 @@ func TestCheckInvalidDictionaryAccessNonOptionalReference(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		access(all) struct S {
-			access(all) let foo: Number
-			init() {
-				self.foo = 0
-			}
-		}
-		let dict: {String: S} = {}
-		let s = &dict[""] as &S
+        access(all) struct S {
+            access(all) let foo: Number
+            init() {
+                self.foo = 0
+            }
+        }
+        let dict: {String: S} = {}
+        let s = &dict[""] as &S
     `)
 
 	errs := RequireCheckerErrors(t, err, 1)
@@ -1354,15 +1354,15 @@ func TestCheckArrayAccessReference(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		access(all) struct S {
-			access(all) let foo: Number
-			init() {
-				self.foo = 0
-			}
-		}
-		let dict: [S] = []
-		let s = &dict[0] as &S
-		let n = s.foo
+        access(all) struct S {
+            access(all) let foo: Number
+            init() {
+                self.foo = 0
+            }
+        }
+        let dict: [S] = []
+        let s = &dict[0] as &S
+        let n = s.foo
     `)
 
 	require.NoError(t, err)
@@ -1854,18 +1854,12 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 init() {
                     self.r2 <- create R2()
                 }
-                destroy() {
-                    destroy self.r2
-                }
             }
 
             access(all) resource R2 {
                 access(all) let r3: @R3
                 init() {
                     self.r3 <- create R3()
-                }
-                destroy() {
-                    destroy self.r3
                 }
             }
 
@@ -1947,7 +1941,7 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
             import Foo from "imported"
 
             access(all) fun test() {
-                let xRef = &Foo.field as &AnyResource
+                let xRef: &AnyResource = Foo.field
                 xRef
             }
         `,
@@ -2602,9 +2596,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 init() {
                     self.bar <-create Bar()
                 }
-                destroy() {
-                    destroy self.bar
-                }
             }
 
             resource Bar {
@@ -2671,9 +2662,6 @@ func TestCheckInvalidatedReferenceUse(t *testing.T) {
                 let bar: @Bar
                 init() {
                     self.bar <-create Bar()
-                }
-                destroy() {
-                    destroy self.bar
                 }
             }
 
@@ -2951,9 +2939,9 @@ func TestCheckResourceReferenceMethodInvocationAfterMove(t *testing.T) {
             // Moving the resource should update the tracking
             var newFoo <- foo
 
-        	fooRef.id
+            fooRef.id
 
-        	destroy newFoo
+            destroy newFoo
         }
     `)
 
@@ -2996,5 +2984,960 @@ func TestCheckReferenceCreationWithInvalidType(t *testing.T) {
 
 		var nonReferenceTypeReferenceError *sema.NonReferenceTypeReferenceError
 		require.ErrorAs(t, errs[0], &nonReferenceTypeReferenceError)
+	})
+}
+
+func TestCheckResourceReferenceFieldNilAssignment(t *testing.T) {
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+        access(all) resource Outer {
+            access(all) var inner : @Inner?
+
+            init(_ v: @Inner){
+                self.inner <- v
+                var outerRef = &self as &Outer
+                outerRef.inner = nil
+            }
+        }
+
+        access(all) resource Inner {}
+
+        fun main() {
+            let inner <- create Inner()
+            let outer <- create Outer(<- inner)
+            destroy outer
+        }
+    `)
+
+	errors := RequireCheckerErrors(t, err, 2)
+	require.IsType(t, &sema.IncorrectTransferOperationError{}, errors[0])
+	require.IsType(t, &sema.InvalidResourceAssignmentError{}, errors[1])
+}
+
+func TestCheckResourceReferenceIndexNilAssignment(t *testing.T) {
+	t.Parallel()
+
+	t.Run("one level", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource Foo {}
+
+            fun main() {
+                let array: @[Foo?] <- [<- create Foo()]
+                let arrayRef = &array as auth(Mutate) &[Foo?]
+
+                arrayRef[0] = nil
+
+                destroy array
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 2)
+		require.IsType(t, &sema.IncorrectTransferOperationError{}, errors[0])
+		require.IsType(t, &sema.InvalidResourceAssignmentError{}, errors[1])
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource Foo {}
+
+            fun main() {
+                let array: @[[Foo?]] <- [<- [<- create Foo()]]
+                let arrayRef = &array as auth(Mutate) &[[Foo?]]
+
+                arrayRef[0][0] = nil
+
+                destroy array
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 3)
+		require.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errors[0])
+		require.IsType(t, &sema.IncorrectTransferOperationError{}, errors[1])
+		require.IsType(t, &sema.InvalidResourceAssignmentError{}, errors[2])
+	})
+}
+
+func TestCheckNestedReference(t *testing.T) {
+	t.Parallel()
+
+	t.Run("basic", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let x = &1 as &Int
+                let y = &x as & &Int
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NestedReferenceError{}, errors[0])
+	})
+
+	t.Run("type of underlying value checked", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let x = &1 as &Int
+                let y = &x as &AnyStruct
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NestedReferenceError{}, errors[0])
+	})
+
+	t.Run("optional", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let x: &Int? = &1 as &Int
+                let y = &x as &AnyStruct?
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NestedReferenceError{}, errors[0])
+	})
+
+	t.Run("nested optional", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                let x: &Int?? = &1 as &Int
+                let y = &x as &AnyStruct?
+            }
+        `)
+
+		errors := RequireCheckerErrors(t, err, 1)
+		require.IsType(t, &sema.NestedReferenceError{}, errors[0])
+	})
+}
+
+func TestCheckDereference(t *testing.T) {
+
+	t.Parallel()
+
+	type testCase struct {
+		ty          sema.Type
+		initializer string
+	}
+
+	runValidTestCase := func(t *testing.T, name, code string, expectedTy sema.Type) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t, code)
+
+			require.NoError(t, err)
+
+			derefType := RequireGlobalValue(t, checker.Elaboration, "deref")
+
+			assert.True(t, expectedTy.Equal(derefType))
+		})
+	}
+
+	runInvalidTestCase := func(t *testing.T, name, code string) {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, code)
+
+			errs := RequireCheckerErrors(t, err, 1)
+			assert.IsType(t, &sema.InvalidUnaryOperandError{}, errs[0])
+		})
+	}
+
+	t.Run("Numeric Types", func(t *testing.T) {
+		t.Parallel()
+
+		for _, typ := range sema.AllIntegerTypes {
+			integerType := typ
+			typString := typ.QualifiedString()
+
+			runValidTestCase(
+				t,
+				typString,
+				fmt.Sprintf(
+					`
+                      let ref: &%[1]s = &1
+                      let deref: %[1]s = *ref
+                    `,
+					integerType,
+				),
+				integerType,
+			)
+		}
+
+		for _, typ := range sema.AllFixedPointTypes {
+			fixedPointType := typ
+			typString := typ.QualifiedString()
+
+			runValidTestCase(
+				t,
+				typString,
+				fmt.Sprintf(
+					`
+                      let ref: &%[1]s = &1.0
+                      let deref: %[1]s = *ref
+                    `,
+					fixedPointType,
+				),
+				fixedPointType,
+			)
+		}
+	})
+
+	t.Run("Simple types", func(t *testing.T) {
+		t.Parallel()
+
+		for _, testCase := range []testCase{
+			{
+				ty:          sema.CharacterType,
+				initializer: `"\u{FC}"`,
+			},
+			{
+				ty:          sema.StringType,
+				initializer: `"\u{FC}"`,
+			},
+			{
+				ty:          sema.BoolType,
+				initializer: "false",
+			},
+			{
+				ty:          sema.TheAddressType,
+				initializer: "0x0000000000000001",
+			},
+			{
+				ty:          sema.PrivatePathType,
+				initializer: "/private/foo",
+			},
+			{
+				ty:          sema.PublicPathType,
+				initializer: "/public/foo",
+			},
+		} {
+			runValidTestCase(
+				t,
+				testCase.ty.QualifiedString(),
+				fmt.Sprintf(
+					`
+                      let value: %[1]s = %[2]s
+                      let ref: &%[1]s = &value
+                      let deref: %[1]s = *ref
+                    `,
+					testCase.ty,
+					testCase.initializer,
+				),
+				testCase.ty,
+			)
+		}
+	})
+
+	t.Run("Arrays", func(t *testing.T) {
+		t.Parallel()
+
+		for _, testCase := range []testCase{
+			{
+				ty:          &sema.VariableSizedType{Type: sema.IntType},
+				initializer: "[1, 2, 3]",
+			},
+			{
+				ty:          &sema.VariableSizedType{Type: sema.Fix64Type},
+				initializer: "[1.0, 5.7]",
+			},
+			{
+				ty:          &sema.VariableSizedType{Type: sema.StringType},
+				initializer: `["abc", "def"]`,
+			},
+			{
+				ty: &sema.VariableSizedType{
+					Type: &sema.VariableSizedType{
+						Type: sema.StringType,
+					},
+				},
+				initializer: `[ ["abc", "def"], ["xyz"]]`,
+			},
+			{
+				ty: &sema.VariableSizedType{
+					Type: &sema.DictionaryType{
+						KeyType:   sema.IntType,
+						ValueType: sema.StringType,
+					}},
+				initializer: `[{1: "abc", 2: "def"}, {3: "xyz"}]`,
+			},
+			{
+				ty:          &sema.ConstantSizedType{Type: sema.IntType, Size: 3},
+				initializer: "[1, 2, 3]",
+			},
+			{
+				ty:          &sema.ConstantSizedType{Type: sema.Fix64Type, Size: 2},
+				initializer: "[1.0, 5.7]",
+			},
+			{
+				ty:          &sema.ConstantSizedType{Type: sema.StringType, Size: 2},
+				initializer: `["abc", "def"]`,
+			},
+			{
+				ty: &sema.ConstantSizedType{
+					Type: &sema.VariableSizedType{
+						Type: sema.StringType,
+					},
+					Size: 2,
+				},
+				initializer: `[ ["abc", "def"], ["xyz"]]`,
+			},
+			{
+				ty: &sema.ConstantSizedType{
+					Type: &sema.DictionaryType{
+						KeyType:   sema.IntType,
+						ValueType: sema.StringType,
+					},
+					Size: 1,
+				},
+				initializer: `[{1: "abc", 2: "def"}]`,
+			},
+		} {
+			runValidTestCase(
+				t,
+				testCase.ty.QualifiedString(),
+				fmt.Sprintf(
+					`
+                      struct S {}
+
+                      let value: %[1]s = %[2]s
+                      let ref: &%[1]s = &value
+                      let deref: %[1]s = *ref
+                    `,
+					testCase.ty,
+					testCase.initializer,
+				),
+				testCase.ty,
+			)
+		}
+
+		// Arrays of structs cannot be dereferenced.
+		runInvalidTestCase(
+			t,
+			"[Struct]",
+			`
+				struct S {}
+
+				let value: [S] = [S(), S()]
+				let ref: &[S] = &value
+				let deref: [S] = *ref
+            `,
+		)
+
+		runInvalidTestCase(
+			t,
+			"[Struct; 2]",
+			`
+				struct S {}
+
+				let value: [S; 2] = [S(), S()]
+				let ref: &[S; 2] = &value
+				let deref: [S; 2] = *ref
+            `,
+		)
+
+		runInvalidTestCase(
+			t,
+			"[AnyStruct]",
+			`
+				struct S {}
+
+				let value: [AnyStruct] = [S(), S()]
+				let ref: &[AnyStruct] = &value
+				let deref: [AnyStruct] = *ref
+            `,
+		)
+
+		runInvalidTestCase(
+			t,
+			"[AnyStruct; 2]",
+			`
+				struct S {}
+
+				let value: [AnyStruct; 2] = [S(), S()]
+				let ref: &[AnyStruct; 2] = &value
+				let deref: [AnyStruct; 2] = *ref
+            `,
+		)
+
+		// Arrays of resources cannot be dereferenced.
+		runInvalidTestCase(
+			t,
+			"[Resource]",
+			`
+              resource R {}
+
+              fun test() {
+                  let array: @[R] <- [<-create R(), <-create R()]
+                  let ref: &[R] = &array
+                  let deref: @[R] <- *ref
+                  destroy array
+                  destroy deref
+              }
+            `,
+		)
+
+		runInvalidTestCase(
+			t,
+			"[Resource; 2]",
+			`
+              resource R {}
+
+              fun test() {
+                  let array: @[R; 2] <- [<-create R(), <-create R()]
+                  let ref: &[R; 2] = &array
+                  let deref: @[R; 2] <- *ref
+                  destroy array
+                  destroy deref
+              }
+            `,
+		)
+
+	})
+
+	t.Run("Dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		for _, testCase := range []testCase{
+			{
+				ty:          &sema.DictionaryType{KeyType: sema.IntType, ValueType: sema.IntType},
+				initializer: "{1: 1, 2: 2, 3: 3}",
+			},
+			{
+				ty:          &sema.DictionaryType{KeyType: sema.IntType, ValueType: sema.Fix64Type},
+				initializer: "{1: 1.2, 2: 2.4, 3: 3.0}",
+			},
+			{
+				ty:          &sema.DictionaryType{KeyType: sema.StringType, ValueType: sema.StringType},
+				initializer: `{"123": "abc", "456": "def"}`,
+			},
+			{
+				ty: &sema.DictionaryType{
+					KeyType: sema.StringType,
+					ValueType: &sema.VariableSizedType{
+						Type: sema.IntType,
+					},
+				},
+				initializer: `{"123": [1, 2, 3], "456": [4, 5, 6]}`,
+			},
+			{
+				ty: &sema.DictionaryType{
+					KeyType: sema.StringType,
+					ValueType: &sema.ConstantSizedType{
+						Type: sema.IntType,
+						Size: 3,
+					},
+				},
+				initializer: `{"123": [1, 2, 3], "456": [4, 5, 6]}`,
+			},
+		} {
+			runValidTestCase(
+				t,
+				testCase.ty.QualifiedString(),
+				fmt.Sprintf(
+					`
+                      struct S {}
+
+                      let value: %[1]s = %[2]s
+                      let ref: &%[1]s = &value
+                      let deref: %[1]s = *ref
+                    `,
+					testCase.ty,
+					testCase.initializer,
+				),
+				testCase.ty,
+			)
+		}
+
+		// Dictionaries of structs cannot be dereferenced.
+		runInvalidTestCase(
+			t,
+			"{Int: S}",
+			`
+				struct S {}
+
+				let dict: {Int: S} = {
+					1: S() ,
+					2: S()
+				}
+				let ref: &{Int: S} = &dict
+				let deref: {Int: S} = *ref
+            `,
+		)
+
+		runInvalidTestCase(
+			t,
+			"{Int: AnyStruct}",
+			`
+				struct S {}
+
+				let dict: {Int: AnyStruct} = {
+					1: S() ,
+					2: S()
+				}
+				let ref: &{Int: AnyStruct} = &dict
+				let deref: {Int: AnyStruct} = *ref
+            `,
+		)
+
+		// Dictionaries of resources cannot be dereferenced.
+		runInvalidTestCase(
+			t,
+			"{Int: Resource}",
+			`
+              resource R {}
+
+              fun test() {
+                  let dict: @{Int: R} <- {
+                      1: <-create R(),
+                      2: <-create R()
+                  }
+                  let ref: &{Int: R} = &dict
+                  let deref: @{Int: R} <- *ref
+                  destroy dict
+                  destroy deref
+              }
+            `,
+		)
+
+		// Dictionaries with composite typed keys cannot be dereferenced.
+		runInvalidTestCase(
+			t,
+			"{Enum: Int}",
+			`
+                access(all) enum E:Int {
+                    access(all) case first
+                }
+
+                access(all) fun main() {
+                    var dict = {E.first: 0}
+                    var ref = &dict as &{E: Int}
+                    var deref = *ref
+                }
+            `,
+		)
+	})
+
+	runInvalidTestCase(
+		t,
+		"Resource",
+		`
+          resource interface I {
+              fun foo()
+          }
+
+          resource R: I {
+              fun foo() {}
+          }
+
+          fun test() {
+              let r <- create R()
+              let ref = &r as &{I}
+              let deref <- *ref
+              destroy r
+              destroy deref
+          }
+        `,
+	)
+
+	runInvalidTestCase(
+		t,
+		"Struct",
+		`
+          struct S {}
+
+          fun test() {
+              let s = S()
+              let ref = &s as &S
+              let deref = *ref
+          }
+        `,
+	)
+
+	t.Run("built-in", func(t *testing.T) {
+
+		t.Parallel()
+
+		runInvalidTestCase(
+			t,
+			"Account",
+			`
+              fun test(ref: &Account): Account {
+                  return *ref
+              }
+            `,
+		)
+	})
+
+	t.Run("Optional", func(t *testing.T) {
+		t.Parallel()
+
+		runValidTestCase(
+			t,
+			"valid",
+			`
+              let ref: &Int? = &1 as &Int
+              let deref = *ref
+            `,
+			&sema.OptionalType{
+				Type: sema.IntType,
+			},
+		)
+
+		runInvalidTestCase(
+			t,
+			"invalid",
+			`
+              struct S {}
+
+              fun test() {
+                  let s = S()
+                  let ref: &S? = &s as &S
+                  let deref = *ref
+              }
+            `,
+		)
+	})
+
+	runInvalidTestCase(
+		t,
+		"non-reference",
+		`
+          fun test(foo: Int): AnyStruct {
+              return *foo
+          }
+        `,
+	)
+
+	t.Run("invalid type", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let x = *y
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+}
+
+func TestCheckReferenceRequiredTypeAnnotation(t *testing.T) {
+	t.Parallel()
+
+	test := func(
+		t *testing.T,
+		gen func(expr, ty string) (string, string),
+		nestingLevel int,
+	) {
+
+		test := func(
+			t *testing.T,
+			expr, ty string,
+			check func(t *testing.T, requiresTypeAnnotation bool, err error),
+		) {
+			expr, ty = gen(expr, ty)
+
+			t.Run("argument", func(t *testing.T) {
+				t.Parallel()
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                            entitlement X
+                            entitlement Y
+
+                            fun test(_ v: %s) {}
+
+                            let x = test(%s)
+                        `,
+						ty,
+						expr,
+					),
+				)
+				check(t, true, err)
+			})
+
+			t.Run("variable declaration", func(t *testing.T) {
+				t.Parallel()
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                            entitlement X
+                            entitlement Y
+
+                            let x: %s = %s
+                        `,
+						ty,
+						expr,
+					),
+				)
+				check(t, false, err)
+			})
+
+			t.Run("self field assignment", func(t *testing.T) {
+				t.Parallel()
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                            entitlement X
+                            entitlement Y
+
+                            struct S {
+                                let v: %s
+
+                                init() {
+                                    self.v = %s
+                                }
+                            }
+                        `,
+						ty,
+						expr,
+					),
+				)
+				check(t, false, err)
+			})
+
+			t.Run("external field assignment", func(t *testing.T) {
+				t.Parallel()
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                            entitlement X
+                            entitlement Y
+
+                            struct S {
+                                var v: %s?
+
+                                init() {
+                                    self.v = nil
+                                }
+                            }
+ 
+                            fun test() {
+                                let s = S()
+                                s.v = %s
+                            }
+                        `,
+						ty,
+						expr,
+					),
+				)
+				check(t, true, err)
+			})
+		}
+
+		t.Run("missing type annotation", func(t *testing.T) {
+			t.Parallel()
+
+			test(t,
+				"&1",
+				"&Int",
+				func(t *testing.T, requiresTypeAnnotation bool, err error) {
+
+					if requiresTypeAnnotation {
+
+						errs := RequireCheckerErrors(t, err, 1+nestingLevel)
+
+						assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
+				},
+			)
+		})
+
+		t.Run("missing type annotation, with authorization", func(t *testing.T) {
+			t.Parallel()
+
+			test(t,
+				"&1",
+				"auth(X) &Int",
+				func(t *testing.T, requiresTypeAnnotation bool, err error) {
+
+					if requiresTypeAnnotation {
+
+						errs := RequireCheckerErrors(t, err, 1+nestingLevel)
+
+						assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
+				},
+			)
+		})
+
+		t.Run("matching type annotation", func(t *testing.T) {
+			t.Parallel()
+
+			test(t,
+				"&1 as &Int",
+				"&Int",
+				func(t *testing.T, _ bool, err error) {
+
+					require.NoError(t, err)
+				},
+			)
+		})
+
+		t.Run("matching type annotation, with authorization", func(t *testing.T) {
+			t.Parallel()
+
+			test(
+				t,
+				"&1 as auth(X) &Int",
+				"auth(X) &Int",
+				func(t *testing.T, _ bool, err error) {
+
+					require.NoError(t, err)
+				},
+			)
+		})
+
+		t.Run("non-matching type annotation, reference with different authorization", func(t *testing.T) {
+			t.Parallel()
+
+			test(
+				t,
+				"&1 as auth(Y) &Int",
+				"auth(X) &Int",
+				func(t *testing.T, _ bool, err error) {
+
+					errs := RequireCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				},
+			)
+		})
+
+		t.Run("non-matching type, non-reference", func(t *testing.T) {
+			t.Parallel()
+
+			test(
+				t,
+				"1",
+				"&Int",
+				func(t *testing.T, _ bool, err error) {
+
+					errs := RequireCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				},
+			)
+
+		})
+	}
+
+	t.Run("top-level", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			func(expr, ty string) (string, string) {
+				return expr, ty
+			},
+			0,
+		)
+	})
+
+	t.Run("nested, array", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			func(expr, ty string) (string, string) {
+				return fmt.Sprintf("[%s]", expr),
+					fmt.Sprintf("[%s]", ty)
+			},
+			1,
+		)
+	})
+
+	t.Run("nested, dictionary", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			func(expr, ty string) (string, string) {
+				return fmt.Sprintf("{true: %s}", expr),
+					fmt.Sprintf("{Bool: %s}", ty)
+			},
+			1,
+		)
+	})
+
+	t.Run("double nested, array", func(t *testing.T) {
+		t.Parallel()
+
+		test(t,
+			func(expr, ty string) (string, string) {
+				return fmt.Sprintf("[[%s]]", expr),
+					fmt.Sprintf("[[%s]]", ty)
+			},
+			2,
+		)
+	})
+}
+
+func TestCheckOptionalReference(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nested optional reference", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                var dict: {String: Foo?} = {}
+                var ref: (&Foo)?? = &dict["foo"] as &Foo??
+            }
+
+            struct Foo {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("reference to optional", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                var dict: {String: Foo} = {}
+                var ref: &(Foo?) = &dict["foo"] as &(Foo?)
+            }
+
+            struct Foo {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[0])
+	})
+
+	t.Run("reference to nested optional", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun main() {
+                var dict: {String: Foo?} = {}
+                var ref: &(Foo??) = &dict["foo"] as &(Foo??)
+            }
+
+            struct Foo {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ReferenceToAnOptionalError{}, errs[0])
 	})
 }

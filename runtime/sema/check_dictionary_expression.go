@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ package sema
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
 )
 
 func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpression) Type {
@@ -51,12 +50,10 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 			// NOTE: important to check move after each type check,
 			// not combined after both type checks!
 
-			entryKeyType := checker.VisitExpression(entry.Key, keyType)
-			checker.checkVariableMove(entry.Key)
+			entryKeyType := checker.VisitExpression(entry.Key, expression, keyType)
 			checker.checkResourceMoveOperation(entry.Key, entryKeyType)
 
-			entryValueType := checker.VisitExpression(entry.Value, valueType)
-			checker.checkVariableMove(entry.Value)
+			entryValueType := checker.VisitExpression(entry.Value, expression, valueType)
 			checker.checkResourceMoveOperation(entry.Value, entryValueType)
 
 			entryTypes[i] = DictionaryEntryType{
@@ -88,7 +85,7 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		}
 	}
 
-	if !IsValidDictionaryKeyType(keyType) {
+	if !IsSubType(keyType, HashableStructType) {
 		checker.report(
 			&InvalidDictionaryKeyTypeError{
 				Type:  keyType,
@@ -111,22 +108,4 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 	)
 
 	return dictionaryType
-}
-
-func IsValidDictionaryKeyType(keyType Type) bool {
-	// TODO: implement support for more built-in types here and in interpreter
-	switch keyType := keyType.(type) {
-	case *AddressType:
-		return true
-	case *CompositeType:
-		return keyType.Kind == common.CompositeKindEnum
-	default:
-		switch keyType {
-		case NeverType, BoolType, CharacterType, StringType, MetaType:
-			return true
-		default:
-			return IsSameTypeKind(keyType, NumberType) ||
-				IsSameTypeKind(keyType, PathType)
-		}
-	}
 }

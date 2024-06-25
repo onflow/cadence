@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,22 +33,14 @@ var account_CapabilitiesStaticType StaticType = PrimitiveStaticTypeAccount_Capab
 func NewAccountCapabilitiesValue(
 	gauge common.MemoryGauge,
 	address AddressValue,
-	getFunction FunctionValue,
-	borrowFunction FunctionValue,
-	existsFunction FunctionValue,
-	publishFunction FunctionValue,
-	unpublishFunction FunctionValue,
+	getFunction BoundFunctionGenerator,
+	borrowFunction BoundFunctionGenerator,
+	existsFunction BoundFunctionGenerator,
+	publishFunction BoundFunctionGenerator,
+	unpublishFunction BoundFunctionGenerator,
 	storageCapabilitiesConstructor func() Value,
 	accountCapabilitiesConstructor func() Value,
 ) Value {
-
-	fields := map[string]Value{
-		sema.Account_CapabilitiesTypeGetFunctionName:       getFunction,
-		sema.Account_CapabilitiesTypeBorrowFunctionName:    borrowFunction,
-		sema.Account_CapabilitiesTypeExistsFunctionName:    existsFunction,
-		sema.Account_CapabilitiesTypePublishFunctionName:   publishFunction,
-		sema.Account_CapabilitiesTypeUnpublishFunctionName: unpublishFunction,
-	}
 
 	var storageCapabilities Value
 	var accountCapabilities Value
@@ -72,23 +64,33 @@ func NewAccountCapabilitiesValue(
 	}
 
 	var str string
-	stringer := func(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+	stringer := func(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
 		if str == "" {
-			common.UseMemory(memoryGauge, common.AccountCapabilitiesStringMemoryUsage)
-			addressStr := address.MeteredString(memoryGauge, seenReferences)
+			common.UseMemory(interpreter, common.AccountCapabilitiesStringMemoryUsage)
+			addressStr := address.MeteredString(interpreter, seenReferences, locationRange)
 			str = fmt.Sprintf("Account.Capabilities(%s)", addressStr)
 		}
 		return str
 	}
 
-	return NewSimpleCompositeValue(
+	capabilities := NewSimpleCompositeValue(
 		gauge,
 		account_CapabilitiesTypeID,
 		account_CapabilitiesStaticType,
 		nil,
-		fields,
+		nil,
 		computeField,
 		nil,
 		stringer,
 	)
+
+	capabilities.Fields = map[string]Value{
+		sema.Account_CapabilitiesTypeGetFunctionName:       getFunction(capabilities),
+		sema.Account_CapabilitiesTypeBorrowFunctionName:    borrowFunction(capabilities),
+		sema.Account_CapabilitiesTypeExistsFunctionName:    existsFunction(capabilities),
+		sema.Account_CapabilitiesTypePublishFunctionName:   publishFunction(capabilities),
+		sema.Account_CapabilitiesTypeUnpublishFunctionName: unpublishFunction(capabilities),
+	}
+
+	return capabilities
 }

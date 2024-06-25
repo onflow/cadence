@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import (
 
 func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) (_ struct{}) {
 
-	checker.VisitExpression(statement.Test, BoolType)
+	checker.VisitExpression(statement.Test, statement, BoolType)
 
 	// The body of the loop will maybe be evaluated.
 	// That means that resource invalidations and

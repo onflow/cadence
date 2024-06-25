@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckInvalidCompositeRedeclaringType(t *testing.T) {
@@ -162,47 +161,6 @@ func TestCheckInitializerName(t *testing.T) {
 	}
 }
 
-func TestCheckDestructor(t *testing.T) {
-
-	t.Parallel()
-
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
-
-		var baseType string
-		if kind == common.CompositeKindAttachment {
-			baseType = "for AnyResource"
-		}
-
-		t.Run(kind.Keyword(), func(t *testing.T) {
-
-			_, err := ParseAndCheck(t,
-				fmt.Sprintf(
-					`
-                      %s Test %s {
-                          destroy() {}
-                      }
-                    `,
-					kind.Keyword(),
-					baseType,
-				),
-			)
-
-			switch kind {
-			case common.CompositeKindStructure, common.CompositeKindContract:
-				errs := RequireCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.InvalidDestructorError{}, errs[0])
-
-			case common.CompositeKindResource, common.CompositeKindAttachment:
-				require.NoError(t, err)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-		})
-	}
-}
-
 func TestCheckInvalidUnknownSpecialFunction(t *testing.T) {
 
 	t.Parallel()
@@ -289,16 +247,14 @@ func TestCheckInvalidCompositeFieldNames(t *testing.T) {
 				)
 
 				if isInterface {
+					errs := RequireCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.InvalidNameError{}, errs[0])
+				} else {
 					errs := RequireCheckerErrors(t, err, 2)
 
 					assert.IsType(t, &sema.InvalidNameError{}, errs[0])
-					assert.IsType(t, &sema.InvalidNameError{}, errs[1])
-				} else {
-					errs := RequireCheckerErrors(t, err, 3)
-
-					assert.IsType(t, &sema.InvalidNameError{}, errs[0])
-					assert.IsType(t, &sema.InvalidNameError{}, errs[1])
-					assert.IsType(t, &sema.MissingInitializerError{}, errs[2])
+					assert.IsType(t, &sema.MissingInitializerError{}, errs[1])
 				}
 			})
 		}
@@ -597,7 +553,6 @@ func TestCheckInvalidCompositeSpecialFunction(t *testing.T) {
 					`
                       %s Test %s {
                           init() { X }
-                          destroy() { Y }
                       }
                     `,
 					kind.Keyword(),
@@ -607,17 +562,15 @@ func TestCheckInvalidCompositeSpecialFunction(t *testing.T) {
 
 			switch kind {
 			case common.CompositeKindStructure, common.CompositeKindContract:
-				errs := RequireCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-				assert.IsType(t, &sema.InvalidDestructorError{}, errs[1])
 
 			case common.CompositeKindResource, common.CompositeKindAttachment:
 
-				errs := RequireCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
-				assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -672,7 +625,6 @@ func TestCheckCompositeInitializerSelfUse(t *testing.T) {
 					`
                       %s Test %s {
                           init() { self }
-                          destroy() { self }
                       }
                     `,
 					kind.Keyword(),
@@ -681,18 +633,20 @@ func TestCheckCompositeInitializerSelfUse(t *testing.T) {
 			)
 
 			switch kind {
-			case common.CompositeKindStructure, common.CompositeKindContract, common.CompositeKindAttachment:
-				errs := RequireCheckerErrors(t, err, 1)
+			case common.CompositeKindStructure, common.CompositeKindAttachment:
+				require.NoError(t, err)
 
-				assert.IsType(t, &sema.InvalidDestructorError{}, errs[0])
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			case common.CompositeKindResource:
-				errs := RequireCheckerErrors(t, err, 2)
+				errs := RequireCheckerErrors(t, err, 1)
 
 				// TODO: handle `self` properly
 
 				assert.IsType(t, &sema.ResourceLossError{}, errs[0])
-				assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 
 			default:
 				panic(errors.NewUnreachableError())
@@ -725,8 +679,13 @@ func TestCheckCompositeFunctionSelfUse(t *testing.T) {
 			)
 
 			switch kind {
-			case common.CompositeKindStructure, common.CompositeKindContract, common.CompositeKindAttachment:
+			case common.CompositeKindStructure, common.CompositeKindAttachment:
 				require.NoError(t, err)
+
+			case common.CompositeKindContract:
+				errs := RequireCheckerErrors(t, err, 1)
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, errs[0], &invalidMoveError)
 
 			case common.CompositeKindResource:
 				errs := RequireCheckerErrors(t, err, 1)
@@ -773,25 +732,7 @@ func TestCheckInvalidCompositeMissingInitializer(t *testing.T) {
 	}
 }
 
-func TestCheckInvalidResourceMissingDestructor(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-       resource Test {
-           let test: @Test
-           init(test: @Test) {
-               self.test <- test
-           }
-       }
-    `)
-
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.MissingDestructorError{}, errs[0])
-}
-
-func TestCheckResourceWithDestructor(t *testing.T) {
+func TestCheckResourceWithResourceField(t *testing.T) {
 
 	t.Parallel()
 
@@ -801,10 +742,6 @@ func TestCheckResourceWithDestructor(t *testing.T) {
 
            init(test: @Test) {
                self.test <- test
-           }
-
-           destroy() {
-               destroy self.test
            }
        }
     `)
@@ -836,15 +773,6 @@ func TestCheckInvalidResourceFieldWithMissingResourceAnnotation(t *testing.T) {
                 `
 			}
 
-			destructorBody := ""
-			if !isInterface {
-				destructorBody = `
-                  {
-                      destroy self.test
-                  }
-                `
-			}
-
 			annotationType := "Test"
 			if isInterface {
 				annotationType = "{Test}"
@@ -857,14 +785,11 @@ func TestCheckInvalidResourceFieldWithMissingResourceAnnotation(t *testing.T) {
                           let test: %[2]s
 
                           init(test: @%[2]s) %[3]s
-
-                          destroy() %[4]s
                       }
                     `,
 					interfaceKeyword,
 					annotationType,
 					initializerBody,
-					destructorBody,
 				),
 			)
 
@@ -1320,15 +1245,30 @@ func TestCheckInvalidCompositeFunctionAssignment(t *testing.T) {
 				),
 			)
 
-			errs := RequireCheckerErrors(t, err, 2)
+			if kind == common.CompositeKindResource {
+				errs := RequireCheckerErrors(t, err, 3)
 
-			require.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
-			assert.Equal(t,
-				"foo",
-				errs[0].(*sema.AssignmentToConstantMemberError).Name,
-			)
+				require.IsType(t, &sema.ResourceMethodBindingError{}, errs[0])
 
-			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				require.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[1])
+				assert.Equal(t,
+					"foo",
+					errs[1].(*sema.AssignmentToConstantMemberError).Name,
+				)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+
+			} else {
+				errs := RequireCheckerErrors(t, err, 2)
+
+				require.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
+				assert.Equal(t,
+					"foo",
+					errs[0].(*sema.AssignmentToConstantMemberError).Name,
+				)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			}
 		})
 	}
 }
@@ -1987,221 +1927,6 @@ func TestCheckCompositeReferenceBeforeDeclaration(t *testing.T) {
 	}
 }
 
-func TestCheckInvalidDestructorParameters(t *testing.T) {
-
-	t.Parallel()
-
-	interfacePossibilities := []bool{true, false}
-
-	for _, isInterface := range interfacePossibilities {
-
-		interfaceKeyword := ""
-		if isInterface {
-			interfaceKeyword = "interface"
-		}
-
-		destructorBody := ""
-		if !isInterface {
-			destructorBody = "{}"
-		}
-
-		t.Run(interfaceKeyword, func(t *testing.T) {
-
-			_, err := ParseAndCheck(t,
-				fmt.Sprintf(
-					`
-                      resource %[1]s Test {
-                          destroy(x: Int) %[2]s
-                      }
-                    `,
-					interfaceKeyword,
-					destructorBody,
-				),
-			)
-
-			errs := RequireCheckerErrors(t, err, 1)
-
-			assert.IsType(t, &sema.InvalidDestructorParametersError{}, errs[0])
-		})
-	}
-}
-
-func TestCheckInvalidResourceWithDestructorMissingFieldInvalidation(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-       resource Test {
-           let test: @Test
-
-           init(test: @Test) {
-               self.test <- test
-           }
-
-           destroy() {}
-       }
-    `)
-
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
-}
-
-// This tests prevents a potential regression in `checkResourceFieldsInvalidated`:
-// See https://github.com/dapperlabs/flow-go/issues/2533
-//
-// The function contained a bug in which field invalidation was skipped for all remaining members
-// once a non-resource member was encountered, instead of just skipping the non-resource member
-// and continuing the check for the remaining members.
-
-func TestCheckInvalidResourceWithDestructorMissingFieldInvalidationFirstFieldNonResource(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-       resource Test {
-           let a: Int
-           let b: @Test
-
-           init(b: @Test) {
-               self.a = 1
-               self.b <- b
-           }
-
-           destroy() {}
-       }
-    `)
-
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
-}
-
-func TestCheckInvalidResourceWithDestructorMissingDefinitiveFieldInvalidation(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-       resource Test {
-           let test: @Test
-
-           init(test: @Test) {
-               self.test <- test
-           }
-
-           destroy() {
-               if false {
-                   destroy self.test
-               }
-           }
-       }
-    `)
-
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ResourceFieldNotInvalidatedError{}, errs[0])
-}
-
-func TestCheckResourceWithDestructorAndStructField(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-       struct S {}
-
-       resource Test {
-           let s: S
-
-           init(s: S) {
-               self.s = s
-           }
-
-           destroy() {}
-       }
-    `)
-
-	require.NoError(t, err)
-}
-
-func TestCheckInvalidResourceDestructorMoveInvalidation(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-       resource Test {
-           let test: @Test
-
-           init(test: @Test) {
-               self.test <- test
-           }
-
-           destroy() {
-               absorb(<-self.test)
-               absorb(<-self.test)
-           }
-       }
-
-       fun absorb(_ test: @Test) {
-           destroy test
-       }
-    `)
-
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
-}
-
-func TestCheckInvalidResourceDestructorRepeatedDestruction(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-       resource Test {
-           let test: @Test
-
-           init(test: @Test) {
-               self.test <- test
-           }
-
-           destroy() {
-               destroy self.test
-               destroy self.test
-           }
-       }
-    `)
-
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
-}
-
-func TestCheckInvalidResourceDestructorCapturing(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-       var duplicate: (fun(): @Test)? = nil
-
-       resource Test {
-           let test: @Test
-
-           init(test: @Test) {
-               self.test <- test
-           }
-
-           destroy() {
-               duplicate = fun (): @Test {
-                   return <-self.test
-               }
-           }
-       }
-    `)
-
-	errs := RequireCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
-}
-
 func TestCheckInvalidStructureFunctionWithMissingBody(t *testing.T) {
 
 	t.Parallel()
@@ -2247,14 +1972,14 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 					firstTypeAnnotation := "A"
 					if firstIsInterface {
 						firstInterfaceKeyword = "interface"
-						firstTypeAnnotation = AsInterfaceType("A", firstKind)
+						firstTypeAnnotation = "{A}"
 					}
 
 					secondInterfaceKeyword := ""
 					secondTypeAnnotation := "B"
 					if secondIsInterface {
 						secondInterfaceKeyword = "interface"
-						secondTypeAnnotation = AsInterfaceType("B", secondKind)
+						secondTypeAnnotation = "{B}"
 					}
 
 					testName := fmt.Sprintf(
@@ -2266,19 +1991,36 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 					)
 
 					firstBody := ""
+					firstCallableFunc := "fun foo()"
 					if !firstIsInterface {
+						usage := "b"
+						if secondKind == common.CompositeKindContract {
+							usage += ".foo()"
+						}
+
 						firstBody = fmt.Sprintf(
-							"{ %s b }",
+							"{ %s %s }",
 							secondKind.DestructionKeyword(),
+							usage,
 						)
+
+						firstCallableFunc += " {}"
 					}
 
 					secondBody := ""
+					secondCallableFunc := "fun foo()"
 					if !secondIsInterface {
+						usage := "a"
+						if firstKind == common.CompositeKindContract {
+							usage += ".foo()"
+						}
+
 						secondBody = fmt.Sprintf(
-							"{ %s a }",
+							"{ %s %s }",
 							firstKind.DestructionKeyword(),
+							usage,
 						)
+						secondCallableFunc += " {}"
 					}
 
 					t.Run(testName, func(t *testing.T) {
@@ -2287,10 +2029,12 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 							`
                               %[1]s %[2]s A {
                                   fun use(_ b: %[3]s%[4]s) %[5]s
+                                  %[11]s
                               }
 
                               %[6]s %[7]s B {
                                   fun use(_ a: %[8]s%[9]s) %[10]s
+                                  %[12]s
                               }
                             `,
 							firstKind.Keyword(),
@@ -2303,6 +2047,8 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 							firstKind.Annotation(),
 							firstTypeAnnotation,
 							secondBody,
+							firstCallableFunc,
+							secondCallableFunc,
 						)
 
 						_, err := ParseAndCheck(t, code)
@@ -2519,4 +2265,36 @@ func TestCheckNativeFieldDeclaration(t *testing.T) {
 	assert.IsType(t, &sema.InvalidNativeModifierError{}, errs[0])
 	// TODO: native fields need no initializer
 	assert.IsType(t, &sema.MissingInitializerError{}, errs[1])
+}
+
+func TestCheckKeywordsAsFieldNames(t *testing.T) {
+
+	t.Parallel()
+
+	for _, keyword := range []string{
+		"event",
+		"contract",
+		"default",
+	} {
+		keyword := keyword
+
+		t.Run(keyword, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(`
+                    contract C {
+                        let %[1]s: Int
+
+                        init() {
+                            self.%[1]s = 5
+                        }
+                    }`,
+					keyword,
+				),
+			)
+
+			require.NoError(t, err)
+		})
+	}
 }

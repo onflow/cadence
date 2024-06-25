@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ func TestFunctionStaticType(t *testing.T) {
 			sema.BoolTypeAnnotation,
 		)
 
-		hostFunctionValue := NewHostFunctionValue(
+		hostFunctionValue := NewStaticHostFunctionValue(
 			inter,
 			hostFunctionType,
 			hostFunction,
@@ -65,6 +65,14 @@ func TestFunctionStaticType(t *testing.T) {
 
 		inter := newTestInterpreter(t)
 
+		inter.SharedState.Config.CompositeTypeHandler = func(location common.Location, typeID TypeID) *sema.CompositeType {
+			return &sema.CompositeType{
+				Location:   utils.TestLocation,
+				Identifier: "foo",
+				Kind:       common.CompositeKindStructure,
+			}
+		}
+
 		hostFunction := func(_ Invocation) Value {
 			return TrueValue
 		}
@@ -75,13 +83,13 @@ func TestFunctionStaticType(t *testing.T) {
 			sema.BoolTypeAnnotation,
 		)
 
-		hostFunctionValue := NewHostFunctionValue(
+		hostFunctionValue := NewStaticHostFunctionValue(
 			inter,
 			hostFunctionType,
 			hostFunction,
 		)
 
-		compositeValue := NewCompositeValue(
+		var compositeValue Value = NewCompositeValue(
 			inter,
 			EmptyLocationRange,
 			utils.TestLocation,
@@ -91,12 +99,10 @@ func TestFunctionStaticType(t *testing.T) {
 			common.MustBytesToAddress([]byte{0}),
 		)
 
-		var self MemberAccessibleValue = compositeValue
-
 		boundFunctionValue := NewBoundFunctionValue(
 			inter,
 			hostFunctionValue,
-			&self,
+			&compositeValue,
 			nil,
 			nil,
 		)

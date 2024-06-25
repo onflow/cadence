@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -499,6 +499,111 @@ func TestParseAdvancedExpression(t *testing.T) {
 					},
 				},
 				StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+			},
+			result,
+		)
+	})
+
+	t.Run("move operator, force casted", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("<-x as! @T")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.UnaryExpression{
+				Operation: ast.OperationMove,
+				Expression: &ast.CastingExpression{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					TypeAnnotation: &ast.TypeAnnotation{
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "T",
+								Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+							},
+						},
+						StartPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						IsResource: true,
+					},
+					Operation: ast.OperationForceCast,
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("move operator, failable casted", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("<-x as? @T")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.UnaryExpression{
+				Operation: ast.OperationMove,
+				Expression: &ast.CastingExpression{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					TypeAnnotation: &ast.TypeAnnotation{
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "T",
+								Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+							},
+						},
+						StartPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						IsResource: true,
+					},
+					Operation: ast.OperationFailableCast,
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("move operator, casted", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseExpression("<-x as @T")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.UnaryExpression{
+				Operation: ast.OperationMove,
+				Expression: &ast.CastingExpression{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					TypeAnnotation: &ast.TypeAnnotation{
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "T",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+							},
+						},
+						StartPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						IsResource: true,
+					},
+					Operation: ast.OperationCast,
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 			},
 			result,
 		)
@@ -2201,6 +2306,43 @@ func TestParseBlockComment(t *testing.T) {
 	})
 }
 
+func TestParseMulInfixExpression(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := testParseExpression(" 1 ** 2")
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		&ast.BinaryExpression{
+			Operation: ast.OperationMul,
+			Left: &ast.IntegerExpression{
+				PositiveLiteral: []byte("1"),
+				Value:           big.NewInt(1),
+				Base:            10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
+			},
+			Right: &ast.UnaryExpression{
+				Operation: ast.OperationMul,
+				Expression: &ast.IntegerExpression{
+					PositiveLiteral: []byte("2"),
+					Value:           big.NewInt(2),
+					Base:            10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+						EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+			},
+		},
+		result,
+	)
+}
+
 func BenchmarkParseInfix(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
@@ -2843,93 +2985,12 @@ func TestParseAttach(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseExpression("attach E() to r with (X, Y)")
-		require.Empty(t, errs)
-
-		utils.AssertEqualWithDiff(t,
-			&ast.AttachExpression{
-				Base: &ast.IdentifierExpression{
-					Identifier: ast.Identifier{
-						Identifier: "r",
-						Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
-					},
-				},
-				Attachment: &ast.InvocationExpression{
-					InvokedExpression: &ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "E",
-							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
-						},
-					},
-					ArgumentsStartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-					EndPos:            ast.Position{Line: 1, Column: 9, Offset: 9},
-				},
-				Entitlements: []*ast.NominalType{
-					ast.NewNominalType(
-						nil,
-						ast.Identifier{
-							Identifier: "X",
-							Pos:        ast.Position{Line: 1, Column: 22, Offset: 22},
-						},
-						nil,
-					),
-					ast.NewNominalType(
-						nil,
-						ast.Identifier{
-							Identifier: "Y",
-							Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
-						},
-						nil,
-					),
-				},
-				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-			},
-			result,
-		)
-	})
-
-	t.Run("with provided entitlements not closed", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, errs := testParseExpression("attach E() to r with (X, Y")
+		_, errs := testParseExpression("attach E() to r with (X)")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "invalid end of input, expected ')'",
-					Pos:     ast.Position{Offset: 26, Line: 1, Column: 26},
-				},
-			},
-			errs,
-		)
-	})
-
-	t.Run("with provided entitlements extra comma", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, errs := testParseExpression("attach E() to r with (X, Y,)")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "missing type after separator",
-					Pos:     ast.Position{Offset: 27, Line: 1, Column: 27},
-				},
-			},
-			errs,
-		)
-	})
-
-	t.Run("with provided entitlements unopened", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, errs := testParseExpression("attach E() to r with X, Y)")
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "expected token '('",
-					Pos:     ast.Position{Offset: 21, Line: 1, Column: 21},
+					Message: "unexpected token: identifier",
+					Pos:     ast.Position{Offset: 16, Line: 1, Column: 16},
 				},
 			},
 			errs,
@@ -4555,6 +4616,24 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("restricted type argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression("foo<X{T}>")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&RestrictedTypeError{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseBoolExpression(t *testing.T) {
@@ -5012,40 +5091,95 @@ func TestParseUnaryExpression(t *testing.T) {
 
 	t.Parallel()
 
-	const code = `
-	    let foo = -boo
-	`
-	result, errs := testParseProgram(code)
-	require.Empty(t, errs)
+	t.Run("minus", func(t *testing.T) {
 
-	utils.AssertEqualWithDiff(t,
-		[]ast.Declaration{
-			&ast.VariableDeclaration{
-				Access:     ast.AccessNotSpecified,
-				IsConstant: true,
-				Identifier: ast.Identifier{
-					Identifier: "foo",
-					Pos:        ast.Position{Offset: 10, Line: 2, Column: 9},
-				},
-				Transfer: &ast.Transfer{
-					Operation: ast.TransferOperationCopy,
-					Pos:       ast.Position{Offset: 14, Line: 2, Column: 13},
-				},
-				Value: &ast.UnaryExpression{
-					Operation: ast.OperationMinus,
-					Expression: &ast.IdentifierExpression{
-						Identifier: ast.Identifier{
-							Identifier: "boo",
-							Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
-						},
+		t.Parallel()
+
+		const code = ` - boo`
+
+		result, errs := testParseExpression(code)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.UnaryExpression{
+				Operation: ast.OperationMinus,
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "boo",
+						Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
 					},
-					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
-				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
+				StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 			},
-		},
-		result.Declarations(),
-	)
+			result,
+		)
+	})
+
+	t.Run("negate", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = ` ! boo`
+
+		result, errs := testParseExpression(code)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.UnaryExpression{
+				Operation: ast.OperationNegate,
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "boo",
+						Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
+				},
+				StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+			},
+			result,
+		)
+	})
+
+	t.Run("star", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = ` * boo`
+
+		result, errs := testParseExpression(code)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.UnaryExpression{
+				Operation: ast.OperationMul,
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "boo",
+						Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
+					},
+				},
+				StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+			},
+			result,
+		)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		const code = ` % boo`
+
+		_, errs := testParseExpression(code)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "unexpected token in expression: '%'",
+					Pos:     ast.Position{Line: 1, Column: 2, Offset: 2},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseOrExpression(t *testing.T) {
@@ -6362,7 +6496,7 @@ func TestParseIdentifiers(t *testing.T) {
 func TestParseHardKeywords(t *testing.T) {
 	t.Parallel()
 
-	testParseIdentifiersWith(t, hardKeywords, func(t *testing.T, keyword string, err error) {
+	testParseIdentifiersWith(t, HardKeywords, func(t *testing.T, keyword string, err error) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -6378,7 +6512,7 @@ func TestParseHardKeywords(t *testing.T) {
 func TestParseSoftKeywords(t *testing.T) {
 	t.Parallel()
 
-	testParseIdentifiersWith(t, softKeywords, func(t *testing.T, _ string, err error) {
+	testParseIdentifiersWith(t, SoftKeywords, func(t *testing.T, _ string, err error) {
 		require.Empty(t, err)
 	})
 }

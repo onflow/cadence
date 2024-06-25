@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,12 +32,11 @@ import (
 
 type Access interface {
 	isAccess()
+	IsPrimitiveAccess() bool
 	ID() TypeID
 	String() string
 	QualifiedString() string
 	Equal(other Access) bool
-	// IsLessPermissiveThan returns whether receiver access is less permissive than argument access
-	IsLessPermissiveThan(Access) bool
 	// PermitsAccess returns whether receiver access permits argument access
 	PermitsAccess(Access) bool
 }
@@ -52,6 +51,7 @@ const (
 // EntitlementSetAccess
 
 type EntitlementSetAccess struct {
+	_            common.Incomparable
 	Entitlements *EntitlementOrderedSet
 	SetKind      EntitlementSetKind
 }
@@ -72,7 +72,25 @@ func NewEntitlementSetAccess(
 	}
 }
 
+func NewAccessFromEntitlementOrderedSet(
+	set *EntitlementOrderedSet,
+	setKind EntitlementSetKind,
+) Access {
+	if set == nil || set.Len() == 0 {
+		return UnauthorizedAccess
+	}
+
+	return EntitlementSetAccess{
+		Entitlements: set,
+		SetKind:      setKind,
+	}
+}
+
 func (EntitlementSetAccess) isAccess() {}
+
+func (EntitlementSetAccess) IsPrimitiveAccess() bool {
+	return false
+}
 
 func (e EntitlementSetAccess) ID() TypeID {
 	entitlementTypeIDs := make([]TypeID, 0, e.Entitlements.Len())
@@ -232,18 +250,6 @@ func (e EntitlementSetAccess) PermitsAccess(other Access) bool {
 	}
 }
 
-func (e EntitlementSetAccess) IsLessPermissiveThan(other Access) bool {
-	switch otherAccess := other.(type) {
-	case PrimitiveAccess:
-		return ast.PrimitiveAccess(otherAccess) != ast.AccessSelf
-	case EntitlementSetAccess:
-		// subset check returns true on equality, and we want this function to be false on equality, so invert the >= check
-		return !e.PermitsAccess(otherAccess)
-	default:
-		return true
-	}
-}
-
 // EntitlementMapAccess
 
 type EntitlementMapAccess struct {
@@ -265,6 +271,10 @@ func NewEntitlementMapAccess(mapType *EntitlementMapType) *EntitlementMapAccess 
 }
 
 func (*EntitlementMapAccess) isAccess() {}
+
+func (*EntitlementMapAccess) IsPrimitiveAccess() bool {
+	return false
+}
 
 func (e *EntitlementMapAccess) ID() TypeID {
 	return e.Type.ID()
@@ -316,22 +326,16 @@ func (e *EntitlementMapAccess) PermitsAccess(other Access) bool {
 	// the input entitlement. It is only safe for `R` to give out these entitlements if it actually
 	// possesses them, so we require the initializing value to have every possible entitlement that may
 	// be produced by the map
+	//
+	// However, if the map is or includes the `Identity`, there is no possible set that is permitted by
+	// this map, since the theoretical codomain of the Identity map is infinite
 	case EntitlementSetAccess:
+		if e.Type.IncludesIdentity {
+			return false
+		}
 		return e.Codomain().PermitsAccess(otherAccess)
 	default:
 		return false
-	}
-}
-
-func (e *EntitlementMapAccess) IsLessPermissiveThan(other Access) bool {
-	switch otherAccess := other.(type) {
-	case PrimitiveAccess:
-		return ast.PrimitiveAccess(otherAccess) != ast.AccessSelf
-	case *EntitlementMapAccess:
-		// this should be false on equality
-		return !e.Type.Equal(otherAccess.Type)
-	default:
-		return true
 	}
 }
 
@@ -348,7 +352,7 @@ func (e *EntitlementMapAccess) Domain() EntitlementSetAccess {
 	return e.domain
 }
 
-func (e *EntitlementMapAccess) Codomain() EntitlementSetAccess {
+func (e *EntitlementMapAccess) Codomain() Access {
 	e.codomainOnce.Do(func() {
 		codomain := common.MappedSliceWithNoDuplicates(
 			e.Type.Relations,
@@ -435,6 +439,10 @@ var _ Access = PrimitiveAccess(0)
 
 func (PrimitiveAccess) isAccess() {}
 
+func (PrimitiveAccess) IsPrimitiveAccess() bool {
+	return true
+}
+
 func (PrimitiveAccess) ID() TypeID {
 	panic(errors.NewUnreachableError())
 }
@@ -455,15 +463,10 @@ func (a PrimitiveAccess) Equal(other Access) bool {
 	return false
 }
 
-func (a PrimitiveAccess) IsLessPermissiveThan(otherAccess Access) bool {
-	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
-		return ast.PrimitiveAccess(a) < ast.PrimitiveAccess(otherPrimitive)
-	}
-	// primitive and entitlement access should never mix in interface conformance checks
-	return true
-}
-
 func (a PrimitiveAccess) PermitsAccess(otherAccess Access) bool {
+	if a == InaccessibleAccess {
+		return otherAccess == InaccessibleAccess
+	}
 	if otherPrimitive, ok := otherAccess.(PrimitiveAccess); ok {
 		return ast.PrimitiveAccess(a) >= ast.PrimitiveAccess(otherPrimitive)
 	}

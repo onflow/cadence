@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -91,6 +91,7 @@ func TestInspectValue(t *testing.T) {
 				inspectedValues = append(inspectedValues, value)
 				return true
 			},
+			EmptyLocationRange,
 		)
 
 		AssertValueSlicesEqual(
@@ -119,6 +120,7 @@ func TestInspectValue(t *testing.T) {
 				inspectedValues = append(inspectedValues, value)
 				return true
 			},
+			EmptyLocationRange,
 		)
 
 		AssertValueSlicesEqual(

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -166,7 +166,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				}
 				return parseEntitlementOrMappingDeclaration(p, access, accessPos, docString)
 
-			case keywordAttachment:
+			case KeywordAttachment:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindAttachment)
 				if err != nil {
 					return nil, err
@@ -206,7 +206,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 			case KeywordView:
 				if purity != ast.FunctionPurityUnspecified {
-					return nil, p.syntaxError("invalid second view modifier")
+					p.report(p.syntaxError("invalid second view modifier"))
 				}
 
 				pos := p.current.StartPos
@@ -215,10 +215,15 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 				continue
 
 			case KeywordPub:
-				return nil, p.syntaxErrorWithSuggestedFix("`pub` is no longer a valid access keyword", "`access(all)`")
+				err := handlePub(p)
+				if err != nil {
+					return nil, err
+				}
+				continue
 
 			case KeywordPriv:
-				return nil, p.syntaxErrorWithSuggestedFix("`priv` is no longer a valid access keyword", "`access(self)`")
+				handlePriv(p)
+				continue
 
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
@@ -273,6 +278,67 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 
 		return nil, nil
 	}
+}
+
+func handlePriv(p *parser) {
+	p.report(p.syntaxErrorWithSuggestedFix(
+		"`priv` is no longer a valid access keyword",
+		"access(self)",
+	))
+	p.next()
+}
+
+func handlePub(p *parser) error {
+	pubToken := p.current
+
+	p.nextSemanticToken()
+
+	// Try to parse `(set)` if given
+	if !p.current.Is(lexer.TokenParenOpen) {
+		p.report(NewSyntaxErrorWithSuggestedReplacement(
+			pubToken.Range,
+			"`pub` is no longer a valid access keyword",
+			"access(all)",
+		))
+		return nil
+	}
+
+	// Skip the opening paren
+	p.nextSemanticToken()
+
+	const keywordSet = "set"
+
+	if !p.current.Is(lexer.TokenIdentifier) {
+		return p.syntaxError(
+			"expected keyword %q, got %s",
+			keywordSet,
+			p.current.Type,
+		)
+	}
+
+	keyword := p.currentTokenSource()
+	if string(keyword) != keywordSet {
+		return p.syntaxError(
+			"expected keyword %q, got %q",
+			keywordSet,
+			keyword,
+		)
+	}
+
+	// Skip the `set` keyword
+	p.nextSemanticToken()
+
+	_, err := p.mustOne(lexer.TokenParenClose)
+	if err != nil {
+		return err
+	}
+
+	p.report(NewSyntaxError(
+		pubToken.StartPos,
+		"`pub(set)` is no longer a valid access keyword",
+	))
+
+	return nil
 }
 
 var enumeratedAccessModifierKeywords = common.EnumerateWords(
@@ -399,6 +465,20 @@ func parseAccess(p *parser) (ast.Access, error) {
 			access = ast.AccessSelf
 			// Skip the keyword
 			p.nextSemanticToken()
+
+		case KeywordMapping:
+
+			keywordPos := p.current.StartPos
+			// Skip the keyword
+			p.nextSemanticToken()
+
+			entitlementMapName, err := parseNominalType(p, lowestBindingPower)
+			if err != nil {
+				return ast.AccessNotSpecified, err
+			}
+			access = ast.NewMappedAccess(entitlementMapName, keywordPos)
+
+			p.skipSpaceAndComments()
 
 		default:
 			entitlements, err := parseEntitlementList(p)
@@ -861,7 +941,9 @@ func parseEventDeclaration(
 	// Skip the identifier
 	p.next()
 
-	parameterList, err := parseParameterList(p)
+	// if this is a `ResourceDestroyed` event (i.e., a default event declaration), parse default arguments
+	parseDefaultArguments := ast.IsResourceDestructionDefaultEvent(identifier.Identifier)
+	parameterList, err := parseParameterList(p, parseDefaultArguments)
 	if err != nil {
 		return nil, err
 	}
@@ -1328,47 +1410,6 @@ func parseCompositeOrInterfaceDeclaration(
 	}
 }
 
-func parseRequiredEntitlement(p *parser) (*ast.NominalType, error) {
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordRequire) {
-		return nil, p.syntaxError(
-			"expected 'require', got %s",
-			p.current.Type,
-		)
-	}
-
-	// skip the `require` keyword
-	p.nextSemanticToken()
-
-	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordEntitlement) {
-		return nil, p.syntaxError(
-			"expected 'entitlement', got %s",
-			p.current.Type,
-		)
-	}
-
-	// skip the `entitlement` keyword
-	p.nextSemanticToken()
-
-	return rejectAccessKeywords(p, func() (*ast.NominalType, error) {
-		return parseNominalType(p, lowestBindingPower)
-	})
-}
-
-func parseRequiredEntitlements(p *parser) ([]*ast.NominalType, error) {
-	var requiredEntitlements []*ast.NominalType
-
-	for p.isToken(p.current, lexer.TokenIdentifier, KeywordRequire) {
-		requiredEntitlement, err := parseRequiredEntitlement(p)
-		if err != nil {
-			return nil, err
-		}
-		requiredEntitlements = append(requiredEntitlements, requiredEntitlement)
-		p.skipSpaceAndComments()
-	}
-
-	return requiredEntitlements, nil
-}
-
 func parseAttachmentDeclaration(
 	p *parser,
 	access ast.Access,
@@ -1434,13 +1475,6 @@ func parseAttachmentDeclaration(
 
 	p.skipSpaceAndComments()
 
-	requiredEntitlements, err := parseRequiredEntitlements(p)
-	if err != nil {
-		return nil, err
-	}
-
-	p.skipSpaceAndComments()
-
 	members, err := parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
 	if err != nil {
 		return nil, err
@@ -1465,7 +1499,6 @@ func parseAttachmentDeclaration(
 		identifier,
 		baseNominalType,
 		conformances,
-		requiredEntitlements,
 		members,
 		docString,
 		declarationRange,
@@ -1652,7 +1685,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				}
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
-			case keywordAttachment:
+			case KeywordAttachment:
 				return parseAttachmentDeclaration(p, access, accessPos, docString)
 
 			case KeywordView:
@@ -1665,10 +1698,15 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				continue
 
 			case KeywordPub:
-				return nil, p.syntaxErrorWithSuggestedFix("`pub` is no longer a valid access keyword", "`access(all)`")
+				err := handlePub(p)
+				if err != nil {
+					return nil, err
+				}
+				continue
 
 			case KeywordPriv:
-				return nil, p.syntaxErrorWithSuggestedFix("`priv` is no longer a valid access keyword", "`access(self)`")
+				handlePriv(p)
+				continue
 
 			case KeywordAccess:
 				if access != ast.AccessNotSpecified {
@@ -1884,10 +1922,7 @@ func parseSpecialFunctionDeclaration(
 		declarationKind = common.DeclarationKindInitializer
 
 	case KeywordDestroy:
-		if purity == ast.FunctionPurityView {
-			return nil, NewSyntaxError(*purityPos, "invalid view annotation on destructor")
-		}
-		declarationKind = common.DeclarationKindDestructor
+		p.report(&CustomDestructorError{Pos: identifier.Pos})
 
 	case KeywordPrepare:
 		declarationKind = common.DeclarationKindPrepare

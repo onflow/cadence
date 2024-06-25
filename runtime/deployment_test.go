@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,24 +55,10 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		require.Equal(t, event.Type(), expectedEventType)
 
-		expectedEventCompositeType := expectedEventType.(*cadence.EventType)
-
-		codeHashParameterIndex := -1
-
-		for i, field := range expectedEventCompositeType.Fields {
-			if field.Identifier != stdlib.AccountEventCodeHashParameter.Identifier {
-				continue
-			}
-			codeHashParameterIndex = i
-		}
-
-		if codeHashParameterIndex < 0 {
-			t.Error("couldn't find code hash parameter in event type")
-		}
-
 		expectedCodeHash := sha3.Sum256(accountCode)
 
-		codeHashValue := event.Fields[codeHashParameterIndex]
+		fields := cadence.FieldsMappedByName(event)
+		codeHashValue := fields["codeHash"]
 
 		inter := NewTestInterpreter(t)
 
@@ -106,8 +92,6 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 			var runtimeErr Error
 			require.ErrorAs(t, err, &runtimeErr)
-
-			println(runtimeErr.Error())
 
 			assert.EqualError(t, runtimeErr, expectedErrorMessage)
 

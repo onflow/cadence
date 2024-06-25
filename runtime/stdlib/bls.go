@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,9 @@ func newBLSAggregatePublicKeysFunction(
 	gauge common.MemoryGauge,
 	aggregator BLSPublicKeyAggregator,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
+	// TODO: Should create a bound-host function here, but interpreter is not available at this point.
+	// However, this is not a problem for now, since underlying contract doesn't get moved.
+	return interpreter.NewStaticHostFunctionValue(
 		gauge,
 		BLSTypeAggregatePublicKeysFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -57,22 +59,27 @@ func newBLSAggregatePublicKeysFunction(
 			)
 
 			publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
-			publicKeysValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
-				publicKeyValue, ok := element.(*interpreter.CompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+			publicKeysValue.Iterate(
+				inter,
+				func(element interpreter.Value) (resume bool) {
+					publicKeyValue, ok := element.(*interpreter.CompositeValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
 
-				publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
-				if err != nil {
-					panic(err)
-				}
+					publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
+					if err != nil {
+						panic(err)
+					}
 
-				publicKeys = append(publicKeys, publicKey)
+					publicKeys = append(publicKeys, publicKey)
 
-				// Continue iteration
-				return true
-			})
+					// Continue iteration
+					return true
+				},
+				false,
+				locationRange,
+			)
 
 			var err error
 			var aggregatedPublicKey *PublicKey
@@ -89,8 +96,6 @@ func newBLSAggregatePublicKeysFunction(
 				inter,
 				locationRange,
 				aggregatedPublicKey,
-				aggregator,
-				aggregator,
 			)
 
 			return interpreter.NewSomeValueNonCopying(
@@ -110,7 +115,9 @@ func newBLSAggregateSignaturesFunction(
 	gauge common.MemoryGauge,
 	aggregator BLSSignatureAggregator,
 ) *interpreter.HostFunctionValue {
-	return interpreter.NewHostFunctionValue(
+	// TODO: Should create a bound-host function here, but interpreter is not available at this point.
+	// However, this is not a problem for now, since underlying contract doesn't get moved.
+	return interpreter.NewStaticHostFunctionValue(
 		gauge,
 		BLSTypeAggregateSignaturesFunctionType,
 		func(invocation interpreter.Invocation) interpreter.Value {
@@ -129,22 +136,27 @@ func newBLSAggregateSignaturesFunction(
 			)
 
 			bytesArray := make([][]byte, 0, signaturesValue.Count())
-			signaturesValue.Iterate(inter, func(element interpreter.Value) (resume bool) {
-				signature, ok := element.(*interpreter.ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+			signaturesValue.Iterate(
+				inter,
+				func(element interpreter.Value) (resume bool) {
+					signature, ok := element.(*interpreter.ArrayValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
 
-				bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature, invocation.LocationRange)
-				if err != nil {
-					panic(err)
-				}
+					bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature, invocation.LocationRange)
+					if err != nil {
+						panic(err)
+					}
 
-				bytesArray = append(bytesArray, bytes)
+					bytesArray = append(bytesArray, bytes)
 
-				// Continue iteration
-				return true
-			})
+					// Continue iteration
+					return true
+				},
+				false,
+				locationRange,
+			)
 
 			var err error
 			var aggregatedSignature []byte

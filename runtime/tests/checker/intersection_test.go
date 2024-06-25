@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -264,6 +265,109 @@ func TestCheckIntersectionType(t *testing.T) {
 
 		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[0])
 	})
+
+	t.Run("contract interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            contract interface CI {}
+
+            fun test (_ c: {CI}) {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("contract", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            contract C {}
+
+            fun test (_ c: {C}) {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		// Checker is not able to infer valid composite kind based on intersection's types
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
+
+	t.Run("enum", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            enum E: UInt8 {}
+
+            fun test (_ e: {E}) {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		// Checker is not able to infer valid composite kind based on intersection's types
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
+
+	t.Run("event", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            event E()
+
+            fun test (_ e: {E}) {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		// Checker is not able to infer valid composite kind based on intersection's types
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
+
+	t.Run("attachment", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            attachment A for R {}
+
+            fun test (_ a: {A}) {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		// Checker is not able to infer valid composite kind based on intersection's types
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
+
+	t.Run("entitlement", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            entitlement E
+
+            fun test (_ e: {E}) {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		// Checker is not able to infer valid composite kind based on intersection's types
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
+
+	t.Run("entitlement mapping", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            entitlement mapping M {}
+
+            fun test (_ m: {M}) {}
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidIntersectedTypeError{}, errs[0])
+		// Checker is not able to infer valid composite kind based on intersection's types
+		assert.IsType(t, &sema.AmbiguousIntersectionTypeError{}, errs[1])
+	})
 }
 
 func TestCheckIntersectionTypeMemberAccess(t *testing.T) {
@@ -440,6 +544,116 @@ func TestCheckIntersectionTypeMemberAccess(t *testing.T) {
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		assert.IsType(t, &sema.IntersectionMemberClashError{}, errs[1])
 	})
+}
+
+func TestCheckIntersectionTypeWithInheritanceMemberClash(t *testing.T) {
+
+	t.Parallel()
+
+	const firstMember = `let n: Int`
+	const secondMember = `let n: Bool`
+
+	test := func(
+		memberInA, memberInC bool,
+		firstType, secondType string,
+	) {
+
+		testName := fmt.Sprintf(
+			"memberInA: %v, memberInC: %v, firstType: %s, secondType: %s",
+			memberInA, memberInC, firstType, secondType,
+		)
+
+		t.Run(testName, func(t *testing.T) {
+			t.Parallel()
+
+			bodyA := ""
+			bodyB := ""
+			bodyC := ""
+			bodyD := ""
+
+			if memberInA {
+				bodyA = firstMember
+			} else {
+				bodyB = firstMember
+			}
+
+			if memberInC {
+				bodyC = secondMember
+			} else {
+				bodyD = secondMember
+			}
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+				      struct interface A {
+                          %s
+                      }
+
+                      struct interface B: A {
+                          %s
+                      }
+
+                      struct interface C {
+                          %s
+                      }
+
+                      struct interface D: C {
+                          %s
+                      }
+
+                      fun test(_ v: {%s, %s}) {}
+				    `,
+					bodyA,
+					bodyB,
+					bodyC,
+					bodyD,
+					firstType,
+					secondType,
+				),
+			)
+
+			errs := RequireCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.IntersectionMemberClashError{}, errs[0])
+		})
+	}
+
+	for _, memberInA := range []bool{true, false} {
+		for _, memberInC := range []bool{true, false} {
+			for _, firstType := range []string{"A", "B"} {
+				for _, secondType := range []string{"C", "D"} {
+
+					if (firstType == "A" && !memberInA) ||
+						(secondType == "C" && !memberInC) {
+
+						continue
+					}
+
+					test(memberInA, memberInC, firstType, secondType)
+				}
+			}
+		}
+	}
+}
+
+func TestCheckIntersectionTypeWithInheritedMember(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	  struct interface A {
+          let n: Int
+      }
+
+      struct interface B: A {}
+
+      struct interface C: A {}
+
+      fun test(_ v: {B, C}) {}
+	`)
+
+	require.NoError(t, err)
 }
 
 func TestCheckIntersectionTypeSubtyping(t *testing.T) {

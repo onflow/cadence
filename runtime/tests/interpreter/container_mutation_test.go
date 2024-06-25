@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -261,7 +261,7 @@ func TestInterpetArrayMutation(t *testing.T) {
 
 		// Check original array
 
-		namesVal := inter.Globals.Get("names").GetValue()
+		namesVal := inter.Globals.Get("names").GetValue(inter)
 		require.IsType(t, &interpreter.ArrayValue{}, namesVal)
 		namesValArray := namesVal.(*interpreter.ArrayValue)
 
@@ -308,7 +308,7 @@ func TestInterpetArrayMutation(t *testing.T) {
 
 		invoked := false
 
-		valueDeclaration := stdlib.NewStandardLibraryFunction(
+		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			stdlib.LogFunctionType,
 			"",
@@ -336,10 +336,14 @@ func TestInterpetArrayMutation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -450,7 +454,7 @@ func TestInterpetArrayMutation(t *testing.T) {
 
 		t.Parallel()
 
-		valueDeclaration := stdlib.NewStandardLibraryFunction(
+		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			stdlib.LogFunctionType,
 			"",
@@ -475,10 +479,14 @@ func TestInterpetArrayMutation(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -698,7 +706,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		invoked := false
 
-		valueDeclaration := stdlib.NewStandardLibraryFunction(
+		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			stdlib.LogFunctionType,
 			"",
@@ -726,10 +734,14 @@ func TestInterpretDictionaryMutation(t *testing.T) {
             }`,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -840,7 +852,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 
 		t.Parallel()
 
-		valueDeclaration := stdlib.NewStandardLibraryFunction(
+		valueDeclaration := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			stdlib.LogFunctionType,
 			"",
@@ -865,10 +877,14 @@ func TestInterpretDictionaryMutation(t *testing.T) {
            `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -923,6 +939,7 @@ func TestInterpretDictionaryMutation(t *testing.T) {
 			nil,
 			interpreter.AddressValue{1},
 			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
 		)
 
 		_, err := inter.Invoke("test", owner)
@@ -954,6 +971,133 @@ func TestInterpretContainerMutationAfterNilCoalescing(t *testing.T) {
 		),
 		result,
 	)
+}
+
+func TestInterpretContainerMutationWhileIterating(t *testing.T) {
+
+	t.Run("array, append", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): [String] {
+                let array: [String] = ["foo", "bar"]
+
+                var i = 0
+                for element in array {
+                    if i == 0 {
+                        array.append("baz")
+                    }
+                    array[i] = "hello"
+                    i = i + 1
+                }
+
+                return array
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+	})
+
+	t.Run("array, remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test() {
+                let array: [String] = ["foo", "bar", "baz"]
+
+                var i = 0
+                for element in array {
+                    if i == 0 {
+                        array.remove(at: 1)
+                    }
+                }
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+	})
+
+	t.Run("dictionary, add", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): {String: String} {
+                let dictionary: {String: String} = {"a": "foo", "b": "bar"}
+
+                var i = 0
+                dictionary.forEachKey(fun (key: String): Bool {
+                    if i == 0 {
+                        dictionary["c"] = "baz"
+                    }
+
+                    dictionary[key] = "hello"
+                    return true
+                })
+
+                return dictionary
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+	})
+
+	t.Run("dictionary, remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            fun test(): {String: String} {
+                let dictionary: {String: String} = {"a": "foo", "b": "bar", "c": "baz"}
+
+                var i = 0
+                dictionary.forEachKey(fun (key: String): Bool {
+                    if i == 0 {
+                        dictionary.remove(key: "b")
+                    }
+                    return true
+                })
+
+                return dictionary
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+	})
+
+	t.Run("resource dictionary, remove", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource Foo {}
+
+            fun test(): @{String: Foo} {
+                let dictionary: @{String: Foo} <- {"a": <- create Foo(), "b": <- create Foo(), "c": <- create Foo()}
+
+                var dictionaryRef = &dictionary as auth(Mutate) &{String: Foo}
+
+                var i = 0
+                dictionary.forEachKey(fun (key: String): Bool {
+                    if i == 0 {
+                        destroy dictionaryRef.remove(key: "b")
+                    }
+                    return true
+                })
+
+                return <- dictionary
+            }
+        `)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.ContainerMutatedDuringIterationError{})
+	})
 }
 
 func TestInterpretInnerContainerMutationWhileIteratingOuter(t *testing.T) {

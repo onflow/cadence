@@ -7,14 +7,6 @@ repos:
       deps:
         - onflow/cadence
 
-- repo: onflow/cadence-tools
-  needsRelease: true
-  mods:
-    - path: lint
-      deps:
-        - onflow/cadence
-        - onflow/flow-go-sdk
-
 - repo: onflow/flow-go
   needsRelease: false
   mods:
@@ -31,6 +23,15 @@ repos:
         - onflow/flow-go-sdk
         - onflow/cadence
 
+- repo: onflow/cadence-tools
+  needsRelease: true
+  prefixPRTitle: true
+  mods:
+    - path: lint
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+
 - repo: onflow/flow-emulator
   needsRelease: true
   mods:
@@ -42,6 +43,7 @@ repos:
 
 - repo: onflow/cadence-tools
   needsRelease: true
+  prefixPRTitle: true
   mods:
     - path: test
       deps:
@@ -50,10 +52,10 @@ repos:
         - onflow/flow-go
         - onflow/flow-emulator
 
-- repo: onflow/flow-cli
-  needsRelease: false
+- repo: onflow/flowkit
+  needsRelease: true
   mods:
-    - path: flowkit
+    - path: ""
       deps:
         - onflow/cadence
         - onflow/flow-go-sdk
@@ -62,6 +64,7 @@ repos:
 
 - repo: onflow/cadence-tools
   needsRelease: true
+  prefixPRTitle: true
   mods:
     - path: languageserver
       deps:
@@ -71,7 +74,33 @@ repos:
         - onflow/flow-emulator
         - onflow/cadence-tools/lint
         - onflow/cadence-tools/test
-        - onflow/flow-cli/flowkit
+        - onflow/flowkit/v2
+
+- repo: onflow/flixkit-go
+  needsRelease: true
+  mods:
+    - path: ""
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+        - onflow/flowkit/v2
+
+- repo: onflow/flow-evm-gateway
+  needsRelease: false
+  branch: main
+  mods:
+    - path: ""
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+    - path: tests
+      deps:
+        - onflow/cadence
+        - onflow/flow-go-sdk
+        - onflow/flow-go
+        - onflow/flow-emulator
 
 - repo: onflow/flow-cli
   needsRelease: true
@@ -85,3 +114,6 @@ repos:
         - onflow/cadence-tools/test
         - onflow/cadence-tools/lint
         - onflow/cadence-tools/languageserver
+        - onflow/flixkit-go
+        - onflow/flowkit/v2
+        - onflow/flow-evm-gateway

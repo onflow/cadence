@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,13 +29,12 @@ import (
 // AttachmentDeclaration
 
 type AttachmentDeclaration struct {
-	Access               Access
-	Identifier           Identifier
-	BaseType             *NominalType
-	Conformances         []*NominalType
-	RequiredEntitlements []*NominalType
-	Members              *Members
-	DocString            string
+	Access       Access
+	Identifier   Identifier
+	BaseType     *NominalType
+	Conformances []*NominalType
+	Members      *Members
+	DocString    string
 	Range
 }
 
@@ -50,7 +49,6 @@ func NewAttachmentDeclaration(
 	identifier Identifier,
 	baseType *NominalType,
 	conformances []*NominalType,
-	requiredEntitlements []*NominalType,
 	members *Members,
 	docString string,
 	declarationRange Range,
@@ -58,14 +56,13 @@ func NewAttachmentDeclaration(
 	common.UseMemory(memoryGauge, common.AttachmentDeclarationMemoryUsage)
 
 	return &AttachmentDeclaration{
-		Access:               access,
-		Identifier:           identifier,
-		BaseType:             baseType,
-		Conformances:         conformances,
-		RequiredEntitlements: requiredEntitlements,
-		Members:              members,
-		DocString:            docString,
-		Range:                declarationRange,
+		Access:       access,
+		Identifier:   identifier,
+		BaseType:     baseType,
+		Conformances: conformances,
+		Members:      members,
+		DocString:    docString,
+		Range:        declarationRange,
 	}
 }
 
@@ -113,15 +110,9 @@ func (d *AttachmentDeclaration) ConformanceList() []*NominalType {
 	return d.Conformances
 }
 
-func (d *AttachmentDeclaration) RequiredEntitlementsToAttach() []*NominalType {
-	return d.RequiredEntitlements
-}
-
 const attachmentStatementDoc = prettier.Text("attachment")
 const attachmentStatementForDoc = prettier.Text("for")
 const attachmentConformancesSeparatorDoc = prettier.Text(":")
-const attachmentEntitlementDoc = prettier.Text("entitlement")
-const attachmentRequireDoc = prettier.Text("require")
 
 var attachmentConformanceSeparatorDoc prettier.Doc = prettier.Concat{
 	prettier.Text(","),
@@ -151,31 +142,7 @@ func (d *AttachmentDeclaration) Doc() prettier.Doc {
 	)
 	var membersDoc prettier.Concat
 
-	if d.RequiredEntitlements != nil && len(d.RequiredEntitlements) > 0 {
-		membersDoc = append(membersDoc, membersStartDoc)
-		for _, entitlement := range d.RequiredEntitlements {
-			var entitlementRequiredDoc = prettier.Indent{
-				Doc: prettier.Concat{
-					attachmentRequireDoc,
-					prettier.Space,
-					attachmentEntitlementDoc,
-					prettier.Space,
-					entitlement.Doc(),
-				},
-			}
-			membersDoc = append(
-				membersDoc,
-				prettier.HardLine{},
-				entitlementRequiredDoc,
-			)
-		}
-		if len(d.Members.declarations) > 0 {
-			membersDoc = append(membersDoc, prettier.HardLine{}, d.Members.docWithNoBraces())
-		}
-		membersDoc = append(membersDoc, prettier.HardLine{}, membersEndDoc)
-	} else {
-		membersDoc = append(membersDoc, prettier.Line{}, d.Members.Doc())
-	}
+	membersDoc = append(membersDoc, prettier.Line{}, d.Members.Doc())
 
 	if len(d.Conformances) > 0 {
 		conformancesDoc := prettier.Concat{
@@ -244,10 +211,9 @@ func (d *AttachmentDeclaration) String() string {
 
 // AttachExpression
 type AttachExpression struct {
-	Base         Expression
-	Attachment   *InvocationExpression
-	Entitlements []*NominalType
-	StartPos     Position `json:"-"`
+	Base       Expression
+	Attachment *InvocationExpression
+	StartPos   Position `json:"-"`
 }
 
 var _ Element = &AttachExpression{}
@@ -270,16 +236,14 @@ func NewAttachExpression(
 	gauge common.MemoryGauge,
 	base Expression,
 	attachment *InvocationExpression,
-	entitlements []*NominalType,
 	startPos Position,
 ) *AttachExpression {
 	common.UseMemory(gauge, common.AttachExpressionMemoryUsage)
 
 	return &AttachExpression{
-		Base:         base,
-		Attachment:   attachment,
-		Entitlements: entitlements,
-		StartPos:     startPos,
+		Base:       base,
+		Attachment: attachment,
+		StartPos:   startPos,
 	}
 }
 
@@ -289,14 +253,9 @@ func (e *AttachExpression) String() string {
 
 const attachExpressionDoc = prettier.Text("attach")
 const attachExpressionToDoc = prettier.Text("to")
-const attachExpressionWithDoc = prettier.Text("with")
-const attachExpressionCommaDoc = prettier.Text(",")
 
 func (e *AttachExpression) Doc() prettier.Doc {
-	var doc prettier.Concat
-
-	doc = append(
-		doc,
+	return prettier.Concat{
 		attachExpressionDoc,
 		prettier.Space,
 		e.Attachment.Doc(),
@@ -304,19 +263,7 @@ func (e *AttachExpression) Doc() prettier.Doc {
 		attachExpressionToDoc,
 		prettier.Space,
 		e.Base.Doc(),
-	)
-	if len(e.Entitlements) > 0 {
-		entitlementsLen := len(e.Entitlements)
-		doc = append(doc, prettier.Space, attachExpressionWithDoc, prettier.Space, openParenthesisDoc)
-		for i, entitlement := range e.Entitlements {
-			doc = append(doc, entitlement.Doc())
-			if i < entitlementsLen-1 {
-				doc = append(doc, attachExpressionCommaDoc, prettier.Space)
-			}
-		}
-		doc = append(doc, closeParenthesisDoc)
 	}
-	return doc
 }
 
 func (e *AttachExpression) StartPosition() Position {
@@ -324,9 +271,6 @@ func (e *AttachExpression) StartPosition() Position {
 }
 
 func (e *AttachExpression) EndPosition(memoryGauge common.MemoryGauge) Position {
-	if len(e.Entitlements) > 0 {
-		return e.Entitlements[len(e.Entitlements)-1].EndPosition(memoryGauge)
-	}
 	return e.Base.EndPosition(memoryGauge)
 }
 

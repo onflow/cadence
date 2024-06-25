@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,7 +67,12 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 	// Visit the expression, with contextually expected type. Use the expected type
 	// only for inferring wherever possible, but do not check for compatibility.
 	// Compatibility is checked separately for each operand kind.
-	leftType = checker.VisitExpressionWithForceType(expression.Left, expectedType, false)
+	leftType = checker.VisitExpressionWithForceType(
+		expression.Left,
+		expression,
+		expectedType,
+		false,
+	)
 
 	leftIsInvalid := leftType.IsInvalidType()
 
@@ -123,7 +128,12 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 			expectedType = leftType
 		}
 
-		rightType = checker.VisitExpressionWithForceType(expression.Right, expectedType, false)
+		rightType = checker.VisitExpressionWithForceType(
+			expression.Right,
+			expression,
+			expectedType,
+			false,
+		)
 
 		rightIsInvalid := rightType.IsInvalidType()
 
@@ -174,7 +184,12 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 					expectedType = optionalLeftType.Type
 				}
 			}
-			return checker.VisitExpressionWithForceType(expression.Right, expectedType, false)
+			return checker.VisitExpressionWithForceType(
+				expression.Right,
+				expression,
+				expectedType,
+				false,
+			)
 		})
 
 		rightIsInvalid := rightType.IsInvalidType()
@@ -441,13 +456,6 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 		return InvalidType
 	}
 
-	leftInner := leftOptional.Type
-
-	if leftInner == NeverType {
-		return rightType
-	}
-	canNarrow := false
-
 	if !rightIsInvalid {
 
 		if rightType.IsResourceType() {
@@ -458,25 +466,7 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 				},
 			)
 		}
-
-		if !IsSubType(rightType, leftOptional) {
-
-			checker.report(
-				&InvalidBinaryOperandError{
-					Operation:    operation,
-					Side:         common.OperandSideRight,
-					ExpectedType: leftOptional,
-					ActualType:   rightType,
-					Range:        ast.NewRangeFromPositioned(checker.memoryGauge, expression.Right),
-				},
-			)
-		} else {
-			canNarrow = IsSubType(rightType, leftInner)
-		}
 	}
 
-	if !canNarrow {
-		return leftOptional
-	}
-	return leftInner
+	return LeastCommonSuperType(leftOptional.Type, rightType)
 }

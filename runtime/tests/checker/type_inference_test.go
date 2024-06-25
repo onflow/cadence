@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -335,7 +335,7 @@ func TestCheckFunctionArgumentTypeInference(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("with generics", func(t *testing.T) {
+	t.Run("with generics, void return type", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -367,46 +367,146 @@ func TestCheckFunctionArgumentTypeInference(t *testing.T) {
 			},
 		)
 
-		errs := RequireCheckerErrors(t, err, 2)
-
-		require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-		typeParamMismatchErr := errs[0].(*sema.TypeParameterTypeMismatchError)
-		assert.Equal(
-			t,
-			&sema.VariableSizedType{
-				Type: sema.Int8Type,
-			},
-			typeParamMismatchErr.ExpectedType,
-		)
-
-		assert.Equal(
-			t,
-			&sema.VariableSizedType{
-				Type: sema.IntType,
-			},
-			typeParamMismatchErr.ActualType,
-		)
-
-		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-		typeMismatchErr := errs[1].(*sema.TypeMismatchError)
-
-		assert.Equal(
-			t,
-			&sema.VariableSizedType{
-				Type: sema.Int8Type,
-			},
-			typeMismatchErr.ExpectedType,
-		)
-
-		assert.Equal(
-			t,
-			&sema.VariableSizedType{
-				Type: sema.IntType,
-			},
-			typeMismatchErr.ActualType,
-		)
-
+		require.NoError(t, err)
 	})
+
+	t.Run("with generics, generic return type", func(t *testing.T) {
+
+		t.Parallel()
+
+		typeParameter := &sema.TypeParameter{
+			Name:      "T",
+			TypeBound: nil,
+		}
+
+		_, err := parseAndCheckWithTestValue(t,
+			`
+              let res: [Int8] = test<[Int8]>([1, 2, 3])
+            `,
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter,
+				},
+				Parameters: []sema.Parameter{
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "value",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("with generics, argument type propagation, simple", func(t *testing.T) {
+
+		t.Parallel()
+
+		typeParameter := &sema.TypeParameter{
+			Name:      "T",
+			TypeBound: nil,
+		}
+
+		_, err := parseAndCheckWithTestValue(t,
+			`
+              let res: UInt8 = test(1 as UInt8, 2)
+            `,
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter,
+				},
+				Parameters: []sema.Parameter{
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "a",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
+					},
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "b",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("with generics, argument type propagation, nested", func(t *testing.T) {
+
+		t.Parallel()
+
+		typeParameter := &sema.TypeParameter{
+			Name:      "T",
+			TypeBound: nil,
+		}
+
+		_, err := parseAndCheckWithTestValue(t,
+			`
+              let res: UInt8 = test(1 as UInt8, [2])
+            `,
+			&sema.FunctionType{
+				TypeParameters: []*sema.TypeParameter{
+					typeParameter,
+				},
+				Parameters: []sema.Parameter{
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "a",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
+					},
+					{
+						Label:      sema.ArgumentLabelNotRequired,
+						Identifier: "b",
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.VariableSizedType{
+								Type: &sema.GenericType{
+									TypeParameter: typeParameter,
+								},
+							},
+						),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
 }
 
 func TestCheckBinaryExpressionTypeInference(t *testing.T) {
@@ -787,7 +887,7 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 			{
 				name:                "mixed simple values",
 				code:                `let x = [0, true]`,
-				expectedElementType: sema.AnyStructType,
+				expectedElementType: sema.HashableStructType,
 			},
 			{
 				name:                "signed integer values",
@@ -890,7 +990,7 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 				code: `let x = [[[1, 2]], [["foo", "bar"]], [[5.3, 6.4]]]`,
 				expectedElementType: &sema.VariableSizedType{
 					Type: &sema.VariableSizedType{
-						Type: sema.AnyStructType,
+						Type: sema.HashableStructType,
 					},
 				},
 			},
@@ -899,7 +999,7 @@ func TestCheckArraySupertypeInference(t *testing.T) {
 				code: `let x = [[[1, 2] as [Int; 2]], [["foo", "bar"] as [String; 2]], [[5.3, 6.4] as [Fix64; 2]]]`,
 				expectedElementType: &sema.VariableSizedType{
 					Type: &sema.ConstantSizedType{
-						Type: sema.AnyStructType,
+						Type: sema.HashableStructType,
 						Size: 2,
 					},
 				},
@@ -974,7 +1074,7 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				name:              "mixed simple values",
 				code:              `let x = {0: 0, 1: true}`,
 				expectedKeyType:   sema.IntType,
-				expectedValueType: sema.AnyStructType,
+				expectedValueType: sema.HashableStructType,
 			},
 			{
 				name:              "signed integer values",
@@ -1007,6 +1107,12 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				expectedValueType: &sema.OptionalType{
 					Type: sema.StringType,
 				},
+			},
+			{
+				name:              "int and string keys",
+				code:              `let x = {0: 1, "hello": 2}`,
+				expectedKeyType:   sema.HashableStructType,
+				expectedValueType: sema.IntType,
 			},
 			{
 				name: "common interfaced values",
@@ -1088,10 +1194,13 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 				},
 			},
 			{
-				name:              "no supertype for inner keys",
-				code:              `let x = {0: {10: 1, 20: 2}, 1: {"one": 1, "two": 2}}`,
-				expectedKeyType:   sema.IntType,
-				expectedValueType: sema.AnyStructType,
+				name:            "no supertype for inner keys",
+				code:            `let x = {0: {10: 1, 20: 2}, 1: {"one": 1, "two": 2}}`,
+				expectedKeyType: sema.IntType,
+				expectedValueType: &sema.DictionaryType{
+					KeyType:   sema.HashableStructType,
+					ValueType: sema.IntType,
+				},
 			},
 			{
 				name: "no supertype for inner keys with resource values",
@@ -1100,8 +1209,15 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 
                     access(all) resource Foo {}
                 `,
-				expectedKeyType:   sema.IntType,
-				expectedValueType: sema.AnyResourceType,
+				expectedKeyType: sema.IntType,
+				expectedValueType: &sema.DictionaryType{
+					KeyType: sema.HashableStructType,
+					ValueType: &sema.InterfaceType{
+						Location:      common.StringLocation("test"),
+						Identifier:    "Foo",
+						CompositeKind: common.CompositeKindStructure,
+					},
+				},
 			},
 		}
 
@@ -1135,33 +1251,6 @@ func TestCheckDictionarySupertypeInference(t *testing.T) {
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
-	})
-
-	t.Run("no supertype for keys", func(t *testing.T) {
-		t.Parallel()
-
-		code := `
-            let x = {1: 1, "two": 2}
-        `
-		_, err := ParseAndCheck(t, code)
-		errs := RequireCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
-	})
-
-	t.Run("unsupported supertype for keys", func(t *testing.T) {
-		t.Parallel()
-
-		code := `
-            let x = {0: 1, "hello": 2}
-        `
-		_, err := ParseAndCheck(t, code)
-		errs := RequireCheckerErrors(t, err, 1)
-
-		require.IsType(t, &sema.InvalidDictionaryKeyTypeError{}, errs[0])
-		invalidKeyError := errs[0].(*sema.InvalidDictionaryKeyTypeError)
-
-		assert.Equal(t, sema.AnyStructType, invalidKeyError.Type)
 	})
 
 	t.Run("empty dictionary", func(t *testing.T) {

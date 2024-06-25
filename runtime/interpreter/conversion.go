@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,17 +38,22 @@ func ByteArrayValueToByteSlice(interpreter *Interpreter, value Value, locationRa
 		result = make([]byte, 0, count)
 
 		var err error
-		array.Iterate(interpreter, func(element Value) (resume bool) {
-			var b byte
-			b, err = ByteValueToByte(interpreter, element, locationRange)
-			if err != nil {
-				return false
-			}
+		array.Iterate(
+			interpreter,
+			func(element Value) (resume bool) {
+				var b byte
+				b, err = ByteValueToByte(interpreter, element, locationRange)
+				if err != nil {
+					return false
+				}
 
-			result = append(result, b)
+				result = append(result, b)
 
-			return true
-		})
+				return true
+			},
+			false,
+			locationRange,
+		)
 		if err != nil {
 			return nil, err
 		}

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 // Invocation
 type Invocation struct {
 	LocationRange      LocationRange
-	Self               *MemberAccessibleValue
+	Self               *Value
 	Base               *EphemeralReferenceValue
 	BoundAuthorization Authorization
 	TypeParameterTypes *sema.TypeParameterTypeOrderedMap
@@ -37,7 +37,7 @@ type Invocation struct {
 
 func NewInvocation(
 	interpreter *Interpreter,
-	self *MemberAccessibleValue,
+	self *Value,
 	base *EphemeralReferenceValue,
 	boundAuth Authorization,
 	arguments []Value,

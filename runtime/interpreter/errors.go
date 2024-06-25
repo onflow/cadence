@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -340,19 +340,6 @@ func (e DestroyedResourceError) Error() string {
 	return "resource was destroyed and cannot be used anymore"
 }
 
-// ForceAssignmentToNonNilResourceError
-type ForceAssignmentToNonNilResourceError struct {
-	LocationRange
-}
-
-var _ errors.UserError = ForceAssignmentToNonNilResourceError{}
-
-func (ForceAssignmentToNonNilResourceError) IsUserError() {}
-
-func (e ForceAssignmentToNonNilResourceError) Error() string {
-	return "force assignment to non-nil resource-typed value"
-}
-
 // ForceNilError
 type ForceNilError struct {
 	LocationRange
@@ -409,6 +396,30 @@ func (e TypeMismatchError) Error() string {
 
 	return fmt.Sprintf(
 		"type mismatch: expected `%s`, got `%s`",
+		expected,
+		actual,
+	)
+}
+
+// InvalidMemberReferenceError
+type InvalidMemberReferenceError struct {
+	ExpectedType sema.Type
+	ActualType   sema.Type
+	LocationRange
+}
+
+var _ errors.UserError = InvalidMemberReferenceError{}
+
+func (InvalidMemberReferenceError) IsUserError() {}
+
+func (e InvalidMemberReferenceError) Error() string {
+	expected, actual := sema.ErrorMessageExpectedActualTypes(
+		e.ExpectedType,
+		e.ActualType,
+	)
+
+	return fmt.Sprintf(
+		"cannot create reference: expected `%s`, got `%s`",
 		expected,
 		actual,
 	)
@@ -668,6 +679,23 @@ func (e ValueTransferTypeError) Error() string {
 		"invalid transfer of value: expected `%s`, got `%s`",
 		expected,
 		actual,
+	)
+}
+
+// UnexpectedMappedEntitlementError
+type UnexpectedMappedEntitlementError struct {
+	Type sema.Type
+	LocationRange
+}
+
+var _ errors.InternalError = UnexpectedMappedEntitlementError{}
+
+func (UnexpectedMappedEntitlementError) IsInternalError() {}
+
+func (e UnexpectedMappedEntitlementError) Error() string {
+	return fmt.Sprintf(
+		"invalid transfer of value: found an unexpected runtime mapped entitlement `%s`",
+		e.Type.QualifiedString(),
 	)
 }
 
@@ -978,4 +1006,129 @@ func WrappedExternalError(err error) error {
 	default:
 		return errors.NewExternalError(err)
 	}
+}
+
+// CapabilityAddressPublishingError
+type CapabilityAddressPublishingError struct {
+	LocationRange
+	CapabilityAddress AddressValue
+	AccountAddress    AddressValue
+}
+
+var _ errors.UserError = CapabilityAddressPublishingError{}
+
+func (CapabilityAddressPublishingError) IsUserError() {}
+
+func (e CapabilityAddressPublishingError) Error() string {
+	return fmt.Sprintf(
+		"cannot publish capability of account %s in account %s",
+		e.CapabilityAddress.String(),
+		e.AccountAddress.String(),
+	)
+}
+
+// NestedReferenceError
+type NestedReferenceError struct {
+	Value ReferenceValue
+	LocationRange
+}
+
+var _ errors.UserError = NestedReferenceError{}
+
+func (NestedReferenceError) IsUserError() {}
+
+func (e NestedReferenceError) Error() string {
+	return fmt.Sprintf(
+		"cannot create a nested reference to %s",
+		e.Value.String(),
+	)
+}
+
+// InclusiveRangeConstructionError
+
+type InclusiveRangeConstructionError struct {
+	LocationRange
+	Message string
+}
+
+var _ errors.UserError = InclusiveRangeConstructionError{}
+
+func (InclusiveRangeConstructionError) IsUserError() {}
+
+func (e InclusiveRangeConstructionError) Error() string {
+	const message = "InclusiveRange construction failed"
+	if e.Message == "" {
+		return message
+	}
+	return fmt.Sprintf("%s: %s", message, e.Message)
+}
+
+// InvalidCapabilityIssueTypeError
+type InvalidCapabilityIssueTypeError struct {
+	ExpectedTypeDescription string
+	ActualType              sema.Type
+	LocationRange
+}
+
+var _ errors.UserError = InvalidCapabilityIssueTypeError{}
+
+func (InvalidCapabilityIssueTypeError) IsUserError() {}
+
+func (e InvalidCapabilityIssueTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid type: expected %s, got `%s`",
+		e.ExpectedTypeDescription,
+		e.ActualType.QualifiedString(),
+	)
+}
+
+// ResourceReferenceDereferenceError
+type ResourceReferenceDereferenceError struct {
+	LocationRange
+}
+
+var _ errors.InternalError = ResourceReferenceDereferenceError{}
+
+func (ResourceReferenceDereferenceError) IsInternalError() {}
+
+func (e ResourceReferenceDereferenceError) Error() string {
+	return "internal error: resource-references cannot be dereferenced"
+}
+
+// ResourceLossError
+type ResourceLossError struct {
+	LocationRange
+}
+
+var _ errors.UserError = ResourceLossError{}
+
+func (ResourceLossError) IsUserError() {}
+
+func (e ResourceLossError) Error() string {
+	return "resource loss: attempting to assign to non-nil resource-typed value"
+}
+
+// InvalidCapabilityIDError
+
+type InvalidCapabilityIDError struct{}
+
+var _ errors.InternalError = InvalidCapabilityIDError{}
+
+func (InvalidCapabilityIDError) IsInternalError() {}
+
+func (e InvalidCapabilityIDError) Error() string {
+	return "capability created with invalid ID"
+}
+
+// ReferencedValueChangedError
+type ReferencedValueChangedError struct {
+	LocationRange
+}
+
+var _ errors.UserError = ReferencedValueChangedError{}
+
+func (ReferencedValueChangedError) IsUserError() {}
+
+func (e ReferencedValueChangedError) Error() string {
+	return "referenced value has been changed after taking the reference"
 }

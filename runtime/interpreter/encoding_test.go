@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -3422,6 +3422,68 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 		)
 	})
 
+	t.Run("InclusiveRange, Int", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := TypeValue{
+			Type: InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt,
+			},
+		}
+
+		encoded := []byte{
+			// tag
+			0xd8, CBORTagTypeValue,
+			// array, 1 items follow
+			0x81,
+			// tag
+			0xd8, CBORTagInclusiveRangeStaticType,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			// positive integer 36
+			0x18, 0x24,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("InclusiveRange, UInt256", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := TypeValue{
+			Type: InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeUInt256,
+			},
+		}
+
+		encoded := []byte{
+			// tag
+			0xd8, CBORTagTypeValue,
+			// array, 1 items follow
+			0x81,
+			// tag
+			0xd8, CBORTagInclusiveRangeStaticType,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			// positive integer 50
+			0x18, 0x32,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
 	t.Run("without static type", func(t *testing.T) {
 
 		t.Parallel()
@@ -3525,7 +3587,7 @@ func TestCBORTagValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("No new types added in between", func(t *testing.T) {
-		require.Equal(t, byte(225), byte(CBORTag_Count))
+		require.Equal(t, byte(231), byte(CBORTag_Count))
 	})
 }
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,20 +110,6 @@ var CompositeTypeFunctionType = NewSimpleFunctionType(
 	OptionalMetaTypeAnnotation,
 )
 
-const InterfaceTypeFunctionName = "InterfaceType"
-
-var InterfaceTypeFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "identifier",
-			TypeAnnotation: StringTypeAnnotation,
-		},
-	},
-	OptionalMetaTypeAnnotation,
-)
-
 const FunctionTypeFunctionName = "FunctionType"
 
 var FunctionTypeFunctionType = NewSimpleFunctionType(
@@ -197,6 +183,20 @@ var CapabilityTypeFunctionType = NewSimpleFunctionType(
 	OptionalMetaTypeAnnotation,
 )
 
+const InclusiveRangeTypeFunctionName = "InclusiveRangeType"
+
+var InclusiveRangeTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "type",
+			TypeAnnotation: MetaTypeAnnotation,
+		},
+	},
+	OptionalMetaTypeAnnotation,
+)
+
 var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
 		Name:      OptionalTypeFunctionName,
@@ -231,13 +231,6 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	},
 
 	{
-		Name:  InterfaceTypeFunctionName,
-		Value: InterfaceTypeFunctionType,
-		DocString: `Creates a run-time type representing the interface type associated with the given type identifier.
-		Returns nil if the identifier does not correspond to any interface type.`,
-	},
-
-	{
 		Name:      FunctionTypeFunctionName,
 		Value:     FunctionTypeFunctionType,
 		DocString: "Creates a run-time type representing a function type associated with the given parameters and return type.",
@@ -267,5 +260,12 @@ var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 		Name:      CapabilityTypeFunctionName,
 		Value:     CapabilityTypeFunctionType,
 		DocString: "Creates a run-time type representing a capability type of the given reference type. Returns nil if the type is not a reference.",
+	},
+
+	{
+		Name:  InclusiveRangeTypeFunctionName,
+		Value: InclusiveRangeTypeFunctionType,
+		DocString: `Creates a run-time type representing an inclusive range type of the given run-time member type. 
+		Returns nil if the member type is not a valid inclusive range member type.`,
 	},
 }
