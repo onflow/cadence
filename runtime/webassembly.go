@@ -38,6 +38,9 @@ type WasmtimeWebAssemblyModule struct {
 func NewWasmtimeWebAssemblyModule(bytes []byte) (stdlib.WebAssemblyModule, error) {
 	config := wasmtime.NewConfig()
 
+	// Deterministic configuration inspired by
+	// https://github.com/dfinity/ic/blob/a0ab22537bdf65bd1f473654d49283e4f95f5a61/rs/embedders/README.adoc#nondeterminism
+
 	config.SetConsumeFuel(true)
 	config.SetMaxWasmStack(512 * 1024)
 
@@ -51,8 +54,12 @@ func NewWasmtimeWebAssemblyModule(bytes []byte) (stdlib.WebAssemblyModule, error
 	config.SetWasmMultiMemory(false)
 	config.SetWasmMultiValue(false)
 
+	// NaN canonicalization is needed for determinism.
 	config.SetStrategy(wasmtime.StrategyCranelift)
 	config.SetCraneliftFlag("enable_nan_canonicalization", "true")
+
+	// Disable optimizations to keep compilation simple and fast.
+	config.SetCraneliftOptLevel(wasmtime.OptLevelNone)
 
 	engine := wasmtime.NewEngineWithConfig(config)
 
