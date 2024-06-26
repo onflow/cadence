@@ -38,28 +38,36 @@ type WasmtimeWebAssemblyModule struct {
 func NewWasmtimeWebAssemblyModule(bytes []byte) (stdlib.WebAssemblyModule, error) {
 	config := wasmtime.NewConfig()
 
+	config.SetConsumeFuel(true)
+
+	// TODO: define max stack size
+	const todoMaxStackSize = 512 * 1024
+	config.SetMaxWasmStack(todoMaxStackSize)
+
+	// Enable bulk memory operations,
+	// programs can use them to operate on memory more efficiently.
+	config.SetWasmBulkMemory(true)
+
 	// Deterministic configuration inspired by
 	// https://github.com/dfinity/ic/blob/a0ab22537bdf65bd1f473654d49283e4f95f5a61/rs/embedders/README.adoc#nondeterminism
 
-	config.SetConsumeFuel(true)
-	config.SetMaxWasmStack(512 * 1024)
-
-	config.SetWasmBulkMemory(true)
 	config.SetWasmThreads(false)
-	config.SetWasmReferenceTypes(false)
-	// TODO: disable all SIMD related functionality.
-	//   Depends on https://github.com/bytecodealliance/wasmtime-go/pull/224
-	//   config.SetWasmSIMD(false)
-	config.SetWasmMemory64(false)
-	config.SetWasmMultiMemory(false)
-	config.SetWasmMultiValue(false)
+	config.SetWasmSIMD(false)
+	config.SetWasmRelaxedSIMD(false)
+	config.SetWasmRelaxedSIMDDeterministic(false)
 
-	// NaN canonicalization is needed for determinism.
 	config.SetStrategy(wasmtime.StrategyCranelift)
 	config.SetCraneliftFlag("enable_nan_canonicalization", "true")
 
 	// Disable optimizations to keep compilation simple and fast.
 	config.SetCraneliftOptLevel(wasmtime.OptLevelNone)
+
+	// Disable other features for now,
+	// maybe consider enabling them later.
+	config.SetWasmReferenceTypes(false)
+	config.SetWasmMemory64(false)
+	config.SetWasmMultiMemory(false)
+	config.SetWasmMultiValue(false)
 
 	engine := wasmtime.NewEngineWithConfig(config)
 
