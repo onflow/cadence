@@ -98,8 +98,8 @@ class Updater {
 
         const [owner, repoName] = fullRepoName.split('/')
 
-        const defaultBranch = repo.branch ||
-            (await this.octokit.rest.repos.get({owner, repo: repoName})).data.default_branch
+        const defaultBranch = repo.branch || await this.getDefaultBranch(owner, repoName)
+
         console.log(`> Default branch of repo ${fullRepoName}: ${defaultBranch}`)
 
         const defaultRefResponse = await this.octokit.rest.git.getRef({
@@ -418,11 +418,13 @@ class Updater {
             prTitle = `[${modList}] ${prTitle}`
         }
 
+        const base = repo.branch || (await this.getDefaultBranch(owner, repoName))
+
         const pull = await this.octokit.rest.pulls.create({
             owner,
             repo: repoName,
             head: branch,
-            base: repo.branch || "master",
+            base: base,
             title: prTitle,
             body: `
 ## Description
@@ -449,6 +451,11 @@ ${updateList}
 
         console.log(`Cleaning up clone of ${fullRepoName} ...`)
         await rm(dir, { recursive: true, force: true })
+    }
+
+    async getDefaultBranch(owner: string, repoName: string): Promise<string> {
+        const response = await this.octokit.rest.repos.get({owner, repo: repoName})
+        return response.data.default_branch
     }
 }
 
@@ -509,7 +516,10 @@ class Releaser {
         const dir = await mkdtemp(path.join(os.tmpdir(), `${owner}-${repoName}`))
 
         console.log(`Cloning ${this.repo} ...`)
-        await gitClone(this.protocol, this.repo, dir, this.branch || 'master')
+
+        const branch = this.branch || (await this.getDefaultBranch(owner, repoName))
+
+        await gitClone(this.protocol, this.repo, dir, branch)
         process.chdir(dir)
 
         console.log(`Tagging ${this.repo} version ${this.version} ...`)
@@ -526,6 +536,11 @@ class Releaser {
         await rm(dir, { recursive: true, force: true })
 
         console.log(`Now create a GitHub release: https://github.com/${this.repo}/releases/new?tag=${tag}`)
+    }
+
+    async getDefaultBranch(owner: string, repoName: string): Promise<string> {
+        const response = await this.octokit.rest.repos.get({owner, repo: repoName})
+        return response.data.default_branch
     }
 }
 
