@@ -45,12 +45,26 @@ function capitalizeFirstLetter(string: string): string {
 
 class Updater {
 
+    private versions = new Map<string, string>()
+
     constructor(
-        public versions: Map<string, string>,
         public config: CadenceUpdateToolConfigSchema,
         public octokit: Octokit,
         public protocol: Protocol
     ) {}
+
+    public setVersion(name: string, version: string) {
+        this.versions.set(name, version)
+        const match = version.match(/^v(\d+)/)
+        if (!match) {
+            return
+        }
+        const major = match[1]
+        if (major == "0" || major == "1") {
+            return
+        }
+        this.versions.set(`${name}/v${major}`, version)
+    }
 
     async update(repoName: string | undefined): Promise<void> {
         const rootFullRepoName = this.config.repo
@@ -227,7 +241,7 @@ class Updater {
 
         console.log(`✓ All deps of mod ${fullModName} at repo version ${version} are up-to-date`)
 
-        this.versions.set(fullModName, version)
+        this.setVersion(fullModName, version)
 
         return true
     }
@@ -584,19 +598,24 @@ class Releaser {
             async (args) => {
                 const config = await loadConfig(args.config)
 
-                const versions = new Map([
-                    [config.repo, args.version],
-                ])
-
-                for (const versionEntry of args.versions.split(',')) {
-                    const [repo, version] = versionEntry.split('@')
-                    versions.set(repo, version)
-                }
-
                 const protocol = args.useSSH ? Protocol.SSH : Protocol.HTTPS
 
-                await new Updater(versions, config, octokit, protocol)
-                    .update(args.repo)
+                const updater = new Updater(config, octokit, protocol)
+
+                const {version, versions} = args;
+
+                if (version) {
+                    updater.setVersion(config.repo, version)
+                }
+
+                if (versions) {
+                    for (const versionEntry of versions.split(',')) {
+                        const [repo, version] = versionEntry.split('@')
+                        updater.setVersion(repo, version)
+                    }
+                }
+
+                await updater.update(args.repo)
             }
         )
         .command(
