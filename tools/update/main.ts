@@ -107,9 +107,12 @@ class Updater {
             repo: repoName,
             ref: `heads/${defaultBranch}`
         })
-        const defaultRef = defaultRefResponse.data.object.sha
 
-        if (await this.repoModsUpdated(defaultRef, repo)) {
+        // Go uses the first 12 digits of the commit hash
+        // See https://go.dev/ref/mod#glos-pseudo-version
+        const defaultVersion = defaultRefResponse.data.object.sha.slice(0, 12)
+
+        if (await this.repoModsUpdated(defaultVersion, repo)) {
             console.log(`> Default branch (${defaultBranch}) of repo ${fullRepoName} is updated`)
 
             if (repo.needsRelease) {
