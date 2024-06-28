@@ -253,12 +253,15 @@ class Updater {
             const [owner, repoName] = fullRepoName.split('/')
             // Heuristic: Fetch as many releases on the first page as possible,
             // and find the latest release by sorting the releases by semver
-            const releases = await this.octokit.rest.repos.listReleases({
+            const response = await this.octokit.rest.repos.listReleases({
                 owner,
                 repo: repoName,
                 per_page: 100
             })
-            const release = releases.data.sort((a, b) => {
+
+            const releases = response.data.filter(release => !release.draft)
+
+            const release = releases.sort((a, b) => {
                 return a.created_at.localeCompare(b.created_at)
             }).pop()
             if (release === undefined) {
