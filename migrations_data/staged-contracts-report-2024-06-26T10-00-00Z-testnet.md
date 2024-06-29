@@ -19,6 +19,14 @@ Date: 26 June, 2024
 * [View contracts staged on Testnet](https://f.dnz.dev/0x2ceae959ed1a7e7a/)
 * [Great community tool to view up-to-date staging status](https://staging.dnz.dev/)
 
+## Root Block
+```
+Height: 196371608
+ID: 29bf4d7495f2de299706f616c4709358ed74ea2d041b54fba8d075bb76624ee5
+PrentID: 982692915c5d8cbe2d5e1dfcbd56b71943cc9c248b0e01aa0fe1e3469987ade3
+State Commitment: a245dbcad2c7abd06fde154158b3db2fa4257c319d9d8f5cd141cb3dddf983ab
+```
+
 ### Migration Report
 
 |Account Address | Contract Name | Status |
