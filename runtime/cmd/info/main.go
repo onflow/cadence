@@ -240,7 +240,10 @@ func dumpBuiltinValues() {
 	}
 
 	allBaseSemaValueTypes := checker.AllBaseSemaValueTypes()
-	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(nil)
+	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(
+		nil,
+		stdlib.DefaultStandardLibraryOptions,
+	)
 
 	valueTypes := make([]valueType, 0, len(allBaseSemaValueTypes)+len(standardLibraryValues))
 

@@ -41,4 +41,6 @@ type Config struct {
 	LegacyContractUpgradeEnabled bool
 	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates
 	ContractUpdateTypeRemovalEnabled bool
+	// WebAssemblyEnabled specifies if the WebAssembly API is enabled
+	WebAssemblyEnabled bool
 }

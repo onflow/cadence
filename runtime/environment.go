@@ -160,7 +160,9 @@ func newInterpreterEnvironment(config Config) *interpreterEnvironment {
 	}
 	env.InterpreterConfig = env.newInterpreterConfig()
 	env.CheckerConfig = env.newCheckerConfig()
+
 	env.compositeValueFunctionsHandlers = stdlib.DefaultStandardLibraryCompositeValueFunctionHandlers(env)
+
 	return env
 }
 
@@ -210,18 +212,32 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 	}
 }
 
+func StandardLibraryOptionsFromConfig(config Config) stdlib.StandardLibraryOptions {
+	return stdlib.StandardLibraryOptions{
+		WebAssemblyEnabled: config.WebAssemblyEnabled,
+	}
+}
+
 func NewBaseInterpreterEnvironment(config Config) *interpreterEnvironment {
 	env := newInterpreterEnvironment(config)
-	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env) {
+	options := StandardLibraryOptionsFromConfig(config)
+	for _, valueDeclaration := range stdlib.DefaultStandardLibraryValues(env, options) {
 		env.DeclareValue(valueDeclaration, nil)
+	}
+	for _, typeDeclaration := range stdlib.DefaultStandardLibraryTypes(options) {
+		env.DeclareType(typeDeclaration, nil)
 	}
 	return env
 }
 
 func NewScriptInterpreterEnvironment(config Config) Environment {
 	env := newInterpreterEnvironment(config)
-	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env) {
+	options := StandardLibraryOptionsFromConfig(config)
+	for _, valueDeclaration := range stdlib.DefaultScriptStandardLibraryValues(env, options) {
 		env.DeclareValue(valueDeclaration, nil)
+	}
+	for _, typeDeclaration := range stdlib.DefaultStandardLibraryTypes(options) {
+		env.DeclareType(typeDeclaration, nil)
 	}
 	return env
 }
@@ -812,6 +828,10 @@ func (e *interpreterEnvironment) BLSAggregateSignatures(signatures [][]byte) ([]
 
 func (e *interpreterEnvironment) Hash(data []byte, tag string, algorithm sema.HashAlgorithm) ([]byte, error) {
 	return e.runtimeInterface.Hash(data, tag, algorithm)
+}
+
+func (e *interpreterEnvironment) CompileWebAssembly(bytes []byte) (stdlib.WebAssemblyModule, error) {
+	return e.runtimeInterface.CompileWebAssembly(bytes)
 }
 
 func (e *interpreterEnvironment) DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error) {
