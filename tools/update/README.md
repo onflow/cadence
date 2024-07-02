@@ -4,7 +4,6 @@ The update tool helps with updating Flow downstream dependencies to a new Cadenc
 It is able to automate tedious tasks like bumping versions, opening PRs, tagging, etc.
 The tool automatically detects versions and supports multiple modules per repo.
 
-
 ## Usage
 
 ### Install Dependencies
@@ -47,6 +46,7 @@ GH_TOKEN=<github_token> ts-node main.ts update --version v0.30.0 --versions onfl
 ```
 
 Above will update the rest of the dependencies to:
+
 - Cadence `v0.30.0`
 - flow-go-sdk `v0.31.0`
 - flow-go `v0.26.0`
@@ -69,8 +69,8 @@ The update process is basically a cycle of the following steps for each downstre
 1. Use the tool to open a PR that updates the dependencies
 2. Review the PR for correctness
 3. Get the PR reviewed, approved, and merged
-3. Release a new version of the downstream dependency
-4. Go to 1
+4. Release a new version of the downstream dependency
+5. Go to 1
 
 ### Example
 
@@ -154,7 +154,6 @@ branch 'auto-update-onflow-cadence-v1.0.0-M8' set up to track 'origin/auto-updat
 
 </details>
 
-
 The command will determine that the `flow-go-sdk` downstream dependency is outdated and will propose to open a PR for it.
 
 Agree to have a PR opened, get it reviewed, approved, and merged.
@@ -185,6 +184,7 @@ To ssh://github.com/onflow/flow-go-sdk
 Cleaning up clone of onflow/flow-go-sdk
 Now create a GitHub release: https://github.com/onflow/flow-go-sdk/releases/new?tag=v1.0.0-M5
 ```
+
 </details>
 
 Go to the link that is shown at the end to create a new GitHub (pre-)release for this dependency, e.g. https://github.com/onflow/flow-go-sdk/releases/new?tag=v1.0.0-M5.
@@ -204,7 +204,7 @@ GH_TOKEN=`gh auth token` ts-node main.ts update \
 ```
 
 Again, the tool will determine the next downstream dependency that needs to get updated.
-This time is the `lint` module in the  `onflow/cadence-tools` repo.
+This time is the `lint` module in the `onflow/cadence-tools` repo.
 
 <details>
 <summary>
@@ -284,10 +284,6 @@ Checking repo onflow/cadence-tools ...
       --mod lint \
       --version v1.0.0-M5
   ```
-
-- Some downstream dependencies's main branch (e.g. `master`) has not been updated to Cadence 1.0 yet, and the changes for Cadence 1.0 are still on a feature branch.
-
-  For example, the update to Cadence 1.0 in `flow-go` is in the feature branch `feature/stable-cadence`.
 
 - `flowkit` is at `v2`, which Go handles specially, and the update tool does not quite support out-of-the-box yet.
 
