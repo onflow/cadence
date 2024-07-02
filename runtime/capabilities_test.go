@@ -278,12 +278,38 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testRI() {
-                  let unentitledRI1 = self.account.capabilities.get<&{RI}>(/public/unentitledRI).borrow()!
-                  let entitledRI1 = self.account.capabilities.get<auth(X) &{RI}>(/public/unentitledRI).borrow()
-                  assert(entitledRI1 == nil)
+                  // Borrow /public/unentitledRI.
+                  // - All unentitled borrows should succeed (as &{RI} / as &R)
+                  // - All entitled borrows should fail (as &{RI} / as &R)
 
-                  let unentitledRI2 = self.account.capabilities.get<&{RI}>(/public/entitledRI).borrow()!
-                  let entitledRI2 = self.account.capabilities.get<auth(X) &{RI}>(/public/entitledRI).borrow()!
+                  let unentitledRI1 = self.account.capabilities.get<&{RI}>(/public/unentitledRI).borrow()
+                  assert(unentitledRI1 != nil, message: "unentitledRI1 should not be nil")
+
+                  let entitledRI1 = self.account.capabilities.get<auth(X) &{RI}>(/public/unentitledRI).borrow()
+                  assert(entitledRI1 == nil, message: "entitledRI1 should be nil")
+
+                  let unentitledR1 = self.account.capabilities.get<&R>(/public/unentitledRI).borrow()
+                  assert(unentitledR1 != nil, message: "unentitledR1 should not be nil")
+
+                  let entitledR1 = self.account.capabilities.get<auth(X) &R>(/public/unentitledRI).borrow()
+                  assert(entitledR1 == nil, message: "entitledR1 should be nil")
+
+                  // Borrow /public/entitledRI.
+                  // All borrows should succeed:
+                  // - As &{RI} / as &R
+                  // - Unentitled / entitled
+
+                  let unentitledRI2 = self.account.capabilities.get<&{RI}>(/public/entitledRI).borrow()
+                  assert(unentitledRI2 != nil, message: "unentitledRI2 should not be nil")
+
+                  let entitledRI2 = self.account.capabilities.get<auth(X) &{RI}>(/public/entitledRI).borrow()
+                  assert(entitledRI2 != nil, message: "entitledRI2 should not be nil")
+
+                  let unentitledR2 = self.account.capabilities.get<&R>(/public/entitledRI).borrow()
+                  assert(unentitledR2 != nil, message: "unentitledR2 should not be nil")
+
+                  let entitledR2 = self.account.capabilities.get<auth(X) &R>(/public/entitledRI).borrow()
+                  assert(entitledR2 != nil, message: "entitledR2 should not be nil")
               }
           }
         `
@@ -573,12 +599,39 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testSI() {
-                  let unentitledSI1 = self.account.capabilities.get<&{SI}>(/public/unentitledSI).borrow()!
-                  let entitledSI1 = self.account.capabilities.get<auth(X) &{SI}>(/public/unentitledSI).borrow()
-                  assert(entitledSI1 == nil)
 
-                  let unentitledSI2 = self.account.capabilities.get<&{SI}>(/public/entitledSI).borrow()!
-                  let entitledSI2 = self.account.capabilities.get<auth(X) &{SI}>(/public/entitledSI).borrow()!
+                  // Borrow /public/unentitledSI.
+                  // - All unentitled borrows should succeed (as &{SI} / as &S)
+                  // - All entitled borrows should fail (as &{SI} / as &S)
+
+                  let unentitledSI1 = self.account.capabilities.get<&{SI}>(/public/unentitledSI).borrow()
+                  assert(unentitledSI1 != nil, message: "unentitledSI1 should not be nil")
+
+                  let entitledSI1 = self.account.capabilities.get<auth(X) &{SI}>(/public/unentitledSI).borrow()
+                  assert(entitledSI1 == nil, message: "entitledSI1 should be nil")
+
+                  let unentitledS1 = self.account.capabilities.get<&S>(/public/unentitledSI).borrow()
+                  assert(unentitledS1 != nil, message: "unentitledS1 should not be nil")
+
+                  let entitledS1 = self.account.capabilities.get<auth(X) &S>(/public/unentitledSI).borrow()
+                  assert(entitledS1 == nil, message: "entitledS1 should be nil")
+
+                  // Borrow /public/entitledSI.
+                  // All borrows should succeed:
+                  // - As &{SI} / as &S
+                  // - Unentitled / entitled
+
+                  let unentitledSI2 = self.account.capabilities.get<&{SI}>(/public/entitledSI).borrow()
+                  assert(unentitledSI2 != nil, message: "unentitledSI2 should not be nil")
+
+                  let entitledSI2 = self.account.capabilities.get<auth(X) &{SI}>(/public/entitledSI).borrow()
+                  assert(entitledSI2 != nil, message: "entitledSI2 should not be nil")
+
+                  let unentitledS2 = self.account.capabilities.get<&S>(/public/entitledSI).borrow()
+                  assert(unentitledS2 != nil, message: "unentitledS2 should not be nil")
+
+                  let entitledS2 = self.account.capabilities.get<auth(X) &S>(/public/entitledSI).borrow()
+                  assert(entitledS2 != nil, message: "entitledS2 should not be nil")
               }
           }
         `
