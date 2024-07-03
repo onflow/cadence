@@ -1312,7 +1312,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 	}
 
 	castingExpressionTypes := interpreter.Program.Elaboration.CastingExpressionTypes(expression)
-	expectedType := interpreter.substituteMappedEntitlements(castingExpressionTypes.TargetType)
+	expectedType := interpreter.SubstituteMappedEntitlements(castingExpressionTypes.TargetType)
 
 	switch expression.Operation {
 	case ast.OperationFailableCast, ast.OperationForceCast:
@@ -1325,7 +1325,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
 		// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
 		// so we don't substitute them.
-		valueSemaType := interpreter.substituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
+		valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
 

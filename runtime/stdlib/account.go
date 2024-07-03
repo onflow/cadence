@@ -3509,6 +3509,25 @@ func newAccountCapabilitiesUnpublishFunction(
 	}
 }
 
+func canBorrow(
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) bool {
+
+	// Ensure the wanted borrow type is not more permissive than the capability borrow type
+
+	if !wantedBorrowType.Authorization.
+		PermitsAccess(capabilityBorrowType.Authorization) {
+
+		return false
+	}
+
+	// Ensure the wanted borrow type must be a subtype or supertype of the capability borrow type
+
+	return sema.IsSubType(wantedBorrowType.Type, capabilityBorrowType.Type) ||
+		sema.IsSubType(capabilityBorrowType.Type, wantedBorrowType.Type)
+}
+
 func getCheckedCapabilityController(
 	inter *interpreter.Interpreter,
 	capabilityAddressValue interpreter.AddressValue,
@@ -3519,15 +3538,14 @@ func getCheckedCapabilityController(
 	interpreter.CapabilityControllerValue,
 	*sema.ReferenceType,
 ) {
-
 	if wantedBorrowType == nil {
 		wantedBorrowType = capabilityBorrowType
-	} else if !sema.IsSubType(capabilityBorrowType, wantedBorrowType) {
-		// Ensure wanted borrow type is not more permissive
-		// than the capability's borrow type:
-		// The wanted type must be a supertype
+	} else {
+		wantedBorrowType = inter.SubstituteMappedEntitlements(wantedBorrowType).(*sema.ReferenceType)
 
-		return nil, nil
+		if !canBorrow(wantedBorrowType, capabilityBorrowType) {
+			return nil, nil
+		}
 	}
 
 	capabilityAddress := capabilityAddressValue.ToAddress()
@@ -3538,10 +3556,6 @@ func getCheckedCapabilityController(
 		return nil, nil
 	}
 
-	// Ensure wanted borrow type is not more permissive
-	// than the controller's borrow type:
-	// The wanted type must be a supertype
-
 	controllerBorrowStaticType := controller.CapabilityControllerBorrowType()
 
 	controllerBorrowType, ok :=
@@ -3550,7 +3564,7 @@ func getCheckedCapabilityController(
 		panic(errors.NewUnreachableError())
 	}
 
-	if !sema.IsSubType(controllerBorrowType, wantedBorrowType) {
+	if !canBorrow(wantedBorrowType, controllerBorrowType) {
 		return nil, nil
 	}
 

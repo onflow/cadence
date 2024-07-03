@@ -1792,7 +1792,7 @@ func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclarat
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) substituteMappedEntitlements(ty sema.Type) sema.Type {
+func (interpreter *Interpreter) SubstituteMappedEntitlements(ty sema.Type) sema.Type {
 	if interpreter.SharedState.currentEntitlementMappedValue == nil {
 		return ty
 	}
@@ -1830,7 +1830,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		nil,
 	)
 
-	targetType = interpreter.substituteMappedEntitlements(targetType)
+	targetType = interpreter.SubstituteMappedEntitlements(targetType)
 
 	result := interpreter.ConvertAndBox(
 		locationRange,
