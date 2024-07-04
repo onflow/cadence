@@ -3522,7 +3522,7 @@ func canBorrow(
 		return false
 	}
 
-	// Ensure the wanted borrow type must be a subtype or supertype of the capability borrow type
+	// Ensure the wanted borrow type is a subtype or supertype of the capability borrow type
 
 	return sema.IsSubType(wantedBorrowType.Type, capabilityBorrowType.Type) ||
 		sema.IsSubType(capabilityBorrowType.Type, wantedBorrowType.Type)
