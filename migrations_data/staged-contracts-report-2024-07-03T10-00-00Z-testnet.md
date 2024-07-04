@@ -21,7 +21,7 @@ Date: 03 July, 2024
 ## Root Block
 ```
 Height: 198451725
-ID: TBD
+ID: 2dcf5fdf92c12ab7b7f9e7862355e7475225879fdd1598efdecaa2e7322876bc
 ParentID: b495b4bb7d87aff7833c9cfa9146e02ed500330a1a472cefd12c3378c2db1ce9
 State Commitment: 4d3ddf0bfd134eb88759ba7317842abf94e2d87a5df8bea8053f6fd39355eea3
 ```
