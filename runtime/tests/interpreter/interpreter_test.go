@@ -1125,6 +1125,8 @@ func TestInterpretStringSlicing(t *testing.T) {
 		{"cafe\\u{301}ba\\u{308}be", 4, 8, "ba\u0308be", nil},
 		{"cafe\\u{301}ba\\u{308}be", 3, 4, "e\u0301", nil},
 		{"cafe\\u{301}ba\\u{308}be", 5, 6, "a\u0308", nil},
+		{"tamil \\u{BA8}\\u{BBF} (ni)", 0, 7, "tamil \u0BA8\u0BBF", nil},
+		{"tamil \\u{BA8}\\u{BBF} (ni)", 7, 12, " (ni)", nil},
 	}
 
 	runTest := func(test test) {
@@ -5355,6 +5357,7 @@ func TestInterpretStringLength(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
       let x = "cafe\u{301}".length
       let y = x
+      let z = "\u{1F3F3}\u{FE0F}\u{200D}\u{1F308}".length
     `)
 
 	AssertValuesEqual(
@@ -5368,6 +5371,12 @@ func TestInterpretStringLength(t *testing.T) {
 		inter,
 		interpreter.NewUnmeteredIntValueFromInt64(4),
 		inter.Globals.Get("y").GetValue(inter),
+	)
+	AssertValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredIntValueFromInt64(1),
+		inter.Globals.Get("z").GetValue(inter),
 	)
 }
 
