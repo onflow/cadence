@@ -3483,16 +3483,20 @@ func (v *ArrayValue) ToVariableSized(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 ) Value {
-	var returnArrayStaticType ArrayStaticType
-	switch v.Type.(type) {
-	case *ConstantSizedStaticType:
-		returnArrayStaticType = NewVariableSizedStaticType(
-			interpreter,
-			v.Type.ElementType(),
-		)
-	default:
+
+	// Convert the constant-sized array type to a variable-sized array type.
+
+	constantSizedType, ok := v.Type.(*ConstantSizedStaticType)
+	if !ok {
 		panic(errors.NewUnreachableError())
 	}
+
+	variableSizedType := NewVariableSizedStaticType(
+		interpreter,
+		constantSizedType.Type,
+	)
+
+	// Convert the array to a variable-sized array.
 
 	iterator, err := v.array.Iterator()
 	if err != nil {
@@ -3501,7 +3505,7 @@ func (v *ArrayValue) ToVariableSized(
 
 	return NewArrayValueWithIterator(
 		interpreter,
-		returnArrayStaticType,
+		variableSizedType,
 		common.ZeroAddress,
 		uint64(v.Count()),
 		func() Value {
@@ -3536,33 +3540,41 @@ func (v *ArrayValue) ToConstantSized(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	expectedConstantSizedArraySize int64,
-) Value {
-	if int64(v.Count()) != expectedConstantSizedArraySize {
+) OptionalValue {
+
+	// Ensure the array has the expected size.
+
+	count := v.Count()
+
+	if int64(count) != expectedConstantSizedArraySize {
 		return NilOptionalValue
 	}
 
-	var returnArrayStaticType ArrayStaticType
-	switch v.Type.(type) {
-	case *VariableSizedStaticType:
-		returnArrayStaticType = NewConstantSizedStaticType(
-			interpreter,
-			v.Type.ElementType(),
-			expectedConstantSizedArraySize,
-		)
-	default:
+	// Convert the variable-sized array type to a constant-sized array type.
+
+	variableSizedType, ok := v.Type.(*VariableSizedStaticType)
+	if !ok {
 		panic(errors.NewUnreachableError())
 	}
+
+	constantSizedType := NewConstantSizedStaticType(
+		interpreter,
+		variableSizedType.Type,
+		expectedConstantSizedArraySize,
+	)
+
+	// Convert the array to a constant-sized array.
 
 	iterator, err := v.array.Iterator()
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 
-	return NewArrayValueWithIterator(
+	constantSizedArray := NewArrayValueWithIterator(
 		interpreter,
-		returnArrayStaticType,
+		constantSizedType,
 		common.ZeroAddress,
-		uint64(v.Count()),
+		uint64(count),
 		func() Value {
 
 			// Meter computation for iterating the array.
@@ -3589,6 +3601,10 @@ func (v *ArrayValue) ToConstantSized(
 			)
 		},
 	)
+
+	// Return the constant-sized array as an optional value.
+
+	return NewSomeValueNonCopying(interpreter, constantSizedArray)
 }
 
 func (v *ArrayValue) SetType(staticType ArrayStaticType) {
