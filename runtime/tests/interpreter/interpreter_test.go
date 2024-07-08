@@ -1128,7 +1128,10 @@ func TestInterpretStringSlicing(t *testing.T) {
 	}
 
 	runTest := func(test test) {
-		t.Run("", func(t *testing.T) {
+
+		name := fmt.Sprintf("%s, %d, %d", test.str, test.from, test.to)
+
+		t.Run(name, func(t *testing.T) {
 
 			t.Parallel()
 

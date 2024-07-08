@@ -1379,6 +1379,21 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			},
 		)
 
+	case sema.StringTypeContainsFunctionName:
+		return NewBoundHostFunctionValue(
+			interpreter,
+			v,
+			sema.StringTypeContainsFunctionType,
+			func(invocation Invocation) Value {
+				other, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.Contains(invocation.Interpreter, other)
+			},
+		)
+
 	case sema.StringTypeDecodeHexFunctionName:
 		return NewBoundHostFunctionValue(
 			interpreter,
@@ -1686,6 +1701,44 @@ func (v *StringValue) ForEach(
 			return
 		}
 	}
+}
+
+func (v *StringValue) Contains(inter *Interpreter, other *StringValue) BoolValue {
+
+	// Meter computation as if the string was iterated.
+	// This is a conservative over-estimation.
+	inter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)*len(other.Str)))
+
+	v.prepareGraphemes()
+
+	for {
+		start, _ := v.graphemes.Positions()
+		remainder := v.Str[start:]
+		if strings.HasPrefix(remainder, other.Str) {
+
+			// Check the end is a grapheme cluster boundary
+			expectedEnd := start + len(other.Str)
+			for {
+				_, end := v.graphemes.Positions()
+				if end == expectedEnd {
+					return TrueValue
+				} else if end > expectedEnd {
+					return FalseValue
+				}
+
+				if !v.graphemes.Next() {
+					break
+				}
+			}
+		}
+
+		if !v.graphemes.Next() {
+			break
+		}
+	}
+
+	return FalseValue
+
 }
 
 type StringValueIterator struct {

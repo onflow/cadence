@@ -643,3 +643,84 @@ func TestInterpretStringReplaceAll(t *testing.T) {
 	testCase(t, "testEmptyOf", interpreter.NewUnmeteredStringValue("1a1b1c1"))
 	testCase(t, "testNoMatch", interpreter.NewUnmeteredStringValue("pqrS;asdf"))
 }
+
+func TestInterpretStringContains(t *testing.T) {
+
+	t.Parallel()
+
+	type test struct {
+		str    string
+		subStr string
+		result bool
+	}
+
+	tests := []test{
+		{"abcdef", "", true},
+		{"abcdef", "a", true},
+		{"abcdef", "ab", true},
+		{"abcdef", "ac", false},
+		{"abcdef", "b", true},
+		{"abcdef", "bc", true},
+		{"abcdef", "bcd", true},
+		{"abcdef", "c", true},
+		{"abcdef", "cd", true},
+		{"abcdef", "cdef", true},
+		{"abcdef", "cdefg", false},
+		{"abcdef", "abcdef", true},
+		{"abcdef", "abcdefg", false},
+
+		// U+1F476 U+1F3FB is 👶🏻
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", " \\u{1F476}", false},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{1F3FB}", false},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", " \\u{1F476}\\u{1F3FB}", true},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{1F476}\\u{1F3FB}", true},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{1F476}\\u{1F3FB} ", true},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{D}", false},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{A}", false},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", " ascii ", true},
+
+		// 🇪🇸🇪🇪 ("ES", "EE") contains 🇪🇸("ES")
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1EA}\\u{1F1F8}", true},
+		// 🇪🇸🇪🇪 ("ES", "EE") contains 🇪🇪 ("EE")
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1EA}\\u{1F1EA}", true},
+		// 🇪🇸🇪🇪 ("ES", "EE") does NOT contain 🇸🇪 ("SE")
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1F8}\\u{1F1EA}", false},
+		// neither prefix nor suffix of codepoints are valid
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}", false},
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", false},
+	}
+
+	runTest := func(test test) {
+
+		name := fmt.Sprintf("%s, %s", test.str, test.subStr)
+
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      fun test(): Bool {
+                        let s = "%s"
+                        return s.contains("%s")
+                      }
+                    `,
+					test.str,
+					test.subStr,
+				),
+			)
+
+			value, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			require.IsType(t, interpreter.BoolValue(true), value)
+			actual := value.(interpreter.BoolValue)
+			require.Equal(t, test.result, bool(actual))
+		})
+	}
+
+	for _, test := range tests {
+		runTest(test)
+	}
+}
