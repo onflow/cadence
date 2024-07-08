@@ -1703,6 +1703,48 @@ func (v *StringValue) ForEach(
 	}
 }
 
+func (v *StringValue) IsBoundaryStart(start int) bool {
+	v.prepareGraphemes()
+	return v.isGraphemeBoundaryStartPrepared(start)
+}
+
+func (v *StringValue) isGraphemeBoundaryStartPrepared(start int) bool {
+
+	for {
+		boundaryStart, _ := v.graphemes.Positions()
+		if start == boundaryStart {
+			return true
+		} else if boundaryStart > start {
+			return false
+		}
+
+		if !v.graphemes.Next() {
+			return false
+		}
+	}
+}
+
+func (v *StringValue) IsBoundaryEnd(end int) bool {
+	v.prepareGraphemes()
+	return v.isGraphemeBoundaryEndPrepared(end)
+}
+
+func (v *StringValue) isGraphemeBoundaryEndPrepared(end int) bool {
+
+	for {
+		_, boundaryEnd := v.graphemes.Positions()
+		if end == boundaryEnd {
+			return true
+		} else if boundaryEnd > end {
+			return false
+		}
+
+		if !v.graphemes.Next() {
+			return false
+		}
+	}
+}
+
 func (v *StringValue) Contains(inter *Interpreter, other *StringValue) BoolValue {
 
 	// Meter computation as if the string was iterated.
@@ -1711,29 +1753,17 @@ func (v *StringValue) Contains(inter *Interpreter, other *StringValue) BoolValue
 
 	v.prepareGraphemes()
 
-	for {
-		start, _ := v.graphemes.Positions()
-		remainder := v.Str[start:]
-		if strings.HasPrefix(remainder, other.Str) {
+	for start := 0; start < len(v.Str); start++ {
 
-			// Check the end is a grapheme cluster boundary
-			expectedEnd := start + len(other.Str)
-			for {
-				_, end := v.graphemes.Positions()
-				if end == expectedEnd {
-					return TrueValue
-				} else if end > expectedEnd {
-					return FalseValue
-				}
-
-				if !v.graphemes.Next() {
-					break
-				}
-			}
+		start = strings.Index(v.Str[start:], other.Str)
+		if start < 0 {
+			break
 		}
 
-		if !v.graphemes.Next() {
-			break
+		if v.isGraphemeBoundaryStartPrepared(start) &&
+			v.isGraphemeBoundaryEndPrepared(start+len(other.Str)) {
+
+			return TrueValue
 		}
 	}
 
