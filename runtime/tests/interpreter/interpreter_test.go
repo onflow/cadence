@@ -11520,6 +11520,43 @@ func TestInterpretArrayToConstantSized(t *testing.T) {
 			),
 		)
 	})
+
+	t.Run("ensure result is optional", func(t *testing.T) {
+		t.Parallel()
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(stdlib.PanicFunction)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, stdlib.PanicFunction)
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+               fun test(): [UInt8; 20] {
+                    return "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+                        .decodeHex()
+                        .toConstantSized<[UInt8; 20]>()
+                        ?? panic("toConstantSized failed")
+               }
+            `,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+				Config: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	})
 }
 
 func TestInterpretCastingBoxing(t *testing.T) {

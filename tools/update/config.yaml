@@ -88,7 +88,6 @@ repos:
 
 - repo: onflow/flow-evm-gateway
   needsRelease: false
-  branch: main
   mods:
     - path: ""
       deps:

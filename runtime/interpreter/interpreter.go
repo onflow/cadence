@@ -1792,7 +1792,7 @@ func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclarat
 	panic(errors.NewUnreachableError())
 }
 
-func (interpreter *Interpreter) substituteMappedEntitlements(ty sema.Type) sema.Type {
+func (interpreter *Interpreter) SubstituteMappedEntitlements(ty sema.Type) sema.Type {
 	if interpreter.SharedState.currentEntitlementMappedValue == nil {
 		return ty
 	}
@@ -1831,7 +1831,7 @@ func (interpreter *Interpreter) transferAndConvert(
 		true, // value is standalone.
 	)
 
-	targetType = interpreter.substituteMappedEntitlements(targetType)
+	targetType = interpreter.SubstituteMappedEntitlements(targetType)
 
 	result := interpreter.ConvertAndBox(
 		locationRange,
@@ -3998,39 +3998,31 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType StaticTy
 	return interpreter.IsSubTypeOfSemaType(subType, semaType)
 }
 
-func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superType sema.Type) bool {
+func (interpreter *Interpreter) IsSubTypeOfSemaType(staticSubType StaticType, superType sema.Type) bool {
 	if superType == sema.AnyType {
 		return true
 	}
 
-	switch subType := subType.(type) {
+	// Optimization: Implement subtyping for common cases directly,
+	// without converting the subtype to a sema type.
+
+	switch staticSubType := staticSubType.(type) {
 	case *OptionalStaticType:
 		if superType, ok := superType.(*sema.OptionalType); ok {
-			return interpreter.IsSubTypeOfSemaType(subType.Type, superType.Type)
+			return interpreter.IsSubTypeOfSemaType(staticSubType.Type, superType.Type)
 		}
 
 		switch superType {
 		case sema.AnyStructType, sema.AnyResourceType:
-			return interpreter.IsSubTypeOfSemaType(subType.Type, superType)
-		}
-
-	case *ReferenceStaticType:
-		if superType, ok := superType.(*sema.ReferenceType); ok {
-
-			// First, check that the static type of the referenced value
-			// is a subtype of the super type
-
-			return subType.ReferencedType != nil &&
-				interpreter.IsSubTypeOfSemaType(subType.ReferencedType, superType.Type) &&
-				superType.Authorization.PermitsAccess(interpreter.MustConvertStaticAuthorizationToSemaAccess(subType.Authorization))
+			return interpreter.IsSubTypeOfSemaType(staticSubType.Type, superType)
 		}
 
 		return superType == sema.AnyStructType
 	}
 
-	semaType := interpreter.MustConvertStaticToSemaType(subType)
+	semaSubType := interpreter.MustConvertStaticToSemaType(staticSubType)
 
-	return sema.IsSubType(semaType, superType)
+	return sema.IsSubType(semaSubType, superType)
 }
 
 func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
