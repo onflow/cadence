@@ -29,8 +29,7 @@ var nativeFunctions []*global
 
 var builtinTypes = []sema.Type{
 	sema.StringType,
-	sema.AuthAccountType,
-	sema.PublicAccountType,
+	sema.AccountType,
 	&sema.CapabilityType{},
 }
 

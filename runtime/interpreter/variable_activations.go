@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@ package interpreter
 
 import "github.com/onflow/cadence/runtime/activations"
 
-type VariableActivations = activations.Activations[*Variable]
+type VariableActivations = activations.Activations[Variable]
 
-type VariableActivation = activations.Activation[*Variable]
+type VariableActivation = activations.Activation[Variable]
 
 func Declare(a *VariableActivation, declaration ValueDeclaration) {
 

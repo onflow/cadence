@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
 
 package stdlib
 
+//go:generate go run ../sema/gen -p stdlib bls.cdc bls.gen.go
+
 import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -25,161 +27,192 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var blsContractType = func() *sema.CompositeType {
-	ty := &sema.CompositeType{
-		Identifier: "BLS",
-		Kind:       common.CompositeKindContract,
+type BLSPublicKeyAggregator interface {
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+	// BLSAggregatePublicKeys aggregate multiple BLS public keys into one.
+	BLSAggregatePublicKeys(publicKeys []*PublicKey) (*PublicKey, error)
+}
+
+func newBLSAggregatePublicKeysFunction(
+	gauge common.MemoryGauge,
+	aggregator BLSPublicKeyAggregator,
+) *interpreter.HostFunctionValue {
+	// TODO: Should create a bound-host function here, but interpreter is not available at this point.
+	// However, this is not a problem for now, since underlying contract doesn't get moved.
+	return interpreter.NewStaticHostFunctionValue(
+		gauge,
+		BLSTypeAggregatePublicKeysFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			publicKeysValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			inter.ExpectType(
+				publicKeysValue,
+				sema.PublicKeyArrayType,
+				locationRange,
+			)
+
+			publicKeys := make([]*PublicKey, 0, publicKeysValue.Count())
+			publicKeysValue.Iterate(
+				inter,
+				func(element interpreter.Value) (resume bool) {
+					publicKeyValue, ok := element.(*interpreter.CompositeValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					publicKey, err := NewPublicKeyFromValue(inter, locationRange, publicKeyValue)
+					if err != nil {
+						panic(err)
+					}
+
+					publicKeys = append(publicKeys, publicKey)
+
+					// Continue iteration
+					return true
+				},
+				false,
+				locationRange,
+			)
+
+			var err error
+			var aggregatedPublicKey *PublicKey
+			errors.WrapPanic(func() {
+				aggregatedPublicKey, err = aggregator.BLSAggregatePublicKeys(publicKeys)
+			})
+
+			// If the crypto layer produces an error, we have invalid input, return nil
+			if err != nil {
+				return interpreter.NilOptionalValue
+			}
+
+			aggregatedPublicKeyValue := NewPublicKeyValue(
+				inter,
+				locationRange,
+				aggregatedPublicKey,
+			)
+
+			return interpreter.NewSomeValueNonCopying(
+				inter,
+				aggregatedPublicKeyValue,
+			)
+		},
+	)
+}
+
+type BLSSignatureAggregator interface {
+	// BLSAggregateSignatures aggregate multiple BLS signatures into one.
+	BLSAggregateSignatures(signatures [][]byte) ([]byte, error)
+}
+
+func newBLSAggregateSignaturesFunction(
+	gauge common.MemoryGauge,
+	aggregator BLSSignatureAggregator,
+) *interpreter.HostFunctionValue {
+	// TODO: Should create a bound-host function here, but interpreter is not available at this point.
+	// However, this is not a problem for now, since underlying contract doesn't get moved.
+	return interpreter.NewStaticHostFunctionValue(
+		gauge,
+		BLSTypeAggregateSignaturesFunctionType,
+		func(invocation interpreter.Invocation) interpreter.Value {
+			signaturesValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			inter.ExpectType(
+				signaturesValue,
+				sema.ByteArrayArrayType,
+				locationRange,
+			)
+
+			bytesArray := make([][]byte, 0, signaturesValue.Count())
+			signaturesValue.Iterate(
+				inter,
+				func(element interpreter.Value) (resume bool) {
+					signature, ok := element.(*interpreter.ArrayValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					bytes, err := interpreter.ByteArrayValueToByteSlice(inter, signature, invocation.LocationRange)
+					if err != nil {
+						panic(err)
+					}
+
+					bytesArray = append(bytesArray, bytes)
+
+					// Continue iteration
+					return true
+				},
+				false,
+				locationRange,
+			)
+
+			var err error
+			var aggregatedSignature []byte
+			errors.WrapPanic(func() {
+				aggregatedSignature, err = aggregator.BLSAggregateSignatures(bytesArray)
+			})
+
+			// If the crypto layer produces an error, we have invalid input, return nil
+			if err != nil {
+				return interpreter.NilOptionalValue
+			}
+
+			aggregatedSignatureValue := interpreter.ByteSliceToByteArrayValue(inter, aggregatedSignature)
+
+			return interpreter.NewSomeValueNonCopying(
+				inter,
+				aggregatedSignatureValue,
+			)
+		},
+	)
+}
+
+type BLSContractHandler interface {
+	PublicKeyValidator
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+	BLSPublicKeyAggregator
+	BLSSignatureAggregator
+}
+
+var BLSTypeStaticType = interpreter.ConvertSemaToStaticType(nil, BLSType)
+
+func NewBLSContract(
+	gauge common.MemoryGauge,
+	handler BLSContractHandler,
+) StandardLibraryValue {
+	blsContractFields := map[string]interpreter.Value{
+		BLSTypeAggregatePublicKeysFunctionName: newBLSAggregatePublicKeysFunction(gauge, handler),
+		BLSTypeAggregateSignaturesFunctionName: newBLSAggregateSignaturesFunction(gauge, handler),
 	}
 
-	ty.Members = sema.GetMembersAsMap([]*sema.Member{
-		sema.NewUnmeteredPublicFunctionMember(
-			ty,
-			blsAggregatePublicKeysFunctionName,
-			blsAggregatePublicKeysFunctionType,
-			blsAggregatePublicKeysFunctionDocString,
-		),
-		sema.NewUnmeteredPublicFunctionMember(
-			ty,
-			blsAggregateSignaturesFunctionName,
-			blsAggregateSignaturesFunctionType,
-			blsAggregateSignaturesFunctionDocString,
-		),
-	})
-	return ty
-}()
+	blsContractValue := interpreter.NewSimpleCompositeValue(
+		gauge,
+		BLSType.ID(),
+		BLSTypeStaticType,
+		nil,
+		blsContractFields,
+		nil,
+		nil,
+		nil,
+	)
 
-var blsContractTypeID = blsContractType.ID()
-var blsContractStaticType interpreter.StaticType = interpreter.CompositeStaticType{
-	QualifiedIdentifier: blsContractType.Identifier,
-	TypeID:              blsContractTypeID,
-}
-
-const blsAggregateSignaturesFunctionDocString = `
-Aggregates multiple BLS signatures into one,
-considering the proof of possession as a defense against rogue attacks.
-
-Signatures could be generated from the same or distinct messages,
-they could also be the aggregation of other signatures.
-The order of the signatures in the slice does not matter since the aggregation is commutative.
-No subgroup membership check is performed on the input signatures.
-The function returns nil if the array is empty or if decoding one of the signature fails.
-`
-
-const blsAggregateSignaturesFunctionName = "aggregateSignatures"
-
-var blsAggregateSignaturesFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "signatures",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.ByteArrayArrayType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.OptionalType{
-			Type: sema.ByteArrayType,
-		},
-	),
-}
-
-const blsAggregatePublicKeysFunctionDocString = `
-Aggregates multiple BLS public keys into one.
-
-The order of the public keys in the slice does not matter since the aggregation is commutative.
-No subgroup membership check is performed on the input keys.
-The function returns nil if the array is empty or any of the input keys is not a BLS key.
-`
-
-const blsAggregatePublicKeysFunctionName = "aggregatePublicKeys"
-
-var blsAggregatePublicKeysFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "keys",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.PublicKeyArrayType,
-			),
-		},
-	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.OptionalType{
-			Type: sema.PublicKeyType,
-		},
-	),
-}
-
-var blsAggregatePublicKeysFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		publicKeys, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		inter := invocation.Interpreter
-		locationRange := invocation.LocationRange
-
-		inter.ExpectType(
-			publicKeys,
-			sema.PublicKeyArrayType,
-			locationRange,
-		)
-
-		return inter.Config.BLSAggregatePublicKeysHandler(
-			inter,
-			locationRange,
-			publicKeys,
-		)
-	},
-	blsAggregatePublicKeysFunctionType,
-)
-
-var blsAggregateSignaturesFunction = interpreter.NewUnmeteredHostFunctionValue(
-	func(invocation interpreter.Invocation) interpreter.Value {
-		signatures, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		inter := invocation.Interpreter
-		locationRange := invocation.LocationRange
-
-		inter.ExpectType(
-			signatures,
-			sema.ByteArrayArrayType,
-			locationRange,
-		)
-
-		return inter.Config.BLSAggregateSignaturesHandler(
-			inter,
-			locationRange,
-			signatures,
-		)
-	},
-	blsAggregateSignaturesFunctionType,
-)
-
-var blsContractFields = map[string]interpreter.Value{
-	blsAggregatePublicKeysFunctionName: blsAggregatePublicKeysFunction,
-	blsAggregateSignaturesFunctionName: blsAggregateSignaturesFunction,
-}
-
-var blsContractValue = interpreter.NewSimpleCompositeValue(
-	nil,
-	blsContractType.ID(),
-	blsContractStaticType,
-	nil,
-	blsContractFields,
-	nil,
-	nil,
-	nil,
-)
-
-var BLSContract = StandardLibraryValue{
-	Name:  "BLS",
-	Type:  blsContractType,
-	Value: blsContractValue,
-	Kind:  common.DeclarationKindContract,
+	return StandardLibraryValue{
+		Name:  BLSTypeName,
+		Type:  BLSType,
+		Value: blsContractValue,
+		Kind:  common.DeclarationKindContract,
+	}
 }

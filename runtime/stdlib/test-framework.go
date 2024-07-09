@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,26 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-// TestFramework is the interface to be implemented by the test providers.
-// Cadence standard library talks to test providers via this interface.
+// TestFramework & Blockchain are the interfaces to be implemented by
+// the test providers.
+// Cadence standard library talks to test providers via these interfaces.
 // This is used as a way to inject test provider dependencies dynamically.
+
 type TestFramework interface {
-	RunScript(inter *interpreter.Interpreter, code string, arguments []interpreter.Value) *ScriptResult
+	EmulatorBackend() Blockchain
+
+	ReadFile(string) (string, error)
+}
+
+type Blockchain interface {
+	RunScript(
+		inter *interpreter.Interpreter,
+		code string, arguments []interpreter.Value,
+	) *ScriptResult
 
 	CreateAccount() (*Account, error)
+
+	GetAccount(interpreter.AddressValue) (*Account, error)
 
 	AddTransaction(
 		inter *interpreter.Interpreter,
@@ -47,14 +60,26 @@ type TestFramework interface {
 	DeployContract(
 		inter *interpreter.Interpreter,
 		name string,
-		code string,
-		account *Account,
+		path string,
 		arguments []interpreter.Value,
 	) error
 
-	ReadFile(string) (string, error)
+	Logs() []string
 
-	UseConfiguration(configuration *Configuration)
+	ServiceAccount() (*Account, error)
+
+	Events(
+		inter *interpreter.Interpreter,
+		eventType interpreter.StaticType,
+	) interpreter.Value
+
+	Reset(uint64)
+
+	MoveTime(int64)
+
+	CreateSnapshot(string) error
+
+	LoadSnapshot(string) error
 }
 
 type ScriptResult struct {
@@ -67,10 +92,6 @@ type TransactionResult struct {
 }
 
 type Account struct {
-	Address   common.Address
 	PublicKey *PublicKey
-}
-
-type Configuration struct {
-	Addresses map[string]common.Address
+	Address   common.Address
 }

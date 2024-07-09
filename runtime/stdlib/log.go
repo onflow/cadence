@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,24 +19,22 @@
 package stdlib
 
 import (
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var LogFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+var LogFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityImpure,
+	[]sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "value",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.AnyStructType,
-			),
+			Label:          sema.ArgumentLabelNotRequired,
+			Identifier:     "value",
+			TypeAnnotation: sema.AnyStructTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.VoidType,
-	),
-}
+	sema.VoidTypeAnnotation,
+)
 
 const logFunctionDocString = `
 Logs a string representation of the given value
@@ -44,26 +42,27 @@ Logs a string representation of the given value
 
 type Logger interface {
 	// ProgramLog logs program logs.
-	ProgramLog(message string) error
+	ProgramLog(message string, locationRange interpreter.LocationRange) error
 }
 
 func NewLogFunction(logger Logger) StandardLibraryValue {
-	return NewStandardLibraryFunction(
+	return NewStandardLibraryStaticFunction(
 		"log",
 		LogFunctionType,
 		logFunctionDocString,
 		func(invocation interpreter.Invocation) interpreter.Value {
 			value := invocation.Arguments[0]
+			locationRange := invocation.LocationRange
 
-			memoryGauge := invocation.Interpreter
-			message := value.MeteredString(memoryGauge, interpreter.SeenReferences{})
+			inter := invocation.Interpreter
+			message := value.MeteredString(inter, interpreter.SeenReferences{}, locationRange)
 
 			var err error
-			wrapPanic(func() {
-				err = logger.ProgramLog(message)
+			errors.WrapPanic(func() {
+				err = logger.ProgramLog(message, locationRange)
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			return interpreter.Void

@@ -22,24 +22,28 @@ func _() {
 	_ = x[DeclarationKindEvent-11]
 	_ = x[DeclarationKindField-12]
 	_ = x[DeclarationKindInitializer-13]
-	_ = x[DeclarationKindDestructor-14]
+	_ = x[DeclarationKindDestructorLegacy-14]
 	_ = x[DeclarationKindStructureInterface-15]
 	_ = x[DeclarationKindResourceInterface-16]
 	_ = x[DeclarationKindContractInterface-17]
-	_ = x[DeclarationKindImport-18]
-	_ = x[DeclarationKindSelf-19]
-	_ = x[DeclarationKindTransaction-20]
-	_ = x[DeclarationKindPrepare-21]
-	_ = x[DeclarationKindExecute-22]
-	_ = x[DeclarationKindTypeParameter-23]
-	_ = x[DeclarationKindPragma-24]
-	_ = x[DeclarationKindEnum-25]
-	_ = x[DeclarationKindEnumCase-26]
+	_ = x[DeclarationKindEntitlement-18]
+	_ = x[DeclarationKindEntitlementMapping-19]
+	_ = x[DeclarationKindImport-20]
+	_ = x[DeclarationKindSelf-21]
+	_ = x[DeclarationKindBase-22]
+	_ = x[DeclarationKindTransaction-23]
+	_ = x[DeclarationKindPrepare-24]
+	_ = x[DeclarationKindExecute-25]
+	_ = x[DeclarationKindTypeParameter-26]
+	_ = x[DeclarationKindPragma-27]
+	_ = x[DeclarationKindEnum-28]
+	_ = x[DeclarationKindEnumCase-29]
+	_ = x[DeclarationKindAttachment-30]
 }
 
-const _DeclarationKind_name = "DeclarationKindUnknownDeclarationKindValueDeclarationKindFunctionDeclarationKindVariableDeclarationKindConstantDeclarationKindTypeDeclarationKindParameterDeclarationKindArgumentLabelDeclarationKindStructureDeclarationKindResourceDeclarationKindContractDeclarationKindEventDeclarationKindFieldDeclarationKindInitializerDeclarationKindDestructorDeclarationKindStructureInterfaceDeclarationKindResourceInterfaceDeclarationKindContractInterfaceDeclarationKindImportDeclarationKindSelfDeclarationKindTransactionDeclarationKindPrepareDeclarationKindExecuteDeclarationKindTypeParameterDeclarationKindPragmaDeclarationKindEnumDeclarationKindEnumCase"
+const _DeclarationKind_name = "DeclarationKindUnknownDeclarationKindValueDeclarationKindFunctionDeclarationKindVariableDeclarationKindConstantDeclarationKindTypeDeclarationKindParameterDeclarationKindArgumentLabelDeclarationKindStructureDeclarationKindResourceDeclarationKindContractDeclarationKindEventDeclarationKindFieldDeclarationKindInitializerDeclarationKindDestructorLegacyDeclarationKindStructureInterfaceDeclarationKindResourceInterfaceDeclarationKindContractInterfaceDeclarationKindEntitlementDeclarationKindEntitlementMappingDeclarationKindImportDeclarationKindSelfDeclarationKindBaseDeclarationKindTransactionDeclarationKindPrepareDeclarationKindExecuteDeclarationKindTypeParameterDeclarationKindPragmaDeclarationKindEnumDeclarationKindEnumCaseDeclarationKindAttachment"
 
-var _DeclarationKind_index = [...]uint16{0, 22, 42, 65, 88, 111, 130, 154, 182, 206, 229, 252, 272, 292, 318, 343, 376, 408, 440, 461, 480, 506, 528, 550, 578, 599, 618, 641}
+var _DeclarationKind_index = [...]uint16{0, 22, 42, 65, 88, 111, 130, 154, 182, 206, 229, 252, 272, 292, 318, 349, 382, 414, 446, 472, 505, 526, 545, 564, 590, 612, 634, 662, 683, 702, 725, 750}
 
 func (i DeclarationKind) String() string {
 	if i >= DeclarationKind(len(_DeclarationKind_index)-1) {

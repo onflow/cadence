@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,10 @@ func TestCheckInvalidCompositeInitializerOverloading(t *testing.T) {
 	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
 		for _, isInterface := range interfacePossibilities {
 
+			if isInterface && !kind.SupportsInterfaces() {
+				continue
+			}
+
 			interfaceKeyword := ""
 			body := ""
 			if isInterface {
@@ -50,12 +54,17 @@ func TestCheckInvalidCompositeInitializerOverloading(t *testing.T) {
 				interfaceKeyword,
 			)
 
+			var baseType string
+			if kind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
 			t.Run(testName, func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          %[1]s %[2]s X {
+                          %[1]s %[2]s X %[4]s {
                               init() %[3]s
                               init(y: Int) %[3]s
                           }
@@ -63,51 +72,14 @@ func TestCheckInvalidCompositeInitializerOverloading(t *testing.T) {
 						kind.Keyword(),
 						interfaceKeyword,
 						body,
+						baseType,
 					),
 				)
 
 				errs := RequireCheckerErrors(t, err, 1)
 
-				assert.IsType(t, &sema.UnsupportedOverloadingError{}, errs[0])
+				assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 			})
 		}
-	}
-}
-
-func TestCheckInvalidResourceDestructorOverloading(t *testing.T) {
-
-	t.Parallel()
-
-	interfacePossibilities := []bool{true, false}
-
-	for _, isInterface := range interfacePossibilities {
-
-		interfaceKeyword := ""
-		body := ""
-		if isInterface {
-			interfaceKeyword = "interface"
-		} else {
-			body = "{}"
-		}
-
-		t.Run(interfaceKeyword, func(t *testing.T) {
-
-			_, err := ParseAndCheck(t,
-				fmt.Sprintf(
-					`
-                      resource %[1]s X {
-                          destroy() %[2]s
-                          destroy(y: Int) %[2]s
-                      }
-                    `,
-					interfaceKeyword,
-					body,
-				),
-			)
-
-			errs := RequireCheckerErrors(t, err, 1)
-
-			assert.IsType(t, &sema.UnsupportedOverloadingError{}, errs[0])
-		})
 	}
 }

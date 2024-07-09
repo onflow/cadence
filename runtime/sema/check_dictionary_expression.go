@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ package sema
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
 )
 
 func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpression) Type {
@@ -37,30 +36,34 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		valueType = expectedMapType.ValueType
 	}
 
+	var entryTypes []DictionaryEntryType
+	var keyTypes []Type
+	var valueTypes []Type
+
 	dictionarySize := len(expression.Entries)
-	entryTypes := make([]DictionaryEntryType, dictionarySize)
-	keyTypes := make([]Type, dictionarySize)
-	valueTypes := make([]Type, dictionarySize)
+	if dictionarySize > 0 {
+		entryTypes = make([]DictionaryEntryType, dictionarySize)
+		keyTypes = make([]Type, dictionarySize)
+		valueTypes = make([]Type, dictionarySize)
 
-	for i, entry := range expression.Entries {
-		// NOTE: important to check move after each type check,
-		// not combined after both type checks!
+		for i, entry := range expression.Entries {
+			// NOTE: important to check move after each type check,
+			// not combined after both type checks!
 
-		entryKeyType := checker.VisitExpression(entry.Key, keyType)
-		checker.checkVariableMove(entry.Key)
-		checker.checkResourceMoveOperation(entry.Key, entryKeyType)
+			entryKeyType := checker.VisitExpression(entry.Key, expression, keyType)
+			checker.checkResourceMoveOperation(entry.Key, entryKeyType)
 
-		entryValueType := checker.VisitExpression(entry.Value, valueType)
-		checker.checkVariableMove(entry.Value)
-		checker.checkResourceMoveOperation(entry.Value, entryValueType)
+			entryValueType := checker.VisitExpression(entry.Value, expression, valueType)
+			checker.checkResourceMoveOperation(entry.Value, entryValueType)
 
-		entryTypes[i] = DictionaryEntryType{
-			KeyType:   entryKeyType,
-			ValueType: entryValueType,
+			entryTypes[i] = DictionaryEntryType{
+				KeyType:   entryKeyType,
+				ValueType: entryValueType,
+			}
+
+			keyTypes[i] = entryKeyType
+			valueTypes[i] = entryValueType
 		}
-
-		keyTypes[i] = entryKeyType
-		valueTypes[i] = entryValueType
 	}
 
 	if keyType == nil && valueType == nil {
@@ -73,7 +76,7 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 			valueType == InvalidType {
 			checker.report(
 				&TypeAnnotationRequiredError{
-					Cause: "cannot infer type from dictionary literal: ",
+					Cause: "cannot infer type from dictionary literal:",
 					Pos:   expression.StartPos,
 				},
 			)
@@ -82,7 +85,7 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		}
 	}
 
-	if !IsValidDictionaryKeyType(keyType) {
+	if !IsSubType(keyType, HashableStructType) {
 		checker.report(
 			&InvalidDictionaryKeyTypeError{
 				Type:  keyType,
@@ -96,29 +99,13 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 		ValueType: valueType,
 	}
 
-	checker.Elaboration.DictionaryExpressionTypes[expression] =
+	checker.Elaboration.SetDictionaryExpressionTypes(
+		expression,
 		DictionaryExpressionTypes{
 			EntryTypes:     entryTypes,
 			DictionaryType: dictionaryType,
-		}
+		},
+	)
 
 	return dictionaryType
-}
-
-func IsValidDictionaryKeyType(keyType Type) bool {
-	// TODO: implement support for more built-in types here and in interpreter
-	switch keyType := keyType.(type) {
-	case *AddressType:
-		return true
-	case *CompositeType:
-		return keyType.Kind == common.CompositeKindEnum
-	default:
-		switch keyType {
-		case NeverType, BoolType, CharacterType, StringType, MetaType:
-			return true
-		default:
-			return IsSameTypeKind(keyType, NumberType) ||
-				IsSameTypeKind(keyType, PathType)
-		}
-	}
 }

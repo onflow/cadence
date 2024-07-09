@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,193 +24,248 @@ type RuntimeTypeConstructor struct {
 	DocString string
 }
 
-var OptionalTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+var MetaTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	nil,
+	MetaTypeAnnotation,
+)
+
+const OptionalTypeFunctionName = "OptionalType"
+
+var OptionalTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-}
+	MetaTypeAnnotation,
+)
 
-var VariableSizedArrayTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+const VariableSizedArrayTypeFunctionName = "VariableSizedArrayType"
+
+var VariableSizedArrayTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-}
+	MetaTypeAnnotation,
+)
 
-var ConstantSizedArrayTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+const ConstantSizedArrayTypeFunctionName = "ConstantSizedArrayType"
+
+var ConstantSizedArrayTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
 			Identifier:     "type",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 		{
 			Identifier:     "size",
-			TypeAnnotation: NewTypeAnnotation(IntType),
+			TypeAnnotation: IntTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-}
+	MetaTypeAnnotation,
+)
 
-var DictionaryTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+var OptionalMetaTypeAnnotation = NewTypeAnnotation(&OptionalType{
+	Type: MetaType,
+})
+
+const DictionaryTypeFunctionName = "DictionaryType"
+
+var DictionaryTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
 			Identifier:     "key",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 		{
 			Identifier:     "value",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
-}
+	OptionalMetaTypeAnnotation,
+)
 
-var CompositeTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+const CompositeTypeFunctionName = "CompositeType"
+
+var CompositeTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "identifier",
-			TypeAnnotation: NewTypeAnnotation(StringType),
+			TypeAnnotation: StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
-}
+	OptionalMetaTypeAnnotation,
+)
 
-var InterfaceTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "identifier",
-			TypeAnnotation: NewTypeAnnotation(StringType),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
-}
+const FunctionTypeFunctionName = "FunctionType"
 
-var FunctionTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+var FunctionTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
-			Identifier:     "parameters",
-			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{Type: MetaType}),
+			Identifier: "parameters",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: MetaType,
+				},
+			),
 		},
 		{
 			Identifier:     "return",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-}
+	MetaTypeAnnotation,
+)
 
-var RestrictedTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+const IntersectionTypeFunctionName = "IntersectionType"
+
+var IntersectionTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
-			Identifier:     "identifier",
-			TypeAnnotation: NewTypeAnnotation(&OptionalType{StringType}),
-		},
-		{
-			Identifier:     "restrictions",
-			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{Type: StringType}),
+			Identifier: "types",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: StringType,
+				},
+			),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
-}
+	OptionalMetaTypeAnnotation,
+)
 
-var ReferenceTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+const ReferenceTypeFunctionName = "ReferenceType"
+
+var ReferenceTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
-			Identifier:     "authorized",
-			TypeAnnotation: NewTypeAnnotation(BoolType),
+			Identifier: "entitlements",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: StringType,
+				},
+			),
 		},
 		{
 			Identifier:     "type",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(MetaType),
-}
+	OptionalMetaTypeAnnotation,
+)
 
-var CapabilityTypeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
+const CapabilityTypeFunctionName = "CapabilityType"
+
+var CapabilityTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "type",
-			TypeAnnotation: NewTypeAnnotation(MetaType),
+			TypeAnnotation: MetaTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&OptionalType{MetaType}),
-}
+	OptionalMetaTypeAnnotation,
+)
+
+const InclusiveRangeTypeFunctionName = "InclusiveRangeType"
+
+var InclusiveRangeTypeFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "type",
+			TypeAnnotation: MetaTypeAnnotation,
+		},
+	},
+	OptionalMetaTypeAnnotation,
+)
 
 var runtimeTypeConstructors = []*RuntimeTypeConstructor{
 	{
-		"OptionalType",
-		OptionalTypeFunctionType,
-		"Creates a run-time type representing an optional version of the given run-time type.",
+		Name:      OptionalTypeFunctionName,
+		Value:     OptionalTypeFunctionType,
+		DocString: "Creates a run-time type representing an optional version of the given run-time type.",
 	},
 
 	{
-		"VariableSizedArrayType",
-		VariableSizedArrayTypeFunctionType,
-		"Creates a run-time type representing a variable-sized array type of the given run-time type.",
+		Name:      VariableSizedArrayTypeFunctionName,
+		Value:     VariableSizedArrayTypeFunctionType,
+		DocString: "Creates a run-time type representing a variable-sized array type of the given run-time type.",
 	},
 
 	{
-		"ConstantSizedArrayType",
-		ConstantSizedArrayTypeFunctionType,
-		"Creates a run-time type representing a constant-sized array type of the given run-time type with the specifized size.",
+		Name:      ConstantSizedArrayTypeFunctionName,
+		Value:     ConstantSizedArrayTypeFunctionType,
+		DocString: "Creates a run-time type representing a constant-sized array type of the given run-time type with the specified size.",
 	},
 
 	{
-		"DictionaryType",
-		DictionaryTypeFunctionType,
-		`Creates a run-time type representing a dictionary type of the given run-time key and value types. 
+		Name:  DictionaryTypeFunctionName,
+		Value: DictionaryTypeFunctionType,
+		DocString: `Creates a run-time type representing a dictionary type of the given run-time key and value types.
 		Returns nil if the key type is not a valid dictionary key.`,
 	},
 
 	{
-		"CompositeType",
-		CompositeTypeFunctionType,
-		`Creates a run-time type representing the composite type associated with the given type identifier. 
+		Name:  CompositeTypeFunctionName,
+		Value: CompositeTypeFunctionType,
+		DocString: `Creates a run-time type representing the composite type associated with the given type identifier.
 		Returns nil if the identifier does not correspond to any composite type.`,
 	},
 
 	{
-		"InterfaceType",
-		InterfaceTypeFunctionType,
-		`Creates a run-time type representing the interface type associated with the given type identifier. 
-		Returns nil if the identifier does not correspond to any interface type.`,
+		Name:      FunctionTypeFunctionName,
+		Value:     FunctionTypeFunctionType,
+		DocString: "Creates a run-time type representing a function type associated with the given parameters and return type.",
 	},
 
 	{
-		"FunctionType",
-		FunctionTypeFunctionType,
-		"Creates a run-time type representing a function type associated with the given parameters and return type.",
+		Name:  ReferenceTypeFunctionName,
+		Value: ReferenceTypeFunctionType,
+		DocString: `
+		Creates a run-time type representing a reference type of the given type.
+
+		The first argument specifies the set of entitlements to which this reference is entitled.
+
+		Providing an empty array will result in an unauthorized return value.
+
+		Providing invalid entitlements in the input array will result in a nil return value`,
 	},
 
 	{
-		"ReferenceType",
-		ReferenceTypeFunctionType,
-		"Creates a run-time type representing a reference type of the given type, with authorization provided by the first argument.",
+		Name:  IntersectionTypeFunctionName,
+		Value: IntersectionTypeFunctionType,
+		DocString: `Creates a run-time type representing an intersection of the interface identifiers in the argument.
+		Returns nil if the intersection is not valid.`,
 	},
 
 	{
-		"RestrictedType",
-		RestrictedTypeFunctionType,
-		`Creates a run-time type representing a restricted type of the first argument, restricted by the interface identifiers in the second argument. 
-		Returns nil if the restriction is not valid.`,
+		Name:      CapabilityTypeFunctionName,
+		Value:     CapabilityTypeFunctionType,
+		DocString: "Creates a run-time type representing a capability type of the given reference type. Returns nil if the type is not a reference.",
 	},
 
 	{
-		"CapabilityType",
-		CapabilityTypeFunctionType,
-		"Creates a run-time type representing a capability type of the given reference type. Returns nil if the type is not a reference.",
+		Name:  InclusiveRangeTypeFunctionName,
+		Value: InclusiveRangeTypeFunctionType,
+		DocString: `Creates a run-time type representing an inclusive range type of the given run-time member type. 
+		Returns nil if the member type is not a valid inclusive range member type.`,
 	},
 }

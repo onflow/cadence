@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ func BenchmarkParseDeploy(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			_, err := ParseProgram(transaction, nil)
+			_, err := ParseProgram(nil, transaction, Config{})
 			if err != nil {
 				b.FailNow()
 			}
@@ -81,7 +81,7 @@ func BenchmarkParseDeploy(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			_, err := ParseProgram(transaction, nil)
+			_, err := ParseProgram(nil, transaction, Config{})
 			if err != nil {
 				b.FailNow()
 			}
@@ -90,10 +90,10 @@ func BenchmarkParseDeploy(b *testing.B) {
 }
 
 const fungibleTokenContract = `
-pub contract FungibleToken {
+access(all) contract FungibleToken {
 
-    pub resource interface Provider {
-        pub fun withdraw(amount: Int): @Vault {
+    access(all) resource interface Provider {
+        access(all) fun withdraw(amount: Int): @Vault {
             pre {
                 amount > 0:
                     "Withdrawal amount must be positive"
@@ -105,8 +105,8 @@ pub contract FungibleToken {
         }
     }
 
-    pub resource interface Receiver {
-        pub balance: Int
+    access(all) resource interface Receiver {
+        access(all) balance: Int
 
         init(balance: Int) {
             pre {
@@ -119,7 +119,7 @@ pub contract FungibleToken {
             }
         }
 
-        pub fun deposit(from: @Receiver) {
+        access(all) fun deposit(from: @Receiver) {
             pre {
                 from.balance > 0:
                     "Deposit balance needs to be positive!"
@@ -131,21 +131,21 @@ pub contract FungibleToken {
         }
     }
 
-    pub resource Vault: Provider, Receiver {
+    access(all) resource Vault: Provider, Receiver {
 
-        pub var balance: Int
+        access(all) var balance: Int
 
         init(balance: Int) {
             self.balance = balance
         }
 
-        pub fun withdraw(amount: Int): @Vault {
+        access(all) fun withdraw(amount: Int): @Vault {
             self.balance = self.balance - amount
             return <-create Vault(balance: amount)
         }
 
         // transfer combines withdraw and deposit into one function call
-        pub fun transfer(to: &Receiver, amount: Int) {
+        access(all) fun transfer(to: &Receiver, amount: Int) {
             pre {
                 amount <= self.balance:
                     "Insufficient funds"
@@ -157,22 +157,22 @@ pub contract FungibleToken {
             to.deposit(from: <-self.withdraw(amount: amount))
         }
 
-        pub fun deposit(from: @Receiver) {
+        access(all) fun deposit(from: @Receiver) {
             self.balance = self.balance + from.balance
             destroy from
         }
 
-        pub fun createEmptyVault(): @Vault {
+        access(all) fun createEmptyVault(): @Vault {
             return <-create Vault(balance: 0)
         }
     }
 
-    pub fun createEmptyVault(): @Vault {
+    access(all) fun createEmptyVault(): @Vault {
         return <-create Vault(balance: 0)
     }
 
-    pub resource VaultMinter {
-        pub fun mintTokens(amount: Int, recipient: &Receiver) {
+    access(all) resource VaultMinter {
+        access(all) fun mintTokens(amount: Int, recipient: &Receiver) {
             recipient.deposit(from: <-create Vault(balance: amount))
         }
     }
@@ -205,7 +205,7 @@ func BenchmarkParseFungibleToken(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			_, err := ParseProgram(code, nil)
+			_, err := ParseProgram(nil, code, Config{})
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -221,7 +221,7 @@ func BenchmarkParseFungibleToken(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			_, err := ParseProgram(code, meter)
+			_, err := ParseProgram(meter, code, Config{})
 			if err != nil {
 				b.Fatal(err)
 			}

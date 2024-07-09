@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,18 +24,13 @@ import (
 )
 
 func (checker *Checker) VisitVariableDeclaration(declaration *ast.VariableDeclaration) (_ struct{}) {
-	checker.visitVariableDeclaration(declaration, false)
+	declarationType := checker.visitVariableDeclarationValues(declaration, false)
+	checker.declareVariableDeclaration(declaration, declarationType)
+
 	return
 }
 
-func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclaration, isOptionalBinding bool) {
-
-	checker.checkDeclarationAccessModifier(
-		declaration.Access,
-		declaration.DeclarationKind(),
-		declaration.StartPos,
-		declaration.IsConstant,
-	)
+func (checker *Checker) visitVariableDeclarationValues(declaration *ast.VariableDeclaration, isOptionalBinding bool) Type {
 
 	// Determine the type of the initial value of the variable declaration
 	// and save it in the elaboration
@@ -59,7 +54,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		}
 	}
 
-	valueType := checker.VisitExpression(declaration.Value, expectedValueType)
+	valueType := checker.VisitExpression(declaration.Value, declaration, expectedValueType)
 
 	if isOptionalBinding {
 		optionalType, isOptional := valueType.(*OptionalType)
@@ -83,6 +78,15 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		declarationType = valueType
 	}
 
+	checker.checkDeclarationAccessModifier(
+		checker.accessFromAstAccess(declaration.Access),
+		declaration.DeclarationKind(),
+		valueType,
+		nil,
+		declaration.StartPos,
+		declaration.IsConstant,
+	)
+
 	checker.checkTransfer(declaration.Transfer, declarationType)
 
 	// The variable declaration might have a second transfer and second expression.
@@ -96,12 +100,18 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 
 	var secondValueType Type
 
+	// The value transfer need to be marked as a resource move (when applicable),
+	// even if there is no second value, because in destructors,
+	// nested resource moves are allowed.
+	valueIsResource := valueType != nil && valueType.IsResourceType()
+	if valueIsResource {
+		checker.elaborateNestedResourceMoveExpression(declaration.Value)
+	}
+
 	if declaration.SecondTransfer == nil {
 		if declaration.SecondValue != nil {
 			panic(errors.NewUnreachableError())
 		}
-
-		checker.checkVariableMove(declaration.Value)
 
 		// If only one value expression is provided, it is invalidated (if it has a resource type)
 
@@ -132,8 +142,6 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 			// so that second value types that are standalone not considered resource typed
 			// are still admitted if they are type compatible (e.g. `nil`).
 
-			valueIsResource := valueType != nil && valueType.IsResourceType()
-
 			if valueType != nil &&
 				!valueType.IsInvalidType() &&
 				!valueIsResource {
@@ -146,6 +154,32 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 				)
 			}
 
+			// Given a variable declaration with a second value transfer of the form
+			// 				`let x <- e1 <- e2`
+			//
+			// the interpreter will evaluate this in the following order:
+			//  - evaluating `e1` to some value `v1` (which is necessarily either a variable, an index expression, or a member expression)
+			//  - moving the value stored in `v1` into the newly declared variable `x`
+			//  - evaluating `e2` to some value `v2`
+			//  - evaluate `e1` again to some value `v1'` (as `e1` may produce a different value after `e2`'s execution)
+			//  - lastly moving the value `v2` into the "variable" denoted by `v1'`
+			//
+			// This means that while at the end of the execution of the entire statement,
+			// `v1` is still a valid resource (having had the result of `e2` moved into it),
+			// specifically during the execution of `e2` it is invalid.
+			// In order to reflect this, we temporarily invalidate `v1` before evaluating `e2` and checking the assignment,
+			// and then re-validate `v1` afterwards.
+			// We also re-check `e1` again as well, since it is evaluated a second time by the interpreter.
+			// Note that while typechecking the same expression twice is not safe in general,
+			// in this case it is permissible for a specific reason:
+			// `e1` is necessarily an identifier, index or member expression, which may not have side effects
+
+			recordedResourceInvalidation := checker.recordResourceInvalidation(
+				declaration.Value,
+				declarationType,
+				ResourceInvalidationKindMoveTemporary,
+			)
+
 			// Check the assignment of the second value to the first expression
 
 			// The check of the assignment of the second value to the first also:
@@ -157,25 +191,33 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 			// NOTE: already performs resource invalidation
 
 			_, secondValueType = checker.checkAssignment(
+				declaration,
 				declaration.Value,
 				declaration.SecondValue,
 				declaration.SecondTransfer,
 				true,
 			)
 
-			if valueIsResource {
-				checker.elaborateNestedResourceMoveExpression(declaration.Value)
+			if recordedResourceInvalidation != nil {
+				checker.resources.RemoveTemporaryMoveInvalidation(recordedResourceInvalidation.resource, recordedResourceInvalidation.invalidation)
 			}
+			checker.VisitExpression(declaration.Value, declaration, expectedValueType)
 		}
 	}
 
-	checker.Elaboration.VariableDeclarationTypes[declaration] =
+	checker.Elaboration.SetVariableDeclarationTypes(
+		declaration,
 		VariableDeclarationTypes{
 			TargetType:      declarationType,
 			ValueType:       valueType,
 			SecondValueType: secondValueType,
-		}
+		},
+	)
 
+	return declarationType
+}
+
+func (checker *Checker) declareVariableDeclaration(declaration *ast.VariableDeclaration, declarationType Type) {
 	// Finally, declare the variable in the current value activation
 
 	identifier := declaration.Identifier.Identifier
@@ -184,7 +226,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		identifier:               identifier,
 		ty:                       declarationType,
 		docString:                declaration.DocString,
-		access:                   declaration.Access,
+		access:                   checker.accessFromAstAccess(declaration.Access),
 		kind:                     declaration.DeclarationKind(),
 		pos:                      declaration.Identifier.Pos,
 		isConstant:               declaration.IsConstant,
@@ -197,6 +239,8 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		checker.recordVariableDeclarationOccurrence(identifier, variable)
 		checker.recordVariableDeclarationRange(declaration, identifier, declarationType)
 	}
+
+	checker.recordReference(variable, declaration.Value)
 }
 
 func (checker *Checker) recordVariableDeclarationRange(
@@ -230,6 +274,192 @@ func (checker *Checker) recordVariableDeclarationRange(
 func (checker *Checker) elaborateNestedResourceMoveExpression(expression ast.Expression) {
 	switch expression.(type) {
 	case *ast.IndexExpression, *ast.MemberExpression:
-		checker.Elaboration.IsNestedResourceMoveExpression[expression] = struct{}{}
+		checker.Elaboration.SetIsNestedResourceMoveExpression(expression)
 	}
+}
+
+func (checker *Checker) recordReferenceCreation(target, expr ast.Expression) {
+	switch target := target.(type) {
+	case *ast.IdentifierExpression:
+		targetVariable := checker.valueActivations.Find(target.Identifier.Identifier)
+		checker.recordReference(targetVariable, expr)
+	default:
+		// Currently it's not possible to track the references
+		// assigned to member-expressions/index-expressions.
+		return
+	}
+}
+
+func (checker *Checker) recordReference(targetVariable *Variable, expr ast.Expression) {
+	if targetVariable == nil {
+		return
+	}
+
+	if _, isReference := MaybeReferenceType(targetVariable.Type); !isReference {
+		return
+	}
+
+	targetVariable.referencedResourceVariables = checker.referencedVariables(expr)
+}
+
+// referencedVariables return the referenced variables
+func (checker *Checker) referencedVariables(expr ast.Expression) (variables []*Variable) {
+	refExpressions := referenceExpressions(expr)
+
+	for _, refExpr := range refExpressions {
+		var variableRefExpr *ast.Identifier
+
+		switch refExpr := refExpr.(type) {
+		case *ast.ReferenceExpression:
+			// If it is a reference expression, then find the "root variable".
+			// As nested resources cannot be tracked, at least track the "root" if possible.
+			// For example, for an expression `&a.b.c as &T`, the "root variable" is `a`.
+			variableRefExpr = rootVariableOfExpression(refExpr.Expression)
+		case *ast.IdentifierExpression:
+			variableRefExpr = &refExpr.Identifier
+		case *ast.IndexExpression:
+			// If it is a reference expression, then find the "root variable".
+			// As nested resources cannot be tracked, at least track the "root" if possible.
+			// For example, for an expression `a[b][c]`, the "root variable" is `a`.
+			variableRefExpr = rootVariableOfExpression(refExpr.TargetExpression)
+		case *ast.MemberExpression:
+			// If it is a reference expression, then find the "root variable".
+			// As nested resources cannot be tracked, at least track the "root" if possible.
+			// For example, for an expression `a.b.c`, the "root variable" is `a`.
+			variableRefExpr = rootVariableOfExpression(refExpr.Expression)
+		default:
+			continue
+		}
+
+		if variableRefExpr == nil {
+			continue
+		}
+
+		referencedVariable := checker.valueActivations.Find(variableRefExpr.Identifier)
+		if referencedVariable == nil {
+			continue
+		}
+
+		// If the referenced variable is again a reference,
+		// then find the variable of the root of the reference chain.
+		// e.g.:
+		//     ref1 = &v
+		//     ref2 = &ref1
+		//     ref2.field = 3
+		//
+		// Here, `ref2` refers to `ref1`, which refers to `v`.
+		// So `ref2` is actually referring to `v`
+
+		referencedVars := nestedReferencedVariables(referencedVariable)
+		if referencedVars != nil {
+			variables = append(variables, referencedVars...)
+		}
+	}
+
+	return
+}
+
+// referenceExpressions returns all sub-expressions that may produce a reference.
+//
+// There could be two types of expressions that can result in a reference:
+//  1. Expressions that create a new reference.
+//     (i.e: reference-expression)
+//  2. Expressions that return an existing reference.
+//     (i.e: identifier-expression/member-expression/index-expression having a reference type)
+//
+// However, it is currently not possible to track member-expressions and index-expressions.
+// So this method either returns a reference-expression or an identifier-expression.
+//
+// The expression could also be hidden inside some other expression.
+// e.g(1): `&v as &T` is a casting expression, but has a hidden reference expression.
+// e.g(2): `(&v as &T?)!
+func referenceExpressions(expr ast.Expression) []ast.Expression {
+	switch expr := expr.(type) {
+	case *ast.ReferenceExpression:
+		return []ast.Expression{expr}
+	case *ast.ForceExpression:
+		return referenceExpressions(expr.Expression)
+	case *ast.CastingExpression:
+		return referenceExpressions(expr.Expression)
+	case *ast.BinaryExpression:
+		if expr.Operation != ast.OperationNilCoalesce {
+			return nil
+		}
+
+		refExpressions := make([]ast.Expression, 0)
+
+		lhsRef := referenceExpressions(expr.Left)
+		if lhsRef != nil {
+			refExpressions = append(refExpressions, lhsRef...)
+		}
+
+		rhsRef := referenceExpressions(expr.Right)
+		if rhsRef != nil {
+			refExpressions = append(refExpressions, rhsRef...)
+		}
+
+		return refExpressions
+	case *ast.ConditionalExpression:
+		refExpressions := make([]ast.Expression, 0)
+
+		thenRef := referenceExpressions(expr.Then)
+		if thenRef != nil {
+			refExpressions = append(refExpressions, thenRef...)
+		}
+
+		elseRef := referenceExpressions(expr.Else)
+		if elseRef != nil {
+			refExpressions = append(refExpressions, elseRef...)
+		}
+
+		return refExpressions
+	case *ast.IdentifierExpression,
+		*ast.IndexExpression,
+		*ast.MemberExpression:
+		// For all these expressions, we reach here only if the expression's type is a reference.
+		// Hence, no need to check it here again.
+		return []ast.Expression{expr}
+	default:
+		return nil
+	}
+}
+
+// rootVariableOfExpression returns the identifier expression
+// of a var-ref/member-access/index-access expression.
+func rootVariableOfExpression(expr ast.Expression) *ast.Identifier {
+	for {
+		switch typedExpr := expr.(type) {
+		case *ast.IdentifierExpression:
+			return &typedExpr.Identifier
+		case *ast.MemberExpression:
+			expr = typedExpr.Expression
+		case *ast.IndexExpression:
+			expr = typedExpr.TargetExpression
+		default:
+			return nil
+		}
+	}
+}
+
+func nestedReferencedVariables(variable *Variable) []*Variable {
+	// If there are no more referenced variables, then it is the root of the reference chain.
+	if len(variable.referencedResourceVariables) == 0 {
+		// Add it as the referenced variable, if it is a resource.
+		if !variable.Type.IsResourceType() {
+			return nil
+		}
+
+		return []*Variable{variable}
+	}
+
+	var referencedResourceVariables []*Variable
+	for _, referencedVar := range variable.referencedResourceVariables {
+		nestedReferencedVars := nestedReferencedVariables(referencedVar)
+		if nestedReferencedVars != nil {
+			referencedResourceVariables = append(referencedResourceVariables, nestedReferencedVars...)
+
+		}
+	}
+
+	return referencedResourceVariables
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const typeSeparatorSpaceDoc = prettier.Text(": ")
@@ -32,9 +33,9 @@ const typeSeparatorSpaceDoc = prettier.Text(": ")
 // TypeAnnotation
 
 type TypeAnnotation struct {
-	IsResource bool
 	Type       Type     `json:"AnnotatedType"`
 	StartPos   Position `json:"-"`
+	IsResource bool
 }
 
 func NewTypeAnnotation(
@@ -80,8 +81,8 @@ func (t *TypeAnnotation) Doc() prettier.Doc {
 func (t *TypeAnnotation) MarshalJSON() ([]byte, error) {
 	type Alias TypeAnnotation
 	return json.Marshal(&struct {
-		Range
 		*Alias
+		Range
 	}{
 		Range: NewUnmeteredRangeFromPositioned(t),
 		Alias: (*Alias)(t),
@@ -106,8 +107,8 @@ func IsEmptyType(t Type) bool {
 // NominalType represents a named type
 
 type NominalType struct {
-	Identifier        Identifier
 	NestedIdentifiers []Identifier `json:",omitempty"`
+	Identifier        Identifier
 }
 
 var _ Type = &NominalType{}
@@ -164,9 +165,9 @@ func (t *NominalType) Doc() prettier.Doc {
 func (t *NominalType) MarshalJSON() ([]byte, error) {
 	type Alias NominalType
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "NominalType",
 		Range: NewUnmeteredRangeFromPositioned(t),
@@ -181,6 +182,8 @@ func (t *NominalType) IsQualifiedName() bool {
 func (t *NominalType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckNominalTypeEquality(t, other)
 }
+
+func (*NominalType) isEntitlementMapElement() {}
 
 // OptionalType represents am optional variant of another type
 
@@ -229,9 +232,9 @@ func (t *OptionalType) Doc() prettier.Doc {
 func (t *OptionalType) MarshalJSON() ([]byte, error) {
 	type Alias OptionalType
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "OptionalType",
 		Range: NewUnmeteredRangeFromPositioned(t),
@@ -290,8 +293,8 @@ func (t *VariableSizedType) Doc() prettier.Doc {
 func (t *VariableSizedType) MarshalJSON() ([]byte, error) {
 	type Alias VariableSizedType
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "VariableSizedType",
 		Alias: (*Alias)(t),
@@ -353,8 +356,8 @@ func (t *ConstantSizedType) Doc() prettier.Doc {
 func (t *ConstantSizedType) MarshalJSON() ([]byte, error) {
 	type Alias ConstantSizedType
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "ConstantSizedType",
 		Alias: (*Alias)(t),
@@ -417,8 +420,8 @@ func (t *DictionaryType) Doc() prettier.Doc {
 func (t *DictionaryType) MarshalJSON() ([]byte, error) {
 	type Alias DictionaryType
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "DictionaryType",
 		Alias: (*Alias)(t),
@@ -432,8 +435,9 @@ func (t *DictionaryType) CheckEqual(other Type, checker TypeEqualityChecker) err
 // FunctionType
 
 type FunctionType struct {
-	ParameterTypeAnnotations []*TypeAnnotation `json:",omitempty"`
+	PurityAnnotation         FunctionPurity
 	ReturnTypeAnnotation     *TypeAnnotation
+	ParameterTypeAnnotations []*TypeAnnotation `json:",omitempty"`
 	Range
 }
 
@@ -441,12 +445,14 @@ var _ Type = &FunctionType{}
 
 func NewFunctionType(
 	memoryGauge common.MemoryGauge,
+	purity FunctionPurity,
 	parameterTypes []*TypeAnnotation,
 	returnType *TypeAnnotation,
 	astRange Range,
 ) *FunctionType {
 	common.UseMemory(memoryGauge, common.FunctionTypeMemoryUsage)
 	return &FunctionType{
+		PurityAnnotation:         purity,
 		ParameterTypeAnnotations: parameterTypes,
 		ReturnTypeAnnotation:     returnType,
 		Range:                    astRange,
@@ -459,14 +465,27 @@ func (t *FunctionType) String() string {
 	return Prettier(t)
 }
 
-const functionTypeStartDoc = prettier.Text("(")
-const functionTypeEndDoc = prettier.Text(")")
+const functionTypeKeywordDoc = prettier.Text("fun")
+const openParenthesisDoc = prettier.Text("(")
+const closeParenthesisDoc = prettier.Text(")")
 const functionTypeParameterSeparatorDoc = prettier.Text(",")
 
 func (t *FunctionType) Doc() prettier.Doc {
 	parametersDoc := prettier.Concat{
 		prettier.SoftLine{},
 	}
+
+	var result prettier.Concat
+
+	if t.PurityAnnotation != FunctionPurityUnspecified {
+		result = append(
+			result,
+			prettier.Text(t.PurityAnnotation.Keyword()),
+			prettier.Space,
+		)
+	}
+
+	result = append(result, functionTypeKeywordDoc, prettier.Space)
 
 	for i, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
 		if i > 0 {
@@ -482,29 +501,30 @@ func (t *FunctionType) Doc() prettier.Doc {
 		)
 	}
 
-	return prettier.Concat{
-		functionTypeStartDoc,
+	result = append(
+		result,
 		prettier.Group{
 			Doc: prettier.Concat{
-				functionTypeStartDoc,
+				openParenthesisDoc,
 				prettier.Indent{
 					Doc: parametersDoc,
 				},
 				prettier.SoftLine{},
-				functionTypeEndDoc,
+				closeParenthesisDoc,
 			},
 		},
 		typeSeparatorSpaceDoc,
 		t.ReturnTypeAnnotation.Doc(),
-		functionTypeEndDoc,
-	}
+	)
+
+	return result
 }
 
 func (t *FunctionType) MarshalJSON() ([]byte, error) {
 	type Alias FunctionType
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "FunctionType",
 		Alias: (*Alias)(t),
@@ -516,26 +536,26 @@ func (t *FunctionType) CheckEqual(other Type, checker TypeEqualityChecker) error
 }
 
 // ReferenceType
-
 type ReferenceType struct {
-	Authorized bool
-	Type       Type     `json:"ReferencedType"`
-	StartPos   Position `json:"-"`
+	Type             Type     `json:"ReferencedType"`
+	StartPos         Position `json:"-"`
+	LegacyAuthorized bool
+	Authorization    Authorization `json:"Authorization"`
 }
 
 var _ Type = &ReferenceType{}
 
 func NewReferenceType(
 	memoryGauge common.MemoryGauge,
-	authorized bool,
+	authorization Authorization,
 	typ Type,
 	startPos Position,
 ) *ReferenceType {
 	common.UseMemory(memoryGauge, common.ReferenceTypeMemoryUsage)
 	return &ReferenceType{
-		Authorized: authorized,
-		Type:       typ,
-		StartPos:   startPos,
+		Authorization: authorization,
+		Type:          typ,
+		StartPos:      startPos,
 	}
 }
 
@@ -553,13 +573,39 @@ func (t *ReferenceType) EndPosition(memoryGauge common.MemoryGauge) Position {
 	return t.Type.EndPosition(memoryGauge)
 }
 
-const referenceTypeAuthKeywordSpaceDoc = prettier.Text("auth ")
+const referenceTypeAuthKeywordDoc = prettier.Text("auth")
+const referenceTypeMappingKeywordDoc = prettier.Text("mapping ")
 const referenceTypeSymbolDoc = prettier.Text("&")
 
 func (t *ReferenceType) Doc() prettier.Doc {
 	var doc prettier.Concat
-	if t.Authorized {
-		doc = append(doc, referenceTypeAuthKeywordSpaceDoc)
+	if t.Authorization != nil {
+		doc = append(doc, referenceTypeAuthKeywordDoc)
+		doc = append(doc, prettier.Text("("))
+		switch authorization := t.Authorization.(type) {
+		case EntitlementSet:
+			if len(authorization.Entitlements()) > 0 {
+				entitlements := authorization.Entitlements()
+				// TODO: add indentation, improve separators. follow e.g. ParameterList.Doc()
+				for i, entitlement := range entitlements {
+					doc = append(doc, entitlement.Doc())
+					if i < len(entitlements)-1 {
+						doc = append(doc, prettier.Text(authorization.Separator().String()), prettier.Space)
+					}
+				}
+			}
+		case *MappedAccess:
+			doc = append(doc,
+				referenceTypeMappingKeywordDoc,
+				authorization.EntitlementMap.Doc(),
+			)
+		default:
+			panic(errors.NewUnreachableError())
+		}
+		doc = append(doc,
+			prettier.Text(")"),
+			prettier.Space,
+		)
 	}
 
 	return append(
@@ -572,9 +618,9 @@ func (t *ReferenceType) Doc() prettier.Doc {
 func (t *ReferenceType) MarshalJSON() ([]byte, error) {
 	type Alias ReferenceType
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "ReferenceType",
 		Range: NewUnmeteredRangeFromPositioned(t),
@@ -586,92 +632,87 @@ func (t *ReferenceType) CheckEqual(other Type, checker TypeEqualityChecker) erro
 	return checker.CheckReferenceTypeEquality(t, other)
 }
 
-// RestrictedType
+// IntersectionType
 
-type RestrictedType struct {
-	Type         Type `json:"RestrictedType"`
-	Restrictions []*NominalType
+type IntersectionType struct {
+	LegacyRestrictedType Type // Deprecated
+	Types                []*NominalType
 	Range
 }
 
-var _ Type = &RestrictedType{}
+var _ Type = &IntersectionType{}
 
-func NewRestrictedType(
+func NewIntersectionType(
 	memoryGauge common.MemoryGauge,
-	typ Type,
-	restrictions []*NominalType,
+	types []*NominalType,
 	astRange Range,
-) *RestrictedType {
-	common.UseMemory(memoryGauge, common.RestrictedTypeMemoryUsage)
-	return &RestrictedType{
-		Type:         typ,
-		Restrictions: restrictions,
-		Range:        astRange,
+) *IntersectionType {
+	common.UseMemory(memoryGauge, common.IntersectionTypeMemoryUsage)
+	return &IntersectionType{
+		Types: types,
+		Range: astRange,
 	}
 }
 
-func (*RestrictedType) isType() {}
+func (*IntersectionType) isType() {}
 
-func (t *RestrictedType) String() string {
+func (t *IntersectionType) String() string {
 	return Prettier(t)
 }
 
-const restrictedTypeStartDoc = prettier.Text("{")
-const restrictedTypeEndDoc = prettier.Text("}")
-const restrictedTypeSeparatorDoc = prettier.Text(",")
+const intersectionTypeStartDoc = prettier.Text("{")
+const intersectionTypeEndDoc = prettier.Text("}")
+const intersectionTypeSeparatorDoc = prettier.Text(",")
 
-func (t *RestrictedType) Doc() prettier.Doc {
-	restrictionsDoc := prettier.Concat{
+func (t *IntersectionType) Doc() prettier.Doc {
+	intersectionDoc := prettier.Concat{
 		prettier.SoftLine{},
 	}
 
-	for i, restriction := range t.Restrictions {
+	for i, typ := range t.Types {
 		if i > 0 {
-			restrictionsDoc = append(
-				restrictionsDoc,
-				restrictedTypeSeparatorDoc,
+			intersectionDoc = append(
+				intersectionDoc,
+				intersectionTypeSeparatorDoc,
 				prettier.Line{},
 			)
 		}
-		restrictionsDoc = append(
-			restrictionsDoc,
-			restriction.Doc(),
+		intersectionDoc = append(
+			intersectionDoc,
+			typ.Doc(),
 		)
 	}
 
 	var doc prettier.Concat
-	if t.Type != nil {
-		doc = append(doc, t.Type.Doc())
-	}
 
 	return append(doc,
 		prettier.Group{
 			Doc: prettier.Concat{
-				restrictedTypeStartDoc,
+				intersectionTypeStartDoc,
 				prettier.Indent{
-					Doc: restrictionsDoc,
+					Doc: intersectionDoc,
 				},
 				prettier.SoftLine{},
-				restrictedTypeEndDoc,
+				intersectionTypeEndDoc,
 			},
 		},
 	)
 
 }
 
-func (t *RestrictedType) MarshalJSON() ([]byte, error) {
-	type Alias RestrictedType
+func (t *IntersectionType) MarshalJSON() ([]byte, error) {
+	type Alias IntersectionType
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
-		Type:  "RestrictedType",
+		Type:  "IntersectionType",
 		Alias: (*Alias)(t),
 	})
 }
 
-func (t *RestrictedType) CheckEqual(other Type, checker TypeEqualityChecker) error {
-	return checker.CheckRestrictedTypeEquality(t, other)
+func (t *IntersectionType) CheckEqual(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckIntersectionTypeEquality(t, other)
 }
 
 // InstantiationType represents an instantiation of a generic (nominal) type
@@ -756,9 +797,9 @@ func (t *InstantiationType) Doc() prettier.Doc {
 func (t *InstantiationType) MarshalJSON() ([]byte, error) {
 	type Alias InstantiationType
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "InstantiationType",
 		Range: NewUnmeteredRangeFromPositioned(t),
@@ -778,6 +819,6 @@ type TypeEqualityChecker interface {
 	CheckDictionaryTypeEquality(*DictionaryType, Type) error
 	CheckFunctionTypeEquality(*FunctionType, Type) error
 	CheckReferenceTypeEquality(*ReferenceType, Type) error
-	CheckRestrictedTypeEquality(*RestrictedType, Type) error
+	CheckIntersectionTypeEquality(*IntersectionType, Type) error
 	CheckInstantiationTypeEquality(*InstantiationType, Type) error
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -37,8 +41,98 @@ func TestInterpretFunctionInvocationCheckArgumentTypes(t *testing.T) {
        }
    `)
 
-	_, err := inter.Invoke("test", interpreter.BoolValue(true))
+	_, err := inter.Invoke("test", interpreter.TrueValue)
 	RequireError(t, err)
 
 	require.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+}
+
+func TestInterpretSelfDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, code string, expectSelf bool) {
+
+		checkFunction := stdlib.NewStandardLibraryStaticFunction(
+			"check",
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+			},
+			``,
+			func(invocation interpreter.Invocation) interpreter.Value {
+				// Check that the *caller's* self
+
+				callStack := invocation.Interpreter.CallStack()
+				parentInvocation := callStack[len(callStack)-1]
+
+				if expectSelf {
+					require.NotNil(t, parentInvocation.Self)
+				} else {
+					require.Nil(t, parentInvocation.Self)
+				}
+				return interpreter.Void
+			},
+		)
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		baseValueActivation.DeclareValue(checkFunction)
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		interpreter.Declare(baseActivation, checkFunction)
+
+		inter, err := parseCheckAndInterpretWithOptions(t, code, ParseCheckAndInterpretOptions{
+			Config: &interpreter.Config{
+				Storage: newUnmeteredInMemoryStorage(),
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+			},
+		})
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("test")
+		require.NoError(t, err)
+	}
+
+	t.Run("plain function", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `
+            fun foo() {
+                check()
+            }
+
+            fun test() {
+                foo()
+            }
+        `
+		test(t, code, false)
+	})
+
+	t.Run("composite function", func(t *testing.T) {
+
+		t.Parallel()
+
+		code := `
+            struct S {
+                fun test() {
+                     check()
+                }
+            }
+
+
+            fun test() {
+                S().test()
+            }
+        `
+		test(t, code, true)
+	})
+
 }

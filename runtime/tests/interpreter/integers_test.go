@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,17 +52,19 @@ var testIntegerTypesAndValues = map[string]interpreter.Value{
 	"UInt128": interpreter.NewUnmeteredUInt128ValueFromUint64(50),
 	"UInt256": interpreter.NewUnmeteredUInt256ValueFromUint64(50),
 	// Word*
-	"Word8":  interpreter.NewUnmeteredWord8Value(50),
-	"Word16": interpreter.NewUnmeteredWord16Value(50),
-	"Word32": interpreter.NewUnmeteredWord32Value(50),
-	"Word64": interpreter.NewUnmeteredWord64Value(50),
+	"Word8":   interpreter.NewUnmeteredWord8Value(50),
+	"Word16":  interpreter.NewUnmeteredWord16Value(50),
+	"Word32":  interpreter.NewUnmeteredWord32Value(50),
+	"Word64":  interpreter.NewUnmeteredWord64Value(50),
+	"Word128": interpreter.NewUnmeteredWord128ValueFromUint64(50),
+	"Word256": interpreter.NewUnmeteredWord256ValueFromUint64(50),
 }
 
 func init() {
 	for _, integerType := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch integerType {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -95,21 +97,21 @@ func TestInterpretIntegerConversions(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
 				value,
-				inter.Globals.Get("y").GetValue(),
+				inter.Globals.Get("y").GetValue(inter),
 			)
 
 			AssertValuesEqual(
 				t,
 				inter,
-				interpreter.BoolValue(true),
-				inter.Globals.Get("z").GetValue(),
+				interpreter.TrueValue,
+				inter.Globals.Get("z").GetValue(inter),
 			)
 
 		})
@@ -121,10 +123,12 @@ func TestInterpretWordOverflowConversions(t *testing.T) {
 	t.Parallel()
 
 	words := map[string]*big.Int{
-		"Word8":  sema.UInt8TypeMaxInt,
-		"Word16": sema.UInt16TypeMaxInt,
-		"Word32": sema.UInt32TypeMaxInt,
-		"Word64": sema.UInt64TypeMaxInt,
+		"Word8":   sema.UInt8TypeMaxInt,
+		"Word16":  sema.UInt16TypeMaxInt,
+		"Word32":  sema.UInt32TypeMaxInt,
+		"Word64":  sema.UInt64TypeMaxInt,
+		"Word128": sema.UInt128TypeMaxIntBig,
+		"Word256": sema.UInt256TypeMaxIntBig,
 	}
 
 	for typeName, value := range words {
@@ -145,7 +149,7 @@ func TestInterpretWordOverflowConversions(t *testing.T) {
 			require.Equal(
 				t,
 				"0",
-				inter.Globals.Get("y").GetValue().String(),
+				inter.Globals.Get("y").GetValue(inter).String(),
 			)
 		})
 	}
@@ -156,10 +160,12 @@ func TestInterpretWordUnderflowConversions(t *testing.T) {
 	t.Parallel()
 
 	words := map[string]*big.Int{
-		"Word8":  sema.UInt8TypeMaxInt,
-		"Word16": sema.UInt16TypeMaxInt,
-		"Word32": sema.UInt32TypeMaxInt,
-		"Word64": sema.UInt64TypeMaxInt,
+		"Word8":   sema.UInt8TypeMaxInt,
+		"Word16":  sema.UInt16TypeMaxInt,
+		"Word32":  sema.UInt32TypeMaxInt,
+		"Word64":  sema.UInt64TypeMaxInt,
+		"Word128": sema.Word128TypeMaxIntBig,
+		"Word256": sema.Word256TypeMaxIntBig,
 	}
 
 	for typeName, value := range words {
@@ -179,7 +185,7 @@ func TestInterpretWordUnderflowConversions(t *testing.T) {
 			require.Equal(
 				t,
 				value.String(),
-				inter.Globals.Get("y").GetValue().String(),
+				inter.Globals.Get("y").GetValue(inter).String(),
 			)
 		})
 	}
@@ -203,7 +209,7 @@ func TestInterpretAddressConversion(t *testing.T) {
 			interpreter.AddressValue{
 				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 			},
-			inter.Globals.Get("x").GetValue(),
+			inter.Globals.Get("x").GetValue(inter),
 		)
 
 	})
@@ -222,7 +228,7 @@ func TestInterpretAddressConversion(t *testing.T) {
 			interpreter.AddressValue{
 				0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
 			},
-			inter.Globals.Get("x").GetValue(),
+			inter.Globals.Get("x").GetValue(inter),
 		)
 	})
 
@@ -282,7 +288,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 
 		})
@@ -310,7 +316,7 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclarationOptional(t *t
 				t,
 				inter,
 				interpreter.NewUnmeteredSomeValueNonCopying(value),
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 	}
@@ -340,7 +346,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 
 			_, err := inter.Invoke("test")
@@ -350,8 +356,8 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 			AssertValuesEqual(
 				t,
 				inter,
-				numberValue.Plus(inter, numberValue),
-				inter.Globals.Get("x").GetValue(),
+				numberValue.Plus(inter, numberValue, interpreter.EmptyLocationRange),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 	}
@@ -381,7 +387,7 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 				t,
 				inter,
 				interpreter.NewUnmeteredSomeValueNonCopying(value),
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 
 			_, err := inter.Invoke("test")
@@ -393,9 +399,9 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 				t,
 				inter,
 				interpreter.NewUnmeteredSomeValueNonCopying(
-					numberValue.Plus(inter, numberValue),
+					numberValue.Plus(inter, numberValue, interpreter.EmptyLocationRange),
 				),
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 	}
@@ -425,7 +431,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgument(t *testing.
 				t,
 				inter,
 				value,
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 	}
@@ -455,7 +461,7 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgumentOptional(t *
 				t,
 				inter,
 				interpreter.NewUnmeteredSomeValueNonCopying(value),
-				inter.Globals.Get("x").GetValue(),
+				inter.Globals.Get("x").GetValue(inter),
 			)
 		})
 	}
@@ -654,6 +660,16 @@ func TestInterpretIntegerConversion(t *testing.T) {
 			min:      interpreter.NewUnmeteredWord64Value(0),
 			max:      interpreter.NewUnmeteredWord64Value(math.MaxUint64),
 		},
+		sema.Word128Type: {
+			fortyTwo: interpreter.NewUnmeteredWord128ValueFromUint64(42),
+			min:      interpreter.NewUnmeteredWord128ValueFromUint64(0),
+			max:      interpreter.NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
+		},
+		sema.Word256Type: {
+			fortyTwo: interpreter.NewUnmeteredWord256ValueFromUint64(42),
+			min:      interpreter.NewUnmeteredWord256ValueFromUint64(0),
+			max:      interpreter.NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
+		},
 		sema.Int8Type: {
 			fortyTwo: interpreter.NewUnmeteredInt8Value(42),
 			min:      interpreter.NewUnmeteredInt8Value(math.MinInt8),
@@ -689,7 +705,7 @@ func TestInterpretIntegerConversion(t *testing.T) {
 	for _, ty := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -713,7 +729,9 @@ func TestInterpretIntegerConversion(t *testing.T) {
 					case sema.Word8Type,
 						sema.Word16Type,
 						sema.Word32Type,
-						sema.Word64Type:
+						sema.Word64Type,
+						sema.Word128Type,
+						sema.Word256Type:
 					default:
 						t.Run("underflow", func(t *testing.T) {
 							test(t, sourceType, targetType, sourceValues.min, nil, interpreter.UnderflowError{})
@@ -738,7 +756,9 @@ func TestInterpretIntegerConversion(t *testing.T) {
 					case sema.Word8Type,
 						sema.Word16Type,
 						sema.Word32Type,
-						sema.Word64Type:
+						sema.Word64Type,
+						sema.Word128Type,
+						sema.Word256Type:
 					default:
 						t.Run("overflow", func(t *testing.T) {
 							test(t, sourceType, targetType, sourceValues.max, nil, interpreter.OverflowError{})
@@ -785,7 +805,7 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 			t,
 			inter,
 			expected,
-			inter.Globals.Get("x").GetValue(),
+			inter.Globals.Get("x").GetValue(inter),
 		)
 	}
 
@@ -834,6 +854,14 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 			min: interpreter.NewUnmeteredWord64Value(0),
 			max: interpreter.NewUnmeteredWord64Value(math.MaxUint64),
 		},
+		sema.Word128Type: {
+			min: interpreter.NewUnmeteredWord128ValueFromUint64(0),
+			max: interpreter.NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
+		},
+		sema.Word256Type: {
+			min: interpreter.NewUnmeteredWord256ValueFromUint64(0),
+			max: interpreter.NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
+		},
 		sema.Int8Type: {
 			min: interpreter.NewUnmeteredInt8Value(math.MinInt8),
 			max: interpreter.NewUnmeteredInt8Value(math.MaxInt8),
@@ -863,7 +891,7 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 	for _, ty := range sema.AllIntegerTypes {
 		// Only test leaf types
 		switch ty {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -885,7 +913,7 @@ func TestInterpretIntegerMinMax(t *testing.T) {
 	}
 }
 
-func TestStringIntegerConversion(t *testing.T) {
+func TestInterpretStringIntegerConversion(t *testing.T) {
 	t.Parallel()
 
 	test := func(t *testing.T, typ sema.Type) {

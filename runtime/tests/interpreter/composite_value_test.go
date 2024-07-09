@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,14 +56,14 @@ func TestInterpretCompositeValue(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("Apple"),
-			inter.Globals.Get("name").GetValue(),
+			inter.Globals.Get("name").GetValue(inter),
 		)
 
 		RequireValuesEqual(
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("Red"),
-			inter.Globals.Get("color").GetValue(),
+			inter.Globals.Get("color").GetValue(inter),
 		)
 	})
 }
@@ -138,25 +138,34 @@ func testCompositeValue(t *testing.T, code string) *interpreter.Interpreter {
 		Kind: common.DeclarationKindStructure,
 	})
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerConfig: &sema.Config{
-				BaseValueActivation: baseValueActivation,
-				BaseTypeActivation:  baseTypeActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+				BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseTypeActivation
+				},
 				CheckHandler: func(checker *sema.Checker, check func()) {
 					if checker.Location == TestLocation {
-						checker.Elaboration.CompositeTypes[fruitType.ID()] = fruitType
+						checker.Elaboration.SetCompositeType(
+							fruitType.ID(),
+							fruitType,
+						)
 					}
 					check()
 				},
 			},
 			Config: &interpreter.Config{
-				Storage:        storage,
-				BaseActivation: baseActivation,
+				Storage: storage,
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
 			},
 		},
 	)
@@ -180,12 +189,22 @@ func TestInterpretContractTransfer(t *testing.T) {
               contract C {}
 
               fun test() {
-                  authAccount.save(%s, to: /storage/c)
+                  authAccount.storage.save(%s, to: /storage/c)
               }
 		    `,
 			value,
 		)
-		inter, _ := testAccount(t, address, true, code)
+		inter, _ := testAccountWithErrorHandler(
+			t,
+			address,
+			true,
+			nil,
+			code,
+			sema.Config{},
+			func(err error) {
+				var invalidMoveError *sema.InvalidMoveError
+				require.ErrorAs(t, err, &invalidMoveError)
+			})
 
 		_, err := inter.Invoke("test")
 		RequireError(t, err)

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ func TestCheckDynamicCastingAnyStruct(t *testing.T) {
 		t.Run(operation.Symbol(), func(t *testing.T) {
 
 			t.Run("struct", func(t *testing.T) {
-				checker, err := ParseAndCheck(t,
+				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
                           struct S {}
@@ -59,7 +59,6 @@ func TestCheckDynamicCastingAnyStruct(t *testing.T) {
 
 				require.NoError(t, err)
 
-				assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
 			})
 
 			t.Run("resource", func(t *testing.T) {
@@ -91,9 +90,11 @@ func TestCheckDynamicCastingAnyResource(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
+		t.Parallel()
+
 		t.Run("as?", func(t *testing.T) {
 
-			checker, err := ParseAndCheck(t, `
+			_, err := ParseAndCheck(t, `
 
               resource R {}
 
@@ -108,13 +109,11 @@ func TestCheckDynamicCastingAnyResource(t *testing.T) {
             `)
 
 			require.NoError(t, err)
-
-			assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
 		})
 
 		t.Run("as!", func(t *testing.T) {
 
-			checker, err := ParseAndCheck(t, `
+			_, err := ParseAndCheck(t, `
 
               resource R {}
 
@@ -126,12 +125,12 @@ func TestCheckDynamicCastingAnyResource(t *testing.T) {
             `)
 
 			require.NoError(t, err)
-
-			assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
 		})
 	})
 
 	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
 
 		t.Run("as?", func(t *testing.T) {
 
@@ -463,7 +462,7 @@ func TestCheckDynamicCastingAddress(t *testing.T) {
 
 	types := []sema.Type{
 		sema.AnyStructType,
-		&sema.AddressType{},
+		sema.TheAddressType,
 	}
 
 	for _, operation := range dynamicCastingOperations {
@@ -732,7 +731,7 @@ func TestCheckDynamicCastingStructInterface(t *testing.T) {
 	types := []string{
 		"AnyStruct",
 		"S",
-		"AnyStruct{I}",
+		"{I}",
 	}
 
 	for _, operation := range dynamicCastingOperations {
@@ -798,7 +797,7 @@ func TestCheckDynamicCastingStructInterface(t *testing.T) {
                               struct interface I2 {}
 
                               let i: %[1]s = S()
-                              let s: AnyStruct{I2}? = i %[2]s AnyStruct{I2}
+                              let s: {I2}? = i %[2]s {I2}
                             `,
 							fromType,
 							operation.Symbol(),
@@ -825,7 +824,7 @@ func TestCheckDynamicCastingResourceInterface(t *testing.T) {
 	types := []string{
 		"AnyResource",
 		"R",
-		"AnyResource{I}",
+		"{I}",
 	}
 
 	for _, fromType := range types {
@@ -953,9 +952,9 @@ func TestCheckDynamicCastingResourceInterface(t *testing.T) {
 
                           resource interface I2 {}
 
-                          fun test(): @AnyResource{I2}? {
+                          fun test(): @{I2}? {
                               let i: @%s <- create R()
-                              if let r <- i as? @AnyResource{I2} {
+                              if let r <- i as? @{I2} {
                                   return <-r
                               } else {
                                   destroy i
@@ -987,9 +986,9 @@ func TestCheckDynamicCastingResourceInterface(t *testing.T) {
 
                           resource interface I2 {}
 
-                          fun test(): @AnyResource{I2}? {
+                          fun test(): @{I2}? {
                               let i: @%s <- create R()
-                              let r <- i as! @AnyResource{I2}
+                              let r <- i as! @{I2}
                               return <-r
                           }
                         `,
@@ -1215,12 +1214,14 @@ func TestCheckDynamicCastingCapability(t *testing.T) {
 	types := []sema.Type{
 		&sema.CapabilityType{
 			BorrowType: &sema.ReferenceType{
-				Type: structType,
+				Type:          structType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 		},
 		&sema.CapabilityType{
 			BorrowType: &sema.ReferenceType{
-				Type: sema.AnyStructType,
+				Type:          sema.AnyStructType,
+				Authorization: sema.UnauthorizedAccess,
 			},
 		},
 		&sema.CapabilityType{},
@@ -1229,7 +1230,8 @@ func TestCheckDynamicCastingCapability(t *testing.T) {
 
 	capabilityType := &sema.CapabilityType{
 		BorrowType: &sema.ReferenceType{
-			Type: structType,
+			Type:          structType,
+			Authorization: sema.UnauthorizedAccess,
 		},
 	}
 

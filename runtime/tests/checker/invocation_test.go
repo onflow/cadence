@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckInvalidFunctionCallWithTooFewArguments(t *testing.T) {
@@ -44,7 +47,7 @@ func TestCheckInvalidFunctionCallWithTooFewArguments(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+	assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
 }
 
 func TestCheckFunctionCallWithArgumentLabel(t *testing.T) {
@@ -172,8 +175,7 @@ func TestCheckInvalidFunctionCallWithTooManyArguments(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
-
+	assert.IsType(t, &sema.ExcessiveArgumentsError{}, errs[0])
 	assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
 }
 
@@ -313,17 +315,11 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
 	t.Parallel()
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryFunction(
+	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
 		"foo",
 		&sema.FunctionType{
-			ReturnTypeAnnotation: &sema.TypeAnnotation{
-				Type: sema.VoidType,
-			},
-			RequiredArgumentCount: func() *int {
-				// NOTE: important to check *all* arguments are optional
-				var count = 0
-				return &count
-			}(),
+			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+			Arity:                &sema.Arity{Max: -1},
 		},
 		"",
 		nil,
@@ -331,16 +327,268 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
-            pub fun test() {
+            access(all) fun test() {
                 foo(1)
             }
         `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				BaseValueActivation: baseValueActivation,
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
 			},
 		},
 	)
 
 	require.NoError(t, err)
+}
+
+func TestCheckArgumentLabels(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function", func(t *testing.T) {
+
+		t.Run("", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              fun test(foo bar: Int, baz: String) {}
+
+              let t = test(x: 1, "2")
+            `)
+
+			errs := RequireCheckerErrors(t, err, 2)
+
+			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
+			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
+		})
+
+		t.Run("imported", func(t *testing.T) {
+
+			t.Parallel()
+
+			importedChecker, err := ParseAndCheckWithOptions(t,
+				`
+                  fun test(foo bar: Int, baz: String) {}
+                `,
+				ParseAndCheckOptions{
+					Location: utils.ImportedLocation,
+				},
+			)
+
+			require.NoError(t, err)
+
+			_, err = ParseAndCheckWithOptions(t,
+				`
+                  import "imported"
+
+                  let t = test(x: 1, "2")
+                `,
+				ParseAndCheckOptions{
+					Config: &sema.Config{
+						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
+					},
+				},
+			)
+
+			errs := RequireCheckerErrors(t, err, 2)
+
+			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
+			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
+		})
+	})
+
+	t.Run("composite function", func(t *testing.T) {
+
+		t.Run("", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              struct Test {
+                  fun test(foo bar: Int, baz: String) {}
+              }
+
+              let t = Test().test(x: 1, "2")
+            `)
+
+			errs := RequireCheckerErrors(t, err, 2)
+
+			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
+			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
+		})
+
+		t.Run("imported", func(t *testing.T) {
+
+			t.Parallel()
+
+			importedChecker, err := ParseAndCheckWithOptions(t,
+				`
+                  struct Test {
+                      fun test(foo bar: Int, baz: String) {}
+                  }
+                `,
+				ParseAndCheckOptions{
+					Location: utils.ImportedLocation,
+				},
+			)
+
+			require.NoError(t, err)
+
+			_, err = ParseAndCheckWithOptions(t,
+				`
+                  import "imported"
+
+                  let t = Test().test(x: 1, "2")
+                `,
+				ParseAndCheckOptions{
+					Config: &sema.Config{
+						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
+					},
+				},
+			)
+
+			errs := RequireCheckerErrors(t, err, 2)
+
+			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
+			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
+		})
+	})
+
+	t.Run("constructor", func(t *testing.T) {
+
+		t.Run("", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              struct Test {
+                  init(foo bar: Int, baz: String) {}
+              }
+
+              let t = Test(x: 1, "2")
+            `)
+
+			errs := RequireCheckerErrors(t, err, 2)
+
+			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
+			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
+		})
+
+		t.Run("imported", func(t *testing.T) {
+
+			t.Parallel()
+
+			importedChecker, err := ParseAndCheckWithOptions(t,
+				`
+                  struct Test {
+                      init(foo bar: Int, baz: String) {}
+                  }
+                `,
+				ParseAndCheckOptions{
+					Location: utils.ImportedLocation,
+				},
+			)
+
+			require.NoError(t, err)
+
+			_, err = ParseAndCheckWithOptions(t,
+				`
+                  import "imported"
+
+                  let t = Test(x: 1, "2")
+                `,
+				ParseAndCheckOptions{
+					Config: &sema.Config{
+						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
+					},
+				},
+			)
+
+			errs := RequireCheckerErrors(t, err, 2)
+
+			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
+			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
+		})
+	})
+
+	t.Run("nested constructor", func(t *testing.T) {
+
+		t.Run("", func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t, `
+              contract C {
+                  struct S {
+                      init(foo bar: Int, baz: String) {}
+                  }
+              }
+
+              let t = C.S(x: 1, "2")
+            `)
+
+			errs := RequireCheckerErrors(t, err, 2)
+
+			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
+			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
+		})
+
+		t.Run("imported", func(t *testing.T) {
+
+			t.Parallel()
+
+			importedChecker, err := ParseAndCheckWithOptions(t,
+				`
+                  contract C {
+                      struct S {
+                          init(foo bar: Int, baz: String) {}
+                      }
+                  }
+                `,
+				ParseAndCheckOptions{
+					Location: utils.ImportedLocation,
+				},
+			)
+
+			require.NoError(t, err)
+
+			_, err = ParseAndCheckWithOptions(t,
+				`
+                  import "imported"
+
+                  let t = C.S(x: 1, "2")
+                `,
+				ParseAndCheckOptions{
+					Config: &sema.Config{
+						ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
+							}, nil
+						},
+					},
+				},
+			)
+
+			errs := RequireCheckerErrors(t, err, 2)
+
+			assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
+			assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[1])
+		})
+
+	})
 }

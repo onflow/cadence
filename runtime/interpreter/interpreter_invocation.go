@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,39 +63,46 @@ func (interpreter *Interpreter) invokeFunctionValue(
 ) Value {
 
 	parameterTypeCount := len(parameterTypes)
-	transferredArguments := make([]Value, len(arguments))
 
-	for i, argument := range arguments {
-		argumentType := argumentTypes[i]
+	var transferredArguments []Value
 
-		var locationPos ast.HasPosition
-		if i < len(expressions) {
-			locationPos = expressions[i]
-		} else {
-			locationPos = invocationPosition
-		}
+	argumentCount := len(arguments)
+	if argumentCount > 0 {
+		transferredArguments = make([]Value, argumentCount)
 
-		locationRange := LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: locationPos,
-		}
+		for i, argument := range arguments {
+			argumentType := argumentTypes[i]
 
-		if i < parameterTypeCount {
-			parameterType := parameterTypes[i]
-			transferredArguments[i] = interpreter.transferAndConvert(
-				argument,
-				argumentType,
-				parameterType,
-				locationRange,
-			)
-		} else {
-			transferredArguments[i] = argument.Transfer(
-				interpreter,
-				locationRange,
-				atree.Address{},
-				false,
-				nil,
-			)
+			var locationPos ast.HasPosition
+			if i < len(expressions) {
+				locationPos = expressions[i]
+			} else {
+				locationPos = invocationPosition
+			}
+
+			locationRange := LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: locationPos,
+			}
+
+			if i < parameterTypeCount {
+				parameterType := parameterTypes[i]
+				transferredArguments[i] = interpreter.transferAndConvert(
+					argument,
+					argumentType,
+					parameterType,
+					locationRange,
+				)
+			} else {
+				transferredArguments[i] = argument.Transfer(
+					interpreter,
+					locationRange,
+					atree.Address{},
+					false,
+					nil,
+					nil,
+				)
+			}
 		}
 	}
 
@@ -106,6 +113,8 @@ func (interpreter *Interpreter) invokeFunctionValue(
 
 	invocation := NewInvocation(
 		interpreter,
+		nil,
+		nil,
 		nil,
 		transferredArguments,
 		argumentTypes,
@@ -127,27 +136,38 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	current := interpreter.activations.PushNewWithParent(function.Activation)
 	current.IsFunction = true
 
-	interpreter.sharedState.callStack.Push(invocation)
+	interpreter.SharedState.callStack.Push(invocation)
 
 	// Make `self` available, if any
 	if invocation.Self != nil {
-		interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
+		interpreter.declareSelfVariable(*invocation.Self, invocation.LocationRange)
+	}
+	if invocation.Base != nil {
+		interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
+	}
+	if invocation.BoundAuthorization != nil {
+		oldInvocationValue := interpreter.SharedState.currentEntitlementMappedValue
+		interpreter.SharedState.currentEntitlementMappedValue = invocation.BoundAuthorization
+		defer func() {
+			interpreter.SharedState.currentEntitlementMappedValue = oldInvocationValue
+		}()
 	}
 
-	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments)
+	return interpreter.invokeInterpretedFunctionActivated(function, invocation.Arguments, invocation.LocationRange)
 }
 
 // NOTE: assumes the function's activation (or an extension of it) is pushed!
 func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 	function *InterpretedFunctionValue,
 	arguments []Value,
+	declarationLocationRange LocationRange,
 ) Value {
 	defer func() {
 		// Only unwind the call stack if there was no error
 		if r := recover(); r != nil {
 			panic(r)
 		}
-		interpreter.sharedState.callStack.Pop()
+		interpreter.SharedState.callStack.Pop()
 	}()
 	defer interpreter.activations.Pop()
 
@@ -163,6 +183,7 @@ func (interpreter *Interpreter) invokeInterpretedFunctionActivated(
 		},
 		function.PostConditions,
 		function.Type.ReturnTypeAnnotation.Type,
+		declarationLocationRange,
 	)
 }
 

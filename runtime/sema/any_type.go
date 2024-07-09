@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,14 @@ var AnyType = &SimpleType{
 	Name:          "Any",
 	QualifiedName: "Any",
 	TypeID:        "Any",
-	tag:           AnyTypeTag,
-	IsInvalid:     false,
+	TypeTag:       AnyTypeTag,
 	IsResource:    false,
 	// `Any` is never a valid type in user programs
-	Storable:  true,
-	Equatable: false,
+	Storable:   true,
+	Primitive:  false,
+	Equatable:  false,
+	Comparable: false,
 	// `Any` is never a valid type in user programs
-	ExternallyReturnable: false,
-	Importable:           false,
+	Exportable: false,
+	Importable: false,
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,12 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) Ty
 		expectedType = checker.expectedType
 	}
 
-	valueType := checker.VisitExpressionWithForceType(expression.Expression, expectedType, false)
+	valueType := checker.VisitExpressionWithForceType(
+		expression.Expression,
+		expression,
+		expectedType,
+		false,
+	)
 
 	reportInvalidUnaryOperator := func(expectedType Type) {
 		checker.report(
@@ -60,6 +65,56 @@ func (checker *Checker) VisitUnaryExpression(expression *ast.UnaryExpression) Ty
 
 	case ast.OperationMinus:
 		return checkExpectedType(valueType, SignedNumberType)
+
+	case ast.OperationMul:
+
+		var isOptional bool
+		if optionalType, ok := valueType.(*OptionalType); ok {
+			isOptional = true
+			valueType = optionalType.Type
+		}
+
+		referenceType, ok := valueType.(*ReferenceType)
+		if !ok {
+			if !valueType.IsInvalidType() {
+				checker.report(
+					&InvalidUnaryOperandError{
+						Operation:               expression.Operation,
+						ExpectedTypeDescription: "reference type",
+						ActualType:              valueType,
+						Range: ast.NewRangeFromPositioned(
+							checker.memoryGauge,
+							expression.Expression,
+						),
+					},
+				)
+			}
+			return InvalidType
+		}
+
+		innerType := referenceType.Type
+
+		if !IsPrimitiveOrContainerOfPrimitive(innerType) {
+			checker.report(
+				&InvalidUnaryOperandError{
+					Operation:               expression.Operation,
+					ExpectedTypeDescription: "primitive or container of primitives",
+					ActualType:              innerType,
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						expression.Expression,
+					),
+				},
+			)
+		}
+
+		if isOptional {
+			return &OptionalType{
+				Type: innerType,
+			}
+		} else {
+			return innerType
+		}
 
 	case ast.OperationMove:
 		if !valueType.IsInvalidType() &&

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,17 @@ package sema
 
 // NeverType represents the bottom type
 var NeverType = &SimpleType{
-	Name:                 "Never",
-	QualifiedName:        "Never",
-	TypeID:               "Never",
-	tag:                  NeverTypeTag,
-	IsInvalid:            false,
-	IsResource:           false,
-	Storable:             false,
-	Equatable:            false,
-	ExternallyReturnable: false,
-	Importable:           false,
+	Name:          "Never",
+	QualifiedName: "Never",
+	TypeID:        "Never",
+	TypeTag:       NeverTypeTag,
+	IsResource:    false,
+	Storable:      false,
+	Primitive:     false,
+	Equatable:     false,
+	Comparable:    false,
+	Exportable:    false,
+	Importable:    false,
 }
+
+var NeverTypeAnnotation = NewTypeAnnotation(NeverType)

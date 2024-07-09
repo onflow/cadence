@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,30 +50,30 @@ type position struct {
 }
 
 type lexer struct {
+	// memoryGauge is used for metering memory usage
+	memoryGauge common.MemoryGauge
 	// input is the entire input string
 	input []byte
+	// tokens contains all tokens of the stream
+	tokens []Token
+	// startPos is the start position of the current word
+	startPos position
 	// startOffset is the start offset of the current word in the current line
 	startOffset int
 	// endOffset is the end offset of the current word in the current line
 	endOffset int
 	// prevEndOffset is the previous end offset, used for stepping back
 	prevEndOffset int
+	// cursor is the offset in the token stream
+	cursor int
+	// tokenCount is the number of tokens in the stream
+	tokenCount int
 	// current is the currently scanned rune
 	current rune
 	// prev is the previously scanned rune, used for stepping back
 	prev rune
 	// canBackup indicates whether stepping back is allowed
 	canBackup bool
-	// startPos is the start position of the current word
-	startPos position
-	// cursor is the offset in the token stream
-	cursor int
-	// tokens contains all tokens of the stream
-	tokens []Token
-	// tokenCount is the number of tokens in the stream
-	tokenCount int
-	// memoryGauge is used for metering memory usage
-	memoryGauge common.MemoryGauge
 }
 
 var _ TokenStream = &lexer{}
@@ -357,12 +357,24 @@ func (l *lexer) scanSpace() (containsNewline bool) {
 func (l *lexer) scanIdentifier() {
 	// lookahead is already lexed.
 	// parse more, if any
-	l.acceptWhile(func(r rune) bool {
-		return r >= 'a' && r <= 'z' ||
-			r >= 'A' && r <= 'Z' ||
-			r >= '0' && r <= '9' ||
-			r == '_'
-	})
+	l.acceptWhile(IsIdentifierRune)
+}
+
+func IsIdentifierRune(r rune) bool {
+	return r >= 'a' && r <= 'z' ||
+		r >= 'A' && r <= 'Z' ||
+		r >= '0' && r <= '9' ||
+		r == '_'
+}
+
+func IsValidIdentifier(s string) bool {
+	for _, r := range s {
+		if !IsIdentifierRune(r) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (l *lexer) scanLineComment() {

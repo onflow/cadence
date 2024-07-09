@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ func TestInspectValue(t *testing.T) {
 
 	var compositeValue *CompositeValue
 	{
-		dictionaryStaticType := DictionaryStaticType{
+		dictionaryStaticType := &DictionaryStaticType{
 			KeyType:   PrimitiveStaticTypeString,
 			ValueType: PrimitiveStaticTypeInt256,
 		}
@@ -52,16 +52,16 @@ func TestInspectValue(t *testing.T) {
 		arrayValue := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: dictionaryStaticType,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			dictValue,
 		)
 
 		optionalValue := NewUnmeteredSomeValueNonCopying(arrayValue)
 
-		compositeValue = newTestCompositeValue(inter, common.Address{})
+		compositeValue = newTestCompositeValue(inter, common.ZeroAddress)
 		compositeValue.SetMember(
 			inter,
 			EmptyLocationRange,
@@ -91,6 +91,7 @@ func TestInspectValue(t *testing.T) {
 				inspectedValues = append(inspectedValues, value)
 				return true
 			},
+			EmptyLocationRange,
 		)
 
 		AssertValueSlicesEqual(
@@ -119,6 +120,7 @@ func TestInspectValue(t *testing.T) {
 				inspectedValues = append(inspectedValues, value)
 				return true
 			},
+			EmptyLocationRange,
 		)
 
 		AssertValueSlicesEqual(

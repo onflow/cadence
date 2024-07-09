@@ -40,11 +40,11 @@ func InterpreterValueToVMValue(value interpreter.Value) Value {
 			value.QualifiedIdentifier,
 			value.Kind,
 		)
-	case interpreter.LinkValue:
-		return NewLinkValue(
-			InterpreterValueToVMValue(value.TargetPath).(PathValue),
-			value.Type,
-		)
+	//case interpreter.LinkValue:
+	//	return NewLinkValue(
+	//		InterpreterValueToVMValue(value.TargetPath).(PathValue),
+	//		value.Type,
+	//	)
 	case interpreter.PathValue:
 		return PathValue{
 			Domain:     value.Domain,
@@ -78,26 +78,27 @@ func VMValueToInterpreterValue(storage interpreter.Storage, value Value) interpr
 	case StringValue:
 		return interpreter.NewUnmeteredStringValue(string(value.Str))
 	case *CompositeValue:
-		return interpreter.NewCompositeValueFromOrderedMap(
-			value.dictionary,
+		return interpreter.NewCompositeValueFromAtreeMap(
+			nil,
 			interpreter.CompositeTypeInfo{
 				Location:            value.Location,
 				QualifiedIdentifier: value.QualifiedIdentifier,
 				Kind:                value.Kind,
 			},
+			value.dictionary,
 		)
 	case *CapabilityValue:
 		return interpreter.NewCapabilityValue(
 			nil,
+			interpreter.NewUnmeteredUInt64Value(uint64(value.ID.SmallInt)), // TODO: properly convert
 			VMValueToInterpreterValue(storage, value.Address).(interpreter.AddressValue),
-			VMValueToInterpreterValue(storage, value.Path).(interpreter.PathValue),
 			value.BorrowType,
 		)
-	case LinkValue:
-		return interpreter.LinkValue{
-			TargetPath: VMValueToInterpreterValue(storage, value.TargetPath).(interpreter.PathValue),
-			Type:       value.StaticType(nil),
-		}
+	//case LinkValue:
+	//	return interpreter.LinkValue{
+	//		TargetPath: VMValueToInterpreterValue(storage, value.TargetPath).(interpreter.PathValue),
+	//		Type:       value.StaticType(nil),
+	//	}
 	case AddressValue:
 		return interpreter.AddressValue(value)
 	case PathValue:

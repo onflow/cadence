@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,8 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func NewStandardLibraryFunction(
+// NewStandardLibraryStaticFunction should only be used for creating static functions.
+func NewStandardLibraryStaticFunction(
 	name string,
 	functionType *sema.FunctionType,
 	docString string,
@@ -39,7 +40,7 @@ func NewStandardLibraryFunction(
 		argumentLabels[i] = parameter.EffectiveArgumentLabel()
 	}
 
-	functionValue := interpreter.NewUnmeteredHostFunctionValue(function, functionType)
+	functionValue := interpreter.NewUnmeteredStaticHostFunctionValue(functionType, function)
 
 	return StandardLibraryValue{
 		Name:           name,

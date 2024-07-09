@@ -1,8 +1,12 @@
 changelog:
   categories:
-    - title: 💥 Breaking Changes
+    - title: 💥 Language Breaking Changes
       labels:
-        - Breaking Change
+        - Language Breaking Change
+        - Storage Breaking Change
+    - title: 💥 Go API Breaking Chance
+      labels:
+        - Go API Breaking Change
     - title: ⭐ Features
       labels:
         - Feature
@@ -12,6 +16,9 @@ changelog:
     - title: 🐞 Bug Fixes
       labels:
         - Bugfix
+    - title: 🧪 Testing
+      labels:
+        - Testing
     - title: 📖 Documentation
       labels:
         - Documentation

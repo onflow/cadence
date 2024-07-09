@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,13 @@ import (
 	"time"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDeclaration) StatementResult {
 
-	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationsResolvedLocations[declaration]
+	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationsResolvedLocations(declaration)
 
 	for _, resolvedLocation := range resolvedLocations {
 		interpreter.importResolvedLocation(resolvedLocation)
@@ -38,9 +39,10 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 }
 
 func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation) {
+	config := interpreter.SharedState.Config
 
 	// tracing
-	if interpreter.Config.TracingEnabled {
+	if config.TracingEnabled {
 		startTime := time.Now()
 		defer func() {
 			interpreter.reportImportTrace(
@@ -55,10 +57,10 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	// determine which identifiers are imported /
 	// which variables need to be declared
 
-	var variables map[string]*Variable
+	var variables map[string]Variable
 	identifierLength := len(resolvedLocation.Identifiers)
 	if identifierLength > 0 {
-		variables = make(map[string]*Variable, identifierLength)
+		variables = make(map[string]Variable, identifierLength)
 		for _, identifier := range resolvedLocation.Identifiers {
 			variables[identifier.Identifier] =
 				subInterpreter.Globals.Get(identifier.Identifier)
@@ -72,7 +74,7 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 
 	var names []string
 
-	for name := range variables { //nolint:maprangecheck
+	for name := range variables { //nolint:maprange
 		names = append(names, name)
 	}
 
@@ -82,9 +84,40 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 
 	for _, name := range names {
 		variable := variables[name]
+		if variable == nil {
+			continue
+		}
 
-		interpreter.setVariable(name, variable)
-		interpreter.Globals.Set(name, variable)
+		// Lazily load the value
+		getter := func() Value {
+			value := variable.GetValue(interpreter)
+
+			// If the variable is a contract value, then import it as a reference.
+			// This must be done at the type of importing, rather than when declaring the contract value.
+			compositeValue, ok := value.(*CompositeValue)
+			if !ok || compositeValue.Kind != common.CompositeKindContract {
+				return value
+			}
+
+			staticType := compositeValue.StaticType(interpreter)
+			semaType, err := interpreter.ConvertStaticToSemaType(staticType)
+			if err != nil {
+				panic(err)
+			}
+
+			return NewEphemeralReferenceValue(
+				interpreter,
+				UnauthorizedAccess,
+				compositeValue,
+				semaType,
+				LocationRange{
+					Location: interpreter.Location,
+				},
+			)
+		}
+
+		importedVariable := NewVariableWithGetter(interpreter, getter)
+		interpreter.setVariable(name, importedVariable)
+		interpreter.Globals.Set(name, importedVariable)
 	}
-
 }

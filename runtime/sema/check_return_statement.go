@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,10 +25,16 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 
 	defer func() {
 		// NOTE: check for resource loss before declaring the function
-		// as having definitely returned
-		checker.checkResourceLossForFunction()
+		// as having definitely returned.
+		//
+		// Check all variables declared *inside* of the function.
+		// The function activation's value activation depth is where the *function* is declared ("parent scope"),
+		// and two value activation scopes are defined for the function itself: for the parameters and the body.
+
+		checker.checkResourceLoss(functionActivation.ValueActivationDepth + 1)
 		functionActivation.ReturnInfo.MaybeReturned = true
 		functionActivation.ReturnInfo.DefinitelyReturned = true
+		functionActivation.ReturnInfo.DefinitelyExited = true
 	}()
 
 	returnType := functionActivation.ReturnType
@@ -54,26 +60,21 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) (_ 
 	// If the return statement has a return value,
 	// check that the value's type matches the enclosing function's return type
 
-	valueType := checker.VisitExpression(statement.Expression, returnType)
+	valueType := checker.VisitExpression(statement.Expression, statement, returnType)
 
-	checker.Elaboration.ReturnStatementTypes[statement] =
+	checker.Elaboration.SetReturnStatementTypes(
+		statement,
 		ReturnStatementTypes{
 			ValueType:  valueType,
 			ReturnType: returnType,
-		}
+		},
+	)
 
 	if returnType == VoidType {
 		return
 	}
 
-	checker.checkVariableMove(statement.Expression)
 	checker.checkResourceMoveOperation(statement.Expression, valueType)
 
 	return
-}
-
-func (checker *Checker) checkResourceLossForFunction() {
-	functionValueActivationDepth :=
-		checker.functionActivations.Current().ValueActivationDepth
-	checker.checkResourceLoss(functionValueActivationDepth)
 }

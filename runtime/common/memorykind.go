@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ const (
 
 	// Values
 
-	MemoryKindBoolValue
 	MemoryKindAddressValue
 	MemoryKindStringValue
 	MemoryKindCharacterValue
@@ -38,12 +37,9 @@ const (
 	MemoryKindCompositeValueBase
 	MemoryKindSimpleCompositeValueBase
 	MemoryKindOptionalValue
-	MemoryKindNilValue
-	MemoryKindVoidValue
 	MemoryKindTypeValue
 	MemoryKindPathValue
 	MemoryKindCapabilityValue
-	MemoryKindLinkValue
 	MemoryKindStorageReferenceValue
 	MemoryKindEphemeralReferenceValue
 	MemoryKindInterpretedFunctionValue
@@ -52,6 +48,8 @@ const (
 	MemoryKindBigInt
 	MemoryKindSimpleCompositeValue
 	MemoryKindPublishedValue
+	MemoryKindStorageCapabilityControllerValue
+	MemoryKindAccountCapabilityControllerValue
 
 	// Atree Nodes
 	MemoryKindAtreeArrayDataSlab
@@ -70,8 +68,11 @@ const (
 	MemoryKindVariableSizedStaticType
 	MemoryKindConstantSizedStaticType
 	MemoryKindDictionaryStaticType
+	MemoryKindInclusiveRangeStaticType
 	MemoryKindOptionalStaticType
-	MemoryKindRestrictedStaticType
+	MemoryKindIntersectionStaticType
+	MemoryKindEntitlementSetStaticAccess
+	MemoryKindEntitlementMapStaticAccess
 	MemoryKindReferenceStaticType
 	MemoryKindCapabilityStaticType
 	MemoryKindFunctionStaticType
@@ -88,40 +89,49 @@ const (
 	MemoryKindCadenceArrayValueBase
 	MemoryKindCadenceArrayValueLength
 	MemoryKindCadenceDictionaryValue
+	MemoryKindCadenceInclusiveRangeValue
 	MemoryKindCadenceKeyValuePair
 	MemoryKindCadenceStructValueBase
 	MemoryKindCadenceStructValueSize
 	MemoryKindCadenceResourceValueBase
+	MemoryKindCadenceAttachmentValueBase
 	MemoryKindCadenceResourceValueSize
+	MemoryKindCadenceAttachmentValueSize
 	MemoryKindCadenceEventValueBase
 	MemoryKindCadenceEventValueSize
 	MemoryKindCadenceContractValueBase
 	MemoryKindCadenceContractValueSize
 	MemoryKindCadenceEnumValueBase
 	MemoryKindCadenceEnumValueSize
-	MemoryKindCadenceLinkValue
 	MemoryKindCadencePathValue
 	MemoryKindCadenceTypeValue
 	MemoryKindCadenceCapabilityValue
+	MemoryKindCadenceDeprecatedPathCapabilityType // Deprecated: removed in v1.0.0
+	MemoryKindCadenceFunctionValue
 
 	// Cadence Types
-	MemoryKindCadenceSimpleType
 	MemoryKindCadenceOptionalType
+	MemoryKindCadenceDeprecatedRestrictedType // Deprecated: removed in v1.0.0
 	MemoryKindCadenceVariableSizedArrayType
 	MemoryKindCadenceConstantSizedArrayType
 	MemoryKindCadenceDictionaryType
+	MemoryKindCadenceInclusiveRangeType
 	MemoryKindCadenceField
 	MemoryKindCadenceParameter
+	MemoryKindCadenceTypeParameter
 	MemoryKindCadenceStructType
 	MemoryKindCadenceResourceType
+	MemoryKindCadenceAttachmentType
 	MemoryKindCadenceEventType
 	MemoryKindCadenceContractType
 	MemoryKindCadenceStructInterfaceType
 	MemoryKindCadenceResourceInterfaceType
 	MemoryKindCadenceContractInterfaceType
 	MemoryKindCadenceFunctionType
+	MemoryKindCadenceEntitlementSetAccess
+	MemoryKindCadenceEntitlementMapAccess
 	MemoryKindCadenceReferenceType
-	MemoryKindCadenceRestrictedType
+	MemoryKindCadenceIntersectionType
 	MemoryKindCadenceCapabilityType
 	MemoryKindCadenceEnumType
 
@@ -152,6 +162,8 @@ const (
 	MemoryKindFunctionBlock
 	MemoryKindParameter
 	MemoryKindParameterList
+	MemoryKindTypeParameter
+	MemoryKindTypeParameterList
 	MemoryKindTransfer
 	MemoryKindMembers
 	MemoryKindTypeAnnotation
@@ -159,7 +171,11 @@ const (
 
 	MemoryKindFunctionDeclaration
 	MemoryKindCompositeDeclaration
+	MemoryKindAttachmentDeclaration
 	MemoryKindInterfaceDeclaration
+	MemoryKindEntitlementDeclaration
+	MemoryKindEntitlementMappingElement
+	MemoryKindEntitlementMappingDeclaration
 	MemoryKindEnumCaseDeclaration
 	MemoryKindFieldDeclaration
 	MemoryKindTransactionDeclaration
@@ -179,8 +195,10 @@ const (
 	MemoryKindSwapStatement
 	MemoryKindSwitchStatement
 	MemoryKindWhileStatement
+	MemoryKindRemoveStatement
 
 	MemoryKindBooleanExpression
+	MemoryKindVoidExpression
 	MemoryKindNilExpression
 	MemoryKindStringExpression
 	MemoryKindIntegerExpression
@@ -201,6 +219,7 @@ const (
 	MemoryKindReferenceExpression
 	MemoryKindForceExpression
 	MemoryKindPathExpression
+	MemoryKindAttachExpression
 
 	MemoryKindConstantSizedType
 	MemoryKindDictionaryType
@@ -209,7 +228,7 @@ const (
 	MemoryKindNominalType
 	MemoryKindOptionalType
 	MemoryKindReferenceType
-	MemoryKindRestrictedType
+	MemoryKindIntersectionType
 	MemoryKindVariableSizedType
 
 	MemoryKindPosition
@@ -224,9 +243,13 @@ const (
 	MemoryKindConstantSizedSemaType
 	MemoryKindDictionarySemaType
 	MemoryKindOptionalSemaType
-	MemoryKindRestrictedSemaType
+	MemoryKindIntersectionSemaType
 	MemoryKindReferenceSemaType
+	MemoryKindEntitlementSemaType
+	MemoryKindEntitlementMapSemaType
+	MemoryKindEntitlementRelationSemaType
 	MemoryKindCapabilitySemaType
+	MemoryKindInclusiveRangeSemaType
 
 	// ordered-map
 	MemoryKindOrderedMap

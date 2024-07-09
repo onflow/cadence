@@ -61,6 +61,31 @@ type Compiler struct {
 	memoryGauge common.MemoryGauge
 }
 
+func (c *Compiler) VisitAttachmentDeclaration(_ *ast.AttachmentDeclaration) (_ struct{}) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Compiler) VisitEntitlementDeclaration(_ *ast.EntitlementDeclaration) (_ struct{}) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Compiler) VisitEntitlementMappingDeclaration(_ *ast.EntitlementMappingDeclaration) (_ struct{}) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Compiler) VisitRemoveStatement(_ *ast.RemoveStatement) (_ struct{}) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Compiler) VisitAttachExpression(_ *ast.AttachExpression) (_ struct{}) {
+	//TODO implement me
+	panic("implement me")
+}
+
 type constantsCacheKey struct {
 	data string
 	kind constantkind.ConstantKind
@@ -333,7 +358,7 @@ func (c *Compiler) reserveGlobalVars(
 
 	for _, declaration := range specialFunctionDecls {
 		switch declaration.Kind {
-		case common.DeclarationKindDestructor,
+		case common.DeclarationKindDestructorLegacy,
 			common.DeclarationKindPrepare:
 			// Important: All special functions visited within `VisitSpecialFunctionDeclaration`
 			// must be also visited here. And must be visited only them. e.g: Don't visit inits.
@@ -444,7 +469,7 @@ func (c *Compiler) exportContract() *bbq.Contract {
 
 	contractDecl := c.Program.SoleContractDeclaration()
 	if contractDecl != nil {
-		contractType := c.Elaboration.CompositeDeclarationTypes[contractDecl]
+		contractType := c.Elaboration.CompositeDeclarationType(contractDecl)
 		location = contractType.Location
 		name = contractType.Identifier
 	} else {
@@ -453,7 +478,7 @@ func (c *Compiler) exportContract() *bbq.Contract {
 			return nil
 		}
 
-		interfaceType := c.Elaboration.InterfaceDeclarationTypes[interfaceDecl]
+		interfaceType := c.Elaboration.InterfaceDeclarationType(interfaceDecl)
 		location = interfaceType.Location
 		name = interfaceType.Identifier
 	}
@@ -580,7 +605,7 @@ func (c *Compiler) VisitVariableDeclaration(declaration *ast.VariableDeclaration
 func (c *Compiler) VisitAssignmentStatement(statement *ast.AssignmentStatement) (_ struct{}) {
 	c.compileExpression(statement.Value)
 
-	assignmentTypes := c.Elaboration.AssignmentStatementTypes[statement]
+	assignmentTypes := c.Elaboration.AssignmentStatementTypes(statement)
 	c.emitCheckType(assignmentTypes.TargetType)
 
 	switch target := statement.Target.(type) {
@@ -639,7 +664,7 @@ func (c *Compiler) VisitNilExpression(_ *ast.NilExpression) (_ struct{}) {
 }
 
 func (c *Compiler) VisitIntegerExpression(expression *ast.IntegerExpression) (_ struct{}) {
-	integerType := c.Elaboration.IntegerExpressionType[expression]
+	integerType := c.Elaboration.IntegerExpressionType(expression)
 	constantKind := constantkind.FromSemaType(integerType)
 
 	// TODO:
@@ -690,7 +715,7 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 
 	switch invokedExpr := expression.InvokedExpression.(type) {
 	case *ast.IdentifierExpression:
-		typ := c.Elaboration.IdentifierInInvocationTypes[invokedExpr]
+		typ := c.Elaboration.IdentifierInInvocationType(invokedExpr)
 		invocationType := typ.(*sema.FunctionType)
 		if invocationType.IsConstructor {
 			// TODO:
@@ -704,7 +729,12 @@ func (c *Compiler) VisitInvocationExpression(expression *ast.InvocationExpressio
 		typeArgs := c.loadTypeArguments(expression)
 		c.emit(opcode.Invoke, typeArgs...)
 	case *ast.MemberExpression:
-		memberInfo := c.Elaboration.MemberExpressionMemberInfos[invokedExpr]
+		memberInfo, ok := c.Elaboration.MemberExpressionMemberAccessInfo(invokedExpr)
+		if !ok {
+			// TODO: verify
+			panic(errors.NewUnreachableError())
+		}
+
 		typeName := TypeName(memberInfo.AccessedType)
 		var funcName string
 
@@ -759,9 +789,7 @@ func isInterfaceMethodInvocation(accessedType sema.Type) bool {
 	switch typ := accessedType.(type) {
 	case *sema.ReferenceType:
 		return isInterfaceMethodInvocation(typ.Type)
-	case *sema.RestrictedType:
-		// TODO: If the concrete type is known (other than AnyStruct/AnyResource), can
-		//  this be treated as a concrete type method invocation (instead of the restriction interface)?
+	case *sema.IntersectionType:
 		return true
 	default:
 		return false
@@ -772,16 +800,16 @@ func TypeName(typ sema.Type) string {
 	switch typ := typ.(type) {
 	case *sema.ReferenceType:
 		return TypeName(typ.Type)
-	case *sema.RestrictedType:
+	case *sema.IntersectionType:
 		// TODO: Revisit. Probably this is not needed here?
-		return TypeName(typ.Restrictions[0])
+		return TypeName(typ.Types[0])
 	default:
 		return typ.QualifiedString()
 	}
 }
 
 func (c *Compiler) loadArguments(expression *ast.InvocationExpression) {
-	invocationTypes := c.Elaboration.InvocationExpressionTypes[expression]
+	invocationTypes := c.Elaboration.InvocationExpressionTypes(expression)
 	for index, argument := range expression.Arguments {
 		c.compileExpression(argument.Expression)
 		c.emitCheckType(invocationTypes.ArgumentTypes[index])
@@ -795,7 +823,7 @@ func (c *Compiler) loadArguments(expression *ast.InvocationExpression) {
 }
 
 func (c *Compiler) loadTypeArguments(expression *ast.InvocationExpression) []byte {
-	invocationTypes := c.Elaboration.InvocationExpressionTypes[expression]
+	invocationTypes := c.Elaboration.InvocationExpressionTypes(expression)
 
 	//if len(expression.TypeArguments) == 0 {
 	//	first, second := encodeUint16(0)
@@ -910,8 +938,8 @@ func (c *Compiler) VisitStringExpression(expression *ast.StringExpression) (_ st
 func (c *Compiler) VisitCastingExpression(expression *ast.CastingExpression) (_ struct{}) {
 	c.compileExpression(expression.Expression)
 
-	targetType := c.Elaboration.CastingTargetTypes[expression]
-	index := c.getOrAddType(targetType)
+	castingTypes := c.Elaboration.CastingExpressionTypes(expression)
+	index := c.getOrAddType(castingTypes.TargetType)
 	first, second := encodeUint16(index)
 
 	castType := commons.CastTypeFrom(expression.Operation)
@@ -967,7 +995,7 @@ func (c *Compiler) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunct
 	switch kind {
 	case common.DeclarationKindInitializer:
 		c.compileInitializer(declaration)
-	case common.DeclarationKindDestructor, common.DeclarationKindPrepare:
+	case common.DeclarationKindDestructorLegacy, common.DeclarationKindPrepare:
 		c.compileDeclaration(declaration.FunctionDeclaration)
 	default:
 		// TODO: support other special functions
@@ -1107,7 +1135,7 @@ func (c *Compiler) declareFunction(declaration *ast.FunctionDeclaration, declare
 }
 
 func (c *Compiler) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) (_ struct{}) {
-	enclosingCompositeType := c.Elaboration.CompositeDeclarationTypes[declaration]
+	enclosingCompositeType := c.Elaboration.CompositeDeclarationType(declaration)
 	c.compositeTypeStack.push(enclosingCompositeType)
 	defer func() {
 		c.compositeTypeStack.pop()
@@ -1297,7 +1325,7 @@ func (c *Compiler) desugarTransaction(transaction *ast.TransactionDeclaration) (
 			// Create global variables
 			// i.e: `var a: Type`
 			field := &ast.VariableDeclaration{
-				Access:         ast.AccessPrivate,
+				Access:         ast.AccessSelf,
 				IsConstant:     false,
 				Identifier:     parameter.Identifier,
 				TypeAnnotation: parameter.TypeAnnotation,
@@ -1331,14 +1359,14 @@ func (c *Compiler) desugarTransaction(transaction *ast.TransactionDeclaration) (
 			}
 			statements = append(statements, assignment)
 
-			transactionTypes := c.Elaboration.TransactionDeclarationTypes[transaction]
+			transactionTypes := c.Elaboration.TransactionDeclarationType(transaction)
 			paramType := transactionTypes.Parameters[index].TypeAnnotation.Type
 			assignmentTypes := sema.AssignmentStatementTypes{
 				ValueType:  paramType,
 				TargetType: paramType,
 			}
 
-			c.Elaboration.AssignmentStatementTypes[assignment] = assignmentTypes
+			c.Elaboration.SetAssignmentStatementTypes(assignment, assignmentTypes)
 		}
 
 		// Create an init function.
@@ -1348,7 +1376,7 @@ func (c *Compiler) desugarTransaction(transaction *ast.TransactionDeclaration) (
 		//     ...
 		// }
 		initFunction = &ast.FunctionDeclaration{
-			Access: 0,
+			Access: ast.AccessNotSpecified,
 			Identifier: ast.Identifier{
 				Identifier: commons.ProgramInitFunctionName,
 			},
@@ -1393,7 +1421,7 @@ func (c *Compiler) desugarTransaction(transaction *ast.TransactionDeclaration) (
 		ast.EmptyRange,
 	)
 
-	c.Elaboration.CompositeDeclarationTypes[compositeDecl] = compositeType
+	c.Elaboration.SetCompositeDeclarationType(compositeDecl, compositeType)
 
 	return compositeDecl, varDeclarations, initFunction
 }
@@ -1404,11 +1432,15 @@ var emptyInitializer = func() *ast.SpecialFunctionDeclaration {
 	initializer := ast.NewFunctionDeclaration(
 		nil,
 		ast.AccessNotSpecified,
+		ast.FunctionPurityUnspecified,
+		false,
+		false,
 		ast.NewIdentifier(
 			nil,
 			commons.InitFunctionName,
 			ast.EmptyPosition,
 		),
+		nil,
 		nil,
 		nil,
 		ast.NewFunctionBlock(

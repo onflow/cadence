@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"fmt"
 	"runtime"
 	"sort"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
@@ -34,9 +36,9 @@ const StorageDomainContract = "contract"
 
 type Storage struct {
 	*atree.PersistentSlabStorage
-	writes          map[interpreter.StorageKey]atree.StorageIndex
+	NewStorageMaps  *orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]
 	storageMaps     map[interpreter.StorageKey]*interpreter.StorageMap
-	contractUpdates map[interpreter.StorageKey]*interpreter.CompositeValue
+	contractUpdates *orderedmap.OrderedMap[interpreter.StorageKey, *interpreter.CompositeValue]
 	Ledger          atree.Ledger
 	memoryGauge     common.MemoryGauge
 }
@@ -74,9 +76,7 @@ func NewStorage(ledger atree.Ledger, memoryGauge common.MemoryGauge) *Storage {
 	return &Storage{
 		Ledger:                ledger,
 		PersistentSlabStorage: persistentSlabStorage,
-		writes:                map[interpreter.StorageKey]atree.StorageIndex{},
 		storageMaps:           map[interpreter.StorageKey]*interpreter.StorageMap{},
-		contractUpdates:       map[interpreter.StorageKey]*interpreter.CompositeValue{},
 		memoryGauge:           memoryGauge,
 	}
 }
@@ -99,11 +99,11 @@ func (s *Storage) GetStorageMap(
 
 		var data []byte
 		var err error
-		wrapPanic(func() {
+		errors.WrapPanic(func() {
 			data, err = s.Ledger.GetValue(key.Address[:], []byte(key.Key))
 		})
 		if err != nil {
-			panic(err)
+			panic(interpreter.WrappedExternalError(err))
 		}
 
 		dataLength := len(data)
@@ -125,7 +125,7 @@ func (s *Storage) GetStorageMap(
 			copy(storageIndex[:], data[:])
 			storageMap = s.loadExistingStorageMap(atreeAddress, storageIndex)
 		} else if createIfNotExists {
-			storageMap = s.storeNewStorageMap(atreeAddress, domain)
+			storageMap = s.StoreNewStorageMap(atreeAddress, domain)
 		}
 
 		if storageMap != nil {
@@ -146,34 +146,50 @@ func (s *Storage) loadExistingStorageMap(address atree.Address, storageIndex atr
 	return interpreter.NewStorageMapWithRootID(s, storageID)
 }
 
-func (s *Storage) storeNewStorageMap(address atree.Address, domain string) *interpreter.StorageMap {
+func (s *Storage) StoreNewStorageMap(address atree.Address, domain string) *interpreter.StorageMap {
 	storageMap := interpreter.NewStorageMap(s.memoryGauge, s, address)
 
 	storageIndex := storageMap.StorageID().Index
 
 	storageKey := interpreter.NewStorageKey(s.memoryGauge, common.Address(address), domain)
 
-	s.writes[storageKey] = storageIndex
+	if s.NewStorageMaps == nil {
+		s.NewStorageMaps = &orderedmap.OrderedMap[interpreter.StorageKey, atree.StorageIndex]{}
+	}
+	s.NewStorageMaps.Set(storageKey, storageIndex)
 
 	return storageMap
 }
 
 func (s *Storage) recordContractUpdate(
-	address common.Address,
-	name string,
+	location common.AddressLocation,
 	contractValue *interpreter.CompositeValue,
 ) {
-	key := interpreter.NewStorageKey(s.memoryGauge, address, name)
+	key := interpreter.NewStorageKey(s.memoryGauge, location.Address, location.Name)
 
 	// NOTE: do NOT delete the map entry,
 	// otherwise the removal write is lost
 
-	s.contractUpdates[key] = contractValue
+	if s.contractUpdates == nil {
+		s.contractUpdates = &orderedmap.OrderedMap[interpreter.StorageKey, *interpreter.CompositeValue]{}
+	}
+	s.contractUpdates.Set(key, contractValue)
+}
+
+func (s *Storage) contractUpdateRecorded(
+	location common.AddressLocation,
+) bool {
+	if s.contractUpdates == nil {
+		return false
+	}
+
+	key := interpreter.NewStorageKey(s.memoryGauge, location.Address, location.Name)
+	return s.contractUpdates.Contains(key)
 }
 
 type ContractUpdate struct {
-	Key           interpreter.StorageKey
 	ContractValue *interpreter.CompositeValue
+	Key           interpreter.StorageKey
 }
 
 func SortContractUpdates(updates []ContractUpdate) {
@@ -187,43 +203,12 @@ func SortContractUpdates(updates []ContractUpdate) {
 // commitContractUpdates writes the contract updates to storage.
 // The contract updates were delayed so they are not observable during execution.
 func (s *Storage) commitContractUpdates(inter *interpreter.Interpreter) {
+	if s.contractUpdates == nil {
+		return
+	}
 
-	contractUpdateCount := len(s.contractUpdates)
-
-	if contractUpdateCount <= 1 {
-		// NOTE: ranging over maps is safe (deterministic),
-		// if the loop breaks after the first element (if any)
-
-		for key, contractValue := range s.contractUpdates { //nolint:maprangecheck
-			s.writeContractUpdate(inter, key, contractValue)
-			break
-		}
-	} else {
-
-		contractUpdates := make([]ContractUpdate, 0, contractUpdateCount)
-
-		// NOTE: ranging over maps is safe (deterministic),
-		// if it is side effect free and the keys are sorted afterwards
-
-		for key, contractValue := range s.contractUpdates { //nolint:maprangecheck
-			contractUpdates = append(
-				contractUpdates,
-				ContractUpdate{
-					Key:           key,
-					ContractValue: contractValue,
-				},
-			)
-		}
-
-		// Sort the contract updates by key in lexicographic order
-
-		SortContractUpdates(contractUpdates)
-
-		// Perform contract updates in order
-
-		for _, contractUpdate := range contractUpdates {
-			s.writeContractUpdate(inter, contractUpdate.Key, contractUpdate.ContractValue)
-		}
+	for pair := s.contractUpdates.Oldest(); pair != nil; pair = pair.Next() {
+		s.writeContractUpdate(inter, pair.Key, pair.Value)
 	}
 }
 
@@ -234,88 +219,77 @@ func (s *Storage) writeContractUpdate(
 ) {
 	storageMap := s.GetStorageMap(key.Address, StorageDomainContract, true)
 	// NOTE: pass nil instead of allocating a Value-typed  interface that points to nil
+	storageMapKey := interpreter.StringStorageMapKey(key.Key)
 	if contractValue == nil {
-		storageMap.WriteValue(inter, key.Key, nil)
+		storageMap.WriteValue(inter, storageMapKey, nil)
 	} else {
-		storageMap.WriteValue(inter, key.Key, contractValue)
+		storageMap.WriteValue(inter, storageMapKey, contractValue)
 	}
-}
-
-type write struct {
-	storageKey   interpreter.StorageKey
-	storageIndex atree.StorageIndex
-}
-
-func sortWrites(writes []write) {
-	sort.Slice(writes, func(i, j int) bool {
-		a := writes[i].storageKey
-		b := writes[j].storageKey
-		return a.IsLess(b)
-	})
 }
 
 // Commit serializes/saves all values in the readCache in storage (through the runtime interface).
 func (s *Storage) Commit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
+	return s.commit(inter, commitContractUpdates, true)
+}
+
+// NondeterministicCommit serializes and commits all values in the deltas storage
+// in nondeterministic order.  This function is used when commit ordering isn't
+// required (e.g. migration programs).
+func (s *Storage) NondeterministicCommit(inter *interpreter.Interpreter, commitContractUpdates bool) error {
+	return s.commit(inter, commitContractUpdates, false)
+}
+
+func (s *Storage) commit(inter *interpreter.Interpreter, commitContractUpdates bool, deterministic bool) error {
 
 	if commitContractUpdates {
 		s.commitContractUpdates(inter)
 	}
 
-	var writes []write
-
-	writeCount := len(s.writes)
-	if writeCount > 0 {
-		writes = make([]write, 0, writeCount)
-	}
-
-	// NOTE: ranging over maps is safe (deterministic),
-	// if it is side effect free and the keys are sorted afterwards
-
-	for storageKey, storageIndex := range s.writes { //nolint:maprangecheck
-		writes = append(
-			writes,
-			write{
-				storageKey:   storageKey,
-				storageIndex: storageIndex,
-			},
-		)
-	}
-
-	// Sort the writes by storage key in lexicographic order
-	if writeCount > 1 {
-		sortWrites(writes)
-	}
-
-	// Write account storage entries in order
-
-	// NOTE: Important: do not use a for-range loop,
-	// as the introduced variable will be overridden on each loop iteration,
-	// leading to the slices created in the loop body being backed by the same data
-	for i := 0; i < len(writes); i++ {
-		write := writes[i]
-
-		var err error
-		wrapPanic(func() {
-			err = s.Ledger.SetValue(
-				write.storageKey.Address[:],
-				[]byte(write.storageKey.Key),
-				write.storageIndex[:],
-			)
-		})
-		if err != nil {
-			return err
-		}
-
-		delete(s.writes, write.storageKey)
+	err := s.commitNewStorageMaps()
+	if err != nil {
+		return err
 	}
 
 	// Commit the underlying slab storage's writes
+
+	size := s.PersistentSlabStorage.DeltasSizeWithoutTempAddresses()
+	if size > 0 {
+		inter.ReportComputation(common.ComputationKindEncodeValue, uint(size))
+		usage := common.NewBytesMemoryUsage(int(size))
+		common.UseMemory(s.memoryGauge, usage)
+	}
 
 	deltas := s.PersistentSlabStorage.DeltasWithoutTempAddresses()
 	common.UseMemory(s.memoryGauge, common.NewAtreeEncodedSlabMemoryUsage(deltas))
 
 	// TODO: report encoding metric for all encoded slabs
-	return s.PersistentSlabStorage.FastCommit(runtime.NumCPU())
+	if deterministic {
+		return s.PersistentSlabStorage.FastCommit(runtime.NumCPU())
+	} else {
+		return s.PersistentSlabStorage.NondeterministicFastCommit(runtime.NumCPU())
+	}
+}
+
+func (s *Storage) commitNewStorageMaps() error {
+	if s.NewStorageMaps == nil {
+		return nil
+	}
+
+	for pair := s.NewStorageMaps.Oldest(); pair != nil; pair = pair.Next() {
+		var err error
+		errors.WrapPanic(func() {
+			err = s.Ledger.SetValue(
+				pair.Key.Address[:],
+				[]byte(pair.Key.Key),
+				pair.Value[:],
+			)
+		})
+		if err != nil {
+			return interpreter.WrappedExternalError(err)
+		}
+	}
+
+	return nil
 }
 
 func (s *Storage) CheckHealth() error {
@@ -330,7 +304,7 @@ func (s *Storage) CheckHealth() error {
 	accountRootSlabIDs := make(map[atree.StorageID]struct{}, len(rootSlabIDs))
 
 	// NOTE: map range is safe, as it creates a subset
-	for rootSlabID := range rootSlabIDs { //nolint:maprangecheck
+	for rootSlabID := range rootSlabIDs { //nolint:maprange
 		if rootSlabID.Address == (atree.Address{}) {
 			continue
 		}
@@ -344,7 +318,7 @@ func (s *Storage) CheckHealth() error {
 
 	var storageMapStorageIDs []atree.StorageID
 
-	for _, storageMap := range s.storageMaps { //nolint:maprangecheck
+	for _, storageMap := range s.storageMaps { //nolint:maprange
 		storageMapStorageIDs = append(
 			storageMapStorageIDs,
 			storageMap.StorageID(),
@@ -372,7 +346,7 @@ func (s *Storage) CheckHealth() error {
 	if len(accountRootSlabIDs) > len(found) {
 		var unreferencedRootSlabIDs []atree.StorageID
 
-		for accountRootSlabID := range accountRootSlabIDs { //nolint:maprangecheck
+		for accountRootSlabID := range accountRootSlabIDs { //nolint:maprange
 			if _, ok := found[accountRootSlabID]; ok {
 				continue
 			}
@@ -389,8 +363,22 @@ func (s *Storage) CheckHealth() error {
 			return a.Compare(b) < 0
 		})
 
-		return errors.NewUnexpectedError("slabs not referenced from account storage: %s", unreferencedRootSlabIDs)
+		return UnreferencedRootSlabsError{
+			UnreferencedRootSlabIDs: unreferencedRootSlabIDs,
+		}
 	}
 
 	return nil
+}
+
+type UnreferencedRootSlabsError struct {
+	UnreferencedRootSlabIDs []atree.StorageID
+}
+
+var _ errors.InternalError = UnreferencedRootSlabsError{}
+
+func (UnreferencedRootSlabsError) IsInternalError() {}
+
+func (e UnreferencedRootSlabsError) Error() string {
+	return fmt.Sprintf("slabs not referenced: %s", e.UnreferencedRootSlabIDs)
 }

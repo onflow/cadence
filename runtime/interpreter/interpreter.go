@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,35 +19,29 @@
 package interpreter
 
 import (
+	"encoding/binary"
 	goErrors "errors"
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 	"strconv"
 	"time"
 
-	"github.com/onflow/cadence/runtime/activations"
+	"golang.org/x/xerrors"
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/onflow/atree"
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
-
-//
-
-var emptyFunctionType = &sema.FunctionType{
-	ReturnTypeAnnotation: &sema.TypeAnnotation{
-		Type: sema.VoidType,
-	},
-}
-
-//
 
 type getterSetter struct {
 	target Value
@@ -112,6 +106,26 @@ type OnMeterComputationFunc func(
 	intensity uint,
 )
 
+// CapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
+type CapabilityBorrowHandlerFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	capabilityID UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) ReferenceValue
+
+// CapabilityCheckHandlerFunc is a function that is used to check ID capabilities.
+type CapabilityCheckHandlerFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	capabilityID UInt64Value,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) BoolValue
+
 // InjectedCompositeFieldsHandlerFunc is a function that handles storage reads.
 type InjectedCompositeFieldsHandlerFunc func(
 	inter *Interpreter,
@@ -134,87 +148,28 @@ type ImportLocationHandlerFunc func(
 	location common.Location,
 ) Import
 
-// PublicAccountHandlerFunc is a function that handles retrieving a public account at a given address.
-// The account returned must be of type `PublicAccount`.
-type PublicAccountHandlerFunc func(
+// AccountHandlerFunc is a function that handles retrieving an auth account at a given address.
+// The account returned must be of type `Account`.
+type AccountHandlerFunc func(
+	inter *Interpreter,
 	address AddressValue,
 ) Value
 
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() (uint64, error)
 
-// PublicKeyValidationHandlerFunc is a function that validates a given public key.
-// Parameter types:
-// - publicKey: PublicKey
-type PublicKeyValidationHandlerFunc func(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	publicKey *CompositeValue,
-) error
+// CompositeTypeHandlerFunc is a function that loads composite types.
+type CompositeTypeHandlerFunc func(location common.Location, typeID TypeID) *sema.CompositeType
 
-// BLSVerifyPoPHandlerFunc is a function that verifies a BLS proof of possession.
-// Parameter types:
-// - publicKey: PublicKey
-// - signature: [UInt8]
-// Expected result type: Bool
-type BLSVerifyPoPHandlerFunc func(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	publicKey MemberAccessibleValue,
-	signature *ArrayValue,
-) BoolValue
+// InterfaceTypeHandlerFunc is a function that loads interface types.
+type InterfaceTypeHandlerFunc func(location common.Location, typeID TypeID) *sema.InterfaceType
 
-// BLSAggregateSignaturesHandlerFunc is a function that aggregates multiple BLS signatures.
-// Parameter types:
-// - signatures: [[UInt8]]
-// Expected result type: [UInt8]?
-type BLSAggregateSignaturesHandlerFunc func(
+// CompositeValueFunctionsHandlerFunc is a function that loads composite value functions.
+type CompositeValueFunctionsHandlerFunc func(
 	inter *Interpreter,
 	locationRange LocationRange,
-	signatures *ArrayValue,
-) OptionalValue
-
-// BLSAggregatePublicKeysHandlerFunc is a function that aggregates multiple BLS public keys.
-// Parameter types:
-// - publicKeys: [PublicKey]
-// Expected result type: PublicKey?
-type BLSAggregatePublicKeysHandlerFunc func(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	publicKeys *ArrayValue,
-) OptionalValue
-
-// SignatureVerificationHandlerFunc is a function that validates a signature.
-// Parameter types:
-// - signature: [UInt8]
-// - signedData: [UInt8]
-// - domainSeparationTag: String
-// - hashAlgorithm: HashAlgorithm
-// - publicKey: PublicKey
-// Expected result type: Bool
-type SignatureVerificationHandlerFunc func(
-	interpreter *Interpreter,
-	locationRange LocationRange,
-	signature *ArrayValue,
-	signedData *ArrayValue,
-	domainSeparationTag *StringValue,
-	hashAlgorithm *SimpleCompositeValue,
-	publicKey MemberAccessibleValue,
-) BoolValue
-
-// HashHandlerFunc is a function that hashes.
-// Parameter types:
-// - data: [UInt8]
-// - domainSeparationTag: [UInt8]
-// - hashAlgorithm: HashAlgorithm
-// Expected result type: [UInt8]
-type HashHandlerFunc func(
-	inter *Interpreter,
-	locationRange LocationRange,
-	data *ArrayValue,
-	domainSeparationTag *StringValue,
-	hashAlgorithm MemberAccessibleValue,
-) *ArrayValue
+	compositeValue *CompositeValue,
+) *FunctionOrderedMap
 
 // CompositeTypeCode contains the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
@@ -223,30 +178,28 @@ type HashHandlerFunc func(
 // As there is no support for inheritance of concrete types,
 // these are the "leaf" nodes in the call chain, and are functions.
 type CompositeTypeCode struct {
-	CompositeFunctions map[string]FunctionValue
-	DestructorFunction FunctionValue
+	CompositeFunctions *FunctionOrderedMap
 }
 
 type FunctionWrapper = func(inner FunctionValue) FunctionValue
 
 // WrapperCode contains the "prepared" / "callable" "code"
-// for inherited types (interfaces and type requirements).
+// for inherited types.
 //
 // These are "branch" nodes in the call chain, and are function wrappers,
 // i.e. they wrap the functions / function wrappers that inherit them.
 type WrapperCode struct {
-	InitializerFunctionWrapper FunctionWrapper
-	DestructorFunctionWrapper  FunctionWrapper
-	FunctionWrappers           map[string]FunctionWrapper
-	Functions                  map[string]FunctionValue
+	InitializerFunctionWrapper     FunctionWrapper
+	FunctionWrappers               map[string]FunctionWrapper
+	Functions                      *FunctionOrderedMap
+	DefaultDestroyEventConstructor FunctionValue
 }
 
 // TypeCodes is the value which stores the "prepared" / "callable" "code"
-// of all composite types, interface types, and type requirements.
+// of all composite types and interface types.
 type TypeCodes struct {
-	CompositeCodes       map[sema.TypeID]CompositeTypeCode
-	InterfaceCodes       map[sema.TypeID]WrapperCode
-	TypeRequirementCodes map[sema.TypeID]WrapperCode
+	CompositeCodes map[sema.TypeID]CompositeTypeCode
+	InterfaceCodes map[sema.TypeID]WrapperCode
 }
 
 func (c TypeCodes) Merge(codes TypeCodes) {
@@ -254,16 +207,12 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 	// Iterating over the maps in a non-deterministic way is OK,
 	// we only copy the values over.
 
-	for typeID, code := range codes.CompositeCodes { //nolint:maprangecheck
+	for typeID, code := range codes.CompositeCodes { //nolint:maprange
 		c.CompositeCodes[typeID] = code
 	}
 
-	for typeID, code := range codes.InterfaceCodes { //nolint:maprangecheck
+	for typeID, code := range codes.InterfaceCodes { //nolint:maprange
 		c.InterfaceCodes[typeID] = code
-	}
-
-	for typeID, code := range codes.TypeRequirementCodes { //nolint:maprangecheck
-		c.TypeRequirementCodes[typeID] = code
 	}
 }
 
@@ -273,18 +222,17 @@ type Storage interface {
 	CheckHealth() error
 }
 
-type ReferencedResourceKindedValues map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}
+type ReferencedResourceKindedValues map[atree.StorageID]map[*EphemeralReferenceValue]struct{}
 
 type Interpreter struct {
-	Program      *Program
 	Location     common.Location
-	sharedState  *sharedState
-	activations  *VariableActivations
-	Globals      GlobalVariables
-	Transactions []*HostFunctionValue
-	Config       *Config
-	interpreted  bool
 	statement    ast.Statement
+	Program      *Program
+	SharedState  *SharedState
+	Globals      GlobalVariables
+	activations  *VariableActivations
+	Transactions []*HostFunctionValue
+	interpreted  bool
 }
 
 var _ common.MemoryGauge = &Interpreter{}
@@ -294,39 +242,36 @@ var _ ast.ExpressionVisitor[Value] = &Interpreter{}
 
 // BaseActivation is the activation which contains all base declarations.
 // It is reused across all interpreters.
-var BaseActivation = func() *VariableActivation {
-	// No need to meter since this is only created once
-	activation := activations.NewActivation[*Variable](nil, nil)
+var BaseActivation *VariableActivation
 
-	defineBaseFunctions(activation)
-	return activation
-}()
+func init() {
+	// No need to meter since this is only created once
+	BaseActivation = activations.NewActivation[Variable](nil, nil)
+	defineBaseFunctions(BaseActivation)
+}
 
 func NewInterpreter(
 	program *Program,
 	location common.Location,
 	config *Config,
 ) (*Interpreter, error) {
-	return newInterpreter(
+	return NewInterpreterWithSharedState(
 		program,
 		location,
-		newSharedState(),
-		config,
+		NewSharedState(config),
 	)
 }
 
-func newInterpreter(
+func NewInterpreterWithSharedState(
 	program *Program,
 	location common.Location,
-	sharedState *sharedState,
-	config *Config,
+	sharedState *SharedState,
 ) (*Interpreter, error) {
 
 	interpreter := &Interpreter{
 		Program:     program,
 		Location:    location,
-		sharedState: sharedState,
-		Config:      config,
+		SharedState: sharedState,
 	}
 
 	// Register self
@@ -334,9 +279,15 @@ func newInterpreter(
 		sharedState.allInterpreters[location] = interpreter
 	}
 
-	interpreter.activations = activations.NewActivations[*Variable](interpreter)
+	// Initialize activations
 
-	baseActivation := config.BaseActivation
+	interpreter.activations = activations.NewActivations[Variable](interpreter)
+
+	var baseActivation *VariableActivation
+	baseActivationHandler := sharedState.Config.BaseActivationHandler
+	if baseActivationHandler != nil {
+		baseActivation = baseActivationHandler(location)
+	}
 	if baseActivation == nil {
 		baseActivation = BaseActivation
 	}
@@ -346,11 +297,11 @@ func newInterpreter(
 	return interpreter, nil
 }
 
-func (interpreter *Interpreter) FindVariable(name string) *Variable {
+func (interpreter *Interpreter) FindVariable(name string) Variable {
 	return interpreter.activations.Find(name)
 }
 
-func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
+func (interpreter *Interpreter) findOrDeclareVariable(name string) Variable {
 	variable := interpreter.FindVariable(name)
 	if variable == nil {
 		variable = interpreter.declareVariable(name, nil)
@@ -358,7 +309,7 @@ func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
 	return variable
 }
 
-func (interpreter *Interpreter) setVariable(name string, variable *Variable) {
+func (interpreter *Interpreter) setVariable(name string, variable Variable) {
 	interpreter.activations.Set(name, variable)
 }
 
@@ -417,7 +368,7 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	variableValue := variable.GetValue()
+	variableValue := variable.GetValue(interpreter)
 
 	// the global variable must be declared as a function
 	functionValue, ok := variableValue.(FunctionValue)
@@ -427,7 +378,7 @@ func (interpreter *Interpreter) invokeVariable(
 		}
 	}
 
-	functionVariable, ok := interpreter.Program.Elaboration.GlobalValues.Get(functionName)
+	functionVariable, ok := interpreter.Program.Elaboration.GetGlobalValue(functionName)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
@@ -461,12 +412,15 @@ func (interpreter *Interpreter) InvokeExternally(
 
 	if argumentCount != parameterCount {
 
-		// if the function has defined optional parameters,
-		// then the provided arguments must be equal to or greater than
-		// the number of required parameters.
-		if functionType.RequiredArgumentCount == nil ||
-			argumentCount < *functionType.RequiredArgumentCount {
+		if argumentCount < functionType.Arity.MinCount(parameterCount) {
+			return nil, ArgumentCountError{
+				ParameterCount: parameterCount,
+				ArgumentCount:  argumentCount,
+			}
+		}
 
+		maxCount := functionType.Arity.MaxCount(parameterCount)
+		if maxCount != nil && argumentCount > *maxCount {
 			return nil, ArgumentCountError{
 				ParameterCount: parameterCount,
 				ArgumentCount:  argumentCount,
@@ -476,23 +430,32 @@ func (interpreter *Interpreter) InvokeExternally(
 
 	locationRange := EmptyLocationRange
 
-	preparedArguments := make([]Value, len(arguments))
-	for i, argument := range arguments {
-		parameterType := parameters[i].TypeAnnotation.Type
+	var preparedArguments []Value
+	if argumentCount > 0 {
+		preparedArguments = make([]Value, argumentCount)
+		for i, argument := range arguments {
+			parameterType := parameters[i].TypeAnnotation.Type
 
-		// converts the argument into the parameter type declared by the function
-		preparedArguments[i] = interpreter.ConvertAndBox(locationRange, argument, nil, parameterType)
+			// converts the argument into the parameter type declared by the function
+			preparedArguments[i] = interpreter.ConvertAndBox(locationRange, argument, nil, parameterType)
+		}
 	}
 
-	var self *CompositeValue
+	var self *Value
+	var base *EphemeralReferenceValue
+	var boundAuth Authorization
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
 		self = boundFunc.Self
+		base = boundFunc.Base
+		boundAuth = boundFunc.BoundAuthorization
 	}
 
 	// NOTE: can't fill argument types, as they are unknown
 	invocation := NewInvocation(
 		interpreter,
 		self,
+		base,
+		boundAuth,
 		preparedArguments,
 		nil,
 		nil,
@@ -547,20 +510,8 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 
 func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
-		var err error
-
 		// Recover all errors, because interpreter can be directly invoked by FVM.
-		switch r := r.(type) {
-		case Error,
-			errors.ExternalError,
-			errors.InternalError,
-			errors.UserError:
-			err = r.(error)
-		case error:
-			err = errors.NewUnexpectedErrorFromCause(r)
-		default:
-			err = errors.NewUnexpectedError("%s", r)
-		}
+		err := asCadenceError(r)
 
 		// if the error is not yet an interpreter error, wrap it
 		if _, ok := err.(Error); !ok {
@@ -590,8 +541,33 @@ func (interpreter *Interpreter) RecoverErrors(onError func(error)) {
 	}
 }
 
+func asCadenceError(r any) error {
+	err, isError := r.(error)
+	if !isError {
+		return errors.NewUnexpectedError("%s", r)
+	}
+
+	rootError := err
+
+	for {
+		switch typedError := err.(type) {
+		case Error,
+			errors.ExternalError,
+			errors.InternalError,
+			errors.UserError:
+			return typedError
+		case xerrors.Wrapper:
+			err = typedError.Unwrap()
+		case error:
+			return errors.NewUnexpectedErrorFromCause(rootError)
+		default:
+			return errors.NewUnexpectedErrorFromCause(rootError)
+		}
+	}
+}
+
 func (interpreter *Interpreter) CallStack() []Invocation {
-	return interpreter.sharedState.callStack.Invocations[:]
+	return interpreter.SharedState.callStack.Invocations[:]
 }
 
 func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
@@ -605,6 +581,10 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 	}
 
 	for _, declaration := range program.CompositeDeclarations() {
+		interpreter.visitGlobalDeclaration(declaration)
+	}
+
+	for _, declaration := range program.AttachmentDeclarations() {
 		interpreter.visitGlobalDeclaration(declaration)
 	}
 
@@ -647,51 +627,51 @@ func (interpreter *Interpreter) VisitProgram(program *ast.Program) {
 	// which will evaluate the variable declaration. The resulting value
 	// is reused for subsequent reads of the variable.
 
-	variableDeclarationVariables := make([]*Variable, 0, len(program.VariableDeclarations()))
+	var variableDeclarationVariables []Variable
 
-	for _, declaration := range program.VariableDeclarations() {
+	variableDeclarationCount := len(program.VariableDeclarations())
+	if variableDeclarationCount > 0 {
+		variableDeclarationVariables = make([]Variable, 0, variableDeclarationCount)
 
-		// Rebind declaration, so the closure captures to current iteration's value,
-		// i.e. the next iteration doesn't override `declaration`
+		for _, declaration := range program.VariableDeclarations() {
 
-		declaration := declaration
+			// Rebind declaration, so the closure captures to current iteration's value,
+			// i.e. the next iteration doesn't override `declaration`
 
-		identifier := declaration.Identifier.Identifier
+			declaration := declaration
 
-		var variable *Variable
+			identifier := declaration.Identifier.Identifier
 
-		variable = NewVariableWithGetter(interpreter, func() Value {
-			var result Value
-			interpreter.visitVariableDeclaration(declaration, func(_ string, value Value) {
-				result = value
+			var variable Variable
+
+			variable = NewVariableWithGetter(interpreter, func() Value {
+				result := interpreter.visitVariableDeclaration(declaration, false)
+
+				// Global variables are lazily loaded. Therefore, start resource tracking also
+				// lazily when the resource is used for the first time.
+				// This is needed to support forward referencing.
+				interpreter.startResourceTracking(
+					result,
+					variable,
+					identifier,
+					declaration.Identifier,
+				)
+
+				return result
 			})
+			interpreter.setVariable(identifier, variable)
+			interpreter.Globals.Set(identifier, variable)
 
-			// Global variables are lazily loaded. Therefore, start resource tracking also
-			// lazily when the resource is used for the first time.
-			// This is needed to support forward referencing.
-			interpreter.startResourceTracking(
-				result,
-				variable,
-				identifier,
-				declaration.Identifier,
-			)
-
-			return result
-		})
-		interpreter.setVariable(identifier, variable)
-		interpreter.Globals.Set(identifier, variable)
-
-		variableDeclarationVariables = append(variableDeclarationVariables, variable)
+			variableDeclarationVariables = append(variableDeclarationVariables, variable)
+		}
 	}
 
 	// Second, force the evaluation of all variable declarations,
 	// in the order they were declared.
 
 	for _, variable := range variableDeclarationVariables {
-		_ = variable.GetValue()
+		_ = variable.GetValue(interpreter)
 	}
-
-	return
 }
 
 func (interpreter *Interpreter) VisitSpecialFunctionDeclaration(declaration *ast.SpecialFunctionDeclaration) StatementResult {
@@ -702,7 +682,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 
 	identifier := declaration.Identifier.Identifier
 
-	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[declaration]
+	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionType(declaration)
 
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable := interpreter.findOrDeclareVariable(identifier)
@@ -713,12 +693,19 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 	// make the function itself available inside the function
 	lexicalScope.Set(identifier, variable)
 
+	value := interpreter.functionDeclarationValue(
+		declaration,
+		functionType,
+		lexicalScope,
+	)
+
 	variable.SetValue(
-		interpreter.functionDeclarationValue(
-			declaration,
-			functionType,
-			lexicalScope,
-		),
+		interpreter,
+		LocationRange{
+			Location:    interpreter.Location,
+			HasPosition: declaration,
+		},
+		value,
 	)
 
 	return nil
@@ -740,7 +727,7 @@ func (interpreter *Interpreter) functionDeclarationValue(
 
 	if declaration.FunctionBlock.PostConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[declaration.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(declaration.FunctionBlock.PostConditions)
 
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 		beforeStatements = postConditionsRewrite.BeforeStatements
@@ -772,6 +759,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 	body func() StatementResult,
 	postConditions ast.Conditions,
 	returnType sema.Type,
+	declarationLocationRange LocationRange,
 ) Value {
 
 	// block scope: each function block gets an activation record
@@ -783,7 +771,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 		return result.Value
 	}
 
-	interpreter.visitConditions(preConditions)
+	interpreter.visitConditions(preConditions, ast.ConditionKindPre)
 
 	var returnValue Value
 
@@ -799,66 +787,127 @@ func (interpreter *Interpreter) visitFunctionBody(
 	}
 
 	// If there is a return type, declare the constant `result`.
-	// If it is a resource type, the constant has the same type as a reference to the return type.
-	// If it is not a resource type, the constant has the same type as the return type.
 
 	if returnType != sema.VoidType {
-		var resultValue Value
-		if returnType.IsResourceType() {
-			resultValue = NewEphemeralReferenceValue(interpreter, false, returnValue, returnType)
-		} else {
-			resultValue = returnValue
-		}
+		resultValue := interpreter.resultValue(returnValue, returnType, declarationLocationRange)
 		interpreter.declareVariable(
 			sema.ResultIdentifier,
 			resultValue,
 		)
 	}
 
-	interpreter.visitConditions(postConditions)
+	interpreter.visitConditions(postConditions, ast.ConditionKindPost)
 
 	return returnValue
 }
 
-func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) {
+// resultValue returns the value for the `result` constant.
+// If the return type is not a resource:
+//   - The constant has the same type as the return type.
+//   - `result` value is the same as the return value.
+//
+// If the return type is a resource:
+//   - The constant has the same type as a reference to the return type.
+//   - `result` value is a reference to the return value.
+func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.Type, declarationLocationRange LocationRange) Value {
+	if !returnType.IsResourceType() {
+		return returnValue
+	}
+
+	resultAuth := func(ty sema.Type) Authorization {
+		auth := UnauthorizedAccess
+		// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned
+		if entitlementSupportingType, ok := ty.(sema.EntitlementSupportingType); ok {
+			access := entitlementSupportingType.SupportedEntitlements().Access()
+			auth = ConvertSemaAccessToStaticAuthorization(interpreter, access)
+		}
+		return auth
+	}
+
+	if optionalType, ok := returnType.(*sema.OptionalType); ok {
+		switch returnValue := returnValue.(type) {
+		// If this value is an optional value (T?), then transform it into an optional reference (&T)?.
+		case *SomeValue:
+
+			innerValue := NewEphemeralReferenceValue(
+				interpreter,
+				resultAuth(returnType),
+				returnValue.value,
+				optionalType.Type,
+				declarationLocationRange,
+			)
+
+			return NewSomeValueNonCopying(interpreter, innerValue)
+		case NilValue:
+			return NilValue{}
+		}
+	}
+
+	return NewEphemeralReferenceValue(
+		interpreter,
+		resultAuth(returnType),
+		returnValue,
+		returnType,
+		declarationLocationRange,
+	)
+}
+
+func (interpreter *Interpreter) visitConditions(conditions ast.Conditions, kind ast.ConditionKind) {
 	for _, condition := range conditions {
-		interpreter.visitCondition(condition)
+		interpreter.visitCondition(condition, kind)
 	}
 }
 
-func (interpreter *Interpreter) visitCondition(condition *ast.Condition) {
+func (interpreter *Interpreter) visitCondition(condition ast.Condition, kind ast.ConditionKind) {
 
-	// Evaluate the condition as a statement, so we get position information in case of an error
+	switch condition := condition.(type) {
+	case *ast.TestCondition:
+		// Evaluate the condition as a statement, so we get position information in case of an error
+		statement := ast.NewExpressionStatement(interpreter, condition.Test)
 
-	statement := ast.NewExpressionStatement(interpreter, condition.Test)
+		result, ok := interpreter.evalStatement(statement).(ExpressionResult)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-	result, ok := interpreter.evalStatement(statement).(ExpressionResult)
+		value, ok := result.Value.(BoolValue)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
-	value, valueOk := result.Value.(BoolValue)
+		if value {
+			return
+		}
 
-	if ok && valueOk && bool(value) {
-		return
+		messageExpression := condition.Message
+		var message string
+		if messageExpression != nil {
+			messageValue := interpreter.evalExpression(messageExpression)
+			message = messageValue.(*StringValue).Str
+		}
+
+		panic(ConditionError{
+			ConditionKind: kind,
+			Message:       message,
+			LocationRange: LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: statement,
+			},
+		})
+
+	case *ast.EmitCondition:
+		interpreter.evalStatement((*ast.EmitStatement)(condition))
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
-	var message string
-	if condition.Message != nil {
-		messageValue := interpreter.evalExpression(condition.Message)
-		message = messageValue.(*StringValue).Str
-	}
-
-	panic(ConditionError{
-		ConditionKind: condition.Kind,
-		Message:       message,
-		LocationRange: LocationRange{
-			Location:    interpreter.Location,
-			HasPosition: condition.Test,
-		},
-	})
 }
 
 // declareVariable declares a variable in the latest scope
-func (interpreter *Interpreter) declareVariable(identifier string, value Value) *Variable {
+func (interpreter *Interpreter) declareVariable(identifier string, value Value) Variable {
 	// NOTE: semantic analysis already checked possible invalid redeclaration
+
 	variable := NewVariableWithValue(interpreter, value)
 	interpreter.setVariable(identifier, variable)
 
@@ -868,47 +917,58 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 	return variable
 }
 
+// declareSelfVariable declares a special "self" variable in the latest scope
+func (interpreter *Interpreter) declareSelfVariable(value Value, locationRange LocationRange) Variable {
+	identifier := sema.SelfIdentifier
+
+	// If the self variable is already a reference (e.g: in attachments),
+	// then declare it as a normal variable.
+	// No need to explicitly create a new reference for tracking.
+
+	switch value := value.(type) {
+	case ReferenceValue:
+		return interpreter.declareVariable(identifier, value)
+	case *SimpleCompositeValue:
+		if value.isTransaction {
+			return interpreter.declareVariable(identifier, value)
+		}
+	}
+
+	// NOTE: semantic analysis already checked possible invalid redeclaration
+	variable := NewSelfVariableWithValue(interpreter, value, locationRange)
+	interpreter.setVariable(identifier, variable)
+
+	interpreter.startResourceTracking(value, variable, identifier, locationRange)
+
+	return variable
+}
+
 func (interpreter *Interpreter) visitAssignment(
 	transferOperation ast.TransferOperation,
-	targetExpression ast.Expression, targetType sema.Type,
+	targetGetterSetter getterSetter, targetType sema.Type,
 	valueExpression ast.Expression, valueType sema.Type,
 	position ast.HasPosition,
 ) {
-	// First evaluate the target, which results in a getter/setter function pair
-	getterSetter := interpreter.assignmentGetterSetter(targetExpression)
-
 	locationRange := LocationRange{
 		Location:    interpreter.Location,
 		HasPosition: position,
 	}
 
-	// If the assignment is a forced move,
-	// ensure that the target is nil,
-	// otherwise panic
+	// Evaluate the value, and assign it using the setter function
 
-	if transferOperation == ast.TransferOperationMoveForced {
-
-		// If the force-move assignment is used for the initialization of a field,
-		// then there is no prior value for the field, so allow missing
-
-		const allowMissing = true
-
-		target := getterSetter.get(allowMissing)
-
-		if _, ok := target.(NilValue); !ok && target != nil {
-			panic(ForceAssignmentToNonNilResourceError{
-				LocationRange: locationRange,
-			})
-		}
-	}
-
-	// Finally, evaluate the value, and assign it using the setter function
+	// Here it is too early to check whether the existing value is a
+	// valid non-nil resource (i.e: causing a resource loss), because
+	// evaluating the `valueExpression` could change things, and
+	// a `nil`/invalid resource at this point could be valid after
+	// the evaluation of `valueExpression`.
+	// Therefore, delay the checking of resource loss as much as possible,
+	// and check it at the 'setter', at the point where the value is assigned.
 
 	value := interpreter.evalExpression(valueExpression)
 
 	transferredValue := interpreter.transferAndConvert(value, valueType, targetType, locationRange)
 
-	getterSetter.set(transferredValue)
+	targetGetterSetter.set(transferredValue)
 }
 
 // NOTE: only called for top-level composite declarations
@@ -920,6 +980,82 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 	_, _ = interpreter.declareCompositeValue(declaration, lexicalScope)
 
 	return nil
+}
+
+func (interpreter *Interpreter) VisitAttachmentDeclaration(declaration *ast.AttachmentDeclaration) StatementResult {
+	// lexical scope: variables in functions are bound to what is visible at declaration time
+	lexicalScope := interpreter.activations.CurrentOrNew()
+	_, _ = interpreter.declareAttachmentValue(declaration, lexicalScope)
+	return nil
+}
+
+func (interpreter *Interpreter) declareAttachmentValue(
+	declaration *ast.AttachmentDeclaration,
+	lexicalScope *VariableActivation,
+) (
+	scope *VariableActivation,
+	variable Variable,
+) {
+	return interpreter.declareCompositeValue(declaration, lexicalScope)
+}
+
+// evaluateDefaultDestroyEvent evaluates all the implicit default arguments to the default destroy event.
+//
+// the handling of default arguments makes a number of assumptions to simplify the implementation;
+// namely that a) all default arguments are lazily evaluated at the site of the invocation,
+// b) that either all the parameters or none of the parameters of a function have default arguments,
+// and c) functions cannot currently be explicitly invoked if they have default arguments
+//
+// if we plan to generalize this further, we will need to relax those assumptions
+func (interpreter *Interpreter) evaluateDefaultDestroyEvent(
+	containingResourceComposite *CompositeValue,
+	eventDecl *ast.CompositeDeclaration,
+	declarationActivation *VariableActivation,
+) (arguments []Value) {
+
+	declarationInterpreter := interpreter
+	parameters := eventDecl.DeclarationMembers().Initializers()[0].FunctionDeclaration.ParameterList.Parameters
+
+	declarationInterpreter.activations.PushNewWithParent(declarationActivation)
+	defer declarationInterpreter.activations.Pop()
+
+	locationRange := LocationRange{
+		Location:    interpreter.Location,
+		HasPosition: eventDecl,
+	}
+
+	var self MemberAccessibleValue = containingResourceComposite
+	if containingResourceComposite.Kind == common.CompositeKindAttachment {
+		var base *EphemeralReferenceValue
+		// in evaluation of destroy events, base and self are fully entitled, as the value must be owned
+		entitlementSupportingType, ok := interpreter.MustSemaTypeOfValue(containingResourceComposite).(sema.EntitlementSupportingType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
+		access := supportedEntitlements.Access()
+		base, self = attachmentBaseAndSelfValues(
+			declarationInterpreter,
+			access,
+			containingResourceComposite,
+			locationRange,
+		)
+		declarationInterpreter.declareVariable(sema.BaseIdentifier, base)
+	}
+	declarationInterpreter.declareSelfVariable(self, locationRange)
+
+	for _, parameter := range parameters {
+		// "lazily" evaluate the default argument expressions.
+		// This is "lazy" with respect to the event's declaration:
+		// if we declare a default event `ResourceDestroyed(foo: Int = self.x)`,
+		// `self.x` is evaluated in the context that exists when the event is destroyed,
+		// not the context when it is declared. This function is only called after the destroy
+		// triggers the event emission, so with respect to this function it's "eager".
+		defaultArg := declarationInterpreter.evalExpression(parameter.DefaultArgument)
+		arguments = append(arguments, defaultArg)
+	}
+
+	return
 }
 
 // declareCompositeValue creates and declares the value for
@@ -939,29 +1075,29 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 //
 // For all other composite kinds the constructor function is declared.
 func (interpreter *Interpreter) declareCompositeValue(
-	declaration *ast.CompositeDeclaration,
+	declaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
-	variable *Variable,
+	variable Variable,
 ) {
-	if declaration.CompositeKind == common.CompositeKindEnum {
-		return interpreter.declareEnumConstructor(declaration, lexicalScope)
+	if declaration.Kind() == common.CompositeKindEnum {
+		return interpreter.declareEnumConstructor(declaration.(*ast.CompositeDeclaration), lexicalScope)
 	} else {
 		return interpreter.declareNonEnumCompositeValue(declaration, lexicalScope)
 	}
 }
 
-func (interpreter *Interpreter) declareNonEnumCompositeValue(
-	declaration *ast.CompositeDeclaration,
+func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
+	declaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
-	variable *Variable,
+	variable Variable,
 ) {
-	identifier := declaration.Identifier.Identifier
+	identifier := declaration.DeclarationIdentifier().Identifier
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
-	variable = interpreter.findOrDeclareVariable(identifier)
+	variable = declarationInterpreter.findOrDeclareVariable(identifier)
 
 	// Make the value available in the initializer
 	lexicalScope.Set(identifier, variable)
@@ -969,75 +1105,128 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
 
-	nestedVariables := map[string]*Variable{}
+	nestedVariables := map[string]Variable{}
+
+	var destroyEventConstructor FunctionValue
 
 	(func() {
-		interpreter.activations.PushNewWithCurrent()
-		defer interpreter.activations.Pop()
+		declarationInterpreter.activations.PushNewWithCurrent()
+		defer declarationInterpreter.activations.Pop()
 
 		// Pre-declare empty variables for all interfaces, composites, and function declarations
 		predeclare := func(identifier ast.Identifier) {
 			name := identifier.Identifier
 			lexicalScope.Set(
 				name,
-				interpreter.declareVariable(name, nil),
+				declarationInterpreter.declareVariable(name, nil),
 			)
 		}
 
-		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
+		members := declaration.DeclarationMembers()
+
+		for _, nestedInterfaceDeclaration := range members.Interfaces() {
 			predeclare(nestedInterfaceDeclaration.Identifier)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+		for _, nestedCompositeDeclaration := range members.Composites() {
 			predeclare(nestedCompositeDeclaration.Identifier)
 		}
 
-		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
-			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
+		for _, nestedAttachmentDeclaration := range members.Attachments() {
+			predeclare(nestedAttachmentDeclaration.Identifier)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
+		for _, nestedInterfaceDeclaration := range members.Interfaces() {
+			declarationInterpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
+		}
+
+		for _, nestedCompositeDeclaration := range members.Composites() {
 
 			// Pass the lexical scope, which has the containing composite's value declared,
 			// to the nested declarations so they can refer to it, and update the lexical scope
 			// so the container's functions can refer to the nested composite's value
 
-			var nestedVariable *Variable
+			var nestedVariable Variable
 			lexicalScope, nestedVariable =
-				interpreter.declareCompositeValue(
+				declarationInterpreter.declareCompositeValue(
 					nestedCompositeDeclaration,
 					lexicalScope,
 				)
 
 			memberIdentifier := nestedCompositeDeclaration.Identifier.Identifier
 			nestedVariables[memberIdentifier] = nestedVariable
+
+			// statically we know there is at most one of these
+			if nestedCompositeDeclaration.IsResourceDestructionDefaultEvent() {
+				destroyEventConstructor = nestedVariable.GetValue(declarationInterpreter).(FunctionValue)
+			}
+		}
+
+		for _, nestedAttachmentDeclaration := range members.Attachments() {
+
+			// Pass the lexical scope, which has the containing composite's value declared,
+			// to the nested declarations so they can refer to it, and update the lexical scope
+			// so the container's functions can refer to the nested composite's value
+
+			var nestedVariable Variable
+			lexicalScope, nestedVariable =
+				declarationInterpreter.declareAttachmentValue(
+					nestedAttachmentDeclaration,
+					lexicalScope,
+				)
+
+			memberIdentifier := nestedAttachmentDeclaration.Identifier.Identifier
+			nestedVariables[memberIdentifier] = nestedVariable
 		}
 	})()
 
-	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := declarationInterpreter.Program.Elaboration.CompositeDeclarationType(declaration)
 
-	constructorType := &sema.FunctionType{
-		IsConstructor: true,
-		Parameters:    compositeType.ConstructorParameters,
-		ReturnTypeAnnotation: &sema.TypeAnnotation{
-			Type: compositeType,
-		},
-		RequiredArgumentCount: nil,
-	}
+	initializerType := compositeType.InitializerFunctionType()
+
+	declarationActivation := declarationInterpreter.activations.CurrentOrNew()
 
 	var initializerFunction FunctionValue
-	if declaration.CompositeKind == common.CompositeKindEvent {
-		initializerFunction = NewHostFunctionValue(
-			interpreter,
+	if declaration.Kind() == common.CompositeKindEvent {
+		// Initializer could ideally be a bound function.
+		// However, since it is created and being called here itself, and
+		// because it is never passed around, it is OK to just create as static function
+		// without  the bound-function wrapper.
+		initializerFunction = NewStaticHostFunctionValue(
+			declarationInterpreter,
+			initializerType,
 			func(invocation Invocation) Value {
-				inter := invocation.Interpreter
+				invocationInterpreter := invocation.Interpreter
 				locationRange := invocation.LocationRange
-				self := invocation.Self
+				self := *invocation.Self
+
+				compositeSelf, ok := self.(*CompositeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if len(compositeType.ConstructorParameters) < 1 {
+					return nil
+				}
+
+				// event interfaces do not exist
+				compositeDecl := declaration.(*ast.CompositeDeclaration)
+				if compositeDecl.IsResourceDestructionDefaultEvent() {
+					// we implicitly pass the containing composite value as an argument to this invocation
+					containerComposite := invocation.Arguments[0].(*CompositeValue)
+					invocation.Arguments = declarationInterpreter.evaluateDefaultDestroyEvent(
+						containerComposite,
+						compositeDecl,
+						// to properly lexically scope the evaluation of default arguments, we capture the
+						// activations existing at the time when the event was defined and use them here
+						declarationActivation,
+					)
+				}
 
 				for i, argument := range invocation.Arguments {
 					parameter := compositeType.ConstructorParameters[i]
-					self.SetMember(
-						inter,
+					compositeSelf.SetMember(
+						invocationInterpreter,
 						locationRange,
 						parameter.Identifier,
 						argument,
@@ -1045,24 +1234,21 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				}
 				return nil
 			},
-			constructorType,
 		)
 	} else {
-		compositeInitializerFunction := interpreter.compositeInitializerFunction(declaration, lexicalScope)
+		compositeInitializerFunction := declarationInterpreter.compositeInitializerFunction(declaration, lexicalScope)
 		if compositeInitializerFunction != nil {
 			initializerFunction = compositeInitializerFunction
 		}
 	}
 
-	var destructorFunction FunctionValue
-	compositeDestructorFunction := interpreter.compositeDestructorFunction(declaration, lexicalScope)
-	if compositeDestructorFunction != nil {
-		destructorFunction = compositeDestructorFunction
+	functions := declarationInterpreter.compositeFunctions(declaration, lexicalScope)
+
+	if destroyEventConstructor != nil {
+		functions.Set(resourceDefaultDestroyEventName(compositeType), destroyEventConstructor)
 	}
 
-	functions := interpreter.compositeFunctions(declaration, lexicalScope)
-
-	wrapFunctions := func(code WrapperCode) {
+	wrapFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
 
 		// Wrap initializer
 
@@ -1073,29 +1259,22 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			initializerFunction = initializerFunctionWrapper(initializerFunction)
 		}
 
-		// Wrap destructor
-
-		destructorFunctionWrapper :=
-			code.DestructorFunctionWrapper
-
-		if destructorFunctionWrapper != nil {
-			destructorFunction = destructorFunctionWrapper(destructorFunction)
-		}
-
 		// Apply default functions, if conforming type does not provide the function
 
 		// Iterating over the map in a non-deterministic way is OK,
 		// we only apply the function wrapper to each function,
 		// the order does not matter.
 
-		for name, function := range code.Functions { //nolint:maprangecheck
-			if functions[name] != nil {
-				continue
-			}
-			if functions == nil {
-				functions = map[string]FunctionValue{}
-			}
-			functions[name] = function
+		if code.Functions != nil {
+			code.Functions.Foreach(func(name string, function FunctionValue) {
+				if functions == nil {
+					functions = orderedmap.New[FunctionOrderedMap](code.Functions.Len())
+				}
+				if functions.Contains(name) {
+					return
+				}
+				functions.Set(name, function)
+			})
 		}
 
 		// Wrap functions
@@ -1104,44 +1283,42 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		// we only apply the function wrapper to each function,
 		// the order does not matter.
 
-		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprangecheck
-			functions[name] = functionWrapper(functions[name])
+		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
+			fn, _ := functions.Get(name)
+			functions.Set(name, functionWrapper(fn))
+		}
+
+		if code.DefaultDestroyEventConstructor != nil {
+			functions.Set(resourceDefaultDestroyEventName(ty), code.DefaultDestroyEventConstructor)
 		}
 	}
 
-	// NOTE: First the conditions of the type requirements are evaluated,
-	//  then the conditions of this composite's conformances
-	//
-	// Because the conditions are wrappers, they have to be applied
-	// in reverse order: first the conformances, then the type requirements;
-	// each conformances and type requirements in reverse order as well.
-
-	for i := len(compositeType.ExplicitInterfaceConformances) - 1; i >= 0; i-- {
-		conformance := compositeType.ExplicitInterfaceConformances[i]
-
-		wrapFunctions(interpreter.sharedState.typeCodes.InterfaceCodes[conformance.ID()])
+	conformances := compositeType.EffectiveInterfaceConformances()
+	for i := len(conformances) - 1; i >= 0; i-- {
+		conformance := conformances[i].InterfaceType
+		wrapFunctions(conformance, declarationInterpreter.SharedState.typeCodes.InterfaceCodes[conformance.ID()])
 	}
 
-	typeRequirements := compositeType.TypeRequirements()
-
-	for i := len(typeRequirements) - 1; i >= 0; i-- {
-		typeRequirement := typeRequirements[i]
-		wrapFunctions(interpreter.sharedState.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
-	}
-
-	interpreter.sharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
-		DestructorFunction: destructorFunction,
+	declarationInterpreter.SharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
 		CompositeFunctions: functions,
 	}
 
-	location := interpreter.Location
+	location := declarationInterpreter.Location
 
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
+	config := declarationInterpreter.SharedState.Config
+
+	constructorType := compositeType.ConstructorFunctionType()
+
 	constructorGenerator := func(address common.Address) *HostFunctionValue {
-		return NewHostFunctionValue(
-			interpreter,
+		// Constructor is a static function.
+		return NewStaticHostFunctionValue(
+			declarationInterpreter,
+			constructorType,
 			func(invocation Invocation) Value {
+
+				interpreter := invocation.Interpreter
 
 				// Check that the resource is constructed
 				// in the same location as it was declared
@@ -1149,7 +1326,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				locationRange := invocation.LocationRange
 
 				if compositeType.Kind == common.CompositeKindResource &&
-					invocation.Interpreter.Location != compositeType.Location {
+					interpreter.Location != compositeType.Location {
 
 					panic(ResourceConstructionError{
 						CompositeType: compositeType,
@@ -1160,21 +1337,21 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				// Load injected fields
 				var injectedFields map[string]Value
 				injectedCompositeFieldsHandler :=
-					interpreter.Config.InjectedCompositeFieldsHandler
+					config.InjectedCompositeFieldsHandler
 				if injectedCompositeFieldsHandler != nil {
 					injectedFields = injectedCompositeFieldsHandler(
 						interpreter,
 						location,
 						qualifiedIdentifier,
-						declaration.CompositeKind,
+						declaration.Kind(),
 					)
 				}
 
 				var fields []CompositeField
 
-				if declaration.CompositeKind == common.CompositeKindResource {
+				if declaration.Kind() == common.CompositeKindResource {
 
-					uuidHandler := interpreter.Config.UUIDHandler
+					uuidHandler := config.UUIDHandler
 					if uuidHandler == nil {
 						panic(UUIDUnavailableError{
 							LocationRange: locationRange,
@@ -1206,22 +1383,48 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 					locationRange,
 					location,
 					qualifiedIdentifier,
-					declaration.CompositeKind,
+					declaration.Kind(),
 					fields,
 					address,
 				)
 
-				value.InjectedFields = injectedFields
+				value.injectedFields = injectedFields
 				value.Functions = functions
-				value.Destructor = destructorFunction
 
-				invocation.Self = value
+				var self Value = value
+				if declaration.Kind() == common.CompositeKindAttachment {
 
-				if declaration.CompositeKind == common.CompositeKindContract {
+					attachmentType := interpreter.MustSemaTypeOfValue(value).(*sema.CompositeType)
+					// Self's type in the constructor is fully entitled, since
+					// the constructor can only be called when in possession of the base resource
+
+					access := attachmentType.SupportedEntitlements().Access()
+					auth := ConvertSemaAccessToStaticAuthorization(interpreter, access)
+
+					self = NewEphemeralReferenceValue(interpreter, auth, value, attachmentType, locationRange)
+
+					// set the base to the implicitly provided value, and remove this implicit argument from the list
+					implicitArgumentPos := len(invocation.Arguments) - 1
+					invocation.Base = invocation.Arguments[implicitArgumentPos].(*EphemeralReferenceValue)
+
+					var ok bool
+					value.base, ok = invocation.Base.Value.(*CompositeValue)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					invocation.Arguments[implicitArgumentPos] = nil
+					invocation.Arguments = invocation.Arguments[:implicitArgumentPos]
+					invocation.ArgumentTypes[implicitArgumentPos] = nil
+					invocation.ArgumentTypes = invocation.ArgumentTypes[:implicitArgumentPos]
+				}
+				invocation.Self = &self
+
+				if declaration.Kind() == common.CompositeKindContract {
 					// NOTE: set the variable value immediately, as the contract value
 					// needs to be available for nested declarations
 
-					variable.SetValue(value)
+					variable.InitializeWithValue(value)
 
 					// Also, immediately set the nested values,
 					// as the initializer of the contract may use nested declarations
@@ -1236,19 +1439,18 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				}
 				return value
 			},
-			constructorType,
 		)
 	}
 
 	// Contract declarations declare a value / instance (singleton),
 	// for all other composite kinds, the constructor is declared
 
-	if declaration.CompositeKind == common.CompositeKindContract {
-		variable.getter = func() Value {
-			positioned := ast.NewRangeFromPositioned(interpreter, declaration.Identifier)
+	if declaration.Kind() == common.CompositeKindContract {
+		variable.InitializeWithGetter(func() Value {
+			positioned := ast.NewRangeFromPositioned(declarationInterpreter, declaration.DeclarationIdentifier())
 
-			contractValue := interpreter.Config.ContractValueHandler(
-				interpreter,
+			contractValue := config.ContractValueHandler(
+				declarationInterpreter,
 				compositeType,
 				constructorGenerator,
 				positioned,
@@ -1256,11 +1458,18 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 			contractValue.SetNestedVariables(nestedVariables)
 			return contractValue
-		}
+		})
 	} else {
-		constructor := constructorGenerator(common.Address{})
+		constructor := constructorGenerator(common.ZeroAddress)
 		constructor.NestedVariables = nestedVariables
-		variable.SetValue(constructor)
+		variable.SetValue(
+			declarationInterpreter,
+			LocationRange{
+				Location:    location,
+				HasPosition: declaration,
+			},
+			constructor,
+		)
 	}
 
 	return lexicalScope, variable
@@ -1276,7 +1485,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	lexicalScope *VariableActivation,
 ) (
 	scope *VariableActivation,
-	variable *Variable,
+	variable Variable,
 ) {
 	identifier := declaration.Identifier.Identifier
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
@@ -1284,7 +1493,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 
 	lexicalScope.Set(identifier, variable)
 
-	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := interpreter.Program.Elaboration.CompositeDeclarationType(declaration)
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
 	location := interpreter.Location
@@ -1294,7 +1503,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	enumCases := declaration.Members.EnumCases()
 	caseValues := make([]EnumCase, len(enumCases))
 
-	constructorNestedVariables := map[string]*Variable{}
+	constructorNestedVariables := map[string]Variable{}
 
 	for i, enumCase := range enumCases {
 
@@ -1303,6 +1512,10 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			NewIntValueFromInt64(interpreter, int64(i)),
 			intType,
 			compositeType.EnumRawType,
+			LocationRange{
+				Location:    location,
+				HasPosition: enumCase,
+			},
 		).(IntegerValue)
 
 		caseValueFields := []CompositeField{
@@ -1324,7 +1537,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 			qualifiedIdentifier,
 			declaration.CompositeKind,
 			caseValueFields,
-			common.Address{},
+			common.ZeroAddress,
 		)
 		caseValues[i] = EnumCase{
 			Value:    caseValue,
@@ -1347,7 +1560,11 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		caseValues,
 		constructorNestedVariables,
 	)
-	variable.SetValue(value)
+	variable.SetValue(
+		interpreter,
+		locationRange,
+		value,
+	)
 
 	return lexicalScope, variable
 }
@@ -1357,7 +1574,7 @@ func EnumConstructorFunction(
 	locationRange LocationRange,
 	enumType *sema.CompositeType,
 	cases []EnumCase,
-	nestedVariables map[string]*Variable,
+	nestedVariables map[string]Variable,
 ) *HostFunctionValue {
 
 	// Prepare a lookup table based on the big-endian byte representation
@@ -1371,8 +1588,10 @@ func EnumConstructorFunction(
 
 	// Prepare the constructor function which performs a lookup in the lookup table
 
-	constructor := NewHostFunctionValue(
+	// Constructor is a static function.
+	constructor := NewStaticHostFunctionValue(
 		gauge,
+		sema.EnumConstructorType(enumType),
 		func(invocation Invocation) Value {
 			rawValue, ok := invocation.Arguments[0].(IntegerValue)
 			if !ok {
@@ -1388,7 +1607,6 @@ func EnumConstructorFunction(
 
 			return NewSomeValueNonCopying(invocation.Interpreter, caseValue)
 		},
-		sema.EnumConstructorType(enumType),
 	)
 
 	constructor.NestedVariables = nestedVariables
@@ -1397,20 +1615,20 @@ func EnumConstructorFunction(
 }
 
 func (interpreter *Interpreter) compositeInitializerFunction(
-	compositeDeclaration *ast.CompositeDeclaration,
+	compositeDeclaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
 ) *InterpretedFunctionValue {
 
 	// TODO: support multiple overloaded initializers
 
-	initializers := compositeDeclaration.Members.Initializers()
+	initializers := compositeDeclaration.DeclarationMembers().Initializers()
 	var initializer *ast.SpecialFunctionDeclaration
 	if len(initializers) == 0 {
 		return nil
 	}
 
 	initializer = initializers[0]
-	functionType := interpreter.Program.Elaboration.ConstructorFunctionTypes[initializer]
+	functionType := interpreter.Program.Elaboration.ConstructorFunctionType(initializer)
 
 	parameterList := initializer.FunctionDeclaration.ParameterList
 
@@ -1427,7 +1645,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	postConditions := initializer.FunctionDeclaration.FunctionBlock.PostConditions
 	if postConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[postConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(postConditions)
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
@@ -1445,53 +1663,10 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	)
 }
 
-func (interpreter *Interpreter) compositeDestructorFunction(
-	compositeDeclaration *ast.CompositeDeclaration,
-	lexicalScope *VariableActivation,
-) *InterpretedFunctionValue {
-
-	destructor := compositeDeclaration.Members.Destructor()
-	if destructor == nil {
-		return nil
-	}
-
-	statements := destructor.FunctionDeclaration.FunctionBlock.Block.Statements
-
-	var preConditions ast.Conditions
-
-	conditions := destructor.FunctionDeclaration.FunctionBlock.PreConditions
-	if conditions != nil {
-		preConditions = *conditions
-	}
-
-	var beforeStatements []ast.Statement
-	var rewrittenPostConditions ast.Conditions
-
-	postConditions := destructor.FunctionDeclaration.FunctionBlock.PostConditions
-	if postConditions != nil {
-		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[postConditions]
-
-		beforeStatements = postConditionsRewrite.BeforeStatements
-		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
-	}
-
-	return NewInterpretedFunctionValue(
-		interpreter,
-		nil,
-		emptyFunctionType,
-		lexicalScope,
-		beforeStatements,
-		preConditions,
-		statements,
-		rewrittenPostConditions,
-	)
-}
-
 func (interpreter *Interpreter) defaultFunctions(
 	members *ast.Members,
 	lexicalScope *VariableActivation,
-) map[string]FunctionValue {
+) *FunctionOrderedMap {
 
 	functionDeclarations := members.Functions()
 	functionCount := len(functionDeclarations)
@@ -1500,7 +1675,7 @@ func (interpreter *Interpreter) defaultFunctions(
 		return nil
 	}
 
-	functions := make(map[string]FunctionValue, functionCount)
+	functions := orderedmap.New[FunctionOrderedMap](functionCount)
 
 	for _, functionDeclaration := range functionDeclarations {
 		name := functionDeclaration.Identifier.Identifier
@@ -1508,9 +1683,12 @@ func (interpreter *Interpreter) defaultFunctions(
 			continue
 		}
 
-		functions[name] = interpreter.compositeFunction(
-			functionDeclaration,
-			lexicalScope,
+		functions.Set(
+			name,
+			interpreter.compositeFunction(
+				functionDeclaration,
+				lexicalScope,
+			),
 		)
 	}
 
@@ -1518,19 +1696,21 @@ func (interpreter *Interpreter) defaultFunctions(
 }
 
 func (interpreter *Interpreter) compositeFunctions(
-	compositeDeclaration *ast.CompositeDeclaration,
+	compositeDeclaration ast.CompositeLikeDeclaration,
 	lexicalScope *VariableActivation,
-) map[string]FunctionValue {
+) *FunctionOrderedMap {
 
-	functions := map[string]FunctionValue{}
+	functions := orderedmap.New[FunctionOrderedMap](len(compositeDeclaration.DeclarationMembers().Functions()))
 
-	for _, functionDeclaration := range compositeDeclaration.Members.Functions() {
+	for _, functionDeclaration := range compositeDeclaration.DeclarationMembers().Functions() {
 		name := functionDeclaration.Identifier.Identifier
-		functions[name] =
+		functions.Set(
+			name,
 			interpreter.compositeFunction(
 				functionDeclaration,
 				lexicalScope,
-			)
+			),
+		)
 	}
 
 	return functions
@@ -1545,12 +1725,12 @@ func (interpreter *Interpreter) functionWrappers(
 
 	for _, functionDeclaration := range members.Functions() {
 
-		functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
+		functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionType(functionDeclaration)
 
 		name := functionDeclaration.Identifier.Identifier
 		functionWrapper := interpreter.functionConditionsWrapper(
 			functionDeclaration,
-			functionType.ReturnTypeAnnotation.Type,
+			functionType,
 			lexicalScope,
 		)
 		if functionWrapper == nil {
@@ -1567,7 +1747,7 @@ func (interpreter *Interpreter) compositeFunction(
 	lexicalScope *VariableActivation,
 ) *InterpretedFunctionValue {
 
-	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
+	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionType(functionDeclaration)
 
 	var preConditions ast.Conditions
 
@@ -1576,15 +1756,15 @@ func (interpreter *Interpreter) compositeFunction(
 	}
 
 	var beforeStatements []ast.Statement
-	var postConditions ast.Conditions
+	var rewrittenPostConditions ast.Conditions
 
 	if functionDeclaration.FunctionBlock.PostConditions != nil {
 
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[functionDeclaration.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(functionDeclaration.FunctionBlock.PostConditions)
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
-		postConditions = postConditionsRewrite.RewrittenPostConditions
+		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 	}
 
 	parameterList := functionDeclaration.ParameterList
@@ -1598,7 +1778,7 @@ func (interpreter *Interpreter) compositeFunction(
 		beforeStatements,
 		preConditions,
 		statements,
-		postConditions,
+		rewrittenPostConditions,
 	)
 }
 
@@ -1610,6 +1790,25 @@ func (interpreter *Interpreter) VisitFieldDeclaration(_ *ast.FieldDeclaration) S
 func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) StatementResult {
 	// enum cases aren't interpreted
 	panic(errors.NewUnreachableError())
+}
+
+func (interpreter *Interpreter) SubstituteMappedEntitlements(ty sema.Type) sema.Type {
+	if interpreter.SharedState.currentEntitlementMappedValue == nil {
+		return ty
+	}
+
+	return ty.Map(interpreter, make(map[*sema.TypeParameter]*sema.TypeParameter), func(t sema.Type) sema.Type {
+		switch refType := t.(type) {
+		case *sema.ReferenceType:
+			if _, isMappedAuth := refType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
+				authorization := interpreter.MustConvertStaticAuthorizationToSemaAccess(
+					interpreter.SharedState.currentEntitlementMappedValue,
+				)
+				return sema.NewReferenceType(interpreter, authorization, refType.Type)
+			}
+		}
+		return t
+	})
 }
 
 func (interpreter *Interpreter) ValueIsSubtypeOfSemaType(value Value, targetType sema.Type) bool {
@@ -1628,7 +1827,10 @@ func (interpreter *Interpreter) transferAndConvert(
 		atree.Address{},
 		false,
 		nil,
+		nil,
 	)
+
+	targetType = interpreter.SubstituteMappedEntitlements(targetType)
 
 	result := interpreter.ConvertAndBox(
 		locationRange,
@@ -1661,136 +1863,407 @@ func (interpreter *Interpreter) ConvertAndBox(
 	value Value,
 	valueType, targetType sema.Type,
 ) Value {
-	value = interpreter.convert(value, valueType, targetType)
+	value = interpreter.convert(value, valueType, targetType, locationRange)
 	return interpreter.BoxOptional(locationRange, value, targetType)
 }
 
-func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.Type) Value {
-	if valueType == nil {
-		return value
-	}
+// Produces the `valueStaticType` argument into a new static type that conforms
+// to the specification of the `targetSemaType`. At the moment, this means that the
+// authorization of any reference types in `valueStaticType` are changed to match the
+// authorization of any equivalently-positioned reference types in `targetSemaType`.
+func (interpreter *Interpreter) convertStaticType(
+	valueStaticType StaticType,
+	targetSemaType sema.Type,
+) StaticType {
+	switch valueStaticType := valueStaticType.(type) {
+	case *ReferenceStaticType:
+		if targetReferenceType, isReferenceType := targetSemaType.(*sema.ReferenceType); isReferenceType {
+			return NewReferenceStaticType(
+				interpreter,
+				ConvertSemaAccessToStaticAuthorization(interpreter, targetReferenceType.Authorization),
+				valueStaticType.ReferencedType,
+			)
+		}
 
-	if _, valueIsOptional := valueType.(*sema.OptionalType); valueIsOptional {
+	case *OptionalStaticType:
+		if targetOptionalType, isOptionalType := targetSemaType.(*sema.OptionalType); isOptionalType {
+			return NewOptionalStaticType(
+				interpreter,
+				interpreter.convertStaticType(
+					valueStaticType.Type,
+					targetOptionalType.Type,
+				),
+			)
+		}
+
+	case *DictionaryStaticType:
+		if targetDictionaryType, isDictionaryType := targetSemaType.(*sema.DictionaryType); isDictionaryType {
+			return NewDictionaryStaticType(
+				interpreter,
+				interpreter.convertStaticType(
+					valueStaticType.KeyType,
+					targetDictionaryType.KeyType,
+				),
+				interpreter.convertStaticType(
+					valueStaticType.ValueType,
+					targetDictionaryType.ValueType,
+				),
+			)
+		}
+
+	case *VariableSizedStaticType:
+		if targetArrayType, isArrayType := targetSemaType.(*sema.VariableSizedType); isArrayType {
+			return NewVariableSizedStaticType(
+				interpreter,
+				interpreter.convertStaticType(
+					valueStaticType.Type,
+					targetArrayType.Type,
+				),
+			)
+		}
+
+	case *ConstantSizedStaticType:
+		if targetArrayType, isArrayType := targetSemaType.(*sema.ConstantSizedType); isArrayType {
+			return NewConstantSizedStaticType(
+				interpreter,
+				interpreter.convertStaticType(
+					valueStaticType.Type,
+					targetArrayType.Type,
+				),
+				valueStaticType.Size,
+			)
+		}
+
+	case *CapabilityStaticType:
+		if targetCapabilityType, isCapabilityType := targetSemaType.(*sema.CapabilityType); isCapabilityType {
+			return NewCapabilityStaticType(
+				interpreter,
+				interpreter.convertStaticType(
+					valueStaticType.BorrowType,
+					targetCapabilityType.BorrowType,
+				),
+			)
+		}
+	}
+	return valueStaticType
+}
+
+func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.Type, locationRange LocationRange) Value {
+	if valueType == nil {
 		return value
 	}
 
 	unwrappedTargetType := sema.UnwrapOptionalType(targetType)
 
+	// if the value is optional, convert the inner value to the unwrapped target type
+	if optionalValueType, valueIsOptional := valueType.(*sema.OptionalType); valueIsOptional {
+		switch value := value.(type) {
+		case NilValue:
+			return value
+
+		case *SomeValue:
+			if !optionalValueType.Type.Equal(unwrappedTargetType) {
+				innerValue := interpreter.convert(value.value, optionalValueType.Type, unwrappedTargetType, locationRange)
+				return NewSomeValueNonCopying(interpreter, innerValue)
+			}
+			return value
+		}
+	}
+
 	switch unwrappedTargetType {
 	case sema.IntType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt(interpreter, value)
+			return ConvertInt(interpreter, value, locationRange)
 		}
 
 	case sema.UIntType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt(interpreter, value)
+			return ConvertUInt(interpreter, value, locationRange)
 		}
 
 	// Int*
 	case sema.Int8Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt8(interpreter, value)
+			return ConvertInt8(interpreter, value, locationRange)
 		}
 
 	case sema.Int16Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt16(interpreter, value)
+			return ConvertInt16(interpreter, value, locationRange)
 		}
 
 	case sema.Int32Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt32(interpreter, value)
+			return ConvertInt32(interpreter, value, locationRange)
 		}
 
 	case sema.Int64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt64(interpreter, value)
+			return ConvertInt64(interpreter, value, locationRange)
 		}
 
 	case sema.Int128Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt128(interpreter, value)
+			return ConvertInt128(interpreter, value, locationRange)
 		}
 
 	case sema.Int256Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertInt256(interpreter, value)
+			return ConvertInt256(interpreter, value, locationRange)
 		}
 
 	// UInt*
 	case sema.UInt8Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt8(interpreter, value)
+			return ConvertUInt8(interpreter, value, locationRange)
 		}
 
 	case sema.UInt16Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt16(interpreter, value)
+			return ConvertUInt16(interpreter, value, locationRange)
 		}
 
 	case sema.UInt32Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt32(interpreter, value)
+			return ConvertUInt32(interpreter, value, locationRange)
 		}
 
 	case sema.UInt64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt64(interpreter, value)
+			return ConvertUInt64(interpreter, value, locationRange)
 		}
 
 	case sema.UInt128Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt128(interpreter, value)
+			return ConvertUInt128(interpreter, value, locationRange)
 		}
 
 	case sema.UInt256Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUInt256(interpreter, value)
+			return ConvertUInt256(interpreter, value, locationRange)
 		}
 
 	// Word*
 	case sema.Word8Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord8(interpreter, value)
+			return ConvertWord8(interpreter, value, locationRange)
 		}
 
 	case sema.Word16Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord16(interpreter, value)
+			return ConvertWord16(interpreter, value, locationRange)
 		}
 
 	case sema.Word32Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord32(interpreter, value)
+			return ConvertWord32(interpreter, value, locationRange)
 		}
 
 	case sema.Word64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertWord64(interpreter, value)
+			return ConvertWord64(interpreter, value, locationRange)
+		}
+
+	case sema.Word128Type:
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertWord128(interpreter, value, locationRange)
+		}
+
+	case sema.Word256Type:
+		if !valueType.Equal(unwrappedTargetType) {
+			return ConvertWord256(interpreter, value, locationRange)
 		}
 
 	// Fix*
 
 	case sema.Fix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertFix64(interpreter, value)
+			return ConvertFix64(interpreter, value, locationRange)
 		}
 
 	case sema.UFix64Type:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertUFix64(interpreter, value)
+			return ConvertUFix64(interpreter, value, locationRange)
 		}
 	}
 
-	switch unwrappedTargetType.(type) {
+	switch unwrappedTargetType := unwrappedTargetType.(type) {
 	case *sema.AddressType:
 		if !valueType.Equal(unwrappedTargetType) {
-			return ConvertAddress(interpreter, value)
+			return ConvertAddress(interpreter, value, locationRange)
+		}
+
+	case sema.ArrayType:
+		if arrayValue, isArray := value.(*ArrayValue); isArray && !valueType.Equal(unwrappedTargetType) {
+
+			oldArrayStaticType := arrayValue.StaticType(interpreter)
+			arrayStaticType := interpreter.convertStaticType(oldArrayStaticType, unwrappedTargetType).(ArrayStaticType)
+
+			if oldArrayStaticType.Equal(arrayStaticType) {
+				return value
+			}
+
+			targetElementType := interpreter.MustConvertStaticToSemaType(arrayStaticType.ElementType())
+
+			array := arrayValue.array
+
+			iterator, err := array.Iterator()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+
+			return NewArrayValueWithIterator(
+				interpreter,
+				arrayStaticType,
+				arrayValue.GetOwner(),
+				array.Count(),
+				func() Value {
+					element, err := iterator.Next()
+					if err != nil {
+						panic(errors.NewExternalError(err))
+					}
+					if element == nil {
+						return nil
+					}
+
+					value := MustConvertStoredValue(interpreter, element)
+					valueType := interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter))
+					return interpreter.convert(value, valueType, targetElementType, locationRange)
+				},
+			)
+		}
+
+	case *sema.DictionaryType:
+		if dictValue, isDict := value.(*DictionaryValue); isDict && !valueType.Equal(unwrappedTargetType) {
+
+			oldDictStaticType := dictValue.StaticType(interpreter)
+			dictStaticType := interpreter.convertStaticType(oldDictStaticType, unwrappedTargetType).(*DictionaryStaticType)
+
+			if oldDictStaticType.Equal(dictStaticType) {
+				return value
+			}
+
+			targetKeyType := interpreter.MustConvertStaticToSemaType(dictStaticType.KeyType)
+			targetValueType := interpreter.MustConvertStaticToSemaType(dictStaticType.ValueType)
+
+			dictionary := dictValue.dictionary
+
+			iterator, err := dictionary.Iterator()
+			if err != nil {
+				panic(errors.NewExternalError(err))
+			}
+
+			return newDictionaryValueWithIterator(
+				interpreter,
+				locationRange,
+				dictStaticType,
+				dictionary.Count(),
+				dictionary.Seed(),
+				common.Address(dictionary.Address()),
+				func() (Value, Value) {
+					k, v, err := iterator.Next()
+
+					if err != nil {
+						panic(errors.NewExternalError(err))
+					}
+					if k == nil || v == nil {
+						return nil, nil
+					}
+
+					key := MustConvertStoredValue(interpreter, k)
+					value := MustConvertStoredValue(interpreter, v)
+
+					keyType := interpreter.MustConvertStaticToSemaType(key.StaticType(interpreter))
+					valueType := interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter))
+
+					convertedKey := interpreter.convert(key, keyType, targetKeyType, locationRange)
+					convertedValue := interpreter.convert(value, valueType, targetValueType, locationRange)
+
+					return convertedKey, convertedValue
+				},
+			)
+		}
+
+	case *sema.CapabilityType:
+		if !valueType.Equal(unwrappedTargetType) && unwrappedTargetType.BorrowType != nil {
+			targetBorrowType := unwrappedTargetType.BorrowType.(*sema.ReferenceType)
+
+			switch capability := value.(type) {
+			case *IDCapabilityValue:
+				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
+				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
+				if capability.isInvalid() {
+					return NewInvalidCapabilityValue(interpreter, capability.Address, borrowType)
+				}
+				return NewCapabilityValue(
+					interpreter,
+					capability.ID,
+					capability.Address,
+					borrowType,
+				)
+			default:
+				// unsupported capability value
+				panic(errors.NewUnreachableError())
+			}
+		}
+
+	case *sema.ReferenceType:
+		targetAuthorization := ConvertSemaAccessToStaticAuthorization(interpreter, unwrappedTargetType.Authorization)
+		switch ref := value.(type) {
+		case *EphemeralReferenceValue:
+			if interpreter.shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+				checkMappedEntitlements(unwrappedTargetType, locationRange)
+				return NewEphemeralReferenceValue(
+					interpreter,
+					targetAuthorization,
+					ref.Value,
+					unwrappedTargetType.Type,
+					locationRange,
+				)
+			}
+
+		case *StorageReferenceValue:
+			if interpreter.shouldConvertReference(ref, valueType, unwrappedTargetType, targetAuthorization) {
+				checkMappedEntitlements(unwrappedTargetType, locationRange)
+				return NewStorageReferenceValue(
+					interpreter,
+					targetAuthorization,
+					ref.TargetStorageAddress,
+					ref.TargetPath,
+					unwrappedTargetType.Type,
+				)
+			}
+
+		default:
+			panic(errors.NewUnexpectedError("unsupported reference value: %T", ref))
 		}
 	}
 
 	return value
+}
+
+func (interpreter *Interpreter) shouldConvertReference(
+	ref ReferenceValue,
+	valueType sema.Type,
+	unwrappedTargetType *sema.ReferenceType,
+	targetAuthorization Authorization,
+) bool {
+	if !valueType.Equal(unwrappedTargetType) {
+		return true
+	}
+
+	return !ref.BorrowType().Equal(unwrappedTargetType.Type) ||
+		!ref.GetAuthorization().Equal(targetAuthorization)
+}
+
+func checkMappedEntitlements(unwrappedTargetType *sema.ReferenceType, locationRange LocationRange) {
+	// check defensively that we never create a runtime mapped entitlement value
+	if _, isMappedAuth := unwrappedTargetType.Authorization.(*sema.EntitlementMapAccess); isMappedAuth {
+		panic(UnexpectedMappedEntitlementError{
+			Type:          unwrappedTargetType,
+			LocationRange: locationRange,
+		})
+	}
 }
 
 // BoxOptional boxes a value in optionals, if necessary
@@ -1863,64 +2336,48 @@ func (interpreter *Interpreter) declareInterface(
 		}
 
 		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
-			interpreter.declareTypeRequirement(nestedCompositeDeclaration, lexicalScope)
+			if nestedCompositeDeclaration.Kind() == common.CompositeKindEvent {
+				interpreter.declareNonEnumCompositeValue(nestedCompositeDeclaration, lexicalScope)
+			} else {
+				// this is statically prevented in the checker
+				panic(errors.NewUnreachableError())
+			}
 		}
 	})()
 
-	interfaceType := interpreter.Program.Elaboration.InterfaceDeclarationTypes[declaration]
+	interfaceType := interpreter.Program.Elaboration.InterfaceDeclarationType(declaration)
 	typeID := interfaceType.ID()
 
-	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
-	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
-	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
-	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
+	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(
+		declaration.Members,
+		interfaceType.InitializerParameters,
+		lexicalScope,
+	)
 
-	interpreter.sharedState.typeCodes.InterfaceCodes[typeID] = WrapperCode{
-		InitializerFunctionWrapper: initializerFunctionWrapper,
-		DestructorFunctionWrapper:  destructorFunctionWrapper,
-		FunctionWrappers:           functionWrappers,
-		Functions:                  defaultFunctions,
+	var defaultDestroyEventConstructor FunctionValue
+	if defautlDestroyEvent := interpreter.Program.Elaboration.DefaultDestroyDeclaration(declaration); defautlDestroyEvent != nil {
+		var nestedVariable Variable
+		lexicalScope, nestedVariable = interpreter.declareCompositeValue(
+			defautlDestroyEvent,
+			lexicalScope,
+		)
+		defaultDestroyEventConstructor = nestedVariable.GetValue(interpreter).(FunctionValue)
 	}
-}
 
-func (interpreter *Interpreter) declareTypeRequirement(
-	declaration *ast.CompositeDeclaration,
-	lexicalScope *VariableActivation,
-) {
-	// Evaluate nested declarations in a new scope, so values
-	// of nested declarations won't be visible after the containing declaration
-
-	(func() {
-		interpreter.activations.PushNewWithCurrent()
-		defer interpreter.activations.Pop()
-
-		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
-			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
-		}
-
-		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
-			interpreter.declareTypeRequirement(nestedCompositeDeclaration, lexicalScope)
-		}
-	})()
-
-	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
-	typeID := compositeType.ID()
-
-	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
-	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 	defaultFunctions := interpreter.defaultFunctions(declaration.Members, lexicalScope)
 
-	interpreter.sharedState.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
-		InitializerFunctionWrapper: initializerFunctionWrapper,
-		DestructorFunctionWrapper:  destructorFunctionWrapper,
-		FunctionWrappers:           functionWrappers,
-		Functions:                  defaultFunctions,
+	interpreter.SharedState.typeCodes.InterfaceCodes[typeID] = WrapperCode{
+		InitializerFunctionWrapper:     initializerFunctionWrapper,
+		FunctionWrappers:               functionWrappers,
+		Functions:                      defaultFunctions,
+		DefaultDestroyEventConstructor: defaultDestroyEventConstructor,
 	}
 }
 
 func (interpreter *Interpreter) initializerFunctionWrapper(
 	members *ast.Members,
+	parameters []sema.Parameter,
 	lexicalScope *VariableActivation,
 ) FunctionWrapper {
 
@@ -1938,31 +2395,17 @@ func (interpreter *Interpreter) initializerFunctionWrapper(
 
 	return interpreter.functionConditionsWrapper(
 		firstInitializer.FunctionDeclaration,
-		sema.VoidType,
-		lexicalScope,
-	)
-}
-
-func (interpreter *Interpreter) destructorFunctionWrapper(
-	members *ast.Members,
-	lexicalScope *VariableActivation,
-) FunctionWrapper {
-
-	destructor := members.Destructor()
-	if destructor == nil {
-		return nil
-	}
-
-	return interpreter.functionConditionsWrapper(
-		destructor.FunctionDeclaration,
-		sema.VoidType,
+		&sema.FunctionType{
+			Parameters:           parameters,
+			ReturnTypeAnnotation: sema.VoidTypeAnnotation,
+		},
 		lexicalScope,
 	)
 }
 
 func (interpreter *Interpreter) functionConditionsWrapper(
 	declaration *ast.FunctionDeclaration,
-	returnType sema.Type,
+	functionType *sema.FunctionType,
 	lexicalScope *VariableActivation,
 ) FunctionWrapper {
 
@@ -1981,22 +2424,18 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	if declaration.FunctionBlock.PostConditions != nil {
 
 		postConditionsRewrite :=
-			interpreter.Program.Elaboration.PostConditionsRewrite[declaration.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite(declaration.FunctionBlock.PostConditions)
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 	}
 
 	return func(inner FunctionValue) FunctionValue {
-		// Construct a raw HostFunctionValue without a type,
-		// instead of using NewHostFunctionValue, which requires a type.
-		//
-		// This host function value is an internally created and used function,
-		// and can never be passed around as a value.
-		// Hence, the type is not required.
-
-		return &HostFunctionValue{
-			Function: func(invocation Invocation) Value {
+		// Condition wrapper is a static function.
+		return NewStaticHostFunctionValue(
+			interpreter,
+			functionType,
+			func(invocation Invocation) Value {
 				// Start a new activation record.
 				// Lexical scope: use the function declaration's activation record,
 				// not the current one (which would be dynamic scope)
@@ -2011,7 +2450,10 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 				}
 
 				if invocation.Self != nil {
-					interpreter.declareVariable(sema.SelfIdentifier, invocation.Self)
+					interpreter.declareSelfVariable(*invocation.Self, invocation.LocationRange)
+				}
+				if invocation.Base != nil {
+					interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
 				}
 
 				// NOTE: The `inner` function might be nil.
@@ -2043,7 +2485,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 						// for use by the post-condition block.
 
 						type argumentVariable struct {
-							variable *Variable
+							variable Variable
 							value    ResourceKindedValue
 						}
 
@@ -2057,7 +2499,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 							argumentVariables = append(
 								argumentVariables,
 								argumentVariable{
-									variable: interpreter.sharedState.resourceVariables[resourceKindedValue],
+									variable: interpreter.SharedState.resourceVariables[resourceKindedValue],
 									value:    resourceKindedValue,
 								},
 							)
@@ -2076,10 +2518,15 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 						for _, argumentVariable := range argumentVariables {
 							value := argumentVariable.value
 							interpreter.invalidateResource(value)
-							interpreter.sharedState.resourceVariables[value] = argumentVariable.variable
+							interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
 						}
-						return ReturnResult{returnValue}
+						return ReturnResult{Value: returnValue}
 					}
+				}
+
+				declarationLocationRange := LocationRange{
+					Location:    interpreter.Location,
+					HasPosition: declaration,
 				}
 
 				return interpreter.visitFunctionBody(
@@ -2087,10 +2534,11 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 					preConditions,
 					body,
 					rewrittenPostConditions,
-					returnType,
+					functionType.ReturnTypeAnnotation.Type,
+					declarationLocationRange,
 				)
 			},
-		}
+		)
 	}
 }
 
@@ -2100,7 +2548,7 @@ func (interpreter *Interpreter) EnsureLoaded(
 	return interpreter.ensureLoadedWithLocationHandler(
 		location,
 		func() Import {
-			return interpreter.Config.ImportLocationHandler(interpreter, location)
+			return interpreter.SharedState.Config.ImportLocationHandler(interpreter, location)
 		},
 	)
 }
@@ -2112,7 +2560,7 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 
 	// If a sub-interpreter already exists, return it
 
-	subInterpreter := interpreter.sharedState.allInterpreters[location]
+	subInterpreter := interpreter.SharedState.allInterpreters[location]
 	if subInterpreter != nil {
 		return subInterpreter
 	}
@@ -2152,12 +2600,12 @@ func (interpreter *Interpreter) ensureLoadedWithLocationHandler(
 			subInterpreter.Globals.Set(global.Name, variable)
 		}
 
-		subInterpreter.sharedState.typeCodes.
+		subInterpreter.SharedState.typeCodes.
 			Merge(virtualImport.TypeCodes)
 
 		// Virtual import does not register interpreter itself,
 		// unlike InterpreterImport
-		interpreter.sharedState.allInterpreters[location] = subInterpreter
+		interpreter.SharedState.allInterpreters[location] = subInterpreter
 
 		subInterpreter.Program = &Program{
 			Elaboration: virtualImport.Elaboration,
@@ -2177,21 +2625,19 @@ func (interpreter *Interpreter) NewSubInterpreter(
 	*Interpreter,
 	error,
 ) {
-	return newInterpreter(
-
+	return NewInterpreterWithSharedState(
 		program,
 		location,
-		interpreter.sharedState,
-		interpreter.Config,
+		interpreter.SharedState,
 	)
 }
 
-func (interpreter *Interpreter) storedValueExists(
+func (interpreter *Interpreter) StoredValueExists(
 	storageAddress common.Address,
 	domain string,
-	identifier string,
+	identifier StorageMapKey,
 ) bool {
-	accountStorage := interpreter.Config.Storage.GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return false
 	}
@@ -2201,9 +2647,9 @@ func (interpreter *Interpreter) storedValueExists(
 func (interpreter *Interpreter) ReadStored(
 	storageAddress common.Address,
 	domain string,
-	identifier string,
+	identifier StorageMapKey,
 ) Value {
-	accountStorage := interpreter.Config.Storage.GetStorageMap(storageAddress, domain, false)
+	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, false)
 	if accountStorage == nil {
 		return nil
 	}
@@ -2213,12 +2659,11 @@ func (interpreter *Interpreter) ReadStored(
 func (interpreter *Interpreter) WriteStored(
 	storageAddress common.Address,
 	domain string,
-	identifier string,
+	key StorageMapKey,
 	value Value,
-) {
-	accountStorage := interpreter.Config.Storage.GetStorageMap(storageAddress, domain, true)
-	accountStorage.WriteValue(interpreter, identifier, value)
-	interpreter.recordStorageMutation()
+) (existed bool) {
+	accountStorage := interpreter.Storage().GetStorageMap(storageAddress, domain, true)
+	return accountStorage.WriteValue(interpreter, key, value)
 }
 
 type fromStringFunctionValue struct {
@@ -2232,7 +2677,8 @@ type stringValueParser func(*Interpreter, string) OptionalValue
 func newFromStringFunction(ty sema.Type, parser stringValueParser) fromStringFunctionValue {
 	functionType := sema.FromStringFunctionType(ty)
 
-	hostFunctionImpl := NewUnmeteredHostFunctionValue(
+	hostFunctionImpl := NewUnmeteredStaticHostFunctionValue(
+		functionType,
 		func(invocation Invocation) Value {
 			argument, ok := invocation.Arguments[0].(*StringValue)
 			if !ok {
@@ -2242,7 +2688,6 @@ func newFromStringFunction(ty sema.Type, parser stringValueParser) fromStringFun
 			inter := invocation.Interpreter
 			return parser(inter, argument.Str)
 		},
-		functionType,
 	)
 	return fromStringFunctionValue{
 		receiverType: ty,
@@ -2293,13 +2738,15 @@ func signedIntValueParser[ValueType Value, IntType any](
 	}
 }
 
-// No need to use metered constructors for values represented by big.Ints, since estimation is more granular than fixed-size types.
+// No need to use metered constructors for values represented by big.Ints,
+// since estimation is more granular than fixed-size types.
 func bigIntValueParser(convert func(*big.Int) (Value, bool)) stringValueParser {
 	return func(interpreter *Interpreter, input string) OptionalValue {
-		estimatedSize := common.OverEstimateBigIntFromString(input)
+		literalKind := common.IntegerLiteralKindDecimal
+		estimatedSize := common.OverEstimateBigIntFromString(input, literalKind)
 		common.UseMemory(interpreter, common.NewBigIntMemoryUsage(estimatedSize))
 
-		val, ok := new(big.Int).SetString(input, 10)
+		val, ok := new(big.Int).SetString(input, literalKind.Base())
 		if !ok {
 			return NilOptionalValue
 		}
@@ -2380,6 +2827,18 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 		newFromStringFunction(sema.Word16Type, unsignedIntValueParser(16, NewWord16Value, u64_16)),
 		newFromStringFunction(sema.Word32Type, unsignedIntValueParser(32, NewWord32Value, u64_32)),
 		newFromStringFunction(sema.Word64Type, unsignedIntValueParser(64, NewWord64Value, u64_64)),
+		newFromStringFunction(sema.Word128Type, bigIntValueParser(func(b *big.Int) (v Value, ok bool) {
+			if ok = inRange(b, sema.Word128TypeMinIntBig, sema.Word128TypeMaxIntBig); ok {
+				v = NewUnmeteredWord128ValueFromBigInt(b)
+			}
+			return
+		})),
+		newFromStringFunction(sema.Word256Type, bigIntValueParser(func(b *big.Int) (v Value, ok bool) {
+			if ok = inRange(b, sema.Word256TypeMinIntBig, sema.Word256TypeMaxIntBig); ok {
+				v = NewUnmeteredWord256ValueFromBigInt(b)
+			}
+			return
+		})),
 
 		// fixed-points
 		newFromStringFunction(sema.Fix64Type, func(inter *Interpreter, input string) OptionalValue {
@@ -2411,12 +2870,241 @@ var fromStringFunctionValues = func() map[string]fromStringFunctionValue {
 	return values
 }()
 
+type fromBigEndianBytesFunctionValue struct {
+	receiverType sema.Type
+	hostFunction *HostFunctionValue
+}
+
+func padWithZeroes(b []byte, expectedLen int) []byte {
+	l := len(b)
+	if l > expectedLen {
+		panic(errors.NewUnreachableError())
+	} else if l == expectedLen {
+		return b
+	}
+
+	var res []byte
+	// use existing allocated slice if possible.
+	if cap(b) >= expectedLen {
+		res = b[:expectedLen]
+	} else {
+		res = make([]byte, expectedLen)
+	}
+
+	copy(res[expectedLen-l:], b)
+
+	// explicitly set to 0 for the first expectedLen - l bytes.
+	if cap(b) >= expectedLen {
+		for i := 0; i < expectedLen-l; i++ {
+			res[i] = 0
+		}
+	}
+	return res
+}
+
+// a function that attempts to create a Number from a big-endian bytes.
+type bigEndianBytesConverter func(*Interpreter, []byte) Value
+
+func newFromBigEndianBytesFunction(
+	ty sema.Type,
+	byteLength int,
+	converter bigEndianBytesConverter) fromBigEndianBytesFunctionValue {
+	functionType := sema.FromBigEndianBytesFunctionType(ty)
+
+	// Converter functions are static functions.
+	hostFunctionImpl := NewUnmeteredStaticHostFunctionValue(
+		functionType,
+		func(invocation Invocation) Value {
+			argument, ok := invocation.Arguments[0].(*ArrayValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			inter := invocation.Interpreter
+			bytes, err := ByteArrayValueToByteSlice(inter, argument, invocation.LocationRange)
+			if err != nil {
+				return Nil
+			}
+
+			// overflow
+			if byteLength != 0 && len(bytes) > byteLength {
+				return Nil
+			}
+
+			return NewSomeValueNonCopying(inter, converter(inter, bytes))
+		},
+	)
+	return fromBigEndianBytesFunctionValue{
+		receiverType: ty,
+		hostFunction: hostFunctionImpl,
+	}
+}
+
+var fromBigEndianBytesFunctionValues = func() map[string]fromBigEndianBytesFunctionValue {
+	declarations := []fromBigEndianBytesFunctionValue{
+		// signed int values
+		newFromBigEndianBytesFunction(sema.Int8Type, 1, func(i *Interpreter, b []byte) Value {
+			return NewInt8Value(i, func() int8 {
+				bytes := padWithZeroes(b, 1)
+				return int8(bytes[0])
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Int16Type, 2, func(i *Interpreter, b []byte) Value {
+			return NewInt16Value(i, func() int16 {
+				bytes := padWithZeroes(b, 2)
+				val := binary.BigEndian.Uint16(bytes)
+				return int16(val)
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Int32Type, 4, func(i *Interpreter, b []byte) Value {
+			return NewInt32Value(i, func() int32 {
+				bytes := padWithZeroes(b, 4)
+				val := binary.BigEndian.Uint32(bytes)
+				return int32(val)
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Int64Type, 8, func(i *Interpreter, b []byte) Value {
+			return NewInt64Value(i, func() int64 {
+				bytes := padWithZeroes(b, 8)
+				val := binary.BigEndian.Uint64(bytes)
+				return int64(val)
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Int128Type, 16, func(i *Interpreter, b []byte) Value {
+			return NewInt128ValueFromBigInt(i, func() *big.Int {
+				bi := BigEndianBytesToSignedBigInt(b)
+				return bi
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Int256Type, 32, func(i *Interpreter, b []byte) Value {
+			return NewInt256ValueFromBigInt(i, func() *big.Int {
+				bi := BigEndianBytesToSignedBigInt(b)
+				return bi
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.IntType, 0, func(i *Interpreter, b []byte) Value {
+			bi := BigEndianBytesToSignedBigInt(b)
+			memoryUsage := common.NewBigIntMemoryUsage(
+				common.BigIntByteLength(bi),
+			)
+			return NewIntValueFromBigInt(i, memoryUsage, func() *big.Int { return bi })
+		}),
+
+		// unsigned int values
+		newFromBigEndianBytesFunction(sema.UInt8Type, 1, func(i *Interpreter, b []byte) Value {
+			return NewUInt8Value(i, func() uint8 { return b[0] })
+		}),
+		newFromBigEndianBytesFunction(sema.UInt16Type, 2, func(i *Interpreter, b []byte) Value {
+			return NewUInt16Value(i, func() uint16 {
+				bytes := padWithZeroes(b, 2)
+				val := binary.BigEndian.Uint16(bytes)
+				return val
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.UInt32Type, 4, func(i *Interpreter, b []byte) Value {
+			return NewUInt32Value(i, func() uint32 {
+				bytes := padWithZeroes(b, 4)
+				val := binary.BigEndian.Uint32(bytes)
+				return val
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.UInt64Type, 8, func(i *Interpreter, b []byte) Value {
+			return NewUInt64Value(i, func() uint64 {
+				bytes := padWithZeroes(b, 8)
+				val := binary.BigEndian.Uint64(bytes)
+				return val
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.UInt128Type, 16, func(i *Interpreter, b []byte) Value {
+			return NewUInt128ValueFromBigInt(i, func() *big.Int {
+				return BigEndianBytesToUnsignedBigInt(b)
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.UInt256Type, 32, func(i *Interpreter, b []byte) Value {
+			return NewUInt256ValueFromBigInt(i, func() *big.Int {
+				return BigEndianBytesToUnsignedBigInt(b)
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.UIntType, 0, func(i *Interpreter, b []byte) Value {
+			bi := BigEndianBytesToUnsignedBigInt(b)
+			memoryUsage := common.NewBigIntMemoryUsage(
+				common.BigIntByteLength(bi),
+			)
+			return NewUIntValueFromBigInt(i, memoryUsage, func() *big.Int { return bi })
+		}),
+
+		// machine-sized word types
+		newFromBigEndianBytesFunction(sema.Word8Type, 1, func(i *Interpreter, b []byte) Value {
+			return NewWord8Value(i, func() uint8 { return b[0] })
+		}),
+		newFromBigEndianBytesFunction(sema.Word16Type, 2, func(i *Interpreter, b []byte) Value {
+			return NewWord16Value(i, func() uint16 {
+				bytes := padWithZeroes(b, 2)
+				val := binary.BigEndian.Uint16(bytes)
+				return val
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Word32Type, 4, func(i *Interpreter, b []byte) Value {
+			return NewWord32Value(i, func() uint32 {
+				bytes := padWithZeroes(b, 4)
+				val := binary.BigEndian.Uint32(bytes)
+				return val
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Word64Type, 8, func(i *Interpreter, b []byte) Value {
+			return NewWord64Value(i, func() uint64 {
+				bytes := padWithZeroes(b, 8)
+				val := binary.BigEndian.Uint64(bytes)
+				return val
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Word128Type, 16, func(i *Interpreter, b []byte) Value {
+			return NewWord128ValueFromBigInt(i, func() *big.Int {
+				return BigEndianBytesToUnsignedBigInt(b)
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.Word256Type, 32, func(i *Interpreter, b []byte) Value {
+			return NewWord256ValueFromBigInt(i, func() *big.Int {
+				return BigEndianBytesToUnsignedBigInt(b)
+			})
+		}),
+
+		// fixed-points
+		newFromBigEndianBytesFunction(sema.Fix64Type, 8, func(i *Interpreter, b []byte) Value {
+			return NewFix64Value(i, func() int64 {
+				bytes := padWithZeroes(b, 8)
+				val := binary.BigEndian.Uint64(bytes)
+				return int64(val)
+			})
+		}),
+		newFromBigEndianBytesFunction(sema.UFix64Type, 8, func(i *Interpreter, b []byte) Value {
+			return NewUFix64Value(i, func() uint64 {
+				bytes := padWithZeroes(b, 8)
+				val := binary.BigEndian.Uint64(bytes)
+				return val
+			})
+		}),
+	}
+
+	values := make(map[string]fromBigEndianBytesFunctionValue, len(declarations))
+	for _, decl := range declarations {
+		// index declaration by type name
+		values[decl.receiverType.String()] = decl
+	}
+
+	return values
+}()
+
 type ValueConverterDeclaration struct {
-	name         string
-	convert      func(*Interpreter, Value) Value
-	min          Value
-	max          Value
-	functionType *sema.FunctionType
+	min             Value
+	max             Value
+	convert         func(*Interpreter, Value, LocationRange) Value
+	functionType    *sema.FunctionType
+	nestedVariables []struct {
+		Name  string
+		Value Value
+	}
+	name string
 }
 
 // It would be nice if return types in Go's function types would be covariant
@@ -2424,23 +3112,23 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.IntTypeName,
 		functionType: sema.NumberConversionFunctionType(sema.IntType),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt(interpreter, value, locationRange)
 		},
 	},
 	{
 		name:         sema.UIntTypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UIntType),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUIntValueFromBigInt(sema.UIntTypeMin),
 	},
 	{
 		name:         sema.Int8TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int8Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt8(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt8(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredInt8Value(math.MinInt8),
 		max: NewUnmeteredInt8Value(math.MaxInt8),
@@ -2448,8 +3136,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int16TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int16Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt16(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt16(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredInt16Value(math.MinInt16),
 		max: NewUnmeteredInt16Value(math.MaxInt16),
@@ -2457,8 +3145,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int32TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int32Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt32(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt32(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredInt32Value(math.MinInt32),
 		max: NewUnmeteredInt32Value(math.MaxInt32),
@@ -2466,8 +3154,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int64Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt64(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt64(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredInt64Value(math.MinInt64),
 		max: NewUnmeteredInt64Value(math.MaxInt64),
@@ -2475,8 +3163,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int128TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int128Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt128(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt128(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
 		max: NewUnmeteredInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
@@ -2484,8 +3172,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Int256TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Int256Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertInt256(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertInt256(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
 		max: NewUnmeteredInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
@@ -2493,8 +3181,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt8TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt8Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt8(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt8(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUInt8Value(0),
 		max: NewUnmeteredUInt8Value(math.MaxUint8),
@@ -2502,8 +3190,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt16TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt16Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt16(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt16(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUInt16Value(0),
 		max: NewUnmeteredUInt16Value(math.MaxUint16),
@@ -2511,8 +3199,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt32TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt32Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt32(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt32(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUInt32Value(0),
 		max: NewUnmeteredUInt32Value(math.MaxUint32),
@@ -2520,8 +3208,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt64Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt64(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt64(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUInt64Value(0),
 		max: NewUnmeteredUInt64Value(math.MaxUint64),
@@ -2529,8 +3217,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt128TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt128Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt128(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt128(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUInt128ValueFromUint64(0),
 		max: NewUnmeteredUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
@@ -2538,8 +3226,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UInt256TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UInt256Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUInt256(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUInt256(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUInt256ValueFromUint64(0),
 		max: NewUnmeteredUInt256ValueFromBigInt(sema.UInt256TypeMaxIntBig),
@@ -2547,8 +3235,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Word8TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word8Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertWord8(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertWord8(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredWord8Value(0),
 		max: NewUnmeteredWord8Value(math.MaxUint8),
@@ -2556,8 +3244,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Word16TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word16Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertWord16(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertWord16(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredWord16Value(0),
 		max: NewUnmeteredWord16Value(math.MaxUint16),
@@ -2565,8 +3253,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Word32TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word32Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertWord32(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertWord32(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredWord32Value(0),
 		max: NewUnmeteredWord32Value(math.MaxUint32),
@@ -2574,17 +3262,35 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.Word64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Word64Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertWord64(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertWord64(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredWord64Value(0),
 		max: NewUnmeteredWord64Value(math.MaxUint64),
 	},
 	{
+		name:         sema.Word128TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Word128Type),
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertWord128(interpreter, value, locationRange)
+		},
+		min: NewUnmeteredWord128ValueFromUint64(0),
+		max: NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
+	},
+	{
+		name:         sema.Word256TypeName,
+		functionType: sema.NumberConversionFunctionType(sema.Word256Type),
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertWord256(interpreter, value, locationRange)
+		},
+		min: NewUnmeteredWord256ValueFromUint64(0),
+		max: NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
+	},
+	{
 		name:         sema.Fix64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.Fix64Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertFix64(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertFix64(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredFix64Value(math.MinInt64),
 		max: NewUnmeteredFix64Value(math.MaxInt64),
@@ -2592,8 +3298,8 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.UFix64TypeName,
 		functionType: sema.NumberConversionFunctionType(sema.UFix64Type),
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertUFix64(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertUFix64(interpreter, value, locationRange)
 		},
 		min: NewUnmeteredUFix64Value(0),
 		max: NewUnmeteredUFix64Value(math.MaxUint64),
@@ -2601,24 +3307,50 @@ var ConverterDeclarations = []ValueConverterDeclaration{
 	{
 		name:         sema.AddressTypeName,
 		functionType: sema.AddressConversionFunctionType,
-		convert: func(interpreter *Interpreter, value Value) Value {
-			return ConvertAddress(interpreter, value)
+		convert: func(interpreter *Interpreter, value Value, locationRange LocationRange) Value {
+			return ConvertAddress(interpreter, value, locationRange)
+		},
+		nestedVariables: []struct {
+			Name  string
+			Value Value
+		}{
+			// Converter functions are static functions.
+			{
+				Name: sema.AddressTypeFromBytesFunctionName,
+				Value: NewUnmeteredStaticHostFunctionValue(
+					sema.AddressTypeFromBytesFunctionType,
+					AddressFromBytes,
+				),
+			},
+			{
+				Name: sema.AddressTypeFromStringFunctionName,
+				Value: NewUnmeteredStaticHostFunctionValue(
+					sema.AddressTypeFromStringFunctionType,
+					AddressFromString,
+				),
+			},
 		},
 	},
 	{
 		name:         sema.PublicPathType.Name,
 		functionType: sema.PublicPathConversionFunctionType,
-		convert:      ConvertPublicPath,
+		convert: func(interpreter *Interpreter, value Value, _ LocationRange) Value {
+			return newPathFromStringValue(interpreter, common.PathDomainPublic, value)
+		},
 	},
 	{
 		name:         sema.PrivatePathType.Name,
 		functionType: sema.PrivatePathConversionFunctionType,
-		convert:      ConvertPrivatePath,
+		convert: func(interpreter *Interpreter, value Value, _ LocationRange) Value {
+			return newPathFromStringValue(interpreter, common.PathDomainPrivate, value)
+		},
 	},
 	{
 		name:         sema.StoragePathType.Name,
 		functionType: sema.StoragePathConversionFunctionType,
-		convert:      ConvertStoragePath,
+		convert: func(interpreter *Interpreter, value Value, _ LocationRange) Value {
+			return newPathFromStringValue(interpreter, common.PathDomainStorage, value)
+		},
 	},
 }
 
@@ -2629,7 +3361,7 @@ func lookupInterface(interpreter *Interpreter, typeID string) (*sema.InterfaceTy
 		return nil, err
 	}
 
-	typ, err := interpreter.getInterfaceType(location, qualifiedIdentifier)
+	typ, err := interpreter.GetInterfaceType(location, qualifiedIdentifier, TypeID(typeID))
 	if err != nil {
 		return nil, err
 	}
@@ -2644,7 +3376,22 @@ func lookupComposite(interpreter *Interpreter, typeID string) (*sema.CompositeTy
 		return nil, err
 	}
 
-	typ, err := interpreter.GetCompositeType(location, qualifiedIdentifier, common.TypeID(typeID))
+	typ, err := interpreter.GetCompositeType(location, qualifiedIdentifier, TypeID(typeID))
+	if err != nil {
+		return nil, err
+	}
+
+	return typ, nil
+}
+
+func lookupEntitlement(interpreter *Interpreter, typeID string) (*sema.EntitlementType, error) {
+	_, _, err := common.DecodeTypeID(interpreter, typeID)
+	// if the typeID is invalid, return nil
+	if err != nil {
+		return nil, err
+	}
+
+	typ, err := interpreter.GetEntitlementType(common.TypeID(typeID))
 	if err != nil {
 		return nil, err
 	}
@@ -2667,7 +3414,7 @@ func init() {
 
 		switch numberType {
 		case sema.NumberType, sema.SignedNumberType,
-			sema.IntegerType, sema.SignedIntegerType,
+			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
@@ -2682,223 +3429,80 @@ func init() {
 		if _, ok := fromStringFunctionValues[typeName]; !ok {
 			panic(fmt.Sprintf("missing fromString implementation for number type: %s", numberType))
 		}
+
+		if _, ok := fromBigEndianBytesFunctionValues[typeName]; !ok {
+			panic(fmt.Sprintf("missing fromBigEndianBytes implementation for number type: %s", numberType))
+		}
 	}
 
 	// We assign this here because it depends on the interpreter, so this breaks the initialization cycle
+
+	// All of the following methods are static functions.
 	defineBaseValue(
 		BaseActivation,
-		"DictionaryType",
-		NewUnmeteredHostFunctionValue(
-			func(invocation Invocation) Value {
-				keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				valueTypeValue, ok := invocation.Arguments[1].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				keyType := keyTypeValue.Type
-				valueType := valueTypeValue.Type
-
-				// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
-				if keyType == nil ||
-					!sema.IsValidDictionaryKeyType(invocation.Interpreter.MustConvertStaticToSemaType(keyType)) {
-					return Nil
-				}
-
-				return NewSomeValueNonCopying(
-					invocation.Interpreter,
-					NewTypeValue(
-						invocation.Interpreter,
-						NewDictionaryStaticType(
-							invocation.Interpreter,
-							keyType,
-							valueType,
-						),
-					),
-				)
-			},
+		sema.DictionaryTypeFunctionName,
+		NewUnmeteredStaticHostFunctionValue(
 			sema.DictionaryTypeFunctionType,
+			dictionaryTypeFunction,
 		))
 
 	defineBaseValue(
 		BaseActivation,
-		"CompositeType",
-		NewUnmeteredHostFunctionValue(
-			func(invocation Invocation) Value {
-				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				typeID := typeIDValue.Str
-
-				composite, err := lookupComposite(invocation.Interpreter, typeID)
-				if err != nil {
-					return Nil
-				}
-
-				return NewSomeValueNonCopying(
-					invocation.Interpreter,
-					NewTypeValue(
-						invocation.Interpreter,
-						ConvertSemaToStaticType(invocation.Interpreter, composite),
-					),
-				)
-			},
+		sema.CompositeTypeFunctionName,
+		NewUnmeteredStaticHostFunctionValue(
 			sema.CompositeTypeFunctionType,
+			compositeTypeFunction,
 		),
 	)
 
 	defineBaseValue(
 		BaseActivation,
-		"InterfaceType",
-		NewUnmeteredHostFunctionValue(
-			func(invocation Invocation) Value {
-				typeIDValue, ok := invocation.Arguments[0].(*StringValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				typeID := typeIDValue.Str
-
-				interfaceType, err := lookupInterface(invocation.Interpreter, typeID)
-				if err != nil {
-					return Nil
-				}
-
-				return NewSomeValueNonCopying(
-					invocation.Interpreter,
-					NewTypeValue(
-						invocation.Interpreter,
-						ConvertSemaToStaticType(invocation.Interpreter, interfaceType),
-					),
-				)
-			},
-			sema.InterfaceTypeFunctionType,
+		sema.ReferenceTypeFunctionName,
+		NewUnmeteredStaticHostFunctionValue(
+			sema.ReferenceTypeFunctionType,
+			referenceTypeFunction,
 		),
 	)
 
 	defineBaseValue(
 		BaseActivation,
-		"FunctionType",
-		NewUnmeteredHostFunctionValue(
-			func(invocation Invocation) Value {
-				parameters, ok := invocation.Arguments[0].(*ArrayValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				typeValue, ok := invocation.Arguments[1].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				returnType := invocation.Interpreter.MustConvertStaticToSemaType(typeValue.Type)
-				parameterTypes := make([]*sema.Parameter, 0, parameters.Count())
-				parameters.Iterate(invocation.Interpreter, func(param Value) bool {
-					semaType := invocation.Interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
-					parameterTypes = append(
-						parameterTypes,
-						&sema.Parameter{
-							TypeAnnotation: sema.NewTypeAnnotation(semaType),
-						},
-					)
-
-					// Continue iteration
-					return true
-				})
-				functionStaticType := NewFunctionStaticType(
-					invocation.Interpreter,
-					&sema.FunctionType{
-						ReturnTypeAnnotation: sema.NewTypeAnnotation(returnType),
-						Parameters:           parameterTypes,
-					},
-				)
-				return NewUnmeteredTypeValue(functionStaticType)
-			},
+		sema.FunctionTypeFunctionName,
+		NewUnmeteredStaticHostFunctionValue(
 			sema.FunctionTypeFunctionType,
+			functionTypeFunction,
 		),
 	)
 
 	defineBaseValue(
 		BaseActivation,
-		"RestrictedType",
-		NewUnmeteredHostFunctionValue(
-			RestrictedTypeFunction,
-			sema.RestrictedTypeFunctionType,
+		sema.IntersectionTypeFunctionName,
+		NewUnmeteredStaticHostFunctionValue(
+			sema.IntersectionTypeFunctionType,
+			intersectionTypeFunction,
 		),
 	)
 }
 
-func RestrictedTypeFunction(invocation Invocation) Value {
-	restrictionIDs, ok := invocation.Arguments[1].(*ArrayValue)
+func dictionaryTypeFunction(invocation Invocation) Value {
+	keyTypeValue, ok := invocation.Arguments[0].(TypeValue)
 	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	staticRestrictions := make([]InterfaceStaticType, 0, restrictionIDs.Count())
-	semaRestrictions := make([]*sema.InterfaceType, 0, restrictionIDs.Count())
-
-	var invalidRestrictionID bool
-	restrictionIDs.Iterate(invocation.Interpreter, func(typeID Value) bool {
-		typeIDValue, ok := typeID.(*StringValue)
-		if !ok {
-			panic(errors.NewUnreachableError())
-		}
-
-		restrictionInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
-		if err != nil {
-			invalidRestrictionID = true
-			return true
-		}
-
-		staticRestrictions = append(
-			staticRestrictions,
-			ConvertSemaToStaticType(invocation.Interpreter, restrictionInterface).(InterfaceStaticType),
-		)
-		semaRestrictions = append(semaRestrictions, restrictionInterface)
-
-		// Continue iteration
-		return true
-	})
-
-	// If there are any invalid restrictions,
-	// then return nil
-	if invalidRestrictionID {
-		return Nil
-	}
-
-	var semaType sema.Type
-	var err error
-
-	switch typeID := invocation.Arguments[0].(type) {
-	case NilValue:
-		semaType = nil
-	case *SomeValue:
-		innerValue := typeID.InnerValue(invocation.Interpreter, invocation.LocationRange)
-		semaType, err = lookupComposite(invocation.Interpreter, innerValue.(*StringValue).Str)
-		if err != nil {
-			return Nil
-		}
-	default:
+	valueTypeValue, ok := invocation.Arguments[1].(TypeValue)
+	if !ok {
 		panic(errors.NewUnreachableError())
 	}
 
-	var invalidRestrictedType bool
-	ty := sema.CheckRestrictedType(
-		invocation.Interpreter,
-		semaType,
-		semaRestrictions,
-		func(_ func(*ast.RestrictedType) error) {
-			invalidRestrictedType = true
-		},
-	)
+	keyType := keyTypeValue.Type
+	valueType := valueTypeValue.Type
 
-	// If the restricted type would have failed to type-check statically,
-	// then return nil
-	if invalidRestrictedType {
+	// if the given key is not a valid dictionary key, it wouldn't make sense to create this type
+	if keyType == nil ||
+		!sema.IsSubType(
+			invocation.Interpreter.MustConvertStaticToSemaType(keyType),
+			sema.HashableStructType,
+		) {
 		return Nil
 	}
 
@@ -2906,10 +3510,220 @@ func RestrictedTypeFunction(invocation Invocation) Value {
 		invocation.Interpreter,
 		NewTypeValue(
 			invocation.Interpreter,
-			NewRestrictedStaticType(
+			NewDictionaryStaticType(
 				invocation.Interpreter,
-				ConvertSemaToStaticType(invocation.Interpreter, ty),
-				staticRestrictions,
+				keyType,
+				valueType,
+			),
+		),
+	)
+}
+
+func referenceTypeFunction(invocation Invocation) Value {
+	entitlementValues, ok := invocation.Arguments[0].(*ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	typeValue, ok := invocation.Arguments[1].(TypeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	authorization := UnauthorizedAccess
+	errInIteration := false
+	entitlementsCount := entitlementValues.Count()
+
+	if entitlementsCount > 0 {
+		authorization = NewEntitlementSetAuthorization(
+			invocation.Interpreter,
+			func() []common.TypeID {
+				entitlements := make([]common.TypeID, 0, entitlementsCount)
+				entitlementValues.Iterate(
+					invocation.Interpreter,
+					func(element Value) (resume bool) {
+						entitlementString, isString := element.(*StringValue)
+						if !isString {
+							errInIteration = true
+							return false
+						}
+
+						_, err := lookupEntitlement(invocation.Interpreter, entitlementString.Str)
+						if err != nil {
+							errInIteration = true
+							return false
+						}
+						entitlements = append(entitlements, common.TypeID(entitlementString.Str))
+
+						return true
+					},
+					false,
+					invocation.LocationRange,
+				)
+				return entitlements
+			},
+			entitlementsCount,
+			sema.Conjunction,
+		)
+	}
+
+	if errInIteration {
+		return Nil
+	}
+
+	return NewSomeValueNonCopying(
+		invocation.Interpreter,
+		NewTypeValue(
+			invocation.Interpreter,
+			NewReferenceStaticType(
+				invocation.Interpreter,
+				authorization,
+				typeValue.Type,
+			),
+		),
+	)
+}
+
+func compositeTypeFunction(invocation Invocation) Value {
+	typeIDValue, ok := invocation.Arguments[0].(*StringValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+	typeID := typeIDValue.Str
+
+	composite, err := lookupComposite(invocation.Interpreter, typeID)
+	if err != nil {
+		return Nil
+	}
+
+	return NewSomeValueNonCopying(
+		invocation.Interpreter,
+		NewTypeValue(
+			invocation.Interpreter,
+			ConvertSemaToStaticType(invocation.Interpreter, composite),
+		),
+	)
+}
+
+func functionTypeFunction(invocation Invocation) Value {
+	interpreter := invocation.Interpreter
+
+	parameters, ok := invocation.Arguments[0].(*ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	typeValue, ok := invocation.Arguments[1].(TypeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	returnType := interpreter.MustConvertStaticToSemaType(typeValue.Type)
+
+	var parameterTypes []sema.Parameter
+	parameterCount := parameters.Count()
+	if parameterCount > 0 {
+		parameterTypes = make([]sema.Parameter, 0, parameterCount)
+		parameters.Iterate(
+			interpreter,
+			func(param Value) bool {
+				semaType := interpreter.MustConvertStaticToSemaType(param.(TypeValue).Type)
+				parameterTypes = append(
+					parameterTypes,
+					sema.Parameter{
+						TypeAnnotation: sema.NewTypeAnnotation(semaType),
+					},
+				)
+
+				// Continue iteration
+				return true
+			},
+			false,
+			invocation.LocationRange,
+		)
+	}
+	functionStaticType := NewFunctionStaticType(
+		interpreter,
+		sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			parameterTypes,
+			sema.NewTypeAnnotation(returnType),
+		),
+	)
+	return NewUnmeteredTypeValue(functionStaticType)
+}
+
+func intersectionTypeFunction(invocation Invocation) Value {
+	intersectionIDs, ok := invocation.Arguments[0].(*ArrayValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	var staticIntersections []*InterfaceStaticType
+	var semaIntersections []*sema.InterfaceType
+
+	count := intersectionIDs.Count()
+	if count > 0 {
+		staticIntersections = make([]*InterfaceStaticType, 0, count)
+		semaIntersections = make([]*sema.InterfaceType, 0, count)
+
+		var invalidIntersectionID bool
+		intersectionIDs.Iterate(
+			invocation.Interpreter,
+			func(typeID Value) bool {
+				typeIDValue, ok := typeID.(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				intersectedInterface, err := lookupInterface(invocation.Interpreter, typeIDValue.Str)
+				if err != nil {
+					invalidIntersectionID = true
+					return true
+				}
+
+				staticIntersections = append(
+					staticIntersections,
+					ConvertSemaToStaticType(invocation.Interpreter, intersectedInterface).(*InterfaceStaticType),
+				)
+				semaIntersections = append(semaIntersections, intersectedInterface)
+
+				// Continue iteration
+				return true
+			},
+			false,
+			invocation.LocationRange,
+		)
+
+		// If there are any invalid interfaces,
+		// then return nil
+		if invalidIntersectionID {
+			return Nil
+		}
+	}
+
+	var invalidIntersectionType bool
+	sema.CheckIntersectionType(
+		invocation.Interpreter,
+		semaIntersections,
+		func(_ func(*ast.IntersectionType) error) {
+			invalidIntersectionType = true
+		},
+	)
+
+	// If the intersection type would have failed to type-check statically,
+	// then return nil
+	if invalidIntersectionType {
+		return Nil
+	}
+
+	return NewSomeValueNonCopying(
+		invocation.Interpreter,
+		NewTypeValue(
+			invocation.Interpreter,
+			NewIntersectionStaticType(
+				invocation.Interpreter,
+				staticIntersections,
 			),
 		),
 	)
@@ -2923,8 +3737,8 @@ func defineBaseFunctions(activation *VariableActivation) {
 }
 
 type converterFunction struct {
-	name      string
 	converter *HostFunctionValue
+	name      string
 }
 
 // Converter functions are stateless functions. Hence they can be re-used across interpreters.
@@ -2935,16 +3749,16 @@ var converterFunctionValues = func() []converterFunction {
 	for index, declaration := range ConverterDeclarations {
 		// NOTE: declare in loop, as captured in closure below
 		convert := declaration.convert
-		converterFunctionValue := NewUnmeteredHostFunctionValue(
-			func(invocation Invocation) Value {
-				return convert(invocation.Interpreter, invocation.Arguments[0])
-			},
+		converterFunctionValue := NewUnmeteredStaticHostFunctionValue(
 			declaration.functionType,
+			func(invocation Invocation) Value {
+				return convert(invocation.Interpreter, invocation.Arguments[0], invocation.LocationRange)
+			},
 		)
 
 		addMember := func(name string, value Value) {
 			if converterFunctionValue.NestedVariables == nil {
-				converterFunctionValue.NestedVariables = map[string]*Variable{}
+				converterFunctionValue.NestedVariables = map[string]Variable{}
 			}
 			// these variables are not needed to be metered as they are only ever declared once,
 			// and can be considered base interpreter overhead
@@ -2963,6 +3777,16 @@ var converterFunctionValues = func() []converterFunction {
 
 		addMember(sema.FromStringFunctionName, fromStringVal.hostFunction)
 
+		fromBigEndianBytesVal := fromBigEndianBytesFunctionValues[declaration.name]
+
+		addMember(sema.FromBigEndianBytesFunctionName, fromBigEndianBytesVal.hostFunction)
+
+		if declaration.nestedVariables != nil {
+			for _, variable := range declaration.nestedVariables {
+				addMember(variable.Name, variable.Value)
+			}
+		}
+
 		converterFuncValues[index] = converterFunction{
 			name:      declaration.name,
 			converter: converterFunctionValue,
@@ -2979,15 +3803,17 @@ func defineConverterFunctions(activation *VariableActivation) {
 }
 
 type runtimeTypeConstructor struct {
-	name      string
 	converter *HostFunctionValue
+	name      string
 }
 
 // Constructor functions are stateless functions. Hence they can be re-used across interpreters.
+// They are also static functions.
 var runtimeTypeConstructors = []runtimeTypeConstructor{
 	{
-		name: "OptionalType",
-		converter: NewUnmeteredHostFunctionValue(
+		name: sema.OptionalTypeFunctionName,
+		converter: NewUnmeteredStaticHostFunctionValue(
+			sema.OptionalTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -3002,12 +3828,12 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					),
 				)
 			},
-			sema.OptionalTypeFunctionType,
 		),
 	},
 	{
-		name: "VariableSizedArrayType",
-		converter: NewUnmeteredHostFunctionValue(
+		name: sema.VariableSizedArrayTypeFunctionName,
+		converter: NewUnmeteredStaticHostFunctionValue(
+			sema.VariableSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -3023,12 +3849,12 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					),
 				)
 			},
-			sema.VariableSizedArrayTypeFunctionType,
 		),
 	},
 	{
-		name: "ConstantSizedArrayType",
-		converter: NewUnmeteredHostFunctionValue(
+		name: sema.ConstantSizedArrayTypeFunctionName,
+		converter: NewUnmeteredStaticHostFunctionValue(
+			sema.ConstantSizedArrayTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -3045,43 +3871,16 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					NewConstantSizedStaticType(
 						invocation.Interpreter,
 						typeValue.Type,
-						int64(sizeValue.ToInt()),
+						int64(sizeValue.ToInt(invocation.LocationRange)),
 					),
 				)
 			},
-			sema.ConstantSizedArrayTypeFunctionType,
 		),
 	},
 	{
-		name: "ReferenceType",
-		converter: NewUnmeteredHostFunctionValue(
-			func(invocation Invocation) Value {
-				authorizedValue, ok := invocation.Arguments[0].(BoolValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				typeValue, ok := invocation.Arguments[1].(TypeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				return NewTypeValue(
-					invocation.Interpreter,
-					NewReferenceStaticType(
-						invocation.Interpreter,
-						bool(authorizedValue),
-						typeValue.Type,
-						nil,
-					),
-				)
-			},
-			sema.ReferenceTypeFunctionType,
-		),
-	},
-	{
-		name: "CapabilityType",
-		converter: NewUnmeteredHostFunctionValue(
+		name: sema.CapabilityTypeFunctionName,
+		converter: NewUnmeteredStaticHostFunctionValue(
+			sema.CapabilityTypeFunctionType,
 			func(invocation Invocation) Value {
 				typeValue, ok := invocation.Arguments[0].(TypeValue)
 				if !ok {
@@ -3090,7 +3889,7 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 
 				ty := typeValue.Type
 				// Capabilities must hold references
-				_, ok = ty.(ReferenceStaticType)
+				_, ok = ty.(*ReferenceStaticType)
 				if !ok {
 					return Nil
 				}
@@ -3106,7 +3905,38 @@ var runtimeTypeConstructors = []runtimeTypeConstructor{
 					),
 				)
 			},
-			sema.CapabilityTypeFunctionType,
+		),
+	},
+	{
+		name: sema.InclusiveRangeTypeFunctionName,
+		converter: NewUnmeteredStaticHostFunctionValue(
+			sema.InclusiveRangeTypeFunctionType,
+			func(invocation Invocation) Value {
+				typeValue, ok := invocation.Arguments[0].(TypeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				inter := invocation.Interpreter
+
+				ty := typeValue.Type
+				// InclusiveRanges must hold integers
+				elemSemaTy := inter.MustConvertStaticToSemaType(ty)
+				if !sema.IsSameTypeKind(elemSemaTy, sema.IntegerType) {
+					return Nil
+				}
+
+				return NewSomeValueNonCopying(
+					inter,
+					NewTypeValue(
+						inter,
+						NewInclusiveRangeStaticType(
+							inter,
+							ty,
+						),
+					),
+				)
+			},
 		),
 	},
 }
@@ -3118,7 +3948,9 @@ func defineRuntimeTypeConstructorFunctions(activation *VariableActivation) {
 }
 
 // typeFunction is the `Type` function. It is stateless, hence it can be re-used across interpreters.
-var typeFunction = NewUnmeteredHostFunctionValue(
+// It's also a static function.
+var typeFunction = NewUnmeteredStaticHostFunctionValue(
+	sema.MetaTypeFunctionType,
 	func(invocation Invocation) Value {
 		typeParameterPair := invocation.TypeParameterTypes.Oldest()
 		if typeParameterPair == nil {
@@ -3129,9 +3961,6 @@ var typeFunction = NewUnmeteredHostFunctionValue(
 
 		staticType := ConvertSemaToStaticType(invocation.Interpreter, ty)
 		return NewTypeValue(invocation.Interpreter, staticType)
-	},
-	&sema.FunctionType{
-		ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
 	},
 )
 
@@ -3168,113 +3997,119 @@ func (interpreter *Interpreter) IsSubType(subType StaticType, superType StaticTy
 	return interpreter.IsSubTypeOfSemaType(subType, semaType)
 }
 
-func (interpreter *Interpreter) IsSubTypeOfSemaType(subType StaticType, superType sema.Type) bool {
+func (interpreter *Interpreter) IsSubTypeOfSemaType(staticSubType StaticType, superType sema.Type) bool {
 	if superType == sema.AnyType {
 		return true
 	}
 
-	switch subType := subType.(type) {
-	case OptionalStaticType:
+	// Optimization: Implement subtyping for common cases directly,
+	// without converting the subtype to a sema type.
+
+	switch staticSubType := staticSubType.(type) {
+	case *OptionalStaticType:
 		if superType, ok := superType.(*sema.OptionalType); ok {
-			return interpreter.IsSubTypeOfSemaType(subType.Type, superType.Type)
+			return interpreter.IsSubTypeOfSemaType(staticSubType.Type, superType.Type)
 		}
 
 		switch superType {
 		case sema.AnyStructType, sema.AnyResourceType:
-			return interpreter.IsSubTypeOfSemaType(subType.Type, superType)
-		}
-
-	case ReferenceStaticType:
-		if superType, ok := superType.(*sema.ReferenceType); ok {
-
-			// First, check that the static type of the referenced value
-			// is a subtype of the super type
-
-			if subType.ReferencedType == nil ||
-				!interpreter.IsSubTypeOfSemaType(subType.ReferencedType, superType.Type) {
-
-				return false
-			}
-
-			// If the reference value is authorized it may be downcasted
-
-			authorized := subType.Authorized
-
-			if authorized {
-				return true
-			}
-
-			// If the reference value is not authorized,
-			// it may not be down-casted
-
-			borrowType := interpreter.MustConvertStaticToSemaType(subType.BorrowedType)
-
-			return sema.IsSubType(
-				&sema.ReferenceType{
-					Authorized: authorized,
-					Type:       borrowType,
-				},
-				superType,
-			)
+			return interpreter.IsSubTypeOfSemaType(staticSubType.Type, superType)
 		}
 
 		return superType == sema.AnyStructType
 	}
 
-	semaType := interpreter.MustConvertStaticToSemaType(subType)
+	semaSubType := interpreter.MustConvertStaticToSemaType(staticSubType)
 
-	return sema.IsSubType(semaType, superType)
+	return sema.IsSubType(semaSubType, superType)
 }
 
 func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
-	storageMap := interpreter.Config.Storage.GetStorageMap(address, domain.Identifier(), false)
+	storageMap := interpreter.Storage().GetStorageMap(address, domain.Identifier(), false)
 	if storageMap == nil {
 		return []Value{}
 	}
 	iterator := storageMap.Iterator(interpreter)
-	values := make([]Value, 0, storageMap.Count())
-	for key := iterator.NextKey(); key != ""; key = iterator.NextKey() {
-		values = append(values, NewPathValue(interpreter, domain, key))
+	var paths []Value
+
+	count := storageMap.Count()
+	if count > 0 {
+		paths = make([]Value, 0, count)
+		for key := iterator.NextKey(); key != nil; key = iterator.NextKey() {
+			// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
+			identifier := string(key.(StringAtreeValue))
+			path := NewPathValue(interpreter, domain, identifier)
+			paths = append(paths, path)
+		}
 	}
-	return values
+	return paths
 }
 
-func (interpreter *Interpreter) accountPaths(addressValue AddressValue, locationRange LocationRange, domain common.PathDomain, pathType StaticType) *ArrayValue {
+func (interpreter *Interpreter) accountPaths(
+	addressValue AddressValue,
+	locationRange LocationRange,
+	domain common.PathDomain,
+	pathType StaticType,
+) *ArrayValue {
 	address := addressValue.ToAddress()
 	values := interpreter.domainPaths(address, domain)
 	return NewArrayValue(
 		interpreter,
 		locationRange,
 		NewVariableSizedStaticType(interpreter, pathType),
-		common.Address{},
+		common.ZeroAddress,
 		values...,
 	)
 }
 
-func (interpreter *Interpreter) publicAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {
-	return interpreter.accountPaths(addressValue, locationRange, common.PathDomainPublic, PrimitiveStaticTypePublicPath)
+func (interpreter *Interpreter) publicAccountPaths(
+	addressValue AddressValue,
+	locationRange LocationRange,
+) *ArrayValue {
+	return interpreter.accountPaths(
+		addressValue,
+		locationRange,
+		common.PathDomainPublic,
+		PrimitiveStaticTypePublicPath,
+	)
 }
 
-func (interpreter *Interpreter) privateAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {
-	return interpreter.accountPaths(addressValue, locationRange, common.PathDomainPrivate, PrimitiveStaticTypePrivatePath)
-}
-
-func (interpreter *Interpreter) storageAccountPaths(addressValue AddressValue, locationRange LocationRange) *ArrayValue {
-	return interpreter.accountPaths(addressValue, locationRange, common.PathDomainStorage, PrimitiveStaticTypeStoragePath)
+func (interpreter *Interpreter) storageAccountPaths(
+	addressValue AddressValue,
+	locationRange LocationRange,
+) *ArrayValue {
+	return interpreter.accountPaths(
+		addressValue,
+		locationRange,
+		common.PathDomainStorage,
+		PrimitiveStaticTypeStoragePath,
+	)
 }
 
 func (interpreter *Interpreter) recordStorageMutation() {
-	if interpreter.sharedState.inStorageIteration {
-		interpreter.sharedState.storageMutatedDuringIteration = true
+	if interpreter.SharedState.inStorageIteration {
+		interpreter.SharedState.storageMutatedDuringIteration = true
 	}
 }
 
-func (interpreter *Interpreter) newStorageIterationFunction(addressValue AddressValue, domain common.PathDomain, pathType sema.Type) *HostFunctionValue {
-	address := addressValue.ToAddress()
+func (interpreter *Interpreter) newStorageIterationFunction(
+	storageValue *SimpleCompositeValue,
+	functionType *sema.FunctionType,
+	addressValue AddressValue,
+	domain common.PathDomain,
+	pathType sema.Type,
+) BoundFunctionValue {
 
-	return NewHostFunctionValue(
+	address := addressValue.ToAddress()
+	config := interpreter.SharedState.Config
+
+	return NewBoundHostFunctionValue(
 		interpreter,
+		storageValue,
+		functionType,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
 			fn, ok := invocation.Arguments[0].(FunctionValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3282,30 +4117,49 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 
 			locationRange := invocation.LocationRange
 			inter := invocation.Interpreter
-			storageMap := interpreter.Config.Storage.GetStorageMap(address, domain.Identifier(), false)
+			storageMap := config.Storage.GetStorageMap(address, domain.Identifier(), false)
 			if storageMap == nil {
 				// if nothing is stored, no iteration is required
 				return Void
 			}
 			storageIterator := storageMap.Iterator(interpreter)
 
-			invocationTypeParams := []sema.Type{pathType, sema.MetaType}
+			invocationArgumentTypes := []sema.Type{pathType, sema.MetaType}
 
-			inIteration := inter.sharedState.inStorageIteration
-			inter.sharedState.inStorageIteration = true
+			inIteration := inter.SharedState.inStorageIteration
+			inter.SharedState.inStorageIteration = true
 			defer func() {
-				inter.sharedState.inStorageIteration = inIteration
+				inter.SharedState.inStorageIteration = inIteration
 			}()
 
-			for key, value := storageIterator.Next(); key != "" && value != nil; key, value = storageIterator.Next() {
-				pathValue := NewPathValue(inter, domain, key)
-				runtimeType := NewTypeValue(inter, value.StaticType(inter))
+			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
+
+				staticType := value.StaticType(interpreter)
+
+				// Perform a forced value de-referencing to see if the associated type is not broken.
+				// If broken, skip this value from the iteration.
+				valueError := inter.checkValue(
+					value,
+					staticType,
+					invocation.LocationRange,
+				)
+
+				if valueError != nil {
+					continue
+				}
+
+				// TODO: unfortunately, the iterator only returns an atree.Value, not a StorageMapKey
+				identifier := string(key.(StringAtreeValue))
+				pathValue := NewPathValue(inter, domain, identifier)
+				runtimeType := NewTypeValue(inter, staticType)
 
 				subInvocation := NewInvocation(
 					inter,
 					nil,
+					nil,
+					nil,
 					[]Value{pathValue, runtimeType},
-					invocationTypeParams,
+					invocationArgumentTypes,
 					nil,
 					locationRange,
 				)
@@ -3319,12 +4173,15 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 					break
 				}
 
-				// it is not safe to check this at the beginning of the loop (i.e. on the next invocation of the callback)
-				// because if the mutation performed in the callback reorganized storage such that the iteration pointer is now
-				// at the end, we will not invoke the callback again but will still silently skip elements of storage. In order
-				// to be safe, we perform this check here to effectively enforce that users return `false` from their callback
-				// in all cases where storage is mutated
-				if inter.sharedState.storageMutatedDuringIteration {
+				// It is not safe to check this at the beginning of the loop
+				// (i.e. on the next invocation of the callback),
+				// because if the mutation performed in the callback reorganized storage
+				// such that the iteration pointer is now at the end,
+				// we will not invoke the callback again but will still silently skip elements of storage.
+				//
+				// In order to be safe, we perform this check here to effectively enforce
+				// that users return `false` from their callback in all cases where storage is mutated.
+				if inter.SharedState.storageMutatedDuringIteration {
 					panic(StorageMutatedDuringIterationError{
 						LocationRange: locationRange,
 					})
@@ -3334,18 +4191,88 @@ func (interpreter *Interpreter) newStorageIterationFunction(addressValue Address
 
 			return Void
 		},
-		sema.AccountForEachFunctionType(pathType),
 	)
 }
 
-func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) *HostFunctionValue {
+func (interpreter *Interpreter) checkValue(
+	value Value,
+	staticType StaticType,
+	locationRange LocationRange,
+) (valueError error) {
+
+	defer func() {
+		if r := recover(); r != nil {
+			rootError := r
+			for {
+				switch err := r.(type) {
+				case errors.UserError, errors.ExternalError:
+					valueError = err.(error)
+					return
+				case xerrors.Wrapper:
+					r = err.Unwrap()
+				default:
+					panic(rootError)
+				}
+			}
+		}
+	}()
+
+	// Here, the value at the path could be either:
+	//	1) The actual stored value (storage path)
+	//	2) A capability to the value at the storage (private/public paths)
+
+	if capability, ok := value.(*IDCapabilityValue); ok {
+		// If, the value is a capability, try to load the value at the capability target.
+		// However, borrow type is not statically known.
+		// So take the borrow type from the value itself
+
+		// Capability values always have a `CapabilityStaticType` static type.
+		borrowType := staticType.(*CapabilityStaticType).BorrowType
+
+		var borrowSemaType sema.Type
+		borrowSemaType, valueError = interpreter.ConvertStaticToSemaType(borrowType)
+		if valueError != nil {
+			return valueError
+		}
+
+		referenceType, ok := borrowSemaType.(*sema.ReferenceType)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+
+		_ = interpreter.SharedState.Config.CapabilityCheckHandler(
+			interpreter,
+			locationRange,
+			capability.Address,
+			capability.ID,
+			referenceType,
+			referenceType,
+		)
+
+	} else {
+		// For all other values, trying to load the type is sufficient.
+		// Here it is only interested in whether the type can be properly loaded.
+		_, valueError = interpreter.ConvertStaticToSemaType(staticType)
+	}
+
+	return
+}
+
+func (interpreter *Interpreter) authAccountSaveFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+) BoundFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		storageValue,
+		sema.Account_StorageTypeSaveFunctionType,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
 			value := invocation.Arguments[0]
 
 			path, ok := invocation.Arguments[1].(PathValue)
@@ -3360,11 +4287,9 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 			locationRange := invocation.LocationRange
 
-			if interpreter.storedValueExists(
-				address,
-				domain,
-				identifier,
-			) {
+			storageMapKey := StringStorageMapKey(identifier)
+
+			if interpreter.StoredValueExists(address, domain, storageMapKey) {
 				panic(
 					OverwriteError{
 						Address:       addressValue,
@@ -3380,26 +4305,38 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 				atree.Address(address),
 				true,
 				nil,
+				nil,
 			)
 
 			// Write new value
 
-			interpreter.WriteStored(address, domain, identifier, value)
+			interpreter.WriteStored(
+				address,
+				domain,
+				storageMapKey,
+				value,
+			)
 
 			return Void
 		},
-		sema.AuthAccountTypeSaveFunctionType,
 	)
 }
 
-func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValue) *HostFunctionValue {
+func (interpreter *Interpreter) authAccountTypeFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+) BoundFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		storageValue,
+		sema.Account_StorageTypeTypeFunctionType,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
 			path, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3408,41 +4345,56 @@ func (interpreter *Interpreter) authAccountTypeFunction(addressValue AddressValu
 			domain := path.Domain.Identifier()
 			identifier := path.Identifier
 
-			value := interpreter.ReadStored(address, domain, identifier)
+			storageMapKey := StringStorageMapKey(identifier)
+
+			value := interpreter.ReadStored(address, domain, storageMapKey)
 
 			if value == nil {
 				return Nil
 			}
 
 			return NewSomeValueNonCopying(
-				invocation.Interpreter,
+				interpreter,
 				NewTypeValue(
-					invocation.Interpreter,
-					value.StaticType(invocation.Interpreter),
+					interpreter,
+					value.StaticType(interpreter),
 				),
 			)
 		},
-
-		sema.AuthAccountTypeTypeFunctionType,
 	)
 }
 
-func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValue) *HostFunctionValue {
-	return interpreter.authAccountReadFunction(addressValue, true)
+func (interpreter *Interpreter) authAccountLoadFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+) BoundFunctionValue {
+	return interpreter.authAccountReadFunction(storageValue, addressValue, true)
 }
 
-func (interpreter *Interpreter) authAccountCopyFunction(addressValue AddressValue) *HostFunctionValue {
-	return interpreter.authAccountReadFunction(addressValue, false)
+func (interpreter *Interpreter) authAccountCopyFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+) BoundFunctionValue {
+	return interpreter.authAccountReadFunction(storageValue, addressValue, false)
 }
 
-func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValue, clear bool) *HostFunctionValue {
+func (interpreter *Interpreter) authAccountReadFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+	clear bool,
+) BoundFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		storageValue,
+		// same as sema.Account_StorageTypeCopyFunctionType
+		sema.Account_StorageTypeLoadFunctionType,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
 			path, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3451,7 +4403,9 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			domain := path.Domain.Identifier()
 			identifier := path.Identifier
 
-			value := interpreter.ReadStored(address, domain, identifier)
+			storageMapKey := StringStorageMapKey(identifier)
+
+			value := interpreter.ReadStored(address, domain, storageMapKey)
 
 			if value == nil {
 				return Nil
@@ -3467,7 +4421,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 			ty := typeParameterPair.Value
 
-			valueStaticType := value.StaticType(invocation.Interpreter)
+			valueStaticType := value.StaticType(interpreter)
 
 			if !interpreter.IsSubTypeOfSemaType(valueStaticType, ty) {
 				valueSemaType := interpreter.MustConvertStaticToSemaType(valueStaticType)
@@ -3479,42 +4433,51 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 				})
 			}
 
-			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
 
 			// We could also pass remove=true and the storable stored in storage,
 			// but passing remove=false here and writing nil below has the same effect
 			// TODO: potentially refactor and get storable in storage, pass it and remove=true
 			transferredValue := value.Transfer(
-				inter,
+				interpreter,
 				locationRange,
 				atree.Address{},
 				false,
+				nil,
 				nil,
 			)
 
 			// Remove the value from storage,
 			// but only if the type check succeeded.
 			if clear {
-				interpreter.WriteStored(address, domain, identifier, nil)
+				interpreter.WriteStored(
+					address,
+					domain,
+					storageMapKey,
+					nil,
+				)
 			}
 
 			return NewSomeValueNonCopying(invocation.Interpreter, transferredValue)
 		},
-
-		// same as sema.AuthAccountTypeCopyFunctionType
-		sema.AuthAccountTypeLoadFunctionType,
 	)
 }
 
-func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressValue) *HostFunctionValue {
+func (interpreter *Interpreter) authAccountBorrowFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+) BoundFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		storageValue,
+		sema.Account_StorageTypeBorrowFunctionType,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
 			path, ok := invocation.Arguments[0].(PathValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -3533,8 +4496,8 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			}
 
 			reference := NewStorageReferenceValue(
-				invocation.Interpreter,
-				referenceType.Authorized,
+				interpreter,
+				ConvertSemaAccessToStaticAuthorization(interpreter, referenceType.Authorization),
 				address,
 				path,
 				referenceType.Type,
@@ -3552,347 +4515,138 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 				return Nil
 			}
 
-			return NewSomeValueNonCopying(invocation.Interpreter, reference)
+			return NewSomeValueNonCopying(interpreter, reference)
 		},
-		sema.AuthAccountTypeBorrowFunctionType,
 	)
 }
 
-func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValue) *HostFunctionValue {
+func (interpreter *Interpreter) authAccountCheckFunction(
+	storageValue *SimpleCompositeValue,
+	addressValue AddressValue,
+) BoundFunctionValue {
 
 	// Converted addresses can be cached and don't have to be recomputed on each function invocation
 	address := addressValue.ToAddress()
 
-	return NewHostFunctionValue(
+	return NewBoundHostFunctionValue(
 		interpreter,
+		storageValue,
+		sema.Account_StorageTypeCheckFunctionType,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
+			path, ok := invocation.Arguments[0].(PathValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			domain := path.Domain.Identifier()
+			identifier := path.Identifier
+
+			storageMapKey := StringStorageMapKey(identifier)
+
+			value := interpreter.ReadStored(address, domain, storageMapKey)
+
+			if value == nil {
+				return FalseValue
+			}
+
+			// If there is value stored for the given path,
+			// check that it satisfies the type given as the type argument.
 
 			typeParameterPair := invocation.TypeParameterTypes.Oldest()
 			if typeParameterPair == nil {
 				panic(errors.NewUnreachableError())
 			}
 
-			borrowType, ok := typeParameterPair.Value.(*sema.ReferenceType)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+			ty := typeParameterPair.Value
 
-			newCapabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
+			valueStaticType := value.StaticType(interpreter)
 
-			targetPath, ok := invocation.Arguments[1].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			newCapabilityDomain := newCapabilityPath.Domain.Identifier()
-			newCapabilityIdentifier := newCapabilityPath.Identifier
-
-			if interpreter.storedValueExists(
-				address,
-				newCapabilityDomain,
-				newCapabilityIdentifier,
-			) {
-				return Nil
-			}
-
-			// Write new value
-
-			borrowStaticType := ConvertSemaToStaticType(invocation.Interpreter, borrowType)
-
-			// Note that this will be metered twice if Atree validation is enabled.
-			linkValue := NewLinkValue(interpreter, targetPath, borrowStaticType)
-
-			interpreter.WriteStored(
-				address,
-				newCapabilityDomain,
-				newCapabilityIdentifier,
-				linkValue,
-			)
-
-			return NewSomeValueNonCopying(
-				invocation.Interpreter,
-				NewCapabilityValue(
-					invocation.Interpreter,
-					addressValue,
-					newCapabilityPath,
-					borrowStaticType,
-				),
-			)
-
+			return AsBoolValue(interpreter.IsSubTypeOfSemaType(valueStaticType, ty))
 		},
-		sema.AuthAccountTypeLinkFunctionType,
 	)
 }
 
-func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue AddressValue) *HostFunctionValue {
+func (interpreter *Interpreter) GetEntitlementType(typeID common.TypeID) (*sema.EntitlementType, error) {
+	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(typeID))
+	if err != nil {
+		return nil, err
+	}
 
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		func(invocation Invocation) Value {
-
-			capabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
+	if location == nil {
+		ty := sema.BuiltinEntitlements[qualifiedIdentifier]
+		if ty == nil {
+			return nil, TypeLoadingError{
+				TypeID: typeID,
 			}
-
-			domain := capabilityPath.Domain.Identifier()
-			identifier := capabilityPath.Identifier
-
-			value := interpreter.ReadStored(address, domain, identifier)
-
-			if value == nil {
-				return Nil
-			}
-
-			link, ok := value.(LinkValue)
-			if !ok {
-				return Nil
-			}
-
-			return NewSomeValueNonCopying(invocation.Interpreter, link.TargetPath)
-		},
-		sema.AccountTypeGetLinkTargetFunctionType,
-	)
-}
-
-func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressValue) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		func(invocation Invocation) Value {
-
-			capabilityPath, ok := invocation.Arguments[0].(PathValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			domain := capabilityPath.Domain.Identifier()
-			identifier := capabilityPath.Identifier
-
-			// Write new value
-
-			interpreter.WriteStored(address, domain, identifier, nil)
-
-			return Void
-		},
-		sema.AuthAccountTypeUnlinkFunctionType,
-	)
-}
-
-func (interpreter *Interpreter) capabilityBorrowFunction(
-	addressValue AddressValue,
-	pathValue PathValue,
-	borrowType *sema.ReferenceType,
-) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		func(invocation Invocation) Value {
-
-			// NOTE: if a type argument is provided for the function,
-			// use it *instead* of the type of the value (if any)
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				var ok bool
-				borrowType, ok = ty.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-			}
-
-			if borrowType == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			targetPath, authorized, err :=
-				interpreter.GetCapabilityFinalTargetPath(
-					address,
-					pathValue,
-					borrowType,
-					invocation.LocationRange,
-				)
-			if err != nil {
-				panic(err)
-			}
-
-			if targetPath == EmptyPathValue {
-				return Nil
-			}
-
-			reference := NewStorageReferenceValue(
-				invocation.Interpreter,
-				authorized,
-				address,
-				targetPath,
-				borrowType.Type,
-			)
-
-			// Attempt to dereference,
-			// which reads the stored value
-			// and performs a dynamic type check
-
-			value, err := reference.dereference(interpreter, invocation.LocationRange)
-			if err != nil {
-				panic(err)
-			}
-			if value == nil {
-				return Nil
-			}
-
-			return NewSomeValueNonCopying(invocation.Interpreter, reference)
-		},
-		sema.CapabilityTypeBorrowFunctionType(borrowType),
-	)
-}
-
-func (interpreter *Interpreter) capabilityCheckFunction(
-	addressValue AddressValue,
-	pathValue PathValue,
-	borrowType *sema.ReferenceType,
-) *HostFunctionValue {
-
-	// Converted addresses can be cached and don't have to be recomputed on each function invocation
-	address := addressValue.ToAddress()
-
-	return NewHostFunctionValue(
-		interpreter,
-		func(invocation Invocation) Value {
-
-			// NOTE: if a type argument is provided for the function,
-			// use it *instead* of the type of the value (if any)
-
-			typeParameterPair := invocation.TypeParameterTypes.Oldest()
-			if typeParameterPair != nil {
-				ty := typeParameterPair.Value
-				var ok bool
-				borrowType, ok = ty.(*sema.ReferenceType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-			}
-
-			if borrowType == nil {
-				panic(errors.NewUnreachableError())
-			}
-
-			targetPath, authorized, err :=
-				interpreter.GetCapabilityFinalTargetPath(
-					address,
-					pathValue,
-					borrowType,
-					invocation.LocationRange,
-				)
-			if err != nil {
-				panic(err)
-			}
-
-			if targetPath == EmptyPathValue {
-				return FalseValue
-			}
-
-			reference := NewStorageReferenceValue(
-				invocation.Interpreter,
-				authorized,
-				address,
-				targetPath,
-				borrowType.Type,
-			)
-
-			// Attempt to dereference,
-			// which reads the stored value
-			// and performs a dynamic type check
-
-			if reference.ReferencedValue(interpreter) == nil {
-				return FalseValue
-			}
-
-			return TrueValue
-		},
-		sema.CapabilityTypeCheckFunctionType(borrowType),
-	)
-}
-
-func (interpreter *Interpreter) GetCapabilityFinalTargetPath(
-	address common.Address,
-	path PathValue,
-	wantedBorrowType *sema.ReferenceType,
-	locationRange LocationRange,
-) (
-	finalPath PathValue,
-	authorized bool,
-	err error,
-) {
-	wantedReferenceType := wantedBorrowType
-
-	seenPaths := map[PathValue]struct{}{}
-	paths := []PathValue{path}
-
-	for {
-		// Detect cyclic links
-
-		if _, ok := seenPaths[path]; ok {
-			return EmptyPathValue, false, CyclicLinkError{
-				Address:       address,
-				Paths:         paths,
-				LocationRange: locationRange,
-			}
-		} else {
-			seenPaths[path] = struct{}{}
 		}
 
-		value := interpreter.ReadStored(
-			address,
-			path.Domain.Identifier(),
-			path.Identifier,
-		)
+		return ty, nil
+	}
 
-		if value == nil {
-			return EmptyPathValue, false, nil
-		}
-
-		if link, ok := value.(LinkValue); ok {
-
-			allowedType := interpreter.MustConvertStaticToSemaType(link.Type)
-
-			if !sema.IsSubType(allowedType, wantedBorrowType) {
-				return EmptyPathValue, false, nil
-			}
-
-			targetPath := link.TargetPath
-			paths = append(paths, targetPath)
-			path = targetPath
-
-		} else {
-			return path, wantedReferenceType.Authorized, nil
+	elaboration := interpreter.getElaboration(location)
+	if elaboration == nil {
+		return nil, TypeLoadingError{
+			TypeID: typeID,
 		}
 	}
+
+	ty := elaboration.EntitlementType(typeID)
+	if ty == nil {
+		return nil, TypeLoadingError{
+			TypeID: typeID,
+		}
+	}
+
+	return ty, nil
+}
+
+func (interpreter *Interpreter) GetEntitlementMapType(typeID common.TypeID) (*sema.EntitlementMapType, error) {
+	location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(typeID))
+	if err != nil {
+		return nil, err
+	}
+
+	if location == nil {
+		ty := sema.BuiltinEntitlementMappings[qualifiedIdentifier]
+		if ty == nil {
+			return nil, TypeLoadingError{
+				TypeID: typeID,
+			}
+		}
+
+		return ty, nil
+	}
+
+	elaboration := interpreter.getElaboration(location)
+	if elaboration == nil {
+		return nil, TypeLoadingError{
+			TypeID: typeID,
+		}
+	}
+
+	ty := elaboration.EntitlementMapType(typeID)
+	if ty == nil {
+		return nil, TypeLoadingError{
+			TypeID: typeID,
+		}
+	}
+
+	return ty, nil
 }
 
 func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) (sema.Type, error) {
+	config := interpreter.SharedState.Config
 	return ConvertStaticToSemaType(
-		interpreter.Config.MemoryGauge,
+		config.MemoryGauge,
 		staticType,
-		func(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
-			return interpreter.getInterfaceType(location, qualifiedIdentifier)
-		},
-		func(location common.Location, qualifiedIdentifier string, typeID common.TypeID) (*sema.CompositeType, error) {
-			return interpreter.GetCompositeType(location, qualifiedIdentifier, typeID)
-		},
+		interpreter,
 	)
+}
+
+func (interpreter *Interpreter) MustSemaTypeOfValue(value Value) sema.Type {
+	return interpreter.MustConvertStaticToSemaType(value.StaticType(interpreter))
 }
 
 func (interpreter *Interpreter) MustConvertStaticToSemaType(staticType StaticType) sema.Type {
@@ -3903,6 +4657,18 @@ func (interpreter *Interpreter) MustConvertStaticToSemaType(staticType StaticTyp
 	return semaType
 }
 
+func (interpreter *Interpreter) MustConvertStaticAuthorizationToSemaAccess(auth Authorization) sema.Access {
+	access, err := ConvertStaticAuthorizationToSemaAccess(
+		interpreter,
+		auth,
+		interpreter,
+	)
+	if err != nil {
+		panic(err)
+	}
+	return access
+}
+
 func (interpreter *Interpreter) getElaboration(location common.Location) *sema.Elaboration {
 
 	// Ensure the program for this location is loaded,
@@ -3910,12 +4676,41 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 	inter := interpreter.EnsureLoaded(location)
 
-	subInterpreter := inter.sharedState.allInterpreters[location]
+	subInterpreter := inter.SharedState.allInterpreters[location]
 	if subInterpreter == nil || subInterpreter.Program == nil {
 		return nil
 	}
 
 	return subInterpreter.Program.Elaboration
+}
+
+func (interpreter *Interpreter) AllElaborations() (elaborations map[common.Location]*sema.Elaboration) {
+
+	elaborations = map[common.Location]*sema.Elaboration{}
+
+	allInterpreters := interpreter.SharedState.allInterpreters
+
+	locations := make([]common.Location, 0, len(allInterpreters))
+
+	for location := range allInterpreters { //nolint:maprange
+		locations = append(locations, location)
+	}
+
+	sort.Slice(locations, func(i, j int) bool {
+		a := locations[i]
+		b := locations[j]
+		return a.ID() < b.ID()
+	})
+
+	for _, location := range locations {
+		elaboration := interpreter.getElaboration(location)
+		if elaboration == nil {
+			panic(errors.NewUnexpectedError("missing elaboration for location %s", location))
+		}
+		elaborations[location] = elaboration
+	}
+
+	return
 }
 
 // GetContractComposite gets the composite value of the contract at the address location.
@@ -3929,7 +4724,7 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 	}
 
 	// get contract value
-	contractValue, ok := contractGlobal.GetValue().(*CompositeValue)
+	contractValue, ok := contractGlobal.GetValue(interpreter).(*CompositeValue)
 	if !ok {
 		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindContract,
@@ -3940,19 +4735,147 @@ func (interpreter *Interpreter) GetContractComposite(contractLocation common.Add
 	return contractValue, nil
 }
 
+func GetNativeCompositeValueComputedFields(qualifiedIdentifier string) map[string]ComputedField {
+	switch qualifiedIdentifier {
+	case sema.PublicKeyType.Identifier:
+		return map[string]ComputedField{
+			sema.PublicKeyTypePublicKeyFieldName: func(
+				interpreter *Interpreter,
+				locationRange LocationRange,
+				v *CompositeValue,
+			) Value {
+				publicKeyValue := v.GetField(interpreter, locationRange, sema.PublicKeyTypePublicKeyFieldName)
+				return publicKeyValue.Transfer(
+					interpreter,
+					locationRange,
+					atree.Address{},
+					false,
+					nil,
+					nil,
+				)
+			},
+		}
+	}
+
+	return nil
+}
+
+func (interpreter *Interpreter) GetCompositeValueComputedFields(v *CompositeValue) map[string]ComputedField {
+
+	var computedFields map[string]ComputedField
+	if v.Location == nil {
+		computedFields = GetNativeCompositeValueComputedFields(v.QualifiedIdentifier)
+		if computedFields != nil {
+			return computedFields
+		}
+	}
+
+	// TODO: add handler to config
+
+	return nil
+}
+
+func (interpreter *Interpreter) GetCompositeValueInjectedFields(v *CompositeValue) map[string]Value {
+	config := interpreter.SharedState.Config
+	injectedCompositeFieldsHandler := config.InjectedCompositeFieldsHandler
+	if injectedCompositeFieldsHandler == nil {
+		return nil
+	}
+
+	return injectedCompositeFieldsHandler(
+		interpreter,
+		v.Location,
+		v.QualifiedIdentifier,
+		v.Kind,
+	)
+}
+
+func (interpreter *Interpreter) GetCompositeValueFunctions(
+	v *CompositeValue,
+	locationRange LocationRange,
+) *FunctionOrderedMap {
+
+	var functions *FunctionOrderedMap
+
+	typeID := v.TypeID()
+
+	sharedState := interpreter.SharedState
+
+	compositeValueFunctionsHandler := sharedState.Config.CompositeValueFunctionsHandler
+	if compositeValueFunctionsHandler != nil {
+		functions = compositeValueFunctionsHandler(interpreter, locationRange, v)
+		if functions != nil {
+			return functions
+		}
+	}
+
+	compositeCodes := sharedState.typeCodes.CompositeCodes
+	return compositeCodes[typeID].CompositeFunctions
+}
+
 func (interpreter *Interpreter) GetCompositeType(
 	location common.Location,
 	qualifiedIdentifier string,
-	typeID common.TypeID,
+	typeID TypeID,
 ) (*sema.CompositeType, error) {
+	var compositeType *sema.CompositeType
 	if location == nil {
-		return interpreter.getNativeCompositeType(qualifiedIdentifier)
+		compositeType = sema.NativeCompositeTypes[qualifiedIdentifier]
+		if compositeType != nil {
+			return compositeType, nil
+		}
 	}
 
-	return interpreter.getUserCompositeType(location, typeID)
+	config := interpreter.SharedState.Config
+	compositeTypeHandler := config.CompositeTypeHandler
+	if compositeTypeHandler != nil {
+		compositeType = compositeTypeHandler(location, typeID)
+		if compositeType != nil {
+			return compositeType, nil
+		}
+	}
+
+	if location != nil {
+		compositeType = interpreter.getUserCompositeType(location, typeID)
+		if compositeType != nil {
+			return compositeType, nil
+		}
+	}
+
+	return nil, TypeLoadingError{
+		TypeID: typeID,
+	}
 }
 
-func (interpreter *Interpreter) getUserCompositeType(location common.Location, typeID common.TypeID) (*sema.CompositeType, error) {
+func (interpreter *Interpreter) getUserCompositeType(location common.Location, typeID TypeID) *sema.CompositeType {
+	elaboration := interpreter.getElaboration(location)
+	if elaboration == nil {
+		return nil
+	}
+
+	return elaboration.CompositeType(typeID)
+}
+
+func (interpreter *Interpreter) GetInterfaceType(
+	location common.Location,
+	qualifiedIdentifier string,
+	typeID TypeID,
+) (*sema.InterfaceType, error) {
+	if location == nil {
+		return nil, InterfaceMissingLocationError{
+			QualifiedIdentifier: qualifiedIdentifier,
+		}
+	}
+
+	config := interpreter.SharedState.Config
+	interfaceTypeHandler := config.InterfaceTypeHandler
+	if interfaceTypeHandler != nil {
+		interfaceType := interfaceTypeHandler(location, typeID)
+		if interfaceType != nil {
+			return interfaceType, nil
+		}
+	}
+
 	elaboration := interpreter.getElaboration(location)
 	if elaboration == nil {
 		return nil, TypeLoadingError{
@@ -3960,42 +4883,7 @@ func (interpreter *Interpreter) getUserCompositeType(location common.Location, t
 		}
 	}
 
-	ty := elaboration.CompositeTypes[typeID]
-	if ty == nil {
-		return nil, TypeLoadingError{
-			TypeID: typeID,
-		}
-	}
-
-	return ty, nil
-}
-
-func (interpreter *Interpreter) getNativeCompositeType(qualifiedIdentifier string) (*sema.CompositeType, error) {
-	ty := sema.NativeCompositeTypes[qualifiedIdentifier]
-	if ty == nil {
-		return nil, TypeLoadingError{
-			TypeID: common.TypeID(qualifiedIdentifier),
-		}
-	}
-
-	return ty, nil
-}
-
-func (interpreter *Interpreter) getInterfaceType(location common.Location, qualifiedIdentifier string) (*sema.InterfaceType, error) {
-	if location == nil {
-		return nil, InterfaceMissingLocationError{QualifiedIdentifier: qualifiedIdentifier}
-	}
-
-	typeID := location.TypeID(interpreter, qualifiedIdentifier)
-
-	elaboration := interpreter.getElaboration(location)
-	if elaboration == nil {
-		return nil, TypeLoadingError{
-			TypeID: typeID,
-		}
-	}
-
-	ty := elaboration.InterfaceTypes[typeID]
+	ty := elaboration.InterfaceType(typeID)
 	if ty == nil {
 		return nil, TypeLoadingError{
 			TypeID: typeID,
@@ -4006,12 +4894,14 @@ func (interpreter *Interpreter) getInterfaceType(location common.Location, quali
 }
 
 func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
-	onMeterComputation := interpreter.Config.OnMeterComputation
+	config := interpreter.SharedState.Config
+
+	onMeterComputation := config.OnMeterComputation
 	if onMeterComputation != nil {
 		onMeterComputation(common.ComputationKindLoop, 1)
 	}
 
-	onLoopIteration := interpreter.Config.OnLoopIteration
+	onLoopIteration := config.OnLoopIteration
 	if onLoopIteration != nil {
 		line := pos.StartPosition().Line
 		onLoopIteration(interpreter, line)
@@ -4019,19 +4909,23 @@ func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
 }
 
 func (interpreter *Interpreter) reportFunctionInvocation() {
-	onMeterComputation := interpreter.Config.OnMeterComputation
+	config := interpreter.SharedState.Config
+
+	onMeterComputation := config.OnMeterComputation
 	if onMeterComputation != nil {
 		onMeterComputation(common.ComputationKindFunctionInvocation, 1)
 	}
 
-	onFunctionInvocation := interpreter.Config.OnFunctionInvocation
+	onFunctionInvocation := config.OnFunctionInvocation
 	if onFunctionInvocation != nil {
 		onFunctionInvocation(interpreter)
 	}
 }
 
 func (interpreter *Interpreter) reportInvokedFunctionReturn() {
-	onInvokedFunctionReturn := interpreter.Config.OnInvokedFunctionReturn
+	config := interpreter.SharedState.Config
+
+	onInvokedFunctionReturn := config.OnInvokedFunctionReturn
 	if onInvokedFunctionReturn == nil {
 		return
 	}
@@ -4040,10 +4934,93 @@ func (interpreter *Interpreter) reportInvokedFunctionReturn() {
 }
 
 func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKind, intensity uint) {
-	onMeterComputation := interpreter.Config.OnMeterComputation
+	config := interpreter.SharedState.Config
+
+	onMeterComputation := config.OnMeterComputation
 	if onMeterComputation != nil {
 		onMeterComputation(compKind, intensity)
 	}
+}
+
+func (interpreter *Interpreter) getAccessOfMember(self Value, identifier string) sema.Access {
+	typ, err := interpreter.ConvertStaticToSemaType(self.StaticType(interpreter))
+	// some values (like transactions) do not have types that can be looked up this way. These types
+	// do not support entitled members, so their access is always unauthorized
+	if err != nil {
+		return sema.UnauthorizedAccess
+	}
+	member, hasMember := typ.GetMembers()[identifier]
+	// certain values (like functions) have builtin members that are not present on the type
+	// in such cases the access is always unauthorized
+	if !hasMember {
+		return sema.UnauthorizedAccess
+	}
+	return member.Resolve(interpreter, identifier, ast.EmptyRange, func(err error) {}).Access
+}
+
+func (interpreter *Interpreter) mapMemberValueAuthorization(
+	self Value,
+	memberAccess sema.Access,
+	resultValue Value,
+	resultingType sema.Type,
+	locationRange LocationRange,
+) Value {
+
+	if memberAccess == nil {
+		return resultValue
+	}
+
+	if mappedAccess, isMappedAccess := (memberAccess).(*sema.EntitlementMapAccess); isMappedAccess {
+		var auth Authorization
+		switch selfValue := self.(type) {
+		case AuthorizedValue:
+			selfAccess := interpreter.MustConvertStaticAuthorizationToSemaAccess(selfValue.GetAuthorization())
+			imageAccess, err := mappedAccess.Image(selfAccess, func() ast.Range { return ast.EmptyRange })
+			if err != nil {
+				panic(err)
+			}
+			auth = ConvertSemaAccessToStaticAuthorization(interpreter, imageAccess)
+
+		default:
+			var access sema.Access
+			if mappedAccess.Type.IncludesIdentity {
+				access = sema.AllSupportedEntitlements(resultingType)
+			}
+
+			if access == nil {
+				access = mappedAccess.Codomain()
+			}
+
+			auth = ConvertSemaAccessToStaticAuthorization(interpreter, access)
+		}
+
+		switch refValue := resultValue.(type) {
+		case *EphemeralReferenceValue:
+			return NewEphemeralReferenceValue(interpreter, auth, refValue.Value, refValue.BorrowedType, locationRange)
+		case *StorageReferenceValue:
+			return NewStorageReferenceValue(interpreter, auth, refValue.TargetStorageAddress, refValue.TargetPath, refValue.BorrowedType)
+		case BoundFunctionValue:
+			return NewBoundFunctionValue(interpreter, refValue.Function, refValue.Self, refValue.Base, auth)
+		}
+	}
+	return resultValue
+}
+
+func (interpreter *Interpreter) getMemberWithAuthMapping(
+	self Value,
+	locationRange LocationRange,
+	identifier string,
+	memberAccessInfo sema.MemberAccessInfo,
+) Value {
+
+	result := interpreter.getMember(self, locationRange, identifier)
+	if result == nil {
+		return nil
+	}
+	// once we have obtained the member, if it was declared with entitlement-mapped access, we must compute the output of the map based
+	// on the runtime authorizations of the accessing reference or composite
+	memberAccess := interpreter.getAccessOfMember(self, identifier)
+	return interpreter.mapMemberValueAuthorization(self, memberAccess, result, memberAccessInfo.ResultingType, locationRange)
 }
 
 // getMember gets the member value by the given identifier from the given Value depending on its type.
@@ -4073,10 +5050,14 @@ func (interpreter *Interpreter) getMember(self Value, locationRange LocationRang
 	return result
 }
 
-func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValue {
-	return NewHostFunctionValue(
+func (interpreter *Interpreter) isInstanceFunction(self Value) FunctionValue {
+	return NewBoundHostFunctionValue(
 		interpreter,
+		self,
+		sema.IsInstanceFunctionType,
 		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+
 			firstArgument := invocation.Arguments[0]
 			typeValue, ok := firstArgument.(TypeValue)
 
@@ -4092,28 +5073,29 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) *HostFunctionValu
 			}
 
 			// NOTE: not invocation.Self, as that is only set for composite values
-			selfType := self.StaticType(invocation.Interpreter)
+			selfType := self.StaticType(interpreter)
 			return AsBoolValue(
 				interpreter.IsSubType(selfType, staticType),
 			)
 		},
-		sema.IsInstanceFunctionType,
 	)
 }
 
-func (interpreter *Interpreter) getTypeFunction(self Value) *HostFunctionValue {
-	return NewHostFunctionValue(
+func (interpreter *Interpreter) getTypeFunction(self Value) FunctionValue {
+	return NewBoundHostFunctionValue(
 		interpreter,
-		func(invocation Invocation) Value {
-			staticType := self.StaticType(invocation.Interpreter)
-			return NewTypeValue(invocation.Interpreter, staticType)
-		},
+		self,
 		sema.GetTypeFunctionType,
+		func(invocation Invocation) Value {
+			interpreter := invocation.Interpreter
+			staticType := self.StaticType(interpreter)
+			return NewTypeValue(interpreter, staticType)
+		},
 	)
 }
 
-func (interpreter *Interpreter) setMember(self Value, locationRange LocationRange, identifier string, value Value) {
-	self.(MemberAccessibleValue).SetMember(interpreter, locationRange, identifier, value)
+func (interpreter *Interpreter) setMember(self Value, locationRange LocationRange, identifier string, value Value) bool {
+	return self.(MemberAccessibleValue).SetMember(interpreter, locationRange, identifier, value)
 }
 
 func (interpreter *Interpreter) ExpectType(
@@ -4142,21 +5124,10 @@ func (interpreter *Interpreter) checkContainerMutation(
 	if !interpreter.IsSubType(element.StaticType(interpreter), elementType) {
 		panic(ContainerMutationError{
 			ExpectedType:  interpreter.MustConvertStaticToSemaType(elementType),
-			ActualType:    interpreter.MustConvertStaticToSemaType(element.StaticType(interpreter)),
+			ActualType:    interpreter.MustSemaTypeOfValue(element),
 			LocationRange: locationRange,
 		})
 	}
-}
-
-func (interpreter *Interpreter) checkReferencedResourceNotDestroyed(value Value, locationRange LocationRange) {
-	resourceKindedValue, ok := value.(ResourceKindedValue)
-	if !ok || !resourceKindedValue.IsDestroyed() {
-		return
-	}
-
-	panic(DestroyedResourceError{
-		LocationRange: locationRange,
-	})
 }
 
 func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
@@ -4166,19 +5137,21 @@ func (interpreter *Interpreter) RemoveReferencedSlab(storable atree.Storable) {
 	}
 
 	storageID := atree.StorageID(storageIDStorable)
-	err := interpreter.Config.Storage.Remove(storageID)
+	err := interpreter.Storage().Remove(storageID)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
 }
 
 func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
-	if interpreter.Config.AtreeValueValidationEnabled {
+	config := interpreter.SharedState.Config
+
+	if config.AtreeValueValidationEnabled {
 		interpreter.ValidateAtreeValue(v)
 	}
 
-	if interpreter.Config.AtreeStorageValidationEnabled {
-		err := interpreter.Config.Storage.CheckHealth()
+	if config.AtreeStorageValidationEnabled {
+		err := config.Storage.CheckHealth()
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -4188,11 +5161,11 @@ func (interpreter *Interpreter) maybeValidateAtreeValue(v atree.Value) {
 func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	tic := func(info atree.TypeInfo, other atree.TypeInfo) bool {
 		switch info := info.(type) {
-		case ConstantSizedStaticType:
+		case *ConstantSizedStaticType:
 			return info.Equal(other.(StaticType))
-		case VariableSizedStaticType:
+		case *VariableSizedStaticType:
 			return info.Equal(other.(StaticType))
-		case DictionaryStaticType:
+		case *DictionaryStaticType:
 			return info.Equal(other.(StaticType))
 		case CompositeTypeInfo:
 			return info.Equal(other)
@@ -4206,22 +5179,29 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	defaultHIP := newHashInputProvider(interpreter, EmptyLocationRange)
 
 	hip := func(value atree.Value, buffer []byte) ([]byte, error) {
-		if _, ok := value.(StringAtreeValue); ok {
-			return StringAtreeHashInput(value, buffer)
+		switch value := value.(type) {
+		case StringAtreeValue:
+			return StringAtreeValueHashInput(value, buffer)
+		case Uint64AtreeValue:
+			return Uint64AtreeValueHashInput(value, buffer)
+		default:
+			return defaultHIP(value, buffer)
 		}
-
-		return defaultHIP(value, buffer)
 	}
 
+	config := interpreter.SharedState.Config
+	storage := config.Storage
+
 	compare := func(storable, otherStorable atree.Storable) bool {
-		value, err := storable.StoredValue(interpreter.Config.Storage)
+		value, err := storable.StoredValue(storage)
 		if err != nil {
 			panic(err)
 		}
 
-		if _, ok := value.(StringAtreeValue); ok {
-			equal, err := StringAtreeComparator(
-				interpreter.Config.Storage,
+		switch value := value.(type) {
+		case StringAtreeValue:
+			equal, err := StringAtreeValueComparator(
+				storage,
 				value,
 				otherStorable,
 			)
@@ -4230,15 +5210,27 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 			}
 
 			return equal
-		}
 
-		if equatableValue, ok := value.(EquatableValue); ok {
-			otherValue := StoredValue(interpreter, otherStorable, interpreter.Config.Storage)
-			return equatableValue.Equal(interpreter, EmptyLocationRange, otherValue)
-		}
+		case Uint64AtreeValue:
+			equal, err := Uint64AtreeValueComparator(
+				storage,
+				value,
+				otherStorable,
+			)
+			if err != nil {
+				panic(err)
+			}
 
-		// Not all values are comparable, assume valid for now
-		return true
+			return equal
+
+		case EquatableValue:
+			otherValue := StoredValue(interpreter, otherStorable, storage)
+			return value.Equal(interpreter, EmptyLocationRange, otherValue)
+
+		default:
+			// Not all values are comparable, assume valid for now
+			return true
+		}
 	}
 
 	switch value := value.(type) {
@@ -4296,47 +5288,96 @@ func (interpreter *Interpreter) ValidateAtreeValue(value atree.Value) {
 	}
 }
 
+func (interpreter *Interpreter) maybeTrackReferencedResourceKindedValue(value Value) {
+	if referenceValue, ok := value.(*EphemeralReferenceValue); ok {
+		if value, ok := referenceValue.Value.(ReferenceTrackedResourceKindedValue); ok {
+			interpreter.trackReferencedResourceKindedValue(value.StorageID(), referenceValue)
+		}
+	}
+}
+
 func (interpreter *Interpreter) trackReferencedResourceKindedValue(
 	id atree.StorageID,
-	value ReferenceTrackedResourceKindedValue,
+	value *EphemeralReferenceValue,
 ) {
-	values := interpreter.sharedState.referencedResourceKindedValues[id]
+	values := interpreter.SharedState.referencedResourceKindedValues[id]
 	if values == nil {
-		values = map[ReferenceTrackedResourceKindedValue]struct{}{}
-		interpreter.sharedState.referencedResourceKindedValues[id] = values
+		values = map[*EphemeralReferenceValue]struct{}{}
+		interpreter.SharedState.referencedResourceKindedValues[id] = values
 	}
 	values[value] = struct{}{}
 }
 
-func (interpreter *Interpreter) updateReferencedResource(
-	currentStorageID atree.StorageID,
-	newStorageID atree.StorageID,
-	updateFunc func(value ReferenceTrackedResourceKindedValue),
+// TODO: Remove the `destroyed` flag
+func (interpreter *Interpreter) invalidateReferencedResources(
+	value Value,
+	locationRange LocationRange,
 ) {
-	values := interpreter.sharedState.referencedResourceKindedValues[currentStorageID]
+	// skip non-resource typed values
+	if !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	var storageID atree.StorageID
+
+	switch value := value.(type) {
+	case *CompositeValue:
+		value.ForEachLoadedField(interpreter, func(_ string, fieldValue Value) (resume bool) {
+			interpreter.invalidateReferencedResources(fieldValue, locationRange)
+			// continue iteration
+			return true
+		}, locationRange)
+		storageID = value.StorageID()
+	case *DictionaryValue:
+		value.IterateLoaded(interpreter, func(_, value Value) (resume bool) {
+			interpreter.invalidateReferencedResources(value, locationRange)
+			return true
+		}, locationRange)
+		storageID = value.StorageID()
+	case *ArrayValue:
+		value.IterateLoaded(
+			interpreter,
+			func(element Value) (resume bool) {
+				interpreter.invalidateReferencedResources(element, locationRange)
+				return true
+			},
+			locationRange,
+		)
+		storageID = value.StorageID()
+	case *SomeValue:
+		interpreter.invalidateReferencedResources(value.value, locationRange)
+		return
+	default:
+		// skip non-container typed values.
+		return
+	}
+
+	values := interpreter.SharedState.referencedResourceKindedValues[storageID]
 	if values == nil {
 		return
 	}
-	for value := range values { //nolint:maprangecheck
-		updateFunc(value)
+
+	for value := range values { //nolint:maprange
+		value.Value = nil
 	}
-	if newStorageID != currentStorageID {
-		interpreter.sharedState.referencedResourceKindedValues[newStorageID] = values
-		interpreter.sharedState.referencedResourceKindedValues[currentStorageID] = nil
-	}
+
+	// The old resource instances are already cleared/invalidated above.
+	// So no need to track those stale resources anymore. We will not need to update/clear them again.
+	// Therefore, remove them from the mapping.
+	// This is only to allow GC. No impact to the behavior.
+	delete(interpreter.SharedState.referencedResourceKindedValues, storageID)
 }
 
 // startResourceTracking starts tracking the life-span of a resource.
 // A resource can only be associated with one variable at most, at a given time.
 func (interpreter *Interpreter) startResourceTracking(
 	value Value,
-	variable *Variable,
+	variable Variable,
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
 
-	if !interpreter.Config.InvalidatedResourceValidationEnabled ||
-		identifier == sema.SelfIdentifier {
+	if identifier == sema.SelfIdentifier {
 		return
 	}
 
@@ -4349,7 +5390,7 @@ func (interpreter *Interpreter) startResourceTracking(
 	// If the resource already has a variable-association, that means there is a
 	// resource variable that has not been invalidated properly.
 	// This should not be allowed, and must have been caught by the checker ideally.
-	if _, exists := interpreter.sharedState.resourceVariables[resourceKindedValue]; exists {
+	if _, exists := interpreter.SharedState.resourceVariables[resourceKindedValue]; exists {
 		panic(InvalidatedResourceError{
 			LocationRange: LocationRange{
 				Location:    interpreter.Location,
@@ -4358,19 +5399,18 @@ func (interpreter *Interpreter) startResourceTracking(
 		})
 	}
 
-	interpreter.sharedState.resourceVariables[resourceKindedValue] = variable
+	interpreter.SharedState.resourceVariables[resourceKindedValue] = variable
 }
 
 // checkInvalidatedResourceUse checks whether a resource variable is used after invalidation.
 func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	value Value,
-	variable *Variable,
+	variable Variable,
 	identifier string,
 	hasPosition ast.HasPosition,
 ) {
 
-	if !interpreter.Config.InvalidatedResourceValidationEnabled ||
-		identifier == sema.SelfIdentifier {
+	if identifier == sema.SelfIdentifier {
 		return
 	}
 
@@ -4385,7 +5425,7 @@ func (interpreter *Interpreter) checkInvalidatedResourceUse(
 	// This should not be allowed, and must have been caught by the checker ideally.
 	//
 	// Note: if the `resourceVariables` doesn't have a mapping, that implies an invalidated resource.
-	if existingVar, exists := interpreter.sharedState.resourceVariables[resourceKindedValue]; !exists || existingVar != variable {
+	if existingVar, exists := interpreter.SharedState.resourceVariables[resourceKindedValue]; !exists || existingVar != variable {
 		panic(InvalidatedResourceError{
 			LocationRange: LocationRange{
 				Location:    interpreter.Location,
@@ -4413,10 +5453,6 @@ func (interpreter *Interpreter) resourceForValidation(value Value) ResourceKinde
 }
 
 func (interpreter *Interpreter) invalidateResource(value Value) {
-	if !interpreter.Config.InvalidatedResourceValidationEnabled {
-		return
-	}
-
 	if value == nil || !value.IsResourceKinded(interpreter) {
 		return
 	}
@@ -4427,12 +5463,15 @@ func (interpreter *Interpreter) invalidateResource(value Value) {
 	}
 
 	// Remove the resource-to-variable mapping.
-	delete(interpreter.sharedState.resourceVariables, resourceKindedValue)
+	delete(interpreter.SharedState.resourceVariables, resourceKindedValue)
 }
 
 // MeterMemory delegates the memory usage to the interpreter's memory gauge, if any.
 func (interpreter *Interpreter) MeterMemory(usage common.MemoryUsage) error {
-	common.UseMemory(interpreter.Config.MemoryGauge, usage)
+	if interpreter != nil {
+		config := interpreter.SharedState.Config
+		common.UseMemory(config.MemoryGauge, usage)
+	}
 	return nil
 }
 
@@ -4448,4 +5487,180 @@ func (interpreter *Interpreter) DecodeStorable(
 
 func (interpreter *Interpreter) DecodeTypeInfo(decoder *cbor.StreamDecoder) (atree.TypeInfo, error) {
 	return DecodeTypeInfo(decoder, interpreter)
+}
+
+func (interpreter *Interpreter) Storage() Storage {
+	return interpreter.SharedState.Config.Storage
+}
+
+func (interpreter *Interpreter) capabilityBorrowFunction(
+	capabilityValue CapabilityValue,
+	addressValue AddressValue,
+	capabilityID UInt64Value,
+	capabilityBorrowType *sema.ReferenceType,
+) FunctionValue {
+
+	return NewBoundHostFunctionValue(
+		interpreter,
+		capabilityValue,
+		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
+		func(invocation Invocation) Value {
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			if capabilityID == InvalidCapabilityID {
+				return Nil
+			}
+
+			var wantedBorrowType *sema.ReferenceType
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				wantedBorrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+			}
+
+			referenceValue := inter.SharedState.Config.CapabilityBorrowHandler(
+				inter,
+				locationRange,
+				addressValue,
+				capabilityID,
+				wantedBorrowType,
+				capabilityBorrowType,
+			)
+			if referenceValue == nil {
+				return Nil
+			}
+			return NewSomeValueNonCopying(inter, referenceValue)
+		},
+	)
+}
+
+func (interpreter *Interpreter) capabilityCheckFunction(
+	capabilityValue CapabilityValue,
+	addressValue AddressValue,
+	capabilityID UInt64Value,
+	capabilityBorrowType *sema.ReferenceType,
+) FunctionValue {
+
+	return NewBoundHostFunctionValue(
+		interpreter,
+		capabilityValue,
+		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
+		func(invocation Invocation) Value {
+
+			if capabilityID == InvalidCapabilityID {
+				return FalseValue
+			}
+
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
+
+			// NOTE: if a type argument is provided for the function,
+			// use it *instead* of the type of the value (if any)
+
+			var wantedBorrowType *sema.ReferenceType
+			typeParameterPair := invocation.TypeParameterTypes.Oldest()
+			if typeParameterPair != nil {
+				ty := typeParameterPair.Value
+				var ok bool
+				wantedBorrowType, ok = ty.(*sema.ReferenceType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+			}
+
+			return inter.SharedState.Config.CapabilityCheckHandler(
+				inter,
+				locationRange,
+				addressValue,
+				capabilityID,
+				wantedBorrowType,
+				capabilityBorrowType,
+			)
+		},
+	)
+}
+
+func (interpreter *Interpreter) validateMutation(storageID atree.StorageID, locationRange LocationRange) {
+	_, present := interpreter.SharedState.containerValueIteration[storageID]
+	if !present {
+		return
+	}
+	panic(ContainerMutatedDuringIterationError{
+		LocationRange: locationRange,
+	})
+}
+
+func (interpreter *Interpreter) withMutationPrevention(storageID atree.StorageID, f func()) {
+	if interpreter == nil {
+		f()
+		return
+	}
+	oldIteration, present := interpreter.SharedState.containerValueIteration[storageID]
+	interpreter.SharedState.containerValueIteration[storageID] = struct{}{}
+
+	f()
+
+	if !present {
+		delete(interpreter.SharedState.containerValueIteration, storageID)
+	} else {
+		interpreter.SharedState.containerValueIteration[storageID] = oldIteration
+	}
+}
+
+func (interpreter *Interpreter) enforceNotResourceDestruction(
+	storageID atree.StorageID,
+	locationRange LocationRange,
+) {
+	_, exists := interpreter.SharedState.destroyedResources[storageID]
+	if exists {
+		panic(DestroyedResourceError{
+			LocationRange: locationRange,
+		})
+	}
+}
+
+func (interpreter *Interpreter) withResourceDestruction(
+	storageID atree.StorageID,
+	locationRange LocationRange,
+	f func(),
+) {
+	interpreter.enforceNotResourceDestruction(storageID, locationRange)
+
+	interpreter.SharedState.destroyedResources[storageID] = struct{}{}
+
+	f()
+}
+
+func (interpreter *Interpreter) checkResourceLoss(value Value, locationRange LocationRange) {
+	if !value.IsResourceKinded(interpreter) {
+		return
+	}
+
+	var resourceKindedValue ResourceKindedValue
+
+	switch existingValue := value.(type) {
+	case *CompositeValue:
+		// A dedicated error is thrown when setting duplicate attachments.
+		// So don't throw an error here.
+		if existingValue.Kind == common.CompositeKindAttachment {
+			return
+		}
+		resourceKindedValue = existingValue
+	case ResourceKindedValue:
+		resourceKindedValue = existingValue
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	if !resourceKindedValue.isInvalidatedResource(interpreter) {
+		panic(ResourceLossError{
+			LocationRange: locationRange,
+		})
+	}
 }

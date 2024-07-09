@@ -27,7 +27,7 @@ import (
 
 type NilValue struct{}
 
-var _ Value = NilValue{}
+var Nil Value = NilValue{}
 
 func (NilValue) isValue() {}
 

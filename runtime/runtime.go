@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 package runtime
 
 import (
-	goRuntime "runtime"
+	stdErrors "errors"
 	"time"
 
 	"github.com/onflow/cadence"
@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type Script struct {
@@ -92,6 +93,9 @@ type Executor interface {
 
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
+	// Config returns the runtime.Config this Runtime was instantiated with.
+	Config() Config
+
 	// NewScriptExecutor returns an executor which executes the given script.
 	NewScriptExecutor(Script, Context) Executor
 
@@ -124,8 +128,9 @@ type Runtime interface {
 	// InvokeContractFunction invokes a contract function with the given arguments.
 	//
 	// This function returns an error if the execution fails.
-	// If the contract function accepts an AuthAccount as a parameter the corresponding argument can be an interpreter.Address.
-	// returns a cadence.Value
+	// If the contract function accepts an &Account as a parameter,
+	// the corresponding argument can be an interpreter.Address.
+	// Returns a cadence.Value
 	InvokeContractFunction(
 		contractLocation common.AddressLocation,
 		functionName string,
@@ -143,10 +148,6 @@ type Runtime interface {
 	//
 	ReadStored(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
 
-	// ReadLinked dereferences the path and returns the value stored at the target
-	//
-	ReadLinked(address common.Address, path cadence.Path, context Context) (cadence.Value, error)
-
 	// Storage returns the storage system and an interpreter which can be used for
 	// accessing values in storage.
 	//
@@ -161,20 +162,21 @@ type Runtime interface {
 
 type ImportResolver = func(location Location) (program *ast.Program, e error)
 
-var validTopLevelDeclarationsInTransaction = []common.DeclarationKind{
+var validTopLevelDeclarationsInTransaction = common.NewDeclarationKindSet(
+	common.DeclarationKindPragma,
 	common.DeclarationKindImport,
 	common.DeclarationKindFunction,
 	common.DeclarationKindTransaction,
-}
+)
 
-var validTopLevelDeclarationsInAccountCode = []common.DeclarationKind{
+var validTopLevelDeclarationsInAccountCode = common.NewDeclarationKindSet(
 	common.DeclarationKindPragma,
 	common.DeclarationKindImport,
 	common.DeclarationKindContract,
 	common.DeclarationKindContractInterface,
-}
+)
 
-func validTopLevelDeclarations(location Location) []common.DeclarationKind {
+func validTopLevelDeclarations(location Location) common.DeclarationKindSet {
 	switch location.(type) {
 	case common.TransactionLocation:
 		return validTopLevelDeclarationsInTransaction
@@ -182,7 +184,7 @@ func validTopLevelDeclarations(location Location) []common.DeclarationKind {
 		return validTopLevelDeclarationsInAccountCode
 	}
 
-	return nil
+	return common.AllDeclarationKindsSet
 }
 
 func reportMetric(
@@ -208,14 +210,18 @@ type interpreterRuntime struct {
 	defaultConfig Config
 }
 
-// NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
+// NewInterpreterRuntime returns an interpreter-based version of the Flow runtime.
 func NewInterpreterRuntime(defaultConfig Config) Runtime {
 	return &interpreterRuntime{
 		defaultConfig: defaultConfig,
 	}
 }
 
-func (r *interpreterRuntime) Recover(onError func(Error), location Location, codesAndPrograms codesAndPrograms) {
+func (r *interpreterRuntime) Config() Config {
+	return r.defaultConfig
+}
+
+func (r *interpreterRuntime) Recover(onError func(Error), location Location, codesAndPrograms CodesAndPrograms) {
 	recovered := recover()
 	if recovered == nil {
 		return
@@ -225,7 +231,7 @@ func (r *interpreterRuntime) Recover(onError func(Error), location Location, cod
 	onError(err)
 }
 
-func getWrappedError(recovered any, location Location, codesAndPrograms codesAndPrograms) Error {
+func getWrappedError(recovered any, location Location, codesAndPrograms CodesAndPrograms) Error {
 	switch recovered := recovered.(type) {
 
 	// If the error is already a `runtime.Error`, then avoid redundant wrapping.
@@ -254,6 +260,7 @@ func getWrappedError(recovered any, location Location, codesAndPrograms codesAnd
 		return newError(err, location, codesAndPrograms)
 	}
 }
+
 func (r *interpreterRuntime) NewScriptExecutor(
 	script Script,
 	context Context,
@@ -262,6 +269,10 @@ func (r *interpreterRuntime) NewScriptExecutor(
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (val cadence.Value, err error) {
+	location := context.Location
+	if _, ok := location.(common.ScriptLocation); !ok {
+		return nil, errors.NewUnexpectedError("invalid non-script location: %s", location)
+	}
 	return r.NewScriptExecutor(script, context).Result()
 }
 
@@ -303,46 +314,39 @@ func (r *interpreterRuntime) NewTransactionExecutor(script Script, context Conte
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) (err error) {
+	location := context.Location
+	if _, ok := location.(common.TransactionLocation); !ok {
+		return errors.NewUnexpectedError("invalid non-transaction location: %s", location)
+	}
 	_, err = r.NewTransactionExecutor(script, context).Result()
 	return err
 }
 
-func wrapPanic(f func()) {
+// UserPanicToError Executes `f` and gracefully handle `UserError` panics.
+// All on-user panics (including `InternalError` and `ExternalError`) are propagated up.
+func UserPanicToError(f func()) (returnedError error) {
 	defer func() {
 		if r := recover(); r != nil {
-			// don't wrap Go errors and internal errors
-			switch r := r.(type) {
-			case goRuntime.Error, errors.InternalError:
-				panic(r)
-			default:
-				panic(errors.ExternalError{
-					Recovered: r,
-				})
+			err, ok := r.(error)
+			if !ok {
+				panic(errors.NewUnexpectedError("%s", r))
 			}
 
-		}
-	}()
-	f()
-}
-
-// userPanicToError Executes `f` and gracefully handle `UserError` panics.
-// All on-user panics (including `InternalError` and `ExternalError`) are propagated up.
-func userPanicToError(f func()) (returnedError error) {
-	defer func() {
-		if r := recover(); r != nil {
-			switch err := r.(type) {
-			case errors.UserError:
+			var userError errors.UserError
+			if stdErrors.As(err, &userError) {
 				// Return user errors
 				returnedError = err
+				return
+			}
+
+			switch err.(type) {
 			case errors.InternalError, errors.ExternalError:
 				panic(err)
 
 			// Otherwise, panic.
 			// Also wrap with a `UnexpectedError` to mark it as an `InternalError`.
-			case error:
-				panic(errors.NewUnexpectedErrorFromCause(err))
 			default:
-				panic(errors.NewUnexpectedError("%s", r))
+				panic(errors.NewUnexpectedErrorFromCause(err))
 			}
 		}
 	}()
@@ -351,12 +355,19 @@ func userPanicToError(f func()) (returnedError error) {
 	return nil
 }
 
+type ArgumentDecoder interface {
+	stdlib.StandardLibraryHandler
+
+	// DecodeArgument decodes a transaction/script argument against the given type.
+	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
+}
+
 func validateArgumentParams(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
+	decoder ArgumentDecoder,
 	locationRange interpreter.LocationRange,
 	arguments [][]byte,
-	parameters []*sema.Parameter,
+	parameters []sema.Parameter,
 ) (
 	[]interpreter.Value,
 	error,
@@ -374,16 +385,16 @@ func validateArgumentParams(
 	argumentValues := make([]interpreter.Value, len(arguments))
 
 	// Decode arguments against parameter types
-	for i, parameter := range parameters {
+	for parameterIndex, parameter := range parameters {
 		parameterType := parameter.TypeAnnotation.Type
-		argument := arguments[i]
+		argument := arguments[parameterIndex]
 
 		exportedParameterType := ExportMeteredType(inter, parameterType, map[sema.TypeID]cadence.Type{})
 		var value cadence.Value
 		var err error
 
-		wrapPanic(func() {
-			value, err = runtimeInterface.DecodeArgument(
+		errors.WrapPanic(func() {
+			value, err = decoder.DecodeArgument(
 				argument,
 				exportedParameterType,
 			)
@@ -391,17 +402,18 @@ func validateArgumentParams(
 
 		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
-				Index: i,
+				Index: parameterIndex,
 				Err:   err,
 			}
 		}
 
 		var arg interpreter.Value
-		panicError := userPanicToError(func() {
+		panicError := UserPanicToError(func() {
 			// if importing an invalid public key, this call panics
 			arg, err = ImportValue(
 				inter,
 				locationRange,
+				decoder,
 				value,
 				parameterType,
 			)
@@ -409,14 +421,14 @@ func validateArgumentParams(
 
 		if panicError != nil {
 			return nil, &InvalidEntryPointArgumentError{
-				Index: i,
+				Index: parameterIndex,
 				Err:   panicError,
 			}
 		}
 
 		if err != nil {
 			return nil, &InvalidEntryPointArgumentError{
-				Index: i,
+				Index: parameterIndex,
 				Err:   err,
 			}
 		}
@@ -424,7 +436,7 @@ func validateArgumentParams(
 		// Ensure the argument is of an importable type
 		argType := arg.StaticType(inter)
 
-		if !arg.IsImportable(inter) {
+		if !arg.IsImportable(inter, locationRange) {
 			return nil, &ArgumentNotImportableError{
 				Type: argType,
 			}
@@ -433,7 +445,7 @@ func validateArgumentParams(
 		// Check that decoded value is a subtype of static parameter type
 		if !inter.IsSubTypeOfSemaType(argType, parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
-				Index: i,
+				Index: parameterIndex,
 				Err: &InvalidValueTypeError{
 					ExpectedType: parameterType,
 				},
@@ -447,7 +459,7 @@ func validateArgumentParams(
 			interpreter.TypeConformanceResults{},
 		) {
 			return nil, &InvalidEntryPointArgumentError{
-				Index: i,
+				Index: parameterIndex,
 				Err: &MalformedValueError{
 					ExpectedType: parameterType,
 				},
@@ -455,19 +467,24 @@ func validateArgumentParams(
 		}
 
 		// Ensure static type info is available for all values
-		interpreter.InspectValue(inter, arg, func(value interpreter.Value) bool {
-			if value == nil {
+		interpreter.InspectValue(
+			inter,
+			arg,
+			func(value interpreter.Value) bool {
+				if value == nil {
+					return true
+				}
+
+				if !hasValidStaticType(inter, value) {
+					panic(errors.NewUnexpectedError("invalid static type for argument: %d", parameterIndex))
+				}
+
 				return true
-			}
+			},
+			locationRange,
+		)
 
-			if !hasValidStaticType(inter, value) {
-				panic(errors.NewUnexpectedError("invalid static type for argument: %d", i))
-			}
-
-			return true
-		})
-
-		argumentValues[i] = arg
+		argumentValues[parameterIndex] = arg
 	}
 
 	return argumentValues, nil
@@ -498,7 +515,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(
 ) {
 	location := context.Location
 
-	codesAndPrograms := newCodesAndPrograms()
+	codesAndPrograms := NewCodesAndPrograms()
 
 	defer r.Recover(
 		func(internalErr Error) {
@@ -537,7 +554,7 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 
 	location := context.Location
 
-	codesAndPrograms := newCodesAndPrograms()
+	codesAndPrograms := NewCodesAndPrograms()
 
 	storage := NewStorage(context.Interface, context.Interface)
 
@@ -545,6 +562,7 @@ func (r *interpreterRuntime) Storage(context Context) (*Storage, *interpreter.In
 	if environment == nil {
 		environment = NewBaseInterpreterEnvironment(r.defaultConfig)
 	}
+
 	environment.Configure(
 		context.Interface,
 		codesAndPrograms,
@@ -574,7 +592,7 @@ func (r *interpreterRuntime) ReadStored(
 ) {
 	location := context.Location
 
-	var codesAndPrograms codesAndPrograms
+	var codesAndPrograms CodesAndPrograms
 
 	defer r.Recover(
 		func(internalErr Error) {
@@ -590,71 +608,14 @@ func (r *interpreterRuntime) ReadStored(
 		return nil, err
 	}
 
-	pathValue := importPathValue(inter, path)
+	pathValue := valueImporter{inter: inter}.importPathValue(path)
 
 	domain := pathValue.Domain.Identifier()
 	identifier := pathValue.Identifier
 
-	value := inter.ReadStored(address, domain, identifier)
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
 
-	var exportedValue cadence.Value
-	if value != nil {
-		exportedValue, err = ExportValue(value, inter, interpreter.EmptyLocationRange)
-		if err != nil {
-			return nil, newError(err, location, codesAndPrograms)
-		}
-	}
-
-	return exportedValue, nil
-}
-
-func (r *interpreterRuntime) ReadLinked(
-	address common.Address,
-	path cadence.Path,
-	context Context,
-) (
-	val cadence.Value,
-	err error,
-) {
-	location := context.Location
-
-	var codesAndPrograms codesAndPrograms
-
-	defer r.Recover(
-		func(internalErr Error) {
-			err = internalErr
-		},
-		location,
-		codesAndPrograms,
-	)
-
-	_, inter, err := r.Storage(context)
-	if err != nil {
-		// error is already wrapped as Error in Storage
-		return nil, err
-	}
-
-	targetPath, _, err := inter.GetCapabilityFinalTargetPath(
-		address,
-		importPathValue(inter, path),
-		&sema.ReferenceType{
-			Type: sema.AnyType,
-		},
-		interpreter.EmptyLocationRange,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	if targetPath == interpreter.EmptyPathValue {
-		return nil, nil
-	}
-
-	value := inter.ReadStored(
-		address,
-		targetPath.Domain.Identifier(),
-		targetPath.Identifier,
-	)
+	value := inter.ReadStored(address, domain, storageMapKey)
 
 	var exportedValue cadence.Value
 	if value != nil {

@@ -72,7 +72,7 @@ func init() {
 		ParameterCount: len(stdlib.PanicFunctionType.Parameters),
 		Function: func(config *Config, typeArguments []StaticType, arguments ...Value) Value {
 			address := arguments[0].(AddressValue)
-			return NewPublicAccountValue(common.Address(address))
+			return NewAccountReferenceValue(common.Address(address))
 		},
 	})
 }

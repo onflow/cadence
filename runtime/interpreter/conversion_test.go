@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,28 +45,28 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeUInt64,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt64Value(500),
 			),
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInt256,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredInt256ValueFromBigInt(largeBigInt),
 			),
 			NewUnmeteredUInt64Value(500),
-			BoolValue(true),
+			TrueValue,
 			NewUnmeteredStringValue("test"),
 		}
 
 		for _, value := range invalid {
-			_, err := ByteArrayValueToByteSlice(inter, value)
+			_, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
 			RequireError(t, err)
 		}
 	})
@@ -79,35 +79,35 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
-				common.Address{},
-			): {},
+				common.ZeroAddress,
+			): nil,
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt64Value(2),
 				NewUnmeteredUInt128ValueFromUint64(3),
 			): {2, 3},
 			NewArrayValue(
 				inter,
 				EmptyLocationRange,
-				VariableSizedStaticType{
+				&VariableSizedStaticType{
 					Type: PrimitiveStaticTypeInteger,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				NewUnmeteredUInt8Value(4),
 				NewUnmeteredIntValueFromInt64(5),
 			): {4, 5},
 		}
 
 		for value, expected := range invalid {
-			result, err := ByteArrayValueToByteSlice(inter, value)
+			result, err := ByteArrayValueToByteSlice(inter, value, EmptyLocationRange)
 			require.NoError(t, err)
 			require.Equal(t, expected, result)
 		}
@@ -129,7 +129,7 @@ func TestByteValueToByte(t *testing.T) {
 		}
 
 		for _, value := range invalid {
-			_, err := ByteValueToByte(nil, value)
+			_, err := ByteValueToByte(nil, value, EmptyLocationRange)
 			RequireError(t, err)
 		}
 	})
@@ -147,9 +147,62 @@ func TestByteValueToByte(t *testing.T) {
 		}
 
 		for value, expected := range invalid {
-			result, err := ByteValueToByte(nil, value)
+			result, err := ByteValueToByte(nil, value, EmptyLocationRange)
 			require.NoError(t, err)
 			require.Equal(t, expected, result)
 		}
+	})
+}
+
+func TestByteSliceToArrayValue(t *testing.T) {
+	t.Parallel()
+
+	t.Run("variable sized", func(t *testing.T) {
+		b := []byte{0, 1, 2}
+
+		inter := newTestInterpreter(t)
+
+		expectedType := &VariableSizedStaticType{
+			Type: PrimitiveStaticTypeUInt8,
+		}
+
+		expected := NewArrayValue(
+			inter,
+			EmptyLocationRange,
+			expectedType,
+			common.ZeroAddress,
+			NewUnmeteredUInt8Value(0),
+			NewUnmeteredUInt8Value(1),
+			NewUnmeteredUInt8Value(2),
+		)
+
+		result := ByteSliceToByteArrayValue(inter, b)
+		require.Equal(t, expectedType, result.Type)
+		require.True(t, result.Equal(inter, EmptyLocationRange, expected))
+	})
+
+	t.Run("const sized", func(t *testing.T) {
+		b := []byte{0, 1, 2}
+
+		inter := newTestInterpreter(t)
+
+		expectedType := &ConstantSizedStaticType{
+			Size: int64(len(b)),
+			Type: PrimitiveStaticTypeUInt8,
+		}
+
+		expected := NewArrayValue(
+			inter,
+			EmptyLocationRange,
+			expectedType,
+			common.ZeroAddress,
+			NewUnmeteredUInt8Value(0),
+			NewUnmeteredUInt8Value(1),
+			NewUnmeteredUInt8Value(2),
+		)
+
+		result := ByteSliceToConstantSizedByteArrayValue(inter, b)
+		require.Equal(t, expectedType, result.Type)
+		require.True(t, result.Equal(inter, EmptyLocationRange, expected))
 	})
 }

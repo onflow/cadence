@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,6 +50,10 @@ func (e Error) ChildErrors() []error {
 	return e.Errors
 }
 
+func (e Error) Unwrap() []error {
+	return e.Errors
+}
+
 // ParserError
 
 type ParseError interface {
@@ -61,19 +65,13 @@ type ParseError interface {
 // SyntaxError
 
 type SyntaxError struct {
-	Pos     ast.Position
 	Message string
+	Pos     ast.Position
 }
 
 func NewSyntaxError(pos ast.Position, message string, params ...any) *SyntaxError {
 	return &SyntaxError{
 		Pos:     pos,
-		Message: fmt.Sprintf(message, params...),
-	}
-}
-
-func NewUnpositionedSyntaxError(message string, params ...any) *SyntaxError {
-	return &SyntaxError{
 		Message: fmt.Sprintf(message, params...),
 	}
 }
@@ -95,6 +93,48 @@ func (e *SyntaxError) EndPosition(_ common.MemoryGauge) ast.Position {
 
 func (e *SyntaxError) Error() string {
 	return e.Message
+}
+
+// SyntaxErrorWithSuggestedFix
+
+type SyntaxErrorWithSuggestedReplacement struct {
+	Message      string
+	SuggestedFix string
+	ast.Range
+}
+
+var _ errors.HasSuggestedFixes[ast.TextEdit] = &SyntaxErrorWithSuggestedReplacement{}
+
+func NewSyntaxErrorWithSuggestedReplacement(r ast.Range, message string, suggestedFix string) *SyntaxErrorWithSuggestedReplacement {
+	return &SyntaxErrorWithSuggestedReplacement{
+		Range:        r,
+		Message:      message,
+		SuggestedFix: suggestedFix,
+	}
+}
+
+var _ ParseError = &SyntaxErrorWithSuggestedReplacement{}
+var _ errors.UserError = &SyntaxErrorWithSuggestedReplacement{}
+
+func (*SyntaxErrorWithSuggestedReplacement) isParseError() {}
+
+func (*SyntaxErrorWithSuggestedReplacement) IsUserError() {}
+func (e *SyntaxErrorWithSuggestedReplacement) Error() string {
+	return e.Message
+}
+
+func (e *SyntaxErrorWithSuggestedReplacement) SuggestFixes(_ string) []errors.SuggestedFix[ast.TextEdit] {
+	return []errors.SuggestedFix[ast.TextEdit]{
+		{
+			Message: fmt.Sprintf("replace with %s", e.SuggestedFix),
+			TextEdits: []ast.TextEdit{
+				{
+					Replacement: e.SuggestedFix,
+					Range:       e.Range,
+				},
+			},
+		},
+	}
 }
 
 // JuxtaposedUnaryOperatorsError
@@ -126,20 +166,21 @@ func (e *JuxtaposedUnaryOperatorsError) Error() string {
 
 type InvalidIntegerLiteralError struct {
 	Literal                   string
-	IntegerLiteralKind        IntegerLiteralKind
+	IntegerLiteralKind        common.IntegerLiteralKind
 	InvalidIntegerLiteralKind InvalidNumberLiteralKind
 	ast.Range
 }
 
 var _ ParseError = &InvalidIntegerLiteralError{}
 var _ errors.UserError = &InvalidIntegerLiteralError{}
+var _ errors.SecondaryError = &InvalidIntegerLiteralError{}
 
 func (*InvalidIntegerLiteralError) isParseError() {}
 
 func (*InvalidIntegerLiteralError) IsUserError() {}
 
 func (e *InvalidIntegerLiteralError) Error() string {
-	if e.IntegerLiteralKind == IntegerLiteralKindUnknown {
+	if e.IntegerLiteralKind == common.IntegerLiteralKindUnknown {
 		return fmt.Sprintf(
 			"invalid integer literal `%s`: %s",
 			e.Literal,
@@ -251,4 +292,50 @@ func (e *MissingCommaInParameterListError) EndPosition(_ common.MemoryGauge) ast
 
 func (e *MissingCommaInParameterListError) Error() string {
 	return "missing comma after parameter"
+}
+
+// CustomDestructorError
+
+type CustomDestructorError struct {
+	Pos ast.Position
+}
+
+var _ ParseError = &CustomDestructorError{}
+var _ errors.UserError = &CustomDestructorError{}
+
+func (*CustomDestructorError) isParseError() {}
+
+func (*CustomDestructorError) IsUserError() {}
+
+func (e *CustomDestructorError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *CustomDestructorError) EndPosition(_ common.MemoryGauge) ast.Position {
+	return e.Pos
+}
+
+func (e *CustomDestructorError) Error() string {
+	return "custom destructor definitions are no longer permitted"
+}
+
+func (e *CustomDestructorError) SecondaryError() string {
+	return "remove the destructor definition"
+}
+
+// RestrictedTypeError
+
+type RestrictedTypeError struct {
+	ast.Range
+}
+
+var _ ParseError = &CustomDestructorError{}
+var _ errors.UserError = &CustomDestructorError{}
+
+func (*RestrictedTypeError) isParseError() {}
+
+func (*RestrictedTypeError) IsUserError() {}
+
+func (e *RestrictedTypeError) Error() string {
+	return "restricted types have been removed; replace with the concrete type or an equivalent intersection type"
 }

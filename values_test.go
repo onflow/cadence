@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,133 +27,186 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestStringer(t *testing.T) {
+type valueTestCase struct {
+	value        Value
+	string       string
+	exampleType  Type
+	expectedType Type
+	withType     func(value Value, ty Type) Value
+	noType       bool
+}
 
-	t.Parallel()
-
-	type testCase struct {
-		value    Value
-		expected string
-	}
-
+func newValueTestCases() map[string]valueTestCase {
 	ufix64, _ := NewUFix64("64.01")
 	fix64, _ := NewFix64("-32.11")
 
-	stringerTests := map[string]testCase{
+	testFunctionType := NewFunctionType(
+		FunctionPurityUnspecified,
+		nil,
+		[]Parameter{
+			{
+				Type: StringType,
+			},
+		},
+		UInt8Type,
+	)
+
+	return map[string]valueTestCase{
 		"UInt": {
-			value:    NewUInt(10),
-			expected: "10",
+			value:        NewUInt(10),
+			string:       "10",
+			expectedType: UIntType,
 		},
 		"UInt8": {
-			value:    NewUInt8(8),
-			expected: "8",
+			value:        NewUInt8(8),
+			string:       "8",
+			expectedType: UInt8Type,
 		},
 		"UInt16": {
-			value:    NewUInt16(16),
-			expected: "16",
+			value:        NewUInt16(16),
+			string:       "16",
+			expectedType: UInt16Type,
 		},
 		"UInt32": {
-			value:    NewUInt32(32),
-			expected: "32",
+			value:        NewUInt32(32),
+			string:       "32",
+			expectedType: UInt32Type,
 		},
 		"UInt64": {
-			value:    NewUInt64(64),
-			expected: "64",
+			value:        NewUInt64(64),
+			string:       "64",
+			expectedType: UInt64Type,
 		},
 		"UInt128": {
-			value:    NewUInt128(128),
-			expected: "128",
+			value:        NewUInt128(128),
+			string:       "128",
+			expectedType: UInt128Type,
 		},
 		"UInt256": {
-			value:    NewUInt256(256),
-			expected: "256",
+			value:        NewUInt256(256),
+			string:       "256",
+			expectedType: UInt256Type,
 		},
 		"Int": {
-			value:    NewInt(1000000),
-			expected: "1000000",
+			value:        NewInt(1000000),
+			string:       "1000000",
+			expectedType: IntType,
 		},
 		"Int8": {
-			value:    NewInt8(-8),
-			expected: "-8",
+			value:        NewInt8(-8),
+			string:       "-8",
+			expectedType: Int8Type,
 		},
 		"Int16": {
-			value:    NewInt16(-16),
-			expected: "-16",
+			value:        NewInt16(-16),
+			string:       "-16",
+			expectedType: Int16Type,
 		},
 		"Int32": {
-			value:    NewInt32(-32),
-			expected: "-32",
+			value:        NewInt32(-32),
+			string:       "-32",
+			expectedType: Int32Type,
 		},
 		"Int64": {
-			value:    NewInt64(-64),
-			expected: "-64",
+			value:        NewInt64(-64),
+			string:       "-64",
+			expectedType: Int64Type,
 		},
 		"Int128": {
-			value:    NewInt128(-128),
-			expected: "-128",
+			value:        NewInt128(-128),
+			string:       "-128",
+			expectedType: Int128Type,
 		},
 		"Int256": {
-			value:    NewInt256(-256),
-			expected: "-256",
+			value:        NewInt256(-256),
+			string:       "-256",
+			expectedType: Int256Type,
 		},
 		"Word8": {
-			value:    NewWord8(8),
-			expected: "8",
+			value:        NewWord8(8),
+			string:       "8",
+			expectedType: Word8Type,
 		},
 		"Word16": {
-			value:    NewWord16(16),
-			expected: "16",
+			value:        NewWord16(16),
+			string:       "16",
+			expectedType: Word16Type,
 		},
 		"Word32": {
-			value:    NewWord32(32),
-			expected: "32",
+			value:        NewWord32(32),
+			string:       "32",
+			expectedType: Word32Type,
 		},
 		"Word64": {
-			value:    NewWord64(64),
-			expected: "64",
+			value:        NewWord64(64),
+			string:       "64",
+			expectedType: Word64Type,
+		},
+		"Word128": {
+			value:        NewWord128(128),
+			string:       "128",
+			expectedType: Word128Type,
+		},
+		"Word256": {
+			value:        NewWord256(256),
+			string:       "256",
+			expectedType: Word256Type,
 		},
 		"UFix64": {
-			value:    ufix64,
-			expected: "64.01000000",
+			value:        ufix64,
+			string:       "64.01000000",
+			expectedType: UFix64Type,
 		},
 		"Fix64": {
-			value:    fix64,
-			expected: "-32.11000000",
+			value:        fix64,
+			string:       "-32.11000000",
+			expectedType: Fix64Type,
 		},
 		"Void": {
-			value:    NewVoid(),
-			expected: "()",
+			value:        NewVoid(),
+			string:       "()",
+			expectedType: VoidType,
 		},
-		"true": {
-			value:    NewBool(true),
-			expected: "true",
-		},
-		"false": {
-			value:    NewBool(false),
-			expected: "false",
+		"Bool": {
+			value:        NewBool(true),
+			string:       "true",
+			expectedType: BoolType,
 		},
 		"some": {
-			value:    NewOptional(ufix64),
-			expected: "64.01000000",
+			value:        NewOptional(ufix64),
+			string:       "64.01000000",
+			expectedType: NewOptionalType(UFix64Type),
 		},
 		"nil": {
-			value:    NewOptional(nil),
-			expected: "nil",
+			value:        NewOptional(nil),
+			string:       "nil",
+			expectedType: NewOptionalType(NeverType),
 		},
 		"String": {
-			value:    String("Flow ridah!"),
-			expected: "\"Flow ridah!\"",
+			value:        String("Flow ridah!"),
+			string:       "\"Flow ridah!\"",
+			expectedType: StringType,
+		},
+		"Character": {
+			value:        Character("✌️"),
+			string:       "\"\\u{270c}\\u{fe0f}\"",
+			expectedType: CharacterType,
 		},
 		"Array": {
 			value: NewArray([]Value{
 				NewInt(10),
 				String("TEST"),
 			}),
-			expected: "[10, \"TEST\"]",
+			exampleType: NewConstantSizedArrayType(2, AnyType),
+			withType: func(value Value, ty Type) Value {
+				return value.(Array).WithType(ty.(ArrayType))
+			},
+			string: "[10, \"TEST\"]",
 		},
 		"Dictionary": {
 			value: NewDictionary([]KeyValuePair{
@@ -162,41 +215,65 @@ func TestStringer(t *testing.T) {
 					Value: String("value"),
 				},
 			}),
-			expected: "{\"key\": \"value\"}",
+			exampleType: NewDictionaryType(StringType, StringType),
+			withType: func(value Value, ty Type) Value {
+				return value.(Dictionary).WithType(ty.(*DictionaryType))
+			},
+			string: "{\"key\": \"value\"}",
+		},
+		"InclusiveRange": {
+			value:       NewInclusiveRange(NewInt(85), NewInt(-85), NewInt(-2)),
+			exampleType: NewInclusiveRangeType(IntType),
+			withType: func(value Value, ty Type) Value {
+				return value.(*InclusiveRange).WithType(ty.(*InclusiveRangeType))
+			},
+			string: "InclusiveRange<Int>(start: 85, end: -85, step: -2)",
 		},
 		"Bytes": {
-			value:    NewBytes([]byte{0x1, 0x2}),
-			expected: "[0x1, 0x2]",
+			value:        NewBytes([]byte{0x1, 0x2}),
+			string:       "[0x1, 0x2]",
+			expectedType: TheBytesType,
 		},
 		"Address": {
-			value:    NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-			expected: "0x0000000000000001",
+			value:        NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+			string:       "0x0000000000000001",
+			expectedType: AddressType,
 		},
 		"struct": {
-			value: NewStruct([]Value{String("bar")}).WithType(&StructType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooStruct",
-				Fields: []Field{
+			value: NewStruct([]Value{String("bar")}),
+			exampleType: NewStructType(
+				utils.TestLocation,
+				"FooStruct",
+				[]Field{
 					{
 						Identifier: "y",
-						Type:       StringType{},
+						Type:       StringType,
 					},
 				},
-			}),
-			expected: "S.test.FooStruct(y: \"bar\")",
+				nil,
+			),
+			withType: func(value Value, ty Type) Value {
+				return value.(Struct).WithType(ty.(*StructType))
+			},
+			string: "S.test.FooStruct(y: \"bar\")",
 		},
 		"resource": {
-			value: NewResource([]Value{NewInt(1)}).WithType(&ResourceType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooResource",
-				Fields: []Field{
+			value: NewResource([]Value{NewInt(1)}),
+			exampleType: NewResourceType(
+				utils.TestLocation,
+				"FooResource",
+				[]Field{
 					{
 						Identifier: "bar",
-						Type:       IntType{},
+						Type:       IntType,
 					},
 				},
-			}),
-			expected: "S.test.FooResource(bar: 1)",
+				nil,
+			),
+			withType: func(value Value, ty Type) Value {
+				return value.(Resource).WithType(ty.(*ResourceType))
+			},
+			string: "S.test.FooResource(bar: 1)",
 		},
 		"event": {
 			value: NewEvent(
@@ -204,85 +281,197 @@ func TestStringer(t *testing.T) {
 					NewInt(1),
 					String("foo"),
 				},
-			).WithType(&EventType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooEvent",
-				Fields: []Field{
+			),
+			exampleType: NewEventType(
+				utils.TestLocation,
+				"FooEvent",
+				[]Field{
 					{
 						Identifier: "a",
-						Type:       IntType{},
+						Type:       IntType,
 					},
 					{
 						Identifier: "b",
-						Type:       StringType{},
+						Type:       StringType,
 					},
 				},
-			}),
-			expected: "S.test.FooEvent(a: 1, b: \"foo\")",
+				nil,
+			),
+			withType: func(value Value, ty Type) Value {
+				return value.(Event).WithType(ty.(*EventType))
+			},
+			string: "S.test.FooEvent(a: 1, b: \"foo\")",
 		},
 		"contract": {
-			value: NewContract([]Value{String("bar")}).WithType(&ContractType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "FooContract",
-				Fields: []Field{
+			value: NewContract([]Value{String("bar")}),
+			exampleType: NewContractType(
+				utils.TestLocation,
+				"FooContract",
+				[]Field{
 					{
 						Identifier: "y",
-						Type:       StringType{},
+						Type:       StringType,
 					},
 				},
-			}),
-			expected: "S.test.FooContract(y: \"bar\")",
-		},
-		"Link": {
-			value: NewLink(
-				Path{
-					Domain:     "storage",
-					Identifier: "foo",
-				},
-				"Int",
+				nil,
 			),
-			expected: "Link<Int>(/storage/foo)",
+			withType: func(value Value, ty Type) Value {
+				return value.(Contract).WithType(ty.(*ContractType))
+			},
+			string: "S.test.FooContract(y: \"bar\")",
 		},
-		"Path": {
+		"enum": {
+			value: NewEnum([]Value{UInt8(1)}),
+			exampleType: NewEnumType(
+				utils.TestLocation,
+				"FooEnum",
+				nil,
+				[]Field{
+					{
+						Identifier: sema.EnumRawValueFieldName,
+						Type:       UInt8Type,
+					},
+				},
+				nil,
+			),
+			withType: func(value Value, ty Type) Value {
+				return value.(Enum).WithType(ty.(*EnumType))
+			},
+			string: "S.test.FooEnum(rawValue: 1)",
+		},
+		"attachment": {
+			value: NewAttachment([]Value{NewInt(1)}),
+			exampleType: NewAttachmentType(
+				utils.TestLocation,
+				"FooAttachment",
+				nil,
+				[]Field{
+					{
+						Identifier: "bar",
+						Type:       IntType,
+					},
+				},
+				nil,
+			),
+			withType: func(value Value, ty Type) Value {
+				return value.(Attachment).WithType(ty.(*AttachmentType))
+			},
+			string: "S.test.FooAttachment(bar: 1)",
+		},
+		"StoragePath": {
 			value: Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
-			expected: "/storage/foo",
+			expectedType: StoragePathType,
+			string:       "/storage/foo",
+		},
+		"PrivatePath": {
+			value: Path{
+				Domain:     common.PathDomainPrivate,
+				Identifier: "foo",
+			},
+			expectedType: PrivatePathType,
+			string:       "/private/foo",
+		},
+		"PublicPath": {
+			value: Path{
+				Domain:     common.PathDomainPublic,
+				Identifier: "foo",
+			},
+			expectedType: PublicPathType,
+			string:       "/public/foo",
 		},
 		"Type": {
-			value:    TypeValue{StaticType: IntType{}},
-			expected: "Type<Int>()",
+			value:        TypeValue{StaticType: IntType},
+			expectedType: MetaType,
+			string:       "Type<Int>()",
 		},
-		"Capability": {
-			value: Capability{
-				Path:       Path{Domain: "storage", Identifier: "foo"},
-				Address:    BytesToAddress([]byte{1, 2, 3, 4, 5}),
-				BorrowType: IntType{},
-			},
-			expected: "Capability<Int>(address: 0x0000000102030405, path: /storage/foo)",
+		"Capability (Path)": {
+			value: NewDeprecatedPathCapability(
+				BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				Path{
+					Domain:     common.PathDomainPublic,
+					Identifier: "foo",
+				},
+				StringType,
+			),
+			expectedType: NewCapabilityType(StringType),
+			string:       "Capability<String>(address: 0x0000000102030405, path: /public/foo)",
+		},
+		"Capability (Path, no borrow type)": {
+			value: NewDeprecatedPathCapability(
+				BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				Path{
+					Domain:     common.PathDomainPublic,
+					Identifier: "foo",
+				},
+				nil,
+			),
+			expectedType: NewCapabilityType(nil),
+			string:       "Capability(address: 0x0000000102030405, path: /public/foo)",
+		},
+		"Capability (ID)": {
+			value: NewCapability(
+				3,
+				BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				IntType,
+			),
+			expectedType: NewCapabilityType(IntType),
+			string:       "Capability<Int>(address: 0x0000000102030405, id: 3)",
+		},
+		"Function": {
+			value: NewFunction(
+				testFunctionType,
+			),
+			expectedType: testFunctionType,
+			string:       "fun ...",
 		},
 	}
+}
 
-	test := func(name string, testCase testCase) {
+func TestValue_String(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(name string, testCase valueTestCase) {
 
 		t.Run(name, func(t *testing.T) {
 
 			t.Parallel()
 
+			withType := testCase.withType
+			if withType != nil {
+				testCase.value = withType(testCase.value, testCase.exampleType)
+			}
+
 			assert.Equal(t,
-				testCase.expected,
+				testCase.string,
 				testCase.value.String(),
 			)
 		})
 	}
 
-	for name, testCase := range stringerTests {
+	for name, testCase := range newValueTestCases() {
 		test(name, testCase)
 	}
 }
 
-func TestToBigEndianBytes(t *testing.T) {
+func TestNumberValue_ToBigEndianBytes(t *testing.T) {
+
+	t.Parallel()
+
+	uint128LargeValueTestCase, _ := NewUInt128FromBig(new(big.Int).SetBytes([]byte{127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}))
+	uint128MaxValue, _ := NewUInt128FromBig(sema.UInt128TypeMaxIntBig)
+
+	uint256LargeValueTestCase, _ := NewUInt256FromBig(new(big.Int).SetBytes([]byte{127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}))
+	uint256MaxValue, _ := NewUInt256FromBig(sema.UInt256TypeMaxIntBig)
+
+	word128LargeValueTestCase, _ := NewWord128FromBig(new(big.Int).SetBytes([]byte{127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}))
+	word128MaxValue, _ := NewWord128FromBig(sema.Word128TypeMaxIntBig)
+
+	word256LargeValueTestCase, _ := NewWord256FromBig(new(big.Int).SetBytes([]byte{127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255}))
+	word256MaxValue, _ := NewWord256FromBig(sema.Word256TypeMaxIntBig)
 
 	typeTests := map[string]map[NumberValue][]byte{
 		// Int*
@@ -297,56 +486,70 @@ func TestToBigEndianBytes(t *testing.T) {
 			NewInt(-10000000000000000): {220, 121, 13, 144, 63, 0, 0},
 		},
 		"Int8": {
-			NewInt8(0):    {0},
-			NewInt8(42):   {42},
-			NewInt8(127):  {127},
-			NewInt8(-1):   {255},
-			NewInt8(-127): {129},
-			NewInt8(-128): {128},
+			Int8(0):    {0},
+			Int8(42):   {42},
+			Int8(127):  {127},
+			Int8(99):   {99},
+			Int8(-1):   {255},
+			Int8(-127): {129},
+			Int8(-128): {128},
+			Int8(-99):  {157},
 		},
 		"Int16": {
 			NewInt16(0):      {0, 0},
 			NewInt16(42):     {0, 42},
 			NewInt16(32767):  {127, 255},
+			NewInt16(10000):  {39, 16},
 			NewInt16(-1):     {255, 255},
+			NewInt16(-10000): {216, 240},
 			NewInt16(-32767): {128, 1},
 			NewInt16(-32768): {128, 0},
 		},
 		"Int32": {
 			NewInt32(0):           {0, 0, 0, 0},
 			NewInt32(42):          {0, 0, 0, 42},
+			NewInt32(10000):       {0, 0, 39, 16},
 			NewInt32(2147483647):  {127, 255, 255, 255},
 			NewInt32(-1):          {255, 255, 255, 255},
+			NewInt32(-10000):      {255, 255, 216, 240},
 			NewInt32(-2147483647): {128, 0, 0, 1},
 			NewInt32(-2147483648): {128, 0, 0, 0},
 		},
 		"Int64": {
 			NewInt64(0):                    {0, 0, 0, 0, 0, 0, 0, 0},
 			NewInt64(42):                   {0, 0, 0, 0, 0, 0, 0, 42},
+			NewInt64(10000):                {0, 0, 0, 0, 0, 0, 39, 16},
 			NewInt64(9223372036854775807):  {127, 255, 255, 255, 255, 255, 255, 255},
 			NewInt64(-1):                   {255, 255, 255, 255, 255, 255, 255, 255},
+			NewInt64(-10000):               {255, 255, 255, 255, 255, 255, 216, 240},
 			NewInt64(-9223372036854775807): {128, 0, 0, 0, 0, 0, 0, 1},
 			NewInt64(-9223372036854775808): {128, 0, 0, 0, 0, 0, 0, 0},
 		},
 		"Int128": {
-			NewInt128(0):                  {0},
-			NewInt128(42):                 {42},
-			NewInt128(127):                {127},
-			NewInt128(128):                {0, 128},
-			NewInt128(200):                {0, 200},
-			NewInt128(-1):                 {255},
-			NewInt128(-200):               {255, 56},
-			NewInt128(-10000000000000000): {220, 121, 13, 144, 63, 0, 0},
+			NewInt128(0):                     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			NewInt128(42):                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42},
+			NewInt128(127):                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127},
+			NewInt128(128):                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128},
+			NewInt128(200):                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200},
+			NewInt128(10000):                 {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 16},
+			NewInt128(-1):                    {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			NewInt128(-200):                  {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 56},
+			NewInt128(-10000):                {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 216, 240},
+			NewInt128(-10000000000000000):    {255, 255, 255, 255, 255, 255, 255, 255, 255, 220, 121, 13, 144, 63, 0, 0},
+			Int128{sema.Int128TypeMinIntBig}: {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			Int128{sema.Int128TypeMaxIntBig}: {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		"Int256": {
-			NewInt256(0):                  {0},
-			NewInt256(42):                 {42},
-			NewInt256(127):                {127},
-			NewInt256(128):                {0, 128},
-			NewInt256(200):                {0, 200},
-			NewInt256(-1):                 {255},
-			NewInt256(-200):               {255, 56},
-			NewInt256(-10000000000000000): {220, 121, 13, 144, 63, 0, 0},
+			NewInt256(0):                     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			NewInt256(42):                    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42},
+			NewInt256(127):                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127},
+			NewInt256(128):                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128},
+			NewInt256(200):                   {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200},
+			NewInt256(-1):                    {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			NewInt256(-200):                  {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 56},
+			NewInt256(-10000000000000000):    {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 220, 121, 13, 144, 63, 0, 0},
+			Int256{sema.Int256TypeMinIntBig}: {128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			Int256{sema.Int256TypeMaxIntBig}: {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		// UInt*
 		"UInt": {
@@ -359,6 +562,7 @@ func TestToBigEndianBytes(t *testing.T) {
 		"UInt8": {
 			NewUInt8(0):   {0},
 			NewUInt8(42):  {42},
+			NewUInt8(99):  {99},
 			NewUInt8(127): {127},
 			NewUInt8(128): {128},
 			NewUInt8(255): {255},
@@ -366,6 +570,7 @@ func TestToBigEndianBytes(t *testing.T) {
 		"UInt16": {
 			NewUInt16(0):     {0, 0},
 			NewUInt16(42):    {0, 42},
+			NewUInt16(10000): {39, 16},
 			NewUInt16(32767): {127, 255},
 			NewUInt16(32768): {128, 0},
 			NewUInt16(65535): {255, 255},
@@ -373,6 +578,7 @@ func TestToBigEndianBytes(t *testing.T) {
 		"UInt32": {
 			NewUInt32(0):          {0, 0, 0, 0},
 			NewUInt32(42):         {0, 0, 0, 42},
+			NewUInt32(10000):      {0, 0, 39, 16},
 			NewUInt32(2147483647): {127, 255, 255, 255},
 			NewUInt32(2147483648): {128, 0, 0, 0},
 			NewUInt32(4294967295): {255, 255, 255, 255},
@@ -380,23 +586,28 @@ func TestToBigEndianBytes(t *testing.T) {
 		"UInt64": {
 			NewUInt64(0):                    {0, 0, 0, 0, 0, 0, 0, 0},
 			NewUInt64(42):                   {0, 0, 0, 0, 0, 0, 0, 42},
+			NewUInt64(10000):                {0, 0, 0, 0, 0, 0, 39, 16},
 			NewUInt64(9223372036854775807):  {127, 255, 255, 255, 255, 255, 255, 255},
 			NewUInt64(9223372036854775808):  {128, 0, 0, 0, 0, 0, 0, 0},
 			NewUInt64(18446744073709551615): {255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		"UInt128": {
-			NewUInt128(0):   {0},
-			NewUInt128(42):  {42},
-			NewUInt128(127): {127},
-			NewUInt128(128): {128},
-			NewUInt128(200): {200},
+			NewUInt128(0):             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			NewUInt128(42):            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42},
+			NewUInt128(127):           {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127},
+			NewUInt128(128):           {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128},
+			NewUInt128(200):           {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200},
+			uint128LargeValueTestCase: {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			uint128MaxValue:           {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		"UInt256": {
-			NewUInt256(0):   {0},
-			NewUInt256(42):  {42},
-			NewUInt256(127): {127},
-			NewUInt256(128): {128},
-			NewUInt256(200): {200},
+			NewUInt256(0):             {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			NewUInt256(42):            {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42},
+			NewUInt256(127):           {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127},
+			NewUInt256(128):           {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128},
+			NewUInt256(200):           {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 200},
+			uint256LargeValueTestCase: {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			uint256MaxValue:           {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
 		},
 		// Word*
 		"Word8": {
@@ -427,6 +638,22 @@ func TestToBigEndianBytes(t *testing.T) {
 			NewWord64(9223372036854775808):  {128, 0, 0, 0, 0, 0, 0, 0},
 			NewWord64(18446744073709551615): {255, 255, 255, 255, 255, 255, 255, 255},
 		},
+		"Word128": {
+			NewWord128(0):             {0},
+			NewWord128(42):            {42},
+			NewWord128(127):           {127},
+			NewWord128(128):           {128},
+			word128LargeValueTestCase: {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			word128MaxValue:           {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
+		"Word256": {
+			NewWord256(0):             {0},
+			NewWord256(42):            {42},
+			NewWord256(127):           {127},
+			NewWord256(200):           {200},
+			word256LargeValueTestCase: {127, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+			word256MaxValue:           {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+		},
 		// Fix*
 		"Fix64": {
 			Fix64(0):           {0, 0, 0, 0, 0, 0, 0, 0},
@@ -447,7 +674,7 @@ func TestToBigEndianBytes(t *testing.T) {
 	for _, integerType := range sema.AllNumberTypes {
 		switch integerType {
 		case sema.NumberType, sema.SignedNumberType,
-			sema.IntegerType, sema.SignedIntegerType,
+			sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType,
 			sema.FixedPointType, sema.SignedFixedPointType:
 			continue
 		}
@@ -473,12 +700,13 @@ func TestToBigEndianBytes(t *testing.T) {
 }
 
 func TestOptional_Type(t *testing.T) {
+	t.Parallel()
 
 	t.Run("none", func(t *testing.T) {
 
 		require.Equal(t,
-			OptionalType{
-				Type: NeverType{},
+			&OptionalType{
+				Type: NeverType,
 			},
 			Optional{}.Type(),
 		)
@@ -487,8 +715,8 @@ func TestOptional_Type(t *testing.T) {
 	t.Run("some", func(t *testing.T) {
 
 		require.Equal(t,
-			OptionalType{
-				Type: Int8Type{},
+			&OptionalType{
+				Type: Int8Type,
 			},
 			Optional{
 				Value: Int8(2),
@@ -498,6 +726,8 @@ func TestOptional_Type(t *testing.T) {
 }
 
 func TestNonUTF8String(t *testing.T) {
+	t.Parallel()
+
 	nonUTF8String := "\xbd\xb2\x3d\xbc\x20\xe2"
 
 	// Make sure it is an invalid utf8 string
@@ -510,6 +740,7 @@ func TestNonUTF8String(t *testing.T) {
 }
 
 func TestNewInt128FromBig(t *testing.T) {
+	t.Parallel()
 
 	_, err := NewInt128FromBig(big.NewInt(1))
 	require.NoError(t, err)
@@ -530,6 +761,7 @@ func TestNewInt128FromBig(t *testing.T) {
 }
 
 func TestNewInt256FromBig(t *testing.T) {
+	t.Parallel()
 
 	_, err := NewInt256FromBig(big.NewInt(1))
 	require.NoError(t, err)
@@ -550,6 +782,7 @@ func TestNewInt256FromBig(t *testing.T) {
 }
 
 func TestNewUIntFromBig(t *testing.T) {
+	t.Parallel()
 
 	_, err := NewUIntFromBig(big.NewInt(1))
 	require.NoError(t, err)
@@ -567,6 +800,7 @@ func TestNewUIntFromBig(t *testing.T) {
 }
 
 func TestNewUInt128FromBig(t *testing.T) {
+	t.Parallel()
 
 	_, err := NewUInt128FromBig(big.NewInt(1))
 	require.NoError(t, err)
@@ -584,6 +818,7 @@ func TestNewUInt128FromBig(t *testing.T) {
 }
 
 func TestNewUInt256FromBig(t *testing.T) {
+	t.Parallel()
 
 	_, err := NewUInt256FromBig(big.NewInt(1))
 	require.NoError(t, err)
@@ -598,4 +833,157 @@ func TestNewUInt256FromBig(t *testing.T) {
 	)
 	_, err = NewUInt256FromBig(aboveMax)
 	require.Error(t, err)
+}
+
+func TestNewWord128FromBig(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewWord128FromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := big.NewInt(-1)
+	_, err = NewWord128FromBig(belowMin)
+	require.Error(t, err)
+
+	aboveMax := new(big.Int).Add(
+		sema.Word128TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewWord128FromBig(aboveMax)
+	require.Error(t, err)
+}
+
+func TestNewWord256FromBig(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewWord256FromBig(big.NewInt(1))
+	require.NoError(t, err)
+
+	belowMin := big.NewInt(-1)
+	_, err = NewWord256FromBig(belowMin)
+	require.Error(t, err)
+
+	aboveMax := new(big.Int).Add(
+		sema.Word256TypeMaxIntBig,
+		big.NewInt(1),
+	)
+	_, err = NewWord256FromBig(aboveMax)
+	require.Error(t, err)
+}
+
+func TestValue_Type(t *testing.T) {
+
+	t.Parallel()
+
+	checkedTypes := map[Type]struct{}{}
+
+	test := func(name string, testCase valueTestCase) {
+
+		t.Run(name, func(t *testing.T) {
+
+			value := testCase.value
+
+			returnedType := value.Type()
+
+			expectedType := testCase.expectedType
+			if expectedType != nil {
+				require.NotNil(t, returnedType)
+				require.True(t, returnedType != nil)
+				require.Equal(t, expectedType, returnedType)
+			} else if !testCase.noType {
+				exampleType := testCase.exampleType
+				require.NotNil(t, exampleType)
+
+				// Ensure the nil type is an *untyped nil*
+				require.Nil(t, returnedType)
+				require.True(t, returnedType == nil)
+
+				// Once a type is set, it should be returned
+				value = testCase.withType(value, exampleType)
+
+				returnedType = value.Type()
+
+				require.NotNil(t, returnedType)
+				require.Equal(t, exampleType, returnedType)
+			}
+
+			if !testCase.noType {
+				require.NotContains(t, checkedTypes, returnedType)
+				checkedTypes[returnedType] = struct{}{}
+			}
+		})
+	}
+
+	for name, testCase := range newValueTestCases() {
+		test(name, testCase)
+	}
+}
+
+func TestComposite(t *testing.T) {
+	t.Parallel()
+
+	test := func(name string, testCase valueTestCase) {
+
+		t.Run(name, func(t *testing.T) {
+			value := testCase.value
+			switch value.(type) {
+			case Event, Struct, Contract, Enum, Resource, Attachment:
+				valueWithType := testCase.withType(value, testCase.exampleType)
+				require.Implements(t, (*Composite)(nil), valueWithType)
+				fieldedValueWithType := valueWithType.(Composite)
+				assert.NotNil(t, fieldedValueWithType.getFieldValues())
+				assert.NotNil(t, fieldedValueWithType.getFields())
+
+				fieldedValue := value.(Composite)
+
+				assert.Nil(t, fieldedValue.getFields())
+			}
+		})
+
+	}
+
+	for name, testCase := range newValueTestCases() {
+		test(name, testCase)
+	}
+}
+
+func TestEvent_GetFieldByName(t *testing.T) {
+	t.Parallel()
+
+	simpleEvent := NewEvent(
+		[]Value{
+			NewInt(1),
+			String("foo"),
+		},
+	)
+	assert.Nil(t, FieldsMappedByName(simpleEvent))
+	assert.Nil(t, SearchFieldByName(simpleEvent, "a"))
+
+	simpleEventWithType := simpleEvent.WithType(NewEventType(
+		utils.TestLocation,
+		"SimpleEvent",
+		[]Field{
+			{
+				Identifier: "a",
+				Type:       IntType,
+			},
+			{
+				Identifier: "b",
+				Type:       StringType,
+			},
+		},
+		nil,
+	))
+
+	assert.Equal(t, NewInt(1), SearchFieldByName(simpleEventWithType, "a"))
+	assert.Equal(t, String("foo"), SearchFieldByName(simpleEventWithType, "b"))
+	assert.Nil(t, SearchFieldByName(simpleEventWithType, "c"))
+
+	assert.Equal(t,
+		map[string]Value{
+			"a": NewInt(1),
+			"b": String("foo"),
+		},
+		FieldsMappedByName(simpleEventWithType),
+	)
 }

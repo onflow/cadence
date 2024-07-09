@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,10 @@ type StatementDeclarationVisitor[T any] interface {
 	VisitFunctionDeclaration(*FunctionDeclaration) T
 	VisitSpecialFunctionDeclaration(*SpecialFunctionDeclaration) T
 	VisitCompositeDeclaration(*CompositeDeclaration) T
+	VisitAttachmentDeclaration(*AttachmentDeclaration) T
 	VisitInterfaceDeclaration(*InterfaceDeclaration) T
+	VisitEntitlementDeclaration(*EntitlementDeclaration) T
+	VisitEntitlementMappingDeclaration(*EntitlementMappingDeclaration) T
 	VisitTransactionDeclaration(*TransactionDeclaration) T
 }
 
@@ -73,11 +76,20 @@ func AcceptDeclaration[T any](declaration Declaration, visitor DeclarationVisito
 	case ElementTypeCompositeDeclaration:
 		return visitor.VisitCompositeDeclaration(declaration.(*CompositeDeclaration))
 
+	case ElementTypeAttachmentDeclaration:
+		return visitor.VisitAttachmentDeclaration(declaration.(*AttachmentDeclaration))
+
 	case ElementTypeInterfaceDeclaration:
 		return visitor.VisitInterfaceDeclaration(declaration.(*InterfaceDeclaration))
 
 	case ElementTypeTransactionDeclaration:
 		return visitor.VisitTransactionDeclaration(declaration.(*TransactionDeclaration))
+
+	case ElementTypeEntitlementDeclaration:
+		return visitor.VisitEntitlementDeclaration(declaration.(*EntitlementDeclaration))
+
+	case ElementTypeEntitlementMappingDeclaration:
+		return visitor.VisitEntitlementMappingDeclaration(declaration.(*EntitlementMappingDeclaration))
 	}
 
 	panic(errors.NewUnreachableError())
@@ -96,6 +108,7 @@ type StatementVisitor[T any] interface {
 	VisitSwitchStatement(*SwitchStatement) T
 	VisitEmitStatement(*EmitStatement) T
 	VisitExpressionStatement(*ExpressionStatement) T
+	VisitRemoveStatement(*RemoveStatement) T
 }
 
 func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_ T) {
@@ -146,11 +159,20 @@ func AcceptStatement[T any](statement Statement, visitor StatementVisitor[T]) (_
 	case ElementTypeCompositeDeclaration:
 		return visitor.VisitCompositeDeclaration(statement.(*CompositeDeclaration))
 
+	case ElementTypeAttachmentDeclaration:
+		return visitor.VisitAttachmentDeclaration(statement.(*AttachmentDeclaration))
+
 	case ElementTypeInterfaceDeclaration:
 		return visitor.VisitInterfaceDeclaration(statement.(*InterfaceDeclaration))
 
 	case ElementTypeTransactionDeclaration:
 		return visitor.VisitTransactionDeclaration(statement.(*TransactionDeclaration))
+
+	case ElementTypeEntitlementDeclaration:
+		return visitor.VisitEntitlementDeclaration(statement.(*EntitlementDeclaration))
+
+	case ElementTypeRemoveStatement:
+		return visitor.VisitRemoveStatement(statement.(*RemoveStatement))
 	}
 
 	panic(errors.NewUnreachableError())
@@ -179,6 +201,7 @@ type ExpressionVisitor[T any] interface {
 	VisitCastingExpression(*CastingExpression) T
 	VisitBinaryExpression(*BinaryExpression) T
 	VisitConditionalExpression(*ConditionalExpression) T
+	VisitAttachExpression(*AttachExpression) T
 }
 
 func AcceptExpression[T any](expression Expression, visitor ExpressionVisitor[T]) (_ T) {
@@ -249,6 +272,9 @@ func AcceptExpression[T any](expression Expression, visitor ExpressionVisitor[T]
 
 	case ElementTypeConditionalExpression:
 		return visitor.VisitConditionalExpression(expression.(*ConditionalExpression))
+
+	case ElementTypeAttachExpression:
+		return visitor.VisitAttachExpression(expression.(*AttachExpression))
 	}
 
 	panic(errors.NewUnreachableError())

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,17 +35,18 @@ func TestCheckInvalidContractAccountField(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       contract Test {
-          let account: AuthAccount
+          let account: &Account
 
-          init(account: AuthAccount) {
+          init(account: &Account) {
               self.account = account
           }
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 func TestCheckInvalidContractInterfaceAccountField(t *testing.T) {
@@ -54,7 +55,7 @@ func TestCheckInvalidContractInterfaceAccountField(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       contract interface Test {
-          let account: AuthAccount
+          let account: &Account
       }
     `)
 
@@ -132,15 +133,16 @@ func TestCheckInvalidContractAccountFieldInitialization(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       contract Test {
 
-          init(account: AuthAccount) {
+          init(account: &Account) {
               self.account = account
           }
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.AssignmentToConstantMemberError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 func TestCheckInvalidContractAccountFieldAccess(t *testing.T) {
@@ -360,7 +362,7 @@ func TestCheckContractNestedDeclarationOrderOutsideInside(t *testing.T) {
 
 		annotationType := "R"
 		if isInterface {
-			annotationType = "AnyResource{R}"
+			annotationType = "{R}"
 		}
 
 		t.Run(interfaceKeyword, func(t *testing.T) {
@@ -433,6 +435,10 @@ func TestCheckContractNestedDeclarationsComplex(t *testing.T) {
 			for _, firstIsInterface := range interfacePossibilities {
 				for _, secondKind := range compositeKinds {
 					for _, secondIsInterface := range interfacePossibilities {
+
+						if contractIsInterface && (!firstIsInterface || !secondIsInterface) {
+							continue
+						}
 
 						contractInterfaceKeyword := ""
 						if contractIsInterface {
@@ -525,21 +531,21 @@ func TestCheckContractNestedDeclarationsComplex(t *testing.T) {
 							switch firstKind {
 							case common.CompositeKindResource:
 								firstQualifiedTypeAnnotation = fmt.Sprintf(
-									"AnyResource{%s}",
+									"{%s}",
 									firstQualifiedTypeAnnotation,
 								)
 								firstLocalTypeAnnotation = fmt.Sprintf(
-									"AnyResource{%s}",
+									"{%s}",
 									firstLocalTypeAnnotation,
 								)
 
 							case common.CompositeKindStructure:
 								firstQualifiedTypeAnnotation = fmt.Sprintf(
-									"AnyStruct{%s}",
+									"{%s}",
 									firstQualifiedTypeAnnotation,
 								)
 								firstLocalTypeAnnotation = fmt.Sprintf(
-									"AnyStruct{%s}",
+									"{%s}",
 									firstLocalTypeAnnotation,
 								)
 
@@ -552,21 +558,21 @@ func TestCheckContractNestedDeclarationsComplex(t *testing.T) {
 							switch secondKind {
 							case common.CompositeKindResource:
 								secondQualifiedTypeAnnotation = fmt.Sprintf(
-									"AnyResource{%s}",
+									"{%s}",
 									secondQualifiedTypeAnnotation,
 								)
 								secondLocalTypeAnnotation = fmt.Sprintf(
-									"AnyResource{%s}",
+									"{%s}",
 									secondLocalTypeAnnotation,
 								)
 
 							case common.CompositeKindStructure:
 								secondQualifiedTypeAnnotation = fmt.Sprintf(
-									"AnyStruct{%s}",
+									"{%s}",
 									secondQualifiedTypeAnnotation,
 								)
 								secondLocalTypeAnnotation = fmt.Sprintf(
-									"AnyStruct{%s}",
+									"{%s}",
 									secondLocalTypeAnnotation,
 								)
 							}
@@ -660,11 +666,20 @@ func TestCheckInvalidContractNestedTypeShadowing(t *testing.T) {
 		for _, isInterface := range []bool{true, false} {
 			keywords := kind.Keyword()
 
+			if isInterface && kind == common.CompositeKindAttachment {
+				continue
+			}
+
 			if isInterface {
 				keywords += " interface"
 			}
 
-			code := fmt.Sprintf(`%s Test {}`, keywords)
+			var baseType string
+			if kind == common.CompositeKindAttachment {
+				baseType = "for AnyStruct"
+			}
+
+			code := fmt.Sprintf(`%s Test %s {}`, keywords, baseType)
 
 			tests = append(tests, test{
 				name:        keywords,
@@ -711,9 +726,9 @@ func TestCheckInvalidContractNestedTypeShadowing(t *testing.T) {
 func TestCheckBadContractNesting(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, "contract signatureAlgorithm { resource interface payer { contract fun : payer { contract fun { contract fun { } contract fun { contract interface account { } } contract account { } } } } }")
+	_, err := ParseAndCheck(t, "contract signatureAlgorithm { resource interface payer { contract foo : payer { contract foo { contract foo { } contract foo { contract interface account { } } contract account { } } } } }")
 
-	errs := RequireCheckerErrors(t, err, 14)
+	errs := RequireCheckerErrors(t, err, 9)
 
 	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
@@ -724,17 +739,17 @@ func TestCheckBadContractNesting(t *testing.T) {
 	assert.IsType(t, &sema.RedeclarationError{}, errs[6])
 	assert.IsType(t, &sema.RedeclarationError{}, errs[7])
 	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[8])
-	assert.IsType(t, &sema.RedeclarationError{}, errs[9])
-	assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[10])
-	assert.IsType(t, &sema.MissingConformanceError{}, errs[11])
-	assert.IsType(t, &sema.RedeclarationError{}, errs[12])
-	assert.IsType(t, &sema.RedeclarationError{}, errs[13])
 }
 
 func TestCheckContractEnumAccessRestricted(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseAndCheckWithOptions(t, "contract enum{}let x = enum!",
+	_, err := ParseAndCheckWithOptions(t, `
+            contract foo {
+                access(all) fun bar() {}
+            }
+            let x = foo.bar()!
+        `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
 				AccessCheckMode: sema.AccessCheckModeStrict,

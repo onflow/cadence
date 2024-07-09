@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 )
 
 func (checker *Checker) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) (_ struct{}) {
-	transactionType := checker.Elaboration.TransactionDeclarationTypes[declaration]
+	transactionType := checker.Elaboration.TransactionDeclarationType(declaration)
 	if transactionType == nil {
 		panic(errors.NewUnreachableError())
 	}
@@ -57,7 +57,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	checker.enterValueScope()
 	defer checker.leaveValueScope(declaration.EndPosition, true)
 
-	checker.declareSelfValue(transactionType, "")
+	checker.declareSelfValue(UnauthorizedAccess, transactionType, "")
 
 	if declaration.ParameterList != nil {
 		checker.checkTransactionParameters(declaration, transactionType.Parameters)
@@ -84,15 +84,16 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	return
 }
 
-func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionDeclaration, parameters []*Parameter) {
+func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionDeclaration, parameters []Parameter) {
 	checker.checkArgumentLabels(declaration.ParameterList)
 	checker.checkParameters(declaration.ParameterList, parameters)
 	checker.declareParameters(declaration.ParameterList, parameters)
 
 	// Check parameter types
 
-	for _, parameter := range parameters {
+	for parameterIndex, parameter := range parameters {
 		parameterType := parameter.TypeAnnotation.Type
+		astParameter := declaration.ParameterList.Parameters[parameterIndex]
 
 		// Ignore invalid parameter types
 
@@ -105,7 +106,8 @@ func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionD
 		if !parameterType.IsImportable(map[*Member]bool{}) {
 			checker.report(
 				&InvalidNonImportableTransactionParameterTypeError{
-					Type: parameterType,
+					Type:  parameterType,
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, astParameter),
 				},
 			)
 		}
@@ -184,6 +186,7 @@ func (checker *Checker) visitTransactionPrepareFunction(
 	checker.checkFunction(
 		prepareFunction.FunctionDeclaration.ParameterList,
 		nil,
+		UnauthorizedAccess,
 		prepareFunctionType,
 		prepareFunction.FunctionDeclaration.FunctionBlock,
 		true,
@@ -200,13 +203,13 @@ func (checker *Checker) visitTransactionPrepareFunction(
 // checkTransactionPrepareFunctionParameters checks that the parameters are each of type Account.
 func (checker *Checker) checkTransactionPrepareFunctionParameters(
 	parameterList *ast.ParameterList,
-	parameters []*Parameter,
+	parameters []Parameter,
 ) {
 	for i, parameter := range parameterList.Parameters {
 		parameterType := parameters[i].TypeAnnotation.Type
 
 		if !parameterType.IsInvalidType() &&
-			!IsSameTypeKind(parameterType, AuthAccountType) {
+			!IsSubType(parameterType, AccountReferenceType) {
 
 			checker.report(
 				&InvalidTransactionPrepareParameterTypeError{
@@ -233,6 +236,7 @@ func (checker *Checker) visitTransactionExecuteFunction(
 	checker.checkFunction(
 		&ast.ParameterList{},
 		nil,
+		UnauthorizedAccess,
 		executeFunctionType,
 		executeFunction.FunctionDeclaration.FunctionBlock,
 		true,
@@ -248,12 +252,17 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.Parameters = checker.parameters(declaration.ParameterList)
 	}
 
-	declarations := make([]ast.Declaration, len(declaration.Fields))
-	for i, field := range declaration.Fields {
-		declarations[i] = field
+	var fieldDeclarations []ast.Declaration
+
+	fieldCount := len(declaration.Fields)
+	if fieldCount > 0 {
+		fieldDeclarations = make([]ast.Declaration, fieldCount)
+		for i, field := range declaration.Fields {
+			fieldDeclarations[i] = field
+		}
 	}
 
-	allMembers := ast.NewMembers(checker.memoryGauge, declarations)
+	allMembers := ast.NewMembers(checker.memoryGauge, fieldDeclarations)
 
 	members, fields, origins := checker.defaultMembersAndOrigins(
 		allMembers,
@@ -273,6 +282,6 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.PrepareParameters = checker.parameters(parameterList)
 	}
 
-	checker.Elaboration.TransactionDeclarationTypes[declaration] = transactionType
+	checker.Elaboration.SetTransactionDeclarationType(declaration, transactionType)
 	checker.Elaboration.TransactionTypes = append(checker.Elaboration.TransactionTypes, transactionType)
 }

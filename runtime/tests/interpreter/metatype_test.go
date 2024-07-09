@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,8 +48,8 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
-			inter.Globals.Get("result").GetValue(),
+			interpreter.TrueValue,
+			inter.Globals.Get("result").GetValue(inter),
 		)
 	})
 
@@ -64,8 +64,8 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
-			inter.Globals.Get("result").GetValue(),
+			interpreter.FalseValue,
+			inter.Globals.Get("result").GetValue(inter),
 		)
 	})
 
@@ -80,8 +80,8 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
-			inter.Globals.Get("result").GetValue(),
+			interpreter.FalseValue,
+			inter.Globals.Get("result").GetValue(inter),
 		)
 	})
 
@@ -96,8 +96,8 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(true),
-			inter.Globals.Get("result").GetValue(),
+			interpreter.TrueValue,
+			inter.Globals.Get("result").GetValue(inter),
 		)
 	})
 
@@ -112,8 +112,8 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
-			inter.Globals.Get("result").GetValue(),
+			interpreter.FalseValue,
+			inter.Globals.Get("result").GetValue(inter),
 		)
 	})
 
@@ -133,7 +133,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 		baseValueActivation.DeclareValue(valueDeclaration)
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		interpreter.Declare(baseActivation, valueDeclaration)
 
 		inter, err := parseCheckAndInterpretWithOptions(t,
@@ -142,10 +142,14 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -154,8 +158,8 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
-			inter.Globals.Get("result").GetValue(),
+			interpreter.FalseValue,
+			inter.Globals.Get("result").GetValue(inter),
 		)
 	})
 
@@ -187,7 +191,7 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range valueDeclarations {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
@@ -198,10 +202,14 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -210,8 +218,8 @@ func TestInterpretMetaTypeEquality(t *testing.T) {
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.BoolValue(false),
-			inter.Globals.Get("result").GetValue(),
+			interpreter.FalseValue,
+			inter.Globals.Get("result").GetValue(inter),
 		)
 	})
 }
@@ -233,7 +241,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("[Int]"),
-			inter.Globals.Get("identifier").GetValue(),
+			inter.Globals.Get("identifier").GetValue(inter),
 		)
 	})
 
@@ -252,7 +260,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("S.test.S"),
-			inter.Globals.Get("identifier").GetValue(),
+			inter.Globals.Get("identifier").GetValue(inter),
 		)
 	})
 
@@ -276,7 +284,7 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			baseValueActivation.DeclareValue(valueDeclaration)
 		}
 
-		baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 		for _, valueDeclaration := range valueDeclarations {
 			interpreter.Declare(baseActivation, valueDeclaration)
 		}
@@ -287,10 +295,14 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
             `,
 			ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			},
 		)
@@ -300,7 +312,34 @@ func TestInterpretMetaTypeIdentifier(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue(""),
-			inter.Globals.Get("identifier").GetValue(),
+			inter.Globals.Get("identifier").GetValue(inter),
+		)
+	})
+
+	t.Run("no loading of program", func(t *testing.T) {
+
+		t.Parallel()
+
+		// TypeValue.GetMember for `identifier` should not load the program
+
+		inter := parseCheckAndInterpret(t, `
+           fun test(_ type: Type): String {
+               return type.identifier
+           }
+        `)
+
+		location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
+		staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
+		typeValue := interpreter.NewUnmeteredTypeValue(staticType)
+
+		result, err := inter.Invoke("test", typeValue)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("A.0000000000000001.Foo.Bar"),
+			result,
 		)
 	})
 }
@@ -406,17 +445,21 @@ func TestInterpretIsInstance(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(valueDeclaration)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
 			inter, err := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			})
 			require.NoError(t, err)
@@ -425,13 +468,13 @@ func TestInterpretIsInstance(t *testing.T) {
 				t,
 				inter,
 				interpreter.BoolValue(testCase.result),
-				inter.Globals.Get("result").GetValue(),
+				inter.Globals.Get("result").GetValue(inter),
 			)
 		})
 	}
 }
 
-func TestInterpretIsSubtype(t *testing.T) {
+func TestInterpretMetaTypeIsSubtype(t *testing.T) {
 
 	t.Parallel()
 
@@ -495,8 +538,8 @@ func TestInterpretIsSubtype(t *testing.T) {
 		{
 			name: "resource is not a subtype of String",
 			code: `
-			  resource R {}
-			  let result = Type<@R>().isSubtype(of: Type<String>())
+              resource R {}
+              let result = Type<@R>().isSubtype(of: Type<String>())
             `,
 			result: false,
 		},
@@ -546,24 +589,28 @@ func TestInterpretIsSubtype(t *testing.T) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(valueDeclaration)
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
 	interpreter.Declare(baseActivation, valueDeclaration)
 
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
 			inter, err := parseCheckAndInterpretWithOptions(t, testCase.code, ParseCheckAndInterpretOptions{
 				CheckerConfig: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 				Config: &interpreter.Config{
-					BaseActivation: baseActivation,
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
 				},
 			})
 			require.NoError(t, err)
 
 			assert.Equal(t,
 				interpreter.BoolValue(testCase.result),
-				inter.Globals.Get("result").GetValue(),
+				inter.Globals.Get("result").GetValue(inter),
 			)
 		})
 	}
@@ -572,12 +619,6 @@ func TestInterpretIsSubtype(t *testing.T) {
 func TestInterpretGetType(t *testing.T) {
 
 	t.Parallel()
-
-	storageAddress := common.MustBytesToAddress([]byte{0x42})
-	storagePath := interpreter.PathValue{
-		Domain:     common.PathDomainStorage,
-		Identifier: "test",
-	}
 
 	cases := []struct {
 		name   string
@@ -626,20 +667,78 @@ func TestInterpretGetType(t *testing.T) {
 			// wrapping the ephemeral reference in an optional
 			// ensures getType doesn't dereference the value,
 			// i.e. EphemeralReferenceValue.StaticType is tested
-			name: "optional ephemeral reference",
+			name: "optional auth ephemeral reference",
 			code: `
+              entitlement X
+
               fun test(): Type {
                   let value = 1
-                  let ref = &value as auth &Int
+                  let ref = &value as auth(X) &Int
+                  let optRef: auth(X) &Int? = ref
+                  return optRef.getType()
+              }
+            `,
+			result: interpreter.TypeValue{
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
+						Authorization: interpreter.NewEntitlementSetAuthorization(
+							nil,
+							func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+							1,
+							sema.Conjunction),
+						ReferencedType: interpreter.PrimitiveStaticTypeInt,
+					},
+				},
+			},
+		},
+		{
+			// wrapping the ephemeral reference in an optional
+			// ensures getType doesn't dereference the value,
+			// i.e. EphemeralReferenceValue.StaticType is tested
+			name: "optional ephemeral reference, auth to unauth",
+			code: `
+              entitlement X
+
+              fun test(): Type {
+                  let value = 1
+                  let ref = &value as auth(X) &Int
                   let optRef: &Int? = ref
                   return optRef.getType()
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
-					Type: interpreter.ReferenceStaticType{
-						Authorized:   true,
-						BorrowedType: interpreter.PrimitiveStaticTypeInt,
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
+						// Reference was converted
+						Authorization:  interpreter.UnauthorizedAccess,
+						ReferencedType: interpreter.PrimitiveStaticTypeInt,
+					},
+				},
+			},
+		},
+		{
+			// wrapping the ephemeral reference in an optional
+			// ensures getType doesn't dereference the value,
+			// i.e. EphemeralReferenceValue.StaticType is tested
+			name: "optional ephemeral reference, auth to auth",
+			code: `
+              entitlement X
+
+              fun test(): Type {
+                  let value = 1
+                  let ref = &value as auth(X) &Int
+                  let optRef: auth(X) &Int? = ref
+                  return optRef.getType()
+              }
+            `,
+			result: interpreter.TypeValue{
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
+						Authorization: interpreter.NewEntitlementSetAuthorization(
+							nil,
+							func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+							1, sema.Conjunction),
+						ReferencedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -648,8 +747,15 @@ func TestInterpretGetType(t *testing.T) {
 			// wrapping the storage reference in an optional
 			// ensures getType doesn't dereference the value,
 			// i.e. StorageReferenceValue.StaticType is tested
-			name: "optional storage reference",
+			name: "optional storage reference, auth to unauth",
 			code: `
+              entitlement X
+
+              fun getStorageReference(): auth(X) &Int {
+                  account.storage.save(1, to: /storage/foo)
+                  return account.storage.borrow<auth(X) &Int>(from: /storage/foo)!
+              }
+
               fun test(): Type {
                   let ref = getStorageReference()
                   let optRef: &Int? = ref
@@ -657,10 +763,43 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.OptionalStaticType{
-					Type: interpreter.ReferenceStaticType{
-						Authorized:   true,
-						BorrowedType: interpreter.PrimitiveStaticTypeInt,
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
+						// Reference was converted
+						Authorization:  interpreter.UnauthorizedAccess,
+						ReferencedType: interpreter.PrimitiveStaticTypeInt,
+					},
+				},
+			},
+		},
+		{
+			// wrapping the storage reference in an optional
+			// ensures getType doesn't dereference the value,
+			// i.e. StorageReferenceValue.StaticType is tested
+			name: "optional storage reference, auth to auth",
+			code: `
+              entitlement X
+
+              fun getStorageReference(): auth(X) &Int {
+                  account.storage.save(1, to: /storage/foo)
+                  return account.storage.borrow<auth(X) &Int>(from: /storage/foo)!
+              }
+
+              fun test(): Type {
+                  let ref = getStorageReference()
+                  let optRef: auth(X) &Int? = ref
+                  return optRef.getType()
+              }
+            `,
+			result: interpreter.TypeValue{
+				Type: &interpreter.OptionalStaticType{
+					Type: &interpreter.ReferenceStaticType{
+						Authorization: interpreter.NewEntitlementSetAuthorization(
+							nil,
+							func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+							1,
+							sema.Conjunction),
+						ReferencedType: interpreter.PrimitiveStaticTypeInt,
 					},
 				},
 			},
@@ -673,7 +812,7 @@ func TestInterpretGetType(t *testing.T) {
               }
             `,
 			result: interpreter.TypeValue{
-				Type: interpreter.VariableSizedStaticType{
+				Type: &interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeInt,
 				},
 			},
@@ -681,62 +820,10 @@ func TestInterpretGetType(t *testing.T) {
 	}
 
 	for _, testCase := range cases {
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
 		t.Run(testCase.name, func(t *testing.T) {
-
-			// Inject a function that returns a storage reference value,
-			// which is borrowed as: `auth &Int`
-
-			getStorageReferenceFunctionType := &sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					&sema.ReferenceType{
-						Authorized: true,
-						Type:       sema.IntType,
-					},
-				),
-			}
-
-			valueDeclaration := stdlib.NewStandardLibraryFunction(
-				"getStorageReference",
-				getStorageReferenceFunctionType,
-				"",
-				func(invocation interpreter.Invocation) interpreter.Value {
-					return &interpreter.StorageReferenceValue{
-						Authorized:           true,
-						TargetStorageAddress: storageAddress,
-						TargetPath:           storagePath,
-						BorrowedType:         sema.IntType,
-					}
-				},
-			)
-
-			baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-			baseValueActivation.DeclareValue(valueDeclaration)
-
-			baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
-			interpreter.Declare(baseActivation, valueDeclaration)
-
-			storage := newUnmeteredInMemoryStorage()
-
-			inter, err := parseCheckAndInterpretWithOptions(t,
-				testCase.code,
-				ParseCheckAndInterpretOptions{
-					CheckerConfig: &sema.Config{
-						BaseValueActivation: baseValueActivation,
-					},
-					Config: &interpreter.Config{
-						Storage:        storage,
-						BaseActivation: baseActivation,
-					},
-				},
-			)
-			require.NoError(t, err)
-
-			storageMap := storage.GetStorageMap(storageAddress, storagePath.Domain.Identifier(), true)
-			storageMap.WriteValue(
-				inter,
-				storagePath.Identifier,
-				interpreter.NewUnmeteredIntValueFromInt64(2),
-			)
+			inter, _ := testAccount(t, address, true, nil, testCase.code, sema.Config{})
 
 			result, err := inter.Invoke("test")
 			require.NoError(t, err)
@@ -749,4 +836,81 @@ func TestInterpretGetType(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestInterpretMetaTypeHashInput(t *testing.T) {
+
+	t.Parallel()
+
+	// TypeValue.HashInput should not load the program
+
+	inter := parseCheckAndInterpret(t, `
+       fun test(_ type: Type) {
+           {type: 1}
+       }
+    `)
+
+	location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
+	staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
+	typeValue := interpreter.NewUnmeteredTypeValue(staticType)
+
+	_, err := inter.Invoke("test", typeValue)
+	require.NoError(t, err)
+
+}
+
+func TestInterpretBrokenMetaTypeUsage(t *testing.T) {
+
+	t.Parallel()
+
+	inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+       fun test(type1: Type, type2: Type): [Type] {
+           let dict = {type1: "a", type2: "b"}
+           log(dict.keys.length)
+           log(dict.keys.contains(type1))
+           log(dict.keys.contains(type2))
+           log(dict[type1])
+           log(dict[type2])
+           return dict.keys
+       }
+    `)
+	require.NoError(t, err)
+
+	location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
+	staticType1 := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
+	staticType2 := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Baz")
+	typeValue1 := interpreter.NewUnmeteredTypeValue(staticType1)
+	typeValue2 := interpreter.NewUnmeteredTypeValue(staticType2)
+
+	result, err := inter.Invoke("test", typeValue1, typeValue2)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{
+			`2`,
+			`true`,
+			`true`,
+			`"a"`,
+			`"b"`,
+		},
+		getLogs(),
+	)
+
+	require.IsType(t, &interpreter.ArrayValue{}, result)
+	resultArray := result.(*interpreter.ArrayValue)
+
+	require.Equal(t, 2, resultArray.Count())
+
+	RequireValuesEqual(t,
+		inter,
+		interpreter.NewTypeValue(nil, staticType2),
+		resultArray.Get(inter, interpreter.EmptyLocationRange, 0),
+	)
+
+	RequireValuesEqual(t,
+		inter,
+		interpreter.NewTypeValue(nil, staticType1),
+		resultArray.Get(inter, interpreter.EmptyLocationRange, 1),
+	)
+
 }

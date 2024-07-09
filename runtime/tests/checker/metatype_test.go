@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -134,7 +134,7 @@ func TestCheckIsInstance(t *testing.T) {
 			code: `
               let result = (1).isInstance(Type<Int>(), Type<Int>())
             `,
-			expectedErrorType: &sema.ArgumentCountError{},
+			expectedErrorType: &sema.ExcessiveArgumentsError{},
 		},
 	}
 
@@ -209,7 +209,7 @@ func TestCheckIsSubtype(t *testing.T) {
 			code: `
               let result = Type<Int>().isSubtype()
             `,
-			expectedErrorType: &sema.ArgumentCountError{},
+			expectedErrorType: &sema.InsufficientArgumentsError{},
 		},
 		{
 			name: "isSubtype argument must be named",
@@ -223,7 +223,7 @@ func TestCheckIsSubtype(t *testing.T) {
 			code: `
               let result = Type<Int>().isSubtype(of: Type<Int?>(), Type<Int?>())
             `,
-			expectedErrorType: &sema.ArgumentCountError{},
+			expectedErrorType: &sema.ExcessiveArgumentsError{},
 		},
 	}
 

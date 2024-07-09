@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -281,6 +281,9 @@ func TestOrderedMapOperations(t *testing.T) {
 // TestGeneratedMapOperations tests the basic functionality of a generated map.
 // This is to make sure any update to the generator would not cause any regression issues.
 func TestGeneratedMapOperations(t *testing.T) {
+
+	t.Parallel()
+
 	fruits := OrderedMap[string, *Fruit]{}
 	require.NotNil(t, fruits)
 

@@ -94,7 +94,7 @@ func TestFTTransfer(t *testing.T) {
 		},
 	)
 
-	authAccount := NewAuthAccountValue(contractsAddress)
+	authAccount := NewAuthAccountReferenceValue(contractsAddress)
 
 	flowTokenContractValue, err := flowTokenVM.InitializeContract(authAccount)
 	require.NoError(t, err)
@@ -184,7 +184,7 @@ func TestFTTransfer(t *testing.T) {
 
 		setupTxVM := NewVM(program, vmConfig)
 
-		authorizer := NewAuthAccountValue(address)
+		authorizer := NewAuthAccountReferenceValue(address)
 		err = setupTxVM.ExecuteTransaction(nil, authorizer)
 		require.NoError(t, err)
 		require.Empty(t, setupTxVM.stack)
@@ -197,9 +197,9 @@ func TestFTTransfer(t *testing.T) {
 		realMintFlowTokenTransaction,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				ImportHandler:       checkerImportHandler,
-				BaseValueActivation: baseActivation(),
-				LocationHandler:     singleIdentifierLocationResolver(t),
+				ImportHandler:              checkerImportHandler,
+				BaseValueActivationHandler: baseActivation,
+				LocationHandler:            singleIdentifierLocationResolver(t),
 			},
 		},
 	)
@@ -221,7 +221,7 @@ func TestFTTransfer(t *testing.T) {
 		IntValue{total},
 	}
 
-	mintTxAuthorizer := NewAuthAccountValue(contractsAddress)
+	mintTxAuthorizer := NewAuthAccountReferenceValue(contractsAddress)
 	err = mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
 	require.NoError(t, err)
 	require.Empty(t, mintTxVM.stack)
@@ -233,9 +233,9 @@ func TestFTTransfer(t *testing.T) {
 		realFlowTokenTransferTransaction,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				ImportHandler:       checkerImportHandler,
-				BaseValueActivation: baseActivation(),
-				LocationHandler:     singleIdentifierLocationResolver(t),
+				ImportHandler:              checkerImportHandler,
+				BaseValueActivationHandler: baseActivation,
+				LocationHandler:            singleIdentifierLocationResolver(t),
 			},
 		},
 	)
@@ -257,7 +257,7 @@ func TestFTTransfer(t *testing.T) {
 		AddressValue(receiverAddress),
 	}
 
-	tokenTransferTxAuthorizer := NewAuthAccountValue(senderAddress)
+	tokenTransferTxAuthorizer := NewAuthAccountReferenceValue(senderAddress)
 	err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 	require.NoError(t, err)
 	require.Empty(t, tokenTransferTxVM.stack)
@@ -273,9 +273,9 @@ func TestFTTransfer(t *testing.T) {
 			realFlowTokenBalanceScript,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
-					ImportHandler:       checkerImportHandler,
-					BaseValueActivation: baseActivation(),
-					LocationHandler:     singleIdentifierLocationResolver(t),
+					ImportHandler:              checkerImportHandler,
+					BaseValueActivationHandler: baseActivation,
+					LocationHandler:            singleIdentifierLocationResolver(t),
 				},
 			},
 		)
@@ -303,11 +303,11 @@ func TestFTTransfer(t *testing.T) {
 	}
 }
 
-func baseActivation() *sema.VariableActivation {
+func baseActivation(common.Location) *sema.VariableActivation {
 	// Only need to make the checker happy
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
 	baseValueActivation.DeclareValue(stdlib.PanicFunction)
-	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryFunction(
+	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
 		"getAccount",
 		stdlib.GetAccountFunctionType,
 		"",
@@ -845,7 +845,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 		},
 	)
 
-	authAccount := NewAuthAccountValue(contractsAddress)
+	authAccount := NewAuthAccountReferenceValue(contractsAddress)
 
 	flowTokenContractValue, err := flowTokenVM.InitializeContract(authAccount)
 	require.NoError(b, err)
@@ -934,7 +934,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 		setupTxVM := NewVM(program, vmConfig)
 
-		authorizer := NewAuthAccountValue(address)
+		authorizer := NewAuthAccountReferenceValue(address)
 		err = setupTxVM.ExecuteTransaction(nil, authorizer)
 		require.NoError(b, err)
 	}
@@ -946,9 +946,9 @@ func BenchmarkFTTransfer(b *testing.B) {
 		realMintFlowTokenTransaction,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				ImportHandler:       checkerImportHandler,
-				BaseValueActivation: baseActivation(),
-				LocationHandler:     singleIdentifierLocationResolver(b),
+				ImportHandler:              checkerImportHandler,
+				BaseValueActivationHandler: baseActivation,
+				LocationHandler:            singleIdentifierLocationResolver(b),
 			},
 		},
 	)
@@ -969,7 +969,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 		IntValue{total},
 	}
 
-	mintTxAuthorizer := NewAuthAccountValue(contractsAddress)
+	mintTxAuthorizer := NewAuthAccountReferenceValue(contractsAddress)
 	err = mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
 	require.NoError(b, err)
 
@@ -980,9 +980,9 @@ func BenchmarkFTTransfer(b *testing.B) {
 		realFlowTokenTransferTransaction,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
-				ImportHandler:       checkerImportHandler,
-				BaseValueActivation: baseActivation(),
-				LocationHandler:     singleIdentifierLocationResolver(b),
+				ImportHandler:              checkerImportHandler,
+				BaseValueActivationHandler: baseActivation,
+				LocationHandler:            singleIdentifierLocationResolver(b),
 			},
 		},
 	)
@@ -995,7 +995,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 		AddressValue(receiverAddress),
 	}
 
-	tokenTransferTxAuthorizer := NewAuthAccountValue(senderAddress)
+	tokenTransferTxAuthorizer := NewAuthAccountReferenceValue(senderAddress)
 
 	b.ReportAllocs()
 	b.ResetTimer()

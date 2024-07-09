@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,14 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+func PurityFromAnnotation(purity ast.FunctionPurity) FunctionPurity {
+	if purity == ast.FunctionPurityView {
+		return FunctionPurityView
+	}
+	return FunctionPurityImpure
+
+}
+
 func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) (_ struct{}) {
 	checker.visitFunctionDeclaration(
 		declaration,
@@ -31,6 +39,7 @@ func (checker *Checker) VisitFunctionDeclaration(declaration *ast.FunctionDeclar
 			declareFunction:   true,
 			checkResourceLoss: true,
 		},
+		nil,
 	)
 
 	return
@@ -57,33 +66,72 @@ type functionDeclarationOptions struct {
 func (checker *Checker) visitFunctionDeclaration(
 	declaration *ast.FunctionDeclaration,
 	options functionDeclarationOptions,
+	containerKind *common.CompositeKind,
 ) {
 
-	checker.checkDeclarationAccessModifier(
-		declaration.Access,
-		declaration.DeclarationKind(),
-		declaration.StartPos,
-		true,
+	checker.checkStaticModifier(
+		declaration.IsStatic(),
+		declaration.Identifier,
 	)
+
+	checker.checkNativeModifier(
+		declaration.IsNative(),
+		declaration.Identifier,
+	)
+
+	functionBlock := declaration.FunctionBlock
+
+	if declaration.IsNative() {
+		if !functionBlock.IsEmpty() {
+			checker.report(&NativeFunctionWithImplementationError{
+				Range: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					functionBlock,
+				),
+			})
+		}
+
+		functionBlock = nil
+	}
 
 	// global functions were previously declared, see `declareFunctionDeclaration`
 
-	functionType := checker.Elaboration.FunctionDeclarationFunctionTypes[declaration]
+	functionType := checker.Elaboration.FunctionDeclarationFunctionType(declaration)
+	access := checker.accessFromAstAccess(declaration.Access)
+
 	if functionType == nil {
-		functionType = checker.functionType(declaration.ParameterList, declaration.ReturnTypeAnnotation)
+
+		functionType = checker.functionType(
+			declaration.IsNative(),
+			declaration.Purity,
+			access,
+			declaration.TypeParameterList,
+			declaration.ParameterList,
+			declaration.ReturnTypeAnnotation,
+		)
 
 		if options.declareFunction {
 			checker.declareFunctionDeclaration(declaration, functionType)
 		}
 	}
 
-	checker.Elaboration.FunctionDeclarationFunctionTypes[declaration] = functionType
+	checker.checkDeclarationAccessModifier(
+		access,
+		declaration.DeclarationKind(),
+		functionType,
+		containerKind,
+		declaration.StartPos,
+		true,
+	)
+
+	checker.Elaboration.SetFunctionDeclarationFunctionType(declaration, functionType)
 
 	checker.checkFunction(
 		declaration.ParameterList,
 		declaration.ReturnTypeAnnotation,
+		access,
 		functionType,
-		declaration.FunctionBlock,
+		functionBlock,
 		options.mustExit,
 		nil,
 		options.checkResourceLoss,
@@ -100,7 +148,7 @@ func (checker *Checker) declareFunctionDeclaration(
 		identifier:               declaration.Identifier.Identifier,
 		ty:                       functionType,
 		docString:                declaration.DocString,
-		access:                   declaration.Access,
+		access:                   checker.accessFromAstAccess(declaration.Access),
 		kind:                     common.DeclarationKindFunction,
 		pos:                      declaration.Identifier.Pos,
 		isConstant:               true,
@@ -117,6 +165,7 @@ func (checker *Checker) declareFunctionDeclaration(
 func (checker *Checker) checkFunction(
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
+	access Access,
 	functionType *FunctionType,
 	functionBlock *ast.FunctionBlock,
 	mustExit bool,
@@ -128,7 +177,7 @@ func (checker *Checker) checkFunction(
 
 	checker.checkParameters(parameterList, functionType.Parameters)
 
-	if functionType.ReturnTypeAnnotation != nil {
+	if functionType.ReturnTypeAnnotation.Type != nil {
 		checker.checkTypeAnnotation(functionType.ReturnTypeAnnotation, returnTypeAnnotation)
 	}
 
@@ -161,11 +210,23 @@ func (checker *Checker) checkFunction(
 			functionActivation.InitializationInfo = initializationInfo
 
 			if functionBlock != nil {
-				checker.visitFunctionBlock(
-					functionBlock,
-					functionType.ReturnTypeAnnotation,
-					checkResourceLoss,
-				)
+				func() {
+					oldMappedAccess := checker.entitlementMappingInScope
+					if mappedAccess, isMappedAccess := access.(*EntitlementMapAccess); isMappedAccess {
+						checker.entitlementMappingInScope = mappedAccess.Type
+					} else {
+						checker.entitlementMappingInScope = nil
+					}
+					defer func() { checker.entitlementMappingInScope = oldMappedAccess }()
+
+					checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
+						checker.visitFunctionBlock(
+							functionBlock,
+							functionType.ReturnTypeAnnotation,
+							checkResourceLoss,
+						)
+					})
+				}()
 
 				if mustExit {
 					returnType := functionType.ReturnTypeAnnotation.Type
@@ -200,11 +261,9 @@ func (checker *Checker) checkFunctionExits(functionBlock *ast.FunctionBlock, ret
 
 	functionActivation := checker.functionActivations.Current()
 
-	definitelyReturnedOrHalted :=
-		functionActivation.ReturnInfo.DefinitelyReturned ||
-			functionActivation.ReturnInfo.DefinitelyHalted
-
-	if definitelyReturnedOrHalted {
+	// NOTE: intentionally NOT DefinitelyReturned || DefinitelyHalted,
+	// see DefinitelyExited
+	if functionActivation.ReturnInfo.DefinitelyExited {
 		return
 	}
 
@@ -215,7 +274,7 @@ func (checker *Checker) checkFunctionExits(functionBlock *ast.FunctionBlock, ret
 	)
 }
 
-func (checker *Checker) checkParameters(parameterList *ast.ParameterList, parameters []*Parameter) {
+func (checker *Checker) checkParameters(parameterList *ast.ParameterList, parameters []Parameter) {
 	for i, parameter := range parameterList.Parameters {
 		parameterTypeAnnotation := parameters[i].TypeAnnotation
 
@@ -258,7 +317,7 @@ func (checker *Checker) checkArgumentLabels(parameterList *ast.ParameterList) {
 // ensuring names are unique and constants don't already exist
 func (checker *Checker) declareParameters(
 	parameterList *ast.ParameterList,
-	parameters []*Parameter,
+	parameters []Parameter,
 ) {
 	depth := checker.valueActivations.Depth()
 
@@ -284,7 +343,7 @@ func (checker *Checker) declareParameters(
 
 		variable := &Variable{
 			Identifier:      identifier.Identifier,
-			Access:          ast.AccessPublic,
+			Access:          PrimitiveAccess(ast.AccessAll),
 			DeclarationKind: common.DeclarationKindParameter,
 			IsConstant:      true,
 			Type:            parameterType,
@@ -310,9 +369,12 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 		rewriteResult := checker.rewritePostConditions(*postConditions)
 		rewrittenPostConditions = &rewriteResult
 
-		checker.Elaboration.PostConditionsRewrite[postConditions] = rewriteResult
+		checker.Elaboration.SetPostConditionsRewrite(postConditions, rewriteResult)
 
-		checker.visitStatements(rewriteResult.BeforeStatements)
+		// all condition blocks are `view`
+		checker.InNewPurityScope(true, func() {
+			checker.visitStatements(rewriteResult.BeforeStatements)
+		})
 	}
 
 	body()
@@ -334,8 +396,46 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 	if returnType != VoidType {
 		var resultType Type
 		if returnType.IsResourceType() {
+
+			innerType := returnType
+			optType, isOptional := returnType.(*OptionalType)
+			if isOptional {
+				innerType = optType.Type
+			}
+
+			auth := UnauthorizedAccess
+			// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned.
+			// To create a "fully authorized" reference, we scan the resource type and produce a conjunction of all the entitlements mentioned within.
+			// So, for example,
+			//
+			// resource R {
+			//		access(E) let x: Int
+			//      access(X | Y) fun foo() {}
+			// }
+			//
+			// fun test(): @R {
+			//    post {
+			//	      // do something with result here
+			//    }
+			//    return <- create R()
+			// }
+			//
+			// here the `result` value in the `post` block will have type `auth(E, X, Y) &R`
+			if entitlementSupportingType, ok := innerType.(EntitlementSupportingType); ok {
+				supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
+				auth = supportedEntitlements.Access()
+			}
+
 			resultType = &ReferenceType{
-				Type: returnType,
+				Type:          innerType,
+				Authorization: auth,
+			}
+
+			if isOptional {
+				// If the return type is an optional type T?, then create an optional reference (&T)?.
+				resultType = &OptionalType{
+					Type: resultType,
+				}
 			}
 		} else {
 			resultType = returnType
@@ -350,7 +450,7 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 
 func (checker *Checker) visitFunctionBlock(
 	functionBlock *ast.FunctionBlock,
-	returnTypeAnnotation *TypeAnnotation,
+	returnTypeAnnotation TypeAnnotation,
 	checkResourceLoss bool,
 ) {
 	checker.enterValueScope()
@@ -395,13 +495,21 @@ func (checker *Checker) declareBefore() {
 func (checker *Checker) VisitFunctionExpression(expression *ast.FunctionExpression) Type {
 
 	// TODO: infer
-	functionType := checker.functionType(expression.ParameterList, expression.ReturnTypeAnnotation)
+	functionType := checker.functionType(
+		false,
+		expression.Purity,
+		UnauthorizedAccess,
+		nil,
+		expression.ParameterList,
+		expression.ReturnTypeAnnotation,
+	)
 
-	checker.Elaboration.FunctionExpressionFunctionType[expression] = functionType
+	checker.Elaboration.SetFunctionExpressionFunctionType(expression, functionType)
 
 	checker.checkFunction(
 		expression.ParameterList,
 		expression.ReturnTypeAnnotation,
+		UnauthorizedAccess,
 		functionType,
 		expression.FunctionBlock,
 		true,

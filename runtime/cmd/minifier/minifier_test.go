@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -41,10 +40,10 @@ transaction(amount: UFix64, to: Address) {
     // The Vault resource that holds the tokens that are being transferred
     let sentVault: @FungibleToken.Vault
 
-    prepare(signer: AuthAccount) {
+    prepare(signer: &Account) {
 
         // Get a reference to the signer's stored vault
-        let vaultRef = signer.borrow<&ExampleToken.Vault>(from: /storage/exampleTokenVault)
+        let vaultRef = signer.storage.borrow<&ExampleToken.Vault>(from: /storage/exampleTokenVault)
 			?? panic("Could not borrow reference to the owner's Vault!")
 
         // Withdraw tokens from the signer's stored vault
@@ -71,8 +70,8 @@ const expectedOutput = `import FungibleToken from 0xFUNGIBLETOKENADDRESS
 import ExampleToken from 0xTOKENADDRESS
 transaction(amount: UFix64, to: Address) {
 let sentVault: @FungibleToken.Vault
-prepare(signer: AuthAccount) {
-let vaultRef = signer.borrow<&ExampleToken.Vault>(from: /storage/exampleTokenVault)
+prepare(signer: &Account) {
+let vaultRef = signer.storage.borrow<&ExampleToken.Vault>(from: /storage/exampleTokenVault)
 ?? panic("Could not borrow reference to the owner's Vault!")
 self.sentVault <- vaultRef.withdraw(amount: amount)
 }
@@ -87,8 +86,10 @@ receiverRef.deposit(from: <-self.sentVault)
 
 // Test to test the minifier function
 func TestMinify(t *testing.T) {
+	t.Parallel()
+
 	// create an input file with the test cadence script
-	inputFile, err := ioutil.TempFile("", "test_*.cdc")
+	inputFile, err := os.CreateTemp("", "test_*.cdc")
 	require.NoError(t, err)
 	inputFileName := inputFile.Name()
 	_, err = inputFile.WriteString(cadenceTestScript)
@@ -97,7 +98,7 @@ func TestMinify(t *testing.T) {
 	require.NoError(t, err)
 
 	// get a valid output file path
-	outputFile, err := ioutil.TempFile("", "minified_test_*.cdc")
+	outputFile, err := os.CreateTemp("", "minified_test_*.cdc")
 	require.NoError(t, err)
 	err = outputFile.Close()
 	require.NoError(t, err)
@@ -114,7 +115,7 @@ func TestMinify(t *testing.T) {
 	defer os.Remove(outputFileName)
 
 	// read the output file contents and assert the contents
-	actualOutput, err := ioutil.ReadFile(outputFileName)
+	actualOutput, err := os.ReadFile(outputFileName)
 	require.NoError(t, err)
 	assert.Equal(t, expectedOutput, string(actualOutput))
 }

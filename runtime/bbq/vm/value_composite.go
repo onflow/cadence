@@ -101,8 +101,8 @@ func (v *CompositeValue) StaticType(memoryGauge common.MemoryGauge) StaticType {
 
 func (v *CompositeValue) GetMember(config *Config, name string) Value {
 	storable, err := v.dictionary.Get(
-		interpreter.StringAtreeComparator,
-		interpreter.StringAtreeHashInput,
+		interpreter.StringAtreeValueComparator,
+		interpreter.StringAtreeValueHashInput,
 		interpreter.StringAtreeValue(name),
 	)
 	if err != nil {
@@ -133,8 +133,8 @@ func (v *CompositeValue) SetMember(conf *Config, name string, value Value) {
 	interpreterValue := VMValueToInterpreterValue(conf.Storage, value)
 
 	existingStorable, err := v.dictionary.Set(
-		interpreter.StringAtreeComparator,
-		interpreter.StringAtreeHashInput,
+		interpreter.StringAtreeValueComparator,
+		interpreter.StringAtreeValueHashInput,
 		interpreter.NewStringAtreeValue(conf.MemoryGauge, name),
 		interpreterValue,
 	)
@@ -242,8 +242,8 @@ func (v *CompositeValue) Transfer(
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
-			interpreter.StringAtreeComparator,
-			interpreter.StringAtreeHashInput,
+			interpreter.StringAtreeValueComparator,
+			interpreter.StringAtreeValueHashInput,
 			v.dictionary.Seed(),
 			func() (atree.Value, atree.Value, error) {
 

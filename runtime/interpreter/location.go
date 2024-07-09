@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,20 +23,28 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-// LocationPosition defines a position in the source of the import tree.
-// The Location defines the script within the import tree, the Position
-// defines the row/colum within the source of that script.
-type LocationPosition struct {
-	Location common.Location
-	Position ast.Position
-}
-
 // LocationRange defines a range in the source of the import tree.
 // The Position defines the script within the import tree, the Range
 // defines the start/end position within the source of that script.
 type LocationRange struct {
 	Location common.Location
 	ast.HasPosition
+}
+
+var _ ast.HasPosition = LocationRange{}
+
+func (r LocationRange) StartPosition() ast.Position {
+	if r.HasPosition == nil {
+		return ast.EmptyPosition
+	}
+	return r.HasPosition.StartPosition()
+}
+
+func (r LocationRange) EndPosition(memoryGauge common.MemoryGauge) ast.Position {
+	if r.HasPosition == nil {
+		return ast.EmptyPosition
+	}
+	return r.HasPosition.EndPosition(memoryGauge)
 }
 
 func (r LocationRange) ImportLocation() common.Location {

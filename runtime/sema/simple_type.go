@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,39 +22,45 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type ValueIndexingInfo struct {
-	IsValueIndexableType          bool
-	AllowsValueIndexingAssignment bool
 	ElementType                   func(_ bool) Type
 	IndexingType                  *NumericType
+	IsValueIndexableType          bool
+	AllowsValueIndexingAssignment bool
 }
 
 // SimpleType represents a simple nominal type.
 type SimpleType struct {
-	Name                 string
-	QualifiedName        string
-	TypeID               TypeID
-	tag                  TypeTag
-	IsInvalid            bool
-	IsResource           bool
-	Storable             bool
-	Equatable            bool
-	ExternallyReturnable bool
-	Importable           bool
-	IsSuperTypeOf        func(subType Type) bool
-	Members              func(*SimpleType) map[string]MemberResolver
-	members              map[string]MemberResolver
-	membersOnce          sync.Once
-	NestedTypes          *StringTypeOrderedMap
-	ValueIndexingInfo    ValueIndexingInfo
+	ValueIndexingInfo   ValueIndexingInfo
+	NestedTypes         *StringTypeOrderedMap
+	memberResolvers     map[string]MemberResolver
+	Members             func(*SimpleType) map[string]MemberResolver
+	QualifiedName       string
+	TypeID              TypeID
+	Name                string
+	TypeTag             TypeTag
+	memberResolversOnce sync.Once
+	Importable          bool
+	Exportable          bool
+	Equatable           bool
+	Comparable          bool
+	Storable            bool
+	Primitive           bool
+	IsResource          bool
+	ContainFields       bool
 }
+
+var _ Type = &SimpleType{}
+var _ ValueIndexableType = &SimpleType{}
+var _ ContainerType = &SimpleType{}
 
 func (*SimpleType) IsType() {}
 
 func (t *SimpleType) Tag() TypeTag {
-	return t.tag
+	return t.TypeTag
 }
 
 func (t *SimpleType) String() string {
@@ -77,8 +83,16 @@ func (t *SimpleType) IsResourceType() bool {
 	return t.IsResource
 }
 
+func (t *SimpleType) IsPrimitiveType() bool {
+	return t.Primitive
+}
+
 func (t *SimpleType) IsInvalidType() bool {
-	return t.IsInvalid
+	return t == InvalidType
+}
+
+func (*SimpleType) IsOrContainsReferenceType() bool {
+	return false
 }
 
 func (t *SimpleType) IsStorable(_ map[*Member]bool) bool {
@@ -89,23 +103,37 @@ func (t *SimpleType) IsEquatable() bool {
 	return t.Equatable
 }
 
-func (t *SimpleType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return t.ExternallyReturnable
+func (t *SimpleType) IsComparable() bool {
+	return t.Comparable
+}
+
+func (t *SimpleType) IsExportable(_ map[*Member]bool) bool {
+	return t.Exportable
 }
 
 func (t *SimpleType) IsImportable(_ map[*Member]bool) bool {
 	return t.Importable
 }
 
+func (t *SimpleType) ContainFieldsOrElements() bool {
+	return t.ContainFields
+}
+
 func (*SimpleType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *SimpleType) RewriteWithRestrictedTypes() (Type, bool) {
+func (t *SimpleType) RewriteWithIntersectionTypes() (Type, bool) {
 	return t, false
 }
 
-func (*SimpleType) Unify(_ Type, _ *TypeParameterTypeOrderedMap, _ func(err error), _ ast.Range) bool {
+func (*SimpleType) Unify(
+	_ Type,
+	_ *TypeParameterTypeOrderedMap,
+	_ func(err error),
+	_ common.MemoryGauge,
+	_ ast.HasPosition,
+) bool {
 	return false
 }
 
@@ -113,18 +141,22 @@ func (t *SimpleType) Resolve(_ *TypeParameterTypeOrderedMap) Type {
 	return t
 }
 
+func (t *SimpleType) Map(_ common.MemoryGauge, _ map[*TypeParameter]*TypeParameter, f func(Type) Type) Type {
+	return f(t)
+}
+
 func (t *SimpleType) GetMembers() map[string]MemberResolver {
 	t.initializeMembers()
-	return t.members
+	return t.memberResolvers
 }
 
 func (t *SimpleType) initializeMembers() {
-	t.membersOnce.Do(func() {
+	t.memberResolversOnce.Do(func() {
 		var members map[string]MemberResolver
 		if t.Members != nil {
 			members = t.Members(t)
 		}
-		t.members = withBuiltinMembers(t, members)
+		t.memberResolvers = withBuiltinMembers(t, members)
 	})
 }
 
@@ -150,4 +182,16 @@ func (t *SimpleType) ElementType(isAssignment bool) Type {
 
 func (t *SimpleType) IndexingType() Type {
 	return t.ValueIndexingInfo.IndexingType
+}
+
+func (t *SimpleType) CompositeKind() common.CompositeKind {
+	if t.IsResource {
+		return common.CompositeKindResource
+	} else {
+		return common.CompositeKindStructure
+	}
+}
+
+func (t *SimpleType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
+	// NO-OP
 }

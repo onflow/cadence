@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) (_ struct{}
 
 	switch test := statement.Test.(type) {
 	case ast.Expression:
-		checker.VisitExpression(test, BoolType)
+		checker.VisitExpression(test, statement, BoolType)
 
 		checker.checkConditionalBranches(
 			func() Type {
@@ -46,12 +46,27 @@ func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) (_ struct{}
 		)
 
 	case *ast.VariableDeclaration:
+		declarationType := checker.visitVariableDeclarationValues(test, true)
+
 		checker.checkConditionalBranches(
 			func() Type {
 				checker.enterValueScope()
 				defer checker.leaveValueScope(thenElement.EndPosition, true)
 
-				checker.visitVariableDeclaration(test, true)
+				if castingExpression, ok := test.Value.(*ast.CastingExpression); ok &&
+					castingExpression.Operation == ast.OperationFailableCast {
+
+					castingTypes := checker.Elaboration.CastingExpressionTypes(castingExpression)
+					leftHandType := castingTypes.StaticValueType
+					if leftHandType.IsResourceType() {
+						checker.recordResourceInvalidation(
+							castingExpression.Expression,
+							leftHandType,
+							ResourceInvalidationKindMoveDefinite,
+						)
+					}
+				}
+				checker.declareVariableDeclaration(test, declarationType)
 
 				checker.checkBlock(thenElement)
 				return nil
@@ -75,14 +90,14 @@ func (checker *Checker) VisitConditionalExpression(expression *ast.ConditionalEx
 
 	expectedType := checker.expectedType
 
-	checker.VisitExpression(expression.Test, BoolType)
+	checker.VisitExpression(expression.Test, expression, BoolType)
 
 	thenType, elseType := checker.checkConditionalBranches(
 		func() Type {
-			return checker.VisitExpression(expression.Then, expectedType)
+			return checker.VisitExpression(expression.Then, expression, expectedType)
 		},
 		func() Type {
-			return checker.VisitExpression(expression.Else, expectedType)
+			return checker.VisitExpression(expression.Else, expression, expectedType)
 		},
 	)
 
@@ -142,7 +157,9 @@ func (checker *Checker) checkConditionalBranches(
 
 	initialResources := checker.resources
 	thenResources := initialResources.Clone()
+	defer thenResources.Reclaim()
 	elseResources := initialResources.Clone()
+	defer elseResources.Reclaim()
 
 	thenType = checker.checkBranch(
 		checkThen,

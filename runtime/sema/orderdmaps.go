@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package sema
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/common/orderedmap"
 )
 
@@ -29,3 +30,5 @@ type StringVariableOrderedMap = orderedmap.OrderedMap[string, *Variable]
 type TypeParameterTypeOrderedMap = orderedmap.OrderedMap[*TypeParameter, Type]
 type StringImportElementOrderedMap = orderedmap.OrderedMap[string, ImportElement]
 type MemberFieldDeclarationOrderedMap = orderedmap.OrderedMap[*Member, *ast.FieldDeclaration]
+type EntitlementOrderedSet = orderedmap.OrderedMap[*EntitlementType, struct{}]
+type TypeIDOrderedSet = orderedmap.OrderedMap[common.TypeID, struct{}]

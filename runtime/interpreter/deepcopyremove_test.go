@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	dictionaryStaticType := DictionaryStaticType{
+	dictionaryStaticType := &DictionaryStaticType{
 		KeyType:   PrimitiveStaticTypeString,
 		ValueType: PrimitiveStaticTypeInt256,
 	}
@@ -67,10 +67,10 @@ func TestValueDeepCopyAndDeepRemove(t *testing.T) {
 	arrayValue := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: dictionaryStaticType,
 		},
-		common.Address{},
+		common.ZeroAddress,
 		dictValue,
 	)
 

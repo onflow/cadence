@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,13 @@
 package sema
 
 const (
-	NumberTypeName           = "Number"
-	SignedNumberTypeName     = "SignedNumber"
-	IntegerTypeName          = "Integer"
-	SignedIntegerTypeName    = "SignedInteger"
-	FixedPointTypeName       = "FixedPoint"
-	SignedFixedPointTypeName = "SignedFixedPoint"
+	NumberTypeName                   = "Number"
+	SignedNumberTypeName             = "SignedNumber"
+	IntegerTypeName                  = "Integer"
+	SignedIntegerTypeName            = "SignedInteger"
+	FixedSizeUnsignedIntegerTypeName = "FixedSizeUnsignedInteger"
+	FixedPointTypeName               = "FixedPoint"
+	SignedFixedPointTypeName         = "SignedFixedPoint"
 
 	IntTypeName    = "Int"
 	Int8TypeName   = "Int8"
@@ -42,10 +43,12 @@ const (
 	UInt128TypeName = "UInt128"
 	UInt256TypeName = "UInt256"
 
-	Word8TypeName  = "Word8"
-	Word16TypeName = "Word16"
-	Word32TypeName = "Word32"
-	Word64TypeName = "Word64"
+	Word8TypeName   = "Word8"
+	Word16TypeName  = "Word16"
+	Word32TypeName  = "Word32"
+	Word64TypeName  = "Word64"
+	Word128TypeName = "Word128"
+	Word256TypeName = "Word256"
 
 	Fix64TypeName  = "Fix64"
 	UFix64TypeName = "UFix64"

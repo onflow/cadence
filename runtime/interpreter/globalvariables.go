@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ package interpreter
 
 // GlobalVariables represents global variables defined in a program.
 type GlobalVariables struct {
-	variables map[string]*Variable
+	variables map[string]Variable
 }
 
 func (g *GlobalVariables) Contains(name string) bool {
@@ -31,16 +31,16 @@ func (g *GlobalVariables) Contains(name string) bool {
 	return ok
 }
 
-func (g *GlobalVariables) Get(name string) *Variable {
+func (g *GlobalVariables) Get(name string) Variable {
 	if g.variables == nil {
 		return nil
 	}
 	return g.variables[name]
 }
 
-func (g *GlobalVariables) Set(name string, variable *Variable) {
+func (g *GlobalVariables) Set(name string, variable Variable) {
 	if g.variables == nil {
-		g.variables = map[string]*Variable{}
+		g.variables = map[string]Variable{}
 	}
 	g.variables[name] = variable
 }

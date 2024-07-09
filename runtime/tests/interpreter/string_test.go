@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ func TestInterpretRecursiveValueString(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
       fun test(): AnyStruct {
           let map: {String: AnyStruct} = {}
-          let mapRef = &map as &{String: AnyStruct}
+          let mapRef = &map as auth(Mutate) &{String: AnyStruct}
           mapRef["mapRef"] = mapRef
           return map
       }
@@ -103,10 +103,10 @@ func TestInterpretStringDecodeHex(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredUInt8Value(1),
 				interpreter.NewUnmeteredUInt8Value(0xCA),
 				interpreter.NewUnmeteredUInt8Value(0xDE),
@@ -269,10 +269,10 @@ func TestInterpretStringUtf8Field(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeUInt8,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			// Flowers
 			interpreter.NewUnmeteredUInt8Value(70),
 			interpreter.NewUnmeteredUInt8Value(108),
@@ -444,21 +444,202 @@ func TestInterpretCompareCharacters(t *testing.T) {
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
-		inter.Globals.Get("x").GetValue(),
+		interpreter.TrueValue,
+		inter.Globals.Get("x").GetValue(inter),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(true),
-		inter.Globals.Get("y").GetValue(),
+		interpreter.TrueValue,
+		inter.Globals.Get("y").GetValue(inter),
 	)
 
 	AssertValuesEqual(
 		t,
 		inter,
-		interpreter.BoolValue(false),
-		inter.Globals.Get("z").GetValue(),
+		interpreter.FalseValue,
+		inter.Globals.Get("z").GetValue(inter),
 	)
+}
+
+func TestInterpretStringJoin(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		fun test(): String {
+			return String.join(["👪", "❤️"], separator: "//")
+		}
+
+		fun testEmptyArray(): String {
+			return String.join([], separator: "//")
+		}
+
+		fun testSingletonArray(): String {
+			return String.join(["pqrS"], separator: "//")
+		}
+	`)
+
+	testCase := func(t *testing.T, funcName string, expected *interpreter.StringValue) {
+		t.Run(funcName, func(t *testing.T) {
+			result, err := inter.Invoke(funcName)
+			require.NoError(t, err)
+
+			RequireValuesEqual(
+				t,
+				inter,
+				expected,
+				result,
+			)
+		})
+	}
+
+	testCase(t, "test", interpreter.NewUnmeteredStringValue("👪//❤️"))
+	testCase(t, "testEmptyArray", interpreter.NewUnmeteredStringValue(""))
+	testCase(t, "testSingletonArray", interpreter.NewUnmeteredStringValue("pqrS"))
+}
+
+func TestInterpretStringSplit(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		fun split(): [String] {
+			return "👪////❤️".split(separator: "////")
+		}
+		fun splitBySpace(): [String] {
+			return "👪 ❤️ Abc6 ;123".split(separator: " ")
+		}
+		fun splitWithUnicodeEquivalence(): [String] {
+			return "Caf\u{65}\u{301}ABc".split(separator: "\u{e9}")
+		}
+		fun testEmptyString(): [String] {
+			return "".split(separator: "//")
+		}
+		fun testNoMatch(): [String] {
+			return "pqrS;asdf".split(separator: ";;")
+		}
+	`)
+
+	testCase := func(t *testing.T, funcName string, expected *interpreter.ArrayValue) {
+		t.Run(funcName, func(t *testing.T) {
+			result, err := inter.Invoke(funcName)
+			require.NoError(t, err)
+
+			RequireValuesEqual(
+				t,
+				inter,
+				expected,
+				result,
+			)
+		})
+	}
+
+	varSizedStringType := &interpreter.VariableSizedStaticType{
+		Type: interpreter.PrimitiveStaticTypeString,
+	}
+
+	testCase(t,
+		"split",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			varSizedStringType,
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("👪"),
+			interpreter.NewUnmeteredStringValue("❤️"),
+		),
+	)
+	testCase(t,
+		"splitBySpace",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			varSizedStringType,
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("👪"),
+			interpreter.NewUnmeteredStringValue("❤️"),
+			interpreter.NewUnmeteredStringValue("Abc6"),
+			interpreter.NewUnmeteredStringValue(";123"),
+		),
+	)
+	testCase(t,
+		"splitWithUnicodeEquivalence",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			varSizedStringType,
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("Caf"),
+			interpreter.NewUnmeteredStringValue("ABc"),
+		),
+	)
+	testCase(t,
+		"testEmptyString",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			varSizedStringType,
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue(""),
+		),
+	)
+	testCase(t,
+		"testNoMatch",
+		interpreter.NewArrayValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			varSizedStringType,
+			common.ZeroAddress,
+			interpreter.NewUnmeteredStringValue("pqrS;asdf"),
+		),
+	)
+}
+
+func TestInterpretStringReplaceAll(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		fun replaceAll(): String {
+			return "👪////❤️".replaceAll(of: "////", with: "||")
+		}
+		fun replaceAllSpaceWithDoubleSpace(): String {
+			return "👪 ❤️ Abc6 ;123".replaceAll(of: " ", with: "  ")
+		}
+		fun replaceAllWithUnicodeEquivalence(): String {
+			return "Caf\u{65}\u{301}ABc".replaceAll(of: "\u{e9}", with: "X")
+		}
+		fun testEmptyString(): String {
+			return "".replaceAll(of: "//", with: "abc")
+		}
+		fun testEmptyOf(): String {
+			return "abc".replaceAll(of: "", with: "1")
+		}
+		fun testNoMatch(): String {
+			return "pqrS;asdf".replaceAll(of: ";;", with: "does_not_matter")
+		}
+	`)
+
+	testCase := func(t *testing.T, funcName string, expected *interpreter.StringValue) {
+		t.Run(funcName, func(t *testing.T) {
+			result, err := inter.Invoke(funcName)
+			require.NoError(t, err)
+
+			RequireValuesEqual(
+				t,
+				inter,
+				expected,
+				result,
+			)
+		})
+	}
+
+	testCase(t, "replaceAll", interpreter.NewUnmeteredStringValue("👪||❤️"))
+	testCase(t, "replaceAllSpaceWithDoubleSpace", interpreter.NewUnmeteredStringValue("👪  ❤️  Abc6  ;123"))
+	testCase(t, "replaceAllWithUnicodeEquivalence", interpreter.NewUnmeteredStringValue("CafXABc"))
+	testCase(t, "testEmptyString", interpreter.NewUnmeteredStringValue(""))
+	testCase(t, "testEmptyOf", interpreter.NewUnmeteredStringValue("1a1b1c1"))
+	testCase(t, "testNoMatch", interpreter.NewUnmeteredStringValue("pqrS;asdf"))
 }

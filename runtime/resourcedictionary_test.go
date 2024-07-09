@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"encoding/hex"
@@ -27,59 +27,58 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 const resourceDictionaryContract = `
- pub contract Test {
+ access(all) contract Test {
 
-     pub resource R {
+     access(all) resource R {
 
-         pub var value: Int
+		 access(all) event ResourceDestroyed(value: Int = self.value)
+
+         access(all) var value: Int
 
          init(_ value: Int) {
              self.value = value
          }
 
-         pub fun increment() {
+         access(all) fun increment() {
              self.value = self.value + 1
-         }
-
-         destroy() {
-             log("destroying R")
-             log(self.value)
          }
      }
 
-     pub fun createR(_ value: Int): @R {
+     access(all) fun createR(_ value: Int): @R {
          return <-create R(value)
      }
 
-     pub resource C {
+     access(all) resource C {
 
-         pub(set) var rs: @{String: R}
+         access(all) var rs: @{String: R}
 
          init() {
              self.rs <- {}
          }
 
-         pub fun remove(_ id: String): @R {
+         access(all) fun remove(_ id: String): @R {
              let r <- self.rs.remove(key: id) ?? panic("missing")
              return <-r
          }
 
-         pub fun insert(_ id: String, _ r: @R): @R? {
+         access(all) fun insert(_ id: String, _ r: @R): @R? {
              let old <- self.rs.insert(key: id, <-r)
              return <- old
          }
 
-         destroy() {
-             destroy self.rs
-         }
+		 access(all) fun forceInsert(_ id: String, _ r: @R) {
+			self.rs[id] <-! r
+		 }
      }
 
-     pub fun createC(): @C {
+     access(all) fun createC(): @C {
          return <-create C()
      }
  }
@@ -89,7 +88,7 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
@@ -102,8 +101,8 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
-             signer.save(<-Test.createC(), to: /storage/c)
+         prepare(signer: auth(Storage) &Account) {
+             signer.storage.save(<-Test.createC(), to: /storage/c)
          }
       }
    `)
@@ -112,29 +111,29 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{Address(addressValue)}, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -165,10 +164,10 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
-             c.rs["a"] <-! Test.createR(1)
-             c.rs["b"] <-! Test.createR(2)
+         prepare(signer: auth(Storage) &Account) {
+             let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
+             c.forceInsert("a", <- Test.createR(1))
+             c.forceInsert("b", <- Test.createR(2))
         }
      }
    `)
@@ -189,8 +188,8 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
+         prepare(signer: auth(Storage) &Account) {
+             let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
              log(c.rs["b"]?.value)
              log(c.rs["b"]?.value)
          }
@@ -216,8 +215,8 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
+         prepare(signer: auth(Storage) &Account) {
+             let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
              c.rs["b"]?.increment()
 
              log(c.rs["b"]?.value)
@@ -247,17 +246,18 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
+         prepare(signer: auth(Storage) &Account) {
+             let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
              log(c.rs["b"]?.value)
-             let existing <- c.rs["b"] <- Test.createR(4)
-             destroy existing
+			 destroy c.remove("b")
+			 c.forceInsert("b", <- Test.createR(4))
              log(c.rs["b"]?.value)
          }
      }
    `)
 
 	loggedMessages = nil
+	events = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -273,12 +273,12 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"3",
-			`"destroying R"`,
-			"3",
 			"4",
 		},
 		loggedMessages,
 	)
+	require.Len(t, events, 1)
+	require.Equal(t, "A.000000000000cade.Test.R.ResourceDestroyed(value: 3)", events[0].String())
 
 	// Remove the key
 
@@ -287,17 +287,17 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
+         prepare(signer: auth(Storage) &Account) {
+             let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
              log(c.rs["b"]?.value)
-             let existing <- c.rs["b"] <- nil
-             destroy existing
+			 destroy c.remove("b")
              log(c.rs["b"]?.value)
          }
      }
    `)
 
 	loggedMessages = nil
+	events = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -313,12 +313,12 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"4",
-			`"destroying R"`,
-			"4",
 			"nil",
 		},
 		loggedMessages,
 	)
+	require.Len(t, events, 1)
+	require.Equal(t, "A.000000000000cade.Test.R.ResourceDestroyed(value: 4)", events[0].String())
 
 	// Read the deleted key
 
@@ -344,20 +344,21 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
-             if let c <- signer.load<@Test.C>(from: /storage/c) {
+         prepare(signer: auth(Storage) &Account) {
+             if let c <- signer.storage.load<@Test.C>(from: /storage/c) {
                  log(c.rs["a"]?.value)
                  destroy c
              }
 
              let c2 <- Test.createC()
-             c2.rs["x"] <-! Test.createR(10)
-             signer.save(<-c2, to: /storage/c)
+			 c2.forceInsert("x", <-Test.createR(10))
+             signer.storage.save(<-c2, to: /storage/c)
          }
      }
    `)
 
 	loggedMessages = nil
+	events = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -373,76 +374,77 @@ func TestRuntimeResourceDictionaryValues(t *testing.T) {
 	assert.Equal(t,
 		[]string{
 			"1",
-			`"destroying R"`,
-			"1",
 		},
 		loggedMessages,
 	)
+	require.Len(t, events, 1)
+	require.Equal(t, "A.000000000000cade.Test.R.ResourceDestroyed(value: 1)", events[0].String())
+
 }
 
 func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
-     pub contract Test {
+     access(all) contract Test {
 
-         pub resource R {
+         access(all) resource R {
 
-             pub var value: Int
+             access(all) var value: Int
 
              init(_ value: Int) {
                  self.value = value
              }
 
-             pub fun increment() {
+             access(all) fun increment() {
                  self.value = self.value + 1
              }
          }
 
-         pub fun createR(_ value: Int): @R {
+         access(all) fun createR(_ value: Int): @R {
              return <-create R(value)
          }
 
-         pub resource C2 {
+         access(all) resource C2 {
 
-             pub(set) var rs: @{String: R}
+             access(all) var rs: @{String: R}
 
              init() {
                  self.rs <- {}
              }
 
-             pub fun value(key: String): Int? {
+             access(all) fun value(key: String): Int? {
                  return self.rs[key]?.value
              }
 
-             destroy() {
-                 destroy self.rs
-             }
+			 access(all) fun forceInsert(_ id: String, _ r: @R) {
+				self.rs[id] <-! r
+			 }
          }
 
-         pub fun createC2(): @C2 {
+         access(all) fun createC2(): @C2 {
              return <-create C2()
          }
 
-         pub resource C {
+         access(all) resource C {
 
-             pub(set) var c2s: @{String: C2}
+             access(all) var c2s: @{String: C2}
+
+			 access(all) fun forceInsert(_ id: String, _ c: @C2) {
+				self.c2s[id] <-! c
+			 }
 
              init() {
                  self.c2s <- {}
              }
-
-             destroy() {
-                 destroy self.c2s
-             }
          }
 
-         pub fun createC(): @C {
+         access(all) fun createC(): @C {
              return <-create C()
          }
      }
@@ -455,8 +457,11 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
       transaction {
 
-          prepare(signer: AuthAccount) {
-              signer.save(<-Test.createC(), to: /storage/c)
+          prepare(signer: auth(Storage) &Account) {
+              signer.storage.save(
+                  <-Test.createC(),
+                  to: /storage/c
+              )
           }
       }
    `)
@@ -465,32 +470,32 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		getCode: func(_ Location) (bytes []byte, err error) {
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{Address(addressValue)}, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -521,12 +526,12 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
+         prepare(signer: auth(Storage) &Account) {
+             let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
              let c2 <- Test.createC2()
-             c2.rs["a"] <-! Test.createR(1)
-             c2.rs["b"] <-! Test.createR(2)
-             c.c2s["x"] <-! c2
+             c2.forceInsert("a", <- Test.createR(1))
+			 c2.forceInsert("b", <- Test.createR(2))
+			 c.forceInsert("x", <- c2)
          }
      }
    `)
@@ -547,8 +552,8 @@ func TestRuntimeResourceDictionaryValues_Nested(t *testing.T) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
+         prepare(signer: auth(Storage) &Account) {
+             let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
              // TODO: use nested optional chaining
              log(c.c2s["x"]?.value(key: "b"))
          }
@@ -578,42 +583,42 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 	signer1 := common.MustBytesToAddress([]byte{0x1})
 	signer2 := common.MustBytesToAddress([]byte{0x2})
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	contract := []byte(`
-     pub contract Test {
+     access(all) contract Test {
 
-         pub resource R {
+         access(all) resource R {
 
-             pub var value: Int
+             access(all) var value: Int
 
              init(_ value: Int) {
                  self.value = value
              }
 
-             pub fun increment() {
+             access(all) fun increment() {
                  self.value = self.value + 1
              }
          }
 
-         pub fun createR(_ value: Int): @R {
+         access(all) fun createR(_ value: Int): @R {
              return <-create R(value)
          }
 
-         pub resource C {
+         access(all) resource C {
 
-             pub(set) var rs: @{String: R}
+             access(all) var rs: @{String: R}
+
+			 access(all) fun setRs(key s: String, r: @R) {
+				self.rs[s] <-! r
+			 }
 
              init() {
                  self.rs <- {}
              }
-
-             destroy() {
-                 destroy self.rs
-             }
          }
 
-         pub fun createC(): @C {
+         access(all) fun createC(): @C {
              return <-create C()
          }
      }
@@ -623,7 +628,10 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 		`
          transaction {
 
-             prepare(signer1: AuthAccount, signer2: AuthAccount) {
+             prepare(
+                 signer1: auth(Contracts) &Account,
+                 signer2: &Account
+             ) {
                  signer1.contracts.add(name: "Test", code: "%s".decodeHex())
              }
          }
@@ -636,11 +644,14 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
       transaction {
 
-          prepare(signer1: AuthAccount, signer2: AuthAccount) {
+          prepare(
+              signer1: auth(Storage) &Account,
+              signer2: &Account
+          ) {
               let c <- Test.createC()
-              c.rs["a"] <-! Test.createR(1)
-              c.rs["b"] <-! Test.createR(2)
-              signer1.save(<-c, to: /storage/c)
+              c.setRs(key: "a", r: <- Test.createR(1))
+			  c.setRs(key: "b", r: <- Test.createR(2))
+              signer1.storage.save(<-c, to: /storage/c)
           }
       }
    `)
@@ -649,35 +660,35 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 	var events []cadence.Event
 	var loggedMessages []string
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{
 				signer1,
 				signer2,
 			}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) (err error) {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -710,10 +721,13 @@ func TestRuntimeResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
      transaction {
 
-         prepare(signer1: AuthAccount, signer2: AuthAccount) {
-             let c <- signer1.load<@Test.C>(from: /storage/c) ?? panic("missing C")
-             c.rs["x"] <-! Test.createR(42)
-             signer2.save(<-c, to: /storage/c2)
+         prepare(
+             signer1: auth(Storage) &Account,
+             signer2: auth(Storage) &Account
+         ) {
+             let c <- signer1.storage.load<@Test.C>(from: /storage/c) ?? panic("missing C")
+             c.setRs(key: "x", r: <- Test.createR(42))
+             signer2.storage.save(<-c, to: /storage/c2)
          }
      }
    `)
@@ -736,7 +750,7 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	contract := []byte(resourceDictionaryContract)
 
@@ -747,11 +761,11 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
+         prepare(signer: auth(Storage) &Account) {
              let c <- Test.createC()
-             c.rs["a"] <-! Test.createR(1)
-             c.rs["b"] <-! Test.createR(2)
-             signer.save(<-c, to: /storage/c)
+			 c.forceInsert("a", <- Test.createR(1))
+             c.forceInsert("b", <- Test.createR(2))
+             signer.storage.save(<-c, to: /storage/c)
          }
      }
    `)
@@ -761,8 +775,8 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 
      transaction {
 
-        prepare(signer: AuthAccount) {
-            let c = signer.borrow<&Test.C>(from: /storage/c)!
+        prepare(signer: auth(Storage) &Account) {
+            let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
             let r <- c.remove("a")
             destroy r
         }
@@ -774,8 +788,8 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 
      transaction {
 
-        prepare(signer: AuthAccount) {
-            let c <- signer.load<@Test.C>(from: /storage/c)!
+        prepare(signer: auth(Storage) &Account) {
+            let c <- signer.storage.load<@Test.C>(from: /storage/c)!
             let r <- c.remove("b")
             destroy r
             destroy c
@@ -789,32 +803,32 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 
 	signer := common.MustBytesToAddress([]byte{0x1})
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signer}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) (err error) {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -861,11 +875,11 @@ func TestRuntimeResourceDictionaryValues_Removal(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
+func TestRuntimeResourceDictionaryValues_Destruction(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	contract := []byte(resourceDictionaryContract)
 
@@ -876,11 +890,11 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
+         prepare(signer: auth(Storage) &Account) {
              let c <- Test.createC()
-             c.rs["a"] <-! Test.createR(1)
-             c.rs["b"] <-! Test.createR(2)
-             signer.save(<-c, to: /storage/c)
+             c.forceInsert("a", <- Test.createR(1))
+             c.forceInsert("b", <- Test.createR(2))
+             signer.storage.save(<-c, to: /storage/c)
          }
      }
    `)
@@ -890,8 +904,8 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 
      transaction {
 
-        prepare(signer: AuthAccount) {
-            let c <- signer.load<@Test.C>(from: /storage/c)
+        prepare(signer: auth(Storage) &Account) {
+            let c <- signer.storage.load<@Test.C>(from: /storage/c)
             destroy c
         }
      }
@@ -903,32 +917,32 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 
 	signer := common.MustBytesToAddress([]byte{0x1})
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signer}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -964,22 +978,21 @@ func TestRuntimeSResourceDictionaryValues_Destruction(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		[]string{
-			`"destroying R"`,
-			"2",
-			`"destroying R"`,
-			"1",
-		},
-		loggedMessages,
-	)
+	require.Len(t, events, 3)
+	require.Equal(t, "flow.AccountContractAdded", events[0].EventType.ID())
+	require.Equal(t, "A.0000000000000001.Test.R.ResourceDestroyed", events[1].EventType.ID())
+	require.Equal(t, "A.0000000000000001.Test.R.ResourceDestroyed", events[2].EventType.ID())
+	event2Fields := cadence.FieldsMappedByName(events[1])
+	event3Fields := cadence.FieldsMappedByName(events[2])
+	require.Equal(t, "2", event2Fields["value"].String())
+	require.Equal(t, "1", event3Fields["value"].String())
 }
 
 func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	contract := []byte(resourceDictionaryContract)
 
@@ -990,11 +1003,11 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
+         prepare(signer: auth(Storage) &Account) {
              let c <- Test.createC()
-             c.rs["a"] <-! Test.createR(1)
-             c.rs["b"] <-! Test.createR(2)
-             signer.save(<-c, to: /storage/c)
+			 c.forceInsert("a", <- Test.createR(1))
+             c.forceInsert("b", <- Test.createR(2))
+             signer.storage.save(<-c, to: /storage/c)
          }
      }
    `)
@@ -1004,8 +1017,8 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 
      transaction {
 
-        prepare(signer: AuthAccount) {
-            let c = signer.borrow<&Test.C>(from: /storage/c)!
+        prepare(signer: auth(Storage) &Account) {
+            let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
 
             let e1 <- c.insert("c", <-Test.createR(3))
             assert(e1 == nil)
@@ -1023,8 +1036,8 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 
      transaction {
 
-        prepare(signer: AuthAccount) {
-            let c <- signer.load<@Test.C>(from: /storage/c)!
+        prepare(signer: auth(Storage) &Account) {
+            let c <- signer.storage.load<@Test.C>(from: /storage/c)!
             let e1 <- c.insert("d", <-Test.createR(4))
             assert(e1 == nil)
             destroy e1
@@ -1044,32 +1057,32 @@ func TestRuntimeResourceDictionaryValues_Insertion(t *testing.T) {
 
 	signer := common.MustBytesToAddress([]byte{0x1})
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signer}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -1120,7 +1133,7 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	contract := []byte(resourceDictionaryContract)
 
@@ -1131,9 +1144,9 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
+         prepare(signer: auth(Storage) &Account) {
              let c <- Test.createC()
-             signer.save(<-c, to: /storage/c)
+             signer.storage.save(<-c, to: /storage/c)
          }
      }
    `)
@@ -1143,8 +1156,8 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
      transaction {
 
-        prepare(signer: AuthAccount) {
-            let c = signer.borrow<&Test.C>(from: /storage/c)!
+        prepare(signer: auth(Storage) &Account) {
+            let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
 
             let existing <- c.insert("1", <-Test.createR(1))
             assert(existing == nil)
@@ -1158,9 +1171,12 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
      transaction {
 
-        prepare(signer1: AuthAccount, signer2: AuthAccount) {
-            let c1 = signer1.borrow<&Test.C>(from: /storage/c)!
-            let c2 = signer2.borrow<&Test.C>(from: /storage/c)!
+        prepare(
+            signer1: auth(Storage) &Account,
+            signer2: auth(Storage) &Account
+        ) {
+            let c1 = signer1.storage.borrow<&Test.C>(from: /storage/c)!
+            let c2 = signer2.storage.borrow<&Test.C>(from: /storage/c)!
 
             let r <- c1.remove("1")
 
@@ -1176,8 +1192,8 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
      transaction {
 
-        prepare(signer: AuthAccount) {
-            let c = signer.borrow<&Test.C>(from: /storage/c)!
+        prepare(signer: auth(Storage) &Account) {
+            let c = signer.storage.borrow<&Test.C>(from: /storage/c)!
 
             let r <- c.remove("1")
             destroy r
@@ -1195,34 +1211,34 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
 	var signers []Address
 
-	testStorage := newTestLedger(nil, nil)
+	testStorage := NewTestLedger(nil, nil)
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: testStorage,
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: testStorage,
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return signers, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		log: func(message string) {
+		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	signers = []Address{signer1}
 	err := runtime.ExecuteTransaction(
@@ -1299,16 +1315,16 @@ func TestRuntimeResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
 func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
-	  pub contract Test {
+	  access(all) contract Test {
 
-         pub resource R {}
+         access(all) resource R {}
 
-         pub fun createR(): @R {
+         access(all) fun createR(): @R {
              return <-create R()
          }
      }
@@ -1321,14 +1337,14 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
+         prepare(signer: &Account) {
              let data: @{Int: Test.R} <- {}
              var i = 0
              while i < 1000 {
                  data[i] <-! Test.createR()
                  i = i + 1
              }
-             signer.save(<-data, to: /storage/data)
+             signer.storage.save(<-data, to: /storage/data)
          }
       }
    `)
@@ -1336,28 +1352,28 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 	var accountCode []byte
 	var events []cadence.Event
 
-	storage := newTestLedger(nil, nil)
+	storage := NewTestLedger(nil, nil)
 
-	runtimeInterface := &testRuntimeInterface{
-		resolveLocation: singleIdentifierLocationResolver(b),
-		getAccountContractCode: func(_ Address, _ string) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnResolveLocation: NewSingleIdentifierLocationResolver(b),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: storage,
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: storage,
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{Address(addressValue)}, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{
@@ -1388,8 +1404,8 @@ func BenchmarkRuntimeResourceDictionaryValues(b *testing.B) {
 
      transaction {
 
-         prepare(signer: AuthAccount) {
-             let ref = signer.borrow<&{Int: Test.R}>(from: /storage/data)!
+         prepare(signer: &Account) {
+             let ref = signer.storage.borrow<&{Int: Test.R}>(from: /storage/data)!
              assert(ref[50] != nil)
         }
      }

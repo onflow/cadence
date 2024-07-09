@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,8 +52,8 @@ func TestCheckRepeatedImport(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-          pub let x = 1
-          pub let y = 2
+          access(all) let x = 1
+          access(all) let y = 2
         `,
 		ParseAndCheckOptions{
 			Location: utils.ImportedLocation,
@@ -87,11 +87,11 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
 
 	importedCheckerX, err := ParseAndCheckWithOptions(t,
 		`
-          pub fun test(): Int {
+          access(all) fun test(): Int {
               return 1
           }
 
-          pub let x = test()
+          access(all) let x = test()
         `,
 		ParseAndCheckOptions{
 			Location: common.AddressLocation{
@@ -104,11 +104,11 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
 
 	importedCheckerY, err := ParseAndCheckWithOptions(t,
 		`
-          pub fun test(): Int {
+          access(all) fun test(): Int {
               return 2
           }
 
-          pub let y = test()
+          access(all) let y = test()
         `,
 		ParseAndCheckOptions{
 			Location: common.AddressLocation{
@@ -166,7 +166,7 @@ func TestCheckInvalidRepeatedImport(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-          pub let x = 1
+          access(all) let x = 1
         `,
 		ParseAndCheckOptions{
 			Location: utils.ImportedLocation,
@@ -204,11 +204,11 @@ func TestCheckImportResolutionSplit(t *testing.T) {
 
 	importedCheckerX, err := ParseAndCheckWithOptions(t,
 		`
-          pub fun test(): Int {
+          access(all) fun test(): Int {
               return 1
           }
 
-          pub let x = test()
+          access(all) let x = test()
         `,
 		ParseAndCheckOptions{
 			Location: common.AddressLocation{
@@ -221,11 +221,11 @@ func TestCheckImportResolutionSplit(t *testing.T) {
 
 	importedCheckerY, err := ParseAndCheckWithOptions(t,
 		`
-          pub fun test(): Int {
+          access(all) fun test(): Int {
               return 2
           }
 
-          pub let y = test()
+          access(all) let y = test()
         `,
 		ParseAndCheckOptions{
 			Location: common.AddressLocation{
@@ -282,7 +282,7 @@ func TestCheckImportAll(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-          pub fun answer(): Int {
+          access(all) fun answer(): Int {
               return 42
           }
         `,
@@ -297,7 +297,7 @@ func TestCheckImportAll(t *testing.T) {
 		`
           import "imported"
 
-          pub let x = answer()
+          access(all) let x = answer()
         `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
@@ -319,7 +319,7 @@ func TestCheckInvalidImportUnexported(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-           pub let x = 1
+           access(all) let x = 1
         `,
 		ParseAndCheckOptions{
 			Location: utils.ImportedLocation,
@@ -332,7 +332,7 @@ func TestCheckInvalidImportUnexported(t *testing.T) {
 		`
            import answer from "imported"
 
-           pub let x = answer()
+           access(all) let x = answer()
         `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
@@ -356,11 +356,11 @@ func TestCheckImportSome(t *testing.T) {
 
 	importedChecker, err := ParseAndCheckWithOptions(t,
 		`
-          pub fun answer(): Int {
+          access(all) fun answer(): Int {
               return 42
           }
 
-          pub let x = 1
+          access(all) let x = 1
         `,
 		ParseAndCheckOptions{
 			Location: utils.ImportedLocation,
@@ -373,7 +373,7 @@ func TestCheckImportSome(t *testing.T) {
 		`
           import answer from "imported"
 
-          pub let x = answer()
+          access(all) let x = answer()
         `,
 		ParseAndCheckOptions{
 			Config: &sema.Config{
@@ -438,9 +438,9 @@ func TestCheckImportTypes(t *testing.T) {
 			importedChecker, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(
 					`
-                       pub %[1]s Test %[2]s
+                       access(all) %[1]s Test %[2]s
 
-                       pub %[1]s interface TestInterface %[2]s
+                       access(all) %[1]s interface TestInterface %[2]s
                     `,
 					compositeKind.Keyword(),
 					body,
@@ -455,7 +455,7 @@ func TestCheckImportTypes(t *testing.T) {
 			var useCode string
 			if compositeKind != common.CompositeKindContract {
 				useCode = fmt.Sprintf(
-					`pub let x: %[1]sTest %[2]s %[3]s Test%[4]s`,
+					`access(all) let x: %[1]sTest %[2]s %[3]s Test%[4]s`,
 					compositeKind.Annotation(),
 					compositeKind.TransferOperator(),
 					compositeKind.ConstructionKeyword(),
@@ -468,7 +468,7 @@ func TestCheckImportTypes(t *testing.T) {
 					`
                       import "imported"
 
-                      pub %[1]s TestImpl: TestInterface {}
+                      access(all) %[1]s TestImpl: TestInterface {}
 
                       %[2]s
                     `,
@@ -510,7 +510,11 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 	// it will be checked by checker that is checking the importing program
 
 	const code = `import "test"`
-	importedProgram, err := parser.ParseProgram([]byte(code), nil)
+	importedProgram, err := parser.ParseProgram(
+		nil,
+		[]byte(code),
+		parser.Config{},
+	)
 
 	require.NoError(t, err)
 
@@ -571,27 +575,27 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 	const codeEven = `
       import odd from "odd"
 
-      pub fun even(_ n: Int): Bool {
+      access(all) fun even(_ n: Int): Bool {
           if n == 0 {
               return true
           }
           return odd(n - 1)
       }
     `
-	programEven, err := parser.ParseProgram([]byte(codeEven), nil)
+	programEven, err := parser.ParseProgram(nil, []byte(codeEven), parser.Config{})
 	require.NoError(t, err)
 
 	const codeOdd = `
       import even from "even"
 
-      pub fun odd(_ n: Int): Bool {
+      access(all) fun odd(_ n: Int): Bool {
           if n == 0 {
               return false
           }
           return even(n - 1)
       }
     `
-	programOdd, err := parser.ParseProgram([]byte(codeOdd), nil)
+	programOdd, err := parser.ParseProgram(nil, []byte(codeOdd), parser.Config{})
 	require.NoError(t, err)
 
 	getProgram := func(location common.Location) *ast.Program {
@@ -659,6 +663,8 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 
 func TestCheckImportVirtual(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
        import Foo
 
@@ -682,7 +688,7 @@ func TestCheckImportVirtual(t *testing.T) {
 			fooType,
 			"bar",
 			&sema.FunctionType{
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.UInt64Type),
+				ReturnTypeAnnotation: sema.UInt64TypeAnnotation,
 			},
 			"",
 		))
@@ -691,7 +697,7 @@ func TestCheckImportVirtual(t *testing.T) {
 
 	valueElements.Set("Foo", sema.ImportElement{
 		DeclarationKind: common.DeclarationKindStructure,
-		Access:          ast.AccessPublic,
+		Access:          sema.UnauthorizedAccess,
 		Type:            fooType,
 	})
 
@@ -709,4 +715,111 @@ func TestCheckImportVirtual(t *testing.T) {
 	)
 
 	require.NoError(t, err)
+}
+
+func TestCheckImportContract(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+            access(all) contract Foo {
+                access(all) let x: [Int]
+
+                access(all) fun answer(): Int {
+                    return 42
+                }
+
+                access(all) struct Bar {}
+
+                init() {
+                    self.x = []
+                }
+            }`,
+			ParseAndCheckOptions{
+				Location: utils.ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+            import Foo from "imported"
+
+            access(all) fun main() {
+                var foo: &Foo = Foo
+                var x: &[Int] = Foo.x
+                var bar: Foo.Bar = Foo.Bar()
+            }
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+            access(all) contract Foo {
+                access(all) let x: [Int]
+
+                access(all) fun answer(): Int {
+                    return 42
+                }
+
+                access(all) struct Bar {}
+
+                init() {
+                    self.x = []
+                }
+            }`,
+			ParseAndCheckOptions{
+				Location: utils.ImportedLocation,
+			},
+		)
+
+		require.NoError(t, err)
+
+		_, err = ParseAndCheckWithOptions(t,
+			`
+            import Foo from "imported"
+
+            access(all) fun main() {
+                Foo.x[0] = 3
+                Foo.x.append(4)
+            }
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					ImportHandler: func(_ *sema.Checker, _ common.Location, _ ast.Range) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
+						}, nil
+					},
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assignmentError := &sema.UnauthorizedReferenceAssignmentError{}
+		assert.ErrorAs(t, errs[0], &assignmentError)
+
+		accessError := &sema.InvalidAccessError{}
+		assert.ErrorAs(t, errs[1], &accessError)
+	})
+
 }

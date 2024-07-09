@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -159,14 +159,29 @@ func TestCheckInvalidNilCoalescingNonMatchingTypes(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      let x: Int? = 1
-      let y = x ?? false
-   `)
+	t.Run("with super type", func(t *testing.T) {
+		t.Parallel()
 
-	errs := RequireCheckerErrors(t, err, 1)
+		_, err := ParseAndCheck(t, `
+          let x: Int? = 1
+          let y = x ?? false
+       `)
 
-	assert.IsType(t, &sema.InvalidBinaryOperandError{}, errs[0])
+		require.NoError(t, err)
+	})
+
+	t.Run("no super type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let x: Int? = 1
+          let y: Int = x ?? false
+       `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }
 
 func TestCheckNilCoalescingAny(t *testing.T) {
@@ -217,8 +232,8 @@ func TestCheckNilCoalescingWithNever(t *testing.T) {
 
 	_, err := ParseAndCheckWithPanic(t,
 		`
-          pub let x: Int? = nil
-          pub let y = x ?? panic("nope")
+          access(all) let x: Int? = nil
+          access(all) let y = x ?? panic("nope")
         `,
 	)
 

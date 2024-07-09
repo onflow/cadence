@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,55 +24,128 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-type ContractUpdateValidator struct {
-	TypeComparator
+type UpdateValidator interface {
+	ast.TypeEqualityChecker
 
-	location     common.Location
-	contractName string
-	oldProgram   *ast.Program
-	newProgram   *ast.Program
-	currentDecl  ast.Declaration
-	errors       []error
+	Validate() error
+	report(error)
+
+	getCurrentDeclaration() ast.Declaration
+	setCurrentDeclaration(ast.Declaration)
+
+	checkField(oldField *ast.FieldDeclaration, newField *ast.FieldDeclaration)
+	checkNestedDeclarationRemoval(
+		nestedDeclaration ast.Declaration,
+		oldContainingDeclaration ast.Declaration,
+		newContainingDeclaration ast.Declaration,
+		removedTypes *orderedmap.OrderedMap[string, struct{}],
+	)
+	getAccountContractNames(address common.Address) ([]string, error)
+
+	checkDeclarationKindChange(
+		oldDeclaration ast.Declaration,
+		newDeclaration ast.Declaration,
+	) bool
+
+	isTypeRemovalEnabled() bool
+	WithTypeRemovalEnabled(enabled bool) UpdateValidator
+}
+
+type checkConformanceFunc func(
+	oldDecl *ast.CompositeDeclaration,
+	newDecl *ast.CompositeDeclaration,
+)
+
+type ContractUpdateValidator struct {
+	*TypeComparator
+
+	location                     common.Location
+	contractName                 string
+	oldProgram                   *ast.Program
+	newProgram                   *ast.Program
+	currentDecl                  ast.Declaration
+	importLocations              map[ast.Identifier]common.Location
+	accountContractNamesProvider AccountContractNamesProvider
+	errors                       []error
+	typeRemovalEnabled           bool
 }
 
 // ContractUpdateValidator should implement ast.TypeEqualityChecker
 var _ ast.TypeEqualityChecker = &ContractUpdateValidator{}
+var _ UpdateValidator = &ContractUpdateValidator{}
 
 // NewContractUpdateValidator initializes and returns a validator, without performing any validation.
 // Invoke the `Validate()` method of the validator returned, to start validating the contract.
 func NewContractUpdateValidator(
 	location common.Location,
 	contractName string,
+	accountContractNamesProvider AccountContractNamesProvider,
 	oldProgram *ast.Program,
 	newProgram *ast.Program,
 ) *ContractUpdateValidator {
 
 	return &ContractUpdateValidator{
-		location:     location,
-		oldProgram:   oldProgram,
-		newProgram:   newProgram,
-		contractName: contractName,
+		location:                     location,
+		oldProgram:                   oldProgram,
+		newProgram:                   newProgram,
+		contractName:                 contractName,
+		accountContractNamesProvider: accountContractNamesProvider,
+		importLocations:              map[ast.Identifier]common.Location{},
+		TypeComparator:               &TypeComparator{},
 	}
+}
+
+func (validator *ContractUpdateValidator) isTypeRemovalEnabled() bool {
+	return validator.typeRemovalEnabled
+}
+
+func (validator *ContractUpdateValidator) WithTypeRemovalEnabled(enabled bool) UpdateValidator {
+	validator.typeRemovalEnabled = enabled
+	return validator
+}
+
+func (validator *ContractUpdateValidator) getCurrentDeclaration() ast.Declaration {
+	return validator.currentDecl
+}
+
+func (validator *ContractUpdateValidator) setCurrentDeclaration(decl ast.Declaration) {
+	validator.currentDecl = decl
+}
+
+func (validator *ContractUpdateValidator) getAccountContractNames(address common.Address) ([]string, error) {
+	return validator.accountContractNamesProvider.GetAccountContractNames(address)
 }
 
 // Validate validates the contract update, and returns an error if it is an invalid update.
 func (validator *ContractUpdateValidator) Validate() error {
-	oldRootDecl := validator.getRootDeclaration(validator.oldProgram)
+	oldRootDecl := getRootDeclaration(validator, validator.oldProgram)
 	if validator.hasErrors() {
 		return validator.getContractUpdateError()
 	}
 
-	newRootDecl := validator.getRootDeclaration(validator.newProgram)
+	newRootDecl := getRootDeclaration(validator, validator.newProgram)
 	if validator.hasErrors() {
 		return validator.getContractUpdateError()
 	}
 
 	validator.TypeComparator.RootDeclIdentifier = newRootDecl.DeclarationIdentifier()
+	validator.TypeComparator.expectedIdentifierImportLocations = collectImports(validator, validator.oldProgram)
+	validator.TypeComparator.foundIdentifierImportLocations = collectImports(validator, validator.newProgram)
 
-	validator.checkDeclarationUpdatability(oldRootDecl, newRootDecl)
+	if validator.hasErrors() {
+		return validator.getContractUpdateError()
+	}
+
+	checkDeclarationUpdatability(
+		validator,
+		oldRootDecl,
+		newRootDecl,
+		validator.checkConformance,
+	)
 
 	if validator.hasErrors() {
 		return validator.getContractUpdateError()
@@ -81,8 +154,52 @@ func (validator *ContractUpdateValidator) Validate() error {
 	return nil
 }
 
-func (validator *ContractUpdateValidator) getRootDeclaration(program *ast.Program) ast.Declaration {
-	decl, err := getRootDeclaration(program)
+func collectImports(validator UpdateValidator, program *ast.Program) map[string]common.Location {
+	importLocations := map[string]common.Location{}
+
+	imports := program.ImportDeclarations()
+
+	for _, importDecl := range imports {
+		importLocation := importDecl.Location
+
+		addressLocation, ok := importLocation.(common.AddressLocation)
+		if !ok {
+			// e.g: Crypto
+			continue
+		}
+
+		// if there are no identifiers given, the import covers all of them
+		if len(importDecl.Identifiers) == 0 {
+			allLocations, err := validator.getAccountContractNames(addressLocation.Address)
+			if err != nil {
+				validator.report(err)
+			}
+			for _, identifier := range allLocations {
+				// associate the location of an identifier's import with the location it's being imported from
+				// this assumes that two imports cannot have the same name, which should be prevented by the type checker
+				importLocations[identifier] = common.AddressLocation{
+					Name:    identifier,
+					Address: addressLocation.Address,
+				}
+			}
+		} else {
+			for _, identifier := range importDecl.Identifiers {
+				name := identifier.Identifier
+				// associate the location of an identifier's import with the location it's being imported from.
+				// This assumes that two imports cannot have the same name, which should be prevented by the type checker
+				importLocations[name] = common.AddressLocation{
+					Name:    name,
+					Address: addressLocation.Address,
+				}
+			}
+		}
+	}
+
+	return importLocations
+}
+
+func getRootDeclaration(validator UpdateValidator, program *ast.Program) ast.Declaration {
+	decl, err := getRootDeclarationOfProgram(program)
 
 	if err != nil {
 		validator.report(&ContractNotFoundError{
@@ -93,7 +210,7 @@ func (validator *ContractUpdateValidator) getRootDeclaration(program *ast.Progra
 	return decl
 }
 
-func getRootDeclaration(program *ast.Program) (ast.Declaration, error) {
+func getRootDeclarationOfProgram(program *ast.Program) (ast.Declaration, error) {
 	compositeDecl := program.SoleContractDeclaration()
 	if compositeDecl != nil {
 		return compositeDecl, nil
@@ -113,43 +230,72 @@ func (validator *ContractUpdateValidator) hasErrors() bool {
 	return len(validator.errors) > 0
 }
 
-func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
+func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaDeclaration) *orderedmap.OrderedMap[string, struct{}] {
+	removedTypes := orderedmap.New[orderedmap.OrderedMap[string, struct{}]](len(pragmas))
+
+	for _, pragma := range pragmas {
+		invocationExpression, isInvocation := pragma.Expression.(*ast.InvocationExpression)
+		if !isInvocation {
+			continue
+		}
+		invokedIdentifier, isIdentifier := invocationExpression.InvokedExpression.(*ast.IdentifierExpression)
+		if !isIdentifier || invokedIdentifier.Identifier.Identifier != "removedType" {
+			continue
+		}
+		if len(invocationExpression.Arguments) != 1 {
+			validator.report(&InvalidTypeRemovalPragmaError{
+				Expression: pragma.Expression,
+				Range:      ast.NewUnmeteredRangeFromPositioned(pragma.Expression),
+			})
+			continue
+		}
+		removedTypeName, isIdentifer := invocationExpression.Arguments[0].Expression.(*ast.IdentifierExpression)
+		if !isIdentifer {
+			validator.report(&InvalidTypeRemovalPragmaError{
+				Expression: pragma.Expression,
+				Range:      ast.NewUnmeteredRangeFromPositioned(pragma.Expression),
+			})
+			continue
+		}
+		removedTypes.Set(removedTypeName.Identifier.Identifier, struct{}{})
+	}
+
+	return removedTypes
+}
+
+func checkDeclarationUpdatability(
+	validator UpdateValidator,
 	oldDeclaration ast.Declaration,
 	newDeclaration ast.Declaration,
+	checkConformance checkConformanceFunc,
 ) {
 
-	// Do not allow converting between different types of composite declarations:
-	// e.g: - 'contracts' and 'contract-interfaces',
-	//      - 'structs' and 'enums'
-	if oldDeclaration.DeclarationKind() != newDeclaration.DeclarationKind() {
-		validator.report(&InvalidDeclarationKindChangeError{
-			Name:    oldDeclaration.DeclarationIdentifier().Identifier,
-			OldKind: oldDeclaration.DeclarationKind(),
-			NewKind: newDeclaration.DeclarationKind(),
-			Range:   ast.NewUnmeteredRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
-		})
-
+	if !validator.checkDeclarationKindChange(oldDeclaration, newDeclaration) {
 		return
 	}
 
-	parentDecl := validator.currentDecl
-	validator.currentDecl = newDeclaration
+	parentDecl := validator.getCurrentDeclaration()
+	validator.setCurrentDeclaration(newDeclaration)
 	defer func() {
-		validator.currentDecl = parentDecl
+		validator.setCurrentDeclaration(parentDecl)
 	}()
 
-	validator.checkFields(oldDeclaration, newDeclaration)
+	checkFields(validator, oldDeclaration, newDeclaration)
 
-	validator.checkNestedDeclarations(oldDeclaration, newDeclaration)
+	checkNestedDeclarations(validator, oldDeclaration, newDeclaration, checkConformance)
 
 	if newDecl, ok := newDeclaration.(*ast.CompositeDeclaration); ok {
 		if oldDecl, ok := oldDeclaration.(*ast.CompositeDeclaration); ok {
-			validator.checkConformances(oldDecl, newDecl)
+			checkConformance(oldDecl, newDecl)
 		}
 	}
 }
 
-func (validator *ContractUpdateValidator) checkFields(oldDeclaration ast.Declaration, newDeclaration ast.Declaration) {
+func checkFields(
+	validator UpdateValidator,
+	oldDeclaration ast.Declaration,
+	newDeclaration ast.Declaration,
+) {
 
 	oldFields := oldDeclaration.DeclarationMembers().FieldsByIdentifier()
 	newFields := newDeclaration.DeclarationMembers().Fields()
@@ -187,50 +333,164 @@ func (validator *ContractUpdateValidator) checkField(oldField *ast.FieldDeclarat
 	}
 }
 
-func (validator *ContractUpdateValidator) checkNestedDeclarations(
+func (validator *ContractUpdateValidator) checkDeclarationKindChange(
 	oldDeclaration ast.Declaration,
 	newDeclaration ast.Declaration,
+) bool {
+	// Do not allow converting between different types of composite declarations:
+	// e.g: - 'contracts' and 'contract-interfaces',
+	//      - 'structs' and 'enums'
+	if oldDeclaration.DeclarationKind() != newDeclaration.DeclarationKind() {
+		validator.report(&InvalidDeclarationKindChangeError{
+			Name:    oldDeclaration.DeclarationIdentifier().Identifier,
+			OldKind: oldDeclaration.DeclarationKind(),
+			NewKind: newDeclaration.DeclarationKind(),
+			Range:   ast.NewUnmeteredRangeFromPositioned(newDeclaration.DeclarationIdentifier()),
+		})
+
+		return false
+	}
+
+	return true
+}
+
+func (validator *ContractUpdateValidator) checkNestedDeclarationRemoval(
+	nestedDeclaration ast.Declaration,
+	_ ast.Declaration,
+	newContainingDeclaration ast.Declaration,
+	removedTypes *orderedmap.OrderedMap[string, struct{}],
+) {
+	declarationKind := nestedDeclaration.DeclarationKind()
+
+	// OK to remove events - they are not stored
+	if declarationKind == common.DeclarationKindEvent {
+		return
+	}
+
+	if validator.typeRemovalEnabled {
+		// OK to remove a type if it is included in a #removedType pragma, and it is not an interface
+		if removedTypes.Contains(nestedDeclaration.DeclarationIdentifier().Identifier) &&
+			!declarationKind.IsInterfaceDeclaration() {
+			return
+		}
+	}
+
+	validator.report(&MissingDeclarationError{
+		Name: nestedDeclaration.DeclarationIdentifier().Identifier,
+		Kind: declarationKind,
+		Range: ast.NewUnmeteredRangeFromPositioned(
+			newContainingDeclaration.DeclarationIdentifier(),
+		),
+	})
+}
+
+func (validator *ContractUpdateValidator) oldTypeID(oldType *ast.NominalType) common.TypeID {
+	oldImportLocation := validator.expectedIdentifierImportLocations[oldType.Identifier.Identifier]
+	qualifiedIdentifier := oldType.String()
+	if oldImportLocation == nil {
+		return common.TypeID(qualifiedIdentifier)
+	}
+	return oldImportLocation.TypeID(nil, qualifiedIdentifier)
+}
+
+func checkTypeNotRemoved(
+	validator UpdateValidator,
+	newDeclaration ast.Declaration,
+	removedTypes *orderedmap.OrderedMap[string, struct{}],
+) {
+	if !validator.isTypeRemovalEnabled() {
+		return
+	}
+
+	if removedTypes.Contains(newDeclaration.DeclarationIdentifier().Identifier) {
+		validator.report(&UseOfRemovedTypeError{
+			Declaration: newDeclaration,
+			Range:       ast.NewUnmeteredRangeFromPositioned(newDeclaration),
+		})
+	}
+}
+
+func checkNestedDeclarations(
+	validator UpdateValidator,
+	oldDeclaration ast.Declaration,
+	newDeclaration ast.Declaration,
+	checkConformance checkConformanceFunc,
 ) {
 
-	oldCompositeAndInterfaceDecls := getNestedCompositeAndInterfaceDecls(oldDeclaration)
+	var removedTypes *orderedmap.OrderedMap[string, struct{}]
+	if validator.isTypeRemovalEnabled() {
+		// process pragmas first, as they determine whether types can later be removed
+		oldRemovedTypes := collectRemovedTypePragmas(validator, oldDeclaration.DeclarationMembers().Pragmas())
+		removedTypes = collectRemovedTypePragmas(validator, newDeclaration.DeclarationMembers().Pragmas())
+
+		// #typeRemoval pragmas cannot be removed, so any that appear in the old program must appear in the new program
+		// they can however, be added, so use the new program's type removals for the purposes of checking the upgrade
+		oldRemovedTypes.Foreach(func(oldRemovedType string, _ struct{}) {
+			if !removedTypes.Contains(oldRemovedType) {
+				validator.report(&TypeRemovalPragmaRemovalError{
+					RemovedType: oldRemovedType,
+				})
+			}
+		})
+	}
+
+	oldNominalTypeDecls := getNestedNominalTypeDecls(oldDeclaration)
 
 	// Check nested structs, enums, etc.
 	newNestedCompositeDecls := newDeclaration.DeclarationMembers().Composites()
 	for _, newNestedDecl := range newNestedCompositeDecls {
-		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
+		checkTypeNotRemoved(validator, newNestedDecl, removedTypes)
+		oldNestedDecl, found := oldNominalTypeDecls[newNestedDecl.Identifier.Identifier]
 		if !found {
 			// Then it's a new declaration
 			continue
 		}
 
-		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
+		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl, checkConformance)
 
 		// If there's a matching new decl, then remove the old one from the map.
-		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
+		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
+	}
+
+	// Check nested attachments, etc.
+	newNestedAttachmentDecls := newDeclaration.DeclarationMembers().Attachments()
+	for _, newNestedDecl := range newNestedAttachmentDecls {
+		checkTypeNotRemoved(validator, newNestedDecl, removedTypes)
+		oldNestedDecl, found := oldNominalTypeDecls[newNestedDecl.Identifier.Identifier]
+		if !found {
+			// Then it's a new declaration
+			continue
+		}
+
+		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl, checkConformance)
+
+		// If there's a matching new decl, then remove the old one from the map.
+		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
 	}
 
 	// Check nested interfaces.
 	newNestedInterfaces := newDeclaration.DeclarationMembers().Interfaces()
 	for _, newNestedDecl := range newNestedInterfaces {
-		oldNestedDecl, found := oldCompositeAndInterfaceDecls[newNestedDecl.Identifier.Identifier]
+		checkTypeNotRemoved(validator, newNestedDecl, removedTypes)
+		oldNestedDecl, found := oldNominalTypeDecls[newNestedDecl.Identifier.Identifier]
 		if !found {
 			// Then this is a new declaration.
 			continue
 		}
 
-		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
+		checkDeclarationUpdatability(validator, oldNestedDecl, newNestedDecl, checkConformance)
 
 		// If there's a matching new decl, then remove the old one from the map.
-		delete(oldCompositeAndInterfaceDecls, newNestedDecl.Identifier.Identifier)
+		delete(oldNominalTypeDecls, newNestedDecl.Identifier.Identifier)
 	}
 
 	// The remaining old declarations don't have a corresponding new declaration,
 	// i.e., an existing declaration was removed.
 	// Hence, report an error.
 
-	missingDeclarations := make([]ast.Declaration, 0, len(oldCompositeAndInterfaceDecls))
+	missingDeclarations := make([]ast.Declaration, 0, len(oldNominalTypeDecls))
 
-	for _, declaration := range oldCompositeAndInterfaceDecls { //nolint:maprangecheck
+	for _, declaration := range oldNominalTypeDecls { //nolint:maprange
 		missingDeclarations = append(missingDeclarations, declaration)
 	}
 
@@ -240,29 +500,28 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	})
 
 	for _, declaration := range missingDeclarations {
-		validator.report(&MissingDeclarationError{
-			Name: declaration.DeclarationIdentifier().Identifier,
-			Kind: declaration.DeclarationKind(),
-			Range: ast.NewUnmeteredRangeFromPositioned(
-				newDeclaration.DeclarationIdentifier(),
-			),
-		})
+		validator.checkNestedDeclarationRemoval(declaration, oldDeclaration, newDeclaration, removedTypes)
 	}
 
 	// Check enum-cases, if there are any.
-	validator.checkEnumCases(oldDeclaration, newDeclaration)
+	checkEnumCases(validator, oldDeclaration, newDeclaration)
 }
 
-func getNestedCompositeAndInterfaceDecls(declaration ast.Declaration) map[string]ast.Declaration {
+func getNestedNominalTypeDecls(declaration ast.Declaration) map[string]ast.Declaration {
 	compositeAndInterfaceDecls := map[string]ast.Declaration{}
 
 	nestedCompositeDecls := declaration.DeclarationMembers().CompositesByIdentifier()
-	for identifier, nestedDecl := range nestedCompositeDecls { //nolint:maprangecheck
+	for identifier, nestedDecl := range nestedCompositeDecls { //nolint:maprange
+		compositeAndInterfaceDecls[identifier] = nestedDecl
+	}
+
+	nestedAttachmentDecls := declaration.DeclarationMembers().AttachmentsByIdentifier()
+	for identifier, nestedDecl := range nestedAttachmentDecls { //nolint:maprange
 		compositeAndInterfaceDecls[identifier] = nestedDecl
 	}
 
 	nestedInterfaceDecls := declaration.DeclarationMembers().InterfacesByIdentifier()
-	for identifier, nestedDecl := range nestedInterfaceDecls { //nolint:maprangecheck
+	for identifier, nestedDecl := range nestedInterfaceDecls { //nolint:maprange
 		compositeAndInterfaceDecls[identifier] = nestedDecl
 	}
 
@@ -272,7 +531,11 @@ func getNestedCompositeAndInterfaceDecls(declaration ast.Declaration) map[string
 // checkEnumCases validates updating enum cases. Updated enum must:
 //   - Have at-least the same number of enum-cases as the old enum (Adding is allowed, but no removals).
 //   - Preserve the order of the old enum-cases (Adding to top/middle is not allowed, swapping is not allowed).
-func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Declaration, newDeclaration ast.Declaration) {
+func checkEnumCases(
+	validator UpdateValidator,
+	oldDeclaration ast.Declaration,
+	newDeclaration ast.Declaration,
+) {
 	newEnumCases := newDeclaration.DeclarationMembers().EnumCases()
 	oldEnumCases := oldDeclaration.DeclarationMembers().EnumCases()
 
@@ -312,7 +575,7 @@ func (validator *ContractUpdateValidator) checkEnumCases(oldDeclaration ast.Decl
 	}
 }
 
-func (validator *ContractUpdateValidator) checkConformances(
+func (validator *ContractUpdateValidator) checkConformance(
 	oldDecl *ast.CompositeDeclaration,
 	newDecl *ast.CompositeDeclaration,
 ) {
@@ -327,6 +590,13 @@ func (validator *ContractUpdateValidator) checkConformances(
 
 	// All the existing conformances must have a match. Order is not important.
 	// Having extra new conformance is OK. See: https://github.com/onflow/cadence/issues/1394
+
+	// Note: Removing a conformance is NOT OK. That could lead to type-safety issues.
+	// e.g:
+	//  - Someone stores an array of type `[{I}]` with `T:I` objects inside.
+	//  - Later T’s conformance to `I` is removed.
+	//  - Now `[{I}]` contains objects if `T` that does not conform to `I`.
+
 	for _, oldConformance := range oldConformances {
 		found := false
 		for index, newConformance := range newConformances {
@@ -342,9 +612,12 @@ func (validator *ContractUpdateValidator) checkConformances(
 		}
 
 		if !found {
+			oldConformanceID := validator.oldTypeID(oldConformance)
+
 			validator.report(&ConformanceMismatchError{
-				DeclName: newDecl.Identifier.Identifier,
-				Range:    ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
+				DeclName:           newDecl.Identifier.Identifier,
+				MissingConformance: string(oldConformanceID),
+				Range:              ast.NewUnmeteredRangeFromPositioned(newDecl.Identifier),
 			})
 
 			return
@@ -368,7 +641,7 @@ func (validator *ContractUpdateValidator) getContractUpdateError() error {
 }
 
 func containsEnumsInProgram(program *ast.Program) bool {
-	declaration, err := getRootDeclaration(program)
+	declaration, err := getRootDeclarationOfProgram(program)
 
 	if err != nil {
 		return false
@@ -397,9 +670,9 @@ func containsEnums(declaration ast.Declaration) bool {
 // ContractUpdateError is reported upon any invalid update to a contract or contract interface.
 // It contains all the errors reported during the update validation.
 type ContractUpdateError struct {
+	Location     common.Location
 	ContractName string
 	Errors       []error
-	Location     common.Location
 }
 
 var _ errors.UserError = &ContractUpdateError{}
@@ -415,6 +688,10 @@ func (e *ContractUpdateError) ChildErrors() []error {
 	return e.Errors
 }
 
+func (e *ContractUpdateError) Unwrap() []error {
+	return e.Errors
+}
+
 func (e *ContractUpdateError) ImportLocation() common.Location {
 	return e.Location
 }
@@ -422,9 +699,9 @@ func (e *ContractUpdateError) ImportLocation() common.Location {
 // FieldMismatchError is reported during a contract update, when a type of a field
 // does not match the existing type of the same field.
 type FieldMismatchError struct {
+	Err       error
 	DeclName  string
 	FieldName string
-	Err       error
 	ast.Range
 }
 
@@ -516,7 +793,8 @@ func (e *InvalidDeclarationKindChangeError) Error() string {
 // ConformanceMismatchError is reported during a contract update, when the enum conformance of the new program
 // does not match the existing one.
 type ConformanceMismatchError struct {
-	DeclName string
+	DeclName           string
+	MissingConformance string
 	ast.Range
 }
 
@@ -525,7 +803,11 @@ var _ errors.UserError = &ConformanceMismatchError{}
 func (*ConformanceMismatchError) IsUserError() {}
 
 func (e *ConformanceMismatchError) Error() string {
-	return fmt.Sprintf("conformances does not match in `%s`", e.DeclName)
+	return fmt.Sprintf(
+		"conformances do not match in `%s`: missing `%s`",
+		e.DeclName,
+		e.MissingConformance,
+	)
 }
 
 // EnumCaseMismatchError is reported during an enum update, when an updated enum case
@@ -584,7 +866,60 @@ func (*MissingDeclarationError) IsUserError() {}
 func (e *MissingDeclarationError) Error() string {
 	return fmt.Sprintf(
 		"missing %s declaration `%s`",
-		e.Kind,
+		e.Kind.Name(),
 		e.Name,
+	)
+}
+
+// InvalidTypeRemovalPragmaError is reported during a contract update
+// if a malformed #removedType pragma is encountered
+type InvalidTypeRemovalPragmaError struct {
+	Expression ast.Expression
+	ast.Range
+}
+
+var _ errors.UserError = &InvalidTypeRemovalPragmaError{}
+
+func (*InvalidTypeRemovalPragmaError) IsUserError() {}
+
+func (e *InvalidTypeRemovalPragmaError) Error() string {
+	return fmt.Sprintf(
+		"invalid #removedType pragma: %s",
+		e.Expression.String(),
+	)
+}
+
+// UseOfRemovedTypeError is reported during a contract update
+// if a type is encountered that is also in a #removedType pragma
+type UseOfRemovedTypeError struct {
+	Declaration ast.Declaration
+	ast.Range
+}
+
+var _ errors.UserError = &UseOfRemovedTypeError{}
+
+func (*UseOfRemovedTypeError) IsUserError() {}
+
+func (e *UseOfRemovedTypeError) Error() string {
+	return fmt.Sprintf(
+		"cannot declare %s, type has been removed with a #removedType pragma",
+		e.Declaration.DeclarationIdentifier(),
+	)
+}
+
+// TypeRemovalPragmaRemovalError is reported during a contract update
+// if a #removedType pragma is removed
+type TypeRemovalPragmaRemovalError struct {
+	RemovedType string
+}
+
+var _ errors.UserError = &TypeRemovalPragmaRemovalError{}
+
+func (*TypeRemovalPragmaRemovalError) IsUserError() {}
+
+func (e *TypeRemovalPragmaRemovalError) Error() string {
+	return fmt.Sprintf(
+		"missing #removedType pragma for %s",
+		e.RemovedType,
 	)
 }

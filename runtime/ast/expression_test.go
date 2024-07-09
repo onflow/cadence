@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ func TestBoolExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "BoolExpression",
@@ -98,6 +99,7 @@ func TestNilExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "NilExpression",
@@ -145,6 +147,7 @@ func TestStringExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "StringExpression",
@@ -195,6 +198,7 @@ func TestIntegerExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "IntegerExpression",
@@ -399,6 +403,7 @@ func TestFixedPointExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "FixedPointExpression",
@@ -518,6 +523,7 @@ func TestArrayExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ArrayExpression",
@@ -661,6 +667,7 @@ func TestDictionaryExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "DictionaryExpression",
@@ -818,6 +825,7 @@ func TestIdentifierExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "IdentifierExpression",
@@ -882,6 +890,7 @@ func TestPathExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "PathExpression",
@@ -970,6 +979,7 @@ func TestMemberExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "MemberExpression",
@@ -1304,6 +1314,7 @@ func TestIndexExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "IndexExpression",
@@ -1611,6 +1622,7 @@ func TestUnaryExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "UnaryExpression",
@@ -1843,6 +1855,7 @@ func TestBinaryExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "BinaryExpression",
@@ -2337,6 +2350,7 @@ func TestDestroyExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "DestroyExpression",
@@ -2552,6 +2566,7 @@ func TestForceExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ForceExpression",
@@ -2764,6 +2779,7 @@ func TestConditionalExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ConditionalExpression",
@@ -3306,6 +3322,7 @@ func TestInvocationExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "InvocationExpression",
@@ -3625,6 +3642,7 @@ func TestCastingExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "CastingExpression",
@@ -3976,6 +3994,7 @@ func TestCreateExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "CreateExpression",
@@ -4084,17 +4103,13 @@ func TestCreateExpression_String(t *testing.T) {
 
 func TestReferenceExpression_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	expr := &ReferenceExpression{
 		Expression: &IdentifierExpression{
 			Identifier: Identifier{
 				Identifier: "foobar",
 				Pos:        Position{Offset: 1, Line: 2, Column: 3},
-			},
-		},
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-				Pos:        Position{Offset: 4, Line: 5, Column: 6},
 			},
 		},
 		StartPos: Position{Offset: 7, Line: 8, Column: 9},
@@ -4104,6 +4119,7 @@ func TestReferenceExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ReferenceExpression",
@@ -4117,18 +4133,8 @@ func TestReferenceExpression_MarshalJSON(t *testing.T) {
                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
             },
-            "TargetType": {
-               "Type": "NominalType",
-               "Identifier": {
-                   "Identifier": "AB",
-                   "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
-                   "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
-               },
-               "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
-               "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
-            },
             "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
-            "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
+            "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
         }
         `,
 		string(actual),
@@ -4149,14 +4155,6 @@ func TestReferenceExpression_Doc(t *testing.T) {
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
-			Type: &ReferenceType{
-				Authorized: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "Int",
-					},
-				},
-			},
 		}
 
 		assert.Equal(t,
@@ -4165,14 +4163,6 @@ func TestReferenceExpression_Doc(t *testing.T) {
 					prettier.Text("&"),
 					prettier.Group{
 						Doc: prettier.Text("42"),
-					},
-					prettier.Line{},
-					prettier.Text("as"),
-					prettier.Line{},
-					prettier.Concat{
-						prettier.Text("auth "),
-						prettier.Text("&"),
-						prettier.Text("Int"),
 					},
 				},
 			},
@@ -4191,22 +4181,6 @@ func TestReferenceExpression_Doc(t *testing.T) {
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
-				Type: &ReferenceType{
-					Authorized: true,
-					Type: &NominalType{
-						Identifier: Identifier{
-							Identifier: "AnyStruct",
-						},
-					},
-				},
-			},
-			Type: &ReferenceType{
-				Authorized: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "XYZ",
-					},
-				},
 			},
 		}
 
@@ -4221,24 +4195,8 @@ func TestReferenceExpression_Doc(t *testing.T) {
 								prettier.Group{
 									Doc: prettier.Text("42"),
 								},
-								prettier.Line{},
-								prettier.Text("as"),
-								prettier.Line{},
-								prettier.Concat{
-									prettier.Text("auth "),
-									prettier.Text("&"),
-									prettier.Text("AnyStruct"),
-								},
 							},
 						},
-					},
-					prettier.Line{},
-					prettier.Text("as"),
-					prettier.Line{},
-					prettier.Concat{
-						prettier.Text("auth "),
-						prettier.Text("&"),
-						prettier.Text("XYZ"),
 					},
 				},
 			},
@@ -4261,14 +4219,6 @@ func TestReferenceExpression_Doc(t *testing.T) {
 				Right: &IdentifierExpression{
 					Identifier: Identifier{
 						Identifier: "bar",
-					},
-				},
-			},
-			Type: &ReferenceType{
-				Authorized: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "Int",
 					},
 				},
 			},
@@ -4304,14 +4254,6 @@ func TestReferenceExpression_Doc(t *testing.T) {
 							},
 						},
 					},
-					prettier.Line{},
-					prettier.Text("as"),
-					prettier.Line{},
-					prettier.Concat{
-						prettier.Text("auth "),
-						prettier.Text("&"),
-						prettier.Text("Int"),
-					},
 				},
 			},
 			expr.Doc(),
@@ -4333,18 +4275,10 @@ func TestReferenceExpression_String(t *testing.T) {
 				Value:           big.NewInt(42),
 				Base:            10,
 			},
-			Type: &ReferenceType{
-				Authorized: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "Int",
-					},
-				},
-			},
 		}
 
 		assert.Equal(t,
-			"&42 as auth &Int",
+			"&42",
 			expr.String(),
 		)
 	})
@@ -4360,27 +4294,11 @@ func TestReferenceExpression_String(t *testing.T) {
 					Value:           big.NewInt(42),
 					Base:            10,
 				},
-				Type: &ReferenceType{
-					Authorized: true,
-					Type: &NominalType{
-						Identifier: Identifier{
-							Identifier: "AnyStruct",
-						},
-					},
-				},
-			},
-			Type: &ReferenceType{
-				Authorized: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "XYZ",
-					},
-				},
 			},
 		}
 
 		assert.Equal(t,
-			"&&42 as auth &AnyStruct as auth &XYZ",
+			"&&42",
 			expr.String(),
 		)
 	})
@@ -4403,18 +4321,10 @@ func TestReferenceExpression_String(t *testing.T) {
 					},
 				},
 			},
-			Type: &ReferenceType{
-				Authorized: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "Int",
-					},
-				},
-			},
 		}
 
 		assert.Equal(t,
-			"&(foo - bar) as auth &Int",
+			"&(foo - bar)",
 			expr.String(),
 		)
 	})
@@ -4442,10 +4352,7 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
 						},
 						StartPos: Position{Offset: 7, Line: 8, Column: 9},
 					},
-					Range: Range{
-						StartPos: Position{Offset: 10, Line: 11, Column: 12},
-						EndPos:   Position{Offset: 13, Line: 14, Column: 15},
-					},
+					StartPos: Position{Offset: 10, Line: 11, Column: 12},
 				},
 			},
 			Range: Range{
@@ -4479,6 +4386,7 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "FunctionExpression",
@@ -4506,13 +4414,15 @@ func TestFunctionExpression_MarshalJSON(t *testing.T) {
                             "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
                             "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                         },
+						"DefaultArgument": null,
                         "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
-                        "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
+                        "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
                     }
                 ],
                 "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
                 "EndPos": {"Offset": 19, "Line": 20, "Column": 21}
             },
+			"Purity": "Unspecified",
             "ReturnTypeAnnotation": {
                 "IsResource": true,
                 "AnnotatedType": {
@@ -4571,7 +4481,8 @@ func TestFunctionExpression_Doc(t *testing.T) {
 					prettier.Text("()"),
 				},
 			},
-			prettier.Text(" {}"),
+			prettier.Text(" "),
+			prettier.Text("{}"),
 		}
 
 		assert.Equal(t, expected, expr.Doc())
@@ -4712,8 +4623,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 			},
 			FunctionBlock: &FunctionBlock{
 				PreConditions: &Conditions{
-					{
-						Kind: ConditionKindPre,
+					&TestCondition{
 						Test: &BoolExpression{
 							Value: true,
 						},
@@ -4723,8 +4633,7 @@ func TestFunctionExpression_Doc(t *testing.T) {
 					},
 				},
 				PostConditions: &Conditions{
-					{
-						Kind: ConditionKindPre,
+					&TestCondition{
 						Test: &BoolExpression{
 							Value: false,
 						},
@@ -4827,6 +4736,36 @@ func TestFunctionExpression_Doc(t *testing.T) {
 				prettier.HardLine{},
 				prettier.Text("}"),
 			},
+		}
+
+		assert.Equal(t, expected, expr.Doc())
+	})
+
+	t.Run("view", func(t *testing.T) {
+
+		t.Parallel()
+
+		expr := &FunctionExpression{
+			Purity:        FunctionPurityView,
+			ParameterList: &ParameterList{},
+			FunctionBlock: &FunctionBlock{
+				Block: &Block{
+					Statements: []Statement{},
+				},
+			},
+		}
+
+		expected := prettier.Concat{
+			prettier.Text("view"),
+			prettier.Space,
+			prettier.Text("fun "),
+			prettier.Group{
+				Doc: prettier.Concat{
+					prettier.Text("()"),
+				},
+			},
+			prettier.Text(" "),
+			prettier.Text("{}"),
 		}
 
 		assert.Equal(t, expected, expr.Doc())
@@ -4938,8 +4877,7 @@ func TestFunctionExpression_String(t *testing.T) {
 			},
 			FunctionBlock: &FunctionBlock{
 				PreConditions: &Conditions{
-					{
-						Kind: ConditionKindPre,
+					&TestCondition{
 						Test: &BoolExpression{
 							Value: true,
 						},
@@ -4949,8 +4887,7 @@ func TestFunctionExpression_String(t *testing.T) {
 					},
 				},
 				PostConditions: &Conditions{
-					{
-						Kind: ConditionKindPre,
+					&TestCondition{
 						Test: &BoolExpression{
 							Value: false,
 						},

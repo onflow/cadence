@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,9 +38,9 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	importedChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
-          pub resource R {}
+          access(all) resource R {}
 
-          pub fun createR(): @R {
+          access(all) fun createR(): @R {
               return <- create R()
           }
         `,
@@ -54,9 +54,9 @@ func TestInterpretResourceUUID(t *testing.T) {
 		`
           import createR from "imported"
 
-          pub resource R2 {}
+          access(all) resource R2 {}
 
-          pub fun createRs(): @[AnyResource] {
+          access(all) fun createRs(): @[AnyResource] {
               return <- [
                   <- (createR() as @AnyResource),
                   <- create R2()

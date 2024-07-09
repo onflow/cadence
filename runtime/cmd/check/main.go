@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 type memberAccountAccessFlags []string
@@ -91,7 +92,7 @@ func main() {
 }
 
 type benchResult struct {
-	// N is the the number of iterations
+	// N is the number of iterations
 	Iterations int `json:"iterations"`
 	// T is the total time taken
 	Time time.Duration `json:"time"`
@@ -235,6 +236,9 @@ func runPath(
 
 	location := common.NewStringLocation(nil, path)
 
+	// standard library handler is only needed for execution, but we're only checking
+	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(nil)
+
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
@@ -245,7 +249,14 @@ func runPath(
 
 		program, must = cmd.PrepareProgram(code, location, codes)
 
-		checker, _ = cmd.PrepareChecker(program, location, codes, memberAccountAccess, must)
+		checker, _ = cmd.PrepareChecker(
+			program,
+			location,
+			codes,
+			memberAccountAccess,
+			standardLibraryValues,
+			must,
+		)
 
 		err = checker.Check()
 		if err != nil {
@@ -266,7 +277,15 @@ func runPath(
 	if bench && err == nil {
 		benchRes := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				checker, must = cmd.PrepareChecker(program, location, codes, memberAccountAccess, must)
+
+				checker, must = cmd.PrepareChecker(
+					program,
+					location,
+					codes,
+					memberAccountAccess,
+					standardLibraryValues,
+					must,
+				)
 				must(checker.Check())
 				if err != nil {
 					panic(err)

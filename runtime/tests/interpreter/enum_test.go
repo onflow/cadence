@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ func TestInterpretEnum(t *testing.T) {
 
 	assert.IsType(t,
 		&interpreter.HostFunctionValue{},
-		inter.Globals.Get("E").GetValue(),
+		inter.Globals.Get("E").GetValue(inter),
 	)
 }
 
@@ -61,7 +61,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
       let b = E.b
     `)
 
-	a := inter.Globals.Get("a").GetValue()
+	a := inter.Globals.Get("a").GetValue(inter)
 	require.IsType(t,
 		&interpreter.CompositeValue{},
 		a,
@@ -72,7 +72,7 @@ func TestInterpretEnumCaseUse(t *testing.T) {
 		a.(*interpreter.CompositeValue).Kind,
 	)
 
-	b := inter.Globals.Get("b").GetValue()
+	b := inter.Globals.Get("b").GetValue(inter)
 	require.IsType(t,
 		&interpreter.CompositeValue{},
 		b,
@@ -102,14 +102,14 @@ func TestInterpretEnumCaseRawValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredInt64Value(0),
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	RequireValuesEqual(
 		t,
 		inter,
 		interpreter.NewUnmeteredInt64Value(1),
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 }
 
@@ -136,15 +136,15 @@ func TestInterpretEnumCaseEquality(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
-			common.Address{},
-			interpreter.BoolValue(true),
-			interpreter.BoolValue(true),
-			interpreter.BoolValue(true),
+			common.ZeroAddress,
+			interpreter.TrueValue,
+			interpreter.TrueValue,
+			interpreter.TrueValue,
 		),
-		inter.Globals.Get("res").GetValue(),
+		inter.Globals.Get("res").GetValue(inter),
 	)
 }
 
@@ -172,16 +172,16 @@ func TestInterpretEnumConstructor(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
-			common.Address{},
-			interpreter.BoolValue(true),
-			interpreter.BoolValue(true),
-			interpreter.BoolValue(true),
-			interpreter.BoolValue(true),
+			common.ZeroAddress,
+			interpreter.TrueValue,
+			interpreter.TrueValue,
+			interpreter.TrueValue,
+			interpreter.TrueValue,
 		),
-		inter.Globals.Get("res").GetValue(),
+		inter.Globals.Get("res").GetValue(inter),
 	)
 }
 
@@ -207,14 +207,14 @@ func TestInterpretEnumInstance(t *testing.T) {
 		interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeBool,
 			},
-			common.Address{},
-			interpreter.BoolValue(true),
-			interpreter.BoolValue(true),
+			common.ZeroAddress,
+			interpreter.TrueValue,
+			interpreter.TrueValue,
 		),
-		inter.Globals.Get("res").GetValue(),
+		inter.Globals.Get("res").GetValue(inter),
 	)
 }
 
@@ -226,8 +226,8 @@ func TestInterpretEnumInContract(t *testing.T) {
 		`
           contract C {
               enum E: UInt8 {
-                  pub case a
-                  pub case b
+                  access(all) case a
+                  access(all) case b
               }
 
               var e: E
@@ -245,7 +245,7 @@ func TestInterpretEnumInContract(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	c := inter.Globals.Get("C").GetValue()
+	c := inter.Globals.Get("C").GetValue(inter)
 	require.IsType(t, &interpreter.CompositeValue{}, c)
 	contract := c.(*interpreter.CompositeValue)
 

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/compiler"
 	"github.com/onflow/cadence/runtime/compiler/ir"
 	"github.com/onflow/cadence/runtime/compiler/wasm"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func main() {
@@ -44,7 +45,17 @@ func main() {
 
 	program, must := cmd.PrepareProgramFromFile(location, codes)
 
-	checker, must := cmd.PrepareChecker(program, location, codes, nil, must)
+	// standard library handler is only needed for execution, but we're only checking
+	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(nil)
+
+	checker, must := cmd.PrepareChecker(
+		program,
+		location,
+		codes,
+		nil,
+		standardLibraryValues,
+		must,
+	)
 
 	must(checker.Check())
 
@@ -67,7 +78,7 @@ func main() {
 	// Export all public functions
 
 	for i, functionDeclaration := range functionDeclarations {
-		if functionDeclaration.Access != ast.AccessPublic {
+		if functionDeclaration.Access != ast.AccessAll {
 			continue
 		}
 

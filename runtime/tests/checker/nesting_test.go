@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,10 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 						continue
 					}
 
+					if outerIsInterface && !outerComposite.SupportsInterfaces() {
+						continue
+					}
+
 					outer := outerComposite.DeclarationKind(outerIsInterface)
 					inner := innerComposite.DeclarationKind(innerIsInterface)
 
@@ -63,16 +67,28 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 							innerConformances = ": Int"
 						}
 
+						var innerBaseType string
+						if innerComposite == common.CompositeKindAttachment {
+							innerBaseType = "for AnyStruct"
+						}
+
+						var outerBaseType string
+						if outerComposite == common.CompositeKindAttachment {
+							outerBaseType = "for AnyStruct"
+						}
+
 						code := fmt.Sprintf(
 							`
-                              %[1]s Outer {
-                                  %[2]s Inner%[3]s %[4]s
+                              %[1]s Outer %[5]s {
+                                  %[2]s Inner %[6]s %[3]s %[4]s
                               }
                             `,
 							outer.Keywords(),
 							inner.Keywords(),
 							innerConformances,
 							innerBody,
+							outerBaseType,
+							innerBaseType,
 						)
 						_, err := ParseAndCheck(t,
 							code,
@@ -87,18 +103,28 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 
 								assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
 
+							case common.CompositeKindEvent:
+								require.NoError(t, err)
+
 							case common.CompositeKindResource,
 								common.CompositeKindStructure,
-								common.CompositeKindEvent,
+								common.CompositeKindAttachment,
 								common.CompositeKindEnum:
 
-								require.NoError(t, err)
+								if outerIsInterface && !innerIsInterface {
+									errs := RequireCheckerErrors(t, err, 1)
+
+									assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+								} else {
+									require.NoError(t, err)
+								}
 
 							default:
 								t.Errorf("unknown outer composite kind %s", outerComposite)
 							}
 
 						case common.CompositeKindResource,
+							common.CompositeKindAttachment,
 							common.CompositeKindStructure:
 
 							errs := RequireCheckerErrors(t, err, 1)
@@ -146,9 +172,9 @@ func TestCheckCompositeDeclarationNestedStructInterfaceUse(t *testing.T) {
 
           struct X: XI {}
 
-          var xi: AnyStruct{XI}
+          var xi: {XI}
 
-          init(xi: AnyStruct{XI}) {
+          init(xi: {XI}) {
               self.xi = xi
           }
 
@@ -171,9 +197,11 @@ func TestCheckCompositeDeclarationNestedTypeScopingInsideNestedOuter(t *testing.
           struct X {
 
               fun test() {
-                  Test
+                  Test.foo()
               }
           }
+
+          fun foo() {}
       }
    `)
 
@@ -302,7 +330,9 @@ func TestCheckNestedTypeInvalidChildType(t *testing.T) {
 				`let u: T.U = nil`,
 				ParseAndCheckOptions{
 					Config: &sema.Config{
-						BaseTypeActivation: baseTypeActivation,
+						BaseTypeActivationHandler: func(_ common.Location) *sema.VariableActivation {
+							return baseTypeActivation
+						},
 					},
 				},
 			)

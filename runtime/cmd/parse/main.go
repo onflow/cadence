@@ -4,7 +4,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,8 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -32,6 +34,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/itchyny/gojq"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser"
@@ -40,29 +44,32 @@ import (
 
 var benchFlag = flag.Bool("bench", false, "benchmark the parser")
 var jsonFlag = flag.Bool("json", false, "print the result formatted as JSON")
+var readCSVFlag = flag.Bool("readCSV", false, "read the input file as CSV (header: location,code)")
+var jqASTFlag = flag.String("jqAST", "", "query the AST using gojq")
 
 func main() {
 	testing.Init()
 	flag.Parse()
 
 	args := flag.Args()
-	run(args, *benchFlag, *jsonFlag)
+	run(args, *benchFlag, *jsonFlag, *readCSVFlag, *jqASTFlag)
 }
 
 type benchResult struct {
-	// N is the the number of iterations
+	// N is the number of iterations
 	Iterations int `json:"iterations"`
 	// T is the total time taken
 	Time time.Duration `json:"time"`
 }
 
 type result struct {
-	Path     string       `json:"path,omitempty"`
-	Code     []byte       `json:"-"`
-	Bench    *benchResult `json:"bench,omitempty"`
-	BenchStr string       `json:"-"`
 	Error    error        `json:"error,omitempty"`
+	Bench    *benchResult `json:"bench,omitempty"`
 	Program  *ast.Program `json:"program"`
+	Path     string       `json:"path,omitempty"`
+	BenchStr string       `json:"-"`
+	Code     []byte       `json:"-"`
+	Results  []any        `json:"results,omitempty"`
 }
 
 type output interface {
@@ -71,11 +78,13 @@ type output interface {
 }
 
 type jsonOutput struct {
+	file    *os.File
 	results []result
 }
 
-func newJSONOutput(count int) *jsonOutput {
+func newJSONOutput(file *os.File, count int) *jsonOutput {
 	return &jsonOutput{
+		file:    file,
 		results: make([]result, 0, count),
 	}
 }
@@ -85,7 +94,7 @@ func (j *jsonOutput) Append(r result) {
 }
 
 func (j *jsonOutput) End() {
-	encoder := json.NewEncoder(os.Stdout)
+	encoder := json.NewEncoder(j.file)
 	encoder.SetIndent("", "  ")
 	err := encoder.Encode(j.results)
 	if err != nil {
@@ -93,21 +102,19 @@ func (j *jsonOutput) End() {
 	}
 }
 
-type stdoutOutput struct{}
+type fileOutput struct {
+	file *os.File
+}
 
-func (s stdoutOutput) Append(r result) {
-	var err error
+func (s fileOutput) Append(r result) {
 
 	if len(r.Path) > 0 {
-		_, err = fmt.Printf("%s\n", r.Path)
-		if err != nil {
-			panic(err)
-		}
+		_, _ = fmt.Fprintf(s.file, "%s\n", r.Path)
 	}
 
 	if r.Error != nil {
 		location := common.NewStringLocation(nil, r.Path)
-		printErr := pretty.NewErrorPrettyPrinter(os.Stdout, true).
+		printErr := pretty.NewErrorPrettyPrinter(s.file, true).
 			PrettyPrintError(r.Error, location, map[common.Location][]byte{location: r.Code})
 		if printErr != nil {
 			panic(printErr)
@@ -115,37 +122,95 @@ func (s stdoutOutput) Append(r result) {
 	}
 
 	if len(r.BenchStr) > 0 {
-		_, err = fmt.Printf("bench:\t%s\n", r.BenchStr)
-		if err != nil {
-			panic(err)
+		_, _ = fmt.Fprintf(s.file, "bench:\t%s\n", r.BenchStr)
+	}
+
+	if len(r.Results) > 0 {
+		_, _ = fmt.Fprint(s.file, "query results:\n")
+
+		for _, res := range r.Results {
+			_, _ = fmt.Fprintf(s.file, "- %#+v\n", res)
 		}
 	}
+
+	println()
 }
 
-func (s stdoutOutput) End() {
+func queryProgram(program *ast.Program, query *gojq.Code) []any {
+	// Encode to JSON
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(program)
+	if err != nil {
+		panic(err)
+	}
+
+	// Decode from JSON
+	var decoded any
+	err = json.NewDecoder(&buf).Decode(&decoded)
+	if err != nil {
+		panic(err)
+	}
+
+	var results []any
+
+	// Run query and print results
+	iter := query.Run(decoded)
+	for {
+		v, ok := iter.Next()
+		if !ok {
+			break
+		}
+		if err, ok := v.(error); ok {
+			panic(err)
+		}
+
+		results = append(results, v)
+	}
+
+	return results
+}
+
+func (s fileOutput) End() {
 	// no-op
 }
 
-func run(paths []string, bench bool, json bool) {
+func run(paths []string, bench bool, json bool, readCSV bool, jqAST string) {
 	if len(paths) == 0 {
 		paths = []string{""}
 	}
 
+	var compiledQuery *gojq.Code
+
+	if jqAST != "" {
+		query, err := gojq.Parse(jqAST)
+		if err != nil {
+			panic(err)
+		}
+
+		compiledQuery, err = gojq.Compile(query)
+		if err != nil {
+			panic(err)
+		}
+
+	}
+
 	var out output
 	if json {
-		out = newJSONOutput(len(paths))
+		out = newJSONOutput(os.Stdout, len(paths))
 	} else {
-		out = stdoutOutput{}
+		out = fileOutput{file: os.Stdout}
 	}
 
 	allSucceeded := true
 
 	for _, path := range paths {
-		res, runSucceeded := runPath(path, bench)
-		if !runSucceeded {
-			allSucceeded = false
+		for _, file := range read(path, readCSV) {
+			res, runSucceeded := runFile(file, bench, compiledQuery)
+			if !runSucceeded {
+				allSucceeded = false
+			}
+			out.Append(res)
 		}
-		out.Append(res)
 	}
 
 	out.End()
@@ -155,13 +220,13 @@ func run(paths []string, bench bool, json bool) {
 	}
 }
 
-func runPath(path string, bench bool) (res result, succeeded bool) {
+func runFile(file file, bench bool, query *gojq.Code) (res result, succeeded bool) {
 	res = result{
-		Path: path,
+		Path: file.path,
 	}
 	succeeded = true
 
-	code := read(path)
+	code := file.code
 	res.Code = code
 
 	var program *ast.Program
@@ -175,7 +240,9 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 			}
 		}()
 
-		program, err = parser.ParseProgram(code, nil)
+		_, _ = fmt.Fprintf(os.Stderr, "parsing %s\n", file.path)
+
+		program, err = parser.ParseProgram(nil, code, parser.Config{})
 		if !bench {
 			res.Program = program
 		}
@@ -189,7 +256,7 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 
 	if bench {
 		benchRes := benchParse(func() (err error) {
-			_, err = parser.ParseProgram(code, nil)
+			_, err = parser.ParseProgram(nil, code, parser.Config{})
 			return
 		})
 		res.Bench = &benchResult{
@@ -199,10 +266,19 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 		res.BenchStr = benchRes.String()
 	}
 
+	if program != nil && query != nil {
+		res.Results = queryProgram(program, query)
+	}
+
 	return
 }
 
-func read(path string) []byte {
+type file struct {
+	path string
+	code []byte
+}
+
+func read(path string, readCSV bool) []file {
 	var data []byte
 	var err error
 	if len(path) == 0 {
@@ -213,7 +289,34 @@ func read(path string) []byte {
 	if err != nil {
 		panic(err)
 	}
-	return data
+
+	if readCSV {
+		records, err := csv.NewReader(bytes.NewReader(data)).ReadAll()
+		if err != nil {
+			panic(err)
+		}
+
+		files := make([]file, 0, len(records))
+
+		// Convert all records to files, except for the header
+		for _, record := range records[1:] {
+			files = append(files,
+				file{
+					path: record[0],
+					code: []byte(record[1]),
+				},
+			)
+		}
+
+		return files
+	} else {
+		return []file{
+			{
+				path: path,
+				code: data,
+			},
+		}
+	}
 }
 
 func benchParse(parse func() (err error)) testing.BenchmarkResult {

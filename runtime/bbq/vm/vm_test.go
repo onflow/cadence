@@ -1494,10 +1494,10 @@ func TestNativeFunctions(t *testing.T) {
 
 	t.Run("static function", func(t *testing.T) {
 
-		logFunction := stdlib.NewStandardLibraryFunction(
+		logFunction := stdlib.NewStandardLibraryStaticFunction(
 			"log",
 			&sema.FunctionType{
-				Parameters: []*sema.Parameter{
+				Parameters: []sema.Parameter{
 					{
 						Label:          sema.ArgumentLabelNotRequired,
 						Identifier:     "value",
@@ -1521,7 +1521,9 @@ func TestNativeFunctions(t *testing.T) {
             }`,
 			ParseAndCheckOptions{
 				Config: &sema.Config{
-					BaseValueActivation: baseValueActivation,
+					BaseValueActivationHandler: func(common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
 				},
 			},
 		)

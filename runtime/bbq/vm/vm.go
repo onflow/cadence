@@ -430,7 +430,7 @@ func opGetField(vm *VM) {
 
 	fieldValue := memberAccessibleValue.GetMember(vm.config, fieldNameStr)
 	if fieldValue == nil {
-		panic(interpreter.MissingMemberValueError{
+		panic(MissingMemberValueError{
 			Name: fieldNameStr,
 		})
 	}

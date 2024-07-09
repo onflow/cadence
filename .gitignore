@@ -39,6 +39,7 @@ runtime/cmd/main/main
 runtime/cmd/parse/parse
 runtime/cmd/parse/parse.wasm
 tools/golangci-lint/golangci-lint
-tools/maprangecheck/maprangecheck.so
-tools/constructorcheck/constructorcheck.so
+tools/maprange/maprange
+tools/unkeyed/unkeyed
+*.so
 

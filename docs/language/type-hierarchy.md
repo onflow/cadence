@@ -1,5 +1,3 @@
----
-title: Type Hierarchy
----
+# This document has been moved to a new location:
 
-![Cadence type hierarchy](type-hierarchy.png)
+https://github.com/onflow/cadence-lang.org/tree/main/docs/language/type-hierarchy.md

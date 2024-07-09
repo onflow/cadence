@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,14 @@ func rootState(l *lexer) stateFn {
 		case '+':
 			l.emitType(TokenPlus)
 		case '-':
-			l.emitType(TokenMinus)
+			r = l.next()
+			switch r {
+			case '>':
+				l.emitType(TokenRightArrow)
+			default:
+				l.backupOne()
+				l.emitType(TokenMinus)
+			}
 		case '*':
 			l.emitType(TokenStar)
 		case '%':

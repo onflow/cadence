@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,21 +26,47 @@ import (
 
 // ReturnInfo tracks control-flow information
 type ReturnInfo struct {
-	// MaybeReturned indicates that (the branch of) the function
-	// contains a potentially taken return statement
-	MaybeReturned bool
 	// JumpOffsets contains the offsets of all jumps
 	// (break or continue statements), potential or definite.
 	//
 	// If non-empty, indicates that (the branch of) the function
 	// contains a potential break or continue statement
 	JumpOffsets *persistent.OrderedSet[int]
+	// MaybeReturned indicates that (the branch of) the function
+	// contains a potentially taken return statement
+	MaybeReturned bool
 	// DefinitelyReturned indicates that (the branch of) the function
 	// contains a definite return statement
 	DefinitelyReturned bool
 	// DefinitelyHalted indicates that (the branch of) the function
 	// contains a definite halt (a function call with a Never return type)
 	DefinitelyHalted bool
+	// DefinitelyExited indicates that (the branch of)
+	// the function either contains a definite return statement,
+	// contains a definite halt (a function call with a Never return type),
+	// or both.
+	//
+	// NOTE: this is NOT the same DefinitelyReturned || DefinitelyHalted:
+	// For example, for the following program:
+	//
+	//   if ... {
+	//       return
+	//
+	//       // DefinitelyReturned = true
+	//	     // DefinitelyHalted = false
+	//	     // DefinitelyExited = true
+	//   } else {
+	//       panic(...)
+	//
+	//       // DefinitelyReturned = false
+	//	     // DefinitelyHalted = true
+	//	     // DefinitelyExited = true
+	//   }
+	//
+	//   // DefinitelyReturned = false
+	//   // DefinitelyHalted = false
+	//   // DefinitelyExited = true
+	DefinitelyExited bool
 	// DefinitelyJumped indicates that (the branch of) the function
 	// contains a definite break or continue statement
 	DefinitelyJumped bool
@@ -73,6 +99,10 @@ func (ri *ReturnInfo) MergeBranches(thenReturnInfo *ReturnInfo, elseReturnInfo *
 	ri.DefinitelyHalted = ri.DefinitelyHalted ||
 		(thenReturnInfo.DefinitelyHalted &&
 			elseReturnInfo.DefinitelyHalted)
+
+	ri.DefinitelyExited = ri.DefinitelyExited ||
+		(thenReturnInfo.DefinitelyExited &&
+			elseReturnInfo.DefinitelyExited)
 }
 
 func (ri *ReturnInfo) MergePotentiallyUnevaluated(temporaryReturnInfo *ReturnInfo) {
@@ -89,8 +119,9 @@ func (ri *ReturnInfo) Clone() *ReturnInfo {
 }
 
 func (ri *ReturnInfo) IsUnreachable() bool {
-	return ri.DefinitelyReturned ||
-		ri.DefinitelyHalted ||
+	// NOTE: intentionally NOT DefinitelyReturned || DefinitelyHalted,
+	// see DefinitelyExited
+	return ri.DefinitelyExited ||
 		ri.DefinitelyJumped
 }
 

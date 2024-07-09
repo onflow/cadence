@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,29 +25,55 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type sharedState struct {
-	allInterpreters               map[common.Location]*Interpreter
-	callStack                     *CallStack
-	typeCodes                     TypeCodes
-	inStorageIteration            bool
-	storageMutatedDuringIteration bool
-	// TODO: ideally this would be a weak map, but Go has no weak references
-	referencedResourceKindedValues ReferencedResourceKindedValues
-	resourceVariables              map[ResourceKindedValue]*Variable
+type AddressPath struct {
+	Address common.Address
+	Path    PathValue
 }
 
-func newSharedState() *sharedState {
-	return &sharedState{
+type SharedState struct {
+	attachmentIterationMap map[*CompositeValue]bool
+	typeCodes              TypeCodes
+	Config                 *Config
+	allInterpreters        map[common.Location]*Interpreter
+	callStack              *CallStack
+	// TODO: ideally this would be a weak map, but Go has no weak references
+	referencedResourceKindedValues              ReferencedResourceKindedValues
+	resourceVariables                           map[ResourceKindedValue]Variable
+	inStorageIteration                          bool
+	storageMutatedDuringIteration               bool
+	CapabilityControllerIterations              map[AddressPath]int
+	MutationDuringCapabilityControllerIteration bool
+	containerValueIteration                     map[atree.StorageID]struct{}
+	destroyedResources                          map[atree.StorageID]struct{}
+	currentEntitlementMappedValue               Authorization
+}
+
+func NewSharedState(config *Config) *SharedState {
+	return &SharedState{
+		Config:          config,
 		allInterpreters: map[common.Location]*Interpreter{},
 		callStack:       &CallStack{},
 		typeCodes: TypeCodes{
-			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
-			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
-			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
+			CompositeCodes: map[sema.TypeID]CompositeTypeCode{},
+			InterfaceCodes: map[sema.TypeID]WrapperCode{},
 		},
 		inStorageIteration:             false,
 		storageMutatedDuringIteration:  false,
-		referencedResourceKindedValues: map[atree.StorageID]map[ReferenceTrackedResourceKindedValue]struct{}{},
-		resourceVariables:              map[ResourceKindedValue]*Variable{},
+		referencedResourceKindedValues: map[atree.StorageID]map[*EphemeralReferenceValue]struct{}{},
+		resourceVariables:              map[ResourceKindedValue]Variable{},
+		CapabilityControllerIterations: map[AddressPath]int{},
+		containerValueIteration:        map[atree.StorageID]struct{}{},
+		destroyedResources:             map[atree.StorageID]struct{}{},
 	}
+}
+
+func (s *SharedState) inAttachmentIteration(base *CompositeValue) bool {
+	return s.attachmentIterationMap[base]
+}
+
+func (s *SharedState) setAttachmentIteration(base *CompositeValue, b bool) {
+	if s.attachmentIterationMap == nil {
+		s.attachmentIterationMap = map[*CompositeValue]bool{}
+	}
+	s.attachmentIterationMap[base] = b
 }

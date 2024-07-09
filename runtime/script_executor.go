@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,25 +26,29 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type interpreterScriptExecutor struct {
-	runtime *interpreterRuntime
-	script  Script
-	context Context
-
-	// preprocess
-	preprocessOnce         sync.Once
-	preprocessErr          error
-	codesAndPrograms       codesAndPrograms
-	storage                *Storage
-	program                *interpreter.Program
+type interpreterScriptExecutorPreparation struct {
 	environment            Environment
+	preprocessErr          error
+	codesAndPrograms       CodesAndPrograms
 	functionEntryPointType *sema.FunctionType
+	program                *interpreter.Program
+	storage                *Storage
 	interpret              InterpretFunc
+	preprocessOnce         sync.Once
+}
 
-	// execute
-	executeOnce sync.Once
+type interpreterScriptExecutorExecution struct {
 	executeErr  error
 	result      cadence.Value
+	executeOnce sync.Once
+}
+
+type interpreterScriptExecutor struct {
+	context Context
+	interpreterScriptExecutorExecution
+	runtime *interpreterRuntime
+	interpreterScriptExecutorPreparation
+	script Script
 }
 
 func newInterpreterScriptExecutor(
@@ -88,7 +92,7 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 	location := context.Location
 	script := executor.script
 
-	codesAndPrograms := newCodesAndPrograms()
+	codesAndPrograms := NewCodesAndPrograms()
 	executor.codesAndPrograms = codesAndPrograms
 
 	interpreterRuntime := executor.runtime
@@ -149,18 +153,14 @@ func (executor *interpreterScriptExecutor) preprocess() (err error) {
 
 	// Ensure the entry point's return type is valid
 	returnType := functionEntryPointType.ReturnTypeAnnotation.Type
-	if !returnType.IsExternallyReturnable(map[*sema.Member]bool{}) {
+	if !returnType.IsExportable(map[*sema.Member]bool{}) {
 		err = &InvalidScriptReturnTypeError{
 			Type: returnType,
 		}
 		return newError(err, location, codesAndPrograms)
 	}
 
-	executor.interpret = scriptExecutionFunction(
-		parameters,
-		script.Arguments,
-		runtimeInterface,
-	)
+	executor.interpret = executor.scriptExecutionFunction()
 
 	return nil
 }
@@ -195,6 +195,7 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 	}
 
 	// Export before committing storage
+
 	exportableValue := newExportableValue(value, inter)
 	result, err := exportValue(
 		exportableValue,
@@ -217,11 +218,7 @@ func (executor *interpreterScriptExecutor) execute() (val cadence.Value, err err
 	return result, nil
 }
 
-func scriptExecutionFunction(
-	parameters []*sema.Parameter,
-	arguments [][]byte,
-	runtimeInterface Interface,
-) InterpretFunc {
+func (executor *interpreterScriptExecutor) scriptExecutionFunction() InterpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
 
 		// Recover internal panics and return them as an error.
@@ -234,14 +231,15 @@ func scriptExecutionFunction(
 
 		values, err := validateArgumentParams(
 			inter,
-			runtimeInterface,
+			executor.environment,
 			interpreter.EmptyLocationRange,
-			arguments,
-			parameters,
+			executor.script.Arguments,
+			executor.functionEntryPointType.Parameters,
 		)
 		if err != nil {
 			return nil, err
 		}
-		return inter.Invoke("main", values...)
+
+		return inter.Invoke(sema.FunctionEntryPointName, values...)
 	}
 }

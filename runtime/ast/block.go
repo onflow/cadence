@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,8 +94,8 @@ func (b *Block) String() string {
 func (b *Block) MarshalJSON() ([]byte, error) {
 	type Alias Block
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "Block",
 		Alias: (*Alias)(b),
@@ -138,17 +138,17 @@ func (*FunctionBlock) ElementType() ElementType {
 }
 
 func (b *FunctionBlock) Walk(walkChild func(Element)) {
-	// TODO: pre-conditions
+	b.PreConditions.Walk(walkChild)
 	walkChild(b.Block)
-	// TODO: post-conditions
+	b.PostConditions.Walk(walkChild)
 }
 
 func (b *FunctionBlock) MarshalJSON() ([]byte, error) {
 	type Alias FunctionBlock
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "FunctionBlock",
 		Range: b.Block.Range,
@@ -223,15 +223,72 @@ func (b *FunctionBlock) HasStatements() bool {
 	return b != nil && len(b.Block.Statements) > 0
 }
 
+func (b *FunctionBlock) HasConditions() bool {
+	return b != nil &&
+		(!b.PreConditions.IsEmpty() || !b.PostConditions.IsEmpty())
+}
+
 // Condition
 
-type Condition struct {
-	Kind    ConditionKind
+type Condition interface {
+	Element
+	isCondition()
+	CodeElement() Element
+	Doc() prettier.Doc
+	HasPosition
+}
+
+// TestCondition
+
+type TestCondition struct {
 	Test    Expression
 	Message Expression
 }
 
-func (c Condition) Doc() prettier.Doc {
+func (c TestCondition) ElementType() ElementType {
+	return ElementTypeUnknown
+}
+
+func (c TestCondition) Walk(walkChild func(Element)) {
+	walkChild(c.Test)
+	if c.Message != nil {
+		walkChild(c.Message)
+	}
+}
+
+var _ Condition = TestCondition{}
+
+func (c TestCondition) isCondition() {}
+
+func (c TestCondition) CodeElement() Element {
+	return c.Test
+}
+
+func (c TestCondition) StartPosition() Position {
+	return c.Test.StartPosition()
+}
+
+func (c TestCondition) EndPosition(memoryGauge common.MemoryGauge) Position {
+	if c.Message == nil {
+		return c.Test.EndPosition(memoryGauge)
+	}
+	return c.Message.EndPosition(memoryGauge)
+}
+
+func (c TestCondition) MarshalJSON() ([]byte, error) {
+	type Alias TestCondition
+	return json.Marshal(&struct {
+		Alias
+		Type string
+		Range
+	}{
+		Type:  "TestCondition",
+		Range: NewUnmeteredRangeFromPositioned(c),
+		Alias: (Alias)(c),
+	})
+}
+
+func (c TestCondition) Doc() prettier.Doc {
 	doc := c.Test.Doc()
 	if c.Message != nil {
 		doc = prettier.Concat{
@@ -251,9 +308,54 @@ func (c Condition) Doc() prettier.Doc {
 	}
 }
 
+// EmitCondition
+
+type EmitCondition EmitStatement
+
+var _ Condition = &EmitCondition{}
+
+func (c *EmitCondition) isCondition() {}
+
+func (c *EmitCondition) CodeElement() Element {
+	return (*EmitStatement)(c)
+}
+
+func (c *EmitCondition) StartPosition() Position {
+	return (*EmitStatement)(c).StartPosition()
+}
+
+func (c *EmitCondition) EndPosition(memoryGauge common.MemoryGauge) Position {
+	return (*EmitStatement)(c).EndPosition(memoryGauge)
+}
+
+func (c *EmitCondition) Doc() prettier.Doc {
+	return (*EmitStatement)(c).Doc()
+}
+
+func (c *EmitCondition) MarshalJSON() ([]byte, error) {
+	type Alias EmitCondition
+	return json.Marshal(&struct {
+		*Alias
+		Type string
+		Range
+	}{
+		Type:  "EmitCondition",
+		Range: NewUnmeteredRangeFromPositioned(c),
+		Alias: (*Alias)(c),
+	})
+}
+
+func (c *EmitCondition) ElementType() ElementType {
+	return (*EmitStatement)(c).ElementType()
+}
+
+func (c *EmitCondition) Walk(walkChild func(Element)) {
+	(*EmitStatement)(c).Walk(walkChild)
+}
+
 // Conditions
 
-type Conditions []*Condition
+type Conditions []Condition
 
 func (c *Conditions) IsEmpty() bool {
 	return c == nil || len(*c) == 0
@@ -285,5 +387,15 @@ func (c *Conditions) Doc(keywordDoc prettier.Doc) prettier.Doc {
 			prettier.HardLine{},
 			blockEndDoc,
 		},
+	}
+}
+
+func (c *Conditions) Walk(walkChild func(Element)) {
+	if c.IsEmpty() {
+		return
+	}
+
+	for _, condition := range *c {
+		walkChild(condition)
 	}
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,11 +40,77 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 
 	checker.checkSelfVariableUseInInitializer(variable, identifier.Pos)
 
+	checker.checkReferenceValidity(variable, expression)
+
 	if checker.inInvocation {
-		checker.Elaboration.IdentifierInInvocationTypes[expression] = valueType
+		checker.Elaboration.SetIdentifierInInvocationType(expression, valueType)
 	}
 
+	checker.checkVariableMove(expression, variable)
+
 	return valueType
+}
+
+func (checker *Checker) checkVariableMove(identifierExpression *ast.IdentifierExpression, variable *Variable) {
+
+	reportMaybeInvalidMove := func(declarationKind common.DeclarationKind) {
+		// If the parent is member-access or index-access, then it's OK.
+		// e.g: `v.foo`, `v.bar()`, `v[T]` are OK.
+		switch parent := checker.parent.(type) {
+		case *ast.MemberExpression:
+			// TODO: No need for below check? i.e: should always be true
+			if parent.Expression == identifierExpression {
+				return
+			}
+		case *ast.IndexExpression:
+			// Only `v[foo]` is OK, `foo[v]` is not.
+			if parent.TargetExpression == identifierExpression {
+				return
+			}
+		}
+
+		checker.report(
+			&InvalidMoveError{
+				Name:            variable.Identifier,
+				DeclarationKind: declarationKind,
+				Pos:             identifierExpression.StartPosition(),
+			},
+		)
+	}
+
+	switch ty := variable.Type.(type) {
+	case *TransactionType:
+		reportMaybeInvalidMove(common.DeclarationKindTransaction)
+
+	case CompositeKindedType:
+		kind := ty.GetCompositeKind()
+		if kind == common.CompositeKindContract {
+			reportMaybeInvalidMove(common.DeclarationKindContract)
+		}
+	}
+}
+
+func (checker *Checker) checkReferenceValidity(variable *Variable, hasPosition ast.HasPosition) {
+	typ := UnwrapOptionalType(variable.Type)
+	if _, ok := typ.(*ReferenceType); !ok {
+		return
+	}
+
+	// Here it is not required to find the root of the reference chain,
+	// because it is already done at the time of recoding the reference.
+	// i.e: It is always the roots of the chain that is being stored as the `referencedResourceVariables`.
+	for _, referencedVar := range variable.referencedResourceVariables {
+		resourceInfo := checker.resources.Get(Resource{Variable: referencedVar})
+		invalidation := resourceInfo.Invalidation()
+		if invalidation == nil {
+			continue
+		}
+
+		checker.report(&InvalidatedResourceReferenceError{
+			Invalidation: *invalidation,
+			Range:        ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
+		})
+	}
 }
 
 // checkSelfVariableUseInInitializer checks uses of `self` in the initializer
@@ -136,7 +202,7 @@ func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Varia
 func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatement) (_ struct{}) {
 	expression := statement.Expression
 
-	ty := checker.VisitExpression(expression, nil)
+	ty := checker.VisitExpression(expression, statement, nil)
 
 	if ty.IsResourceType() {
 		checker.report(
@@ -174,7 +240,7 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 	// If the contextually expected type is a subtype of Integer or Address, then take that.
 	if IsSameTypeKind(expectedType, IntegerType) {
 		actualType = expectedType
-	} else if IsSameTypeKind(expectedType, &AddressType{}) {
+	} else if IsSameTypeKind(expectedType, TheAddressType) {
 		isAddress = true
 		CheckAddressLiteral(checker.memoryGauge, expression, checker.report)
 		actualType = expectedType
@@ -187,7 +253,7 @@ func (checker *Checker) VisitIntegerExpression(expression *ast.IntegerExpression
 		CheckIntegerLiteral(checker.memoryGauge, expression, actualType, checker.report)
 	}
 
-	checker.Elaboration.IntegerExpressionType[expression] = actualType
+	checker.Elaboration.SetIntegerExpressionType(expression, actualType)
 
 	return actualType
 }
@@ -212,7 +278,7 @@ func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpr
 
 	CheckFixedPointLiteral(checker.memoryGauge, expression, actualType, checker.report)
 
-	checker.Elaboration.FixedPointExpression[expression] = actualType
+	checker.Elaboration.SetFixedPointExpression(expression, actualType)
 
 	return actualType
 }
@@ -227,7 +293,7 @@ func (checker *Checker) VisitStringExpression(expression *ast.StringExpression) 
 		actualType = expectedType
 	}
 
-	checker.Elaboration.StringExpressionType[expression] = actualType
+	checker.Elaboration.SetStringExpressionType(expression, actualType)
 
 	return actualType
 }
@@ -245,7 +311,7 @@ func (checker *Checker) visitIndexExpression(
 ) Type {
 
 	targetExpression := indexExpression.TargetExpression
-	targetType := checker.VisitExpression(targetExpression, nil)
+	targetType := checker.VisitExpression(targetExpression, indexExpression, nil)
 
 	// NOTE: check indexed type first for UX reasons
 
@@ -256,45 +322,140 @@ func (checker *Checker) visitIndexExpression(
 		return InvalidType
 	}
 
+	reportNonIndexable := func(t Type) {
+		checker.report(
+			&NotIndexableTypeError{
+				Type:  t,
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
+			},
+		)
+	}
+
 	// Check if the type instance is actually indexable. For most types (e.g. arrays and dictionaries)
 	// this is known statically (in the sense of this host language (Go), not the implemented language),
 	// i.e. a Go type switch would be sufficient.
 	// However, for some types (e.g. reference types) this depends on what type is referenced
+	// we cannot use a switch here because in the reference type case we need to be able to "fallthrough",
+	// and Go does not allow fallthroughs in typed switches
+	valueIndexedType, isValueIndexableType := targetType.(ValueIndexableType)
 
-	indexedType, ok := targetType.(ValueIndexableType)
-	if !ok || !indexedType.isValueIndexableType() {
-		checker.report(
-			&NotIndexableTypeError{
-				Type:  targetType,
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
+	if isValueIndexableType && valueIndexedType.isValueIndexableType() {
+		if isAssignment && !valueIndexedType.AllowsValueIndexingAssignment() {
+			checker.report(
+				&NotIndexingAssignableTypeError{
+					Type:  valueIndexedType,
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
+				},
+			)
+		}
+		indexingType := checker.VisitExpression(
+			indexExpression.IndexingExpression,
+			indexExpression,
+			valueIndexedType.IndexingType(),
+		)
+
+		elementType := valueIndexedType.ElementType(isAssignment)
+
+		checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
+
+		// If the element,
+		//   1) is accessed via a reference, and
+		//   2) is container-typed,
+		// then the element type should also be a reference.
+		returnReference := false
+		if shouldReturnReference(valueIndexedType, elementType, isAssignment) {
+			// For index expressions, element are un-authorized.
+			elementType = checker.getReferenceType(elementType, false, UnauthorizedAccess)
+
+			// Store the result in elaboration, so the interpreter can re-use this.
+			returnReference = true
+		}
+
+		checker.Elaboration.SetIndexExpressionTypes(
+			indexExpression,
+			IndexExpressionTypes{
+				IndexedType:     valueIndexedType,
+				IndexingType:    indexingType,
+				ResultType:      elementType,
+				ReturnReference: returnReference,
 			},
 		)
 
+		return elementType
+	}
+
+	typeIndexedType, isTypeIndexableType := targetType.(TypeIndexableType)
+
+	if isTypeIndexableType && typeIndexedType.isTypeIndexableType() {
+		if isAssignment {
+			checker.report(
+				&NotIndexingAssignableTypeError{
+					Type:  typeIndexedType,
+					Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
+				},
+			)
+			return InvalidType
+		}
+
+		elementType := checker.checkTypeIndexingExpression(typeIndexedType, indexExpression)
+		if elementType == InvalidType {
+			checker.report(
+				&InvalidTypeIndexingError{
+					BaseType:           typeIndexedType,
+					IndexingExpression: indexExpression.IndexingExpression,
+					Range: ast.NewRangeFromPositioned(
+						checker.memoryGauge,
+						indexExpression.IndexingExpression,
+					),
+				},
+			)
+		}
+		return elementType
+	}
+
+	reportNonIndexable(targetType)
+	return InvalidType
+}
+
+func (checker *Checker) checkTypeIndexingExpression(
+	targetType TypeIndexableType,
+	indexExpression *ast.IndexExpression,
+) Type {
+
+	targetExpression := indexExpression.TargetExpression
+
+	if !checker.Config.AttachmentsEnabled {
+		checker.report(&AttachmentsNotEnabledError{
+			Range: ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression),
+		})
+	}
+
+	expressionType := ast.ExpressionAsType(indexExpression.IndexingExpression)
+	if expressionType == nil {
 		return InvalidType
 	}
 
-	indexingType := checker.VisitExpression(
-		indexExpression.IndexingExpression,
-		indexedType.IndexingType(),
-	)
-
-	if isAssignment && !indexedType.AllowsValueIndexingAssignment() {
-		checker.report(
-			&NotIndexingAssignableTypeError{
-				Type:  indexedType,
-				Range: ast.NewRangeFromPositioned(checker.memoryGauge, targetExpression),
-			},
-		)
+	nominalTypeExpression, isNominalType := expressionType.(*ast.NominalType)
+	if !isNominalType {
+		return InvalidType
 	}
 
-	elementType := indexedType.ElementType(isAssignment)
+	nominalType := checker.convertNominalType(nominalTypeExpression)
 
-	checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
-
-	checker.Elaboration.IndexExpressionTypes[indexExpression] = IndexExpressionTypes{
-		IndexedType:  indexedType,
-		IndexingType: indexingType,
+	if !targetType.IsValidIndexingType(nominalType) {
+		return InvalidType
 	}
 
-	return elementType
+	checker.Elaboration.SetAttachmentAccessTypes(indexExpression, nominalType)
+
+	checker.checkUnusedExpressionResourceLoss(targetType, targetExpression)
+
+	// at this point, the base is known to be a struct/resource,
+	// and the attachment is known to be a valid attachment for that base
+	indexedType, err := targetType.TypeIndexingElementType(nominalType, func() ast.Range { return ast.NewRangeFromPositioned(checker.memoryGauge, indexExpression) })
+	if err != nil {
+		checker.report(err)
+		return InvalidType
+	}
+	return indexedType
 }

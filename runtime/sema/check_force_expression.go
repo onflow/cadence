@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) Ty
 	// i.e: if `x!` is `String`, then `x` is expected to be `String?`.
 	expectedType := wrapWithOptionalIfNotNil(checker.expectedType)
 
-	valueType := checker.VisitExpression(expression.Expression, expectedType)
+	valueType := checker.VisitExpression(expression.Expression, expression, expectedType)
 
 	if valueType.IsInvalidType() {
 		return valueType
@@ -41,7 +41,7 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) Ty
 	)
 
 	if checker.Config.ExtendedElaborationEnabled {
-		checker.Elaboration.ForceExpressionTypes[expression] = valueType
+		checker.Elaboration.SetForceExpressionType(expression, valueType)
 	}
 
 	optionalType, ok := valueType.(*OptionalType)

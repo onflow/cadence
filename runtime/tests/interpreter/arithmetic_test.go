@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
@@ -49,17 +50,19 @@ var integerTestValues = map[string]interpreter.NumberValue{
 	"UInt128": interpreter.NewUnmeteredUInt128ValueFromUint64(60),
 	"UInt256": interpreter.NewUnmeteredUInt256ValueFromUint64(60),
 	// Word*
-	"Word8":  interpreter.NewUnmeteredWord8Value(60),
-	"Word16": interpreter.NewUnmeteredWord16Value(60),
-	"Word32": interpreter.NewUnmeteredWord32Value(60),
-	"Word64": interpreter.NewUnmeteredWord64Value(60),
+	"Word8":   interpreter.NewUnmeteredWord8Value(60),
+	"Word16":  interpreter.NewUnmeteredWord16Value(60),
+	"Word32":  interpreter.NewUnmeteredWord32Value(60),
+	"Word64":  interpreter.NewUnmeteredWord64Value(60),
+	"Word128": interpreter.NewUnmeteredWord128ValueFromUint64(60),
+	"Word256": interpreter.NewUnmeteredWord256ValueFromUint64(60),
 }
 
 func init() {
 
 	for _, integerType := range sema.AllIntegerTypes {
 		switch integerType {
-		case sema.IntegerType, sema.SignedIntegerType:
+		case sema.IntegerType, sema.SignedIntegerType, sema.FixedSizeUnsignedIntegerType:
 			continue
 		}
 
@@ -92,7 +95,7 @@ func TestInterpretPlusOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -121,7 +124,7 @@ func TestInterpretMinusOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -150,7 +153,7 @@ func TestInterpretMulOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -179,7 +182,7 @@ func TestInterpretDivOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -208,7 +211,7 @@ func TestInterpretModOperator(t *testing.T) {
 				t,
 				inter,
 				value,
-				inter.Globals.Get("c").GetValue(),
+				inter.Globals.Get("c").GetValue(inter),
 			)
 		})
 	}
@@ -506,43 +509,43 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 			add: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 				},
 				underflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(-2),
+					interpreter.NewUnmeteredFix64ValueWithInteger(-2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
 				},
 			},
 			subtract: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(-2),
+					interpreter.NewUnmeteredFix64ValueWithInteger(-2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 				},
 				underflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
 				},
 			},
 			multiply: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 				},
 				underflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
 				},
 			},
 			divide: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredFix64Value(math.MinInt64),
-					interpreter.NewUnmeteredFix64ValueWithInteger(-1),
+					interpreter.NewUnmeteredFix64ValueWithInteger(-1, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredFix64Value(math.MaxInt64),
 				},
 			},
@@ -698,21 +701,21 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 			add: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
-					interpreter.NewUnmeteredUFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
 				},
 			},
 			subtract: testCalls{
 				underflow: testCall{
 					interpreter.NewUnmeteredUFix64Value(0),
-					interpreter.NewUnmeteredUFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredUFix64Value(0),
 				},
 			},
 			multiply: testCalls{
 				overflow: testCall{
 					interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
-					interpreter.NewUnmeteredUFix64ValueWithInteger(2),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(2, interpreter.EmptyLocationRange),
 					interpreter.NewUnmeteredUFix64Value(math.MaxUint64),
 				},
 			},
@@ -721,9 +724,9 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 
 	// Verify all test cases exist
 
-	for _, ty := range append(
-		sema.AllSignedIntegerTypes[:],
-		sema.AllSignedFixedPointTypes...,
+	for _, ty := range common.Concat(
+		sema.AllSignedIntegerTypes,
+		sema.AllSignedFixedPointTypes,
 	) {
 
 		testCase, ok := testCases[ty]
@@ -747,9 +750,9 @@ func TestInterpretSaturatedArithmeticFunctions(t *testing.T) {
 		}
 	}
 
-	for _, ty := range append(
-		sema.AllUnsignedIntegerTypes[:],
-		sema.AllUnsignedFixedPointTypes...,
+	for _, ty := range common.Concat(
+		sema.AllUnsignedIntegerTypes,
+		sema.AllUnsignedFixedPointTypes,
 	) {
 
 		if strings.HasPrefix(ty.String(), "Word") {

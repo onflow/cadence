@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,29 +22,33 @@ import (
 	"sync"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type interpreterTransactionExecutor struct {
-	runtime *interpreterRuntime
-	script  Script
-	context Context
-
-	// prepare
-	preprocessOnce   sync.Once
+type interpreterTransactionExecutorPreparation struct {
+	codesAndPrograms CodesAndPrograms
+	environment      Environment
 	preprocessErr    error
-	codesAndPrograms codesAndPrograms
+	transactionType  *sema.TransactionType
 	storage          *Storage
 	program          *interpreter.Program
-	environment      Environment
-	transactionType  *sema.TransactionType
-	authorizers      []Address
+	preprocessOnce   sync.Once
+}
 
-	// execute
-	executeOnce sync.Once
+type interpreterTransactionExecutorExecution struct {
 	executeErr  error
 	interpret   InterpretFunc
+	executeOnce sync.Once
+}
+
+type interpreterTransactionExecutor struct {
+	context Context
+	interpreterTransactionExecutorExecution
+	runtime *interpreterRuntime
+	script  Script
+	interpreterTransactionExecutorPreparation
 }
 
 func newInterpreterTransactionExecutor(
@@ -87,7 +91,7 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 	location := context.Location
 	script := executor.script
 
-	codesAndPrograms := newCodesAndPrograms()
+	codesAndPrograms := NewCodesAndPrograms()
 	executor.codesAndPrograms = codesAndPrograms
 
 	interpreterRuntime := executor.runtime
@@ -139,19 +143,18 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 	transactionType := transactions[0]
 	executor.transactionType = transactionType
 
-	var authorizers []Address
-	wrapPanic(func() {
-		authorizers, err = runtimeInterface.GetSigningAccounts()
+	var authorizerAddresses []Address
+	errors.WrapPanic(func() {
+		authorizerAddresses, err = runtimeInterface.GetSigningAccounts()
 	})
 	if err != nil {
 		return newError(err, location, codesAndPrograms)
 	}
-	executor.authorizers = authorizers
 
 	// check parameter count
 
 	argumentCount := len(script.Arguments)
-	authorizerCount := len(authorizers)
+	authorizerCount := len(authorizerAddresses)
 
 	transactionParameterCount := len(transactionType.Parameters)
 	if argumentCount != transactionParameterCount {
@@ -162,7 +165,9 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 		return newError(err, location, codesAndPrograms)
 	}
 
-	transactionAuthorizerCount := len(transactionType.PrepareParameters)
+	prepareParameters := transactionType.PrepareParameters
+
+	transactionAuthorizerCount := len(prepareParameters)
 	if authorizerCount != transactionAuthorizerCount {
 		err = InvalidTransactionAuthorizerCountError{
 			Expected: transactionAuthorizerCount,
@@ -173,28 +178,56 @@ func (executor *interpreterTransactionExecutor) preprocess() (err error) {
 
 	// gather authorizers
 
-	executor.interpret = transactionExecutionFunction(
-		transactionType.Parameters,
-		script.Arguments,
-		context.Interface,
-		executor.authorizerValues,
+	executor.interpret = executor.transactionExecutionFunction(
+		func(inter *interpreter.Interpreter) []interpreter.Value {
+			return executor.authorizerValues(
+				inter,
+				authorizerAddresses,
+				prepareParameters,
+			)
+		},
 	)
 
 	return nil
 }
 
-func (executor *interpreterTransactionExecutor) authorizerValues(inter *interpreter.Interpreter) []interpreter.Value {
+func (executor *interpreterTransactionExecutor) authorizerValues(
+	inter *interpreter.Interpreter,
+	addresses []Address,
+	parameters []sema.Parameter,
+) []interpreter.Value {
 
 	// gather authorizers
 
-	authorizerValues := make([]interpreter.Value, 0, len(executor.authorizers))
+	authorizerValues := make([]interpreter.Value, 0, len(addresses))
 
-	for _, address := range executor.authorizers {
+	for i, address := range addresses {
+		parameter := parameters[i]
+
 		addressValue := interpreter.NewAddressValue(inter, address)
-		authorizerValues = append(
-			authorizerValues,
-			executor.environment.NewAuthAccountValue(addressValue),
+
+		accountValue := executor.environment.NewAccountValue(inter, addressValue)
+
+		referenceType, ok := parameter.TypeAnnotation.Type.(*sema.ReferenceType)
+		if !ok || referenceType.Type != sema.AccountType {
+			panic(errors.NewUnreachableError())
+		}
+
+		authorization := interpreter.ConvertSemaAccessToStaticAuthorization(
+			inter,
+			referenceType.Authorization,
 		)
+
+		accountReferenceValue := interpreter.NewEphemeralReferenceValue(
+			inter,
+			authorization,
+			accountValue,
+			sema.AccountType,
+			// okay to pass an empty range here because the account value is never a reference, so this can't fail
+			interpreter.EmptyLocationRange,
+		)
+
+		authorizerValues = append(authorizerValues, accountReferenceValue)
 	}
 
 	return authorizerValues
@@ -238,10 +271,7 @@ func (executor *interpreterTransactionExecutor) execute() (err error) {
 	return nil
 }
 
-func transactionExecutionFunction(
-	parameters []*sema.Parameter,
-	arguments [][]byte,
-	runtimeInterface Interface,
+func (executor *interpreterTransactionExecutor) transactionExecutionFunction(
 	authorizerValues func(*interpreter.Interpreter) []interpreter.Value,
 ) InterpretFunc {
 	return func(inter *interpreter.Interpreter) (value interpreter.Value, err error) {
@@ -256,10 +286,10 @@ func transactionExecutionFunction(
 
 		values, err := validateArgumentParams(
 			inter,
-			runtimeInterface,
+			executor.environment,
 			interpreter.EmptyLocationRange,
-			arguments,
-			parameters,
+			executor.script.Arguments,
+			executor.transactionType.Parameters,
 		)
 		if err != nil {
 			return nil, err

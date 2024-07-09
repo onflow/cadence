@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func expectSuccess(t *testing.T, err error) {
@@ -95,15 +94,14 @@ func TestCheckAccessModifierCompositeFunctionDeclaration(t *testing.T) {
 	t.Parallel()
 
 	tests := map[ast.Access]bool{
-		ast.AccessNotSpecified:   true,
-		ast.AccessPrivate:        true,
-		ast.AccessPublic:         true,
-		ast.AccessPublicSettable: false,
+		ast.AccessNotSpecified: true,
+		ast.AccessSelf:         true,
+		ast.AccessAll:          true,
 	}
 
 	require.Len(t, tests, len(ast.BasicAccesses))
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		compositeKindKeyword := compositeKind.Keyword()
 
@@ -147,28 +145,24 @@ func TestCheckAccessModifierInterfaceFunctionDeclaration(t *testing.T) {
 
 	checkModeTests := map[sema.AccessCheckMode]map[ast.Access]error{
 		sema.AccessCheckModeStrict: {
-			ast.AccessNotSpecified:   &sema.MissingAccessModifierError{},
-			ast.AccessPrivate:        &sema.InvalidAccessModifierError{},
-			ast.AccessPublic:         nil,
-			ast.AccessPublicSettable: &sema.InvalidAccessModifierError{},
+			ast.AccessNotSpecified: &sema.MissingAccessModifierError{},
+			ast.AccessSelf:         &sema.InvalidAccessModifierError{},
+			ast.AccessAll:          nil,
 		},
 		sema.AccessCheckModeNotSpecifiedRestricted: {
-			ast.AccessNotSpecified:   nil,
-			ast.AccessPrivate:        &sema.InvalidAccessModifierError{},
-			ast.AccessPublic:         nil,
-			ast.AccessPublicSettable: &sema.InvalidAccessModifierError{},
+			ast.AccessNotSpecified: nil,
+			ast.AccessSelf:         &sema.InvalidAccessModifierError{},
+			ast.AccessAll:          nil,
 		},
 		sema.AccessCheckModeNotSpecifiedUnrestricted: {
-			ast.AccessNotSpecified:   nil,
-			ast.AccessPrivate:        &sema.InvalidAccessModifierError{},
-			ast.AccessPublic:         nil,
-			ast.AccessPublicSettable: &sema.InvalidAccessModifierError{},
+			ast.AccessNotSpecified: nil,
+			ast.AccessSelf:         &sema.InvalidAccessModifierError{},
+			ast.AccessAll:          nil,
 		},
 		sema.AccessCheckModeNone: {
-			ast.AccessNotSpecified:   nil,
-			ast.AccessPrivate:        &sema.InvalidAccessModifierError{},
-			ast.AccessPublic:         nil,
-			ast.AccessPublicSettable: &sema.InvalidAccessModifierError{},
+			ast.AccessNotSpecified: nil,
+			ast.AccessSelf:         &sema.InvalidAccessModifierError{},
+			ast.AccessAll:          nil,
 		},
 	}
 
@@ -179,7 +173,7 @@ func TestCheckAccessModifierInterfaceFunctionDeclaration(t *testing.T) {
 
 		for access, expectedErr := range tests {
 
-			for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+			for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 				testName := fmt.Sprintf(
 					"%s/%s interface/%s",
@@ -193,7 +187,7 @@ func TestCheckAccessModifierInterfaceFunctionDeclaration(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s interface Test {
+                              access(all) %[1]s interface Test {
                                   %[2]s fun test()
                               }
 	                        `,
@@ -228,21 +222,18 @@ func TestCheckAccessModifierCompositeConstantFieldDeclaration(t *testing.T) {
 		ast.AccessNotSpecified: func(_ bool) bool {
 			return true
 		},
-		ast.AccessPrivate: func(isInterface bool) bool {
+		ast.AccessSelf: func(isInterface bool) bool {
 			return !isInterface
 		},
-		ast.AccessPublic: func(_ bool) bool {
+		ast.AccessAll: func(_ bool) bool {
 			return true
-		},
-		ast.AccessPublicSettable: func(_ bool) bool {
-			return false
 		},
 	}
 
 	require.Len(t, tests, len(ast.BasicAccesses))
 
 	for access, expectSuccess := range tests {
-		for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+		for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 			for _, isInterface := range []bool{true, false} {
 
 				interfaceKeyword := ""
@@ -292,7 +283,7 @@ func TestCheckAccessModifierCompositeVariableFieldDeclaration(t *testing.T) {
 	t.Parallel()
 
 	for _, access := range ast.BasicAccesses {
-		for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+		for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 			for _, isInterface := range []bool{true, false} {
 
 				interfaceKeyword := ""
@@ -328,7 +319,7 @@ func TestCheckAccessModifierCompositeVariableFieldDeclaration(t *testing.T) {
 
 					// private fields in interfaces are invalid
 
-					if isInterface && access == ast.AccessPrivate {
+					if isInterface && access == ast.AccessSelf {
 						expectInvalidAccessModifierError(t, err)
 					} else {
 						assert.NoError(t, err)
@@ -344,10 +335,9 @@ func TestCheckAccessModifierGlobalFunctionDeclaration(t *testing.T) {
 	t.Parallel()
 
 	tests := map[ast.Access]bool{
-		ast.AccessNotSpecified:   true,
-		ast.AccessPrivate:        true,
-		ast.AccessPublic:         true,
-		ast.AccessPublicSettable: false,
+		ast.AccessNotSpecified: true,
+		ast.AccessSelf:         true,
+		ast.AccessAll:          true,
 	}
 
 	require.Len(t, tests, len(ast.BasicAccesses))
@@ -379,10 +369,9 @@ func TestCheckAccessModifierGlobalVariableDeclaration(t *testing.T) {
 	t.Parallel()
 
 	tests := map[ast.Access]bool{
-		ast.AccessNotSpecified:   true,
-		ast.AccessPrivate:        true,
-		ast.AccessPublic:         true,
-		ast.AccessPublicSettable: true,
+		ast.AccessNotSpecified: true,
+		ast.AccessSelf:         true,
+		ast.AccessAll:          true,
 	}
 
 	require.Len(t, tests, len(ast.BasicAccesses))
@@ -414,10 +403,9 @@ func TestCheckAccessModifierGlobalConstantDeclaration(t *testing.T) {
 	t.Parallel()
 
 	tests := map[ast.Access]bool{
-		ast.AccessNotSpecified:   true,
-		ast.AccessPrivate:        true,
-		ast.AccessPublic:         true,
-		ast.AccessPublicSettable: false,
+		ast.AccessNotSpecified: true,
+		ast.AccessSelf:         true,
+		ast.AccessAll:          true,
 	}
 
 	require.Len(t, tests, len(ast.BasicAccesses))
@@ -449,10 +437,9 @@ func TestCheckAccessModifierLocalVariableDeclaration(t *testing.T) {
 	t.Parallel()
 
 	tests := map[ast.Access]bool{
-		ast.AccessNotSpecified:   true,
-		ast.AccessPrivate:        false,
-		ast.AccessPublic:         false,
-		ast.AccessPublicSettable: false,
+		ast.AccessNotSpecified: true,
+		ast.AccessSelf:         false,
+		ast.AccessAll:          false,
 	}
 
 	require.Len(t, tests, len(ast.BasicAccesses))
@@ -496,10 +483,9 @@ func TestCheckAccessModifierLocalFunctionDeclaration(t *testing.T) {
 	t.Parallel()
 
 	tests := map[ast.Access]bool{
-		ast.AccessNotSpecified:   true,
-		ast.AccessPrivate:        false,
-		ast.AccessPublic:         false,
-		ast.AccessPublicSettable: false,
+		ast.AccessNotSpecified: true,
+		ast.AccessSelf:         false,
+		ast.AccessAll:          false,
 	}
 
 	require.Len(t, tests, len(ast.BasicAccesses))
@@ -540,28 +526,24 @@ func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
 
 	checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 		sema.AccessCheckModeStrict: {
-			ast.AccessNotSpecified:   expectMissingAccessModifierError,
-			ast.AccessPrivate:        expectInvalidAccessModifierError,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectInvalidAccessModifierError,
+			ast.AccessNotSpecified: expectMissingAccessModifierError,
+			ast.AccessSelf:         expectInvalidAccessModifierError,
+			ast.AccessAll:          expectSuccess,
 		},
 		sema.AccessCheckModeNotSpecifiedRestricted: {
-			ast.AccessNotSpecified:   expectMissingAccessModifierError,
-			ast.AccessPrivate:        expectInvalidAccessModifierError,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectInvalidAccessModifierError,
+			ast.AccessNotSpecified: expectMissingAccessModifierError,
+			ast.AccessSelf:         expectInvalidAccessModifierError,
+			ast.AccessAll:          expectSuccess,
 		},
 		sema.AccessCheckModeNotSpecifiedUnrestricted: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectInvalidAccessModifierError,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectInvalidAccessModifierError,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectInvalidAccessModifierError,
+			ast.AccessAll:          expectSuccess,
 		},
 		sema.AccessCheckModeNone: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectInvalidAccessModifierError,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectInvalidAccessModifierError,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectInvalidAccessModifierError,
+			ast.AccessAll:          expectSuccess,
 		},
 	}
 
@@ -593,6 +575,11 @@ func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
 						conformances = ": Int"
 					}
 
+					var baseType string
+					if compositeKind == common.CompositeKindAttachment {
+						baseType = "for AnyStruct"
+					}
+
 					testName := fmt.Sprintf("%s %s/%s/%s",
 						compositeKind.Keyword(),
 						interfaceKeyword,
@@ -605,17 +592,19 @@ func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
 						_, err := ParseAndCheckWithOptions(t,
 							fmt.Sprintf(
 								`
-                                  %[1]s %[2]s %[3]s Test%[4]s %[5]s
+                                  %[1]s %[2]s %[3]s Test %[6]s %[4]s %[5]s
 	                            `,
 								access.Keyword(),
 								compositeKind.Keyword(),
 								interfaceKeyword,
 								conformances,
 								body,
+								baseType,
 							),
 							ParseAndCheckOptions{
 								Config: &sema.Config{
-									AccessCheckMode: checkMode,
+									AccessCheckMode:    checkMode,
+									AttachmentsEnabled: true,
 								},
 							},
 						)
@@ -632,32 +621,28 @@ func TestCheckAccessCompositeFunction(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 			sema.AccessCheckModeStrict: {
-				ast.AccessNotSpecified:   nil,
-				ast.AccessPrivate:        expectInvalidAccessError,
-				ast.AccessPublic:         expectSuccess,
-				ast.AccessPublicSettable: nil,
+				ast.AccessNotSpecified: nil,
+				ast.AccessSelf:         expectInvalidAccessError,
+				ast.AccessAll:          expectSuccess,
 			},
 			sema.AccessCheckModeNotSpecifiedRestricted: {
-				ast.AccessNotSpecified:   expectInvalidAccessError,
-				ast.AccessPrivate:        expectInvalidAccessError,
-				ast.AccessPublic:         expectSuccess,
-				ast.AccessPublicSettable: nil,
+				ast.AccessNotSpecified: expectInvalidAccessError,
+				ast.AccessSelf:         expectInvalidAccessError,
+				ast.AccessAll:          expectSuccess,
 			},
 			sema.AccessCheckModeNotSpecifiedUnrestricted: {
-				ast.AccessNotSpecified:   expectSuccess,
-				ast.AccessPrivate:        expectInvalidAccessError,
-				ast.AccessPublic:         expectSuccess,
-				ast.AccessPublicSettable: nil,
+				ast.AccessNotSpecified: expectSuccess,
+				ast.AccessSelf:         expectInvalidAccessError,
+				ast.AccessAll:          expectSuccess,
 			},
 			sema.AccessCheckModeNone: {
-				ast.AccessNotSpecified:   expectSuccess,
-				ast.AccessPrivate:        expectSuccess,
-				ast.AccessPublic:         expectSuccess,
-				ast.AccessPublicSettable: nil,
+				ast.AccessNotSpecified: expectSuccess,
+				ast.AccessSelf:         expectSuccess,
+				ast.AccessAll:          expectSuccess,
 			},
 		}
 
@@ -701,15 +686,15 @@ func TestCheckAccessCompositeFunction(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s Test {
+                              access(all) %[1]s Test {
                                   %[2]s fun test() {}
 
-                                  pub fun test2() {
+                                  access(all) fun test2() {
                                       self.test()
                                   }
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   %[3]s
                                   %[4]s.test()
                                   %[5]s
@@ -739,32 +724,28 @@ func TestCheckAccessInterfaceFunction(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 
 		checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 			sema.AccessCheckModeStrict: {
-				ast.AccessNotSpecified:   nil,
-				ast.AccessPrivate:        expectInvalidAccessModifierAndInvalidAccessErrors,
-				ast.AccessPublic:         expectSuccess,
-				ast.AccessPublicSettable: nil,
+				ast.AccessNotSpecified: nil,
+				ast.AccessSelf:         expectInvalidAccessModifierAndInvalidAccessErrors,
+				ast.AccessAll:          expectSuccess,
 			},
 			sema.AccessCheckModeNotSpecifiedRestricted: {
-				ast.AccessNotSpecified:   expectConformanceAndInvalidAccessErrors,
-				ast.AccessPrivate:        expectInvalidAccessModifierAndInvalidAccessErrors,
-				ast.AccessPublic:         expectSuccess,
-				ast.AccessPublicSettable: nil,
+				ast.AccessNotSpecified: expectConformanceAndInvalidAccessErrors,
+				ast.AccessSelf:         expectInvalidAccessModifierAndInvalidAccessErrors,
+				ast.AccessAll:          expectSuccess,
 			},
 			sema.AccessCheckModeNotSpecifiedUnrestricted: {
-				ast.AccessNotSpecified:   expectSuccess,
-				ast.AccessPrivate:        expectInvalidAccessModifierAndInvalidAccessErrors,
-				ast.AccessPublic:         expectSuccess,
-				ast.AccessPublicSettable: nil,
+				ast.AccessNotSpecified: expectSuccess,
+				ast.AccessSelf:         expectInvalidAccessModifierAndInvalidAccessErrors,
+				ast.AccessAll:          expectSuccess,
 			},
 			sema.AccessCheckModeNone: {
-				ast.AccessNotSpecified:   expectSuccess,
-				ast.AccessPrivate:        expectInvalidAccessModifierError,
-				ast.AccessPublic:         expectSuccess,
-				ast.AccessPublicSettable: nil,
+				ast.AccessNotSpecified: expectSuccess,
+				ast.AccessSelf:         expectInvalidAccessModifierError,
+				ast.AccessAll:          expectSuccess,
 			},
 		}
 
@@ -790,7 +771,7 @@ func TestCheckAccessInterfaceFunction(t *testing.T) {
 				if compositeKind == common.CompositeKindContract {
 					identifier = "TestImpl"
 				} else {
-					interfaceType := AsInterfaceType("Test", compositeKind)
+					interfaceType := "{Test}"
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -812,19 +793,19 @@ func TestCheckAccessInterfaceFunction(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s interface Test {
+                              access(all) %[1]s interface Test {
                                   %[2]s fun test()
                               }
 
-                              pub %[1]s TestImpl: Test {
+                              access(all) %[1]s TestImpl: Test {
                                   %[2]s fun test() {}
 
-                                  pub fun test2() {
+                                  access(all) fun test2() {
                                       self.test()
                                   }
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   %[3]s
                                   %[4]s.test()
                                   %[5]s
@@ -856,34 +837,30 @@ func TestCheckAccessCompositeFieldRead(t *testing.T) {
 
 	checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 		sema.AccessCheckModeStrict: {
-			ast.AccessNotSpecified:   nil,
-			ast.AccessPrivate:        expectInvalidAccessError,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: nil,
+			ast.AccessSelf:         expectInvalidAccessError,
+			ast.AccessAll:          expectSuccess,
 		},
 		sema.AccessCheckModeNotSpecifiedRestricted: {
-			ast.AccessNotSpecified:   expectInvalidAccessError,
-			ast.AccessPrivate:        expectInvalidAccessError,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectInvalidAccessError,
+			ast.AccessSelf:         expectInvalidAccessError,
+			ast.AccessAll:          expectSuccess,
 		},
 		sema.AccessCheckModeNotSpecifiedUnrestricted: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectInvalidAccessError,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectInvalidAccessError,
+			ast.AccessAll:          expectSuccess,
 		},
 		sema.AccessCheckModeNone: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectSuccess,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectSuccess,
+			ast.AccessAll:          expectSuccess,
 		},
 	}
 
 	require.Len(t, checkModeTests, len(sema.AccessCheckModes))
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		for checkMode, checkModeTests := range checkModeTests {
 			require.Len(t, checkModeTests, len(ast.BasicAccesses))
 
@@ -923,19 +900,19 @@ func TestCheckAccessCompositeFieldRead(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s Test {
+                              access(all) %[1]s Test {
                                   %[2]s var test: Int
 
                                   init() {
                                       self.test = 0
                                   }
 
-                                  pub fun test2() {
+                                  access(all) fun test2() {
                                       self.test
                                   }
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   %[3]s
                                   %[4]s.test
                                   %[5]s
@@ -967,34 +944,30 @@ func TestCheckAccessInterfaceFieldRead(t *testing.T) {
 
 	checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 		sema.AccessCheckModeStrict: {
-			ast.AccessNotSpecified:   nil,
-			ast.AccessPrivate:        expectInvalidAccessModifierAndInvalidAccessErrors,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: nil,
+			ast.AccessSelf:         expectInvalidAccessModifierAndInvalidAccessErrors,
+			ast.AccessAll:          expectSuccess,
 		},
 		sema.AccessCheckModeNotSpecifiedRestricted: {
-			ast.AccessNotSpecified:   expectConformanceAndInvalidAccessErrors,
-			ast.AccessPrivate:        expectInvalidAccessModifierAndInvalidAccessErrors,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectConformanceAndInvalidAccessErrors,
+			ast.AccessSelf:         expectInvalidAccessModifierAndInvalidAccessErrors,
+			ast.AccessAll:          expectSuccess,
 		},
 		sema.AccessCheckModeNotSpecifiedUnrestricted: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectInvalidAccessModifierAndInvalidAccessErrors,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectInvalidAccessModifierAndInvalidAccessErrors,
+			ast.AccessAll:          expectSuccess,
 		},
 		sema.AccessCheckModeNone: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectInvalidAccessModifierError,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectInvalidAccessModifierError,
+			ast.AccessAll:          expectSuccess,
 		},
 	}
 
 	require.Len(t, checkModeTests, len(sema.AccessCheckModes))
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		for checkMode, checkModeTests := range checkModeTests {
 			require.Len(t, checkModeTests, len(ast.BasicAccesses))
 
@@ -1016,7 +989,7 @@ func TestCheckAccessInterfaceFieldRead(t *testing.T) {
 				if compositeKind == common.CompositeKindContract {
 					identifier = "TestImpl"
 				} else {
-					interfaceType := AsInterfaceType("Test", compositeKind)
+					interfaceType := "{Test}"
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -1038,23 +1011,23 @@ func TestCheckAccessInterfaceFieldRead(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s interface Test {
+                              access(all) %[1]s interface Test {
                                   %[2]s var test: Int
                               }
 
-                              pub %[1]s TestImpl: Test {
+                              access(all) %[1]s TestImpl: Test {
                                   %[2]s var test: Int
 
                                   init() {
                                       self.test = 0
                                   }
 
-                                  pub fun test2() {
+                                  access(all) fun test2() {
                                       self.test
                                   }
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   %[3]s
                                   %[4]s.test
                                   %[5]s
@@ -1086,34 +1059,30 @@ func TestCheckAccessCompositeFieldAssignmentAndSwap(t *testing.T) {
 
 	checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 		sema.AccessCheckModeStrict: {
-			ast.AccessNotSpecified:   nil,
-			ast.AccessPrivate:        expectTwoAccessErrors,
-			ast.AccessPublic:         expectTwoInvalidAssignmentAccessErrors,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: nil,
+			ast.AccessSelf:         expectTwoAccessErrors,
+			ast.AccessAll:          expectTwoInvalidAssignmentAccessErrors,
 		},
 		sema.AccessCheckModeNotSpecifiedRestricted: {
-			ast.AccessNotSpecified:   expectTwoAccessErrors,
-			ast.AccessPrivate:        expectTwoAccessErrors,
-			ast.AccessPublic:         expectTwoInvalidAssignmentAccessErrors,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectTwoAccessErrors,
+			ast.AccessSelf:         expectTwoAccessErrors,
+			ast.AccessAll:          expectTwoInvalidAssignmentAccessErrors,
 		},
 		sema.AccessCheckModeNotSpecifiedUnrestricted: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectTwoAccessErrors,
-			ast.AccessPublic:         expectTwoInvalidAssignmentAccessErrors,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectTwoAccessErrors,
+			ast.AccessAll:          expectTwoInvalidAssignmentAccessErrors,
 		},
 		sema.AccessCheckModeNone: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectSuccess,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectSuccess,
+			ast.AccessAll:          expectSuccess,
 		},
 	}
 
 	require.Len(t, checkModeTests, len(sema.AccessCheckModes))
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		for checkMode, checkModeTests := range checkModeTests {
 			require.Len(t, checkModeTests, len(ast.BasicAccesses))
 
@@ -1152,21 +1121,21 @@ func TestCheckAccessCompositeFieldAssignmentAndSwap(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s Test {
+                              access(all) %[1]s Test {
                                   %[2]s var test: Int
 
                                   init() {
                                       self.test = 0
                                   }
 
-                                  pub fun test2() {
+                                  access(all) fun test2() {
                                       self.test = 1
                                       var temp = 2
                                       self.test <-> temp
                                   }
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   %[3]s
 
                                   %[4]s.test = 3
@@ -1222,34 +1191,30 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 
 	checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 		sema.AccessCheckModeStrict: {
-			ast.AccessNotSpecified:   nil,
-			ast.AccessPrivate:        expectInvalidAccessModifierAndAccessErrors,
-			ast.AccessPublic:         expectTwoInvalidAssignmentAccessErrors,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: nil,
+			ast.AccessSelf:         expectInvalidAccessModifierAndAccessErrors,
+			ast.AccessAll:          expectTwoInvalidAssignmentAccessErrors,
 		},
 		sema.AccessCheckModeNotSpecifiedRestricted: {
-			ast.AccessNotSpecified:   expectConformanceAndAccessErrors,
-			ast.AccessPrivate:        expectInvalidAccessModifierAndAccessErrors,
-			ast.AccessPublic:         expectTwoInvalidAssignmentAccessErrors,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectConformanceAndAccessErrors,
+			ast.AccessSelf:         expectInvalidAccessModifierAndAccessErrors,
+			ast.AccessAll:          expectTwoInvalidAssignmentAccessErrors,
 		},
 		sema.AccessCheckModeNotSpecifiedUnrestricted: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectInvalidAccessModifierAndAccessErrors,
-			ast.AccessPublic:         expectTwoInvalidAssignmentAccessErrors,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectInvalidAccessModifierAndAccessErrors,
+			ast.AccessAll:          expectTwoInvalidAssignmentAccessErrors,
 		},
 		sema.AccessCheckModeNone: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectInvalidAccessModifierError,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectInvalidAccessModifierError,
+			ast.AccessAll:          expectSuccess,
 		},
 	}
 
 	require.Len(t, checkModeTests, len(sema.AccessCheckModes))
 
-	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
+	for _, compositeKind := range common.InstantiableCompositeKindsWithFieldsAndFunctions {
 		for checkMode, checkModeTests := range checkModeTests {
 			require.Len(t, checkModeTests, len(ast.BasicAccesses))
 
@@ -1271,7 +1236,7 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 					identifier = "TestImpl"
 				} else {
 
-					interfaceType := AsInterfaceType("Test", compositeKind)
+					interfaceType := "{Test}"
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -1293,25 +1258,25 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 					_, err := ParseAndCheckWithOptions(t,
 						fmt.Sprintf(
 							`
-                              pub %[1]s interface Test {
+                              access(all) %[1]s interface Test {
                                   %[2]s var test: Int
                               }
 
-                              pub %[1]s TestImpl: Test {
+                              access(all) %[1]s TestImpl: Test {
                                   %[2]s var test: Int
 
                                   init() {
                                       self.test = 0
                                   }
 
-                                  pub fun test2() {
+                                  access(all) fun test2() {
                                        self.test = 1
                                        var temp = 2
                                        self.test <-> temp
                                   }
                               }
 
-                              pub fun test() {
+                              access(all) fun test() {
                                   %[3]s
                                   %[4]s.test = 3
                                   var temp = 4
@@ -1345,28 +1310,24 @@ func TestCheckAccessCompositeFieldVariableDeclarationWithSecondValue(t *testing.
 
 	checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 		sema.AccessCheckModeStrict: {
-			ast.AccessNotSpecified:   nil,
-			ast.AccessPrivate:        expectAccessErrors,
-			ast.AccessPublic:         expectInvalidAssignmentAccessError,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: nil,
+			ast.AccessSelf:         expectAccessErrors,
+			ast.AccessAll:          expectInvalidAssignmentAccessError,
 		},
 		sema.AccessCheckModeNotSpecifiedRestricted: {
-			ast.AccessNotSpecified:   expectAccessErrors,
-			ast.AccessPrivate:        expectAccessErrors,
-			ast.AccessPublic:         expectInvalidAssignmentAccessError,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectAccessErrors,
+			ast.AccessSelf:         expectAccessErrors,
+			ast.AccessAll:          expectInvalidAssignmentAccessError,
 		},
 		sema.AccessCheckModeNotSpecifiedUnrestricted: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectAccessErrors,
-			ast.AccessPublic:         expectInvalidAssignmentAccessError,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectAccessErrors,
+			ast.AccessAll:          expectInvalidAssignmentAccessError,
 		},
 		sema.AccessCheckModeNone: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectSuccess,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectSuccess,
+			ast.AccessAll:          expectSuccess,
 		},
 	}
 
@@ -1392,26 +1353,22 @@ func TestCheckAccessCompositeFieldVariableDeclarationWithSecondValue(t *testing.
 				_, err := ParseAndCheckWithOptions(t,
 					fmt.Sprintf(
 						`
-                          pub resource A {}
+                          access(all) resource A {}
 
-                          pub resource B {
+                          access(all) resource B {
                               %[1]s var a: @A
 
                               init() {
                                   self.a <- create A()
                               }
 
-                              destroy() {
-                                  destroy self.a
-                              }
-
-                              pub fun test() {
+                              access(all) fun test() {
                                   let oldA <- self.a <- create A()
                                   destroy oldA
                               }
                           }
 
-                          pub fun test() {
+                          access(all) fun test() {
                               let b <- create B()
                               let oldA <- b.a <- create A()
                               destroy oldA
@@ -1447,10 +1404,9 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
 
 	checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 		sema.AccessCheckModeStrict: {
-			ast.AccessNotSpecified:   nil,
-			ast.AccessPrivate:        expectPrivateAccessErrors,
-			ast.AccessPublic:         expectInvalidAssignmentAccessError,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: nil,
+			ast.AccessSelf:         expectPrivateAccessErrors,
+			ast.AccessAll:          expectInvalidAssignmentAccessError,
 		},
 		sema.AccessCheckModeNotSpecifiedRestricted: {
 			ast.AccessNotSpecified: func(t *testing.T, err error) {
@@ -1460,21 +1416,18 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
 				assert.IsType(t, &sema.InvalidAccessError{}, errs[1])
 				assert.IsType(t, &sema.InvalidAssignmentAccessError{}, errs[2])
 			},
-			ast.AccessPrivate:        expectPrivateAccessErrors,
-			ast.AccessPublic:         expectInvalidAssignmentAccessError,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessSelf: expectPrivateAccessErrors,
+			ast.AccessAll:  expectInvalidAssignmentAccessError,
 		},
 		sema.AccessCheckModeNotSpecifiedUnrestricted: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectPrivateAccessErrors,
-			ast.AccessPublic:         expectInvalidAssignmentAccessError,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectPrivateAccessErrors,
+			ast.AccessAll:          expectInvalidAssignmentAccessError,
 		},
 		sema.AccessCheckModeNone: {
-			ast.AccessNotSpecified:   expectSuccess,
-			ast.AccessPrivate:        expectInvalidAccessModifierError,
-			ast.AccessPublic:         expectSuccess,
-			ast.AccessPublicSettable: expectSuccess,
+			ast.AccessNotSpecified: expectSuccess,
+			ast.AccessSelf:         expectInvalidAccessModifierError,
+			ast.AccessAll:          expectSuccess,
 		},
 	}
 
@@ -1500,31 +1453,27 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
 				_, err := ParseAndCheckWithOptions(t,
 					fmt.Sprintf(
 						`
-                          pub resource A {}
+                          access(all) resource A {}
 
-                          pub resource interface B {
+                          access(all) resource interface B {
                               %[1]s var a: @A
                           }
 
-                          pub resource BImpl: B {
+                          access(all) resource BImpl: B {
                               %[1]s var a: @A
 
                               init() {
                                   self.a <- create A()
                               }
 
-                              destroy() {
-                                  destroy self.a
-                              }
-
-                              pub fun test() {
+                              access(all) fun test() {
                                   let oldA <- self.a <- create A()
                                   destroy oldA
                               }
                           }
 
-                          pub fun test() {
-                              let b: @AnyResource{B} <- create BImpl()
+                          access(all) fun test() {
+                              let b: @{B} <- create BImpl()
                               let oldA <- b.a <- create A()
                               destroy oldA
                               destroy b
@@ -1600,14 +1549,14 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
 
 			lastAccessModifier := ""
 			if checkMode == sema.AccessCheckModeStrict {
-				lastAccessModifier = "priv"
+				lastAccessModifier = "access(self)"
 			}
 
 			tests := []string{
 				fmt.Sprintf(
 					`
-                      priv fun a() {}
-                      pub fun b() {}
+                      access(self) fun a() {}
+                      access(all) fun b() {}
                       %s fun c() {}
                     `,
 					lastAccessModifier,
@@ -1619,8 +1568,8 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
 				tests = append(tests,
 					fmt.Sprintf(
 						`
-                           priv %[1]s a = 1
-                           pub %[1]s b = 2
+                           access(self) %[1]s a = 1
+                           access(all) %[1]s b = 2
                            %[2]s %[1]s c = 3
                         `,
 						variableKind.Keyword(),
@@ -1810,14 +1759,14 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 
 			lastAccessModifier := ""
 			if checkMode == sema.AccessCheckModeStrict {
-				lastAccessModifier = "priv"
+				lastAccessModifier = "access(self)"
 			}
 
 			imported, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                       priv var a = 1
-                       pub var b = 2
+                       access(self) var a = 1
+                       access(all) var b = 2
                        %s var c = 3
                     `,
 					lastAccessModifier,
@@ -1829,7 +1778,7 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 				`
                   import a, b, c from "imported"
 
-                  pub fun test() {
+                  access(all) fun test() {
                       a = 4
                       b = 5
                       c = 6
@@ -1866,22 +1815,23 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 	t.Parallel()
 
 	imported, err := ParseAndCheck(t, `
-       pub resource R {}
+       access(all) resource R {}
 
-       pub fun createR(): @R {
+       access(all) fun createR(): @R {
            return <-create R()
        }
 
-       priv var x <- createR()
-       pub var y <- createR()
+       access(self) var x <- createR()
+       access(all) var y <- createR()
     `)
 	require.NoError(t, err)
 
+	// these capture x and y because they are created in a different file
 	_, err = ParseAndCheckWithOptions(t,
 		`
            import x, y, createR from "imported"
 
-           pub fun test() {
+           access(all) fun test() {
                let oldX <- x <- createR()
                destroy oldX
 
@@ -1900,7 +1850,9 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 		},
 	)
 
-	errs := RequireCheckerErrors(t, err, 5)
+	errs := RequireCheckerErrors(t, err, 9)
+
+	// For `x`
 
 	require.IsType(t, &sema.InvalidAccessError{}, errs[0])
 	assert.Equal(t,
@@ -1910,19 +1862,29 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 
 	require.IsType(t, &sema.ResourceCapturingError{}, errs[1])
 
-	require.IsType(t, &sema.AssignmentToConstantError{}, errs[2])
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[2])
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[3])
 	assert.Equal(t,
 		"x",
-		errs[2].(*sema.AssignmentToConstantError).Name,
+		errs[3].(*sema.AssignmentToConstantError).Name,
 	)
 
-	require.IsType(t, &sema.ResourceCapturingError{}, errs[3])
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[4])
 
-	require.IsType(t, &sema.AssignmentToConstantError{}, errs[4])
+	// For `y`
+
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[5])
+
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[6])
+
+	require.IsType(t, &sema.AssignmentToConstantError{}, errs[7])
 	assert.Equal(t,
 		"y",
-		errs[4].(*sema.AssignmentToConstantError).Name,
+		errs[7].(*sema.AssignmentToConstantError).Name,
 	)
+
+	require.IsType(t, &sema.ResourceCapturingError{}, errs[8])
 }
 
 func TestCheckContractNestedDeclarationPrivateAccess(t *testing.T) {
@@ -1931,7 +1893,7 @@ func TestCheckContractNestedDeclarationPrivateAccess(t *testing.T) {
 
 	const contract = `
 	  contract Outer {
-		  priv let num: Int
+		  access(self) let num: Int
 
 		  init(num: Int) {
 			  self.num = num
@@ -1965,10 +1927,10 @@ func TestCheckAccessSameContractInnerStructField(t *testing.T) {
 	t.Parallel()
 
 	tests := map[ast.Access]bool{
-		ast.AccessPrivate:  false,
+		ast.AccessSelf:     false,
 		ast.AccessContract: true,
 		ast.AccessAccount:  true,
-		ast.AccessPublic:   true,
+		ast.AccessAll:      true,
 	}
 
 	for access, expectSuccess := range tests {
@@ -2012,10 +1974,10 @@ func TestCheckAccessSameContractInnerStructInterfaceField(t *testing.T) {
 	t.Parallel()
 
 	tests := map[ast.Access]bool{
-		ast.AccessPrivate:  false,
+		ast.AccessSelf:     false,
 		ast.AccessContract: true,
 		ast.AccessAccount:  true,
-		ast.AccessPublic:   true,
+		ast.AccessAll:      true,
 	}
 
 	for access, expectSuccess := range tests {
@@ -2038,7 +2000,7 @@ func TestCheckAccessSameContractInnerStructInterfaceField(t *testing.T) {
                           }
 
                           fun useB() {
-                              let b: AnyStruct{B} = A.BImpl()
+                              let b: {B} = A.BImpl()
                               b.field
                           }
                       }
@@ -2064,10 +2026,10 @@ func TestCheckAccessOtherContractInnerStructField(t *testing.T) {
 	t.Parallel()
 
 	tests := map[ast.Access]bool{
-		ast.AccessPrivate:  false,
+		ast.AccessSelf:     false,
 		ast.AccessContract: false,
 		ast.AccessAccount:  true,
-		ast.AccessPublic:   true,
+		ast.AccessAll:      true,
 	}
 
 	for access, expectSuccess := range tests {
@@ -2113,7 +2075,7 @@ func TestCheckAccessOtherContractInnerStructInterfaceField(t *testing.T) {
 	t.Parallel()
 
 	tests := map[ast.Access][]error{
-		ast.AccessPrivate: {
+		ast.AccessSelf: {
 			&sema.InvalidAccessModifierError{},
 			&sema.InvalidAccessError{},
 		},
@@ -2121,7 +2083,7 @@ func TestCheckAccessOtherContractInnerStructInterfaceField(t *testing.T) {
 			&sema.InvalidAccessError{},
 		},
 		ast.AccessAccount: nil,
-		ast.AccessPublic:  nil,
+		ast.AccessAll:     nil,
 	}
 
 	for access, expectedErrorTypes := range tests {
@@ -2146,7 +2108,7 @@ func TestCheckAccessOtherContractInnerStructInterfaceField(t *testing.T) {
 
                       contract C {
                           fun useB() {
-                              let b: AnyStruct{A.B} = A.BImpl()
+                              let b: {A.B} = A.BImpl()
                               b.field
                           }
                       }
@@ -2170,55 +2132,23 @@ func TestCheckRestrictiveAccessModifier(t *testing.T) {
 
 	for _, access := range ast.AllAccesses {
 
-		if access <= ast.AccessPrivate {
+		if access <= ast.AccessSelf {
 			continue
 		}
 
 		t.Run(access.Keyword(), func(t *testing.T) {
-
-			t.Run("type requirement", func(t *testing.T) {
-
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-                          pub contract interface CI {
-
-                              pub resource R {
-
-                                  %[1]s var x: Int
-                              }
-                          }
-
-                          pub contract C: CI {
-
-                              pub resource R {
-
-                                  %[1]s var x: Int
-
-                                  init () {
-                                      self.x = 0
-                                  }
-                              }
-                          }
-                        `,
-						access.Keyword(),
-					),
-				)
-
-				require.NoError(t, err)
-			})
 
 			t.Run("interface", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          pub resource interface RI {
+                          access(all) resource interface RI {
 
                               %[1]s var x: Int
                           }
 
-                          pub resource R: RI {
+                          access(all) resource R: RI {
 
                               %[1]s var x: Int
 
@@ -2245,39 +2175,19 @@ func TestCheckInvalidRestrictiveAccessModifier(t *testing.T) {
 	for _, access := range ast.AllAccesses {
 
 		if access == ast.AccessNotSpecified ||
-			access > ast.AccessPrivate {
+			access > ast.AccessSelf {
 
 			continue
 		}
 
 		t.Run(access.Keyword(), func(t *testing.T) {
 
-			t.Run("type requirement", func(t *testing.T) {
-
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-                          pub contract interface CI {
-
-                              pub resource R {
-
-                                  %[1]s var x: Int
-                              }
-                          }
-                        `,
-						access.Keyword(),
-					),
-				)
-
-				expectInvalidAccessModifierError(t, err)
-			})
-
 			t.Run("interface", func(t *testing.T) {
 
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                          pub resource interface RI {
+                          access(all) resource interface RI {
 
                               %[1]s var x: Int
                           }
@@ -2316,8 +2226,8 @@ func TestCheckAccountAccess(t *testing.T) {
 	const importingCode = `
       import A from 0x1
 
-      pub contract B {
-          pub fun use() {
+      access(all) contract B {
+          access(all) fun use() {
               let b = A.a
           }
       }
@@ -2356,7 +2266,7 @@ func TestCheckAccountAccess(t *testing.T) {
 			importedChecker, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(
 					`
-                      pub contract A {
+                      access(all) contract A {
                           access(account) %s a: Int
 
                           init() {

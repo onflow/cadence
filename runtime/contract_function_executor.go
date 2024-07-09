@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,25 +29,20 @@ import (
 )
 
 type interpreterContractFunctionExecutor struct {
-	runtime *interpreterRuntime
-
+	context          Context
+	environment      Environment
+	result           cadence.Value
+	executeErr       error
+	preprocessErr    error
+	codesAndPrograms CodesAndPrograms
+	runtime          *interpreterRuntime
+	storage          *Storage
 	contractLocation common.AddressLocation
 	functionName     string
 	arguments        []cadence.Value
 	argumentTypes    []sema.Type
-	context          Context
-
-	// prepare
+	executeOnce      sync.Once
 	preprocessOnce   sync.Once
-	preprocessErr    error
-	codesAndPrograms codesAndPrograms
-	storage          *Storage
-	environment      Environment
-
-	// execute
-	executeOnce sync.Once
-	executeErr  error
-	result      cadence.Value
 }
 
 func newInterpreterContractFunctionExecutor(
@@ -95,7 +90,7 @@ func (executor *interpreterContractFunctionExecutor) preprocess() (err error) {
 	context := executor.context
 	location := context.Location
 
-	codesAndPrograms := newCodesAndPrograms()
+	codesAndPrograms := NewCodesAndPrograms()
 	executor.codesAndPrograms = codesAndPrograms
 
 	interpreterRuntime := executor.runtime
@@ -163,15 +158,17 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 
 	interpreterArguments := make([]interpreter.Value, len(executor.arguments))
 
+	locationRange := interpreter.LocationRange{
+		Location:    location,
+		HasPosition: ast.EmptyRange,
+	}
+
 	for i, argumentType := range executor.argumentTypes {
 		interpreterArguments[i], err = executor.convertArgument(
 			inter,
 			executor.arguments[i],
 			argumentType,
-			interpreter.LocationRange{
-				Location:    location,
-				HasPosition: ast.EmptyRange,
-			},
+			locationRange,
 		)
 		if err != nil {
 			return nil, newError(err, location, codesAndPrograms)
@@ -183,10 +180,14 @@ func (executor *interpreterContractFunctionExecutor) execute() (val cadence.Valu
 		return nil, newError(err, location, codesAndPrograms)
 	}
 
+	var self interpreter.Value = contractValue
+
 	// prepare invocation
 	invocation := interpreter.NewInvocation(
 		inter,
-		contractValue,
+		&self,
+		nil,
+		nil,
 		interpreterArguments,
 		executor.argumentTypes,
 		nil,
@@ -238,25 +239,40 @@ func (executor *interpreterContractFunctionExecutor) convertArgument(
 ) (interpreter.Value, error) {
 	environment := executor.environment
 
-	switch argumentType {
-	case sema.AuthAccountType:
-		// convert addresses to auth accounts so there is no need to construct an auth account value for the caller
-		if addressValue, ok := argument.(cadence.Address); ok {
-			address := interpreter.NewAddressValue(inter, common.Address(addressValue))
-			return environment.NewAuthAccountValue(address), nil
-		}
+	// Convert `Address` arguments to account reference values (`&Account`)
+	// if it is the expected argument type,
+	// so there is no need for the caller to construct the value
 
-	case sema.PublicAccountType:
-		// convert addresses to public accounts so there is no need to construct a public account value for the caller
-		if addressValue, ok := argument.(cadence.Address); ok {
+	if addressValue, ok := argument.(cadence.Address); ok {
+
+		if referenceType, ok := argumentType.(*sema.ReferenceType); ok &&
+			referenceType.Type == sema.AccountType {
+
 			address := interpreter.NewAddressValue(inter, common.Address(addressValue))
-			return environment.NewPublicAccountValue(address), nil
+
+			accountValue := environment.NewAccountValue(inter, address)
+
+			authorization := interpreter.ConvertSemaAccessToStaticAuthorization(
+				inter,
+				referenceType.Authorization,
+			)
+
+			accountReferenceValue := interpreter.NewEphemeralReferenceValue(
+				inter,
+				authorization,
+				accountValue,
+				sema.AccountType,
+				locationRange,
+			)
+
+			return accountReferenceValue, nil
 		}
 	}
 
 	return ImportValue(
 		inter,
 		locationRange,
+		environment,
 		argument,
 		argumentType,
 	)

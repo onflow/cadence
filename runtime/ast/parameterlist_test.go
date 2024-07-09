@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,8 @@ import (
 )
 
 func TestParameterList_ParametersByIdentifier(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("result", func(t *testing.T) {
 		l := &ParameterList{

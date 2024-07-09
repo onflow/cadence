@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,9 +30,18 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var InvalidLiteralError = parser.NewUnpositionedSyntaxError("invalid literal")
-var UnsupportedLiteralError = parser.NewUnpositionedSyntaxError("unsupported literal")
-var LiteralExpressionTypeError = parser.NewUnpositionedSyntaxError("input is not a literal")
+var InvalidLiteralError = parser.NewSyntaxError(
+	ast.Position{Line: 1},
+	"invalid literal",
+)
+var UnsupportedLiteralError = parser.NewSyntaxError(
+	ast.Position{Line: 1},
+	"unsupported literal",
+)
+var LiteralExpressionTypeError = parser.NewSyntaxError(
+	ast.Position{Line: 1},
+	"input is not a literal",
+)
 
 // ParseLiteral parses a single literal string, that should have the given type.
 //
@@ -48,7 +57,7 @@ func ParseLiteral(
 ) {
 	code := []byte(literal)
 
-	expression, errs := parser.ParseExpression(code, inter)
+	expression, errs := parser.ParseExpression(inter, code, parser.Config{})
 	if len(errs) > 0 {
 		return nil, parser.Error{
 			Code:   code,
@@ -73,7 +82,7 @@ func ParseLiteralArgumentList(
 	error,
 ) {
 	code := []byte(argumentList)
-	arguments, errs := parser.ParseArgumentList(code, inter)
+	arguments, errs := parser.ParseArgumentList(inter, code, parser.Config{})
 	if len(errs) > 0 {
 		return nil, parser.Error{
 			Errors: errs,
@@ -84,7 +93,8 @@ func ParseLiteralArgumentList(
 	parameterCount := len(parameterTypes)
 
 	if argumentCount != parameterCount {
-		return nil, parser.NewUnpositionedSyntaxError(
+		return nil, parser.NewSyntaxError(
+			ast.Position{Line: 1},
 			"invalid number of arguments: got %d, expected %d",
 			argumentCount,
 			parameterCount,
@@ -97,7 +107,8 @@ func ParseLiteralArgumentList(
 		parameterType := parameterTypes[i]
 		value, err := LiteralValue(inter, argument.Expression, parameterType)
 		if err != nil {
-			return nil, parser.NewUnpositionedSyntaxError(
+			return nil, parser.NewSyntaxError(
+				argument.Expression.StartPosition(),
 				"invalid argument at index %d: %v", i, err,
 			)
 		}
@@ -107,7 +118,8 @@ func ParseLiteralArgumentList(
 	return result, nil
 }
 
-func arrayLiteralValue(inter *interpreter.Interpreter, elements []ast.Expression, elementType sema.Type) (cadence.Value, error) {
+func arrayLiteralValue(inter *interpreter.Interpreter, elements []ast.Expression, elementType sema.Type) (cadence.Array, error) {
+
 	return cadence.NewMeteredArray(
 		inter,
 		len(elements),
@@ -124,30 +136,39 @@ func arrayLiteralValue(inter *interpreter.Interpreter, elements []ast.Expression
 
 			return values, nil
 		})
+
 }
 
-func pathLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression, ty sema.Type) (result cadence.Value, errResult error) {
+func pathLiteralValue(
+	memoryGauge common.MemoryGauge,
+	expression ast.Expression,
+	ty sema.Type,
+) (
+	cadence.Value,
+	error,
+) {
 	pathExpression, ok := expression.(*ast.PathExpression)
 	if !ok {
 		return nil, LiteralExpressionTypeError
 	}
 
+	pathDomain := pathExpression.Domain.Identifier
+	pathIdentifier := pathExpression.Identifier.Identifier
+
 	pathType, err := sema.CheckPathLiteral(
-		pathExpression.Domain.Identifier,
-		pathExpression.Identifier.Identifier,
-		func() ast.Range {
-			return ast.NewRangeFromPositioned(memoryGauge, pathExpression.Domain)
-		},
-		func() ast.Range {
-			return ast.NewRangeFromPositioned(memoryGauge, pathExpression.Identifier)
-		},
+		memoryGauge,
+		pathDomain,
+		pathIdentifier,
+		pathExpression.Domain,
+		pathExpression.Identifier,
 	)
 	if err != nil {
 		return nil, InvalidLiteralError
 	}
 
 	if !sema.IsSubType(pathType, ty) {
-		return nil, parser.NewUnpositionedSyntaxError(
+		return nil, parser.NewSyntaxError(
+			ast.Position{Line: 1},
 			"path literal type %s is not subtype of requested path type %s",
 			pathType, ty,
 		)
@@ -155,9 +176,9 @@ func pathLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expression,
 
 	return cadence.NewMeteredPath(
 		memoryGauge,
-		pathExpression.Domain.Identifier,
-		pathExpression.Identifier.Identifier,
-	), nil
+		common.PathDomainFromIdentifier(pathDomain),
+		pathIdentifier,
+	)
 }
 
 func integerLiteralValue(
@@ -210,41 +231,45 @@ func convertIntValue(
 	case sema.IntType, sema.IntegerType, sema.SignedIntegerType:
 		return intValue, nil
 	case sema.Int8Type:
-		return interpreter.ConvertInt8(memoryGauge, intValue), nil
+		return interpreter.ConvertInt8(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Int16Type:
-		return interpreter.ConvertInt16(memoryGauge, intValue), nil
+		return interpreter.ConvertInt16(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Int32Type:
-		return interpreter.ConvertInt32(memoryGauge, intValue), nil
+		return interpreter.ConvertInt32(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Int64Type:
-		return interpreter.ConvertInt64(memoryGauge, intValue), nil
+		return interpreter.ConvertInt64(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Int128Type:
-		return interpreter.ConvertInt128(memoryGauge, intValue), nil
+		return interpreter.ConvertInt128(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Int256Type:
-		return interpreter.ConvertInt256(memoryGauge, intValue), nil
+		return interpreter.ConvertInt256(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 
 	case sema.UIntType:
-		return interpreter.ConvertUInt(memoryGauge, intValue), nil
+		return interpreter.ConvertUInt(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.UInt8Type:
-		return interpreter.ConvertUInt8(memoryGauge, intValue), nil
+		return interpreter.ConvertUInt8(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.UInt16Type:
-		return interpreter.ConvertUInt16(memoryGauge, intValue), nil
+		return interpreter.ConvertUInt16(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.UInt32Type:
-		return interpreter.ConvertUInt32(memoryGauge, intValue), nil
+		return interpreter.ConvertUInt32(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.UInt64Type:
-		return interpreter.ConvertUInt64(memoryGauge, intValue), nil
+		return interpreter.ConvertUInt64(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.UInt128Type:
-		return interpreter.ConvertUInt128(memoryGauge, intValue), nil
-	case sema.UInt256Type:
-		return interpreter.ConvertUInt256(memoryGauge, intValue), nil
+		return interpreter.ConvertUInt128(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
+	case sema.UInt256Type, sema.FixedSizeUnsignedIntegerType:
+		return interpreter.ConvertUInt256(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 
 	case sema.Word8Type:
-		return interpreter.ConvertWord8(memoryGauge, intValue), nil
+		return interpreter.ConvertWord8(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Word16Type:
-		return interpreter.ConvertWord16(memoryGauge, intValue), nil
+		return interpreter.ConvertWord16(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Word32Type:
-		return interpreter.ConvertWord32(memoryGauge, intValue), nil
+		return interpreter.ConvertWord32(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 	case sema.Word64Type:
-		return interpreter.ConvertWord64(memoryGauge, intValue), nil
+		return interpreter.ConvertWord64(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
+	case sema.Word128Type:
+		return interpreter.ConvertWord128(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
+	case sema.Word256Type:
+		return interpreter.ConvertWord256(memoryGauge, intValue, interpreter.EmptyLocationRange), nil
 
 	default:
 		return nil, UnsupportedLiteralError
@@ -282,14 +307,21 @@ func fixedPointLiteralValue(memoryGauge common.MemoryGauge, expression ast.Expre
 }
 
 func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty sema.Type) (cadence.Value, error) {
+
 	switch ty := ty.(type) {
 	case *sema.VariableSizedType:
 		expression, ok := expression.(*ast.ArrayExpression)
 		if !ok {
 			return nil, LiteralExpressionTypeError
 		}
-
-		return arrayLiteralValue(inter, expression.Values, ty.Type)
+		array, err := arrayLiteralValue(inter, expression.Values, ty.Type)
+		exported := ExportType(ty, map[sema.TypeID]cadence.Type{})
+		arrayType, ok := exported.(cadence.ArrayType)
+		if !ok {
+			return nil, LiteralExpressionTypeError
+		}
+		arrayCadenceType := cadence.NewMeteredVariableSizedArrayType(inter, arrayType.Element())
+		return array.WithType(arrayCadenceType), err
 
 	case *sema.ConstantSizedType:
 		expression, ok := expression.(*ast.ArrayExpression)
@@ -297,11 +329,25 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 			return nil, LiteralExpressionTypeError
 		}
 
-		return arrayLiteralValue(inter, expression.Values, ty.Type)
+		array, err := arrayLiteralValue(inter, expression.Values, ty.Type)
+		exported := ExportType(ty, map[sema.TypeID]cadence.Type{})
+		arrayType := exported.(cadence.ArrayType)
+		if !ok {
+			return nil, LiteralExpressionTypeError
+		}
+		arrayCadenceType := cadence.NewMeteredConstantSizedArrayType(inter, uint(ty.Size), arrayType.Element())
+		return array.WithType(arrayCadenceType), err
 
 	case *sema.OptionalType:
 		if _, ok := expression.(*ast.NilExpression); ok {
-			return cadence.NewMeteredOptional(inter, nil), nil
+			value := cadence.NewMeteredOptional(inter, nil)
+			for {
+				ty, ok = ty.Type.(*sema.OptionalType)
+				if !ok {
+					return value, nil
+				}
+				value = cadence.NewMeteredOptional(inter, value)
+			}
 		}
 
 		converted, err := LiteralValue(inter, expression, ty.Type)
@@ -317,7 +363,12 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 			return nil, LiteralExpressionTypeError
 		}
 
-		return cadence.NewMeteredDictionary(
+		exported := ExportType(ty, map[sema.TypeID]cadence.Type{})
+		dictionaryType, ok := exported.(*cadence.DictionaryType)
+		if !ok {
+			return nil, LiteralExpressionTypeError
+		}
+		dictionaryValue, err := cadence.NewMeteredDictionary(
 			inter,
 			len(expression.Entries),
 			func() ([]cadence.KeyValuePair, error) {
@@ -340,6 +391,13 @@ func LiteralValue(inter *interpreter.Interpreter, expression ast.Expression, ty 
 				return pairs, nil
 			},
 		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		dictionaryCadenceType := cadence.NewMeteredDictionaryType(inter, dictionaryType.KeyType, dictionaryType.ElementType)
+		return dictionaryValue.WithType(dictionaryCadenceType), nil
 
 	case *sema.AddressType:
 		expression, ok := expression.(*ast.IntegerExpression)

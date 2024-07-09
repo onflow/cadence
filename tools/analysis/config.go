@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,24 +24,27 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // A Config specifies details about how programs should be loaded.
 // The zero value is a valid configuration.
 // Calls to Load do not modify this struct.
 type Config struct {
-	// Mode controls the level of information returned for each program.
-	Mode LoadMode
-
-	// ResolveAddressContractNames is called to resolve the contract names of an address location.
+	// ResolveAddressContractNames is called to resolve the contract names of an address location
 	ResolveAddressContractNames func(address common.Address) ([]string, error)
-
-	// ResolveCode is called to resolve an import to its source code.
+	// ResolveCode is called to resolve an import to its source code
 	ResolveCode func(
 		location common.Location,
 		importingLocation common.Location,
 		importRange ast.Range,
 	) ([]byte, error)
+	// Mode controls the level of information returned for each program
+	Mode LoadMode
+	// HandleParserError is called when a parser error occurs instead of returning it
+	HandleParserError func(err ParsingCheckingError, program *ast.Program) error
+	// HandleCheckerError is called when a checker error occurs instead of returning it
+	HandleCheckerError func(err ParsingCheckingError, checker *sema.Checker) error
 }
 
 func NewSimpleConfig(
@@ -62,7 +65,7 @@ func NewSimpleConfig(
 
 		names := make([]string, 0, len(contracts))
 
-		for name := range contracts { //nolint:maprangecheck
+		for name := range contracts { //nolint:maprange
 			names = append(names, name)
 		}
 

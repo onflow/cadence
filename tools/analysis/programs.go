@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,19 @@ import (
 
 type Programs map[common.Location]*Program
 
+type importResolutionResults map[common.Location]bool
+
 func (programs Programs) Load(config *Config, location common.Location) error {
-	return programs.load(config, location, nil, ast.Range{})
+	return programs.load(
+		config,
+		location,
+		nil,
+		ast.Range{},
+		importResolutionResults{
+			// Entry point program is also currently in check.
+			location: true,
+		},
+	)
 }
 
 func (programs Programs) load(
@@ -37,12 +48,13 @@ func (programs Programs) load(
 	location common.Location,
 	importingLocation common.Location,
 	importRange ast.Range,
+	seenImports importResolutionResults,
 ) error {
-
 	if programs[location] != nil {
 		return nil
 	}
 
+	var loadError error
 	wrapError := func(err error) ParsingCheckingError {
 		return ParsingCheckingError{
 			error:    err,
@@ -55,24 +67,49 @@ func (programs Programs) load(
 		return err
 	}
 
-	program, err := parser.ParseProgram(code, nil)
+	program, err := parser.ParseProgram(nil, code, parser.Config{})
 	if err != nil {
-		return wrapError(err)
+		wrappedErr := wrapError(err)
+		loadError = wrappedErr
+
+		// If a custom error handler is set, use it to potentially handle the error
+		if config.HandleParserError != nil {
+			err = config.HandleParserError(wrappedErr, program)
+			if err != nil {
+				return err
+			}
+		} else {
+			return wrappedErr
+		}
 	}
 
-	var elaboration *sema.Elaboration
+	var checker *sema.Checker
 	if config.Mode&NeedTypes != 0 {
-		elaboration, err = programs.check(config, program, location)
+		checker, err = programs.check(config, program, location, seenImports)
 		if err != nil {
-			return wrapError(err)
+			wrappedErr := wrapError(err)
+			if loadError == nil {
+				loadError = wrappedErr
+			}
+
+			// If a custom error handler is set, use it to potentially handle the error
+			if config.HandleCheckerError != nil {
+				err = config.HandleCheckerError(wrappedErr, checker)
+				if err != nil {
+					return err
+				}
+			} else {
+				return wrappedErr
+			}
 		}
 	}
 
 	programs[location] = &Program{
-		Location:    location,
-		Code:        code,
-		Program:     program,
-		Elaboration: elaboration,
+		Location:  location,
+		Code:      code,
+		Program:   program,
+		Checker:   checker,
+		LoadError: loadError,
 	}
 
 	return nil
@@ -82,8 +119,9 @@ func (programs Programs) check(
 	config *Config,
 	program *ast.Program,
 	location common.Location,
+	seenImports importResolutionResults,
 ) (
-	*sema.Elaboration,
+	*sema.Checker,
 	error,
 ) {
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
@@ -96,8 +134,10 @@ func (programs Programs) check(
 		location,
 		nil,
 		&sema.Config{
-			BaseValueActivation: baseValueActivation,
-			AccessCheckMode:     sema.AccessCheckModeStrict,
+			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+				return baseValueActivation
+			},
+			AccessCheckMode: sema.AccessCheckModeStrict,
 			LocationHandler: sema.AddressLocationHandlerFunc(
 				config.ResolveAddressContractNames,
 			),
@@ -110,17 +150,42 @@ func (programs Programs) check(
 			) (sema.Import, error) {
 
 				var elaboration *sema.Elaboration
+				var loadError error
+
 				switch importedLocation {
-				case stdlib.CryptoChecker.Location:
-					elaboration = stdlib.CryptoChecker.Elaboration
+				case stdlib.CryptoCheckerLocation:
+					cryptoChecker := stdlib.CryptoChecker()
+					elaboration = cryptoChecker.Elaboration
 
 				default:
-					err := programs.load(config, importedLocation, location, importRange)
+					if seenImports[importedLocation] {
+						return nil, &sema.CyclicImportsError{
+							Location: importedLocation,
+							Range:    importRange,
+						}
+					}
+					seenImports[importedLocation] = true
+					defer delete(seenImports, importedLocation)
+
+					err := programs.load(config, importedLocation, location, importRange, seenImports)
 					if err != nil {
 						return nil, err
 					}
 
-					elaboration = programs[importedLocation].Elaboration
+					program := programs[importedLocation]
+					checker := program.Checker
+
+					// If the imported program has a checker, use its elaboration for the import
+					if checker != nil {
+						elaboration = checker.Elaboration
+					}
+
+					// If the imported program had an error while loading, record it
+					loadError = program.LoadError
+				}
+
+				if loadError != nil {
+					return nil, loadError
 				}
 
 				return sema.ElaborationImport{
@@ -135,8 +200,8 @@ func (programs Programs) check(
 
 	err = checker.Check()
 	if err != nil {
-		return nil, err
+		return checker, err
 	}
 
-	return checker.Elaboration, nil
+	return checker, nil
 }

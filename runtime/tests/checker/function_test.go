@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -132,21 +135,10 @@ func TestCheckFunctionAccess(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-       pub fun test() {}
+       access(all) fun test() {}
     `)
 
 	require.NoError(t, err)
-}
-
-func TestCheckInvalidFunctionAccess(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-       pub(set) fun test() {}
-    `)
-
-	expectInvalidAccessModifierError(t, err)
 }
 
 func TestCheckReturnWithoutExpression(t *testing.T) {
@@ -180,7 +172,7 @@ func TestCheckFunctionReturnFunction(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-      fun foo(): ((Int): Void) {
+      fun foo(): fun(Int): Void {
           return bar
       }
 
@@ -293,7 +285,7 @@ func TestCheckInvalidResourceCapturingThroughVariable(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       resource Kitty {}
 
-      fun makeKittyCloner(): ((): @Kitty) {
+      fun makeKittyCloner(): fun(): @Kitty {
           let kitty <- create Kitty()
           return fun (): @Kitty {
               return <-kitty
@@ -315,7 +307,7 @@ func TestCheckInvalidResourceCapturingThroughParameter(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       resource Kitty {}
 
-      fun makeKittyCloner(kitty: @Kitty): ((): @Kitty) {
+      fun makeKittyCloner(kitty: @Kitty): fun(): @Kitty {
           return fun (): @Kitty {
               return <-kitty
           }
@@ -335,7 +327,7 @@ func TestCheckInvalidSelfResourceCapturing(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       resource Kitty {
-          fun makeCloner(): ((): @Kitty) {
+          fun makeCloner(): fun(): @Kitty {
               return fun (): @Kitty {
                   return <-self
               }
@@ -367,7 +359,7 @@ func TestCheckInvalidResourceCapturingJustMemberAccess(t *testing.T) {
           }
       }
 
-      fun makeKittyIdGetter(): ((): Int) {
+      fun makeKittyIdGetter(): fun(): Int {
           let kitty <- create Kitty(id: 1)
           let getId = fun (): Int {
               return kitty.id
@@ -379,10 +371,9 @@ func TestCheckInvalidResourceCapturingJustMemberAccess(t *testing.T) {
       let test = makeKittyIdGetter()
     `)
 
-	errs := RequireCheckerErrors(t, err, 2)
+	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
-	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
 
 func TestCheckInvalidFunctionWithResult(t *testing.T) {
@@ -414,4 +405,196 @@ func TestCheckFunctionNonExistingField(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+}
+
+func TestCheckStaticFunctionDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithOptions(t,
+		`
+          static fun test() {}
+        `,
+		ParseAndCheckOptions{
+			ParseOptions: parser.Config{
+				StaticModifierEnabled: true,
+			},
+		},
+	)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidStaticModifierError{}, errs[0])
+}
+
+func TestCheckNativeFunctionDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+              native fun test(): Int {}
+            `,
+			ParseAndCheckOptions{
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+				},
+				Config: &sema.Config{
+					AllowNativeDeclarations: false,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNativeModifierError{}, errs[0])
+	})
+
+	t.Run("enabled, valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+              native fun test(): Int {}
+            `,
+			ParseAndCheckOptions{
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+				},
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("enabled, invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+              native fun test(): Int {
+                  return 1
+              }
+            `,
+			ParseAndCheckOptions{
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+				},
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+			},
+		)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NativeFunctionWithImplementationError{}, errs[0])
+	})
+
+	t.Run("enabled, composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		checker, err := ParseAndCheckWithOptions(t,
+			`
+              struct S {
+                  native fun test(foo: String): Int {}
+              }
+            `,
+			ParseAndCheckOptions{
+				ParseOptions: parser.Config{
+					NativeModifierEnabled: true,
+				},
+				Config: &sema.Config{
+					AllowNativeDeclarations: true,
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		sType := RequireGlobalType(t, checker.Elaboration, "S")
+		require.NotNil(t, sType)
+
+		const testFunctionIdentifier = "test"
+		testMemberResolver, ok := sType.GetMembers()[testFunctionIdentifier]
+		require.True(t, ok)
+
+		assert.Equal(t,
+			common.DeclarationKindFunction,
+			testMemberResolver.Kind,
+		)
+
+		member := testMemberResolver.Resolve(nil, testFunctionIdentifier, ast.EmptyRange, nil)
+
+		assert.Equal(t,
+			sema.NewTypeAnnotation(&sema.FunctionType{
+				Parameters: []sema.Parameter{
+					{
+						Identifier:     "foo",
+						TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+					},
+				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+			}),
+			member.TypeAnnotation,
+		)
+	})
+}
+
+func TestCheckResultVariable(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) let id: UInt64
+                init() {
+                    self.id = 1
+                }
+            }
+
+            access(all) fun main(): @R  {
+                post {
+                    result.id == 1234: "Invalid id"
+                }
+                return <- create R()
+            }`,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("optional resource", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) resource R {
+                access(all) let id: UInt64
+                init() {
+                    self.id = 1
+                }
+            }
+
+            access(all) fun main(): @R?  {
+                post {
+                    result!.id == 1234: "invalid id"
+                }
+                return nil
+            }`,
+		)
+
+		require.NoError(t, err)
+	})
 }

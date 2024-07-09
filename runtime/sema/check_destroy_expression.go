@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@ import (
 func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression) (resultType Type) {
 	resultType = VoidType
 
-	valueType := checker.VisitExpression(expression.Expression, nil)
+	valueType := checker.VisitExpression(expression.Expression, expression, nil)
 
+	checker.ObserveImpureOperation(expression)
 	checker.recordResourceInvalidation(
 		expression.Expression,
 		valueType,

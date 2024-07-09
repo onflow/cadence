@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,246 +24,27 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestCheckInvalidEventTypeRequirementConformance(t *testing.T) {
+func TestCheckEventNonTypeRequirementConformance(t *testing.T) {
 
 	t.Parallel()
-
 	_, err := ParseAndCheck(t, `
-      pub contract interface CI {
+      access(all) contract interface CI {
 
-          pub event E(a: Int)
+          access(all) event E(a: Int)
       }
 
-      pub contract C: CI {
+      access(all) contract C: CI {
 
-          pub event E(b: String)
+          access(all) event E(b: String)
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
-
-	require.IsType(t, &sema.ConformanceError{}, errs[0])
-}
-
-func TestCheckTypeRequirementConformance(t *testing.T) {
-
-	t.Parallel()
-
-	test := func(preparationCode string, interfaceCode string, conformanceCode string, valid bool) {
-		_, err := ParseAndCheck(t,
-			fmt.Sprintf(
-				`
-                  %s
-
-                  pub contract interface CI {
-                      %s
-                  }
-
-                  pub contract C: CI {
-                      %s
-                  }
-                `,
-				preparationCode,
-				interfaceCode,
-				conformanceCode,
-			),
-		)
-
-		if valid {
-			require.NoError(t, err)
-		} else {
-			errs := RequireCheckerErrors(t, err, 1)
-
-			require.IsType(t, &sema.ConformanceError{}, errs[0])
-		}
-	}
-
-	t.Run("Both empty", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(
-			``,
-			`pub struct S {}`,
-			`pub struct S {}`,
-			true,
-		)
-	})
-
-	t.Run("Conformance with additional function", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(
-			``,
-			`
-              pub struct S {}
-            `,
-			`
-              pub struct S {
-                  fun foo() {}
-              }
-            `,
-			true,
-		)
-	})
-
-	t.Run("Conformance with missing function", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(
-			``,
-			`
-              pub struct S {
-                  fun foo()
-              }
-            `,
-			`
-              pub struct S {}
-            `,
-			false,
-		)
-	})
-
-	t.Run("Conformance with same name, same parameter type, but different argument label", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(
-			``,
-			`
-              pub struct S {
-                  fun foo(x: Int)
-              }
-            `,
-			`
-              pub struct S {
-                  fun foo(y: Int) {}
-              }
-            `,
-			false,
-		)
-	})
-
-	t.Run("Conformance with same name, same argument label, but different parameter type", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(
-			``,
-			`
-              pub struct S {
-                  fun foo(x: Int)
-              }
-            `,
-			`
-              pub struct S {
-                  fun foo(x: String) {}
-              }
-            `,
-			false,
-		)
-	})
-
-	t.Run("Conformance with same name, same argument label, same parameter type, different parameter name", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(
-			``,
-			`
-              pub struct S {
-                  fun foo(x y: String)
-              }
-            `,
-			`
-              pub struct S {
-                  fun foo(x z: String) {}
-              }
-            `,
-			true,
-		)
-	})
-
-	t.Run("Conformance with more specific parameter type", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(
-			`
-                pub struct interface I {}
-                pub struct T: I {}
-            `,
-			`
-              pub struct S {
-                  fun foo(bar: {I})
-              }
-            `,
-			`
-              pub struct S {
-                  fun foo(bar: T) {}
-              }
-            `,
-			false,
-		)
-	})
-
-	t.Run("Conformance with same nested parameter type", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(
-			`
-                pub contract X {
-                    struct Bar {}
-                }
-            `,
-			`
-              pub struct S {
-                  fun foo(bar: X.Bar)
-              }
-            `,
-			`
-              pub struct S {
-                  fun foo(bar: X.Bar) {}
-              }
-            `,
-			true,
-		)
-	})
-
-	t.Run("Conformance with different nested parameter type", func(t *testing.T) {
-
-		t.Parallel()
-
-		test(
-			`
-              pub contract X {
-                  struct Bar {}
-              }
-
-              pub contract Y {
-                  struct Bar {}
-              }
-            `,
-			`
-              pub struct S {
-                  fun foo(bar: X.Bar)
-              }
-            `,
-			`
-              pub struct S {
-                  fun foo(bar: Y.Bar) {}
-              }
-            `,
-			false,
-		)
-
-	})
+	require.NoError(t, err)
 }
 
 func TestCheckConformanceWithFunctionSubtype(t *testing.T) {
@@ -415,85 +196,218 @@ func TestCheckConformanceWithFunctionSubtype(t *testing.T) {
 	})
 }
 
-func TestCheckTypeRequirementDuplicateDeclaration(t *testing.T) {
+func TestCheckInitializerConformanceErrorMessages(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-	  contract interface CI {
-          // Checking if CI_TR1 conforms to CI here,
-          // requires checking the type requirement CI_TR2 of CI.
-          //
-          // Note that CI_TR1 here declares 2 (!)
-          // nested composite declarations named CI_TR2.
-          //
-          // Checking should not just use the first declaration named CI_TR2,
-          // but detect the second / duplicate, error,
-          // and stop further conformance checking
-          //
-	      contract CI_TR1: CI {
-	          contract CI_TR2 {}
-	          contract CI_TR2: CI {
-	              contract CI_TR2_TR {}
-	          }
-	      }
+	t.Run("initializer notes", func(t *testing.T) {
 
-	      contract CI_TR2: CI {
-	          contract CI_TR2_TR {}
-	      }
-	  }
-	`)
+		t.Parallel()
 
-	errs := RequireCheckerErrors(t, err, 13)
-
-	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
-	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[1])
-	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[2])
-	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[3])
-	require.IsType(t, &sema.RedeclarationError{}, errs[4])
-	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[5])
-	require.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[6])
-	require.IsType(t, &sema.RedeclarationError{}, errs[7])
-	require.IsType(t, &sema.RedeclarationError{}, errs[8])
-	require.IsType(t, &sema.RedeclarationError{}, errs[9])
-	require.IsType(t, &sema.ConformanceError{}, errs[10])
-	require.IsType(t, &sema.ConformanceError{}, errs[11])
-	require.IsType(t, &sema.ConformanceError{}, errs[12])
-}
-
-func TestCheckMultipleTypeRequirements(t *testing.T) {
-
-	t.Parallel()
-
-	_, err := ParseAndCheck(t, `
-      contract interface IA {
-
-          struct X {
-              let a: Int
-          }
+		_, err := ParseAndCheck(t, `
+      access(all) resource interface I {
+          let x: Int 
+          init(x: Int)
       }
 
-      contract interface IB {
-
-          struct X {
-              let b: Int
-          }
-      }
-
-      contract Test: IA, IB {
-
-          struct X {
-              let a: Int
-              // missing b
-
-              init() {
-                  self.a = 0
-              }
-          }
+      access(all) resource R: I {
+        let x: Int 
+        init() {
+            self.x = 1
+        }
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 1)
 
-	require.IsType(t, &sema.ConformanceError{}, errs[0])
+		var conformanceErr *sema.ConformanceError
+		require.ErrorAs(t, errs[0], &conformanceErr)
+
+		require.NotNil(t, conformanceErr.InitializerMismatch)
+		notes := conformanceErr.ErrorNotes()
+		require.Len(t, notes, 1)
+
+		require.Equal(t, &sema.MemberMismatchNote{
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 158, Line: 9, Column: 8},
+				EndPos:   ast.Position{Offset: 161, Line: 9, Column: 11},
+			},
+		}, notes[0])
+	})
+
+	t.Run("1 missing member", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          access(all) resource interface I {
+              fun foo(): Int
+          }
+
+          access(all) resource R: I {
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var conformanceErr *sema.ConformanceError
+		require.ErrorAs(t, errs[0], &conformanceErr)
+
+		require.Equal(t,
+			"`R` is missing definitions for members: `foo`",
+			conformanceErr.SecondaryError(),
+		)
+	})
+
+	t.Run("2 missing member", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          access(all) resource interface I {
+              fun foo(): Int
+              fun bar(): Int
+          }
+
+          access(all) resource R: I {
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		var conformanceErr *sema.ConformanceError
+		require.ErrorAs(t, errs[0], &conformanceErr)
+
+		require.Equal(t,
+			"`R` is missing definitions for members: `foo`, `bar`",
+			conformanceErr.SecondaryError(),
+		)
+	})
+}
+
+func TestCheckConformanceAccessModifierMatches(t *testing.T) {
+	t.Parallel()
+
+	e1 := &sema.EntitlementType{
+		Identifier: "E1",
+	}
+	e2 := &sema.EntitlementType{
+		Identifier: "E2",
+	}
+
+	accessModifiers := []sema.Access{
+		sema.PrimitiveAccess(ast.AccessSelf),
+		sema.PrimitiveAccess(ast.AccessAccount),
+		sema.PrimitiveAccess(ast.AccessContract),
+		sema.NewEntitlementSetAccess(
+			[]*sema.EntitlementType{e1, e2},
+			sema.Conjunction,
+		),
+		sema.NewEntitlementSetAccess(
+			[]*sema.EntitlementType{e1, e2},
+			sema.Disjunction,
+		),
+		sema.NewEntitlementSetAccess(
+			[]*sema.EntitlementType{e1},
+			sema.Conjunction,
+		),
+		sema.PrimitiveAccess(ast.AccessAll),
+	}
+
+	asASTAccess := func(access sema.Access) ast.Access {
+		switch access := access.(type) {
+		case sema.PrimitiveAccess:
+			return ast.PrimitiveAccess(access)
+
+		case sema.EntitlementSetAccess:
+
+			entitlementTypes := make([]*ast.NominalType, 0, access.Entitlements.Len())
+
+			access.Entitlements.Foreach(func(entitlementType *sema.EntitlementType, _ struct{}) {
+				entitlementTypes = append(
+					entitlementTypes,
+					&ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: entitlementType.QualifiedIdentifier(),
+						},
+					},
+				)
+			})
+
+			var entitlementSet ast.EntitlementSet
+			switch access.SetKind {
+			case sema.Conjunction:
+				entitlementSet = ast.NewConjunctiveEntitlementSet(entitlementTypes)
+
+			case sema.Disjunction:
+				entitlementSet = ast.NewDisjunctiveEntitlementSet(entitlementTypes)
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+
+			return ast.EntitlementAccess{
+				EntitlementSet: entitlementSet,
+			}
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	}
+
+	test := func(t *testing.T, interfaceAccess, implementationAccess sema.Access) {
+		name := fmt.Sprintf("%s %s", interfaceAccess, implementationAccess)
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      entitlement E1
+                      entitlement E2
+
+                      struct interface SI {
+                          %s fun foo()
+                      }
+
+                      struct S: SI {
+                          %s fun foo() {}
+                      }
+                    `,
+					asASTAccess(interfaceAccess).Keyword(),
+					asASTAccess(implementationAccess).Keyword(),
+				),
+			)
+
+			if interfaceAccess == sema.PrimitiveAccess(ast.AccessSelf) {
+				if implementationAccess == sema.PrimitiveAccess(ast.AccessSelf) {
+					errs := RequireCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+				} else {
+					errs := RequireCheckerErrors(t, err, 2)
+
+					require.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+					require.IsType(t, &sema.ConformanceError{}, errs[1])
+				}
+			} else if !implementationAccess.Equal(interfaceAccess) {
+				errs := RequireCheckerErrors(t, err, 1)
+
+				var conformanceErr *sema.ConformanceError
+				require.ErrorAs(t, errs[0], &conformanceErr)
+
+				require.Len(t, conformanceErr.MemberMismatches, 1)
+
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+
+	for _, access1 := range accessModifiers {
+		for _, access2 := range accessModifiers {
+			test(t, access1, access2)
+		}
+	}
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,42 +18,43 @@
 
 package stdlib
 
-var BuiltinValues = []StandardLibraryValue{
-	AssertFunction,
-	PanicFunction,
-	SignatureAlgorithmConstructor,
-	RLPContract,
-	// TODO: refactor. should be function accepting handler,
-	//   instead of relying on callback on interpreter (PublicKeyValidationHandler, SignatureVerificationHandler)
-	PublicKeyConstructor,
-	// TODO: refactor. should be function accepting handler,
-	//   instead of relying on callback on interpreter (HashHandler)
-	HashAlgorithmConstructor,
-	// TODO: refactor. should be function accepting handler,
-	//   instead of relying on callback on interpreter
-	//   (BLSVerifyPoPHandler, BLSAggregateSignaturesHandler, BLSAggregatePublicKeysHandler)
-	BLSContract,
-}
+import (
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+)
 
 type StandardLibraryHandler interface {
 	Logger
-	UnsafeRandomGenerator
+	RandomGenerator
 	BlockAtHeightProvider
 	CurrentBlockProvider
-	PublicAccountHandler
 	AccountCreator
+	PublicKeyValidator
+	PublicKeySignatureVerifier
+	BLSPoPVerifier
+	BLSPublicKeyAggregator
+	BLSSignatureAggregator
+	Hasher
 }
 
 func DefaultStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
-	return append(
-		BuiltinValues[:],
+	return []StandardLibraryValue{
+		AssertFunction,
+		PanicFunction,
+		SignatureAlgorithmConstructor,
+		RLPContract,
+		InclusiveRangeConstructorFunction,
 		NewLogFunction(handler),
-		NewUnsafeRandomFunction(handler),
+		NewRevertibleRandomFunction(handler),
 		NewGetBlockFunction(handler),
 		NewGetCurrentBlockFunction(handler),
 		NewGetAccountFunction(handler),
-		NewAuthAccountConstructor(handler),
-	)
+		NewAccountConstructor(handler),
+		NewPublicKeyConstructor(handler),
+		NewBLSContract(nil, handler),
+		NewHashAlgorithmConstructor(handler),
+	}
 }
 
 func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []StandardLibraryValue {
@@ -61,4 +62,26 @@ func DefaultScriptStandardLibraryValues(handler StandardLibraryHandler) []Standa
 		DefaultStandardLibraryValues(handler),
 		NewGetAuthAccountFunction(handler),
 	)
+}
+
+type CompositeValueFunctionsHandler func(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	compositeValue *interpreter.CompositeValue,
+) *interpreter.FunctionOrderedMap
+
+type CompositeValueFunctionsHandlers map[common.TypeID]CompositeValueFunctionsHandler
+
+func DefaultStandardLibraryCompositeValueFunctionHandlers(
+	handler StandardLibraryHandler,
+) CompositeValueFunctionsHandlers {
+	return CompositeValueFunctionsHandlers{
+		sema.PublicKeyType.ID(): func(
+			inter *interpreter.Interpreter,
+			_ interpreter.LocationRange,
+			publicKeyValue *interpreter.CompositeValue,
+		) *interpreter.FunctionOrderedMap {
+			return PublicKeyFunctions(inter, publicKeyValue, handler)
+		},
+	}
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -45,49 +46,45 @@ func TestInterpretOptionalType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.OptionalStaticType{
+			Type: &interpreter.OptionalStaticType{
 				Type: interpreter.PrimitiveStaticTypeString,
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.OptionalStaticType{
+			Type: &interpreter.OptionalStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.OptionalStaticType{
-				Type: interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "R",
-					TypeID:              "S.test.R",
-				},
+			Type: &interpreter.OptionalStaticType{
+				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.OptionalStaticType{
-				Type: interpreter.OptionalStaticType{
+			Type: &interpreter.OptionalStaticType{
+				Type: &interpreter.OptionalStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 			},
 		},
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("e").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 }
 
@@ -108,48 +105,44 @@ func TestInterpretVariableSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.VariableSizedStaticType{
+			Type: &interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeString,
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.VariableSizedStaticType{
+			Type: &interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.VariableSizedStaticType{
-				Type: interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "R",
-					TypeID:              "S.test.R",
-				},
+			Type: &interpreter.VariableSizedStaticType{
+				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.VariableSizedStaticType{
-				Type: interpreter.VariableSizedStaticType{
+			Type: &interpreter.VariableSizedStaticType{
+				Type: &interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 				},
 			},
 		},
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("e").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 }
 
@@ -170,54 +163,50 @@ func TestInterpretConstantSizedArrayType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ConstantSizedStaticType{
+			Type: &interpreter.ConstantSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeString,
 				Size: int64(10),
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ConstantSizedStaticType{
+			Type: &interpreter.ConstantSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 				Size: int64(5),
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ConstantSizedStaticType{
-				Type: interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "R",
-					TypeID:              "S.test.R",
-				},
+			Type: &interpreter.ConstantSizedStaticType{
+				Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				Size: int64(400),
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ConstantSizedStaticType{
-				Type: interpreter.ConstantSizedStaticType{
+			Type: &interpreter.ConstantSizedStaticType{
+				Type: &interpreter.ConstantSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeString,
 					Size: int64(10),
 				},
 				Size: int64(6),
 			},
 		},
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("e").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 }
 
@@ -240,59 +229,55 @@ func TestInterpretDictionaryType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.DictionaryStaticType{
+			Type: &interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.DictionaryStaticType{
+			Type: &interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeInt,
 				ValueType: interpreter.PrimitiveStaticTypeString,
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.DictionaryStaticType{
-				ValueType: interpreter.CompositeStaticType{
-					Location:            utils.TestLocation,
-					QualifiedIdentifier: "R",
-					TypeID:              "S.test.R",
-				},
-				KeyType: interpreter.PrimitiveStaticTypeInt,
+			Type: &interpreter.DictionaryStaticType{
+				ValueType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
+				KeyType:   interpreter.PrimitiveStaticTypeInt,
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.DictionaryStaticType{
-				ValueType: interpreter.DictionaryStaticType{
+			Type: &interpreter.DictionaryStaticType{
+				ValueType: &interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
 				},
 				KeyType: interpreter.PrimitiveStaticTypeBool,
 			},
 		},
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("e").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("f").GetValue(),
+		inter.Globals.Get("f").GetValue(inter),
 	)
 }
 
@@ -320,118 +305,52 @@ func TestInterpretCompositeType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "R",
-				Location:            utils.TestLocation,
-				TypeID:              "S.test.R",
-			},
+			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "S",
-				Location:            utils.TestLocation,
-				TypeID:              "S.test.S",
-			},
+			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("e").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.TypeValue{
-			Type: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "F",
-				Location:            utils.TestLocation,
-				TypeID:              "S.test.F",
-			},
-		},
-		inter.Globals.Get("f").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "PublicKey",
-				Location:            nil,
-				TypeID:              "PublicKey",
-			},
+			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "F"),
 		},
-		inter.Globals.Get("g").GetValue(),
+		inter.Globals.Get("f").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CompositeStaticType{
-				QualifiedIdentifier: "HashAlgorithm",
-				Location:            nil,
-				TypeID:              "HashAlgorithm",
-			},
+			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "PublicKey"),
 		},
-		inter.Globals.Get("h").GetValue(),
-	)
-}
-
-func TestInterpretInterfaceType(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      resource interface R {}
-      struct interface S {}
-      struct B {}
-
-      let a = InterfaceType("S.test.R")!
-      let b = InterfaceType("S.test.S")!
-      let c = InterfaceType("S.test.A")
-      let d = InterfaceType("S.test.B")
-    `)
-
-	assert.Equal(t,
-		interpreter.TypeValue{
-			Type: interpreter.InterfaceStaticType{
-				QualifiedIdentifier: "R",
-				Location:            utils.TestLocation,
-			},
-		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("g").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.InterfaceStaticType{
-				QualifiedIdentifier: "S",
-				Location:            utils.TestLocation,
-			},
+			Type: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "HashAlgorithm"),
 		},
-		inter.Globals.Get("b").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("h").GetValue(inter),
 	)
 }
 
@@ -444,51 +363,54 @@ func TestInterpretFunctionType(t *testing.T) {
       let b = FunctionType(parameters: [Type<String>(), Type<Int>()], return: Type<Bool>())
       let c = FunctionType(parameters: [], return: Type<String>())
 
-      let d = Type<((String): Int)>();
+      let d = Type<fun(String): Int>();
     `)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
-					Parameters:           []*sema.Parameter{{TypeAnnotation: &sema.TypeAnnotation{Type: sema.StringType}}},
-					ReturnTypeAnnotation: &sema.TypeAnnotation{Type: sema.IntType},
-				},
-			},
-		},
-		inter.Globals.Get("a").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.TypeValue{
-			Type: interpreter.FunctionStaticType{
-				Type: &sema.FunctionType{
-					Parameters: []*sema.Parameter{
-						{TypeAnnotation: &sema.TypeAnnotation{Type: sema.StringType}},
-						{TypeAnnotation: &sema.TypeAnnotation{Type: sema.IntType}},
+					Parameters: []sema.Parameter{
+						{
+							TypeAnnotation: sema.StringTypeAnnotation,
+						},
 					},
-					ReturnTypeAnnotation: &sema.TypeAnnotation{Type: sema.BoolType},
+					ReturnTypeAnnotation: sema.IntTypeAnnotation,
 				},
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
 			Type: interpreter.FunctionStaticType{
 				Type: &sema.FunctionType{
-					Parameters:           []*sema.Parameter{},
-					ReturnTypeAnnotation: &sema.TypeAnnotation{Type: sema.StringType},
+					Parameters: []sema.Parameter{
+						{TypeAnnotation: sema.StringTypeAnnotation},
+						{TypeAnnotation: sema.IntTypeAnnotation},
+					},
+					ReturnTypeAnnotation: sema.BoolTypeAnnotation,
 				},
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("d").GetValue(),
+		interpreter.TypeValue{
+			Type: interpreter.FunctionStaticType{
+				Type: &sema.FunctionType{
+					ReturnTypeAnnotation: sema.StringTypeAnnotation,
+				},
+			},
+		},
+		inter.Globals.Get("c").GetValue(inter),
+	)
+
+	assert.Equal(t,
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 }
 
@@ -499,58 +421,67 @@ func TestInterpretReferenceType(t *testing.T) {
 	inter := parseCheckAndInterpret(t, `
       resource R {}
       struct S {}
+	  entitlement X
 
-      let a = ReferenceType(authorized: true, type: Type<@R>())
-      let b = ReferenceType(authorized: false, type: Type<String>())
-      let c = ReferenceType(authorized: true, type: Type<S>()) 
-      let d = Type<auth &R>()
+      let a = ReferenceType(entitlements: ["S.test.X"], type: Type<@R>())!
+      let b = ReferenceType(entitlements: [], type: Type<String>())!
+      let c = ReferenceType(entitlements: ["S.test.X"], type: Type<S>())!
+      let d = Type<auth(X) &R>()
+	  let e = ReferenceType(entitlements: ["S.test.Y"], type: Type<S>())
     `)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ReferenceStaticType{
-				BorrowedType: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "R",
-					Location:            utils.TestLocation,
-					TypeID:              "S.test.R",
-				},
-				Authorized: true,
+			Type: &interpreter.ReferenceStaticType{
+				ReferencedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
+				Authorization: interpreter.NewEntitlementSetAuthorization(
+					nil,
+					func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+					1,
+					sema.Conjunction,
+				),
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ReferenceStaticType{
-				BorrowedType: interpreter.PrimitiveStaticTypeString,
-				Authorized:   false,
+			Type: &interpreter.ReferenceStaticType{
+				ReferencedType: interpreter.PrimitiveStaticTypeString,
+				Authorization:  interpreter.UnauthorizedAccess,
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.ReferenceStaticType{
-				BorrowedType: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "S",
-					Location:            utils.TestLocation,
-					TypeID:              "S.test.S",
-				},
-				Authorized: true,
+			Type: &interpreter.ReferenceStaticType{
+				ReferencedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
+				Authorization: interpreter.NewEntitlementSetAuthorization(
+					nil,
+					func() []common.TypeID { return []common.TypeID{"S.test.X"} },
+					1,
+					sema.Conjunction,
+				),
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("d").GetValue(inter),
+	)
+
+	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("e").GetValue(inter),
 	)
 }
 
-func TestInterpretRestrictedType(t *testing.T) {
+func TestInterpretIntersectionType(t *testing.T) {
 
 	t.Parallel()
 
@@ -561,127 +492,80 @@ func TestInterpretRestrictedType(t *testing.T) {
       struct B : S {}
 
       struct interface S2 {
-        pub let foo : Int
+        access(all) let foo : Int
       }
 
-      let a = RestrictedType(identifier: "S.test.A", restrictions: ["S.test.R"])!
-      let b = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.S"])!
+      let a = IntersectionType(types: ["S.test.R"])!
+      let b = IntersectionType(types: ["S.test.S"])!
 
-      let c = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.R"])
-      let d = RestrictedType(identifier: "S.test.A", restrictions: ["S.test.S"])
-      let e = RestrictedType(identifier: "S.test.B", restrictions: ["S.test.S2"])
+	  let c = IntersectionType(types: [])
 
-      let f = RestrictedType(identifier: "S.test.B", restrictions: ["X"])
-      let g = RestrictedType(identifier: "S.test.N", restrictions: ["S.test.S2"])
+      let f = IntersectionType(types: ["X"])
 
-      let h = Type<@A{R}>()
-      let i = Type<B{S}>()
+      let h = Type<@{R}>()
+      let i = Type<{S}>()
 
-      let j = RestrictedType(identifier: nil, restrictions: ["S.test.R"])!
-      let k = RestrictedType(identifier: nil, restrictions: ["S.test.S"])!
+      let j = IntersectionType(types: ["S.test.R", "S.test.S" ])
+      let k = IntersectionType(types: ["S.test.S", "S.test.S2"])!
     `)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "A",
-					Location:            utils.TestLocation,
-					TypeID:              "S.test.A",
-				},
-				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "R",
-						Location:            utils.TestLocation,
-					},
+			Type: &interpreter.IntersectionStaticType{
+				Types: []*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
 				},
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+	)
+
+	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.CompositeStaticType{
-					QualifiedIdentifier: "B",
-					Location:            utils.TestLocation,
-					TypeID:              "S.test.B",
-				},
-				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "S",
-						Location:            utils.TestLocation,
-					},
+			Type: &interpreter.IntersectionStaticType{
+				Types: []*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
 				},
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
+	)
+
+	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("j").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyResource,
-				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "R",
-						Location:            utils.TestLocation,
-					},
+			Type: &interpreter.IntersectionStaticType{
+				Types: []*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S"),
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "S2"),
 				},
 			},
 		},
-		inter.Globals.Get("j").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.PrimitiveStaticTypeAnyStruct,
-				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						QualifiedIdentifier: "S",
-						Location:            utils.TestLocation,
-					},
-				},
-			},
-		},
-		inter.Globals.Get("k").GetValue(),
+		inter.Globals.Get("k").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("f").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("h").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("e").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("f").GetValue(),
-	)
-
-	assert.Equal(t,
-		interpreter.Nil,
-		inter.Globals.Get("g").GetValue(),
-	)
-
-	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("h").GetValue(),
-	)
-
-	assert.Equal(t,
-		inter.Globals.Get("b").GetValue(),
-		inter.Globals.Get("i").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
+		inter.Globals.Get("i").GetValue(inter),
 	)
 }
 
@@ -702,51 +586,92 @@ func TestInterpretCapabilityType(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CapabilityStaticType{
-				BorrowType: interpreter.ReferenceStaticType{
-					BorrowedType: interpreter.PrimitiveStaticTypeString,
-					Authorized:   false,
+			Type: &interpreter.CapabilityStaticType{
+				BorrowType: &interpreter.ReferenceStaticType{
+					ReferencedType: interpreter.PrimitiveStaticTypeString,
+					Authorization:  interpreter.UnauthorizedAccess,
 				},
 			},
 		},
-		inter.Globals.Get("a").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CapabilityStaticType{
-				BorrowType: interpreter.ReferenceStaticType{
-					BorrowedType: interpreter.PrimitiveStaticTypeInt,
-					Authorized:   false,
+			Type: &interpreter.CapabilityStaticType{
+				BorrowType: &interpreter.ReferenceStaticType{
+					ReferencedType: interpreter.PrimitiveStaticTypeInt,
+					Authorization:  interpreter.UnauthorizedAccess,
 				},
 			},
 		},
-		inter.Globals.Get("b").GetValue(),
+		inter.Globals.Get("b").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.TypeValue{
-			Type: interpreter.CapabilityStaticType{
-				BorrowType: interpreter.ReferenceStaticType{
-					BorrowedType: interpreter.CompositeStaticType{
-						QualifiedIdentifier: "R",
-						Location:            utils.TestLocation,
-						TypeID:              "S.test.R",
-					},
-					Authorized: false,
+			Type: &interpreter.CapabilityStaticType{
+				BorrowType: &interpreter.ReferenceStaticType{
+					ReferencedType: interpreter.NewCompositeStaticTypeComputeTypeID(nil, utils.TestLocation, "R"),
+					Authorization:  interpreter.UnauthorizedAccess,
 				},
 			},
 		},
-		inter.Globals.Get("c").GetValue(),
+		inter.Globals.Get("c").GetValue(inter),
 	)
 
 	assert.Equal(t,
 		interpreter.Nil,
-		inter.Globals.Get("d").GetValue(),
+		inter.Globals.Get("d").GetValue(inter),
 	)
 
 	assert.Equal(t,
-		inter.Globals.Get("a").GetValue(),
-		inter.Globals.Get("e").GetValue(),
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
+	)
+}
+
+func TestInterpretInclusiveRangeType(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		let a = InclusiveRangeType(Type<Int>())!
+		let b = InclusiveRangeType(Type<&Int>())
+
+		resource R {}
+		let c = InclusiveRangeType(Type<@R>())
+		let d = InclusiveRangeType(Type<String>())
+
+		let e = InclusiveRangeType(Type<Int>())!
+	`)
+
+	assert.Equal(t,
+		interpreter.TypeValue{
+			Type: interpreter.InclusiveRangeStaticType{
+				ElementType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		inter.Globals.Get("a").GetValue(inter),
+	)
+
+	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("b").GetValue(inter),
+	)
+
+	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("c").GetValue(inter),
+	)
+
+	assert.Equal(t,
+		interpreter.Nil,
+		inter.Globals.Get("d").GetValue(inter),
+	)
+
+	assert.Equal(t,
+		inter.Globals.Get("a").GetValue(inter),
+		inter.Globals.Get("e").GetValue(inter),
 	)
 }

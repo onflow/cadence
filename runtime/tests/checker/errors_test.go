@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -76,8 +77,8 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
 
 						_, err := ParseAndCheckWithOptions(t,
 							`
-                              pub let x = X
-                              pub let y = Y
+                              access(all) let x = X
+                              access(all) let y = Y
                             `,
 							ParseAndCheckOptions{
 								Location: utils.ImportedLocation,
@@ -105,5 +106,97 @@ func TestCheckErrorShortCircuiting(t *testing.T) {
 		errs = RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+}
+
+func TestCheckEntitlementsErrorMessage(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("reference subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+				access(all) entitlement E 
+				fun foo() {
+					let x = 1
+					let refX: auth(E) &Int = &x as auth(F) &Int
+				}
+            `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		var mismatchError *sema.TypeMismatchError
+
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.ErrorAs(t, errs[1], &mismatchError)
+		require.Equal(t, "expected `auth(E) &Int`, got `auth(F) &Int`", mismatchError.SecondaryError())
+	})
+
+	t.Run("invalid access", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+				access(all) entitlement E 
+				access(all) resource R {
+					access(E) fun foo() {}
+				}
+				fun foo() {
+					let r <- create R() 
+					let refR = &r as auth(F) &R
+					refR.foo()
+					destroy r
+				}
+            `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		var invalidAccess *sema.InvalidAccessError
+
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.ErrorAs(t, errs[1], &invalidAccess)
+		require.Equal(t,
+			"cannot access `foo`: function requires `E` authorization, but reference only has `F` authorization",
+			invalidAccess.Error(),
+		)
+	})
+
+	t.Run("interface as type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+				access(all) entitlement E 
+				access(all) resource interface I {
+					access(E) fun foo()
+				}
+				access(all) resource R: I  {
+					access(E) fun foo() {}
+				}
+				fun foo() {
+					let r <- create R() 
+					let refR = &r as auth(F) &I
+					destroy r
+				}
+            `,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		var invalidInterface *sema.InvalidInterfaceTypeError
+
+		require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		require.ErrorAs(t, errs[1], &invalidInterface)
+		require.Equal(t,
+			"got `auth(F) &I`; consider using `auth(F) &{I}`",
+			invalidInterface.SecondaryError(),
+		)
 	})
 }

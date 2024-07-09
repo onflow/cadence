@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,16 +64,33 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 		if !ok {
 			panic(errors.NewUnreachableError())
 		}
-		return newArrayValueFromConstructor(gauge, staticType, value.Count(), func() *atree.Array { return value }), nil
+		return newArrayValueFromAtreeArray(
+			gauge,
+			staticType,
+			ArrayElementSize(staticType),
+			value,
+		), nil
+
 	case *atree.OrderedMap:
 		typeInfo := value.Type()
-		switch typeInfo := typeInfo.(type) {
-		case DictionaryStaticType:
-			return newDictionaryValueFromConstructor(gauge, typeInfo, value.Count(), func() *atree.OrderedMap { return value }), nil
+		switch staticType := typeInfo.(type) {
+		case *DictionaryStaticType:
+			return newDictionaryValueFromAtreeMap(
+				gauge,
+				staticType,
+				DictionaryElementSize(staticType),
+				value,
+			), nil
+
 		case CompositeTypeInfo:
-			return newCompositeValueFromConstructor(gauge, value.Count(), typeInfo, func() *atree.OrderedMap { return value }), nil
+			return NewCompositeValueFromAtreeMap(
+				gauge,
+				staticType,
+				value,
+			), nil
+
 		default:
-			return nil, errors.NewUnexpectedError("invalid ordered map type info: %T", typeInfo)
+			return nil, errors.NewUnexpectedError("invalid ordered map type info: %T", staticType)
 		}
 
 	case Value:
@@ -85,8 +102,8 @@ func ConvertStoredValue(gauge common.MemoryGauge, value atree.Value) (Value, err
 }
 
 type StorageKey struct {
-	Address common.Address
 	Key     string
+	Address common.Address
 }
 
 func NewStorageKey(memoryGauge common.MemoryGauge, address common.Address, key string) StorageKey {

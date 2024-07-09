@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import (
 )
 
 type encodeDecodeTest struct {
-	value                Value
+	value                atree.Value
 	storable             atree.Storable
 	encoded              []byte
 	invalid              bool
@@ -47,7 +47,6 @@ type encodeDecodeTest struct {
 	deepEquality         bool
 	storage              Storage
 	slabStorageID        atree.StorageID
-	check                func(actual Value)
 	maxInlineElementSize uint64
 }
 
@@ -90,7 +89,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	}
 
 	decoder := CBORDecMode.NewByteStreamDecoder(encoded)
-	decoded, err := DecodeStorable(decoder, test.slabStorageID, nil)
+	decodedStorable, err := DecodeStorable(decoder, test.slabStorageID, nil)
 
 	if test.invalid {
 		require.Error(t, err)
@@ -103,8 +102,10 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 				Storage: test.storage,
 			},
 		)
+		require.NoError(t, err)
 
-		decodedValue := StoredValue(inter, decoded, test.storage)
+		decodedValue, err := decodedStorable.StoredValue(test.storage)
+		require.NoError(t, err)
 
 		expectedValue := test.value
 		if test.decodedValue != nil {
@@ -114,12 +115,13 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		if test.deepEquality {
 			assert.Equal(t, expectedValue, decodedValue)
 		} else {
-			require.NoError(t, err)
-			AssertValuesEqual(t, inter, expectedValue, decodedValue)
-		}
-
-		if test.check != nil {
-			test.check(decodedValue)
+			if expectedValue, ok := expectedValue.(Value); ok {
+				storedValue, err := ConvertStoredValue(nil, decodedValue)
+				require.NoError(t, err)
+				AssertValuesEqual(t, inter, expectedValue, storedValue)
+				return
+			}
+			assert.Equal(t, expectedValue, decodedValue)
 		}
 	}
 }
@@ -166,7 +168,7 @@ func TestEncodeDecodeBool(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: BoolValue(false),
+				value: FalseValue,
 				encoded: []byte{
 					// false
 					0xf4,
@@ -181,7 +183,7 @@ func TestEncodeDecodeBool(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: BoolValue(true),
+				value: TrueValue,
 				encoded: []byte{
 					// true
 					0xf5,
@@ -259,6 +261,132 @@ func TestEncodeDecodeString(t *testing.T) {
 	})
 }
 
+func TestEncodeDecodeStringAtreeValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		expected := StringAtreeValue("")
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					//  UTF-8 string, 0 bytes follow
+					0x60,
+				},
+			})
+	})
+
+	t.Run("non-empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		expected := StringAtreeValue("foo")
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// UTF-8 string, 3 bytes follow
+					0x63,
+					// f, o, o
+					0x66, 0x6f, 0x6f,
+				},
+			},
+		)
+	})
+
+	t.Run("larger than max inline size", func(t *testing.T) {
+
+		t.Parallel()
+
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		expected := StringAtreeValue(strings.Repeat("x", int(maxInlineElementSize+1)))
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
+}
+
+func TestEncodeDecodeUint64AtreeValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: Uint64AtreeValue(0),
+				encoded: []byte{
+					// integer 0
+					0x0,
+				},
+			},
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// negative integer 42
+					0x38,
+					0x29,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: Uint64AtreeValue(42),
+				encoded: []byte{
+					// positive integer 42
+					0x18,
+					0x2a,
+				},
+			},
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: Uint64AtreeValue(math.MaxUint64),
+				encoded: []byte{
+					// positive integer 0xffffffffffffffff
+					0x1b,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+			},
+		)
+	})
+}
+
 func TestEncodeDecodeArray(t *testing.T) {
 
 	t.Parallel()
@@ -272,16 +400,16 @@ func TestEncodeDecodeArray(t *testing.T) {
 		expected := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			ConstantSizedStaticType{
+			&ConstantSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 				Size: 0,
 			},
-			common.Address{},
+			common.ZeroAddress,
 		)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Config.Storage,
+				storage: inter.Storage(),
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -304,17 +432,17 @@ func TestEncodeDecodeArray(t *testing.T) {
 		expected := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: PrimitiveStaticTypeAnyStruct,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			expectedString,
-			BoolValue(true),
+			TrueValue,
 		)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Config.Storage,
+				storage: inter.Storage(),
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -350,7 +478,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Config.Storage,
+				storage: inter.Storage(),
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -373,7 +501,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		fields := []CompositeField{
 			{Name: "string", Value: stringValue},
-			{Name: "true", Value: BoolValue(true)},
+			{Name: "true", Value: TrueValue},
 		}
 
 		expected := NewCompositeValue(
@@ -388,7 +516,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				storage: inter.Config.Storage,
+				storage: inter.Storage(),
 				value:   expected,
 				encoded: []byte{
 					// tag
@@ -470,7 +598,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 					0xc3,
 					// byte string, length 1
 					0x41,
-					// `-42` in decimal is is `0x2a` in hex.
+					// `-42` in decimal is `0x2a` in hex.
 					// CBOR requires negative values to be encoded as `-1-n`, which is `-n - 1`,
 					// which is `0x2a - 0x01`, which equals to `0x29`.
 					0x29,
@@ -535,7 +663,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
-			expected = expected.Mul(inter, expected).(IntValue)
+			expected = expected.Mul(inter, expected, EmptyLocationRange).(IntValue)
 		}
 
 		testEncodeDecode(t,
@@ -1493,7 +1621,7 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
 		for len(expected.BigInt.Bytes()) < int(maxInlineElementSize+1) {
-			expected = expected.Mul(inter, expected).(UIntValue)
+			expected = expected.Mul(inter, expected, EmptyLocationRange).(UIntValue)
 		}
 
 		testEncodeDecode(t,
@@ -2366,6 +2494,254 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 	})
 }
 
+func TestEncodeDecodeWord128Value(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredWord128ValueFromUint64(0),
+				encoded: []byte{
+					0xd8, CBORTagWord128Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 0
+					0x40,
+				},
+			},
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredWord128ValueFromUint64(42),
+				encoded: []byte{
+					0xd8, CBORTagWord128Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 1
+					0x41,
+					0x2a,
+				},
+			},
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredWord128ValueFromBigInt(sema.Word128TypeMaxIntBig),
+				encoded: []byte{
+					0xd8, CBORTagWord128Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 16
+					0x50,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+			},
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, CBORTagWord128Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 1
+					0x41,
+					0x2a,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, CBORTagWord128Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 17
+					0x51,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("RFC", func(t *testing.T) {
+
+		t.Parallel()
+
+		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredWord128ValueFromBigInt(rfcValue),
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagWord128Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 9
+					0x49,
+					0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				},
+			},
+		)
+	})
+}
+
+func TestEncodeDecodeWord256Value(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("zero", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredWord256ValueFromUint64(0),
+				encoded: []byte{
+					0xd8, CBORTagWord256Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 0
+					0x40,
+				},
+			},
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredWord256ValueFromUint64(42),
+				encoded: []byte{
+					0xd8, CBORTagWord256Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 1
+					0x41,
+					0x2a,
+				},
+			},
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredWord256ValueFromBigInt(sema.Word256TypeMaxIntBig),
+				encoded: []byte{
+					0xd8, CBORTagWord256Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 32
+					0x58, 0x20,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+			},
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, CBORTagWord256Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 1
+					0x41,
+					0x2a,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, CBORTagWord256Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 65
+					0x58, 0x41,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("RFC", func(t *testing.T) {
+
+		t.Parallel()
+
+		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUnmeteredWord256ValueFromBigInt(rfcValue),
+				encoded: []byte{
+					// tag
+					0xd8, CBORTagWord256Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 9
+					0x49,
+					0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+				},
+			},
+		)
+	})
+}
+
 func TestEncodeDecodeSomeValue(t *testing.T) {
 
 	t.Parallel()
@@ -2416,7 +2792,7 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+				value: NewUnmeteredSomeValueNonCopying(TrueValue),
 				encoded: []byte{
 					// tag
 					0xd8, CBORTagSomeValue,
@@ -2885,14 +3261,9 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("private path, untyped capability, new format", func(t *testing.T) {
+	t.Run("untyped capability", func(t *testing.T) {
 
 		t.Parallel()
-
-		value := &CapabilityValue{
-			Address: NewUnmeteredAddressValueFromBytes([]byte{0x2}),
-			Path:    privatePathValue,
-		}
 
 		encoded := []byte{
 			// tag
@@ -2905,37 +3276,30 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			0x41,
 			// address
 			0x02,
-			// tag for address
-			0xd8, CBORTagPathValue,
-			// array, 2 items follow
-			0x82,
-			// positive integer 2
-			0x2,
-			// UTF-8 string, length 3
-			0x63,
-			// f, o, o
-			0x66, 0x6f, 0x6f,
+			// positive integer 4
+			0x4,
 			// nil
 			0xf6,
 		}
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
+				encoded:    encoded,
+				decodeOnly: true,
+				invalid:    true,
 			},
 		)
 	})
 
-	t.Run("private path, typed capability", func(t *testing.T) {
+	t.Run("typed capability", func(t *testing.T) {
 
 		t.Parallel()
 
-		value := &CapabilityValue{
-			Address:    NewUnmeteredAddressValueFromBytes([]byte{0x2}),
-			Path:       privatePathValue,
-			BorrowType: PrimitiveStaticTypeBool,
-		}
+		value := NewUnmeteredCapabilityValue(
+			4,
+			NewUnmeteredAddressValueFromBytes([]byte{0x2}),
+			PrimitiveStaticTypeBool,
+		)
 
 		encoded := []byte{
 			// tag
@@ -2948,17 +3312,9 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 			0x41,
 			// address
 			0x02,
-			// tag for address
-			0xd8, CBORTagPathValue,
-			// aray, 2 items follow
-			0x82,
-			// positive integer 2
-			0x2,
-			// UTF-8 string, length 3
-			0x63,
-			// f, o, o
-			0x66, 0x6f, 0x6f,
-			// tag
+			// positive integer 4
+			0x4,
+			// tag for borrow type
 			0xd8, CBORTagPrimitiveStaticType,
 			// bool
 			0x6,
@@ -2972,709 +3328,25 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 		)
 	})
 
-	t.Run("public path, untyped capability, new format", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := &CapabilityValue{
-			Address: NewUnmeteredAddressValueFromBytes([]byte{0x3}),
-			Path:    publicPathValue,
-		}
-
-		encoded := []byte{
-			// tag
-			0xd8, CBORTagCapabilityValue,
-			// array, 3 items follow
-			0x83,
-			// tag for address
-			0xd8, CBORTagAddressValue,
-			// byte sequence, length 1
-			0x41,
-			// address
-			0x03,
-			// tag for address
-			0xd8, CBORTagPathValue,
-			// array, 2 items follow
-			0x82,
-			// positive integer 3
-			0x3,
-			// UTF-8 string, length 3
-			0x63,
-			// b, a, r
-			0x62, 0x61, 0x72,
-			// nil
-			0xf6,
-		}
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-
-	})
-
-	t.Run("public path, typed capability", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := &CapabilityValue{
-			Address:    NewUnmeteredAddressValueFromBytes([]byte{0x3}),
-			Path:       publicPathValue,
-			BorrowType: PrimitiveStaticTypeBool,
-		}
-
-		encoded := []byte{
-			// tag
-			0xd8, CBORTagCapabilityValue,
-			// array, 3 items follow
-			0x83,
-			// tag for address
-			0xd8, CBORTagAddressValue,
-			// byte sequence, length 1
-			0x41,
-			// address
-			0x03,
-			// tag for address
-			0xd8, CBORTagPathValue,
-			// array, 2 items follow
-			0x82,
-			// positive integer 3
-			0x3,
-			// UTF-8 string, length 3
-			0x63,
-			// b, a, r
-			0x62, 0x61, 0x72,
-			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			// bool
-			0x6,
-		}
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	// For testing backward compatibility for native composite types
-	t.Run("public path, public account typed capability", func(t *testing.T) {
-
-		t.Parallel()
-
-		capabilityValue := &CapabilityValue{
-			Address:    NewUnmeteredAddressValueFromBytes([]byte{0x3}),
-			Path:       publicPathValue,
-			BorrowType: PrimitiveStaticTypePublicAccount,
-		}
-
-		encoded := []byte{
-			// tag
-			0xd8, CBORTagCapabilityValue,
-			// array, 3 items follow
-			0x83,
-			// tag for address
-			0xd8, CBORTagAddressValue,
-			// byte sequence, length 1
-			0x41,
-			// address
-			0x03,
-			// tag for address
-			0xd8, CBORTagPathValue,
-			// array, 2 items follow
-			0x82,
-			// positive integer 3
-			0x3,
-			// UTF-8 string, length 3
-			0x63,
-			// b, a, r
-			0x62, 0x61, 0x72,
-			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			// positive integer to follow
-			0x18,
-			// public account (tag)
-			0x5b,
-		}
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   capabilityValue,
-				encoded: encoded,
-			},
-		)
-	})
-
 	t.Run("larger than max inline size", func(t *testing.T) {
 
 		t.Parallel()
 
-		// Generate a path that has an encoding size just below the max inline element size.
-		// It will not get inlined, but the outer capability will
-
-		var path PathValue
+		// Generate an arbitrary, large static type
 		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		var borrowType StaticType = PrimitiveStaticTypeNever
+
 		for i := uint64(0); i < maxInlineElementSize; i++ {
-			identifier := strings.Repeat("x", int(maxInlineElementSize-i))
-
-			path = PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: identifier,
-			}
-
-			size, err := StorableSize(path)
-			require.NoError(t, err)
-
-			if uint64(size) == maxInlineElementSize-1 {
-				break
+			borrowType = &OptionalStaticType{
+				Type: borrowType,
 			}
 		}
 
-		expected := &CapabilityValue{
-			Path: path,
-		}
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:                expected,
-				maxInlineElementSize: maxInlineElementSize,
-				encoded: []byte{
-					// tag
-					0xd8, atree.CBORTagStorageID,
-
-					// storage ID
-					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-				},
-			},
+		expected := NewUnmeteredCapabilityValue(
+			4,
+			NewUnmeteredAddressValueFromBytes([]byte{0x3}),
+			borrowType,
 		)
-	})
-
-	t.Run("larger than max inline size due to path", func(t *testing.T) {
-
-		t.Parallel()
-
-		// Generate a path that has an encoding size just above the max inline element size
-
-		maxInlineElementSize := atree.MaxInlineArrayElementSize
-
-		var path PathValue
-		for i := uint64(0); i < maxInlineElementSize; i++ {
-			identifier := strings.Repeat("x", int(maxInlineElementSize-i))
-
-			path = PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: identifier,
-			}
-
-			size, err := StorableSize(path)
-			require.NoError(t, err)
-
-			if uint64(size) == maxInlineElementSize+1 {
-				break
-			}
-		}
-
-		expected := &CapabilityValue{
-			Path: path,
-		}
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:                expected,
-				maxInlineElementSize: maxInlineElementSize,
-				encoded: []byte{
-					0xd8, atree.CBORTagStorageID,
-					// storage ID
-					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-				},
-			},
-		)
-	})
-}
-
-func TestEncodeDecodeLinkValue(t *testing.T) {
-
-	t.Parallel()
-
-	expectedLinkEncodingPrefix := []byte{
-		// tag
-		0xd8, CBORTagLinkValue,
-		// array, 2 items follow
-		0x82,
-		0xd8, CBORTagPathValue,
-		// array, 2 items follow
-		0x82,
-		// positive integer 3
-		0x3,
-		// UTF-8 string, length 3
-		0x63,
-		// b, a, r
-		0x62, 0x61, 0x72,
-	}
-
-	t.Run("primitive, Bool", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := LinkValue{
-			TargetPath: publicPathValue,
-			Type:       ConvertSemaToPrimitiveStaticType(nil, sema.BoolType),
-		}
-
-		//nolint:gocritic
-		encoded := append(
-			expectedLinkEncodingPrefix[:],
-			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			0x6,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("optional, primitive, bool", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := LinkValue{
-			TargetPath: publicPathValue,
-			Type: OptionalStaticType{
-				Type: PrimitiveStaticTypeBool,
-			},
-		}
-
-		encodedType := []byte{
-			// tag
-			0xd8, CBORTagOptionalStaticType,
-			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			0x6,
-		}
-
-		//nolint:gocritic
-		encoded := append(
-			expectedLinkEncodingPrefix[:],
-			encodedType...,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("composite, struct, qualified identifier", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := LinkValue{
-			TargetPath: publicPathValue,
-			Type: NewCompositeStaticTypeComputeTypeID(
-				nil,
-				utils.TestLocation,
-				"SimpleStruct",
-			),
-		}
-
-		//nolint:gocritic
-		encoded := append(
-			expectedLinkEncodingPrefix[:],
-			// tag
-			0xd8, CBORTagCompositeStaticType,
-			// array, 2 items follow
-			0x82,
-			// tag
-			0xd8, CBORTagStringLocation,
-			// UTF-8 string, length 4
-			0x64,
-			// t, e, s, t
-			0x74, 0x65, 0x73, 0x74,
-			// UTF-8 string, length 12
-			0x6c,
-			// SimpleStruct
-			0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("interface, struct, qualified identifier", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := LinkValue{
-			TargetPath: publicPathValue,
-			Type: InterfaceStaticType{
-				Location:            utils.TestLocation,
-				QualifiedIdentifier: "SimpleInterface",
-			},
-		}
-
-		//nolint:gocritic
-		encoded := append(
-			expectedLinkEncodingPrefix[:],
-			// tag
-			0xd8, CBORTagInterfaceStaticType,
-			// array, 2 items follow
-			0x82,
-			// tag
-			0xd8, CBORTagStringLocation,
-			// UTF-8 string, length 4
-			0x64,
-			// t, e, s, t
-			0x74, 0x65, 0x73, 0x74,
-			// UTF-8 string, length 22
-			0x6F,
-			// SimpleInterface
-			0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("variable-sized, bool", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := LinkValue{
-			TargetPath: publicPathValue,
-			Type: VariableSizedStaticType{
-				Type: PrimitiveStaticTypeBool,
-			},
-		}
-
-		//nolint:gocritic
-		encoded := append(
-			expectedLinkEncodingPrefix[:],
-			// tag
-			0xd8, CBORTagVariableSizedStaticType,
-			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			0x6,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("constant-sized, bool", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := LinkValue{
-			TargetPath: publicPathValue,
-			Type: ConstantSizedStaticType{
-				Type: PrimitiveStaticTypeBool,
-				Size: 42,
-			},
-		}
-
-		//nolint:gocritic
-		encoded := append(
-			expectedLinkEncodingPrefix[:],
-			// tag
-			0xd8, CBORTagConstantSizedStaticType,
-			// array, 2 items follow
-			0x82,
-			// positive integer 42
-			0x18, 0x2A,
-			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			0x6,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("reference type, authorized, bool", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := LinkValue{
-			TargetPath: publicPathValue,
-			Type: ReferenceStaticType{
-				Authorized:   true,
-				BorrowedType: PrimitiveStaticTypeBool,
-			},
-		}
-
-		//nolint:gocritic
-		encoded := append(
-			expectedLinkEncodingPrefix[:],
-			// tag
-			0xd8, CBORTagReferenceStaticType,
-			// array, 2 items follow
-			0x82,
-			// true
-			0xf5,
-			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			0x6,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("reference type, unauthorized, bool", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := LinkValue{
-			TargetPath: publicPathValue,
-			Type: ReferenceStaticType{
-				Authorized:   false,
-				BorrowedType: PrimitiveStaticTypeBool,
-			},
-		}
-
-		//nolint:gocritic
-		encoded := append(
-			expectedLinkEncodingPrefix[:],
-			// tag
-			0xd8, CBORTagReferenceStaticType,
-			// array, 2 items follow
-			0x82,
-			// false
-			0xf4,
-			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			0x6,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("dictionary, bool, string", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := LinkValue{
-			TargetPath: publicPathValue,
-			Type: DictionaryStaticType{
-				KeyType:   PrimitiveStaticTypeBool,
-				ValueType: PrimitiveStaticTypeString,
-			},
-		}
-
-		//nolint:gocritic
-		encoded := append(
-			expectedLinkEncodingPrefix[:],
-			// tag
-			0xd8, CBORTagDictionaryStaticType,
-			// array, 2 items follow
-			0x82,
-			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			0x6,
-			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			0x8,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("restricted", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := LinkValue{
-			TargetPath: publicPathValue,
-			Type: &RestrictedStaticType{
-				Type: NewCompositeStaticTypeComputeTypeID(
-					nil,
-					utils.TestLocation,
-					"S",
-				),
-				Restrictions: []InterfaceStaticType{
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "I1",
-					},
-					{
-						Location:            utils.TestLocation,
-						QualifiedIdentifier: "I2",
-					},
-				},
-			},
-		}
-
-		//nolint:gocritic
-		encoded := append(
-			expectedLinkEncodingPrefix[:],
-			// tag
-			0xd8, CBORTagRestrictedStaticType,
-			// array, 2 items follow
-			0x82,
-			// tag
-			0xd8, CBORTagCompositeStaticType,
-			// array, 2 items follow
-			0x82,
-			// tag
-			0xd8, CBORTagStringLocation,
-			// UTF-8 string, length 4
-			0x64,
-			// t, e, s, t
-			0x74, 0x65, 0x73, 0x74,
-			// UTF-8 string, length 1
-			0x61,
-			// S
-			0x53,
-			// array, length 2
-			0x82,
-			// tag
-			0xd8, CBORTagInterfaceStaticType,
-			// array, 2 items follow
-			0x82,
-			// tag
-			0xd8, CBORTagStringLocation,
-			// UTF-8 string, length 4
-			0x64,
-			// t, e, s, t
-			0x74, 0x65, 0x73, 0x74,
-			// UTF-8 string, length 2
-			0x62,
-			// I1
-			0x49, 0x31,
-			// tag
-			0xd8, CBORTagInterfaceStaticType,
-			// array, 2 items follow
-			0x82,
-			// tag
-			0xd8, CBORTagStringLocation,
-			// UTF-8 string, length 4
-			0x64,
-			// t, e, s, t
-			0x74, 0x65, 0x73, 0x74,
-			// UTF-8 string, length 2
-			0x62,
-			// I2
-			0x49, 0x32,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("capability, none", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := LinkValue{
-			TargetPath: publicPathValue,
-			Type:       CapabilityStaticType{},
-		}
-
-		//nolint:gocritic
-		encoded := append(
-			expectedLinkEncodingPrefix[:],
-			// tag
-			0xd8, CBORTagCapabilityStaticType,
-			// null
-			0xf6,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("capability, primitive, bool", func(t *testing.T) {
-
-		t.Parallel()
-
-		value := LinkValue{
-			TargetPath: publicPathValue,
-			Type: CapabilityStaticType{
-				BorrowType: PrimitiveStaticTypeBool,
-			},
-		}
-
-		//nolint:gocritic
-		encoded := append(
-			expectedLinkEncodingPrefix[:],
-			// tag
-			0xd8, CBORTagCapabilityStaticType,
-			// tag
-			0xd8, CBORTagPrimitiveStaticType,
-			0x6,
-		)
-
-		testEncodeDecode(t,
-			encodeDecodeTest{
-				value:   value,
-				encoded: encoded,
-			},
-		)
-	})
-
-	t.Run("larger than max inline size", func(t *testing.T) {
-
-		t.Parallel()
-
-		maxInlineElementSize := atree.MaxInlineArrayElementSize
-		identifier := strings.Repeat("x", int(maxInlineElementSize+1))
-
-		path := PathValue{
-			Domain:     common.PathDomainStorage,
-			Identifier: identifier,
-		}
-
-		expected := LinkValue{
-			TargetPath: path,
-			Type:       PrimitiveStaticTypeNever,
-		}
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -3740,6 +3412,68 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 			0xd8, CBORTagPrimitiveStaticType,
 			// positive integer 36
 			0x18, 0x24,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("InclusiveRange, Int", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := TypeValue{
+			Type: InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeInt,
+			},
+		}
+
+		encoded := []byte{
+			// tag
+			0xd8, CBORTagTypeValue,
+			// array, 1 items follow
+			0x81,
+			// tag
+			0xd8, CBORTagInclusiveRangeStaticType,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			// positive integer 36
+			0x18, 0x24,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("InclusiveRange, UInt256", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := TypeValue{
+			Type: InclusiveRangeStaticType{
+				ElementType: PrimitiveStaticTypeUInt256,
+			},
+		}
+
+		encoded := []byte{
+			// tag
+			0xd8, CBORTagTypeValue,
+			// array, 1 items follow
+			0x81,
+			// tag
+			0xd8, CBORTagInclusiveRangeStaticType,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			// positive integer 50
+			0x18, 0x32,
 		}
 
 		testEncodeDecode(t,
@@ -3853,6 +3587,677 @@ func TestCBORTagValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("No new types added in between", func(t *testing.T) {
-		require.Equal(t, byte(222), byte(CBORTag_Count))
+		require.Equal(t, byte(231), byte(CBORTag_Count))
+	})
+}
+
+func TestEncodeDecodeStorageCapabilityControllerValue(t *testing.T) {
+
+	t.Parallel()
+
+	assemble := func(bytes ...byte) []byte {
+		result := []byte{
+			// tag
+			0xd8, CBORTagStorageCapabilityControllerValue,
+			// array, 3 items follow
+			0x83,
+		}
+		result = append(result, bytes...)
+		result = append(result,
+			// positive integer 42
+			0x18, 0x2A,
+			0xd8, CBORTagPathValue,
+			// array, 2 items follow
+			0x82,
+			// positive integer 3
+			0x3,
+			// UTF-8 string, length 3
+			0x63,
+			// b, a, r
+			0x62, 0x61, 0x72,
+		)
+		return result
+	}
+
+	const capabilityID = 42
+
+	t.Run("non-reference, primitive, Bool", func(t *testing.T) {
+
+		t.Parallel()
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			0x6,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				decodeOnly: true,
+				invalid:    true,
+				encoded:    encoded,
+			},
+		)
+	})
+
+	t.Run("unauthorized reference, primitive, Bool", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &StorageCapabilityControllerValue{
+			TargetPath: publicPathValue,
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: PrimitiveStaticTypeBool,
+				Authorization:  UnauthorizedAccess,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			0x6,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("unauthorized reference, optional, primitive, Bool", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &StorageCapabilityControllerValue{
+			TargetPath: publicPathValue,
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: &OptionalStaticType{
+					Type: PrimitiveStaticTypeBool,
+				},
+				Authorization: UnauthorizedAccess,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			// tag
+			0xd8, CBORTagOptionalStaticType,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			0x6,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("unauthorized reference, composite, struct, qualified identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &StorageCapabilityControllerValue{
+			TargetPath: publicPathValue,
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: NewCompositeStaticTypeComputeTypeID(
+					nil,
+					utils.TestLocation,
+					"SimpleStruct",
+				),
+				Authorization: UnauthorizedAccess,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			// tag
+			0xd8, CBORTagCompositeStaticType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, CBORTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// UTF-8 string, length 12
+			0x6c,
+			// SimpleStruct
+			0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("unauthorized reference, interface, struct, qualified identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &StorageCapabilityControllerValue{
+			TargetPath: publicPathValue,
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "SimpleInterface"),
+				Authorization:  UnauthorizedAccess,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			// tag
+			0xd8, CBORTagInterfaceStaticType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, CBORTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// UTF-8 string, length 22
+			0x6F,
+			// SimpleInterface
+			0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("unauthorized reference, variable-sized, bool", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &StorageCapabilityControllerValue{
+			TargetPath: publicPathValue,
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: &VariableSizedStaticType{
+					Type: PrimitiveStaticTypeBool,
+				},
+				Authorization: UnauthorizedAccess,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			// tag
+			0xd8, CBORTagVariableSizedStaticType,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			0x6,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("unauthorized reference, constant-sized, bool", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &StorageCapabilityControllerValue{
+			TargetPath: publicPathValue,
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: &ConstantSizedStaticType{
+					Type: PrimitiveStaticTypeBool,
+					Size: 42,
+				},
+				Authorization: UnauthorizedAccess,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			// tag
+			0xd8, CBORTagConstantSizedStaticType,
+			// array, 2 items follow
+			0x82,
+			// positive integer 42
+			0x18, 0x2A,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			0x6,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("unauthorized reference, dictionary, bool, string", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &StorageCapabilityControllerValue{
+			TargetPath: publicPathValue,
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: &DictionaryStaticType{
+					KeyType:   PrimitiveStaticTypeBool,
+					ValueType: PrimitiveStaticTypeString,
+				},
+				Authorization: UnauthorizedAccess,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			// tag
+			0xd8, CBORTagDictionaryStaticType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			0x6,
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			0x8,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("unauthorized reference, intersection", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &StorageCapabilityControllerValue{
+			TargetPath: publicPathValue,
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: &IntersectionStaticType{
+					Types: []*InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I1"),
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "I2"),
+					},
+				},
+				Authorization: UnauthorizedAccess,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			// tag
+			0xd8, CBORTagIntersectionStaticType,
+			// array, length 2
+			0x82,
+			// nil
+			0xf6,
+			// array, length 2
+			0x82,
+			// tag
+			0xd8, CBORTagInterfaceStaticType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, CBORTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// UTF-8 string, length 2
+			0x62,
+			// I1
+			0x49, 0x31,
+			// tag
+			0xd8, CBORTagInterfaceStaticType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, CBORTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// UTF-8 string, length 2
+			0x62,
+			// I2
+			0x49, 0x32,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("larger than max inline size", func(t *testing.T) {
+
+		t.Parallel()
+
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		identifier := strings.Repeat("x", int(maxInlineElementSize+1))
+
+		path := PathValue{
+			Domain:     common.PathDomainStorage,
+			Identifier: identifier,
+		}
+
+		expected := &StorageCapabilityControllerValue{
+			TargetPath: path,
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: PrimitiveStaticTypeNever,
+				Authorization:  UnauthorizedAccess,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
+	})
+}
+
+func TestEncodeDecodeAccountCapabilityControllerValue(t *testing.T) {
+
+	t.Parallel()
+
+	assemble := func(bytes ...byte) []byte {
+		result := []byte{
+			// tag
+			0xd8, CBORTagAccountCapabilityControllerValue,
+			// array, 2 items follow
+			0x82,
+		}
+		result = append(result, bytes...)
+		result = append(result,
+			// positive integer 42
+			0x18, 0x2A,
+		)
+		return result
+	}
+
+	const capabilityID = 42
+
+	t.Run("non-reference, primitive, Bool", func(t *testing.T) {
+
+		t.Parallel()
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagPrimitiveStaticType,
+			0x6,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				decodeOnly: true,
+				invalid:    true,
+				encoded:    encoded,
+			},
+		)
+	})
+
+	t.Run("unauthorized reference, AuthAccount", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &AccountCapabilityControllerValue{
+			BorrowType: &ReferenceStaticType{
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeAuthAccount,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			0xd8, CBORTagPrimitiveStaticType,
+			// unsigned 90
+			0x18, 0x5a,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("unauthorized reference, Account", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &AccountCapabilityControllerValue{
+			BorrowType: &ReferenceStaticType{
+				Authorization:  UnauthorizedAccess,
+				ReferencedType: PrimitiveStaticTypeAccount,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			0xd8, CBORTagPrimitiveStaticType,
+			// unsigned 105
+			0x18, 0x69,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("unauthorized reference, intersection I1", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := &AccountCapabilityControllerValue{
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: &IntersectionStaticType{
+					Types: []*InterfaceStaticType{
+						NewInterfaceStaticTypeComputeTypeID(nil, utils.TestLocation, "SimpleInterface"),
+					},
+				},
+				Authorization: UnauthorizedAccess,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		encoded := assemble(
+			// tag
+			0xd8, CBORTagReferenceStaticType,
+			// array, 2 items follow
+			0x82,
+			// authorization:
+			// tag
+			0xd8, CBORTagUnauthorizedStaticAuthorization,
+			// null
+			0xf6,
+			// tag
+			0xd8, CBORTagIntersectionStaticType,
+			// array, length 2
+			0x82,
+			// nil
+			0xf6,
+			// array, 1 item follows
+			0x81,
+			// tag
+			0xd8, CBORTagInterfaceStaticType,
+			// array, 2 items follow
+			0x82,
+			// tag
+			0xd8, CBORTagStringLocation,
+			// UTF-8 string, length 4
+			0x64,
+			// t, e, s, t
+			0x74, 0x65, 0x73, 0x74,
+			// UTF-8 string, length 22
+			0x6F,
+			// SimpleInterface
+			0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
+		)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:   value,
+				encoded: encoded,
+			},
+		)
+	})
+
+	t.Run("larger than max inline size", func(t *testing.T) {
+
+		t.Parallel()
+
+		// Generate an arbitrary, large static type
+		maxInlineElementSize := atree.MaxInlineArrayElementSize
+		var borrowType StaticType = PrimitiveStaticTypeNever
+
+		for i := uint64(0); i < maxInlineElementSize; i++ {
+			borrowType = &OptionalStaticType{
+				Type: borrowType,
+			}
+		}
+
+		expected := &AccountCapabilityControllerValue{
+			BorrowType: &ReferenceStaticType{
+				ReferencedType: borrowType,
+				Authorization:  UnauthorizedAccess,
+			},
+			CapabilityID: capabilityID,
+		}
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value:                expected,
+				maxInlineElementSize: maxInlineElementSize,
+				encoded: []byte{
+					// tag
+					0xd8, atree.CBORTagStorageID,
+
+					// storage ID
+					0x50, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+			},
+		)
 	})
 }

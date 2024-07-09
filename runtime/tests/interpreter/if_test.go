@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ func TestInterpretIfStatement(t *testing.T) {
 
 	inter, err := parseCheckAndInterpretWithOptions(t,
 		`
-           pub fun testTrue(): Int {
+           access(all) fun testTrue(): Int {
                if true {
                    return 2
                } else {
@@ -46,7 +46,7 @@ func TestInterpretIfStatement(t *testing.T) {
                return 4
            }
 
-           pub fun testFalse(): Int {
+           access(all) fun testFalse(): Int {
                if false {
                    return 2
                } else {
@@ -55,14 +55,14 @@ func TestInterpretIfStatement(t *testing.T) {
                return 4
            }
 
-           pub fun testNoElse(): Int {
+           access(all) fun testNoElse(): Int {
                if true {
                    return 2
                }
                return 3
            }
 
-           pub fun testElseIf(): Int {
+           access(all) fun testElseIf(): Int {
                if false {
                    return 2
                } else if true {
@@ -71,7 +71,7 @@ func TestInterpretIfStatement(t *testing.T) {
                return 4
            }
            
-           pub fun testElseIfElse(): Int {
+           access(all) fun testElseIfElse(): Int {
                if false {
                    return 2
                } else if false {
@@ -146,7 +146,7 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals.Get("branch").GetValue(),
+			inter.Globals.Get("branch").GetValue(inter),
 		)
 	})
 
@@ -163,7 +163,7 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			inter.Globals.Get("branch").GetValue(),
+			inter.Globals.Get("branch").GetValue(inter),
 		)
 	})
 }
@@ -201,7 +201,7 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals.Get("branch").GetValue(),
+			inter.Globals.Get("branch").GetValue(inter),
 		)
 	})
 
@@ -218,7 +218,7 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			inter.Globals.Get("branch").GetValue(),
+			inter.Globals.Get("branch").GetValue(inter),
 		)
 
 	})
@@ -260,7 +260,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals.Get("branch").GetValue(),
+			inter.Globals.Get("branch").GetValue(inter),
 		)
 	})
 
@@ -280,7 +280,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			inter.Globals.Get("branch").GetValue(),
+			inter.Globals.Get("branch").GetValue(inter),
 		)
 	})
 }
@@ -321,7 +321,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			inter.Globals.Get("branch").GetValue(),
+			inter.Globals.Get("branch").GetValue(inter),
 		)
 
 	})
@@ -341,7 +341,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 			t,
 			inter,
 			interpreter.NewUnmeteredIntValueFromInt64(2),
-			inter.Globals.Get("branch").GetValue(),
+			inter.Globals.Get("branch").GetValue(inter),
 		)
 	})
 }

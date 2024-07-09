@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,74 +20,85 @@ package sema
 
 // PathType
 var PathType = &SimpleType{
-	Name:                 "Path",
-	QualifiedName:        "Path",
-	TypeID:               "Path",
-	tag:                  PathTypeTag,
-	IsInvalid:            false,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
-	IsSuperTypeOf: func(subType Type) bool {
-		return IsSubType(subType, StoragePathType) ||
-			IsSubType(subType, CapabilityPathType)
-	},
+	Name:          "Path",
+	QualifiedName: "Path",
+	TypeID:        "Path",
+	TypeTag:       PathTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Primitive:     true,
+	Equatable:     true,
+	Comparable:    false,
+	Exportable:    true,
+	Importable:    true,
 }
+
+var PathTypeAnnotation = NewTypeAnnotation(PathType)
 
 // StoragePathType
 var StoragePathType = &SimpleType{
-	Name:                 "StoragePath",
-	QualifiedName:        "StoragePath",
-	TypeID:               "StoragePath",
-	tag:                  StoragePathTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          "StoragePath",
+	QualifiedName: "StoragePath",
+	TypeID:        "StoragePath",
+	TypeTag:       StoragePathTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Primitive:     true,
+	Equatable:     true,
+	Comparable:    false,
+	Exportable:    true,
+	Importable:    true,
 }
+
+var StoragePathTypeAnnotation = NewTypeAnnotation(StoragePathType)
 
 // CapabilityPathType
 var CapabilityPathType = &SimpleType{
-	Name:                 "CapabilityPath",
-	QualifiedName:        "CapabilityPath",
-	TypeID:               "CapabilityPath",
-	tag:                  CapabilityPathTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
-	IsSuperTypeOf: func(subType Type) bool {
-		return IsSubType(subType, PrivatePathType) ||
-			IsSubType(subType, PublicPathType)
-	},
+	Name:          "CapabilityPath",
+	QualifiedName: "CapabilityPath",
+	TypeID:        "CapabilityPath",
+	TypeTag:       CapabilityPathTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Primitive:     true,
+	Equatable:     true,
+	Comparable:    false,
+	Exportable:    true,
+	Importable:    true,
 }
+
+var CapabilityPathTypeAnnotation = NewTypeAnnotation(CapabilityPathType)
 
 // PublicPathType
 var PublicPathType = &SimpleType{
-	Name:                 "PublicPath",
-	QualifiedName:        "PublicPath",
-	TypeID:               "PublicPath",
-	tag:                  PublicPathTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          "PublicPath",
+	QualifiedName: "PublicPath",
+	TypeID:        "PublicPath",
+	TypeTag:       PublicPathTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Primitive:     true,
+	Equatable:     true,
+	Comparable:    false,
+	Exportable:    true,
+	Importable:    true,
 }
+
+var PublicPathTypeAnnotation = NewTypeAnnotation(PublicPathType)
 
 // PrivatePathType
 var PrivatePathType = &SimpleType{
-	Name:                 "PrivatePath",
-	QualifiedName:        "PrivatePath",
-	TypeID:               "PrivatePath",
-	tag:                  PrivatePathTypeTag,
-	IsResource:           false,
-	Storable:             true,
-	Equatable:            true,
-	ExternallyReturnable: true,
-	Importable:           true,
+	Name:          "PrivatePath",
+	QualifiedName: "PrivatePath",
+	TypeID:        "PrivatePath",
+	TypeTag:       PrivatePathTypeTag,
+	IsResource:    false,
+	Storable:      true,
+	Primitive:     true,
+	Equatable:     true,
+	Comparable:    false,
+	Exportable:    true,
+	Importable:    true,
 }
+
+var PrivatePathTypeAnnotation = NewTypeAnnotation(PrivatePathType)

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/go-test/deep"
+	gopretty "github.com/kr/pretty"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -35,18 +36,20 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func init() {
-	deep.MaxDepth = 20
-}
-
 func ParseAndCheck(t testing.TB, code string) (*sema.Checker, error) {
-	return ParseAndCheckWithOptions(t, code, ParseAndCheckOptions{})
+	return ParseAndCheckWithOptions(t, code, ParseAndCheckOptions{
+		// allow attachments is on by default for testing purposes
+		Config: &sema.Config{
+			AttachmentsEnabled: true,
+		},
+	})
 }
 
 type ParseAndCheckOptions struct {
 	Location         common.Location
-	IgnoreParseError bool
 	Config           *sema.Config
+	ParseOptions     parser.Config
+	IgnoreParseError bool
 }
 
 var checkConcurrently = flag.Int(
@@ -74,7 +77,7 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 		options.Location = utils.TestLocation
 	}
 
-	program, err := parser.ParseProgram([]byte(code), memoryGauge)
+	program, err := parser.ParseProgram(memoryGauge, []byte(code), options.ParseOptions)
 	if !options.IgnoreParseError && !assert.NoError(t, err) {
 		var sb strings.Builder
 		location := options.Location
@@ -153,9 +156,9 @@ func ParseAndCheckWithOptionsAndMemoryMetering(
 		err = firstResult.err
 
 		for otherResult := range results {
-			diff := deep.Equal(err, otherResult.err)
-			if diff != nil {
-				t.Error(diff)
+			diff := gopretty.Diff(err, otherResult.err)
+			if len(diff) > 0 {
+				t.Error(strings.Join(diff, "\n"))
 			}
 		}
 
@@ -191,13 +194,37 @@ func RequireCheckerErrors(t *testing.T, err error, count int) []error {
 }
 
 func RequireGlobalType(t *testing.T, elaboration *sema.Elaboration, name string) sema.Type {
-	variable, ok := elaboration.GlobalTypes.Get(name)
+	variable, ok := elaboration.GetGlobalType(name)
 	require.True(t, ok, "global type '%s' missing", name)
 	return variable.Type
 }
 
 func RequireGlobalValue(t *testing.T, elaboration *sema.Elaboration, name string) sema.Type {
-	variable, ok := elaboration.GlobalValues.Get(name)
+	variable, ok := elaboration.GetGlobalValue(name)
 	require.True(t, ok, "global value '%s' missing", name)
 	return variable.Type
+}
+
+func AllActivationTypes(activation *sema.VariableActivation) map[string]sema.Type {
+
+	types := map[string]sema.Type{}
+
+	_ = activation.ForEach(func(name string, variable *sema.Variable) error {
+		if name == "" {
+			return nil
+		}
+
+		types[name] = variable.Type
+		return nil
+	})
+
+	return types
+}
+
+func AllBaseSemaTypes() map[string]sema.Type {
+	return AllActivationTypes(sema.BaseTypeActivation)
+}
+
+func AllBaseSemaValueTypes() map[string]sema.Type {
+	return AllActivationTypes(sema.BaseValueActivation)
 }

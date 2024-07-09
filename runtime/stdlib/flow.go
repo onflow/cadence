@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,6 +74,10 @@ func (l FlowLocation) Description() string {
 	return FlowLocationPrefix
 }
 
+func (l FlowLocation) ID() string {
+	return FlowLocationPrefix
+}
+
 func (l FlowLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type string
@@ -105,11 +109,6 @@ func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
 
 	parts := strings.SplitN(typeID, ".", 2)
 
-	pieceCount := len(parts)
-	if pieceCount == 1 {
-		return newError("missing qualified identifier")
-	}
-
 	prefix := parts[0]
 
 	if prefix != FlowLocationPrefix {
@@ -121,14 +120,20 @@ func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
 		)
 	}
 
-	qualifiedIdentifier := parts[1]
+	var qualifiedIdentifier string
+	pieceCount := len(parts)
+	if pieceCount > 1 {
+		qualifiedIdentifier = parts[1]
+	}
 
 	return FlowLocation{}, qualifiedIdentifier, nil
 }
 
 // built-in event types
 
-func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.CompositeType {
+var FlowEventTypes = map[common.TypeID]*sema.CompositeType{}
+
+func newFlowEventType(identifier string, parameters ...sema.Parameter) *sema.CompositeType {
 
 	eventType := &sema.CompositeType{
 		Kind:       common.CompositeKindEvent,
@@ -161,6 +166,8 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 		)
 	}
 
+	FlowEventTypes[eventType.ID()] = eventType
+
 	return eventType
 }
 
@@ -171,26 +178,50 @@ var HashType = &sema.ConstantSizedType{
 	Type: sema.UInt8Type,
 }
 
-var AccountEventAddressParameter = &sema.Parameter{
+var HashTypeAnnotation = sema.NewTypeAnnotation(HashType)
+
+var AccountEventAddressParameter = sema.Parameter{
 	Identifier:     "address",
-	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+	TypeAnnotation: sema.AddressTypeAnnotation,
 }
 
-var AccountEventCodeHashParameter = &sema.Parameter{
+var AccountEventCodeHashParameter = sema.Parameter{
 	Identifier:     "codeHash",
-	TypeAnnotation: sema.NewTypeAnnotation(HashType),
+	TypeAnnotation: HashTypeAnnotation,
 }
 
-var AccountEventPublicKeyParameter = &sema.Parameter{
+var AccountEventPublicKeyParameterAsCompositeType = sema.Parameter{
 	Identifier: "publicKey",
 	TypeAnnotation: sema.NewTypeAnnotation(
-		sema.ByteArrayType,
+		sema.PublicKeyType,
 	),
 }
 
-var AccountEventContractParameter = &sema.Parameter{
+var AccountEventPublicKeyIndexParameter = sema.Parameter{
+	Identifier: "publicKey",
+	TypeAnnotation: sema.NewTypeAnnotation(
+		sema.IntType,
+	),
+}
+
+var AccountEventContractParameter = sema.Parameter{
 	Identifier:     "contract",
-	TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+	TypeAnnotation: sema.StringTypeAnnotation,
+}
+
+var AccountEventKeyWeightParameter = sema.Parameter{
+	Identifier:     "weight",
+	TypeAnnotation: sema.UFix64TypeAnnotation,
+}
+
+var AccountEventHashAlgorithmParameter = sema.Parameter{
+	Identifier:     "hashAlgorithm",
+	TypeAnnotation: sema.HashAlgorithmTypeAnnotation,
+}
+
+var AccountEventKeyIndexParameter = sema.Parameter{
+	Identifier:     "keyIndex",
+	TypeAnnotation: sema.IntTypeAnnotation,
 }
 
 var AccountCreatedEventType = newFlowEventType(
@@ -198,16 +229,19 @@ var AccountCreatedEventType = newFlowEventType(
 	AccountEventAddressParameter,
 )
 
-var AccountKeyAddedEventType = newFlowEventType(
+var AccountKeyAddedFromPublicKeyEventType = newFlowEventType(
 	"AccountKeyAdded",
 	AccountEventAddressParameter,
-	AccountEventPublicKeyParameter,
+	AccountEventPublicKeyParameterAsCompositeType,
+	AccountEventKeyWeightParameter,
+	AccountEventHashAlgorithmParameter,
+	AccountEventKeyIndexParameter,
 )
 
-var AccountKeyRemovedEventType = newFlowEventType(
+var AccountKeyRemovedFromPublicKeyIndexEventType = newFlowEventType(
 	"AccountKeyRemoved",
 	AccountEventAddressParameter,
-	AccountEventPublicKeyParameter,
+	AccountEventPublicKeyIndexParameter,
 )
 
 var AccountContractAddedEventType = newFlowEventType(
@@ -231,24 +265,24 @@ var AccountContractRemovedEventType = newFlowEventType(
 	AccountEventContractParameter,
 )
 
-var AccountEventProviderParameter = &sema.Parameter{
+var AccountEventProviderParameter = sema.Parameter{
 	Identifier:     "provider",
-	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+	TypeAnnotation: sema.AddressTypeAnnotation,
 }
 
-var AccountEventRecipientParameter = &sema.Parameter{
+var AccountEventRecipientParameter = sema.Parameter{
 	Identifier:     "recipient",
-	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
+	TypeAnnotation: sema.AddressTypeAnnotation,
 }
 
-var AccountEventNameParameter = &sema.Parameter{
+var AccountEventNameParameter = sema.Parameter{
 	Identifier:     "name",
-	TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+	TypeAnnotation: sema.StringTypeAnnotation,
 }
 
-var AccountEventTypeParameter = &sema.Parameter{
+var AccountEventTypeParameter = sema.Parameter{
 	Identifier:     "type",
-	TypeAnnotation: sema.NewTypeAnnotation(sema.MetaType),
+	TypeAnnotation: sema.MetaTypeAnnotation,
 }
 
 var AccountInboxPublishedEventType = newFlowEventType(

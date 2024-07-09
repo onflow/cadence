@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,15 @@ import (
 	"strings"
 )
 
-var addressOverflowError = goErrors.New("address too large")
+var AddressOverflowError = goErrors.New("address too large")
+var InvalidHexAddressError = goErrors.New("invalid hex string for address")
 
 const AddressLength = 8
 
 type Address [AddressLength]byte
+
+// Singleton for address 0x0. This should be used in place of an empty initializer `Address{}`
+var ZeroAddress Address = Address{}
 
 // MustBytesToAddress returns Address with value b.
 //
@@ -47,7 +51,7 @@ func MustBytesToAddress(b []byte) Address {
 // If the address is too large, then the function returns an error.
 func BytesToAddress(b []byte) (Address, error) {
 	if len(b) > AddressLength {
-		return Address{}, addressOverflowError
+		return Address{}, AddressOverflowError
 	}
 	var a Address
 	a.SetBytes(b)
@@ -108,6 +112,16 @@ func (a Address) HexWithPrefix() string {
 	return fmt.Sprintf("0x%x", [AddressLength]byte(a))
 }
 
+// HexToAddress converts a hex string to an Address after
+// ensuring that the hex string starts with the prefix 0x.
+func HexToAddressAssertPrefix(h string) (Address, error) {
+	if !strings.HasPrefix(h, "0x") {
+		return Address{}, InvalidHexAddressError
+	}
+
+	return HexToAddress(h)
+}
+
 // HexToAddress converts a hex string to an Address.
 func HexToAddress(h string) (Address, error) {
 	trimmed := strings.TrimPrefix(h, "0x")
@@ -116,7 +130,7 @@ func HexToAddress(h string) (Address, error) {
 	}
 	b, err := hex.DecodeString(trimmed)
 	if err != nil {
-		return Address{}, err
+		return Address{}, InvalidHexAddressError
 	}
 	return BytesToAddress(b)
 }

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,16 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) (_ stru
 		return
 	}
 
-	checker.Elaboration.EmitStatementEventTypes[statement] = compositeType
+	if ast.IsResourceDestructionDefaultEvent(compositeType.Identifier) {
+		checker.report(
+			&EmitDefaultDestroyEventError{
+				Range: ast.NewRangeFromPositioned(checker.memoryGauge, statement.InvocationExpression),
+			},
+		)
+		return
+	}
+
+	checker.Elaboration.SetEmitStatementEventType(statement, compositeType)
 
 	// Check that the emitted event is declared in the same location
 
@@ -59,5 +68,10 @@ func (checker *Checker) VisitEmitStatement(statement *ast.EmitStatement) (_ stru
 		)
 	}
 
+	// emitting an event is an impure operation, but it is redundant to enforce that here:
+	// because the emit statement can only be used on events (as a result of the above checks),
+	// and because an event can only be invoked in an emit statement,
+	// every emit corresponds 1:1 to an event invocation, which is an impure function call.
+	// Thus we already report emits as impure by virtue of the necessity to create the event being emitted
 	return
 }

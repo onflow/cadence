@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/tests/checker"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,24 +38,28 @@ func newUnmeteredInMemoryStorage() interpreter.InMemoryStorage {
 	return interpreter.NewInMemoryStorage(nil)
 }
 
-func testInterpreter(t *testing.T, code string, valueDeclaration StandardLibraryValue) *interpreter.Interpreter {
+func newInterpreter(t *testing.T, code string, valueDeclarations ...StandardLibraryValue) *interpreter.Interpreter {
 	program, err := parser.ParseProgram(
-		[]byte(code),
 		nil,
+		[]byte(code),
+		parser.Config{},
 	)
 	require.NoError(t, err)
 
 	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-
-	baseValueActivation.DeclareValue(valueDeclaration)
+	for _, valueDeclaration := range valueDeclarations {
+		baseValueActivation.DeclareValue(valueDeclaration)
+	}
 
 	checker, err := sema.NewChecker(
 		program,
 		utils.TestLocation,
 		nil,
 		&sema.Config{
-			BaseValueActivation: baseValueActivation,
-			AccessCheckMode:     sema.AccessCheckModeStrict,
+			BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+				return baseValueActivation
+			},
+			AccessCheckMode: sema.AccessCheckModeStrict,
 		},
 	)
 	require.NoError(t, err)
@@ -63,15 +69,19 @@ func testInterpreter(t *testing.T, code string, valueDeclaration StandardLibrary
 
 	storage := newUnmeteredInMemoryStorage()
 
-	baseActivation := activations.NewActivation[*interpreter.Variable](nil, interpreter.BaseActivation)
-	interpreter.Declare(baseActivation, valueDeclaration)
+	baseActivation := activations.NewActivation[interpreter.Variable](nil, interpreter.BaseActivation)
+	for _, valueDeclaration := range valueDeclarations {
+		interpreter.Declare(baseActivation, valueDeclaration)
+	}
 
 	inter, err := interpreter.NewInterpreter(
 		interpreter.ProgramFromChecker(checker),
 		checker.Location,
 		&interpreter.Config{
-			Storage:        storage,
-			BaseActivation: baseActivation,
+			Storage: storage,
+			BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+				return baseActivation
+			},
 		},
 	)
 	require.NoError(t, err)
@@ -82,18 +92,91 @@ func testInterpreter(t *testing.T, code string, valueDeclaration StandardLibrary
 	return inter
 }
 
-func TestAssert(t *testing.T) {
+func TestCheckAssert(t *testing.T) {
 
 	t.Parallel()
 
-	inter := testInterpreter(t,
-		`pub let test = assert`,
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(AssertFunction)
+
+	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
+		return checker.ParseAndCheckWithOptions(t,
+			code,
+			checker.ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+		)
+	}
+
+	t.Run("too few arguments", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert()`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.InsufficientArgumentsError{})
+	})
+
+	t.Run("invalid first argument", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert(1)`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.TypeMismatchError{})
+	})
+
+	t.Run("no message", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert(true)`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("with message", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert(true, message: "foo")`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid message", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert(true, message: 1)`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.TypeMismatchError{})
+	})
+
+	t.Run("missing argument label for message", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert(true, "")`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.MissingArgumentLabelError{})
+	})
+
+	t.Run("too many arguments", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = assert(true, message: "foo", true)`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.ExcessiveArgumentsError{})
+	})
+}
+
+func TestInterpretAssert(t *testing.T) {
+
+	inter := newInterpreter(t,
+		`access(all) let test = assert`,
 		AssertFunction,
 	)
 
 	_, err := inter.Invoke(
 		"test",
-		interpreter.BoolValue(false),
+		interpreter.FalseValue,
 		interpreter.NewUnmeteredStringValue("oops"),
 	)
 	assert.Equal(t,
@@ -106,7 +189,7 @@ func TestAssert(t *testing.T) {
 		err,
 	)
 
-	_, err = inter.Invoke("test", interpreter.BoolValue(false))
+	_, err = inter.Invoke("test", interpreter.FalseValue)
 	assert.Equal(t,
 		interpreter.Error{
 			Err: AssertionError{
@@ -118,21 +201,74 @@ func TestAssert(t *testing.T) {
 
 	_, err = inter.Invoke(
 		"test",
-		interpreter.BoolValue(true),
+		interpreter.TrueValue,
 		interpreter.NewUnmeteredStringValue("oops"),
 	)
 	assert.NoError(t, err)
 
-	_, err = inter.Invoke("test", interpreter.BoolValue(true))
+	_, err = inter.Invoke("test", interpreter.TrueValue)
 	assert.NoError(t, err)
 }
 
-func TestPanic(t *testing.T) {
+func TestCheckPanic(t *testing.T) {
 
 	t.Parallel()
 
-	inter := testInterpreter(t,
-		`pub let test = panic`,
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(PanicFunction)
+
+	parseAndCheck := func(t *testing.T, code string) (*sema.Checker, error) {
+		return checker.ParseAndCheckWithOptions(t,
+			code,
+			checker.ParseAndCheckOptions{
+				Config: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+			},
+		)
+	}
+
+	t.Run("too few arguments", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = panic()`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.InsufficientArgumentsError{})
+	})
+
+	t.Run("message", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = panic("test")`)
+
+		require.NoError(t, err)
+
+	})
+
+	t.Run("invalid message", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = panic(true)`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.TypeMismatchError{})
+	})
+
+	t.Run("too many arguments", func(t *testing.T) {
+
+		_, err := parseAndCheck(t, `let _ = panic("test", 1)`)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+		require.IsType(t, errs[0], &sema.ExcessiveArgumentsError{})
+	})
+}
+
+func TestInterpretPanic(t *testing.T) {
+
+	t.Parallel()
+
+	inter := newInterpreter(t,
+		`access(all) let test = panic`,
 		PanicFunction,
 	)
 

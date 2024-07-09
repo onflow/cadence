@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,6 @@ type Value interface {
 	isValue()
 	Type() Type
 	MeteredType(gauge common.MemoryGauge) Type
-	ToGoValue() any
 	fmt.Stringer
 }
 
@@ -68,15 +67,11 @@ func NewMeteredVoid(memoryGauge common.MemoryGauge) Void {
 func (Void) isValue() {}
 
 func (Void) Type() Type {
-	return NewVoidType()
+	return VoidType
 }
 
-func (Void) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredVoidType(gauge)
-}
-
-func (Void) ToGoValue() any {
-	return nil
+func (v Void) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (Void) String() string {
@@ -105,7 +100,7 @@ func (Optional) isValue() {}
 func (o Optional) Type() Type {
 	var innerType Type
 	if o.Value == nil {
-		innerType = NewNeverType()
+		innerType = NeverType
 	} else {
 		innerType = o.Value.Type()
 	}
@@ -118,7 +113,7 @@ func (o Optional) Type() Type {
 func (o Optional) MeteredType(gauge common.MemoryGauge) Type {
 	var innerType Type
 	if o.Value == nil {
-		innerType = NewMeteredNeverType(gauge)
+		innerType = NeverType
 	} else {
 		innerType = o.Value.MeteredType(gauge)
 	}
@@ -127,16 +122,6 @@ func (o Optional) MeteredType(gauge common.MemoryGauge) Type {
 		gauge,
 		innerType,
 	)
-}
-
-func (o Optional) ToGoValue() any {
-	if o.Value == nil {
-		return nil
-	}
-
-	value := o.Value.ToGoValue()
-
-	return value
 }
 
 func (o Optional) String() string {
@@ -164,15 +149,11 @@ func NewMeteredBool(memoryGauge common.MemoryGauge, b bool) Bool {
 func (Bool) isValue() {}
 
 func (Bool) Type() Type {
-	return NewBoolType()
+	return BoolType
 }
 
-func (Bool) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredBoolType(gauge)
-}
-
-func (v Bool) ToGoValue() any {
-	return bool(v)
+func (v Bool) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Bool) String() string {
@@ -206,15 +187,11 @@ func NewMeteredString(
 func (String) isValue() {}
 
 func (String) Type() Type {
-	return NewStringType()
+	return StringType
 }
 
-func (String) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredStringType(gauge)
-}
-
-func (v String) ToGoValue() any {
-	return string(v)
+func (v String) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v String) String() string {
@@ -235,15 +212,11 @@ func NewBytes(b []byte) Bytes {
 func (Bytes) isValue() {}
 
 func (Bytes) Type() Type {
-	return NewBytesType()
+	return TheBytesType
 }
 
-func (Bytes) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredBytesType(gauge)
-}
-
-func (v Bytes) ToGoValue() any {
-	return []byte(v)
+func (v Bytes) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Bytes) String() string {
@@ -279,15 +252,11 @@ func NewMeteredCharacter(
 func (Character) isValue() {}
 
 func (Character) Type() Type {
-	return NewCharacterType()
+	return CharacterType
 }
 
-func (Character) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredCharacterType(gauge)
-}
-
-func (v Character) ToGoValue() any {
-	return string(v)
+func (v Character) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Character) String() string {
@@ -325,15 +294,11 @@ func BytesToMeteredAddress(memoryGauge common.MemoryGauge, b []byte) Address {
 func (Address) isValue() {}
 
 func (Address) Type() Type {
-	return NewAddressType()
+	return AddressType
 }
 
-func (Address) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredAddressType(gauge)
-}
-
-func (v Address) ToGoValue() any {
-	return [AddressLength]byte(v)
+func (Address) MeteredType(common.MemoryGauge) Type {
+	return AddressType
 }
 
 func (v Address) Bytes() []byte {
@@ -357,11 +322,15 @@ type Int struct {
 var _ Value = Int{}
 
 func NewInt(i int) Int {
-	return Int{big.NewInt(int64(i))}
+	return Int{
+		Value: big.NewInt(int64(i)),
+	}
 }
 
 func NewIntFromBig(i *big.Int) Int {
-	return Int{i}
+	return Int{
+		Value: i,
+	}
 }
 
 func NewMeteredIntFromBig(
@@ -377,15 +346,11 @@ func NewMeteredIntFromBig(
 func (Int) isValue() {}
 
 func (Int) Type() Type {
-	return NewIntType()
+	return IntType
 }
 
-func (Int) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredIntType(gauge)
-}
-
-func (v Int) ToGoValue() any {
-	return v.Big()
+func (v Int) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int) Int() int {
@@ -423,16 +388,12 @@ func NewMeteredInt8(memoryGauge common.MemoryGauge, v int8) Int8 {
 
 func (Int8) isValue() {}
 
-func (v Int8) ToGoValue() any {
-	return int8(v)
-}
-
 func (Int8) Type() Type {
-	return NewInt8Type()
+	return Int8Type
 }
 
-func (Int8) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredInt8Type(gauge)
+func (v Int8) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int8) ToBigEndianBytes() []byte {
@@ -463,15 +424,11 @@ func NewMeteredInt16(memoryGauge common.MemoryGauge, v int16) Int16 {
 func (Int16) isValue() {}
 
 func (Int16) Type() Type {
-	return NewInt16Type()
+	return Int16Type
 }
 
-func (Int16) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredInt16Type(gauge)
-}
-
-func (v Int16) ToGoValue() any {
-	return int16(v)
+func (v Int16) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int16) ToBigEndianBytes() []byte {
@@ -504,15 +461,11 @@ func NewMeteredInt32(memoryGauge common.MemoryGauge, v int32) Int32 {
 func (Int32) isValue() {}
 
 func (Int32) Type() Type {
-	return NewInt32Type()
+	return Int32Type
 }
 
-func (Int32) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredInt32Type(gauge)
-}
-
-func (v Int32) ToGoValue() any {
-	return int32(v)
+func (v Int32) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int32) ToBigEndianBytes() []byte {
@@ -545,15 +498,11 @@ func NewMeteredInt64(memoryGauge common.MemoryGauge, v int64) Int64 {
 func (Int64) isValue() {}
 
 func (Int64) Type() Type {
-	return NewInt64Type()
+	return Int64Type
 }
 
-func (Int64) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredInt64Type(gauge)
-}
-
-func (v Int64) ToGoValue() any {
-	return int64(v)
+func (v Int64) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int64) ToBigEndianBytes() []byte {
@@ -577,7 +526,9 @@ var _ Value = Int128{}
 var Int128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
 func NewInt128(i int) Int128 {
-	return Int128{big.NewInt(int64(i))}
+	return Int128{
+		Value: big.NewInt(int64(i)),
+	}
 }
 
 var int128MinExceededError = errors.NewDefaultUserError("value exceeds min of Int128")
@@ -590,7 +541,7 @@ func NewInt128FromBig(i *big.Int) (Int128, error) {
 	if i.Cmp(sema.Int128TypeMaxIntBig) > 0 {
 		return Int128{}, int128MaxExceededError
 	}
-	return Int128{i}, nil
+	return Int128{Value: i}, nil
 }
 
 func NewMeteredInt128FromBig(
@@ -605,15 +556,11 @@ func NewMeteredInt128FromBig(
 func (Int128) isValue() {}
 
 func (Int128) Type() Type {
-	return NewInt128Type()
+	return Int128Type
 }
 
-func (Int128) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredInt128Type(gauge)
-}
-
-func (v Int128) ToGoValue() any {
-	return v.Big()
+func (v Int128) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int128) Int() int {
@@ -625,7 +572,7 @@ func (v Int128) Big() *big.Int {
 }
 
 func (v Int128) ToBigEndianBytes() []byte {
-	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
+	return interpreter.SignedBigIntToSizedBigEndianBytes(v.Value, sema.Int128TypeSize)
 }
 
 func (v Int128) String() string {
@@ -643,7 +590,9 @@ var _ Value = Int256{}
 var Int256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
 func NewInt256(i int) Int256 {
-	return Int256{big.NewInt(int64(i))}
+	return Int256{
+		Value: big.NewInt(int64(i)),
+	}
 }
 
 var int256MinExceededError = errors.NewDefaultUserError("value exceeds min of Int256")
@@ -656,7 +605,7 @@ func NewInt256FromBig(i *big.Int) (Int256, error) {
 	if i.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		return Int256{}, int256MaxExceededError
 	}
-	return Int256{i}, nil
+	return Int256{Value: i}, nil
 }
 
 func NewMeteredInt256FromBig(
@@ -671,15 +620,11 @@ func NewMeteredInt256FromBig(
 func (Int256) isValue() {}
 
 func (Int256) Type() Type {
-	return NewInt256Type()
+	return Int256Type
 }
 
-func (Int256) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredInt256Type(gauge)
-}
-
-func (v Int256) ToGoValue() any {
-	return v.Big()
+func (v Int256) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Int256) Int() int {
@@ -691,7 +636,7 @@ func (v Int256) Big() *big.Int {
 }
 
 func (v Int256) ToBigEndianBytes() []byte {
-	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
+	return interpreter.SignedBigIntToSizedBigEndianBytes(v.Value, sema.Int256TypeSize)
 }
 
 func (v Int256) String() string {
@@ -707,7 +652,9 @@ type UInt struct {
 var _ Value = UInt{}
 
 func NewUInt(i uint) UInt {
-	return UInt{big.NewInt(int64(i))}
+	return UInt{
+		Value: big.NewInt(int64(i)),
+	}
 }
 
 var uintNegativeError = errors.NewDefaultUserError("invalid negative value for UInt")
@@ -716,7 +663,7 @@ func NewUIntFromBig(i *big.Int) (UInt, error) {
 	if i.Sign() < 0 {
 		return UInt{}, uintNegativeError
 	}
-	return UInt{i}, nil
+	return UInt{Value: i}, nil
 }
 
 func NewMeteredUIntFromBig(
@@ -732,15 +679,11 @@ func NewMeteredUIntFromBig(
 func (UInt) isValue() {}
 
 func (UInt) Type() Type {
-	return NewUIntType()
+	return UIntType
 }
 
-func (UInt) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUIntType(gauge)
-}
-
-func (v UInt) ToGoValue() any {
-	return v.Big()
+func (v UInt) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt) Int() int {
@@ -779,15 +722,11 @@ func NewMeteredUInt8(gauge common.MemoryGauge, v uint8) UInt8 {
 func (UInt8) isValue() {}
 
 func (UInt8) Type() Type {
-	return NewUInt8Type()
+	return UInt8Type
 }
 
-func (UInt8) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUInt8Type(gauge)
-}
-
-func (v UInt8) ToGoValue() any {
-	return uint8(v)
+func (v UInt8) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt8) ToBigEndianBytes() []byte {
@@ -818,15 +757,11 @@ func NewMeteredUInt16(gauge common.MemoryGauge, v uint16) UInt16 {
 func (UInt16) isValue() {}
 
 func (UInt16) Type() Type {
-	return NewUInt16Type()
+	return UInt16Type
 }
 
-func (UInt16) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUInt16Type(gauge)
-}
-
-func (v UInt16) ToGoValue() any {
-	return uint16(v)
+func (v UInt16) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt16) ToBigEndianBytes() []byte {
@@ -859,15 +794,11 @@ func NewMeteredUInt32(gauge common.MemoryGauge, v uint32) UInt32 {
 func (UInt32) isValue() {}
 
 func (UInt32) Type() Type {
-	return NewUInt32Type()
+	return UInt32Type
 }
 
-func (UInt32) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUInt32Type(gauge)
-}
-
-func (v UInt32) ToGoValue() any {
-	return uint32(v)
+func (v UInt32) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt32) ToBigEndianBytes() []byte {
@@ -900,15 +831,11 @@ func NewMeteredUInt64(gauge common.MemoryGauge, v uint64) UInt64 {
 func (UInt64) isValue() {}
 
 func (UInt64) Type() Type {
-	return NewUInt64Type()
+	return UInt64Type
 }
 
-func (UInt64) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUInt64Type(gauge)
-}
-
-func (v UInt64) ToGoValue() any {
-	return uint64(v)
+func (v UInt64) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt64) ToBigEndianBytes() []byte {
@@ -932,7 +859,9 @@ var _ Value = UInt128{}
 var UInt128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
 
 func NewUInt128(i uint) UInt128 {
-	return UInt128{big.NewInt(int64(i))}
+	return UInt128{
+		Value: big.NewInt(int64(i)),
+	}
 }
 
 var uint128NegativeError = errors.NewDefaultUserError("invalid negative value for UInt128")
@@ -945,7 +874,7 @@ func NewUInt128FromBig(i *big.Int) (UInt128, error) {
 	if i.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
 		return UInt128{}, uint128MaxExceededError
 	}
-	return UInt128{i}, nil
+	return UInt128{Value: i}, nil
 }
 
 func NewMeteredUInt128FromBig(
@@ -960,15 +889,11 @@ func NewMeteredUInt128FromBig(
 func (UInt128) isValue() {}
 
 func (UInt128) Type() Type {
-	return NewUInt128Type()
+	return UInt128Type
 }
 
-func (UInt128) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUInt128Type(gauge)
-}
-
-func (v UInt128) ToGoValue() any {
-	return v.Big()
+func (v UInt128) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt128) Int() int {
@@ -980,7 +905,7 @@ func (v UInt128) Big() *big.Int {
 }
 
 func (v UInt128) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+	return interpreter.UnsignedBigIntToSizedBigEndianBytes(v.Value, sema.UInt128TypeSize)
 }
 
 func (v UInt128) String() string {
@@ -998,7 +923,9 @@ var _ Value = UInt256{}
 var UInt256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
 
 func NewUInt256(i uint) UInt256 {
-	return UInt256{big.NewInt(int64(i))}
+	return UInt256{
+		Value: big.NewInt(int64(i)),
+	}
 }
 
 var uint256NegativeError = errors.NewDefaultUserError("invalid negative value for UInt256")
@@ -1011,7 +938,7 @@ func NewUInt256FromBig(i *big.Int) (UInt256, error) {
 	if i.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
 		return UInt256{}, uint256MaxExceededError
 	}
-	return UInt256{i}, nil
+	return UInt256{Value: i}, nil
 }
 
 func NewMeteredUInt256FromBig(
@@ -1026,15 +953,11 @@ func NewMeteredUInt256FromBig(
 func (UInt256) isValue() {}
 
 func (UInt256) Type() Type {
-	return NewUInt256Type()
+	return UInt256Type
 }
 
-func (UInt256) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUInt256Type(gauge)
-}
-
-func (v UInt256) ToGoValue() any {
-	return v.Big()
+func (v UInt256) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UInt256) Int() int {
@@ -1046,7 +969,7 @@ func (v UInt256) Big() *big.Int {
 }
 
 func (v UInt256) ToBigEndianBytes() []byte {
-	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+	return interpreter.UnsignedBigIntToSizedBigEndianBytes(v.Value, sema.UInt256TypeSize)
 }
 
 func (v UInt256) String() string {
@@ -1073,15 +996,11 @@ func NewMeteredWord8(gauge common.MemoryGauge, v uint8) Word8 {
 func (Word8) isValue() {}
 
 func (Word8) Type() Type {
-	return NewWord8Type()
+	return Word8Type
 }
 
-func (Word8) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredWord8Type(gauge)
-}
-
-func (v Word8) ToGoValue() any {
-	return uint8(v)
+func (v Word8) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Word8) ToBigEndianBytes() []byte {
@@ -1112,15 +1031,11 @@ func NewMeteredWord16(gauge common.MemoryGauge, v uint16) Word16 {
 func (Word16) isValue() {}
 
 func (Word16) Type() Type {
-	return NewWord16Type()
+	return Word16Type
 }
 
-func (Word16) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredWord16Type(gauge)
-}
-
-func (v Word16) ToGoValue() any {
-	return uint16(v)
+func (v Word16) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Word16) ToBigEndianBytes() []byte {
@@ -1153,15 +1068,11 @@ func NewMeteredWord32(gauge common.MemoryGauge, v uint32) Word32 {
 func (Word32) isValue() {}
 
 func (Word32) Type() Type {
-	return NewWord32Type()
+	return Word32Type
 }
 
-func (Word32) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredWord32Type(gauge)
-}
-
-func (v Word32) ToGoValue() any {
-	return uint32(v)
+func (v Word32) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Word32) ToBigEndianBytes() []byte {
@@ -1194,15 +1105,11 @@ func NewMeteredWord64(gauge common.MemoryGauge, v uint64) Word64 {
 func (Word64) isValue() {}
 
 func (Word64) Type() Type {
-	return NewWord64Type()
+	return Word64Type
 }
 
-func (Word64) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredWord64Type(gauge)
-}
-
-func (v Word64) ToGoValue() any {
-	return uint64(v)
+func (v Word64) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Word64) ToBigEndianBytes() []byte {
@@ -1213,6 +1120,134 @@ func (v Word64) ToBigEndianBytes() []byte {
 
 func (v Word64) String() string {
 	return format.Uint(uint64(v))
+}
+
+// Word128
+
+type Word128 struct {
+	Value *big.Int
+}
+
+var _ Value = Word128{}
+
+var Word128MemoryUsage = common.NewCadenceBigIntMemoryUsage(16)
+
+func NewWord128(i uint) Word128 {
+	return Word128{
+		Value: big.NewInt(int64(i)),
+	}
+}
+
+var word128NegativeError = errors.NewDefaultUserError("invalid negative value for Word128")
+var word128MaxExceededError = errors.NewDefaultUserError("value exceeds max of Word128")
+
+func NewWord128FromBig(i *big.Int) (Word128, error) {
+	if i.Sign() < 0 {
+		return Word128{}, word128NegativeError
+	}
+	if i.Cmp(sema.Word128TypeMaxIntBig) > 0 {
+		return Word128{}, word128MaxExceededError
+	}
+	return Word128{Value: i}, nil
+}
+
+func NewMeteredWord128FromBig(
+	memoryGauge common.MemoryGauge,
+	bigIntConstructor func() *big.Int,
+) (Word128, error) {
+	common.UseMemory(memoryGauge, Word128MemoryUsage)
+	value := bigIntConstructor()
+	return NewWord128FromBig(value)
+}
+
+func (Word128) isValue() {}
+
+func (Word128) Type() Type {
+	return Word128Type
+}
+
+func (v Word128) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v Word128) Int() int {
+	return int(v.Value.Uint64())
+}
+
+func (v Word128) Big() *big.Int {
+	return v.Value
+}
+
+func (v Word128) ToBigEndianBytes() []byte {
+	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+}
+
+func (v Word128) String() string {
+	return format.BigInt(v.Value)
+}
+
+// Word256
+
+type Word256 struct {
+	Value *big.Int
+}
+
+var _ Value = Word256{}
+
+var Word256MemoryUsage = common.NewCadenceBigIntMemoryUsage(32)
+
+func NewWord256(i uint) Word256 {
+	return Word256{
+		Value: big.NewInt(int64(i)),
+	}
+}
+
+var word256NegativeError = errors.NewDefaultUserError("invalid negative value for Word256")
+var word256MaxExceededError = errors.NewDefaultUserError("value exceeds max of Word256")
+
+func NewWord256FromBig(i *big.Int) (Word256, error) {
+	if i.Sign() < 0 {
+		return Word256{}, word256NegativeError
+	}
+	if i.Cmp(sema.Word256TypeMaxIntBig) > 0 {
+		return Word256{}, word256MaxExceededError
+	}
+	return Word256{Value: i}, nil
+}
+
+func NewMeteredWord256FromBig(
+	memoryGauge common.MemoryGauge,
+	bigIntConstructor func() *big.Int,
+) (Word256, error) {
+	common.UseMemory(memoryGauge, Word256MemoryUsage)
+	value := bigIntConstructor()
+	return NewWord256FromBig(value)
+}
+
+func (Word256) isValue() {}
+
+func (Word256) Type() Type {
+	return Word256Type
+}
+
+func (v Word256) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v Word256) Int() int {
+	return int(v.Value.Uint64())
+}
+
+func (v Word256) Big() *big.Int {
+	return v.Value
+}
+
+func (v Word256) ToBigEndianBytes() []byte {
+	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+}
+
+func (v Word256) String() string {
+	return format.BigInt(v.Value)
 }
 
 // Fix64
@@ -1253,18 +1288,19 @@ func NewMeteredFix64(gauge common.MemoryGauge, constructor func() (string, error
 	return NewFix64(value)
 }
 
+func NewMeteredFix64FromRawFixedPointNumber(gauge common.MemoryGauge, n int64) (Fix64, error) {
+	common.UseMemory(gauge, fix64MemoryUsage)
+	return Fix64(n), nil
+}
+
 func (Fix64) isValue() {}
 
 func (Fix64) Type() Type {
-	return NewFix64Type()
+	return Fix64Type
 }
 
-func (Fix64) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredFix64Type(gauge)
-}
-
-func (v Fix64) ToGoValue() any {
-	return int64(v)
+func (v Fix64) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Fix64) ToBigEndianBytes() []byte {
@@ -1322,18 +1358,19 @@ func ParseUFix64(s string) (uint64, error) {
 	return v.Uint64(), nil
 }
 
+func NewMeteredUFix64FromRawFixedPointNumber(gauge common.MemoryGauge, n uint64) (UFix64, error) {
+	common.UseMemory(gauge, ufix64MemoryUsage)
+	return UFix64(n), nil
+}
+
 func (UFix64) isValue() {}
 
 func (UFix64) Type() Type {
-	return NewUFix64Type()
+	return UFix64Type
 }
 
-func (UFix64) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredUFix64Type(gauge)
-}
-
-func (v UFix64) ToGoValue() any {
-	return uint64(v)
+func (v UFix64) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v UFix64) ToBigEndianBytes() []byte {
@@ -1382,23 +1419,13 @@ func (v Array) Type() Type {
 	return v.ArrayType
 }
 
-func (v Array) MeteredType(_ common.MemoryGauge) Type {
+func (v Array) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
 func (v Array) WithType(arrayType ArrayType) Array {
 	v.ArrayType = arrayType
 	return v
-}
-
-func (v Array) ToGoValue() any {
-	ret := make([]any, len(v.Values))
-
-	for i, e := range v.Values {
-		ret[i] = e.ToGoValue()
-	}
-
-	return ret
 }
 
 func (v Array) String() string {
@@ -1412,7 +1439,7 @@ func (v Array) String() string {
 // Dictionary
 
 type Dictionary struct {
-	DictionaryType Type
+	DictionaryType *DictionaryType
 	Pairs          []KeyValuePair
 }
 
@@ -1439,26 +1466,21 @@ func NewMeteredDictionary(
 func (Dictionary) isValue() {}
 
 func (v Dictionary) Type() Type {
+	if v.DictionaryType == nil {
+		// Return nil Type instead of Type referencing nil *DictionaryType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.DictionaryType
 }
 
-func (v Dictionary) MeteredType(_ common.MemoryGauge) Type {
+func (v Dictionary) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Dictionary) WithType(dictionaryType DictionaryType) Dictionary {
+func (v Dictionary) WithType(dictionaryType *DictionaryType) Dictionary {
 	v.DictionaryType = dictionaryType
 	return v
-}
-
-func (v Dictionary) ToGoValue() any {
-	ret := map[any]any{}
-
-	for _, p := range v.Pairs {
-		ret[p.Key.ToGoValue()] = p.Value.ToGoValue()
-	}
-
-	return ret
 }
 
 func (v Dictionary) String() string {
@@ -1495,17 +1517,82 @@ func NewMeteredKeyValuePair(gauge common.MemoryGauge, key, value Value) KeyValue
 	}
 }
 
+// Composite
+
+type Composite interface {
+	Value
+
+	isComposite()
+	getFields() []Field
+	getFieldValues() []Value
+
+	SearchFieldByName(fieldName string) Value
+	FieldsMappedByName() map[string]Value
+}
+
+// linked in by packages that need access to Composite.getFieldValues,
+// e.g. JSON and CCF codecs
+func getCompositeFieldValues(composite Composite) []Value { //nolint:unused
+	return composite.getFieldValues()
+}
+
+// SearchFieldByName searches for the field with the given name in the composite type,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func SearchFieldByName(v Composite, fieldName string) Value {
+	fieldValues := v.getFieldValues()
+	fields := v.getFields()
+
+	if fieldValues == nil || fields == nil {
+		return nil
+	}
+
+	for i, field := range fields {
+		if field.Identifier == fieldName {
+			return fieldValues[i]
+		}
+	}
+	return nil
+}
+
+func FieldsMappedByName(v Composite) map[string]Value {
+	fieldValues := v.getFieldValues()
+	fields := v.getFields()
+
+	if fieldValues == nil || fields == nil {
+		return nil
+	}
+
+	fieldsMap := make(map[string]Value, len(fields))
+	for i, fieldValue := range fieldValues {
+		var fieldName string
+		if i < len(fields) {
+			fieldName = fields[i].Identifier
+		} else if attachment, ok := fieldValue.(Attachment); ok {
+			fieldName = interpreter.AttachmentMemberName(attachment.Type().ID())
+		} else {
+			panic(errors.NewUnreachableError())
+		}
+		fieldsMap[fieldName] = fieldValue
+	}
+
+	return fieldsMap
+}
+
 // Struct
 
 type Struct struct {
 	StructType *StructType
-	Fields     []Value
+	fields     []Value
 }
 
 var _ Value = Struct{}
+var _ Composite = Struct{}
 
 func NewStruct(fields []Value) Struct {
-	return Struct{Fields: fields}
+	return Struct{fields: fields}
 }
 
 func NewMeteredStruct(
@@ -1526,11 +1613,18 @@ func NewMeteredStruct(
 
 func (Struct) isValue() {}
 
+func (Struct) isComposite() {}
+
 func (v Struct) Type() Type {
+	if v.StructType == nil {
+		// Return nil Type instead of Type referencing nil *StructType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.StructType
 }
 
-func (v Struct) MeteredType(_ common.MemoryGauge) Type {
+func (v Struct) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1539,18 +1633,37 @@ func (v Struct) WithType(typ *StructType) Struct {
 	return v
 }
 
-func (v Struct) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
-
-	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
+func (v Struct) String() string {
+	return formatComposite(
+		v.StructType.ID(),
+		v.StructType.fields,
+		v.fields,
+	)
 }
 
-func (v Struct) String() string {
-	return formatComposite(v.StructType.ID(), v.StructType.Fields, v.Fields)
+func (v Struct) getFields() []Field {
+	if v.StructType == nil {
+		return nil
+	}
+
+	return v.StructType.fields
+}
+
+func (v Struct) getFieldValues() []Value {
+	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the struct,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Struct) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Struct) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 func formatComposite(typeID string, fields []Field, values []Value) string {
@@ -1578,13 +1691,14 @@ func formatComposite(typeID string, fields []Field, values []Value) string {
 
 type Resource struct {
 	ResourceType *ResourceType
-	Fields       []Value
+	fields       []Value
 }
 
 var _ Value = Resource{}
+var _ Composite = Resource{}
 
 func NewResource(fields []Value) Resource {
-	return Resource{Fields: fields}
+	return Resource{fields: fields}
 }
 
 func NewMeteredResource(
@@ -1604,11 +1718,18 @@ func NewMeteredResource(
 
 func (Resource) isValue() {}
 
+func (Resource) isComposite() {}
+
 func (v Resource) Type() Type {
+	if v.ResourceType == nil {
+		// Return nil Type instead of Type referencing nil *ResourceType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.ResourceType
 }
 
-func (v Resource) MeteredType(_ common.MemoryGauge) Type {
+func (v Resource) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1617,31 +1738,135 @@ func (v Resource) WithType(typ *ResourceType) Resource {
 	return v
 }
 
-func (v Resource) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
-
-	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
+func (v Resource) String() string {
+	return formatComposite(
+		v.ResourceType.ID(),
+		v.ResourceType.fields,
+		v.fields,
+	)
 }
 
-func (v Resource) String() string {
-	return formatComposite(v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
+func (v Resource) getFields() []Field {
+	if v.ResourceType == nil {
+		return nil
+	}
+
+	return v.ResourceType.fields
+}
+
+func (v Resource) getFieldValues() []Value {
+	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the resource,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Resource) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Resource) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
+}
+
+// Attachment
+
+type Attachment struct {
+	AttachmentType *AttachmentType
+	fields         []Value
+}
+
+var _ Value = Attachment{}
+var _ Composite = Attachment{}
+
+func NewAttachment(fields []Value) Attachment {
+	return Attachment{fields: fields}
+}
+
+func NewMeteredAttachment(
+	gauge common.MemoryGauge,
+	numberOfFields int,
+	constructor func() ([]Value, error),
+) (Attachment, error) {
+	baseUsage, sizeUsage := common.NewCadenceAttachmentMemoryUsages(numberOfFields)
+	common.UseMemory(gauge, baseUsage)
+	common.UseMemory(gauge, sizeUsage)
+	fields, err := constructor()
+	if err != nil {
+		return Attachment{}, err
+	}
+	return NewAttachment(fields), nil
+}
+
+func (Attachment) isValue() {}
+
+func (Attachment) isComposite() {}
+
+func (v Attachment) Type() Type {
+	if v.AttachmentType == nil {
+		// Return nil Type instead of Type referencing nil *AttachmentType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
+	return v.AttachmentType
+}
+
+func (v Attachment) MeteredType(_ common.MemoryGauge) Type {
+	return v.Type()
+}
+
+func (v Attachment) WithType(typ *AttachmentType) Attachment {
+	v.AttachmentType = typ
+	return v
+}
+
+func (v Attachment) String() string {
+	return formatComposite(
+		v.AttachmentType.ID(),
+		v.AttachmentType.fields,
+		v.fields,
+	)
+}
+
+func (v Attachment) getFields() []Field {
+	if v.AttachmentType == nil {
+		return nil
+	}
+
+	return v.AttachmentType.fields
+}
+
+func (v Attachment) getFieldValues() []Value {
+	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the attachment,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Attachment) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Attachment) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 // Event
 
 type Event struct {
 	EventType *EventType
-	Fields    []Value
+	fields    []Value
 }
 
 var _ Value = Event{}
+var _ Composite = Event{}
 
 func NewEvent(fields []Value) Event {
-	return Event{Fields: fields}
+	return Event{fields: fields}
 }
 
 func NewMeteredEvent(
@@ -1661,11 +1886,18 @@ func NewMeteredEvent(
 
 func (Event) isValue() {}
 
+func (Event) isComposite() {}
+
 func (v Event) Type() Type {
+	if v.EventType == nil {
+		// Return nil Type instead of Type referencing nil *EventType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.EventType
 }
 
-func (v Event) MeteredType(_ common.MemoryGauge) Type {
+func (v Event) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1674,30 +1906,51 @@ func (v Event) WithType(typ *EventType) Event {
 	return v
 }
 
-func (v Event) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
+func (v Event) String() string {
+	return formatComposite(
+		v.EventType.ID(),
+		v.EventType.fields,
+		v.fields,
+	)
+}
 
-	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
+func (v Event) getFields() []Field {
+	if v.EventType == nil {
+		return nil
 	}
 
-	return ret
+	return v.EventType.fields
 }
-func (v Event) String() string {
-	return formatComposite(v.EventType.ID(), v.EventType.Fields, v.Fields)
+
+func (v Event) getFieldValues() []Value {
+	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the event,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Event) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Event) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
 }
 
 // Contract
 
 type Contract struct {
 	ContractType *ContractType
-	Fields       []Value
+	fields       []Value
 }
 
 var _ Value = Contract{}
+var _ Composite = Contract{}
 
 func NewContract(fields []Value) Contract {
-	return Contract{Fields: fields}
+	return Contract{fields: fields}
 }
 
 func NewMeteredContract(
@@ -1717,11 +1970,18 @@ func NewMeteredContract(
 
 func (Contract) isValue() {}
 
+func (Contract) isComposite() {}
+
 func (v Contract) Type() Type {
+	if v.ContractType == nil {
+		// Return nil Type instead of Type referencing nil *ContractType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.ContractType
 }
 
-func (v Contract) MeteredType(_ common.MemoryGauge) Type {
+func (v Contract) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1730,101 +1990,172 @@ func (v Contract) WithType(typ *ContractType) Contract {
 	return v
 }
 
-func (v Contract) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
-
-	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
-}
-
 func (v Contract) String() string {
-	return formatComposite(v.ContractType.ID(), v.ContractType.Fields, v.Fields)
+	return formatComposite(
+		v.ContractType.ID(),
+		v.ContractType.fields,
+		v.fields,
+	)
 }
 
-// Link
+func (v Contract) getFields() []Field {
+	if v.ContractType == nil {
+		return nil
+	}
 
-type Link struct {
-	TargetPath Path
-	// TODO: a future version might want to export the whole type
-	BorrowType string
+	return v.ContractType.fields
 }
 
-var _ Value = Link{}
+func (v Contract) getFieldValues() []Value {
+	return v.fields
+}
 
-func NewLink(targetPath Path, borrowType string) Link {
-	return Link{
-		TargetPath: targetPath,
-		BorrowType: borrowType,
+// SearchFieldByName searches for the field with the given name in the contract,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Contract) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Contract) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
+}
+
+// InclusiveRange
+
+type InclusiveRange struct {
+	InclusiveRangeType *InclusiveRangeType
+	Start              Value
+	End                Value
+	Step               Value
+	fields             []Field
+}
+
+var _ Value = &InclusiveRange{}
+
+func NewInclusiveRange(start, end, step Value) *InclusiveRange {
+	return &InclusiveRange{
+		Start: start,
+		End:   end,
+		Step:  step,
 	}
 }
 
-func NewMeteredLink(gauge common.MemoryGauge, targetPath Path, borrowType string) Link {
-	common.UseMemory(gauge, common.CadenceLinkValueMemoryUsage)
-	return NewLink(targetPath, borrowType)
+func NewMeteredInclusiveRange(
+	gauge common.MemoryGauge,
+	start, end, step Value,
+) *InclusiveRange {
+	common.UseMemory(gauge, common.CadenceInclusiveRangeValueMemoryUsage)
+	return NewInclusiveRange(start, end, step)
 }
 
-func (Link) isValue() {}
+func (*InclusiveRange) isValue() {}
 
-func (v Link) Type() Type {
-	return nil
+func (v *InclusiveRange) Type() Type {
+	if v.InclusiveRangeType == nil {
+		// Return nil Type instead of Type referencing nil *InclusiveRangeType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
+	return v.InclusiveRangeType
 }
 
-func (v Link) MeteredType(_ common.MemoryGauge) Type {
+func (v *InclusiveRange) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
-func (v Link) ToGoValue() any {
-	return nil
+func (v *InclusiveRange) WithType(typ *InclusiveRangeType) *InclusiveRange {
+	v.InclusiveRangeType = typ
+	return v
 }
 
-func (v Link) String() string {
-	return format.Link(
-		v.BorrowType,
-		v.TargetPath.String(),
+func (v *InclusiveRange) String() string {
+	if v.InclusiveRangeType == nil {
+		return ""
+	}
+
+	if v.fields == nil {
+		elementType := v.InclusiveRangeType.ElementType
+		v.fields = []Field{
+			{
+				Identifier: sema.InclusiveRangeTypeStartFieldName,
+				Type:       elementType,
+			},
+			{
+				Identifier: sema.InclusiveRangeTypeEndFieldName,
+				Type:       elementType,
+			},
+			{
+				Identifier: sema.InclusiveRangeTypeStepFieldName,
+				Type:       elementType,
+			},
+		}
+	}
+
+	return formatComposite(
+		v.InclusiveRangeType.ID(),
+		v.fields,
+		[]Value{v.Start, v.End, v.Step},
 	)
 }
 
 // Path
 
 type Path struct {
-	Domain     string
+	Domain     common.PathDomain
 	Identifier string
 }
 
 var _ Value = Path{}
 
-func NewPath(domain, identifier string) Path {
+func NewPath(domain common.PathDomain, identifier string) (Path, error) {
+	if domain == common.PathDomainUnknown {
+		return Path{}, errors.NewDefaultUserError("unknown domain in path")
+	}
+
 	return Path{
 		Domain:     domain,
 		Identifier: identifier,
-	}
+	}, nil
 }
 
-func NewMeteredPath(gauge common.MemoryGauge, domain, identifier string) Path {
+func MustNewPath(domain common.PathDomain, identifier string) Path {
+	path, err := NewPath(domain, identifier)
+	if err != nil {
+		panic(err)
+	}
+	return path
+}
+
+func NewMeteredPath(gauge common.MemoryGauge, domain common.PathDomain, identifier string) (Path, error) {
 	common.UseMemory(gauge, common.CadencePathValueMemoryUsage)
 	return NewPath(domain, identifier)
 }
 
 func (Path) isValue() {}
 
-func (Path) Type() Type {
-	return NewPathType()
+func (v Path) Type() Type {
+	switch v.Domain {
+	case common.PathDomainStorage:
+		return StoragePathType
+	case common.PathDomainPrivate:
+		return PrivatePathType
+	case common.PathDomainPublic:
+		return PublicPathType
+	}
+
+	panic(errors.NewUnreachableError())
 }
 
-func (Path) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredPathType(gauge)
-}
-
-func (Path) ToGoValue() any {
-	return nil
+func (v Path) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v Path) String() string {
 	return format.Path(
-		v.Domain,
+		v.Domain.Identifier(),
 		v.Identifier,
 	)
 }
@@ -1851,15 +2182,11 @@ func NewMeteredTypeValue(gauge common.MemoryGauge, staticType Type) TypeValue {
 func (TypeValue) isValue() {}
 
 func (TypeValue) Type() Type {
-	return NewMetaType()
+	return MetaType
 }
 
-func (TypeValue) MeteredType(gauge common.MemoryGauge) Type {
-	return NewMeteredMetaType(gauge)
-}
-
-func (TypeValue) ToGoValue() any {
-	return nil
+func (v TypeValue) MeteredType(common.MemoryGauge) Type {
+	return v.Type()
 }
 
 func (v TypeValue) String() string {
@@ -1869,24 +2196,38 @@ func (v TypeValue) String() string {
 // Capability
 
 type Capability struct {
-	Path       Path
-	Address    Address
-	BorrowType Type
+	BorrowType     Type
+	Address        Address
+	DeprecatedPath *Path // Deprecated: removed in v1.0.0
+	ID             UInt64
 }
 
 var _ Value = Capability{}
 
-func NewCapability(path Path, address Address, borrowType Type) Capability {
+func NewCapability(
+	id UInt64,
+	address Address,
+	borrowType Type,
+) Capability {
 	return Capability{
-		Path:       path,
+		ID:         id,
 		Address:    address,
 		BorrowType: borrowType,
 	}
 }
 
-func NewMeteredCapability(gauge common.MemoryGauge, path Path, address Address, borrowType Type) Capability {
+func NewMeteredCapability(
+	gauge common.MemoryGauge,
+	id UInt64,
+	address Address,
+	borrowType Type,
+) Capability {
 	common.UseMemory(gauge, common.CadenceCapabilityValueMemoryUsage)
-	return NewCapability(path, address, borrowType)
+	return NewCapability(
+		id,
+		address,
+		borrowType,
+	)
 }
 
 func (Capability) isValue() {}
@@ -1899,28 +2240,65 @@ func (v Capability) MeteredType(gauge common.MemoryGauge) Type {
 	return NewMeteredCapabilityType(gauge, v.BorrowType)
 }
 
-func (Capability) ToGoValue() any {
-	return nil
+func (v Capability) String() string {
+	if v.DeprecatedPath != nil && v.DeprecatedPath.String() != "" {
+		var borrowType string
+		if v.BorrowType != nil {
+			borrowType = v.BorrowType.ID()
+		}
+
+		return format.DeprecatedPathCapability(
+			borrowType,
+			v.Address.String(),
+			v.DeprecatedPath.String(),
+		)
+	} else {
+		return format.Capability(
+			v.BorrowType.ID(),
+			v.Address.String(),
+			v.ID.String(),
+		)
+	}
 }
 
-func (v Capability) String() string {
-	return format.Capability(
-		v.BorrowType.ID(),
-		v.Address.String(),
-		v.Path.String(),
+// Deprecated: removed in v1.0.0
+func NewDeprecatedPathCapability(
+	address Address,
+	path Path,
+	borrowType Type,
+) Capability {
+	return Capability{
+		DeprecatedPath: &path,
+		Address:        address,
+		BorrowType:     borrowType,
+	}
+}
+
+func NewDeprecatedMeteredPathCapability(
+	gauge common.MemoryGauge,
+	address Address,
+	path Path,
+	borrowType Type,
+) Capability {
+	common.UseMemory(gauge, common.CadenceDeprecatedPathCapabilityValueMemoryUsage)
+	return NewDeprecatedPathCapability(
+		address,
+		path,
+		borrowType,
 	)
 }
 
 // Enum
 type Enum struct {
 	EnumType *EnumType
-	Fields   []Value
+	fields   []Value
 }
 
 var _ Value = Enum{}
+var _ Composite = Enum{}
 
 func NewEnum(fields []Value) Enum {
-	return Enum{Fields: fields}
+	return Enum{fields: fields}
 }
 
 func NewMeteredEnum(
@@ -1940,11 +2318,18 @@ func NewMeteredEnum(
 
 func (Enum) isValue() {}
 
+func (Enum) isComposite() {}
+
 func (v Enum) Type() Type {
+	if v.EnumType == nil {
+		// Return nil Type instead of Type referencing nil *EnumType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
 	return v.EnumType
 }
 
-func (v Enum) MeteredType(_ common.MemoryGauge) Type {
+func (v Enum) MeteredType(common.MemoryGauge) Type {
 	return v.Type()
 }
 
@@ -1953,16 +2338,73 @@ func (v Enum) WithType(typ *EnumType) Enum {
 	return v
 }
 
-func (v Enum) ToGoValue() any {
-	ret := make([]any, len(v.Fields))
-
-	for i, field := range v.Fields {
-		ret[i] = field.ToGoValue()
-	}
-
-	return ret
+func (v Enum) String() string {
+	return formatComposite(
+		v.EnumType.ID(),
+		v.EnumType.fields,
+		v.fields,
+	)
 }
 
-func (v Enum) String() string {
-	return formatComposite(v.EnumType.ID(), v.EnumType.Fields, v.Fields)
+func (v Enum) getFields() []Field {
+	if v.EnumType == nil {
+		return nil
+	}
+
+	return v.EnumType.fields
+}
+
+func (v Enum) getFieldValues() []Value {
+	return v.fields
+}
+
+// SearchFieldByName searches for the field with the given name in the enum,
+// and returns the value of the field, or nil if the field is not found.
+//
+// WARNING: This function performs a linear search, so is not efficient for accessing multiple fields.
+// Prefer using FieldsMappedByName if you need to access multiple fields.
+func (v Enum) SearchFieldByName(fieldName string) Value {
+	return SearchFieldByName(v, fieldName)
+}
+
+func (v Enum) FieldsMappedByName() map[string]Value {
+	return FieldsMappedByName(v)
+}
+
+// Function
+type Function struct {
+	FunctionType *FunctionType
+}
+
+var _ Value = Function{}
+
+func NewFunction(functionType *FunctionType) Function {
+	return Function{
+		FunctionType: functionType,
+	}
+}
+
+func NewMeteredFunction(gauge common.MemoryGauge, functionType *FunctionType) Function {
+	common.UseMemory(gauge, common.CadenceFunctionValueMemoryUsage)
+	return NewFunction(functionType)
+}
+
+func (Function) isValue() {}
+
+func (v Function) Type() Type {
+	if v.FunctionType == nil {
+		// Return nil Type instead of Type referencing nil *FunctionType,
+		// so caller can check if v's type is nil and also prevent nil pointer dereference.
+		return nil
+	}
+	return v.FunctionType
+}
+
+func (v Function) MeteredType(common.MemoryGauge) Type {
+	return v.FunctionType
+}
+
+func (v Function) String() string {
+	// TODO: include function type
+	return "fun ..."
 }

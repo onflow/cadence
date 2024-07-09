@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,13 @@ import (
 // InterfaceDeclaration
 
 type InterfaceDeclaration struct {
+	Members      *Members
+	DocString    string
+	Identifier   Identifier
+	Conformances []*NominalType
+	Range
 	Access        Access
 	CompositeKind common.CompositeKind
-	Identifier    Identifier
-	Members       *Members
-	DocString     string
-	Range
 }
 
 var _ Element = &InterfaceDeclaration{}
@@ -46,6 +47,7 @@ func NewInterfaceDeclaration(
 	access Access,
 	compositeKind common.CompositeKind,
 	identifier Identifier,
+	conformances []*NominalType,
 	members *Members,
 	docString string,
 	declRange Range,
@@ -56,6 +58,7 @@ func NewInterfaceDeclaration(
 		Access:        access,
 		CompositeKind: compositeKind,
 		Identifier:    identifier,
+		Conformances:  conformances,
 		Members:       members,
 		DocString:     docString,
 		Range:         declRange,
@@ -99,8 +102,8 @@ func (d *InterfaceDeclaration) DeclarationDocString() string {
 func (d *InterfaceDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias InterfaceDeclaration
 	return json.Marshal(&struct {
-		Type string
 		*Alias
+		Type string
 	}{
 		Type:  "InterfaceDeclaration",
 		Alias: (*Alias)(d),
@@ -113,11 +116,19 @@ func (d *InterfaceDeclaration) Doc() prettier.Doc {
 		d.CompositeKind,
 		true,
 		d.Identifier.Identifier,
-		nil,
+		d.Conformances,
 		d.Members,
 	)
 }
 
 func (d *InterfaceDeclaration) String() string {
 	return Prettier(d)
+}
+
+func (d *InterfaceDeclaration) ConformanceList() []*NominalType {
+	return d.Conformances
+}
+
+func (d *InterfaceDeclaration) Kind() common.CompositeKind {
+	return d.CompositeKind
 }

@@ -19,28 +19,41 @@
 package vm
 
 import (
-	"fmt"
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 // members
 
 type CapabilityValue struct {
 	Address    AddressValue
-	Path       PathValue
 	BorrowType StaticType
+	ID         IntValue // TODO: UInt64Value
 }
 
 var _ Value = CapabilityValue{}
 
-func NewCapabilityValue(address AddressValue, path PathValue, borrowType StaticType) CapabilityValue {
+func NewCapabilityValue(address AddressValue, id IntValue, borrowType StaticType) CapabilityValue {
 	return CapabilityValue{
 		Address:    address,
-		Path:       path,
+		BorrowType: borrowType,
+		ID:         id,
+	}
+}
+
+func NewInvalidCapabilityValue(
+	memoryGauge common.MemoryGauge,
+	address AddressValue,
+	borrowType StaticType,
+) *CapabilityValue {
+	return &CapabilityValue{
+		ID:         InvalidCapabilityID,
+		Address:    address,
 		BorrowType: borrowType,
 	}
 }
@@ -63,115 +76,169 @@ func (v CapabilityValue) String() string {
 	return format.Capability(
 		borrowType,
 		v.Address.String(),
-		v.Path.String(),
+		v.ID.String(),
 	)
 }
+
+var InvalidCapabilityID = IntValue{}
 
 func init() {
 	typeName := interpreter.PrimitiveStaticTypeCapability.String()
 
 	// Capability.borrow
-	RegisterTypeBoundFunction(typeName, sema.CapabilityTypeBorrowField, NativeFunctionValue{
-		ParameterCount: 0,
-		Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
-			capabilityValue := args[0].(CapabilityValue)
+	RegisterTypeBoundFunction(
+		typeName,
+		sema.CapabilityTypeBorrowFunctionName,
+		NativeFunctionValue{
+			ParameterCount: 0,
+			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
+				capabilityValue := args[0].(CapabilityValue)
+				capabilityID := capabilityValue.ID
 
-			// NOTE: if a type argument is provided for the function,
-			// use it *instead* of the type of the value (if any)
-			var borrowType interpreter.ReferenceStaticType
-			if len(typeArguments) > 0 {
-				borrowType = typeArguments[0].(interpreter.ReferenceStaticType)
-			} else {
-				borrowType = capabilityValue.BorrowType.(interpreter.ReferenceStaticType)
-			}
+				if capabilityID == InvalidCapabilityID {
+					return Nil
+				}
 
-			address := capabilityValue.Address
+				capabilityBorrowType := capabilityValue.BorrowType.(*interpreter.ReferenceStaticType)
 
-			targetPath, authorized, err := getCapabilityFinalTargetPath(
-				config.Storage,
-				common.Address(address),
-				capabilityValue.Path,
-				borrowType,
-			)
-			if err != nil {
-				panic(err)
-			}
+				var wantedBorrowType *interpreter.ReferenceStaticType
+				if len(typeArguments) > 0 {
+					wantedBorrowType = typeArguments[0].(*interpreter.ReferenceStaticType)
+				}
 
-			reference := NewStorageReferenceValue(
-				config.Storage,
-				authorized,
-				common.Address(address),
-				targetPath,
-				borrowType,
-			)
+				address := capabilityValue.Address
 
-			// Attempt to dereference,
-			// which reads the stored value
-			// and performs a dynamic type check
+				referenceValue := GetCheckedCapabilityControllerReference(
+					config,
+					address,
+					capabilityID,
+					wantedBorrowType,
+					capabilityBorrowType,
+				)
+				if referenceValue == nil {
+					return nil
+				}
 
-			value, err := reference.dereference(config.MemoryGauge)
-			if err != nil {
-				panic(err)
-			}
-			if value == nil {
-				return NilValue{}
-			}
+				// TODO: Is this needed?
+				// Attempt to dereference,
+				// which reads the stored value
+				// and performs a dynamic type check
 
-			return NewSomeValueNonCopying(reference)
-		},
-	})
+				//value, err := referenceValue.dereference(config.MemoryGauge)
+				//if err != nil {
+				//	panic(err)
+				//}
+
+				if referenceValue == nil {
+					return Nil
+				}
+
+				return NewSomeValueNonCopying(referenceValue)
+			},
+		})
 }
 
-func getCapabilityFinalTargetPath(
-	storage interpreter.Storage,
-	address common.Address,
-	path PathValue,
-	wantedBorrowType interpreter.ReferenceStaticType,
+func GetCheckedCapabilityControllerReference(
+	config *Config,
+	capabilityAddressValue AddressValue,
+	capabilityIDValue IntValue,
+	wantedBorrowType *interpreter.ReferenceStaticType,
+	capabilityBorrowType *interpreter.ReferenceStaticType,
+) ReferenceValue {
+	controller, resultBorrowType := getCheckedCapabilityController(
+		config,
+		capabilityAddressValue,
+		capabilityIDValue,
+		wantedBorrowType,
+		capabilityBorrowType,
+	)
+	if controller == nil {
+		return nil
+	}
+
+	capabilityAddress := common.Address(capabilityAddressValue)
+
+	return controller.ReferenceValue(
+		config,
+		capabilityAddress,
+		resultBorrowType,
+	)
+}
+
+func getCheckedCapabilityController(
+	config *Config,
+	capabilityAddressValue AddressValue,
+	capabilityIDValue IntValue,
+	wantedBorrowType *interpreter.ReferenceStaticType,
+	capabilityBorrowType *interpreter.ReferenceStaticType,
 ) (
-	finalPath PathValue,
-	authorized bool,
-	err error,
+	CapabilityControllerValue,
+	*interpreter.ReferenceStaticType,
 ) {
-	wantedReferenceType := wantedBorrowType
-
-	seenPaths := map[PathValue]struct{}{}
-	paths := []PathValue{path}
-
-	for {
-		// Detect cyclic links
-
-		if _, ok := seenPaths[path]; ok {
-			return EmptyPathValue, false, fmt.Errorf("cyclic link error")
-		} else {
-			seenPaths[path] = struct{}{}
-		}
-
-		value := ReadStored(
-			nil,
-			storage,
-			address,
-			path.Domain.Identifier(),
-			path.Identifier,
-		)
-
-		if value == nil {
-			return EmptyPathValue, false, nil
-		}
-
-		if link, ok := value.(LinkValue); ok {
-
-			//allowedType := interpreter.MustConvertStaticToSemaType(link.Type)
-
-			//if !sema.IsSubType(allowedType, wantedBorrowType) {
-			//	return EmptyPathValue, false, nil
-			//}
-
-			targetPath := link.TargetPath
-			paths = append(paths, targetPath)
-			path = targetPath
-
-		} else {
-			return path, wantedReferenceType.Authorized, nil
+	if wantedBorrowType == nil {
+		wantedBorrowType = capabilityBorrowType
+	} else {
+		if !canBorrow(wantedBorrowType, capabilityBorrowType) {
+			return nil, nil
 		}
 	}
+
+	capabilityAddress := common.Address(capabilityAddressValue)
+	capabilityID := uint64(capabilityIDValue.SmallInt)
+
+	controller := getCapabilityController(config, capabilityAddress, capabilityID)
+	if controller == nil {
+		return nil, nil
+	}
+
+	controllerBorrowType := controller.CapabilityControllerBorrowType()
+	if !canBorrow(wantedBorrowType, controllerBorrowType) {
+		return nil, nil
+	}
+
+	return controller, wantedBorrowType
+}
+
+// getCapabilityController gets the capability controller for the given capability ID
+func getCapabilityController(
+	config *Config,
+	address common.Address,
+	capabilityID uint64,
+) CapabilityControllerValue {
+
+	storageMapKey := interpreter.Uint64StorageMapKey(capabilityID)
+
+	accountStorage := config.Storage.GetStorageMap(address, stdlib.CapabilityControllerStorageDomain, false)
+	if accountStorage == nil {
+		return nil
+	}
+
+	referenced := accountStorage.ReadValue(config.MemoryGauge, storageMapKey)
+	vmReferencedValue := InterpreterValueToVMValue(referenced)
+
+	controller, ok := vmReferencedValue.(CapabilityControllerValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return controller
+}
+
+func canBorrow(
+	wantedBorrowType *interpreter.ReferenceStaticType,
+	capabilityBorrowType *interpreter.ReferenceStaticType,
+) bool {
+
+	// Ensure the wanted borrow type is not more permissive than the capability borrow type
+	// TODO:
+	//if !wantedBorrowType.Authorization.
+	//	PermitsAccess(capabilityBorrowType.Authorization) {
+	//
+	//	return false
+	//}
+
+	// Ensure the wanted borrow type is a subtype or supertype of the capability borrow type
+
+	return IsSubType(wantedBorrowType.ReferencedType, capabilityBorrowType.ReferencedType) ||
+		IsSubType(capabilityBorrowType.ReferencedType, wantedBorrowType.ReferencedType)
 }

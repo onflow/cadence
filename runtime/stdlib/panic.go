@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,8 +27,8 @@ import (
 )
 
 type PanicError struct {
-	Message string
 	interpreter.LocationRange
+	Message string
 }
 
 var _ errors.UserError = PanicError{}
@@ -43,20 +43,19 @@ const panicFunctionDocString = `
 Terminates the program unconditionally and reports a message which explains why the unrecoverable error occurred.
 `
 
-var PanicFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+var PanicFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]sema.Parameter{
 		{
 			Label:          sema.ArgumentLabelNotRequired,
 			Identifier:     "message",
-			TypeAnnotation: sema.NewTypeAnnotation(sema.StringType),
+			TypeAnnotation: sema.StringTypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.NeverType,
-	),
-}
+	sema.NeverTypeAnnotation,
+)
 
-var PanicFunction = NewStandardLibraryFunction(
+var PanicFunction = NewStandardLibraryStaticFunction(
 	"panic",
 	PanicFunctionType,
 	panicFunctionDocString,

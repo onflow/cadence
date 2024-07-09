@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,17 +57,24 @@ func FunctionEntryPointDeclaration(program *ast.Program) *ast.FunctionDeclaratio
 // EntryPointParameters returns the parameters of the transaction or script, if any.
 //
 // Returns nil if the program specifies both a valid transaction and entry point function declaration.
-func (checker *Checker) EntryPointParameters() []*Parameter {
+func (checker *Checker) EntryPointParameters() []Parameter {
 	transactionDeclaration := checker.Program.SoleTransactionDeclaration()
 	if transactionDeclaration != nil {
-		transactionType := checker.Elaboration.TransactionDeclarationTypes[transactionDeclaration]
+		transactionType := checker.Elaboration.TransactionDeclarationType(transactionDeclaration)
 		return transactionType.Parameters
 	}
 
 	functionDeclaration := FunctionEntryPointDeclaration(checker.Program)
 	if functionDeclaration != nil {
-		functionType := checker.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
+		functionType := checker.Elaboration.FunctionDeclarationFunctionType(functionDeclaration)
 		return functionType.Parameters
+	}
+
+	compositeDeclarations := checker.Program.CompositeDeclarations()
+	if len(compositeDeclarations) > 0 {
+		compositeDeclaration := compositeDeclarations[0]
+		compositeType := checker.Elaboration.CompositeDeclarationType(compositeDeclaration)
+		return compositeType.ConstructorParameters
 	}
 
 	return nil

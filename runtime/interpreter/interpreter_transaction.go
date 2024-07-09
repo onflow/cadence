@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ func (interpreter *Interpreter) VisitTransactionDeclaration(declaration *ast.Tra
 }
 
 func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.TransactionDeclaration) {
-	transactionType := interpreter.Program.Elaboration.TransactionDeclarationTypes[declaration]
+	transactionType := interpreter.Program.Elaboration.TransactionDeclarationType(declaration)
 
 	lexicalScope := interpreter.activations.CurrentOrNew()
 
@@ -49,9 +49,10 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	}
 
 	postConditionsRewrite :=
-		interpreter.Program.Elaboration.PostConditionsRewrite[declaration.PostConditions]
+		interpreter.Program.Elaboration.PostConditionsRewrite(declaration.PostConditions)
 
-	staticType := NewCompositeStaticTypeComputeTypeID(interpreter, interpreter.Location, "")
+	const qualifiedIdentifier = ""
+	staticType := NewCompositeStaticTypeComputeTypeID(interpreter, interpreter.Location, qualifiedIdentifier)
 
 	self := NewSimpleCompositeValue(
 		interpreter,
@@ -64,6 +65,8 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		nil,
 	)
 
+	self.isTransaction = true
+
 	// Construct a raw HostFunctionValue without a type,
 	// instead of using NewHostFunctionValue, which requires a type.
 	//
@@ -75,8 +78,9 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 		Function: func(invocation Invocation) Value {
 			interpreter.activations.PushNewWithParent(lexicalScope)
 
-			invocation.Self = self
-			interpreter.declareVariable(sema.SelfIdentifier, self)
+			self := Value(self)
+			invocation.Self = &self
+			interpreter.declareSelfVariable(self, invocation.LocationRange)
 
 			if declaration.ParameterList != nil {
 				// If the transaction has a parameter list of N parameters,
@@ -130,12 +134,18 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				preConditions = *declaration.PreConditions
 			}
 
+			declarationLocationRange := LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: declaration,
+			}
+
 			return interpreter.visitFunctionBody(
 				postConditionsRewrite.BeforeStatements,
 				preConditions,
 				body,
 				postConditionsRewrite.RewrittenPostConditions,
 				sema.VoidType,
+				declarationLocationRange,
 			)
 		},
 	}

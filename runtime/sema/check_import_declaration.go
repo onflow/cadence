@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ func (checker *Checker) VisitImportDeclaration(declaration *ast.ImportDeclaratio
 	})
 }
 
-func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) Type {
+func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) {
 	locationRange := ast.NewRange(
 		checker.memoryGauge,
 		declaration.LocationPos,
@@ -53,19 +53,44 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 		declaration.LocationPos,
 	)
 
-	resolvedLocations, err := checker.resolveLocation(declaration.Identifiers, declaration.Location)
+	identifiers := declaration.Identifiers
+
+	resolvedLocations, err := checker.resolveLocation(identifiers, declaration.Location)
 	if err != nil {
 		checker.report(err)
-		return nil
+		return
 	}
 
-	checker.Elaboration.ImportDeclarationsResolvedLocations[declaration] = resolvedLocations
+	// 1) If the import is just for an address (e.g. `import 0x01`) without specifying any contracts, AND
+	// 2) If the imported address is same as the address of the account to which the current contract is deploying,
+	// Then this could create a cycle, as soon the current contract is deployed.
+	// e.g:
+	//    import 0x01
+	//    access(all) contract Foo {}
+	//
+
+	if len(identifiers) == 0 {
+		if currentProgramLocation, ok := checker.Location.(common.AddressLocation); ok {
+			if importLocation, ok := declaration.Location.(common.AddressLocation); ok {
+				if currentProgramLocation.Address == importLocation.Address {
+					checker.report(
+						&CyclicImportsError{
+							Location: declaration.Location,
+							Range:    locationRange,
+						},
+					)
+
+					return
+				}
+			}
+		}
+	}
+
+	checker.Elaboration.SetImportDeclarationsResolvedLocations(declaration, resolvedLocations)
 
 	for _, resolvedLocation := range resolvedLocations {
 		checker.importResolvedLocation(resolvedLocation, locationRange)
 	}
-
-	return nil
 }
 
 func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error) {
@@ -107,7 +132,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 			// In that case, return the error as is, for this location.
 			//
 			// If the error is not a cyclic error,
-			// it is considered a error in the imported program,
+			// it is considered an error in the imported program,
 			// and is wrapped
 
 			if _, ok := err.(*CyclicImportsError); !ok {
@@ -153,6 +178,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 		checker.valueActivations,
 		resolvedLocation.Identifiers,
 		allValueElements,
+		true,
 	)
 
 	// Attempt to import the requested type declarations
@@ -162,6 +188,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 		checker.typeActivations,
 		resolvedLocation.Identifiers,
 		allTypeElements,
+		false,
 	)
 
 	// For each identifier, report if the import is invalid due to
@@ -246,7 +273,7 @@ func (checker *Checker) handleMissingImports(missing []ast.Identifier, available
 		)
 
 		// NOTE: declare constant variable with invalid type to silence rest of program
-		const access = ast.AccessPrivate
+		const access = PrimitiveAccess(ast.AccessSelf)
 
 		_, err := checker.valueActivations.declare(variableDeclaration{
 			identifier:               identifier.Identifier,
@@ -275,6 +302,7 @@ func (checker *Checker) importElements(
 	valueActivations *VariableActivations,
 	requestedIdentifiers []ast.Identifier,
 	availableElements *StringImportElementOrderedMap,
+	importValues bool,
 ) (
 	found map[ast.Identifier]bool,
 	invalidAccessed map[ast.Identifier]ImportElement,
@@ -314,7 +342,7 @@ func (checker *Checker) importElements(
 
 			access := element.Access
 
-			if !checker.isReadableAccess(access) {
+			if !checker.Config.AccessCheckMode.IsReadableAccess(access) {
 
 				// If the variable was imported explicitly, report an error
 
@@ -326,9 +354,19 @@ func (checker *Checker) importElements(
 				}
 			}
 
+			elementType := element.Type
+
+			if importValues {
+				// Imported contract values must be imported as a reference.
+				compositeType, ok := elementType.(*CompositeType)
+				if ok && compositeType.Kind == common.CompositeKindContract {
+					elementType = NewReferenceType(checker.memoryGauge, UnauthorizedAccess, compositeType)
+				}
+			}
+
 			_, err := valueActivations.declare(variableDeclaration{
 				identifier: name,
-				ty:         element.Type,
+				ty:         elementType,
 				// TODO: implies that type is "re-exported"
 				access: access,
 				kind:   element.DeclarationKind,

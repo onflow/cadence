@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,16 +19,17 @@
 package analysis_test
 
 import (
+	"fmt"
 	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/parser"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/tools/analysis"
 )
 
@@ -40,7 +41,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 	const txCode = `
 	  import 0x1
 
-	  pub let y = "test" as! String
+	  access(all) let y = "test" as! String
 	`
 
 	contractAddress := common.MustBytesToAddress([]byte{0x1})
@@ -49,7 +50,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 		Name:    "ContractA",
 	}
 	const contractCode = `
-      pub contract ContractA {
+      access(all) contract ContractA {
 	    init() {
 	      let y = true as! Bool
 	    }
@@ -75,8 +76,8 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 				return []byte(contractCode), nil
 
 			default:
-				require.FailNow(t,
-					"import of unknown location: %s",
+				require.FailNowf(t,
+					"import of unknown location",
 					"location: %s",
 					location,
 				)
@@ -100,7 +101,7 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 
 	for _, program := range programs {
 		require.NotNil(t, program.Program)
-		require.NotNil(t, program.Elaboration)
+		require.NotNil(t, program.Checker)
 
 		// Run a simple analysis: Detect unnecessary cast
 
@@ -112,8 +113,9 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 				return true
 			}
 
-			leftHandType := program.Elaboration.CastingStaticValueTypes[castingExpression]
-			rightHandType := program.Elaboration.CastingTargetTypes[castingExpression]
+			types := program.Checker.Elaboration.CastingExpressionTypes(castingExpression)
+			leftHandType := types.StaticValueType
+			rightHandType := types.TargetType
 
 			if !sema.IsSubType(leftHandType, rightHandType) {
 				return true
@@ -149,15 +151,15 @@ func TestNeedSyntaxAndImport(t *testing.T) {
 			{
 				location: contractLocation,
 				Range: ast.Range{
-					StartPos: ast.Position{Offset: 61, Line: 4, Column: 15},
-					EndPos:   ast.Position{Offset: 73, Line: 4, Column: 27},
+					StartPos: ast.Position{Offset: 69, Line: 4, Column: 15},
+					EndPos:   ast.Position{Offset: 81, Line: 4, Column: 27},
 				},
 			},
 			{
 				location: txLocation,
 				Range: ast.Range{
-					StartPos: ast.Position{Offset: 31, Line: 4, Column: 15},
-					EndPos:   ast.Position{Offset: 47, Line: 4, Column: 31},
+					StartPos: ast.Position{Offset: 39, Line: 4, Column: 23},
+					EndPos:   ast.Position{Offset: 55, Line: 4, Column: 39},
 				},
 			},
 		},
@@ -175,7 +177,7 @@ func TestParseError(t *testing.T) {
 		Name:    "ContractA",
 	}
 	const contractCode = `
-      pub contract ContractA {
+      access(all) contract ContractA {
 	    init() {
 	      ???
 	    }
@@ -192,10 +194,9 @@ func TestParseError(t *testing.T) {
 			switch location {
 			case contractLocation:
 				return []byte(contractCode), nil
-
 			default:
-				require.FailNow(t,
-					"import of unknown location: %s",
+				require.FailNowf(t,
+					"import of unknown location",
 					"location: %s",
 					location,
 				)
@@ -221,7 +222,7 @@ func TestCheckError(t *testing.T) {
 		Name:    "ContractA",
 	}
 	const contractCode = `
-      pub contract ContractA {
+      access(all) contract ContractA {
 	    init() {
 	      X
 	    }
@@ -240,8 +241,8 @@ func TestCheckError(t *testing.T) {
 				return []byte(contractCode), nil
 
 			default:
-				require.FailNow(t,
-					"import of unknown location: %s",
+				require.FailNowf(t,
+					"import of unknown location",
 					"location: %s",
 					location,
 				)
@@ -257,6 +258,185 @@ func TestCheckError(t *testing.T) {
 	require.ErrorAs(t, err, &checkerError)
 }
 
+func TestHandledParserError(t *testing.T) {
+
+	t.Parallel()
+
+	contractAddress := common.MustBytesToAddress([]byte{0x1})
+	contractLocation := common.AddressLocation{
+		Address: contractAddress,
+		Name:    "ContractA",
+	}
+	const contractCode = `
+	  access(all) contract ContractA {
+	    init() {
+	      ???
+	    }
+	  }
+	`
+
+	handlerCalls := 0
+	config := &analysis.Config{
+		Mode: analysis.NeedSyntax,
+		ResolveCode: func(
+			location common.Location,
+			importingLocation common.Location,
+			importRange ast.Range,
+		) ([]byte, error) {
+			switch location {
+			case contractLocation:
+				return []byte(contractCode), nil
+
+			default:
+				require.FailNowf(t,
+					"import of unknown location",
+					"location: %s",
+					location,
+				)
+				return nil, nil
+			}
+		},
+		HandleParserError: func(err analysis.ParsingCheckingError, _ *ast.Program) error {
+			require.Error(t, err)
+			handlerCalls++
+			return nil
+		},
+	}
+
+	programs, err := analysis.Load(config, contractLocation)
+	require.NoError(t, err)
+
+	require.Equal(t, 1, handlerCalls)
+
+	var parserError parser.Error
+	require.ErrorAs(t, programs[contractLocation].LoadError, &parserError)
+}
+
+func TestHandledCheckerError(t *testing.T) {
+
+	t.Parallel()
+
+	contractAddress := common.MustBytesToAddress([]byte{0x1})
+	contractLocation := common.AddressLocation{
+		Address: contractAddress,
+		Name:    "ContractA",
+	}
+	const contractCode = `
+	  access(all) contract ContractA {
+	    init() {
+	      X
+	    }
+	  }
+	`
+
+	handlerCalls := 0
+	config := &analysis.Config{
+		Mode: analysis.NeedTypes,
+		ResolveCode: func(
+			location common.Location,
+			importingLocation common.Location,
+			importRange ast.Range,
+		) ([]byte, error) {
+			switch location {
+			case contractLocation:
+				return []byte(contractCode), nil
+			default:
+				require.FailNowf(t,
+					"import of unknown location",
+					"location: %s",
+					location,
+				)
+				return nil, nil
+			}
+		},
+		HandleCheckerError: func(err analysis.ParsingCheckingError, _ *sema.Checker) error {
+			require.Error(t, err)
+			handlerCalls++
+			return nil
+		},
+	}
+
+	programs, err := analysis.Load(config, contractLocation)
+	require.Equal(t, 1, handlerCalls)
+	require.NoError(t, err)
+
+	var checkerError *sema.CheckerError
+	require.ErrorAs(t, programs[contractLocation].LoadError, &checkerError)
+}
+
+// Tests that an error handled by the custom error handler is not returned
+// However, it must set LoadError to the handled error so that checkers later importing the program can see it
+func TestHandledLoadErrorImportedProgram(t *testing.T) {
+
+	t.Parallel()
+
+	contract1Address := common.MustBytesToAddress([]byte{0x1})
+	contract1Location := common.AddressLocation{
+		Address: contract1Address,
+		Name:    "ContractA",
+	}
+	const contract1Code = `
+	  import ContractB from 0x2
+	  
+      access(all) contract ContractA {
+	    init() {}
+	  }
+	`
+	contract2Address := common.MustBytesToAddress([]byte{0x2})
+	contract2Location := common.AddressLocation{
+		Address: contract2Address,
+		Name:    "ContractB",
+	}
+	const contract2Code = `
+	  access(all) contract ContractB {
+	    init() {
+	      X
+	    }
+	  }
+	`
+
+	handlerCalls := 0
+	config := &analysis.Config{
+		Mode: analysis.NeedTypes,
+		ResolveCode: func(
+			location common.Location,
+			importingLocation common.Location,
+			importRange ast.Range,
+		) ([]byte, error) {
+			switch location {
+			case contract1Location:
+				return []byte(contract1Code), nil
+			case contract2Location:
+				return []byte(contract2Code), nil
+			default:
+				require.FailNowf(t,
+					"import of unknown location",
+					"location: %s",
+					location,
+				)
+				return nil, nil
+			}
+		},
+		HandleCheckerError: func(err analysis.ParsingCheckingError, _ *sema.Checker) error {
+			require.Error(t, err)
+			handlerCalls++
+			return nil
+		},
+	}
+
+	programs, err := analysis.Load(config, contract1Location)
+	require.Equal(t, 2, handlerCalls)
+	require.NoError(t, err)
+
+	var checkerError *sema.CheckerError
+	require.ErrorAs(t, programs[contract1Location].LoadError, &checkerError)
+	require.ErrorAs(t, programs[contract2Location].LoadError, &checkerError)
+
+	// Validate that parent checker receives the imported program error despite it being handled
+	var importedProgramErr *sema.ImportedProgramError
+	require.ErrorAs(t, programs[contract1Location].LoadError, &importedProgramErr)
+}
+
 func TestStdlib(t *testing.T) {
 
 	t.Parallel()
@@ -264,7 +444,7 @@ func TestStdlib(t *testing.T) {
 	scriptLocation := common.ScriptLocation{}
 
 	const code = `
-	  pub fun main() {
+	  access(all) fun main() {
           panic("test")
       }
 	`
@@ -281,8 +461,8 @@ func TestStdlib(t *testing.T) {
 				return []byte(code), nil
 
 			default:
-				require.FailNow(t,
-					"import of unknown location: %s",
+				require.FailNowf(t,
+					"import of unknown location",
 					"location: %s",
 					location,
 				)
@@ -293,5 +473,84 @@ func TestStdlib(t *testing.T) {
 
 	_, err := analysis.Load(config, scriptLocation)
 	require.NoError(t, err)
+}
 
+func TestCyclicImports(t *testing.T) {
+
+	t.Parallel()
+
+	fooContractAddress := common.MustBytesToAddress([]byte{0x1})
+	fooContractLocation := common.AddressLocation{
+		Address: fooContractAddress,
+		Name:    "Foo",
+	}
+	const fooContractCode = `
+        import 0x2
+        access(all) contract Foo {}
+	`
+
+	barContractAddress := common.MustBytesToAddress([]byte{0x2})
+	barContractLocation := common.AddressLocation{
+		Address: barContractAddress,
+		Name:    "Bar",
+	}
+	const barContractCode = `
+        import 0x1
+        access(all) contract Bar {}
+	`
+
+	config := &analysis.Config{
+		Mode: analysis.NeedTypes,
+		ResolveAddressContractNames: func(address common.Address) ([]string, error) {
+			switch address {
+			case fooContractAddress:
+				return []string{fooContractLocation.Name}, nil
+			case barContractAddress:
+				return []string{barContractLocation.Name}, nil
+			default:
+				return nil, fmt.Errorf(
+					"import of unknown location: %s",
+					address,
+				)
+			}
+		},
+		ResolveCode: func(
+			location common.Location,
+			importingLocation common.Location,
+			importRange ast.Range,
+		) ([]byte, error) {
+			switch location {
+			case fooContractLocation:
+				return []byte(fooContractCode), nil
+
+			case barContractLocation:
+				return []byte(barContractCode), nil
+
+			default:
+				require.FailNowf(t,
+					"import of unknown location",
+					"location: %s",
+					location,
+				)
+				return nil, nil
+			}
+		},
+	}
+
+	_, err := analysis.Load(config, fooContractLocation)
+	require.Error(t, err)
+
+	var checkerError *sema.CheckerError
+	require.ErrorAs(t, err, &checkerError)
+
+	errs := checker.RequireCheckerErrors(t, checkerError, 1)
+
+	var importedProgramErr *sema.ImportedProgramError
+	require.ErrorAs(t, errs[0], &importedProgramErr)
+
+	var nestedCheckerErr *sema.CheckerError
+	require.ErrorAs(t, importedProgramErr.Err, &nestedCheckerErr)
+
+	errs = checker.RequireCheckerErrors(t, nestedCheckerErr, 1)
+	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
 }

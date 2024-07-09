@@ -18,7 +18,10 @@
 
 package vm
 
-import "github.com/onflow/cadence/runtime/errors"
+import (
+	"fmt"
+	"github.com/onflow/cadence/runtime/errors"
+)
 
 type LinkerError struct {
 	Message string
@@ -32,4 +35,19 @@ func (l LinkerError) IsInternalError() {
 
 func (l LinkerError) Error() string {
 	return l.Message
+}
+
+type MissingMemberValueError struct {
+	Name string
+}
+
+var _ error = MissingMemberValueError{}
+var _ errors.InternalError = MissingMemberValueError{}
+
+func (l MissingMemberValueError) IsInternalError() {
+}
+
+func (l MissingMemberValueError) Error() string {
+	return fmt.Sprintf("cannot find member: %s", l.Name)
+
 }

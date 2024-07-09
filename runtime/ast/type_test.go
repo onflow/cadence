@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -88,6 +88,7 @@ func TestTypeAnnotation_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "IsResource": true,
@@ -169,6 +170,8 @@ func TestNominalType_String(t *testing.T) {
 
 	t.Run("simple", func(t *testing.T) {
 
+		t.Parallel()
+
 		ty := &NominalType{
 			Identifier: Identifier{
 				Identifier: "R",
@@ -230,6 +233,7 @@ func TestNominalType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "NominalType",
@@ -310,6 +314,7 @@ func TestOptionalType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "OptionalType",
@@ -398,6 +403,7 @@ func TestVariableSizedType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "VariableSizedType",
@@ -507,6 +513,7 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ConstantSizedType",
@@ -621,6 +628,7 @@ func TestDictionaryType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "DictionaryType",
@@ -657,6 +665,7 @@ func TestFunctionType_Doc(t *testing.T) {
 	t.Parallel()
 
 	ty := &FunctionType{
+		PurityAnnotation: FunctionPurityView,
 		ParameterTypeAnnotations: []*TypeAnnotation{
 			{
 				IsResource: true,
@@ -686,7 +695,10 @@ func TestFunctionType_Doc(t *testing.T) {
 
 	assert.Equal(t,
 		prettier.Concat{
-			prettier.Text("("),
+			prettier.Text("view"),
+			prettier.Space,
+			prettier.Text("fun"),
+			prettier.Space,
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("("),
@@ -711,7 +723,6 @@ func TestFunctionType_Doc(t *testing.T) {
 			},
 			prettier.Text(": "),
 			prettier.Text("EF"),
-			prettier.Text(")"),
 		},
 		ty.Doc(),
 	)
@@ -750,7 +761,7 @@ func TestFunctionType_String(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		"((@AB, @CD): EF)",
+		"fun (@AB, @CD): EF",
 		ty.String(),
 	)
 }
@@ -792,6 +803,7 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "FunctionType",
@@ -812,6 +824,7 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
                     "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
                 }
            ],
+		   "PurityAnnotation": "Unspecified",
            "ReturnTypeAnnotation": {
                "IsResource": true,
                "AnnotatedType": {
@@ -839,12 +852,20 @@ func TestReferenceType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("auth", func(t *testing.T) {
+	t.Run("auth with entitlement", func(t *testing.T) {
 
 		t.Parallel()
 
 		ty := &ReferenceType{
-			Authorized: true,
+			Authorization: &ConjunctiveEntitlementSet{
+				Elements: []*NominalType{
+					{
+						Identifier: Identifier{
+							Identifier: "X",
+						},
+					},
+				},
+			},
 			Type: &NominalType{
 				Identifier: Identifier{
 					Identifier: "T",
@@ -854,7 +875,131 @@ func TestReferenceType_Doc(t *testing.T) {
 
 		assert.Equal(t,
 			prettier.Concat{
-				prettier.Text("auth "),
+				prettier.Text("auth"),
+				prettier.Text("("),
+				prettier.Text("X"),
+				prettier.Text(")"),
+				prettier.Space,
+				prettier.Text("&"),
+				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("auth with mapping", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &MappedAccess{
+				EntitlementMap: &NominalType{
+					Identifier: Identifier{
+						Identifier: "X",
+					},
+				},
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("auth"),
+				prettier.Text("("),
+				prettier.Text("mapping "),
+				prettier.Text("X"),
+				prettier.Text(")"),
+				prettier.Space,
+				prettier.Text("&"),
+				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("auth with 2 conjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &ConjunctiveEntitlementSet{
+				Elements: []*NominalType{
+					{
+						Identifier: Identifier{
+							Identifier: "X",
+						},
+					},
+					{
+						Identifier: Identifier{
+							Identifier: "Y",
+						},
+					},
+				},
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("auth"),
+				prettier.Text("("),
+				prettier.Text("X"),
+				prettier.Text(","),
+				prettier.Space,
+				prettier.Text("Y"),
+				prettier.Text(")"),
+				prettier.Space,
+				prettier.Text("&"),
+				prettier.Text("T"),
+			},
+			ty.Doc(),
+		)
+	})
+
+	t.Run("auth with 2 disjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &DisjunctiveEntitlementSet{
+				Elements: []*NominalType{
+					{
+						Identifier: Identifier{
+							Identifier: "X",
+						},
+					},
+					{
+						Identifier: Identifier{
+							Identifier: "Y",
+						},
+					},
+				},
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			prettier.Concat{
+				prettier.Text("auth"),
+				prettier.Text("("),
+				prettier.Text("X"),
+				prettier.Text(" |"),
+				prettier.Space,
+				prettier.Text("Y"),
+				prettier.Text(")"),
+				prettier.Space,
 				prettier.Text("&"),
 				prettier.Text("T"),
 			},
@@ -888,12 +1033,20 @@ func TestReferenceType_String(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("auth", func(t *testing.T) {
+	t.Run("auth with entitlement", func(t *testing.T) {
 
 		t.Parallel()
 
 		ty := &ReferenceType{
-			Authorized: true,
+			Authorization: &ConjunctiveEntitlementSet{
+				Elements: []*NominalType{
+					{
+						Identifier: Identifier{
+							Identifier: "X",
+						},
+					},
+				},
+			},
 			Type: &NominalType{
 				Identifier: Identifier{
 					Identifier: "T",
@@ -902,7 +1055,96 @@ func TestReferenceType_String(t *testing.T) {
 		}
 
 		assert.Equal(t,
-			"auth &T",
+			"auth(X) &T",
+			ty.String(),
+		)
+	})
+
+	t.Run("auth with mapping", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &MappedAccess{
+				EntitlementMap: &NominalType{
+					Identifier: Identifier{
+						Identifier: "X",
+					},
+				},
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"auth(mapping X) &T",
+			ty.String(),
+		)
+	})
+
+	t.Run("auth with 2 conjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &ConjunctiveEntitlementSet{
+				Elements: []*NominalType{
+					{
+						Identifier: Identifier{
+							Identifier: "X",
+						},
+					},
+					{
+						Identifier: Identifier{
+							Identifier: "Y",
+						},
+					},
+				},
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"auth(X, Y) &T",
+			ty.String(),
+		)
+	})
+
+	t.Run("auth with 2 disjunctive entitlements", func(t *testing.T) {
+
+		t.Parallel()
+
+		ty := &ReferenceType{
+			Authorization: &DisjunctiveEntitlementSet{
+				Elements: []*NominalType{
+					{
+						Identifier: Identifier{
+							Identifier: "X",
+						},
+					},
+					{
+						Identifier: Identifier{
+							Identifier: "Y",
+						},
+					},
+				},
+			},
+			Type: &NominalType{
+				Identifier: Identifier{
+					Identifier: "T",
+				},
+			},
+		}
+
+		assert.Equal(t,
+			"auth(X | Y) &T",
 			ty.String(),
 		)
 	})
@@ -932,7 +1174,20 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 	t.Parallel()
 
 	ty := &ReferenceType{
-		Authorized: true,
+		Authorization: &ConjunctiveEntitlementSet{
+			Elements: []*NominalType{
+				{
+					Identifier: Identifier{
+						Identifier: "X",
+					},
+				},
+				{
+					Identifier: Identifier{
+						Identifier: "Y",
+					},
+				},
+			},
+		},
 		Type: &NominalType{
 			Identifier: Identifier{
 				Identifier: "AB",
@@ -946,10 +1201,35 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "ReferenceType",
-            "Authorized": true,
+			"LegacyAuthorized": false,
+            "Authorization": {
+				 "ConjunctiveElements": [
+					{ 
+						"Type": "NominalType",
+						"Identifier": {
+							"Identifier": "X",
+							"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
+							"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
+						},
+						"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
+						"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
+					}, 
+					{ 
+						"Type": "NominalType",
+						"Identifier": {
+							"Identifier": "Y",
+							"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
+							"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
+						},
+						"StartPos": {"Offset": 0, "Line": 0, "Column": 0},
+						"EndPos": {"Offset": 0, "Line": 0, "Column": 0}
+					}
+				]
+			},
             "ReferencedType": {
                 "Type": "NominalType",
                 "Identifier": {
@@ -968,17 +1248,12 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
 	)
 }
 
-func TestRestrictedType_Doc(t *testing.T) {
+func TestIntersectionType_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &RestrictedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
-		Restrictions: []*NominalType{
+	ty := &IntersectionType{
+		Types: []*NominalType{
 			{
 				Identifier: Identifier{
 					Identifier: "CD",
@@ -994,7 +1269,6 @@ func TestRestrictedType_Doc(t *testing.T) {
 
 	assert.Equal(t,
 		prettier.Concat{
-			prettier.Text("AB"),
 			prettier.Group{
 				Doc: prettier.Concat{
 					prettier.Text("{"),
@@ -1016,17 +1290,12 @@ func TestRestrictedType_Doc(t *testing.T) {
 	)
 }
 
-func TestRestrictedType_String(t *testing.T) {
+func TestIntersectionType_String(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &RestrictedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-			},
-		},
-		Restrictions: []*NominalType{
+	ty := &IntersectionType{
+		Types: []*NominalType{
 			{
 				Identifier: Identifier{
 					Identifier: "CD",
@@ -1041,23 +1310,17 @@ func TestRestrictedType_String(t *testing.T) {
 	}
 
 	assert.Equal(t,
-		"AB{CD, EF}",
+		"{CD, EF}",
 		ty.String(),
 	)
 }
 
-func TestRestrictedType_MarshalJSON(t *testing.T) {
+func TestIntersectionType_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	ty := &RestrictedType{
-		Type: &NominalType{
-			Identifier: Identifier{
-				Identifier: "AB",
-				Pos:        Position{Offset: 1, Line: 2, Column: 3},
-			},
-		},
-		Restrictions: []*NominalType{
+	ty := &IntersectionType{
+		Types: []*NominalType{
 			{
 				Identifier: Identifier{
 					Identifier: "CD",
@@ -1081,20 +1344,12 @@ func TestRestrictedType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
-            "Type": "RestrictedType",
-            "RestrictedType": {
-                "Type": "NominalType",
-                "Identifier": {
-                    "Identifier": "AB",
-                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-                    "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
-                },
-                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-                "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
-            },
-            "Restrictions": [
+            "Type": "IntersectionType",
+			"LegacyRestrictedType": null,
+            "Types": [
                 {
                     "Type": "NominalType",
                     "Identifier": {
@@ -1258,6 +1513,7 @@ func TestInstantiationType_MarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
+		// language=json
 		`
         {
             "Type": "InstantiationType",

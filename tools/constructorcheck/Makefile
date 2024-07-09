@@ -1,3 +1,2 @@
-.PHONY: plugin
-plugin:
+constructorcheck.so: go.mod *.go
 	go build -buildmode=plugin .

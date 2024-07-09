@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestEntryPointParameters(t *testing.T) {
+func TestCheckEntryPointParameters(t *testing.T) {
 
 	t.Parallel()
 
@@ -35,7 +35,7 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            pub fun main() {}
+            access(all) fun main() {}
         `)
 
 		require.NoError(t, err)
@@ -50,7 +50,7 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            pub fun main(a: Int) {}
+            access(all) fun main(a: Int) {}
         `)
 
 		require.NoError(t, err)
@@ -58,11 +58,11 @@ func TestEntryPointParameters(t *testing.T) {
 		parameters := checker.EntryPointParameters()
 
 		require.Equal(t,
-			[]*sema.Parameter{
+			[]sema.Parameter{
 				{
 					Label:          "",
 					Identifier:     "a",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+					TypeAnnotation: sema.IntTypeAnnotation,
 				},
 			},
 			parameters,
@@ -97,11 +97,11 @@ func TestEntryPointParameters(t *testing.T) {
 		parameters := checker.EntryPointParameters()
 
 		require.Equal(t,
-			[]*sema.Parameter{
+			[]sema.Parameter{
 				{
 					Label:          "",
 					Identifier:     "a",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+					TypeAnnotation: sema.IntTypeAnnotation,
 				},
 			},
 			parameters,
@@ -113,9 +113,9 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            pub struct SomeStruct {}
+            access(all) struct SomeStruct {}
 
-            pub fun main(a: Int) {}
+            access(all) fun main(a: Int) {}
         `)
 
 		require.NoError(t, err)
@@ -123,11 +123,11 @@ func TestEntryPointParameters(t *testing.T) {
 		parameters := checker.EntryPointParameters()
 
 		require.Equal(t,
-			[]*sema.Parameter{
+			[]sema.Parameter{
 				{
 					Label:          "",
 					Identifier:     "a",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+					TypeAnnotation: sema.IntTypeAnnotation,
 				},
 			},
 			parameters,
@@ -139,9 +139,9 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            pub struct interface SomeInterface {}
+            access(all) struct interface SomeInterface {}
 
-            pub fun main(a: Int) {}
+            access(all) fun main(a: Int) {}
         `)
 
 		require.NoError(t, err)
@@ -149,11 +149,11 @@ func TestEntryPointParameters(t *testing.T) {
 		parameters := checker.EntryPointParameters()
 
 		require.Equal(t,
-			[]*sema.Parameter{
+			[]sema.Parameter{
 				{
 					Label:          "",
 					Identifier:     "a",
-					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+					TypeAnnotation: sema.IntTypeAnnotation,
 				},
 			},
 			parameters,
@@ -165,7 +165,7 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            pub struct SomeStruct {}
+            access(all) struct SomeStruct {}
 
             transaction(a: Int) {}
         `)
@@ -182,9 +182,55 @@ func TestEntryPointParameters(t *testing.T) {
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
-            pub fun main(a: Int) {}
+            access(all) fun main(a: Int) {}
 
             transaction(a: Int) {}
+        `)
+
+		require.NoError(t, err)
+
+		parameters := checker.EntryPointParameters()
+
+		require.Empty(t, parameters)
+	})
+
+	t.Run("contract with init params", func(t *testing.T) {
+
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			access(all) contract SimpleContract {
+				access(all) let v: Int
+				init(a: Int) {
+					self.v = a
+				}
+			}		
+        `)
+
+		require.NoError(t, err)
+
+		parameters := checker.EntryPointParameters()
+
+		require.Equal(t,
+			[]sema.Parameter{
+				{
+					Label:          "",
+					Identifier:     "a",
+					TypeAnnotation: sema.NewTypeAnnotation(sema.IntType),
+				},
+			},
+			parameters,
+		)
+	})
+
+	t.Run("contract init empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+			access(all) contract SimpleContract {
+				init() {}
+			}		
         `)
 
 		require.NoError(t, err)

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,7 +98,7 @@ func TestCheckInvalidSwitchStatementCaseExpression(t *testing.T) {
 
 	errs := RequireCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
 func TestCheckInvalidSwitchStatementCaseExpressionInvalidTest(t *testing.T) {
@@ -400,4 +400,212 @@ func TestCheckSwitchStatementWithUnreachableReturn(t *testing.T) {
 
 	assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 	assert.IsType(t, &sema.MissingReturnStatementError{}, errs[1])
+}
+
+func TestCheckCaseExpressionTypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              let x: UInt8 = 5
+
+              switch x {
+              case 1:
+                  return 1
+              default:
+                  return 2
+              }
+          }
+        `)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              let x: UInt8 = 5
+
+              switch x {
+              case "one":
+                  return 1
+              default:
+                  return 2
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("unknown", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              switch x {
+              case "one":
+                  return 1
+              default:
+                  return 2
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
+	t.Run("character literal", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            fun test(): Int {
+                let c: Character = "a"
+                switch c {
+                case "b": return 0
+                case "c": return 1
+                case "d": return 2
+                case "a": return 1337
+                default: return -1
+                }
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckSwitchResourceInvalidation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("in first test", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun drop(_ r: @AnyResource): Bool {
+              destroy r
+              return true
+          }
+
+          fun test() {
+              let r <- create R()
+              switch true {
+              case drop(<-r):
+                return
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("in first case", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun test() {
+              let r <- create R()
+              switch true {
+              case false:
+                destroy r
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("in second test, not invalidated in first", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun drop(_ r: @AnyResource): Bool {
+              destroy r
+              return true
+          }
+
+          fun test() {
+              let r <- create R()
+              switch true {
+              case false:
+                return
+              case drop(<-r):
+                return
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	})
+
+	t.Run("in second test, but invalidated in first case", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun drop(_ r: @AnyResource): Bool {
+              destroy r
+              return true
+          }
+
+          fun test() {
+              let r <- create R()
+              switch true {
+              case false:
+                destroy r
+                return
+              case drop(<-r):
+                return
+              }
+          }
+        `)
+		require.NoError(t, err)
+	})
+
+	t.Run("invalidations in multiple tests", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          fun drop(_ r: @AnyResource): Bool {
+              destroy r
+              return true
+          }
+
+          fun test() {
+              let r <- create R()
+              switch true {
+              case drop(<-r):
+                return
+              case drop(<-r):
+                return
+              }
+          }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
 }

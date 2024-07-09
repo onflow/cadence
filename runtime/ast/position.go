@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,9 +74,32 @@ func (position Position) Compare(other Position) int {
 	}
 }
 
+func EarlierPosition(p1, p2 *Position) *Position {
+	if p1 == nil {
+		return p2
+	}
+	if p2 == nil {
+		return p1
+	}
+	if p1.Compare(*p2) < 0 {
+		return p1
+	}
+	return p2
+}
+
 func EndPosition(memoryGauge common.MemoryGauge, startPosition Position, end int) Position {
 	length := end - startPosition.Offset
 	return startPosition.Shifted(memoryGauge, length)
+}
+
+func EarliestPosition(p Position, ps ...*Position) (earliest Position) {
+	earliest = p
+	for _, pos := range ps {
+		if pos != nil && pos.Compare(earliest) < 0 {
+			earliest = *pos
+		}
+	}
+	return
 }
 
 // HasPosition
@@ -84,6 +107,11 @@ func EndPosition(memoryGauge common.MemoryGauge, startPosition Position, end int
 type HasPosition interface {
 	StartPosition() Position
 	EndPosition(memoryGauge common.MemoryGauge) Position
+}
+
+func RangeContains(memoryGauge common.MemoryGauge, a, b HasPosition) bool {
+	return a.StartPosition().Compare(b.StartPosition()) <= 0 &&
+		a.EndPosition(memoryGauge).Compare(b.EndPosition(memoryGauge)) >= 0
 }
 
 // Range
@@ -118,6 +146,10 @@ func (e Range) EndPosition(common.MemoryGauge) Position {
 // NewRangeFromPositioned
 
 func NewRangeFromPositioned(memoryGauge common.MemoryGauge, hasPosition HasPosition) Range {
+	if hasPosition == nil {
+		return EmptyRange
+	}
+
 	return NewRange(
 		memoryGauge,
 		hasPosition.StartPosition(),

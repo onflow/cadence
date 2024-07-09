@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,9 +39,9 @@ func TestCheckInvalidUnknownDeclarationSwap(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
-
+	errs := RequireCheckerErrors(t, err, 2)
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
 
 func TestCheckInvalidLeftConstantSwap(t *testing.T) {
@@ -105,9 +105,10 @@ func TestCheckInvalidTypesSwap(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 func TestCheckInvalidTypesSwap2(t *testing.T) {
@@ -122,9 +123,10 @@ func TestCheckInvalidTypesSwap2(t *testing.T) {
       }
     `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
 func TestCheckInvalidSwapTargetExpressionLeft(t *testing.T) {
@@ -251,10 +253,6 @@ func TestCheckSwapResourceFields(t *testing.T) {
           init(x: @X) {
               self.x <- x
           }
-
-          destroy() {
-              destroy self.x
-          }
       }
 
       fun test() {
@@ -300,10 +298,6 @@ func TestCheckInvalidSwapConstantResourceFields(t *testing.T) {
                           init(x: @X) {
                               self.x <- x
                           }
-
-                          destroy() {
-                              destroy self.x
-                          }
                       }
 
                       resource Z {
@@ -311,10 +305,6 @@ func TestCheckInvalidSwapConstantResourceFields(t *testing.T) {
 
                           init(x: @X) {
                               self.x <- x
-                          }
-
-                          destroy() {
-                              destroy self.x
                           }
                       }
 
@@ -399,4 +389,23 @@ func TestCheckInvalidTwoConstantsSwap(t *testing.T) {
 	require.IsType(t, &sema.AssignmentToConstantError{}, errs[1])
 	assignmentError = errs[1].(*sema.AssignmentToConstantError)
 	assert.Equal(t, "y", assignmentError.Name)
+}
+
+func TestCheckIndexSwapWithInvalidExpression(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test() {
+          let xs = [1]
+
+          // NOTE: ys is not declared
+          xs[0] <-> ys[0]
+      }
+    `)
+
+	errs := RequireCheckerErrors(t, err, 2)
+
+	require.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	require.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }

@@ -27,7 +27,7 @@ import (
 )
 
 type StorageReferenceValue struct {
-	Authorized           bool
+	Authorization        interpreter.Authorization
 	TargetStorageAddress common.Address
 	TargetPath           PathValue
 	BorrowedType         interpreter.StaticType
@@ -36,16 +36,17 @@ type StorageReferenceValue struct {
 
 var _ Value = &StorageReferenceValue{}
 var _ MemberAccessibleValue = &StorageReferenceValue{}
+var _ ReferenceValue = &StorageReferenceValue{}
 
 func NewStorageReferenceValue(
 	storage interpreter.Storage,
-	authorized bool,
+	authorization interpreter.Authorization,
 	targetStorageAddress common.Address,
 	targetPath PathValue,
 	borrowedType interpreter.StaticType,
 ) *StorageReferenceValue {
 	return &StorageReferenceValue{
-		Authorized:           authorized,
+		Authorization:        authorization,
 		TargetStorageAddress: targetStorageAddress,
 		TargetPath:           targetPath,
 		BorrowedType:         borrowedType,
@@ -55,6 +56,21 @@ func NewStorageReferenceValue(
 
 func (*StorageReferenceValue) isValue() {}
 
+func (v *StorageReferenceValue) isReference() {}
+
+func (v *StorageReferenceValue) ReferencedValue(gauge common.MemoryGauge, errorOnFailedDereference bool) *Value {
+	referenced, err := v.dereference(gauge)
+	if err != nil && errorOnFailedDereference {
+		panic(err)
+	}
+
+	return referenced
+}
+
+func (v *StorageReferenceValue) BorrowType() interpreter.StaticType {
+	return v.BorrowedType
+}
+
 func (v *StorageReferenceValue) StaticType(gauge common.MemoryGauge) StaticType {
 	referencedValue, err := v.dereference(gauge)
 	if err != nil {
@@ -63,8 +79,7 @@ func (v *StorageReferenceValue) StaticType(gauge common.MemoryGauge) StaticType 
 
 	return interpreter.NewReferenceStaticType(
 		gauge,
-		v.Authorized,
-		v.BorrowedType,
+		v.Authorization,
 		(*referencedValue).StaticType(gauge),
 	)
 }
@@ -74,13 +89,10 @@ func (v *StorageReferenceValue) dereference(gauge common.MemoryGauge) (*Value, e
 	domain := v.TargetPath.Domain.Identifier()
 	identifier := v.TargetPath.Identifier
 
-	accountStorage := v.storage.GetStorageMap(address, domain, false)
-	if accountStorage == nil {
+	vmReferencedValue := ReadStored(gauge, v.storage, address, domain, identifier)
+	if vmReferencedValue == nil {
 		return nil, nil
 	}
-
-	referenced := accountStorage.ReadValue(gauge, identifier)
-	vmReferencedValue := InterpreterValueToVMValue(referenced)
 
 	if v.BorrowedType != nil {
 		staticType := vmReferencedValue.StaticType(gauge)

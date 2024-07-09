@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
 package interpreter
 
 import (
-	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,23 +28,45 @@ func TestPrimitiveStaticTypeSemaTypeConversion(t *testing.T) {
 
 	t.Parallel()
 
-	placeholderTypePattern := regexp.MustCompile("PrimitiveStaticType\\(\\d+\\)")
-
 	test := func(ty PrimitiveStaticType) {
+		if ty.IsDeprecated() { //nolint:staticcheck
+			return
+		}
+
 		t.Run(ty.String(), func(t *testing.T) {
 			t.Parallel()
 
 			semaType := ty.SemaType()
+
 			ty2 := ConvertSemaToPrimitiveStaticType(nil, semaType)
 			require.True(t, ty2.Equal(ty))
 		})
 	}
 
 	for ty := PrimitiveStaticType(1); ty < PrimitiveStaticType_Count; ty++ {
-		if placeholderTypePattern.MatchString(ty.String()) {
+		if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
 			continue
 		}
 		test(ty)
 	}
+}
 
+func TestPrimitiveStaticType_elementSize(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(ty PrimitiveStaticType) {
+		t.Run(ty.String(), func(t *testing.T) {
+			t.Parallel()
+
+			_ = ty.elementSize()
+		})
+	}
+
+	for ty := PrimitiveStaticType(1); ty < PrimitiveStaticType_Count; ty++ {
+		if !ty.IsDefined() || ty.IsDeprecated() { //nolint:staticcheck
+			continue
+		}
+		test(ty)
+	}
 }

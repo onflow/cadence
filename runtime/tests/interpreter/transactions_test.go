@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -226,7 +230,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
           transaction {
-            prepare(signer: AuthAccount) {}
+            prepare(signer: &Account) {}
           }
         `)
 
@@ -244,20 +248,14 @@ func TestInterpretTransactions(t *testing.T) {
           }
 
           transaction {
-            prepare(signer: AuthAccount) {}
+            prepare(signer: &Account) {}
 
             execute {}
           }
         `)
 
-		signer1 := newTestAuthAccountValue(
-			nil,
-			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
-		)
-		signer2 := newTestAuthAccountValue(
-			nil,
-			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
-		)
+		signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
+		signer2 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{2}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
 
 		// first transaction
 		err := inter.InvokeTransaction(0, signer1)
@@ -277,7 +275,7 @@ func TestInterpretTransactions(t *testing.T) {
 
           transaction(x: Int, y: Bool) {
 
-            prepare(signer: AuthAccount) {
+            prepare(signer: &Account) {
               values.append(signer.address)
               values.append(y)
               values.append(x)
@@ -287,22 +285,27 @@ func TestInterpretTransactions(t *testing.T) {
 
 		arguments := []interpreter.Value{
 			interpreter.NewUnmeteredIntValueFromInt64(1),
-			interpreter.BoolValue(true),
+			interpreter.TrueValue,
 		}
 
-		prepareArguments := []interpreter.Value{
-			newTestAuthAccountValue(
-				nil,
-				interpreter.AddressValue{},
-			),
-		}
+		address := common.MustBytesToAddress([]byte{0x1})
+
+		account := stdlib.NewAccountReferenceValue(
+			nil,
+			nil,
+			interpreter.AddressValue(address),
+			interpreter.UnauthorizedAccess,
+			interpreter.EmptyLocationRange,
+		)
+
+		prepareArguments := []interpreter.Value{account}
 
 		arguments = append(arguments, prepareArguments...)
 
 		err := inter.InvokeTransaction(0, arguments...)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
-		values := inter.Globals.Get("values").GetValue()
+		values := inter.Globals.Get("values").GetValue(inter)
 
 		require.IsType(t, &interpreter.ArrayValue{}, values)
 
@@ -310,11 +313,127 @@ func TestInterpretTransactions(t *testing.T) {
 			t,
 			inter,
 			[]interpreter.Value{
-				interpreter.AddressValue{},
-				interpreter.BoolValue(true),
+				interpreter.AddressValue(address),
+				interpreter.TrueValue,
 				interpreter.NewUnmeteredIntValueFromInt64(1),
 			},
-			arrayElements(inter, values.(*interpreter.ArrayValue)),
+			ArrayElements(inter, values.(*interpreter.ArrayValue)),
 		)
+	})
+}
+
+func TestRuntimeInvalidTransferInExecute(t *testing.T) {
+
+	t.Parallel()
+
+	inter, _ := parseCheckAndInterpretWithOptions(t, `
+		access(all) resource Dummy {}
+
+		transaction {
+			var vaults: @[AnyResource]
+			var account: auth(Storage) &Account
+
+			prepare(account: auth(Storage) &Account) {
+				self.vaults <- [<-create Dummy(), <-create Dummy()]
+				self.account = account
+			}
+
+			execute {
+				let x = fun(): @[AnyResource] {
+					var x <- self.vaults <- [<-create Dummy()]
+					return <-x
+				}
+
+				var t <-  self.vaults[0] <- self.vaults 
+				destroy t
+				self.account.storage.save(<- x(), to: /storage/x42)
+			}
+		}
+	`, ParseCheckAndInterpretOptions{
+		HandleCheckerError: func(err error) {
+			errs := checker.RequireCheckerErrors(t, err, 1)
+			require.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+		},
+	})
+
+	signer1 := stdlib.NewAccountReferenceValue(nil, nil, interpreter.AddressValue{1}, interpreter.UnauthorizedAccess, interpreter.EmptyLocationRange)
+	err := inter.InvokeTransaction(0, signer1)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceError{})
+}
+
+func TestRuntimeInvalidRecursiveTransferInExecute(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Array", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			transaction {
+				var arr: @[AnyResource]
+
+				prepare() {
+					self.arr <- []
+				}
+
+				execute {
+					self.arr.append(<-self.arr)
+				}
+			}
+		`)
+
+		err := inter.InvokeTransaction(0)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("Dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			transaction {
+				var dict: @{String: AnyResource}
+
+				prepare() {
+					self.dict <- {}
+				}
+
+				execute {
+					destroy self.dict.insert(key: "", <-self.dict)
+				}
+			}
+		`)
+
+		err := inter.InvokeTransaction(0)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			resource R {
+				fun foo(_ r: @R) {
+					destroy r
+				}
+			}
+
+			transaction {
+				var r: @R
+
+				prepare() {
+					self.r <- create R()
+				}
+
+				execute {
+					self.r.foo(<-self.r) 
+				}
+			}
+		`)
+
+		err := inter.InvokeTransaction(0)
+		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }

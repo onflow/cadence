@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ package common
 
 import (
 	"encoding/json"
+	"math"
 
 	"github.com/onflow/cadence/runtime/errors"
 )
@@ -43,12 +44,15 @@ const (
 	DeclarationKindEvent
 	DeclarationKindField
 	DeclarationKindInitializer
-	DeclarationKindDestructor
+	DeclarationKindDestructorLegacy
 	DeclarationKindStructureInterface
 	DeclarationKindResourceInterface
 	DeclarationKindContractInterface
+	DeclarationKindEntitlement
+	DeclarationKindEntitlementMapping
 	DeclarationKindImport
 	DeclarationKindSelf
+	DeclarationKindBase
 	DeclarationKindTransaction
 	DeclarationKindPrepare
 	DeclarationKindExecute
@@ -56,6 +60,7 @@ const (
 	DeclarationKindPragma
 	DeclarationKindEnum
 	DeclarationKindEnumCase
+	DeclarationKindAttachment
 )
 
 func DeclarationKindCount() int {
@@ -67,12 +72,15 @@ func (k DeclarationKind) IsTypeDeclaration() bool {
 	case DeclarationKindStructure,
 		DeclarationKindResource,
 		DeclarationKindContract,
+		DeclarationKindEntitlement,
+		DeclarationKindEntitlementMapping,
 		DeclarationKindEvent,
 		DeclarationKindStructureInterface,
 		DeclarationKindResourceInterface,
 		DeclarationKindContractInterface,
 		DeclarationKindTypeParameter,
-		DeclarationKindEnum:
+		DeclarationKindEnum,
+		DeclarationKindAttachment:
 
 		return true
 
@@ -109,18 +117,26 @@ func (k DeclarationKind) Name() string {
 		return "field"
 	case DeclarationKindInitializer:
 		return "initializer"
-	case DeclarationKindDestructor:
-		return "destructor"
+	case DeclarationKindDestructorLegacy:
+		return "legacy destructor"
+	case DeclarationKindAttachment:
+		return "attachment"
 	case DeclarationKindStructureInterface:
 		return "structure interface"
 	case DeclarationKindResourceInterface:
 		return "resource interface"
 	case DeclarationKindContractInterface:
 		return "contract interface"
+	case DeclarationKindEntitlement:
+		return "entitlement"
+	case DeclarationKindEntitlementMapping:
+		return "entitlement mapping"
 	case DeclarationKindImport:
 		return "import"
 	case DeclarationKindSelf:
 		return "self"
+	case DeclarationKindBase:
+		return "base"
 	case DeclarationKindTransaction:
 		return "transaction"
 	case DeclarationKindPrepare:
@@ -130,7 +146,7 @@ func (k DeclarationKind) Name() string {
 	case DeclarationKindTypeParameter:
 		return "type parameter"
 	case DeclarationKindPragma:
-		return "#pragma"
+		return "pragma"
 	case DeclarationKindEnum:
 		return "enum"
 	case DeclarationKindEnumCase:
@@ -160,18 +176,26 @@ func (k DeclarationKind) Keywords() string {
 		return "event"
 	case DeclarationKindInitializer:
 		return "init"
-	case DeclarationKindDestructor:
+	case DeclarationKindDestructorLegacy: // Deprecated
 		return "destroy"
+	case DeclarationKindAttachment:
+		return "attachment"
 	case DeclarationKindStructureInterface:
 		return "struct interface"
 	case DeclarationKindResourceInterface:
 		return "resource interface"
 	case DeclarationKindContractInterface:
 		return "contract interface"
+	case DeclarationKindEntitlement:
+		return "entitlement"
+	case DeclarationKindEntitlementMapping:
+		return "entitlement mapping"
 	case DeclarationKindImport:
 		return "import"
 	case DeclarationKindSelf:
 		return "self"
+	case DeclarationKindBase:
+		return "base"
 	case DeclarationKindTransaction:
 		return "transaction"
 	case DeclarationKindPrepare:
@@ -187,6 +211,39 @@ func (k DeclarationKind) Keywords() string {
 	}
 }
 
+func (k DeclarationKind) IsInterfaceDeclaration() bool {
+	switch k {
+	case DeclarationKindContractInterface,
+		DeclarationKindStructureInterface,
+		DeclarationKindResourceInterface:
+		return true
+	}
+	return false
+}
+
 func (k DeclarationKind) MarshalJSON() ([]byte, error) {
 	return json.Marshal(k.String())
+}
+
+type DeclarationKindSet uint64
+
+const (
+	EmptyDeclarationKindSet DeclarationKindSet = 0
+	AllDeclarationKindsSet  DeclarationKindSet = math.MaxUint64
+)
+
+func NewDeclarationKindSet(declarationKinds ...DeclarationKind) DeclarationKindSet {
+	var set DeclarationKindSet
+	for _, declarationKind := range declarationKinds {
+		set = set.With(declarationKind)
+	}
+	return set
+}
+
+func (s DeclarationKindSet) With(kind DeclarationKind) DeclarationKindSet {
+	return s | DeclarationKindSet(1<<kind)
+}
+
+func (s DeclarationKindSet) Has(kind DeclarationKind) bool {
+	return s&(1<<kind) != 0
 }

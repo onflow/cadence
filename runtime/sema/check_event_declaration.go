@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 // as determined by `isValidEventParameterType`.
 func (checker *Checker) checkEventParameters(
 	parameterList *ast.ParameterList,
-	parameters []*Parameter,
+	parameters []Parameter,
 ) {
 
 	parameterTypeValidationResults := map[*Member]bool{}
@@ -60,6 +60,9 @@ func IsValidEventParameterType(t Type, results map[*Member]bool) bool {
 	switch t := t.(type) {
 	case *AddressType:
 		return true
+
+	case *ReferenceType:
+		return IsValidEventParameterType(t.Type, results)
 
 	case *OptionalType:
 		return IsValidEventParameterType(t.Type, results)

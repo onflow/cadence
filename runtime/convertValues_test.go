@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	_ "embed"
@@ -29,26 +29,29 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestExportValue(t *testing.T) {
+func TestRuntimeExportValue(t *testing.T) {
 
 	t.Parallel()
 
 	type exportTest struct {
-		label string
-		value interpreter.Value
+		value    interpreter.Value
+		expected cadence.Value
 		// Some values need an interpreter to be created (e.g. stored values like arrays, dictionaries, and composites),
 		// so provide an optional helper function to construct the value
 		valueFactory func(*interpreter.Interpreter) interpreter.Value
-		expected     cadence.Value
+		label        string
+		invalid      bool
 	}
 
 	test := func(tt exportTest) {
@@ -57,25 +60,21 @@ func TestExportValue(t *testing.T) {
 
 			t.Parallel()
 
-			inter := newTestInterpreter(t)
+			inter := NewTestInterpreter(t)
 
 			value := tt.value
 			if tt.valueFactory != nil {
 				value = tt.valueFactory(inter)
 			}
-			actual, err := exportValueWithInterpreter(
+			actual, err := ExportValue(
 				value,
 				inter,
 				interpreter.EmptyLocationRange,
-				seenReferences{},
 			)
-			if tt.expected == nil {
+
+			if tt.invalid {
 				RequireError(t, err)
-				if tt.expected == nil {
-					assertInternalError(t, err)
-				} else {
-					assertUserError(t, err)
-				}
+				assertUserError(t, err)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expected, actual)
@@ -83,45 +82,72 @@ func TestExportValue(t *testing.T) {
 		})
 	}
 
-	signatureAlgorithmType := &cadence.EnumType{
-		QualifiedIdentifier: "SignatureAlgorithm",
-		RawType:             cadence.UInt8Type{},
-		Fields: []cadence.Field{
-			{
-				Identifier: "rawValue",
-				Type:       cadence.UInt8Type{},
-			},
-		},
-	}
-
-	publicKeyType := &cadence.StructType{
-		QualifiedIdentifier: "PublicKey",
-		Fields: []cadence.Field{
-			{
-				Identifier: "publicKey",
-				Type: cadence.VariableSizedArrayType{
-					ElementType: cadence.UInt8Type{},
+	newSignatureAlgorithmType := func() *cadence.EnumType {
+		return cadence.NewEnumType(
+			nil,
+			"SignatureAlgorithm",
+			cadence.UInt8Type,
+			[]cadence.Field{
+				{
+					Identifier: "rawValue",
+					Type:       cadence.UInt8Type,
 				},
 			},
-			{
-				Identifier: "signatureAlgorithm",
-				Type:       signatureAlgorithmType,
-			},
-		},
+			nil,
+		)
 	}
 
-	hashAlgorithmType := &cadence.EnumType{
-		QualifiedIdentifier: "HashAlgorithm",
-		RawType:             cadence.UInt8Type{},
-		Fields: []cadence.Field{
-			{
-				Identifier: "rawValue",
-				Type:       cadence.UInt8Type{},
+	newPublicKeyType := func(signatureAlgorithmType cadence.Type) *cadence.StructType {
+		return cadence.NewStructType(
+			nil,
+			"PublicKey",
+			[]cadence.Field{
+				{
+					Identifier: "publicKey",
+					Type: &cadence.VariableSizedArrayType{
+						ElementType: cadence.UInt8Type,
+					},
+				},
+				{
+					Identifier: "signatureAlgorithm",
+					Type:       signatureAlgorithmType,
+				},
 			},
-		},
+			nil,
+		)
 	}
 
-	a, _ := cadence.NewCharacter("a")
+	newHashAlgorithmType := func() *cadence.EnumType {
+		return cadence.NewEnumType(
+			nil,
+			"HashAlgorithm",
+			cadence.UInt8Type,
+			[]cadence.Field{
+				{
+					Identifier: "rawValue",
+					Type:       cadence.UInt8Type,
+				},
+			},
+			nil,
+		)
+	}
+
+	testCharacter, _ := cadence.NewCharacter("a")
+
+	testFunction := &interpreter.InterpretedFunctionValue{
+		Type: sema.NewSimpleFunctionType(
+			sema.FunctionPurityImpure,
+			nil,
+			sema.VoidTypeAnnotation,
+		),
+	}
+
+	testFunctionType := cadence.NewFunctionType(
+		sema.FunctionPurityImpure,
+		nil,
+		nil,
+		cadence.VoidType,
+	)
 
 	for _, tt := range []exportTest{
 		{
@@ -143,13 +169,13 @@ func TestExportValue(t *testing.T) {
 		},
 		{
 			label:    "Bool true",
-			value:    interpreter.BoolValue(true),
+			value:    interpreter.TrueValue,
 			expected: cadence.NewBool(true),
 		},
 
 		{
 			label:    "Bool false",
-			value:    interpreter.BoolValue(false),
+			value:    interpreter.FalseValue,
 			expected: cadence.NewBool(false),
 		},
 
@@ -169,15 +195,15 @@ func TestExportValue(t *testing.T) {
 				return interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.VariableSizedStaticType{
+					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
-					common.Address{},
+					common.ZeroAddress,
 				)
 			},
 			expected: cadence.NewArray([]cadence.Value{}).
-				WithType(cadence.VariableSizedArrayType{
-					ElementType: cadence.AnyStructType{},
+				WithType(&cadence.VariableSizedArrayType{
+					ElementType: cadence.AnyStructType,
 				}),
 		},
 		{
@@ -186,10 +212,10 @@ func TestExportValue(t *testing.T) {
 				return interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.VariableSizedStaticType{
+					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
-					common.Address{},
+					common.ZeroAddress,
 					interpreter.NewUnmeteredIntValueFromInt64(42),
 					interpreter.NewUnmeteredStringValue("foo"),
 				)
@@ -197,8 +223,29 @@ func TestExportValue(t *testing.T) {
 			expected: cadence.NewArray([]cadence.Value{
 				cadence.NewInt(42),
 				cadence.String("foo"),
-			}).WithType(cadence.VariableSizedArrayType{
-				ElementType: cadence.AnyStructType{},
+			}).WithType(&cadence.VariableSizedArrayType{
+				ElementType: cadence.AnyStructType,
+			}),
+		},
+		{
+			label: "Array (non-empty) with HashableStruct",
+			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				return interpreter.NewArrayValue(
+					inter,
+					interpreter.EmptyLocationRange,
+					&interpreter.VariableSizedStaticType{
+						Type: interpreter.PrimitiveStaticTypeHashableStruct,
+					},
+					common.ZeroAddress,
+					interpreter.NewUnmeteredIntValueFromInt64(42),
+					interpreter.NewUnmeteredStringValue("foo"),
+				)
+			},
+			expected: cadence.NewArray([]cadence.Value{
+				cadence.NewInt(42),
+				cadence.String("foo"),
+			}).WithType(&cadence.VariableSizedArrayType{
+				ElementType: cadence.HashableStructType,
 			}),
 		},
 		{
@@ -207,16 +254,16 @@ func TestExportValue(t *testing.T) {
 				return interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.DictionaryStaticType{
+					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeString,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
 				)
 			},
 			expected: cadence.NewDictionary([]cadence.KeyValuePair{}).
-				WithType(cadence.DictionaryType{
-					KeyType:     cadence.StringType{},
-					ElementType: cadence.AnyStructType{},
+				WithType(&cadence.DictionaryType{
+					KeyType:     cadence.StringType,
+					ElementType: cadence.AnyStructType,
 				}),
 		},
 		{
@@ -225,7 +272,7 @@ func TestExportValue(t *testing.T) {
 				return interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.DictionaryStaticType{
+					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeString,
 						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 					},
@@ -245,9 +292,9 @@ func TestExportValue(t *testing.T) {
 					Value: cadence.NewInt(1),
 				},
 			}).
-				WithType(cadence.DictionaryType{
-					KeyType:     cadence.StringType{},
-					ElementType: cadence.AnyStructType{},
+				WithType(&cadence.DictionaryType{
+					KeyType:     cadence.StringType,
+					ElementType: cadence.AnyStructType,
 				}),
 		},
 		{
@@ -263,7 +310,7 @@ func TestExportValue(t *testing.T) {
 		{
 			label:    "Character",
 			value:    interpreter.NewUnmeteredCharacterValue("a"),
-			expected: a,
+			expected: testCharacter,
 		},
 		{
 			label:    "Int8",
@@ -351,6 +398,16 @@ func TestExportValue(t *testing.T) {
 			expected: cadence.NewWord64(42),
 		},
 		{
+			label:    "Word128",
+			value:    interpreter.NewUnmeteredWord128ValueFromUint64(42),
+			expected: cadence.NewWord128(42),
+		},
+		{
+			label:    "Word256",
+			value:    interpreter.NewUnmeteredWord256ValueFromUint64(42),
+			expected: cadence.NewWord256(42),
+		},
+		{
 			label:    "Fix64",
 			value:    interpreter.NewUnmeteredFix64Value(-123000000),
 			expected: cadence.Fix64(-123000000),
@@ -367,28 +424,40 @@ func TestExportValue(t *testing.T) {
 				Identifier: "foo",
 			},
 			expected: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 		},
 		{
-			label:    "Interpreted Function (invalid)",
-			value:    &interpreter.InterpretedFunctionValue{},
-			expected: nil,
+			label: "Interpreted Function",
+			value: testFunction,
+			expected: cadence.Function{
+				FunctionType: testFunctionType,
+			},
 		},
 		{
-			label:    "Host Function (invalid)",
-			value:    &interpreter.HostFunctionValue{},
-			expected: nil,
+			label: "Host Function",
+			value: &interpreter.HostFunctionValue{
+				Type: testFunction.Type,
+			},
+			expected: cadence.Function{
+				FunctionType: testFunctionType,
+			},
 		},
 		{
-			label:    "Bound Function (invalid)",
-			value:    interpreter.BoundFunctionValue{},
-			expected: nil,
+			label: "Bound Function",
+			value: interpreter.BoundFunctionValue{
+				Function: testFunction,
+			},
+			expected: cadence.Function{
+				FunctionType: testFunctionType,
+			},
 		},
 		{
 			label: "Account key",
 			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				hashAlgorithm, _ := stdlib.NewHashAlgorithmCase(1, nil)
+
 				return interpreter.NewAccountKeyValue(
 					inter,
 					interpreter.NewUnmeteredIntValueFromInt64(1),
@@ -399,26 +468,44 @@ func TestExportValue(t *testing.T) {
 							PublicKey: []byte{1, 2, 3},
 							SignAlgo:  2,
 						},
-						func(
-							_ *interpreter.Interpreter,
-							_ interpreter.LocationRange,
-							_ *interpreter.CompositeValue,
-						) error {
-							return nil
-						},
 					),
-					stdlib.NewHashAlgorithmCase(1),
-					interpreter.NewUnmeteredUFix64ValueWithInteger(10),
+					hashAlgorithm,
+					interpreter.NewUnmeteredUFix64ValueWithInteger(10, interpreter.EmptyLocationRange),
 					false,
 				)
 			},
-			expected: cadence.Struct{
-				StructType: &cadence.StructType{
-					QualifiedIdentifier: "AccountKey",
-					Fields: []cadence.Field{
+			expected: func() cadence.Value {
+
+				signatureAlgorithmType := newSignatureAlgorithmType()
+				publicKeyType := newPublicKeyType(signatureAlgorithmType)
+				hashAlgorithmType := newHashAlgorithmType()
+
+				return cadence.NewStruct([]cadence.Value{
+					cadence.NewInt(1),
+					cadence.NewStruct([]cadence.Value{
+						cadence.NewArray([]cadence.Value{
+							cadence.NewUInt8(1),
+							cadence.NewUInt8(2),
+							cadence.NewUInt8(3),
+						}).WithType(&cadence.VariableSizedArrayType{
+							ElementType: cadence.UInt8Type,
+						}),
+						cadence.NewEnum([]cadence.Value{
+							cadence.UInt8(2),
+						}).WithType(signatureAlgorithmType),
+					}).WithType(publicKeyType),
+					cadence.NewEnum([]cadence.Value{
+						cadence.UInt8(1),
+					}).WithType(hashAlgorithmType),
+					cadence.UFix64(10_00000000),
+					cadence.Bool(false),
+				}).WithType(cadence.NewStructType(
+					nil,
+					"AccountKey",
+					[]cadence.Field{
 						{
 							Identifier: "keyIndex",
-							Type:       cadence.IntType{},
+							Type:       cadence.IntType,
 						},
 						{
 							Identifier: "publicKey",
@@ -430,44 +517,16 @@ func TestExportValue(t *testing.T) {
 						},
 						{
 							Identifier: "weight",
-							Type:       cadence.UFix64Type{},
+							Type:       cadence.UFix64Type,
 						},
 						{
 							Identifier: "isRevoked",
-							Type:       cadence.BoolType{},
+							Type:       cadence.BoolType,
 						},
 					},
-				},
-				Fields: []cadence.Value{
-					cadence.NewInt(1),
-					cadence.Struct{
-						StructType: publicKeyType,
-						Fields: []cadence.Value{
-							cadence.NewArray([]cadence.Value{
-								cadence.NewUInt8(1),
-								cadence.NewUInt8(2),
-								cadence.NewUInt8(3),
-							}).WithType(cadence.VariableSizedArrayType{
-								ElementType: cadence.UInt8Type{},
-							}),
-							cadence.Enum{
-								EnumType: signatureAlgorithmType,
-								Fields: []cadence.Value{
-									cadence.UInt8(2),
-								},
-							},
-						},
-					},
-					cadence.Enum{
-						EnumType: hashAlgorithmType,
-						Fields: []cadence.Value{
-							cadence.UInt8(1),
-						},
-					},
-					cadence.UFix64(10_00000000),
-					cadence.Bool(false),
-				},
-			},
+					nil,
+				))
+			}(),
 		},
 		{
 			label: "Deployed contract (invalid)",
@@ -477,14 +536,35 @@ func TestExportValue(t *testing.T) {
 					interpreter.AddressValue{},
 					interpreter.NewUnmeteredStringValue("C"),
 					interpreter.NewArrayValue(
-						newTestInterpreter(t),
+						inter,
 						interpreter.EmptyLocationRange,
 						interpreter.ByteArrayStaticType,
-						common.Address{},
+						common.ZeroAddress,
 					),
 				)
 			},
-			expected: nil,
+			invalid: true,
+		},
+		{
+			label: "Block (invalid)",
+			valueFactory: func(inter *interpreter.Interpreter) interpreter.Value {
+				blockIDStaticType :=
+					interpreter.ConvertSemaToStaticType(nil, sema.BlockTypeIdFieldType).(interpreter.ArrayStaticType)
+
+				return interpreter.NewBlockValue(
+					inter,
+					interpreter.NewUnmeteredUInt64Value(1),
+					interpreter.NewUnmeteredUInt64Value(2),
+					interpreter.NewArrayValue(
+						inter,
+						interpreter.EmptyLocationRange,
+						blockIDStaticType,
+						common.ZeroAddress,
+					),
+					interpreter.NewUnmeteredUFix64ValueWithInteger(1, interpreter.EmptyLocationRange),
+				)
+			},
+			invalid: true,
 		},
 	} {
 		test(tt)
@@ -492,15 +572,15 @@ func TestExportValue(t *testing.T) {
 
 }
 
-func TestImportValue(t *testing.T) {
+func TestRuntimeImportValue(t *testing.T) {
 
 	t.Parallel()
 
 	type importTest struct {
-		label        string
 		expected     interpreter.Value
 		value        cadence.Value
 		expectedType sema.Type
+		label        string
 	}
 
 	test := func(tt importTest) {
@@ -509,22 +589,19 @@ func TestImportValue(t *testing.T) {
 
 			t.Parallel()
 
-			inter := newTestInterpreter(t)
+			inter := NewTestInterpreter(t)
 
 			actual, err := ImportValue(
 				inter,
 				interpreter.EmptyLocationRange,
+				nil,
 				tt.value,
 				tt.expectedType,
 			)
 
 			if tt.expected == nil {
 				RequireError(t, err)
-				if _, ok := tt.value.(cadence.Link); ok {
-					assertInternalError(t, err)
-				} else {
-					assertUserError(t, err)
-				}
+				assertUserError(t, err)
 			} else {
 				require.NoError(t, err)
 				AssertValuesEqual(t, inter, tt.expected, actual)
@@ -555,11 +632,11 @@ func TestImportValue(t *testing.T) {
 		{
 			label:    "Bool true",
 			value:    cadence.NewBool(true),
-			expected: interpreter.BoolValue(true),
+			expected: interpreter.TrueValue,
 		},
 		{
 			label:    "Bool false",
-			expected: interpreter.BoolValue(false),
+			expected: interpreter.FalseValue,
 			value:    cadence.NewBool(false),
 		},
 		{
@@ -576,12 +653,12 @@ func TestImportValue(t *testing.T) {
 			label: "Array empty",
 			value: cadence.NewArray([]cadence.Value{}),
 			expected: interpreter.NewArrayValue(
-				newTestInterpreter(t),
+				NewTestInterpreter(t),
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				common.Address{},
+				common.ZeroAddress,
 			),
 			expectedType: &sema.VariableSizedType{
 				Type: sema.AnyStructType,
@@ -594,12 +671,12 @@ func TestImportValue(t *testing.T) {
 				cadence.String("foo"),
 			}),
 			expected: interpreter.NewArrayValue(
-				newTestInterpreter(t),
+				NewTestInterpreter(t),
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(42),
 				interpreter.NewUnmeteredStringValue("foo"),
 			),
@@ -610,9 +687,9 @@ func TestImportValue(t *testing.T) {
 		{
 			label: "Dictionary",
 			expected: interpreter.NewDictionaryValue(
-				newTestInterpreter(t),
+				NewTestInterpreter(t),
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -626,9 +703,9 @@ func TestImportValue(t *testing.T) {
 		{
 			label: "Dictionary (non-empty)",
 			expected: interpreter.NewDictionaryValue(
-				newTestInterpreter(t),
+				NewTestInterpreter(t),
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
@@ -753,6 +830,16 @@ func TestImportValue(t *testing.T) {
 			expected: interpreter.NewUnmeteredWord64Value(42),
 		},
 		{
+			label:    "Word128",
+			value:    cadence.NewWord128(42),
+			expected: interpreter.NewUnmeteredWord128ValueFromUint64(42),
+		},
+		{
+			label:    "Word256",
+			value:    cadence.NewWord256(42),
+			expected: interpreter.NewUnmeteredWord256ValueFromUint64(42),
+		},
+		{
 			label:    "Fix64",
 			value:    cadence.Fix64(-123000000),
 			expected: interpreter.NewUnmeteredFix64Value(-123000000),
@@ -765,7 +852,7 @@ func TestImportValue(t *testing.T) {
 		{
 			label: "Path",
 			value: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			expected: interpreter.PathValue{
@@ -774,30 +861,22 @@ func TestImportValue(t *testing.T) {
 			},
 		},
 		{
-			label: "Link (invalid)",
-			value: cadence.Link{
-				TargetPath: cadence.Path{
-					Domain:     "storage",
-					Identifier: "test",
-				},
-				BorrowType: "Int",
-			},
+			label: "ID Capability (invalid)",
+			value: cadence.NewCapability(
+				4,
+				cadence.Address{0x1},
+				cadence.IntType,
+			),
 			expected: nil,
 		},
 		{
-			label: "Capability (invalid)",
-			value: cadence.Capability{
-				Path: cadence.Path{
-					Domain:     "public",
-					Identifier: "test",
-				},
-				BorrowType: cadence.IntType{},
-			},
+			label:    "Function (invalid)",
+			value:    cadence.Function{},
 			expected: nil,
 		},
 		{
 			label:    "Type<Int>()",
-			value:    cadence.NewTypeValue(cadence.IntType{}),
+			value:    cadence.NewTypeValue(cadence.IntType),
 			expected: interpreter.TypeValue{Type: interpreter.PrimitiveStaticTypeInt},
 		},
 	} {
@@ -813,458 +892,298 @@ func assertUserError(t *testing.T, err error) {
 	)
 }
 
-func assertInternalError(t *testing.T, err error) {
-	require.True(t,
-		errors.IsInternalError(err),
-		"Expected `InternalError`, found `%T`",
-		err,
-	)
-}
-
-func TestImportRuntimeType(t *testing.T) {
+func TestRuntimeImportRuntimeType(t *testing.T) {
 	t.Parallel()
 
 	type importTest struct {
 		label    string
 		expected interpreter.StaticType
-		actual   cadence.Type
+		input    cadence.Type
 	}
 
 	test := func(tt importTest) {
 		t.Run(tt.label, func(t *testing.T) {
 			t.Parallel()
-			actual := ImportType(nil, tt.actual)
+			actual := ImportType(nil, tt.input)
 			assert.Equal(t, tt.expected, actual)
 
 		})
 	}
 
-	for _, tt := range []importTest{
+	tests := []importTest{
 		{
-			label:    "Any",
-			actual:   cadence.AnyType{},
-			expected: interpreter.PrimitiveStaticTypeAny,
+			label: "AccountKey",
+			input: &cadence.StructType{
+				QualifiedIdentifier: "AccountKey",
+			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "AccountKey"),
 		},
 		{
-			label:    "AnyStruct",
-			actual:   cadence.AnyStructType{},
-			expected: interpreter.PrimitiveStaticTypeAnyStruct,
+			label: "PublicKey",
+			input: &cadence.StructType{
+				QualifiedIdentifier: "PublicKey",
+			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "PublicKey"),
 		},
 		{
-			label:    "AnyResource",
-			actual:   cadence.AnyResourceType{},
-			expected: interpreter.PrimitiveStaticTypeAnyResource,
+			label: "HashAlgorithm",
+			input: &cadence.StructType{
+				QualifiedIdentifier: "HashAlgorithm",
+			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "HashAlgorithm"),
 		},
 		{
-			label:    "MetaType",
-			actual:   cadence.MetaType{},
-			expected: interpreter.PrimitiveStaticTypeMetaType,
-		},
-		{
-			label:    "Void",
-			actual:   cadence.VoidType{},
-			expected: interpreter.PrimitiveStaticTypeVoid,
-		},
-		{
-			label:    "Never",
-			actual:   cadence.NeverType{},
-			expected: interpreter.PrimitiveStaticTypeNever,
-		},
-		{
-			label:    "Bool",
-			actual:   cadence.BoolType{},
-			expected: interpreter.PrimitiveStaticTypeBool,
-		},
-		{
-			label:    "String",
-			actual:   cadence.StringType{},
-			expected: interpreter.PrimitiveStaticTypeString,
-		},
-		{
-			label:    "Character",
-			actual:   cadence.CharacterType{},
-			expected: interpreter.PrimitiveStaticTypeCharacter,
-		},
-		{
-			label:    "Address",
-			actual:   cadence.AddressType{},
-			expected: interpreter.PrimitiveStaticTypeAddress,
-		},
-		{
-			label:    "Number",
-			actual:   cadence.NumberType{},
-			expected: interpreter.PrimitiveStaticTypeNumber,
-		},
-		{
-			label:    "SignedNumber",
-			actual:   cadence.SignedNumberType{},
-			expected: interpreter.PrimitiveStaticTypeSignedNumber,
-		},
-		{
-			label:    "Integer",
-			actual:   cadence.IntegerType{},
-			expected: interpreter.PrimitiveStaticTypeInteger,
-		},
-		{
-			label:    "SignedInteger",
-			actual:   cadence.SignedIntegerType{},
-			expected: interpreter.PrimitiveStaticTypeSignedInteger,
-		},
-		{
-			label:    "FixedPoint",
-			actual:   cadence.FixedPointType{},
-			expected: interpreter.PrimitiveStaticTypeFixedPoint,
-		},
-		{
-			label:    "SignedFixedPoint",
-			actual:   cadence.SignedFixedPointType{},
-			expected: interpreter.PrimitiveStaticTypeSignedFixedPoint,
-		},
-		{
-			label:    "Int",
-			actual:   cadence.IntType{},
-			expected: interpreter.PrimitiveStaticTypeInt,
-		},
-		{
-			label:    "Int8",
-			actual:   cadence.Int8Type{},
-			expected: interpreter.PrimitiveStaticTypeInt8,
-		},
-		{
-			label:    "Int16",
-			actual:   cadence.Int16Type{},
-			expected: interpreter.PrimitiveStaticTypeInt16,
-		},
-		{
-			label:    "Int32",
-			actual:   cadence.Int32Type{},
-			expected: interpreter.PrimitiveStaticTypeInt32,
-		},
-		{
-			label:    "Int64",
-			actual:   cadence.Int64Type{},
-			expected: interpreter.PrimitiveStaticTypeInt64,
-		},
-		{
-			label:    "Int128",
-			actual:   cadence.Int128Type{},
-			expected: interpreter.PrimitiveStaticTypeInt128,
-		},
-		{
-			label:    "Int256",
-			actual:   cadence.Int256Type{},
-			expected: interpreter.PrimitiveStaticTypeInt256,
-		},
-		{
-			label:    "UInt",
-			actual:   cadence.UIntType{},
-			expected: interpreter.PrimitiveStaticTypeUInt,
-		},
-		{
-			label:    "UInt8",
-			actual:   cadence.UInt8Type{},
-			expected: interpreter.PrimitiveStaticTypeUInt8,
-		},
-		{
-			label:    "UInt16",
-			actual:   cadence.UInt16Type{},
-			expected: interpreter.PrimitiveStaticTypeUInt16,
-		},
-		{
-			label:    "UInt32",
-			actual:   cadence.UInt32Type{},
-			expected: interpreter.PrimitiveStaticTypeUInt32,
-		},
-		{
-			label:    "UInt64",
-			actual:   cadence.UInt64Type{},
-			expected: interpreter.PrimitiveStaticTypeUInt64,
-		},
-		{
-			label:    "UInt128",
-			actual:   cadence.UInt128Type{},
-			expected: interpreter.PrimitiveStaticTypeUInt128,
-		},
-		{
-			label:    "UInt256",
-			actual:   cadence.UInt256Type{},
-			expected: interpreter.PrimitiveStaticTypeUInt256,
-		},
-		{
-			label:    "Word8",
-			actual:   cadence.Word8Type{},
-			expected: interpreter.PrimitiveStaticTypeWord8,
-		},
-		{
-			label:    "Word16",
-			actual:   cadence.Word16Type{},
-			expected: interpreter.PrimitiveStaticTypeWord16,
-		},
-		{
-			label:    "Word32",
-			actual:   cadence.Word32Type{},
-			expected: interpreter.PrimitiveStaticTypeWord32,
-		},
-		{
-			label:    "Word64",
-			actual:   cadence.Word64Type{},
-			expected: interpreter.PrimitiveStaticTypeWord64,
-		},
-		{
-			label:    "Fix64",
-			actual:   cadence.Fix64Type{},
-			expected: interpreter.PrimitiveStaticTypeFix64,
-		},
-		{
-			label:    "UFix64",
-			actual:   cadence.UFix64Type{},
-			expected: interpreter.PrimitiveStaticTypeUFix64,
-		},
-		{
-			label:    "Block",
-			actual:   cadence.BlockType{},
-			expected: interpreter.PrimitiveStaticTypeBlock,
-		},
-		{
-			label:    "CapabilityPath",
-			actual:   cadence.CapabilityPathType{},
-			expected: interpreter.PrimitiveStaticTypeCapabilityPath,
-		},
-		{
-			label:    "StoragePath",
-			actual:   cadence.StoragePathType{},
-			expected: interpreter.PrimitiveStaticTypeStoragePath,
-		},
-		{
-			label:    "PublicPath",
-			actual:   cadence.PublicPathType{},
-			expected: interpreter.PrimitiveStaticTypePublicPath,
-		},
-		{
-			label:    "PrivatePath",
-			actual:   cadence.PrivatePathType{},
-			expected: interpreter.PrimitiveStaticTypePrivatePath,
-		},
-		{
-			label:    "AuthAccount",
-			actual:   cadence.AuthAccountType{},
-			expected: interpreter.PrimitiveStaticTypeAuthAccount,
-		},
-		{
-			label:    "PublicAccount",
-			actual:   cadence.PublicAccountType{},
-			expected: interpreter.PrimitiveStaticTypePublicAccount,
-		},
-		{
-			label:    "DeployedContract",
-			actual:   cadence.DeployedContractType{},
-			expected: interpreter.PrimitiveStaticTypeDeployedContract,
-		},
-		{
-			label:    "AuthAccount.Keys",
-			actual:   cadence.AuthAccountKeysType{},
-			expected: interpreter.PrimitiveStaticTypeAuthAccountKeys,
-		},
-		{
-			label:    "PublicAccount.Keys",
-			actual:   cadence.PublicAccountKeysType{},
-			expected: interpreter.PrimitiveStaticTypePublicAccountKeys,
-		},
-		{
-			label:    "AuthAccount.Contracts",
-			actual:   cadence.AuthAccountContractsType{},
-			expected: interpreter.PrimitiveStaticTypeAuthAccountContracts,
-		},
-		{
-			label:    "PublicAccount.Contracts",
-			actual:   cadence.PublicAccountContractsType{},
-			expected: interpreter.PrimitiveStaticTypePublicAccountContracts,
-		},
-		{
-			label:    "AccountKey",
-			actual:   cadence.AccountKeyType{},
-			expected: interpreter.PrimitiveStaticTypeAccountKey,
+			label: "SignatureAlgorithm",
+			input: &cadence.StructType{
+				QualifiedIdentifier: "SignatureAlgorithm",
+			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, nil, "SignatureAlgorithm"),
 		},
 		{
 			label: "Optional",
-			actual: cadence.OptionalType{
-				Type: cadence.IntType{},
+			input: &cadence.OptionalType{
+				Type: cadence.IntType,
 			},
-			expected: interpreter.OptionalStaticType{
+			expected: &interpreter.OptionalStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		{
 			label: "VariableSizedArray",
-			actual: cadence.VariableSizedArrayType{
-				ElementType: cadence.IntType{},
+			input: &cadence.VariableSizedArrayType{
+				ElementType: cadence.IntType,
 			},
-			expected: interpreter.VariableSizedStaticType{
+			expected: &interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		{
 			label: "ConstantSizedArray",
-			actual: cadence.ConstantSizedArrayType{
-				ElementType: cadence.IntType{},
+			input: &cadence.ConstantSizedArrayType{
+				ElementType: cadence.IntType,
 				Size:        3,
 			},
-			expected: interpreter.ConstantSizedStaticType{
+			expected: &interpreter.ConstantSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeInt,
 				Size: 3,
 			},
 		},
 		{
 			label: "Dictionary",
-			actual: cadence.DictionaryType{
-				ElementType: cadence.IntType{},
-				KeyType:     cadence.StringType{},
+			input: &cadence.DictionaryType{
+				ElementType: cadence.IntType,
+				KeyType:     cadence.StringType,
 			},
-			expected: interpreter.DictionaryStaticType{
+			expected: &interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		{
-			label: "Reference",
-			actual: cadence.ReferenceType{
-				Authorized: false,
-				Type:       cadence.IntType{},
+			label: "Unauthorized Reference",
+			input: &cadence.ReferenceType{
+				Authorization: cadence.UnauthorizedAccess,
+				Type:          cadence.IntType,
 			},
-			expected: interpreter.ReferenceStaticType{
-				Authorized:   false,
-				BorrowedType: interpreter.PrimitiveStaticTypeInt,
+			expected: &interpreter.ReferenceStaticType{
+				Authorization:  interpreter.UnauthorizedAccess,
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "Entitlement Set Reference",
+			input: &cadence.ReferenceType{
+				Authorization: &cadence.EntitlementSetAuthorization{
+					Kind:         cadence.Conjunction,
+					Entitlements: []common.TypeID{"E", "F"},
+				},
+				Type: cadence.IntType,
+			},
+			expected: &interpreter.ReferenceStaticType{
+				Authorization: interpreter.NewEntitlementSetAuthorization(
+					nil,
+					func() []common.TypeID { return []common.TypeID{"E", "F"} },
+					2,
+					sema.Conjunction,
+				),
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "Reference",
+			input: &cadence.ReferenceType{
+				Authorization: &cadence.EntitlementSetAuthorization{
+					Kind:         cadence.Disjunction,
+					Entitlements: []common.TypeID{"E", "F"},
+				},
+				Type: cadence.IntType,
+			},
+			expected: &interpreter.ReferenceStaticType{
+				Authorization: interpreter.NewEntitlementSetAuthorization(
+					nil,
+					func() []common.TypeID { return []common.TypeID{"E", "F"} },
+					2,
+					sema.Disjunction),
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			label: "Entitlement Map Reference",
+			input: &cadence.ReferenceType{
+				Authorization: cadence.EntitlementMapAuthorization{
+					TypeID: "M",
+				},
+				Type: cadence.IntType,
+			},
+			expected: &interpreter.ReferenceStaticType{
+				Authorization: interpreter.EntitlementMapAuthorization{
+					TypeID: "M",
+				},
+				ReferencedType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		{
 			label: "Capability",
-			actual: cadence.CapabilityType{
-				BorrowType: cadence.IntType{},
+			input: &cadence.CapabilityType{
+				BorrowType: cadence.IntType,
 			},
-			expected: interpreter.CapabilityStaticType{
+			expected: &interpreter.CapabilityStaticType{
 				BorrowType: interpreter.PrimitiveStaticTypeInt,
 			},
 		},
 		{
 			label: "Struct",
-			actual: &cadence.StructType{
+			input: &cadence.StructType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "Resource",
-			actual: &cadence.ResourceType{
+			input: &cadence.ResourceType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "Contract",
-			actual: &cadence.ContractType{
+			input: &cadence.ContractType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "Event",
-			actual: &cadence.EventType{
+			input: &cadence.EventType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "Enum",
-			actual: &cadence.EnumType{
+			input: &cadence.EnumType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.CompositeStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewCompositeStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "StructInterface",
-			actual: &cadence.StructInterfaceType{
+			input: &cadence.StructInterfaceType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.InterfaceStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "ResourceInterface",
-			actual: &cadence.ResourceInterfaceType{
+			input: &cadence.ResourceInterfaceType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.InterfaceStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
 			label: "ContractInterface",
-			actual: &cadence.ContractInterfaceType{
+			input: &cadence.ContractInterfaceType{
 				Location:            TestLocation,
 				QualifiedIdentifier: "S",
 			},
-			expected: interpreter.InterfaceStaticType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "S",
-			},
+			expected: interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "S"),
 		},
 		{
-			label: "RestrictedType",
-			actual: &cadence.RestrictedType{
-				Type: &cadence.StructType{
-					Location:            TestLocation,
-					QualifiedIdentifier: "S",
-				},
-				Restrictions: []cadence.Type{
+			label: "IntersectionType",
+			input: &cadence.IntersectionType{
+				Types: []cadence.Type{
 					&cadence.StructInterfaceType{
-						Location:            TestLocation,
-						QualifiedIdentifier: "T",
-					}},
-			},
-			expected: &interpreter.RestrictedStaticType{
-				Type: interpreter.CompositeStaticType{
-					Location:            TestLocation,
-					QualifiedIdentifier: "S",
-				},
-				Restrictions: []interpreter.InterfaceStaticType{
-					{
 						Location:            TestLocation,
 						QualifiedIdentifier: "T",
 					},
 				},
 			},
+			expected: &interpreter.IntersectionStaticType{
+				Types: []*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "T"),
+				},
+			},
 		},
-	} {
+		{
+			label: "InclusiveRange",
+			input: &cadence.InclusiveRangeType{
+				ElementType: cadence.IntType,
+			},
+			expected: interpreter.InclusiveRangeStaticType{
+				ElementType: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+	}
+
+	for ty := interpreter.PrimitiveStaticTypeUnknown + 1; ty < interpreter.PrimitiveStaticType_Count; ty++ {
+		if !ty.IsDefined() {
+			continue
+		}
+
+		tests = append(tests, importTest{
+			label:    fmt.Sprintf("%s (primitive)", ty),
+			input:    cadence.PrimitiveType(ty),
+			expected: ty,
+		})
+
+		typeID := ty.ID()
+		qualifiedIdentifier := string(typeID)
+
+		var expectedForComposite interpreter.StaticType
+		if ty.IsDeprecated() { //nolint:staticcheck
+			expectedForComposite = interpreter.NewCompositeStaticType(
+				nil,
+				nil,
+				qualifiedIdentifier,
+				typeID,
+			)
+		} else {
+			expectedForComposite = ty
+		}
+
+		tests = append(tests, importTest{
+			label: fmt.Sprintf("%s (composite)", ty),
+			input: &cadence.StructType{
+				Location:            nil,
+				QualifiedIdentifier: qualifiedIdentifier,
+			},
+			expected: expectedForComposite,
+		})
+	}
+
+	for _, tt := range tests {
 		test(tt)
 	}
 }
 
-func TestExportIntegerValuesFromScript(t *testing.T) {
+func TestRuntimeExportIntegerValuesFromScript(t *testing.T) {
 
 	t.Parallel()
 
@@ -1276,7 +1195,7 @@ func TestExportIntegerValuesFromScript(t *testing.T) {
 
 			script := fmt.Sprintf(
 				`
-                  pub fun main(): %s {
+                  access(all) fun main(): %s {
                       return 42
                   }
                 `,
@@ -1294,7 +1213,7 @@ func TestExportIntegerValuesFromScript(t *testing.T) {
 	}
 }
 
-func TestExportFixedPointValuesFromScript(t *testing.T) {
+func TestRuntimeExportFixedPointValuesFromScript(t *testing.T) {
 
 	t.Parallel()
 
@@ -1306,7 +1225,7 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 
 			script := fmt.Sprintf(
 				`
-                  pub fun main(): %s {
+                  access(all) fun main(): %s {
                       return %s
                   }
                 `,
@@ -1333,12 +1252,12 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 	}
 }
 
-func TestExportAddressValue(t *testing.T) {
+func TestRuntimeExportAddressValue(t *testing.T) {
 
 	t.Parallel()
 
 	script := `
-        pub fun main(): Address {
+        access(all) fun main(): Address {
             return 0x42
         }
     `
@@ -1351,229 +1270,422 @@ func TestExportAddressValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestExportStructValue(t *testing.T) {
+func TestExportInclusiveRangeValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("with step", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+			access(all) fun main(): InclusiveRange<Int> {
+				return InclusiveRange(10, 20, step: 2)
+			}
+		`
+
+		inclusiveRangeType := cadence.NewInclusiveRangeType(cadence.IntType)
+
+		actual := exportValueFromScript(t, script)
+		expected := cadence.NewInclusiveRange(
+			cadence.NewInt(10),
+			cadence.NewInt(20),
+			cadence.NewInt(2),
+		).WithType(inclusiveRangeType)
+
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("without step", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+			access(all) fun main(): InclusiveRange<Int> {
+				return InclusiveRange(10, 20)
+			}
+		`
+
+		inclusiveRangeType := cadence.NewInclusiveRangeType(cadence.IntType)
+
+		actual := exportValueFromScript(t, script)
+		expected := cadence.NewInclusiveRange(
+			cadence.NewInt(10),
+			cadence.NewInt(20),
+			cadence.NewInt(1),
+		).WithType(inclusiveRangeType)
+
+		assert.Equal(t, expected, actual)
+	})
+}
+
+func TestImportInclusiveRangeValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("simple - InclusiveRange<Int>", func(t *testing.T) {
+		t.Parallel()
+
+		value := cadence.NewInclusiveRange(cadence.NewInt(10), cadence.NewInt(-10), cadence.NewInt(-2))
+
+		inter := NewTestInterpreter(t)
+
+		actual, err := ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			value,
+			sema.NewInclusiveRangeType(inter, sema.IntType),
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewInclusiveRangeValueWithStep(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewIntValueFromInt64(inter, 10),
+				interpreter.NewIntValueFromInt64(inter, -10),
+				interpreter.NewIntValueFromInt64(inter, -2),
+				interpreter.InclusiveRangeStaticType{
+					ElementType: interpreter.PrimitiveStaticTypeInt,
+				},
+				sema.NewInclusiveRangeType(nil, sema.IntType),
+			),
+			actual,
+		)
+	})
+
+	t.Run("import with broader type - AnyStruct", func(t *testing.T) {
+		t.Parallel()
+
+		value := cadence.NewInclusiveRange(cadence.NewInt(10), cadence.NewInt(-10), cadence.NewInt(-2))
+
+		inter := NewTestInterpreter(t)
+
+		actual, err := ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			value,
+			sema.AnyStructType,
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewInclusiveRangeValueWithStep(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewIntValueFromInt64(inter, 10),
+				interpreter.NewIntValueFromInt64(inter, -10),
+				interpreter.NewIntValueFromInt64(inter, -2),
+				interpreter.InclusiveRangeStaticType{
+					ElementType: interpreter.PrimitiveStaticTypeInt,
+				},
+				sema.NewInclusiveRangeType(nil, sema.IntType),
+			),
+			actual,
+		)
+	})
+
+	t.Run("invalid - mixed types", func(t *testing.T) {
+		t.Parallel()
+
+		value := cadence.NewInclusiveRange(cadence.NewInt(10), cadence.NewUInt(100), cadence.NewUInt64(1))
+
+		inter := NewTestInterpreter(t)
+
+		_, err := ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			value,
+			sema.AnyStructType,
+		)
+
+		RequireError(t, err)
+		assertUserError(t, err)
+
+		var userError errors.DefaultUserError
+		require.ErrorAs(t, err, &userError)
+		require.Contains(
+			t,
+			userError.Error(),
+			"cannot import InclusiveRange: start, end and step must be of the same type",
+		)
+	})
+
+	t.Run("invalid - InclusiveRange<String>", func(t *testing.T) {
+		t.Parallel()
+
+		strValue, err := cadence.NewString("anything")
+		require.NoError(t, err)
+
+		value := cadence.NewInclusiveRange(strValue, strValue, strValue)
+
+		inter := NewTestInterpreter(t)
+
+		_, err = ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			value,
+			sema.StringType,
+		)
+
+		RequireError(t, err)
+		assertUserError(t, err)
+
+		var userError errors.DefaultUserError
+		require.ErrorAs(t, err, &userError)
+		require.Contains(
+			t,
+			userError.Error(),
+			"cannot import InclusiveRange: start, end and step must be integers",
+		)
+	})
+}
+
+func TestRuntimeExportStructValue(t *testing.T) {
 
 	t.Parallel()
 
 	script := `
-        pub struct Foo {
-            pub let bar: Int
+        access(all) struct Foo {
+            access(all) let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        pub fun main(): Foo {
+        access(all) fun main(): Foo {
             return Foo(bar: 42)
         }
     `
 
+	fooStructType := cadence.NewStructType(
+		common.ScriptLocation{},
+		"Foo",
+		fooFields,
+		nil,
+	)
+
 	actual := exportValueFromScript(t, script)
-	expected := cadence.NewStruct([]cadence.Value{cadence.NewInt(42)}).WithType(fooStructType)
+	expected := cadence.NewStruct([]cadence.Value{
+		cadence.NewInt(42),
+	}).WithType(fooStructType)
 
 	assert.Equal(t, expected, actual)
 }
 
-func TestExportResourceValue(t *testing.T) {
+func TestRuntimeExportResourceValue(t *testing.T) {
 
 	t.Parallel()
 
 	script := `
-        pub resource Foo {
-            pub let bar: Int
+        access(all) resource Foo {
+            access(all) let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        pub fun main(): @Foo {
+        access(all) fun main(): @Foo {
             return <- create Foo(bar: 42)
         }
     `
 
 	actual := exportValueFromScript(t, script)
-	expected :=
-		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
-			cadence.NewInt(42),
-		}).WithType(fooResourceType)
+	expected := cadence.NewResource([]cadence.Value{
+		cadence.NewUInt64(1),
+		cadence.NewInt(42),
+	}).WithType(newFooResourceType())
 
 	assert.Equal(t, expected, actual)
 }
 
-func TestExportResourceArrayValue(t *testing.T) {
+func TestRuntimeExportResourceArrayValue(t *testing.T) {
 
 	t.Parallel()
 
 	script := `
-        pub resource Foo {
-            pub let bar: Int
+        access(all) resource Foo {
+            access(all) let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        pub fun main(): @[Foo] {
-            return <- [<- create Foo(bar: 1), <- create Foo(bar: 2)]
+        access(all) fun main(): @[Foo] {
+            return <- [<- create Foo(bar: 3), <- create Foo(bar: 4)]
         }
     `
 
+	fooResourceType := newFooResourceType()
+
 	actual := exportValueFromScript(t, script)
+
 	expected := cadence.NewArray([]cadence.Value{
 		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
-			cadence.NewInt(1),
+			cadence.NewUInt64(1),
+			cadence.NewInt(3),
 		}).WithType(fooResourceType),
 		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
-			cadence.NewInt(2),
+			cadence.NewUInt64(2),
+			cadence.NewInt(4),
 		}).WithType(fooResourceType),
-	}).WithType(cadence.VariableSizedArrayType{
-		ElementType: &cadence.ResourceType{
-			Location:            common.StringLocation("test"),
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
+	}).WithType(cadence.NewVariableSizedArrayType(
+		cadence.NewResourceType(
+			common.ScriptLocation{},
+			"Foo",
+			[]cadence.Field{
 				{
 					Identifier: "uuid",
-					Type:       cadence.UInt64Type{},
+					Type:       cadence.UInt64Type,
 				},
 				{
 					Identifier: "bar",
-					Type:       cadence.IntType{},
+					Type:       cadence.IntType,
 				},
 			},
-		},
-	})
+			nil,
+		),
+	))
 
 	assert.Equal(t, expected, actual)
 }
 
-func TestExportResourceDictionaryValue(t *testing.T) {
+func TestRuntimeExportResourceDictionaryValue(t *testing.T) {
 
 	t.Parallel()
 
 	script := `
-        pub resource Foo {
-            pub let bar: Int
+        access(all) resource Foo {
+            access(all) let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        pub fun main(): @{String: Foo} {
+        access(all) fun main(): @{String: Foo} {
             return <- {
-                "a": <- create Foo(bar: 1),
-                "b": <- create Foo(bar: 2)
+                "a": <- create Foo(bar: 3),
+                "b": <- create Foo(bar: 4)
             }
         }
     `
 
+	fooResourceType := newFooResourceType()
+
 	actual := exportValueFromScript(t, script)
+
 	expected := cadence.NewDictionary([]cadence.KeyValuePair{
 		{
 			Key: cadence.String("b"),
 			Value: cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
-				cadence.NewInt(2),
+				cadence.NewUInt64(2),
+				cadence.NewInt(4),
 			}).WithType(fooResourceType),
 		},
 		{
 			Key: cadence.String("a"),
 			Value: cadence.NewResource([]cadence.Value{
-				cadence.NewUInt64(0),
-				cadence.NewInt(1),
+				cadence.NewUInt64(1),
+				cadence.NewInt(3),
 			}).WithType(fooResourceType),
 		},
-	}).WithType(cadence.DictionaryType{
-		KeyType: cadence.StringType{},
-		ElementType: &cadence.ResourceType{
-			Location:            common.StringLocation("test"),
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
+	}).WithType(&cadence.DictionaryType{
+		KeyType: cadence.StringType,
+		ElementType: cadence.NewResourceType(
+			common.ScriptLocation{},
+			"Foo",
+			[]cadence.Field{
 				{
 					Identifier: "uuid",
-					Type:       cadence.UInt64Type{},
+					Type:       cadence.UInt64Type,
 				},
 				{
 					Identifier: "bar",
-					Type:       cadence.IntType{},
+					Type:       cadence.IntType,
 				},
 			},
-		},
+			nil,
+		),
 	})
 
 	assert.Equal(t, expected, actual)
 }
 
-func TestExportNestedResourceValueFromScript(t *testing.T) {
+func TestRuntimeExportNestedResourceValueFromScript(t *testing.T) {
 
 	t.Parallel()
 
-	barResourceType := &cadence.ResourceType{
-		Location:            TestLocation,
-		QualifiedIdentifier: "Bar",
-		Fields: []cadence.Field{
+	barResourceType := cadence.NewResourceType(
+		common.ScriptLocation{},
+		"Bar",
+		[]cadence.Field{
 			{
 				Identifier: "uuid",
-				Type:       cadence.UInt64Type{},
+				Type:       cadence.UInt64Type,
 			},
 			{
 				Identifier: "x",
-				Type:       cadence.IntType{},
+				Type:       cadence.IntType,
 			},
 		},
-	}
+		nil,
+	)
 
-	fooResourceType := &cadence.ResourceType{
-		Location:            TestLocation,
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
+	fooResourceType := cadence.NewResourceType(
+		common.ScriptLocation{},
+		"Foo",
+		[]cadence.Field{
 			{
 				Identifier: "uuid",
-				Type:       cadence.UInt64Type{},
+				Type:       cadence.UInt64Type,
 			},
 			{
 				Identifier: "bar",
 				Type:       barResourceType,
 			},
 		},
-	}
+		nil,
+	)
 
 	script := `
-        pub resource Bar {
-            pub let x: Int
+        access(all) resource Bar {
+            access(all) let x: Int
 
             init(x: Int) {
                 self.x = x
             }
         }
 
-        pub resource Foo {
-            pub let bar: @Bar
+        access(all) resource Foo {
+            access(all) let bar: @Bar
 
             init(bar: @Bar) {
                 self.bar <- bar
             }
-
-            destroy() {
-                destroy self.bar
-            }
         }
 
-        pub fun main(): @Foo {
+        access(all) fun main(): @Foo {
             return <- create Foo(bar: <- create Bar(x: 42))
         }
     `
 
 	actual := exportValueFromScript(t, script)
 	expected := cadence.NewResource([]cadence.Value{
-		cadence.NewUInt64(0),
+		cadence.NewUInt64(2),
 		cadence.NewResource([]cadence.Value{
-			cadence.NewUInt64(0),
+			cadence.NewUInt64(1),
 			cadence.NewInt(42),
 		}).WithType(barResourceType),
 	}).WithType(fooResourceType)
@@ -1581,31 +1693,82 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestExportEventValue(t *testing.T) {
+func TestRuntimeExportEventValue(t *testing.T) {
 
 	t.Parallel()
 
-	script := `
-        pub event Foo(bar: Int)
+	t.Run("primitive", func(t *testing.T) {
+		t.Parallel()
 
-        pub fun main() {
-            emit Foo(bar: 42)
-        }
-    `
+		script := `
+          access(all)
+          event Foo(bar: Int)
 
-	actual := exportEventFromScript(t, script)
-	expected := cadence.NewEvent([]cadence.Value{cadence.NewInt(42)}).WithType(fooEventType)
+          access(all)
+          fun main() {
+              emit Foo(bar: 42)
+          }
+        `
 
-	assert.Equal(t, expected, actual)
+		fooEventType := cadence.NewEventType(
+			common.ScriptLocation{},
+			"Foo",
+			fooFields,
+			nil,
+		)
+
+		actual := exportEventFromScript(t, script)
+		expected := cadence.NewEvent([]cadence.Value{
+			cadence.NewInt(42),
+		}).WithType(fooEventType)
+
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("reference", func(t *testing.T) {
+		t.Parallel()
+
+		script := `
+          access(all)
+          event Foo(bar: &Int)
+
+          access(all)
+          fun main() {
+              emit Foo(bar: &42 as &Int)
+          }
+        `
+
+		fooEventType := cadence.NewEventType(
+			common.ScriptLocation{},
+			"Foo",
+			[]cadence.Field{
+				{
+					Identifier: "bar",
+					Type: cadence.NewReferenceType(
+						cadence.UnauthorizedAccess,
+						cadence.IntType,
+					),
+				},
+			},
+			nil,
+		)
+
+		actual := exportEventFromScript(t, script)
+		expected := cadence.NewEvent([]cadence.Value{
+			cadence.NewInt(42),
+		}).WithType(fooEventType)
+
+		assert.Equal(t, expected, actual)
+	})
 }
 
 func exportEventFromScript(t *testing.T, script string) cadence.Event {
-	rt := newTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	var events []cadence.Event
 
-	inter := &testRuntimeInterface{
-		emitEvent: func(event cadence.Event) error {
+	inter := &TestRuntimeInterface{
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
@@ -1617,7 +1780,7 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 		},
 		Context{
 			Interface: inter,
-			Location:  TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
 
@@ -1630,15 +1793,15 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 }
 
 func exportValueFromScript(t *testing.T, script string) cadence.Value {
-	rt := newTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
 	value, err := rt.ExecuteScript(
 		Script{
 			Source: []byte(script),
 		},
 		Context{
-			Interface: &testRuntimeInterface{},
-			Location:  TestLocation,
+			Interface: &TestRuntimeInterface{},
+			Location:  common.ScriptLocation{},
 		},
 	)
 
@@ -1647,7 +1810,7 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 	return value
 }
 
-func TestExportReferenceValue(t *testing.T) {
+func TestRuntimeExportReferenceValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -1656,7 +1819,7 @@ func TestExportReferenceValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): &Int {
+            access(all) fun main(): &Int {
                 return &1 as &Int
             }
         `
@@ -1672,7 +1835,7 @@ func TestExportReferenceValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): [&AnyStruct] {
+            access(all) fun main(): [&AnyStruct] {
                 let refs: [&AnyStruct] = []
                 refs.append(&refs as &AnyStruct)
                 return refs
@@ -1683,14 +1846,16 @@ func TestExportReferenceValue(t *testing.T) {
 		expected := cadence.NewArray([]cadence.Value{
 			cadence.NewArray([]cadence.Value{
 				nil,
-			}).WithType(cadence.VariableSizedArrayType{
-				ElementType: cadence.ReferenceType{
-					Type: cadence.AnyStructType{},
+			}).WithType(&cadence.VariableSizedArrayType{
+				ElementType: &cadence.ReferenceType{
+					Type:          cadence.AnyStructType,
+					Authorization: cadence.UnauthorizedAccess,
 				},
 			}),
-		}).WithType(cadence.VariableSizedArrayType{
-			ElementType: cadence.ReferenceType{
-				Type: cadence.AnyStructType{},
+		}).WithType(&cadence.VariableSizedArrayType{
+			ElementType: &cadence.ReferenceType{
+				Type:          cadence.AnyStructType,
+				Authorization: cadence.UnauthorizedAccess,
 			},
 		})
 
@@ -1703,16 +1868,15 @@ func TestExportReferenceValue(t *testing.T) {
 
 		// Arrange
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		transaction := `
             transaction {
-                prepare(signer: AuthAccount) {
-                    signer.save(1, to: /storage/test)
-                    signer.link<&Int>(
-                        /public/test,
-                        target: /storage/test
-                    )
+                prepare(signer: auth(Storage, Capabilities) &Account) {
+                    signer.storage.save(1, to: /storage/test)
+                    let cap = signer.capabilities.storage.issue<&Int>(/storage/test)
+                    signer.capabilities.publish(cap, at: /public/test)
+
                 }
             }
         `
@@ -1720,9 +1884,9 @@ func TestExportReferenceValue(t *testing.T) {
 		address, err := common.HexToAddress("0x1")
 		require.NoError(t, err)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: newTestLedger(nil, nil),
-			getSigningAccounts: func() ([]Address, error) {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{
 					address,
 				}, nil
@@ -1743,8 +1907,8 @@ func TestExportReferenceValue(t *testing.T) {
 		require.NoError(t, err)
 
 		script := `
-            pub fun main(): &AnyStruct {
-                return getAccount(0x1).getCapability(/public/test).borrow<&AnyStruct>()!
+            access(all) fun main(): &AnyStruct {
+                return getAccount(0x1).capabilities.borrow<&AnyStruct>(/public/test)!
             }
         `
 
@@ -1763,9 +1927,81 @@ func TestExportReferenceValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+
+	t.Run("storage, recursive, same reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) fun main(): &AnyStruct {
+                var acct = getAuthAccount<auth(Storage) &Account>(0x01)
+	            var v:[AnyStruct] = []
+	            acct.storage.save(v, to: /storage/x)
+
+                var ref = acct.storage.borrow<auth(Insert) &[AnyStruct]>(from: /storage/x)!
+	            ref.append(ref)
+	            return ref
+            }
+        `
+
+		rt := NewTestInterpreterRuntime()
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cannot store non-storable value")
+	})
+
+	t.Run("storage, recursive, two references", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) fun main(): &AnyStruct {
+                let acct = getAuthAccount<auth(Storage) &Account>(0x01)
+	            let v: [AnyStruct] = []
+	            acct.storage.save(v, to: /storage/x)
+
+                let ref1 = acct.storage.borrow<auth(Insert) &[AnyStruct]>(from: /storage/x)!
+                let ref2 = acct.storage.borrow<&[AnyStruct]>(from: /storage/x)!
+
+	            ref1.append(ref2)
+	            return ref1
+            }
+        `
+
+		rt := NewTestInterpreterRuntime()
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+		}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "cannot store non-storable value")
+	})
 }
 
-func TestExportTypeValue(t *testing.T) {
+func TestRuntimeExportTypeValue(t *testing.T) {
 
 	t.Parallel()
 
@@ -1774,14 +2010,14 @@ func TestExportTypeValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Type {
+            access(all) fun main(): Type {
                 return Type<Int>()
             }
         `
 
 		actual := exportValueFromScript(t, script)
 		expected := cadence.TypeValue{
-			StaticType: cadence.IntType{},
+			StaticType: cadence.IntType,
 		}
 
 		assert.Equal(t, expected, actual)
@@ -1792,20 +2028,21 @@ func TestExportTypeValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub struct S {}
+            access(all) struct S {}
 
-            pub fun main(): Type {
+            access(all) fun main(): Type {
                 return Type<S>()
             }
         `
 
 		actual := exportValueFromScript(t, script)
 		expected := cadence.TypeValue{
-			StaticType: &cadence.StructType{
-				QualifiedIdentifier: "S",
-				Location:            TestLocation,
-				Fields:              []cadence.Field{},
-			},
+			StaticType: cadence.NewStructType(
+				common.ScriptLocation{},
+				"S",
+				[]cadence.Field{},
+				nil,
+			),
 		}
 
 		assert.Equal(t, expected, actual)
@@ -1816,7 +2053,7 @@ func TestExportTypeValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(): Type {
+            access(all) fun main(): Type {
                 return CompositeType("PublicKey")!
             }
         `
@@ -1834,11 +2071,10 @@ func TestExportTypeValue(t *testing.T) {
 		value := interpreter.TypeValue{
 			Type: nil,
 		}
-		actual, err := exportValueWithInterpreter(
+		actual, err := ExportValue(
 			value,
-			newTestInterpreter(t),
+			NewTestInterpreter(t),
 			interpreter.EmptyLocationRange,
-			seenReferences{},
 		)
 		require.NoError(t, err)
 
@@ -1849,17 +2085,17 @@ func TestExportTypeValue(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
-	t.Run("with restricted static type", func(t *testing.T) {
+	t.Run("with intersection static type", func(t *testing.T) {
 
 		t.Parallel()
 
 		const code = `
-          pub struct interface SI {}
+          access(all) struct interface SI {}
 
-          pub struct S: SI {}
+          access(all) struct S: SI {}
 
         `
-		program, err := parser.ParseProgram([]byte(code), nil)
+		program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(
@@ -1875,17 +2111,13 @@ func TestExportTypeValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 		inter.Program = interpreter.ProgramFromChecker(checker)
 
 		ty := interpreter.TypeValue{
-			Type: &interpreter.RestrictedStaticType{
-				Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
-				Restrictions: []interpreter.InterfaceStaticType{
-					{
-						Location:            TestLocation,
-						QualifiedIdentifier: "SI",
-					},
+			Type: &interpreter.IntersectionStaticType{
+				Types: []*interpreter.InterfaceStaticType{
+					interpreter.NewInterfaceStaticTypeComputeTypeID(nil, TestLocation, "SI"),
 				},
 			},
 		}
@@ -1895,20 +2127,16 @@ func TestExportTypeValue(t *testing.T) {
 
 		assert.Equal(t,
 			cadence.TypeValue{
-				StaticType: (&cadence.RestrictedType{
-					Type: &cadence.StructType{
-						QualifiedIdentifier: "S",
-						Location:            TestLocation,
-						Fields:              []cadence.Field{},
+				StaticType: &cadence.IntersectionType{
+					Types: []cadence.Type{
+						cadence.NewStructInterfaceType(
+							TestLocation,
+							"SI",
+							[]cadence.Field{},
+							nil,
+						),
 					},
-					Restrictions: []cadence.Type{
-						&cadence.StructInterfaceType{
-							QualifiedIdentifier: "SI",
-							Location:            TestLocation,
-							Fields:              []cadence.Field{},
-						},
-					},
-				}).WithID("S.test.S{S.test.SI}"),
+				},
 			},
 			actual,
 		)
@@ -1916,37 +2144,30 @@ func TestExportTypeValue(t *testing.T) {
 
 }
 
-func TestExportCapabilityValue(t *testing.T) {
+func TestRuntimeExportCapabilityValue(t *testing.T) {
 
 	t.Parallel()
 
 	t.Run("Int", func(t *testing.T) {
 
-		capability := &interpreter.CapabilityValue{
-			Address: interpreter.AddressValue{0x1},
-			Path: interpreter.PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-			BorrowType: interpreter.PrimitiveStaticTypeInt,
-		}
+		capability := interpreter.NewUnmeteredCapabilityValue(
+			3,
+			interpreter.AddressValue{0x1},
+			interpreter.PrimitiveStaticTypeInt,
+		)
 
-		actual, err := exportValueWithInterpreter(
+		actual, err := ExportValue(
 			capability,
-			newTestInterpreter(t),
+			NewTestInterpreter(t),
 			interpreter.EmptyLocationRange,
-			seenReferences{},
 		)
 		require.NoError(t, err)
 
-		expected := cadence.Capability{
-			Path: cadence.Path{
-				Domain:     "storage",
-				Identifier: "foo",
-			},
-			Address:    cadence.Address{0x1},
-			BorrowType: cadence.IntType{},
-		}
+		expected := cadence.NewCapability(
+			3,
+			cadence.Address{0x1},
+			cadence.IntType,
+		)
 
 		assert.Equal(t, expected, actual)
 
@@ -1957,7 +2178,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		const code = `
           struct S {}
         `
-		program, err := parser.ParseProgram([]byte(code), nil)
+		program, err := parser.ParseProgram(nil, []byte(code), parser.Config{})
 		require.NoError(t, err)
 
 		checker, err := sema.NewChecker(
@@ -1973,161 +2194,94 @@ func TestExportCapabilityValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 		inter.Program = interpreter.ProgramFromChecker(checker)
 
-		capability := &interpreter.CapabilityValue{
-			Address: interpreter.AddressValue{0x1},
-			Path: interpreter.PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-			BorrowType: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
-		}
+		capability := interpreter.NewUnmeteredCapabilityValue(
+			3,
+			interpreter.AddressValue{0x1},
+			interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
+		)
 
-		actual, err := exportValueWithInterpreter(
+		actual, err := ExportValue(
 			capability,
 			inter,
 			interpreter.EmptyLocationRange,
-			seenReferences{},
 		)
 		require.NoError(t, err)
 
-		expected := cadence.Capability{
-			Path: cadence.Path{
-				Domain:     "storage",
-				Identifier: "foo",
-			},
-			Address: cadence.Address{0x1},
-			BorrowType: &cadence.StructType{
-				QualifiedIdentifier: "S",
-				Location:            TestLocation,
-				Fields:              []cadence.Field{},
-			},
-		}
-
-		assert.Equal(t, expected, actual)
-	})
-
-	t.Run("no borrow type", func(t *testing.T) {
-
-		capability := &interpreter.CapabilityValue{
-			Address: interpreter.AddressValue{0x1},
-			Path: interpreter.PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-		}
-
-		actual, err := exportValueWithInterpreter(
-			capability,
-			newTestInterpreter(t),
-			interpreter.EmptyLocationRange,
-			seenReferences{},
+		expected := cadence.NewCapability(
+			3,
+			cadence.Address{0x1},
+			cadence.NewStructType(
+				TestLocation,
+				"S",
+				[]cadence.Field{},
+				nil,
+			),
 		)
-		require.NoError(t, err)
-
-		expected := cadence.Capability{
-			Path: cadence.Path{
-				Domain:     "storage",
-				Identifier: "foo",
-			},
-			Address: cadence.Address{0x1},
-		}
 
 		assert.Equal(t, expected, actual)
 	})
 }
 
-func TestExportLinkValue(t *testing.T) {
+func TestRuntimeExportCompositeValueWithFunctionValueField(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("Int", func(t *testing.T) {
+	script := `
+        access(all) struct Foo {
+            access(all) let answer: Int
+            access(all) let f: fun(): Void
 
-		link := interpreter.LinkValue{
-			TargetPath: interpreter.PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
+            init() {
+                self.answer = 42
+                self.f = fun () {}
+            }
+        }
+
+        access(all) fun main(): Foo {
+            return Foo()
+        }
+    `
+
+	fooStructType := cadence.NewStructType(
+		common.ScriptLocation{},
+		"Foo",
+		[]cadence.Field{
+			{
+				Identifier: "answer",
+				Type:       cadence.IntType,
 			},
-			Type: interpreter.PrimitiveStaticTypeInt,
-		}
-
-		actual, err := exportValueWithInterpreter(
-			link,
-			newTestInterpreter(t),
-			interpreter.EmptyLocationRange,
-			seenReferences{},
-		)
-		require.NoError(t, err)
-
-		expected := cadence.Link{
-			TargetPath: cadence.Path{
-				Domain:     "storage",
-				Identifier: "foo",
+			{
+				Identifier: "f",
+				Type: &cadence.FunctionType{
+					ReturnType: cadence.VoidType,
+				},
 			},
-			BorrowType: "Int",
-		}
+		},
+		nil,
+	)
 
-		assert.Equal(t, expected, actual)
-	})
+	actual := exportValueFromScript(t, script)
 
-	t.Run("Struct", func(t *testing.T) {
-
-		const code = `
-          struct S {}
-        `
-		program, err := parser.ParseProgram([]byte(code), nil)
-		require.NoError(t, err)
-
-		checker, err := sema.NewChecker(
-			program,
-			TestLocation,
-			nil,
-			&sema.Config{
-				AccessCheckMode: sema.AccessCheckModeNotSpecifiedUnrestricted,
+	expected := cadence.NewStruct([]cadence.Value{
+		cadence.NewInt(42),
+		cadence.Function{
+			FunctionType: &cadence.FunctionType{
+				ReturnType: cadence.VoidType,
 			},
-		)
-		require.NoError(t, err)
+		},
+	}).WithType(fooStructType)
 
-		err = checker.Check()
-		require.NoError(t, err)
-
-		inter := newTestInterpreter(t)
-		inter.Program = interpreter.ProgramFromChecker(checker)
-
-		capability := interpreter.LinkValue{
-			TargetPath: interpreter.PathValue{
-				Domain:     common.PathDomainStorage,
-				Identifier: "foo",
-			},
-			Type: interpreter.NewCompositeStaticTypeComputeTypeID(inter, TestLocation, "S"),
-		}
-
-		actual, err := exportValueWithInterpreter(
-			capability,
-			inter,
-			interpreter.EmptyLocationRange,
-			seenReferences{},
-		)
-		require.NoError(t, err)
-
-		expected := cadence.Link{
-			TargetPath: cadence.Path{
-				Domain:     "storage",
-				Identifier: "foo",
-			},
-			BorrowType: "S.test.S",
-		}
-
-		assert.Equal(t, expected, actual)
-	})
+	assert.Equal(t, expected, actual)
 }
 
 //go:embed test-export-json-deterministic.txt
 var exportJsonDeterministicExpected string
 
-func TestExportJsonDeterministic(t *testing.T) {
+func TestRuntimeExportJsonDeterministic(t *testing.T) {
+	t.Parallel()
 
 	// exported order of field in a dictionary depends on the execution ,
 	// however the deterministic code should generate deterministic type
@@ -2179,80 +2333,77 @@ func TestExportJsonDeterministic(t *testing.T) {
 var fooFields = []cadence.Field{
 	{
 		Identifier: "bar",
-		Type:       cadence.IntType{},
+		Type:       cadence.IntType,
 	},
 }
 var fooResourceFields = []cadence.Field{
 	{
 		Identifier: "uuid",
-		Type:       cadence.UInt64Type{},
+		Type:       cadence.UInt64Type,
 	},
 	{
 		Identifier: "bar",
-		Type:       cadence.IntType{},
+		Type:       cadence.IntType,
 	},
 }
 
-var fooStructType = &cadence.StructType{
-	Location:            TestLocation,
-	QualifiedIdentifier: "Foo",
-	Fields:              fooFields,
-}
-
-var fooResourceType = &cadence.ResourceType{
-	Location:            TestLocation,
-	QualifiedIdentifier: "Foo",
-	Fields:              fooResourceFields,
-}
-
-var fooEventType = &cadence.EventType{
-	Location:            TestLocation,
-	QualifiedIdentifier: "Foo",
-	Fields:              fooFields,
+func newFooResourceType() *cadence.ResourceType {
+	return cadence.NewResourceType(
+		common.ScriptLocation{},
+		"Foo",
+		fooResourceFields,
+		nil,
+	)
 }
 
 func TestRuntimeEnumValue(t *testing.T) {
 
 	t.Parallel()
 
-	enumValue := cadence.Enum{
-		EnumType: &cadence.EnumType{
-			Location:            TestLocation,
-			QualifiedIdentifier: "Direction",
-			Fields: []cadence.Field{
+	newEnumValue := func() cadence.Enum {
+		return cadence.NewEnum([]cadence.Value{
+			cadence.NewInt(3),
+		}).WithType(cadence.NewEnumType(
+			common.ScriptLocation{},
+			"Direction",
+			cadence.IntType,
+			[]cadence.Field{
 				{
 					Identifier: sema.EnumRawValueFieldName,
-					Type:       cadence.IntType{},
+					Type:       cadence.IntType,
 				},
 			},
-			RawType: cadence.IntType{},
-		},
-		Fields: []cadence.Value{
-			cadence.NewInt(3),
-		},
+			nil,
+		))
 	}
 
 	t.Run("test export", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
-            pub fun main(): Direction {
+            access(all) fun main(): Direction {
                 return Direction.RIGHT
             }
 
-            pub enum Direction: Int {
-                pub case UP
-                pub case DOWN
-                pub case LEFT
-                pub case RIGHT
+            access(all) enum Direction: Int {
+                access(all) case UP
+                access(all) case DOWN
+                access(all) case LEFT
+                access(all) case RIGHT
             }
         `
 
+		expected := newEnumValue()
 		actual := exportValueFromScript(t, script)
-		assert.Equal(t, enumValue, actual)
+
+		assert.Equal(t, expected, actual)
 	})
 
 	t.Run("test import", func(t *testing.T) {
+		t.Parallel()
+
 		script := `
-            pub fun main(dir: Direction): Direction {
+            access(all) fun main(dir: Direction): Direction {
                 if !dir.isInstance(Type<Direction>()) {
                     panic("Not a Direction value")
                 }
@@ -2260,31 +2411,30 @@ func TestRuntimeEnumValue(t *testing.T) {
                 return dir
             }
 
-            pub enum Direction: Int {
-                pub case UP
-                pub case DOWN
-                pub case LEFT
-                pub case RIGHT
+            access(all) enum Direction: Int {
+                access(all) case UP
+                access(all) case DOWN
+                access(all) case LEFT
+                access(all) case RIGHT
             }
         `
 
-		actual, err := executeTestScript(t, script, enumValue)
+		expected := newEnumValue()
+		actual, err := executeTestScript(t, script, expected)
 		require.NoError(t, err)
-		assert.Equal(t, enumValue, actual)
+
+		assert.Equal(t, expected, actual)
 	})
 }
 
 func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.Value, error) {
-	rt := newTestInterpreterRuntime()
+	rt := NewTestInterpreterRuntime()
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestLedger(nil, nil),
-		meterMemory: func(_ common.MemoryUsage) error {
-			return nil
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
 		},
-	}
-	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-		return json.Decode(runtimeInterface, b)
 	}
 
 	scriptParam := Script{
@@ -2297,13 +2447,15 @@ func executeTestScript(t *testing.T, script string, arg cadence.Value) (cadence.
 		scriptParam.Arguments = [][]byte{encodedArg}
 	}
 
-	return rt.ExecuteScript(
+	value, err := rt.ExecuteScript(
 		scriptParam,
 		Context{
 			Interface: runtimeInterface,
-			Location:  TestLocation,
+			Location:  common.ScriptLocation{},
 		},
 	)
+
+	return value, err
 }
 
 func TestRuntimeArgumentPassing(t *testing.T) {
@@ -2311,9 +2463,9 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 	t.Parallel()
 
 	type argumentPassingTest struct {
+		exportedValue cadence.Value
 		label         string
 		typeSignature string
-		exportedValue cadence.Value
 		skipExport    bool
 	}
 
@@ -2347,8 +2499,8 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			label:         "Array empty",
 			typeSignature: "[String]",
 			exportedValue: cadence.NewArray([]cadence.Value{}).
-				WithType(cadence.VariableSizedArrayType{
-					ElementType: cadence.StringType{},
+				WithType(&cadence.VariableSizedArrayType{
+					ElementType: cadence.StringType,
 				}),
 		},
 		{
@@ -2357,8 +2509,8 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewArray([]cadence.Value{
 				cadence.String("foo"),
 				cadence.String("bar"),
-			}).WithType(cadence.VariableSizedArrayType{
-				ElementType: cadence.StringType{},
+			}).WithType(&cadence.VariableSizedArrayType{
+				ElementType: cadence.StringType,
 			}),
 		},
 		{
@@ -2369,9 +2521,20 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 					Key:   cadence.String("foo"),
 					Value: cadence.String("bar"),
 				},
-			}).WithType(cadence.DictionaryType{
-				KeyType:     cadence.StringType{},
-				ElementType: cadence.StringType{},
+			}).WithType(&cadence.DictionaryType{
+				KeyType:     cadence.StringType,
+				ElementType: cadence.StringType,
+			}),
+		},
+		{
+			label:         "InclusiveRange",
+			typeSignature: "InclusiveRange<UInt128>",
+			exportedValue: cadence.NewInclusiveRange(
+				cadence.NewUInt128(1),
+				cadence.NewUInt128(500),
+				cadence.NewUInt128(25),
+			).WithType(&cadence.InclusiveRangeType{
+				ElementType: cadence.UInt128Type,
 			}),
 		},
 		{
@@ -2465,6 +2628,16 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewWord64(42),
 		},
 		{
+			label:         "Word128",
+			typeSignature: "Word128",
+			exportedValue: cadence.NewWord128(42),
+		},
+		{
+			label:         "Word256",
+			typeSignature: "Word256",
+			exportedValue: cadence.NewWord256(42),
+		},
+		{
 			label:         "Fix64",
 			typeSignature: "Fix64",
 			exportedValue: cadence.Fix64(-123000000),
@@ -2478,7 +2651,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			label:         "StoragePath",
 			typeSignature: "StoragePath",
 			exportedValue: cadence.Path{
-				Domain:     "storage",
+				Domain:     common.PathDomainStorage,
 				Identifier: "foo",
 			},
 			skipExport: true,
@@ -2487,7 +2660,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			label:         "PrivatePath",
 			typeSignature: "PrivatePath",
 			exportedValue: cadence.Path{
-				Domain:     "private",
+				Domain:     common.PathDomainPrivate,
 				Identifier: "foo",
 			},
 			skipExport: true,
@@ -2496,7 +2669,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			label:         "PublicPath",
 			typeSignature: "PublicPath",
 			exportedValue: cadence.Path{
-				Domain:     "public",
+				Domain:     common.PathDomainPublic,
 				Identifier: "foo",
 			},
 			skipExport: true,
@@ -2523,7 +2696,7 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			}
 
 			script := fmt.Sprintf(
-				`pub fun main(arg: %[1]s)%[2]s {
+				`access(all) fun main(arg: %[1]s)%[2]s {
 
                     if !arg.isInstance(Type<%[1]s>()) {
                         panic("Not a %[1]s value")
@@ -2540,7 +2713,8 @@ func TestRuntimeArgumentPassing(t *testing.T) {
 			require.NoError(t, err)
 
 			if !test.skipExport {
-				assert.Equal(t, test.exportedValue, actual)
+				expected := test.exportedValue
+				assert.Equal(t, expected, actual)
 			}
 		})
 	}
@@ -2555,111 +2729,115 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 	t.Parallel()
 
 	// Complex struct value
-	complexStructValue := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: cadence.OptionalType{
-						Type: cadence.StringType{},
-					},
-				},
-				{
-					Identifier: "b",
-					Type: cadence.DictionaryType{
-						KeyType:     cadence.StringType{},
-						ElementType: cadence.StringType{},
-					},
-				},
-				{
-					Identifier: "c",
-					Type: cadence.VariableSizedArrayType{
-						ElementType: cadence.StringType{},
-					},
-				},
-				{
-					Identifier: "d",
-					Type: cadence.ConstantSizedArrayType{
-						ElementType: cadence.StringType{},
-						Size:        2,
-					},
-				},
-				{
-					Identifier: "e",
-					Type:       cadence.AddressType{},
-				},
-				{
-					Identifier: "f",
-					Type:       cadence.BoolType{},
-				},
-				{
-					Identifier: "g",
-					Type:       cadence.StoragePathType{},
-				},
-				{
-					Identifier: "h",
-					Type:       cadence.PublicPathType{},
-				},
-				{
-					Identifier: "i",
-					Type:       cadence.PrivatePathType{},
-				},
-				{
-					Identifier: "j",
-					Type:       cadence.AnyStructType{},
+	structType := cadence.NewStructType(
+		common.ScriptLocation{},
+		"Foo",
+		[]cadence.Field{
+			{
+				Identifier: "a",
+				Type: &cadence.OptionalType{
+					Type: cadence.StringType,
 				},
 			},
+			{
+				Identifier: "b",
+				Type: &cadence.DictionaryType{
+					KeyType:     cadence.StringType,
+					ElementType: cadence.StringType,
+				},
+			},
+			{
+				Identifier: "c",
+				Type: &cadence.VariableSizedArrayType{
+					ElementType: cadence.StringType,
+				},
+			},
+			{
+				Identifier: "d",
+				Type: &cadence.ConstantSizedArrayType{
+					ElementType: cadence.StringType,
+					Size:        2,
+				},
+			},
+			{
+				Identifier: "e",
+				Type:       cadence.AddressType,
+			},
+			{
+				Identifier: "f",
+				Type:       cadence.BoolType,
+			},
+			{
+				Identifier: "g",
+				Type:       cadence.StoragePathType,
+			},
+			{
+				Identifier: "h",
+				Type:       cadence.PublicPathType,
+			},
+			{
+				Identifier: "i",
+				Type:       cadence.PrivatePathType,
+			},
+			{
+				Identifier: "j",
+				Type:       cadence.AnyStructType,
+			},
+			{
+				Identifier: "k",
+				Type:       cadence.HashableStructType,
+			},
 		},
+		nil,
+	)
 
-		Fields: []cadence.Value{
-			cadence.NewOptional(
-				cadence.String("John"),
-			),
-			cadence.NewDictionary([]cadence.KeyValuePair{
-				{
-					Key:   cadence.String("name"),
-					Value: cadence.String("Doe"),
-				},
-			}).WithType(cadence.DictionaryType{
-				KeyType:     cadence.StringType{},
-				ElementType: cadence.StringType{},
-			}),
-			cadence.NewArray([]cadence.Value{
-				cadence.String("foo"),
-				cadence.String("bar"),
-			}).WithType(cadence.VariableSizedArrayType{
-				ElementType: cadence.StringType{},
-			}),
-			cadence.NewArray([]cadence.Value{
-				cadence.String("foo"),
-				cadence.String("bar"),
-			}).WithType(cadence.ConstantSizedArrayType{
-				ElementType: cadence.StringType{},
-				Size:        2,
-			}),
-			cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
-			cadence.NewBool(true),
-			cadence.Path{
-				Domain:     "storage",
-				Identifier: "foo",
+	complexStructValue := cadence.NewStruct([]cadence.Value{
+		cadence.NewOptional(
+			cadence.String("John"),
+		),
+		cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key:   cadence.String("name"),
+				Value: cadence.String("Doe"),
 			},
-			cadence.Path{
-				Domain:     "public",
-				Identifier: "foo",
-			},
-			cadence.Path{
-				Domain:     "private",
-				Identifier: "foo",
-			},
+		}).WithType(&cadence.DictionaryType{
+			KeyType:     cadence.StringType,
+			ElementType: cadence.StringType,
+		}),
+		cadence.NewArray([]cadence.Value{
 			cadence.String("foo"),
+			cadence.String("bar"),
+		}).WithType(&cadence.VariableSizedArrayType{
+			ElementType: cadence.StringType,
+		}),
+		cadence.NewArray([]cadence.Value{
+			cadence.String("foo"),
+			cadence.String("bar"),
+		}).WithType(&cadence.ConstantSizedArrayType{
+			ElementType: cadence.StringType,
+			Size:        2,
+		}),
+		cadence.NewAddress([8]byte{0, 0, 0, 0, 0, 1, 0, 2}),
+		cadence.NewBool(true),
+		cadence.Path{
+			Domain:     common.PathDomainStorage,
+			Identifier: "foo",
 		},
-	}
+		cadence.Path{
+			Domain:     common.PathDomainPublic,
+			Identifier: "foo",
+		},
+		cadence.Path{
+			Domain:     common.PathDomainPrivate,
+			Identifier: "foo",
+		},
+		cadence.String("foo"),
+		cadence.String("foo"),
+	}).WithType(structType)
 
 	script := fmt.Sprintf(
 		`
-          pub fun main(arg: %[1]s): %[1]s {
+          access(all) fun main(arg: %[1]s): %[1]s {
 
               if !arg.isInstance(Type<%[1]s>()) {
                   panic("Not a %[1]s value")
@@ -2668,17 +2846,18 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
               return arg
           }
 
-          pub struct Foo {
-              pub var a: String?
-              pub var b: {String: String}
-              pub var c: [String]
-              pub var d: [String; 2]
-              pub var e: Address
-              pub var f: Bool
-              pub var g: StoragePath
-              pub var h: PublicPath
-              pub var i: PrivatePath
-              pub var j: AnyStruct
+          access(all) struct Foo {
+              access(all) var a: String?
+              access(all) var b: {String: String}
+              access(all) var c: [String]
+              access(all) var d: [String; 2]
+              access(all) var e: Address
+              access(all) var f: Bool
+              access(all) var g: StoragePath
+              access(all) var h: PublicPath
+              access(all) var i: PrivatePath
+              access(all) var j: AnyStruct
+              access(all) var k: HashableStruct
 
               init() {
                   self.a = "Hello"
@@ -2691,6 +2870,7 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
                   self.h = /public/foo
                   self.i = /private/foo
                   self.j = nil
+                  self.k = "hashable_struct_value"
               }
           }
         `,
@@ -2699,7 +2879,9 @@ func TestRuntimeComplexStructArgumentPassing(t *testing.T) {
 
 	actual, err := executeTestScript(t, script, complexStructValue)
 	require.NoError(t, err)
-	assert.Equal(t, complexStructValue, actual)
+
+	expected := complexStructValue
+	assert.Equal(t, expected, actual)
 
 }
 
@@ -2708,78 +2890,77 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 	t.Parallel()
 
 	// Complex struct value
-	complexStructValue := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: cadence.OptionalType{
-						Type: cadence.AnyStructType{},
-					},
-				},
-				{
-					Identifier: "b",
-					Type: cadence.DictionaryType{
-						KeyType:     cadence.StringType{},
-						ElementType: cadence.AnyStructType{},
-					},
-				},
-				{
-					Identifier: "c",
-					Type: cadence.VariableSizedArrayType{
-						ElementType: cadence.AnyStructType{},
-					},
-				},
-				{
-					Identifier: "d",
-					Type: cadence.ConstantSizedArrayType{
-						ElementType: cadence.AnyStructType{},
-						Size:        2,
-					},
-				},
-				{
-					Identifier: "e",
-					Type:       cadence.AnyStructType{},
+	structType := cadence.NewStructType(
+		common.ScriptLocation{},
+		"Foo",
+		[]cadence.Field{
+			{
+				Identifier: "a",
+				Type: &cadence.OptionalType{
+					Type: cadence.AnyStructType,
 				},
 			},
+			{
+				Identifier: "b",
+				Type: &cadence.DictionaryType{
+					KeyType:     cadence.StringType,
+					ElementType: cadence.AnyStructType,
+				},
+			},
+			{
+				Identifier: "c",
+				Type: &cadence.VariableSizedArrayType{
+					ElementType: cadence.AnyStructType,
+				},
+			},
+			{
+				Identifier: "d",
+				Type: &cadence.ConstantSizedArrayType{
+					ElementType: cadence.AnyStructType,
+					Size:        2,
+				},
+			},
+			{
+				Identifier: "e",
+				Type:       cadence.AnyStructType,
+			},
 		},
+		nil,
+	)
 
-		Fields: []cadence.Value{
-			cadence.NewOptional(cadence.String("John")),
-			cadence.NewDictionary([]cadence.KeyValuePair{
-				{
-					Key:   cadence.String("name"),
-					Value: cadence.String("Doe"),
-				},
-			}).WithType(cadence.DictionaryType{
-				KeyType:     cadence.StringType{},
-				ElementType: cadence.AnyStructType{},
-			}),
-			cadence.NewArray([]cadence.Value{
-				cadence.String("foo"),
-				cadence.String("bar"),
-			}).WithType(cadence.VariableSizedArrayType{
-				ElementType: cadence.AnyStructType{},
-			}),
-			cadence.NewArray([]cadence.Value{
-				cadence.String("foo"),
-				cadence.String("bar"),
-			}).WithType(cadence.ConstantSizedArrayType{
-				ElementType: cadence.AnyStructType{},
-				Size:        2,
-			}),
-			cadence.Path{
-				Domain:     "storage",
-				Identifier: "foo",
+	complexStructValue := cadence.NewStruct([]cadence.Value{
+		cadence.NewOptional(cadence.String("John")),
+		cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key:   cadence.String("name"),
+				Value: cadence.String("Doe"),
 			},
+		}).WithType(&cadence.DictionaryType{
+			KeyType:     cadence.StringType,
+			ElementType: cadence.AnyStructType,
+		}),
+		cadence.NewArray([]cadence.Value{
+			cadence.String("foo"),
+			cadence.String("bar"),
+		}).WithType(&cadence.VariableSizedArrayType{
+			ElementType: cadence.AnyStructType,
+		}),
+		cadence.NewArray([]cadence.Value{
+			cadence.String("foo"),
+			cadence.String("bar"),
+		}).WithType(&cadence.ConstantSizedArrayType{
+			ElementType: cadence.AnyStructType,
+			Size:        2,
+		}),
+		cadence.Path{
+			Domain:     common.PathDomainStorage,
+			Identifier: "foo",
 		},
-	}
+	}).WithType(structType)
 
 	script := fmt.Sprintf(
 		`
-          pub fun main(arg: %[1]s): %[1]s {
+          access(all) fun main(arg: %[1]s): %[1]s {
 
               if !arg.isInstance(Type<%[1]s>()) {
                   panic("Not a %[1]s value")
@@ -2788,12 +2969,12 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
               return arg
           }
 
-          pub struct Foo {
-              pub var a: AnyStruct?
-              pub var b: {String: AnyStruct}
-              pub var c: [AnyStruct]
-              pub var d: [AnyStruct; 2]
-              pub var e: AnyStruct
+          access(all) struct Foo {
+              access(all) var a: AnyStruct?
+              access(all) var b: {String: AnyStruct}
+              access(all) var c: [AnyStruct]
+              access(all) var d: [AnyStruct; 2]
+              access(all) var e: AnyStruct
 
               init() {
                   self.a = "Hello"
@@ -2809,7 +2990,116 @@ func TestRuntimeComplexStructWithAnyStructFields(t *testing.T) {
 
 	actual, err := executeTestScript(t, script, complexStructValue)
 	require.NoError(t, err)
+
 	assert.Equal(t, complexStructValue, actual)
+}
+
+func TestRuntimeComplexStructWithHashableStructFields(t *testing.T) {
+
+	t.Parallel()
+
+	// Complex struct value
+	structType := cadence.NewStructType(
+		common.ScriptLocation{},
+		"Foo",
+		[]cadence.Field{
+			{
+				Identifier: "a",
+				Type: &cadence.OptionalType{
+					Type: cadence.HashableStructType,
+				},
+			},
+			{
+				Identifier: "b",
+				Type: &cadence.DictionaryType{
+					KeyType:     cadence.StringType,
+					ElementType: cadence.HashableStructType,
+				},
+			},
+			{
+				Identifier: "c",
+				Type: &cadence.VariableSizedArrayType{
+					ElementType: cadence.HashableStructType,
+				},
+			},
+			{
+				Identifier: "d",
+				Type: &cadence.ConstantSizedArrayType{
+					ElementType: cadence.HashableStructType,
+					Size:        2,
+				},
+			},
+			{
+				Identifier: "e",
+				Type:       cadence.HashableStructType,
+			},
+		},
+		nil,
+	)
+
+	complexStructValue := cadence.NewStruct([]cadence.Value{
+		cadence.NewOptional(cadence.String("John")),
+		cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key:   cadence.String("name"),
+				Value: cadence.String("Doe"),
+			},
+		}).WithType(&cadence.DictionaryType{
+			KeyType:     cadence.StringType,
+			ElementType: cadence.HashableStructType,
+		}),
+		cadence.NewArray([]cadence.Value{
+			cadence.String("foo"),
+			cadence.String("bar"),
+		}).WithType(&cadence.VariableSizedArrayType{
+			ElementType: cadence.HashableStructType,
+		}),
+		cadence.NewArray([]cadence.Value{
+			cadence.String("foo"),
+			cadence.String("bar"),
+		}).WithType(&cadence.ConstantSizedArrayType{
+			ElementType: cadence.HashableStructType,
+			Size:        2,
+		}),
+		cadence.Path{
+			Domain:     common.PathDomainStorage,
+			Identifier: "foo",
+		},
+	}).WithType(structType)
+
+	script := fmt.Sprintf(
+		`
+          access(all) fun main(arg: %[1]s): %[1]s {
+              if !arg.isInstance(Type<%[1]s>()) {
+                  panic("Not a %[1]s value")
+              }
+              return arg
+          }
+
+          access(all) struct Foo {
+            access(all) var a: HashableStruct?
+            access(all) var b: {String: HashableStruct}
+            access(all) var c: [HashableStruct]
+            access(all) var d: [HashableStruct; 2]
+            access(all) var e: HashableStruct
+
+            init() {
+              self.a = "Hello"
+              self.b = {}
+              self.c = []
+              self.d = ["foo", "bar"]
+              self.e = /storage/foo
+            }
+          }
+        `,
+		"Foo",
+	)
+
+	actual, err := executeTestScript(t, script, complexStructValue)
+	require.NoError(t, err)
+
+	expected := complexStructValue
+	assert.Equal(t, expected, actual)
 }
 
 func TestRuntimeMalformedArgumentPassing(t *testing.T) {
@@ -2818,114 +3108,116 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 
 	// Struct with wrong field type
 
-	malformedStructType1 := &cadence.StructType{
-		Location:            TestLocation,
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
-			{
-				Identifier: "a",
-				Type:       cadence.IntType{},
+	newMalformedStructType1 := func() *cadence.StructType {
+		return cadence.NewStructType(
+			common.ScriptLocation{},
+			"Foo",
+			[]cadence.Field{
+				{
+					Identifier: "a",
+					Type:       cadence.IntType,
+				},
 			},
-		},
+			nil,
+		)
 	}
 
-	malformedStruct1 := cadence.Struct{
-		StructType: malformedStructType1,
-		Fields: []cadence.Value{
+	newMalformedStruct1 := func() cadence.Struct {
+		return cadence.NewStruct([]cadence.Value{
 			cadence.NewInt(3),
-		},
+		}).WithType(newMalformedStructType1())
 	}
 
 	// Struct with wrong field name
 
-	malformedStruct2 := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            TestLocation,
-			QualifiedIdentifier: "Foo",
-			Fields: []cadence.Field{
+	newMalformedStruct2 := func() cadence.Struct {
+		return cadence.NewStruct([]cadence.Value{
+			cadence.String("John"),
+		}).WithType(cadence.NewStructType(
+			common.ScriptLocation{},
+			"Foo",
+			[]cadence.Field{
 				{
 					Identifier: "nonExisting",
-					Type:       cadence.StringType{},
+					Type:       cadence.StringType,
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.String("John"),
-		},
+			nil,
+		))
 	}
 
 	// Struct with nested malformed array value
-	malformedStruct3 := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            TestLocation,
-			QualifiedIdentifier: "Bar",
-			Fields: []cadence.Field{
+	newMalformedStruct3 := func() cadence.Struct {
+		return cadence.NewStruct([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				newMalformedStruct1(),
+			}),
+		}).WithType(cadence.NewStructType(
+			common.ScriptLocation{},
+			"Bar",
+			[]cadence.Field{
 				{
 					Identifier: "a",
-					Type: cadence.VariableSizedArrayType{
-						ElementType: malformedStructType1,
+					Type: &cadence.VariableSizedArrayType{
+						ElementType: newMalformedStructType1(),
 					},
 				},
 			},
-		},
-		Fields: []cadence.Value{
-			cadence.NewArray([]cadence.Value{
-				malformedStruct1,
-			}),
-		},
+			nil,
+		))
 	}
 
 	// Struct with nested malformed dictionary value
-	malformedStruct4 := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            TestLocation,
-			QualifiedIdentifier: "Baz",
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: cadence.DictionaryType{
-						KeyType:     cadence.StringType{},
-						ElementType: malformedStructType1,
-					},
-				},
-			},
-		},
-		Fields: []cadence.Value{
+	newMalformedStruct4 := func() cadence.Struct {
+		return cadence.NewStruct([]cadence.Value{
 			cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("foo"),
-					Value: malformedStruct1,
+					Value: newMalformedStruct1(),
 				},
 			}),
-		},
-	}
-
-	// Struct with nested array with mismatching element type
-	malformedStruct5 := cadence.Struct{
-		StructType: &cadence.StructType{
-			Location:            TestLocation,
-			QualifiedIdentifier: "Bar",
-			Fields: []cadence.Field{
+		}).WithType(cadence.NewStructType(
+			common.ScriptLocation{},
+			"Baz",
+			[]cadence.Field{
 				{
 					Identifier: "a",
-					Type: cadence.VariableSizedArrayType{
-						ElementType: malformedStructType1,
+					Type: &cadence.DictionaryType{
+						KeyType:     cadence.StringType,
+						ElementType: newMalformedStructType1(),
 					},
 				},
 			},
-		},
-		Fields: []cadence.Value{
+			nil,
+		))
+	}
+
+	// Struct with nested array with mismatching element type
+	newMalformedStruct5 := func() cadence.Struct {
+		return cadence.NewStruct([]cadence.Value{
 			cadence.NewArray([]cadence.Value{
 				cadence.String("mismatching value"),
 			}),
-		},
+		}).WithType(cadence.NewStructType(
+			common.ScriptLocation{},
+			"Bar",
+			[]cadence.Field{
+				{
+					Identifier: "a",
+					Type: &cadence.VariableSizedArrayType{
+						ElementType: newMalformedStructType1(),
+					},
+				},
+			},
+			nil,
+		))
 	}
 
 	type argumentPassingTest struct {
-		label                                    string
-		typeSignature                            string
 		exportedValue                            cadence.Value
 		expectedInvalidEntryPointArgumentErrType error
+		label                                    string
+		typeSignature                            string
 		expectedContainerMutationError           bool
 	}
 
@@ -2933,38 +3225,38 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:                                    "Malformed Struct field type",
 			typeSignature:                            "Foo",
-			exportedValue:                            malformedStruct1,
+			exportedValue:                            newMalformedStruct1(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed Struct field name",
 			typeSignature:                            "Foo",
-			exportedValue:                            malformedStruct2,
+			exportedValue:                            newMalformedStruct2(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed AnyStruct",
 			typeSignature:                            "AnyStruct",
-			exportedValue:                            malformedStruct1,
+			exportedValue:                            newMalformedStruct1(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed nested struct array",
 			typeSignature:                            "Bar",
-			exportedValue:                            malformedStruct3,
+			exportedValue:                            newMalformedStruct3(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed nested struct dictionary",
 			typeSignature:                            "Baz",
-			exportedValue:                            malformedStruct4,
+			exportedValue:                            newMalformedStruct4(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:         "Variable-size array with malformed element",
 			typeSignature: "[Foo]",
 			exportedValue: cadence.NewArray([]cadence.Value{
-				malformedStruct1,
+				newMalformedStruct1(),
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
@@ -2972,7 +3264,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			label:         "Constant-size array with malformed element",
 			typeSignature: "[Foo; 1]",
 			exportedValue: cadence.NewArray([]cadence.Value{
-				malformedStruct1,
+				newMalformedStruct1(),
 			}),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
@@ -3007,13 +3299,13 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 		{
 			label:                                    "Inner array with mismatching element",
 			typeSignature:                            "Bar",
-			exportedValue:                            malformedStruct5,
+			exportedValue:                            newMalformedStruct5(),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
 			label:                                    "Malformed Optional",
 			typeSignature:                            "Foo?",
-			exportedValue:                            cadence.NewOptional(malformedStruct1),
+			exportedValue:                            cadence.NewOptional(newMalformedStruct1()),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 		{
@@ -3022,9 +3314,19 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			exportedValue: cadence.NewDictionary([]cadence.KeyValuePair{
 				{
 					Key:   cadence.String("foo"),
-					Value: malformedStruct1,
+					Value: newMalformedStruct1(),
 				},
 			}),
+			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
+		},
+		{
+			label:         "Malformed InclusiveRange",
+			typeSignature: "InclusiveRange<Int>",
+			exportedValue: cadence.NewInclusiveRange(
+				cadence.NewUInt(1),
+				cadence.NewUInt(10),
+				cadence.NewUInt(3),
+			),
 			expectedInvalidEntryPointArgumentErrType: &MalformedValueError{},
 		},
 	}
@@ -3036,7 +3338,7 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
 			t.Parallel()
 
 			script := fmt.Sprintf(
-				`pub fun main(arg: %[1]s): %[1]s {
+				`access(all) fun main(arg: %[1]s): %[1]s {
 
                     if !arg.isInstance(Type<%[1]s>()) {
                         panic("Not a %[1]s value")
@@ -3045,24 +3347,24 @@ func TestRuntimeMalformedArgumentPassing(t *testing.T) {
                     return arg
                 }
 
-                pub struct Foo {
-                    pub var a: String
+                access(all) struct Foo {
+                    access(all) var a: String
 
                     init() {
                         self.a = "Hello"
                     }
                 }
 
-                pub struct Bar {
-                    pub var a: [Foo]
+                access(all) struct Bar {
+                    access(all) var a: [Foo]
 
                     init() {
                         self.a = []
                     }
                 }
 
-                pub struct Baz {
-                    pub var a: {String: Foo}
+                access(all) struct Baz {
+                    access(all) var a: {String: Foo}
 
                     init() {
                         self.a = {}
@@ -3109,29 +3411,28 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		value := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-			common.Address{},
+			common.ZeroAddress,
 		)
 
-		actual, err := exportValueWithInterpreter(
+		actual, err := ExportValue(
 			value,
 			inter,
 			interpreter.EmptyLocationRange,
-			seenReferences{},
 		)
 		require.NoError(t, err)
 
 		assert.Equal(t,
 			cadence.NewArray([]cadence.Value{}).
-				WithType(cadence.VariableSizedArrayType{
-					ElementType: cadence.AnyStructType{},
+				WithType(&cadence.VariableSizedArrayType{
+					ElementType: cadence.AnyStructType,
 				}),
 			actual,
 		)
@@ -3143,11 +3444,12 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		value := cadence.NewArray([]cadence.Value{})
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			value,
 			sema.ByteArrayType,
 		)
@@ -3159,10 +3461,10 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeUInt8,
 				},
-				common.Address{},
+				common.ZeroAddress,
 			),
 			actual,
 		)
@@ -3172,24 +3474,23 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 
 		t.Parallel()
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		value := interpreter.NewArrayValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.VariableSizedStaticType{
+			&interpreter.VariableSizedStaticType{
 				Type: interpreter.PrimitiveStaticTypeAnyStruct,
 			},
-			common.Address{},
+			common.ZeroAddress,
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 			interpreter.NewUnmeteredStringValue("foo"),
 		)
 
-		actual, err := exportValueWithInterpreter(
+		actual, err := ExportValue(
 			value,
 			inter,
 			interpreter.EmptyLocationRange,
-			seenReferences{},
 		)
 		require.NoError(t, err)
 
@@ -3197,8 +3498,8 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			cadence.NewArray([]cadence.Value{
 				cadence.NewInt(42),
 				cadence.String("foo"),
-			}).WithType(cadence.VariableSizedArrayType{
-				ElementType: cadence.AnyStructType{},
+			}).WithType(&cadence.VariableSizedArrayType{
+				ElementType: cadence.AnyStructType,
 			}),
 			actual,
 		)
@@ -3213,11 +3514,12 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			cadence.String("foo"),
 		})
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			value,
 			&sema.VariableSizedType{
 				Type: sema.AnyStructType,
@@ -3231,10 +3533,10 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
 					Type: interpreter.PrimitiveStaticTypeAnyStruct,
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewUnmeteredIntValueFromInt64(42),
 				interpreter.NewUnmeteredStringValue("foo"),
 			),
@@ -3257,11 +3559,12 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			}),
 		})
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			value,
 			sema.AnyStructType,
 		)
@@ -3273,29 +3576,29 @@ func TestRuntimeImportExportArrayValue(t *testing.T) {
 			interpreter.NewArrayValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.VariableSizedStaticType{
-					Type: interpreter.VariableSizedStaticType{
+				&interpreter.VariableSizedStaticType{
+					Type: &interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
 				},
-				common.Address{},
+				common.ZeroAddress,
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.VariableSizedStaticType{
+					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
-					common.Address{},
+					common.ZeroAddress,
 					interpreter.NewUnmeteredInt8Value(4),
 					interpreter.NewUnmeteredInt8Value(3),
 				),
 				interpreter.NewArrayValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.VariableSizedStaticType{
+					&interpreter.VariableSizedStaticType{
 						Type: interpreter.PrimitiveStaticTypeInt8,
 					},
-					common.Address{},
+					common.ZeroAddress,
 					interpreter.NewUnmeteredInt8Value(42),
 					interpreter.NewUnmeteredInt8Value(54),
 				),
@@ -3314,27 +3617,26 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 		t.Parallel()
 
 		value := interpreter.NewDictionaryValue(
-			newTestInterpreter(t),
+			NewTestInterpreter(t),
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
 		)
 
-		actual, err := exportValueWithInterpreter(
+		actual, err := ExportValue(
 			value,
-			newTestInterpreter(t),
+			NewTestInterpreter(t),
 			interpreter.EmptyLocationRange,
-			seenReferences{},
 		)
 		require.NoError(t, err)
 
 		assert.Equal(t,
 			cadence.NewDictionary([]cadence.KeyValuePair{}).
-				WithType(cadence.DictionaryType{
-					KeyType:     cadence.StringType{},
-					ElementType: cadence.IntType{},
+				WithType(&cadence.DictionaryType{
+					KeyType:     cadence.StringType,
+					ElementType: cadence.IntType,
 				}),
 			actual,
 		)
@@ -3346,11 +3648,12 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		value := cadence.NewDictionary([]cadence.KeyValuePair{})
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			value,
 			&sema.DictionaryType{
 				KeyType:   sema.StringType,
@@ -3365,7 +3668,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeUInt8,
 				},
@@ -3378,12 +3681,12 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 
 		t.Parallel()
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		value := interpreter.NewDictionaryValue(
 			inter,
 			interpreter.EmptyLocationRange,
-			interpreter.DictionaryStaticType{
+			&interpreter.DictionaryStaticType{
 				KeyType:   interpreter.PrimitiveStaticTypeString,
 				ValueType: interpreter.PrimitiveStaticTypeInt,
 			},
@@ -3391,11 +3694,10 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewUnmeteredStringValue("b"), interpreter.NewUnmeteredIntValueFromInt64(2),
 		)
 
-		actual, err := exportValueWithInterpreter(
+		actual, err := ExportValue(
 			value,
 			inter,
 			interpreter.EmptyLocationRange,
-			seenReferences{},
 		)
 		require.NoError(t, err)
 
@@ -3409,9 +3711,9 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 					Key:   cadence.String("a"),
 					Value: cadence.NewInt(1),
 				},
-			}).WithType(cadence.DictionaryType{
-				KeyType:     cadence.StringType{},
-				ElementType: cadence.IntType{},
+			}).WithType(&cadence.DictionaryType{
+				KeyType:     cadence.StringType,
+				ElementType: cadence.IntType,
 			}),
 			actual,
 		)
@@ -3432,11 +3734,12 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			},
 		})
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			value,
 			&sema.DictionaryType{
 				KeyType:   sema.StringType,
@@ -3451,7 +3754,7 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType:   interpreter.PrimitiveStaticTypeString,
 					ValueType: interpreter.PrimitiveStaticTypeInt,
 				},
@@ -3495,11 +3798,12 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			},
 		})
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			value,
 			sema.AnyStructType,
 		)
@@ -3511,11 +3815,11 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 			interpreter.NewDictionaryValue(
 				inter,
 				interpreter.EmptyLocationRange,
-				interpreter.DictionaryStaticType{
+				&interpreter.DictionaryStaticType{
 					KeyType: interpreter.PrimitiveStaticTypeString,
-					ValueType: interpreter.DictionaryStaticType{
+					ValueType: &interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
-						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+						ValueType: interpreter.PrimitiveStaticTypeHashableStruct,
 					},
 				},
 
@@ -3523,9 +3827,9 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.DictionaryStaticType{
+					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeInt8,
-						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+						ValueType: interpreter.PrimitiveStaticTypeHashableStruct,
 					},
 					interpreter.NewUnmeteredInt8Value(1), interpreter.NewUnmeteredIntValueFromInt64(100),
 					interpreter.NewUnmeteredInt8Value(2), interpreter.NewUnmeteredStringValue("hello"),
@@ -3535,9 +3839,9 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 				interpreter.NewDictionaryValue(
 					inter,
 					interpreter.EmptyLocationRange,
-					interpreter.DictionaryStaticType{
+					&interpreter.DictionaryStaticType{
 						KeyType:   interpreter.PrimitiveStaticTypeSignedInteger,
-						ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+						ValueType: interpreter.PrimitiveStaticTypeHashableStruct,
 					},
 					interpreter.NewUnmeteredInt8Value(1), interpreter.NewUnmeteredStringValue("foo"),
 					interpreter.NewUnmeteredIntValueFromInt64(2), interpreter.NewUnmeteredIntValueFromInt64(50),
@@ -3550,59 +3854,54 @@ func TestRuntimeImportExportDictionaryValue(t *testing.T) {
 	t.Run("import dictionary with heterogeneous keys", func(t *testing.T) {
 		t.Parallel()
 
-		script :=
-			`pub fun main(arg: Foo) {
-            }
+		dictionaryWithHeterogenousKeys := cadence.NewDictionary([]cadence.KeyValuePair{
+			{
+				Key:   cadence.String("foo"),
+				Value: cadence.String("value1"),
+			},
+			{
+				Key:   cadence.NewInt(5),
+				Value: cadence.String("value2"),
+			},
+		})
 
-            pub struct Foo {
-                pub var a: AnyStruct
+		inter := NewTestInterpreter(t)
 
-                init() {
-                    self.a = nil
-                }
-            }`
+		actual, err := ImportValue(
+			inter,
+			interpreter.EmptyLocationRange,
+			nil,
+			dictionaryWithHeterogenousKeys,
+			sema.AnyStructType,
+		)
+		require.NoError(t, err)
 
-		// Struct with nested malformed dictionary value
-		malformedStruct := cadence.Struct{
-			StructType: &cadence.StructType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "Foo",
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type:       cadence.AnyStructType{},
-					},
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewDictionaryValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				&interpreter.DictionaryStaticType{
+					KeyType:   interpreter.PrimitiveStaticTypeHashableStruct,
+					ValueType: interpreter.PrimitiveStaticTypeString,
 				},
-			},
-			Fields: []cadence.Value{
-				cadence.NewDictionary([]cadence.KeyValuePair{
-					{
-						Key:   cadence.String("foo"),
-						Value: cadence.String("value1"),
-					},
-					{
-						Key:   cadence.NewInt(5),
-						Value: cadence.String("value2"),
-					},
-				}),
-			},
-		}
 
-		_, err := executeTestScript(t, script, malformedStruct)
-		RequireError(t, err)
-		assertUserError(t, err)
+				interpreter.NewUnmeteredStringValue("foo"),
+				interpreter.NewUnmeteredStringValue("value1"),
 
-		var argErr *InvalidEntryPointArgumentError
-		require.ErrorAs(t, err, &argErr)
-
-		assert.Contains(t, argErr.Error(), "cannot import dictionary: keys does not belong to the same type")
+				interpreter.NewIntValueFromInt64(nil, 5),
+				interpreter.NewUnmeteredStringValue("value2"),
+			),
+			actual,
+		)
 	})
 
 	t.Run("nested dictionary with mismatching element", func(t *testing.T) {
 		t.Parallel()
 
 		script :=
-			`pub fun main(arg: {String: {String: String}}) {
+			`access(all) fun main(arg: {String: {String: String}}) {
             }
             `
 
@@ -3646,7 +3945,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 		stringValue := cadence.String(nonUTF8String)
 
 		script := `
-            pub fun main(s: String) {
+            access(all) fun main(s: String) {
                 log(s)
             }
         `
@@ -3654,21 +3953,18 @@ func TestRuntimeStringValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(stringValue)
 		require.NoError(t, err)
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
-		validated := false
+		var validated bool
 
-		runtimeInterface := &testRuntimeInterface{
-			log: func(s string) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnProgramLog: func(s string) {
 				assert.True(t, utf8.ValidString(s))
 				validated = true
 			},
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -3678,7 +3974,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3688,7 +3984,7 @@ func TestRuntimeStringValueImport(t *testing.T) {
 	})
 }
 
-func TestTypeValueImport(t *testing.T) {
+func TestRuntimeTypeValueImport(t *testing.T) {
 
 	t.Parallel()
 
@@ -3696,10 +3992,10 @@ func TestTypeValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		typeValue := cadence.NewTypeValue(cadence.IntType{})
+		typeValue := cadence.NewTypeValue(cadence.IntType)
 
 		script := `
-            pub fun main(s: Type) {
+            access(all) fun main(s: Type) {
                 log(s.identifier)
             }
         `
@@ -3707,21 +4003,18 @@ func TestTypeValueImport(t *testing.T) {
 		encodedArg, err := json.Encode(typeValue)
 		require.NoError(t, err)
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		var ok bool
 
-		runtimeInterface := &testRuntimeInterface{
-			log: func(s string) {
-				assert.Equal(t, s, "\"Int\"")
+		runtimeInterface := &TestRuntimeInterface{
+			OnProgramLog: func(s string) {
+				assert.Equal(t, "\"Int\"", s)
 				ok = true
 			},
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -3731,7 +4024,7 @@ func TestTypeValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3743,30 +4036,27 @@ func TestTypeValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		typeValue := cadence.NewTypeValue(&cadence.StructType{
-			QualifiedIdentifier: "S",
-			Location:            TestLocation,
-			Fields:              []cadence.Field{},
-			Initializers:        [][]cadence.Parameter{},
-		})
+		typeValue := cadence.NewTypeValue(cadence.NewStructType(
+			TestLocation,
+			"S",
+			[]cadence.Field{},
+			[][]cadence.Parameter{},
+		))
 
 		script := `
-            pub fun main(s: Type) {
+            access(all) fun main(s: Type) {
             }
         `
 
 		encodedArg, err := json.Encode(typeValue)
 		require.NoError(t, err)
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+		runtimeInterface := &TestRuntimeInterface{
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -3776,7 +4066,7 @@ func TestTypeValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3786,47 +4076,34 @@ func TestTypeValueImport(t *testing.T) {
 	})
 }
 
-func TestCapabilityValueImport(t *testing.T) {
+func TestRuntimeCapabilityValueImport(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("public Capability<&Int>", func(t *testing.T) {
+	t.Run("Capability<&Int>", func(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.Capability{
-			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
-			Address:    cadence.Address{0x1},
-			Path: cadence.Path{
-				Domain:     common.PathDomainPublic.Identifier(),
-				Identifier: "foo",
-			},
-		}
+		capabilityValue := cadence.NewCapability(
+			42,
+			cadence.Address{0x1},
+			&cadence.ReferenceType{Type: cadence.IntType},
+		)
 
 		script := `
-            pub fun main(s: Capability<&Int>) {
-                log(s)
+            access(all) fun main(s: Capability<&Int>) {
             }
         `
 
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
-		var ok bool
-
-		runtimeInterface := &testRuntimeInterface{
-			log: func(s string) {
-				assert.Equal(t, s, "Capability<&Int>(address: 0x0100000000000000, path: /public/foo)")
-				ok = true
+		runtimeInterface := &TestRuntimeInterface{
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
-			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -3836,91 +4113,38 @@ func TestCapabilityValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
-		require.NoError(t, err)
-		require.True(t, ok)
+		RequireError(t, err)
+		assertUserError(t, err)
 	})
 
 	t.Run("Capability<Int>", func(t *testing.T) {
 
 		t.Parallel()
 
-		capabilityValue := cadence.Capability{
-			BorrowType: cadence.IntType{},
-			Address:    cadence.Address{0x1},
-			Path: cadence.Path{
-				Domain:     common.PathDomainPublic.Identifier(),
-				Identifier: "foo",
-			},
-		}
-
-		script := `
-            pub fun main(s: Capability<Int>) {
-            }
-        `
-
-		encodedArg, err := json.Encode(capabilityValue)
-		require.NoError(t, err)
-
-		rt := newTestInterpreterRuntime()
-
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
-			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
-		}
-
-		_, err = rt.ExecuteScript(
-			Script{
-				Source:    []byte(script),
-				Arguments: [][]byte{encodedArg},
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  TestLocation,
-			},
+		capabilityValue := cadence.NewCapability(
+			3,
+			cadence.Address{0x1},
+			cadence.IntType,
 		)
 
-		RequireError(t, err)
-		assertUserError(t, err)
-	})
-
-	t.Run("private Capability<&Int>", func(t *testing.T) {
-
-		t.Parallel()
-
-		capabilityValue := cadence.Capability{
-			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
-			Address:    cadence.Address{0x1},
-			Path: cadence.Path{
-				Domain:     common.PathDomainPrivate.Identifier(),
-				Identifier: "foo",
-			},
-		}
-
 		script := `
-            pub fun main(s: Capability<&Int>) {
+            access(all) fun main(s: Capability<Int>) {
             }
         `
 
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+		runtimeInterface := &TestRuntimeInterface{
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -3930,56 +4154,7 @@ func TestCapabilityValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
-			},
-		)
-
-		RequireError(t, err)
-		assertUserError(t, err)
-	})
-
-	t.Run("storage Capability<&Int>", func(t *testing.T) {
-
-		t.Parallel()
-
-		capabilityValue := cadence.Capability{
-			BorrowType: cadence.ReferenceType{Type: cadence.IntType{}},
-			Address:    cadence.Address{0x1},
-			Path: cadence.Path{
-				Domain:     common.PathDomainStorage.Identifier(),
-				Identifier: "foo",
-			},
-		}
-
-		script := `
-            pub fun main(s: Capability<&Int>) {
-            }
-        `
-
-		encodedArg, err := json.Encode(capabilityValue)
-		require.NoError(t, err)
-
-		rt := newTestInterpreterRuntime()
-
-		runtimeInterface := &testRuntimeInterface{
-			log: func(s string) {
-			},
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
-			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
-		}
-
-		_, err = rt.ExecuteScript(
-			Script{
-				Source:    []byte(script),
-				Arguments: [][]byte{encodedArg},
-			},
-			Context{
-				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -3991,41 +4166,33 @@ func TestCapabilityValueImport(t *testing.T) {
 
 		t.Parallel()
 
-		borrowType := &cadence.StructType{
-			QualifiedIdentifier: "S",
-			Location:            TestLocation,
-			Fields:              []cadence.Field{},
-			Initializers:        [][]cadence.Parameter{},
-		}
+		borrowType := cadence.NewStructType(
+			TestLocation,
+			"S",
+			[]cadence.Field{},
+			[][]cadence.Parameter{},
+		)
 
-		capabilityValue := cadence.Capability{
-			BorrowType: borrowType,
-			Address:    cadence.Address{0x1},
-			Path: cadence.Path{
-				Domain:     common.PathDomainPublic.Identifier(),
-				Identifier: "foo",
-			},
-		}
+		capabilityValue := cadence.NewCapability(
+			42,
+			cadence.Address{0x1},
+			borrowType,
+		)
 
 		script := `
-            pub fun main(s: Capability<S>) {
+            access(all) fun main(s: Capability<S>) {
             }
         `
 
 		encodedArg, err := json.Encode(capabilityValue)
 		require.NoError(t, err)
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
-		runtimeInterface := &testRuntimeInterface{
-			log: func(s string) {
+		runtimeInterface := &TestRuntimeInterface{
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
-			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err = rt.ExecuteScript(
@@ -4035,7 +4202,7 @@ func TestCapabilityValueImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -4058,7 +4225,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		encodedArg, err := json.Encode(arg)
 		require.NoError(t, err)
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
 		return rt.ExecuteScript(
 			Script{
@@ -4067,7 +4234,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 	}
@@ -4088,7 +4255,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 					t.Parallel()
 
 					script := `
-                        pub fun main(key: PublicKey) {
+                        access(all) fun main(key: PublicKey) {
                         }
                     `
 
@@ -4106,22 +4273,19 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 						},
 					).WithType(PublicKeyType)
 
-					publicKeyValidated := false
+					var publicKeyValidated bool
 
-					storage := newTestLedger(nil, nil)
+					storage := NewTestLedger(nil, nil)
 
-					runtimeInterface := &testRuntimeInterface{
-						storage: storage,
-						validatePublicKey: func(publicKey *stdlib.PublicKey) error {
+					runtimeInterface := &TestRuntimeInterface{
+						Storage: storage,
+						OnValidatePublicKey: func(publicKey *stdlib.PublicKey) error {
 							publicKeyValidated = true
 							return publicKeyActualError
 						},
-						meterMemory: func(_ common.MemoryUsage) error {
-							return nil
+						OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+							return json.Decode(nil, b)
 						},
-					}
-					runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-						return json.Decode(runtimeInterface, b)
 					}
 
 					_, err := executeScript(t, script, publicKey, runtimeInterface)
@@ -4153,7 +4317,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(key: PublicKey): Bool {
+            access(all) fun main(key: PublicKey): Bool {
                 return key.verify(
                     signature: [],
                     signedData: [],
@@ -4177,13 +4341,13 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		).WithType(PublicKeyType)
 
-		verifyInvoked := false
+		var verifyInvoked bool
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			verifySignature: func(
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnVerifySignature: func(
 				signature []byte,
 				tag string,
 				signedData []byte,
@@ -4194,12 +4358,9 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 				verifyInvoked = true
 				return true, nil
 			},
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 		addPublicKeyValidation(runtimeInterface, nil)
 
@@ -4207,12 +4368,12 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.True(t, verifyInvoked)
-		assert.Equal(t, actual, cadence.NewBool(true))
+		assert.Equal(t, cadence.NewBool(true), actual)
 	})
 
 	t.Run("Invalid raw public key", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4229,16 +4390,13 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		).WithType(PublicKeyType)
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
@@ -4251,7 +4409,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Invalid content in public key", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4271,16 +4429,13 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		).WithType(PublicKeyType)
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
@@ -4293,7 +4448,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Invalid sign algo", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4306,16 +4461,13 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		).WithType(PublicKeyType)
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
@@ -4328,7 +4480,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Invalid sign algo fields", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4345,16 +4497,13 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 		).WithType(PublicKeyType)
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := executeScript(t, script, publicKey, runtimeInterface)
@@ -4367,7 +4516,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Extra field", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey) {
+            access(all) fun main(key: PublicKey) {
             }
         `
 
@@ -4423,18 +4572,15 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := rt.ExecuteScript(
@@ -4446,7 +4592,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 		RequireError(t, err)
@@ -4458,7 +4604,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Missing raw public key", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey): PublicKey {
+            access(all) fun main(key: PublicKey): PublicKey {
                 return key
             }
         `
@@ -4492,18 +4638,15 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		_, err := rt.ExecuteScript(
@@ -4515,7 +4658,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -4525,7 +4668,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Missing publicKey", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey): [UInt8] {
+            access(all) fun main(key: PublicKey): [UInt8] {
                 return key.publicKey
             }
         `
@@ -4559,24 +4702,21 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
-		publicKeyValidated := false
+		var publicKeyValidated bool
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			validatePublicKey: func(publicKey *stdlib.PublicKey) error {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnValidatePublicKey: func(publicKey *stdlib.PublicKey) error {
 				publicKeyValidated = true
 				return nil
 			},
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		value, err := rt.ExecuteScript(
@@ -4588,10 +4728,11 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
+		RequireError(t, err)
 		assert.Contains(t, err.Error(),
 			"invalid argument at index 0: cannot import value of type 'PublicKey'. missing field 'publicKey'")
 		assert.False(t, publicKeyValidated)
@@ -4600,7 +4741,7 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 
 	t.Run("Missing signatureAlgorithm", func(t *testing.T) {
 		script := `
-            pub fun main(key: PublicKey): SignatureAlgorithm {
+            access(all) fun main(key: PublicKey): SignatureAlgorithm {
                 return key.signatureAlgorithm
             }
         `
@@ -4632,24 +4773,21 @@ func TestRuntimePublicKeyImport(t *testing.T) {
             }
         `
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
-		publicKeyValidated := false
+		var publicKeyValidated bool
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			validatePublicKey: func(publicKey *stdlib.PublicKey) error {
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnValidatePublicKey: func(publicKey *stdlib.PublicKey) error {
 				publicKeyValidated = true
 				return nil
 			},
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		value, err := rt.ExecuteScript(
@@ -4661,10 +4799,11 @@ func TestRuntimePublicKeyImport(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
+		RequireError(t, err)
 		assert.Contains(t, err.Error(),
 			"invalid argument at index 0: cannot import value of type 'PublicKey'. missing field 'signatureAlgorithm'")
 		assert.False(t, publicKeyValidated)
@@ -4678,10 +4817,10 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	t.Parallel()
 
 	program := interpreter.Program{
-		Elaboration: sema.NewElaboration(nil, false),
+		Elaboration: sema.NewElaboration(nil),
 	}
 
-	inter := newTestInterpreter(t)
+	inter := NewTestInterpreter(t)
 	inter.Program = &program
 
 	// Array
@@ -4690,19 +4829,19 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		Type: sema.AnyStructType,
 	}
 
-	staticArrayType := interpreter.VariableSizedStaticType{
+	staticArrayType := &interpreter.VariableSizedStaticType{
 		Type: interpreter.PrimitiveStaticTypeAnyStruct,
 	}
 
-	externalArrayType := cadence.VariableSizedArrayType{
-		ElementType: cadence.AnyStructType{},
+	externalArrayType := &cadence.VariableSizedArrayType{
+		ElementType: cadence.AnyStructType,
 	}
 
 	internalArrayValue := interpreter.NewArrayValue(
 		inter,
 		interpreter.EmptyLocationRange,
 		staticArrayType,
-		common.Address{},
+		common.ZeroAddress,
 		interpreter.NewUnmeteredIntValueFromInt64(42),
 		interpreter.NewUnmeteredStringValue("foo"),
 	)
@@ -4710,8 +4849,8 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 	externalArrayValue := cadence.NewArray([]cadence.Value{
 		cadence.NewInt(42),
 		cadence.String("foo"),
-	}).WithType(cadence.VariableSizedArrayType{
-		ElementType: cadence.AnyStructType{},
+	}).WithType(&cadence.VariableSizedArrayType{
+		ElementType: cadence.AnyStructType,
 	})
 
 	// Dictionary
@@ -4721,13 +4860,13 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		ValueType: semaArrayType,
 	}
 
-	staticDictionaryType := interpreter.DictionaryStaticType{
+	staticDictionaryType := &interpreter.DictionaryStaticType{
 		KeyType:   interpreter.PrimitiveStaticTypeString,
 		ValueType: staticArrayType,
 	}
 
-	externalDictionaryType := cadence.DictionaryType{
-		KeyType:     cadence.StringType{},
+	externalDictionaryType := &cadence.DictionaryType{
+		KeyType:     cadence.StringType,
 		ElementType: externalArrayType,
 	}
 
@@ -4743,10 +4882,10 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 			Key:   cadence.String("a"),
 			Value: externalArrayValue,
 		},
-	}).WithType(cadence.DictionaryType{
-		KeyType: cadence.StringType{},
-		ElementType: cadence.VariableSizedArrayType{
-			ElementType: cadence.AnyStructType{},
+	}).WithType(&cadence.DictionaryType{
+		KeyType: cadence.StringType,
+		ElementType: &cadence.VariableSizedArrayType{
+			ElementType: cadence.AnyStructType,
 		},
 	})
 
@@ -4760,7 +4899,10 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		Fields:     []string{"dictionary"},
 	}
 
-	program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
+	program.Elaboration.SetCompositeType(
+		semaCompositeType.ID(),
+		semaCompositeType,
+	)
 
 	semaCompositeType.Members.Set(
 		"dictionary",
@@ -4772,16 +4914,17 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		),
 	)
 
-	externalCompositeType := &cadence.StructType{
-		Location:            TestLocation,
-		QualifiedIdentifier: "Foo",
-		Fields: []cadence.Field{
+	externalCompositeType := cadence.NewStructType(
+		TestLocation,
+		"Foo",
+		[]cadence.Field{
 			{
 				Identifier: "dictionary",
 				Type:       externalDictionaryType,
 			},
 		},
-	}
+		nil,
+	)
 
 	internalCompositeValueFields := []interpreter.CompositeField{
 		{
@@ -4797,25 +4940,21 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 		"Foo",
 		common.CompositeKindStructure,
 		internalCompositeValueFields,
-		common.Address{},
+		common.ZeroAddress,
 	)
 
-	externalCompositeValue := cadence.Struct{
-		StructType: externalCompositeType,
-		Fields: []cadence.Value{
-			externalDictionaryValue,
-		},
-	}
+	externalCompositeValue := cadence.NewStruct([]cadence.Value{
+		externalDictionaryValue,
+	}).WithType(externalCompositeType)
 
 	t.Run("export", func(t *testing.T) {
 
-		t.Parallel()
+		// NOTE: cannot be parallel, due to type's ID being cached (potential data race)
 
-		actual, err := exportValueWithInterpreter(
+		actual, err := ExportValue(
 			internalCompositeValue,
 			inter,
 			interpreter.EmptyLocationRange,
-			seenReferences{},
 		)
 		require.NoError(t, err)
 
@@ -4827,20 +4966,24 @@ func TestRuntimeImportExportComplex(t *testing.T) {
 
 	t.Run("import", func(t *testing.T) {
 
-		t.Parallel()
+		// NOTE: cannot be parallel, due to type's ID being cached (potential data race)
 
 		program := interpreter.Program{
-			Elaboration: sema.NewElaboration(nil, false),
+			Elaboration: sema.NewElaboration(nil),
 		}
 
-		inter := newTestInterpreter(t)
+		inter := NewTestInterpreter(t)
 		inter.Program = &program
 
-		program.Elaboration.CompositeTypes[semaCompositeType.ID()] = semaCompositeType
+		program.Elaboration.SetCompositeType(
+			semaCompositeType.ID(),
+			semaCompositeType,
+		)
 
 		actual, err := ImportValue(
 			inter,
 			interpreter.EmptyLocationRange,
+			nil,
 			externalCompositeValue,
 			semaCompositeType,
 		)
@@ -4861,11 +5004,11 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 
 	t.Run("inner array", func(t *testing.T) {
 		script := `
-            pub fun main(arg: Foo) {
+            access(all) fun main(arg: Foo) {
             }
 
-            pub struct Foo {
-                pub var a: AnyStruct
+            access(all) struct Foo {
+                access(all) var a: AnyStruct
 
                 init() {
                     self.a = nil
@@ -4873,25 +5016,22 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
             }
         `
 
-		structValue := cadence.Struct{
-			StructType: &cadence.StructType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "Foo",
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type:       cadence.AnyStructType{},
-					},
+		structValue := cadence.NewStruct([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
+				cadence.String("foo"),
+				cadence.String("bar"),
+			}),
+		}).WithType(cadence.NewStructType(
+			common.ScriptLocation{},
+			"Foo",
+			[]cadence.Field{
+				{
+					Identifier: "a",
+					Type:       cadence.AnyStructType,
 				},
 			},
-
-			Fields: []cadence.Value{
-				cadence.NewArray([]cadence.Value{
-					cadence.String("foo"),
-					cadence.String("bar"),
-				}),
-			},
-		}
+			nil,
+		))
 
 		_, err := executeTestScript(t, script, structValue)
 		require.NoError(t, err)
@@ -4899,11 +5039,11 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
 
 	t.Run("inner dictionary", func(t *testing.T) {
 		script := `
-            pub fun main(arg: Foo) {
+            access(all) fun main(arg: Foo) {
             }
 
-            pub struct Foo {
-                pub var a: AnyStruct
+            access(all) struct Foo {
+                access(all) var a: AnyStruct
 
                 init() {
                     self.a = nil
@@ -4911,55 +5051,31 @@ func TestRuntimeStaticTypeAvailability(t *testing.T) {
             }
         `
 
-		structValue := cadence.Struct{
-			StructType: &cadence.StructType{
-				Location:            TestLocation,
-				QualifiedIdentifier: "Foo",
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type:       cadence.AnyStructType{},
-					},
+		structValue := cadence.NewStruct([]cadence.Value{
+			cadence.NewDictionary([]cadence.KeyValuePair{
+				{
+					Key:   cadence.String("foo"),
+					Value: cadence.String("bar"),
+				},
+			}),
+		}).WithType(cadence.NewStructType(
+			common.ScriptLocation{},
+			"Foo",
+			[]cadence.Field{
+				{
+					Identifier: "a",
+					Type:       cadence.AnyStructType,
 				},
 			},
-
-			Fields: []cadence.Value{
-				cadence.NewDictionary([]cadence.KeyValuePair{
-					{
-						Key:   cadence.String("foo"),
-						Value: cadence.String("bar"),
-					},
-				}),
-			},
-		}
+			nil,
+		))
 
 		_, err := executeTestScript(t, script, structValue)
 		require.NoError(t, err)
 	})
 }
 
-func newTestInterpreter(tb testing.TB) *interpreter.Interpreter {
-	storage := newUnmeteredInMemoryStorage()
-
-	inter, err := interpreter.NewInterpreter(
-		nil,
-		TestLocation,
-		&interpreter.Config{
-			Storage:                       storage,
-			AtreeValueValidationEnabled:   true,
-			AtreeStorageValidationEnabled: true,
-		},
-	)
-	require.NoError(tb, err)
-
-	return inter
-}
-
-func newUnmeteredInMemoryStorage() interpreter.Storage {
-	return interpreter.NewInMemoryStorage(nil)
-}
-
-func TestNestedStructArgPassing(t *testing.T) {
+func TestRuntimeNestedStructArgPassing(t *testing.T) {
 	t.Parallel()
 
 	t.Run("valid", func(t *testing.T) {
@@ -4967,12 +5083,12 @@ func TestNestedStructArgPassing(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(v: AnyStruct): UInt8 {
+            access(all) fun main(v: AnyStruct): UInt8 {
                 return (v as! Foo).bytes[0]
             }
 
-            pub struct Foo {
-                pub let bytes: [UInt8]
+            access(all) struct Foo {
+                access(all) let bytes: [UInt8]
 
                 init(_ bytes: [UInt8]) {
                     self.bytes = bytes
@@ -4983,7 +5099,7 @@ func TestNestedStructArgPassing(t *testing.T) {
 		jsonCdc := `
           {
             "value": {
-              "id": "S.test.Foo",
+              "id": "s.0000000000000000000000000000000000000000000000000000000000000000.Foo",
               "fields": [
                 {
                   "name": "bytes",
@@ -5003,18 +5119,15 @@ func TestNestedStructArgPassing(t *testing.T) {
           }
         `
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
-		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
 		}
 
 		value, err := rt.ExecuteScript(
@@ -5026,12 +5139,12 @@ func TestNestedStructArgPassing(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, value, cadence.NewUInt8(32))
+		assert.Equal(t, cadence.NewUInt8(32), value)
 	})
 
 	t.Run("invalid interface", func(t *testing.T) {
@@ -5039,17 +5152,17 @@ func TestNestedStructArgPassing(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            pub fun main(v: AnyStruct) {
+            access(all) fun main(v: AnyStruct) {
             }
 
-            pub struct interface Foo {
+            access(all) struct interface Foo {
             }
         `
 
 		jsonCdc := `
           {
             "value": {
-              "id": "S.test.Foo",
+              "id": "s.0000000000000000000000000000000000000000000000000000000000000000.Foo",
               "fields": [
                 {
                   "name": "bytes",
@@ -5069,19 +5182,17 @@ func TestNestedStructArgPassing(t *testing.T) {
           }
         `
 
-		rt := newTestInterpreterRuntime()
+		rt := NewTestInterpreterRuntime()
 
-		storage := newTestLedger(nil, nil)
+		storage := NewTestLedger(nil, nil)
 
-		runtimeInterface := &testRuntimeInterface{
-			storage: storage,
-			meterMemory: func(_ common.MemoryUsage) error {
-				return nil
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: storage,
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
 			},
 		}
-		runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-			return json.Decode(runtimeInterface, b)
-		}
+
 		_, err := rt.ExecuteScript(
 			Script{
 				Source: []byte(script),
@@ -5091,7 +5202,7 @@ func TestNestedStructArgPassing(t *testing.T) {
 			},
 			Context{
 				Interface: runtimeInterface,
-				Location:  TestLocation,
+				Location:  common.ScriptLocation{},
 			},
 		)
 
@@ -5100,5 +5211,200 @@ func TestNestedStructArgPassing(t *testing.T) {
 
 		var argErr *InvalidEntryPointArgumentError
 		require.ErrorAs(t, err, &argErr)
+	})
+}
+
+func TestRuntimeDestroyedResourceReferenceExport(t *testing.T) {
+	t.Parallel()
+
+	rt := NewTestInterpreterRuntimeWithAttachments()
+
+	script := []byte(`
+        access(all) resource S {}
+
+        access(all) fun main(): &S  {
+            var s <- create S()
+            var ref = &s as &S
+
+            // Just to trick the checker,
+            // and get pass the static referenced resource invalidation analysis.
+            var ref2 = getRef(ref)
+
+            destroy s
+            return ref2!
+        }
+
+        access(all) fun getRef(_ ref: &S): &S  {
+            return ref
+        }
+	 `)
+
+	runtimeInterface := &TestRuntimeInterface{}
+
+	nextScriptLocation := NewScriptLocationGenerator()
+	_, err := rt.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.Error(t, err)
+	require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+}
+
+func TestRuntimeDeploymentResultValueImportExport(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("import", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) fun main(v: DeploymentResult) {}
+        `
+
+		rt := NewTestInterpreterRuntime()
+		runtimeInterface := &TestRuntimeInterface{}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		RequireError(t, err)
+
+		var notImportableError *ScriptParameterTypeNotImportableError
+		require.ErrorAs(t, err, &notImportableError)
+	})
+
+	t.Run("export", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) fun main(): DeploymentResult? {
+                return nil
+            }
+        `
+
+		rt := NewTestInterpreterRuntime()
+		runtimeInterface := &TestRuntimeInterface{}
+
+		_, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		RequireError(t, err)
+
+		var invalidReturnTypeError *InvalidScriptReturnTypeError
+		require.ErrorAs(t, err, &invalidReturnTypeError)
+	})
+}
+
+func TestRuntimeDeploymentResultTypeImportExport(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("import", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) fun main(v: Type) {
+                assert(v == Type<DeploymentResult>())
+            }
+        `
+
+		rt := NewTestInterpreterRuntime()
+
+		typeValue := cadence.NewTypeValue(cadence.NewStructType(
+			nil,
+			"DeploymentResult",
+			[]cadence.Field{
+				{
+					Type:       cadence.NewOptionalType(cadence.DeployedContractType),
+					Identifier: "deployedContract",
+				},
+			},
+			nil,
+		))
+
+		encodedArg, err := json.Encode(typeValue)
+		require.NoError(t, err)
+
+		runtimeInterface := &TestRuntimeInterface{
+			OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return json.Decode(nil, b)
+			},
+		}
+
+		_, err = rt.ExecuteScript(
+			Script{
+				Source:    []byte(script),
+				Arguments: [][]byte{encodedArg},
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("export", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            access(all) fun main(): Type {
+                return Type<DeploymentResult>()
+            }
+        `
+
+		rt := NewTestInterpreterRuntime()
+		runtimeInterface := &TestRuntimeInterface{}
+
+		result, err := rt.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			cadence.NewTypeValue(cadence.NewStructType(
+				nil,
+				"DeploymentResult",
+				[]cadence.Field{
+					{
+						Type:       cadence.NewOptionalType(cadence.DeployedContractType),
+						Identifier: "deployedContract",
+					},
+				},
+				nil,
+			)),
+			result,
+		)
 	})
 }

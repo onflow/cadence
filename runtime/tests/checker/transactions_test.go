@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -86,7 +86,7 @@ func TestCheckTransactions(t *testing.T) {
 			`
               transaction {
 
-                  prepare(x: AuthAccount, y: AuthAccount) {}
+                  prepare(x: &Account, y: &Account) {}
               }
             `,
 			nil,
@@ -175,6 +175,29 @@ func TestCheckTransactions(t *testing.T) {
 		)
 	})
 
+	t.Run("PreConditions must be view", func(t *testing.T) {
+		test(t,
+			`
+              transaction {
+				  var foo: fun (): Int
+
+                  prepare() {
+					  self.foo = fun (): Int {
+						return 40
+					  }
+                  }
+
+                  pre {
+					  self.foo() > 30
+                  }
+              }
+            `,
+			[]error{
+				&sema.PurityError{},
+			},
+		)
+	})
+
 	t.Run("PostConditions", func(t *testing.T) {
 		test(t,
 			`
@@ -196,6 +219,29 @@ func TestCheckTransactions(t *testing.T) {
               }
             `,
 			nil,
+		)
+	})
+
+	t.Run("PostConditions must be view", func(t *testing.T) {
+		test(t,
+			`
+              transaction {
+				  var foo: fun (): Int
+
+                  prepare() {
+					  self.foo = fun (): Int {
+						return 40
+					  }
+                  }
+
+                  post {
+					  self.foo() > 30
+                  }
+              }
+            `,
+			[]error{
+				&sema.PurityError{},
+			},
 		)
 	})
 
@@ -337,7 +383,7 @@ func TestCheckTransactions(t *testing.T) {
 	t.Run("InvalidNonStorableParameter", func(t *testing.T) {
 		test(t,
 			`
-		      transaction(x: ((Int): Int)) {
+		      transaction(x: fun(Int): Int) {
 				execute {
 				  x(0)
 				}
@@ -431,10 +477,13 @@ func TestCheckInvalidTransactionSelfMoveReturnFromFunction(t *testing.T) {
      }
    `)
 
-	errs := RequireCheckerErrors(t, err, 1)
+	errs := RequireCheckerErrors(t, err, 2)
 
-	require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-	typeMismatchErr := errs[0].(*sema.TypeMismatchError)
+	var invalidMoveError *sema.InvalidMoveError
+	require.ErrorAs(t, errs[0], &invalidMoveError)
+
+	require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	typeMismatchErr := errs[1].(*sema.TypeMismatchError)
 
 	assert.Equal(t, sema.VoidType, typeMismatchErr.ExpectedType)
 	assert.IsType(t, &sema.TransactionType{}, typeMismatchErr.ActualType)
@@ -476,4 +525,35 @@ func TestCheckInvalidTransactionSelfMoveIntoDictionaryLiteral(t *testing.T) {
 	errs := RequireCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+}
+
+func TestCheckInvalidTransactionResourceLoss(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+	access(all) resource R{}
+    transaction {
+		var r: @R?
+	  
+		prepare() {
+			  self.r <- nil
+		}
+	  
+		execute {
+			let writeback = fun() {
+				self.r <-! create R()
+			}
+	  
+			var x <- self.r
+	  
+			destroy x
+			writeback()
+		}
+	  }	  
+   `)
+
+	errs := RequireCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 }

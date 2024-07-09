@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,8 +82,20 @@ func (p *Program) InterfaceDeclarations() []*InterfaceDeclaration {
 	return p.indices.interfaceDeclarations(p.declarations)
 }
 
+func (p *Program) EntitlementDeclarations() []*EntitlementDeclaration {
+	return p.indices.entitlementDeclarations(p.declarations)
+}
+
+func (p *Program) EntitlementMappingDeclarations() []*EntitlementMappingDeclaration {
+	return p.indices.entitlementMappingDeclarations(p.declarations)
+}
+
 func (p *Program) CompositeDeclarations() []*CompositeDeclaration {
 	return p.indices.compositeDeclarations(p.declarations)
+}
+
+func (p *Program) AttachmentDeclarations() []*AttachmentDeclaration {
+	return p.indices.attachmentDeclarations(p.declarations)
 }
 
 func (p *Program) FunctionDeclarations() []*FunctionDeclaration {
@@ -130,7 +142,8 @@ func (p *Program) SoleContractInterfaceDeclaration() *InterfaceDeclaration {
 	if len(interfaceDeclarations) != 1 ||
 		len(p.TransactionDeclarations()) > 0 ||
 		len(p.FunctionDeclarations()) > 0 ||
-		len(p.CompositeDeclarations()) > 0 {
+		len(p.CompositeDeclarations()) > 0 ||
+		len(p.AttachmentDeclarations()) > 0 {
 
 		return nil
 	}
@@ -153,7 +166,8 @@ func (p *Program) SoleTransactionDeclaration() *TransactionDeclaration {
 	if len(transactionDeclarations) != 1 ||
 		len(p.CompositeDeclarations()) > 0 ||
 		len(p.InterfaceDeclarations()) > 0 ||
-		len(p.FunctionDeclarations()) > 0 {
+		len(p.FunctionDeclarations()) > 0 ||
+		len(p.AttachmentDeclarations()) > 0 {
 
 		return nil
 	}
@@ -164,9 +178,9 @@ func (p *Program) SoleTransactionDeclaration() *TransactionDeclaration {
 func (p *Program) MarshalJSON() ([]byte, error) {
 	type Alias Program
 	return json.Marshal(&struct {
+		*Alias
 		Type         string
 		Declarations []Declaration
-		*Alias
 	}{
 		Type:         "Program",
 		Declarations: p.declarations,

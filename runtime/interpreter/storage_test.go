@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,7 +65,7 @@ func TestCompositeStorage(t *testing.T) {
 
 	const fieldName = "test"
 
-	value.SetMember(inter, EmptyLocationRange, fieldName, BoolValue(true))
+	value.SetMember(inter, EmptyLocationRange, fieldName, TrueValue)
 
 	require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
@@ -81,8 +81,64 @@ func TestCompositeStorage(t *testing.T) {
 	RequireValuesEqual(
 		t,
 		inter,
-		BoolValue(true),
+		TrueValue,
 		storedComposite.GetField(inter, EmptyLocationRange, fieldName),
+	)
+}
+
+func TestInclusiveRangeStorage(t *testing.T) {
+
+	t.Parallel()
+
+	storage := newUnmeteredInMemoryStorage()
+
+	inter, err := NewInterpreter(
+		nil,
+		common.AddressLocation{},
+		&Config{Storage: storage},
+	)
+	require.NoError(t, err)
+
+	value := NewInclusiveRangeValueWithStep(
+		inter,
+		EmptyLocationRange,
+		NewUnmeteredInt16Value(1),
+		NewUnmeteredInt16Value(100),
+		NewUnmeteredInt16Value(5),
+		NewInclusiveRangeStaticType(inter, PrimitiveStaticTypeInt16),
+		sema.NewInclusiveRangeType(inter, sema.Int16Type),
+	)
+
+	require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
+
+	require.Equal(t, 1, storage.BasicSlabStorage.Count())
+
+	_, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID())
+	require.NoError(t, err)
+	require.True(t, ok)
+
+	// Ensure that updating a field (e.g. step) works
+	const stepFieldName = "step"
+
+	value.SetMember(inter, EmptyLocationRange, stepFieldName, NewUnmeteredInt16Value(10))
+
+	require.Equal(t, 1, storage.BasicSlabStorage.Count())
+
+	retrievedStorable, ok, err := storage.BasicSlabStorage.Retrieve(value.StorageID())
+	require.NoError(t, err)
+	require.True(t, ok)
+
+	storedValue := StoredValue(inter, retrievedStorable, storage)
+
+	// InclusiveRange is stored as a CompositeValue.
+	require.IsType(t, storedValue, &CompositeValue{})
+	storedComposite := storedValue.(*CompositeValue)
+
+	RequireValuesEqual(
+		t,
+		inter,
+		NewUnmeteredInt16Value(10),
+		storedComposite.GetField(inter, EmptyLocationRange, stepFieldName),
 	)
 }
 
@@ -91,8 +147,11 @@ func TestArrayStorage(t *testing.T) {
 	t.Parallel()
 
 	importLocationHandlerFunc := func(inter *Interpreter, location common.Location) Import {
-		elaboration := sema.NewElaboration(nil, false)
-		elaboration.CompositeTypes[testCompositeValueType.ID()] = testCompositeValueType
+		elaboration := sema.NewElaboration(nil)
+		elaboration.SetCompositeType(
+			testCompositeValueType.ID(),
+			testCompositeValueType,
+		)
 		return VirtualImport{Elaboration: elaboration}
 	}
 
@@ -112,17 +171,17 @@ func TestArrayStorage(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		element := newTestCompositeValue(inter, common.Address{})
+		element := newTestCompositeValue(inter, common.ZeroAddress)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
 		value := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
-			common.Address{},
+			common.ZeroAddress,
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
@@ -178,17 +237,17 @@ func TestArrayStorage(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		element := newTestCompositeValue(inter, common.Address{})
+		element := newTestCompositeValue(inter, common.ZeroAddress)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
 
 		value := NewArrayValue(
 			inter,
 			EmptyLocationRange,
-			VariableSizedStaticType{
+			&VariableSizedStaticType{
 				Type: element.StaticType(inter),
 			},
-			common.Address{},
+			common.ZeroAddress,
 			element,
 		)
 
@@ -244,7 +303,7 @@ func TestDictionaryStorage(t *testing.T) {
 		value := NewDictionaryValue(
 			inter,
 			EmptyLocationRange,
-			DictionaryStaticType{
+			&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
@@ -259,7 +318,7 @@ func TestDictionaryStorage(t *testing.T) {
 		require.True(t, ok)
 
 		entryKey := NewUnmeteredStringValue("test")
-		entryValue := BoolValue(true)
+		entryValue := TrueValue
 
 		value.SetKey(
 			inter,
@@ -301,12 +360,12 @@ func TestDictionaryStorage(t *testing.T) {
 		value := NewDictionaryValue(
 			inter,
 			EmptyLocationRange,
-			DictionaryStaticType{
+			&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
 			NewUnmeteredStringValue("test"),
-			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(TrueValue),
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
@@ -351,12 +410,12 @@ func TestDictionaryStorage(t *testing.T) {
 		value := NewDictionaryValue(
 			inter,
 			EmptyLocationRange,
-			DictionaryStaticType{
+			&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
 			NewUnmeteredStringValue("test"),
-			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(TrueValue),
 		)
 
 		require.NotEqual(t, atree.StorageIDUndefined, value.StorageID())
@@ -400,7 +459,7 @@ func TestDictionaryStorage(t *testing.T) {
 		value := NewDictionaryValue(
 			inter,
 			EmptyLocationRange,
-			DictionaryStaticType{
+			&DictionaryStaticType{
 				KeyType:   PrimitiveStaticTypeString,
 				ValueType: PrimitiveStaticTypeAnyStruct,
 			},
@@ -418,7 +477,7 @@ func TestDictionaryStorage(t *testing.T) {
 			inter,
 			EmptyLocationRange,
 			NewUnmeteredStringValue("test"),
-			NewUnmeteredSomeValueNonCopying(BoolValue(true)),
+			NewUnmeteredSomeValueNonCopying(TrueValue),
 		)
 
 		require.Equal(t, 1, storage.BasicSlabStorage.Count())
@@ -446,36 +505,36 @@ func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	address := common.Address{}
+	address := common.ZeroAddress
 
 	array1 := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		address,
 		NewUnmeteredStringValue("first"),
 	)
 
-	const identifier = "test"
+	const storageMapKey = StringStorageMapKey("test")
 
 	storageMap := storage.GetStorageMap(address, "storage", true)
-	storageMap.WriteValue(inter, identifier, array1)
+	storageMap.WriteValue(inter, storageMapKey, array1)
 
 	// Overwriting delete any existing child slabs
 
 	array2 := NewArrayValue(
 		inter,
 		EmptyLocationRange,
-		VariableSizedStaticType{
+		&VariableSizedStaticType{
 			Type: PrimitiveStaticTypeAnyStruct,
 		},
 		address,
 		NewUnmeteredStringValue("second"),
 	)
 
-	storageMap.WriteValue(inter, identifier, array2)
+	storageMap.WriteValue(inter, storageMapKey, array2)
 
 	// 2:
 	// - storage map (atree ordered map)
@@ -484,7 +543,7 @@ func TestInterpretStorageOverwriteAndRemove(t *testing.T) {
 
 	// Writing nil is deletion and should delete any child slabs
 
-	storageMap.WriteValue(inter, identifier, nil)
+	storageMap.WriteValue(inter, storageMapKey, nil)
 
 	// 1:
 	// - storage map (atree ordered map)

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ package errors
 
 import (
 	"fmt"
-	"runtime/debug"
 
 	"golang.org/x/xerrors"
 )
@@ -48,16 +47,36 @@ type UserError interface {
 // ExternalError is an error that occurred externally.
 // It contains the recovered value.
 type ExternalError struct {
-	Recovered any
+	Recovered error
 }
 
-func NewExternalError(recovered any) ExternalError {
+func NewExternalError(recovered error) ExternalError {
 	return ExternalError{
 		Recovered: recovered,
 	}
 }
 
 func (e ExternalError) Error() string {
+	return fmt.Sprint(e.Recovered)
+}
+
+func (e ExternalError) Unwrap() error {
+	return e.Recovered
+}
+
+// ExternalNonError is an non-error-typed panic that occurred externally.
+// It contains the recovered value.
+type ExternalNonError struct {
+	Recovered any
+}
+
+func NewExternalNonError(recovered error) ExternalError {
+	return ExternalError{
+		Recovered: recovered,
+	}
+}
+
+func (e ExternalNonError) Error() string {
 	return fmt.Sprint(e.Recovered)
 }
 
@@ -94,6 +113,17 @@ type MemoryError struct {
 	Err error
 }
 
+// SuggestedFix
+
+type HasSuggestedFixes[T any] interface {
+	SuggestFixes(code string) []SuggestedFix[T]
+}
+
+type SuggestedFix[T any] struct {
+	Message   string
+	TextEdits []T
+}
+
 var _ UserError = MemoryError{}
 
 func (MemoryError) IsUserError() {}
@@ -111,8 +141,7 @@ func (e MemoryError) Error() string {
 //
 // NOTE: This error is not used for errors occur due to bugs in a user-provided program.
 type UnexpectedError struct {
-	Err   error
-	Stack []byte
+	Err error
 }
 
 var _ InternalError = UnexpectedError{}
@@ -121,15 +150,13 @@ func (UnexpectedError) IsInternalError() {}
 
 func NewUnexpectedError(message string, arg ...any) UnexpectedError {
 	return UnexpectedError{
-		Err:   fmt.Errorf(message, arg...),
-		Stack: debug.Stack(),
+		Err: fmt.Errorf(message, arg...),
 	}
 }
 
 func NewUnexpectedErrorFromCause(err error) UnexpectedError {
 	return UnexpectedError{
-		Err:   err,
-		Stack: debug.Stack(),
+		Err: err,
 	}
 }
 
@@ -138,7 +165,7 @@ func (e UnexpectedError) Unwrap() error {
 }
 
 func (e UnexpectedError) Error() string {
-	return fmt.Sprintf("internal error: %s\n%s", e.Err.Error(), e.Stack)
+	return fmt.Sprintf("internal error: %s", e.Err.Error())
 }
 
 // DefaultUserError is the default implementation of UserError interface.

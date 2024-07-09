@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,16 +24,56 @@ import (
 	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+)
+
+type FunctionPurity int
+
+const (
+	FunctionPurityUnspecified FunctionPurity = iota
+	FunctionPurityView
+)
+
+func (p FunctionPurity) Keyword() string {
+	switch p {
+	case FunctionPurityUnspecified:
+		return ""
+	case FunctionPurityView:
+		return "view"
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (p FunctionPurity) MarshalJSON() ([]byte, error) {
+	switch p {
+	case FunctionPurityUnspecified:
+		return json.Marshal("Unspecified")
+	case FunctionPurityView:
+		return json.Marshal("View")
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+type FunctionDeclarationFlags uint8
+
+const (
+	FunctionDeclarationFlagsIsStatic FunctionDeclarationFlags = 1 << iota
+	FunctionDeclarationFlagsIsNative
 )
 
 type FunctionDeclaration struct {
-	Access               Access
-	Identifier           Identifier
+	Purity               FunctionPurity
+	TypeParameterList    *TypeParameterList
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
 	DocString            string
+	Identifier           Identifier
 	StartPos             Position `json:"-"`
+	Access               Access
+	Flags                FunctionDeclarationFlags
 }
 
 var _ Element = &FunctionDeclaration{}
@@ -43,7 +83,11 @@ var _ Statement = &FunctionDeclaration{}
 func NewFunctionDeclaration(
 	gauge common.MemoryGauge,
 	access Access,
+	purity FunctionPurity,
+	isStatic bool,
+	isNative bool,
 	identifier Identifier,
+	typeParameterList *TypeParameterList,
 	parameterList *ParameterList,
 	returnTypeAnnotation *TypeAnnotation,
 	functionBlock *FunctionBlock,
@@ -52,9 +96,20 @@ func NewFunctionDeclaration(
 ) *FunctionDeclaration {
 	common.UseMemory(gauge, common.FunctionDeclarationMemoryUsage)
 
+	var flags FunctionDeclarationFlags
+	if isStatic {
+		flags |= FunctionDeclarationFlagsIsStatic
+	}
+	if isNative {
+		flags |= FunctionDeclarationFlagsIsNative
+	}
+
 	return &FunctionDeclaration{
 		Access:               access,
+		Purity:               purity,
+		Flags:                flags,
 		Identifier:           identifier,
+		TypeParameterList:    typeParameterList,
 		ParameterList:        parameterList,
 		ReturnTypeAnnotation: returnTypeAnnotation,
 		FunctionBlock:        functionBlock,
@@ -108,6 +163,7 @@ func (d *FunctionDeclaration) DeclarationAccess() Access {
 func (d *FunctionDeclaration) ToExpression(memoryGauge common.MemoryGauge) *FunctionExpression {
 	return NewFunctionExpression(
 		memoryGauge,
+		d.Purity,
 		d.ParameterList,
 		d.ReturnTypeAnnotation,
 		d.FunctionBlock,
@@ -126,8 +182,12 @@ func (d *FunctionDeclaration) DeclarationDocString() string {
 func (d *FunctionDeclaration) Doc() prettier.Doc {
 	return FunctionDocument(
 		d.Access,
+		d.Purity,
+		d.IsStatic(),
+		d.IsNative(),
 		true,
 		d.Identifier.Identifier,
+		d.TypeParameterList,
 		d.ParameterList,
 		d.ReturnTypeAnnotation,
 		d.FunctionBlock,
@@ -137,13 +197,19 @@ func (d *FunctionDeclaration) Doc() prettier.Doc {
 func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias FunctionDeclaration
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
+		IsStatic bool
+		IsNative bool
+		Flags    FunctionDeclarationFlags `json:",omitempty"`
 	}{
-		Type:  "FunctionDeclaration",
-		Range: NewUnmeteredRangeFromPositioned(d),
-		Alias: (*Alias)(d),
+		Type:     "FunctionDeclaration",
+		Range:    NewUnmeteredRangeFromPositioned(d),
+		IsStatic: d.IsStatic(),
+		IsNative: d.IsNative(),
+		Alias:    (*Alias)(d),
+		Flags:    0,
 	})
 }
 
@@ -151,11 +217,19 @@ func (d *FunctionDeclaration) String() string {
 	return Prettier(d)
 }
 
+func (d *FunctionDeclaration) IsStatic() bool {
+	return d.Flags&FunctionDeclarationFlagsIsStatic != 0
+}
+
+func (d *FunctionDeclaration) IsNative() bool {
+	return d.Flags&FunctionDeclarationFlagsIsNative != 0
+}
+
 // SpecialFunctionDeclaration
 
 type SpecialFunctionDeclaration struct {
-	Kind                common.DeclarationKind
 	FunctionDeclaration *FunctionDeclaration
+	Kind                common.DeclarationKind
 }
 
 var _ Element = &SpecialFunctionDeclaration{}
@@ -218,8 +292,12 @@ func (d *SpecialFunctionDeclaration) DeclarationDocString() string {
 func (d *SpecialFunctionDeclaration) Doc() prettier.Doc {
 	return FunctionDocument(
 		d.FunctionDeclaration.Access,
+		d.FunctionDeclaration.Purity,
+		d.FunctionDeclaration.IsStatic(),
+		d.FunctionDeclaration.IsNative(),
 		false,
 		d.Kind.Keywords(),
+		d.FunctionDeclaration.TypeParameterList,
 		d.FunctionDeclaration.ParameterList,
 		d.FunctionDeclaration.ReturnTypeAnnotation,
 		d.FunctionDeclaration.FunctionBlock,
@@ -229,9 +307,9 @@ func (d *SpecialFunctionDeclaration) Doc() prettier.Doc {
 func (d *SpecialFunctionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias SpecialFunctionDeclaration
 	return json.Marshal(&struct {
+		*Alias
 		Type string
 		Range
-		*Alias
 	}{
 		Type:  "SpecialFunctionDeclaration",
 		Range: NewUnmeteredRangeFromPositioned(d),

@@ -49,7 +49,7 @@ func ReadStored(
 		return nil
 	}
 
-	referenced := accountStorage.ReadValue(gauge, identifier)
+	referenced := accountStorage.ReadValue(gauge, interpreter.StringStorageMapKey(identifier))
 	return InterpreterValueToVMValue(referenced)
 }
 
@@ -63,7 +63,11 @@ func WriteStored(
 	storage := config.Storage
 	accountStorage := storage.GetStorageMap(storageAddress, domain, true)
 	interValue := VMValueToInterpreterValue(storage, value)
-	accountStorage.WriteValue(config.interpreter(), identifier, interValue)
+	accountStorage.WriteValue(
+		config.interpreter(),
+		interpreter.StringStorageMapKey(identifier),
+		interValue,
+	)
 	//interpreter.recordStorageMutation()
 }
 

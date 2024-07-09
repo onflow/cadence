@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,32 +32,31 @@ const getCurrentBlockFunctionDocString = `
 Returns the current block, i.e. the block which contains the currently executed transaction
 `
 
-var getCurrentBlockFunctionType = &sema.FunctionType{
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		sema.BlockType,
-	),
-}
+var getCurrentBlockFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	nil,
+	sema.BlockTypeAnnotation,
+)
 
 const getBlockFunctionDocString = `
 Returns the block at the given height. If the given block does not exist the function returns nil
 `
 
-var getBlockFunctionType = &sema.FunctionType{
-	Parameters: []*sema.Parameter{
+var getBlockFunctionType = sema.NewSimpleFunctionType(
+	sema.FunctionPurityView,
+	[]sema.Parameter{
 		{
-			Label:      "at",
-			Identifier: "height",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				sema.UInt64Type,
-			),
+			Label:          "at",
+			Identifier:     "height",
+			TypeAnnotation: sema.UInt64TypeAnnotation,
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+	sema.NewTypeAnnotation(
 		&sema.OptionalType{
 			Type: sema.BlockType,
 		},
 	),
-}
+)
 
 const BlockHashLength = 32
 
@@ -76,7 +75,7 @@ type BlockAtHeightProvider interface {
 }
 
 func NewGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
-	return NewStandardLibraryFunction(
+	return NewStandardLibraryStaticFunction(
 		"getBlock",
 		getBlockFunctionType,
 		getBlockFunctionDocString,
@@ -103,7 +102,7 @@ func NewGetBlockFunction(provider BlockAtHeightProvider) StandardLibraryValue {
 	)
 }
 
-var BlockIDStaticType = interpreter.ConstantSizedStaticType{
+var BlockIDStaticType = &interpreter.ConstantSizedStaticType{
 	Type: interpreter.PrimitiveStaticTypeUInt8, // unmetered
 	Size: 32,
 }
@@ -136,7 +135,7 @@ func NewBlockValue(
 
 	// ID
 	common.UseMemory(inter, blockIDMemoryUsage)
-	var values = make([]interpreter.Value, sema.BlockIDSize)
+	var values = make([]interpreter.Value, sema.BlockTypeIdFieldType.Size)
 	for i, b := range block.Hash {
 		values[i] = interpreter.NewUnmeteredUInt8Value(b)
 	}
@@ -145,7 +144,7 @@ func NewBlockValue(
 		inter,
 		locationRange,
 		BlockIDStaticType,
-		common.Address{},
+		common.ZeroAddress,
 		values...,
 	)
 
@@ -156,6 +155,7 @@ func NewBlockValue(
 		func() uint64 {
 			return uint64(time.Unix(0, block.Timestamp).Unix())
 		},
+		locationRange,
 	)
 
 	return interpreter.NewBlockValue(
@@ -175,11 +175,11 @@ func getBlockAtHeight(
 	exists bool,
 ) {
 	var err error
-	wrapPanic(func() {
+	errors.WrapPanic(func() {
 		block, exists, err = provider.GetBlockAtHeight(height)
 	})
 	if err != nil {
-		panic(err)
+		panic(interpreter.WrappedExternalError(err))
 	}
 
 	return block, exists
@@ -192,7 +192,7 @@ type CurrentBlockProvider interface {
 }
 
 func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryValue {
-	return NewStandardLibraryFunction(
+	return NewStandardLibraryStaticFunction(
 		"getCurrentBlock",
 		getCurrentBlockFunctionType,
 		getCurrentBlockFunctionDocString,
@@ -200,11 +200,11 @@ func NewGetCurrentBlockFunction(provider CurrentBlockProvider) StandardLibraryVa
 
 			var height uint64
 			var err error
-			wrapPanic(func() {
+			errors.WrapPanic(func() {
 				height, err = provider.GetCurrentBlockHeight()
 			})
 			if err != nil {
-				panic(err)
+				panic(interpreter.WrappedExternalError(err))
 			}
 
 			block, exists := getBlockAtHeight(

@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package runtime
+package runtime_test
 
 import (
 	"encoding/hex"
@@ -27,16 +27,19 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
+	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
+func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	accountCodes := map[common.Location][]byte{}
 
@@ -44,42 +47,34 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 
 	signerAccount := common.MustBytesToAddress([]byte{0x1})
 
-	storage := newTestLedger(nil, nil)
+	storage := NewTestLedger(nil, nil)
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(location Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
 		},
-		storage: storage,
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: storage,
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signerAccount}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
 			return accountCodes[location], nil
 		},
-		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			location := common.AddressLocation{
-				Address: address,
-				Name:    name,
-			}
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
 			accountCodes[location] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-	}
-	runtimeInterface.decodeArgument = func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-		return json.Decode(nil, b)
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy Fungible Token contract
 
@@ -87,7 +82,7 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 		Script{
 			Source: DeploymentTransaction(
 				"FungibleToken",
-				[]byte(realFungibleTokenContractInterface),
+				[]byte(modifiedFungibleTokenContractInterface),
 			),
 		},
 		Context{
@@ -105,12 +100,12 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 				`
                   transaction {
 
-                      prepare(signer: AuthAccount) {
+                      prepare(signer: auth(Storage, Contracts, Capabilities) &Account) {
                           signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
                       }
                   }
                 `,
-				hex.EncodeToString([]byte(realFlowContract)),
+				hex.EncodeToString([]byte(modifiedFlowContract)),
 			)),
 		},
 		Context{
@@ -127,13 +122,23 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 	const holderContract = `
       import FlowToken from 0x1
 
-      pub contract Holder {
+      access(all) contract Holder {
 
-          pub (set) var content: @FlowToken.Vault?
+          access(all) var content: @FlowToken.Vault?
 
           init() {
               self.content <- nil
           }
+
+          access(all) fun setContent(_ vault: @FlowToken.Vault?) {
+            self.content <-! vault
+          }
+
+          access(all) fun swapContent(_ vault: @FlowToken.Vault?): @FlowToken.Vault? {
+            let oldVault <- self.content <- vault
+            return <-oldVault
+          }
+
       }
     `
 	err = runtime.ExecuteTransaction(
@@ -159,26 +164,30 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 
         transaction {
 
-          prepare(acct: AuthAccount) {
+          prepare(acct: auth(Storage) &Account) {
 
               // Create vault
               let vault <- FlowToken.createEmptyVault() as! @FlowToken.Vault?
 
               // Move vault into the contract
-              Holder.content <-! vault
+              Holder.setContent(<-vault)
 
-              // Save the contract into storage (invalid, even if same account)
-              acct.save(Holder as AnyStruct, to: /storage/holder)
+              // Save the contract reference into storage.
+              // This won't error, since the validation happens at the end of the transaction.
+              acct.storage.save(Holder as AnyStruct, to: /storage/holder)
 
               // Move vault back out of the contract
-              let vault2 <- Holder.content <- nil
+              let vault2 <- Holder.swapContent(nil)
               let unwrappedVault2 <- vault2!
 
-              // Load the contract back from storage
-              let dupeContract = acct.load<AnyStruct>(from: /storage/holder)! as! Holder
+              // Load the contract reference back from storage.
+              // Given the value is a reference, this won't duplicate the contract value.
+              let dupeContract = acct.storage.load<AnyStruct>(from: /storage/holder)! as! &Holder
 
-              // Move the vault of of the duplicated contract
-              let dupeVault <- dupeContract.content <- nil
+              // Move the vault of of the contract.
+              // The 'dupeVault' must be nil, since it was moved out of the contract
+              // in the above step.
+              let dupeVault <- dupeContract.swapContent(nil)
               let unwrappedDupeVault <- dupeVault!
 
               // Deposit the duplicated vault into the original vault
@@ -200,6 +209,162 @@ func TestRuntimeResourceDuplicationWithContractTransfer(t *testing.T) {
 	)
 	RequireError(t, err)
 
-	var nonTransferableValueError interpreter.NonTransferableValueError
-	require.ErrorAs(t, err, &nonTransferableValueError)
+	var forceNilError interpreter.ForceNilError
+	require.ErrorAs(t, err, &forceNilError)
+}
+
+func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	accountCodes := map[common.Location][]byte{}
+
+	var events []cadence.Event
+
+	signerAccount := common.MustBytesToAddress([]byte{0x1})
+
+	storage := NewTestLedger(nil, nil)
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: storage,
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy Fungible Token contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction(
+				"FungibleToken",
+				[]byte(modifiedFungibleTokenContractInterface),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Deploy Flow Token contract
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(fmt.Sprintf(
+				`
+                  transaction {
+
+                      prepare(signer: auth(Storage, Contracts, Capabilities) &Account) {
+                          signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
+                      }
+                  }
+                `,
+				hex.EncodeToString([]byte(modifiedFlowContract)),
+			)),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Deploy Holder contract
+
+	signerAccount = common.MustBytesToAddress([]byte{0x2})
+
+	const holderContract = `
+      import FlowToken from 0x1
+
+      access(all) contract Holder {
+
+          access(all) var content: @FlowToken.Vault?
+
+          init() {
+              self.content <- nil
+          }
+
+          access(all) fun setContent(_ vault: @FlowToken.Vault?) {
+            self.content <-! vault
+          }
+
+          access(all) fun swapContent(_ vault: @FlowToken.Vault?): @FlowToken.Vault? {
+            let oldVault <- self.content <- vault
+            return <-oldVault
+          }
+
+          access(all) fun duplicate(acct: auth(Storage) &Account) {
+              // Create vault
+              let vault <- FlowToken.createEmptyVault() as! @FlowToken.Vault?
+
+              // Move vault into the contract
+              Holder.setContent(<-vault)
+
+              // Save the contract into storage (invalid, even if same account).
+              // Given here it access the enclosing contract itself (not an imported contract),
+              // the concrete contract value is available.
+              acct.storage.save(Holder as AnyStruct, to: /storage/holder)
+
+              // Move vault back out of the contract
+              let vault2 <- Holder.swapContent(nil)
+              let unwrappedVault2 <- vault2!
+
+              // Load the contract reference back from storage.
+              // Given the value is a reference, this won't duplicate the contract value.
+              let dupeContract = acct.storage.load<AnyStruct>(from: /storage/holder)! as! &Holder
+
+              // Move the vault of of the contract.
+              // The 'dupeVault' must be nil, since it was moved out of the contract
+              // in the above step.
+              let dupeVault <- dupeContract.swapContent(nil)
+              let unwrappedDupeVault <- dupeVault!
+
+              // Deposit the duplicated vault into the original vault
+              unwrappedVault2.deposit(from: <- unwrappedDupeVault)
+
+              destroy unwrappedVault2
+          }
+
+      }
+    `
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction(
+				"Holder",
+				[]byte(holderContract),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	RequireError(t, err)
+
+	var invalidMoveError *sema.InvalidMoveError
+	require.ErrorAs(t, err, &invalidMoveError)
 }

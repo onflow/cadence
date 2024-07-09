@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2022 Dapper Labs, Inc.
+ * Copyright Flow Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import (
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -30,16 +29,20 @@ import (
 // SimpleCompositeValue
 
 type SimpleCompositeValue struct {
-	TypeID     sema.TypeID
-	staticType StaticType
-	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
-	FieldNames      []string
+	staticType      StaticType
 	Fields          map[string]Value
 	ComputeField    func(name string, interpreter *Interpreter, locationRange LocationRange) Value
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string
 	// stringer is an optional function that is used to produce the string representation of the value.
 	// If nil, the FieldNames are used.
-	stringer func(common.MemoryGauge, SeenReferences) string
+	stringer func(*Interpreter, SeenReferences, LocationRange) string
+	TypeID   sema.TypeID
+	// FieldNames are the names of the field members (i.e. not functions, and not computed fields), in order
+	FieldNames []string
+
+	// This is used for distinguishing between transaction values and other composite values.
+	// TODO: maybe cleanup if there is an alternative/better way.
+	isTransaction bool
 }
 
 var _ Value = &SimpleCompositeValue{}
@@ -53,7 +56,7 @@ func NewSimpleCompositeValue(
 	fields map[string]Value,
 	computeField func(name string, interpreter *Interpreter, locationRange LocationRange) Value,
 	fieldFormatters map[string]func(common.MemoryGauge, Value, SeenReferences) string,
-	stringer func(common.MemoryGauge, SeenReferences) string,
+	stringer func(*Interpreter, SeenReferences, LocationRange) string,
 ) *SimpleCompositeValue {
 
 	common.UseMemory(gauge, common.SimpleCompositeValueBaseMemoryUsage)
@@ -70,26 +73,33 @@ func NewSimpleCompositeValue(
 	}
 }
 
-func (*SimpleCompositeValue) IsValue() {}
+func (*SimpleCompositeValue) isValue() {}
 
-func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+func (v *SimpleCompositeValue) Accept(interpreter *Interpreter, visitor Visitor, _ LocationRange) {
 	visitor.VisitSimpleCompositeValue(interpreter, v)
 }
 
 // ForEachField iterates over all field-name field-value pairs of the composite value.
 // It does NOT iterate over computed fields and functions!
-func (v *SimpleCompositeValue) ForEachField(_ *Interpreter, f func(fieldName string, fieldValue Value)) {
+func (v *SimpleCompositeValue) ForEachField(
+	f func(fieldName string, fieldValue Value) (resume bool),
+) {
 	for _, fieldName := range v.FieldNames {
 		fieldValue := v.Fields[fieldName]
-		f(fieldName, fieldValue)
+		if !f(fieldName, fieldValue) {
+			break
+		}
 	}
 }
 
 // Walk iterates over all field values of the composite value.
 // It does NOT walk the computed fields and functions!
-func (v *SimpleCompositeValue) Walk(interpreter *Interpreter, walkChild func(Value)) {
-	v.ForEachField(interpreter, func(_ string, fieldValue Value) {
+func (v *SimpleCompositeValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+	v.ForEachField(func(_ string, fieldValue Value) (resume bool) {
 		walkChild(fieldValue)
+
+		// continue iteration
+		return true
 	})
 }
 
@@ -97,10 +107,28 @@ func (v *SimpleCompositeValue) StaticType(_ *Interpreter) StaticType {
 	return v.staticType
 }
 
-func (v *SimpleCompositeValue) IsImportable(inter *Interpreter) bool {
+func (v *SimpleCompositeValue) IsImportable(inter *Interpreter, locationRange LocationRange) bool {
+	// Check type is importable
 	staticType := v.StaticType(inter)
 	semaType := inter.MustConvertStaticToSemaType(staticType)
-	return semaType.IsImportable(map[*sema.Member]bool{})
+	if !semaType.IsImportable(map[*sema.Member]bool{}) {
+		return false
+	}
+
+	// Check all field values are importable
+	importable := true
+	v.ForEachField(func(_ string, value Value) (resume bool) {
+		if !value.IsImportable(inter, locationRange) {
+			importable = false
+			// stop iteration
+			return false
+		}
+
+		// continue iteration
+		return true
+	})
+
+	return importable
 }
 
 func (v *SimpleCompositeValue) GetMember(
@@ -122,13 +150,16 @@ func (v *SimpleCompositeValue) GetMember(
 	return nil
 }
 
-func (*SimpleCompositeValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
-	// Simple composite values have no removable members (fields / functions)
-	panic(errors.NewUnreachableError())
+func (v *SimpleCompositeValue) RemoveMember(_ *Interpreter, _ LocationRange, name string) Value {
+	value := v.Fields[name]
+	delete(v.Fields, name)
+	return value
 }
 
-func (v *SimpleCompositeValue) SetMember(_ *Interpreter, _ LocationRange, name string, value Value) {
+func (v *SimpleCompositeValue) SetMember(_ *Interpreter, _ LocationRange, name string, value Value) bool {
+	_, hasField := v.Fields[name]
 	v.Fields[name] = value
+	return hasField
 }
 
 func (v *SimpleCompositeValue) String() string {
@@ -136,13 +167,13 @@ func (v *SimpleCompositeValue) String() string {
 }
 
 func (v *SimpleCompositeValue) RecursiveString(seenReferences SeenReferences) string {
-	return v.MeteredString(nil, seenReferences)
+	return v.MeteredString(nil, seenReferences, EmptyLocationRange)
 }
 
-func (v *SimpleCompositeValue) MeteredString(memoryGauge common.MemoryGauge, seenReferences SeenReferences) string {
+func (v *SimpleCompositeValue) MeteredString(interpreter *Interpreter, seenReferences SeenReferences, locationRange LocationRange) string {
 
 	if v.stringer != nil {
-		return v.stringer(memoryGauge, seenReferences)
+		return v.stringer(interpreter, seenReferences, locationRange)
 	}
 
 	var fields []struct {
@@ -158,11 +189,11 @@ func (v *SimpleCompositeValue) MeteredString(memoryGauge common.MemoryGauge, see
 		var value string
 		if v.fieldFormatters != nil {
 			if fieldFormatter, ok := v.fieldFormatters[fieldName]; ok {
-				value = fieldFormatter(memoryGauge, fieldValue, seenReferences)
+				value = fieldFormatter(interpreter, fieldValue, seenReferences)
 			}
 		}
 		if value == "" {
-			value = fieldValue.MeteredString(memoryGauge, seenReferences)
+			value = fieldValue.MeteredString(interpreter, seenReferences, locationRange)
 		}
 
 		fields = append(fields, struct {
@@ -188,7 +219,7 @@ func (v *SimpleCompositeValue) MeteredString(memoryGauge common.MemoryGauge, see
 	// Value of each field is metered separately.
 	strLen = strLen + len(typeId) + len(fields)*4
 
-	common.UseMemory(memoryGauge, common.NewRawStringMemoryUsage(strLen))
+	common.UseMemory(interpreter, common.NewRawStringMemoryUsage(strLen))
 
 	return format.Composite(typeId, fields)
 }
@@ -234,11 +265,19 @@ func (v *SimpleCompositeValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
+	_ map[atree.StorageID]struct{},
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
 	}
+
+	if v.isTransaction {
+		panic(NonTransferableValueError{
+			Value: v,
+		})
+	}
+
 	return v
 }
 
