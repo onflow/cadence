@@ -129,6 +129,18 @@ func init() {
 				StringTypeContainsFunctionType,
 				stringTypeContainsFunctionDocString,
 			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeIndexFunctionName,
+				StringTypeIndexFunctionType,
+				stringTypeIndexFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeCountFunctionName,
+				StringTypeCountFunctionType,
+				stringTypeCountFunctionDocString,
+			),
 		})
 	}
 }
@@ -192,6 +204,46 @@ const StringTypeContainsFunctionName = "contains"
 
 const stringTypeContainsFunctionDocString = `
 Returns true if this string contains the given other string as a substring.
+`
+
+var StringTypeIndexFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:          "of",
+			Identifier:     "other",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+	},
+	IntTypeAnnotation,
+)
+
+const StringTypeIndexFunctionName = "index"
+
+const stringTypeIndexFunctionDocString = `
+Returns the index within this string of the first occurrence of the given substring.
+
+If the substring is not found, the function returns -1.
+`
+
+var StringTypeCountFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "other",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+	},
+	IntTypeAnnotation,
+)
+
+const StringTypeCountFunctionName = "count"
+
+const stringTypeCountFunctionDocString = `
+Returns the number of non-overlapping instances of the given substring in this string.
+
+If the given substring is an empty string, the function returns 1 + the number of characters in this string.
 `
 
 const StringTypeReplaceAllFunctionName = "replaceAll"
