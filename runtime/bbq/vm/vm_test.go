@@ -1175,7 +1175,7 @@ func TestContractAccessDuringInit(t *testing.T) {
             contract MyContract {
                 var status : String
 
-                pub fun getInitialStatus(): String {
+                access(all) fun getInitialStatus(): String {
                     return "PENDING"
                 }
 
@@ -1207,7 +1207,7 @@ func TestContractAccessDuringInit(t *testing.T) {
             contract MyContract {
                 var status : String
 
-                pub fun getInitialStatus(): String {
+                access(all) fun getInitialStatus(): String {
                     return "PENDING"
                 }
 

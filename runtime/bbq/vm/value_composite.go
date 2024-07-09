@@ -19,6 +19,8 @@
 package vm
 
 import (
+	goerrors "errors"
+
 	"github.com/onflow/atree"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -106,9 +108,11 @@ func (v *CompositeValue) GetMember(config *Config, name string) Value {
 		interpreter.StringAtreeValue(name),
 	)
 	if err != nil {
-		if _, ok := err.(*atree.KeyNotFoundError); !ok {
-			panic(errors.NewExternalError(err))
+		var keyNotFoundError *atree.KeyNotFoundError
+		if goerrors.As(err, &keyNotFoundError) {
+			return nil
 		}
+		panic(errors.NewExternalError(err))
 	}
 
 	if storable != nil {
