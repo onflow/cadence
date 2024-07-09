@@ -1379,6 +1379,21 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			},
 		)
 
+	case sema.StringTypeContainsFunctionName:
+		return NewBoundHostFunctionValue(
+			interpreter,
+			v,
+			sema.StringTypeContainsFunctionType,
+			func(invocation Invocation) Value {
+				other, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.Contains(invocation.Interpreter, other)
+			},
+		)
+
 	case sema.StringTypeDecodeHexFunctionName:
 		return NewBoundHostFunctionValue(
 			interpreter,
@@ -1686,6 +1701,74 @@ func (v *StringValue) ForEach(
 			return
 		}
 	}
+}
+
+func (v *StringValue) IsBoundaryStart(start int) bool {
+	v.prepareGraphemes()
+	return v.isGraphemeBoundaryStartPrepared(start)
+}
+
+func (v *StringValue) isGraphemeBoundaryStartPrepared(start int) bool {
+
+	for {
+		boundaryStart, _ := v.graphemes.Positions()
+		if start == boundaryStart {
+			return true
+		} else if boundaryStart > start {
+			return false
+		}
+
+		if !v.graphemes.Next() {
+			return false
+		}
+	}
+}
+
+func (v *StringValue) IsBoundaryEnd(end int) bool {
+	v.prepareGraphemes()
+	return v.isGraphemeBoundaryEndPrepared(end)
+}
+
+func (v *StringValue) isGraphemeBoundaryEndPrepared(end int) bool {
+
+	for {
+		_, boundaryEnd := v.graphemes.Positions()
+		if end == boundaryEnd {
+			return true
+		} else if boundaryEnd > end {
+			return false
+		}
+
+		if !v.graphemes.Next() {
+			return false
+		}
+	}
+}
+
+func (v *StringValue) Contains(inter *Interpreter, other *StringValue) BoolValue {
+
+	// Meter computation as if the string was iterated.
+	// This is a conservative over-estimation.
+	inter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)*len(other.Str)))
+
+	v.prepareGraphemes()
+
+	for start := 0; start < len(v.Str); start++ {
+
+		start = strings.Index(v.Str[start:], other.Str)
+		if start < 0 {
+			break
+		}
+
+		if v.isGraphemeBoundaryStartPrepared(start) &&
+			v.isGraphemeBoundaryEndPrepared(start+len(other.Str)) {
+
+			return TrueValue
+		}
+	}
+
+	return FalseValue
+
 }
 
 type StringValueIterator struct {

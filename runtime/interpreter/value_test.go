@@ -4391,3 +4391,85 @@ func TestValue_ConformsToStaticType(t *testing.T) {
 	})
 
 }
+
+func TestStringIsBoundaryStart(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(s string, i int, expected bool) {
+
+		name := fmt.Sprintf("%s, %d", s, i)
+
+		t.Run(name, func(t *testing.T) {
+			str := NewUnmeteredStringValue(s)
+			assert.Equal(t, expected, str.IsBoundaryStart(i))
+		})
+	}
+
+	test("", 0, true)
+	test("a", 0, true)
+	test("a", 1, false)
+	test("ab", 1, true)
+
+	// 🇪🇸🇪🇪 ("ES", "EE")
+	flagESflagEE := "\U0001F1EA\U0001F1F8\U0001F1EA\U0001F1EA"
+	require.Len(t, flagESflagEE, 16)
+	test(flagESflagEE, 0, true)
+	test(flagESflagEE, 1, false)
+	test(flagESflagEE, 2, false)
+	test(flagESflagEE, 3, false)
+	test(flagESflagEE, 4, false)
+	test(flagESflagEE, 5, false)
+	test(flagESflagEE, 6, false)
+	test(flagESflagEE, 7, false)
+
+	test(flagESflagEE, 8, true)
+	test(flagESflagEE, 9, false)
+	test(flagESflagEE, 10, false)
+	test(flagESflagEE, 11, false)
+	test(flagESflagEE, 12, false)
+	test(flagESflagEE, 13, false)
+	test(flagESflagEE, 14, false)
+	test(flagESflagEE, 15, false)
+}
+
+func TestStringIsBoundaryEnd(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(s string, i int, expected bool) {
+
+		name := fmt.Sprintf("%s, %d", s, i)
+
+		t.Run(name, func(t *testing.T) {
+			str := NewUnmeteredStringValue(s)
+			assert.Equal(t, expected, str.IsBoundaryEnd(i))
+		})
+	}
+
+	test("", 0, true)
+	test("a", 0, true)
+	test("a", 1, true)
+	test("ab", 1, true)
+
+	// 🇪🇸🇪🇪 ("ES", "EE")
+	flagESflagEE := "\U0001F1EA\U0001F1F8\U0001F1EA\U0001F1EA"
+	require.Len(t, flagESflagEE, 16)
+	test(flagESflagEE, 0, true)
+	test(flagESflagEE, 1, false)
+	test(flagESflagEE, 2, false)
+	test(flagESflagEE, 3, false)
+	test(flagESflagEE, 4, false)
+	test(flagESflagEE, 5, false)
+	test(flagESflagEE, 6, false)
+	test(flagESflagEE, 7, false)
+
+	test(flagESflagEE, 8, true)
+	test(flagESflagEE, 9, false)
+	test(flagESflagEE, 10, false)
+	test(flagESflagEE, 11, false)
+	test(flagESflagEE, 12, false)
+	test(flagESflagEE, 13, false)
+	test(flagESflagEE, 14, false)
+	test(flagESflagEE, 15, false)
+}

@@ -123,6 +123,12 @@ func init() {
 				StringTypeReplaceAllFunctionType,
 				StringTypeReplaceAllFunctionDocString,
 			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeContainsFunctionName,
+				StringTypeContainsFunctionType,
+				stringTypeContainsFunctionDocString,
+			),
 		})
 	}
 }
@@ -168,6 +174,24 @@ Returns a new string containing the slice of the characters in the given string 
 This function creates a new string whose length is ` + "`upTo - from`" + `.
 It does not modify the original string.
 If either of the parameters are out of the bounds of the string, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail
+`
+
+var StringTypeContainsFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "other",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+	},
+	BoolTypeAnnotation,
+)
+
+const StringTypeContainsFunctionName = "contains"
+
+const stringTypeContainsFunctionDocString = `
+Returns true if this string contains the given other string as a substring.
 `
 
 const StringTypeReplaceAllFunctionName = "replaceAll"
