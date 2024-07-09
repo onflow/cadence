@@ -504,97 +504,114 @@ func TestInterpretStringSplit(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-		fun split(): [String] {
-			return "👪////❤️".split(separator: "////")
-		}
-		fun splitBySpace(): [String] {
-			return "👪 ❤️ Abc6 ;123".split(separator: " ")
-		}
-		fun splitWithUnicodeEquivalence(): [String] {
-			return "Caf\u{65}\u{301}ABc".split(separator: "\u{e9}")
-		}
-		fun testEmptyString(): [String] {
-			return "".split(separator: "//")
-		}
-		fun testNoMatch(): [String] {
-			return "pqrS;asdf".split(separator: ";;")
-		}
-	`)
+	type test struct {
+		str    string
+		sep    string
+		result []string
+	}
 
-	testCase := func(t *testing.T, funcName string, expected *interpreter.ArrayValue) {
-		t.Run(funcName, func(t *testing.T) {
-			result, err := inter.Invoke(funcName)
+	var abcd = "abcd"
+	var faces = "☺☻☹"
+	var commas = "1,2,3,4"
+	var dots = "1....2....3....4"
+
+	tests := []test{
+		{"", "", []string{}},
+		{abcd, "", []string{"a", "b", "c", "d"}},
+		{faces, "", []string{"☺", "☻", "☹"}},
+		{"☺�☹", "", []string{"☺", "�", "☹"}},
+		{abcd, "a", []string{"", "bcd"}},
+		{abcd, "z", []string{"abcd"}},
+		{commas, ",", []string{"1", "2", "3", "4"}},
+		{dots, "...", []string{"1", ".2", ".3", ".4"}},
+		{faces, "☹", []string{"☺☻", ""}},
+		{faces, "~", []string{faces}},
+		{
+			"\\u{1F46A}////\\u{2764}\\u{FE0F}",
+			"////",
+			[]string{"\U0001F46A", "\u2764\uFE0F"},
+		},
+		{
+			"\\u{1F46A} \\u{2764}\\u{FE0F} Abc6 ;123",
+			" ",
+			[]string{"\U0001F46A", "\u2764\uFE0F", "Abc6", ";123"},
+		},
+		{
+			"Caf\\u{65}\\u{301}ABc",
+			"\\u{e9}",
+			[]string{"Caf", "ABc"},
+		},
+		{
+			"",
+			"//",
+			[]string{""},
+		},
+		{
+			"pqrS;asdf",
+			";;",
+			[]string{"pqrS;asdf"},
+		},
+		{
+			// U+1F476 U+1F3FB is 👶🏻
+			" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}",
+			" ",
+			[]string{"", "\U0001F476\U0001F3FB", "ascii", "\u000D\u000A"},
+		},
+		// 🇪🇸🇸🇪🇪🇪 is "ES", "SE", "EE"
+		{
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}\\u{1F1EA}",
+			"\\u{1F1F8}\\u{1F1EA}",
+			[]string{"\U0001F1EA\U0001F1F8", "\U0001F1EA\U0001F1EA"},
+		},
+	}
+
+	runTest := func(test test) {
+
+		name := fmt.Sprintf("%s, %s", test.str, test.sep)
+
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      fun test(): [String] {
+                        let s = "%s"
+                        return s.split(separator: "%s")
+                      }
+                    `,
+					test.str,
+					test.sep,
+				),
+			)
+
+			value, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				expected,
-				result,
-			)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			actual := value.(*interpreter.ArrayValue)
+
+			require.Equal(t, len(test.result), actual.Count())
+
+			for partIndex, expected := range test.result {
+				actualPart := actual.Get(
+					inter,
+					interpreter.EmptyLocationRange,
+					partIndex,
+				)
+
+				require.IsType(t, &interpreter.StringValue{}, actualPart)
+				actualPartString := actualPart.(*interpreter.StringValue)
+
+				require.Equal(t, expected, actualPartString.Str)
+			}
 		})
 	}
 
-	varSizedStringType := &interpreter.VariableSizedStaticType{
-		Type: interpreter.PrimitiveStaticTypeString,
+	for _, test := range tests {
+		runTest(test)
 	}
-
-	testCase(t,
-		"split",
-		interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			varSizedStringType,
-			common.ZeroAddress,
-			interpreter.NewUnmeteredStringValue("👪"),
-			interpreter.NewUnmeteredStringValue("❤️"),
-		),
-	)
-	testCase(t,
-		"splitBySpace",
-		interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			varSizedStringType,
-			common.ZeroAddress,
-			interpreter.NewUnmeteredStringValue("👪"),
-			interpreter.NewUnmeteredStringValue("❤️"),
-			interpreter.NewUnmeteredStringValue("Abc6"),
-			interpreter.NewUnmeteredStringValue(";123"),
-		),
-	)
-	testCase(t,
-		"splitWithUnicodeEquivalence",
-		interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			varSizedStringType,
-			common.ZeroAddress,
-			interpreter.NewUnmeteredStringValue("Caf"),
-			interpreter.NewUnmeteredStringValue("ABc"),
-		),
-	)
-	testCase(t,
-		"testEmptyString",
-		interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			varSizedStringType,
-			common.ZeroAddress,
-			interpreter.NewUnmeteredStringValue(""),
-		),
-	)
-	testCase(t,
-		"testNoMatch",
-		interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			varSizedStringType,
-			common.ZeroAddress,
-			interpreter.NewUnmeteredStringValue("pqrS;asdf"),
-		),
-	)
 }
 
 func TestInterpretStringReplaceAll(t *testing.T) {

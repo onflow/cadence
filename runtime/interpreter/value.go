@@ -1465,7 +1465,11 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 					panic(errors.NewUnreachableError())
 				}
 
-				return v.Split(invocation.Interpreter, invocation.LocationRange, separator.Str)
+				return v.Split(
+					invocation.Interpreter,
+					invocation.LocationRange,
+					separator,
+				)
 			},
 		)
 
@@ -1545,16 +1549,17 @@ func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 	)
 }
 
-func (v *StringValue) Split(inter *Interpreter, _ LocationRange, separator string) Value {
+func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, separator *StringValue) *ArrayValue {
 
-	// Meter computation as if the string was iterated.
-	// i.e: linear search to find the split points. This is an estimate.
-	inter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)))
+	if len(separator.Str) == 0 {
+		return v.Explode(inter, locationRange)
+	}
 
-	split := strings.Split(v.Str, separator)
+	count := v.count(inter, locationRange, separator) + 1
 
-	var index int
-	count := len(split)
+	partIndex := 0
+
+	remaining := v
 
 	return NewArrayValueWithIterator(
 		inter,
@@ -1562,12 +1567,66 @@ func (v *StringValue) Split(inter *Interpreter, _ LocationRange, separator strin
 		common.ZeroAddress,
 		uint64(count),
 		func() Value {
-			if index >= count {
+
+			inter.ReportComputation(common.ComputationKindLoop, 1)
+
+			if partIndex >= count {
 				return nil
 			}
 
-			str := split[index]
-			index++
+			// Set the remainder as the last part
+			if partIndex == count-1 {
+				partIndex++
+				return remaining
+			}
+
+			separatorCharacterIndex := remaining.indexOf(inter, separator)
+			if separatorCharacterIndex < 0 {
+				return nil
+			}
+
+			partIndex++
+
+			part := remaining.slice(
+				0,
+				separatorCharacterIndex,
+				locationRange,
+			)
+
+			remaining = remaining.slice(
+				separatorCharacterIndex+separator.Length(),
+				remaining.Length(),
+				locationRange,
+			)
+
+			return part
+		},
+	)
+}
+
+// Explode returns a Cadence array of type [String], where each element is a single character of the string
+func (v *StringValue) Explode(inter *Interpreter, locationRange LocationRange) *ArrayValue {
+
+	iterator := v.Iterator(inter, locationRange)
+
+	return NewArrayValueWithIterator(
+		inter,
+		VarSizedArrayOfStringType,
+		common.ZeroAddress,
+		uint64(v.Length()),
+		func() Value {
+			value := iterator.Next(inter, locationRange)
+			if value == nil {
+				return nil
+			}
+
+			character, ok := value.(CharacterValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			str := character.Str
+
 			return NewStringValue(
 				inter,
 				common.NewStringMemoryUsage(len(str)),
