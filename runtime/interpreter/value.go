@@ -1246,8 +1246,11 @@ var EmptyString = NewUnmeteredStringValue("")
 
 func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRange) Value {
 	fromIndex := from.ToInt(locationRange)
-
 	toIndex := to.ToInt(locationRange)
+	return v.slice(fromIndex, toIndex, locationRange)
+}
+
+func (v *StringValue) slice(fromIndex int, toIndex int, locationRange LocationRange) *StringValue {
 
 	length := v.Length()
 
@@ -1391,6 +1394,40 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 				}
 
 				return v.Contains(invocation.Interpreter, other)
+			},
+		)
+
+	case sema.StringTypeIndexFunctionName:
+		return NewBoundHostFunctionValue(
+			interpreter,
+			v,
+			sema.StringTypeIndexFunctionType,
+			func(invocation Invocation) Value {
+				other, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.IndexOf(invocation.Interpreter, other)
+			},
+		)
+
+	case sema.StringTypeCountFunctionName:
+		return NewBoundHostFunctionValue(
+			interpreter,
+			v,
+			sema.StringTypeIndexFunctionType,
+			func(invocation Invocation) Value {
+				other, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.Count(
+					invocation.Interpreter,
+					invocation.LocationRange,
+					other,
+				)
 			},
 		)
 
@@ -1703,36 +1740,59 @@ func (v *StringValue) ForEach(
 	}
 }
 
-func (v *StringValue) IsBoundaryStart(start int) bool {
+func (v *StringValue) IsGraphemeBoundaryStart(startOffset int) bool {
 	v.prepareGraphemes()
-	return v.isGraphemeBoundaryStartPrepared(start)
+
+	var characterIndex int
+	return v.seekGraphemeBoundaryStartPrepared(startOffset, &characterIndex)
 }
 
-func (v *StringValue) isGraphemeBoundaryStartPrepared(start int) bool {
+func (v *StringValue) seekGraphemeBoundaryStartPrepared(startOffset int, characterIndex *int) bool {
 
-	for {
-		boundaryStart, _ := v.graphemes.Positions()
-		if start == boundaryStart {
-			return true
-		} else if boundaryStart > start {
-			return false
+	for ; v.graphemes.Next(); *characterIndex++ {
+
+		boundaryStart, boundaryEnd := v.graphemes.Positions()
+		if boundaryStart == boundaryEnd {
+			// Graphemes.Positions() should never return a zero-length grapheme,
+			// and only does so if the grapheme iterator
+			// - is at the beginning of the string and has not been initialized (i.e. Next() has not been called); or
+			// - is at the end of the string and has been exhausted (i.e. Next() has returned false)
+			panic(errors.NewUnreachableError())
 		}
 
-		if !v.graphemes.Next() {
+		if startOffset == boundaryStart {
+			return true
+		} else if boundaryStart > startOffset {
 			return false
 		}
 	}
+
+	return false
 }
 
-func (v *StringValue) IsBoundaryEnd(end int) bool {
+func (v *StringValue) IsGraphemeBoundaryEnd(end int) bool {
 	v.prepareGraphemes()
+	v.graphemes.Next()
+
 	return v.isGraphemeBoundaryEndPrepared(end)
 }
 
 func (v *StringValue) isGraphemeBoundaryEndPrepared(end int) bool {
+	// Empty strings have no grapheme clusters, and therefore no boundaries
+	if len(v.Str) == 0 {
+		return false
+	}
 
 	for {
-		_, boundaryEnd := v.graphemes.Positions()
+		boundaryStart, boundaryEnd := v.graphemes.Positions()
+		if boundaryStart == boundaryEnd {
+			// Graphemes.Positions() should never return a zero-length grapheme,
+			// and only does so if the grapheme iterator
+			// - is at the beginning of the string and has not been initialized (i.e. Next() has not been called); or
+			// - is at the end of the string and has been exhausted (i.e. Next() has returned false)
+			panic(errors.NewUnreachableError())
+		}
+
 		if end == boundaryEnd {
 			return true
 		} else if boundaryEnd > end {
@@ -1745,7 +1805,16 @@ func (v *StringValue) isGraphemeBoundaryEndPrepared(end int) bool {
 	}
 }
 
-func (v *StringValue) Contains(inter *Interpreter, other *StringValue) BoolValue {
+func (v *StringValue) IndexOf(inter *Interpreter, other *StringValue) IntValue {
+	index := v.indexOf(inter, other)
+	return NewIntValueFromInt64(inter, int64(index))
+}
+
+func (v *StringValue) indexOf(inter *Interpreter, other *StringValue) int {
+
+	if len(other.Str) == 0 {
+		return 0
+	}
 
 	// Meter computation as if the string was iterated.
 	// This is a conservative over-estimation.
@@ -1753,22 +1822,93 @@ func (v *StringValue) Contains(inter *Interpreter, other *StringValue) BoolValue
 
 	v.prepareGraphemes()
 
-	for start := 0; start < len(v.Str); start++ {
+	// We are dealing with two different positions / indices / measures:
+	// - 'CharacterIndex' indicates Cadence characters (grapheme clusters)
+	// - 'ByteOffset' indicates bytes
 
-		start = strings.Index(v.Str[start:], other.Str)
-		if start < 0 {
+	// The resulting index, in terms of Cadence characters (grapheme clusters)
+	var characterIndex int
+
+	// Find the position of the substring in the string,
+	// by using strings.Index with an increasing start byte offset.
+	//
+	// The byte offset returned from strings.Index is the start of the substring in the string,
+	// but it may not be at a grapheme boundary, so we need to check
+	// that both the start and end byte offsets are grapheme boundaries.
+	//
+	// We do not have a way to translate a byte offset into a character index.
+	// Instead, we iterate over the grapheme clusters until we reach the byte offset,
+	// keeping track of the character index.
+	//
+	// We need to back up and restore the grapheme iterator and character index
+	// when either the start or the end byte offset are not grapheme boundaries,
+	// so the next iteration can start from the correct position.
+
+	for searchStartByteOffset := 0; searchStartByteOffset < len(v.Str); searchStartByteOffset++ {
+
+		relativeFoundByteOffset := strings.Index(v.Str[searchStartByteOffset:], other.Str)
+		if relativeFoundByteOffset < 0 {
 			break
 		}
 
-		if v.isGraphemeBoundaryStartPrepared(start) &&
-			v.isGraphemeBoundaryEndPrepared(start+len(other.Str)) {
+		// The resulting found byte offset is relative to the search start byte offset,
+		// so we need to add the search start byte offset to get the absolute byte offset
+		absoluteFoundByteOffset := searchStartByteOffset + relativeFoundByteOffset
 
-			return TrueValue
+		// Back up the grapheme iterator and character index,
+		// so the iteration state can be restored
+		// in case the byte offset is not at a grapheme boundary
+		graphemesBackup := *v.graphemes
+		characterIndexBackup := characterIndex
+
+		if v.seekGraphemeBoundaryStartPrepared(absoluteFoundByteOffset, &characterIndex) &&
+			v.isGraphemeBoundaryEndPrepared(absoluteFoundByteOffset+len(other.Str)) {
+
+			return characterIndex
 		}
+
+		// Restore the grapheme iterator and character index
+		v.graphemes = &graphemesBackup
+		characterIndex = characterIndexBackup
 	}
 
-	return FalseValue
+	return -1
+}
 
+func (v *StringValue) Contains(inter *Interpreter, other *StringValue) BoolValue {
+	return AsBoolValue(v.indexOf(inter, other) >= 0)
+}
+
+func (v *StringValue) Count(inter *Interpreter, locationRange LocationRange, other *StringValue) IntValue {
+	index := v.count(inter, locationRange, other)
+	return NewIntValueFromInt64(inter, int64(index))
+}
+
+func (v *StringValue) count(inter *Interpreter, locationRange LocationRange, other *StringValue) int {
+	if other.Length() == 0 {
+		return 1 + v.Length()
+	}
+
+	// Meter computation as if the string was iterated.
+	inter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)))
+
+	remaining := v
+	count := 0
+
+	for {
+		index := remaining.indexOf(inter, other)
+		if index == -1 {
+			return count
+		}
+
+		count++
+
+		remaining = remaining.slice(
+			index+other.Length(),
+			remaining.Length(),
+			locationRange,
+		)
+	}
 }
 
 type StringValueIterator struct {

@@ -724,3 +724,147 @@ func TestInterpretStringContains(t *testing.T) {
 		runTest(test)
 	}
 }
+
+func TestInterpretStringIndex(t *testing.T) {
+
+	t.Parallel()
+
+	type test struct {
+		str    string
+		subStr string
+		result int
+	}
+
+	tests := []test{
+		{"abcdef", "", 0},
+		{"abcdef", "a", 0},
+		{"abcdef", "ab", 0},
+		{"abcdef", "ac", -1},
+		{"abcdef", "b", 1},
+		{"abcdef", "bc", 1},
+		{"abcdef", "bcd", 1},
+		{"abcdef", "c", 2},
+		{"abcdef", "cd", 2},
+		{"abcdef", "cdef", 2},
+		{"abcdef", "cdefg", -1},
+		{"abcdef", "abcdef", 0},
+		{"abcdef", "abcdefg", -1},
+
+		// U+1F476 U+1F3FB is 👶🏻
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", " \\u{1F476}", -1},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{1F3FB}", -1},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", " \\u{1F476}\\u{1F3FB}", 0},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{1F476}\\u{1F3FB}", 1},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{1F476}\\u{1F3FB} ", 1},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{D}", -1},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{A}", -1},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", " ascii ", 2},
+
+		// 🇪🇸🇪🇪 ("ES", "EE") contains 🇪🇸("ES")
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1EA}\\u{1F1F8}", 0},
+		// 🇪🇸🇪🇪 ("ES", "EE") contains 🇪🇪 ("EE")
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1EA}\\u{1F1EA}", 1},
+		// 🇪🇸🇪🇪 ("ES", "EE") does NOT contain 🇸🇪 ("SE")
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1F8}\\u{1F1EA}", -1},
+		// neither prefix nor suffix of codepoints are valid
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}", -1},
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", -1},
+	}
+
+	runTest := func(test test) {
+
+		name := fmt.Sprintf("%s, %s", test.str, test.subStr)
+
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      fun test(): Int {
+                        let s = "%s"
+                        return s.index(of: "%s")
+                      }
+                    `,
+					test.str,
+					test.subStr,
+				),
+			)
+
+			value, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			require.IsType(t, interpreter.IntValue{}, value)
+			actual := value.(interpreter.IntValue)
+			require.Equal(t, test.result, actual.ToInt(interpreter.EmptyLocationRange))
+		})
+	}
+
+	for _, test := range tests {
+		runTest(test)
+	}
+}
+
+func TestInterpretStringCount(t *testing.T) {
+
+	t.Parallel()
+
+	type test struct {
+		str    string
+		subStr string
+		result int
+	}
+
+	tests := []test{
+		{"", "", 1},
+		{"abcdef", "", 7},
+
+		{"", "notempty", 0},
+		{"notempty", "", 9},
+		{"smaller", "not smaller", 0},
+		{"12345678987654321", "6", 2},
+		{"611161116", "6", 3},
+		{"notequal", "NotEqual", 0},
+		{"equal", "equal", 1},
+		{"abc1231231123q", "123", 3},
+		{"11111", "11", 2},
+
+		// 🇪🇸🇪🇪🇪🇸 ("ES", "EE", "ES") contains 🇪🇸("ES") twice
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}\\u{1F1EA}\\u{1F1F8}", "\\u{1F1EA}\\u{1F1F8}", 2},
+	}
+
+	runTest := func(test test) {
+
+		name := fmt.Sprintf("%s, %s", test.str, test.subStr)
+
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      fun test(): Int {
+                        let s = "%s"
+                        return s.count("%s")
+                      }
+                    `,
+					test.str,
+					test.subStr,
+				),
+			)
+
+			value, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			require.IsType(t, interpreter.IntValue{}, value)
+			actual := value.(interpreter.IntValue)
+			require.Equal(t, test.result, actual.ToInt(interpreter.EmptyLocationRange))
+		})
+	}
+
+	for _, test := range tests {
+		runTest(test)
+	}
+}
