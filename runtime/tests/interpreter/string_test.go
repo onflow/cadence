@@ -644,6 +644,35 @@ func TestInterpretStringReplaceAll(t *testing.T) {
 		{"", "//", "abc", ""},
 		{"abc", "", "1", "1a1b1c1"},
 		{"pqrS;asdf", ";;", "does_not_matter", "pqrS;asdf"},
+
+		{
+			// 🇪🇸🇪🇪 ("ES", "EE") does NOT contain 🇸🇪 ("SE")
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}",
+			"\\u{1F1F8}\\u{1F1EA}",
+			"XX",
+			"\U0001F1EA\U0001F1F8\U0001F1EA\U0001F1EA",
+		},
+		{
+			// 🇪🇸🇪🇪🇪🇸 ("ES", "EE", "ES")
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}\\u{1F1EA}\\u{1F1F8}",
+			"\\u{1F1EA}\\u{1F1EA}",
+			"XX",
+			"\U0001F1EA\U0001F1F8XX\U0001F1EA\U0001F1F8",
+		},
+		{
+			// 🇪🇸🇪🇪🇪🇸 ("ES", "EE", "ES")
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}\\u{1F1EA}\\u{1F1F8}",
+			"\\u{1F1EA}\\u{1F1F8}",
+			"XX",
+			"XX\U0001F1EA\U0001F1EAXX",
+		},
+		{
+			// 🇪🇸🇪🇪🇪🇸 ("ES", "EE", "ES")
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}\\u{1F1EA}\\u{1F1F8}",
+			"",
+			"<>",
+			"<>\U0001F1EA\U0001F1F8<>\U0001F1EA\U0001F1EA<>\U0001F1EA\U0001F1F8<>",
+		},
 	}
 
 	runTest := func(test test) {
