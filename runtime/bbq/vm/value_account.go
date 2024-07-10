@@ -69,7 +69,9 @@ func newAccountValue(
 		staticType: interpreter.PrimitiveStaticTypeAccount,
 		Kind:       common.CompositeKindStructure,
 		fields: map[string]Value{
-			sema.AccountTypeAddressFieldName: AddressValue(address),
+			sema.AccountTypeAddressFieldName:      AddressValue(address),
+			sema.AccountTypeStorageFieldName:      NewAccountStorageValue(address),
+			sema.AccountTypeCapabilitiesFieldName: NewAccountCapabilitiesValue(address),
 			// TODO: add the remaining fields
 		},
 	}
@@ -152,15 +154,7 @@ func init() {
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_StorageTypeSaveFunctionType.Parameters),
 			Function: func(config *Config, typeArs []StaticType, args ...Value) Value {
-				authAccount, ok := args[0].(*SimpleCompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				address := authAccount.GetMember(config, sema.AccountTypeAddressFieldName)
-				addressValue, ok := address.(AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				address := getAddressMetaInfoFromValue(args[0])
 
 				value := args[1]
 
@@ -184,7 +178,7 @@ func init() {
 
 				value = value.Transfer(
 					config,
-					atree.Address(addressValue),
+					atree.Address(address),
 					true,
 					nil,
 				)
@@ -193,7 +187,7 @@ func init() {
 
 				WriteStored(
 					config,
-					common.Address(addressValue),
+					address,
 					domain,
 					interpreter.StringStorageMapKey(identifier),
 					value,
@@ -210,10 +204,7 @@ func init() {
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_StorageTypeBorrowFunctionType.Parameters),
 			Function: func(config *Config, typeArgs []StaticType, args ...Value) Value {
-				authAccount, ok := args[0].(*SimpleCompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				address := getAddressMetaInfoFromValue(args[0])
 
 				path, ok := args[1].(PathValue)
 				if !ok {
@@ -225,16 +216,10 @@ func init() {
 					panic(errors.NewUnreachableError())
 				}
 
-				address := authAccount.GetMember(config, sema.AccountTypeAddressFieldName)
-				addressValue, ok := address.(AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
 				reference := NewStorageReferenceValue(
 					config.Storage,
 					referenceType.Authorization,
-					common.Address(addressValue),
+					address,
 					path,
 					referenceType,
 				)
@@ -262,16 +247,8 @@ func init() {
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_CapabilitiesTypeGetFunctionType.Parameters),
 			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
-				// Get address field from the receiver (PublicAccount)
-				authAccount, ok := args[0].(*SimpleCompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				address := authAccount.GetMember(config, sema.AccountTypeAddressFieldName)
-				addressValue, ok := address.(AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				// Get address field from the receiver (Account.Capabilities)
+				address := getAddressMetaInfoFromValue(args[0])
 
 				// Path argument
 				path, ok := args[1].(PathValue)
@@ -296,7 +273,7 @@ func init() {
 
 				return getCapability(
 					config,
-					addressValue,
+					address,
 					path,
 					borrowType,
 					true,
@@ -311,15 +288,8 @@ func init() {
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_CapabilitiesTypeGetFunctionType.Parameters),
 			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
-				// Get address field from the receiver (Account)
-				account, ok := args[0].(*SimpleCompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				accountAddressValue, ok := account.GetMember(config, sema.AccountTypeAddressFieldName).(AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				// Get address field from the receiver (Account.Capabilities)
+				accountAddress := getAddressMetaInfoFromValue(args[0])
 
 				// Get capability argument
 
@@ -331,11 +301,11 @@ func init() {
 					panic(errors.NewUnreachableError())
 				}
 
-				capabilityAddressValue := capabilityValue.Address
-				if capabilityAddressValue != accountAddressValue {
+				capabilityAddressValue := common.Address(capabilityValue.Address)
+				if capabilityAddressValue != accountAddress {
 					panic(interpreter.CapabilityAddressPublishingError{
 						CapabilityAddress: interpreter.AddressValue(capabilityAddressValue),
-						AccountAddress:    interpreter.AddressValue(accountAddressValue),
+						AccountAddress:    interpreter.AddressValue(accountAddress),
 					})
 				}
 
@@ -355,12 +325,10 @@ func init() {
 
 				// Prevent an overwrite
 
-				accountAddress := common.Address(accountAddressValue)
-
 				storageMapKey := interpreter.StringStorageMapKey(identifier)
 				if StoredValueExists(
 					config.Storage,
-					common.Address(accountAddress),
+					accountAddress,
 					domain,
 					storageMapKey,
 				) {
@@ -401,16 +369,8 @@ func init() {
 		NativeFunctionValue{
 			ParameterCount: len(sema.Account_CapabilitiesTypeGetFunctionType.Parameters),
 			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
-				// Get address field from the receiver (PublicAccount)
-				authAccount, ok := args[0].(*SimpleCompositeValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-				address := authAccount.GetMember(config, sema.AccountTypeAddressFieldName)
-				addressValue, ok := address.(AddressValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				// Get address field from the receiver (Account.StorageCapabilities)
+				accountAddress := getAddressMetaInfoFromValue(args[0])
 
 				// Path argument
 				targetPathValue, ok := args[1].(PathValue)
@@ -430,7 +390,7 @@ func init() {
 				return checkAndIssueStorageCapabilityControllerWithType(
 					config,
 					config.AccountHandler,
-					common.Address(addressValue),
+					accountAddress,
 					targetPathValue,
 					ty,
 				)
@@ -438,9 +398,24 @@ func init() {
 		})
 }
 
+func getAddressMetaInfoFromValue(value Value) common.Address {
+	simpleCompositeValue, ok := value.(*SimpleCompositeValue)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	addressMetaInfo := simpleCompositeValue.metaInfo[sema.AccountTypeAddressFieldName]
+	address, ok := addressMetaInfo.(common.Address)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	return address
+}
+
 func getCapability(
 	config *Config,
-	address AddressValue,
+	address common.Address,
 	path PathValue,
 	wantedBorrowType *interpreter.ReferenceStaticType,
 	borrow bool,
@@ -451,7 +426,6 @@ func getCapability(
 	} else {
 		failValue =
 			NewInvalidCapabilityValue(
-				config.MemoryGauge,
 				address,
 				wantedBorrowType,
 			)
@@ -465,7 +439,7 @@ func getCapability(
 	readValue := ReadStored(
 		config.MemoryGauge,
 		config.Storage,
-		common.Address(address),
+		address,
 		domain,
 		identifier,
 	)

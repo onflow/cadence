@@ -47,13 +47,12 @@ func NewCapabilityValue(address AddressValue, id IntValue, borrowType StaticType
 }
 
 func NewInvalidCapabilityValue(
-	memoryGauge common.MemoryGauge,
-	address AddressValue,
+	address common.Address,
 	borrowType StaticType,
 ) *CapabilityValue {
 	return &CapabilityValue{
 		ID:         InvalidCapabilityID,
-		Address:    address,
+		Address:    AddressValue(address),
 		BorrowType: borrowType,
 	}
 }

@@ -28,6 +28,7 @@ type SimpleCompositeValue struct {
 	typeID     common.TypeID
 	staticType StaticType
 	Kind       common.CompositeKind
+	metaInfo   map[string]any
 }
 
 var _ Value = &CompositeValue{}
