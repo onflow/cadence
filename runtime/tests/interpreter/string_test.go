@@ -618,47 +618,98 @@ func TestInterpretStringReplaceAll(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-		fun replaceAll(): String {
-			return "👪////❤️".replaceAll(of: "////", with: "||")
-		}
-		fun replaceAllSpaceWithDoubleSpace(): String {
-			return "👪 ❤️ Abc6 ;123".replaceAll(of: " ", with: "  ")
-		}
-		fun replaceAllWithUnicodeEquivalence(): String {
-			return "Caf\u{65}\u{301}ABc".replaceAll(of: "\u{e9}", with: "X")
-		}
-		fun testEmptyString(): String {
-			return "".replaceAll(of: "//", with: "abc")
-		}
-		fun testEmptyOf(): String {
-			return "abc".replaceAll(of: "", with: "1")
-		}
-		fun testNoMatch(): String {
-			return "pqrS;asdf".replaceAll(of: ";;", with: "does_not_matter")
-		}
-	`)
+	type test struct {
+		str    string
+		old    string
+		new    string
+		result string
+	}
 
-	testCase := func(t *testing.T, funcName string, expected *interpreter.StringValue) {
-		t.Run(funcName, func(t *testing.T) {
-			result, err := inter.Invoke(funcName)
+	tests := []test{
+		{"hello", "l", "L", "heLLo"},
+		{"hello", "x", "X", "hello"},
+		{"", "x", "X", ""},
+		{"radar", "r", "<r>", "<r>ada<r>"},
+		{"", "", "<>", "<>"},
+		{"banana", "a", "<>", "b<>n<>n<>"},
+		{"banana", "an", "<>", "b<><>a"},
+		{"banana", "ana", "<>", "b<>na"},
+		{"banana", "", "<>", "<>b<>a<>n<>a<>n<>a<>"},
+		{"banana", "a", "a", "banana"},
+		{"☺☻☹", "", "<>", "<>☺<>☻<>☹<>"},
+
+		{"\\u{1F46A}////\\u{2764}\\u{FE0F}", "////", "||", "\U0001F46A||\u2764\uFE0F"},
+		{"👪 ❤️ Abc6 ;123", " ", "  ", "👪  ❤️  Abc6  ;123"},
+		{"Caf\\u{65}\\u{301}ABc", "\\u{e9}", "X", "CafXABc"},
+		{"", "//", "abc", ""},
+		{"abc", "", "1", "1a1b1c1"},
+		{"pqrS;asdf", ";;", "does_not_matter", "pqrS;asdf"},
+
+		{
+			// 🇪🇸🇪🇪 ("ES", "EE") does NOT contain 🇸🇪 ("SE")
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}",
+			"\\u{1F1F8}\\u{1F1EA}",
+			"XX",
+			"\U0001F1EA\U0001F1F8\U0001F1EA\U0001F1EA",
+		},
+		{
+			// 🇪🇸🇪🇪🇪🇸 ("ES", "EE", "ES")
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}\\u{1F1EA}\\u{1F1F8}",
+			"\\u{1F1EA}\\u{1F1EA}",
+			"XX",
+			"\U0001F1EA\U0001F1F8XX\U0001F1EA\U0001F1F8",
+		},
+		{
+			// 🇪🇸🇪🇪🇪🇸 ("ES", "EE", "ES")
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}\\u{1F1EA}\\u{1F1F8}",
+			"\\u{1F1EA}\\u{1F1F8}",
+			"XX",
+			"XX\U0001F1EA\U0001F1EAXX",
+		},
+		{
+			// 🇪🇸🇪🇪🇪🇸 ("ES", "EE", "ES")
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}\\u{1F1EA}\\u{1F1F8}",
+			"",
+			"<>",
+			"<>\U0001F1EA\U0001F1F8<>\U0001F1EA\U0001F1EA<>\U0001F1EA\U0001F1F8<>",
+		},
+	}
+
+	runTest := func(test test) {
+
+		name := fmt.Sprintf("%s, %s, %s", test.str, test.old, test.new)
+
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      fun test(): String {
+                        let s = "%s"
+                        return s.replaceAll(of: "%s", with: "%s")
+                      }
+                    `,
+					test.str,
+					test.old,
+					test.new,
+				),
+			)
+
+			value, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				expected,
-				result,
-			)
+			require.IsType(t, &interpreter.StringValue{}, value)
+			actual := value.(*interpreter.StringValue)
+
+			require.Equal(t, test.result, actual.Str)
 		})
 	}
 
-	testCase(t, "replaceAll", interpreter.NewUnmeteredStringValue("👪||❤️"))
-	testCase(t, "replaceAllSpaceWithDoubleSpace", interpreter.NewUnmeteredStringValue("👪  ❤️  Abc6  ;123"))
-	testCase(t, "replaceAllWithUnicodeEquivalence", interpreter.NewUnmeteredStringValue("CafXABc"))
-	testCase(t, "testEmptyString", interpreter.NewUnmeteredStringValue(""))
-	testCase(t, "testEmptyOf", interpreter.NewUnmeteredStringValue("1a1b1c1"))
-	testCase(t, "testNoMatch", interpreter.NewUnmeteredStringValue("pqrS;asdf"))
+	for _, test := range tests {
+		runTest(test)
+	}
 }
 
 func TestInterpretStringContains(t *testing.T) {
