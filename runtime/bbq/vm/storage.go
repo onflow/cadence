@@ -57,15 +57,16 @@ func WriteStored(
 	config *Config,
 	storageAddress common.Address,
 	domain string,
-	identifier string,
+	key interpreter.StorageMapKey,
 	value Value,
-) {
+) (existed bool) {
 	storage := config.Storage
 	accountStorage := storage.GetStorageMap(storageAddress, domain, true)
 	interValue := VMValueToInterpreterValue(storage, value)
-	accountStorage.WriteValue(
+
+	return accountStorage.WriteValue(
 		config.interpreter(),
-		interpreter.StringStorageMapKey(identifier),
+		key,
 		interValue,
 	)
 	//interpreter.recordStorageMutation()
@@ -82,6 +83,19 @@ func RemoveReferencedSlab(storage interpreter.Storage, storable atree.Storable) 
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}
+}
+
+func StoredValueExists(
+	storage interpreter.Storage,
+	storageAddress common.Address,
+	domain string,
+	identifier interpreter.StorageMapKey,
+) bool {
+	accountStorage := storage.GetStorageMap(storageAddress, domain, false)
+	if accountStorage == nil {
+		return false
+	}
+	return accountStorage.ValueExists(identifier)
 }
 
 //

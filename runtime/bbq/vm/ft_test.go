@@ -321,31 +321,31 @@ const realFungibleTokenContractInterface = `
 ///
 /// The interface that fungible token contracts implement.
 ///
-pub contract interface FungibleToken {
+access(all) contract interface FungibleToken {
 
     /// The total number of tokens in existence.
     /// It is up to the implementer to ensure that the total supply
     /// stays accurate and up to date
     ///
-    pub var totalSupply: Int
+    access(all) var totalSupply: Int
 
-    ///// TokensInitialized
-    /////
-    ///// The event that is emitted when the contract is created
-    /////
-    //pub event TokensInitialized(initialSupply: Int)
-	//
-    ///// TokensWithdrawn
-    /////
-    ///// The event that is emitted when tokens are withdrawn from a Vault
-    /////
-    //pub event TokensWithdrawn(amount: Int, from: Address?)
-	//
-    ///// TokensDeposited
-    /////
-    ///// The event that is emitted when tokens are deposited into a Vault
-    /////
-    //pub event TokensDeposited(amount: Int, to: Address?)
+    /// TokensInitialized
+    ///
+    /// The event that is emitted when the contract is created
+    ///
+    access(all) event TokensInitialized(initialSupply: Int)
+
+    /// TokensWithdrawn
+    ///
+    /// The event that is emitted when tokens are withdrawn from a Vault
+    ///
+    access(all) event TokensWithdrawn(amount: Int, from: Address?)
+
+    /// TokensDeposited
+    ///
+    /// The event that is emitted when tokens are deposited into a Vault
+    ///
+    access(all) event TokensDeposited(amount: Int, to: Address?)
 
     /// Provider
     ///
@@ -356,7 +356,7 @@ pub contract interface FungibleToken {
     /// because it leaves open the possibility of creating custom providers
     /// that do not necessarily need their own balance.
     ///
-    pub resource interface Provider {
+    access(all) resource interface Provider {
 
         /// withdraw subtracts tokens from the owner's Vault
         /// and returns a Vault with the removed tokens.
@@ -373,7 +373,7 @@ pub contract interface FungibleToken {
         /// capability that allows all users to access the provider
         /// resource through a reference.
         ///
-        pub fun withdraw(amount: Int): @Vault {
+        access(all) fun withdraw(amount: Int): @{Vault} {
             post {
                 // 'result' refers to the return value
                 result.balance == amount:
@@ -392,11 +392,11 @@ pub contract interface FungibleToken {
     /// can do custom things with the tokens, like split them up and
     /// send them to different places.
     ///
-    pub resource interface Receiver {
+    access(all) resource interface Receiver {
 
         /// deposit takes a Vault and deposits it into the implementing resource type
         ///
-        pub fun deposit(from: @Vault)
+        access(all) fun deposit(from: @{Vault})
     }
 
     /// Balance
@@ -405,11 +405,11 @@ pub contract interface FungibleToken {
     /// and enforces that when new Vaults are created, the balance
     /// is initialized correctly.
     ///
-    pub resource interface Balance {
+    access(all) resource interface Balance {
 
         /// The total balance of a vault
         ///
-        pub var balance: Int
+        access(all) var balance: Int
 
         init(balance: Int) {
             post {
@@ -423,7 +423,7 @@ pub contract interface FungibleToken {
     ///
     /// The resource that contains the functions to send and receive tokens.
     ///
-    pub resource Vault: Provider, Receiver, Balance {
+    access(all) resource interface Vault: Provider, Receiver, Balance {
 
         // The declaration of a concrete type in a contract interface means that
         // every Fungible Token contract that implements the FungibleToken interface
@@ -432,7 +432,7 @@ pub contract interface FungibleToken {
 
         /// The total balance of the vault
         ///
-        pub var balance: Int
+        access(all) var balance: Int
 
         // The conforming type must declare an initializer
         // that allows prioviding the initial balance of the Vault
@@ -442,7 +442,7 @@ pub contract interface FungibleToken {
         /// withdraw subtracts 'amount' from the Vault's balance
         /// and returns a new Vault with the subtracted balance
         ///
-        pub fun withdraw(amount: Int): @Vault {
+        access(all) fun withdraw(amount: Int): @{Vault} {
             pre {
                 self.balance >= amount:
                     "Amount withdrawn must be less than or equal than the balance of the Vault"
@@ -458,7 +458,7 @@ pub contract interface FungibleToken {
 
         /// deposit takes a Vault and adds its balance to the balance of this Vault
         ///
-        pub fun deposit(from: @Vault) {
+        access(all) fun deposit(from: @{Vault}) {
             post {
                 self.balance == before(self.balance) + before(from.balance):
                     "New Vault balance must be the sum of the previous balance and the deposited Vault"
@@ -468,7 +468,7 @@ pub contract interface FungibleToken {
 
     /// createEmptyVault allows any user to create a new Vault that has a zero balance
     ///
-    pub fun createEmptyVault(): @Vault {
+    access(all) fun createEmptyVault(): @{Vault} {
         post {
             result.balance == 0: "The newly created Vault must have zero balance"
         }
@@ -479,31 +479,10 @@ pub contract interface FungibleToken {
 const realFlowContract = `
 import FungibleToken from 0x1
 
-pub contract FlowToken: FungibleToken {
+access(all) contract FlowToken: FungibleToken {
 
     // Total supply of Flow tokens in existence
-    pub var totalSupply: Int
-	
-    //// Event that is emitted when the contract is created
-    //pub event TokensInitialized(initialSupply: Int)
-	//
-    //// Event that is emitted when tokens are withdrawn from a Vault
-    //pub event TokensWithdrawn(amount: Int, from: Address?)
-	//
-    //// Event that is emitted when tokens are deposited to a Vault
-    //pub event TokensDeposited(amount: Int, to: Address?)
-	//
-    //// Event that is emitted when new tokens are minted
-    //pub event TokensMinted(amount: Int)
-	//
-    //// Event that is emitted when tokens are destroyed
-    //pub event TokensBurned(amount: Int)
-	//
-    //// Event that is emitted when a new minter resource is created
-    //pub event MinterCreated(allowedAmount: Int)
-	//
-    //// Event that is emitted when a new burner resource is created
-    //pub event BurnerCreated()
+    access(all) var totalSupply: Int
 
     // Vault
     //
@@ -517,10 +496,10 @@ pub contract FlowToken: FungibleToken {
     // out of thin air. A special Minter resource needs to be defined to mint
     // new tokens.
     //
-    pub resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance {
+    access(all) resource Vault: FungibleToken.Vault {
 
         // holds the balance of a users tokens
-        pub var balance: Int
+        access(all) var balance: Int
 
         // initialize the balance at resource creation time
         init(balance: Int) {
@@ -536,9 +515,8 @@ pub contract FlowToken: FungibleToken {
         // created Vault to the context that called so it can be deposited
         // elsewhere.
         //
-        pub fun withdraw(amount: Int): @FungibleToken.Vault {
+        access(all) fun withdraw(amount: Int): @{FungibleToken.Vault} {
             self.balance = self.balance - amount
-            // emit TokensWithdrawn(amount: amount, from: self.owner?.address)
             return <-create Vault(balance: amount)
         }
 
@@ -549,16 +527,11 @@ pub contract FlowToken: FungibleToken {
         // It is allowed to destroy the sent Vault because the Vault
         // was a temporary holder of the tokens. The Vault's balance has
         // been consumed and therefore can be destroyed.
-        pub fun deposit(from: @FungibleToken.Vault) {
+        access(all) fun deposit(from: @{FungibleToken.Vault}) {
             let vault <- from as! @FlowToken.Vault
             self.balance = self.balance + vault.balance
-            // emit TokensDeposited(amount: vault.balance, to: self.owner?.address)
             vault.balance = 0
             destroy vault
-        }
-
-        destroy() {
-            FlowToken.totalSupply = FlowToken.totalSupply - self.balance
         }
     }
 
@@ -569,18 +542,16 @@ pub contract FlowToken: FungibleToken {
     // and store the returned Vault in their storage in order to allow their
     // account to be able to receive deposits of this token type.
     //
-    pub fun createEmptyVault(): @Vault {
+    access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
         return <-create Vault(balance: 0)
     }
 
-    pub resource Administrator {
-
+    access(all) resource Administrator {
         // createNewMinter
         //
         // Function that creates and returns a new minter resource
         //
-        pub fun createNewMinter(allowedAmount: Int): @Minter {
-            // emit MinterCreated(allowedAmount: allowedAmount)
+        access(all) fun createNewMinter(allowedAmount: Int): @Minter {
             return <-create Minter(allowedAmount: allowedAmount)
         }
 
@@ -588,8 +559,7 @@ pub contract FlowToken: FungibleToken {
         //
         // Function that creates and returns a new burner resource
         //
-        pub fun createNewBurner(): @Burner {
-            // emit BurnerCreated()
+        access(all) fun createNewBurner(): @Burner {
             return <-create Burner()
         }
     }
@@ -598,24 +568,23 @@ pub contract FlowToken: FungibleToken {
     //
     // Resource object that token admin accounts can hold to mint new tokens.
     //
-    pub resource Minter {
+    access(all) resource Minter {
 
         // the amount of tokens that the minter is allowed to mint
-        pub var allowedAmount: Int
+        access(all) var allowedAmount: Int
 
         // mintTokens
         //
         // Function that mints new tokens, adds them to the total supply,
         // and returns them to the calling context.
         //
-        pub fun mintTokens(amount: Int): @FlowToken.Vault {
+        access(all) fun mintTokens(amount: Int): @FlowToken.Vault {
             pre {
-                amount > Int(0): "Amount minted must be greater than zero"
+                amount > 0: "Amount minted must be greater than zero"
                 amount <= self.allowedAmount: "Amount minted must be less than the allowed amount"
             }
             FlowToken.totalSupply = FlowToken.totalSupply + amount
             self.allowedAmount = self.allowedAmount - amount
-            // emit TokensMinted(amount: amount)
             return <-create Vault(balance: amount)
         }
 
@@ -628,7 +597,7 @@ pub contract FlowToken: FungibleToken {
     //
     // Resource object that token admin accounts can hold to burn tokens.
     //
-    pub resource Burner {
+    access(all) resource Burner {
 
         // burnTokens
         //
@@ -637,43 +606,37 @@ pub contract FlowToken: FungibleToken {
         // Note: the burned tokens are automatically subtracted from the
         // total supply in the Vault destructor.
         //
-        pub fun burnTokens(from: @FungibleToken.Vault) {
+        access(all) fun burnTokens(from: @{FungibleToken.Vault}) {
             let vault <- from as! @FlowToken.Vault
             let amount = vault.balance
             destroy vault
-            // emit TokensBurned(amount: amount)
         }
     }
 
-    init(adminAccount: AuthAccount) {
+    init(adminAccount: auth(Storage, Capabilities) &Account) {
         self.totalSupply = 0
 
         // Create the Vault with the total supply of tokens and save it in storage
         //
         let vault <- create Vault(balance: self.totalSupply)
-        adminAccount.save(<-vault, to: /storage/flowTokenVault)
+        adminAccount.storage.save(<-vault, to: /storage/flowTokenVault)
 
         // Create a public capability to the stored Vault that only exposes
         // the 'deposit' method through the 'Receiver' interface
         //
-        adminAccount.link<&FlowToken.Vault{FungibleToken.Receiver}>(
-            /public/flowTokenReceiver,
-            target: /storage/flowTokenVault
-        )
+        let receiverCap = adminAccount.capabilities.storage
+            .issue<&FlowToken.Vault>(/storage/flowTokenVault)
+        adminAccount.capabilities.publish(receiverCap, at: /public/flowTokenReceiver)
 
         // Create a public capability to the stored Vault that only exposes
         // the 'balance' field through the 'Balance' interface
         //
-        adminAccount.link<&FlowToken.Vault{FungibleToken.Balance}>(
-            /public/flowTokenBalance,
-            target: /storage/flowTokenVault
-        )
+        let balanceCap = adminAccount.capabilities.storage
+            .issue<&FlowToken.Vault>(/storage/flowTokenVault)
+        adminAccount.capabilities.publish(balanceCap, at: /public/flowTokenBalance)
 
         let admin <- create Administrator()
-        adminAccount.save(<-admin, to: /storage/flowTokenAdmin)
-
-        // Emit an event that shows that the contract was initialized
-        // emit TokensInitialized(initialSupply: self.totalSupply)
+        adminAccount.storage.save(<-admin, to: /storage/flowTokenAdmin)
     }
 }
 `
@@ -684,22 +647,22 @@ import FlowToken from 0x1
 
 transaction {
 
-    prepare(signer: AuthAccount) {
+    prepare(signer: &Account) {
 
-        if signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
+        if signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
             // Create a new flowToken Vault and put it in storage
-            signer.save(<-FlowToken.createEmptyVault(), to: /storage/flowTokenVault)
+            signer.storage.save(<-FlowToken.createEmptyVault(), to: /storage/flowTokenVault)
 
             // Create a public capability to the Vault that only exposes
             // the deposit function through the Receiver interface
-            signer.link<&FlowToken.Vault{FungibleToken.Receiver}>(
+            signer.link<&FlowToken.Vault>(
                 /public/flowTokenReceiver,
                 target: /storage/flowTokenVault
             )
 
             // Create a public capability to the Vault that only exposes
             // the balance field through the Balance interface
-            signer.link<&FlowToken.Vault{FungibleToken.Balance}>(
+            signer.link<&FlowToken.Vault>(
                 /public/flowTokenBalance,
                 target: /storage/flowTokenVault
             )
@@ -712,15 +675,45 @@ const realFlowTokenTransferTransaction = `
 import FungibleToken from 0x1
 import FlowToken from 0x1
 
+transaction(recipient: Address, amount: Int) {
+    let tokenAdmin: &FlowToken.Administrator
+    let tokenReceiver: &{FungibleToken.Receiver}
+
+    prepare(signer: &Account) {
+        self.tokenAdmin = signer
+            .borrow<&FlowToken.Administrator>(from: /storage/flowTokenAdmin)
+            ?? panic("Signer is not the token admin")
+
+        self.tokenReceiver = getAccount(recipient)
+            .getCapability(/public/flowTokenReceiver)
+            .borrow<&{FungibleToken.Receiver}>()
+            ?? panic("Unable to borrow receiver reference")
+    }
+
+    execute {
+        let minter <- self.tokenAdmin.createNewMinter(allowedAmount: amount)
+        let mintedVault <- minter.mintTokens(amount: amount)
+
+        self.tokenReceiver.deposit(from: <-mintedVault)
+
+        destroy minter
+    }
+}
+`
+
+const realMintFlowTokenTransaction = `
+import FungibleToken from 0x1
+import FlowToken from 0x1
+
 transaction(amount: Int, to: Address) {
 
     // The Vault resource that holds the tokens that are being transferred
-    let sentVault: @FungibleToken.Vault
+    let sentVault: @{FungibleToken.Vault}
 
-    prepare(signer: AuthAccount) {
+    prepare(signer: &Account) {
 
         // Get a reference to the signer's stored vault
-        let vaultRef = signer.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
+        let vaultRef = signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
 			?? panic("Could not borrow reference to the owner's Vault!")
 
         // Withdraw tokens from the signer's stored vault
@@ -741,46 +734,15 @@ transaction(amount: Int, to: Address) {
 }
 `
 
-const realMintFlowTokenTransaction = `
-import FungibleToken from 0x1
-import FlowToken from 0x1
-
-transaction(recipient: Address, amount: Int) {
-    let signer: AuthAccount
-
-    prepare(signer: AuthAccount) {
-        self.signer = signer
-    }
-
-    execute {
-        var tokenAdmin = self.signer
-            .borrow<&FlowToken.Administrator>(from: /storage/flowTokenAdmin)
-            ?? panic("Signer is not the token admin")
-
-        var tokenReceiver = getAccount(recipient)
-            .getCapability(/public/flowTokenReceiver)
-            .borrow<&{FungibleToken.Receiver}>()
-            ?? panic("Unable to borrow receiver reference")
-
-        let minter <- tokenAdmin.createNewMinter(allowedAmount: amount)
-        let mintedVault <- minter.mintTokens(amount: amount)
-
-        tokenReceiver.deposit(from: <-mintedVault)
-
-        destroy minter
-    }
-}
-`
-
 const realFlowTokenBalanceScript = `
 import FungibleToken from 0x1
 import FlowToken from 0x1
 
-pub fun main(account: Address): Int {
+access(all) fun main(account: Address): Int {
 
     let vaultRef = getAccount(account)
         .getCapability(/public/flowTokenBalance)
-        .borrow<&FlowToken.Vault{FungibleToken.Balance}>()
+        .borrow<&FlowToken.Vault>()
         ?? panic("Could not borrow Balance reference to the Vault")
 
     return vaultRef.balance

@@ -264,6 +264,7 @@ func (v *CompositeValue) Transfer(
 
 				value := interpreter.MustConvertStoredValue(conf.MemoryGauge, atreeValue)
 
+				// TODO:
 				vmValue := InterpreterValueToVMValue(value)
 				vmValue.Transfer(conf, address, remove, nil)
 

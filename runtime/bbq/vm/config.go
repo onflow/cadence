@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/cadence/runtime/bbq/commons"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -30,7 +31,14 @@ type Config struct {
 	common.MemoryGauge
 	commons.ImportHandler
 	ContractValueHandler
+	stdlib.AccountHandler
 
+	// TODO: Move these to `Context`.
+	// Context is the shared state across a single execution
+	CapabilityControllerIterations              map[AddressPath]int
+	MutationDuringCapabilityControllerIteration bool
+
+	// TODO: temp
 	inter *interpreter.Interpreter
 }
 
@@ -56,3 +64,8 @@ func (c *Config) interpreter() *interpreter.Interpreter {
 }
 
 type ContractValueHandler func(conf *Config, location common.Location) *CompositeValue
+
+type AddressPath struct {
+	Address common.Address
+	Path    PathValue
+}

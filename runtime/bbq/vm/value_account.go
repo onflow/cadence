@@ -24,7 +24,13 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
+
+type AccountIDGenerator interface {
+	// GenerateAccountID generates a new, *non-zero*, unique ID for the given account.
+	GenerateAccountID(address common.Address) (uint64, error)
+}
 
 func NewAuthAccountReferenceValue(
 	address common.Address,
@@ -135,8 +141,9 @@ func init() {
 	//	},
 	//})
 
-	accountStorageTypeName := interpreter.PrimitiveStaticTypeAccount_Storage.String()
-	accountCapabilitiesTypeName := interpreter.PrimitiveStaticTypeAccount_Capabilities.String()
+	accountStorageTypeName := sema.Account_StorageType.QualifiedIdentifier()
+	accountCapabilitiesTypeName := sema.Account_CapabilitiesType.QualifiedIdentifier()
+	accountStorageCapabilitiesTypeName := sema.Account_StorageCapabilitiesType.QualifiedIdentifier()
 
 	// Account.Storage.save
 	RegisterTypeBoundFunction(
@@ -188,7 +195,7 @@ func init() {
 					config,
 					common.Address(addressValue),
 					domain,
-					identifier,
+					interpreter.StringStorageMapKey(identifier),
 					value,
 				)
 
@@ -282,7 +289,7 @@ func init() {
 
 				var borrowType *interpreter.ReferenceStaticType
 				if len(typeArguments) > 0 {
-					ty := typeArguments[1]
+					ty := typeArguments[0]
 					// we handle the nil case for this below
 					borrowType, _ = ty.(*interpreter.ReferenceStaticType)
 				}
@@ -293,6 +300,139 @@ func init() {
 					path,
 					borrowType,
 					true,
+				)
+			},
+		})
+
+	// Account.Capabilities.publish
+	RegisterTypeBoundFunction(
+		accountCapabilitiesTypeName,
+		sema.Account_CapabilitiesTypePublishFunctionName,
+		NativeFunctionValue{
+			ParameterCount: len(sema.Account_CapabilitiesTypeGetFunctionType.Parameters),
+			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
+				// Get address field from the receiver (Account)
+				account, ok := args[0].(*SimpleCompositeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				accountAddressValue, ok := account.GetMember(config, sema.AccountTypeAddressFieldName).(AddressValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				// Get capability argument
+
+				var capabilityValue *CapabilityValue
+				switch firstValue := args[1].(type) {
+				case *CapabilityValue:
+					capabilityValue = firstValue
+				default:
+					panic(errors.NewUnreachableError())
+				}
+
+				capabilityAddressValue := capabilityValue.Address
+				if capabilityAddressValue != accountAddressValue {
+					panic(interpreter.CapabilityAddressPublishingError{
+						CapabilityAddress: interpreter.AddressValue(capabilityAddressValue),
+						AccountAddress:    interpreter.AddressValue(accountAddressValue),
+					})
+				}
+
+				// Get path argument
+
+				path, ok := args[2].(PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if !ok || path.Domain != common.PathDomainPublic {
+					panic(errors.NewUnreachableError())
+				}
+
+				domain := path.Domain.Identifier()
+				identifier := path.Identifier
+
+				// Prevent an overwrite
+
+				accountAddress := common.Address(accountAddressValue)
+
+				storageMapKey := interpreter.StringStorageMapKey(identifier)
+				if StoredValueExists(
+					config.Storage,
+					common.Address(accountAddress),
+					domain,
+					storageMapKey,
+				) {
+					panic(interpreter.OverwriteError{
+						Address: interpreter.AddressValue(accountAddress),
+						Path:    VMValueToInterpreterValue(config.Storage, path).(interpreter.PathValue),
+					})
+				}
+
+				capabilityValue, ok = capabilityValue.Transfer(
+					config,
+					atree.Address(accountAddress),
+					true,
+					nil,
+				).(*CapabilityValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				// Write new value
+
+				WriteStored(
+					config,
+					accountAddress,
+					domain,
+					storageMapKey,
+					capabilityValue,
+				)
+
+				return Void
+			},
+		})
+
+	// Account.StorageCapabilities.issue
+	RegisterTypeBoundFunction(
+		accountStorageCapabilitiesTypeName,
+		sema.Account_StorageCapabilitiesTypeIssueFunctionName,
+		NativeFunctionValue{
+			ParameterCount: len(sema.Account_CapabilitiesTypeGetFunctionType.Parameters),
+			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
+				// Get address field from the receiver (PublicAccount)
+				authAccount, ok := args[0].(*SimpleCompositeValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+				address := authAccount.GetMember(config, sema.AccountTypeAddressFieldName)
+				addressValue, ok := address.(AddressValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				// Path argument
+				targetPathValue, ok := args[1].(PathValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				if !ok || targetPathValue.Domain != common.PathDomainStorage {
+					panic(errors.NewUnreachableError())
+				}
+
+				// Get borrow type type-argument
+				ty := typeArguments[0]
+
+				// Issue capability controller and return capability
+
+				return checkAndIssueStorageCapabilityControllerWithType(
+					config,
+					config.AccountHandler,
+					common.Address(addressValue),
+					targetPathValue,
+					ty,
 				)
 			},
 		})
@@ -429,4 +569,160 @@ func BorrowCapabilityController(
 	}
 
 	return referenceValue
+}
+
+func checkAndIssueStorageCapabilityControllerWithType(
+	config *Config,
+	idGenerator AccountIDGenerator,
+	address common.Address,
+	targetPathValue PathValue,
+	ty StaticType,
+) CapabilityValue {
+
+	borrowType, ok := ty.(*interpreter.ReferenceStaticType)
+	if !ok {
+		// TODO: remove conversion. se static type in error
+		semaType, err := config.interpreter().ConvertStaticToSemaType(ty)
+		if err != nil {
+			panic(err)
+		}
+		panic(interpreter.InvalidCapabilityIssueTypeError{
+			ExpectedTypeDescription: "reference type",
+			ActualType:              semaType,
+		})
+	}
+
+	// Issue capability controller
+
+	capabilityIDValue := IssueStorageCapabilityController(
+		config,
+		idGenerator,
+		address,
+		borrowType,
+		targetPathValue,
+	)
+
+	if capabilityIDValue == InvalidCapabilityID {
+		panic(interpreter.InvalidCapabilityIDError{})
+	}
+
+	// Return controller's capability
+
+	return NewCapabilityValue(
+		AddressValue(address),
+		capabilityIDValue,
+		borrowType,
+	)
+}
+
+func IssueStorageCapabilityController(
+	config *Config,
+	idGenerator AccountIDGenerator,
+	address common.Address,
+	borrowType *interpreter.ReferenceStaticType,
+	targetPathValue PathValue,
+) IntValue {
+	// Create and write StorageCapabilityController
+
+	var capabilityID uint64
+	var err error
+	errors.WrapPanic(func() {
+		capabilityID, err = idGenerator.GenerateAccountID(address)
+	})
+	if err != nil {
+		panic(interpreter.WrappedExternalError(err))
+	}
+	if capabilityID == 0 {
+		panic(errors.NewUnexpectedError("invalid zero account ID"))
+	}
+
+	capabilityIDValue := IntValue{
+		SmallInt: int64(capabilityID),
+	}
+
+	controller := NewStorageCapabilityControllerValue(
+		borrowType,
+		capabilityIDValue,
+		targetPathValue,
+	)
+
+	storeCapabilityController(config, address, capabilityIDValue, controller)
+	recordStorageCapabilityController(config, address, targetPathValue, capabilityIDValue)
+
+	return capabilityIDValue
+}
+
+func storeCapabilityController(
+	config *Config,
+	address common.Address,
+	capabilityIDValue IntValue,
+	controller CapabilityControllerValue,
+) {
+	storageMapKey := interpreter.Uint64StorageMapKey(capabilityIDValue.SmallInt)
+
+	existed := WriteStored(
+		config,
+		address,
+		stdlib.CapabilityControllerStorageDomain,
+		storageMapKey,
+		controller,
+	)
+
+	if existed {
+		panic(errors.NewUnreachableError())
+	}
+}
+
+var capabilityIDSetStaticType = &interpreter.DictionaryStaticType{
+	KeyType:   interpreter.PrimitiveStaticTypeUInt64,
+	ValueType: interpreter.NilStaticType,
+}
+
+func recordStorageCapabilityController(
+	config *Config,
+	address common.Address,
+	targetPathValue PathValue,
+	capabilityIDValue IntValue,
+) {
+	if targetPathValue.Domain != common.PathDomainStorage {
+		panic(errors.NewUnreachableError())
+	}
+
+	addressPath := AddressPath{
+		Address: address,
+		Path:    targetPathValue,
+	}
+	if config.CapabilityControllerIterations[addressPath] > 0 {
+		config.MutationDuringCapabilityControllerIteration = true
+	}
+
+	storage := config.Storage
+	identifier := targetPathValue.Identifier
+
+	storageMapKey := interpreter.StringStorageMapKey(identifier)
+
+	accountStorage := storage.GetStorageMap(address, stdlib.PathCapabilityStorageDomain, false)
+
+	referenced := accountStorage.ReadValue(config.MemoryGauge, interpreter.StringStorageMapKey(identifier))
+	readValue := InterpreterValueToVMValue(referenced)
+
+	setKey := capabilityIDValue
+	setValue := Nil
+
+	if readValue == nil {
+		capabilityIDSet := NewDictionaryValue(
+			config,
+			capabilityIDSetStaticType,
+			setKey,
+			setValue,
+		)
+		capabilityIDSetInterValue := VMValueToInterpreterValue(storage, capabilityIDSet)
+		accountStorage.SetValue(config.interpreter(), storageMapKey, capabilityIDSetInterValue)
+	} else {
+		capabilityIDSet := readValue.(*DictionaryValue)
+		existing := capabilityIDSet.Insert(config, setKey, setValue)
+		if existing != Nil {
+			panic(errors.NewUnreachableError())
+		}
+	}
 }

@@ -28,7 +28,7 @@ import (
 
 type VoidValue struct{}
 
-var _ Value = VoidValue{}
+var Void Value = VoidValue{}
 
 func (VoidValue) isValue() {}
 

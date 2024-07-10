@@ -48,10 +48,12 @@ func (v FunctionValue) String() string {
 	panic("implement me")
 }
 
+type NativeFunction func(config *Config, typeArguments []StaticType, arguments ...Value) Value
+
 type NativeFunctionValue struct {
 	Name           string
 	ParameterCount int
-	Function       func(config *Config, typeArguments []StaticType, arguments ...Value) Value
+	Function       NativeFunction
 }
 
 var _ Value = NativeFunctionValue{}

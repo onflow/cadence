@@ -46,15 +46,26 @@ func init() {
 	// Because the native functions used by a program are also
 	// added to the imports section of the compiled program.
 	// Then the VM will link the imports (native functions) by the name.
-	for _, builtinType := range builtinTypes {
-		for name, _ := range builtinType.GetMembers() {
-			funcName := commons.TypeQualifiedName(builtinType.QualifiedString(), name)
-			addNativeFunction(funcName)
-		}
+	for _, typ := range builtinTypes {
+		registerBoundFunctions(typ)
 	}
 
 	for _, funcName := range stdlibFunctions {
 		addNativeFunction(funcName)
+	}
+}
+
+func registerBoundFunctions(typ sema.Type) {
+	for name, _ := range typ.GetMembers() {
+		funcName := commons.TypeQualifiedName(typ.QualifiedString(), name)
+		addNativeFunction(funcName)
+	}
+
+	compositeType, ok := typ.(*sema.CompositeType)
+	if ok && compositeType.NestedTypes != nil {
+		compositeType.NestedTypes.Foreach(func(_ string, nestedType sema.Type) {
+			registerBoundFunctions(nestedType)
+		})
 	}
 }
 

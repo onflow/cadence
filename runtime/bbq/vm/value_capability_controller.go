@@ -80,13 +80,10 @@ func NewUnmeteredStorageCapabilityControllerValue(
 }
 
 func NewStorageCapabilityControllerValue(
-	memoryGauge common.MemoryGauge,
 	borrowType *interpreter.ReferenceStaticType,
 	capabilityID IntValue,
 	targetPath PathValue,
 ) *StorageCapabilityControllerValue {
-	// Constant because its constituents are already metered.
-	common.UseMemory(memoryGauge, common.StorageCapabilityControllerValueMemoryUsage)
 	return NewUnmeteredStorageCapabilityControllerValue(
 		borrowType,
 		capabilityID,
@@ -165,7 +162,7 @@ func (v *StorageCapabilityControllerValue) GetMember(config *Config, name string
 }
 
 func init() {
-	typeName := interpreter.PrimitiveStaticTypeStorageCapabilityController.String()
+	typeName := sema.StorageCapabilityControllerType.QualifiedName
 
 	// Capability.borrow
 	RegisterTypeBoundFunction(
@@ -176,7 +173,7 @@ func init() {
 			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
 				capabilityValue := args[0].(*StorageCapabilityControllerValue)
 
-				//stdlib.SetCapabilityControllerTag(config.inter)
+				//stdlib.SetCapabilityControllerTag(config.interpreter())
 
 				capabilityValue.checkDeleted()
 
