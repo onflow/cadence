@@ -377,11 +377,11 @@ func (e *interpreterEnvironment) EmitEvent(
 	values []interpreter.Value,
 	locationRange interpreter.LocationRange,
 ) {
-	emitEventFields(
+	EmitEventFields(
 		inter,
 		locationRange,
 		eventType,
-		newExportableValues(inter, values),
+		values,
 		e.runtimeInterface.EmitEvent,
 	)
 }

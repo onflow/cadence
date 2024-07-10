@@ -84,6 +84,11 @@ type StorageCommitter interface {
 	CommitStorageTemporarily(inter *interpreter.Interpreter) error
 }
 
+type CapabilityControllerIssueHandler interface {
+	EventEmitter
+	AccountIDGenerator
+}
+
 type AccountHandler interface {
 	AccountIDGenerator
 	BalanceProvider
@@ -2260,7 +2265,7 @@ func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.A
 
 func newAccountStorageCapabilitiesValue(
 	inter *interpreter.Interpreter,
-	accountIDGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
 	return interpreter.NewAccountStorageCapabilitiesValue(
@@ -2269,14 +2274,14 @@ func newAccountStorageCapabilitiesValue(
 		newAccountStorageCapabilitiesGetControllerFunction(inter, addressValue),
 		newAccountStorageCapabilitiesGetControllersFunction(inter, addressValue),
 		newAccountStorageCapabilitiesForEachControllerFunction(inter, addressValue),
-		newAccountStorageCapabilitiesIssueFunction(inter, accountIDGenerator, addressValue),
-		newAccountStorageCapabilitiesIssueWithTypeFunction(inter, accountIDGenerator, addressValue),
+		newAccountStorageCapabilitiesIssueFunction(inter, handler, addressValue),
+		newAccountStorageCapabilitiesIssueWithTypeFunction(inter, handler, addressValue),
 	)
 }
 
 func newAccountAccountCapabilitiesValue(
 	inter *interpreter.Interpreter,
-	accountIDGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
 	accountCapabilities := interpreter.NewAccountAccountCapabilitiesValue(
@@ -2285,8 +2290,8 @@ func newAccountAccountCapabilitiesValue(
 		newAccountAccountCapabilitiesGetControllerFunction(inter, addressValue),
 		newAccountAccountCapabilitiesGetControllersFunction(inter, addressValue),
 		newAccountAccountCapabilitiesForEachControllerFunction(inter, addressValue),
-		newAccountAccountCapabilitiesIssueFunction(inter, accountIDGenerator, addressValue),
-		newAccountAccountCapabilitiesIssueWithTypeFunction(inter, accountIDGenerator, addressValue),
+		newAccountAccountCapabilitiesIssueFunction(inter, handler, addressValue),
+		newAccountAccountCapabilitiesIssueWithTypeFunction(inter, handler, addressValue),
 	)
 
 	return accountCapabilities
@@ -2294,7 +2299,7 @@ func newAccountAccountCapabilitiesValue(
 
 func newAccountCapabilitiesValue(
 	inter *interpreter.Interpreter,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.Value {
 	return interpreter.NewAccountCapabilitiesValue(
@@ -2308,14 +2313,14 @@ func newAccountCapabilitiesValue(
 		func() interpreter.Value {
 			return newAccountStorageCapabilitiesValue(
 				inter,
-				idGenerator,
+				handler,
 				addressValue,
 			)
 		},
 		func() interpreter.Value {
 			return newAccountAccountCapabilitiesValue(
 				inter,
-				idGenerator,
+				handler,
 				addressValue,
 			)
 		},
@@ -2542,7 +2547,7 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 
 func newAccountStorageCapabilitiesIssueFunction(
 	inter *interpreter.Interpreter,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
@@ -2573,7 +2578,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 				return checkAndIssueStorageCapabilityControllerWithType(
 					inter,
 					locationRange,
-					idGenerator,
+					handler,
 					address,
 					targetPathValue,
 					ty,
@@ -2585,7 +2590,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 
 func newAccountStorageCapabilitiesIssueWithTypeFunction(
 	inter *interpreter.Interpreter,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
@@ -2623,7 +2628,7 @@ func newAccountStorageCapabilitiesIssueWithTypeFunction(
 				return checkAndIssueStorageCapabilityControllerWithType(
 					inter,
 					locationRange,
-					idGenerator,
+					handler,
 					address,
 					targetPathValue,
 					ty,
@@ -2636,7 +2641,7 @@ func newAccountStorageCapabilitiesIssueWithTypeFunction(
 func checkAndIssueStorageCapabilityControllerWithType(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	targetPathValue interpreter.PathValue,
 	ty sema.Type,
@@ -2656,7 +2661,7 @@ func checkAndIssueStorageCapabilityControllerWithType(
 	capabilityIDValue, borrowStaticType := IssueStorageCapabilityController(
 		inter,
 		locationRange,
-		idGenerator,
+		handler,
 		address,
 		borrowType,
 		targetPathValue,
@@ -2679,7 +2684,7 @@ func checkAndIssueStorageCapabilityControllerWithType(
 func IssueStorageCapabilityController(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	borrowType *sema.ReferenceType,
 	targetPathValue interpreter.PathValue,
@@ -2687,6 +2692,13 @@ func IssueStorageCapabilityController(
 	interpreter.UInt64Value,
 	*interpreter.ReferenceStaticType,
 ) {
+	if targetPathValue.Domain != common.PathDomainStorage {
+		panic(errors.NewDefaultUserError(
+			"invalid storage capability target path domain: %s",
+			targetPathValue.Domain.Identifier(),
+		))
+	}
+
 	// Create and write StorageCapabilityController
 
 	borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, borrowType)
@@ -2694,7 +2706,7 @@ func IssueStorageCapabilityController(
 	var capabilityID uint64
 	var err error
 	errors.WrapPanic(func() {
-		capabilityID, err = idGenerator.GenerateAccountID(address)
+		capabilityID, err = handler.GenerateAccountID(address)
 	})
 	if err != nil {
 		panic(interpreter.WrappedExternalError(err))
@@ -2715,12 +2727,27 @@ func IssueStorageCapabilityController(
 	storeCapabilityController(inter, address, capabilityIDValue, controller)
 	recordStorageCapabilityController(inter, locationRange, address, targetPathValue, capabilityIDValue)
 
+	addressValue := interpreter.AddressValue(address)
+	typeValue := interpreter.NewTypeValue(inter, borrowStaticType)
+
+	handler.EmitEvent(
+		inter,
+		StorageCapabilityControllerIssuedEventType,
+		[]interpreter.Value{
+			capabilityIDValue,
+			addressValue,
+			typeValue,
+			targetPathValue,
+		},
+		locationRange,
+	)
+
 	return capabilityIDValue, borrowStaticType
 }
 
 func newAccountAccountCapabilitiesIssueFunction(
 	inter *interpreter.Interpreter,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
@@ -2744,7 +2771,7 @@ func newAccountAccountCapabilitiesIssueFunction(
 				return checkAndIssueAccountCapabilityControllerWithType(
 					inter,
 					locationRange,
-					idGenerator,
+					handler,
 					address,
 					ty,
 				)
@@ -2755,7 +2782,7 @@ func newAccountAccountCapabilitiesIssueFunction(
 
 func newAccountAccountCapabilitiesIssueWithTypeFunction(
 	inter *interpreter.Interpreter,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
@@ -2786,7 +2813,7 @@ func newAccountAccountCapabilitiesIssueWithTypeFunction(
 				return checkAndIssueAccountCapabilityControllerWithType(
 					inter,
 					locationRange,
-					idGenerator,
+					handler,
 					address,
 					ty,
 				)
@@ -2798,7 +2825,7 @@ func newAccountAccountCapabilitiesIssueWithTypeFunction(
 func checkAndIssueAccountCapabilityControllerWithType(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	ty sema.Type,
 ) *interpreter.IDCapabilityValue {
@@ -2825,7 +2852,7 @@ func checkAndIssueAccountCapabilityControllerWithType(
 		IssueAccountCapabilityController(
 			inter,
 			locationRange,
-			idGenerator,
+			handler,
 			address,
 			borrowType,
 		)
@@ -2847,7 +2874,7 @@ func checkAndIssueAccountCapabilityControllerWithType(
 func IssueAccountCapabilityController(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	borrowType *sema.ReferenceType,
 ) (
@@ -2861,7 +2888,7 @@ func IssueAccountCapabilityController(
 	var capabilityID uint64
 	var err error
 	errors.WrapPanic(func() {
-		capabilityID, err = idGenerator.GenerateAccountID(address)
+		capabilityID, err = handler.GenerateAccountID(address)
 	})
 	if err != nil {
 		panic(interpreter.WrappedExternalError(err))
@@ -2884,6 +2911,20 @@ func IssueAccountCapabilityController(
 		locationRange,
 		address,
 		capabilityIDValue,
+	)
+
+	addressValue := interpreter.AddressValue(address)
+	typeValue := interpreter.NewTypeValue(inter, borrowStaticType)
+
+	handler.EmitEvent(
+		inter,
+		AccountCapabilityControllerIssuedEventType,
+		[]interpreter.Value{
+			capabilityIDValue,
+			addressValue,
+			typeValue,
+		},
+		locationRange,
 	)
 
 	return capabilityIDValue, borrowStaticType

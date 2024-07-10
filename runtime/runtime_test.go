@@ -1388,6 +1388,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
     `)
 
 	var loggedMessages []string
+	var events []cadence.Event
 
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(location Location) (bytes []byte, err error) {
@@ -1404,6 +1405,10 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 		},
 		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -1908,6 +1913,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
     `)
 
 	var loggedMessages []string
+	var events []cadence.Event
 
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(location Location) (bytes []byte, err error) {
@@ -1924,6 +1930,10 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 		},
 		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -2010,6 +2020,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
     `)
 
 	var loggedMessages []string
+	var events []cadence.Event
 
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(location Location) (bytes []byte, err error) {
@@ -2028,6 +2039,10 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 		},
 		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -2587,6 +2602,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 	)
 
 	var loggedMessages []string
+	var events []cadence.Event
 
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(location Location) ([]byte, error) {
@@ -2603,6 +2619,10 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 		},
 		OnProgramLog: func(message string) {
 			loggedMessages = append(loggedMessages, message)
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
 		},
 	}
 
