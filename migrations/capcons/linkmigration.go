@@ -237,10 +237,10 @@ func storageKeyToPathValue(
 	return interpreter.NewUnmeteredPathValue(domain, identifier), true
 }
 
-var authAccountReferenceStaticType = interpreter.NewReferenceStaticType(
+var unauthorizedAccountReferenceStaticType = interpreter.NewReferenceStaticType(
 	nil,
 	interpreter.UnauthorizedAccess,
-	interpreter.PrimitiveStaticTypeAuthAccount, //nolint:staticcheck
+	interpreter.PrimitiveStaticTypeAccount,
 )
 
 func (m *LinkValueMigration) getPathCapabilityFinalTarget(
@@ -309,10 +309,9 @@ func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 				pathValue = targetPath
 
 			case interpreter.AccountLinkValue: //nolint:staticcheck
-				if !inter.IsSubTypeOfSemaType(
-					authAccountReferenceStaticType,
-					wantedBorrowType,
-				) {
+				allowedType := unauthorizedAccountReferenceStaticType
+
+				if !inter.IsSubTypeOfSemaType(allowedType, wantedBorrowType) {
 					return nil, interpreter.UnauthorizedAccess, nil
 				}
 
