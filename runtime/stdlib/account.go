@@ -3056,7 +3056,11 @@ func getCapabilityController(
 			)
 
 		controller.SetTarget =
-			newStorageCapabilityControllerSetTargetFunction(address, controller)
+			newStorageCapabilityControllerSetTargetFunction(
+				address,
+				controller,
+				handler,
+			)
 
 	case *interpreter.AccountCapabilityControllerValue:
 		capabilityID := controller.CapabilityID
@@ -3115,6 +3119,7 @@ func getStorageCapabilityControllerReference(
 func newStorageCapabilityControllerSetTargetFunction(
 	address common.Address,
 	controller *interpreter.StorageCapabilityControllerValue,
+	handler CapabilityControllerHandler,
 ) func(*interpreter.Interpreter, interpreter.LocationRange, interpreter.PathValue) {
 	return func(
 		inter *interpreter.Interpreter,
@@ -3137,6 +3142,19 @@ func newStorageCapabilityControllerSetTargetFunction(
 			address,
 			newTargetPathValue,
 			capabilityID,
+		)
+
+		addressValue := interpreter.AddressValue(address)
+
+		handler.EmitEvent(
+			inter,
+			locationRange,
+			StorageCapabilityControllerTargetChangedEventType,
+			[]interpreter.Value{
+				capabilityID,
+				addressValue,
+				newTargetPathValue,
+			},
 		)
 	}
 }

@@ -350,3 +350,13 @@ var AccountCapabilityControllerDeletedEventType = newFlowEventType(
 	CapabilityControllerEventIDParameter,
 	CapabilityControllerEventAddressParameter,
 )
+
+var StorageCapabilityControllerTargetChangedEventType = newFlowEventType(
+	"StorageCapabilityControllerTargetChanged",
+	CapabilityControllerEventIDParameter,
+	CapabilityControllerEventAddressParameter,
+	sema.Parameter{
+		Identifier:     "path",
+		TypeAnnotation: sema.StoragePathTypeAnnotation,
+	},
+)
