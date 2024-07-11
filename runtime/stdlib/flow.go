@@ -360,3 +360,29 @@ var StorageCapabilityControllerTargetChangedEventType = newFlowEventType(
 		TypeAnnotation: sema.StoragePathTypeAnnotation,
 	},
 )
+
+var CapabilityEventAddressParameter = sema.Parameter{
+	Identifier:     "address",
+	TypeAnnotation: sema.AddressTypeAnnotation,
+}
+
+var CapabilityEventPathParameter = sema.Parameter{
+	Identifier:     "path",
+	TypeAnnotation: sema.PublicPathTypeAnnotation,
+}
+
+var CapabilityPublishedEventType = newFlowEventType(
+	"CapabilityPublished",
+	CapabilityEventAddressParameter,
+	CapabilityEventPathParameter,
+	sema.Parameter{
+		Identifier:     "capability",
+		TypeAnnotation: sema.NewTypeAnnotation(&sema.CapabilityType{}),
+	},
+)
+
+var CapabilityUnpublishedEventType = newFlowEventType(
+	"CapabilityUnpublished",
+	CapabilityEventAddressParameter,
+	CapabilityEventPathParameter,
+)

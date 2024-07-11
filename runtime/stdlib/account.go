@@ -2316,8 +2316,8 @@ func newAccountCapabilitiesValue(
 		newAccountCapabilitiesGetFunction(inter, addressValue, handler, false),
 		newAccountCapabilitiesGetFunction(inter, addressValue, handler, true),
 		newAccountCapabilitiesExistsFunction(inter, addressValue),
-		newAccountCapabilitiesPublishFunction(inter, addressValue),
-		newAccountCapabilitiesUnpublishFunction(inter, addressValue),
+		newAccountCapabilitiesPublishFunction(inter, addressValue, handler),
+		newAccountCapabilitiesUnpublishFunction(inter, addressValue, handler),
 		func() interpreter.Value {
 			return newAccountStorageCapabilitiesValue(
 				inter,
@@ -3473,7 +3473,9 @@ func getAccountCapabilityControllerIDsIterator(
 func newAccountCapabilitiesPublishFunction(
 	inter *interpreter.Interpreter,
 	accountAddressValue interpreter.AddressValue,
+	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
+
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		accountAddress := accountAddressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
@@ -3553,6 +3555,17 @@ func newAccountCapabilitiesPublishFunction(
 					capabilityValue,
 				)
 
+				handler.EmitEvent(
+					inter,
+					locationRange,
+					CapabilityPublishedEventType,
+					[]interpreter.Value{
+						accountAddressValue,
+						pathValue,
+						capabilityValue,
+					},
+				)
+
 				return interpreter.Void
 			},
 		)
@@ -3562,7 +3575,9 @@ func newAccountCapabilitiesPublishFunction(
 func newAccountCapabilitiesUnpublishFunction(
 	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
+	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
+
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
@@ -3619,6 +3634,16 @@ func newAccountCapabilitiesUnpublishFunction(
 					domain,
 					storageMapKey,
 					nil,
+				)
+
+				handler.EmitEvent(
+					inter,
+					locationRange,
+					CapabilityUnpublishedEventType,
+					[]interpreter.Value{
+						addressValue,
+						pathValue,
+					},
 				)
 
 				return interpreter.NewSomeValueNonCopying(inter, capabilityValue)
