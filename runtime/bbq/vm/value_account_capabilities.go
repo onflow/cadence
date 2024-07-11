@@ -20,6 +20,7 @@ package vm
 
 import (
 	"github.com/onflow/atree"
+
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -41,25 +42,10 @@ func NewAccountCapabilitiesValue(accountAddress common.Address) *SimpleComposite
 	}
 }
 
-func NewAccountStorageCapabilitiesValue(accountAddress common.Address) *SimpleCompositeValue {
-	return &SimpleCompositeValue{
-		typeID:     sema.Account_StorageCapabilitiesType.ID(),
-		staticType: interpreter.PrimitiveStaticTypeAccount_StorageCapabilities,
-		Kind:       common.CompositeKindStructure,
-		fields:     map[string]Value{
-			// TODO: add the remaining fields
-		},
-		metaInfo: map[string]any{
-			sema.AccountTypeAddressFieldName: accountAddress,
-		},
-	}
-}
-
 // members
 
 func init() {
 	accountCapabilitiesTypeName := sema.Account_CapabilitiesType.QualifiedIdentifier()
-	accountStorageCapabilitiesTypeName := sema.Account_StorageCapabilitiesType.QualifiedIdentifier()
 
 	// Account.Capabilities.get
 	RegisterTypeBoundFunction(
@@ -180,41 +166,6 @@ func init() {
 				)
 
 				return Void
-			},
-		})
-
-	// Account.StorageCapabilities.issue
-	RegisterTypeBoundFunction(
-		accountStorageCapabilitiesTypeName,
-		sema.Account_StorageCapabilitiesTypeIssueFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_StorageCapabilitiesTypeIssueFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
-				// Get address field from the receiver (Account.StorageCapabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[0])
-
-				// Path argument
-				targetPathValue, ok := args[1].(PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				if !ok || targetPathValue.Domain != common.PathDomainStorage {
-					panic(errors.NewUnreachableError())
-				}
-
-				// Get borrow type type-argument
-				ty := typeArguments[0]
-
-				// Issue capability controller and return capability
-
-				return checkAndIssueStorageCapabilityControllerWithType(
-					config,
-					config.AccountHandler,
-					accountAddress,
-					targetPathValue,
-					ty,
-				)
 			},
 		})
 }
