@@ -144,8 +144,6 @@ func init() {
 	//})
 
 	accountStorageTypeName := sema.Account_StorageType.QualifiedIdentifier()
-	accountCapabilitiesTypeName := sema.Account_CapabilitiesType.QualifiedIdentifier()
-	accountStorageCapabilitiesTypeName := sema.Account_StorageCapabilitiesType.QualifiedIdentifier()
 
 	// Account.Storage.save
 	RegisterTypeBoundFunction(
@@ -239,163 +237,6 @@ func init() {
 				return NewSomeValueNonCopying(reference)
 			},
 		})
-
-	// Account.Capabilities.get
-	RegisterTypeBoundFunction(
-		accountCapabilitiesTypeName,
-		sema.Account_CapabilitiesTypeGetFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_CapabilitiesTypeGetFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
-				// Get address field from the receiver (Account.Capabilities)
-				address := getAddressMetaInfoFromValue(args[0])
-
-				// Path argument
-				path, ok := args[1].(PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				//pathStaticType := path.StaticType(config.MemoryGauge)
-				//
-				//if !IsSubType(pathStaticType, pathType) {
-				//	panic(fmt.Errorf("type mismatch"))
-				//}
-
-				// NOTE: the type parameter is optional, for backwards compatibility
-
-				var borrowType *interpreter.ReferenceStaticType
-				if len(typeArguments) > 0 {
-					ty := typeArguments[0]
-					// we handle the nil case for this below
-					borrowType, _ = ty.(*interpreter.ReferenceStaticType)
-				}
-
-				return getCapability(
-					config,
-					address,
-					path,
-					borrowType,
-					true,
-				)
-			},
-		})
-
-	// Account.Capabilities.publish
-	RegisterTypeBoundFunction(
-		accountCapabilitiesTypeName,
-		sema.Account_CapabilitiesTypePublishFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_CapabilitiesTypeGetFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
-				// Get address field from the receiver (Account.Capabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[0])
-
-				// Get capability argument
-
-				var capabilityValue *CapabilityValue
-				switch firstValue := args[1].(type) {
-				case *CapabilityValue:
-					capabilityValue = firstValue
-				default:
-					panic(errors.NewUnreachableError())
-				}
-
-				capabilityAddressValue := common.Address(capabilityValue.Address)
-				if capabilityAddressValue != accountAddress {
-					panic(interpreter.CapabilityAddressPublishingError{
-						CapabilityAddress: interpreter.AddressValue(capabilityAddressValue),
-						AccountAddress:    interpreter.AddressValue(accountAddress),
-					})
-				}
-
-				// Get path argument
-
-				path, ok := args[2].(PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				if !ok || path.Domain != common.PathDomainPublic {
-					panic(errors.NewUnreachableError())
-				}
-
-				domain := path.Domain.Identifier()
-				identifier := path.Identifier
-
-				// Prevent an overwrite
-
-				storageMapKey := interpreter.StringStorageMapKey(identifier)
-				if StoredValueExists(
-					config.Storage,
-					accountAddress,
-					domain,
-					storageMapKey,
-				) {
-					panic(interpreter.OverwriteError{
-						Address: interpreter.AddressValue(accountAddress),
-						Path:    VMValueToInterpreterValue(config.Storage, path).(interpreter.PathValue),
-					})
-				}
-
-				capabilityValue, ok = capabilityValue.Transfer(
-					config,
-					atree.Address(accountAddress),
-					true,
-					nil,
-				).(*CapabilityValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				// Write new value
-
-				WriteStored(
-					config,
-					accountAddress,
-					domain,
-					storageMapKey,
-					capabilityValue,
-				)
-
-				return Void
-			},
-		})
-
-	// Account.StorageCapabilities.issue
-	RegisterTypeBoundFunction(
-		accountStorageCapabilitiesTypeName,
-		sema.Account_StorageCapabilitiesTypeIssueFunctionName,
-		NativeFunctionValue{
-			ParameterCount: len(sema.Account_CapabilitiesTypeGetFunctionType.Parameters),
-			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
-				// Get address field from the receiver (Account.StorageCapabilities)
-				accountAddress := getAddressMetaInfoFromValue(args[0])
-
-				// Path argument
-				targetPathValue, ok := args[1].(PathValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				if !ok || targetPathValue.Domain != common.PathDomainStorage {
-					panic(errors.NewUnreachableError())
-				}
-
-				// Get borrow type type-argument
-				ty := typeArguments[0]
-
-				// Issue capability controller and return capability
-
-				return checkAndIssueStorageCapabilityControllerWithType(
-					config,
-					config.AccountHandler,
-					accountAddress,
-					targetPathValue,
-					ty,
-				)
-			},
-		})
 }
 
 func getAddressMetaInfoFromValue(value Value) common.Address {
@@ -447,12 +288,10 @@ func getCapability(
 		return failValue
 	}
 
-	var readCapabilityValue *CapabilityValue
-
+	var readCapabilityValue CapabilityValue
 	switch readValue := readValue.(type) {
-	case *CapabilityValue:
+	case CapabilityValue:
 		readCapabilityValue = readValue
-
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -670,12 +509,11 @@ func recordStorageCapabilityController(
 		config.MutationDuringCapabilityControllerIteration = true
 	}
 
-	storage := config.Storage
 	identifier := targetPathValue.Identifier
 
 	storageMapKey := interpreter.StringStorageMapKey(identifier)
 
-	accountStorage := storage.GetStorageMap(address, stdlib.PathCapabilityStorageDomain, false)
+	accountStorage := config.Storage.GetStorageMap(address, stdlib.PathCapabilityStorageDomain, true)
 
 	referenced := accountStorage.ReadValue(config.MemoryGauge, interpreter.StringStorageMapKey(identifier))
 	readValue := InterpreterValueToVMValue(referenced)
@@ -690,7 +528,7 @@ func recordStorageCapabilityController(
 			setKey,
 			setValue,
 		)
-		capabilityIDSetInterValue := VMValueToInterpreterValue(storage, capabilityIDSet)
+		capabilityIDSetInterValue := VMValueToInterpreterValue(capabilityIDSet)
 		accountStorage.SetValue(config.interpreter(), storageMapKey, capabilityIDSetInterValue)
 	} else {
 		capabilityIDSet := readValue.(*DictionaryValue)

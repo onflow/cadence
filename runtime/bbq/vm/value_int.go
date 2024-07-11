@@ -31,6 +31,12 @@ type IntValue struct {
 	SmallInt int64
 }
 
+func NewIntValue(smallInt int64) IntValue {
+	return IntValue{
+		SmallInt: smallInt,
+	}
+}
+
 func (v IntValue) String() string {
 	return strconv.FormatInt(v.SmallInt, 10)
 }

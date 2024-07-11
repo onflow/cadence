@@ -494,6 +494,11 @@ func opEqual(vm *VM) {
 	vm.replaceTop(BoolValue(left == right))
 }
 
+func opNotEqual(vm *VM) {
+	left, right := vm.peekPop()
+	vm.replaceTop(BoolValue(left != right))
+}
+
 func opUnwrap(vm *VM) {
 	value := vm.peek()
 	if someValue, ok := value.(*SomeValue); ok {
@@ -573,6 +578,8 @@ func (vm *VM) run() {
 			opNil(vm)
 		case opcode.Equal:
 			opEqual(vm)
+		case opcode.NotEqual:
+			opNotEqual(vm)
 		case opcode.Unwrap:
 			opUnwrap(vm)
 		default:
@@ -675,4 +682,21 @@ func decodeLocation(locationBytes []byte) common.Location {
 		panic(err)
 	}
 	return location
+}
+
+func getReceiver[T any](receiver Value) T {
+	switch receiver := receiver.(type) {
+	case *SomeValue:
+		return getReceiver[T](receiver.value)
+	case *EphemeralReferenceValue:
+		return getReceiver[T](receiver.Value)
+	case *StorageReferenceValue:
+		referencedValue, err := receiver.dereference(nil)
+		if err != nil {
+			panic(err)
+		}
+		return getReceiver[T](*referencedValue)
+	default:
+		return receiver.(T)
+	}
 }

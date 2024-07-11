@@ -803,6 +803,8 @@ func TypeName(typ sema.Type) string {
 	case *sema.IntersectionType:
 		// TODO: Revisit. Probably this is not needed here?
 		return TypeName(typ.Types[0])
+	case *sema.CapabilityType:
+		return interpreter.PrimitiveStaticTypeCapability.String()
 	default:
 		return typ.QualifiedString()
 	}
@@ -918,7 +920,7 @@ var intBinaryOpcodes = [...]opcode.Opcode{
 	ast.OperationDiv:          opcode.IntDivide,
 	ast.OperationMod:          opcode.IntMod,
 	ast.OperationEqual:        opcode.Equal,
-	ast.OperationNotEqual:     opcode.IntNotEqual,
+	ast.OperationNotEqual:     opcode.NotEqual,
 	ast.OperationLess:         opcode.IntLess,
 	ast.OperationLessEqual:    opcode.IntLessOrEqual,
 	ast.OperationGreater:      opcode.IntGreater,

@@ -10945,7 +10945,7 @@ func TestRuntimeAccountStorageBorrowEphemeralReferenceValue(t *testing.T) {
 
 func BenchmarkContractFunctionInvocation(b *testing.B) {
 
-	runtime := newTestInterpreterRuntime()
+	runtime := NewTestInterpreterRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0x1})
 
@@ -10977,32 +10977,32 @@ func BenchmarkContractFunctionInvocation(b *testing.B) {
 	var accountCode []byte
 	var events []cadence.Event
 
-	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestLedger(nil, nil),
-		getSigningAccounts: func() ([]Address, error) {
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{Address(addressValue)}, nil
 		},
-		resolveLocation: singleIdentifierLocationResolver(b),
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+		OnResolveLocation: NewSingleIdentifierLocationResolver(b),
+		OnGetAccountContractCode: func(_ common.AddressLocation) (code []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
+		OnUpdateAccountContractCode: func(_ common.AddressLocation, code []byte) error {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {
+		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
-		decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+		OnDecodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
 			return json.Decode(nil, b)
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
 		Script{

@@ -49,13 +49,6 @@ type StorageCapabilityControllerValue struct {
 	// deleted indicates if the controller got deleted. Not stored
 	deleted bool
 
-	// Lazily initialized function values.
-	// Host functions based on injected functions (see below).
-	deleteFunction   *FunctionValue
-	targetFunction   *FunctionValue
-	retargetFunction *FunctionValue
-	setTagFunction   *FunctionValue
-
 	// Injected functions.
 	// Tags are not stored directly inside the controller
 	// to avoid unnecessary storage reads

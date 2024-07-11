@@ -90,7 +90,8 @@ func TestFTTransfer(t *testing.T) {
 	flowTokenVM := NewVM(
 		flowTokenProgram,
 		&Config{
-			Storage: storage,
+			Storage:        storage,
+			AccountHandler: &testAccountHandler{},
 		},
 	)
 
@@ -157,6 +158,8 @@ func TestFTTransfer(t *testing.T) {
 				return nil
 			}
 		},
+
+		AccountHandler: &testAccountHandler{},
 	}
 
 	for _, address := range []common.Address{
@@ -217,8 +220,8 @@ func TestFTTransfer(t *testing.T) {
 	total := int64(1000000)
 
 	mintTxArgs := []Value{
-		AddressValue(senderAddress),
 		IntValue{total},
+		AddressValue(senderAddress),
 	}
 
 	mintTxAuthorizer := NewAuthAccountReferenceValue(contractsAddress)
@@ -647,26 +650,28 @@ import FlowToken from 0x1
 
 transaction {
 
-    prepare(signer: &Account) {
+    prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue) &Account) {
 
-        if signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
-            // Create a new flowToken Vault and put it in storage
-            signer.storage.save(<-FlowToken.createEmptyVault(), to: /storage/flowTokenVault)
-
-            // Create a public capability to the Vault that only exposes
-            // the deposit function through the Receiver interface
-            signer.link<&FlowToken.Vault>(
-                /public/flowTokenReceiver,
-                target: /storage/flowTokenVault
-            )
-
-            // Create a public capability to the Vault that only exposes
-            // the balance field through the Balance interface
-            signer.link<&FlowToken.Vault>(
-                /public/flowTokenBalance,
-                target: /storage/flowTokenVault
-            )
+        if signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) != nil {
+            return
         }
+
+        var storagePath = /storage/flowTokenVault
+
+        // Create a new flowToken Vault and put it in storage
+        signer.storage.save(<-FlowToken.createEmptyVault(), to: storagePath)
+
+        // Create a public capability to the Vault that exposes the Vault interfaces
+        let vaultCap = signer.capabilities.storage.issue<&FlowToken.Vault>(
+            storagePath
+        )
+        signer.capabilities.publish(vaultCap, at: /public/flowTokenVault)
+
+        // Create a public Capability to the Vault's Receiver functionality
+        let receiverCap = signer.capabilities.storage.issue<&FlowToken.Vault>(
+            storagePath
+        )
+        signer.capabilities.publish(receiverCap, at: /public/flowTokenReceiver)
     }
 }
 `
@@ -679,14 +684,13 @@ transaction(recipient: Address, amount: Int) {
     let tokenAdmin: &FlowToken.Administrator
     let tokenReceiver: &{FungibleToken.Receiver}
 
-    prepare(signer: &Account) {
-        self.tokenAdmin = signer
-            .borrow<&FlowToken.Administrator>(from: /storage/flowTokenAdmin)
+    prepare(signer: auth(BorrowValue) &Account) {
+        self.tokenAdmin = signer.storage.borrow<&FlowToken.Administrator>(from: /storage/flowTokenAdmin)
             ?? panic("Signer is not the token admin")
 
         self.tokenReceiver = getAccount(recipient)
-            .getCapability(/public/flowTokenReceiver)
-            .borrow<&{FungibleToken.Receiver}>()
+            .capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+            .borrow()
             ?? panic("Unable to borrow receiver reference")
     }
 
@@ -710,7 +714,7 @@ transaction(amount: Int, to: Address) {
     // The Vault resource that holds the tokens that are being transferred
     let sentVault: @{FungibleToken.Vault}
 
-    prepare(signer: &Account) {
+    prepare(signer: auth(BorrowValue) &Account) {
 
         // Get a reference to the signer's stored vault
         let vaultRef = signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
@@ -724,8 +728,8 @@ transaction(amount: Int, to: Address) {
 
         // Get a reference to the recipient's Receiver
         let receiverRef =  getAccount(to)
-            .getCapability(/public/flowTokenReceiver)
-            .borrow<&{FungibleToken.Receiver}>()
+            .capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+            .borrow()
 			?? panic("Could not borrow receiver reference to the recipient's Vault")
 
         // Deposit the withdrawn tokens in the recipient's receiver

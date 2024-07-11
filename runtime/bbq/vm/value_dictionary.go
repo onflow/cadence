@@ -35,7 +35,7 @@ var _ Value = &DictionaryValue{}
 var _ MemberAccessibleValue = &DictionaryValue{}
 
 func NewDictionaryValue(
-	conf *Config,
+	config *Config,
 	dictionaryType *interpreter.DictionaryStaticType,
 	keysAndValues ...Value,
 ) *DictionaryValue {
@@ -49,7 +49,7 @@ func NewDictionaryValue(
 
 	constructor := func() *atree.OrderedMap {
 		dictionary, err := atree.NewMap(
-			conf.Storage,
+			config.Storage,
 			atree.Address(address),
 			atree.NewDefaultDigesterBuilder(),
 			dictionaryType,
@@ -66,7 +66,7 @@ func NewDictionaryValue(
 	for i := 0; i < keysAndValuesCount; i += 2 {
 		key := keysAndValues[i]
 		value := keysAndValues[i+1]
-		existingValue := v.Insert(conf, key, value)
+		existingValue := v.Insert(config, key, value)
 		// If the dictionary already contained a value for the key,
 		// and the dictionary is resource-typed,
 		// then we need to prevent a resource loss
@@ -173,8 +173,8 @@ func (v *DictionaryValue) InsertWithoutTransfer(conf *Config, key, value Value) 
 	valueComparator := newValueComparator(conf)
 	hashInputProvider := newHashInputProvider(conf)
 
-	keyInterpreterValue := VMValueToInterpreterValue(conf.Storage, key)
-	valueInterpreterValue := VMValueToInterpreterValue(conf.Storage, value)
+	keyInterpreterValue := VMValueToInterpreterValue(key)
+	valueInterpreterValue := VMValueToInterpreterValue(value)
 
 	// atree only calls Storable() on keyValue if needed,
 	// i.e., if the key is a new key

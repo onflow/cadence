@@ -60,9 +60,8 @@ func WriteStored(
 	key interpreter.StorageMapKey,
 	value Value,
 ) (existed bool) {
-	storage := config.Storage
-	accountStorage := storage.GetStorageMap(storageAddress, domain, true)
-	interValue := VMValueToInterpreterValue(storage, value)
+	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, true)
+	interValue := VMValueToInterpreterValue(value)
 
 	return accountStorage.WriteValue(
 		config.interpreter(),

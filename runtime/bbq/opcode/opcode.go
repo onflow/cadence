@@ -39,9 +39,8 @@ const (
 	IntMultiply
 	IntDivide
 	IntMod
-	IntEqual
-	IntNotEqual
 	IntLess
+
 	IntGreater
 	IntLessOrEqual
 	IntGreaterOrEqual
@@ -49,6 +48,7 @@ const (
 	// Unary/Binary operators
 
 	Equal
+	NotEqual
 	Unwrap
 	Destroy
 	Transfer

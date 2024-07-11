@@ -49,8 +49,8 @@ func NewCapabilityValue(address AddressValue, id IntValue, borrowType StaticType
 func NewInvalidCapabilityValue(
 	address common.Address,
 	borrowType StaticType,
-) *CapabilityValue {
-	return &CapabilityValue{
+) CapabilityValue {
+	return CapabilityValue{
 		ID:         InvalidCapabilityID,
 		Address:    AddressValue(address),
 		BorrowType: borrowType,
@@ -91,7 +91,7 @@ func init() {
 		NativeFunctionValue{
 			ParameterCount: 0,
 			Function: func(config *Config, typeArguments []StaticType, args ...Value) Value {
-				capabilityValue := args[0].(CapabilityValue)
+				capabilityValue := getReceiver[CapabilityValue](args[0])
 				capabilityID := capabilityValue.ID
 
 				if capabilityID == InvalidCapabilityID {

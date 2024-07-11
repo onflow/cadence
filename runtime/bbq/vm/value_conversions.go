@@ -29,6 +29,10 @@ import (
 
 func InterpreterValueToVMValue(value interpreter.Value) Value {
 	switch value := value.(type) {
+	case nil:
+		return nil
+	case interpreter.NilValue:
+		return Nil
 	case interpreter.IntValue:
 		return IntValue{value.BigInt.Int64()}
 	case *interpreter.StringValue:
@@ -66,13 +70,35 @@ func InterpreterValueToVMValue(value interpreter.Value) Value {
 			value.TypeID,
 			fields,
 		)
+	case *interpreter.DictionaryValue:
+		return newDictionaryValueFromAtreeMap(
+			value.Type,
+			value.ElementSize(),
+			value.AtreeMap(),
+		)
+	case *interpreter.IDCapabilityValue:
+		return NewCapabilityValue(
+			AddressValue(value.Address),
+			NewIntValue(int64(value.ID.ToInt(interpreter.EmptyLocationRange))),
+			value.BorrowType,
+		)
+	case *interpreter.StorageCapabilityControllerValue:
+		return NewStorageCapabilityControllerValue(
+			value.BorrowType,
+			NewIntValue(int64(value.CapabilityID.ToInt(interpreter.EmptyLocationRange))),
+			InterpreterValueToVMValue(value.TargetPath).(PathValue),
+		)
 	default:
 		panic(errors.NewUnreachableError())
 	}
 }
 
-func VMValueToInterpreterValue(storage interpreter.Storage, value Value) interpreter.Value {
+func VMValueToInterpreterValue(value Value) interpreter.Value {
 	switch value := value.(type) {
+	case nil:
+		return nil
+	case NilValue:
+		return interpreter.Nil
 	case IntValue:
 		return interpreter.NewIntValueFromInt64(nil, value.SmallInt)
 	case StringValue:
@@ -87,11 +113,20 @@ func VMValueToInterpreterValue(storage interpreter.Storage, value Value) interpr
 			},
 			value.dictionary,
 		)
-	case *CapabilityValue:
+	case *DictionaryValue:
+		staticType := value.Type
+		elementSize := interpreter.DictionaryElementSize(staticType)
+		return interpreter.NewDictionaryValueFromAtreeMap(
+			nil,
+			staticType,
+			elementSize,
+			value.dictionary,
+		)
+	case CapabilityValue:
 		return interpreter.NewCapabilityValue(
 			nil,
 			interpreter.NewUnmeteredUInt64Value(uint64(value.ID.SmallInt)), // TODO: properly convert
-			VMValueToInterpreterValue(storage, value.Address).(interpreter.AddressValue),
+			VMValueToInterpreterValue(value.Address).(interpreter.AddressValue),
 			value.BorrowType,
 		)
 	//case LinkValue:
@@ -111,7 +146,7 @@ func VMValueToInterpreterValue(storage interpreter.Storage, value Value) interpr
 		var fieldNames []string
 
 		for name, field := range value.fields {
-			fields[name] = VMValueToInterpreterValue(storage, field)
+			fields[name] = VMValueToInterpreterValue(field)
 			fieldNames = append(fieldNames, name)
 		}
 
@@ -133,6 +168,13 @@ func VMValueToInterpreterValue(storage interpreter.Storage, value Value) interpr
 	//		value.TargetPath,
 	//		value.BorrowedType,
 	//	)
+	case *StorageCapabilityControllerValue:
+		return interpreter.NewStorageCapabilityControllerValue(
+			nil,
+			value.BorrowType,
+			interpreter.NewUnmeteredUInt64Value(uint64(value.CapabilityID.SmallInt)),
+			VMValueToInterpreterValue(value.TargetPath).(interpreter.PathValue),
+		)
 	default:
 		panic(errors.NewUnreachableError())
 	}
