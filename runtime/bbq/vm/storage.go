@@ -32,9 +32,9 @@ import (
 //		CheckHealth() error
 //	}
 
-func StoredValue(gauge common.MemoryGauge, storable atree.Storable, storage atree.SlabStorage) Value {
+func StoredValue(gauge common.MemoryGauge, storable atree.Storable, storage interpreter.Storage) Value {
 	value := interpreter.StoredValue(gauge, storable, storage)
-	return InterpreterValueToVMValue(value)
+	return InterpreterValueToVMValue(storage, value)
 }
 
 func ReadStored(
@@ -50,7 +50,7 @@ func ReadStored(
 	}
 
 	referenced := accountStorage.ReadValue(gauge, interpreter.StringStorageMapKey(identifier))
-	return InterpreterValueToVMValue(referenced)
+	return InterpreterValueToVMValue(storage, referenced)
 }
 
 func WriteStored(
@@ -61,7 +61,7 @@ func WriteStored(
 	value Value,
 ) (existed bool) {
 	accountStorage := config.Storage.GetStorageMap(storageAddress, domain, true)
-	interValue := VMValueToInterpreterValue(value)
+	interValue := VMValueToInterpreterValue(config, value)
 
 	return accountStorage.WriteValue(
 		config.interpreter(),

@@ -27,7 +27,7 @@ import (
 // Utility methods to convert between old and new values.
 // These are temporary until all parts of the interpreter are migrated to the vm.
 
-func InterpreterValueToVMValue(value interpreter.Value) Value {
+func InterpreterValueToVMValue(storage interpreter.Storage, value interpreter.Value) Value {
 	switch value := value.(type) {
 	case nil:
 		return nil
@@ -61,7 +61,7 @@ func InterpreterValueToVMValue(value interpreter.Value) Value {
 		var fieldNames []string
 
 		for name, field := range value.Fields {
-			fields[name] = InterpreterValueToVMValue(field)
+			fields[name] = InterpreterValueToVMValue(storage, field)
 			fieldNames = append(fieldNames, name)
 		}
 
@@ -86,14 +86,22 @@ func InterpreterValueToVMValue(value interpreter.Value) Value {
 		return NewStorageCapabilityControllerValue(
 			value.BorrowType,
 			NewIntValue(int64(value.CapabilityID.ToInt(interpreter.EmptyLocationRange))),
-			InterpreterValueToVMValue(value.TargetPath).(PathValue),
+			InterpreterValueToVMValue(storage, value.TargetPath).(PathValue),
+		)
+	case *interpreter.StorageReferenceValue:
+		return NewStorageReferenceValue(
+			storage,
+			value.Authorization,
+			value.TargetStorageAddress,
+			InterpreterValueToVMValue(storage, value.TargetPath).(PathValue),
+			interpreter.ConvertSemaToStaticType(nil, value.BorrowedType),
 		)
 	default:
 		panic(errors.NewUnreachableError())
 	}
 }
 
-func VMValueToInterpreterValue(value Value) interpreter.Value {
+func VMValueToInterpreterValue(config *Config, value Value) interpreter.Value {
 	switch value := value.(type) {
 	case nil:
 		return nil
@@ -126,7 +134,7 @@ func VMValueToInterpreterValue(value Value) interpreter.Value {
 		return interpreter.NewCapabilityValue(
 			nil,
 			interpreter.NewUnmeteredUInt64Value(uint64(value.ID.SmallInt)), // TODO: properly convert
-			VMValueToInterpreterValue(value.Address).(interpreter.AddressValue),
+			VMValueToInterpreterValue(config, value.Address).(interpreter.AddressValue),
 			value.BorrowType,
 		)
 	//case LinkValue:
@@ -146,7 +154,7 @@ func VMValueToInterpreterValue(value Value) interpreter.Value {
 		var fieldNames []string
 
 		for name, field := range value.fields {
-			fields[name] = VMValueToInterpreterValue(field)
+			fields[name] = VMValueToInterpreterValue(config, field)
 			fieldNames = append(fieldNames, name)
 		}
 
@@ -160,20 +168,25 @@ func VMValueToInterpreterValue(value Value) interpreter.Value {
 			nil,
 			nil,
 		)
-	//case *StorageReferenceValue:
-	//	return interpreter.NewStorageReferenceValue(
-	//		nil,
-	//		value.Authorized,
-	//		value.TargetStorageAddress,
-	//		value.TargetPath,
-	//		value.BorrowedType,
-	//	)
+	case *StorageReferenceValue:
+		inter := config.interpreter()
+		semaBorrowType, err := inter.ConvertStaticToSemaType(value.BorrowedType)
+		if err != nil {
+			panic(err)
+		}
+		return interpreter.NewStorageReferenceValue(
+			nil,
+			value.Authorization,
+			value.TargetStorageAddress,
+			VMValueToInterpreterValue(config, value.TargetPath).(interpreter.PathValue),
+			semaBorrowType,
+		)
 	case *StorageCapabilityControllerValue:
 		return interpreter.NewStorageCapabilityControllerValue(
 			nil,
 			value.BorrowType,
 			interpreter.NewUnmeteredUInt64Value(uint64(value.CapabilityID.SmallInt)),
-			VMValueToInterpreterValue(value.TargetPath).(interpreter.PathValue),
+			VMValueToInterpreterValue(config, value.TargetPath).(interpreter.PathValue),
 		)
 	default:
 		panic(errors.NewUnreachableError())

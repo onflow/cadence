@@ -166,15 +166,15 @@ func (v *DictionaryValue) Insert(
 	return NewSomeValueNonCopying(existingValue)
 }
 
-func (v *DictionaryValue) InsertWithoutTransfer(conf *Config, key, value Value) (existingValueStorable atree.Storable) {
+func (v *DictionaryValue) InsertWithoutTransfer(config *Config, key, value Value) (existingValueStorable atree.Storable) {
 
 	//interpreter.validateMutation(v.StorageID(), locationRange)
 
-	valueComparator := newValueComparator(conf)
-	hashInputProvider := newHashInputProvider(conf)
+	valueComparator := newValueComparator(config)
+	hashInputProvider := newHashInputProvider(config)
 
-	keyInterpreterValue := VMValueToInterpreterValue(key)
-	valueInterpreterValue := VMValueToInterpreterValue(value)
+	keyInterpreterValue := VMValueToInterpreterValue(config, key)
+	valueInterpreterValue := VMValueToInterpreterValue(config, value)
 
 	// atree only calls Storable() on keyValue if needed,
 	// i.e., if the key is a new key
@@ -209,13 +209,14 @@ func (v *DictionaryValue) String() string {
 }
 
 func (v *DictionaryValue) Transfer(
-	conf *Config,
+	config *Config,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
 ) Value {
 	currentStorageID := v.StorageID()
 	currentAddress := currentStorageID.Address
+	storage := config.Storage
 
 	dictionary := v.dictionary
 
@@ -223,8 +224,8 @@ func (v *DictionaryValue) Transfer(
 	isResourceKinded := v.IsResourceKinded()
 
 	if needsStoreTo || !isResourceKinded {
-		valueComparator := newValueComparator(conf)
-		hashInputProvider := newHashInputProvider(conf)
+		valueComparator := newValueComparator(config)
+		hashInputProvider := newHashInputProvider(config)
 
 		iterator, err := v.dictionary.Iterator()
 		if err != nil {
@@ -232,7 +233,7 @@ func (v *DictionaryValue) Transfer(
 		}
 
 		dictionary, err = atree.NewMapFromBatchData(
-			conf.Storage,
+			storage,
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
@@ -249,15 +250,15 @@ func (v *DictionaryValue) Transfer(
 					return nil, nil, nil
 				}
 
-				key := interpreter.MustConvertStoredValue(conf.MemoryGauge, atreeValue)
+				key := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeValue)
 				// TODO: converted value is unused
-				vmKey := InterpreterValueToVMValue(key)
-				vmKey = vmKey.Transfer(conf, address, remove, nil)
+				vmKey := InterpreterValueToVMValue(config.Storage, key)
+				vmKey = vmKey.Transfer(config, address, remove, nil)
 
-				value := interpreter.MustConvertStoredValue(conf.MemoryGauge, atreeValue)
+				value := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeValue)
 				// TODO: converted value is unused
-				vmValue := InterpreterValueToVMValue(value)
-				vmValue = vmValue.Transfer(conf, address, remove, nil)
+				vmValue := InterpreterValueToVMValue(config.Storage, value)
+				vmValue = vmValue.Transfer(config, address, remove, nil)
 
 				return key, value, nil
 			},
@@ -268,15 +269,15 @@ func (v *DictionaryValue) Transfer(
 
 		if remove {
 			err = v.dictionary.PopIterate(func(keyStorable atree.Storable, valueStorable atree.Storable) {
-				RemoveReferencedSlab(conf.Storage, keyStorable)
-				RemoveReferencedSlab(conf.Storage, valueStorable)
+				RemoveReferencedSlab(storage, keyStorable)
+				RemoveReferencedSlab(storage, valueStorable)
 			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
 			//interpreter.maybeValidateAtreeValue(v.dictionary)
 
-			RemoveReferencedSlab(conf.Storage, storable)
+			RemoveReferencedSlab(storage, storable)
 		}
 	}
 

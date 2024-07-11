@@ -160,6 +160,22 @@ func TestFTTransfer(t *testing.T) {
 		},
 
 		AccountHandler: &testAccountHandler{},
+
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+			semaImport, err := checkerImportHandler(nil, location, ast.EmptyRange)
+			if err != nil {
+				panic(err)
+			}
+
+			elaborationImport := semaImport.(sema.ElaborationImport)
+
+			compositeType := elaborationImport.Elaboration.CompositeType(typeID)
+			if compositeType != nil {
+				return compositeType
+			}
+
+			return elaborationImport.Elaboration.InterfaceType(typeID)
+		},
 	}
 
 	for _, address := range []common.Address{
@@ -220,8 +236,8 @@ func TestFTTransfer(t *testing.T) {
 	total := int64(1000000)
 
 	mintTxArgs := []Value{
-		IntValue{total},
 		AddressValue(senderAddress),
+		IntValue{total},
 	}
 
 	mintTxAuthorizer := NewAuthAccountReferenceValue(contractsAddress)
@@ -622,21 +638,20 @@ access(all) contract FlowToken: FungibleToken {
         // Create the Vault with the total supply of tokens and save it in storage
         //
         let vault <- create Vault(balance: self.totalSupply)
+
         adminAccount.storage.save(<-vault, to: /storage/flowTokenVault)
 
         // Create a public capability to the stored Vault that only exposes
         // the 'deposit' method through the 'Receiver' interface
         //
-        let receiverCap = adminAccount.capabilities.storage
-            .issue<&FlowToken.Vault>(/storage/flowTokenVault)
-        adminAccount.capabilities.publish(receiverCap, at: /public/flowTokenReceiver)
+        let receiverCapability = adminAccount.capabilities.storage.issue<&FlowToken.Vault>(/storage/flowTokenVault)
+        adminAccount.capabilities.publish(receiverCapability, at: /public/flowTokenReceiver)
 
         // Create a public capability to the stored Vault that only exposes
         // the 'balance' field through the 'Balance' interface
         //
-        let balanceCap = adminAccount.capabilities.storage
-            .issue<&FlowToken.Vault>(/storage/flowTokenVault)
-        adminAccount.capabilities.publish(balanceCap, at: /public/flowTokenBalance)
+        let balanceCapability = adminAccount.capabilities.storage.issue<&FlowToken.Vault>(/storage/flowTokenVault)
+        adminAccount.capabilities.publish(balanceCapability, at: /public/flowTokenBalance)
 
         let admin <- create Administrator()
         adminAccount.storage.save(<-admin, to: /storage/flowTokenAdmin)
@@ -652,26 +667,32 @@ transaction {
 
     prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue) &Account) {
 
-        if signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) != nil {
+        var storagePath = /storage/flowTokenVault
+
+        if signer.storage.borrow<&FlowToken.Vault>(from: storagePath) != nil {
             return
         }
-
-        var storagePath = /storage/flowTokenVault
 
         // Create a new flowToken Vault and put it in storage
         signer.storage.save(<-FlowToken.createEmptyVault(), to: storagePath)
 
-        // Create a public capability to the Vault that exposes the Vault interfaces
-        let vaultCap = signer.capabilities.storage.issue<&FlowToken.Vault>(
-            storagePath
-        )
-        signer.capabilities.publish(vaultCap, at: /public/flowTokenVault)
+        // Create a public capability to the Vault that only exposes
+        // the deposit function through the Receiver interface
+        let vaultCap = signer.capabilities.storage.issue<&FlowToken.Vault>(storagePath)
 
-        // Create a public Capability to the Vault's Receiver functionality
-        let receiverCap = signer.capabilities.storage.issue<&FlowToken.Vault>(
-            storagePath
+        signer.capabilities.publish(
+            vaultCap,
+            at: /public/flowTokenReceiver
         )
-        signer.capabilities.publish(receiverCap, at: /public/flowTokenReceiver)
+
+        // Create a public capability to the Vault that only exposes
+        // the balance field through the Balance interface
+        let balanceCap = signer.capabilities.storage.issue<&FlowToken.Vault>(storagePath)
+
+        signer.capabilities.publish(
+            balanceCap,
+            at: /public/flowTokenBalance
+        )
     }
 }
 `
@@ -680,12 +701,46 @@ const realFlowTokenTransferTransaction = `
 import FungibleToken from 0x1
 import FlowToken from 0x1
 
+transaction(amount: Int, to: Address) {
+    let sentVault: @{FungibleToken.Vault}
+
+    prepare(signer: auth(BorrowValue) &Account) {
+        // Get a reference to the signer's stored vault
+        let vaultRef = signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
+			?? panic("Could not borrow reference to the owner's Vault!")
+
+        // Withdraw tokens from the signer's stored vault
+        self.sentVault <- vaultRef.withdraw(amount: amount)
+    }
+
+    execute {
+        // Get a reference to the recipient's Receiver
+        let receiverRef =  getAccount(to)
+            .capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+            .borrow()
+			?? panic("Could not borrow receiver reference to the recipient's Vault")
+
+        // Deposit the withdrawn tokens in the recipient's receiver
+        receiverRef.deposit(from: <-self.sentVault)
+    }
+}
+`
+
+const realMintFlowTokenTransaction = `
+import FungibleToken from 0x1
+import FlowToken from 0x1
+
 transaction(recipient: Address, amount: Int) {
+
+    /// Reference to the FlowToken Minter Resource object
     let tokenAdmin: &FlowToken.Administrator
+
+    /// Reference to the Fungible Token Receiver of the recipient
     let tokenReceiver: &{FungibleToken.Receiver}
 
     prepare(signer: auth(BorrowValue) &Account) {
-        self.tokenAdmin = signer.storage.borrow<&FlowToken.Administrator>(from: /storage/flowTokenAdmin)
+         self.tokenAdmin = signer.storage
+            .borrow<&FlowToken.Administrator>(from: /storage/flowTokenAdmin)
             ?? panic("Signer is not the token admin")
 
         self.tokenReceiver = getAccount(recipient)
@@ -705,39 +760,6 @@ transaction(recipient: Address, amount: Int) {
 }
 `
 
-const realMintFlowTokenTransaction = `
-import FungibleToken from 0x1
-import FlowToken from 0x1
-
-transaction(amount: Int, to: Address) {
-
-    // The Vault resource that holds the tokens that are being transferred
-    let sentVault: @{FungibleToken.Vault}
-
-    prepare(signer: auth(BorrowValue) &Account) {
-
-        // Get a reference to the signer's stored vault
-        let vaultRef = signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
-			?? panic("Could not borrow reference to the owner's Vault!")
-
-        // Withdraw tokens from the signer's stored vault
-        self.sentVault <- vaultRef.withdraw(amount: amount)
-    }
-
-    execute {
-
-        // Get a reference to the recipient's Receiver
-        let receiverRef =  getAccount(to)
-            .capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
-            .borrow()
-			?? panic("Could not borrow receiver reference to the recipient's Vault")
-
-        // Deposit the withdrawn tokens in the recipient's receiver
-        receiverRef.deposit(from: <-self.sentVault)
-    }
-}
-`
-
 const realFlowTokenBalanceScript = `
 import FungibleToken from 0x1
 import FlowToken from 0x1
@@ -745,8 +767,8 @@ import FlowToken from 0x1
 access(all) fun main(account: Address): Int {
 
     let vaultRef = getAccount(account)
-        .getCapability(/public/flowTokenBalance)
-        .borrow<&FlowToken.Vault>()
+        .capabilities.get<&FlowToken.Vault>(/public/flowTokenBalance)
+        .borrow()
         ?? panic("Could not borrow Balance reference to the Vault")
 
     return vaultRef.balance
@@ -807,7 +829,8 @@ func BenchmarkFTTransfer(b *testing.B) {
 	flowTokenVM := NewVM(
 		flowTokenProgram,
 		&Config{
-			Storage: storage,
+			Storage:        storage,
+			AccountHandler: &testAccountHandler{},
 		},
 	)
 
@@ -874,6 +897,24 @@ func BenchmarkFTTransfer(b *testing.B) {
 				return nil
 			}
 		},
+
+		AccountHandler: &testAccountHandler{},
+
+		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
+			semaImport, err := checkerImportHandler(nil, location, ast.EmptyRange)
+			if err != nil {
+				panic(err)
+			}
+
+			elaborationImport := semaImport.(sema.ElaborationImport)
+
+			compositeType := elaborationImport.Elaboration.CompositeType(typeID)
+			if compositeType != nil {
+				return compositeType
+			}
+
+			return elaborationImport.Elaboration.InterfaceType(typeID)
+		},
 	}
 
 	for _, address := range []common.Address{
@@ -903,6 +944,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 		authorizer := NewAuthAccountReferenceValue(address)
 		err = setupTxVM.ExecuteTransaction(nil, authorizer)
 		require.NoError(b, err)
+		require.Empty(b, setupTxVM.stack)
 	}
 
 	// Mint FLOW to sender
@@ -938,6 +980,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 	mintTxAuthorizer := NewAuthAccountReferenceValue(contractsAddress)
 	err = mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
 	require.NoError(b, err)
+	require.Empty(b, mintTxVM.stack)
 
 	// ----- Run token transfer transaction -----
 

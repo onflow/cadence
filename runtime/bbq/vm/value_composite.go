@@ -122,7 +122,7 @@ func (v *CompositeValue) GetMember(config *Config, name string) Value {
 	return nil
 }
 
-func (v *CompositeValue) SetMember(conf *Config, name string, value Value) {
+func (v *CompositeValue) SetMember(config *Config, name string, value Value) {
 
 	// TODO:
 	//address := v.StorageID().Address
@@ -134,12 +134,12 @@ func (v *CompositeValue) SetMember(conf *Config, name string, value Value) {
 	//	nil,
 	//)
 
-	interpreterValue := VMValueToInterpreterValue(value)
+	interpreterValue := VMValueToInterpreterValue(config, value)
 
 	existingStorable, err := v.dictionary.Set(
 		interpreter.StringAtreeValueComparator,
 		interpreter.StringAtreeValueHashInput,
-		interpreter.NewStringAtreeValue(conf.MemoryGauge, name),
+		interpreter.NewStringAtreeValue(config.MemoryGauge, name),
 		interpreterValue,
 	)
 
@@ -148,10 +148,10 @@ func (v *CompositeValue) SetMember(conf *Config, name string, value Value) {
 	}
 
 	if existingStorable != nil {
-		inter := conf.interpreter()
-		existingValue := interpreter.StoredValue(nil, existingStorable, conf.Storage)
+		inter := config.interpreter()
+		existingValue := interpreter.StoredValue(nil, existingStorable, config.Storage)
 		existingValue.DeepRemove(inter)
-		RemoveReferencedSlab(conf.Storage, existingStorable)
+		RemoveReferencedSlab(config.Storage, existingStorable)
 	}
 }
 
@@ -183,7 +183,7 @@ func (v *CompositeValue) String() string {
 }
 
 func (v *CompositeValue) Transfer(
-	conf *Config,
+	config *Config,
 	address atree.Address,
 	remove bool,
 	storable atree.Storable,
@@ -228,7 +228,7 @@ func (v *CompositeValue) Transfer(
 
 	if needsStoreTo && v.Kind == common.CompositeKindContract {
 		panic(interpreter.NonTransferableValueError{
-			Value: VMValueToInterpreterValue(v),
+			Value: VMValueToInterpreterValue(config, v),
 		})
 	}
 
@@ -239,10 +239,10 @@ func (v *CompositeValue) Transfer(
 		}
 
 		elementMemoryUse := common.NewAtreeMapPreAllocatedElementsMemoryUsage(v.dictionary.Count(), 0)
-		common.UseMemory(conf.MemoryGauge, elementMemoryUse)
+		common.UseMemory(config.MemoryGauge, elementMemoryUse)
 
 		dictionary, err = atree.NewMapFromBatchData(
-			conf.Storage,
+			config.Storage,
 			address,
 			atree.NewDefaultDigesterBuilder(),
 			v.dictionary.Type(),
@@ -262,11 +262,11 @@ func (v *CompositeValue) Transfer(
 				// NOTE: key is stringAtreeValue
 				// and does not need to be converted or copied
 
-				value := interpreter.MustConvertStoredValue(conf.MemoryGauge, atreeValue)
+				value := interpreter.MustConvertStoredValue(config.MemoryGauge, atreeValue)
 
 				// TODO:
-				vmValue := InterpreterValueToVMValue(value)
-				vmValue.Transfer(conf, address, remove, nil)
+				vmValue := InterpreterValueToVMValue(config.Storage, value)
+				vmValue.Transfer(config, address, remove, nil)
 
 				return atreeKey, value, nil
 			},
@@ -277,15 +277,15 @@ func (v *CompositeValue) Transfer(
 
 		if remove {
 			err = v.dictionary.PopIterate(func(nameStorable atree.Storable, valueStorable atree.Storable) {
-				RemoveReferencedSlab(conf.Storage, nameStorable)
-				RemoveReferencedSlab(conf.Storage, valueStorable)
+				RemoveReferencedSlab(config.Storage, nameStorable)
+				RemoveReferencedSlab(config.Storage, valueStorable)
 			})
 			if err != nil {
 				panic(errors.NewExternalError(err))
 			}
 			//interpreter.maybeValidateAtreeValue(v.dictionary)
 
-			RemoveReferencedSlab(conf.Storage, storable)
+			RemoveReferencedSlab(config.Storage, storable)
 		}
 	}
 
@@ -325,7 +325,7 @@ func (v *CompositeValue) Transfer(
 
 	if res == nil {
 		typeInfo := interpreter.NewCompositeTypeInfo(
-			conf.MemoryGauge,
+			config.MemoryGauge,
 			v.Location,
 			v.QualifiedIdentifier,
 			v.Kind,

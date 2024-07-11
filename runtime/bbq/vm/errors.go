@@ -38,7 +38,8 @@ func (l LinkerError) Error() string {
 }
 
 type MissingMemberValueError struct {
-	Name string
+	Parent MemberAccessibleValue
+	Name   string
 }
 
 var _ error = MissingMemberValueError{}
@@ -48,6 +49,6 @@ func (l MissingMemberValueError) IsInternalError() {
 }
 
 func (l MissingMemberValueError) Error() string {
-	return fmt.Sprintf("cannot find member: %s", l.Name)
+	return fmt.Sprintf("cannot find member: `%s` in `%T`", l.Name, l.Parent)
 
 }

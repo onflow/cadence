@@ -141,7 +141,7 @@ func init() {
 				) {
 					panic(interpreter.OverwriteError{
 						Address: interpreter.AddressValue(accountAddress),
-						Path:    VMValueToInterpreterValue(path).(interpreter.PathValue),
+						Path:    VMValueToInterpreterValue(config, path).(interpreter.PathValue),
 					})
 				}
 

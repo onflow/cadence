@@ -213,7 +213,7 @@ func getCapabilityController(
 	}
 
 	referenced := accountStorage.ReadValue(config.MemoryGauge, storageMapKey)
-	vmReferencedValue := InterpreterValueToVMValue(referenced)
+	vmReferencedValue := InterpreterValueToVMValue(config.Storage, referenced)
 
 	controller, ok := vmReferencedValue.(CapabilityControllerValue)
 	if !ok {

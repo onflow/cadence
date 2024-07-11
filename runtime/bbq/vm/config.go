@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/cadence/runtime/bbq/commons"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -39,7 +40,8 @@ type Config struct {
 	MutationDuringCapabilityControllerIteration bool
 
 	// TODO: temp
-	inter *interpreter.Interpreter
+	inter      *interpreter.Interpreter
+	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType
 }
 
 // TODO: This is temporary. Remove once storing/reading is supported for VM values.
@@ -49,7 +51,14 @@ func (c *Config) interpreter() *interpreter.Interpreter {
 			nil,
 			utils.TestLocation,
 			&interpreter.Config{
-				Storage: c.Storage,
+				Storage:               c.Storage,
+				ImportLocationHandler: nil,
+				CompositeTypeHandler: func(location common.Location, typeID interpreter.TypeID) *sema.CompositeType {
+					return c.TypeLoader(location, typeID).(*sema.CompositeType)
+				},
+				InterfaceTypeHandler: func(location common.Location, typeID interpreter.TypeID) *sema.InterfaceType {
+					return c.TypeLoader(location, typeID).(*sema.InterfaceType)
+				},
 			},
 		)
 

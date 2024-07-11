@@ -359,7 +359,7 @@ func recordStorageCapabilityController(
 	accountStorage := config.Storage.GetStorageMap(address, stdlib.PathCapabilityStorageDomain, true)
 
 	referenced := accountStorage.ReadValue(config.MemoryGauge, interpreter.StringStorageMapKey(identifier))
-	readValue := InterpreterValueToVMValue(referenced)
+	readValue := InterpreterValueToVMValue(config.Storage, referenced)
 
 	setKey := capabilityIDValue
 	setValue := Nil
@@ -371,7 +371,7 @@ func recordStorageCapabilityController(
 			setKey,
 			setValue,
 		)
-		capabilityIDSetInterValue := VMValueToInterpreterValue(capabilityIDSet)
+		capabilityIDSetInterValue := VMValueToInterpreterValue(config, capabilityIDSet)
 		accountStorage.SetValue(config.interpreter(), storageMapKey, capabilityIDSetInterValue)
 	} else {
 		capabilityIDSet := readValue.(*DictionaryValue)
