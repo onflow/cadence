@@ -36,14 +36,14 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-type testCapConIssueHandler struct {
+type testCapConHandler struct {
 	ids    map[common.Address]uint64
 	events []cadence.Event
 }
 
-var _ stdlib.CapabilityControllerIssueHandler = &testCapConIssueHandler{}
+var _ stdlib.CapabilityControllerIssueHandler = &testCapConHandler{}
 
-func (g *testCapConIssueHandler) GenerateAccountID(address common.Address) (uint64, error) {
+func (g *testCapConHandler) GenerateAccountID(address common.Address) (uint64, error) {
 	if g.ids == nil {
 		g.ids = make(map[common.Address]uint64)
 	}
@@ -51,11 +51,11 @@ func (g *testCapConIssueHandler) GenerateAccountID(address common.Address) (uint
 	return g.ids[address], nil
 }
 
-func (g *testCapConIssueHandler) EmitEvent(
+func (g *testCapConHandler) EmitEvent(
 	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) {
 	runtime.EmitEventFields(
 		inter,
@@ -489,13 +489,14 @@ func testPathCapabilityValueMigration(
 
 	capabilityMapping := &CapabilityMapping{}
 
-	handler := &testCapConIssueHandler{}
+	handler := &testCapConHandler{}
 
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
 				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
 				Handler:           handler,
 				Reporter:          reporter,
 			},
@@ -1480,13 +1481,14 @@ func testLinkMigration(
 
 	capabilityMapping := &CapabilityMapping{}
 
-	handler := &testCapConIssueHandler{}
+	handler := &testCapConHandler{}
 
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
 				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
 				Handler:           handler,
 				Reporter:          reporter,
 			},
@@ -2301,13 +2303,14 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 
 	capabilityMapping := &CapabilityMapping{}
 
-	handler := &testCapConIssueHandler{}
+	handler := &testCapConHandler{}
 
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
 				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
 				Handler:           handler,
 				Reporter:          reporter,
 			},
@@ -2551,13 +2554,14 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 
 	capabilityMapping := &CapabilityMapping{}
 
-	handler := &testCapConIssueHandler{}
+	handler := &testCapConHandler{}
 
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
 				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
 				Handler:           handler,
 				Reporter:          reporter,
 			},

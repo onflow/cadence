@@ -338,3 +338,15 @@ var AccountCapabilityControllerIssuedEventType = newFlowEventType(
 	CapabilityControllerEventAddressParameter,
 	CapabilityControllerEventTypeParameter,
 )
+
+var StorageCapabilityControllerDeletedEventType = newFlowEventType(
+	"StorageCapabilityControllerDeleted",
+	CapabilityControllerEventIDParameter,
+	CapabilityControllerEventAddressParameter,
+)
+
+var AccountCapabilityControllerDeletedEventType = newFlowEventType(
+	"AccountCapabilityControllerDeleted",
+	CapabilityControllerEventIDParameter,
+	CapabilityControllerEventAddressParameter,
+)
