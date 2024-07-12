@@ -40,9 +40,9 @@ type LinkMigrationReporter interface {
 
 // LinkValueMigration migrates all links to capability controllers.
 type LinkValueMigration struct {
-	CapabilityMapping  *CapabilityMapping
-	AccountIDGenerator stdlib.AccountIDGenerator
-	Reporter           LinkMigrationReporter
+	CapabilityMapping *CapabilityMapping
+	Handler           stdlib.CapabilityControllerIssueHandler
+	Reporter          LinkMigrationReporter
 }
 
 var _ migrations.ValueMigration = &LinkValueMigration{}
@@ -98,7 +98,7 @@ func (m *LinkValueMigration) Migrate(
 	}
 
 	reporter := m.Reporter
-	accountIDGenerator := m.AccountIDGenerator
+	handler := m.Handler
 
 	locationRange := interpreter.EmptyLocationRange
 
@@ -180,7 +180,7 @@ func (m *LinkValueMigration) Migrate(
 		capabilityID, _ = stdlib.IssueStorageCapabilityController(
 			inter,
 			locationRange,
-			accountIDGenerator,
+			handler,
 			accountAddress,
 			borrowType,
 			targetPath,
@@ -190,7 +190,7 @@ func (m *LinkValueMigration) Migrate(
 		capabilityID, _ = stdlib.IssueAccountCapabilityController(
 			inter,
 			locationRange,
-			accountIDGenerator,
+			handler,
 			accountAddress,
 			borrowType,
 		)

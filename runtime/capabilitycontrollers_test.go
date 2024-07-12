@@ -42,6 +42,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 	testWithSignerCount := func(t *testing.T, tx string, signerCount int) (
 		err error,
 		storage *Storage,
+		events []cadence.Event,
 	) {
 
 		rt := NewTestInterpreterRuntime()
@@ -144,7 +145,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				// NO-OP
 			},
 			OnEmitEvent: func(event cadence.Event) error {
-				// NO-OP
+				events = append(events, event)
 				return nil
 			},
 			OnGetSigningAccounts: func() ([]Address, error) {
@@ -200,6 +201,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 	test := func(t *testing.T, tx string) (
 		err error,
 		storage *Storage,
+		events []cadence.Event,
 	) {
 		return testWithSignerCount(t, tx, 1)
 	}
@@ -222,7 +224,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					fmt.Sprintf(
 						// language=cadence
@@ -248,6 +250,11 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					),
 				)
 				require.NoError(t, err)
+
+				require.Equal(t,
+					[]string{},
+					nonDeploymentEventStrings(events),
+				)
 			})
 
 			t.Run("get and check existing, with valid type", func(t *testing.T) {
@@ -255,7 +262,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				t.Run("storage capability", func(t *testing.T) {
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -291,10 +298,17 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 
 				t.Run("account capability", func(t *testing.T) {
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -325,6 +339,12 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+						},
+						nonDeploymentEventStrings(events))
 				})
 			})
 
@@ -334,7 +354,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -372,11 +392,17 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						},
+						nonDeploymentEventStrings(events))
 				})
 
 				t.Run("account capability", func(t *testing.T) {
 
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -409,6 +435,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 			})
 
@@ -418,7 +451,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -456,11 +489,18 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 
 				t.Run("account capability", func(t *testing.T) {
 
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -495,6 +535,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 			})
 
@@ -504,7 +551,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -542,11 +589,18 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 
 				t.Run("account capability", func(t *testing.T) {
 
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -579,6 +633,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 			})
 
@@ -587,7 +648,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				t.Run("storage capability", func(t *testing.T) {
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -627,10 +688,17 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 
 				t.Run("account capability", func(t *testing.T) {
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -665,6 +733,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 
 			})
@@ -673,7 +748,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					fmt.Sprintf(
 						// language=cadence
@@ -693,6 +768,11 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					),
 				)
 				require.NoError(t, err)
+
+				require.Equal(t,
+					[]string{},
+					nonDeploymentEventStrings(events),
+				)
 			})
 
 			t.Run("borrow existing, with valid type", func(t *testing.T) {
@@ -700,7 +780,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				t.Run("storage capability", func(t *testing.T) {
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -734,10 +814,17 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 
 				t.Run("account capability", func(t *testing.T) {
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -766,6 +853,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 			})
 
@@ -775,7 +869,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -809,11 +903,18 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 
 				t.Run("account capability", func(t *testing.T) {
 
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -844,6 +945,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 			})
 
@@ -853,7 +961,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				t.Run("storage capability", func(t *testing.T) {
 
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -887,11 +995,18 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 
 				t.Run("account capability", func(t *testing.T) {
 
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -920,6 +1035,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 			})
 
@@ -928,7 +1050,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				t.Parallel()
 
 				t.Run("storage capability", func(t *testing.T) {
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -964,10 +1086,17 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 
 				t.Run("account capability", func(t *testing.T) {
-					err, _ := test(
+					err, _, events := test(
 						t,
 						fmt.Sprintf(
 							// language=cadence
@@ -998,6 +1127,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						),
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{
+							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+						},
+						nonDeploymentEventStrings(events),
+					)
 				})
 			})
 
@@ -1008,7 +1144,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					t.Parallel()
 
 					t.Run("storage capability", func(t *testing.T) {
-						err, _ := test(
+						err, _, events := test(
 							t,
 							// language=cadence
 							`
@@ -1035,10 +1171,17 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 						var overwriteErr interpreter.OverwriteError
 						require.ErrorAs(t, err, &overwriteErr)
+
+						require.Equal(t,
+							[]string{
+								`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+							},
+							nonDeploymentEventStrings(events),
+						)
 					})
 
-					t.Run("storage capability", func(t *testing.T) {
-						err, _ := test(
+					t.Run("account capability", func(t *testing.T) {
+						err, _, events := test(
 							t,
 							// language=cadence
 							`
@@ -1062,6 +1205,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 						var overwriteErr interpreter.OverwriteError
 						require.ErrorAs(t, err, &overwriteErr)
+
+						require.Equal(t,
+							[]string{
+								`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+							},
+							nonDeploymentEventStrings(events),
+						)
 					})
 				})
 
@@ -1071,7 +1221,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 					t.Run("storage capability", func(t *testing.T) {
 
-						err, _ := testWithSignerCount(
+						err, _, events := testWithSignerCount(
 							t,
 							// language=cadence
 							`
@@ -1106,11 +1256,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 							publishingError.CapabilityAddress,
 						)
+
+						require.Equal(
+							t,
+							[]string{
+								`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&AnyStruct>(), path: /storage/r)`,
+							},
+							nonDeploymentEventStrings(events),
+						)
 					})
 
 					t.Run("account capability", func(t *testing.T) {
 
-						err, _ := testWithSignerCount(
+						err, _, events := testWithSignerCount(
 							t,
 							// language=cadence
 							`
@@ -1144,6 +1302,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 							interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
 							publishingError.CapabilityAddress,
 						)
+
+						require.Equal(t,
+							[]string{
+								`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+							},
+							nonDeploymentEventStrings(events),
+						)
 					})
 				})
 
@@ -1151,7 +1316,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 					t.Parallel()
 
-					err, _ := test(
+					err, _, events := test(
 						t,
 						// language=cadence
 						`
@@ -1169,6 +1334,11 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                         `,
 					)
 					require.NoError(t, err)
+
+					require.Equal(t,
+						[]string{},
+						nonDeploymentEventStrings(events),
+					)
 				})
 			}
 		})
@@ -1189,7 +1359,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1220,13 +1390,24 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(
+				t,
+				[]string{
+					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 3, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 4, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r2)`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("issue, multiple controllers to various paths, with same or different type, type value", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1257,13 +1438,23 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 3, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 4, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r2)`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("issue with type value, invalid type", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1277,13 +1468,18 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.InvalidCapabilityIssueTypeError{})
+
+			require.Equal(t,
+				[]string{},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("getController, non-existing", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1303,13 +1499,18 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("getController, account capability controller", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1330,13 +1531,20 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("getController, multiple controllers to various paths, with same or different type", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1388,13 +1596,23 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 3, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 4, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r2)`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("getControllers", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1444,13 +1662,23 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 3, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 4, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r2)`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, no controllers", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1475,13 +1703,18 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, all", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1544,13 +1777,23 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 3, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 4, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r2)`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, stop immediately", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1584,13 +1827,21 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, mutation (issue), stop", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1618,13 +1869,21 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, mutation (issue), continue", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1655,13 +1914,21 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			var mutationErr stdlib.CapabilityControllersMutatedDuringIterationError
 			require.ErrorAs(t, err, &mutationErr)
+
+			require.Equal(t,
+				[]string{
+					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, mutation (delete), stop", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1689,13 +1956,20 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, mutation (delete), continue", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1726,6 +2000,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			var mutationErr stdlib.CapabilityControllersMutatedDuringIterationError
 			require.ErrorAs(t, err, &mutationErr)
+
+			require.Equal(t,
+				[]string{
+					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 	})
 
@@ -1737,7 +2018,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1760,13 +2041,22 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerIssued(id: 3, address: 0x0000000000000001, type: Type<&Account>())`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("issue, multiple controllers, with same or different type, type value", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1789,13 +2079,22 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerIssued(id: 3, address: 0x0000000000000001, type: Type<&Account>())`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("issue with type value, invalid type", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1809,13 +2108,18 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.InvalidCapabilityIssueTypeError{})
+
+			require.Equal(t,
+				[]string{},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("getController, non-existing", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1835,13 +2139,18 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("getController, storage capability controller", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1862,13 +2171,20 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&AnyStruct>(), path: /storage/x)`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("getController, multiple controllers to various paths, with same or different type", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1904,13 +2220,22 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerIssued(id: 3, address: 0x0000000000000001, type: Type<&Account>())`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("getControllers", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1951,13 +2276,23 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(
+				t,
+				[]string{
+					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerIssued(id: 3, address: 0x0000000000000001, type: Type<&Account>())`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, no controllers", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -1980,13 +2315,18 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, all", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -2031,13 +2371,22 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerIssued(id: 3, address: 0x0000000000000001, type: Type<&Account>())`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, stop immediately", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -2066,13 +2415,21 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&Account>())`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, mutation (issue), continue", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -2098,13 +2455,21 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			var mutationErr stdlib.CapabilityControllersMutatedDuringIterationError
 			require.ErrorAs(t, err, &mutationErr)
+
+			require.Equal(t,
+				[]string{
+					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&Account>())`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, mutation (issue), stop", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -2127,13 +2492,21 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&Account>())`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, mutation (delete), continue", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -2159,13 +2532,20 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			var mutationErr stdlib.CapabilityControllersMutatedDuringIterationError
 			require.ErrorAs(t, err, &mutationErr)
+
+			require.Equal(t,
+				[]string{
+					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("forEachController, mutation (delete), stop", func(t *testing.T) {
 
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -2188,6 +2568,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					"flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())",
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 	})
 
@@ -2198,7 +2585,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		t.Run("capability", func(t *testing.T) {
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -2231,12 +2618,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("tag", func(t *testing.T) {
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -2272,6 +2666,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("retarget", func(t *testing.T) {
@@ -2281,7 +2682,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Run("target, getControllers", func(t *testing.T) {
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					// language=cadence
 					`
@@ -2381,12 +2782,22 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                     `,
 				)
 				require.NoError(t, err)
+
+				require.Equal(t,
+					[]string{
+						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						`flow.StorageCapabilityControllerIssued(id: 3, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						`flow.StorageCapabilityControllerIssued(id: 4, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r2)`,
+					},
+					nonDeploymentEventStrings(events),
+				)
 			})
 
 			t.Run("retarget empty, borrow", func(t *testing.T) {
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					// language=cadence
 					`
@@ -2421,12 +2832,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                     `,
 				)
 				require.NoError(t, err)
+
+				require.Equal(t,
+					[]string{
+						"flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)",
+					},
+					nonDeploymentEventStrings(events),
+				)
 			})
 
 			t.Run("retarget to value with same type, borrow", func(t *testing.T) {
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					// language=cadence
 					`
@@ -2464,12 +2882,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                     `,
 				)
 				require.NoError(t, err)
+
+				require.Equal(t,
+					[]string{
+						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					},
+					nonDeploymentEventStrings(events),
+				)
 			})
 
 			t.Run("retarget to value with different type, borrow", func(t *testing.T) {
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					// language=cadence
 					`
@@ -2505,6 +2930,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                     `,
 				)
 				require.NoError(t, err)
+
+				require.Equal(t,
+					[]string{
+						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					},
+					nonDeploymentEventStrings(events),
+				)
 			})
 		})
 
@@ -2515,7 +2947,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Run("getController, getControllers", func(t *testing.T) {
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					// language=cadence
 					`
@@ -2550,12 +2982,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                     `,
 				)
 				require.NoError(t, err)
+
+				require.Equal(t,
+					[]string{
+						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					},
+					nonDeploymentEventStrings(events),
+				)
 			})
 
 			t.Run("target", func(t *testing.T) {
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					// language=cadence
 					`
@@ -2581,12 +3020,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                     `,
 				)
 				require.ErrorContains(t, err, "controller is deleted")
+
+				require.Equal(t,
+					[]string{
+						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					},
+					nonDeploymentEventStrings(events),
+				)
 			})
 
 			t.Run("retarget", func(t *testing.T) {
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					// language=cadence
 					`
@@ -2612,12 +3058,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                     `,
 				)
 				require.ErrorContains(t, err, "controller is deleted")
+
+				require.Equal(t,
+					[]string{
+						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					},
+					nonDeploymentEventStrings(events),
+				)
 			})
 
 			t.Run("delete", func(t *testing.T) {
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					// language=cadence
 					`
@@ -2643,12 +3096,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                     `,
 				)
 				require.ErrorContains(t, err, "controller is deleted")
+
+				require.Equal(t,
+					[]string{
+						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					},
+					nonDeploymentEventStrings(events),
+				)
 			})
 
 			t.Run("capability set cleared from storage", func(t *testing.T) {
 				t.Parallel()
 
-				err, storage := test(
+				err, storage, events := test(
 					t,
 					// language=cadence
 					`
@@ -2679,12 +3139,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				)
 				require.Zero(t, storageMap.Count())
 
+				require.Equal(t,
+					[]string{
+						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					},
+					nonDeploymentEventStrings(events),
+				)
+
 			})
 
 			t.Run("check, borrow", func(t *testing.T) {
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					// language=cadence
 					`
@@ -2716,6 +3183,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                     `,
 				)
 				require.NoError(t, err)
+
+				require.Equal(t,
+					[]string{
+						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					},
+					nonDeploymentEventStrings(events),
+				)
 			})
 
 		})
@@ -2728,7 +3202,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 		t.Run("capability", func(t *testing.T) {
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -2757,12 +3231,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("tag", func(t *testing.T) {
 			t.Parallel()
 
-			err, _ := test(
+			err, _, events := test(
 				t,
 				// language=cadence
 				`
@@ -2794,6 +3275,13 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                 `,
 			)
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+				},
+				nonDeploymentEventStrings(events),
+			)
 		})
 
 		t.Run("delete", func(t *testing.T) {
@@ -2803,7 +3291,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			t.Run("getController, getControllers", func(t *testing.T) {
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					// language=cadence
 					`
@@ -2834,12 +3322,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                     `,
 				)
 				require.NoError(t, err)
+
+				require.Equal(t,
+					[]string{
+						`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+					},
+					nonDeploymentEventStrings(events),
+				)
 			})
 
 			t.Run("delete", func(t *testing.T) {
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					// language=cadence
 					`
@@ -2861,12 +3356,19 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                     `,
 				)
 				require.ErrorContains(t, err, "controller is deleted")
+
+				require.Equal(t,
+					[]string{
+						`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+					},
+					nonDeploymentEventStrings(events),
+				)
 			})
 
 			t.Run("check, borrow", func(t *testing.T) {
 				t.Parallel()
 
-				err, _ := test(
+				err, _, events := test(
 					t,
 					// language=cadence
 					`
@@ -2892,10 +3394,31 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
                     `,
 				)
 				require.NoError(t, err)
+
+				require.Equal(t,
+					[]string{
+						`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+					},
+					nonDeploymentEventStrings(events),
+				)
 			})
 		})
 	})
 
+}
+
+func nonDeploymentEventStrings(events []cadence.Event) []string {
+	accountContractAddedEventTypeID := stdlib.AccountContractAddedEventType.ID()
+
+	strings := make([]string, 0, len(events))
+	for _, event := range events {
+		// Skip deployment events, i.e. contract added to account
+		if common.TypeID(event.Type().ID()) == accountContractAddedEventTypeID {
+			continue
+		}
+		strings = append(strings, event.String())
+	}
+	return strings
 }
 
 func TestRuntimeCapabilityBorrowAsInheritedInterface(t *testing.T) {

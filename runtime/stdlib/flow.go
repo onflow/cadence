@@ -305,3 +305,36 @@ var AccountInboxClaimedEventType = newFlowEventType(
 	AccountEventRecipientParameter,
 	AccountEventNameParameter,
 )
+
+var CapabilityControllerEventIDParameter = sema.Parameter{
+	Identifier:     "id",
+	TypeAnnotation: sema.UInt64TypeAnnotation,
+}
+
+var CapabilityControllerEventAddressParameter = sema.Parameter{
+	Identifier:     "address",
+	TypeAnnotation: sema.AddressTypeAnnotation,
+}
+
+var CapabilityControllerEventTypeParameter = sema.Parameter{
+	Identifier:     "type",
+	TypeAnnotation: sema.MetaTypeAnnotation,
+}
+
+var StorageCapabilityControllerIssuedEventType = newFlowEventType(
+	"StorageCapabilityControllerIssued",
+	CapabilityControllerEventIDParameter,
+	CapabilityControllerEventAddressParameter,
+	CapabilityControllerEventTypeParameter,
+	sema.Parameter{
+		Identifier:     "path",
+		TypeAnnotation: sema.StoragePathTypeAnnotation,
+	},
+)
+
+var AccountCapabilityControllerIssuedEventType = newFlowEventType(
+	"AccountCapabilityControllerIssued",
+	CapabilityControllerEventIDParameter,
+	CapabilityControllerEventAddressParameter,
+	CapabilityControllerEventTypeParameter,
+)
