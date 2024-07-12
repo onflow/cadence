@@ -19,6 +19,7 @@
 package runtime_test
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -114,6 +115,7 @@ func TestRuntimeAccountInboxPublishUnpublish(t *testing.T) {
 
 	require.Equal(t,
 		[]string{
+			`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&[Int]>(), path: /storage/foo)`,
 			`flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: "foo", type: Type<Capability<&[Int]>>())`,
 			`flow.InboxValueUnpublished(provider: 0x0000000000000001, name: "foo")`,
 		},
@@ -194,6 +196,7 @@ func TestRuntimeAccountInboxUnpublishWrongType(t *testing.T) {
 
 	require.Equal(t,
 		[]string{
+			`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&[Int]>(), path: /storage/foo)`,
 			`flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: "foo", type: Type<Capability<&[Int]>>())`,
 		},
 		events,
@@ -283,6 +286,7 @@ func TestRuntimeAccountInboxUnpublishAbsent(t *testing.T) {
 
 	require.Equal(t,
 		[]string{
+			`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&[Int]>(), path: /storage/foo)`,
 			`flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: "foo", type: Type<Capability<&[Int]>>())`,
 		},
 		events,
@@ -388,12 +392,15 @@ func TestRuntimeAccountInboxUnpublishRemove(t *testing.T) {
 
 	require.Equal(t,
 		[]string{
-			`flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: ` +
-				nameArgument.String() +
-				`, type: Type<Capability<&[Int]>>())`,
-			`flow.InboxValueUnpublished(provider: 0x0000000000000001, name: ` +
-				nameArgument.String() +
-				`)`,
+			`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&[Int]>(), path: /storage/foo)`,
+			fmt.Sprintf(
+				`flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: %s, type: Type<Capability<&[Int]>>())`,
+				nameArgument.String(),
+			),
+			fmt.Sprintf(
+				`flow.InboxValueUnpublished(provider: 0x0000000000000001, name: %s)`,
+				nameArgument.String(),
+			),
 		},
 		events,
 	)
@@ -523,6 +530,7 @@ func TestRuntimeAccountInboxUnpublishWrongAccount(t *testing.T) {
 
 	require.Equal(t,
 		[]string{
+			`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&[Int]>(), path: /storage/foo)`,
 			`flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: "foo", type: Type<Capability<&[Int]>>())`,
 			`flow.InboxValueUnpublished(provider: 0x0000000000000001, name: "foo")`,
 		},
@@ -632,6 +640,7 @@ func TestRuntimeAccountInboxPublishClaim(t *testing.T) {
 
 	require.Equal(t,
 		[]string{
+			`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&[Int]>(), path: /storage/foo)`,
 			`flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: "foo", type: Type<Capability<&[Int]>>())`,
 			`flow.InboxValueClaimed(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: "foo")`,
 		},
@@ -734,6 +743,7 @@ func TestRuntimeAccountInboxPublishClaimWrongType(t *testing.T) {
 
 	require.Equal(t,
 		[]string{
+			`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&[Int]>(), path: /storage/foo)`,
 			`flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: "foo", type: Type<Capability<&[Int]>>())`,
 		},
 		events,
@@ -836,6 +846,7 @@ func TestRuntimeAccountInboxPublishClaimWrongName(t *testing.T) {
 
 	require.Equal(t,
 		[]string{
+			`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&[Int]>(), path: /storage/foo)`,
 			`flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: "foo", type: Type<Capability<&[Int]>>())`,
 		},
 		events,
@@ -962,6 +973,7 @@ func TestRuntimeAccountInboxPublishClaimRemove(t *testing.T) {
 
 	require.Equal(t,
 		[]string{
+			`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&[Int]>(), path: /storage/foo)`,
 			`flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: "foo", type: Type<Capability<&[Int]>>())`,
 			`flow.InboxValueClaimed(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: "foo")`,
 		},
@@ -1103,6 +1115,7 @@ func TestRuntimeAccountInboxPublishClaimWrongAccount(t *testing.T) {
 
 	require.Equal(t,
 		[]string{
+			`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&[Int]>(), path: /storage/foo)`,
 			`flow.InboxValuePublished(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: "foo", type: Type<Capability<&[Int]>>())`,
 			`flow.InboxValueClaimed(provider: 0x0000000000000001, recipient: 0x0000000000000002, name: "foo")`,
 		},

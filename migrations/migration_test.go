@@ -772,10 +772,16 @@ func TestCapConMigration(t *testing.T) {
 
 	rt := NewTestInterpreterRuntime()
 
+	var events []cadence.Event
+
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: NewTestLedger(nil, nil),
 		OnGetSigningAccounts: func() ([]runtime.Address, error) {
 			return []runtime.Address{testAddress}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -953,6 +959,22 @@ func TestCapConMigration(t *testing.T) {
 
 	accountCapEntry = accountCapStorageMap.ReadValue(nil, interpreter.Uint64StorageMapKey(2))
 	assert.NotNil(t, accountCapEntry)
+
+	require.Equal(t,
+		[]string{
+			`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&AnyStruct>(), path: /storage/foo)`,
+			`flow.AccountCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&Account>())`,
+		},
+		eventStrings(events),
+	)
+}
+
+func eventStrings(events []cadence.Event) []string {
+	strings := make([]string, 0, len(events))
+	for _, event := range events {
+		strings = append(strings, event.String())
+	}
+	return strings
 }
 
 func TestContractMigration(t *testing.T) {
