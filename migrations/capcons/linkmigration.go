@@ -41,7 +41,8 @@ type LinkMigrationReporter interface {
 // LinkValueMigration migrates all links to capability controllers.
 type LinkValueMigration struct {
 	CapabilityMapping *CapabilityMapping
-	Handler           stdlib.CapabilityControllerIssueHandler
+	IssueHandler      stdlib.CapabilityControllerIssueHandler
+	Handler           stdlib.CapabilityControllerHandler
 	Reporter          LinkMigrationReporter
 }
 
@@ -98,7 +99,7 @@ func (m *LinkValueMigration) Migrate(
 	}
 
 	reporter := m.Reporter
-	handler := m.Handler
+	issueHandler := m.IssueHandler
 
 	locationRange := interpreter.EmptyLocationRange
 
@@ -180,7 +181,7 @@ func (m *LinkValueMigration) Migrate(
 		capabilityID, _ = stdlib.IssueStorageCapabilityController(
 			inter,
 			locationRange,
-			handler,
+			issueHandler,
 			accountAddress,
 			borrowType,
 			targetPath,
@@ -190,7 +191,7 @@ func (m *LinkValueMigration) Migrate(
 		capabilityID, _ = stdlib.IssueAccountCapabilityController(
 			inter,
 			locationRange,
-			handler,
+			issueHandler,
 			accountAddress,
 			borrowType,
 		)
@@ -253,6 +254,7 @@ func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 	authorization interpreter.Authorization,
 	err error,
 ) {
+	handler := m.Handler
 
 	locationRange := interpreter.EmptyLocationRange
 
@@ -342,11 +344,12 @@ func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 				// just get target address/path
 				reference := stdlib.GetCheckedCapabilityControllerReference(
 					inter,
+					locationRange,
 					value.Address,
 					value.ID,
 					wantedBorrowType,
 					capabilityBorrowType,
-					locationRange,
+					handler,
 				)
 				if reference == nil {
 					return nil, interpreter.UnauthorizedAccess, nil

@@ -302,6 +302,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/r, capability: Capability<&A.0000000000000001.Test.R>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -343,6 +344,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/acct, capability: Capability<&Account>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events))
 				})
@@ -396,6 +398,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/r, capability: Capability<&A.0000000000000001.Test.R>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events))
 				})
@@ -439,6 +442,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/acct, capability: Capability<&Account>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -493,6 +497,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/r, capability: Capability<&A.0000000000000001.Test.R>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -539,6 +544,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/acct, capability: Capability<&Account>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -593,6 +599,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/r, capability: Capability<&A.0000000000000001.Test.R>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -637,6 +644,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/acct, capability: Capability<&Account>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -692,6 +700,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/r, capability: Capability<&A.0000000000000001.Test.R>(address: 0x0000000000000001, id: 1))`,
+							`flow.CapabilityUnpublished(address: 0x0000000000000001, path: /public/r)`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -737,6 +747,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/acct, capability: Capability<&Account>(address: 0x0000000000000001, id: 1))`,
+							`flow.CapabilityUnpublished(address: 0x0000000000000001, path: /public/acct)`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -818,6 +830,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/r, capability: Capability<&A.0000000000000001.Test.R>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -857,6 +870,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/acct, capability: Capability<&Account>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -907,6 +921,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/r, capability: Capability<&A.0000000000000001.Test.R>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -949,6 +964,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/acct, capability: Capability<&Account>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -999,6 +1015,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/r, capability: Capability<&A.0000000000000001.Test.R>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -1039,6 +1056,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/acct, capability: Capability<&Account>(address: 0x0000000000000001, id: 1))`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -1090,6 +1108,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/r, capability: Capability<&A.0000000000000001.Test.R>(address: 0x0000000000000001, id: 1))`,
+							`flow.CapabilityUnpublished(address: 0x0000000000000001, path: /public/r)`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -1131,6 +1151,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 					require.Equal(t,
 						[]string{
 							`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+							`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/acct, capability: Capability<&Account>(address: 0x0000000000000001, id: 1))`,
+							`flow.CapabilityUnpublished(address: 0x0000000000000001, path: /public/acct)`,
 						},
 						nonDeploymentEventStrings(events),
 					)
@@ -1175,6 +1197,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						require.Equal(t,
 							[]string{
 								`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+								`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/r, capability: Capability<&A.0000000000000001.Test.R>(address: 0x0000000000000001, id: 1))`,
 							},
 							nonDeploymentEventStrings(events),
 						)
@@ -1209,6 +1232,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						require.Equal(t,
 							[]string{
 								`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+								`flow.CapabilityPublished(address: 0x0000000000000001, path: /public/acct, capability: Capability<&Account>(address: 0x0000000000000001, id: 1))`,
 							},
 							nonDeploymentEventStrings(events),
 						)
@@ -1960,6 +1984,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			require.Equal(t,
 				[]string{
 					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerDeleted(id: 1, address: 0x0000000000000001)`,
 				},
 				nonDeploymentEventStrings(events),
 			)
@@ -2004,6 +2029,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			require.Equal(t,
 				[]string{
 					`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+					`flow.StorageCapabilityControllerDeleted(id: 1, address: 0x0000000000000001)`,
 				},
 				nonDeploymentEventStrings(events),
 			)
@@ -2536,6 +2562,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 			require.Equal(t,
 				[]string{
 					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerDeleted(id: 1, address: 0x0000000000000001)`,
 				},
 				nonDeploymentEventStrings(events),
 			)
@@ -2571,7 +2598,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 			require.Equal(t,
 				[]string{
-					"flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())",
+					`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+					`flow.AccountCapabilityControllerDeleted(id: 1, address: 0x0000000000000001)`,
 				},
 				nonDeploymentEventStrings(events),
 			)
@@ -2789,6 +2817,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 						`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
 						`flow.StorageCapabilityControllerIssued(id: 3, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
 						`flow.StorageCapabilityControllerIssued(id: 4, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r2)`,
+						`flow.StorageCapabilityControllerTargetChanged(id: 1, address: 0x0000000000000001, path: /storage/r2)`,
 					},
 					nonDeploymentEventStrings(events),
 				)
@@ -2835,7 +2864,8 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 
 				require.Equal(t,
 					[]string{
-						"flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)",
+						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						`flow.StorageCapabilityControllerTargetChanged(id: 1, address: 0x0000000000000001, path: /storage/empty)`,
 					},
 					nonDeploymentEventStrings(events),
 				)
@@ -2886,6 +2916,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.Equal(t,
 					[]string{
 						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						`flow.StorageCapabilityControllerTargetChanged(id: 1, address: 0x0000000000000001, path: /storage/r2)`,
 					},
 					nonDeploymentEventStrings(events),
 				)
@@ -2934,6 +2965,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.Equal(t,
 					[]string{
 						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						`flow.StorageCapabilityControllerTargetChanged(id: 1, address: 0x0000000000000001, path: /storage/s)`,
 					},
 					nonDeploymentEventStrings(events),
 				)
@@ -2986,6 +3018,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.Equal(t,
 					[]string{
 						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						`flow.StorageCapabilityControllerDeleted(id: 1, address: 0x0000000000000001)`,
 					},
 					nonDeploymentEventStrings(events),
 				)
@@ -3024,6 +3057,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.Equal(t,
 					[]string{
 						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						`flow.StorageCapabilityControllerDeleted(id: 1, address: 0x0000000000000001)`,
 					},
 					nonDeploymentEventStrings(events),
 				)
@@ -3062,6 +3096,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.Equal(t,
 					[]string{
 						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						`flow.StorageCapabilityControllerDeleted(id: 1, address: 0x0000000000000001)`,
 					},
 					nonDeploymentEventStrings(events),
 				)
@@ -3100,6 +3135,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.Equal(t,
 					[]string{
 						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						`flow.StorageCapabilityControllerDeleted(id: 1, address: 0x0000000000000001)`,
 					},
 					nonDeploymentEventStrings(events),
 				)
@@ -3142,6 +3178,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.Equal(t,
 					[]string{
 						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						`flow.StorageCapabilityControllerDeleted(id: 1, address: 0x0000000000000001)`,
 					},
 					nonDeploymentEventStrings(events),
 				)
@@ -3187,6 +3224,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.Equal(t,
 					[]string{
 						`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/r)`,
+						`flow.StorageCapabilityControllerDeleted(id: 1, address: 0x0000000000000001)`,
 					},
 					nonDeploymentEventStrings(events),
 				)
@@ -3326,6 +3364,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.Equal(t,
 					[]string{
 						`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+						`flow.AccountCapabilityControllerDeleted(id: 1, address: 0x0000000000000001)`,
 					},
 					nonDeploymentEventStrings(events),
 				)
@@ -3360,6 +3399,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.Equal(t,
 					[]string{
 						`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+						`flow.AccountCapabilityControllerDeleted(id: 1, address: 0x0000000000000001)`,
 					},
 					nonDeploymentEventStrings(events),
 				)
@@ -3398,6 +3438,7 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				require.Equal(t,
 					[]string{
 						`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Account>())`,
+						`flow.AccountCapabilityControllerDeleted(id: 1, address: 0x0000000000000001)`,
 					},
 					nonDeploymentEventStrings(events),
 				)
