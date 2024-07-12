@@ -210,12 +210,9 @@ func newWasmtimeFunctionWebAssemblyExport(
 	}
 
 	metered := func(inter *interpreter.Interpreter, f func() (any, error)) (any, error) {
-		// TODO: get remaining computation and convert to fuel.
-		//   needs e.g. invocation.Interpreter.RemainingComputation()
-		const todoAvailableFuel uint64 = 1000
 
-		fuelBefore := todoAvailableFuel
-		err := store.SetFuel(fuelBefore)
+		fuelBefore := inter.ComputationRemaining(common.ComputationKindWebAssemblyFuel)
+		err := store.SetFuel(uint64(fuelBefore))
 		if err != nil {
 			// "[SetFuel] will return an error if fuel consumption is not enabled"
 			panic(errors.NewUnreachableError())
@@ -231,8 +228,8 @@ func newWasmtimeFunctionWebAssemblyExport(
 			panic(errors.NewUnreachableError())
 		}
 
-		fuelDelta := fuelBefore - fuelAfter
-		inter.ReportComputation(common.ComputationKindWebAssemblyFuel, uint(fuelDelta))
+		fuelDelta := fuelBefore - uint(fuelAfter)
+		inter.ReportComputation(common.ComputationKindWebAssemblyFuel, fuelDelta)
 
 		return callResult, callErr
 	}

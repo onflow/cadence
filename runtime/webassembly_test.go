@@ -198,6 +198,13 @@ func TestRuntimeWebAssemblyLoop(t *testing.T) {
 
 			return nil
 		},
+		OnComputationRemaining: func(kind common.ComputationKind) uint {
+			if kind != common.ComputationKindWebAssemblyFuel {
+				return 0
+			}
+
+			return 1000
+		},
 	}
 
 	_, err := runtime.ExecuteScript(
@@ -256,6 +263,13 @@ func TestRuntimeWebAssemblyInfiniteLoopAtStart(t *testing.T) {
 		OnCompileWebAssembly: NewWasmtimeWebAssemblyModule,
 		OnDecodeArgument: func(b []byte, _ cadence.Type) (cadence.Value, error) {
 			return json.Decode(nil, b)
+		},
+		OnComputationRemaining: func(kind common.ComputationKind) uint {
+			if kind != common.ComputationKindWebAssemblyFuel {
+				return 0
+			}
+
+			return 1000
 		},
 	}
 
