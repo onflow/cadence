@@ -35,6 +35,8 @@ type Config struct {
 	OnResourceOwnerChange OnResourceOwnerChangeFunc
 	// OnMeterComputation is triggered when a computation is about to happen
 	OnMeterComputation OnMeterComputationFunc
+	// OnComputationRemaining is used to determine how much computation is remaining
+	OnComputationRemaining OnComputationRemainingFunc
 	// InjectedCompositeFieldsHandler is used to initialize new composite values' fields
 	InjectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	// ContractValueHandler is used to handle imports of values

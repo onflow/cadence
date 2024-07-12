@@ -190,6 +190,7 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		Debugger:                         e.config.Debugger,
 		OnStatement:                      e.newOnStatementHandler(),
 		OnMeterComputation:               e.newOnMeterComputation(),
+		OnComputationRemaining:           e.newOnComputationRemaining(),
 		OnFunctionInvocation:             e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:          e.newOnInvokedFunctionReturnHandler(),
 		CapabilityBorrowHandler:          stdlib.BorrowCapabilityController,
@@ -1100,6 +1101,16 @@ func (e *interpreterEnvironment) newOnMeterComputation() interpreter.OnMeterComp
 		if err != nil {
 			panic(interpreter.WrappedExternalError(err))
 		}
+	}
+}
+
+func (e *interpreterEnvironment) newOnComputationRemaining() interpreter.OnComputationRemainingFunc {
+	return func(compKind common.ComputationKind) uint {
+		var remaining uint
+		errors.WrapPanic(func() {
+			remaining = e.runtimeInterface.ComputationRemaining(compKind)
+		})
+		return remaining
 	}
 }
 

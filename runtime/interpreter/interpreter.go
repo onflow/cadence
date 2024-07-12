@@ -106,6 +106,11 @@ type OnMeterComputationFunc func(
 	intensity uint,
 )
 
+// OnComputationRemainingFunc is a function that is used to determine how much computation is remaining.
+type OnComputationRemainingFunc func(
+	kind common.ComputationKind,
+) uint
+
 // CapabilityBorrowHandlerFunc is a function that is used to borrow ID capabilities.
 type CapabilityBorrowHandlerFunc func(
 	inter *Interpreter,
@@ -4948,6 +4953,17 @@ func (interpreter *Interpreter) ReportComputation(compKind common.ComputationKin
 	if onMeterComputation != nil {
 		onMeterComputation(compKind, intensity)
 	}
+}
+
+func (interpreter *Interpreter) ComputationRemaining(compKind common.ComputationKind) uint {
+	config := interpreter.SharedState.Config
+
+	onComputationRemaining := config.OnComputationRemaining
+	if onComputationRemaining != nil {
+		return onComputationRemaining(compKind)
+	}
+
+	return math.MaxUint
 }
 
 func (interpreter *Interpreter) getAccessOfMember(self Value, identifier string) sema.Access {

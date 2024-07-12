@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"math"
 	"time"
 
 	"github.com/onflow/atree"
@@ -115,12 +116,13 @@ type TestRuntimeInterface struct {
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	)
-	OnMeterMemory        func(usage common.MemoryUsage) error
-	OnComputationUsed    func() (uint64, error)
-	OnMemoryUsed         func() (uint64, error)
-	OnInteractionUsed    func() (uint64, error)
-	OnGenerateAccountID  func(address common.Address) (uint64, error)
-	OnCompileWebAssembly func(bytes []byte) (stdlib.WebAssemblyModule, error)
+	OnMeterMemory          func(usage common.MemoryUsage) error
+	OnComputationUsed      func() (uint64, error)
+	OnMemoryUsed           func() (uint64, error)
+	OnInteractionUsed      func() (uint64, error)
+	OnComputationRemaining func(kind common.ComputationKind) uint
+	OnGenerateAccountID    func(address common.Address) (uint64, error)
+	OnCompileWebAssembly   func(bytes []byte) (stdlib.WebAssemblyModule, error)
 
 	lastUUID            uint64
 	accountIDs          map[common.Address]uint64
@@ -595,6 +597,13 @@ func (i *TestRuntimeInterface) InteractionUsed() (uint64, error) {
 	}
 
 	return i.OnInteractionUsed()
+}
+
+func (i *TestRuntimeInterface) ComputationRemaining(kind common.ComputationKind) uint {
+	if i.OnComputationRemaining == nil {
+		return math.MaxUint
+	}
+	return i.OnComputationRemaining(kind)
 }
 
 func (i *TestRuntimeInterface) onTransactionExecutionStart() {
