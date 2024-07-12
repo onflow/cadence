@@ -237,3 +237,14 @@ func (WebAssemblyTrapError) IsUserError() {}
 func (WebAssemblyTrapError) Error() string {
 	return "WebAssembly trap"
 }
+
+type WebAssemblyNonFunctionExportError struct{}
+
+var _ error = WebAssemblyNonFunctionExportError{}
+var _ errors.UserError = WebAssemblyNonFunctionExportError{}
+
+func (WebAssemblyNonFunctionExportError) IsUserError() {}
+
+func (WebAssemblyNonFunctionExportError) Error() string {
+	return "invalid WebAssembly export: not a function"
+}

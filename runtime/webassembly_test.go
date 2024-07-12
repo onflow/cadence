@@ -275,3 +275,58 @@ func TestRuntimeWebAssemblyInfiniteLoopAtStart(t *testing.T) {
 	RequireError(t, err)
 	require.ErrorAs(t, err, &stdlib.WebAssemblyTrapError{})
 }
+
+func TestRuntimeWebAssemblyNonFunctionExport(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		WebAssemblyEnabled: true,
+	})
+
+	// A simple program which exports a memory `add`.
+	//
+	//  (module
+	//    (memory (export "add") 1 4)
+	//    (data (i32.const 0x1) "\01\02\03")
+	//  )
+	//
+	addProgram := []byte{
+		0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0x05, 0x04, 0x01, 0x01,
+		0x01, 0x04, 0x07, 0x07, 0x01, 0x03, 0x61, 0x64, 0x64, 0x02, 0x00, 0x0b,
+		0x09, 0x01, 0x00, 0x41, 0x01, 0x0b, 0x03, 0x01, 0x02, 0x03,
+	}
+
+	// language=cadence
+	script := []byte(`
+      access(all)
+      fun main(program: [UInt8]) {
+          let instance = WebAssembly.compileAndInstantiate(bytes: program).instance
+          instance.getExport<fun(): Int32>(name: "add")
+      }
+    `)
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage:              NewTestLedger(nil, nil),
+		OnCompileWebAssembly: NewWasmtimeWebAssemblyModule,
+		OnDecodeArgument: func(b []byte, _ cadence.Type) (cadence.Value, error) {
+			return json.Decode(nil, b)
+		},
+	}
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+			Arguments: encodeArgs(
+				newBytesValue(addProgram),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+
+	RequireError(t, err)
+	require.ErrorAs(t, err, &stdlib.WebAssemblyNonFunctionExportError{})
+}
