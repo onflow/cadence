@@ -274,8 +274,11 @@ func newWasmtimeFunctionWebAssemblyExport(
 				func() (any, error) {
 					res, err := function.Call(store, convertedArguments...)
 					if err != nil {
-						// TODO: wrap error
-						return nil, err
+						if _, ok := err.(*wasmtime.Trap); ok {
+							return nil, stdlib.WebAssemblyTrapError{}
+						}
+
+						panic(errors.NewUnexpectedError("WebAssembly invocation failed with unknown error"))
 					}
 					return res, nil
 				},

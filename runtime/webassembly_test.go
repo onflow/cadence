@@ -214,7 +214,7 @@ func TestRuntimeWebAssemblyLoop(t *testing.T) {
 	)
 
 	require.Error(t, err)
-	// TODO: check error type
+	require.ErrorAs(t, err, &stdlib.WebAssemblyTrapError{})
 
 	assert.Equal(t,
 		// TODO: adjust, currently todoAvailableFuel
