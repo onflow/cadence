@@ -395,26 +395,34 @@ import FlowToken from 0x1
 
 transaction {
 
-    prepare(signer: &Account) {
+    prepare(signer: auth(BorrowValue, IssueStorageCapabilityController, PublishCapability, SaveValue) &Account) {
 
-        if signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) == nil {
-            // Create a new flowToken Vault and put it in storage
-            signer.storage.save(<-FlowToken.createEmptyVault(), to: /storage/flowTokenVault)
+        var storagePath = /storage/flowTokenVault
 
-            // Create a public capability to the Vault that only exposes
-            // the deposit function through the Receiver interface
-            signer.link<&FlowToken.Vault>(
-                /public/flowTokenReceiver,
-                target: /storage/flowTokenVault
-            )
-
-            // Create a public capability to the Vault that only exposes
-            // the balance field through the Balance interface
-            signer.link<&FlowToken.Vault>(
-                /public/flowTokenBalance,
-                target: /storage/flowTokenVault
-            )
+        if signer.storage.borrow<&FlowToken.Vault>(from: storagePath) != nil {
+            return
         }
+
+        // Create a new flowToken Vault and put it in storage
+        signer.storage.save(<-FlowToken.createEmptyVault(), to: storagePath)
+
+        // Create a public capability to the Vault that only exposes
+        // the deposit function through the Receiver interface
+        let vaultCap = signer.capabilities.storage.issue<&FlowToken.Vault>(storagePath)
+
+        signer.capabilities.publish(
+            vaultCap,
+            at: /public/flowTokenReceiver
+        )
+
+        // Create a public capability to the Vault that only exposes
+        // the balance field through the Balance interface
+        let balanceCap = signer.capabilities.storage.issue<&FlowToken.Vault>(storagePath)
+
+        signer.capabilities.publish(
+            balanceCap,
+            at: /public/flowTokenBalance
+        )
     }
 }
 `
@@ -424,17 +432,21 @@ import FungibleToken from 0x1
 import FlowToken from 0x1
 
 transaction(recipient: Address, amount: UFix64) {
+
+    /// Reference to the FlowToken Minter Resource object
     let tokenAdmin: &FlowToken.Administrator
+
+    /// Reference to the Fungible Token Receiver of the recipient
     let tokenReceiver: &{FungibleToken.Receiver}
 
-    prepare(signer: &Account) {
-        self.tokenAdmin = signer
+    prepare(signer: auth(BorrowValue) &Account) {
+         self.tokenAdmin = signer.storage
             .borrow<&FlowToken.Administrator>(from: /storage/flowTokenAdmin)
             ?? panic("Signer is not the token admin")
 
         self.tokenReceiver = getAccount(recipient)
-            .getCapability(/public/flowTokenReceiver)
-            .borrow<&{FungibleToken.Receiver}>()
+            .capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+            .borrow()
             ?? panic("Unable to borrow receiver reference")
     }
 
@@ -454,12 +466,9 @@ import FungibleToken from 0x1
 import FlowToken from 0x1
 
 transaction(amount: UFix64, to: Address) {
-
-    // The Vault resource that holds the tokens that are being transferred
     let sentVault: @{FungibleToken.Vault}
 
-    prepare(signer: &Account) {
-
+    prepare(signer: auth(BorrowValue) &Account) {
         // Get a reference to the signer's stored vault
         let vaultRef = signer.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault)
 			?? panic("Could not borrow reference to the owner's Vault!")
@@ -469,11 +478,10 @@ transaction(amount: UFix64, to: Address) {
     }
 
     execute {
-
         // Get a reference to the recipient's Receiver
         let receiverRef =  getAccount(to)
-            .getCapability(/public/flowTokenReceiver)
-            .borrow<&{FungibleToken.Receiver}>()
+            .capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+            .borrow()
 			?? panic("Could not borrow receiver reference to the recipient's Vault")
 
         // Deposit the withdrawn tokens in the recipient's receiver
@@ -489,8 +497,8 @@ import FlowToken from 0x1
 access(all) fun main(account: Address): UFix64 {
 
     let vaultRef = getAccount(account)
-        .getCapability(/public/flowTokenBalance)
-        .borrow<&FlowToken.Vault>()
+        .capabilities.get<&FlowToken.Vault>(/public/flowTokenBalance)
+        .borrow()
         ?? panic("Could not borrow Balance reference to the Vault")
 
     return vaultRef.balance
@@ -565,7 +573,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 				`
                   transaction {
 
-                      prepare(signer: &Account) {
+                      prepare(signer: auth(Storage, Capabilities, Contracts) &Account) {
                           signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
                       }
                   }
@@ -665,6 +673,8 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	inter := NewTestInterpreter(b)
 
+	nextScriptLocation := NewScriptLocationGenerator()
+
 	for _, address := range []common.Address{
 		senderAddress,
 		receiverAddress,
@@ -679,7 +689,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			},
 			Context{
 				Interface:   runtimeInterface,
-				Location:    nextTransactionLocation(),
+				Location:    nextScriptLocation(),
 				Environment: environment,
 			},
 		)
