@@ -108,11 +108,6 @@ func (m *CapabilityValueMigration) Migrate(
 			panic(errors.NewUnexpectedError("unexpected non-reference borrow type: %T", oldBorrowType))
 		}
 
-		// Convert the old AuthAccount type to the new fully-entitled Account type
-		if newBorrowType.ReferencedType == interpreter.PrimitiveStaticTypeAuthAccount { //nolint:staticcheck
-			newBorrowType = fullyEntitledAccountReferenceStaticType
-		}
-
 		newCapability := interpreter.NewUnmeteredCapabilityValue(
 			capabilityID,
 			oldCapability.Address,
