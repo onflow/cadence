@@ -62,9 +62,9 @@ type TestRuntimeInterface struct {
 		hashAlgo runtime.HashAlgorithm,
 		weight int,
 	) (*stdlib.AccountKey, error)
-	OnGetAccountKey             func(address runtime.Address, index int) (*stdlib.AccountKey, error)
-	OnRemoveAccountKey          func(address runtime.Address, index int) (*stdlib.AccountKey, error)
-	OnAccountKeysCount          func(address runtime.Address) (uint64, error)
+	OnGetAccountKey             func(address runtime.Address, index uint32) (*stdlib.AccountKey, error)
+	OnRemoveAccountKey          func(address runtime.Address, index uint32) (*stdlib.AccountKey, error)
+	OnAccountKeysCount          func(address runtime.Address) (uint32, error)
 	OnUpdateAccountContractCode func(location common.AddressLocation, code []byte) error
 	OnGetAccountContractCode    func(location common.AddressLocation) (code []byte, err error)
 	OnRemoveAccountContractCode func(location common.AddressLocation) (err error)
@@ -259,21 +259,21 @@ func (i *TestRuntimeInterface) AddAccountKey(
 	return i.OnAddAccountKey(address, publicKey, hashAlgo, weight)
 }
 
-func (i *TestRuntimeInterface) GetAccountKey(address runtime.Address, index int) (*stdlib.AccountKey, error) {
+func (i *TestRuntimeInterface) GetAccountKey(address runtime.Address, index uint32) (*stdlib.AccountKey, error) {
 	if i.OnGetAccountKey == nil {
 		panic("must specify TestRuntimeInterface.OnGetAccountKey")
 	}
 	return i.OnGetAccountKey(address, index)
 }
 
-func (i *TestRuntimeInterface) AccountKeysCount(address runtime.Address) (uint64, error) {
+func (i *TestRuntimeInterface) AccountKeysCount(address runtime.Address) (uint32, error) {
 	if i.OnAccountKeysCount == nil {
 		panic("must specify TestRuntimeInterface.OnAccountKeysCount")
 	}
 	return i.OnAccountKeysCount(address)
 }
 
-func (i *TestRuntimeInterface) RevokeAccountKey(address runtime.Address, index int) (*stdlib.AccountKey, error) {
+func (i *TestRuntimeInterface) RevokeAccountKey(address runtime.Address, index uint32) (*stdlib.AccountKey, error) {
 	if i.OnRemoveAccountKey == nil {
 		panic("must specify TestRuntimeInterface.OnRemoveAccountKey")
 	}

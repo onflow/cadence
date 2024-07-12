@@ -347,11 +347,11 @@ func (e *interpreterEnvironment) GetStorageCapacity(address common.Address) (uin
 	return e.runtimeInterface.GetStorageCapacity(address)
 }
 
-func (e *interpreterEnvironment) GetAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
+func (e *interpreterEnvironment) GetAccountKey(address common.Address, index uint32) (*stdlib.AccountKey, error) {
 	return e.runtimeInterface.GetAccountKey(address, index)
 }
 
-func (e *interpreterEnvironment) AccountKeysCount(address common.Address) (uint64, error) {
+func (e *interpreterEnvironment) AccountKeysCount(address common.Address) (uint32, error) {
 	return e.runtimeInterface.AccountKeysCount(address)
 }
 
@@ -395,7 +395,7 @@ func (e *interpreterEnvironment) AddAccountKey(
 	return e.runtimeInterface.AddAccountKey(address, key, algo, weight)
 }
 
-func (e *interpreterEnvironment) RevokeAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
+func (e *interpreterEnvironment) RevokeAccountKey(address common.Address, index uint32) (*stdlib.AccountKey, error) {
 	return e.runtimeInterface.RevokeAccountKey(address, index)
 }
 

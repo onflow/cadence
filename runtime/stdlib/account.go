@@ -657,7 +657,7 @@ func newAccountKeysAddFunction(
 
 type AccountKey struct {
 	PublicKey *PublicKey
-	KeyIndex  int
+	KeyIndex  uint32
 	Weight    int
 	HashAlgo  sema.HashAlgorithm
 	IsRevoked bool
@@ -669,8 +669,8 @@ type AccountKeyProvider interface {
 	BLSPoPVerifier
 	Hasher
 	// GetAccountKey retrieves a key from an account by index.
-	GetAccountKey(address common.Address, index int) (*AccountKey, error)
-	AccountKeysCount(address common.Address) (uint64, error)
+	GetAccountKey(address common.Address, index uint32) (*AccountKey, error)
+	AccountKeysCount(address common.Address) (uint32, error)
 }
 
 func newAccountKeysGetFunction(
@@ -699,7 +699,7 @@ func newAccountKeysGetFunction(
 				var err error
 				var accountKey *AccountKey
 				errors.WrapPanic(func() {
-					accountKey, err = provider.GetAccountKey(address, index)
+					accountKey, err = provider.GetAccountKey(address, uint32(index))
 				})
 
 				if err != nil {
@@ -778,7 +778,7 @@ func newAccountKeysForEachFunction(
 					)
 				}
 
-				var count uint64
+				var count uint32
 				var err error
 
 				errors.WrapPanic(func() {
@@ -791,9 +791,9 @@ func newAccountKeysForEachFunction(
 
 				var accountKey *AccountKey
 
-				for index := uint64(0); index < count; index++ {
+				for index := uint32(0); index < count; index++ {
 					errors.WrapPanic(func() {
-						accountKey, err = provider.GetAccountKey(address, int(index))
+						accountKey, err = provider.GetAccountKey(address, index)
 					})
 					if err != nil {
 						panic(interpreter.WrappedExternalError(err))
@@ -842,7 +842,7 @@ func newAccountKeysCountGetter(
 
 	return func() interpreter.UInt64Value {
 		return interpreter.NewUInt64Value(gauge, func() uint64 {
-			var count uint64
+			var count uint32
 			var err error
 
 			errors.WrapPanic(func() {
@@ -854,7 +854,7 @@ func newAccountKeysCountGetter(
 				panic(interpreter.WrappedExternalError(err))
 			}
 
-			return count
+			return uint64(count)
 		})
 	}
 }
@@ -866,7 +866,7 @@ type AccountKeyRevocationHandler interface {
 	PublicKeySignatureVerifier
 	BLSPoPVerifier
 	// RevokeAccountKey removes a key from an account by index.
-	RevokeAccountKey(address common.Address, index int) (*AccountKey, error)
+	RevokeAccountKey(address common.Address, index uint32) (*AccountKey, error)
 }
 
 func newAccountKeysRevokeFunction(
@@ -894,7 +894,7 @@ func newAccountKeysRevokeFunction(
 				var err error
 				var accountKey *AccountKey
 				errors.WrapPanic(func() {
-					accountKey, err = handler.RevokeAccountKey(address, index)
+					accountKey, err = handler.RevokeAccountKey(address, uint32(index))
 				})
 				if err != nil {
 					panic(interpreter.WrappedExternalError(err))

@@ -308,11 +308,11 @@ func (*StandardLibraryHandler) Hash(_ []byte, _ string, _ sema.HashAlgorithm) ([
 	return nil, goerrors.New("crypto functionality is not available in this environment")
 }
 
-func (*StandardLibraryHandler) GetAccountKey(_ common.Address, _ int) (*stdlib.AccountKey, error) {
+func (*StandardLibraryHandler) GetAccountKey(_ common.Address, _ uint32) (*stdlib.AccountKey, error) {
 	return nil, goerrors.New("accounts are not supported in this environment")
 }
 
-func (*StandardLibraryHandler) AccountKeysCount(_ common.Address) (uint64, error) {
+func (*StandardLibraryHandler) AccountKeysCount(_ common.Address) (uint32, error) {
 	return 0, goerrors.New("accounts are not supported in this environment")
 }
 
@@ -354,7 +354,7 @@ func (*StandardLibraryHandler) AddAccountKey(
 	return nil, goerrors.New("accounts are not available in this environment")
 }
 
-func (*StandardLibraryHandler) RevokeAccountKey(_ common.Address, _ int) (*stdlib.AccountKey, error) {
+func (*StandardLibraryHandler) RevokeAccountKey(_ common.Address, _ uint32) (*stdlib.AccountKey, error) {
 	return nil, goerrors.New("accounts are not available in this environment")
 }
 

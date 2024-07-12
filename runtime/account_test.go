@@ -82,6 +82,10 @@ func noopRuntimeUInt64Getter(_ common.Address) (uint64, error) {
 	return 0, nil
 }
 
+func noopRuntimeUInt32Getter(_ common.Address) (uint32, error) {
+	return 0, nil
+}
+
 func TestRuntimeReturnPublicAccount(t *testing.T) {
 
 	t.Parallel()
@@ -99,7 +103,7 @@ func TestRuntimeReturnPublicAccount(t *testing.T) {
 		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
 		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
-		OnAccountKeysCount:           noopRuntimeUInt64Getter,
+		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}
 
@@ -132,7 +136,7 @@ func TestRuntimeReturnAuthAccount(t *testing.T) {
 		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
 		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
-		OnAccountKeysCount:           noopRuntimeUInt64Getter,
+		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}
 
@@ -449,7 +453,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 
 		keys := make(map[int]*AccountKey, len(testEnv.storage.keys))
 		for _, key := range testEnv.storage.keys {
-			keys[key.KeyIndex] = key
+			keys[int(key.KeyIndex)] = key
 		}
 		for _, loggedIndex := range testEnv.storage.logs {
 			keyIdx, err := strconv.Atoi(loggedIndex)
@@ -837,7 +841,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		keys := make(map[int]*AccountKey, len(testEnv.storage.keys))
 		for _, key := range testEnv.storage.keys {
-			keys[key.KeyIndex] = key
+			keys[int(key.KeyIndex)] = key
 		}
 		for _, loggedIndex := range testEnv.storage.logs {
 			keyIdx, err := strconv.Atoi(loggedIndex)
@@ -1082,7 +1086,7 @@ func newAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *TestRunt
 			return accountKeyTestAddress, nil
 		},
 		OnAddAccountKey: func(address Address, publicKey *stdlib.PublicKey, hashAlgo HashAlgorithm, weight int) (*stdlib.AccountKey, error) {
-			index := len(storage.keys)
+			index := uint32(len(storage.keys))
 			accountKey := &stdlib.AccountKey{
 				KeyIndex:  index,
 				PublicKey: publicKey,
@@ -1096,8 +1100,8 @@ func newAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *TestRunt
 			storage.returnedKey = accountKey
 			return accountKey, nil
 		},
-		OnGetAccountKey: func(address Address, index int) (*stdlib.AccountKey, error) {
-			if index >= len(storage.keys) {
+		OnGetAccountKey: func(address Address, index uint32) (*stdlib.AccountKey, error) {
+			if index >= uint32(len(storage.keys)) {
 				storage.returnedKey = nil
 				return nil, nil
 			}
@@ -1106,8 +1110,8 @@ func newAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *TestRunt
 			storage.returnedKey = accountKey
 			return accountKey, nil
 		},
-		OnRemoveAccountKey: func(address Address, index int) (*stdlib.AccountKey, error) {
-			if index >= len(storage.keys) {
+		OnRemoveAccountKey: func(address Address, index uint32) (*stdlib.AccountKey, error) {
+			if index >= uint32(len(storage.keys)) {
 				storage.returnedKey = nil
 				return nil, nil
 			}
@@ -1125,8 +1129,8 @@ func newAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *TestRunt
 
 			return accountKey, nil
 		},
-		OnAccountKeysCount: func(address Address) (uint64, error) {
-			return uint64(storage.unrevokedKeyCount), nil
+		OnAccountKeysCount: func(address Address) (uint32, error) {
+			return uint32(storage.unrevokedKeyCount), nil
 		},
 		OnProgramLog: func(message string) {
 			storage.logs = append(storage.logs, message)
