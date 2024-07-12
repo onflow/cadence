@@ -330,3 +330,46 @@ func TestRuntimeWebAssemblyNonFunctionExport(t *testing.T) {
 	RequireError(t, err)
 	require.ErrorAs(t, err, &stdlib.WebAssemblyNonFunctionExportError{})
 }
+
+func TestRuntimeWebAssemblyInvalidModule(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntimeWithConfig(Config{
+		WebAssemblyEnabled: true,
+	})
+
+	program := []byte{0xFF}
+
+	// language=cadence
+	script := []byte(`
+      access(all)
+      fun main(program: [UInt8]) {
+          WebAssembly.compileAndInstantiate(bytes: program).instance
+      }
+    `)
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage:              NewTestLedger(nil, nil),
+		OnCompileWebAssembly: NewWasmtimeWebAssemblyModule,
+		OnDecodeArgument: func(b []byte, _ cadence.Type) (cadence.Value, error) {
+			return json.Decode(nil, b)
+		},
+	}
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+			Arguments: encodeArgs(
+				newBytesValue(program),
+			),
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  common.ScriptLocation{},
+		},
+	)
+
+	RequireError(t, err)
+	require.ErrorAs(t, err, &stdlib.WebAssemblyCompilationError{})
+}

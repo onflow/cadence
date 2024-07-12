@@ -91,8 +91,11 @@ func NewWasmtimeWebAssemblyModule(bytes []byte) (stdlib.WebAssemblyModule, error
 
 	module, err := wasmtime.NewModule(engine, bytes)
 	if err != nil {
-		// TODO: wrap error
-		return nil, err
+		if _, ok := err.(*wasmtime.Error); ok {
+			return nil, stdlib.WebAssemblyCompilationError{}
+		}
+
+		panic(errors.NewUnexpectedError("WebAssembly module compilation failed with unknown error"))
 	}
 
 	return WasmtimeWebAssemblyModule{
@@ -110,7 +113,7 @@ func (m WasmtimeWebAssemblyModule) InstantiateWebAssemblyModule(_ common.MemoryG
 			return nil, stdlib.WebAssemblyTrapError{}
 		}
 
-		panic(errors.NewUnexpectedError("WebAssembly module instantiation failed, but did not trap"))
+		panic(errors.NewUnexpectedError("WebAssembly module instantiation failed with unknown error"))
 	}
 	return WasmtimeWebAssemblyInstance{
 		Instance: instance,

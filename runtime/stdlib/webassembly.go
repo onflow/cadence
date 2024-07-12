@@ -248,3 +248,14 @@ func (WebAssemblyNonFunctionExportError) IsUserError() {}
 func (WebAssemblyNonFunctionExportError) Error() string {
 	return "invalid WebAssembly export: not a function"
 }
+
+type WebAssemblyCompilationError struct{}
+
+var _ error = WebAssemblyCompilationError{}
+var _ errors.UserError = WebAssemblyCompilationError{}
+
+func (WebAssemblyCompilationError) IsUserError() {}
+
+func (WebAssemblyCompilationError) Error() string {
+	return "invalid WebAssembly module"
+}
