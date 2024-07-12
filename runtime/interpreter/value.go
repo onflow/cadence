@@ -1233,8 +1233,7 @@ func (v *StringValue) Concat(interpreter *Interpreter, other *StringValue, locat
 	memoryUsage := common.NewStringMemoryUsage(newLength)
 
 	// Meter computation as if the two strings were iterated.
-	length := len(v.Str) + len(other.Str)
-	interpreter.ReportComputation(common.ComputationKindLoop, uint(length))
+	interpreter.ReportComputation(common.ComputationKindLoop, uint(newLength))
 
 	return NewStringValue(
 		interpreter,
@@ -1254,8 +1253,11 @@ var EmptyString = NewUnmeteredStringValue("")
 
 func (v *StringValue) Slice(from IntValue, to IntValue, locationRange LocationRange) Value {
 	fromIndex := from.ToInt(locationRange)
-
 	toIndex := to.ToInt(locationRange)
+	return v.slice(fromIndex, toIndex, locationRange)
+}
+
+func (v *StringValue) slice(fromIndex int, toIndex int, locationRange LocationRange) *StringValue {
 
 	length := v.Length()
 
@@ -1387,6 +1389,55 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			},
 		)
 
+	case sema.StringTypeContainsFunctionName:
+		return NewBoundHostFunctionValue(
+			interpreter,
+			v,
+			sema.StringTypeContainsFunctionType,
+			func(invocation Invocation) Value {
+				other, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.Contains(invocation.Interpreter, other)
+			},
+		)
+
+	case sema.StringTypeIndexFunctionName:
+		return NewBoundHostFunctionValue(
+			interpreter,
+			v,
+			sema.StringTypeIndexFunctionType,
+			func(invocation Invocation) Value {
+				other, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.IndexOf(invocation.Interpreter, other)
+			},
+		)
+
+	case sema.StringTypeCountFunctionName:
+		return NewBoundHostFunctionValue(
+			interpreter,
+			v,
+			sema.StringTypeIndexFunctionType,
+			func(invocation Invocation) Value {
+				other, ok := invocation.Arguments[0].(*StringValue)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				return v.Count(
+					invocation.Interpreter,
+					invocation.LocationRange,
+					other,
+				)
+			},
+		)
+
 	case sema.StringTypeDecodeHexFunctionName:
 		return NewBoundHostFunctionValue(
 			interpreter,
@@ -1421,7 +1472,11 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 					panic(errors.NewUnreachableError())
 				}
 
-				return v.Split(invocation.Interpreter, invocation.LocationRange, separator.Str)
+				return v.Split(
+					invocation.Interpreter,
+					invocation.LocationRange,
+					separator,
+				)
 			},
 		)
 
@@ -1431,17 +1486,22 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			v,
 			sema.StringTypeReplaceAllFunctionType,
 			func(invocation Invocation) Value {
-				of, ok := invocation.Arguments[0].(*StringValue)
+				original, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				with, ok := invocation.Arguments[1].(*StringValue)
+				replacement, ok := invocation.Arguments[1].(*StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				return v.ReplaceAll(invocation.Interpreter, invocation.LocationRange, of.Str, with.Str)
+				return v.ReplaceAll(
+					invocation.Interpreter,
+					invocation.LocationRange,
+					original,
+					replacement,
+				)
 			},
 		)
 	}
@@ -1501,16 +1561,17 @@ func (v *StringValue) ToLower(interpreter *Interpreter) *StringValue {
 	)
 }
 
-func (v *StringValue) Split(inter *Interpreter, _ LocationRange, separator string) Value {
+func (v *StringValue) Split(inter *Interpreter, locationRange LocationRange, separator *StringValue) *ArrayValue {
 
-	// Meter computation as if the string was iterated.
-	// i.e: linear search to find the split points. This is an estimate.
-	inter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)))
+	if len(separator.Str) == 0 {
+		return v.Explode(inter, locationRange)
+	}
 
-	split := strings.Split(v.Str, separator)
+	count := v.count(inter, locationRange, separator) + 1
 
-	var index int
-	count := len(split)
+	partIndex := 0
+
+	remaining := v
 
 	return NewArrayValueWithIterator(
 		inter,
@@ -1518,12 +1579,66 @@ func (v *StringValue) Split(inter *Interpreter, _ LocationRange, separator strin
 		common.ZeroAddress,
 		uint64(count),
 		func() Value {
-			if index >= count {
+
+			inter.ReportComputation(common.ComputationKindLoop, 1)
+
+			if partIndex >= count {
 				return nil
 			}
 
-			str := split[index]
-			index++
+			// Set the remainder as the last part
+			if partIndex == count-1 {
+				partIndex++
+				return remaining
+			}
+
+			separatorCharacterIndex, _ := remaining.indexOf(inter, separator)
+			if separatorCharacterIndex < 0 {
+				return nil
+			}
+
+			partIndex++
+
+			part := remaining.slice(
+				0,
+				separatorCharacterIndex,
+				locationRange,
+			)
+
+			remaining = remaining.slice(
+				separatorCharacterIndex+separator.Length(),
+				remaining.Length(),
+				locationRange,
+			)
+
+			return part
+		},
+	)
+}
+
+// Explode returns a Cadence array of type [String], where each element is a single character of the string
+func (v *StringValue) Explode(inter *Interpreter, locationRange LocationRange) *ArrayValue {
+
+	iterator := v.Iterator(inter, locationRange)
+
+	return NewArrayValueWithIterator(
+		inter,
+		VarSizedArrayOfStringType,
+		common.ZeroAddress,
+		uint64(v.Length()),
+		func() Value {
+			value := iterator.Next(inter, locationRange)
+			if value == nil {
+				return nil
+			}
+
+			character, ok := value.(CharacterValue)
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			str := character.Str
+
 			return NewStringValue(
 				inter,
 				common.NewStringMemoryUsage(len(str)),
@@ -1535,23 +1650,62 @@ func (v *StringValue) Split(inter *Interpreter, _ LocationRange, separator strin
 	)
 }
 
-func (v *StringValue) ReplaceAll(inter *Interpreter, _ LocationRange, of string, with string) *StringValue {
-	// Over-estimate the resulting string length.
-	// In the worst case, `of` can be empty in which case, `with` will be added at every index.
-	// e.g. `of` = "", `v` = "ABC", `with` = "1": result = "1A1B1C1".
-	strLen := len(v.Str)
-	lengthOverEstimate := (2*strLen + 1) * len(with)
+func (v *StringValue) ReplaceAll(
+	inter *Interpreter,
+	locationRange LocationRange,
+	original *StringValue,
+	replacement *StringValue,
+) *StringValue {
 
-	memoryUsage := common.NewStringMemoryUsage(lengthOverEstimate)
+	count := v.count(inter, locationRange, original)
+	if count == 0 {
+		return v
+	}
+
+	newByteLength := len(v.Str) + count*(len(replacement.Str)-len(original.Str))
+
+	memoryUsage := common.NewStringMemoryUsage(newByteLength)
 
 	// Meter computation as if the string was iterated.
-	inter.ReportComputation(common.ComputationKindLoop, uint(strLen))
+	inter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)))
+
+	remaining := v
 
 	return NewStringValue(
 		inter,
 		memoryUsage,
 		func() string {
-			return strings.ReplaceAll(v.Str, of, with)
+			var b strings.Builder
+			b.Grow(newByteLength)
+			for i := 0; i < count; i++ {
+
+				var originalCharacterIndex, originalByteOffset int
+				if original.Length() == 0 {
+					if i > 0 {
+						originalCharacterIndex = 1
+
+						remaining.prepareGraphemes()
+						remaining.graphemes.Next()
+						_, originalByteOffset = remaining.graphemes.Positions()
+					}
+				} else {
+					originalCharacterIndex, originalByteOffset = remaining.indexOf(inter, original)
+					if originalCharacterIndex < 0 {
+						panic(errors.NewUnreachableError())
+					}
+				}
+
+				b.WriteString(remaining.Str[:originalByteOffset])
+				b.WriteString(replacement.Str)
+
+				remaining = remaining.slice(
+					originalCharacterIndex+original.Length(),
+					remaining.Length(),
+					locationRange,
+				)
+			}
+			b.WriteString(remaining.Str)
+			return b.String()
 		},
 	)
 }
@@ -1695,6 +1849,175 @@ func (v *StringValue) ForEach(
 		if !function(value) {
 			return
 		}
+	}
+}
+
+func (v *StringValue) IsGraphemeBoundaryStart(startOffset int) bool {
+	v.prepareGraphemes()
+
+	var characterIndex int
+	return v.seekGraphemeBoundaryStartPrepared(startOffset, &characterIndex)
+}
+
+func (v *StringValue) seekGraphemeBoundaryStartPrepared(startOffset int, characterIndex *int) bool {
+
+	for ; v.graphemes.Next(); *characterIndex++ {
+
+		boundaryStart, boundaryEnd := v.graphemes.Positions()
+		if boundaryStart == boundaryEnd {
+			// Graphemes.Positions() should never return a zero-length grapheme,
+			// and only does so if the grapheme iterator
+			// - is at the beginning of the string and has not been initialized (i.e. Next() has not been called); or
+			// - is at the end of the string and has been exhausted (i.e. Next() has returned false)
+			panic(errors.NewUnreachableError())
+		}
+
+		if startOffset == boundaryStart {
+			return true
+		} else if boundaryStart > startOffset {
+			return false
+		}
+	}
+
+	return false
+}
+
+func (v *StringValue) IsGraphemeBoundaryEnd(end int) bool {
+	v.prepareGraphemes()
+	v.graphemes.Next()
+
+	return v.isGraphemeBoundaryEndPrepared(end)
+}
+
+func (v *StringValue) isGraphemeBoundaryEndPrepared(end int) bool {
+	// Empty strings have no grapheme clusters, and therefore no boundaries
+	if len(v.Str) == 0 {
+		return false
+	}
+
+	for {
+		boundaryStart, boundaryEnd := v.graphemes.Positions()
+		if boundaryStart == boundaryEnd {
+			// Graphemes.Positions() should never return a zero-length grapheme,
+			// and only does so if the grapheme iterator
+			// - is at the beginning of the string and has not been initialized (i.e. Next() has not been called); or
+			// - is at the end of the string and has been exhausted (i.e. Next() has returned false)
+			panic(errors.NewUnreachableError())
+		}
+
+		if end == boundaryEnd {
+			return true
+		} else if boundaryEnd > end {
+			return false
+		}
+
+		if !v.graphemes.Next() {
+			return false
+		}
+	}
+}
+
+func (v *StringValue) IndexOf(inter *Interpreter, other *StringValue) IntValue {
+	index, _ := v.indexOf(inter, other)
+	return NewIntValueFromInt64(inter, int64(index))
+}
+
+func (v *StringValue) indexOf(inter *Interpreter, other *StringValue) (characterIndex int, byteOffset int) {
+
+	if len(other.Str) == 0 {
+		return 0, 0
+	}
+
+	// Meter computation as if the string was iterated.
+	// This is a conservative over-estimation.
+	inter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)*len(other.Str)))
+
+	v.prepareGraphemes()
+
+	// We are dealing with two different positions / indices / measures:
+	// - 'CharacterIndex' indicates Cadence characters (grapheme clusters)
+	// - 'ByteOffset' indicates bytes
+
+	// Find the position of the substring in the string,
+	// by using strings.Index with an increasing start byte offset.
+	//
+	// The byte offset returned from strings.Index is the start of the substring in the string,
+	// but it may not be at a grapheme boundary, so we need to check
+	// that both the start and end byte offsets are grapheme boundaries.
+	//
+	// We do not have a way to translate a byte offset into a character index.
+	// Instead, we iterate over the grapheme clusters until we reach the byte offset,
+	// keeping track of the character index.
+	//
+	// We need to back up and restore the grapheme iterator and character index
+	// when either the start or the end byte offset are not grapheme boundaries,
+	// so the next iteration can start from the correct position.
+
+	for searchStartByteOffset := 0; searchStartByteOffset < len(v.Str); searchStartByteOffset++ {
+
+		relativeFoundByteOffset := strings.Index(v.Str[searchStartByteOffset:], other.Str)
+		if relativeFoundByteOffset < 0 {
+			break
+		}
+
+		// The resulting found byte offset is relative to the search start byte offset,
+		// so we need to add the search start byte offset to get the absolute byte offset
+		absoluteFoundByteOffset := searchStartByteOffset + relativeFoundByteOffset
+
+		// Back up the grapheme iterator and character index,
+		// so the iteration state can be restored
+		// in case the byte offset is not at a grapheme boundary
+		graphemesBackup := *v.graphemes
+		characterIndexBackup := characterIndex
+
+		if v.seekGraphemeBoundaryStartPrepared(absoluteFoundByteOffset, &characterIndex) &&
+			v.isGraphemeBoundaryEndPrepared(absoluteFoundByteOffset+len(other.Str)) {
+
+			return characterIndex, absoluteFoundByteOffset
+		}
+
+		// Restore the grapheme iterator and character index
+		v.graphemes = &graphemesBackup
+		characterIndex = characterIndexBackup
+	}
+
+	return -1, -1
+}
+
+func (v *StringValue) Contains(inter *Interpreter, other *StringValue) BoolValue {
+	characterIndex, _ := v.indexOf(inter, other)
+	return AsBoolValue(characterIndex >= 0)
+}
+
+func (v *StringValue) Count(inter *Interpreter, locationRange LocationRange, other *StringValue) IntValue {
+	index := v.count(inter, locationRange, other)
+	return NewIntValueFromInt64(inter, int64(index))
+}
+
+func (v *StringValue) count(inter *Interpreter, locationRange LocationRange, other *StringValue) int {
+	if other.Length() == 0 {
+		return 1 + v.Length()
+	}
+
+	// Meter computation as if the string was iterated.
+	inter.ReportComputation(common.ComputationKindLoop, uint(len(v.Str)))
+
+	remaining := v
+	count := 0
+
+	for {
+		index, _ := remaining.indexOf(inter, other)
+		if index == -1 {
+			return count
+		}
+
+		count++
+
+		remaining = remaining.slice(
+			index+other.Length(),
+			remaining.Length(),
+			locationRange,
+		)
 	}
 }
 

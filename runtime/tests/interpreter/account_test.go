@@ -91,9 +91,9 @@ type testAccountHandler struct {
 	accountKeysCount func(address common.Address) (uint64, error)
 	emitEvent        func(
 		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
 		values []interpreter.Value,
-		locationRange interpreter.LocationRange,
 	)
 	addAccountKey func(
 		address common.Address,
@@ -241,18 +241,18 @@ func (t *testAccountHandler) AccountKeysCount(address common.Address) (uint64, e
 
 func (t *testAccountHandler) EmitEvent(
 	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) {
 	if t.emitEvent == nil {
 		panic(errors.NewUnexpectedError("unexpected call to EmitEvent"))
 	}
 	t.emitEvent(
 		inter,
+		locationRange,
 		eventType,
 		values,
-		locationRange,
 	)
 }
 

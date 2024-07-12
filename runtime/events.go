@@ -20,7 +20,6 @@ package runtime
 
 import (
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -33,21 +32,27 @@ func emitEventValue(
 	event *interpreter.CompositeValue,
 	emitEvent func(cadence.Event) error,
 ) {
-	fields := make([]exportableValue, len(eventType.ConstructorParameters))
+	fields := make([]interpreter.Value, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
 		value := event.GetField(inter, locationRange, parameter.Identifier)
-		fields[i] = newExportableValue(value, inter)
+		fields[i] = value
 	}
 
-	emitEventFields(inter, locationRange, eventType, fields, emitEvent)
+	EmitEventFields(
+		inter,
+		locationRange,
+		eventType,
+		fields,
+		emitEvent,
+	)
 }
 
-func emitEventFields(
-	gauge common.MemoryGauge,
+func EmitEventFields(
+	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
-	eventFields []exportableValue,
+	eventFields []interpreter.Value,
 	emitEvent func(cadence.Event) error,
 ) {
 	actualLen := len(eventFields)
@@ -62,13 +67,18 @@ func emitEventFields(
 		))
 	}
 
+	exportableEventFields := make([]exportableValue, len(eventFields))
+	for i, field := range eventFields {
+		exportableEventFields[i] = newExportableValue(field, inter)
+	}
+
 	eventValue := exportableEvent{
 		Type:   eventType,
-		Fields: eventFields,
+		Fields: exportableEventFields,
 	}
 
 	exportedEvent, err := exportEvent(
-		gauge,
+		inter,
 		eventValue,
 		locationRange,
 		seenReferences{},

@@ -504,142 +504,435 @@ func TestInterpretStringSplit(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-		fun split(): [String] {
-			return "👪////❤️".split(separator: "////")
-		}
-		fun splitBySpace(): [String] {
-			return "👪 ❤️ Abc6 ;123".split(separator: " ")
-		}
-		fun splitWithUnicodeEquivalence(): [String] {
-			return "Caf\u{65}\u{301}ABc".split(separator: "\u{e9}")
-		}
-		fun testEmptyString(): [String] {
-			return "".split(separator: "//")
-		}
-		fun testNoMatch(): [String] {
-			return "pqrS;asdf".split(separator: ";;")
-		}
-	`)
+	type test struct {
+		str    string
+		sep    string
+		result []string
+	}
 
-	testCase := func(t *testing.T, funcName string, expected *interpreter.ArrayValue) {
-		t.Run(funcName, func(t *testing.T) {
-			result, err := inter.Invoke(funcName)
+	var abcd = "abcd"
+	var faces = "☺☻☹"
+	var commas = "1,2,3,4"
+	var dots = "1....2....3....4"
+
+	tests := []test{
+		{"", "", []string{}},
+		{abcd, "", []string{"a", "b", "c", "d"}},
+		{faces, "", []string{"☺", "☻", "☹"}},
+		{"☺�☹", "", []string{"☺", "�", "☹"}},
+		{abcd, "a", []string{"", "bcd"}},
+		{abcd, "z", []string{"abcd"}},
+		{commas, ",", []string{"1", "2", "3", "4"}},
+		{dots, "...", []string{"1", ".2", ".3", ".4"}},
+		{faces, "☹", []string{"☺☻", ""}},
+		{faces, "~", []string{faces}},
+		{
+			"\\u{1F46A}////\\u{2764}\\u{FE0F}",
+			"////",
+			[]string{"\U0001F46A", "\u2764\uFE0F"},
+		},
+		{
+			"\\u{1F46A} \\u{2764}\\u{FE0F} Abc6 ;123",
+			" ",
+			[]string{"\U0001F46A", "\u2764\uFE0F", "Abc6", ";123"},
+		},
+		{
+			"Caf\\u{65}\\u{301}ABc",
+			"\\u{e9}",
+			[]string{"Caf", "ABc"},
+		},
+		{
+			"",
+			"//",
+			[]string{""},
+		},
+		{
+			"pqrS;asdf",
+			";;",
+			[]string{"pqrS;asdf"},
+		},
+		{
+			// U+1F476 U+1F3FB is 👶🏻
+			" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}",
+			" ",
+			[]string{"", "\U0001F476\U0001F3FB", "ascii", "\u000D\u000A"},
+		},
+		// 🇪🇸🇸🇪🇪🇪 is "ES", "SE", "EE"
+		{
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}\\u{1F1EA}",
+			"\\u{1F1F8}\\u{1F1EA}",
+			[]string{"\U0001F1EA\U0001F1F8", "\U0001F1EA\U0001F1EA"},
+		},
+	}
+
+	runTest := func(test test) {
+
+		name := fmt.Sprintf("%s, %s", test.str, test.sep)
+
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      fun test(): [String] {
+                        let s = "%s"
+                        return s.split(separator: "%s")
+                      }
+                    `,
+					test.str,
+					test.sep,
+				),
+			)
+
+			value, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				expected,
-				result,
-			)
+			require.IsType(t, &interpreter.ArrayValue{}, value)
+			actual := value.(*interpreter.ArrayValue)
+
+			require.Equal(t, len(test.result), actual.Count())
+
+			for partIndex, expected := range test.result {
+				actualPart := actual.Get(
+					inter,
+					interpreter.EmptyLocationRange,
+					partIndex,
+				)
+
+				require.IsType(t, &interpreter.StringValue{}, actualPart)
+				actualPartString := actualPart.(*interpreter.StringValue)
+
+				require.Equal(t, expected, actualPartString.Str)
+			}
 		})
 	}
 
-	varSizedStringType := &interpreter.VariableSizedStaticType{
-		Type: interpreter.PrimitiveStaticTypeString,
+	for _, test := range tests {
+		runTest(test)
 	}
-
-	testCase(t,
-		"split",
-		interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			varSizedStringType,
-			common.ZeroAddress,
-			interpreter.NewUnmeteredStringValue("👪"),
-			interpreter.NewUnmeteredStringValue("❤️"),
-		),
-	)
-	testCase(t,
-		"splitBySpace",
-		interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			varSizedStringType,
-			common.ZeroAddress,
-			interpreter.NewUnmeteredStringValue("👪"),
-			interpreter.NewUnmeteredStringValue("❤️"),
-			interpreter.NewUnmeteredStringValue("Abc6"),
-			interpreter.NewUnmeteredStringValue(";123"),
-		),
-	)
-	testCase(t,
-		"splitWithUnicodeEquivalence",
-		interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			varSizedStringType,
-			common.ZeroAddress,
-			interpreter.NewUnmeteredStringValue("Caf"),
-			interpreter.NewUnmeteredStringValue("ABc"),
-		),
-	)
-	testCase(t,
-		"testEmptyString",
-		interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			varSizedStringType,
-			common.ZeroAddress,
-			interpreter.NewUnmeteredStringValue(""),
-		),
-	)
-	testCase(t,
-		"testNoMatch",
-		interpreter.NewArrayValue(
-			inter,
-			interpreter.EmptyLocationRange,
-			varSizedStringType,
-			common.ZeroAddress,
-			interpreter.NewUnmeteredStringValue("pqrS;asdf"),
-		),
-	)
 }
 
 func TestInterpretStringReplaceAll(t *testing.T) {
 
 	t.Parallel()
 
-	inter := parseCheckAndInterpret(t, `
-		fun replaceAll(): String {
-			return "👪////❤️".replaceAll(of: "////", with: "||")
-		}
-		fun replaceAllSpaceWithDoubleSpace(): String {
-			return "👪 ❤️ Abc6 ;123".replaceAll(of: " ", with: "  ")
-		}
-		fun replaceAllWithUnicodeEquivalence(): String {
-			return "Caf\u{65}\u{301}ABc".replaceAll(of: "\u{e9}", with: "X")
-		}
-		fun testEmptyString(): String {
-			return "".replaceAll(of: "//", with: "abc")
-		}
-		fun testEmptyOf(): String {
-			return "abc".replaceAll(of: "", with: "1")
-		}
-		fun testNoMatch(): String {
-			return "pqrS;asdf".replaceAll(of: ";;", with: "does_not_matter")
-		}
-	`)
+	type test struct {
+		str    string
+		old    string
+		new    string
+		result string
+	}
 
-	testCase := func(t *testing.T, funcName string, expected *interpreter.StringValue) {
-		t.Run(funcName, func(t *testing.T) {
-			result, err := inter.Invoke(funcName)
+	tests := []test{
+		{"hello", "l", "L", "heLLo"},
+		{"hello", "x", "X", "hello"},
+		{"", "x", "X", ""},
+		{"radar", "r", "<r>", "<r>ada<r>"},
+		{"", "", "<>", "<>"},
+		{"banana", "a", "<>", "b<>n<>n<>"},
+		{"banana", "an", "<>", "b<><>a"},
+		{"banana", "ana", "<>", "b<>na"},
+		{"banana", "", "<>", "<>b<>a<>n<>a<>n<>a<>"},
+		{"banana", "a", "a", "banana"},
+		{"☺☻☹", "", "<>", "<>☺<>☻<>☹<>"},
+
+		{"\\u{1F46A}////\\u{2764}\\u{FE0F}", "////", "||", "\U0001F46A||\u2764\uFE0F"},
+		{"👪 ❤️ Abc6 ;123", " ", "  ", "👪  ❤️  Abc6  ;123"},
+		{"Caf\\u{65}\\u{301}ABc", "\\u{e9}", "X", "CafXABc"},
+		{"", "//", "abc", ""},
+		{"abc", "", "1", "1a1b1c1"},
+		{"pqrS;asdf", ";;", "does_not_matter", "pqrS;asdf"},
+
+		{
+			// 🇪🇸🇪🇪 ("ES", "EE") does NOT contain 🇸🇪 ("SE")
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}",
+			"\\u{1F1F8}\\u{1F1EA}",
+			"XX",
+			"\U0001F1EA\U0001F1F8\U0001F1EA\U0001F1EA",
+		},
+		{
+			// 🇪🇸🇪🇪🇪🇸 ("ES", "EE", "ES")
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}\\u{1F1EA}\\u{1F1F8}",
+			"\\u{1F1EA}\\u{1F1EA}",
+			"XX",
+			"\U0001F1EA\U0001F1F8XX\U0001F1EA\U0001F1F8",
+		},
+		{
+			// 🇪🇸🇪🇪🇪🇸 ("ES", "EE", "ES")
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}\\u{1F1EA}\\u{1F1F8}",
+			"\\u{1F1EA}\\u{1F1F8}",
+			"XX",
+			"XX\U0001F1EA\U0001F1EAXX",
+		},
+		{
+			// 🇪🇸🇪🇪🇪🇸 ("ES", "EE", "ES")
+			"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}\\u{1F1EA}\\u{1F1F8}",
+			"",
+			"<>",
+			"<>\U0001F1EA\U0001F1F8<>\U0001F1EA\U0001F1EA<>\U0001F1EA\U0001F1F8<>",
+		},
+	}
+
+	runTest := func(test test) {
+
+		name := fmt.Sprintf("%s, %s, %s", test.str, test.old, test.new)
+
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      fun test(): String {
+                        let s = "%s"
+                        return s.replaceAll(of: "%s", with: "%s")
+                      }
+                    `,
+					test.str,
+					test.old,
+					test.new,
+				),
+			)
+
+			value, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			RequireValuesEqual(
-				t,
-				inter,
-				expected,
-				result,
-			)
+			require.IsType(t, &interpreter.StringValue{}, value)
+			actual := value.(*interpreter.StringValue)
+
+			require.Equal(t, test.result, actual.Str)
 		})
 	}
 
-	testCase(t, "replaceAll", interpreter.NewUnmeteredStringValue("👪||❤️"))
-	testCase(t, "replaceAllSpaceWithDoubleSpace", interpreter.NewUnmeteredStringValue("👪  ❤️  Abc6  ;123"))
-	testCase(t, "replaceAllWithUnicodeEquivalence", interpreter.NewUnmeteredStringValue("CafXABc"))
-	testCase(t, "testEmptyString", interpreter.NewUnmeteredStringValue(""))
-	testCase(t, "testEmptyOf", interpreter.NewUnmeteredStringValue("1a1b1c1"))
-	testCase(t, "testNoMatch", interpreter.NewUnmeteredStringValue("pqrS;asdf"))
+	for _, test := range tests {
+		runTest(test)
+	}
+}
+
+func TestInterpretStringContains(t *testing.T) {
+
+	t.Parallel()
+
+	type test struct {
+		str    string
+		subStr string
+		result bool
+	}
+
+	tests := []test{
+		{"abcdef", "", true},
+		{"abcdef", "a", true},
+		{"abcdef", "ab", true},
+		{"abcdef", "ac", false},
+		{"abcdef", "b", true},
+		{"abcdef", "bc", true},
+		{"abcdef", "bcd", true},
+		{"abcdef", "c", true},
+		{"abcdef", "cd", true},
+		{"abcdef", "cdef", true},
+		{"abcdef", "cdefg", false},
+		{"abcdef", "abcdef", true},
+		{"abcdef", "abcdefg", false},
+
+		// U+1F476 U+1F3FB is 👶🏻
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", " \\u{1F476}", false},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{1F3FB}", false},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", " \\u{1F476}\\u{1F3FB}", true},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{1F476}\\u{1F3FB}", true},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{1F476}\\u{1F3FB} ", true},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{D}", false},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{A}", false},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", " ascii ", true},
+
+		// 🇪🇸🇪🇪 ("ES", "EE") contains 🇪🇸("ES")
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1EA}\\u{1F1F8}", true},
+		// 🇪🇸🇪🇪 ("ES", "EE") contains 🇪🇪 ("EE")
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1EA}\\u{1F1EA}", true},
+		// 🇪🇸🇪🇪 ("ES", "EE") does NOT contain 🇸🇪 ("SE")
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1F8}\\u{1F1EA}", false},
+		// neither prefix nor suffix of codepoints are valid
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}", false},
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", false},
+	}
+
+	runTest := func(test test) {
+
+		name := fmt.Sprintf("%s, %s", test.str, test.subStr)
+
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      fun test(): Bool {
+                        let s = "%s"
+                        return s.contains("%s")
+                      }
+                    `,
+					test.str,
+					test.subStr,
+				),
+			)
+
+			value, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			require.IsType(t, interpreter.BoolValue(true), value)
+			actual := value.(interpreter.BoolValue)
+			require.Equal(t, test.result, bool(actual))
+		})
+	}
+
+	for _, test := range tests {
+		runTest(test)
+	}
+}
+
+func TestInterpretStringIndex(t *testing.T) {
+
+	t.Parallel()
+
+	type test struct {
+		str    string
+		subStr string
+		result int
+	}
+
+	tests := []test{
+		{"abcdef", "", 0},
+		{"abcdef", "a", 0},
+		{"abcdef", "ab", 0},
+		{"abcdef", "ac", -1},
+		{"abcdef", "b", 1},
+		{"abcdef", "bc", 1},
+		{"abcdef", "bcd", 1},
+		{"abcdef", "c", 2},
+		{"abcdef", "cd", 2},
+		{"abcdef", "cdef", 2},
+		{"abcdef", "cdefg", -1},
+		{"abcdef", "abcdef", 0},
+		{"abcdef", "abcdefg", -1},
+
+		// U+1F476 U+1F3FB is 👶🏻
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", " \\u{1F476}", -1},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{1F3FB}", -1},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", " \\u{1F476}\\u{1F3FB}", 0},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{1F476}\\u{1F3FB}", 1},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{1F476}\\u{1F3FB} ", 1},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{D}", -1},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", "\\u{A}", -1},
+		{" \\u{1F476}\\u{1F3FB} ascii \\u{D}\\u{A}", " ascii ", 2},
+
+		// 🇪🇸🇪🇪 ("ES", "EE") contains 🇪🇸("ES")
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1EA}\\u{1F1F8}", 0},
+		// 🇪🇸🇪🇪 ("ES", "EE") contains 🇪🇪 ("EE")
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1EA}\\u{1F1EA}", 1},
+		// 🇪🇸🇪🇪 ("ES", "EE") does NOT contain 🇸🇪 ("SE")
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1F8}\\u{1F1EA}", -1},
+		// neither prefix nor suffix of codepoints are valid
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}", -1},
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", "\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}", -1},
+	}
+
+	runTest := func(test test) {
+
+		name := fmt.Sprintf("%s, %s", test.str, test.subStr)
+
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      fun test(): Int {
+                        let s = "%s"
+                        return s.index(of: "%s")
+                      }
+                    `,
+					test.str,
+					test.subStr,
+				),
+			)
+
+			value, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			require.IsType(t, interpreter.IntValue{}, value)
+			actual := value.(interpreter.IntValue)
+			require.Equal(t, test.result, actual.ToInt(interpreter.EmptyLocationRange))
+		})
+	}
+
+	for _, test := range tests {
+		runTest(test)
+	}
+}
+
+func TestInterpretStringCount(t *testing.T) {
+
+	t.Parallel()
+
+	type test struct {
+		str    string
+		subStr string
+		result int
+	}
+
+	tests := []test{
+		{"", "", 1},
+		{"abcdef", "", 7},
+
+		{"", "notempty", 0},
+		{"notempty", "", 9},
+		{"smaller", "not smaller", 0},
+		{"12345678987654321", "6", 2},
+		{"611161116", "6", 3},
+		{"notequal", "NotEqual", 0},
+		{"equal", "equal", 1},
+		{"abc1231231123q", "123", 3},
+		{"11111", "11", 2},
+
+		// 🇪🇸🇪🇪🇪🇸 ("ES", "EE", "ES") contains 🇪🇸("ES") twice
+		{"\\u{1F1EA}\\u{1F1F8}\\u{1F1EA}\\u{1F1EA}\\u{1F1EA}\\u{1F1F8}", "\\u{1F1EA}\\u{1F1F8}", 2},
+	}
+
+	runTest := func(test test) {
+
+		name := fmt.Sprintf("%s, %s", test.str, test.subStr)
+
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
+			inter := parseCheckAndInterpret(t,
+				fmt.Sprintf(
+					`
+                      fun test(): Int {
+                        let s = "%s"
+                        return s.count("%s")
+                      }
+                    `,
+					test.str,
+					test.subStr,
+				),
+			)
+
+			value, err := inter.Invoke("test")
+			require.NoError(t, err)
+
+			require.IsType(t, interpreter.IntValue{}, value)
+			actual := value.(interpreter.IntValue)
+			require.Equal(t, test.result, actual.ToInt(interpreter.EmptyLocationRange))
+		})
+	}
+
+	for _, test := range tests {
+		runTest(test)
+	}
 }
