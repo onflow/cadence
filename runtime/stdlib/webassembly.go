@@ -226,3 +226,11 @@ var WebAssemblyContractType = StandardLibraryType{
 	Type: WebAssemblyType,
 	Kind: common.DeclarationKindContract,
 }
+
+type WebAssemblyTrapError struct{}
+
+var _ error = WebAssemblyTrapError{}
+
+func (WebAssemblyTrapError) Error() string {
+	return "WebAssembly trap"
+}

@@ -106,8 +106,11 @@ var _ stdlib.WebAssemblyModule = WasmtimeWebAssemblyModule{}
 func (m WasmtimeWebAssemblyModule) InstantiateWebAssemblyModule(_ common.MemoryGauge) (stdlib.WebAssemblyInstance, error) {
 	instance, err := wasmtime.NewInstance(m.Store, m.Module, nil)
 	if err != nil {
-		// TODO: wrap error
-		return nil, err
+		if _, ok := err.(*wasmtime.Trap); ok {
+			return nil, stdlib.WebAssemblyTrapError{}
+		}
+
+		panic(errors.NewUnexpectedError("WebAssembly module instantiation failed, but did not trap"))
 	}
 	return WasmtimeWebAssemblyInstance{
 		Instance: instance,
