@@ -217,8 +217,8 @@ func newWasmtimeFunctionWebAssemblyExport(
 		fuelBefore := todoAvailableFuel
 		err := store.SetFuel(fuelBefore)
 		if err != nil {
-			// TODO: wrap error
-			panic(err)
+			// "[SetFuel] will return an error if fuel consumption is not enabled"
+			panic(errors.NewUnreachableError())
 		}
 
 		callResult, callErr := f()
@@ -227,8 +227,8 @@ func newWasmtimeFunctionWebAssemblyExport(
 
 		fuelAfter, err := store.GetFuel()
 		if err != nil {
-			// TODO: wrap error
-			panic(err)
+			// "[GetFuel] will return an error if fuel consumption is not enabled"
+			panic(errors.NewUnreachableError())
 		}
 
 		fuelDelta := fuelBefore - fuelAfter
