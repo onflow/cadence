@@ -230,6 +230,9 @@ var WebAssemblyContractType = StandardLibraryType{
 type WebAssemblyTrapError struct{}
 
 var _ error = WebAssemblyTrapError{}
+var _ errors.UserError = WebAssemblyTrapError{}
+
+func (WebAssemblyTrapError) IsUserError() {}
 
 func (WebAssemblyTrapError) Error() string {
 	return "WebAssembly trap"
