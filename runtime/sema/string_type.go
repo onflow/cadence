@@ -22,25 +22,100 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+var StringTypeEncodeHexFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "data",
+			TypeAnnotation: ByteArrayTypeAnnotation,
+		},
+	},
+	StringTypeAnnotation,
+)
+
 const StringTypeEncodeHexFunctionName = "encodeHex"
 const StringTypeEncodeHexFunctionDocString = `
 Returns a hexadecimal string for the given byte array
 `
+
+var StringTypeFromUtf8FunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "bytes",
+			TypeAnnotation: ByteArrayTypeAnnotation,
+		},
+	},
+	NewTypeAnnotation(
+		&OptionalType{
+			Type: StringType,
+		},
+	),
+)
 
 const StringTypeFromUtf8FunctionName = "fromUTF8"
 const StringTypeFromUtf8FunctionDocString = `
 Attempt to decode the input as a UTF-8 encoded string. Returns nil if the input bytes are malformed UTF-8
 `
 
+var StringTypeFromCharactersFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "characters",
+			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
+				Type: CharacterType,
+			}),
+		},
+	},
+	StringTypeAnnotation,
+)
+
 const StringTypeFromCharactersFunctionName = "fromCharacters"
 const StringTypeFromCharactersFunctionDocString = `
 Returns a string from the given array of characters
 `
 
+var StringTypeJoinFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "strings",
+			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
+				Type: StringType,
+			}),
+		},
+		{
+			Identifier:     "separator",
+			TypeAnnotation: NewTypeAnnotation(StringType),
+		},
+	},
+	StringTypeAnnotation,
+)
+
 const StringTypeJoinFunctionName = "join"
 const StringTypeJoinFunctionDocString = `
 Returns a string after joining the array of strings with the provided separator.
 `
+
+var StringTypeSplitFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Identifier:     "separator",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+	},
+	NewTypeAnnotation(
+		&VariableSizedType{
+			Type: StringType,
+		},
+	),
+)
 
 const StringTypeSplitFunctionName = "split"
 const StringTypeSplitFunctionDocString = `
@@ -123,6 +198,24 @@ func init() {
 				StringTypeReplaceAllFunctionType,
 				StringTypeReplaceAllFunctionDocString,
 			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeContainsFunctionName,
+				StringTypeContainsFunctionType,
+				stringTypeContainsFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeIndexFunctionName,
+				StringTypeIndexFunctionType,
+				stringTypeIndexFunctionDocString,
+			),
+			NewUnmeteredPublicFunctionMember(
+				t,
+				StringTypeCountFunctionName,
+				StringTypeCountFunctionType,
+				stringTypeCountFunctionDocString,
+			),
 		})
 	}
 }
@@ -169,6 +262,81 @@ This function creates a new string whose length is ` + "`upTo - from`" + `.
 It does not modify the original string.
 If either of the parameters are out of the bounds of the string, or the indices are invalid (` + "`from > upTo`" + `), then the function will fail
 `
+
+var StringTypeContainsFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "other",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+	},
+	BoolTypeAnnotation,
+)
+
+const StringTypeContainsFunctionName = "contains"
+
+const stringTypeContainsFunctionDocString = `
+Returns true if this string contains the given other string as a substring.
+`
+
+var StringTypeIndexFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:          "of",
+			Identifier:     "other",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+	},
+	IntTypeAnnotation,
+)
+
+const StringTypeIndexFunctionName = "index"
+
+const stringTypeIndexFunctionDocString = `
+Returns the index within this string of the first occurrence of the given substring.
+
+If the substring is not found, the function returns -1.
+`
+
+var StringTypeCountFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "other",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+	},
+	IntTypeAnnotation,
+)
+
+const StringTypeCountFunctionName = "count"
+
+const stringTypeCountFunctionDocString = `
+Returns the number of non-overlapping instances of the given substring in this string.
+
+If the given substring is an empty string, the function returns 1 + the number of characters in this string.
+`
+
+var StringTypeReplaceAllFunctionType = NewSimpleFunctionType(
+	FunctionPurityView,
+	[]Parameter{
+		{
+			Label:          "of",
+			Identifier:     "old",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+		{
+			Label:          "with",
+			Identifier:     "replacement",
+			TypeAnnotation: StringTypeAnnotation,
+		},
+	},
+	StringTypeAnnotation,
+)
 
 const StringTypeReplaceAllFunctionName = "replaceAll"
 const StringTypeReplaceAllFunctionDocString = `
@@ -300,93 +468,3 @@ var StringFunctionType = func() *FunctionType {
 
 	return functionType
 }()
-
-var StringTypeEncodeHexFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "data",
-			TypeAnnotation: ByteArrayTypeAnnotation,
-		},
-	},
-	StringTypeAnnotation,
-)
-
-var StringTypeFromUtf8FunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "bytes",
-			TypeAnnotation: ByteArrayTypeAnnotation,
-		},
-	},
-	NewTypeAnnotation(
-		&OptionalType{
-			Type: StringType,
-		},
-	),
-)
-
-var StringTypeFromCharactersFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
-		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "characters",
-			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
-				Type: CharacterType,
-			}),
-		},
-	},
-	StringTypeAnnotation,
-)
-
-var StringTypeJoinFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
-		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "strings",
-			TypeAnnotation: NewTypeAnnotation(&VariableSizedType{
-				Type: StringType,
-			}),
-		},
-		{
-			Identifier:     "separator",
-			TypeAnnotation: NewTypeAnnotation(StringType),
-		},
-	},
-	StringTypeAnnotation,
-)
-
-var StringTypeSplitFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
-		{
-			Identifier:     "separator",
-			TypeAnnotation: StringTypeAnnotation,
-		},
-	},
-	NewTypeAnnotation(
-		&VariableSizedType{
-			Type: StringType,
-		},
-	),
-)
-
-var StringTypeReplaceAllFunctionType = NewSimpleFunctionType(
-	FunctionPurityView,
-	[]Parameter{
-		{
-			Identifier:     "of",
-			TypeAnnotation: StringTypeAnnotation,
-		},
-		{
-			Identifier:     "with",
-			TypeAnnotation: StringTypeAnnotation,
-		},
-	},
-	StringTypeAnnotation,
-)

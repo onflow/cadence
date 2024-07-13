@@ -80,13 +80,20 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               entitlement X
 
               access(all)
-              resource R {
+              resource interface RI {}
+
+              access(all)
+              resource R: RI {
 
                   access(all)
                   let foo: Int
 
+                  access(X)
+                  let bar: Int
+
                   init() {
                       self.foo = 42
+                      self.bar = 21
                   }
               }
 
@@ -128,6 +135,12 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
                   let noCap = self.account.capabilities.storage.issue<&R>(/storage/nonExistentTarget)
                   self.account.capabilities.publish(noCap, at: /public/nonExistentTarget)
+
+                  let unentitledRICap = self.account.capabilities.storage.issue<&{RI}>(/storage/r)
+                  self.account.capabilities.publish(unentitledRICap, at: /public/unentitledRI)
+
+                  let entitledRICap = self.account.capabilities.storage.issue<auth(X) &{RI}>(/storage/r)
+                  self.account.capabilities.publish(entitledRICap, at: /public/entitledRI)
               }
 
               access(all)
@@ -252,15 +265,51 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testSwap(): Int {
-                 let ref = self.account.capabilities.get<&R>(/public/r).borrow()!
+                  let ref = self.account.capabilities.get<&R>(/public/r).borrow()!
 
-                 let r <- self.account.storage.load<@R>(from: /storage/r)
-                 destroy r
+                  let r <- self.account.storage.load<@R>(from: /storage/r)
+                  destroy r
 
-                 let r2 <- create R2()
-                 self.account.storage.save(<-r2, to: /storage/r)
+                  let r2 <- create R2()
+                  self.account.storage.save(<-r2, to: /storage/r)
 
-                 return ref.foo
+                  return ref.foo
+              }
+
+              access(all)
+              fun testRI() {
+                  // Borrow /public/unentitledRI.
+                  // - All unentitled borrows should succeed (as &{RI} / as &R)
+                  // - All entitled borrows should fail (as &{RI} / as &R)
+
+                  let unentitledRI1 = self.account.capabilities.get<&{RI}>(/public/unentitledRI).borrow()
+                  assert(unentitledRI1 != nil, message: "unentitledRI1 should not be nil")
+
+                  let entitledRI1 = self.account.capabilities.get<auth(X) &{RI}>(/public/unentitledRI).borrow()
+                  assert(entitledRI1 == nil, message: "entitledRI1 should be nil")
+
+                  let unentitledR1 = self.account.capabilities.get<&R>(/public/unentitledRI).borrow()
+                  assert(unentitledR1 != nil, message: "unentitledR1 should not be nil")
+
+                  let entitledR1 = self.account.capabilities.get<auth(X) &R>(/public/unentitledRI).borrow()
+                  assert(entitledR1 == nil, message: "entitledR1 should be nil")
+
+                  // Borrow /public/entitledRI.
+                  // All borrows should succeed:
+                  // - As &{RI} / as &R
+                  // - Unentitled / entitled
+
+                  let unentitledRI2 = self.account.capabilities.get<&{RI}>(/public/entitledRI).borrow()
+                  assert(unentitledRI2 != nil, message: "unentitledRI2 should not be nil")
+
+                  let entitledRI2 = self.account.capabilities.get<auth(X) &{RI}>(/public/entitledRI).borrow()
+                  assert(entitledRI2 != nil, message: "entitledRI2 should not be nil")
+
+                  let unentitledR2 = self.account.capabilities.get<&R>(/public/entitledRI).borrow()
+                  assert(unentitledR2 != nil, message: "unentitledR2 should not be nil")
+
+                  let entitledR2 = self.account.capabilities.get<auth(X) &R>(/public/entitledRI).borrow()
+                  assert(entitledR2 != nil, message: "entitledR2 should not be nil")
               }
           }
         `
@@ -327,6 +376,12 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
 		})
+
+		t.Run("testRI", func(t *testing.T) {
+
+			_, err := invoke("testRI")
+			require.NoError(t, err)
+		})
 	})
 
 	t.Run("struct", func(t *testing.T) {
@@ -347,13 +402,20 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
               entitlement X
 
               access(all)
-              struct S {
+              struct interface SI {}
+
+              access(all)
+              struct S: SI {
 
                   access(all)
                   let foo: Int
 
+                  access(X)
+                  let bar: Int
+
                   init() {
                       self.foo = 42
+                      self.bar = 21
                   }
               }
 
@@ -395,6 +457,12 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
                   let noCap = self.account.capabilities.storage.issue<&S>(/storage/nonExistentTarget)
                   self.account.capabilities.publish(noCap, at: /public/nonExistentTarget)
+
+                  let unentitledSICap = self.account.capabilities.storage.issue<&{SI}>(/storage/s)
+                  self.account.capabilities.publish(unentitledSICap, at: /public/unentitledSI)
+
+                  let entitledSICap = self.account.capabilities.storage.issue<auth(X) &{SI}>(/storage/s)
+                  self.account.capabilities.publish(entitledSICap, at: /public/entitledSI)
               }
 
               access(all)
@@ -519,14 +587,51 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
               access(all)
               fun testSwap(): Int {
-                 let ref = self.account.capabilities.get<&S>(/public/s).borrow()!
+                  let ref = self.account.capabilities.get<&S>(/public/s).borrow()!
 
-                 self.account.storage.load<S>(from: /storage/s)
+                  self.account.storage.load<S>(from: /storage/s)
 
-                 let s2 = S2()
-                 self.account.storage.save(s2, to: /storage/s)
+                  let s2 = S2()
+                  self.account.storage.save(s2, to: /storage/s)
 
-                 return ref.foo
+                  return ref.foo
+              }
+
+              access(all)
+              fun testSI() {
+
+                  // Borrow /public/unentitledSI.
+                  // - All unentitled borrows should succeed (as &{SI} / as &S)
+                  // - All entitled borrows should fail (as &{SI} / as &S)
+
+                  let unentitledSI1 = self.account.capabilities.get<&{SI}>(/public/unentitledSI).borrow()
+                  assert(unentitledSI1 != nil, message: "unentitledSI1 should not be nil")
+
+                  let entitledSI1 = self.account.capabilities.get<auth(X) &{SI}>(/public/unentitledSI).borrow()
+                  assert(entitledSI1 == nil, message: "entitledSI1 should be nil")
+
+                  let unentitledS1 = self.account.capabilities.get<&S>(/public/unentitledSI).borrow()
+                  assert(unentitledS1 != nil, message: "unentitledS1 should not be nil")
+
+                  let entitledS1 = self.account.capabilities.get<auth(X) &S>(/public/unentitledSI).borrow()
+                  assert(entitledS1 == nil, message: "entitledS1 should be nil")
+
+                  // Borrow /public/entitledSI.
+                  // All borrows should succeed:
+                  // - As &{SI} / as &S
+                  // - Unentitled / entitled
+
+                  let unentitledSI2 = self.account.capabilities.get<&{SI}>(/public/entitledSI).borrow()
+                  assert(unentitledSI2 != nil, message: "unentitledSI2 should not be nil")
+
+                  let entitledSI2 = self.account.capabilities.get<auth(X) &{SI}>(/public/entitledSI).borrow()
+                  assert(entitledSI2 != nil, message: "entitledSI2 should not be nil")
+
+                  let unentitledS2 = self.account.capabilities.get<&S>(/public/entitledSI).borrow()
+                  assert(unentitledS2 != nil, message: "unentitledS2 should not be nil")
+
+                  let entitledS2 = self.account.capabilities.get<auth(X) &S>(/public/entitledSI).borrow()
+                  assert(entitledS2 != nil, message: "entitledS2 should not be nil")
               }
           }
         `
@@ -592,6 +697,12 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			RequireError(t, err)
 
 			require.ErrorAs(t, err, &interpreter.DereferenceError{})
+		})
+
+		t.Run("testSI", func(t *testing.T) {
+
+			_, err := invoke("testSI")
+			require.NoError(t, err)
 		})
 	})
 

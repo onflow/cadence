@@ -327,9 +327,9 @@ func (*StandardLibraryHandler) GetAccountContractCode(_ common.AddressLocation) 
 
 func (*StandardLibraryHandler) EmitEvent(
 	_ *interpreter.Interpreter,
+	_ interpreter.LocationRange,
 	_ *sema.CompositeType,
 	_ []interpreter.Value,
-	_ interpreter.LocationRange,
 ) {
 	// NO-OP, only called for built-in events,
 	// which never occurs, as all related functionality producing events is unavailable

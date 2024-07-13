@@ -45,12 +45,26 @@ function capitalizeFirstLetter(string: string): string {
 
 class Updater {
 
+    private versions = new Map<string, string>()
+
     constructor(
-        public versions: Map<string, string>,
         public config: CadenceUpdateToolConfigSchema,
         public octokit: Octokit,
         public protocol: Protocol
     ) {}
+
+    public setVersion(name: string, version: string) {
+        this.versions.set(name, version)
+        const match = version.match(/^v(\d+)/)
+        if (!match) {
+            return
+        }
+        const major = match[1]
+        if (major == "0" || major == "1") {
+            return
+        }
+        this.versions.set(`${name}/v${major}`, version)
+    }
 
     async update(repoName: string | undefined): Promise<void> {
         const rootFullRepoName = this.config.repo
@@ -98,8 +112,8 @@ class Updater {
 
         const [owner, repoName] = fullRepoName.split('/')
 
-        const defaultBranch = repo.branch ||
-            (await this.octokit.rest.repos.get({owner, repo: repoName})).data.default_branch
+        const defaultBranch = repo.branch || await this.getDefaultBranch(owner, repoName)
+
         console.log(`> Default branch of repo ${fullRepoName}: ${defaultBranch}`)
 
         const defaultRefResponse = await this.octokit.rest.git.getRef({
@@ -107,9 +121,12 @@ class Updater {
             repo: repoName,
             ref: `heads/${defaultBranch}`
         })
-        const defaultRef = defaultRefResponse.data.object.sha
 
-        if (await this.repoModsUpdated(defaultRef, repo)) {
+        // Go uses the first 12 digits of the commit hash
+        // See https://go.dev/ref/mod#glos-pseudo-version
+        const defaultVersion = defaultRefResponse.data.object.sha.slice(0, 12)
+
+        if (await this.repoModsUpdated(defaultVersion, repo)) {
             console.log(`> Default branch (${defaultBranch}) of repo ${fullRepoName} is updated`)
 
             if (repo.needsRelease) {
@@ -224,7 +241,7 @@ class Updater {
 
         console.log(`✓ All deps of mod ${fullModName} at repo version ${version} are up-to-date`)
 
-        this.versions.set(fullModName, version)
+        this.setVersion(fullModName, version)
 
         return true
     }
@@ -236,12 +253,15 @@ class Updater {
             const [owner, repoName] = fullRepoName.split('/')
             // Heuristic: Fetch as many releases on the first page as possible,
             // and find the latest release by sorting the releases by semver
-            const releases = await this.octokit.rest.repos.listReleases({
+            const response = await this.octokit.rest.repos.listReleases({
                 owner,
                 repo: repoName,
                 per_page: 100
             })
-            const release = releases.data.sort((a, b) => {
+
+            const releases = response.data.filter(release => !release.draft)
+
+            const release = releases.sort((a, b) => {
                 return a.created_at.localeCompare(b.created_at)
             }).pop()
             if (release === undefined) {
@@ -415,11 +435,13 @@ class Updater {
             prTitle = `[${modList}] ${prTitle}`
         }
 
+        const base = repo.branch || (await this.getDefaultBranch(owner, repoName))
+
         const pull = await this.octokit.rest.pulls.create({
             owner,
             repo: repoName,
             head: branch,
-            base: repo.branch || "master",
+            base: base,
             title: prTitle,
             body: `
 ## Description
@@ -446,6 +468,11 @@ ${updateList}
 
         console.log(`Cleaning up clone of ${fullRepoName} ...`)
         await rm(dir, { recursive: true, force: true })
+    }
+
+    async getDefaultBranch(owner: string, repoName: string): Promise<string> {
+        const response = await this.octokit.rest.repos.get({owner, repo: repoName})
+        return response.data.default_branch
     }
 }
 
@@ -506,7 +533,10 @@ class Releaser {
         const dir = await mkdtemp(path.join(os.tmpdir(), `${owner}-${repoName}`))
 
         console.log(`Cloning ${this.repo} ...`)
-        await gitClone(this.protocol, this.repo, dir, this.branch || 'master')
+
+        const branch = this.branch || (await this.getDefaultBranch(owner, repoName))
+
+        await gitClone(this.protocol, this.repo, dir, branch)
         process.chdir(dir)
 
         console.log(`Tagging ${this.repo} version ${this.version} ...`)
@@ -523,6 +553,11 @@ class Releaser {
         await rm(dir, { recursive: true, force: true })
 
         console.log(`Now create a GitHub release: https://github.com/${this.repo}/releases/new?tag=${tag}`)
+    }
+
+    async getDefaultBranch(owner: string, repoName: string): Promise<string> {
+        const response = await this.octokit.rest.repos.get({owner, repo: repoName})
+        return response.data.default_branch
     }
 }
 
@@ -566,19 +601,24 @@ class Releaser {
             async (args) => {
                 const config = await loadConfig(args.config)
 
-                const versions = new Map([
-                    [config.repo, args.version],
-                ])
-
-                for (const versionEntry of args.versions.split(',')) {
-                    const [repo, version] = versionEntry.split('@')
-                    versions.set(repo, version)
-                }
-
                 const protocol = args.useSSH ? Protocol.SSH : Protocol.HTTPS
 
-                await new Updater(versions, config, octokit, protocol)
-                    .update(args.repo)
+                const updater = new Updater(config, octokit, protocol)
+
+                const {version, versions} = args;
+
+                if (version) {
+                    updater.setVersion(config.repo, version)
+                }
+
+                if (versions) {
+                    for (const versionEntry of versions.split(',')) {
+                        const [repo, version] = versionEntry.split('@')
+                        updater.setVersion(repo, version)
+                    }
+                }
+
+                await updater.update(args.repo)
             }
         )
         .command(
@@ -667,7 +707,7 @@ async function gitClone(protocol: Protocol, fullRepoName: string, dir: string, b
             console.error(`unsupported protocol: ${protocol}`)
             return
     }
-    await exec(`git clone ${branch ? `-b ${branch} ` : ""}${prefix}${fullRepoName} ${dir}`)
+    await exec(`git clone --depth 1 ${branch ? `-b ${branch} ` : ""}${prefix}${fullRepoName} ${dir}`)
 }
 
 async function runWithConsoleGroup(func: () => Promise<boolean>): Promise<boolean> {

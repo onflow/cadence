@@ -609,7 +609,7 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint(8), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t, uint(55), computationMeteredValues[common.ComputationKindLoop])
 	})
 
 	t.Run("string to lower", func(t *testing.T) {
@@ -657,6 +657,6 @@ func TestInterpretStdlibComputationMetering(t *testing.T) {
 		_, err = inter.Invoke("main")
 		require.NoError(t, err)
 
-		assert.Equal(t, uint(10), computationMeteredValues[common.ComputationKindLoop])
+		assert.Equal(t, uint(58), computationMeteredValues[common.ComputationKindLoop])
 	})
 }

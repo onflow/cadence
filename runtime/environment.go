@@ -193,8 +193,8 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		OnComputationRemaining:           e.newOnComputationRemaining(),
 		OnFunctionInvocation:             e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:          e.newOnInvokedFunctionReturnHandler(),
-		CapabilityBorrowHandler:          stdlib.BorrowCapabilityController,
-		CapabilityCheckHandler:           stdlib.CheckCapabilityController,
+		CapabilityBorrowHandler:          e.newCapabilityBorrowHandler(),
+		CapabilityCheckHandler:           e.newCapabilityCheckHandler(),
 		LegacyContractUpgradeEnabled:     e.config.LegacyContractUpgradeEnabled,
 		ContractUpdateTypeRemovalEnabled: e.config.ContractUpdateTypeRemovalEnabled,
 	}
@@ -390,15 +390,15 @@ func (e *interpreterEnvironment) GenerateAccountID(address common.Address) (uint
 
 func (e *interpreterEnvironment) EmitEvent(
 	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) {
-	emitEventFields(
+	EmitEventFields(
 		inter,
 		locationRange,
 		eventType,
-		newExportableValues(inter, values),
+		values,
 		e.runtimeInterface.EmitEvent,
 	)
 }
@@ -1286,4 +1286,49 @@ func (e *interpreterEnvironment) getBaseActivation(
 		baseActivation = e.defaultBaseActivation
 	}
 	return
+}
+
+func (e *interpreterEnvironment) newCapabilityBorrowHandler() interpreter.CapabilityBorrowHandlerFunc {
+
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		capabilityID interpreter.UInt64Value,
+		wantedBorrowType *sema.ReferenceType,
+		capabilityBorrowType *sema.ReferenceType,
+	) interpreter.ReferenceValue {
+
+		return stdlib.BorrowCapabilityController(
+			inter,
+			locationRange,
+			address,
+			capabilityID,
+			wantedBorrowType,
+			capabilityBorrowType,
+			e,
+		)
+	}
+}
+
+func (e *interpreterEnvironment) newCapabilityCheckHandler() interpreter.CapabilityCheckHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		capabilityID interpreter.UInt64Value,
+		wantedBorrowType *sema.ReferenceType,
+		capabilityBorrowType *sema.ReferenceType,
+	) interpreter.BoolValue {
+
+		return stdlib.CheckCapabilityController(
+			inter,
+			locationRange,
+			address,
+			capabilityID,
+			wantedBorrowType,
+			capabilityBorrowType,
+			e,
+		)
+	}
 }

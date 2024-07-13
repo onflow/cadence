@@ -40,9 +40,10 @@ type LinkMigrationReporter interface {
 
 // LinkValueMigration migrates all links to capability controllers.
 type LinkValueMigration struct {
-	CapabilityMapping  *CapabilityMapping
-	AccountIDGenerator stdlib.AccountIDGenerator
-	Reporter           LinkMigrationReporter
+	CapabilityMapping *CapabilityMapping
+	IssueHandler      stdlib.CapabilityControllerIssueHandler
+	Handler           stdlib.CapabilityControllerHandler
+	Reporter          LinkMigrationReporter
 }
 
 var _ migrations.ValueMigration = &LinkValueMigration{}
@@ -98,7 +99,7 @@ func (m *LinkValueMigration) Migrate(
 	}
 
 	reporter := m.Reporter
-	accountIDGenerator := m.AccountIDGenerator
+	issueHandler := m.IssueHandler
 
 	locationRange := interpreter.EmptyLocationRange
 
@@ -180,7 +181,7 @@ func (m *LinkValueMigration) Migrate(
 		capabilityID, _ = stdlib.IssueStorageCapabilityController(
 			inter,
 			locationRange,
-			accountIDGenerator,
+			issueHandler,
 			accountAddress,
 			borrowType,
 			targetPath,
@@ -190,7 +191,7 @@ func (m *LinkValueMigration) Migrate(
 		capabilityID, _ = stdlib.IssueAccountCapabilityController(
 			inter,
 			locationRange,
-			accountIDGenerator,
+			issueHandler,
 			accountAddress,
 			borrowType,
 		)
@@ -237,10 +238,10 @@ func storageKeyToPathValue(
 	return interpreter.NewUnmeteredPathValue(domain, identifier), true
 }
 
-var authAccountReferenceStaticType = interpreter.NewReferenceStaticType(
+var unauthorizedAccountReferenceStaticType = interpreter.NewReferenceStaticType(
 	nil,
 	interpreter.UnauthorizedAccess,
-	interpreter.PrimitiveStaticTypeAuthAccount, //nolint:staticcheck
+	interpreter.PrimitiveStaticTypeAccount,
 )
 
 func (m *LinkValueMigration) getPathCapabilityFinalTarget(
@@ -253,6 +254,7 @@ func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 	authorization interpreter.Authorization,
 	err error,
 ) {
+	handler := m.Handler
 
 	locationRange := interpreter.EmptyLocationRange
 
@@ -309,10 +311,9 @@ func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 				pathValue = targetPath
 
 			case interpreter.AccountLinkValue: //nolint:staticcheck
-				if !inter.IsSubTypeOfSemaType(
-					authAccountReferenceStaticType,
-					wantedBorrowType,
-				) {
+				allowedType := unauthorizedAccountReferenceStaticType
+
+				if !inter.IsSubTypeOfSemaType(allowedType, wantedBorrowType) {
 					return nil, interpreter.UnauthorizedAccess, nil
 				}
 
@@ -343,11 +344,12 @@ func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 				// just get target address/path
 				reference := stdlib.GetCheckedCapabilityControllerReference(
 					inter,
+					locationRange,
 					value.Address,
 					value.ID,
 					wantedBorrowType,
 					capabilityBorrowType,
-					locationRange,
+					handler,
 				)
 				if reference == nil {
 					return nil, interpreter.UnauthorizedAccess, nil

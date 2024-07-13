@@ -1884,12 +1884,18 @@ func TestRuntimeExportReferenceValue(t *testing.T) {
 		address, err := common.HexToAddress("0x1")
 		require.NoError(t, err)
 
+		var events []cadence.Event
+
 		runtimeInterface := &TestRuntimeInterface{
 			Storage: NewTestLedger(nil, nil),
 			OnGetSigningAccounts: func() ([]Address, error) {
 				return []Address{
 					address,
 				}, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
 			},
 		}
 
