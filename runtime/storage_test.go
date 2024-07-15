@@ -401,10 +401,16 @@ func TestRuntimeStorageReadAndBorrow(t *testing.T) {
 
 	signer := common.MustBytesToAddress([]byte{0x42})
 
+	var events []cadence.Event
+
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: storage,
 		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signer}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -1048,10 +1054,16 @@ func TestRuntimeStoragePublishAndUnpublish(t *testing.T) {
 
 	signer := common.MustBytesToAddress([]byte{0x42})
 
+	var events []cadence.Event
+
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: storage,
 		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signer}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -1132,10 +1144,16 @@ func TestRuntimeStorageSaveCapability(t *testing.T) {
 
 	signer := common.MustBytesToAddress([]byte{0x42})
 
+	var events []cadence.Event
+
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: storage,
 		OnGetSigningAccounts: func() ([]Address, error) {
 			return []Address{signer}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
 		},
 	}
 

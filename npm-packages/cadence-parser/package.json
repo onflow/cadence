@@ -1,6 +1,6 @@
 {
   "name": "@onflow/cadence-parser",
-  "version": "1.0.0-preview.36",
+  "version": "1.0.0-preview.37",
   "description": "The Cadence parser",
   "homepage": "https://github.com/onflow/cadence",
   "repository": {
