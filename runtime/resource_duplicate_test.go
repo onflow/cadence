@@ -19,8 +19,6 @@
 package runtime_test
 
 import (
-	"encoding/hex"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -96,17 +94,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: []byte(fmt.Sprintf(
-				`
-                  transaction {
-
-                      prepare(signer: auth(Storage, Contracts, Capabilities) &Account) {
-                          signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
-                      }
-                  }
-                `,
-				hex.EncodeToString([]byte(modifiedFlowContract)),
-			)),
+			Source: DeploymentTransaction("FlowToken", []byte(modifiedFlowContract)),
 		},
 		Context{
 			Interface: runtimeInterface,
@@ -167,7 +155,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInTransaction(t *testing.
           prepare(acct: auth(Storage) &Account) {
 
               // Create vault
-              let vault <- FlowToken.createEmptyVault() as! @FlowToken.Vault?
+              let vault <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>()) as! @FlowToken.Vault?
 
               // Move vault into the contract
               Holder.setContent(<-vault)
@@ -274,17 +262,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: []byte(fmt.Sprintf(
-				`
-                  transaction {
-
-                      prepare(signer: auth(Storage, Contracts, Capabilities) &Account) {
-                          signer.contracts.add(name: "FlowToken", code: "%s".decodeHex(), signer)
-                      }
-                  }
-                `,
-				hex.EncodeToString([]byte(modifiedFlowContract)),
-			)),
+			Source: DeploymentTransaction("FlowToken", []byte(modifiedFlowContract)),
 		},
 		Context{
 			Interface: runtimeInterface,
@@ -319,7 +297,7 @@ func TestRuntimeResourceDuplicationWithContractTransferInSameContract(t *testing
 
           access(all) fun duplicate(acct: auth(Storage) &Account) {
               // Create vault
-              let vault <- FlowToken.createEmptyVault() as! @FlowToken.Vault?
+              let vault <- FlowToken.createEmptyVault(Type<@FlowToken.Vault>()) as! @FlowToken.Vault?
 
               // Move vault into the contract
               Holder.setContent(<-vault)
