@@ -74,10 +74,10 @@ type Interface interface {
 	// AddAccountKey appends a key to an account.
 	AddAccountKey(address Address, publicKey *PublicKey, hashAlgo HashAlgorithm, weight int) (*AccountKey, error)
 	// GetAccountKey retrieves a key from an account by index.
-	GetAccountKey(address Address, index int) (*AccountKey, error)
-	AccountKeysCount(address Address) (uint64, error)
+	GetAccountKey(address Address, index uint32) (*AccountKey, error)
+	AccountKeysCount(address Address) (uint32, error)
 	// RevokeAccountKey removes a key from an account by index.
-	RevokeAccountKey(address Address, index int) (*AccountKey, error)
+	RevokeAccountKey(address Address, index uint32) (*AccountKey, error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
 	UpdateAccountContractCode(location common.AddressLocation, code []byte) (err error)
 	// GetAccountContractCode returns the code associated with an account contract.

@@ -7938,7 +7938,7 @@ func TestRuntimeErrorExcerpts(t *testing.T) {
 		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
 		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
-		OnAccountKeysCount:           noopRuntimeUInt64Getter,
+		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}
 
@@ -7990,7 +7990,7 @@ func TestRuntimeErrorExcerptsMultiline(t *testing.T) {
 		OnGetAccountAvailableBalance: noopRuntimeUInt64Getter,
 		OnGetStorageUsed:             noopRuntimeUInt64Getter,
 		OnGetStorageCapacity:         noopRuntimeUInt64Getter,
-		OnAccountKeysCount:           noopRuntimeUInt64Getter,
+		OnAccountKeysCount:           noopRuntimeUInt32Getter,
 		Storage:                      NewTestLedger(nil, nil),
 	}
 

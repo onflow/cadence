@@ -4177,6 +4177,24 @@ func (v IntValue) ToInt(locationRange LocationRange) int {
 	return int(v.BigInt.Int64())
 }
 
+func (v IntValue) ToUint32(locationRange LocationRange) uint32 {
+	if !v.BigInt.IsUint64() {
+		panic(OverflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	result := v.BigInt.Uint64()
+
+	if result > math.MaxUint32 {
+		panic(OverflowError{
+			LocationRange: locationRange,
+		})
+	}
+
+	return uint32(result)
+}
+
 func (v IntValue) ByteLength() int {
 	return common.BigIntByteLength(v.BigInt)
 }
