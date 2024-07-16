@@ -504,40 +504,11 @@ func DecodeFields(composite Composite, s interface{}) error {
 	}
 
 	v = v.Elem()
-	t := v.Type()
+	targetType := v.Type()
 
-	fieldsMap := FieldsMappedByName(composite)
-
-	for i := 0; i < v.NumField(); i++ {
-		structField := t.Field(i)
-		tag := structField.Tag
-		fieldValue := v.Field(i)
-
-		cadenceFieldNameTag := tag.Get("cadence")
-		if cadenceFieldNameTag == "" {
-			continue
-		}
-
-		if !fieldValue.IsValid() || !fieldValue.CanSet() {
-			return fmt.Errorf("cannot set field %s", structField.Name)
-		}
-
-		value := fieldsMap[cadenceFieldNameTag]
-		if value == nil {
-			return fmt.Errorf("%s field not found", cadenceFieldNameTag)
-		}
-
-		converted, err := decodeFieldValue(fieldValue.Type(), value)
-		if err != nil {
-			return fmt.Errorf(
-				"cannot convert Cadence field %s into Go field %s: %w",
-				cadenceFieldNameTag,
-				structField.Name,
-				err,
-			)
-		}
-
-		fieldValue.Set(converted)
+	_, err := decodeStructInto(v, targetType, composite)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -553,6 +524,10 @@ func decodeFieldValue(targetType reflect.Type, value Value) (reflect.Value, erro
 		decodeSpecialFieldFunc = decodeDict
 	case reflect.Array, reflect.Slice:
 		decodeSpecialFieldFunc = decodeSlice
+	case reflect.Struct:
+		if !targetType.Implements(reflect.TypeOf((*Value)(nil)).Elem()) {
+			decodeSpecialFieldFunc = decodeStruct
+		}
 	}
 
 	var reflectedValue reflect.Value
@@ -707,6 +682,61 @@ func decodeSlice(arrayTargetType reflect.Type, cadenceValue Value) (reflect.Valu
 	}
 
 	return arrayValue, nil
+}
+
+func decodeStruct(structTargetType reflect.Type, cadenceValue Value) (reflect.Value, error) {
+	structValue := reflect.New(structTargetType)
+	return decodeStructInto(structValue.Elem(), structTargetType, cadenceValue)
+}
+
+func decodeStructInto(
+	structValue reflect.Value,
+	structTargetType reflect.Type,
+	cadenceValue Value,
+) (reflect.Value, error) {
+	composite, ok := cadenceValue.(Composite)
+	if !ok {
+		return reflect.Value{}, fmt.Errorf(
+			"cannot decode non-Cadence composite %T to Go struct",
+			cadenceValue,
+		)
+	}
+
+	fieldsMap := FieldsMappedByName(composite)
+
+	for i := 0; i < structValue.NumField(); i++ {
+		structField := structTargetType.Field(i)
+		tag := structField.Tag
+		fieldValue := structValue.Field(i)
+
+		cadenceFieldNameTag := tag.Get("cadence")
+		if cadenceFieldNameTag == "" {
+			continue
+		}
+
+		if !fieldValue.IsValid() || !fieldValue.CanSet() {
+			return reflect.Value{}, fmt.Errorf("cannot set field %s", structField.Name)
+		}
+
+		value := fieldsMap[cadenceFieldNameTag]
+		if value == nil {
+			return reflect.Value{}, fmt.Errorf("%s field not found", cadenceFieldNameTag)
+		}
+
+		converted, err := decodeFieldValue(fieldValue.Type(), value)
+		if err != nil {
+			return reflect.Value{}, fmt.Errorf(
+				"cannot convert Cadence field %s into Go field %s: %w",
+				cadenceFieldNameTag,
+				structField.Name,
+				err,
+			)
+		}
+
+		fieldValue.Set(converted)
+	}
+
+	return structValue, nil
 }
 
 // Parameter

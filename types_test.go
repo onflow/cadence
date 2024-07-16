@@ -2284,6 +2284,19 @@ func TestDecodeFields(t *testing.T) {
 			NewDictionary([]KeyValuePair{
 				{Key: UInt8(42), Value: UInt8(24)},
 			}),
+			NewStruct([]Value{
+				NewInt(42),
+			}).WithType(NewStructType(
+				utils.TestLocation,
+				"NestedStruct",
+				[]Field{
+					{
+						Identifier: "intField",
+						Type:       IntType,
+					},
+				},
+				nil,
+			)),
 		},
 	).WithType(NewEventType(
 		utils.TestLocation,
@@ -2408,9 +2421,17 @@ func TestDecodeFields(t *testing.T) {
 					ElementType: UInt8Type,
 				},
 			},
+			{
+				Identifier: "goUint8Struct",
+				Type:       AnyStructType,
+			},
 		},
 		nil,
 	))
+
+	type nestedStruct struct {
+		Int Int `cadence:"intField"`
+	}
 
 	type eventStruct struct {
 		Int                            Int                     `cadence:"intField"`
@@ -2433,6 +2454,7 @@ func TestDecodeFields(t *testing.T) {
 		GoUint8PtrSome                 *uint8                  `cadence:"goUint8PtrSome"`
 		GoUint8Slice                   []uint8                 `cadence:"goUint8Slice"`
 		GoUint8Map                     map[uint8]uint8         `cadence:"goUint8Map"`
+		GoUint8Struct                  nestedStruct            `cadence:"goUint8Struct"`
 		NonCadenceField                Int
 	}
 
@@ -2491,6 +2513,7 @@ func TestDecodeFields(t *testing.T) {
 	assert.Equal(t, &expectedUint8, evt.GoUint8PtrSome)
 	assert.Equal(t, []uint8{4, 2}, evt.GoUint8Slice)
 	assert.Equal(t, map[uint8]uint8{42: 24}, evt.GoUint8Map)
+	assert.Equal(t, NewInt(42), evt.GoUint8Struct.Int)
 
 	type ErrCases struct {
 		Value       interface{}
