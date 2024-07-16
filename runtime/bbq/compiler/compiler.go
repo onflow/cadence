@@ -51,7 +51,6 @@ type Compiler struct {
 	loops               []*loop
 	currentLoop         *loop
 	staticTypes         [][]byte
-	exportedImports     []*bbq.Import
 
 	// Cache alike for staticTypes and constants in the pool.
 	typesInPool     map[sema.Type]uint16
@@ -105,7 +104,6 @@ func NewCompiler(
 		Config:          &Config{},
 		globals:         make(map[string]*global),
 		importedGlobals: indexedNativeFunctions,
-		exportedImports: make([]*bbq.Import, 0),
 		typesInPool:     make(map[sema.Type]uint16),
 		constantsInPool: make(map[constantsCacheKey]*constant),
 		compositeTypeStack: &Stack[*sema.CompositeType]{
@@ -378,16 +376,16 @@ func (c *Compiler) reserveGlobalVars(
 
 		c.addGlobal(qualifiedTypeName)
 
-		// For composite type other than contracts, globals variable
+		// For composite types other than contracts, global variables
 		// reserved by the type-name will be used for the init method.
-		// For contracts, globals variable reserved by the type-name
+		// For contracts, global variables reserved by the type-name
 		// will be used for the contract value.
 		// Hence, reserve a separate global var for contract inits.
 		if declaration.CompositeKind == common.CompositeKindContract {
 			c.addGlobal(commons.InitFunctionName)
 		}
 
-		// Define globals for functions before visiting function bodies
+		// Define globals for functions before visiting function bodies.
 		c.reserveGlobalVars(
 			qualifiedTypeName,
 			nil,

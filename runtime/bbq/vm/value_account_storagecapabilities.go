@@ -30,10 +30,10 @@ func NewAccountStorageCapabilitiesValue(accountAddress common.Address) *SimpleCo
 		typeID:     sema.Account_StorageCapabilitiesType.ID(),
 		staticType: interpreter.PrimitiveStaticTypeAccount_StorageCapabilities,
 		Kind:       common.CompositeKindStructure,
-		fields: map[string]Value{
+		fields:     map[string]Value{
 			// TODO: add the remaining fields
 		},
-		metaInfo: map[string]any{
+		metadata: map[string]any{
 			sema.AccountTypeAddressFieldName: accountAddress,
 		},
 	}

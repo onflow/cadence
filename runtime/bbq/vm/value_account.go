@@ -79,7 +79,7 @@ func newAccountValue(
 // members
 
 func init() {
-	// TODO
+	// Any member methods goes here
 }
 
 func getAddressMetaInfoFromValue(value Value) common.Address {
@@ -88,7 +88,7 @@ func getAddressMetaInfoFromValue(value Value) common.Address {
 		panic(errors.NewUnreachableError())
 	}
 
-	addressMetaInfo := simpleCompositeValue.metaInfo[sema.AccountTypeAddressFieldName]
+	addressMetaInfo := simpleCompositeValue.metadata[sema.AccountTypeAddressFieldName]
 	address, ok := addressMetaInfo.(common.Address)
 	if !ok {
 		panic(errors.NewUnreachableError())

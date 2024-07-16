@@ -28,7 +28,11 @@ type SimpleCompositeValue struct {
 	typeID     common.TypeID
 	staticType StaticType
 	Kind       common.CompositeKind
-	metaInfo   map[string]any
+
+	// metadata is a property bag to carry internal data
+	// that are not visible to cadence users.
+	// TODO: any better way to pass down information?
+	metadata map[string]any
 }
 
 var _ Value = &CompositeValue{}
@@ -78,76 +82,4 @@ func (v *SimpleCompositeValue) Transfer(
 	return v
 }
 
-func (v *SimpleCompositeValue) Destroy(*Config) {
-
-	//interpreter.ReportComputation(common.ComputationKindDestroyCompositeValue, 1)
-	//
-	//if interpreter.Config.InvalidatedResourceValidationEnabled {
-	//	v.checkInvalidatedResourceUse(locationRange)
-	//}
-	//
-	//storageID := v.StorageID()
-	//
-	//if interpreter.Config.TracingEnabled {
-	//	startTime := time.Now()
-	//
-	//	owner := v.GetOwner().String()
-	//	typeID := string(v.TypeID())
-	//	kind := v.Kind.String()
-	//
-	//	defer func() {
-	//
-	//		interpreter.reportCompositeValueDestroyTrace(
-	//			owner,
-	//			typeID,
-	//			kind,
-	//			time.Since(startTime),
-	//		)
-	//	}()
-	//}
-
-	//interpreter = v.getInterpreter(interpreter)
-
-	//// if composite was deserialized, dynamically link in the destructor
-	//if v.Destructor == nil {
-	//	v.Destructor = interpreter.sharedState.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
-	//}
-	//
-	//destructor := v.Destructor
-	//
-	//if destructor != nil {
-	//	invocation := NewInvocation(
-	//		interpreter,
-	//		v,
-	//		nil,
-	//		nil,
-	//		nil,
-	//		locationRange,
-	//	)
-	//
-	//	destructor.invoke(invocation)
-	//}
-
-	//v.isDestroyed = true
-
-	//if interpreter.Config.InvalidatedResourceValidationEnabled {
-	//	v.dictionary = nil
-	//}
-
-	//interpreter.updateReferencedResource(
-	//	storageID,
-	//	storageID,
-	//	func(value ReferenceTrackedResourceKindedValue) {
-	//		compositeValue, ok := value.(*CompositeValue)
-	//		if !ok {
-	//			panic(errors.NewUnreachableError())
-	//		}
-	//
-	//		compositeValue.isDestroyed = true
-	//
-	//		if interpreter.Config.InvalidatedResourceValidationEnabled {
-	//			compositeValue.dictionary = nil
-	//		}
-	//	},
-	//)
-}
+func (v *SimpleCompositeValue) Destroy(*Config) {}

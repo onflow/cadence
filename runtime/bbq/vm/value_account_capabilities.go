@@ -36,7 +36,7 @@ func NewAccountCapabilitiesValue(accountAddress common.Address) *SimpleComposite
 			sema.Account_CapabilitiesTypeStorageFieldName: NewAccountStorageCapabilitiesValue(accountAddress),
 			// TODO: add the remaining fields
 		},
-		metaInfo: map[string]any{
+		metadata: map[string]any{
 			sema.AccountTypeAddressFieldName: accountAddress,
 		},
 	}

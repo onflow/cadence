@@ -22,6 +22,11 @@ import (
 	"github.com/onflow/cadence/runtime/bbq"
 )
 
+// Context is the context of a program.
+// It holds information that are accessible to a given program,
+// such as constants, static-types, and global variables.
+// These info are accessed by the opcodes of the program.
+// i.e: indexes used in opcodes refer to the indexes of its context.
 type Context struct {
 	Program     *bbq.Program
 	Globals     []Value

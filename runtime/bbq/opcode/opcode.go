@@ -40,7 +40,6 @@ const (
 	IntDivide
 	IntMod
 	IntLess
-
 	IntGreater
 	IntLessOrEqual
 	IntGreaterOrEqual

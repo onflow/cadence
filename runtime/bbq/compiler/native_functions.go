@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/cadence/runtime/bbq/commons"
 )
 
-var indexedNativeFunctions map[string]*global
+var indexedNativeFunctions = make(map[string]*global)
 var nativeFunctions []*global
 
 var builtinTypes = []sema.Type{
@@ -40,8 +40,6 @@ var stdlibFunctions = []string{
 }
 
 func init() {
-	indexedNativeFunctions = make(map[string]*global)
-
 	// Here the order isn't really important.
 	// Because the native functions used by a program are also
 	// added to the imports section of the compiled program.

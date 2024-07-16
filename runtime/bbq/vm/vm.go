@@ -654,7 +654,8 @@ func (vm *VM) lookupFunction(location common.Location, name string) FunctionValu
 
 	// If not found, link the function now, dynamically.
 
-	// TODO: This currently link all functions in program, unnecessarily. Link only yhe requested function.
+	// TODO: This currently link all functions in program, unnecessarily.
+	//   Link only the requested function.
 	program := vm.config.ImportHandler(location)
 	ctx := NewContext(program, nil)
 

@@ -34,12 +34,11 @@ type Config struct {
 	ContractValueHandler
 	stdlib.AccountHandler
 
-	// TODO: Move these to `Context`.
-	// Context is the shared state across a single execution
+	// TODO: Move these to a 'shared state'?
 	CapabilityControllerIterations              map[AddressPath]int
 	MutationDuringCapabilityControllerIteration bool
 
-	// TODO: temp
+	// TODO: These are temporary. Remove once storing/reading is supported for VM values.
 	inter      *interpreter.Interpreter
 	TypeLoader func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType
 }
