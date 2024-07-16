@@ -669,6 +669,8 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	inter := newTestInterpreter(b)
 
+	nextScriptLocation := newScriptLocationGenerator()
+
 	for _, address := range []common.Address{
 		senderAddress,
 		receiverAddress,
@@ -683,7 +685,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 			},
 			Context{
 				Interface:   runtimeInterface,
-				Location:    nextTransactionLocation(),
+				Location:    nextScriptLocation(),
 				Environment: environment,
 			},
 		)
