@@ -269,6 +269,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		testEnv := initTestEnvironment(t, nextTransactionLocation())
 
 		test := accountKeyTestCase{
+			//language=Cadence
 			code: `
                 transaction {
                     prepare(signer: &Account) {
@@ -276,8 +277,8 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
                         log(key)
                         assert(!key.isRevoked)
                     }
-                }`,
-			args: []cadence.Value{},
+                }
+            `,
 		}
 
 		err := test.executeTransaction(
@@ -306,14 +307,15 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		testEnv := initTestEnvironment(t, nextTransactionLocation())
 
 		test := accountKeyTestCase{
+			//language=Cadence
 			code: `
                 transaction {
                     prepare(signer: &Account) {
                         let key: AccountKey? = signer.keys.get(keyIndex: 5)
                         assert(key == nil)
                     }
-                }`,
-			args: []cadence.Value{},
+                }
+            `,
 		}
 
 		err := test.executeTransaction(
@@ -325,6 +327,62 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		assert.Nil(t, testEnv.storage.returnedKey)
 	})
 
+	t.Run("get negative index", func(t *testing.T) {
+
+		t.Parallel()
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+		testEnv := initTestEnvironment(t, nextTransactionLocation())
+
+		test := accountKeyTestCase{
+			//language=Cadence
+			code: `
+                transaction {
+                    prepare(signer: &Account) {
+                        signer.keys.get(keyIndex: -1)
+                    }
+                }
+            `,
+		}
+
+		err := test.executeTransaction(
+			testEnv.runtime,
+			testEnv.runtimeInterface,
+			nextTransactionLocation(),
+		)
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.OverflowError{})
+	})
+
+	t.Run("get index overflow", func(t *testing.T) {
+
+		t.Parallel()
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+		testEnv := initTestEnvironment(t, nextTransactionLocation())
+
+		test := accountKeyTestCase{
+			//language=Cadence
+			code: `
+                transaction {
+                    prepare(signer: &Account) {
+                        signer.keys.get(keyIndex: Int(UInt32.max) + 100)
+                    }
+                }
+            `,
+		}
+
+		err := test.executeTransaction(
+			testEnv.runtime,
+			testEnv.runtimeInterface,
+			nextTransactionLocation(),
+		)
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.OverflowError{})
+	})
+
 	t.Run("revoke existing key", func(t *testing.T) {
 
 		t.Parallel()
@@ -333,14 +391,15 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		testEnv := initTestEnvironment(t, nextTransactionLocation())
 
 		test := accountKeyTestCase{
+			//language=Cadence
 			code: `
                 transaction {
                     prepare(signer: auth(RevokeKey) &Account) {
                         let key = signer.keys.revoke(keyIndex: 0) ?? panic("unexpectedly nil")
                         assert(key.isRevoked)
                     }
-                }`,
-			args: []cadence.Value{},
+                }
+            `,
 		}
 
 		err := test.executeTransaction(
@@ -362,6 +421,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		testEnv := initTestEnvironment(t, nextTransactionLocation())
 
 		test := accountKeyTestCase{
+			//language=Cadence
 			code: `
                 transaction {
                     prepare(signer: auth(RevokeKey) &Account) {
@@ -369,7 +429,6 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
                         assert(key == nil)
                     }
                 }`,
-			args: []cadence.Value{},
 		}
 
 		err := test.executeTransaction(
@@ -388,6 +447,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		testEnv := initTestEnvironment(t, nextTransactionLocation())
 
 		test := accountKeyTestCase{
+			//language=Cadence
 			code: `
                 transaction {
                     prepare(signer: auth(RevokeKey) &Account) {
@@ -400,7 +460,6 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
                     }
                 }
             `,
-			args: []cadence.Value{},
 		}
 
 		err := test.executeTransaction(
@@ -420,6 +479,7 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 		testEnv := initTestEnvironment(t, nextTransactionLocation())
 
 		test := accountKeyTestCase{
+			//language=Cadence
 			code: `
                 transaction {
                     prepare(signer: auth(Keys) &Account) {
@@ -441,7 +501,6 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
                     }
                 }
             `,
-			args: []cadence.Value{},
 		}
 
 		err := test.executeTransaction(
@@ -467,6 +526,63 @@ func TestRuntimeAuthAccountKeys(t *testing.T) {
 			keys[keyIdx] = nil
 		}
 	})
+
+	t.Run("revoke negative index", func(t *testing.T) {
+
+		t.Parallel()
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+		testEnv := initTestEnvironment(t, nextTransactionLocation())
+
+		test := accountKeyTestCase{
+			//language=Cadence
+			code: `
+                transaction {
+                    prepare(signer: auth(Keys) &Account) {
+                        signer.keys.revoke(keyIndex: -1)
+                    }
+                }
+            `,
+		}
+
+		err := test.executeTransaction(
+			testEnv.runtime,
+			testEnv.runtimeInterface,
+			nextTransactionLocation(),
+		)
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.OverflowError{})
+	})
+
+	t.Run("revoke index overflow", func(t *testing.T) {
+
+		t.Parallel()
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+		testEnv := initTestEnvironment(t, nextTransactionLocation())
+
+		test := accountKeyTestCase{
+			//language=Cadence
+			code: `
+                transaction {
+                    prepare(signer: auth(Keys) &Account) {
+                        signer.keys.revoke(keyIndex: Int(UInt32.max) + 100)
+                    }
+                }
+            `,
+		}
+
+		err := test.executeTransaction(
+			testEnv.runtime,
+			testEnv.runtimeInterface,
+			nextTransactionLocation(),
+		)
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.OverflowError{})
+	})
+
 }
 
 func TestRuntimeAuthAccountKeysAdd(t *testing.T) {
@@ -669,13 +785,13 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		testEnv := initTestEnv(accountKeyA, accountKeyB)
 		test := accountKeyTestCase{
+			//language=Cadence
 			code: `
               access(all) fun main(): AccountKey? {
                   let acc = getAccount(0x02)
                   return acc.keys.get(keyIndex: 0)
               }
             `,
-			args: []cadence.Value{},
 		}
 
 		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
@@ -706,13 +822,13 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		testEnv := initTestEnv(accountKeyA, accountKeyB)
 
 		test := accountKeyTestCase{
+			//language=Cadence
 			code: `
               access(all) fun main(): AccountKey? {
                   let acc = getAccount(0x02)
                   return acc.keys.get(keyIndex: 1)
               }
             `,
-			args: []cadence.Value{},
 		}
 
 		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
@@ -742,13 +858,13 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		testEnv := initTestEnv(accountKeyA, accountKeyB)
 
 		test := accountKeyTestCase{
+			//language=Cadence
 			code: `
                 access(all) fun main(): AccountKey? {
                     let acc = getAccount(0x02)
                     return acc.keys.get(keyIndex: 4)
                 }
             `,
-			args: []cadence.Value{},
 		}
 
 		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
@@ -761,6 +877,50 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		assert.Nil(t, optionalValue.Value)
 	})
 
+	t.Run("get negative index", func(t *testing.T) {
+
+		t.Parallel()
+
+		testEnv := initTestEnv(accountKeyA, accountKeyB)
+
+		test := accountKeyTestCase{
+			//language=Cadence
+			code: `
+                access(all) fun main(): AccountKey? {
+                    let acc = getAccount(0x02)
+                    return acc.keys.get(keyIndex: -1)
+                }
+            `,
+		}
+
+		_, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.OverflowError{})
+	})
+
+	t.Run("get index overflow", func(t *testing.T) {
+
+		t.Parallel()
+
+		testEnv := initTestEnv(accountKeyA, accountKeyB)
+
+		test := accountKeyTestCase{
+			//language=Cadence
+			code: `
+                access(all) fun main(): AccountKey? {
+                    let acc = getAccount(0x02)
+                    return acc.keys.get(keyIndex: Int(UInt32.max) + 100)
+                }
+            `,
+		}
+
+		_, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
+		RequireError(t, err)
+
+		require.ErrorAs(t, err, &interpreter.OverflowError{})
+	})
+
 	t.Run("get revoked key", func(t *testing.T) {
 
 		t.Parallel()
@@ -768,6 +928,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		testEnv := initTestEnv(revokedAccountKeyA, accountKeyB)
 
 		test := accountKeyTestCase{
+			//language=Cadence
 			code: `
               access(all) fun main(): AccountKey? {
                   let acc = getAccount(0x02)
@@ -775,7 +936,6 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
                   return keys.get(keyIndex: 0)
               }
             `,
-			args: []cadence.Value{},
 		}
 
 		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
@@ -804,6 +964,7 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 		testEnv := initTestEnv(revokedAccountKeyA, accountKeyB)
 
 		test := accountKeyTestCase{
+			//language=Cadence
 			code: `
             access(all) fun main(): UInt64 {
                 return getAccount(0x02).keys.count
@@ -824,15 +985,15 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 
 		testEnv := initTestEnv(revokedAccountKeyA, accountKeyB)
 		test := accountKeyTestCase{
+			//language=Cadence
 			code: `
                 access(all) fun main() {
-                        getAccount(0x02).keys.forEach(fun(key: AccountKey): Bool {
-                            log(key.keyIndex)
-                            return true
-                        })
-                    }
+                    getAccount(0x02).keys.forEach(fun(key: AccountKey): Bool {
+                        log(key.keyIndex)
+                        return true
+                    })
+                }
             `,
-			args: []cadence.Value{},
 		}
 
 		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
@@ -1148,22 +1309,23 @@ func newAccountKeyTestRuntimeInterface(storage *testAccountKeyStorage) *TestRunt
 func addAuthAccountKey(t *testing.T, runtime Runtime, runtimeInterface *TestRuntimeInterface, location Location) {
 	test := accountKeyTestCase{
 		name: "Add key",
+		//language=Cadence
 		code: `
-                transaction {
-                    prepare(signer: auth(AddKey) &Account) {
-                        let key = PublicKey(
-                            publicKey: "010203".decodeHex(),
-                            signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
-                        )
+            transaction {
+                prepare(signer: auth(AddKey) &Account) {
+                    let key = PublicKey(
+                        publicKey: "010203".decodeHex(),
+                        signatureAlgorithm: SignatureAlgorithm.ECDSA_P256
+                    )
 
-                        var addedKey: AccountKey = signer.keys.add(
-                            publicKey: key,
-                            hashAlgorithm: HashAlgorithm.SHA3_256,
-                            weight: 100.0
-                        )
-                    }
-                }`,
-		args: []cadence.Value{},
+                    var addedKey: AccountKey = signer.keys.add(
+                        publicKey: key,
+                        hashAlgorithm: HashAlgorithm.SHA3_256,
+                        weight: 100.0
+                    )
+                }
+            }
+        `,
 	}
 
 	err := test.executeTransaction(runtime, runtimeInterface, location)

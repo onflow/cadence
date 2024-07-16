@@ -704,12 +704,12 @@ func newAccountKeysGetFunction(
 					panic(errors.NewUnreachableError())
 				}
 				locationRange := invocation.LocationRange
-				index := indexValue.ToInt(locationRange)
+				index := indexValue.ToUint32(locationRange)
 
 				var err error
 				var accountKey *AccountKey
 				errors.WrapPanic(func() {
-					accountKey, err = provider.GetAccountKey(address, uint32(index))
+					accountKey, err = provider.GetAccountKey(address, index)
 				})
 
 				if err != nil {
@@ -899,12 +899,12 @@ func newAccountKeysRevokeFunction(
 					panic(errors.NewUnreachableError())
 				}
 				locationRange := invocation.LocationRange
-				index := indexValue.ToInt(locationRange)
+				index := indexValue.ToUint32(locationRange)
 
 				var err error
 				var accountKey *AccountKey
 				errors.WrapPanic(func() {
-					accountKey, err = handler.RevokeAccountKey(address, uint32(index))
+					accountKey, err = handler.RevokeAccountKey(address, index)
 				})
 				if err != nil {
 					panic(interpreter.WrappedExternalError(err))
