@@ -2271,6 +2271,19 @@ func TestDecodeFields(t *testing.T) {
 					NewOptional(nil),
 				},
 			},
+			UInt8(42),
+			NewOptional(nil),
+			NewOptional(UInt8(42)),
+			Array{
+				ArrayType: NewVariableSizedArrayType(UInt8Type),
+				Values: []Value{
+					UInt8(4),
+					UInt8(2),
+				},
+			},
+			NewDictionary([]KeyValuePair{
+				{Key: UInt8(42), Value: UInt8(24)},
+			}),
 		},
 	).WithType(NewEventType(
 		utils.TestLocation,
@@ -2368,6 +2381,33 @@ func TestDecodeFields(t *testing.T) {
 					},
 				),
 			},
+			{
+				Identifier: "goUint8",
+				Type:       UInt8Type,
+			},
+			{
+				Identifier: "goUint8PtrNil",
+				Type: &OptionalType{
+					Type: UInt8Type,
+				},
+			},
+			{
+				Identifier: "goUint8PtrSome",
+				Type: &OptionalType{
+					Type: UInt8Type,
+				},
+			},
+			{
+				Identifier: "goUint8Slice",
+				Type:       NewVariableSizedArrayType(UInt8Type),
+			},
+			{
+				Identifier: "goUint8Map",
+				Type: &DictionaryType{
+					KeyType:     UInt8Type,
+					ElementType: UInt8Type,
+				},
+			},
 		},
 		nil,
 	))
@@ -2388,6 +2428,11 @@ func TestDecodeFields(t *testing.T) {
 		FixedArrayInt                  [2]Int                  `cadence:"fixedArrayIntField"`
 		VariableArrayAnyStruct         []interface{}           `cadence:"variableArrayAnyStructField"`
 		VariableArrayOptionalAnyStruct []*interface{}          `cadence:"variableArrayOptionalAnyStructField"`
+		GoUint8                        uint8                   `cadence:"goUint8"`
+		GoUint8PtrNil                  *uint8                  `cadence:"goUint8PtrNil"`
+		GoUint8PtrSome                 *uint8                  `cadence:"goUint8PtrSome"`
+		GoUint8Slice                   []uint8                 `cadence:"goUint8Slice"`
+		GoUint8Map                     map[uint8]uint8         `cadence:"goUint8Map"`
 		NonCadenceField                Int
 	}
 
@@ -2440,6 +2485,13 @@ func TestDecodeFields(t *testing.T) {
 	require.NotNil(t, evt.DictOptionalAnyStruct["k2"])
 	assert.Nil(t, evt.DictOptionalAnyStruct["nilK"])
 
+	assert.Equal(t, uint8(42), evt.GoUint8)
+	assert.Equal(t, (*uint8)(nil), evt.GoUint8PtrNil)
+	expectedUint8 := uint8(42)
+	assert.Equal(t, &expectedUint8, evt.GoUint8PtrSome)
+	assert.Equal(t, []uint8{4, 2}, evt.GoUint8Slice)
+	assert.Equal(t, map[uint8]uint8{42: 24}, evt.GoUint8Map)
+
 	type ErrCases struct {
 		Value       interface{}
 		ExpectedErr string
@@ -2488,7 +2540,7 @@ func TestDecodeFields(t *testing.T) {
 		{Value: &struct {
 			A String `cadence:"intField"`
 		}{},
-			ExpectedErr: "cannot convert cadence field intField of type Int to struct field A of type cadence.String",
+			ExpectedErr: "cannot convert Cadence field intField into Go field A: cannot convert Cadence value of type Int to Go type cadence.String",
 			Description: "should err when mapping to invalid type",
 		},
 		{Value: &struct {
@@ -2506,61 +2558,61 @@ func TestDecodeFields(t *testing.T) {
 		{Value: &struct {
 			O *String `cadence:"optionalIntField"`
 		}{},
-			ExpectedErr: "cannot decode ptr field O: cannot set field: expected cadence.String, got cadence.Int",
+			ExpectedErr: "cannot convert Cadence field optionalIntField into Go field O: cannot convert Cadence value of type (Int)? to Go type *cadence.String: cannot decode optional value: cannot convert Cadence value of type Int to Go type cadence.String",
 			Description: "should err when mapping to optional field with wrong type",
 		},
 		{Value: &struct {
 			DOptional map[*String]*Int `cadence:"dictOptionalField"`
 		}{},
-			ExpectedErr: "cannot decode map field DOptional: map key cannot be a pointer (optional) type",
+			ExpectedErr: "cannot convert Cadence field dictOptionalField into Go field DOptional: cannot convert Cadence value to Go type map[*cadence.String]*cadence.Int: cannot decode dictionary key: cannot convert Cadence value of type String to Go type *cadence.String: field is not an optional",
 			Description: "should err when mapping to dictionary field with ptr key type",
 		},
 		{Value: &struct {
 			D map[String]String `cadence:"dictField"`
 		}{},
-			ExpectedErr: "cannot decode map field D: map value type mismatch: expected cadence.String, got cadence.Int",
+			ExpectedErr: "cannot convert Cadence field dictField into Go field D: cannot convert Cadence value to Go type map[cadence.String]cadence.String: cannot decode dictionary value: cannot convert Cadence value of type Int to Go type cadence.String",
 			Description: "should err when mapping to dictionary field with wrong value type",
 		},
 		{Value: &struct {
 			A []String `cadence:"intField"`
 		}{},
-			ExpectedErr: "cannot decode slice field A: field is not an array",
+			ExpectedErr: "cannot convert Cadence field intField into Go field A: cannot convert Cadence value of type Int to Go type []cadence.String: cannot decode non-Cadence array cadence.Int to Go slice",
 			Description: "should err when mapping to array field with wrong type",
 		},
 		{Value: &struct {
 			A []String `cadence:"variableArrayIntField"`
 		}{},
-			ExpectedErr: "cannot decode slice field A: array element type mismatch at index 0: expected cadence.String, got cadence.Int",
+			ExpectedErr: "cannot convert Cadence field variableArrayIntField into Go field A: cannot convert Cadence value of type [Int] to Go type []cadence.String: cannot decode array element 0: cannot convert Cadence value of type Int to Go type cadence.String",
 			Description: "should err when mapping to array field with wrong element type",
 		},
 		{Value: &struct {
 			A []*String `cadence:"variableArrayOptionalIntField"`
 		}{},
-			ExpectedErr: "cannot decode slice field A: error decoding array element optional: cannot set field: expected cadence.String, got cadence.Int",
+			ExpectedErr: "cannot convert Cadence field variableArrayOptionalIntField into Go field A: cannot convert Cadence value of type [(Int)?] to Go type []*cadence.String: cannot decode array element 0: cannot convert Cadence value of type (Int)? to Go type *cadence.String: cannot decode optional value: cannot convert Cadence value of type Int to Go type cadence.String",
 			Description: "should err when mapping to array field with wrong type",
 		},
 		{Value: &struct {
 			A map[Int]Int `cadence:"dictField"`
 		}{},
-			ExpectedErr: "cannot decode map field A: map key type mismatch: expected cadence.Int, got cadence.String",
+			ExpectedErr: "cannot convert Cadence field dictField into Go field A: cannot convert Cadence value to Go type map[cadence.Int]cadence.Int: cannot decode dictionary key: cannot convert Cadence value of type String to Go type cadence.Int",
 			Description: "should err when mapping to map field with mismatching key type",
 		},
 		{Value: &struct {
 			A map[String]*String `cadence:"dictOptionalField"`
 		}{},
-			ExpectedErr: "cannot decode map field A: cannot decode optional map value for key \"k\": cannot set field: expected cadence.String, got cadence.Int",
+			ExpectedErr: "cannot convert Cadence field dictOptionalField into Go field A: cannot convert Cadence value to Go type map[cadence.String]*cadence.String: cannot decode dictionary value: cannot convert Cadence value of type (Int)? to Go type *cadence.String: cannot decode optional value: cannot convert Cadence value of type Int to Go type cadence.String",
 			Description: "should err when mapping to map field with mismatching value type",
 		},
 		{Value: &struct {
 			A map[String]Int `cadence:"intField"`
 		}{},
-			ExpectedErr: "cannot decode map field A: field is not a dictionary",
+			ExpectedErr: "cannot convert Cadence field intField into Go field A: cannot convert Cadence value of type Int to Go type map[cadence.String]cadence.Int: cannot decode non-Cadence dictionary cadence.Int to Go map",
 			Description: "should err when mapping to map with mismatching field type",
 		},
 		{Value: &struct {
 			A *Int `cadence:"intField"`
 		}{},
-			ExpectedErr: "cannot decode ptr field A: field is not an optional",
+			ExpectedErr: "cannot convert Cadence field intField into Go field A: cannot convert Cadence value of type Int to Go type *cadence.Int: field is not an optional",
 			Description: "should err when mapping to optional field with mismatching type",
 		},
 	}

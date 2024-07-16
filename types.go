@@ -522,167 +522,191 @@ func DecodeFields(composite Composite, s interface{}) error {
 			return fmt.Errorf("cannot set field %s", structField.Name)
 		}
 
-		cadenceField := fieldsMap[cadenceFieldNameTag]
-		if cadenceField == nil {
+		value := fieldsMap[cadenceFieldNameTag]
+		if value == nil {
 			return fmt.Errorf("%s field not found", cadenceFieldNameTag)
 		}
 
-		cadenceFieldValue := reflect.ValueOf(cadenceField)
-
-		var decodeSpecialFieldFunc func(p reflect.Type, value Value) (*reflect.Value, error)
-
-		switch fieldValue.Kind() {
-		case reflect.Ptr:
-			decodeSpecialFieldFunc = decodeOptional
-		case reflect.Map:
-			decodeSpecialFieldFunc = decodeDict
-		case reflect.Array, reflect.Slice:
-			decodeSpecialFieldFunc = decodeSlice
-		}
-
-		if decodeSpecialFieldFunc != nil {
-			cadenceFieldValuePtr, err := decodeSpecialFieldFunc(fieldValue.Type(), cadenceField)
-			if err != nil {
-				return fmt.Errorf("cannot decode %s field %s: %w", fieldValue.Kind(), structField.Name, err)
-			}
-			cadenceFieldValue = *cadenceFieldValuePtr
-		}
-
-		if !cadenceFieldValue.CanConvert(fieldValue.Type()) {
+		converted, err := decodeFieldValue(fieldValue.Type(), value)
+		if err != nil {
 			return fmt.Errorf(
-				"cannot convert cadence field %s of type %s to struct field %s of type %s",
+				"cannot convert Cadence field %s into Go field %s: %w",
 				cadenceFieldNameTag,
-				cadenceField.Type().ID(),
 				structField.Name,
-				fieldValue.Type(),
+				err,
 			)
 		}
 
-		fieldValue.Set(cadenceFieldValue.Convert(fieldValue.Type()))
+		fieldValue.Set(converted)
 	}
 
 	return nil
 }
 
-func decodeOptional(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
-	optional, ok := cadenceField.(Optional)
-	if !ok {
-		return nil, fmt.Errorf("field is not an optional")
+func decodeFieldValue(targetType reflect.Type, value Value) (reflect.Value, error) {
+	var decodeSpecialFieldFunc func(p reflect.Type, value Value) (reflect.Value, error)
+
+	switch targetType.Kind() {
+	case reflect.Ptr:
+		decodeSpecialFieldFunc = decodeOptional
+	case reflect.Map:
+		decodeSpecialFieldFunc = decodeDict
+	case reflect.Array, reflect.Slice:
+		decodeSpecialFieldFunc = decodeSlice
 	}
 
-	// if optional is nil, skip and default the field to nil
-	if optional.Value == nil {
-		zeroValue := reflect.Zero(valueType)
-		return &zeroValue, nil
+	var reflectedValue reflect.Value
+
+	if decodeSpecialFieldFunc != nil {
+		var err error
+		reflectedValue, err = decodeSpecialFieldFunc(targetType, value)
+		if err != nil {
+			ty := value.Type()
+			if ty == nil {
+				return reflect.Value{}, fmt.Errorf(
+					"cannot convert Cadence value to Go type %s: %w",
+					targetType,
+					err,
+				)
+			} else {
+				return reflect.Value{}, fmt.Errorf(
+					"cannot convert Cadence value of type %s to Go type %s: %w",
+					ty.ID(),
+					targetType,
+					err,
+				)
+			}
+		}
+	} else {
+		reflectedValue = reflect.ValueOf(value)
 	}
 
-	optionalValue := reflect.ValueOf(optional.Value)
-
-	// Check the type
-	if valueType.Elem() != optionalValue.Type() && valueType.Elem().Kind() != reflect.Interface {
-		return nil, fmt.Errorf("cannot set field: expected %v, got %v",
-			valueType.Elem(), optionalValue.Type())
+	if !reflectedValue.CanConvert(targetType) {
+		ty := value.Type()
+		if ty == nil {
+			return reflect.Value{}, fmt.Errorf(
+				"cannot convert Cadence value to Go type %s",
+				targetType,
+			)
+		} else {
+			return reflect.Value{}, fmt.Errorf(
+				"cannot convert Cadence value of type %s to Go type %s",
+				ty.ID(),
+				targetType,
+			)
+		}
 	}
 
-	if valueType.Elem().Kind() == reflect.Interface {
-		newInterfaceVal := reflect.New(reflect.TypeOf((*interface{})(nil)).Elem())
-		newInterfaceVal.Elem().Set(optionalValue)
-
-		return &newInterfaceVal, nil
-	}
-
-	// Create a new pointer for optionalValue
-	newPtr := reflect.New(optionalValue.Type())
-	newPtr.Elem().Set(optionalValue)
-
-	return &newPtr, nil
+	return reflectedValue.Convert(targetType), nil
 }
 
-func decodeDict(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
-	dict, ok := cadenceField.(Dictionary)
+func decodeOptional(pointerTargetType reflect.Type, cadenceValue Value) (reflect.Value, error) {
+	cadenceOptional, ok := cadenceValue.(Optional)
 	if !ok {
-		return nil, fmt.Errorf("field is not a dictionary")
+		return reflect.Value{}, fmt.Errorf("field is not an optional")
 	}
 
-	mapKeyType := valueType.Key()
-	mapValueType := valueType.Elem()
+	// If Cadence optional is nil, skip and default the field to Go nil
+	cadenceInnerValue := cadenceOptional.Value
+	if cadenceInnerValue == nil {
+		return reflect.Zero(pointerTargetType), nil
+	}
 
-	mapValue := reflect.MakeMap(valueType)
-	for _, pair := range dict.Pairs {
+	// Create a new pointer
+	newPtr := reflect.New(pointerTargetType.Elem())
 
-		// Convert key and value to their Go counterparts
-		var key, value reflect.Value
-		if mapKeyType.Kind() == reflect.Ptr {
-			return nil, fmt.Errorf("map key cannot be a pointer (optional) type")
+	innerValue, err := decodeFieldValue(
+		pointerTargetType.Elem(),
+		cadenceInnerValue,
+	)
+	if err != nil {
+		return reflect.Value{}, fmt.Errorf(
+			"cannot decode optional value: %w",
+			err,
+		)
+	}
+
+	newPtr.Elem().Set(innerValue)
+
+	return newPtr, nil
+}
+
+func decodeDict(mapTargetType reflect.Type, cadenceValue Value) (reflect.Value, error) {
+	cadenceDictionary, ok := cadenceValue.(Dictionary)
+	if !ok {
+		return reflect.Value{}, fmt.Errorf(
+			"cannot decode non-Cadence dictionary %T to Go map",
+			cadenceValue,
+		)
+	}
+
+	keyTargetType := mapTargetType.Key()
+	valueTargetType := mapTargetType.Elem()
+
+	mapValue := reflect.MakeMap(mapTargetType)
+
+	for _, pair := range cadenceDictionary.Pairs {
+
+		key, err := decodeFieldValue(keyTargetType, pair.Key)
+		if err != nil {
+			return reflect.Value{}, fmt.Errorf(
+				"cannot decode dictionary key: %w",
+				err,
+			)
 		}
-		key = reflect.ValueOf(pair.Key)
 
-		if mapValueType.Kind() == reflect.Ptr {
-			// If the map value is a pointer type, unwrap it from optional
-			valueOptional, err := decodeOptional(mapValueType, pair.Value)
-			if err != nil {
-				return nil, fmt.Errorf("cannot decode optional map value for key %s: %w", pair.Key.String(), err)
-			}
-			value = *valueOptional
-		} else {
-			value = reflect.ValueOf(pair.Value)
+		value, err := decodeFieldValue(valueTargetType, pair.Value)
+		if err != nil {
+			return reflect.Value{}, fmt.Errorf(
+				"cannot decode dictionary value: %w",
+				err,
+			)
 		}
 
-		if mapKeyType != key.Type() {
-			return nil, fmt.Errorf("map key type mismatch: expected %v, got %v", mapKeyType, key.Type())
-		}
-		if mapValueType != value.Type() && mapValueType.Kind() != reflect.Interface {
-			return nil, fmt.Errorf("map value type mismatch: expected %v, got %v", mapValueType, value.Type())
-		}
-
-		// Add key-value pair to the map
 		mapValue.SetMapIndex(key, value)
 	}
 
-	return &mapValue, nil
+	return mapValue, nil
 }
 
-func decodeSlice(valueType reflect.Type, cadenceField Value) (*reflect.Value, error) {
-	array, ok := cadenceField.(Array)
+func decodeSlice(arrayTargetType reflect.Type, cadenceValue Value) (reflect.Value, error) {
+	cadenceArray, ok := cadenceValue.(Array)
 	if !ok {
-		return nil, fmt.Errorf("field is not an array")
+		return reflect.Value{}, fmt.Errorf(
+			"cannot decode non-Cadence array %T to Go slice",
+			cadenceValue,
+		)
 	}
+
+	elementTargetType := arrayTargetType.Elem()
 
 	var arrayValue reflect.Value
 
-	constantSizeArray, ok := array.ArrayType.(*ConstantSizedArrayType)
+	cadenceConstantSizeArrayType, ok := cadenceArray.ArrayType.(*ConstantSizedArrayType)
 	if ok {
-		arrayValue = reflect.New(reflect.ArrayOf(int(constantSizeArray.Size), valueType.Elem())).Elem()
+		// If the Cadence array is constant-sized, create a Go array
+		size := int(cadenceConstantSizeArrayType.Size)
+		arrayValue = reflect.New(reflect.ArrayOf(size, elementTargetType)).Elem()
 	} else {
-		// If the array is not constant sized, create a slice
-		arrayValue = reflect.MakeSlice(valueType, len(array.Values), len(array.Values))
+		// If the Cadence array is not constant-sized, create a Go slice
+		size := len(cadenceArray.Values)
+		arrayValue = reflect.MakeSlice(arrayTargetType, size, size)
 	}
 
-	for i, value := range array.Values {
-		var elementValue reflect.Value
-		if valueType.Elem().Kind() == reflect.Ptr {
-			// If the array value is a pointer type, unwrap it from optional
-			valueOptional, err := decodeOptional(valueType.Elem(), value)
-			if err != nil {
-				return nil, fmt.Errorf("error decoding array element optional: %w", err)
-			}
-			elementValue = *valueOptional
-		} else {
-			elementValue = reflect.ValueOf(value)
-		}
-		if elementValue.Type() != valueType.Elem() && valueType.Elem().Kind() != reflect.Interface {
-			return nil, fmt.Errorf(
-				"array element type mismatch at index %d: expected %v, got %v",
+	for i, cadenceElement := range cadenceArray.Values {
+		elementValue, err := decodeFieldValue(elementTargetType, cadenceElement)
+		if err != nil {
+			return reflect.Value{}, fmt.Errorf(
+				"cannot decode array element %d: %w",
 				i,
-				valueType.Elem(),
-				elementValue.Type(),
+				err,
 			)
 		}
 
 		arrayValue.Index(i).Set(elementValue)
 	}
 
-	return &arrayValue, nil
+	return arrayValue, nil
 }
 
 // Parameter
