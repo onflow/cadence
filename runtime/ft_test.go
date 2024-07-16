@@ -19,8 +19,6 @@
 package runtime_test
 
 import (
-	"encoding/hex"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -643,17 +641,7 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: []byte(fmt.Sprintf(
-				`
-                  transaction {
-
-                      prepare(signer: auth(AddContract) &Account) {
-                          signer.contracts.add(name: "FlowToken", code: "%s".decodeHex())
-                      }
-                  }
-                `,
-				hex.EncodeToString([]byte(modifiedFlowContract)),
-			)),
+			Source: utils.DeploymentTransaction("FlowToken", []byte(modifiedFlowContract)),
 		},
 		Context{
 			Interface:   runtimeInterface,
