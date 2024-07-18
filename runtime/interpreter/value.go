@@ -26,6 +26,7 @@ import (
 	"math"
 	"math/big"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -1041,7 +1042,9 @@ type StringValue struct {
 	// graphemes is a grapheme cluster segmentation iterator,
 	// which is initialized lazily and reused/reset in functions
 	// that are based on grapheme clusters
-	graphemes       *uniseg.Graphemes
+	graphemes *uniseg.Graphemes
+	lock      sync.RWMutex
+
 	Str             string
 	UnnormalizedStr string
 	// length is the cached length of the string, based on grapheme clusters.
@@ -1095,6 +1098,9 @@ var _ IterableValue = &StringValue{}
 var VarSizedArrayOfStringType = NewVariableSizedStaticType(nil, PrimitiveStaticTypeString)
 
 func (v *StringValue) prepareGraphemes() {
+	v.lock.Lock()
+	defer v.lock.Unlock()
+
 	if v.graphemes == nil {
 		v.graphemes = uniseg.NewGraphemes(v.Str)
 	} else {
