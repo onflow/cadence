@@ -1072,19 +1072,14 @@ func ConvertSemaAccessToStaticAuthorization(
 ) Authorization {
 	switch access := access.(type) {
 	case sema.PrimitiveAccess:
-		if access.Equal(sema.UnauthorizedAccess) {
+		switch access {
+		case sema.UnauthorizedAccess:
 			return UnauthorizedAccess
-		}
-		if access.Equal(sema.InaccessibleAccess) {
+		case sema.InaccessibleAccess:
 			return InaccessibleAccess
 		}
 
 	case sema.EntitlementSetAccess:
-		var entitlements []common.TypeID
-		access.Entitlements.Foreach(func(key *sema.EntitlementType, _ struct{}) {
-			typeId := key.ID()
-			entitlements = append(entitlements, typeId)
-		})
 		return NewEntitlementSetAuthorization(
 			memoryGauge,
 			func() (entitlements []common.TypeID) {
@@ -1102,6 +1097,7 @@ func ConvertSemaAccessToStaticAuthorization(
 		typeId := access.Type.ID()
 		return NewEntitlementMapAuthorization(memoryGauge, typeId)
 	}
+
 	panic(errors.NewUnreachableError())
 }
 
