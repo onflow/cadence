@@ -19,6 +19,7 @@
 package runtime_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -28,6 +29,7 @@ import (
 	. "github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -765,4 +767,264 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 	}
 
 	utils.RequireValuesEqual(b, nil, mintAmountValue, sum)
+}
+
+// TODO:
+//const oldExampleToken = `
+//import FungibleToken from 0x1
+//
+//pub contract ExampleToken: FungibleToken {
+//
+//    pub var totalSupply: UFix64
+//
+//    pub resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance {
+//
+//        pub var balance: UFix64
+//
+//        init(balance: UFix64) {
+//            self.balance = balance
+//        }
+//
+//        pub fun withdraw(amount: UFix64): @FungibleToken.Vault {
+//            self.balance = self.balance - amount
+//            emit TokensWithdrawn(amount: amount, from: self.owner?.address)
+//            return <-create Vault(balance: amount)
+//        }
+//
+//        pub fun deposit(from: @FungibleToken.Vault) {
+//            let vault <- from as! @ExampleToken.Vault
+//            self.balance = self.balance + vault.balance
+//            emit TokensDeposited(amount: vault.balance, to: self.owner?.address)
+//            vault.balance = 0.0
+//            destroy vault
+//        }
+//
+//        destroy() {
+//            if self.balance > 0.0 {
+//                ExampleToken.totalSupply = ExampleToken.totalSupply - self.balance
+//            }
+//        }
+//    }
+//
+//    pub fun createEmptyVault(): @Vault {
+//        return <-create Vault(balance: 0.0)
+//    }
+//
+//    init() {
+//        self.totalSupply = 0.0
+//    }
+//}
+//`
+
+const oldExampleToken = `
+import FungibleToken from 0x1
+
+access(all)
+contract ExampleToken {
+
+    access(all)
+    var totalSupply: UFix64
+
+    access(all)
+    resource Vault {
+
+        access(all)
+        var balance: UFix64
+
+        init(balance: UFix64) {
+            self.balance = balance
+        }
+    }
+
+    init() {
+        self.totalSupply = 4321.0
+    }
+}
+`
+
+func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
+
+	runtime := NewTestInterpreterRuntime()
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+	userAddress := common.MustBytesToAddress([]byte{0x2})
+
+	const contractName = "ExampleToken"
+
+	accountCodes := map[Location][]byte{
+		// We cannot deploy the ExampleToken contract because it is broken
+		common.NewAddressLocation(nil, contractsAddress, contractName): []byte(oldExampleToken),
+	}
+
+	var events []cadence.Event
+	var logs []string
+
+	signerAccount := contractsAddress
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
+		OnProgramLog: func(message string) {
+			logs = append(logs, message)
+		},
+	}
+
+	environment := NewBaseInterpreterEnvironment(Config{})
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy Fungible Token contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: utils.DeploymentTransaction(
+				"FungibleToken",
+				[]byte(modifiedFungibleTokenContractInterface),
+			),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	require.NoError(t, err)
+
+	// We cannot deploy the ExampleToken contract because it is broken.
+	// Manually storage the contract value for the ExampleToken contract in the contract account's storage
+
+	storage, inter, err := runtime.Storage(Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	contractValue := interpreter.NewCompositeValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		common.NewAddressLocation(nil, contractsAddress, contractName),
+		contractName,
+		common.CompositeKindContract,
+		[]interpreter.CompositeField{
+			{
+				Name: "totalSupply",
+				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(
+					4321,
+					interpreter.EmptyLocationRange,
+				),
+			},
+		},
+		contractsAddress,
+	)
+
+	contractStorage := storage.GetStorageMap(
+		contractsAddress,
+		StorageDomainContract,
+		true,
+	)
+	contractStorage.SetValue(
+		inter,
+		interpreter.StringStorageMapKey(contractName),
+		contractValue,
+	)
+
+	// Manually store a broken ExampleToken.Vault in the user account's storage
+
+	vaultValue := interpreter.NewCompositeValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		common.NewAddressLocation(nil, contractsAddress, contractName),
+		fmt.Sprintf("%s.Vault", contractName),
+		common.CompositeKindResource,
+		[]interpreter.CompositeField{
+			{
+				Name:  sema.ResourceUUIDFieldName,
+				Value: interpreter.NewUnmeteredUInt64Value(42),
+			},
+			{
+				Name: "balance",
+				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(
+					1234,
+					interpreter.EmptyLocationRange,
+				),
+			},
+		},
+		userAddress,
+	)
+
+	userStorage := storage.GetStorageMap(
+		userAddress,
+		common.PathDomainStorage.Identifier(),
+		true,
+	)
+	const storagePathIdentifier = "exampleTokenVault"
+	userStorage.SetValue(
+		inter,
+		interpreter.StringStorageMapKey(storagePathIdentifier),
+		vaultValue,
+	)
+
+	err = storage.Commit(inter, false)
+	require.NoError(t, err)
+
+	// Send a transaction that loads the broken ExampleToken contract and the broken ExampleToken.Vault
+
+	const transaction = `
+      import FungibleToken from 0x1
+      import ExampleToken from 0x1
+
+      transaction {
+
+          let vault: @ExampleToken.Vault
+
+          prepare(signer: auth(LoadValue) &Account) {
+              self.vault <- signer.storage.load<@ExampleToken.Vault>(from: /storage/exampleTokenVault)!
+          }
+
+          execute {
+              log(ExampleToken.totalSupply)
+              log(self.vault.balance)
+
+              destroy self.vault
+          }
+      }
+    `
+
+	signerAccount = userAddress
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(transaction),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]string{"4321.00000000", "1234.00000000"},
+		logs,
+	)
 }
