@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	. "github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -769,76 +770,49 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 	utils.RequireValuesEqual(b, nil, mintAmountValue, sum)
 }
 
-// TODO:
-//const oldExampleToken = `
-//import FungibleToken from 0x1
-//
-//pub contract ExampleToken: FungibleToken {
-//
-//    pub var totalSupply: UFix64
-//
-//    pub resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance {
-//
-//        pub var balance: UFix64
-//
-//        init(balance: UFix64) {
-//            self.balance = balance
-//        }
-//
-//        pub fun withdraw(amount: UFix64): @FungibleToken.Vault {
-//            self.balance = self.balance - amount
-//            emit TokensWithdrawn(amount: amount, from: self.owner?.address)
-//            return <-create Vault(balance: amount)
-//        }
-//
-//        pub fun deposit(from: @FungibleToken.Vault) {
-//            let vault <- from as! @ExampleToken.Vault
-//            self.balance = self.balance + vault.balance
-//            emit TokensDeposited(amount: vault.balance, to: self.owner?.address)
-//            vault.balance = 0.0
-//            destroy vault
-//        }
-//
-//        destroy() {
-//            if self.balance > 0.0 {
-//                ExampleToken.totalSupply = ExampleToken.totalSupply - self.balance
-//            }
-//        }
-//    }
-//
-//    pub fun createEmptyVault(): @Vault {
-//        return <-create Vault(balance: 0.0)
-//    }
-//
-//    init() {
-//        self.totalSupply = 0.0
-//    }
-//}
-//`
-
 const oldExampleToken = `
 import FungibleToken from 0x1
 
-access(all)
-contract ExampleToken {
+pub contract ExampleToken: FungibleToken {
 
-    access(all)
-    var totalSupply: UFix64
+   pub var totalSupply: UFix64
 
-    access(all)
-    resource Vault {
+   pub resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance {
 
-        access(all)
-        var balance: UFix64
+       pub var balance: UFix64
 
-        init(balance: UFix64) {
-            self.balance = balance
-        }
-    }
+       init(balance: UFix64) {
+           self.balance = balance
+       }
 
-    init() {
-        self.totalSupply = 4321.0
-    }
+       pub fun withdraw(amount: UFix64): @FungibleToken.Vault {
+           self.balance = self.balance - amount
+           emit TokensWithdrawn(amount: amount, from: self.owner?.address)
+           return <-create Vault(balance: amount)
+       }
+
+       pub fun deposit(from: @FungibleToken.Vault) {
+           let vault <- from as! @ExampleToken.Vault
+           self.balance = self.balance + vault.balance
+           emit TokensDeposited(amount: vault.balance, to: self.owner?.address)
+           vault.balance = 0.0
+           destroy vault
+       }
+
+       destroy() {
+           if self.balance > 0.0 {
+               ExampleToken.totalSupply = ExampleToken.totalSupply - self.balance
+           }
+       }
+   }
+
+   pub fun createEmptyVault(): @Vault {
+       return <-create Vault(balance: 0.0)
+   }
+
+   init() {
+       self.totalSupply = 0.0
+   }
 }
 `
 
@@ -860,6 +834,11 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 	var logs []string
 
 	signerAccount := contractsAddress
+
+	var memoryGauge common.MemoryGauge
+
+	const fungibleTokenTypeTotalSupplyFieldName = "totalSupply"
+	const fungibleTokenVaultTypeBalanceFieldName = "balance"
 
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(location Location) (bytes []byte, err error) {
@@ -886,6 +865,128 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 		OnProgramLog: func(message string) {
 			logs = append(logs, message)
+		},
+		OnRecoverProgram: func(program *ast.Program, location common.Location) (*sema.Elaboration, error) {
+			// TODO: check program syntactically
+
+			// TODO: maybe construct a new program?
+
+			// TODO: add conformances
+
+			elaboration := sema.NewElaboration(memoryGauge)
+
+			// ExampleToken type
+
+			nestedTypes := &sema.StringTypeOrderedMap{}
+
+			contractType := &sema.CompositeType{
+				Identifier: contractName,
+				Location:   location,
+				Kind:       common.CompositeKindContract,
+				Fields: []string{
+					fungibleTokenTypeTotalSupplyFieldName,
+				},
+				Members:     &sema.StringMemberOrderedMap{},
+				NestedTypes: nestedTypes,
+			}
+
+			contractType.Members.Set(
+				fungibleTokenTypeTotalSupplyFieldName,
+				sema.NewFieldMember(
+					memoryGauge,
+					nil,
+					sema.PrimitiveAccess(ast.AccessAll),
+					ast.VariableKindVariable,
+					fungibleTokenTypeTotalSupplyFieldName,
+					sema.UFix64Type,
+					"",
+				),
+			)
+
+			elaboration.SetCompositeType(
+				contractType.ID(),
+				contractType,
+			)
+
+			// TODO: check
+			contractDeclaration := program.SoleContractDeclaration()
+
+			elaboration.SetCompositeTypeDeclaration(
+				contractType,
+				contractDeclaration,
+			)
+			elaboration.SetCompositeDeclarationType(
+				contractDeclaration,
+				contractType,
+			)
+
+			contractVariable := &sema.Variable{
+				Identifier:      contractName,
+				Type:            contractType,
+				DeclarationKind: common.DeclarationKindContract,
+				Access:          sema.PrimitiveAccess(ast.AccessAll),
+				IsConstant:      true,
+			}
+
+			elaboration.SetGlobalType(
+				contractName,
+				contractVariable,
+			)
+
+			elaboration.SetGlobalValue(
+				contractName,
+				contractVariable,
+			)
+
+			// ExampleToken.Vault type
+
+			// TODO: check
+			vaultDeclaration := contractDeclaration.Members.Composites()[0]
+
+			const vaultTypeName = "Vault"
+
+			vaultQualifiedIdentifier := fmt.Sprintf("%s.%s", contractName, vaultTypeName)
+
+			vaultType := &sema.CompositeType{
+				Location:   location,
+				Identifier: vaultQualifiedIdentifier,
+				Kind:       common.CompositeKindResource,
+				Fields: []string{
+					fungibleTokenVaultTypeBalanceFieldName,
+				},
+				Members: &sema.StringMemberOrderedMap{},
+			}
+
+			vaultType.Members.Set(
+				fungibleTokenVaultTypeBalanceFieldName,
+				sema.NewFieldMember(
+					memoryGauge,
+					contractType,
+					sema.PrimitiveAccess(ast.AccessAll),
+					ast.VariableKindVariable,
+					fungibleTokenVaultTypeBalanceFieldName,
+					sema.UFix64Type,
+					"",
+				),
+			)
+
+			elaboration.SetCompositeType(
+				vaultType.ID(),
+				vaultType,
+			)
+
+			elaboration.SetCompositeTypeDeclaration(
+				vaultType,
+				vaultDeclaration,
+			)
+			elaboration.SetCompositeDeclarationType(
+				vaultDeclaration,
+				vaultType,
+			)
+
+			nestedTypes.Set(vaultTypeName, vaultType)
+
+			return elaboration, nil
 		},
 	}
 
@@ -926,7 +1027,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		common.CompositeKindContract,
 		[]interpreter.CompositeField{
 			{
-				Name: "totalSupply",
+				Name: fungibleTokenTypeTotalSupplyFieldName,
 				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(
 					4321,
 					interpreter.EmptyLocationRange,
@@ -961,7 +1062,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 				Value: interpreter.NewUnmeteredUInt64Value(42),
 			},
 			{
-				Name: "balance",
+				Name: fungibleTokenVaultTypeBalanceFieldName,
 				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(
 					1234,
 					interpreter.EmptyLocationRange,
