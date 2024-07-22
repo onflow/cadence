@@ -497,6 +497,7 @@ func (e *interpreterEnvironment) parseAndCheckProgramWithRecovery(
 	recoveredProgram, recoveredElaboration := e.recoverProgram(
 		code,
 		location,
+		checkedImports,
 	)
 
 	// If recovery failed, return the original error
@@ -550,10 +551,12 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 	return program, elaboration, nil
 }
 
-// parseAndCheckProgram parses and checks the given program.
+// recoverProgram parses and checks the given program with the old parser,
+// and recovers the elaboration from the old program.
 func (e *interpreterEnvironment) recoverProgram(
 	code []byte,
 	location common.Location,
+	checkedImports importResolutionResults,
 ) (
 	program *ast.Program,
 	elaboration *sema.Elaboration,
@@ -577,10 +580,15 @@ func (e *interpreterEnvironment) recoverProgram(
 	// Recover elaboration from the old program
 
 	errors.WrapPanic(func() {
-		elaboration, err = e.runtimeInterface.RecoverProgram(program, location)
+		program, err = e.runtimeInterface.RecoverProgram(program, location)
 	})
 	if err != nil {
-		return program, nil
+		return nil, nil
+	}
+
+	elaboration, err = e.check(location, program, checkedImports)
+	if err != nil {
+		return nil, nil
 	}
 
 	return program, elaboration

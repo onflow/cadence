@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -866,127 +867,61 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		OnProgramLog: func(message string) {
 			logs = append(logs, message)
 		},
-		OnRecoverProgram: func(program *ast.Program, location common.Location) (*sema.Elaboration, error) {
+		OnRecoverProgram: func(program *ast.Program, location common.Location) (*ast.Program, error) {
 			// TODO: check program syntactically
 
-			// TODO: maybe construct a new program?
+			code := `
+              import FungibleToken from 0x1
 
-			// TODO: add conformances
+              access(all)
+              contract ExampleToken: FungibleToken {
 
-			elaboration := sema.NewElaboration(memoryGauge)
+                  access(all)
+                  var totalSupply: UFix64
 
-			// ExampleToken type
+                  init() {
+                      self.totalSupply = 0.0
+                  }
 
-			nestedTypes := &sema.StringTypeOrderedMap{}
+                  access(all)
+                  resource Vault: FungibleToken.Vault {
 
-			contractType := &sema.CompositeType{
-				Identifier: contractName,
-				Location:   location,
-				Kind:       common.CompositeKindContract,
-				Fields: []string{
-					fungibleTokenTypeTotalSupplyFieldName,
-				},
-				Members:     &sema.StringMemberOrderedMap{},
-				NestedTypes: nestedTypes,
-			}
+                      access(all)
+                      var balance: UFix64
 
-			contractType.Members.Set(
-				fungibleTokenTypeTotalSupplyFieldName,
-				sema.NewFieldMember(
-					memoryGauge,
-					nil,
-					sema.PrimitiveAccess(ast.AccessAll),
-					ast.VariableKindVariable,
-					fungibleTokenTypeTotalSupplyFieldName,
-					sema.UFix64Type,
-					"",
-				),
-			)
+                      init(balance: UFix64) {
+                          self.balance = balance
+                      }
 
-			elaboration.SetCompositeType(
-				contractType.ID(),
-				contractType,
-			)
+                      access(FungibleToken.Withdraw)
+                      fun withdraw(amount: UFix64): @{FungibleToken.Vault} {
+                          panic("withdraw is not implemented")
+                      }
 
-			// TODO: check
-			contractDeclaration := program.SoleContractDeclaration()
+                      access(all)
+                      view fun isAvailableToWithdraw(amount: UFix64): Bool {
+                          panic("isAvailableToWithdraw is not implemented")
+                      }
 
-			elaboration.SetCompositeTypeDeclaration(
-				contractType,
-				contractDeclaration,
-			)
-			elaboration.SetCompositeDeclarationType(
-				contractDeclaration,
-				contractType,
-			)
+                      access(all)
+                      fun deposit(from: @{FungibleToken.Vault}) {
+                          panic("deposit is not implemented")
+                      }
 
-			contractVariable := &sema.Variable{
-				Identifier:      contractName,
-				Type:            contractType,
-				DeclarationKind: common.DeclarationKindContract,
-				Access:          sema.PrimitiveAccess(ast.AccessAll),
-				IsConstant:      true,
-			}
+                      access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
+                          panic("createEmptyVault is not implemented")
+                      }
+                  }
 
-			elaboration.SetGlobalType(
-				contractName,
-				contractVariable,
-			)
+                  access(all)
+                  fun createEmptyVault(vaultType: Type): @{FungibleToken.Vault} {
+                      panic("createEmptyVault is not implemented")
+                  }
+              }
+            `
 
-			elaboration.SetGlobalValue(
-				contractName,
-				contractVariable,
-			)
-
-			// ExampleToken.Vault type
-
-			// TODO: check
-			vaultDeclaration := contractDeclaration.Members.Composites()[0]
-
-			const vaultTypeName = "Vault"
-
-			vaultQualifiedIdentifier := fmt.Sprintf("%s.%s", contractName, vaultTypeName)
-
-			vaultType := &sema.CompositeType{
-				Location:   location,
-				Identifier: vaultQualifiedIdentifier,
-				Kind:       common.CompositeKindResource,
-				Fields: []string{
-					fungibleTokenVaultTypeBalanceFieldName,
-				},
-				Members: &sema.StringMemberOrderedMap{},
-			}
-
-			vaultType.Members.Set(
-				fungibleTokenVaultTypeBalanceFieldName,
-				sema.NewFieldMember(
-					memoryGauge,
-					contractType,
-					sema.PrimitiveAccess(ast.AccessAll),
-					ast.VariableKindVariable,
-					fungibleTokenVaultTypeBalanceFieldName,
-					sema.UFix64Type,
-					"",
-				),
-			)
-
-			elaboration.SetCompositeType(
-				vaultType.ID(),
-				vaultType,
-			)
-
-			elaboration.SetCompositeTypeDeclaration(
-				vaultType,
-				vaultDeclaration,
-			)
-			elaboration.SetCompositeDeclarationType(
-				vaultDeclaration,
-				vaultType,
-			)
-
-			nestedTypes.Set(vaultTypeName, vaultType)
-
-			return elaboration, nil
+			// TODO: meter
+			return parser.ParseProgram(memoryGauge, []byte(code), parser.Config{})
 		},
 	}
 

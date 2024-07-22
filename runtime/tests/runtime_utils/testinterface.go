@@ -121,7 +121,7 @@ type TestRuntimeInterface struct {
 	OnMemoryUsed        func() (uint64, error)
 	OnInteractionUsed   func() (uint64, error)
 	OnGenerateAccountID func(address common.Address) (uint64, error)
-	OnRecoverProgram    func(program *ast.Program, location common.Location) (*sema.Elaboration, error)
+	OnRecoverProgram    func(program *ast.Program, location common.Location) (*ast.Program, error)
 
 	lastUUID            uint64
 	accountIDs          map[common.Address]uint64
@@ -608,7 +608,7 @@ func (i *TestRuntimeInterface) InvalidateUpdatedPrograms() {
 	}
 }
 
-func (i *TestRuntimeInterface) RecoverProgram(program *ast.Program, location common.Location) (*sema.Elaboration, error) {
+func (i *TestRuntimeInterface) RecoverProgram(program *ast.Program, location common.Location) (*ast.Program, error) {
 	if i.OnRecoverProgram == nil {
 		return nil, nil
 	}

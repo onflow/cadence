@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
 type Interface interface {
@@ -145,7 +144,7 @@ type Interface interface {
 	)
 	// GenerateAccountID generates a new, *non-zero*, unique ID for the given account.
 	GenerateAccountID(address common.Address) (uint64, error)
-	RecoverProgram(program *ast.Program, location common.Location) (*sema.Elaboration, error)
+	RecoverProgram(program *ast.Program, location common.Location) (*ast.Program, error)
 }
 
 type MeterInterface interface {
