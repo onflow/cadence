@@ -817,6 +817,115 @@ pub contract ExampleToken: FungibleToken {
 }
 `
 
+func importsAddressLocation(program *ast.Program, address common.Address, name string) bool {
+	importDeclarations := program.ImportDeclarations()
+
+	// Check if the location is imported by any import declaration
+	for _, importDeclaration := range importDeclarations {
+
+		// The import declaration imports from the same address
+		importedLocation, ok := importDeclaration.Location.(common.AddressLocation)
+		if !ok || importedLocation.Address != address {
+			continue
+		}
+
+		// The import declaration imports all identifiers, so also the location
+		if len(importDeclaration.Identifiers) == 0 {
+			return true
+		}
+
+		// The import declaration imports specific identifiers, so check if the location is imported
+		for _, identifier := range importDeclaration.Identifiers {
+			if identifier.Identifier == name {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func declaresConformanceTo(conformingDeclaration ast.ConformingDeclaration, name string) bool {
+	for _, conformance := range conformingDeclaration.ConformanceList() {
+		if conformance.Identifier.Identifier == name {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isNominalType(ty ast.Type, name string) bool {
+	nominalType, ok := ty.(*ast.NominalType)
+	return ok &&
+		len(nominalType.NestedIdentifiers) == 0 &&
+		nominalType.Identifier.Identifier == name
+}
+
+const fungibleTokenTypeTotalSupplyFieldName = "totalSupply"
+const fungibleTokenVaultTypeBalanceFieldName = "balance"
+const fungibleTokenVaultTypeIdentifier = "Vault"
+
+func isFungibleTokenContract(program *ast.Program, fungibleTokenAddress common.Address) bool {
+	const contractName = "FungibleToken"
+
+	// Check if the contract imports the FungibleToken contract
+	if !importsAddressLocation(program, fungibleTokenAddress, contractName) {
+		return false
+	}
+
+	contractDeclaration := program.SoleContractDeclaration()
+	if contractDeclaration == nil {
+		return false
+	}
+
+	// Check if the contract implements the FungibleToken interface
+	if !declaresConformanceTo(contractDeclaration, contractName) {
+		return false
+	}
+
+	// Check if the contract has a totalSupply field
+	totalSupplyFieldDeclaration := getField(contractDeclaration, fungibleTokenTypeTotalSupplyFieldName)
+	if totalSupplyFieldDeclaration == nil {
+		return false
+	}
+
+	// Check if the totalSupply field is of type UFix64
+	if !isNominalType(totalSupplyFieldDeclaration.TypeAnnotation.Type, sema.UFix64TypeName) {
+		return false
+	}
+
+	// Check if the contract has a Vault resource
+
+	vaultDeclaration := contractDeclaration.Members.CompositesByIdentifier()[fungibleTokenVaultTypeIdentifier]
+	if vaultDeclaration == nil {
+		return false
+	}
+
+	// Check if the Vault resource has a balance field
+	balanceFieldDeclaration := getField(vaultDeclaration, fungibleTokenVaultTypeBalanceFieldName)
+	if balanceFieldDeclaration == nil {
+		return false
+	}
+
+	// Check if the balance field is of type UFix64
+	if !isNominalType(balanceFieldDeclaration.TypeAnnotation.Type, sema.UFix64TypeName) {
+		return false
+	}
+
+	return true
+}
+
+func getField(declaration *ast.CompositeDeclaration, name string) *ast.FieldDeclaration {
+	for _, fieldDeclaration := range declaration.Members.Fields() {
+		if fieldDeclaration.Identifier.Identifier == name {
+			return fieldDeclaration
+		}
+	}
+
+	return nil
+}
+
 func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
 	runtime := NewTestInterpreterRuntime()
@@ -837,9 +946,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 	signerAccount := contractsAddress
 
 	var memoryGauge common.MemoryGauge
-
-	const fungibleTokenTypeTotalSupplyFieldName = "totalSupply"
-	const fungibleTokenVaultTypeBalanceFieldName = "balance"
 
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(location Location) (bytes []byte, err error) {
@@ -868,7 +974,12 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 			logs = append(logs, message)
 		},
 		OnRecoverProgram: func(program *ast.Program, location common.Location) (*ast.Program, error) {
-			// TODO: check program syntactically
+
+			// TODO: generalize
+
+			if !isFungibleTokenContract(program, contractsAddress) {
+				return nil, nil
+			}
 
 			code := `
               import FungibleToken from 0x1

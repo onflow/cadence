@@ -582,12 +582,12 @@ func (e *interpreterEnvironment) recoverProgram(
 	errors.WrapPanic(func() {
 		program, err = e.runtimeInterface.RecoverProgram(program, location)
 	})
-	if err != nil {
+	if err != nil || program == nil {
 		return nil, nil
 	}
 
 	elaboration, err = e.check(location, program, checkedImports)
-	if err != nil {
+	if err != nil || elaboration == nil {
 		return nil, nil
 	}
 
