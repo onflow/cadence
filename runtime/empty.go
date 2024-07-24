@@ -29,6 +29,8 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
+// EmptyRuntimeInterface is an empty implementation of runtime.Interface.
+// It can be embedded in other types implementing runtime.Interface to avoid having to implement all methods.
 type EmptyRuntimeInterface struct{}
 
 var _ Interface = EmptyRuntimeInterface{}
