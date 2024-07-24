@@ -1103,6 +1103,14 @@ var _ IterableValue = &StringValue{}
 var VarSizedArrayOfStringType = NewVariableSizedStaticType(nil, PrimitiveStaticTypeString)
 
 func (v *StringValue) prepareGraphemes() {
+	// If the string is empty, methods of StringValue should never call prepareGraphemes,
+	// as it is not only unnecessary, but also means that the value is the empty string singleton EmptyString,
+	// which should not be mutated because it may be used from different goroutines,
+	// so should not get mutated by preparing the graphemes iterator.
+	if len(v.Str) == 0 {
+		panic(errors.NewUnreachableError())
+	}
+
 	if v.graphemes == nil {
 		v.graphemes = uniseg.NewGraphemes(v.Str)
 	} else {
@@ -1278,7 +1286,14 @@ func (v *StringValue) slice(fromIndex int, toIndex int, locationRange LocationRa
 		})
 	}
 
-	if fromIndex == toIndex {
+	// If the string is empty or the result is empty,
+	// return the empty string singleton EmptyString,
+	// as an optimization to avoid allocating a new value.
+	//
+	// It also ensures that if the sliced value is the empty string singleton EmptyString,
+	// which should not be mutated because it may be used from different goroutines,
+	// it does not get mutated by preparing the graphemes iterator.
+	if len(v.Str) == 0 || fromIndex == toIndex {
 		return EmptyString
 	}
 
@@ -1521,6 +1536,14 @@ func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value
 
 // Length returns the number of characters (grapheme clusters)
 func (v *StringValue) Length() int {
+	// If the string is empty, the length is 0, and there are no graphemes.
+	//
+	// Do NOT store the length, as the value is the empty string singleton EmptyString,
+	// which should not be mutated because it may be used from different goroutines.
+	if len(v.Str) == 0 {
+		return 0
+	}
+
 	if v.length < 0 {
 		var length int
 		v.prepareGraphemes()
@@ -1853,6 +1876,16 @@ func (v *StringValue) ForEach(
 }
 
 func (v *StringValue) IsGraphemeBoundaryStart(startOffset int) bool {
+
+	// Empty strings have no grapheme clusters, and therefore no boundaries.
+	//
+	// Exiting early also ensures that if the checked value is the empty string singleton EmptyString,
+	// which should not be mutated because it may be used from different goroutines,
+	// it does not get mutated by preparing the graphemes iterator.
+	if len(v.Str) == 0 {
+		return false
+	}
+
 	v.prepareGraphemes()
 
 	var characterIndex int
@@ -1883,6 +1916,16 @@ func (v *StringValue) seekGraphemeBoundaryStartPrepared(startOffset int, charact
 }
 
 func (v *StringValue) IsGraphemeBoundaryEnd(end int) bool {
+
+	// Empty strings have no grapheme clusters, and therefore no boundaries.
+	//
+	// Exiting early also ensures that if the checked value is the empty string singleton EmptyString,
+	// which should not be mutated because it may be used from different goroutines,
+	// it does not get mutated by preparing the graphemes iterator.
+	if len(v.Str) == 0 {
+		return false
+	}
+
 	v.prepareGraphemes()
 	v.graphemes.Next()
 
@@ -1890,10 +1933,6 @@ func (v *StringValue) IsGraphemeBoundaryEnd(end int) bool {
 }
 
 func (v *StringValue) isGraphemeBoundaryEndPrepared(end int) bool {
-	// Empty strings have no grapheme clusters, and therefore no boundaries
-	if len(v.Str) == 0 {
-		return false
-	}
 
 	for {
 		boundaryStart, boundaryEnd := v.graphemes.Positions()
@@ -1926,6 +1965,15 @@ func (v *StringValue) indexOf(inter *Interpreter, other *StringValue) (character
 
 	if len(other.Str) == 0 {
 		return 0, 0
+	}
+
+	// If the string is empty, exit early.
+	//
+	// That ensures that if the checked value is the empty string singleton EmptyString,
+	// which should not be mutated because it may be used from different goroutines,
+	// it does not get mutated by preparing the graphemes iterator.
+	if len(v.Str) == 0 {
+		return -1, -1
 	}
 
 	// Meter computation as if the string was iterated.
