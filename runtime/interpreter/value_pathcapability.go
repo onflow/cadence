@@ -25,6 +25,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // TODO: remove once migrated
@@ -50,8 +51,9 @@ func (v *PathCapabilityValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange)
 	panic(errors.NewUnreachableError())
 }
 
-func (v *PathCapabilityValue) Walk(_ *Interpreter, _ func(Value), _ LocationRange) {
-	panic(errors.NewUnreachableError())
+func (v *PathCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
+	walkChild(v.Address)
+	walkChild(v.Path)
 }
 
 func (v *PathCapabilityValue) StaticType(inter *Interpreter) StaticType {
@@ -62,7 +64,7 @@ func (v *PathCapabilityValue) StaticType(inter *Interpreter) StaticType {
 }
 
 func (v *PathCapabilityValue) IsImportable(_ *Interpreter, _ LocationRange) bool {
-	panic(errors.NewUnreachableError())
+	return false
 }
 func (v *PathCapabilityValue) String() string {
 	return v.RecursiveString(SeenReferences{})
@@ -110,8 +112,62 @@ func (v *PathCapabilityValue) MeteredString(
 	}
 }
 
-func (v *PathCapabilityValue) GetMember(_ *Interpreter, _ LocationRange, _ string) Value {
-	panic(errors.NewUnreachableError())
+func (v *PathCapabilityValue) newBorrowFunction(
+	interpreter *Interpreter,
+	borrowType *sema.ReferenceType,
+) BoundFunctionValue {
+	return NewBoundHostFunctionValue(
+		interpreter,
+		v,
+		sema.CapabilityTypeBorrowFunctionType(borrowType),
+		func(_ Invocation) Value {
+			// Borrowing is never allowed
+			return Nil
+		},
+	)
+}
+
+func (v *PathCapabilityValue) newCheckFunction(
+	interpreter *Interpreter,
+	borrowType *sema.ReferenceType,
+) BoundFunctionValue {
+	return NewBoundHostFunctionValue(
+		interpreter,
+		v,
+		sema.CapabilityTypeCheckFunctionType(borrowType),
+		func(_ Invocation) Value {
+			// Borrowing is never allowed
+			return FalseValue
+		},
+	)
+}
+
+func (v *PathCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	case sema.CapabilityTypeBorrowFunctionName:
+		var borrowType *sema.ReferenceType
+		if v.BorrowType != nil {
+			// this function will panic already if this conversion fails
+			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		}
+		return v.newBorrowFunction(interpreter, borrowType)
+
+	case sema.CapabilityTypeCheckFunctionName:
+		var borrowType *sema.ReferenceType
+		if v.BorrowType != nil {
+			// this function will panic already if this conversion fails
+			borrowType, _ = interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		}
+		return v.newCheckFunction(interpreter, borrowType)
+
+	case sema.CapabilityTypeAddressFieldName:
+		return v.Address
+
+	case sema.CapabilityTypeIDFieldName:
+		return InvalidCapabilityID
+	}
+
+	return nil
 }
 
 func (*PathCapabilityValue) RemoveMember(_ *Interpreter, _ LocationRange, _ string) Value {
@@ -127,7 +183,7 @@ func (v *PathCapabilityValue) ConformsToStaticType(
 	_ LocationRange,
 	_ TypeConformanceResults,
 ) bool {
-	panic(errors.NewUnreachableError())
+	return true
 }
 
 func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange LocationRange, other Value) bool {
@@ -151,7 +207,7 @@ func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange Loca
 }
 
 func (*PathCapabilityValue) IsStorable() bool {
-	panic(errors.NewUnreachableError())
+	return true
 }
 
 func (v *PathCapabilityValue) Storable(

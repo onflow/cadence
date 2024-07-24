@@ -943,6 +943,12 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 		return NewUnmeteredCharacterValue(expression.Value)
 	}
 
+	// Optimization: If the string is empty, return the empty string singleton
+	// to avoid allocating a new string value.
+	if len(expression.Value) == 0 {
+		return EmptyString
+	}
+
 	// NOTE: already metered in lexer/parser
 	return NewUnmeteredStringValue(expression.Value)
 }
