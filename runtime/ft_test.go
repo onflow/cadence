@@ -1133,25 +1133,35 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 	err = storage.Commit(inter, false)
 	require.NoError(t, err)
 
-	// Send a transaction that loads the broken ExampleToken contract and the broken ExampleToken.Vault
+	// Send a transaction that loads the broken ExampleToken contract and the broken ExampleToken.Vault.
+	// Accessing the broken ExampleToken contract value and ExampleToken.Vault resource should not cause a panic.
+	// Casting the ExampleToken.Vault resource to a FungibleToken.Vault
+	// and saving it back to storage should not cause a panic either.
 
-	const transaction = `
+	const transaction1 = `
       import FungibleToken from 0x1
       import ExampleToken from 0x1
 
       transaction {
 
           let vault: @ExampleToken.Vault
+          let signer: auth(LoadValue, SaveValue) &Account
 
-          prepare(signer: auth(LoadValue) &Account) {
+          prepare(signer: auth(LoadValue, SaveValue) &Account) {
               self.vault <- signer.storage.load<@ExampleToken.Vault>(from: /storage/exampleTokenVault)!
+              self.signer = signer
           }
 
           execute {
               log(ExampleToken.totalSupply)
               log(self.vault.balance)
+              log(ExampleToken.getType())
+              log(self.vault.getType())
 
-              destroy self.vault
+              let exampleVault <- self.vault
+              let someVault <- exampleVault as! @{FungibleToken.Vault}
+
+              self.signer.storage.save(<-someVault, to: /storage/someTokenVault)
           }
       }
     `
@@ -1160,7 +1170,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: []byte(transaction),
+			Source: []byte(transaction1),
 		},
 		Context{
 			Interface:   runtimeInterface,
@@ -1171,7 +1181,67 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t,
-		[]string{"4321.00000000", "1234.00000000"},
+		[]string{
+			"4321.00000000",
+			"1234.00000000",
+			"Type<A.0000000000000001.ExampleToken>()",
+			"Type<A.0000000000000001.ExampleToken.Vault>()",
+		},
 		logs,
 	)
+
+	// Send another transaction that loads the broken ExampleToken contract and the broken ExampleToken.Vault.
+	// Accessing the broken ExampleToken contract value and ExampleToken.Vault resource again should not cause a panic.
+	// Casting the FungibleToken.Vault resource to an ExampleToken.Vault
+	// and destroying the resource should not cause a panic either.
+
+	const transaction2 = `
+      import FungibleToken from 0x1
+      import ExampleToken from 0x1
+
+      transaction {
+
+          let vault: @{FungibleToken.Vault}
+
+          prepare(signer: auth(LoadValue, SaveValue) &Account) {
+              self.vault <- signer.storage.load<@{FungibleToken.Vault}>(from: /storage/someTokenVault)!
+          }
+
+          execute {
+              log(ExampleToken.totalSupply)
+              log(self.vault.balance)
+              log(ExampleToken.getType())
+              log(self.vault.getType())
+
+              let someVault <- self.vault
+              let exampleVault <- someVault as! @ExampleToken.Vault
+
+              destroy exampleVault
+          }
+      }
+    `
+	logs = nil
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(transaction2),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]string{
+			"4321.00000000",
+			"1234.00000000",
+			"Type<A.0000000000000001.ExampleToken>()",
+			"Type<A.0000000000000001.ExampleToken.Vault>()",
+		},
+		logs,
+	)
+
 }
