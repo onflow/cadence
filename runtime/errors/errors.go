@@ -146,21 +146,24 @@ type UnexpectedError struct {
 	Stack []byte
 }
 
+var StackTracesEnabled = true
+
 var _ InternalError = UnexpectedError{}
 
 func (UnexpectedError) IsInternalError() {}
 
 func NewUnexpectedError(message string, arg ...any) UnexpectedError {
-	return UnexpectedError{
-		Err:   fmt.Errorf(message, arg...),
-		Stack: debug.Stack(),
-	}
+	return NewUnexpectedErrorFromCause(fmt.Errorf(message, arg...))
 }
 
 func NewUnexpectedErrorFromCause(err error) UnexpectedError {
+	var stack []byte
+	if StackTracesEnabled {
+		stack = debug.Stack()
+	}
 	return UnexpectedError{
 		Err:   err,
-		Stack: debug.Stack(),
+		Stack: stack,
 	}
 }
 
@@ -169,7 +172,12 @@ func (e UnexpectedError) Unwrap() error {
 }
 
 func (e UnexpectedError) Error() string {
-	return fmt.Sprintf("internal error: %s\n%s", e.Err.Error(), e.Stack)
+	message := e.Err.Error()
+	if len(e.Stack) == 0 {
+		return fmt.Sprintf("unexpected error: %s", message)
+	} else {
+		return fmt.Sprintf("unexpected error: %s\n%s", message, e.Stack)
+	}
 }
 
 // DefaultUserError is the default implementation of UserError interface.
