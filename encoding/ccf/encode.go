@@ -176,6 +176,40 @@ func (em *encMode) NewEncoder(w io.Writer) *Encoder {
 
 var defaultEncMode = &encMode{}
 
+// AttachmentFieldNotSupportedEncodingError is a user error that is returned
+// when encoding composite value (such as Event) that has cadence.Attachment field.
+type AttachmentFieldNotSupportedEncodingError struct {
+	compositeType  string
+	fieldCount     int
+	fieldTypeCount int
+}
+
+func newAttachmentFieldNotSupportedError(
+	compositeType string,
+	fieldCount int,
+	fieldTypeCount int,
+) error {
+	return AttachmentFieldNotSupportedEncodingError{
+		compositeType:  compositeType,
+		fieldCount:     fieldCount,
+		fieldTypeCount: fieldTypeCount,
+	}
+}
+
+func (e AttachmentFieldNotSupportedEncodingError) Error() string {
+	return fmt.Sprintf(
+		"encoding attachment field in composite value isn't supported: %s field count %d doesn't match declared field type count %d",
+		e.compositeType,
+		e.fieldCount,
+		e.fieldTypeCount,
+	)
+}
+
+func (e AttachmentFieldNotSupportedEncodingError) IsUserError() {
+}
+
+var _ cadenceErrors.UserError = AttachmentFieldNotSupportedEncodingError{}
+
 // Encode returns the CCF-encoded representation of the given value
 // by using default CCF encoding options.  This function returns an
 // error if the Cadence value cannot be represented in CCF.
@@ -219,7 +253,7 @@ func (e *Encoder) Encode(value cadence.Value) (err error) {
 		// Add context to error if there is any.
 		if err != nil {
 			err = fmt.Errorf(
-				"ccf: failed to encode value (type %T, %q): %s",
+				"ccf: failed to encode value (type %T, %q): %w",
 				value,
 				value.Type().ID(),
 				err,
@@ -1102,6 +1136,22 @@ func (e *Encoder) encodeComposite(
 	staticFieldTypes := getCompositeTypeFields(typ)
 
 	if len(staticFieldTypes) != len(fields) {
+
+		// The CCF encoder requires field values and types to match. However,
+		// composite values that have attachment field don't satisfy this requirement because:
+		// - composite field values INCLUDE attachment field values
+		// - composite field types EXCLUDE attachment field types
+		// Given this, CCF encoder will return a user error if composite value has attachment field.
+		for _, f := range fields {
+			if _, ok := f.(cadence.Attachment); ok {
+				panic(newAttachmentFieldNotSupportedError(
+					typ.ID(),
+					len(fields),
+					len(staticFieldTypes),
+				))
+			}
+		}
+
 		panic(cadenceErrors.NewUnexpectedError(
 			"%s field count %d doesn't match declared field type count %d",
 			typ.ID(),

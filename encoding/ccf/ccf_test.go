@@ -35,9 +35,11 @@ import (
 	"github.com/onflow/cadence/encoding/ccf"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
+	"github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -17107,4 +17109,68 @@ func TestDecodeFunctionTypeBackwardCompatibility(t *testing.T) {
 	}
 
 	testDecode(t, data, val)
+}
+
+func TestEncodeEventWithAttachement(t *testing.T) {
+	script := `
+		access(all) struct S {
+			access(all) let x: Int 
+			init(x: Int) {
+				self.x = x
+			}
+		}
+
+		access(all) attachment A for S {
+			access(all) let y: Int 
+			init(y: Int) {
+				self.y = y
+			}
+		}
+
+		access(all) event Foo(s: S)
+
+		access(all) 
+		fun main() {
+			let s = attach A(y: 3) to S(x: 4)
+			emit Foo(s: s)
+		}
+		`
+
+	v := exportEventFromScript(t, script)
+
+	_, err := ccf.Encode(v)
+
+	var attachmentFieldError ccf.AttachmentFieldNotSupportedEncodingError
+	require.ErrorAs(t, err, &attachmentFieldError)
+	require.Implements(t, (*errors.UserError)(nil), attachmentFieldError)
+}
+
+func exportEventFromScript(t *testing.T, script string) cadence.Event {
+	rt := runtime_utils.NewTestInterpreterRuntime()
+
+	var events []cadence.Event
+
+	inter := &runtime_utils.TestRuntimeInterface{
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	_, err := rt.ExecuteScript(
+		runtime.Script{
+			Source: []byte(script),
+		},
+		runtime.Context{
+			Interface: inter,
+			Location:  common.ScriptLocation{},
+		},
+	)
+
+	require.NoError(t, err)
+	require.Len(t, events, 1)
+
+	event := events[0]
+
+	return event
 }
