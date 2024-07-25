@@ -468,5 +468,5 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 		}
 	}
 
-	return LeastCommonSuperType(leftOptional.Type, rightType)
+	return checker.leastCommonSuperType(expression, leftOptional.Type, rightType)
 }

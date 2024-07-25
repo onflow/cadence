@@ -997,6 +997,11 @@ func commonSuperTypeOfHeterogeneousTypes(types []Type) Type {
 	var hasStructs, hasResources, allHashableStructs bool
 	allHashableStructs = true
 	for _, typ := range types {
+		// Ignore 'Never' type as it doesn't affect the supertype.
+		if typ == NeverType {
+			continue
+		}
+
 		isResource := typ.IsResourceType()
 		hasResources = hasResources || isResource
 		hasStructs = hasStructs || !isResource

@@ -2766,3 +2766,18 @@ func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosit
 		)
 	}
 }
+
+func (checker *Checker) leastCommonSuperType(pos ast.HasPosition, types ...Type) Type {
+	elementType := LeastCommonSuperType(types...)
+
+	if elementType == InvalidType {
+		checker.report(
+			&TypeAnnotationRequiredError{
+				Cause: "cannot infer type:",
+				Pos:   pos.StartPosition(),
+			},
+		)
+	}
+
+	return elementType
+}
