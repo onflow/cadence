@@ -1190,10 +1190,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		logs,
 	)
 
-	// Send another transaction that loads the broken ExampleToken contract and the broken ExampleToken.Vault.
-	// Accessing the broken ExampleToken contract value and ExampleToken.Vault resource again should not cause a panic.
-	// Casting the FungibleToken.Vault resource to an ExampleToken.Vault
-	// and destroying the resource should not cause a panic either.
+	// Send another transaction that calls a function on the stored vault.
+	// Function calls on recovered values should panic.
 
 	const transaction2 = `
       import FungibleToken from 0x1
@@ -1201,9 +1199,51 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
       transaction {
 
+          let vault: auth(FungibleToken.Withdraw) &{FungibleToken.Vault}
+
+          prepare(signer: auth(BorrowValue) &Account) {
+              self.vault = signer.storage
+                  .borrow<auth(FungibleToken.Withdraw) &{FungibleToken.Vault}>(
+                      from: /storage/someTokenVault
+                  )!
+          }
+
+          execute {
+              let vault <- self.vault.withdraw(amount: 1.0)
+              destroy vault
+          }
+      }
+    `
+
+	logs = nil
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(transaction2),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	utils.RequireError(t, err)
+	require.ErrorContains(t, err, "panic: withdraw is not implemented")
+
+	// Send another transaction that loads the broken ExampleToken contract and the broken ExampleToken.Vault.
+	// Accessing the broken ExampleToken contract value and ExampleToken.Vault resource again should not cause a panic.
+	// Casting the FungibleToken.Vault resource to an ExampleToken.Vault
+	// and destroying the resource should not cause a panic either.
+
+	const transaction3 = `
+      import FungibleToken from 0x1
+      import ExampleToken from 0x1
+
+      transaction {
+
           let vault: @{FungibleToken.Vault}
 
-          prepare(signer: auth(LoadValue, SaveValue) &Account) {
+          prepare(signer: auth(LoadValue) &Account) {
               self.vault <- signer.storage.load<@{FungibleToken.Vault}>(from: /storage/someTokenVault)!
           }
 
@@ -1220,11 +1260,12 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
           }
       }
     `
+
 	logs = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
-			Source: []byte(transaction2),
+			Source: []byte(transaction3),
 		},
 		Context{
 			Interface:   runtimeInterface,
@@ -1243,5 +1284,4 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 		logs,
 	)
-
 }
