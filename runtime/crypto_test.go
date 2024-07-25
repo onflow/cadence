@@ -358,7 +358,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 		value, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(script),
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					cadence.NewEnum([]cadence.Value{
 						cadence.UInt8(algo.RawValue()),
 					}).WithType(cadence.NewEnumType(
@@ -373,7 +373,7 @@ func TestRuntimeSignatureAlgorithmImport(t *testing.T) {
 						},
 						nil,
 					)),
-				}),
+				),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -439,7 +439,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 		value, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(script),
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					cadence.NewEnum([]cadence.Value{
 						cadence.UInt8(algo.RawValue()),
 					}).WithType(cadence.NewEnumType(
@@ -454,7 +454,7 @@ func TestRuntimeHashAlgorithmImport(t *testing.T) {
 						},
 						nil,
 					)),
-				}),
+				),
 			},
 			Context{
 				Interface: runtimeInterface,
@@ -816,7 +816,7 @@ func TestRuntimeTraversingMerkleProof(t *testing.T) {
 	_, err := runtime.ExecuteScript(
 		Script{
 			Source:    script,
-			Arguments: encodeArgs([]cadence.Value{rootHash, address, accountProof}),
+			Arguments: encodeArgs(rootHash, address, accountProof),
 		},
 		Context{
 			Interface: runtimeInterface,
