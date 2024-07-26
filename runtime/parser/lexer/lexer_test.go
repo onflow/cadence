@@ -876,7 +876,7 @@ func TestLexBasic(t *testing.T) {
 
 	t.Run("trivia", func(t *testing.T) {
 		testLex(t,
-			"// test is in next line \n/* test is here */ test",
+			"// test is in next line \n/* test is here */ test // test is in the same line\n// test is in previous line",
 			[]token{
 				{
 					Token: Token{
@@ -885,6 +885,8 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 2, Column: 19, Offset: 44},
 							EndPos:   ast.Position{Line: 2, Column: 22, Offset: 47},
 						},
+						LeadingTrivia:  "// test is in next line \n/* test is here */ ",
+						TrailingTrivia: " // test is in the same line",
 					},
 					Source: "test",
 				},
@@ -892,9 +894,11 @@ func TestLexBasic(t *testing.T) {
 					Token: Token{
 						Type: TokenEOF,
 						Range: ast.Range{
-							StartPos: ast.Position{Line: 2, Column: 23, Offset: 48},
-							EndPos:   ast.Position{Line: 2, Column: 23, Offset: 48},
+							StartPos: ast.Position{Line: 3, Column: 27, Offset: 104},
+							EndPos:   ast.Position{Line: 3, Column: 27, Offset: 104},
 						},
+						LeadingTrivia:  "\n// test is in previous line",
+						TrailingTrivia: "",
 					},
 				},
 			},

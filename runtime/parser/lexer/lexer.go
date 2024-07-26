@@ -101,6 +101,9 @@ func (l *lexer) Next() Token {
 				pos,
 				pos,
 			),
+			LeadingTrivia: string(l.input[l.currentTriviaRange.StartPos.Offset:l.currentTriviaRange.EndPos.Offset]),
+			// EOF has no trailing trivia
+			TrailingTrivia: "",
 		}
 
 	}
@@ -190,6 +193,8 @@ func (l *lexer) run(state stateFn) {
 	for state != nil {
 		state = state(l)
 	}
+
+	l.updatePreviousTrailingTrivia()
 }
 
 // next decodes the next rune (UTF8 character) from the input string.
@@ -256,6 +261,8 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 
 	endPos := l.endPos()
 
+	l.updatePreviousTrailingTrivia()
+
 	token := Token{
 		Type:         ty,
 		SpaceOrError: spaceOrError,
@@ -269,7 +276,13 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 				endPos.column,
 			),
 		),
+		LeadingTrivia: string(l.input[l.currentTriviaRange.StartPos.Offset:l.currentTriviaRange.EndPos.Offset]),
+		// Trailing trivia can't be determined, as it wasn't consumed yet at this point.
+		TrailingTrivia: "",
 	}
+
+	// Mark as fully consumed
+	l.currentTriviaRange = nil
 
 	l.tokens = append(l.tokens, token)
 	l.tokenCount = len(l.tokens)
@@ -277,6 +290,31 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 	if consume {
 		l.consume(endPos)
 	}
+}
+
+func (l *lexer) updatePreviousTrailingTrivia() {
+	if l.tokenCount > 0 {
+		leadingTriviaRange := l.previousTokenTrailingTriviaRange()
+		l.tokens[l.tokenCount-1].TrailingTrivia = string(l.input[leadingTriviaRange.StartPos.Offset:leadingTriviaRange.EndPos.Offset])
+		// Consume part of the current trivia
+		l.currentTriviaRange.StartPos = leadingTriviaRange.EndPos
+	}
+}
+
+func (l *lexer) previousTokenTrailingTriviaRange() ast.Range {
+	trivia := l.input[l.currentTriviaRange.StartPos.Offset:l.currentTriviaRange.EndPos.Offset]
+
+	endPos := l.currentTriviaRange.StartPos
+	for _, r := range trivia {
+		if r == '\n' {
+			break
+		} else {
+			endPos.Column++
+			endPos.Offset++
+		}
+	}
+
+	return ast.NewRange(l.memoryGauge, l.currentTriviaRange.StartPos, endPos)
 }
 
 func (l *lexer) emitTrivia(legacyTriviaType TokenType) {
