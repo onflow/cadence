@@ -121,10 +121,11 @@ func rootState(l *lexer) stateFn {
 		case '/':
 			r = l.next()
 			switch r {
+			// TODO(preserve-comments): Deprecate trivia token types
 			case '/':
 				return lineCommentState
 			case '*':
-				l.emitType(TokenBlockCommentStart)
+				l.emitTrivia(TokenBlockCommentStart)
 				return blockCommentState(0)
 			default:
 				l.backupOne()
@@ -267,14 +268,8 @@ func spaceState(startIsNewline bool) stateFn {
 
 		common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
 
-		l.emit(
-			TokenSpace,
-			Space{
-				ContainsNewline: containsNewline,
-			},
-			l.startPosition(),
-			true,
-		)
+		l.emitTrivia(TokenSpace)
+
 		return rootState
 	}
 }
@@ -307,7 +302,7 @@ func stringState(l *lexer) stateFn {
 
 func lineCommentState(l *lexer) stateFn {
 	l.scanLineComment()
-	l.emitType(TokenLineComment)
+	l.emitTrivia(TokenLineComment)
 	return rootState
 }
 
@@ -326,9 +321,9 @@ func blockCommentState(nesting int) stateFn {
 			if l.acceptOne('*') {
 				starOffset := l.endOffset
 				l.endOffset = beforeSlashOffset
-				l.emitType(TokenBlockCommentContent)
+				l.emitTrivia(TokenBlockCommentContent)
 				l.endOffset = starOffset
-				l.emitType(TokenBlockCommentStart)
+				l.emitTrivia(TokenBlockCommentStart)
 				return blockCommentState(nesting + 1)
 			}
 
@@ -337,9 +332,9 @@ func blockCommentState(nesting int) stateFn {
 			if l.acceptOne('/') {
 				slashOffset := l.endOffset
 				l.endOffset = beforeStarOffset
-				l.emitType(TokenBlockCommentContent)
+				l.emitTrivia(TokenBlockCommentContent)
 				l.endOffset = slashOffset
-				l.emitType(TokenBlockCommentEnd)
+				l.emitTrivia(TokenBlockCommentEnd)
 				return blockCommentState(nesting - 1)
 			}
 		}

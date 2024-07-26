@@ -74,6 +74,8 @@ type lexer struct {
 	prev rune
 	// canBackup indicates whether stepping back is allowed
 	canBackup bool
+	// currentTriviaRange stores the current leading or trailing trivia
+	currentTriviaRange *ast.Range
 }
 
 var _ TokenStream = &lexer{}
@@ -273,17 +275,48 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 	l.tokenCount = len(l.tokens)
 
 	if consume {
-		l.startOffset = l.endOffset
+		l.consume(endPos)
+	}
+}
 
-		l.startPos = endPos
-		r, _ := utf8.DecodeRune(l.input[l.endOffset-1:])
+func (l *lexer) emitTrivia(legacyTriviaType TokenType) {
+	fmt.Printf("Emitting trivia for %s\n", legacyTriviaType)
 
-		if r == '\n' {
-			l.startPos.line++
-			l.startPos.column = 0
-		} else {
-			l.startPos.column++
-		}
+	endPos := l.endPos()
+
+	currentRange := ast.NewRange(
+		l.memoryGauge,
+		l.startPosition(),
+		ast.NewPosition(
+			l.memoryGauge,
+			l.endOffset-1,
+			endPos.line,
+			endPos.column,
+		),
+	)
+
+	if l.currentTriviaRange == nil {
+		l.currentTriviaRange = &currentRange
+	} else {
+		// Extend the ending range when encountering more trivia
+		l.currentTriviaRange.EndPos = currentRange.EndPos
+	}
+
+	l.consume(endPos)
+}
+
+// endPos pre-computed end-position by calling l.endPos()
+func (l *lexer) consume(endPos position) {
+	l.startOffset = l.endOffset
+
+	l.startPos = endPos
+	r, _ := utf8.DecodeRune(l.input[l.endOffset-1:])
+
+	if r == '\n' {
+		l.startPos.line++
+		l.startPos.column = 0
+	} else {
+		l.startPos.column++
 	}
 }
 

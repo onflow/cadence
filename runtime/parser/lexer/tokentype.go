@@ -69,6 +69,7 @@ const (
 	TokenEqualEqual
 	TokenExclamationMark
 	TokenNotEqual
+	// TODO(preserve-comments): Deprecate trivia token types
 	TokenBlockCommentStart
 	TokenBlockCommentEnd
 	TokenBlockCommentContent

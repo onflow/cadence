@@ -873,6 +873,33 @@ func TestLexBasic(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("trivia", func(t *testing.T) {
+		testLex(t,
+			"// test is in next line \n/* test is here */ test",
+			[]token{
+				{
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 19, Offset: 44},
+							EndPos:   ast.Position{Line: 2, Column: 22, Offset: 47},
+						},
+					},
+					Source: "test",
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 23, Offset: 48},
+							EndPos:   ast.Position{Line: 2, Column: 23, Offset: 48},
+						},
+					},
+				},
+			},
+		)
+	})
 }
 
 func TestLexString(t *testing.T) {
