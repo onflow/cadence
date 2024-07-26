@@ -94,6 +94,11 @@ func (l *lexer) Next() Token {
 			endPos.column,
 		)
 
+		var leadingTrivia string
+		if l.currentTriviaRange != nil {
+			leadingTrivia = string(l.currentTriviaRange.Source(l.input))
+		}
+
 		return Token{
 			Type: TokenEOF,
 			Range: ast.NewRange(
@@ -101,7 +106,7 @@ func (l *lexer) Next() Token {
 				pos,
 				pos,
 			),
-			LeadingTrivia: string(l.input[l.currentTriviaRange.StartPos.Offset:l.currentTriviaRange.EndPos.Offset]),
+			LeadingTrivia: leadingTrivia,
 			// EOF has no trailing trivia
 			TrailingTrivia: "",
 		}
@@ -263,6 +268,11 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 
 	l.updatePreviousTrailingTrivia()
 
+	var leadingTrivia string
+	if l.currentTriviaRange != nil {
+		leadingTrivia = string(l.currentTriviaRange.Source(l.input))
+	}
+
 	token := Token{
 		Type:         ty,
 		SpaceOrError: spaceOrError,
@@ -276,7 +286,7 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 				endPos.column,
 			),
 		),
-		LeadingTrivia: string(l.input[l.currentTriviaRange.StartPos.Offset:l.currentTriviaRange.EndPos.Offset]),
+		LeadingTrivia: leadingTrivia,
 		// Trailing trivia can't be determined, as it wasn't consumed yet at this point.
 		TrailingTrivia: "",
 	}
@@ -293,22 +303,23 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 }
 
 func (l *lexer) updatePreviousTrailingTrivia() {
-	if l.tokenCount > 0 {
+	if l.tokenCount > 0 && l.currentTriviaRange != nil {
 		leadingTriviaRange := l.previousTokenTrailingTriviaRange()
-		l.tokens[l.tokenCount-1].TrailingTrivia = string(l.input[leadingTriviaRange.StartPos.Offset:leadingTriviaRange.EndPos.Offset])
+		l.tokens[l.tokenCount-1].TrailingTrivia = string(leadingTriviaRange.Source(l.input))
 		// Consume part of the current trivia
 		l.currentTriviaRange.StartPos = leadingTriviaRange.EndPos
 	}
 }
 
 func (l *lexer) previousTokenTrailingTriviaRange() ast.Range {
-	trivia := l.input[l.currentTriviaRange.StartPos.Offset:l.currentTriviaRange.EndPos.Offset]
-
+	trivia := l.currentTriviaRange.Source(l.input)
 	endPos := l.currentTriviaRange.StartPos
+
 	for _, r := range trivia {
 		if r == '\n' {
 			break
 		} else {
+			// TODO(preserve-comments): Handle other trivia characters
 			endPos.Column++
 			endPos.Offset++
 		}
