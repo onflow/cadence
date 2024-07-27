@@ -2768,9 +2768,9 @@ func (checker *Checker) checkNativeModifier(isNative bool, position ast.HasPosit
 }
 
 func (checker *Checker) leastCommonSuperType(pos ast.HasPosition, types ...Type) Type {
-	elementType := LeastCommonSuperType(types...)
+	superType := LeastCommonSuperType(types...)
 
-	if elementType == InvalidType {
+	if superType == InvalidType {
 		checker.report(
 			&TypeAnnotationRequiredError{
 				Cause: "cannot infer type:",
@@ -2779,5 +2779,5 @@ func (checker *Checker) leastCommonSuperType(pos ast.HasPosition, types ...Type)
 		)
 	}
 
-	return elementType
+	return superType
 }
