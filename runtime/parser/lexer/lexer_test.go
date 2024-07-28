@@ -906,6 +906,28 @@ func TestLexBasic(t *testing.T) {
 	})
 }
 
+func TestLexTrivia(t *testing.T) {
+
+	t.Parallel()
+
+	// TODO(preserve-comments): Trailing trivia contains one character more than it should
+	t.Run("trivia", func(t *testing.T) {
+		testLex(t, `
+// This transaction calculates sum
+transaction (
+	// First operand 1
+	a: Int, // First operand 2
+	// Second operand 1
+	b: Int // Second operand 2
+) {
+	// Logs the sum 1
+	log(a, b) // Logs the sum 2
+}
+
+`, []token{}) // TODO(preserve-comments): Define expected output
+	})
+}
+
 func TestLexString(t *testing.T) {
 
 	t.Parallel()
