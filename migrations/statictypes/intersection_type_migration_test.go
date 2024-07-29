@@ -560,6 +560,7 @@ func TestIntersectionTypeRehash(t *testing.T) {
 				false,
 				nil,
 				nil,
+				true, // dictValue is standalone
 			),
 		)
 
@@ -732,6 +733,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 					false,
 					nil,
 					nil,
+					true, // dictValue is standalone
 				),
 			)
 
@@ -879,6 +881,7 @@ func TestRehashNestedIntersectionType(t *testing.T) {
 					false,
 					nil,
 					nil,
+					true, // dictValue is standalone
 				),
 			)
 

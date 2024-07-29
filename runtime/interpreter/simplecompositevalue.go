@@ -265,7 +265,8 @@ func (v *SimpleCompositeValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -302,6 +303,6 @@ func (v *SimpleCompositeValue) Clone(interpreter *Interpreter) Value {
 	}
 }
 
-func (v *SimpleCompositeValue) DeepRemove(_ *Interpreter) {
+func (v *SimpleCompositeValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }

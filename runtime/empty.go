@@ -94,8 +94,8 @@ func (EmptyRuntimeInterface) ValueExists(_, _ []byte) (exists bool, err error) {
 	panic("unexpected call to ValueExists")
 }
 
-func (EmptyRuntimeInterface) AllocateStorageIndex(_ []byte) (atree.StorageIndex, error) {
-	panic("unexpected call to AllocateStorageIndex")
+func (EmptyRuntimeInterface) AllocateSlabIndex(_ []byte) (atree.SlabIndex, error) {
+	panic("unexpected call to AllocateSlabIndex")
 }
 
 func (EmptyRuntimeInterface) CreateAccount(_ Address) (address Address, err error) {

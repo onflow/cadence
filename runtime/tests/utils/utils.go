@@ -239,13 +239,17 @@ func DictionaryKeyValues(inter *interpreter.Interpreter, dict *interpreter.Dicti
 	count := dict.Count() * 2
 	result := make([]interpreter.Value, count)
 	i := 0
-	dict.Iterate(inter, func(key, value interpreter.Value) (resume bool) {
-		result[i*2] = key
-		result[i*2+1] = value
-		i++
+	dict.Iterate(
+		inter,
+		interpreter.EmptyLocationRange,
+		func(key, value interpreter.Value) (resume bool) {
+			result[i*2] = key
+			result[i*2+1] = value
+			i++
 
-		return true
-	}, interpreter.EmptyLocationRange)
+			return true
+		},
+	)
 	return result
 }
 
@@ -270,26 +274,30 @@ func DictionaryEntries[K, V any](
 
 	iterStatus := true
 	idx := 0
-	dict.Iterate(inter, func(rawKey, rawValue interpreter.Value) (resume bool) {
-		key, ok := fromKey(rawKey)
+	dict.Iterate(
+		inter,
+		interpreter.EmptyLocationRange,
+		func(rawKey, rawValue interpreter.Value) (resume bool) {
+			key, ok := fromKey(rawKey)
 
-		if !ok {
-			iterStatus = false
+			if !ok {
+				iterStatus = false
+				return iterStatus
+			}
+
+			value, ok := fromVal(rawValue)
+			if !ok {
+				iterStatus = false
+				return iterStatus
+			}
+
+			res[idx] = DictionaryEntry[K, V]{
+				Key:   key,
+				Value: value,
+			}
 			return iterStatus
-		}
-
-		value, ok := fromVal(rawValue)
-		if !ok {
-			iterStatus = false
-			return iterStatus
-		}
-
-		res[idx] = DictionaryEntry[K, V]{
-			Key:   key,
-			Value: value,
-		}
-		return iterStatus
-	}, interpreter.EmptyLocationRange)
+		},
+	)
 
 	return res, iterStatus
 }
