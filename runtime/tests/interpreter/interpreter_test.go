@@ -11686,6 +11686,42 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 	)
 }
 
+func TestInterpretNilCoalesceAnyResourceAndPanic(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
+
+	_, err := parseCheckAndInterpretWithOptions(t,
+		`
+          resource R {}
+
+          fun f(): @AnyResource? {
+              return <-create R()
+          }
+
+          let y <- f() ?? panic("no R")
+        `,
+		ParseCheckAndInterpretOptions{
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+			Config: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
+}
+
 func TestInterpretDictionaryDuplicateKey(t *testing.T) {
 
 	t.Parallel()
