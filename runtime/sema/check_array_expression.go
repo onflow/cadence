@@ -80,16 +80,8 @@ func (checker *Checker) VisitArrayExpression(arrayExpression *ast.ArrayExpressio
 	if elementType == nil {
 		// Contextually expected type is not available.
 		// Therefore, find the least common supertype of the elements.
-		elementType = LeastCommonSuperType(argumentTypes...)
-
+		elementType = checker.leastCommonSuperType(arrayExpression, argumentTypes...)
 		if elementType == InvalidType {
-			checker.report(
-				&TypeAnnotationRequiredError{
-					Cause: "cannot infer type from array literal:",
-					Pos:   arrayExpression.StartPos,
-				},
-			)
-
 			return InvalidType
 		}
 
