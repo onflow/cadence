@@ -1013,3 +1013,37 @@ func TestParseWhitespaceAtEnd(t *testing.T) {
 
 	assert.Empty(t, errs)
 }
+
+func TestParseTrivia(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("doc comments", func(t *testing.T) {
+		res, errs := ParseProgram(
+			nil,
+			[]byte(`
+/// Inline doc
+fun first() {}
+
+/**
+Multi-line doc
+*/
+fun second() {}
+`),
+			Config{},
+		)
+
+		assert.Empty(t, errs)
+		assert.NotNil(t, res)
+
+		first, ok := res.Declarations()[0].(*ast.FunctionDeclaration)
+		assert.True(t, ok)
+		assert.Equal(t, " Inline doc", first.DocString)
+
+		second, ok := res.Declarations()[1].(*ast.FunctionDeclaration)
+		assert.True(t, ok)
+		assert.Equal(t, "\nMulti-line doc\n", second.DocString)
+	})
+
+	t.Run("non-doc comments", func(t *testing.T) {})
+}

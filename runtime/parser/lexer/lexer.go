@@ -328,8 +328,14 @@ func (l *lexer) previousTokenTrailingTriviaRange() ast.Range {
 	return ast.NewRange(l.memoryGauge, l.currentTriviaRange.StartPos, endPos)
 }
 
+const useLegacyTrivia = true
+
 func (l *lexer) emitTrivia(legacyTriviaType TokenType) {
-	fmt.Printf("Emitting trivia for %s\n", legacyTriviaType)
+	// TODO(preserve-comments): Remove after refactoring is complete
+	if useLegacyTrivia {
+		l.emitTriviaLegacy(legacyTriviaType)
+		return
+	}
 
 	endPos := l.endPos()
 
@@ -352,6 +358,30 @@ func (l *lexer) emitTrivia(legacyTriviaType TokenType) {
 	}
 
 	l.consume(endPos)
+}
+
+func (l *lexer) emitTriviaLegacy(legacyType TokenType) {
+	if legacyType == TokenSpace {
+		trivia := l.input[l.startOffset:l.endOffset]
+
+		var containsNewline bool
+		for _, r := range trivia {
+			if r == '\n' {
+				containsNewline = true
+			}
+		}
+
+		l.emit(
+			TokenSpace,
+			Space{
+				ContainsNewline: containsNewline,
+			},
+			l.startPosition(),
+			true,
+		)
+	} else {
+		l.emitType(legacyType)
+	}
 }
 
 // endPos pre-computed end-position by calling l.endPos()
