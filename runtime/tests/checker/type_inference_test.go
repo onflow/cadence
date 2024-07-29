@@ -1375,3 +1375,116 @@ func TestCheckDeploymentResultInference(t *testing.T) {
 
 	assert.Equal(t, sema.DeploymentResultType, variableSizedType.Type)
 }
+
+func TestCheckNilCoalesceExpressionTypeInference(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            resource R {}
+
+            fun f(): @R? {
+                return <-create R()
+            }
+
+            let y <- f() ?? panic("no R")
+        `
+
+		checker, err := ParseAndCheckWithPanic(t, code)
+		require.NoError(t, err)
+
+		yType := RequireGlobalValue(t, checker.Elaboration, "y")
+		require.IsType(t, &sema.CompositeType{}, yType)
+		compositeType := yType.(*sema.CompositeType)
+
+		assert.Equal(t, "R", compositeType.Identifier)
+	})
+
+	t.Run("any resource", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            resource R {}
+
+            fun f(): @AnyResource? {
+                return <-create R()
+            }
+
+            let y <- f() ?? panic("no R")
+        `
+
+		checker, err := ParseAndCheckWithPanic(t, code)
+		require.NoError(t, err)
+
+		yType := RequireGlobalValue(t, checker.Elaboration, "y")
+		assert.Equal(t, sema.AnyResourceType, yType)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            struct S {}
+
+            fun f(): S? {
+                return S()
+            }
+
+            let y = f() ?? panic("no S")
+        `
+
+		checker, err := ParseAndCheckWithPanic(t, code)
+		require.NoError(t, err)
+
+		yType := RequireGlobalValue(t, checker.Elaboration, "y")
+		require.IsType(t, &sema.CompositeType{}, yType)
+		compositeType := yType.(*sema.CompositeType)
+
+		assert.Equal(t, "S", compositeType.Identifier)
+	})
+
+	t.Run("any struct", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            struct S {}
+
+            fun f(): AnyStruct? {
+                return S()
+            }
+
+            let y = f() ?? panic("no S")
+        `
+
+		checker, err := ParseAndCheckWithPanic(t, code)
+		require.NoError(t, err)
+
+		yType := RequireGlobalValue(t, checker.Elaboration, "y")
+		assert.Equal(t, sema.AnyStructType, yType)
+	})
+
+	t.Run("invalid type", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+            struct S {}
+            resource R {}
+
+            fun f(): @R? {
+                return <-create R()
+            }
+
+            let y <- f() ?? S()
+        `
+
+		_, err := ParseAndCheckWithPanic(t, code)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		typeAnnotRequiredError := &sema.TypeAnnotationRequiredError{}
+		require.ErrorAs(t, errs[0], &typeAnnotRequiredError)
+	})
+}
