@@ -508,6 +508,7 @@ func testPathCapabilityValueMigration(
 			reporter,
 			&CapabilityValueMigration{
 				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
 				Reporter:          reporter,
 			},
 		),
@@ -1064,6 +1065,38 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				},
 			},
 			expectedEvents: []string{},
+		},
+		{
+			name: "Path link, storage path",
+			// Equivalent to: getCapability<&Test.R>(/storage/test)
+			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				BorrowType: testRReferenceStaticType,
+				Path: interpreter.PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: testPathIdentifier,
+				},
+				Address: interpreter.AddressValue(testAddress),
+			},
+			pathLinks: nil,
+			expectedMigrations: []testMigration{
+				expectedWrappedCapabilityValueMigration,
+			},
+			expectedPathMigrations: []testCapConsPathCapabilityMigration{
+				{
+					accountAddress: testAddress,
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainStorage,
+							testPathIdentifier,
+						),
+					},
+					borrowType: testRReferenceStaticType,
+				},
+			},
+			expectedEvents: []string{
+				`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
+			},
 		},
 		{
 			name: "Account link, working chain (public), unauthorized",
@@ -2322,6 +2355,7 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 			reporter,
 			&CapabilityValueMigration{
 				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
 				Reporter:          reporter,
 			},
 		),
@@ -2573,6 +2607,7 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 			reporter,
 			&CapabilityValueMigration{
 				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
 				Reporter:          reporter,
 			},
 		),
