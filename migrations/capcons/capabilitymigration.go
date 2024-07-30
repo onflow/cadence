@@ -86,7 +86,7 @@ func (m *CapabilityValueMigration) Migrate(
 }
 
 func (m *CapabilityValueMigration) migratePathCapabilityValue(
-	oldCapability *interpreter.PathCapabilityValue,
+	oldCapability *interpreter.PathCapabilityValue, //nolint:staticcheck
 	storageKey interpreter.StorageKey,
 	inter *interpreter.Interpreter,
 ) (interpreter.Value, error) {
