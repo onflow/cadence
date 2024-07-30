@@ -78,6 +78,7 @@ type testCapConsPathCapabilityMigration struct {
 	accountAddress common.Address
 	addressPath    interpreter.AddressPath
 	borrowType     *interpreter.ReferenceStaticType
+	capabilityID   interpreter.UInt64Value
 }
 
 type testCapConsMissingCapabilityID struct {
@@ -140,6 +141,7 @@ func (t *testMigrationReporter) MigratedPathCapability(
 	accountAddress common.Address,
 	addressPath interpreter.AddressPath,
 	borrowType *interpreter.ReferenceStaticType,
+	capabilityID interpreter.UInt64Value,
 ) {
 	t.pathCapabilityMigrations = append(
 		t.pathCapabilityMigrations,
@@ -147,6 +149,7 @@ func (t *testMigrationReporter) MigratedPathCapability(
 			accountAddress: accountAddress,
 			addressPath:    addressPath,
 			borrowType:     borrowType,
+			capabilityID:   capabilityID,
 		},
 	)
 }
@@ -690,7 +693,8 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: testRReferenceStaticType,
+					borrowType:   testRReferenceStaticType,
+					capabilityID: 2,
 				},
 			},
 			expectedEvents: []string{
@@ -745,7 +749,8 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: testRReferenceStaticType,
+					borrowType:   testRReferenceStaticType,
+					capabilityID: 1,
 				},
 			},
 			expectedEvents: []string{
@@ -799,7 +804,8 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: testRReferenceStaticType,
+					borrowType:   testRReferenceStaticType,
+					capabilityID: 1,
 				},
 			},
 			expectedEvents: []string{
@@ -879,7 +885,8 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: testRReferenceStaticType,
+					borrowType:   testRReferenceStaticType,
+					capabilityID: 2,
 				},
 			},
 			expectedEvents: []string{
@@ -936,7 +943,8 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: testRReferenceStaticType,
+					borrowType:   testRReferenceStaticType,
+					capabilityID: 1,
 				},
 			},
 			expectedEvents: []string{
@@ -1091,7 +1099,8 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: testRReferenceStaticType,
+					borrowType:   testRReferenceStaticType,
+					capabilityID: 1,
 				},
 			},
 			expectedEvents: []string{
@@ -1138,7 +1147,8 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: unauthorizedAccountReferenceStaticType,
+					borrowType:   unauthorizedAccountReferenceStaticType,
+					capabilityID: 1,
 				},
 			},
 			expectedEvents: []string{
@@ -1189,7 +1199,8 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: fullyEntitledAccountReferenceStaticType,
+					borrowType:   fullyEntitledAccountReferenceStaticType,
+					capabilityID: 1,
 				},
 			},
 			expectedEvents: []string{
@@ -1236,7 +1247,8 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: unauthorizedAccountReferenceStaticType,
+					borrowType:   unauthorizedAccountReferenceStaticType,
+					capabilityID: 1,
 				},
 			},
 			expectedEvents: []string{
@@ -1283,7 +1295,8 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: fullyEntitledAccountReferenceStaticType,
+					borrowType:   fullyEntitledAccountReferenceStaticType,
+					capabilityID: 1,
 				},
 			},
 			expectedEvents: []string{
@@ -2249,7 +2262,8 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 					testPathIdentifier,
 				),
 			},
-			borrowType: borrowType,
+			borrowType:   borrowType,
+			capabilityID: 2,
 		},
 	}
 
@@ -2500,7 +2514,8 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 				),
 			},
 			// NOTE: link / cap con's borrow type is used
-			borrowType: linkBorrowType,
+			borrowType:   linkBorrowType,
+			capabilityID: 2,
 		},
 	}
 

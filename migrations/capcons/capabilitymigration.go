@@ -32,6 +32,7 @@ type CapabilityMigrationReporter interface {
 		accountAddress common.Address,
 		addressPath interpreter.AddressPath,
 		borrowType *interpreter.ReferenceStaticType,
+		capabilityID interpreter.UInt64Value,
 	)
 	MissingCapabilityID(
 		accountAddress common.Address,
@@ -165,6 +166,7 @@ func (m *CapabilityValueMigration) migratePathCapabilityValue(
 			storageKey.Address,
 			capabilityAddressPath,
 			newBorrowType,
+			capabilityID,
 		)
 	}
 
