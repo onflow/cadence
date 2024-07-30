@@ -874,7 +874,7 @@ func TestLexBasic(t *testing.T) {
 		)
 	})
 
-	t.Run("trivia", func(t *testing.T) {
+	t.Run("Trivia", func(t *testing.T) {
 		testLex(t,
 			"// test is in next line \n/* test is here */ test // test is in the same line\n// test is in previous line",
 			[]token{
@@ -885,8 +885,34 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 2, Column: 19, Offset: 44},
 							EndPos:   ast.Position{Line: 2, Column: 22, Offset: 47},
 						},
-						LeadingTrivia:  "// test is in next line \n/* test is here */ ",
-						TrailingTrivia: " // test is in the same line",
+						LeadingTrivia: []Trivia{
+							{
+								Type: TriviaTypeInlineComment,
+								Text: []byte("// test is in next line "),
+							},
+							{
+								Type: TriviaTypeNewLine,
+								Text: []byte("\n"),
+							},
+							{
+								Type: TriviaTypeMultiLineComment,
+								Text: []byte("/* test is here */"),
+							},
+							{
+								Type: TriviaTypeSpace,
+								Text: []byte(" "),
+							},
+						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Text: []byte(" "),
+							},
+							{
+								Type: TriviaTypeInlineComment,
+								Text: []byte("// test is in the same line"),
+							},
+						},
 					},
 					Source: "test",
 				},
@@ -897,8 +923,17 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 3, Column: 27, Offset: 104},
 							EndPos:   ast.Position{Line: 3, Column: 27, Offset: 104},
 						},
-						LeadingTrivia:  "\n// test is in previous line",
-						TrailingTrivia: "",
+						LeadingTrivia: []Trivia{
+							{
+								Type: TriviaTypeNewLine,
+								Text: []byte("\n"),
+							},
+							{
+								Type: TriviaTypeInlineComment,
+								Text: []byte("// test is in previous line"),
+							},
+						},
+						TrailingTrivia: []Trivia{},
 					},
 				},
 			},
@@ -910,8 +945,8 @@ func TestLexTrivia(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO(preserve-comments): Trailing trivia contains one character more than it should
-	t.Run("trivia", func(t *testing.T) {
+	// TODO(preserve-comments): Trailing Trivia contains one character more than it should
+	t.Run("Trivia", func(t *testing.T) {
 		testLex(t, `
 // This transaction calculates sum
 transaction (

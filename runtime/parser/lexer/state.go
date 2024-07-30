@@ -111,9 +111,11 @@ func rootState(l *lexer) stateFn {
 		case '_':
 			return identifierState
 		case ' ', '\t', '\r':
-			return spaceState(false)
+			return spaceState
 		case '\n':
-			return spaceState(true)
+			l.emitLegacyTrivia(TokenSpace)
+			l.emitTrivia(TriviaTypeNewLine)
+			return rootState
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			return numberState
 		case '"':
@@ -121,12 +123,12 @@ func rootState(l *lexer) stateFn {
 		case '/':
 			r = l.next()
 			switch r {
-			// TODO(preserve-comments): Deprecate trivia token types
+			// TODO(preserve-comments): Deprecate Trivia token types
 			case '/':
 				return lineCommentState
 			case '*':
-				l.emitTrivia(TokenBlockCommentStart)
-				return blockCommentState(0)
+				l.emitLegacyTrivia(TokenBlockCommentStart)
+				return blockCommentState(l, 0)
 			default:
 				l.backupOne()
 				l.emitType(TokenSlash)
@@ -261,17 +263,16 @@ type Space struct {
 	ContainsNewline bool
 }
 
-func spaceState(startIsNewline bool) stateFn {
-	return func(l *lexer) stateFn {
-		containsNewline := l.scanSpace()
-		containsNewline = containsNewline || startIsNewline
+func spaceState(l *lexer) stateFn {
+	l.scanSpace()
 
-		common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
+	// TODO(preserve-comments): Do we need to track memory for other token types as well?
+	common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
 
-		l.emitTrivia(TokenSpace)
+	l.emitLegacyTrivia(TokenSpace)
+	l.emitTrivia(TriviaTypeSpace)
 
-		return rootState
-	}
+	return rootState
 }
 
 func identifierState(l *lexer) stateFn {
@@ -302,12 +303,14 @@ func stringState(l *lexer) stateFn {
 
 func lineCommentState(l *lexer) stateFn {
 	l.scanLineComment()
-	l.emitTrivia(TokenLineComment)
+	l.emitLegacyTrivia(TokenLineComment)
+	l.emitTrivia(TriviaTypeInlineComment)
 	return rootState
 }
 
-func blockCommentState(nesting int) stateFn {
+func blockCommentState(l *lexer, nesting int) stateFn {
 	if nesting < 0 {
+		l.emitTrivia(TriviaTypeMultiLineComment)
 		return rootState
 	}
 
@@ -321,10 +324,10 @@ func blockCommentState(nesting int) stateFn {
 			if l.acceptOne('*') {
 				starOffset := l.endOffset
 				l.endOffset = beforeSlashOffset
-				l.emitTrivia(TokenBlockCommentContent)
+				l.emitLegacyTrivia(TokenBlockCommentContent)
 				l.endOffset = starOffset
-				l.emitTrivia(TokenBlockCommentStart)
-				return blockCommentState(nesting + 1)
+				l.emitLegacyTrivia(TokenBlockCommentStart)
+				return blockCommentState(l, nesting+1)
 			}
 
 		case '*':
@@ -332,13 +335,13 @@ func blockCommentState(nesting int) stateFn {
 			if l.acceptOne('/') {
 				slashOffset := l.endOffset
 				l.endOffset = beforeStarOffset
-				l.emitTrivia(TokenBlockCommentContent)
+				l.emitLegacyTrivia(TokenBlockCommentContent)
 				l.endOffset = slashOffset
-				l.emitTrivia(TokenBlockCommentEnd)
-				return blockCommentState(nesting - 1)
+				l.emitLegacyTrivia(TokenBlockCommentEnd)
+				return blockCommentState(l, nesting-1)
 			}
 		}
 
-		return blockCommentState(nesting)
+		return blockCommentState(l, nesting)
 	}
 }
