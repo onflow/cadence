@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/gorilla/mux v1.8.1
-	github.com/onflow/atree v0.8.0-rc.3
+	github.com/onflow/atree v0.8.0-rc.5
 	github.com/onflow/cadence v1.0.0-preview-atree-register-inlining.29
 	github.com/onflow/flow-go v0.35.7-crescendo-preview.23-atree-inlining
 	github.com/rs/zerolog v1.32.0
@@ -188,7 +188,7 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	lukechampine.com/blake3 v1.2.1 // indirect
+	lukechampine.com/blake3 v1.3.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
