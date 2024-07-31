@@ -70,7 +70,7 @@ type FunctionDeclaration struct {
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
-	// TODO(preserve-comments): Replace with DeclarationDocString method
+	// TODO(preserve-comments): Replace with DeclarationDocString method, since doc string is computed from Comments struct
 	DocString  string
 	Identifier Identifier
 	StartPos   Position `json:"-"`
@@ -83,6 +83,7 @@ var _ Element = &FunctionDeclaration{}
 var _ Declaration = &FunctionDeclaration{}
 var _ Statement = &FunctionDeclaration{}
 
+// TODO(preserve-comments): Temporary, add `comments` param to NewFunctionDeclaration in the future
 func NewFunctionDeclarationWithComments(
 	gauge common.MemoryGauge,
 	access Access,

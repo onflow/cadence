@@ -42,9 +42,9 @@ func (c Comment) Doc() bool {
 // Text without opening/closing comment characters /*, /**, */, //
 func (c Comment) Text() []byte {
 	withoutPrefixes := cutOptionalPrefixes(c.source, [][]byte{
-		blockCommentDocStringPrefix, // check before blockCommentStringPrefix
+		blockCommentDocStringPrefix, // must be before blockCommentStringPrefix
 		blockCommentStringPrefix,
-		lineCommentDocStringPrefix, // check before lineCommentStringPrefix
+		lineCommentDocStringPrefix, // must be before lineCommentStringPrefix
 		lineCommentStringPrefix,
 	})
 	return cutOptionalSuffixes(withoutPrefixes, [][]byte{
