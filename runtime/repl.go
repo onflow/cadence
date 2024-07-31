@@ -91,6 +91,9 @@ func NewREPL() (*REPL, error) {
 			return baseActivation
 		},
 		OnEventEmitted: standardLibraryHandler.NewOnEventEmittedHandler(),
+		ImportLocationHandler: func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
+			panic(fmt.Errorf("cannot import %s: Importing programs is not supported yet", location.ID()))
+		},
 	}
 
 	inter, err := interpreter.NewInterpreter(
