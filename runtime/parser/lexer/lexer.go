@@ -336,8 +336,8 @@ func (l *lexer) emitTrivia(triviaType TriviaType) {
 	}
 
 	l.currentTrivia = append(l.currentTrivia, Trivia{
-		Type: triviaType,
-		Text: currentRange.Source(l.input),
+		Type:  triviaType,
+		Range: currentRange,
 	})
 
 	l.consume(endPos)

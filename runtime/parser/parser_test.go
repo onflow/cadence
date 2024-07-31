@@ -1022,13 +1022,19 @@ func TestParseTrivia(t *testing.T) {
 		res, errs := ParseProgram(
 			nil,
 			[]byte(`
-/// Inline doc
-fun first() {}
+/// Inline doc 1 of first
+/// Inline doc 2 of first
+fun first() {} // Trailing inline comment of first
 
 /**
-Multi-line doc
+Multi-line doc 1 of second
 */
-fun second() {}
+/**
+Multi-line doc 2 of second
+*/
+fun second() {} /**
+Trailing multi-line comment of second
+*/
 `),
 			Config{},
 		)
@@ -1038,11 +1044,29 @@ fun second() {}
 
 		first, ok := res.Declarations()[0].(*ast.FunctionDeclaration)
 		assert.True(t, ok)
-		assert.Equal(t, " Inline doc", first.DocString)
+		assert.Equal(t, " Inline doc 1 of first\n Inline doc 2 of first", first.DeclarationDocString())
+		assert.Equal(t, ast.Comments{
+			Leading: []ast.Comment{
+				ast.NewComment(nil, []byte("/// Inline doc 1 of first")),
+				ast.NewComment(nil, []byte("/// Inline doc 2 of first")),
+			},
+			Trailing: []ast.Comment{
+				ast.NewComment(nil, []byte("// Trailing inline comment of first")),
+			},
+		}, first.Comments)
 
 		second, ok := res.Declarations()[1].(*ast.FunctionDeclaration)
 		assert.True(t, ok)
-		assert.Equal(t, "\nMulti-line doc\n", second.DocString)
+		assert.Equal(t, "\nMulti-line doc 1 of second\n\n\nMulti-line doc 2 of second\n", second.DeclarationDocString())
+		assert.Equal(t, ast.Comments{
+			Leading: []ast.Comment{
+				ast.NewComment(nil, []byte("/**\nMulti-line doc 1 of second\n*/")),
+				ast.NewComment(nil, []byte("/**\nMulti-line doc 2 of second\n*/")),
+			},
+			Trailing: []ast.Comment{
+				ast.NewComment(nil, []byte("/**\nTrailing multi-line comment of second\n*/")),
+			},
+		}, second.Comments)
 	})
 
 	t.Run("non-doc comments", func(t *testing.T) {})

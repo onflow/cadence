@@ -1,9 +1,11 @@
 package lexer
 
+import "github.com/onflow/cadence/runtime/ast"
+
 type Trivia struct {
 	Type TriviaType
-	// The source text (includes opening/closing comment characters in case of comment trivia type)
-	Text []byte
+	// Position within the source code (includes opening/closing comment characters in case of comment trivia type)
+	ast.Range
 }
 
 type TriviaType uint8
