@@ -251,8 +251,12 @@ func (r *REPL) Accept(code []byte, eval bool) (inputIsComplete bool, err error) 
 		code = prefixedCode
 	}
 
-	tokens := lexer.Lex(code, nil)
+	tokens, err := lexer.Lex(code, nil)
 	defer tokens.Reclaim()
+	if err != nil {
+		r.onError(err, r.checker.Location, r.codes)
+		return
+	}
 
 	inputIsComplete = isInputComplete(tokens)
 
