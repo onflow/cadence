@@ -70,12 +70,10 @@ type FunctionDeclaration struct {
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
-	// TODO(preserve-comments): Replace with DeclarationDocString method, since doc string is computed from Comments struct
-	DocString  string
-	Identifier Identifier
-	StartPos   Position `json:"-"`
-	Access     Access
-	Flags      FunctionDeclarationFlags
+	Identifier           Identifier
+	StartPos             Position `json:"-"`
+	Access               Access
+	Flags                FunctionDeclarationFlags
 	Comments
 }
 
@@ -151,7 +149,6 @@ func NewFunctionDeclaration(
 		ReturnTypeAnnotation: returnTypeAnnotation,
 		FunctionBlock:        functionBlock,
 		StartPos:             startPos,
-		DocString:            docString,
 	}
 }
 
@@ -246,16 +243,18 @@ func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 		*Alias
 		Type string
 		Range
-		IsStatic bool
-		IsNative bool
-		Flags    FunctionDeclarationFlags `json:",omitempty"`
+		IsStatic  bool
+		IsNative  bool
+		Flags     FunctionDeclarationFlags `json:",omitempty"`
+		DocString string
 	}{
-		Type:     "FunctionDeclaration",
-		Range:    NewUnmeteredRangeFromPositioned(d),
-		IsStatic: d.IsStatic(),
-		IsNative: d.IsNative(),
-		Alias:    (*Alias)(d),
-		Flags:    0,
+		Type:      "FunctionDeclaration",
+		Range:     NewUnmeteredRangeFromPositioned(d),
+		IsStatic:  d.IsStatic(),
+		IsNative:  d.IsNative(),
+		Alias:     (*Alias)(d),
+		Flags:     0,
+		DocString: d.DeclarationDocString(),
 	})
 }
 

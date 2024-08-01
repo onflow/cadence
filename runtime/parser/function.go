@@ -328,12 +328,8 @@ func parseFunctionDeclaration(
 	nativePos *ast.Position,
 	docString string,
 ) (*ast.FunctionDeclaration, error) {
-	var leadingTrivia []lexer.Trivia
-	var trailingTrivia []lexer.Trivia
-
-	startPos := ast.EarliestPosition(p.current.StartPos, accessPos, purityPos, staticPos, nativePos)
-
-	leadingTrivia = append(leadingTrivia, p.current.LeadingTrivia...)
+	startToken := p.current
+	startPos := ast.EarliestPosition(startToken.StartPos, accessPos, purityPos, staticPos, nativePos)
 
 	// Skip the `fun` keyword
 	p.nextSemanticToken()
@@ -357,7 +353,6 @@ func parseFunctionDeclaration(
 		}
 	}
 
-	// TODO(preserve-comments): Handle trailing comments
 	parameterList, returnTypeAnnotation, functionBlock, err :=
 		parseFunctionParameterListAndRest(p, functionBlockIsOptional)
 
@@ -378,7 +373,7 @@ func parseFunctionDeclaration(
 		functionBlock,
 		startPos,
 		docString,
-		p.newCommentsFromTrivia(leadingTrivia, trailingTrivia),
+		p.newCommentsFromTrivia(startToken.LeadingTrivia, []lexer.Trivia{}),
 	), nil
 }
 

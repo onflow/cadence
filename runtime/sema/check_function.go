@@ -147,7 +147,7 @@ func (checker *Checker) declareFunctionDeclaration(
 	_, err := checker.valueActivations.declare(variableDeclaration{
 		identifier:               declaration.Identifier.Identifier,
 		ty:                       functionType,
-		docString:                declaration.DocString,
+		docString:                declaration.DeclarationDocString(),
 		access:                   checker.accessFromAstAccess(declaration.Access),
 		kind:                     common.DeclarationKindFunction,
 		pos:                      declaration.Identifier.Pos,

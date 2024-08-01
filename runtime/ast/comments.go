@@ -6,8 +6,8 @@ import (
 )
 
 type Comments struct {
-	Leading  []Comment
-	Trailing []Comment
+	Leading  []Comment `json:"-"`
+	Trailing []Comment `json:"-"`
 }
 
 type Comment struct {
