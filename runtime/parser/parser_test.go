@@ -1018,7 +1018,7 @@ func TestParseTrivia(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("doc comments", func(t *testing.T) {
+	t.Run("function declaration", func(t *testing.T) {
 		res, errs := ParseProgram(
 			nil,
 			[]byte(`
@@ -1050,10 +1050,14 @@ Trailing multi-line comment of second
 				ast.NewComment(nil, []byte("/// Inline doc 1 of first")),
 				ast.NewComment(nil, []byte("/// Inline doc 2 of first")),
 			},
+			Trailing: []ast.Comment{},
+		}, first.Comments)
+		assert.Equal(t, ast.Comments{
+			Leading: []ast.Comment{},
 			Trailing: []ast.Comment{
 				ast.NewComment(nil, []byte("// Trailing inline comment of first")),
 			},
-		}, first.Comments)
+		}, first.FunctionBlock.Block.Comments)
 
 		second, ok := res.Declarations()[1].(*ast.FunctionDeclaration)
 		assert.True(t, ok)
@@ -1063,11 +1067,14 @@ Trailing multi-line comment of second
 				ast.NewComment(nil, []byte("/**\nMulti-line doc 1 of second\n*/")),
 				ast.NewComment(nil, []byte("/**\nMulti-line doc 2 of second\n*/")),
 			},
+			Trailing: []ast.Comment{},
+		}, second.Comments)
+		assert.Equal(t, ast.Comments{
+			Leading: []ast.Comment{},
 			Trailing: []ast.Comment{
 				ast.NewComment(nil, []byte("/**\nTrailing multi-line comment of second\n*/")),
 			},
-		}, second.Comments)
+		}, second.FunctionBlock.Block.Comments)
 	})
 
-	t.Run("non-doc comments", func(t *testing.T) {})
 }

@@ -29,9 +29,17 @@ import (
 type Block struct {
 	Statements []Statement
 	Range
+	Comments
 }
 
 var _ Element = &Block{}
+
+// TODO(preserve-comments): Migrate and remove
+func NewBlockWithComments(memoryGauge common.MemoryGauge, statements []Statement, astRange Range, comments Comments) *Block {
+	block := NewBlock(memoryGauge, statements, astRange)
+	block.Comments = comments
+	return block
+}
 
 func NewBlock(memoryGauge common.MemoryGauge, statements []Statement, astRange Range) *Block {
 	common.UseMemory(memoryGauge, common.BlockMemoryUsage)
