@@ -144,13 +144,13 @@ var pool = sync.Pool{
 	},
 }
 
-func Lex(input []byte, memoryGauge common.MemoryGauge) TokenStream {
+func Lex(input []byte, memoryGauge common.MemoryGauge) (TokenStream, error) {
 	l := pool.Get().(*lexer)
 	l.clear()
 	l.memoryGauge = memoryGauge
 	l.input = input
-	l.run(rootState)
-	return l
+	err := l.run(rootState)
+	return l, err
 }
 
 // run executes the stateFn, which will scan the runes in the input
@@ -162,13 +162,12 @@ func Lex(input []byte, memoryGauge common.MemoryGauge) TokenStream {
 // stateFn is returned, which for example happens when reaching the end of the file.
 //
 // When all stateFn have been executed, an EOF token is emitted.
-func (l *lexer) run(state stateFn) {
+func (l *lexer) run(state stateFn) (err error) {
 
 	// catch panic exceptions, emit it to the tokens channel before
 	// closing it
 	defer func() {
 		if r := recover(); r != nil {
-			var err error
 			switch r := r.(type) {
 			case errors.MemoryError, errors.InternalError:
 				// fatal errors and internal errors percolates up.
@@ -181,13 +180,18 @@ func (l *lexer) run(state stateFn) {
 				err = fmt.Errorf("lexer: %v", r)
 			}
 
-			l.emitError(err)
+			err = l.emitError(err)
 		}
 	}()
 
 	for state != nil {
-		state = state(l)
+		state, err = state(l)
+		if err != nil {
+			return err
+		}
 	}
+
+	return
 }
 
 // next decodes the next rune (UTF8 character) from the input string.
@@ -246,10 +250,10 @@ func (l *lexer) acceptOne(r rune) bool {
 }
 
 // emit writes a token to the channel.
-func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, consume bool) {
+func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, consume bool) error {
 
 	if len(l.tokens) >= tokenLimit {
-		panic(TokenLimitReachedError{})
+		return TokenLimitReachedError{}
 	}
 
 	endPos := l.endPos()
@@ -285,6 +289,8 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 			l.startPos.column++
 		}
 	}
+
+	return nil
 }
 
 func (l *lexer) startPosition() ast.Position {
@@ -318,13 +324,13 @@ func (l *lexer) endPos() position {
 	return endPos
 }
 
-func (l *lexer) emitType(ty TokenType) {
+func (l *lexer) emitType(ty TokenType) error {
 	common.UseMemory(l.memoryGauge, common.TypeTokenMemoryUsage)
 
-	l.emit(ty, nil, l.startPosition(), true)
+	return l.emit(ty, nil, l.startPosition(), true)
 }
 
-func (l *lexer) emitError(err error) {
+func (l *lexer) emitError(err error) error {
 	common.UseMemory(l.memoryGauge, common.ErrorTokenMemoryUsage)
 
 	endPos := l.endPos()
@@ -334,7 +340,8 @@ func (l *lexer) emitError(err error) {
 		endPos.line,
 		endPos.column,
 	)
-	l.emit(TokenError, err, rangeStart, false)
+
+	return l.emit(TokenError, err, rangeStart, false)
 }
 
 func (l *lexer) scanSpace() (containsNewline bool) {
@@ -440,26 +447,26 @@ func (l *lexer) scanHexadecimalRemainder() {
 	})
 }
 
-func (l *lexer) scanDecimalOrFixedPointRemainder() TokenType {
+func (l *lexer) scanDecimalOrFixedPointRemainder() (TokenType, error) {
 	l.acceptWhile(isDecimalDigitOrUnderscore)
 	r := l.next()
 	if r == '.' {
-		l.scanFixedPointRemainder()
-		return TokenFixedPointNumberLiteral
+		err := l.scanFixedPointRemainder()
+		return TokenFixedPointNumberLiteral, err
 	} else {
 		l.backupOne()
-		return TokenDecimalIntegerLiteral
+		return TokenDecimalIntegerLiteral, nil
 	}
 }
 
-func (l *lexer) scanFixedPointRemainder() {
+func (l *lexer) scanFixedPointRemainder() error {
 	r := l.next()
 	if !isDecimalDigitOrUnderscore(r) {
 		l.backupOne()
-		l.emitError(fmt.Errorf("missing fractional digits"))
-		return
+		return l.emitError(fmt.Errorf("missing fractional digits"))
 	}
 	l.acceptWhile(isDecimalDigitOrUnderscore)
+	return nil
 }
 
 func isDecimalDigitOrUnderscore(r rune) bool {

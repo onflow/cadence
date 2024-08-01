@@ -63,7 +63,10 @@ func testLex(t *testing.T, input string, expected []token) {
 
 	bytes := []byte(input)
 
-	withTokens(Lex(bytes, nil), func(actualTokens []Token) {
+	tokenStream, err := Lex(bytes, nil)
+	require.NoError(t, err)
+
+	withTokens(tokenStream, func(actualTokens []Token) {
 		utils.AssertEqualWithDiff(t, expectedTokens, actualTokens)
 
 		require.Len(t, actualTokens, len(expectedTokens))
@@ -2385,8 +2388,8 @@ func TestRevert(t *testing.T) {
 
 	t.Parallel()
 
-	tokenStream := Lex([]byte("1 2 3"), nil)
-
+	tokenStream, err := Lex([]byte("1 2 3"), nil)
+	require.NoError(t, err)
 	// Assert all tokens
 
 	assert.Equal(t,
@@ -2550,7 +2553,8 @@ func TestEOFsAfterError(t *testing.T) {
 
 	t.Parallel()
 
-	tokenStream := Lex([]byte(`1 ''`), nil)
+	tokenStream, err := Lex([]byte(`1 ''`), nil)
+	require.NoError(t, err)
 
 	// Assert all tokens
 
@@ -2613,7 +2617,8 @@ func TestEOFsAfterEmptyInput(t *testing.T) {
 
 	t.Parallel()
 
-	tokenStream := Lex(nil, nil)
+	tokenStream, err := Lex(nil, nil)
+	require.NoError(t, err)
 
 	// Assert EOFs keep on being returned for Next()
 	// at the end of the stream
@@ -2644,10 +2649,7 @@ func TestLimit(t *testing.T) {
 
 	code := b.String()
 
-	assert.PanicsWithValue(t,
-		TokenLimitReachedError{},
-		func() {
-			_ = Lex([]byte(code), nil)
-		},
-	)
+	_, err := Lex([]byte(code), nil)
+	require.Error(t, err)
+	require.ErrorAs(t, err, &TokenLimitReachedError{})
 }
