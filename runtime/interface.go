@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
@@ -67,8 +68,8 @@ type Interface interface {
 	SetValue(owner, key, value []byte) (err error)
 	// ValueExists returns true if the given key exists in the storage, owned by the given account.
 	ValueExists(owner, key []byte) (exists bool, err error)
-	// AllocateStorageIndex allocates a new storage index under the given account.
-	AllocateStorageIndex(owner []byte) (atree.StorageIndex, error)
+	// AllocateSlabIndex allocates a new slab index under the given account.
+	AllocateSlabIndex(owner []byte) (atree.SlabIndex, error)
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
 	// AddAccountKey appends a key to an account.
@@ -143,6 +144,7 @@ type Interface interface {
 	)
 	// GenerateAccountID generates a new, *non-zero*, unique ID for the given account.
 	GenerateAccountID(address common.Address) (uint64, error)
+	RecoverProgram(program *ast.Program, location common.Location) (*ast.Program, error)
 }
 
 type MeterInterface interface {

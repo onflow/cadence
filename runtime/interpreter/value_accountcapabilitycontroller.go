@@ -179,7 +179,8 @@ func (v *AccountCapabilityControllerValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	if remove {
 		interpreter.RemoveReferencedSlab(storable)
@@ -194,7 +195,7 @@ func (v *AccountCapabilityControllerValue) Clone(_ *Interpreter) Value {
 	}
 }
 
-func (v *AccountCapabilityControllerValue) DeepRemove(_ *Interpreter) {
+func (v *AccountCapabilityControllerValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 

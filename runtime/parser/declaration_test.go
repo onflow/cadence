@@ -8747,7 +8747,7 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseDeclarations(" access(all) entitlement E ")
+		result, errs := testParseDeclarations(" access(all) entitlement ABC ")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -8755,12 +8755,12 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 				&ast.EntitlementDeclaration{
 					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
-						Identifier: "E",
+						Identifier: "ABC",
 						Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
 					},
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-						EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+						EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
 					},
 				},
 			},

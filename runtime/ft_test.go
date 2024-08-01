@@ -19,6 +19,7 @@
 package runtime_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,8 +27,11 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	. "github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -765,4 +769,519 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 	}
 
 	utils.RequireValuesEqual(b, nil, mintAmountValue, sum)
+}
+
+const oldExampleToken = `
+import FungibleToken from 0x1
+
+pub contract ExampleToken: FungibleToken {
+
+   pub var totalSupply: UFix64
+
+   pub resource Vault: FungibleToken.Provider, FungibleToken.Receiver, FungibleToken.Balance {
+
+       pub var balance: UFix64
+
+       init(balance: UFix64) {
+           self.balance = balance
+       }
+
+       pub fun withdraw(amount: UFix64): @FungibleToken.Vault {
+           self.balance = self.balance - amount
+           emit TokensWithdrawn(amount: amount, from: self.owner?.address)
+           return <-create Vault(balance: amount)
+       }
+
+       pub fun deposit(from: @FungibleToken.Vault) {
+           let vault <- from as! @ExampleToken.Vault
+           self.balance = self.balance + vault.balance
+           emit TokensDeposited(amount: vault.balance, to: self.owner?.address)
+           vault.balance = 0.0
+           destroy vault
+       }
+
+       destroy() {
+           if self.balance > 0.0 {
+               ExampleToken.totalSupply = ExampleToken.totalSupply - self.balance
+           }
+       }
+   }
+
+   pub fun createEmptyVault(): @Vault {
+       return <-create Vault(balance: 0.0)
+   }
+
+   init() {
+       self.totalSupply = 0.0
+   }
+}
+`
+
+func importsAddressLocation(program *ast.Program, address common.Address, name string) bool {
+	importDeclarations := program.ImportDeclarations()
+
+	// Check if the location is imported by any import declaration
+	for _, importDeclaration := range importDeclarations {
+
+		// The import declaration imports from the same address
+		importedLocation, ok := importDeclaration.Location.(common.AddressLocation)
+		if !ok || importedLocation.Address != address {
+			continue
+		}
+
+		// The import declaration imports all identifiers, so also the location
+		if len(importDeclaration.Identifiers) == 0 {
+			return true
+		}
+
+		// The import declaration imports specific identifiers, so check if the location is imported
+		for _, identifier := range importDeclaration.Identifiers {
+			if identifier.Identifier == name {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func declaresConformanceTo(conformingDeclaration ast.ConformingDeclaration, name string) bool {
+	for _, conformance := range conformingDeclaration.ConformanceList() {
+		if conformance.Identifier.Identifier == name {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isNominalType(ty ast.Type, name string) bool {
+	nominalType, ok := ty.(*ast.NominalType)
+	return ok &&
+		len(nominalType.NestedIdentifiers) == 0 &&
+		nominalType.Identifier.Identifier == name
+}
+
+const fungibleTokenTypeTotalSupplyFieldName = "totalSupply"
+const fungibleTokenVaultTypeBalanceFieldName = "balance"
+const fungibleTokenVaultTypeIdentifier = "Vault"
+
+func isFungibleTokenContract(program *ast.Program, fungibleTokenAddress common.Address) bool {
+	const contractName = "FungibleToken"
+
+	// Check if the contract imports the FungibleToken contract
+	if !importsAddressLocation(program, fungibleTokenAddress, contractName) {
+		return false
+	}
+
+	contractDeclaration := program.SoleContractDeclaration()
+	if contractDeclaration == nil {
+		return false
+	}
+
+	// Check if the contract implements the FungibleToken interface
+	if !declaresConformanceTo(contractDeclaration, contractName) {
+		return false
+	}
+
+	// Check if the contract has a totalSupply field
+	totalSupplyFieldDeclaration := getField(contractDeclaration, fungibleTokenTypeTotalSupplyFieldName)
+	if totalSupplyFieldDeclaration == nil {
+		return false
+	}
+
+	// Check if the totalSupply field is of type UFix64
+	if !isNominalType(totalSupplyFieldDeclaration.TypeAnnotation.Type, sema.UFix64TypeName) {
+		return false
+	}
+
+	// Check if the contract has a Vault resource
+
+	vaultDeclaration := contractDeclaration.Members.CompositesByIdentifier()[fungibleTokenVaultTypeIdentifier]
+	if vaultDeclaration == nil {
+		return false
+	}
+
+	// Check if the Vault resource has a balance field
+	balanceFieldDeclaration := getField(vaultDeclaration, fungibleTokenVaultTypeBalanceFieldName)
+	if balanceFieldDeclaration == nil {
+		return false
+	}
+
+	// Check if the balance field is of type UFix64
+	if !isNominalType(balanceFieldDeclaration.TypeAnnotation.Type, sema.UFix64TypeName) {
+		return false
+	}
+
+	return true
+}
+
+func getField(declaration *ast.CompositeDeclaration, name string) *ast.FieldDeclaration {
+	for _, fieldDeclaration := range declaration.Members.Fields() {
+		if fieldDeclaration.Identifier.Identifier == name {
+			return fieldDeclaration
+		}
+	}
+
+	return nil
+}
+
+func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
+
+	runtime := NewTestInterpreterRuntime()
+
+	contractsAddress := common.MustBytesToAddress([]byte{0x1})
+	userAddress := common.MustBytesToAddress([]byte{0x2})
+
+	const contractName = "ExampleToken"
+
+	accountCodes := map[Location][]byte{
+		// We cannot deploy the ExampleToken contract because it is broken
+		common.NewAddressLocation(nil, contractsAddress, contractName): []byte(oldExampleToken),
+	}
+
+	var events []cadence.Event
+	var logs []string
+
+	signerAccount := contractsAddress
+
+	var memoryGauge common.MemoryGauge
+
+	runtimeInterface := &TestRuntimeInterface{
+		OnGetCode: func(location Location) (bytes []byte, err error) {
+			return accountCodes[location], nil
+		},
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
+		},
+		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+			return accountCodes[location], nil
+		},
+		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+			accountCodes[location] = code
+			return nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+			return json.Decode(nil, b)
+		},
+		OnProgramLog: func(message string) {
+			logs = append(logs, message)
+		},
+		OnRecoverProgram: func(program *ast.Program, location common.Location) (*ast.Program, error) {
+
+			// TODO: generalize
+
+			if !isFungibleTokenContract(program, contractsAddress) {
+				return nil, nil
+			}
+
+			code := `
+              import FungibleToken from 0x1
+
+              access(all)
+              contract ExampleToken: FungibleToken {
+
+                  access(all)
+                  var totalSupply: UFix64
+
+                  init() {
+                      self.totalSupply = 0.0
+                  }
+
+                  access(all)
+                  resource Vault: FungibleToken.Vault {
+
+                      access(all)
+                      var balance: UFix64
+
+                      init(balance: UFix64) {
+                          self.balance = balance
+                      }
+
+                      access(FungibleToken.Withdraw)
+                      fun withdraw(amount: UFix64): @{FungibleToken.Vault} {
+                          panic("withdraw is not implemented")
+                      }
+
+                      access(all)
+                      view fun isAvailableToWithdraw(amount: UFix64): Bool {
+                          panic("isAvailableToWithdraw is not implemented")
+                      }
+
+                      access(all)
+                      fun deposit(from: @{FungibleToken.Vault}) {
+                          panic("deposit is not implemented")
+                      }
+
+                      access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
+                          panic("createEmptyVault is not implemented")
+                      }
+                  }
+
+                  access(all)
+                  fun createEmptyVault(vaultType: Type): @{FungibleToken.Vault} {
+                      panic("createEmptyVault is not implemented")
+                  }
+              }
+            `
+
+			// TODO: meter
+			return parser.ParseProgram(memoryGauge, []byte(code), parser.Config{})
+		},
+	}
+
+	environment := NewBaseInterpreterEnvironment(Config{})
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Deploy Fungible Token contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: utils.DeploymentTransaction(
+				"FungibleToken",
+				[]byte(modifiedFungibleTokenContractInterface),
+			),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	require.NoError(t, err)
+
+	// We cannot deploy the ExampleToken contract because it is broken.
+	// Manually storage the contract value for the ExampleToken contract in the contract account's storage
+
+	storage, inter, err := runtime.Storage(Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	contractValue := interpreter.NewCompositeValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		common.NewAddressLocation(nil, contractsAddress, contractName),
+		contractName,
+		common.CompositeKindContract,
+		[]interpreter.CompositeField{
+			{
+				Name: fungibleTokenTypeTotalSupplyFieldName,
+				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(
+					4321,
+					interpreter.EmptyLocationRange,
+				),
+			},
+		},
+		contractsAddress,
+	)
+
+	contractStorage := storage.GetStorageMap(
+		contractsAddress,
+		StorageDomainContract,
+		true,
+	)
+	contractStorage.SetValue(
+		inter,
+		interpreter.StringStorageMapKey(contractName),
+		contractValue,
+	)
+
+	// Manually store a broken ExampleToken.Vault in the user account's storage
+
+	vaultValue := interpreter.NewCompositeValue(
+		inter,
+		interpreter.EmptyLocationRange,
+		common.NewAddressLocation(nil, contractsAddress, contractName),
+		fmt.Sprintf("%s.Vault", contractName),
+		common.CompositeKindResource,
+		[]interpreter.CompositeField{
+			{
+				Name:  sema.ResourceUUIDFieldName,
+				Value: interpreter.NewUnmeteredUInt64Value(42),
+			},
+			{
+				Name: fungibleTokenVaultTypeBalanceFieldName,
+				Value: interpreter.NewUnmeteredUFix64ValueWithInteger(
+					1234,
+					interpreter.EmptyLocationRange,
+				),
+			},
+		},
+		userAddress,
+	)
+
+	userStorage := storage.GetStorageMap(
+		userAddress,
+		common.PathDomainStorage.Identifier(),
+		true,
+	)
+	const storagePathIdentifier = "exampleTokenVault"
+	userStorage.SetValue(
+		inter,
+		interpreter.StringStorageMapKey(storagePathIdentifier),
+		vaultValue,
+	)
+
+	err = storage.Commit(inter, false)
+	require.NoError(t, err)
+
+	// Send a transaction that loads the broken ExampleToken contract and the broken ExampleToken.Vault.
+	// Accessing the broken ExampleToken contract value and ExampleToken.Vault resource should not cause a panic.
+	// Casting the ExampleToken.Vault resource to a FungibleToken.Vault
+	// and saving it back to storage should not cause a panic either.
+
+	const transaction1 = `
+      import FungibleToken from 0x1
+      import ExampleToken from 0x1
+
+      transaction {
+
+          let vault: @ExampleToken.Vault
+          let signer: auth(LoadValue, SaveValue) &Account
+
+          prepare(signer: auth(LoadValue, SaveValue) &Account) {
+              self.vault <- signer.storage.load<@ExampleToken.Vault>(from: /storage/exampleTokenVault)!
+              self.signer = signer
+          }
+
+          execute {
+              log(ExampleToken.totalSupply)
+              log(self.vault.balance)
+              log(ExampleToken.getType())
+              log(self.vault.getType())
+
+              let exampleVault <- self.vault
+              let someVault <- exampleVault as! @{FungibleToken.Vault}
+
+              self.signer.storage.save(<-someVault, to: /storage/someTokenVault)
+          }
+      }
+    `
+
+	signerAccount = userAddress
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(transaction1),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]string{
+			"4321.00000000",
+			"1234.00000000",
+			"Type<A.0000000000000001.ExampleToken>()",
+			"Type<A.0000000000000001.ExampleToken.Vault>()",
+		},
+		logs,
+	)
+
+	// Send another transaction that calls a function on the stored vault.
+	// Function calls on recovered values should panic.
+
+	const transaction2 = `
+      import FungibleToken from 0x1
+      import ExampleToken from 0x1
+
+      transaction {
+
+          let vault: auth(FungibleToken.Withdraw) &{FungibleToken.Vault}
+
+          prepare(signer: auth(BorrowValue) &Account) {
+              self.vault = signer.storage
+                  .borrow<auth(FungibleToken.Withdraw) &{FungibleToken.Vault}>(
+                      from: /storage/someTokenVault
+                  )!
+          }
+
+          execute {
+              let vault <- self.vault.withdraw(amount: 1.0)
+              destroy vault
+          }
+      }
+    `
+
+	logs = nil
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(transaction2),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	utils.RequireError(t, err)
+	require.ErrorContains(t, err, "panic: withdraw is not implemented")
+
+	// Send another transaction that loads the broken ExampleToken contract and the broken ExampleToken.Vault.
+	// Accessing the broken ExampleToken contract value and ExampleToken.Vault resource again should not cause a panic.
+	// Casting the FungibleToken.Vault resource to an ExampleToken.Vault
+	// and destroying the resource should not cause a panic either.
+
+	const transaction3 = `
+      import FungibleToken from 0x1
+      import ExampleToken from 0x1
+
+      transaction {
+
+          let vault: @{FungibleToken.Vault}
+
+          prepare(signer: auth(LoadValue) &Account) {
+              self.vault <- signer.storage.load<@{FungibleToken.Vault}>(from: /storage/someTokenVault)!
+          }
+
+          execute {
+              log(ExampleToken.totalSupply)
+              log(self.vault.balance)
+              log(ExampleToken.getType())
+              log(self.vault.getType())
+
+              let someVault <- self.vault
+              let exampleVault <- someVault as! @ExampleToken.Vault
+
+              destroy exampleVault
+          }
+      }
+    `
+
+	logs = nil
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: []byte(transaction3),
+		},
+		Context{
+			Interface:   runtimeInterface,
+			Location:    nextTransactionLocation(),
+			Environment: environment,
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]string{
+			"4321.00000000",
+			"1234.00000000",
+			"Type<A.0000000000000001.ExampleToken>()",
+			"Type<A.0000000000000001.ExampleToken.Vault>()",
+		},
+		logs,
+	)
 }

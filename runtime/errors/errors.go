@@ -20,6 +20,7 @@ package errors
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	"golang.org/x/xerrors"
 )
@@ -141,22 +142,28 @@ func (e MemoryError) Error() string {
 //
 // NOTE: This error is not used for errors occur due to bugs in a user-provided program.
 type UnexpectedError struct {
-	Err error
+	Err   error
+	Stack []byte
 }
+
+var StackTracesEnabled = true
 
 var _ InternalError = UnexpectedError{}
 
 func (UnexpectedError) IsInternalError() {}
 
 func NewUnexpectedError(message string, arg ...any) UnexpectedError {
-	return UnexpectedError{
-		Err: fmt.Errorf(message, arg...),
-	}
+	return NewUnexpectedErrorFromCause(fmt.Errorf(message, arg...))
 }
 
 func NewUnexpectedErrorFromCause(err error) UnexpectedError {
+	var stack []byte
+	if StackTracesEnabled {
+		stack = debug.Stack()
+	}
 	return UnexpectedError{
-		Err: err,
+		Err:   err,
+		Stack: stack,
 	}
 }
 
@@ -165,7 +172,12 @@ func (e UnexpectedError) Unwrap() error {
 }
 
 func (e UnexpectedError) Error() string {
-	return fmt.Sprintf("internal error: %s", e.Err.Error())
+	message := e.Err.Error()
+	if len(e.Stack) == 0 {
+		return fmt.Sprintf("unexpected error: %s", message)
+	} else {
+		return fmt.Sprintf("unexpected error: %s\n%s", message, e.Stack)
+	}
 }
 
 // DefaultUserError is the default implementation of UserError interface.

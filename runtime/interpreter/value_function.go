@@ -151,7 +151,8 @@ func (f *InterpretedFunctionValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -164,7 +165,7 @@ func (f *InterpretedFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter) {
+func (*InterpretedFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -303,7 +304,8 @@ func (f *HostFunctionValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -316,7 +318,7 @@ func (f *HostFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (*HostFunctionValue) DeepRemove(_ *Interpreter) {
+func (*HostFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 
@@ -479,7 +481,8 @@ func (f BoundFunctionValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -492,7 +495,7 @@ func (f BoundFunctionValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (BoundFunctionValue) DeepRemove(_ *Interpreter) {
+func (BoundFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }
 

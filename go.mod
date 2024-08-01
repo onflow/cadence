@@ -13,10 +13,10 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/leanovate/gopter v0.2.9
 	github.com/logrusorgru/aurora/v4 v4.0.0
-	github.com/onflow/atree v0.7.0-rc.2
+	github.com/onflow/atree v0.8.0-rc.5
 	github.com/rivo/uniseg v0.4.4
 	github.com/schollz/progressbar/v3 v3.13.1
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	github.com/texttheater/golang-levenshtein/levenshtein v0.0.0-20200805054039-cae8b0eaed6c
 	github.com/tidwall/pretty v1.2.1
 	github.com/turbolent/prettier v0.0.0-20220320183459-661cc755135d

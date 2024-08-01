@@ -4,9 +4,9 @@ go 1.22
 
 require (
 	github.com/gorilla/mux v1.8.1
-	github.com/onflow/atree v0.7.0-rc.2
-	github.com/onflow/cadence v1.0.0-preview.29
-	github.com/onflow/flow-go v0.35.10-0.20240524201939-d3680b8f9373
+	github.com/onflow/atree v0.8.0-rc.5
+	github.com/onflow/cadence v1.0.0-preview-atree-register-inlining.29
+	github.com/onflow/flow-go v0.35.7-crescendo-preview.23-atree-inlining
 	github.com/rs/zerolog v1.32.0
 )
 
@@ -121,7 +121,6 @@ require (
 	github.com/onflow/flow-nft/lib/go/templates v1.2.0 // indirect
 	github.com/onflow/flow/protobuf/go/flow v0.4.3 // indirect
 	github.com/onflow/go-ethereum v1.13.4 // indirect
-	github.com/onflow/nft-storefront/lib/go/contracts v1.0.0 // indirect
 	github.com/onflow/sdks v0.5.1-0.20230912225508-b35402f12bba // indirect
 	github.com/onflow/wal v1.0.2 // indirect
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // indirect
@@ -189,7 +188,7 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	lukechampine.com/blake3 v1.2.1 // indirect
+	lukechampine.com/blake3 v1.3.0 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 

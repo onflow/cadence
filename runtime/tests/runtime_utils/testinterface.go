@@ -29,6 +29,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/ast"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -120,6 +121,7 @@ type TestRuntimeInterface struct {
 	OnMemoryUsed        func() (uint64, error)
 	OnInteractionUsed   func() (uint64, error)
 	OnGenerateAccountID func(address common.Address) (uint64, error)
+	OnRecoverProgram    func(program *ast.Program, location common.Location) (*ast.Program, error)
 
 	lastUUID            uint64
 	accountIDs          map[common.Address]uint64
@@ -219,11 +221,11 @@ func (i *TestRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
 	return i.Storage.SetValue(owner, key, value)
 }
 
-func (i *TestRuntimeInterface) AllocateStorageIndex(owner []byte) (atree.StorageIndex, error) {
-	if i.Storage.OnAllocateStorageIndex == nil {
-		panic("must specify TestRuntimeInterface.storage.OnAllocateStorageIndex")
+func (i *TestRuntimeInterface) AllocateSlabIndex(owner []byte) (atree.SlabIndex, error) {
+	if i.Storage.OnAllocateSlabIndex == nil {
+		panic("must specify TestRuntimeInterface.storage.OnAllocateSlabIndex")
 	}
-	return i.Storage.AllocateStorageIndex(owner)
+	return i.Storage.AllocateSlabIndex(owner)
 }
 
 func (i *TestRuntimeInterface) CreateAccount(payer runtime.Address) (address runtime.Address, err error) {
@@ -604,4 +606,11 @@ func (i *TestRuntimeInterface) InvalidateUpdatedPrograms() {
 		}
 		i.updatedContractCode = false
 	}
+}
+
+func (i *TestRuntimeInterface) RecoverProgram(program *ast.Program, location common.Location) (*ast.Program, error) {
+	if i.OnRecoverProgram == nil {
+		return nil, nil
+	}
+	return i.OnRecoverProgram(program, location)
 }

@@ -69,18 +69,13 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 	if keyType == nil && valueType == nil {
 		// Contextually expected type is not available.
 		// Therefore, find the least common supertype of the keys and values.
-		keyType = LeastCommonSuperType(keyTypes...)
-		valueType = LeastCommonSuperType(valueTypes...)
+		keyType = checker.leastCommonSuperType(expression, keyTypes...)
+		if keyType == InvalidType {
+			return InvalidType
+		}
 
-		if keyType == InvalidType ||
-			valueType == InvalidType {
-			checker.report(
-				&TypeAnnotationRequiredError{
-					Cause: "cannot infer type from dictionary literal:",
-					Pos:   expression.StartPos,
-				},
-			)
-
+		valueType = checker.leastCommonSuperType(expression, valueTypes...)
+		if valueType == InvalidType {
 			return InvalidType
 		}
 	}

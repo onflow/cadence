@@ -26,15 +26,14 @@ import (
 
 	"github.com/onflow/atree"
 
-	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/activations"
-	"github.com/onflow/cadence/runtime/common/orderedmap"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/pretty"
@@ -202,8 +201,10 @@ func parseCheckAndInterpretWithOptionsAndMemoryMetering(
 	if options.Config != nil {
 		config = *options.Config
 	}
-	config.AtreeValueValidationEnabled = true
-	config.AtreeStorageValidationEnabled = true
+	if memoryGauge == nil {
+		config.AtreeValueValidationEnabled = true
+		config.AtreeStorageValidationEnabled = true
+	}
 	if config.UUIDHandler == nil {
 		config.UUIDHandler = func() (uint64, error) {
 			uuid++
@@ -5304,6 +5305,7 @@ func TestInterpretReferenceFailableDowncasting(t *testing.T) {
 			true,
 			nil,
 			nil,
+			true, // r is standalone.
 		)
 
 		domain := storagePath.Domain.Identifier()
@@ -11682,6 +11684,42 @@ func TestInterpretNilCoalesceReference(t *testing.T) {
 		},
 		variable.GetValue(inter),
 	)
+}
+
+func TestInterpretNilCoalesceAnyResourceAndPanic(t *testing.T) {
+
+	t.Parallel()
+
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+
+	baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+	interpreter.Declare(baseActivation, stdlib.PanicFunction)
+
+	_, err := parseCheckAndInterpretWithOptions(t,
+		`
+          resource R {}
+
+          fun f(): @AnyResource? {
+              return <-create R()
+          }
+
+          let y <- f() ?? panic("no R")
+        `,
+		ParseCheckAndInterpretOptions{
+			CheckerConfig: &sema.Config{
+				BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+					return baseValueActivation
+				},
+			},
+			Config: &interpreter.Config{
+				BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+					return baseActivation
+				},
+			},
+		},
+	)
+	require.NoError(t, err)
 }
 
 func TestInterpretDictionaryDuplicateKey(t *testing.T) {

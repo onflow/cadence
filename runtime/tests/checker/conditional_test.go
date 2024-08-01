@@ -66,9 +66,10 @@ func TestCheckInvalidConditionalExpressionElse(t *testing.T) {
             let x = true ? 2 : y
 	    `)
 
-		errs := RequireCheckerErrors(t, err, 1)
+		errs := RequireCheckerErrors(t, err, 2)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[1])
 
 		xType := RequireGlobalValue(t, checker.Elaboration, "x")
 		assert.Equal(t, sema.InvalidType, xType)
