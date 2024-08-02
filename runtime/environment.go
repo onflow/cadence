@@ -21,10 +21,11 @@ package runtime
 import (
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/activations"
-
-	"go.opentelemetry.io/otel/attribute"
+	"github.com/onflow/cadence/runtime/old_parser"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -190,8 +191,8 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		OnMeterComputation:               e.newOnMeterComputation(),
 		OnFunctionInvocation:             e.newOnFunctionInvocationHandler(),
 		OnInvokedFunctionReturn:          e.newOnInvokedFunctionReturnHandler(),
-		CapabilityBorrowHandler:          stdlib.BorrowCapabilityController,
-		CapabilityCheckHandler:           stdlib.CheckCapabilityController,
+		CapabilityBorrowHandler:          e.newCapabilityBorrowHandler(),
+		CapabilityCheckHandler:           e.newCapabilityCheckHandler(),
 		LegacyContractUpgradeEnabled:     e.config.LegacyContractUpgradeEnabled,
 		ContractUpdateTypeRemovalEnabled: e.config.ContractUpdateTypeRemovalEnabled,
 	}
@@ -347,11 +348,11 @@ func (e *interpreterEnvironment) GetStorageCapacity(address common.Address) (uin
 	return e.runtimeInterface.GetStorageCapacity(address)
 }
 
-func (e *interpreterEnvironment) GetAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
+func (e *interpreterEnvironment) GetAccountKey(address common.Address, index uint32) (*stdlib.AccountKey, error) {
 	return e.runtimeInterface.GetAccountKey(address, index)
 }
 
-func (e *interpreterEnvironment) AccountKeysCount(address common.Address) (uint64, error) {
+func (e *interpreterEnvironment) AccountKeysCount(address common.Address) (uint32, error) {
 	return e.runtimeInterface.AccountKeysCount(address)
 }
 
@@ -373,15 +374,15 @@ func (e *interpreterEnvironment) GenerateAccountID(address common.Address) (uint
 
 func (e *interpreterEnvironment) EmitEvent(
 	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) {
-	emitEventFields(
+	EmitEventFields(
 		inter,
 		locationRange,
 		eventType,
-		newExportableValues(inter, values),
+		values,
 		e.runtimeInterface.EmitEvent,
 	)
 }
@@ -395,7 +396,7 @@ func (e *interpreterEnvironment) AddAccountKey(
 	return e.runtimeInterface.AddAccountKey(address, key, algo, weight)
 }
 
-func (e *interpreterEnvironment) RevokeAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
+func (e *interpreterEnvironment) RevokeAccountKey(address common.Address, index uint32) (*stdlib.AccountKey, error) {
 	return e.runtimeInterface.RevokeAccountKey(address, index)
 }
 
@@ -465,8 +466,50 @@ func (e *interpreterEnvironment) ParseAndCheckProgram(
 	)
 }
 
+// parseAndCheckProgramWithRecovery parses and checks the given program.
+// It first attempts to parse and checks the program as usual.
+// If parsing or checking fails, recovery is attempted.
+//
+// Recovery attempts to parse the contract with the old parser,
+// and if it succeeds, uses the program recovery handler
+// to produce an elaboration for the old program.
+func (e *interpreterEnvironment) parseAndCheckProgramWithRecovery(
+	code []byte,
+	location common.Location,
+	checkedImports importResolutionResults,
+) (
+	program *ast.Program,
+	elaboration *sema.Elaboration,
+	err error,
+) {
+	// Attempt to parse and check the program as usual
+	program, elaboration, err = e.parseAndCheckProgram(
+		code,
+		location,
+		checkedImports,
+	)
+	if err == nil {
+		return program, elaboration, nil
+	}
+
+	// If parsing or checking fails, attempt to recover
+
+	recoveredProgram, recoveredElaboration := e.recoverProgram(
+		code,
+		location,
+		checkedImports,
+	)
+
+	// If recovery failed, return the original error
+	if recoveredProgram == nil || recoveredElaboration == nil {
+		return program, elaboration, err
+	}
+
+	// If recovery succeeded, return the recovered program and elaboration
+	return recoveredProgram, recoveredElaboration, nil
+}
+
 // parseAndCheckProgram parses and checks the given program.
-// If storeProgram is true, it calls Interface.SetProgram.
 func (e *interpreterEnvironment) parseAndCheckProgram(
 	code []byte,
 	location common.Location,
@@ -508,6 +551,49 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 	return program, elaboration, nil
 }
 
+// recoverProgram parses and checks the given program with the old parser,
+// and recovers the elaboration from the old program.
+func (e *interpreterEnvironment) recoverProgram(
+	code []byte,
+	location common.Location,
+	checkedImports importResolutionResults,
+) (
+	program *ast.Program,
+	elaboration *sema.Elaboration,
+) {
+	// Parse
+
+	var err error
+	reportMetric(
+		func() {
+			program, err = old_parser.ParseProgram(e, code, old_parser.Config{})
+		},
+		e.runtimeInterface,
+		func(metrics Metrics, duration time.Duration) {
+			metrics.ProgramParsed(location, duration)
+		},
+	)
+	if err != nil {
+		return nil, nil
+	}
+
+	// Recover elaboration from the old program
+
+	errors.WrapPanic(func() {
+		program, err = e.runtimeInterface.RecoverProgram(program, location)
+	})
+	if err != nil || program == nil {
+		return nil, nil
+	}
+
+	elaboration, err = e.check(location, program, checkedImports)
+	if err != nil || elaboration == nil {
+		return nil, nil
+	}
+
+	return program, elaboration
+}
+
 func (e *interpreterEnvironment) check(
 	location common.Location,
 	program *ast.Program,
@@ -543,7 +629,6 @@ func (e *interpreterEnvironment) newLocationHandler() sema.LocationHandlerFunc {
 		errors.WrapPanic(func() {
 			res, err = e.runtimeInterface.ResolveLocation(identifiers, location)
 		})
-
 		if err != nil {
 			err = interpreter.WrappedExternalError(err)
 		}
@@ -643,7 +728,7 @@ func (e *interpreterEnvironment) getProgram(
 
 		e.codesAndPrograms.setCode(location, code)
 
-		parsedProgram, elaboration, err := e.parseAndCheckProgram(
+		parsedProgram, elaboration, err := e.parseAndCheckProgramWithRecovery(
 			code,
 			location,
 			checkedImports,
@@ -866,7 +951,6 @@ func (e *interpreterEnvironment) newUUIDHandler() interpreter.UUIDHandlerFunc {
 		errors.WrapPanic(func() {
 			uuid, err = e.runtimeInterface.GenerateUUID()
 		})
-
 		if err != nil {
 			err = interpreter.WrappedExternalError(err)
 		}
@@ -1255,4 +1339,49 @@ func (e *interpreterEnvironment) getBaseActivation(
 		baseActivation = e.defaultBaseActivation
 	}
 	return
+}
+
+func (e *interpreterEnvironment) newCapabilityBorrowHandler() interpreter.CapabilityBorrowHandlerFunc {
+
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		capabilityID interpreter.UInt64Value,
+		wantedBorrowType *sema.ReferenceType,
+		capabilityBorrowType *sema.ReferenceType,
+	) interpreter.ReferenceValue {
+
+		return stdlib.BorrowCapabilityController(
+			inter,
+			locationRange,
+			address,
+			capabilityID,
+			wantedBorrowType,
+			capabilityBorrowType,
+			e,
+		)
+	}
+}
+
+func (e *interpreterEnvironment) newCapabilityCheckHandler() interpreter.CapabilityCheckHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		capabilityID interpreter.UInt64Value,
+		wantedBorrowType *sema.ReferenceType,
+		capabilityBorrowType *sema.ReferenceType,
+	) interpreter.BoolValue {
+
+		return stdlib.CheckCapabilityController(
+			inter,
+			locationRange,
+			address,
+			capabilityID,
+			wantedBorrowType,
+			capabilityBorrowType,
+			e,
+		)
+	}
 }

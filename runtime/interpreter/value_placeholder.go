@@ -85,7 +85,8 @@ func (f placeholderValue) Transfer(
 	_ atree.Address,
 	remove bool,
 	storable atree.Storable,
-	_ map[atree.StorageID]struct{},
+	_ map[atree.ValueID]struct{},
+	_ bool,
 ) Value {
 	// TODO: actually not needed, value is not storable
 	if remove {
@@ -98,6 +99,6 @@ func (f placeholderValue) Clone(_ *Interpreter) Value {
 	return f
 }
 
-func (placeholderValue) DeepRemove(_ *Interpreter) {
+func (placeholderValue) DeepRemove(_ *Interpreter, _ bool) {
 	// NO-OP
 }

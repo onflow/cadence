@@ -69,9 +69,9 @@ var accountFunctionType = sema.NewSimpleFunctionType(
 type EventEmitter interface {
 	EmitEvent(
 		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
 		values []interpreter.Value,
-		locationRange interpreter.LocationRange,
 	)
 }
 
@@ -82,6 +82,15 @@ type AccountIDGenerator interface {
 
 type StorageCommitter interface {
 	CommitStorageTemporarily(inter *interpreter.Interpreter) error
+}
+
+type CapabilityControllerIssueHandler interface {
+	EventEmitter
+	AccountIDGenerator
+}
+
+type CapabilityControllerHandler interface {
+	EventEmitter
 }
 
 type AccountHandler interface {
@@ -160,9 +169,9 @@ func NewAccountConstructor(creator AccountCreator) StandardLibraryValue {
 
 			creator.EmitEvent(
 				inter,
+				locationRange,
 				AccountCreatedEventType,
 				[]interpreter.Value{addressValue},
-				locationRange,
 			)
 
 			return NewAccountReferenceValue(
@@ -310,8 +319,9 @@ func NewAccountValue(
 		func() interpreter.Value {
 			return newAccountCapabilitiesValue(
 				inter,
-				handler,
 				addressValue,
+				handler,
+				handler,
 			)
 		},
 	)
@@ -633,6 +643,7 @@ func newAccountKeysAddFunction(
 
 				handler.EmitEvent(
 					inter,
+					locationRange,
 					AccountKeyAddedFromPublicKeyEventType,
 					[]interpreter.Value{
 						addressValue,
@@ -641,7 +652,6 @@ func newAccountKeysAddFunction(
 						hashAlgoValue,
 						interpreter.NewIntValueFromInt64(inter, int64(accountKey.KeyIndex)),
 					},
-					locationRange,
 				)
 
 				return NewAccountKeyValue(
@@ -657,7 +667,7 @@ func newAccountKeysAddFunction(
 
 type AccountKey struct {
 	PublicKey *PublicKey
-	KeyIndex  int
+	KeyIndex  uint32
 	Weight    int
 	HashAlgo  sema.HashAlgorithm
 	IsRevoked bool
@@ -669,8 +679,8 @@ type AccountKeyProvider interface {
 	BLSPoPVerifier
 	Hasher
 	// GetAccountKey retrieves a key from an account by index.
-	GetAccountKey(address common.Address, index int) (*AccountKey, error)
-	AccountKeysCount(address common.Address) (uint64, error)
+	GetAccountKey(address common.Address, index uint32) (*AccountKey, error)
+	AccountKeysCount(address common.Address) (uint32, error)
 }
 
 func newAccountKeysGetFunction(
@@ -694,7 +704,7 @@ func newAccountKeysGetFunction(
 					panic(errors.NewUnreachableError())
 				}
 				locationRange := invocation.LocationRange
-				index := indexValue.ToInt(locationRange)
+				index := indexValue.ToUint32(locationRange)
 
 				var err error
 				var accountKey *AccountKey
@@ -778,7 +788,7 @@ func newAccountKeysForEachFunction(
 					)
 				}
 
-				var count uint64
+				var count uint32
 				var err error
 
 				errors.WrapPanic(func() {
@@ -791,9 +801,9 @@ func newAccountKeysForEachFunction(
 
 				var accountKey *AccountKey
 
-				for index := uint64(0); index < count; index++ {
+				for index := uint32(0); index < count; index++ {
 					errors.WrapPanic(func() {
-						accountKey, err = provider.GetAccountKey(address, int(index))
+						accountKey, err = provider.GetAccountKey(address, index)
 					})
 					if err != nil {
 						panic(interpreter.WrappedExternalError(err))
@@ -842,7 +852,7 @@ func newAccountKeysCountGetter(
 
 	return func() interpreter.UInt64Value {
 		return interpreter.NewUInt64Value(gauge, func() uint64 {
-			var count uint64
+			var count uint32
 			var err error
 
 			errors.WrapPanic(func() {
@@ -854,7 +864,7 @@ func newAccountKeysCountGetter(
 				panic(interpreter.WrappedExternalError(err))
 			}
 
-			return count
+			return uint64(count)
 		})
 	}
 }
@@ -866,7 +876,7 @@ type AccountKeyRevocationHandler interface {
 	PublicKeySignatureVerifier
 	BLSPoPVerifier
 	// RevokeAccountKey removes a key from an account by index.
-	RevokeAccountKey(address common.Address, index int) (*AccountKey, error)
+	RevokeAccountKey(address common.Address, index uint32) (*AccountKey, error)
 }
 
 func newAccountKeysRevokeFunction(
@@ -889,7 +899,7 @@ func newAccountKeysRevokeFunction(
 					panic(errors.NewUnreachableError())
 				}
 				locationRange := invocation.LocationRange
-				index := indexValue.ToInt(locationRange)
+				index := indexValue.ToUint32(locationRange)
 
 				var err error
 				var accountKey *AccountKey
@@ -911,12 +921,12 @@ func newAccountKeysRevokeFunction(
 
 				handler.EmitEvent(
 					inter,
+					locationRange,
 					AccountKeyRemovedFromPublicKeyIndexEventType,
 					[]interpreter.Value{
 						addressValue,
 						indexValue,
 					},
-					locationRange,
 				)
 
 				return interpreter.NewSomeValueNonCopying(
@@ -967,6 +977,7 @@ func newAccountInboxPublishFunction(
 
 				handler.EmitEvent(
 					inter,
+					locationRange,
 					AccountInboxPublishedEventType,
 					[]interpreter.Value{
 						providerValue,
@@ -974,7 +985,6 @@ func newAccountInboxPublishFunction(
 						nameValue,
 						interpreter.NewTypeValue(inter, value.StaticType(inter)),
 					},
-					locationRange,
 				)
 
 				publishedValue := interpreter.NewPublishedValue(inter, recipientValue, value).Transfer(
@@ -984,6 +994,7 @@ func newAccountInboxPublishFunction(
 					true,
 					nil,
 					nil,
+					true, // New PublishedValue is standalone.
 				)
 
 				storageMapKey := interpreter.StringStorageMapKey(nameValue.Str)
@@ -1054,6 +1065,7 @@ func newAccountInboxUnpublishFunction(
 					true,
 					nil,
 					nil,
+					false, // publishedValue is an element in storage map because it is returned by ReadStored.
 				)
 
 				inter.WriteStored(
@@ -1065,12 +1077,12 @@ func newAccountInboxUnpublishFunction(
 
 				handler.EmitEvent(
 					inter,
+					locationRange,
 					AccountInboxUnpublishedEventType,
 					[]interpreter.Value{
 						providerValue,
 						nameValue,
 					},
-					locationRange,
 				)
 
 				return interpreter.NewSomeValueNonCopying(inter, value)
@@ -1143,6 +1155,7 @@ func newAccountInboxClaimFunction(
 					true,
 					nil,
 					nil,
+					false, // publishedValue is an element in storage map because it is returned by ReadStored.
 				)
 
 				inter.WriteStored(
@@ -1154,13 +1167,13 @@ func newAccountInboxClaimFunction(
 
 				handler.EmitEvent(
 					inter,
+					locationRange,
 					AccountInboxClaimedEventType,
 					[]interpreter.Value{
 						providerValue,
 						recipientValue,
 						nameValue,
 					},
-					locationRange,
 				)
 
 				return interpreter.NewSomeValueNonCopying(inter, value)
@@ -1729,13 +1742,13 @@ func changeAccountContracts(
 
 	handler.EmitEvent(
 		inter,
+		locationRange,
 		eventType,
 		[]interpreter.Value{
 			addressValue,
 			codeHashValue,
 			nameValue,
 		},
-		locationRange,
 	)
 
 	return interpreter.NewDeployedContractValue(
@@ -2119,13 +2132,13 @@ func newAccountContractsRemoveFunction(
 
 					handler.EmitEvent(
 						inter,
+						locationRange,
 						AccountContractRemovedEventType,
 						[]interpreter.Value{
 							addressValue,
 							codeHashValue,
 							nameValue,
 						},
-						locationRange,
 					)
 
 					return interpreter.NewSomeValueNonCopying(
@@ -2260,33 +2273,35 @@ func CodeToHashValue(inter *interpreter.Interpreter, code []byte) *interpreter.A
 
 func newAccountStorageCapabilitiesValue(
 	inter *interpreter.Interpreter,
-	accountIDGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
+	issueHandler CapabilityControllerIssueHandler,
+	handler CapabilityControllerHandler,
 ) interpreter.Value {
 	return interpreter.NewAccountStorageCapabilitiesValue(
 		inter,
 		addressValue,
-		newAccountStorageCapabilitiesGetControllerFunction(inter, addressValue),
-		newAccountStorageCapabilitiesGetControllersFunction(inter, addressValue),
-		newAccountStorageCapabilitiesForEachControllerFunction(inter, addressValue),
-		newAccountStorageCapabilitiesIssueFunction(inter, accountIDGenerator, addressValue),
-		newAccountStorageCapabilitiesIssueWithTypeFunction(inter, accountIDGenerator, addressValue),
+		newAccountStorageCapabilitiesGetControllerFunction(inter, addressValue, handler),
+		newAccountStorageCapabilitiesGetControllersFunction(inter, addressValue, handler),
+		newAccountStorageCapabilitiesForEachControllerFunction(inter, addressValue, handler),
+		newAccountStorageCapabilitiesIssueFunction(inter, issueHandler, addressValue),
+		newAccountStorageCapabilitiesIssueWithTypeFunction(inter, issueHandler, addressValue),
 	)
 }
 
 func newAccountAccountCapabilitiesValue(
 	inter *interpreter.Interpreter,
-	accountIDGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
+	issueHandler CapabilityControllerIssueHandler,
+	handler CapabilityControllerHandler,
 ) interpreter.Value {
 	accountCapabilities := interpreter.NewAccountAccountCapabilitiesValue(
 		inter,
 		addressValue,
-		newAccountAccountCapabilitiesGetControllerFunction(inter, addressValue),
-		newAccountAccountCapabilitiesGetControllersFunction(inter, addressValue),
-		newAccountAccountCapabilitiesForEachControllerFunction(inter, addressValue),
-		newAccountAccountCapabilitiesIssueFunction(inter, accountIDGenerator, addressValue),
-		newAccountAccountCapabilitiesIssueWithTypeFunction(inter, accountIDGenerator, addressValue),
+		newAccountAccountCapabilitiesGetControllerFunction(inter, addressValue, handler),
+		newAccountAccountCapabilitiesGetControllersFunction(inter, addressValue, handler),
+		newAccountAccountCapabilitiesForEachControllerFunction(inter, addressValue, handler),
+		newAccountAccountCapabilitiesIssueFunction(inter, addressValue, issueHandler),
+		newAccountAccountCapabilitiesIssueWithTypeFunction(inter, addressValue, issueHandler),
 	)
 
 	return accountCapabilities
@@ -2294,29 +2309,32 @@ func newAccountAccountCapabilitiesValue(
 
 func newAccountCapabilitiesValue(
 	inter *interpreter.Interpreter,
-	idGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
+	issueHandler CapabilityControllerIssueHandler,
+	handler CapabilityControllerHandler,
 ) interpreter.Value {
 	return interpreter.NewAccountCapabilitiesValue(
 		inter,
 		addressValue,
-		newAccountCapabilitiesGetFunction(inter, addressValue, false),
-		newAccountCapabilitiesGetFunction(inter, addressValue, true),
+		newAccountCapabilitiesGetFunction(inter, addressValue, handler, false),
+		newAccountCapabilitiesGetFunction(inter, addressValue, handler, true),
 		newAccountCapabilitiesExistsFunction(inter, addressValue),
-		newAccountCapabilitiesPublishFunction(inter, addressValue),
-		newAccountCapabilitiesUnpublishFunction(inter, addressValue),
+		newAccountCapabilitiesPublishFunction(inter, addressValue, handler),
+		newAccountCapabilitiesUnpublishFunction(inter, addressValue, handler),
 		func() interpreter.Value {
 			return newAccountStorageCapabilitiesValue(
 				inter,
-				idGenerator,
 				addressValue,
+				issueHandler,
+				handler,
 			)
 		},
 		func() interpreter.Value {
 			return newAccountAccountCapabilitiesValue(
 				inter,
-				idGenerator,
 				addressValue,
+				issueHandler,
+				handler,
 			)
 		},
 	)
@@ -2325,6 +2343,7 @@ func newAccountCapabilitiesValue(
 func newAccountStorageCapabilitiesGetControllerFunction(
 	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
+	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
 	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
@@ -2346,7 +2365,13 @@ func newAccountStorageCapabilitiesGetControllerFunction(
 
 				capabilityID := uint64(capabilityIDValue)
 
-				referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID, locationRange)
+				referenceValue := getStorageCapabilityControllerReference(
+					inter,
+					locationRange,
+					address,
+					capabilityID,
+					handler,
+				)
 				if referenceValue == nil {
 					return interpreter.Nil
 				}
@@ -2367,6 +2392,7 @@ var storageCapabilityControllerReferencesArrayStaticType = &interpreter.Variable
 func newAccountStorageCapabilitiesGetControllersFunction(
 	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
+	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
 	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
@@ -2409,7 +2435,13 @@ func newAccountStorageCapabilitiesGetControllersFunction(
 							return nil
 						}
 
-						referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID, locationRange)
+						referenceValue := getStorageCapabilityControllerReference(
+							inter,
+							locationRange,
+							address,
+							capabilityID,
+							handler,
+						)
 						if referenceValue == nil {
 							panic(errors.NewUnreachableError())
 						}
@@ -2434,6 +2466,7 @@ var accountStorageCapabilitiesForEachControllerCallbackTypeParams = []sema.Type{
 func newAccountStorageCapabilitiesForEachControllerFunction(
 	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
+	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
 	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
@@ -2488,7 +2521,13 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 						break
 					}
 
-					referenceValue := getStorageCapabilityControllerReference(inter, address, capabilityID, locationRange)
+					referenceValue := getStorageCapabilityControllerReference(
+						inter,
+						locationRange,
+						address,
+						capabilityID,
+						handler,
+					)
 					if referenceValue == nil {
 						panic(errors.NewUnreachableError())
 					}
@@ -2542,7 +2581,7 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 
 func newAccountStorageCapabilitiesIssueFunction(
 	inter *interpreter.Interpreter,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
@@ -2573,7 +2612,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 				return checkAndIssueStorageCapabilityControllerWithType(
 					inter,
 					locationRange,
-					idGenerator,
+					handler,
 					address,
 					targetPathValue,
 					ty,
@@ -2585,7 +2624,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 
 func newAccountStorageCapabilitiesIssueWithTypeFunction(
 	inter *interpreter.Interpreter,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	addressValue interpreter.AddressValue,
 ) interpreter.BoundFunctionGenerator {
 	return func(storageCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
@@ -2623,7 +2662,7 @@ func newAccountStorageCapabilitiesIssueWithTypeFunction(
 				return checkAndIssueStorageCapabilityControllerWithType(
 					inter,
 					locationRange,
-					idGenerator,
+					handler,
 					address,
 					targetPathValue,
 					ty,
@@ -2636,7 +2675,7 @@ func newAccountStorageCapabilitiesIssueWithTypeFunction(
 func checkAndIssueStorageCapabilityControllerWithType(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	targetPathValue interpreter.PathValue,
 	ty sema.Type,
@@ -2656,7 +2695,7 @@ func checkAndIssueStorageCapabilityControllerWithType(
 	capabilityIDValue, borrowStaticType := IssueStorageCapabilityController(
 		inter,
 		locationRange,
-		idGenerator,
+		handler,
 		address,
 		borrowType,
 		targetPathValue,
@@ -2679,7 +2718,7 @@ func checkAndIssueStorageCapabilityControllerWithType(
 func IssueStorageCapabilityController(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	borrowType *sema.ReferenceType,
 	targetPathValue interpreter.PathValue,
@@ -2687,6 +2726,13 @@ func IssueStorageCapabilityController(
 	interpreter.UInt64Value,
 	*interpreter.ReferenceStaticType,
 ) {
+	if targetPathValue.Domain != common.PathDomainStorage {
+		panic(errors.NewDefaultUserError(
+			"invalid storage capability target path domain: %s",
+			targetPathValue.Domain.Identifier(),
+		))
+	}
+
 	// Create and write StorageCapabilityController
 
 	borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, borrowType)
@@ -2694,7 +2740,7 @@ func IssueStorageCapabilityController(
 	var capabilityID uint64
 	var err error
 	errors.WrapPanic(func() {
-		capabilityID, err = idGenerator.GenerateAccountID(address)
+		capabilityID, err = handler.GenerateAccountID(address)
 	})
 	if err != nil {
 		panic(interpreter.WrappedExternalError(err))
@@ -2715,13 +2761,28 @@ func IssueStorageCapabilityController(
 	storeCapabilityController(inter, address, capabilityIDValue, controller)
 	recordStorageCapabilityController(inter, locationRange, address, targetPathValue, capabilityIDValue)
 
+	addressValue := interpreter.AddressValue(address)
+	typeValue := interpreter.NewTypeValue(inter, borrowStaticType)
+
+	handler.EmitEvent(
+		inter,
+		locationRange,
+		StorageCapabilityControllerIssuedEventType,
+		[]interpreter.Value{
+			capabilityIDValue,
+			addressValue,
+			typeValue,
+			targetPathValue,
+		},
+	)
+
 	return capabilityIDValue, borrowStaticType
 }
 
 func newAccountAccountCapabilitiesIssueFunction(
 	inter *interpreter.Interpreter,
-	idGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
+	handler CapabilityControllerIssueHandler,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
@@ -2744,7 +2805,7 @@ func newAccountAccountCapabilitiesIssueFunction(
 				return checkAndIssueAccountCapabilityControllerWithType(
 					inter,
 					locationRange,
-					idGenerator,
+					handler,
 					address,
 					ty,
 				)
@@ -2755,8 +2816,8 @@ func newAccountAccountCapabilitiesIssueFunction(
 
 func newAccountAccountCapabilitiesIssueWithTypeFunction(
 	inter *interpreter.Interpreter,
-	idGenerator AccountIDGenerator,
 	addressValue interpreter.AddressValue,
+	handler CapabilityControllerIssueHandler,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
@@ -2786,7 +2847,7 @@ func newAccountAccountCapabilitiesIssueWithTypeFunction(
 				return checkAndIssueAccountCapabilityControllerWithType(
 					inter,
 					locationRange,
-					idGenerator,
+					handler,
 					address,
 					ty,
 				)
@@ -2798,7 +2859,7 @@ func newAccountAccountCapabilitiesIssueWithTypeFunction(
 func checkAndIssueAccountCapabilityControllerWithType(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	ty sema.Type,
 ) *interpreter.IDCapabilityValue {
@@ -2825,7 +2886,7 @@ func checkAndIssueAccountCapabilityControllerWithType(
 		IssueAccountCapabilityController(
 			inter,
 			locationRange,
-			idGenerator,
+			handler,
 			address,
 			borrowType,
 		)
@@ -2847,7 +2908,7 @@ func checkAndIssueAccountCapabilityControllerWithType(
 func IssueAccountCapabilityController(
 	inter *interpreter.Interpreter,
 	locationRange interpreter.LocationRange,
-	idGenerator AccountIDGenerator,
+	handler CapabilityControllerIssueHandler,
 	address common.Address,
 	borrowType *sema.ReferenceType,
 ) (
@@ -2861,7 +2922,7 @@ func IssueAccountCapabilityController(
 	var capabilityID uint64
 	var err error
 	errors.WrapPanic(func() {
-		capabilityID, err = idGenerator.GenerateAccountID(address)
+		capabilityID, err = handler.GenerateAccountID(address)
 	})
 	if err != nil {
 		panic(interpreter.WrappedExternalError(err))
@@ -2884,6 +2945,20 @@ func IssueAccountCapabilityController(
 		locationRange,
 		address,
 		capabilityIDValue,
+	)
+
+	addressValue := interpreter.AddressValue(address)
+	typeValue := interpreter.NewTypeValue(inter, borrowStaticType)
+
+	handler.EmitEvent(
+		inter,
+		locationRange,
+		AccountCapabilityControllerIssuedEventType,
+		[]interpreter.Value{
+			capabilityIDValue,
+			addressValue,
+			typeValue,
+		},
 	)
 
 	return capabilityIDValue, borrowStaticType
@@ -2944,6 +3019,7 @@ func getCapabilityController(
 	inter *interpreter.Interpreter,
 	address common.Address,
 	capabilityID uint64,
+	handler CapabilityControllerHandler,
 ) interpreter.CapabilityControllerValue {
 
 	storageMapKey := interpreter.Uint64StorageMapKey(capabilityID)
@@ -2976,10 +3052,18 @@ func getCapabilityController(
 			newCapabilityControllerSetTagFunction(address, capabilityID)
 
 		controller.Delete =
-			newStorageCapabilityControllerDeleteFunction(address, controller)
+			newStorageCapabilityControllerDeleteFunction(
+				address,
+				controller,
+				handler,
+			)
 
 		controller.SetTarget =
-			newStorageCapabilityControllerSetTargetFunction(address, controller)
+			newStorageCapabilityControllerSetTargetFunction(
+				address,
+				controller,
+				handler,
+			)
 
 	case *interpreter.AccountCapabilityControllerValue:
 		capabilityID := controller.CapabilityID
@@ -2993,7 +3077,11 @@ func getCapabilityController(
 			newCapabilityControllerSetTagFunction(address, capabilityID)
 
 		controller.Delete =
-			newAccountCapabilityControllerDeleteFunction(address, controller)
+			newAccountCapabilityControllerDeleteFunction(
+				address,
+				controller,
+				handler,
+			)
 	}
 
 	return controller
@@ -3001,12 +3089,18 @@ func getCapabilityController(
 
 func getStorageCapabilityControllerReference(
 	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
 	address common.Address,
 	capabilityID uint64,
-	locationRange interpreter.LocationRange,
+	handler CapabilityControllerHandler,
 ) *interpreter.EphemeralReferenceValue {
 
-	capabilityController := getCapabilityController(inter, address, capabilityID)
+	capabilityController := getCapabilityController(
+		inter,
+		address,
+		capabilityID,
+		handler,
+	)
 	if capabilityController == nil {
 		return nil
 	}
@@ -3028,6 +3122,7 @@ func getStorageCapabilityControllerReference(
 func newStorageCapabilityControllerSetTargetFunction(
 	address common.Address,
 	controller *interpreter.StorageCapabilityControllerValue,
+	handler CapabilityControllerHandler,
 ) func(*interpreter.Interpreter, interpreter.LocationRange, interpreter.PathValue) {
 	return func(
 		inter *interpreter.Interpreter,
@@ -3051,12 +3146,26 @@ func newStorageCapabilityControllerSetTargetFunction(
 			newTargetPathValue,
 			capabilityID,
 		)
+
+		addressValue := interpreter.AddressValue(address)
+
+		handler.EmitEvent(
+			inter,
+			locationRange,
+			StorageCapabilityControllerTargetChangedEventType,
+			[]interpreter.Value{
+				capabilityID,
+				addressValue,
+				newTargetPathValue,
+			},
+		)
 	}
 }
 
 func newStorageCapabilityControllerDeleteFunction(
 	address common.Address,
 	controller *interpreter.StorageCapabilityControllerValue,
+	handler CapabilityControllerHandler,
 ) func(*interpreter.Interpreter, interpreter.LocationRange) {
 	return func(
 		inter *interpreter.Interpreter,
@@ -3076,6 +3185,18 @@ func newStorageCapabilityControllerDeleteFunction(
 			inter,
 			address,
 			capabilityID,
+		)
+
+		addressValue := interpreter.AddressValue(address)
+
+		handler.EmitEvent(
+			inter,
+			locationRange,
+			StorageCapabilityControllerDeletedEventType,
+			[]interpreter.Value{
+				capabilityID,
+				addressValue,
+			},
 		)
 	}
 }
@@ -3355,7 +3476,9 @@ func getAccountCapabilityControllerIDsIterator(
 func newAccountCapabilitiesPublishFunction(
 	inter *interpreter.Interpreter,
 	accountAddressValue interpreter.AddressValue,
+	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
+
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		accountAddress := accountAddressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
@@ -3421,6 +3544,7 @@ func newAccountCapabilitiesPublishFunction(
 					true,
 					nil,
 					nil,
+					true, // capabilityValue is standalone because it is from invocation.Arguments[0].
 				).(*interpreter.IDCapabilityValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -3435,6 +3559,17 @@ func newAccountCapabilitiesPublishFunction(
 					capabilityValue,
 				)
 
+				handler.EmitEvent(
+					inter,
+					locationRange,
+					CapabilityPublishedEventType,
+					[]interpreter.Value{
+						accountAddressValue,
+						pathValue,
+						capabilityValue,
+					},
+				)
+
 				return interpreter.Void
 			},
 		)
@@ -3444,7 +3579,9 @@ func newAccountCapabilitiesPublishFunction(
 func newAccountCapabilitiesUnpublishFunction(
 	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
+	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
+
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
 		return interpreter.NewBoundHostFunctionValue(
@@ -3491,6 +3628,7 @@ func newAccountCapabilitiesUnpublishFunction(
 					true,
 					nil,
 					nil,
+					false, // capabilityValue is an element of storage map.
 				).(*interpreter.IDCapabilityValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -3501,6 +3639,16 @@ func newAccountCapabilitiesUnpublishFunction(
 					domain,
 					storageMapKey,
 					nil,
+				)
+
+				handler.EmitEvent(
+					inter,
+					locationRange,
+					CapabilityUnpublishedEventType,
+					[]interpreter.Value{
+						addressValue,
+						pathValue,
+					},
 				)
 
 				return interpreter.NewSomeValueNonCopying(inter, capabilityValue)
@@ -3534,6 +3682,7 @@ func getCheckedCapabilityController(
 	capabilityIDValue interpreter.UInt64Value,
 	wantedBorrowType *sema.ReferenceType,
 	capabilityBorrowType *sema.ReferenceType,
+	handler CapabilityControllerHandler,
 ) (
 	interpreter.CapabilityControllerValue,
 	*sema.ReferenceType,
@@ -3551,7 +3700,12 @@ func getCheckedCapabilityController(
 	capabilityAddress := capabilityAddressValue.ToAddress()
 	capabilityID := uint64(capabilityIDValue)
 
-	controller := getCapabilityController(inter, capabilityAddress, capabilityID)
+	controller := getCapabilityController(
+		inter,
+		capabilityAddress,
+		capabilityID,
+		handler,
+	)
 	if controller == nil {
 		return nil, nil
 	}
@@ -3573,11 +3727,12 @@ func getCheckedCapabilityController(
 
 func GetCheckedCapabilityControllerReference(
 	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
 	capabilityAddressValue interpreter.AddressValue,
 	capabilityIDValue interpreter.UInt64Value,
 	wantedBorrowType *sema.ReferenceType,
 	capabilityBorrowType *sema.ReferenceType,
-	locationRange interpreter.LocationRange,
+	handler CapabilityControllerHandler,
 ) interpreter.ReferenceValue {
 	controller, resultBorrowType := getCheckedCapabilityController(
 		inter,
@@ -3585,6 +3740,7 @@ func GetCheckedCapabilityControllerReference(
 		capabilityIDValue,
 		wantedBorrowType,
 		capabilityBorrowType,
+		handler,
 	)
 	if controller == nil {
 		return nil
@@ -3607,14 +3763,16 @@ func BorrowCapabilityController(
 	capabilityID interpreter.UInt64Value,
 	wantedBorrowType *sema.ReferenceType,
 	capabilityBorrowType *sema.ReferenceType,
+	handler CapabilityControllerHandler,
 ) interpreter.ReferenceValue {
 	referenceValue := GetCheckedCapabilityControllerReference(
 		inter,
+		locationRange,
 		capabilityAddress,
 		capabilityID,
 		wantedBorrowType,
 		capabilityBorrowType,
-		locationRange,
+		handler,
 	)
 	if referenceValue == nil {
 		return nil
@@ -3643,14 +3801,17 @@ func CheckCapabilityController(
 	capabilityID interpreter.UInt64Value,
 	wantedBorrowType *sema.ReferenceType,
 	capabilityBorrowType *sema.ReferenceType,
+	handler CapabilityControllerHandler,
 ) interpreter.BoolValue {
+
 	referenceValue := GetCheckedCapabilityControllerReference(
 		inter,
+		locationRange,
 		capabilityAddress,
 		capabilityID,
 		wantedBorrowType,
 		capabilityBorrowType,
-		locationRange,
+		handler,
 	)
 	if referenceValue == nil {
 		return interpreter.FalseValue
@@ -3672,6 +3833,7 @@ func CheckCapabilityController(
 func newAccountCapabilitiesGetFunction(
 	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
+	handler CapabilityControllerHandler,
 	borrow bool,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
@@ -3778,6 +3940,7 @@ func newAccountCapabilitiesGetFunction(
 						capabilityID,
 						wantedBorrowType,
 						capabilityBorrowType,
+						handler,
 					)
 				} else {
 					// When not borrowing,
@@ -3790,6 +3953,7 @@ func newAccountCapabilitiesGetFunction(
 						capabilityID,
 						wantedBorrowType,
 						capabilityBorrowType,
+						handler,
 					)
 					if controller != nil {
 						resultBorrowStaticType :=
@@ -3863,12 +4027,18 @@ func newAccountCapabilitiesExistsFunction(
 
 func getAccountCapabilityControllerReference(
 	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
 	address common.Address,
 	capabilityID uint64,
-	locationRange interpreter.LocationRange,
+	handler CapabilityControllerHandler,
 ) *interpreter.EphemeralReferenceValue {
 
-	capabilityController := getCapabilityController(inter, address, capabilityID)
+	capabilityController := getCapabilityController(
+		inter,
+		address,
+		capabilityID,
+		handler,
+	)
 	if capabilityController == nil {
 		return nil
 	}
@@ -3890,6 +4060,7 @@ func getAccountCapabilityControllerReference(
 func newAccountAccountCapabilitiesGetControllerFunction(
 	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
+	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
@@ -3911,7 +4082,13 @@ func newAccountAccountCapabilitiesGetControllerFunction(
 
 				capabilityID := uint64(capabilityIDValue)
 
-				referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID, locationRange)
+				referenceValue := getAccountCapabilityControllerReference(
+					inter,
+					locationRange,
+					address,
+					capabilityID,
+					handler,
+				)
 				if referenceValue == nil {
 					return interpreter.Nil
 				}
@@ -3932,6 +4109,7 @@ var accountCapabilityControllerReferencesArrayStaticType = &interpreter.Variable
 func newAccountAccountCapabilitiesGetControllersFunction(
 	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
+	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
@@ -3969,9 +4147,10 @@ func newAccountAccountCapabilitiesGetControllersFunction(
 
 						referenceValue := getAccountCapabilityControllerReference(
 							inter,
+							locationRange,
 							address,
 							capabilityID,
-							locationRange,
+							handler,
 						)
 						if referenceValue == nil {
 							panic(errors.NewUnreachableError())
@@ -4010,6 +4189,7 @@ func (CapabilityControllersMutatedDuringIterationError) Error() string {
 func newAccountAccountCapabilitiesForEachControllerFunction(
 	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
+	handler CapabilityControllerHandler,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
 		address := addressValue.ToAddress()
@@ -4056,7 +4236,13 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 						break
 					}
 
-					referenceValue := getAccountCapabilityControllerReference(inter, address, capabilityID, locationRange)
+					referenceValue := getAccountCapabilityControllerReference(
+						inter,
+						locationRange,
+						address,
+						capabilityID,
+						handler,
+					)
 					if referenceValue == nil {
 						panic(errors.NewUnreachableError())
 					}
@@ -4111,6 +4297,7 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 func newAccountCapabilityControllerDeleteFunction(
 	address common.Address,
 	controller *interpreter.AccountCapabilityControllerValue,
+	handler CapabilityControllerHandler,
 ) func(*interpreter.Interpreter, interpreter.LocationRange) {
 	return func(inter *interpreter.Interpreter, locationRange interpreter.LocationRange) {
 		capabilityID := controller.CapabilityID
@@ -4125,6 +4312,18 @@ func newAccountCapabilityControllerDeleteFunction(
 			inter,
 			address,
 			capabilityID,
+		)
+
+		addressValue := interpreter.AddressValue(address)
+
+		handler.EmitEvent(
+			inter,
+			locationRange,
+			AccountCapabilityControllerDeletedEventType,
+			[]interpreter.Value{
+				capabilityID,
+				addressValue,
+			},
 		)
 	}
 }

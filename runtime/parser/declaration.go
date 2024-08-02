@@ -1251,7 +1251,7 @@ func parseEntitlementOrMappingDeclaration(
 		declarationRange := ast.NewRange(
 			p.memoryGauge,
 			startPos,
-			identifier.Pos,
+			identifier.EndPosition(p.memoryGauge),
 		)
 
 		return ast.NewEntitlementDeclaration(

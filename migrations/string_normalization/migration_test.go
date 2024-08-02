@@ -294,6 +294,7 @@ func TestStringNormalizingMigration(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // storedValue is standalone
 		)
 
 		inter.WriteStored(
@@ -436,6 +437,8 @@ func TestStringValueRehash(t *testing.T) {
 				false,
 				nil,
 				nil,
+				true, // dictValue is standalone
+
 			),
 		)
 
@@ -583,6 +586,7 @@ func TestCharacterValueRehash(t *testing.T) {
 				false,
 				nil,
 				nil,
+				true, // dictValue is standalone
 			),
 		)
 

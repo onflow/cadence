@@ -1521,6 +1521,7 @@ func TestMigrateSimpleContract(t *testing.T) {
 			false,
 			nil,
 			nil,
+			true, // standalone values doesn't have a parent container.
 		)
 
 		inter.WriteStored(
@@ -3207,6 +3208,7 @@ func TestRehash(t *testing.T) {
 				false,
 				nil,
 				nil,
+				true, // dictValue is standalone
 			),
 		)
 
@@ -3631,6 +3633,7 @@ func TestUseAfterMigrationFailure(t *testing.T) {
 				false,
 				nil,
 				nil,
+				true, // dictValue is standalone
 			),
 		)
 

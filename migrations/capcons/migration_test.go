@@ -36,16 +36,37 @@ import (
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-type testAccountIDGenerator struct {
-	ids map[common.Address]uint64
+type testCapConHandler struct {
+	ids    map[common.Address]uint64
+	events []cadence.Event
 }
 
-func (g *testAccountIDGenerator) GenerateAccountID(address common.Address) (uint64, error) {
+var _ stdlib.CapabilityControllerIssueHandler = &testCapConHandler{}
+
+func (g *testCapConHandler) GenerateAccountID(address common.Address) (uint64, error) {
 	if g.ids == nil {
 		g.ids = make(map[common.Address]uint64)
 	}
 	g.ids[address]++
 	return g.ids[address], nil
+}
+
+func (g *testCapConHandler) EmitEvent(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	eventType *sema.CompositeType,
+	values []interpreter.Value,
+) {
+	runtime.EmitEventFields(
+		inter,
+		locationRange,
+		eventType,
+		values,
+		func(event cadence.Event) error {
+			g.events = append(g.events, event)
+			return nil
+		},
+	)
 }
 
 type testCapConsLinkMigration struct {
@@ -57,6 +78,7 @@ type testCapConsPathCapabilityMigration struct {
 	accountAddress common.Address
 	addressPath    interpreter.AddressPath
 	borrowType     *interpreter.ReferenceStaticType
+	capabilityID   interpreter.UInt64Value
 }
 
 type testCapConsMissingCapabilityID struct {
@@ -119,6 +141,7 @@ func (t *testMigrationReporter) MigratedPathCapability(
 	accountAddress common.Address,
 	addressPath interpreter.AddressPath,
 	borrowType *interpreter.ReferenceStaticType,
+	capabilityID interpreter.UInt64Value,
 ) {
 	t.pathCapabilityMigrations = append(
 		t.pathCapabilityMigrations,
@@ -126,6 +149,7 @@ func (t *testMigrationReporter) MigratedPathCapability(
 			accountAddress: accountAddress,
 			addressPath:    addressPath,
 			borrowType:     borrowType,
+			capabilityID:   capabilityID,
 		},
 	)
 }
@@ -240,7 +264,9 @@ func testPathCapabilityValueMigration(
 	expectedErrors []error,
 	expectedPathMigrations []testCapConsPathCapabilityMigration,
 	expectedMissingCapabilityIDs []testCapConsMissingCapabilityID,
-	setupFunction, checkFunction string,
+	expectedEvents []string,
+	setupFunction string,
+	checkFunction string,
 	borrowShouldFail bool,
 ) {
 	require.True(t,
@@ -466,13 +492,16 @@ func testPathCapabilityValueMigration(
 
 	capabilityMapping := &CapabilityMapping{}
 
+	handler := &testCapConHandler{}
+
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
-				CapabilityMapping:  capabilityMapping,
-				AccountIDGenerator: &testAccountIDGenerator{},
-				Reporter:           reporter,
+				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
+				Handler:           handler,
+				Reporter:          reporter,
 			},
 		),
 	)
@@ -482,6 +511,7 @@ func testPathCapabilityValueMigration(
 			reporter,
 			&CapabilityValueMigration{
 				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
 				Reporter:          reporter,
 			},
 		),
@@ -511,6 +541,11 @@ func testPathCapabilityValueMigration(
 
 	err = storage.CheckHealth()
 	require.NoError(t, err)
+
+	require.Equal(t,
+		expectedEvents,
+		nonDeploymentEventStrings(handler.events),
+	)
 
 	if len(expectedMissingCapabilityIDs) == 0 {
 
@@ -549,6 +584,20 @@ func testPathCapabilityValueMigration(
 	}
 }
 
+func nonDeploymentEventStrings(events []cadence.Event) []string {
+	accountContractAddedEventTypeID := stdlib.AccountContractAddedEventType.ID()
+
+	strings := make([]string, 0, len(events))
+	for _, event := range events {
+		// Skip deployment events, i.e. contract added to account
+		if common.TypeID(event.Type().ID()) == accountContractAddedEventTypeID {
+			continue
+		}
+		strings = append(strings, event.String())
+	}
+	return strings
+}
+
 func TestPathCapabilityValueMigration(t *testing.T) {
 
 	t.Parallel()
@@ -563,6 +612,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		expectedPathMigrations       []testCapConsPathCapabilityMigration
 		expectedMissingCapabilityIDs []testCapConsMissingCapabilityID
 		borrowShouldFail             bool
+		expectedEvents               []string
 	}
 
 	expectedWrappedCapabilityValueMigration := testMigration{
@@ -643,8 +693,13 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: testRReferenceStaticType,
+					borrowType:   testRReferenceStaticType,
+					capabilityID: 2,
 				},
+			},
+			expectedEvents: []string{
+				`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
+				`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
 			},
 		},
 		{
@@ -694,8 +749,12 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: testRReferenceStaticType,
+					borrowType:   testRReferenceStaticType,
+					capabilityID: 1,
 				},
+			},
+			expectedEvents: []string{
+				`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
 			},
 		},
 		{
@@ -745,8 +804,12 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: testRReferenceStaticType,
+					borrowType:   testRReferenceStaticType,
+					capabilityID: 1,
 				},
+			},
+			expectedEvents: []string{
+				`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
 			},
 		},
 		// Test that the migration also follows capability controller,
@@ -822,8 +885,13 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: testRReferenceStaticType,
+					borrowType:   testRReferenceStaticType,
+					capabilityID: 2,
 				},
+			},
+			expectedEvents: []string{
+				`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
+				`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
 			},
 		},
 		// NOTE: this migrates a broken capability to a broken capability
@@ -875,8 +943,12 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: testRReferenceStaticType,
+					borrowType:   testRReferenceStaticType,
+					capabilityID: 1,
 				},
+			},
+			expectedEvents: []string{
+				`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.S>(), path: /storage/test)`,
 			},
 			borrowShouldFail: true,
 		},
@@ -932,6 +1004,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 					},
 				},
 			},
+			expectedEvents: []string{},
 		},
 		{
 			name: "Path links, missing source (public -> private)",
@@ -958,6 +1031,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 					},
 				},
 			},
+			expectedEvents: []string{},
 		},
 		{
 			name: "Path links, missing target (public -> private)",
@@ -998,12 +1072,46 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 					},
 				},
 			},
+			expectedEvents: []string{},
 		},
 		{
-			name: "Account link, working chain (public)",
-			// Equivalent to: getCapability<&AuthAccount>(/public/test)
+			name: "Path link, storage path",
+			// Equivalent to: getCapability<&Test.R>(/storage/test)
 			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: authAccountReferenceStaticType,
+				BorrowType: testRReferenceStaticType,
+				Path: interpreter.PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: testPathIdentifier,
+				},
+				Address: interpreter.AddressValue(testAddress),
+			},
+			pathLinks: nil,
+			expectedMigrations: []testMigration{
+				expectedWrappedCapabilityValueMigration,
+			},
+			expectedPathMigrations: []testCapConsPathCapabilityMigration{
+				{
+					accountAddress: testAddress,
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainStorage,
+							testPathIdentifier,
+						),
+					},
+					borrowType:   testRReferenceStaticType,
+					capabilityID: 1,
+				},
+			},
+			expectedEvents: []string{
+				`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
+			},
+		},
+		{
+			name: "Account link, working chain (public), unauthorized",
+			// Equivalent to: getCapability<&Account>(/public/test)
+			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				BorrowType: unauthorizedAccountReferenceStaticType,
 				Path: interpreter.PathValue{
 					Domain:     common.PathDomainPublic,
 					Identifier: testPathIdentifier,
@@ -1039,15 +1147,71 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: fullyEntitledAccountReferenceStaticType,
+					borrowType:   unauthorizedAccountReferenceStaticType,
+					capabilityID: 1,
 				},
+			},
+			expectedEvents: []string{
+				"flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<auth(Capabilities,Contracts,Inbox,Keys,Storage)&Account>())",
 			},
 		},
 		{
-			name: "Account link, working chain (private)",
-			// Equivalent to: getCapability<&AuthAccount>(/public/test)
+			name: "Account link, working chain (public), authorized",
+			// Equivalent to: getCapability<auth(Capabilities, Contracts, Inbox, Keys, Storage) &Account>(/public/test)
 			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: authAccountReferenceStaticType,
+				BorrowType: interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.FullyEntitledAccountAccess,
+					interpreter.PrimitiveStaticTypeAccount,
+				),
+				Path: interpreter.PathValue{
+					Domain:     common.PathDomainPublic,
+					Identifier: testPathIdentifier,
+				},
+				Address: interpreter.AddressValue(testAddress),
+			},
+			accountLinks: []interpreter.PathValue{
+				// Equivalent to:
+				//   linkAccount(/public/test)
+				{
+					Domain:     common.PathDomainPublic,
+					Identifier: testPathIdentifier,
+				},
+			},
+			expectedMigrations: []testMigration{
+				{
+					storageKey: interpreter.StorageKey{
+						Address: testAddress,
+						Key:     common.PathDomainPublic.Identifier(),
+					},
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
+				},
+				expectedWrappedCapabilityValueMigration,
+			},
+			expectedPathMigrations: []testCapConsPathCapabilityMigration{
+				{
+					accountAddress: testAddress,
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPublic,
+							testPathIdentifier,
+						),
+					},
+					borrowType:   fullyEntitledAccountReferenceStaticType,
+					capabilityID: 1,
+				},
+			},
+			expectedEvents: []string{
+				"flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<auth(Capabilities,Contracts,Inbox,Keys,Storage)&Account>())",
+			},
+		},
+		{
+			name: "Account link, working chain (private), unauthorized",
+			// Equivalent to: getCapability<&Account>(/public/test)
+			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				BorrowType: unauthorizedAccountReferenceStaticType,
 				Path: interpreter.PathValue{
 					Domain:     common.PathDomainPrivate,
 					Identifier: testPathIdentifier,
@@ -1083,8 +1247,60 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 							testPathIdentifier,
 						),
 					},
-					borrowType: fullyEntitledAccountReferenceStaticType,
+					borrowType:   unauthorizedAccountReferenceStaticType,
+					capabilityID: 1,
 				},
+			},
+			expectedEvents: []string{
+				"flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<auth(Capabilities,Contracts,Inbox,Keys,Storage)&Account>())",
+			},
+		},
+		{
+			name: "Account link, working chain (private), authorized",
+			// Equivalent to: getCapability<auth(Capabilities, Contracts, Inbox, Keys, Storage) &Account>(/public/test)
+			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
+				BorrowType: fullyEntitledAccountReferenceStaticType,
+				Path: interpreter.PathValue{
+					Domain:     common.PathDomainPrivate,
+					Identifier: testPathIdentifier,
+				},
+				Address: interpreter.AddressValue(testAddress),
+			},
+			accountLinks: []interpreter.PathValue{
+				// Equivalent to:
+				//   linkAccount(/private/test)
+				{
+					Domain:     common.PathDomainPrivate,
+					Identifier: testPathIdentifier,
+				},
+			},
+			expectedMigrations: []testMigration{
+				{
+					storageKey: interpreter.StorageKey{
+						Address: testAddress,
+						Key:     common.PathDomainPrivate.Identifier(),
+					},
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
+				},
+				expectedWrappedCapabilityValueMigration,
+			},
+			expectedPathMigrations: []testCapConsPathCapabilityMigration{
+				{
+					accountAddress: testAddress,
+					addressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.NewUnmeteredPathValue(
+							common.PathDomainPrivate,
+							testPathIdentifier,
+						),
+					},
+					borrowType:   fullyEntitledAccountReferenceStaticType,
+					capabilityID: 1,
+				},
+			},
+			expectedEvents: []string{
+				"flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<auth(Capabilities,Contracts,Inbox,Keys,Storage)&Account>())",
 			},
 		},
 	}
@@ -1197,6 +1413,7 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 				linkTestCase.expectedErrors,
 				linkTestCase.expectedPathMigrations,
 				linkTestCase.expectedMissingCapabilityIDs,
+				linkTestCase.expectedEvents,
 				valueTestCase.setupFunction,
 				valueTestCase.checkFunction,
 				linkTestCase.borrowShouldFail,
@@ -1220,6 +1437,7 @@ func testLinkMigration(
 	expectedLinkMigrations []testCapConsLinkMigration,
 	expectedCyclicLinkErrors []CyclicLinkError,
 	expectedMissingTargets []interpreter.AddressPath,
+	expectedEvents []string,
 ) {
 	require.True(t,
 		len(expectedLinkMigrations) == 0 ||
@@ -1309,13 +1527,16 @@ func testLinkMigration(
 
 	capabilityMapping := &CapabilityMapping{}
 
+	handler := &testCapConHandler{}
+
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
-				CapabilityMapping:  capabilityMapping,
-				AccountIDGenerator: &testAccountIDGenerator{},
-				Reporter:           reporter,
+				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
+				Handler:           handler,
+				Reporter:          reporter,
 			},
 		),
 	)
@@ -1348,6 +1569,11 @@ func testLinkMigration(
 
 	err = storage.CheckHealth()
 	require.NoError(t, err)
+
+	require.Equal(t,
+		expectedEvents,
+		nonDeploymentEventStrings(handler.events),
+	)
 }
 
 func TestLinkMigration(t *testing.T) {
@@ -1363,6 +1589,7 @@ func TestLinkMigration(t *testing.T) {
 		expectedLinkMigrations   []testCapConsLinkMigration
 		expectedCyclicLinkErrors []CyclicLinkError
 		expectedMissingTargets   []interpreter.AddressPath
+		expectedEvents           []string
 	}
 
 	linkTestCases := []linkTestCase{
@@ -1436,6 +1663,10 @@ func TestLinkMigration(t *testing.T) {
 					capabilityID: 2,
 				},
 			},
+			expectedEvents: []string{
+				`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
+				`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
+			},
 		},
 		{
 			name: "Path links, working chain (public -> storage)",
@@ -1476,6 +1707,9 @@ func TestLinkMigration(t *testing.T) {
 					capabilityID: 1,
 				},
 			},
+			expectedEvents: []string{
+				`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
+			},
 		},
 		{
 			name: "Path links, working chain (private -> storage)",
@@ -1515,6 +1749,9 @@ func TestLinkMigration(t *testing.T) {
 					},
 					capabilityID: 1,
 				},
+			},
+			expectedEvents: []string{
+				`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
 			},
 		},
 		// Test that the migration also follows capability controller,
@@ -1592,6 +1829,10 @@ func TestLinkMigration(t *testing.T) {
 					capabilityID: 2,
 				},
 			},
+			expectedEvents: []string{
+				`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
+				`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&A.0000000000000001.Test.R>(), path: /storage/test)`,
+			},
 		},
 		{
 			name: "Path links, cyclic chain (public -> private -> public)",
@@ -1659,6 +1900,7 @@ func TestLinkMigration(t *testing.T) {
 					},
 				},
 			},
+			expectedEvents: []string{},
 		},
 		{
 			name: "Path links, missing target (public -> private)",
@@ -1686,6 +1928,7 @@ func TestLinkMigration(t *testing.T) {
 					},
 				},
 			},
+			expectedEvents: []string{},
 		},
 		{
 			name: "Account link, working chain (public)",
@@ -1718,6 +1961,9 @@ func TestLinkMigration(t *testing.T) {
 					},
 					capabilityID: 1,
 				},
+			},
+			expectedEvents: []string{
+				`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<auth(Capabilities,Contracts,Inbox,Keys,Storage)&Account>())`,
 			},
 		},
 		{
@@ -1752,12 +1998,15 @@ func TestLinkMigration(t *testing.T) {
 					capabilityID: 1,
 				},
 			},
+			expectedEvents: []string{
+				`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<auth(Capabilities,Contracts,Inbox,Keys,Storage)&Account>())`,
+			},
 		},
 		{
-			name: "Account link, working chain (public -> private)",
+			name: "Account link, working chain (public -> private), unauthorized",
 			pathLinks: []testLink{
 				// Equivalent to:
-				//   link<&AuthAccount>(/public/test, target: /private/test)
+				//   link<&Account>(/public/test, target: /private/test)
 				{
 					sourcePath: interpreter.PathValue{
 						Domain:     common.PathDomainPublic,
@@ -1767,7 +2016,7 @@ func TestLinkMigration(t *testing.T) {
 						Domain:     common.PathDomainPrivate,
 						Identifier: testPathIdentifier,
 					},
-					borrowType: authAccountReferenceStaticType,
+					borrowType: unauthorizedAccountReferenceStaticType,
 				},
 			},
 			accountLinks: []interpreter.PathValue{
@@ -1818,6 +2067,87 @@ func TestLinkMigration(t *testing.T) {
 					capabilityID: 2,
 				},
 			},
+			expectedEvents: []string{
+				`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<auth(Capabilities,Contracts,Inbox,Keys,Storage)&Account>())`,
+				`flow.AccountCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&Account>())`,
+			},
+		},
+		{
+			name: "Account link, working chain (public -> private), authorized",
+			pathLinks: []testLink{
+				// Equivalent to:
+				//   link<auth(Capabilities, Contracts, Inbox, Keys, Storage) &Account>(
+				//       /public/test,
+				//       target: /private/test
+				//   )
+				{
+					sourcePath: interpreter.PathValue{
+						Domain:     common.PathDomainPublic,
+						Identifier: testPathIdentifier,
+					},
+					targetPath: interpreter.PathValue{
+						Domain:     common.PathDomainPrivate,
+						Identifier: testPathIdentifier,
+					},
+					borrowType: interpreter.NewReferenceStaticType(
+						nil,
+						interpreter.FullyEntitledAccountAccess,
+						interpreter.PrimitiveStaticTypeAccount,
+					),
+				},
+			},
+			accountLinks: []interpreter.PathValue{
+				// Equivalent to:
+				//   linkAccount(/private/test)
+				{
+					Domain:     common.PathDomainPrivate,
+					Identifier: testPathIdentifier,
+				},
+			},
+			expectedMigrations: []testMigration{
+				{
+					storageKey: interpreter.StorageKey{
+						Address: testAddress,
+						Key:     common.PathDomainPrivate.Identifier(),
+					},
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
+				},
+				{
+					storageKey: interpreter.StorageKey{
+						Address: testAddress,
+						Key:     common.PathDomainPublic.Identifier(),
+					},
+					storageMapKey: interpreter.StringStorageMapKey(testPathIdentifier),
+					migration:     "LinkValueMigration",
+				},
+			},
+			expectedLinkMigrations: []testCapConsLinkMigration{
+				{
+					accountAddressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPrivate,
+							Identifier: testPathIdentifier,
+						},
+					},
+					capabilityID: 1,
+				},
+				{
+					accountAddressPath: interpreter.AddressPath{
+						Address: testAddress,
+						Path: interpreter.PathValue{
+							Domain:     common.PathDomainPublic,
+							Identifier: testPathIdentifier,
+						},
+					},
+					capabilityID: 2,
+				},
+			},
+			expectedEvents: []string{
+				`flow.AccountCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<auth(Capabilities,Contracts,Inbox,Keys,Storage)&Account>())`,
+				`flow.AccountCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<auth(Capabilities,Contracts,Inbox,Keys,Storage)&Account>())`,
+			},
 		},
 	}
 
@@ -1835,6 +2165,7 @@ func TestLinkMigration(t *testing.T) {
 				linkTestCase.expectedLinkMigrations,
 				linkTestCase.expectedCyclicLinkErrors,
 				linkTestCase.expectedMissingTargets,
+				linkTestCase.expectedEvents,
 			)
 		})
 	}
@@ -1931,7 +2262,8 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 					testPathIdentifier,
 				),
 			},
-			borrowType: borrowType,
+			borrowType:   borrowType,
+			capabilityID: 2,
 		},
 	}
 
@@ -2018,13 +2350,16 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 
 	capabilityMapping := &CapabilityMapping{}
 
+	handler := &testCapConHandler{}
+
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
-				CapabilityMapping:  capabilityMapping,
-				AccountIDGenerator: &testAccountIDGenerator{},
-				Reporter:           reporter,
+				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
+				Handler:           handler,
+				Reporter:          reporter,
 			},
 		),
 	)
@@ -2034,6 +2369,7 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 			reporter,
 			&CapabilityValueMigration{
 				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
 				Reporter:          reporter,
 			},
 		),
@@ -2058,6 +2394,14 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 
 	err = storage.CheckHealth()
 	require.NoError(t, err)
+
+	require.Equal(t,
+		[]string{
+			`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Int>(), path: /storage/test)`,
+			`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&Int>(), path: /storage/test)`,
+		},
+		nonDeploymentEventStrings(handler.events),
+	)
 
 	// language=cadence
 	checkScript := `
@@ -2170,7 +2514,8 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 				),
 			},
 			// NOTE: link / cap con's borrow type is used
-			borrowType: linkBorrowType,
+			borrowType:   linkBorrowType,
+			capabilityID: 2,
 		},
 	}
 
@@ -2258,13 +2603,16 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 
 	capabilityMapping := &CapabilityMapping{}
 
+	handler := &testCapConHandler{}
+
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
-				CapabilityMapping:  capabilityMapping,
-				AccountIDGenerator: &testAccountIDGenerator{},
-				Reporter:           reporter,
+				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
+				Handler:           handler,
+				Reporter:          reporter,
 			},
 		),
 	)
@@ -2274,6 +2622,7 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 			reporter,
 			&CapabilityValueMigration{
 				CapabilityMapping: capabilityMapping,
+				IssueHandler:      handler,
 				Reporter:          reporter,
 			},
 		),
@@ -2298,6 +2647,14 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 
 	err = storage.CheckHealth()
 	require.NoError(t, err)
+
+	require.Equal(t,
+		[]string{
+			`flow.StorageCapabilityControllerIssued(id: 1, address: 0x0000000000000001, type: Type<&Int>(), path: /storage/test)`,
+			`flow.StorageCapabilityControllerIssued(id: 2, address: 0x0000000000000001, type: Type<&Int>(), path: /storage/test)`,
+		},
+		nonDeploymentEventStrings(handler.events),
+	)
 
 	// Check
 

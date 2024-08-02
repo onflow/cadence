@@ -707,7 +707,7 @@ async function gitClone(protocol: Protocol, fullRepoName: string, dir: string, b
             console.error(`unsupported protocol: ${protocol}`)
             return
     }
-    await exec(`git clone ${branch ? `-b ${branch} ` : ""}${prefix}${fullRepoName} ${dir}`)
+    await exec(`git clone --depth 1 ${branch ? `-b ${branch} ` : ""}${prefix}${fullRepoName} ${dir}`)
 }
 
 async function runWithConsoleGroup(func: () => Promise<boolean>): Promise<boolean> {

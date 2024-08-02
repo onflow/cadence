@@ -534,3 +534,166 @@ func TestCheckStringReplaceAllTypeMissingArgumentLabelWith(t *testing.T) {
 
 	assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
 }
+
+func TestCheckStringContains(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("missing argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		  let a = "abcdef"
+		  let x: Bool = a.contains()
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
+	})
+
+	t.Run("wrong argument type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		  let a = "abcdef"
+		  let x: Bool = a.contains(1)
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		  let a = "abcdef"
+		  let x: Bool = a.contains("abc")
+		`)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckStringIndex(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("missing argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		  let a = "abcdef"
+		  let x: Int = a.index()
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
+	})
+
+	t.Run("wrong argument type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		  let a = "abcdef"
+		  let x: Int = a.index(of: 1)
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("wrong argument label", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		  let a = "abcdef"
+		  let x: Int = a.index(foo: "bc")
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.IncorrectArgumentLabelError{}, errs[0])
+	})
+
+	t.Run("missing argument label", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		  let a = "abcdef"
+		  let x: Int = a.index("bc")
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingArgumentLabelError{}, errs[0])
+	})
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		  let a = "abcdef"
+		  let x: Int = a.index(of: "bc")
+		`)
+
+		require.NoError(t, err)
+	})
+}
+
+func TestCheckStringCount(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("missing argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		  let a = "abcdef"
+		  let x: Int = a.count()
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InsufficientArgumentsError{}, errs[0])
+	})
+
+	t.Run("wrong argument type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		  let a = "abcdef"
+		  let x: Int = a.count(1)
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		  let a = "abcdef"
+		  let x: Int = a.count("b")
+		`)
+
+		require.NoError(t, err)
+	})
+}
