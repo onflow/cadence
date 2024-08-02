@@ -4,15 +4,18 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/bbq"
 	"github.com/onflow/cadence/runtime/bbq/commons"
+	"github.com/onflow/cadence/runtime/bbq/compiler"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/stretchr/testify/require"
+	"github.com/onflow/cadence/runtime/tests/checker"
 )
 
 type testAccountHandler struct {
@@ -359,4 +362,86 @@ func singleIdentifierLocationResolver(t testing.TB) func(
 func printProgram(program *bbq.Program) {
 	byteCodePrinter := &bbq.BytecodePrinter{}
 	fmt.Println(byteCodePrinter.PrintProgram(program))
+}
+
+func baseActivation(common.Location) *sema.VariableActivation {
+	// Only need to make the checker happy
+	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+	baseValueActivation.DeclareValue(stdlib.PanicFunction)
+	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
+		"getAccount",
+		stdlib.GetAccountFunctionType,
+		"",
+		nil,
+	))
+	return baseValueActivation
+}
+
+type compiledProgram struct {
+	*bbq.Program
+	*sema.Elaboration
+}
+
+func compileCode(
+	t testing.TB,
+	code string,
+	location common.Location,
+	programs map[common.Location]compiledProgram,
+) *bbq.Program {
+	checker := parseAndCheck(t, code, location, programs)
+
+	program := compile(t, checker, programs)
+
+	programs[location] = compiledProgram{
+		Program:     program,
+		Elaboration: checker.Elaboration,
+	}
+	return program
+}
+
+func parseAndCheck(
+	t testing.TB,
+	code string,
+	location common.Location,
+	programs map[common.Location]compiledProgram,
+) *sema.Checker {
+	checker, err := checker.ParseAndCheckWithOptions(
+		t,
+		code,
+		checker.ParseAndCheckOptions{
+			Location: location,
+			Config: &sema.Config{
+				ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
+					imported, ok := programs[location]
+					if !ok {
+						return nil, fmt.Errorf("cannot find contract in location %s", location)
+					}
+
+					return sema.ElaborationImport{
+						Elaboration: imported.Elaboration,
+					}, nil
+				},
+				LocationHandler:            singleIdentifierLocationResolver(t),
+				BaseValueActivationHandler: baseActivation,
+			},
+		},
+	)
+	require.NoError(t, err)
+	return checker
+}
+
+func compile(t testing.TB, checker *sema.Checker, programs map[common.Location]compiledProgram) *bbq.Program {
+	comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+	comp.Config.LocationHandler = singleIdentifierLocationResolver(t)
+	comp.Config.ImportHandler = func(location common.Location) *bbq.Program {
+		imported, ok := programs[location]
+		if !ok {
+			return nil
+		}
+		return imported.Program
+	}
+
+	program := comp.Compile()
+	printProgram(program)
+	return program
 }

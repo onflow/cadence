@@ -20,20 +20,16 @@ package test
 
 import (
 	"fmt"
-	"github.com/onflow/cadence/runtime/ast"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/bbq"
 	"github.com/onflow/cadence/runtime/bbq/vm"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/stretchr/testify/assert"
-	"testing"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/onflow/cadence/runtime/bbq/compiler"
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/checker"
 )
 
 func TestFTTransfer(t *testing.T) {
@@ -41,52 +37,21 @@ func TestFTTransfer(t *testing.T) {
 	// ---- Deploy FT Contract -----
 
 	storage := interpreter.NewInMemoryStorage(nil)
+	programs := map[common.Location]compiledProgram{}
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
 	receiverAddress := common.MustBytesToAddress([]byte{0x3})
 
 	ftLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleToken")
-	ftChecker, err := ParseAndCheckWithOptions(t, realFungibleTokenContractInterface,
-		ParseAndCheckOptions{
-			Location: ftLocation,
-		},
-	)
-	require.NoError(t, err)
 
-	ftCompiler := compiler.NewCompiler(ftChecker.Program, ftChecker.Elaboration)
-	ftProgram := ftCompiler.Compile()
+	_ = compileCode(t, realFungibleTokenContractInterface, ftLocation, programs)
 
 	// ----- Deploy FlowToken Contract -----
 
 	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
-	flowTokenChecker, err := ParseAndCheckWithOptions(t, realFlowContract,
-		ParseAndCheckOptions{
-			Location: flowTokenLocation,
-			Config: &sema.Config{
-				ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-					switch location {
-					case ftLocation:
-						return sema.ElaborationImport{
-							Elaboration: ftChecker.Elaboration,
-						}, nil
-					default:
-						return nil, fmt.Errorf("cannot find contract in location %s", location)
-					}
-				},
-				LocationHandler: singleIdentifierLocationResolver(t),
-			},
-		},
-	)
-	require.NoError(t, err)
 
-	flowTokenCompiler := compiler.NewCompiler(flowTokenChecker.Program, flowTokenChecker.Elaboration)
-	flowTokenCompiler.Config.ImportHandler = func(location common.Location) *bbq.Program {
-		return ftProgram
-	}
-
-	flowTokenProgram := flowTokenCompiler.Compile()
-	printProgram(flowTokenProgram)
+	flowTokenProgram := compileCode(t, realFlowContract, flowTokenLocation, programs)
 
 	flowTokenVM := vm.NewVM(
 		flowTokenProgram,
@@ -97,55 +62,19 @@ func TestFTTransfer(t *testing.T) {
 	)
 
 	authAccount := vm.NewAuthAccountReferenceValue(contractsAddress)
-
 	flowTokenContractValue, err := flowTokenVM.InitializeContract(authAccount)
 	require.NoError(t, err)
 
 	// ----- Run setup account transaction -----
 
-	checkerImportHandler := func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-		require.IsType(t, common.AddressLocation{}, location)
-		addressLocation := location.(common.AddressLocation)
-		var elaboration *sema.Elaboration
-
-		switch addressLocation {
-		case ftLocation:
-			elaboration = ftChecker.Elaboration
-		case flowTokenLocation:
-			elaboration = flowTokenChecker.Elaboration
-		default:
-			assert.FailNow(t, "invalid location")
-		}
-
-		return sema.ElaborationImport{
-			Elaboration: elaboration,
-		}, nil
-	}
-
-	compilerImportHandler := func(location common.Location) *bbq.Program {
-		switch location {
-		case ftLocation:
-			return ftProgram
-		case flowTokenLocation:
-			return flowTokenProgram
-		default:
-			assert.FailNow(t, "invalid location")
-			return nil
-		}
-	}
-
 	vmConfig := &vm.Config{
 		Storage: storage,
 		ImportHandler: func(location common.Location) *bbq.Program {
-			switch location {
-			case ftLocation:
-				return ftProgram
-			case flowTokenLocation:
-				return flowTokenProgram
-			default:
-				assert.FailNow(t, "invalid location")
+			imported, ok := programs[location]
+			if !ok {
 				return nil
 			}
+			return imported.Program
 		},
 		ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
 			switch location {
@@ -163,19 +92,17 @@ func TestFTTransfer(t *testing.T) {
 		AccountHandler: &testAccountHandler{},
 
 		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
-			semaImport, err := checkerImportHandler(nil, location, ast.EmptyRange)
-			if err != nil {
-				panic(err)
+			imported, ok := programs[location]
+			if !ok {
+				panic(fmt.Errorf("cannot find contract in location %s", location))
 			}
 
-			elaborationImport := semaImport.(sema.ElaborationImport)
-
-			compositeType := elaborationImport.Elaboration.CompositeType(typeID)
+			compositeType := imported.Elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
 			}
 
-			return elaborationImport.Elaboration.InterfaceType(typeID)
+			return imported.Elaboration.InterfaceType(typeID)
 		},
 	}
 
@@ -183,24 +110,7 @@ func TestFTTransfer(t *testing.T) {
 		senderAddress,
 		receiverAddress,
 	} {
-		setupTxChecker, err := ParseAndCheckWithOptions(
-			t,
-			realSetupFlowTokenAccountTransaction,
-			ParseAndCheckOptions{
-				Config: &sema.Config{
-					ImportHandler:   checkerImportHandler,
-					LocationHandler: singleIdentifierLocationResolver(t),
-				},
-			},
-		)
-		require.NoError(t, err)
-
-		setupTxCompiler := compiler.NewCompiler(setupTxChecker.Program, setupTxChecker.Elaboration)
-		setupTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
-		setupTxCompiler.Config.ImportHandler = compilerImportHandler
-
-		program := setupTxCompiler.Compile()
-		printProgram(program)
+		program := compileCode(t, realSetupFlowTokenAccountTransaction, nil, programs)
 
 		setupTxVM := vm.NewVM(program, vmConfig)
 
@@ -212,25 +122,7 @@ func TestFTTransfer(t *testing.T) {
 
 	// Mint FLOW to sender
 
-	mintTxChecker, err := ParseAndCheckWithOptions(
-		t,
-		realMintFlowTokenTransaction,
-		ParseAndCheckOptions{
-			Config: &sema.Config{
-				ImportHandler:              checkerImportHandler,
-				BaseValueActivationHandler: baseActivation,
-				LocationHandler:            singleIdentifierLocationResolver(t),
-			},
-		},
-	)
-	require.NoError(t, err)
-
-	mintTxCompiler := compiler.NewCompiler(mintTxChecker.Program, mintTxChecker.Elaboration)
-	mintTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
-	mintTxCompiler.Config.ImportHandler = compilerImportHandler
-
-	program := mintTxCompiler.Compile()
-	printProgram(program)
+	program := compileCode(t, realMintFlowTokenTransaction, nil, programs)
 
 	mintTxVM := vm.NewVM(program, vmConfig)
 
@@ -248,25 +140,7 @@ func TestFTTransfer(t *testing.T) {
 
 	// ----- Run token transfer transaction -----
 
-	tokenTransferTxChecker, err := ParseAndCheckWithOptions(
-		t,
-		realFlowTokenTransferTransaction,
-		ParseAndCheckOptions{
-			Config: &sema.Config{
-				ImportHandler:              checkerImportHandler,
-				BaseValueActivationHandler: baseActivation,
-				LocationHandler:            singleIdentifierLocationResolver(t),
-			},
-		},
-	)
-	require.NoError(t, err)
-
-	tokenTransferTxCompiler := compiler.NewCompiler(tokenTransferTxChecker.Program, tokenTransferTxChecker.Elaboration)
-	tokenTransferTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
-	tokenTransferTxCompiler.Config.ImportHandler = compilerImportHandler
-
-	tokenTransferTxProgram := tokenTransferTxCompiler.Compile()
-	printProgram(tokenTransferTxProgram)
+	tokenTransferTxProgram := compileCode(t, realFlowTokenTransferTransaction, nil, programs)
 
 	tokenTransferTxVM := vm.NewVM(tokenTransferTxProgram, vmConfig)
 
@@ -288,25 +162,7 @@ func TestFTTransfer(t *testing.T) {
 		senderAddress,
 		receiverAddress,
 	} {
-		validationScriptChecker, err := ParseAndCheckWithOptions(
-			t,
-			realFlowTokenBalanceScript,
-			ParseAndCheckOptions{
-				Config: &sema.Config{
-					ImportHandler:              checkerImportHandler,
-					BaseValueActivationHandler: baseActivation,
-					LocationHandler:            singleIdentifierLocationResolver(t),
-				},
-			},
-		)
-		require.NoError(t, err)
-
-		validationScriptCompiler := compiler.NewCompiler(validationScriptChecker.Program, validationScriptChecker.Elaboration)
-		validationScriptCompiler.Config.LocationHandler = singleIdentifierLocationResolver(t)
-		validationScriptCompiler.Config.ImportHandler = compilerImportHandler
-
-		program := validationScriptCompiler.Compile()
-		printProgram(program)
+		program := compileCode(t, realFlowTokenBalanceScript, nil, programs)
 
 		validationScriptVM := vm.NewVM(program, vmConfig)
 
@@ -321,19 +177,6 @@ func TestFTTransfer(t *testing.T) {
 			assert.Equal(t, vm.IntValue{transferAmount}, result)
 		}
 	}
-}
-
-func baseActivation(common.Location) *sema.VariableActivation {
-	// Only need to make the checker happy
-	baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
-	baseValueActivation.DeclareValue(stdlib.PanicFunction)
-	baseValueActivation.DeclareValue(stdlib.NewStandardLibraryStaticFunction(
-		"getAccount",
-		stdlib.GetAccountFunctionType,
-		"",
-		nil,
-	))
-	return baseValueActivation
 }
 
 const realFungibleTokenContractInterface = `
@@ -781,51 +624,19 @@ func BenchmarkFTTransfer(b *testing.B) {
 	// ---- Deploy FT Contract -----
 
 	storage := interpreter.NewInMemoryStorage(nil)
+	programs := map[common.Location]compiledProgram{}
 
 	contractsAddress := common.MustBytesToAddress([]byte{0x1})
 	senderAddress := common.MustBytesToAddress([]byte{0x2})
 	receiverAddress := common.MustBytesToAddress([]byte{0x3})
 
 	ftLocation := common.NewAddressLocation(nil, contractsAddress, "FungibleToken")
-	ftChecker, err := ParseAndCheckWithOptions(b, realFungibleTokenContractInterface,
-		ParseAndCheckOptions{
-			Location: ftLocation,
-		},
-	)
-	require.NoError(b, err)
-
-	ftCompiler := compiler.NewCompiler(ftChecker.Program, ftChecker.Elaboration)
-	ftProgram := ftCompiler.Compile()
+	_ = compileCode(b, realFungibleTokenContractInterface, ftLocation, programs)
 
 	// ----- Deploy FlowToken Contract -----
 
 	flowTokenLocation := common.NewAddressLocation(nil, contractsAddress, "FlowToken")
-	flowTokenChecker, err := ParseAndCheckWithOptions(b, realFlowContract,
-		ParseAndCheckOptions{
-			Location: flowTokenLocation,
-			Config: &sema.Config{
-				ImportHandler: func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-					switch location {
-					case ftLocation:
-						return sema.ElaborationImport{
-							Elaboration: ftChecker.Elaboration,
-						}, nil
-					default:
-						return nil, fmt.Errorf("cannot find contract in location %s", location)
-					}
-				},
-				LocationHandler: singleIdentifierLocationResolver(b),
-			},
-		},
-	)
-	require.NoError(b, err)
-
-	flowTokenCompiler := compiler.NewCompiler(flowTokenChecker.Program, flowTokenChecker.Elaboration)
-	flowTokenCompiler.Config.ImportHandler = func(location common.Location) *bbq.Program {
-		return ftProgram
-	}
-
-	flowTokenProgram := flowTokenCompiler.Compile()
+	flowTokenProgram := compileCode(b, realFlowContract, flowTokenLocation, programs)
 
 	flowTokenVM := vm.NewVM(
 		flowTokenProgram,
@@ -842,49 +653,14 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	// ----- Run setup account transaction -----
 
-	checkerImportHandler := func(_ *sema.Checker, location common.Location, _ ast.Range) (sema.Import, error) {
-		require.IsType(b, common.AddressLocation{}, location)
-		addressLocation := location.(common.AddressLocation)
-		var elaboration *sema.Elaboration
-
-		switch addressLocation {
-		case ftLocation:
-			elaboration = ftChecker.Elaboration
-		case flowTokenLocation:
-			elaboration = flowTokenChecker.Elaboration
-		default:
-			assert.FailNow(b, "invalid location")
-		}
-
-		return sema.ElaborationImport{
-			Elaboration: elaboration,
-		}, nil
-	}
-
-	compilerImportHandler := func(location common.Location) *bbq.Program {
-		switch location {
-		case ftLocation:
-			return ftProgram
-		case flowTokenLocation:
-			return flowTokenProgram
-		default:
-			assert.FailNow(b, "invalid location")
-			return nil
-		}
-	}
-
 	vmConfig := &vm.Config{
 		Storage: storage,
 		ImportHandler: func(location common.Location) *bbq.Program {
-			switch location {
-			case ftLocation:
-				return ftProgram
-			case flowTokenLocation:
-				return flowTokenProgram
-			default:
-				assert.FailNow(b, "invalid location")
+			imported, ok := programs[location]
+			if !ok {
 				return nil
 			}
+			return imported.Program
 		},
 		ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
 			switch location {
@@ -902,19 +678,17 @@ func BenchmarkFTTransfer(b *testing.B) {
 		AccountHandler: &testAccountHandler{},
 
 		TypeLoader: func(location common.Location, typeID interpreter.TypeID) sema.CompositeKindedType {
-			semaImport, err := checkerImportHandler(nil, location, ast.EmptyRange)
-			if err != nil {
-				panic(err)
+			imported, ok := programs[location]
+			if !ok {
+				panic(fmt.Errorf("cannot find contract in location %s", location))
 			}
 
-			elaborationImport := semaImport.(sema.ElaborationImport)
-
-			compositeType := elaborationImport.Elaboration.CompositeType(typeID)
+			compositeType := imported.Elaboration.CompositeType(typeID)
 			if compositeType != nil {
 				return compositeType
 			}
 
-			return elaborationImport.Elaboration.InterfaceType(typeID)
+			return imported.Elaboration.InterfaceType(typeID)
 		},
 	}
 
@@ -922,23 +696,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 		senderAddress,
 		receiverAddress,
 	} {
-		setupTxChecker, err := ParseAndCheckWithOptions(
-			b,
-			realSetupFlowTokenAccountTransaction,
-			ParseAndCheckOptions{
-				Config: &sema.Config{
-					ImportHandler:   checkerImportHandler,
-					LocationHandler: singleIdentifierLocationResolver(b),
-				},
-			},
-		)
-		require.NoError(b, err)
-
-		setupTxCompiler := compiler.NewCompiler(setupTxChecker.Program, setupTxChecker.Elaboration)
-		setupTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(b)
-		setupTxCompiler.Config.ImportHandler = compilerImportHandler
-
-		program := setupTxCompiler.Compile()
+		program := compileCode(b, realSetupFlowTokenAccountTransaction, nil, programs)
 
 		setupTxVM := vm.NewVM(program, vmConfig)
 
@@ -950,24 +708,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	// Mint FLOW to sender
 
-	mintTxChecker, err := ParseAndCheckWithOptions(
-		b,
-		realMintFlowTokenTransaction,
-		ParseAndCheckOptions{
-			Config: &sema.Config{
-				ImportHandler:              checkerImportHandler,
-				BaseValueActivationHandler: baseActivation,
-				LocationHandler:            singleIdentifierLocationResolver(b),
-			},
-		},
-	)
-	require.NoError(b, err)
-
-	mintTxCompiler := compiler.NewCompiler(mintTxChecker.Program, mintTxChecker.Elaboration)
-	mintTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(b)
-	mintTxCompiler.Config.ImportHandler = compilerImportHandler
-
-	program := mintTxCompiler.Compile()
+	program := compileCode(b, realMintFlowTokenTransaction, nil, programs)
 
 	mintTxVM := vm.NewVM(program, vmConfig)
 
@@ -985,18 +726,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	// ----- Run token transfer transaction -----
 
-	tokenTransferTxChecker, err := ParseAndCheckWithOptions(
-		b,
-		realFlowTokenTransferTransaction,
-		ParseAndCheckOptions{
-			Config: &sema.Config{
-				ImportHandler:              checkerImportHandler,
-				BaseValueActivationHandler: baseActivation,
-				LocationHandler:            singleIdentifierLocationResolver(b),
-			},
-		},
-	)
-	require.NoError(b, err)
+	tokenTransferTxChecker := parseAndCheck(b, realFlowTokenTransferTransaction, nil, programs)
 
 	transferAmount := int64(1)
 
@@ -1011,11 +741,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		tokenTransferTxCompiler := compiler.NewCompiler(tokenTransferTxChecker.Program, tokenTransferTxChecker.Elaboration)
-		tokenTransferTxCompiler.Config.LocationHandler = singleIdentifierLocationResolver(b)
-		tokenTransferTxCompiler.Config.ImportHandler = compilerImportHandler
-
-		tokenTransferTxProgram := tokenTransferTxCompiler.Compile()
+		tokenTransferTxProgram := compile(b, tokenTransferTxChecker, programs)
 
 		tokenTransferTxVM := vm.NewVM(tokenTransferTxProgram, vmConfig)
 		err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
