@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-package vm
+package test
 
 import (
 	"fmt"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/bbq"
+	"github.com/onflow/cadence/runtime/bbq/vm"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -87,15 +88,15 @@ func TestFTTransfer(t *testing.T) {
 	flowTokenProgram := flowTokenCompiler.Compile()
 	printProgram(flowTokenProgram)
 
-	flowTokenVM := NewVM(
+	flowTokenVM := vm.NewVM(
 		flowTokenProgram,
-		&Config{
+		&vm.Config{
 			Storage:        storage,
 			AccountHandler: &testAccountHandler{},
 		},
 	)
 
-	authAccount := NewAuthAccountReferenceValue(contractsAddress)
+	authAccount := vm.NewAuthAccountReferenceValue(contractsAddress)
 
 	flowTokenContractValue, err := flowTokenVM.InitializeContract(authAccount)
 	require.NoError(t, err)
@@ -133,7 +134,7 @@ func TestFTTransfer(t *testing.T) {
 		}
 	}
 
-	vmConfig := &Config{
+	vmConfig := &vm.Config{
 		Storage: storage,
 		ImportHandler: func(location common.Location) *bbq.Program {
 			switch location {
@@ -146,7 +147,7 @@ func TestFTTransfer(t *testing.T) {
 				return nil
 			}
 		},
-		ContractValueHandler: func(_ *Config, location common.Location) *CompositeValue {
+		ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
 			switch location {
 			case ftLocation:
 				// interface
@@ -201,12 +202,12 @@ func TestFTTransfer(t *testing.T) {
 		program := setupTxCompiler.Compile()
 		printProgram(program)
 
-		setupTxVM := NewVM(program, vmConfig)
+		setupTxVM := vm.NewVM(program, vmConfig)
 
-		authorizer := NewAuthAccountReferenceValue(address)
+		authorizer := vm.NewAuthAccountReferenceValue(address)
 		err = setupTxVM.ExecuteTransaction(nil, authorizer)
 		require.NoError(t, err)
-		require.Empty(t, setupTxVM.stack)
+		require.Equal(t, 0, setupTxVM.StackSize())
 	}
 
 	// Mint FLOW to sender
@@ -231,19 +232,19 @@ func TestFTTransfer(t *testing.T) {
 	program := mintTxCompiler.Compile()
 	printProgram(program)
 
-	mintTxVM := NewVM(program, vmConfig)
+	mintTxVM := vm.NewVM(program, vmConfig)
 
 	total := int64(1000000)
 
-	mintTxArgs := []Value{
-		AddressValue(senderAddress),
-		IntValue{total},
+	mintTxArgs := []vm.Value{
+		vm.AddressValue(senderAddress),
+		vm.IntValue{total},
 	}
 
-	mintTxAuthorizer := NewAuthAccountReferenceValue(contractsAddress)
+	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(contractsAddress)
 	err = mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
 	require.NoError(t, err)
-	require.Empty(t, mintTxVM.stack)
+	require.Equal(t, 0, mintTxVM.StackSize())
 
 	// ----- Run token transfer transaction -----
 
@@ -267,19 +268,19 @@ func TestFTTransfer(t *testing.T) {
 	tokenTransferTxProgram := tokenTransferTxCompiler.Compile()
 	printProgram(tokenTransferTxProgram)
 
-	tokenTransferTxVM := NewVM(tokenTransferTxProgram, vmConfig)
+	tokenTransferTxVM := vm.NewVM(tokenTransferTxProgram, vmConfig)
 
 	transferAmount := int64(1)
 
-	tokenTransferTxArgs := []Value{
-		IntValue{transferAmount},
-		AddressValue(receiverAddress),
+	tokenTransferTxArgs := []vm.Value{
+		vm.IntValue{transferAmount},
+		vm.AddressValue(receiverAddress),
 	}
 
-	tokenTransferTxAuthorizer := NewAuthAccountReferenceValue(senderAddress)
+	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(senderAddress)
 	err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 	require.NoError(t, err)
-	require.Empty(t, tokenTransferTxVM.stack)
+	require.Equal(t, 0, tokenTransferTxVM.StackSize())
 
 	// Run validation scripts
 
@@ -307,17 +308,17 @@ func TestFTTransfer(t *testing.T) {
 		program := validationScriptCompiler.Compile()
 		printProgram(program)
 
-		validationScriptVM := NewVM(program, vmConfig)
+		validationScriptVM := vm.NewVM(program, vmConfig)
 
-		addressValue := AddressValue(address)
+		addressValue := vm.AddressValue(address)
 		result, err := validationScriptVM.Invoke("main", addressValue)
 		require.NoError(t, err)
-		require.Empty(t, validationScriptVM.stack)
+		require.Equal(t, 0, validationScriptVM.StackSize())
 
 		if address == senderAddress {
-			assert.Equal(t, IntValue{total - transferAmount}, result)
+			assert.Equal(t, vm.IntValue{total - transferAmount}, result)
 		} else {
-			assert.Equal(t, IntValue{transferAmount}, result)
+			assert.Equal(t, vm.IntValue{transferAmount}, result)
 		}
 	}
 }
@@ -826,15 +827,15 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	flowTokenProgram := flowTokenCompiler.Compile()
 
-	flowTokenVM := NewVM(
+	flowTokenVM := vm.NewVM(
 		flowTokenProgram,
-		&Config{
+		&vm.Config{
 			Storage:        storage,
 			AccountHandler: &testAccountHandler{},
 		},
 	)
 
-	authAccount := NewAuthAccountReferenceValue(contractsAddress)
+	authAccount := vm.NewAuthAccountReferenceValue(contractsAddress)
 
 	flowTokenContractValue, err := flowTokenVM.InitializeContract(authAccount)
 	require.NoError(b, err)
@@ -872,7 +873,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 		}
 	}
 
-	vmConfig := &Config{
+	vmConfig := &vm.Config{
 		Storage: storage,
 		ImportHandler: func(location common.Location) *bbq.Program {
 			switch location {
@@ -885,7 +886,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 				return nil
 			}
 		},
-		ContractValueHandler: func(_ *Config, location common.Location) *CompositeValue {
+		ContractValueHandler: func(_ *vm.Config, location common.Location) *vm.CompositeValue {
 			switch location {
 			case ftLocation:
 				// interface
@@ -939,12 +940,12 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 		program := setupTxCompiler.Compile()
 
-		setupTxVM := NewVM(program, vmConfig)
+		setupTxVM := vm.NewVM(program, vmConfig)
 
-		authorizer := NewAuthAccountReferenceValue(address)
+		authorizer := vm.NewAuthAccountReferenceValue(address)
 		err = setupTxVM.ExecuteTransaction(nil, authorizer)
 		require.NoError(b, err)
-		require.Empty(b, setupTxVM.stack)
+		require.Equal(b, 0, setupTxVM.StackSize())
 	}
 
 	// Mint FLOW to sender
@@ -968,19 +969,19 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	program := mintTxCompiler.Compile()
 
-	mintTxVM := NewVM(program, vmConfig)
+	mintTxVM := vm.NewVM(program, vmConfig)
 
 	total := int64(1000000)
 
-	mintTxArgs := []Value{
-		AddressValue(senderAddress),
-		IntValue{total},
+	mintTxArgs := []vm.Value{
+		vm.AddressValue(senderAddress),
+		vm.IntValue{total},
 	}
 
-	mintTxAuthorizer := NewAuthAccountReferenceValue(contractsAddress)
+	mintTxAuthorizer := vm.NewAuthAccountReferenceValue(contractsAddress)
 	err = mintTxVM.ExecuteTransaction(mintTxArgs, mintTxAuthorizer)
 	require.NoError(b, err)
-	require.Empty(b, mintTxVM.stack)
+	require.Equal(b, 0, mintTxVM.StackSize())
 
 	// ----- Run token transfer transaction -----
 
@@ -999,12 +1000,12 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 	transferAmount := int64(1)
 
-	tokenTransferTxArgs := []Value{
-		IntValue{transferAmount},
-		AddressValue(receiverAddress),
+	tokenTransferTxArgs := []vm.Value{
+		vm.IntValue{transferAmount},
+		vm.AddressValue(receiverAddress),
 	}
 
-	tokenTransferTxAuthorizer := NewAuthAccountReferenceValue(senderAddress)
+	tokenTransferTxAuthorizer := vm.NewAuthAccountReferenceValue(senderAddress)
 
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -1016,7 +1017,7 @@ func BenchmarkFTTransfer(b *testing.B) {
 
 		tokenTransferTxProgram := tokenTransferTxCompiler.Compile()
 
-		tokenTransferTxVM := NewVM(tokenTransferTxProgram, vmConfig)
+		tokenTransferTxVM := vm.NewVM(tokenTransferTxProgram, vmConfig)
 		err = tokenTransferTxVM.ExecuteTransaction(tokenTransferTxArgs, tokenTransferTxAuthorizer)
 		require.NoError(b, err)
 	}

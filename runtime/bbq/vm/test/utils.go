@@ -1,11 +1,18 @@
-package vm
+package test
 
 import (
+	"fmt"
+	"testing"
+
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/bbq"
+	"github.com/onflow/cadence/runtime/bbq/commons"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/stretchr/testify/require"
 )
 
 type testAccountHandler struct {
@@ -327,4 +334,29 @@ func (t *testAccountHandler) EndContractAddition(common.AddressLocation) {
 func (t *testAccountHandler) IsContractBeingAdded(common.AddressLocation) bool {
 	// NO-OP
 	return false
+}
+
+func singleIdentifierLocationResolver(t testing.TB) func(
+	identifiers []ast.Identifier,
+	location common.Location,
+) ([]commons.ResolvedLocation, error) {
+	return func(identifiers []ast.Identifier, location common.Location) ([]commons.ResolvedLocation, error) {
+		require.Len(t, identifiers, 1)
+		require.IsType(t, common.AddressLocation{}, location)
+
+		return []commons.ResolvedLocation{
+			{
+				Location: common.AddressLocation{
+					Address: location.(common.AddressLocation).Address,
+					Name:    identifiers[0].Identifier,
+				},
+				Identifiers: identifiers,
+			},
+		}, nil
+	}
+}
+
+func printProgram(program *bbq.Program) {
+	byteCodePrinter := &bbq.BytecodePrinter{}
+	fmt.Println(byteCodePrinter.PrintProgram(program))
 }

@@ -686,6 +686,10 @@ func decodeLocation(locationBytes []byte) common.Location {
 	return location
 }
 
+func (vm *VM) StackSize() int {
+	return len(vm.stack)
+}
+
 func getReceiver[T any](receiver Value) T {
 	switch receiver := receiver.(type) {
 	case *SomeValue:
