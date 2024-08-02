@@ -37,6 +37,11 @@ func StoredValue(gauge common.MemoryGauge, storable atree.Storable, storage inte
 	return InterpreterValueToVMValue(storage, value)
 }
 
+func MustConvertStoredValue(gauge common.MemoryGauge, storage interpreter.Storage, storedValue atree.Value) Value {
+	value := interpreter.MustConvertStoredValue(gauge, storedValue)
+	return InterpreterValueToVMValue(storage, value)
+}
+
 func ReadStored(
 	gauge common.MemoryGauge,
 	storage interpreter.Storage,
@@ -72,13 +77,13 @@ func WriteStored(
 }
 
 func RemoveReferencedSlab(storage interpreter.Storage, storable atree.Storable) {
-	storageIDStorable, ok := storable.(atree.StorageIDStorable)
+	slabIDStorable, ok := storable.(atree.SlabIDStorable)
 	if !ok {
 		return
 	}
 
-	storageID := atree.StorageID(storageIDStorable)
-	err := storage.Remove(storageID)
+	slabID := atree.SlabID(slabIDStorable)
+	err := storage.Remove(slabID)
 	if err != nil {
 		panic(errors.NewExternalError(err))
 	}

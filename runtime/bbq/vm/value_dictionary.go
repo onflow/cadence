@@ -194,8 +194,8 @@ func (v *DictionaryValue) InsertWithoutTransfer(config *Config, key, value Value
 	return existingValueStorable
 }
 
-func (v *DictionaryValue) StorageID() atree.StorageID {
-	return v.dictionary.StorageID()
+func (v *DictionaryValue) SlabID() atree.SlabID {
+	return v.dictionary.SlabID()
 }
 
 func (v *DictionaryValue) IsResourceKinded() bool {
@@ -214,20 +214,19 @@ func (v *DictionaryValue) Transfer(
 	remove bool,
 	storable atree.Storable,
 ) Value {
-	currentStorageID := v.StorageID()
-	currentAddress := currentStorageID.Address
 	storage := config.Storage
-
 	dictionary := v.dictionary
 
-	needsStoreTo := address != currentAddress
+	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded()
 
 	if needsStoreTo || !isResourceKinded {
 		valueComparator := newValueComparator(config)
 		hashInputProvider := newHashInputProvider(config)
 
-		iterator, err := v.dictionary.Iterator()
+		// Use non-readonly iterator here because iterated
+		// value can be removed if remove parameter is true.
+		iterator, err := v.dictionary.Iterator(valueComparator, hashInputProvider)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -312,6 +311,14 @@ func (v *DictionaryValue) Transfer(
 
 func (v *DictionaryValue) Destroy(*Config) {
 	v.dictionary = nil
+}
+
+func (v *DictionaryValue) NeedsStoreTo(address atree.Address) bool {
+	return address != v.StorageAddress()
+}
+
+func (v *DictionaryValue) StorageAddress() atree.Address {
+	return v.dictionary.Address()
 }
 
 func newValueComparator(conf *Config) atree.ValueComparator {

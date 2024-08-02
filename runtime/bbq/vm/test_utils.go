@@ -30,13 +30,13 @@ type testAccountHandler struct {
 	)
 	blsVerifyPOP     func(publicKey *stdlib.PublicKey, signature []byte) (bool, error)
 	hash             func(data []byte, tag string, algorithm sema.HashAlgorithm) ([]byte, error)
-	getAccountKey    func(address common.Address, index int) (*stdlib.AccountKey, error)
-	accountKeysCount func(address common.Address) (uint64, error)
+	getAccountKey    func(address common.Address, index uint32) (*stdlib.AccountKey, error)
+	accountKeysCount func(address common.Address) (uint32, error)
 	emitEvent        func(
 		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
 		eventType *sema.CompositeType,
 		values []interpreter.Value,
-		locationRange interpreter.LocationRange,
 	)
 	addAccountKey func(
 		address common.Address,
@@ -47,7 +47,7 @@ type testAccountHandler struct {
 		*stdlib.AccountKey,
 		error,
 	)
-	revokeAccountKey       func(address common.Address, index int) (*stdlib.AccountKey, error)
+	revokeAccountKey       func(address common.Address, index uint32) (*stdlib.AccountKey, error)
 	getAccountContractCode func(location common.AddressLocation) ([]byte, error)
 	parseAndCheckProgram   func(
 		code []byte,
@@ -168,14 +168,14 @@ func (t *testAccountHandler) Hash(data []byte, tag string, algorithm sema.HashAl
 	return t.hash(data, tag, algorithm)
 }
 
-func (t *testAccountHandler) GetAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
+func (t *testAccountHandler) GetAccountKey(address common.Address, index uint32) (*stdlib.AccountKey, error) {
 	if t.getAccountKey == nil {
 		panic(errors.NewUnexpectedError("unexpected call to GetAccountKey"))
 	}
 	return t.getAccountKey(address, index)
 }
 
-func (t *testAccountHandler) AccountKeysCount(address common.Address) (uint64, error) {
+func (t *testAccountHandler) AccountKeysCount(address common.Address) (uint32, error) {
 	if t.accountKeysCount == nil {
 		panic(errors.NewUnexpectedError("unexpected call to AccountKeysCount"))
 	}
@@ -184,18 +184,18 @@ func (t *testAccountHandler) AccountKeysCount(address common.Address) (uint64, e
 
 func (t *testAccountHandler) EmitEvent(
 	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
-	locationRange interpreter.LocationRange,
 ) {
 	if t.emitEvent == nil {
 		panic(errors.NewUnexpectedError("unexpected call to EmitEvent"))
 	}
 	t.emitEvent(
 		inter,
+		locationRange,
 		eventType,
 		values,
-		locationRange,
 	)
 }
 
@@ -219,7 +219,7 @@ func (t *testAccountHandler) AddAccountKey(
 	)
 }
 
-func (t *testAccountHandler) RevokeAccountKey(address common.Address, index int) (*stdlib.AccountKey, error) {
+func (t *testAccountHandler) RevokeAccountKey(address common.Address, index uint32) (*stdlib.AccountKey, error) {
 	if t.revokeAccountKey == nil {
 		panic(errors.NewUnexpectedError("unexpected call to RevokeAccountKey"))
 	}

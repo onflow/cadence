@@ -102,7 +102,11 @@ func (v *CompositeValue) StaticType(memoryGauge common.MemoryGauge) StaticType {
 }
 
 func (v *CompositeValue) GetMember(config *Config, name string) Value {
-	storable, err := v.dictionary.Get(
+	return v.GetField(config, name)
+}
+
+func (v *CompositeValue) GetField(config *Config, name string) Value {
+	storedValue, err := v.dictionary.Get(
 		interpreter.StringAtreeValueComparator,
 		interpreter.StringAtreeValueHashInput,
 		interpreter.StringAtreeValue(name),
@@ -115,11 +119,7 @@ func (v *CompositeValue) GetMember(config *Config, name string) Value {
 		panic(errors.NewExternalError(err))
 	}
 
-	if storable != nil {
-		return StoredValue(config.MemoryGauge, storable, config.Storage)
-	}
-
-	return nil
+	return MustConvertStoredValue(config.MemoryGauge, config.Storage, storedValue)
 }
 
 func (v *CompositeValue) SetMember(config *Config, name string, value Value) {
@@ -150,13 +150,15 @@ func (v *CompositeValue) SetMember(config *Config, name string, value Value) {
 	if existingStorable != nil {
 		inter := config.interpreter()
 		existingValue := interpreter.StoredValue(nil, existingStorable, config.Storage)
-		existingValue.DeepRemove(inter)
+
+		existingValue.DeepRemove(inter, true) // existingValue is standalone because it was overwritten in parent container.
+
 		RemoveReferencedSlab(config.Storage, existingStorable)
 	}
 }
 
-func (v *CompositeValue) StorageID() atree.StorageID {
-	return v.dictionary.StorageID()
+func (v *CompositeValue) SlabID() atree.SlabID {
+	return v.dictionary.SlabID()
 }
 
 func (v *CompositeValue) TypeID() common.TypeID {
@@ -218,12 +220,9 @@ func (v *CompositeValue) Transfer(
 	//	}()
 	//}
 
-	currentStorageID := v.StorageID()
-	currentAddress := currentStorageID.Address
-
 	dictionary := v.dictionary
 
-	needsStoreTo := address != currentAddress
+	needsStoreTo := v.NeedsStoreTo(address)
 	isResourceKinded := v.IsResourceKinded()
 
 	if needsStoreTo && v.Kind == common.CompositeKindContract {
@@ -233,7 +232,10 @@ func (v *CompositeValue) Transfer(
 	}
 
 	if needsStoreTo || !isResourceKinded {
-		iterator, err := v.dictionary.Iterator()
+		iterator, err := v.dictionary.Iterator(
+			interpreter.StringAtreeValueComparator,
+			interpreter.StringAtreeValueHashInput,
+		)
 		if err != nil {
 			panic(errors.NewExternalError(err))
 		}
@@ -437,4 +439,12 @@ func (v *CompositeValue) Destroy(*Config) {
 	//		}
 	//	},
 	//)
+}
+
+func (v *CompositeValue) NeedsStoreTo(address atree.Address) bool {
+	return address != v.StorageAddress()
+}
+
+func (v *CompositeValue) StorageAddress() atree.Address {
+	return v.dictionary.Address()
 }
