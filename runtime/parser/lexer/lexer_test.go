@@ -90,39 +90,31 @@ func TestLexBasic(t *testing.T) {
 			[]token{
 				{
 					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
-						},
-					},
-					Source: " ",
-				},
-				{
-					Token: Token{
 						Type: TokenDecimalIntegerLiteral,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
 						},
+						LeadingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+									EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+								},
+							},
+						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+									EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+								},
+							},
+						},
 					},
 					Source: "01",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
-						},
-					},
-					Source: "\t  ",
 				},
 				{
 					Token: Token{
@@ -215,21 +207,17 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+									EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+								},
+							},
+						},
 					},
 					Source: "2",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
-						},
-					},
-					Source: " ",
 				},
 				{
 					Token: Token{
@@ -238,21 +226,17 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+									EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+								},
+							},
+						},
 					},
 					Source: "+",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
-						},
-					},
-					Source: " ",
 				},
 				{
 					Token: Token{
@@ -271,21 +255,17 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
 							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
 						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+									EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+								},
+							},
+						},
 					},
 					Source: ")",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
-							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
-						},
-					},
-					Source: " ",
 				},
 				{
 					Token: Token{
@@ -294,21 +274,17 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+									EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+								},
+							},
+						},
 					},
 					Source: "*",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
-							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
-						},
-					},
-					Source: " ",
 				},
 				{
 					Token: Token{
@@ -354,21 +330,17 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+									EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+								},
+							},
+						},
 					},
 					Source: "2",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
-						},
-					},
-					Source: " ",
 				},
 				{
 					Token: Token{
@@ -377,21 +349,17 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+									EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+								},
+							},
+						},
 					},
 					Source: "-",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
-						},
-					},
-					Source: " ",
 				},
 				{
 					Token: Token{
@@ -410,21 +378,17 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
 							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
 						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+									EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+								},
+							},
+						},
 					},
 					Source: ")",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
-							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
-						},
-					},
-					Source: " ",
 				},
 				{
 					Token: Token{
@@ -433,21 +397,17 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+									EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+								},
+							},
+						},
 					},
 					Source: "/",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
-							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
-						},
-					},
-					Source: " ",
 				},
 				{
 					Token: Token{
@@ -483,21 +443,17 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+									EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+								},
+							},
+						},
 					},
 					Source: "1",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: true,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 2, Column: 1, Offset: 4},
-						},
-					},
-					Source: " \n  ",
 				},
 				{
 					Token: Token{
@@ -506,21 +462,24 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 2, Column: 2, Offset: 5},
 							EndPos:   ast.Position{Line: 2, Column: 2, Offset: 5},
 						},
+						LeadingTrivia: []Trivia{
+							{
+								Type: TriviaTypeNewLine,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+									EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+								},
+							},
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 2, Column: 0, Offset: 3},
+									EndPos:   ast.Position{Line: 2, Column: 1, Offset: 4},
+								},
+							},
+						},
 					},
 					Source: "2",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: true,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 2, Column: 3, Offset: 6},
-							EndPos:   ast.Position{Line: 2, Column: 3, Offset: 6},
-						},
-					},
-					Source: "\n",
 				},
 				{
 					Token: Token{
@@ -528,6 +487,15 @@ func TestLexBasic(t *testing.T) {
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 3, Column: 0, Offset: 7},
 							EndPos:   ast.Position{Line: 3, Column: 0, Offset: 7},
+						},
+						LeadingTrivia: []Trivia{
+							{
+								Type: TriviaTypeNewLine,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 2, Column: 3, Offset: 6},
+									EndPos:   ast.Position{Line: 2, Column: 3, Offset: 6},
+								},
+							},
 						},
 					},
 				},
@@ -546,21 +514,17 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+									EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+								},
+							},
+						},
 					},
 					Source: "1",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: " ",
 				},
 				{
 					Token: Token{
@@ -569,21 +533,17 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+									EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+								},
+							},
+						},
 					},
 					Source: "??",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
-						},
-					},
-					Source: " ",
 				},
 				{
 					Token: Token{
@@ -874,7 +834,7 @@ func TestLexBasic(t *testing.T) {
 		)
 	})
 
-	t.Run("Trivia", func(t *testing.T) {
+	t.Run("trivia", func(t *testing.T) {
 		testLex(t,
 			"// test is in next line \n/* test is here */ test // test is in the same line\n// test is in previous line",
 			[]token{
@@ -888,29 +848,95 @@ func TestLexBasic(t *testing.T) {
 						LeadingTrivia: []Trivia{
 							{
 								Type: TriviaTypeInlineComment,
-								Text: []byte("// test is in next line "),
+								Range: ast.Range{
+									StartPos: ast.Position{
+										Offset: 0,
+										Line:   1,
+										Column: 0,
+									},
+									EndPos: ast.Position{
+										Offset: 23,
+										Line:   1,
+										Column: 23,
+									},
+								},
 							},
 							{
 								Type: TriviaTypeNewLine,
-								Text: []byte("\n"),
+								Range: ast.Range{
+									StartPos: ast.Position{
+										Offset: 24,
+										Line:   1,
+										Column: 24,
+									},
+									EndPos: ast.Position{
+										Offset: 24,
+										Line:   1,
+										Column: 24,
+									},
+								},
 							},
 							{
 								Type: TriviaTypeMultiLineComment,
-								Text: []byte("/* test is here */"),
+								Range: ast.Range{
+									StartPos: ast.Position{
+										Offset: 25,
+										Line:   2,
+										Column: 0,
+									},
+									EndPos: ast.Position{
+										Offset: 42,
+										Line:   2,
+										Column: 17,
+									},
+								},
 							},
 							{
 								Type: TriviaTypeSpace,
-								Text: []byte(" "),
+								Range: ast.Range{
+									StartPos: ast.Position{
+										Offset: 43,
+										Line:   2,
+										Column: 18,
+									},
+									EndPos: ast.Position{
+										Offset: 43,
+										Line:   2,
+										Column: 18,
+									},
+								},
 							},
 						},
 						TrailingTrivia: []Trivia{
 							{
 								Type: TriviaTypeSpace,
-								Text: []byte(" "),
+								Range: ast.Range{
+									StartPos: ast.Position{
+										Offset: 48,
+										Line:   2,
+										Column: 23,
+									},
+									EndPos: ast.Position{
+										Offset: 48,
+										Line:   2,
+										Column: 23,
+									},
+								},
 							},
 							{
 								Type: TriviaTypeInlineComment,
-								Text: []byte("// test is in the same line"),
+								Range: ast.Range{
+									StartPos: ast.Position{
+										Offset: 49,
+										Line:   2,
+										Column: 24,
+									},
+									EndPos: ast.Position{
+										Offset: 75,
+										Line:   2,
+										Column: 50,
+									},
+								},
 							},
 						},
 					},
@@ -926,11 +952,33 @@ func TestLexBasic(t *testing.T) {
 						LeadingTrivia: []Trivia{
 							{
 								Type: TriviaTypeNewLine,
-								Text: []byte("\n"),
+								Range: ast.Range{
+									StartPos: ast.Position{
+										Offset: 76,
+										Line:   2,
+										Column: 51,
+									},
+									EndPos: ast.Position{
+										Offset: 76,
+										Line:   2,
+										Column: 51,
+									},
+								},
 							},
 							{
 								Type: TriviaTypeInlineComment,
-								Text: []byte("// test is in previous line"),
+								Range: ast.Range{
+									StartPos: ast.Position{
+										Offset: 77,
+										Line:   3,
+										Column: 0,
+									},
+									EndPos: ast.Position{
+										Offset: 103,
+										Line:   3,
+										Column: 26,
+									},
+								},
 							},
 						},
 						TrailingTrivia: []Trivia{},
@@ -1118,23 +1166,19 @@ func TestLexString(t *testing.T) {
 				},
 				{
 					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: true,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "\n",
-				},
-				{
-					Token: Token{
 						Type: TokenEOF,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 2, Column: 0, Offset: 2},
 							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
+						},
+						LeadingTrivia: []Trivia{
+							{
+								Type: TriviaTypeNewLine,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+									EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+								},
+							},
 						},
 					},
 				},
@@ -1158,23 +1202,19 @@ func TestLexString(t *testing.T) {
 				},
 				{
 					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: true,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
-						},
-					},
-					Source: "\n",
-				},
-				{
-					Token: Token{
 						Type: TokenEOF,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 2, Column: 0, Offset: 4},
 							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 4},
+						},
+						LeadingTrivia: []Trivia{
+							{
+								Type: TriviaTypeNewLine,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+									EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+								},
+							},
 						},
 					},
 				},
@@ -1252,23 +1292,19 @@ func TestLexString(t *testing.T) {
 				},
 				{
 					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: true,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
-						},
-					},
-					Source: "\n",
-				},
-				{
-					Token: Token{
 						Type: TokenEOF,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 2, Column: 0, Offset: 3},
 							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 3},
+						},
+						LeadingTrivia: []Trivia{
+							{
+								Type: TriviaTypeNewLine,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+									EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+								},
+							},
 						},
 					},
 				},
@@ -1287,53 +1323,14 @@ func TestLexBlockComment(t *testing.T) {
 			[]token{
 				{
 					Token: Token{
-						Type: TokenBlockCommentStart,
+						Type:         TokenError,
+						SpaceOrError: errors.New(`end of the file in a comment`),
 						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+							StartPos: ast.Position{Line: 1, Column: 20, Offset: 20},
+							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
 						},
 					},
-					Source: "/*",
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentContent,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
-						},
-					},
-					Source: `  // *X `,
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentStart,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
-							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
-						},
-					},
-					Source: "/*",
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentContent,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
-							EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
-						},
-					},
-					Source: ` \\*  `,
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentEnd,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
-							EndPos:   ast.Position{Line: 1, Column: 19, Offset: 19},
-						},
-					},
-					Source: "*/",
+					Source: "\000",
 				},
 				{
 					Token: Token{
@@ -1354,93 +1351,26 @@ func TestLexBlockComment(t *testing.T) {
 			[]token{
 				{
 					Token: Token{
-						Type: TokenBlockCommentStart,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "/*",
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentContent,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
-						},
-					},
-					Source: ` test foo `,
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentStart,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
-							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
-						},
-					},
-					Source: "/*",
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentContent,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
-							EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
-						},
-					},
-					Source: ` bar `,
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentEnd,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 19, Offset: 19},
-							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
-						},
-					},
-					Source: "*/",
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentContent,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
-							EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
-						},
-					},
-					Source: ` asd `,
-				},
-				{
-					Token: Token{
-						Type: TokenBlockCommentEnd,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 26, Offset: 26},
-							EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
-						},
-					},
-					Source: "*/",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 28, Offset: 28},
-							EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
-						},
-					},
-					Source: "  ",
-				},
-				{
-					Token: Token{
 						Type: TokenEOF,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 30, Offset: 30},
 							EndPos:   ast.Position{Line: 1, Column: 30, Offset: 30},
+						},
+						LeadingTrivia: []Trivia{
+							{
+								Type: TriviaTypeMultiLineComment,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+									EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
+								},
+							},
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 28, Offset: 28},
+									EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
+								},
+							},
 						},
 					},
 				},
@@ -2069,23 +1999,19 @@ func TestLexIntegerLiterals(t *testing.T) {
 				},
 				{
 					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: true,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					Source: "\n",
-				},
-				{
-					Token: Token{
 						Type: TokenEOF,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 2, Column: 0, Offset: 2},
 							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
+						},
+						LeadingTrivia: []Trivia{
+							{
+								Type: TriviaTypeNewLine,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+									EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+								},
+							},
 						},
 					},
 				},
@@ -2323,49 +2249,38 @@ func TestLexLineComment(t *testing.T) {
 			[]token{
 				{
 					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
-						},
-					},
-					Source: " ",
-				},
-				{
-					Token: Token{
 						Type: TokenIdentifier,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
+						LeadingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+									EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+								},
+							},
+						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+									EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+								},
+							},
+							{
+								Type: TriviaTypeInlineComment,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+									EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+								},
+							},
+						},
 					},
 					Source: "foo",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
-						},
-					},
-					Source: " ",
-				},
-				{
-					Token: Token{
-						Type: TokenLineComment,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
-						},
-					},
-					Source: "// bar ",
 				},
 				{
 					Token: Token{
@@ -2388,62 +2303,38 @@ func TestLexLineComment(t *testing.T) {
 			[]token{
 				{
 					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
-						},
-					},
-					Source: " ",
-				},
-				{
-					Token: Token{
 						Type: TokenIdentifier,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
+						LeadingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+									EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+								},
+							},
+						},
+						TrailingTrivia: []Trivia{
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+									EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+								},
+							},
+							{
+								Type: TriviaTypeInlineComment,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+									EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+								},
+							},
+						},
 					},
 					Source: "foo",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: false,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
-						},
-					},
-					Source: " ",
-				},
-				{
-					Token: Token{
-						Type: TokenLineComment,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
-						},
-					},
-					Source: "// bar ",
-				},
-				{
-					Token: Token{
-						Type: TokenSpace,
-						SpaceOrError: Space{
-							ContainsNewline: true,
-						},
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
-							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 13},
-						},
-					},
-					Source: "\n ",
 				},
 				{
 					Token: Token{
@@ -2451,6 +2342,22 @@ func TestLexLineComment(t *testing.T) {
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 2, Column: 1, Offset: 14},
 							EndPos:   ast.Position{Line: 2, Column: 3, Offset: 16},
+						},
+						LeadingTrivia: []Trivia{
+							{
+								Type: TriviaTypeNewLine,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+									EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+								},
+							},
+							{
+								Type: TriviaTypeSpace,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 2, Column: 0, Offset: 13},
+									EndPos:   ast.Position{Line: 2, Column: 0, Offset: 13},
+								},
+							},
 						},
 					},
 					Source: "baz",
@@ -2484,19 +2391,14 @@ func TestRevert(t *testing.T) {
 				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 				EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 			},
-		},
-		tokenStream.Next(),
-	)
-
-	assert.Equal(t,
-		Token{
-			Type: TokenSpace,
-			SpaceOrError: Space{
-				ContainsNewline: false,
-			},
-			Range: ast.Range{
-				StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-				EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+			TrailingTrivia: []Trivia{
+				{
+					Type: TriviaTypeSpace,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
 			},
 		},
 		tokenStream.Next(),
@@ -2511,19 +2413,14 @@ func TestRevert(t *testing.T) {
 				StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 				EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
 			},
-		},
-		tokenStream.Next(),
-	)
-
-	assert.Equal(t,
-		Token{
-			Type: TokenSpace,
-			SpaceOrError: Space{
-				ContainsNewline: false,
-			},
-			Range: ast.Range{
-				StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-				EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+			TrailingTrivia: []Trivia{
+				{
+					Type: TriviaTypeSpace,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+				},
 			},
 		},
 		tokenStream.Next(),
@@ -2550,6 +2447,7 @@ func TestRevert(t *testing.T) {
 				StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
 				EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 			},
+			TrailingTrivia: []Trivia{},
 		},
 		tokenStream.Next(),
 	)
@@ -2561,6 +2459,7 @@ func TestRevert(t *testing.T) {
 				StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
 				EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 			},
+			TrailingTrivia: []Trivia{},
 		},
 		tokenStream.Next(),
 	)
@@ -2578,19 +2477,14 @@ func TestRevert(t *testing.T) {
 				StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 				EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
 			},
-		},
-		tokenStream.Next(),
-	)
-
-	assert.Equal(t,
-		Token{
-			Type: TokenSpace,
-			SpaceOrError: Space{
-				ContainsNewline: false,
-			},
-			Range: ast.Range{
-				StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-				EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+			TrailingTrivia: []Trivia{
+				{
+					Type: TriviaTypeSpace,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+				},
 			},
 		},
 		tokenStream.Next(),
@@ -2617,6 +2511,7 @@ func TestRevert(t *testing.T) {
 				StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
 				EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 			},
+			TrailingTrivia: []Trivia{},
 		},
 		tokenStream.Next(),
 	)
@@ -2628,6 +2523,7 @@ func TestRevert(t *testing.T) {
 				StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
 				EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 			},
+			TrailingTrivia: []Trivia{},
 		},
 		tokenStream.Next(),
 	)
@@ -2649,19 +2545,14 @@ func TestEOFsAfterError(t *testing.T) {
 				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 				EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 			},
-		},
-		tokenStream.Next(),
-	)
-
-	assert.Equal(t,
-		Token{
-			Type: TokenSpace,
-			SpaceOrError: Space{
-				ContainsNewline: false,
-			},
-			Range: ast.Range{
-				StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-				EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+			TrailingTrivia: []Trivia{
+				{
+					Type: TriviaTypeSpace,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
 			},
 		},
 		tokenStream.Next(),
@@ -2691,6 +2582,7 @@ func TestEOFsAfterError(t *testing.T) {
 					StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 					EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
 				},
+				TrailingTrivia: []Trivia{},
 			},
 			tokenStream.Next(),
 		)
@@ -2715,6 +2607,7 @@ func TestEOFsAfterEmptyInput(t *testing.T) {
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 				},
+				TrailingTrivia: []Trivia{},
 			},
 			tokenStream.Next(),
 		)
@@ -2726,8 +2619,9 @@ func TestLimit(t *testing.T) {
 	t.Parallel()
 
 	var b strings.Builder
+	// TODO(preserve-comments): Token limit is affected, because comments are not treated as separate tokens
 	for i := 0; i < 300000; i++ {
-		b.WriteString("x ")
+		b.WriteString("x x ")
 	}
 
 	code := b.String()

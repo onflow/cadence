@@ -318,6 +318,7 @@ func blockCommentState(l *lexer, nesting int) stateFn {
 		r := l.next()
 		switch r {
 		case EOF:
+			l.emitError(fmt.Errorf("end of the file in a comment"))
 			return nil
 		case '/':
 			beforeSlashOffset := l.prevEndOffset

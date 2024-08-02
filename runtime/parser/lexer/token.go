@@ -23,6 +23,7 @@ import (
 )
 
 type Token struct {
+	// TODO(preserve-comments): Rename to Error error
 	SpaceOrError any
 	ast.Range
 	Type TokenType
