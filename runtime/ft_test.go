@@ -941,7 +941,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 	}
 
 	var events []cadence.Event
-	var logs []string
 
 	signerAccount := contractsAddress
 
@@ -969,9 +968,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
-		},
-		OnProgramLog: func(message string) {
-			logs = append(logs, message)
 		},
 		OnRecoverProgram: func(program *ast.Program, location common.Location) (*ast.Program, error) {
 
@@ -1153,10 +1149,18 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
           }
 
           execute {
-              log(ExampleToken.totalSupply)
-              log(self.vault.balance)
-              log(ExampleToken.getType())
-              log(self.vault.getType())
+              assert(ExampleToken.totalSupply == 4321.00000000)
+              assert(self.vault.balance == 1234.00000000)
+
+              let exampleTokenType = ExampleToken.getType()
+              assert(exampleTokenType == Type<ExampleToken>())
+              assert(exampleTokenType.isRecovered)
+              assert(Type<ExampleToken>().isRecovered)
+
+              let vaultType = self.vault.getType()
+              assert(vaultType == Type<@ExampleToken.Vault>())
+              assert(vaultType.isRecovered)
+              assert(Type<@ExampleToken.Vault>().isRecovered)
 
               let exampleVault <- self.vault
               let someVault <- exampleVault as! @{FungibleToken.Vault}
@@ -1179,16 +1183,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-
-	require.Equal(t,
-		[]string{
-			"4321.00000000",
-			"1234.00000000",
-			"Type<A.0000000000000001.ExampleToken>()",
-			"Type<A.0000000000000001.ExampleToken.Vault>()",
-		},
-		logs,
-	)
 
 	// Send another transaction that calls a function on the stored vault.
 	// Function calls on recovered values should panic.
@@ -1214,8 +1208,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
           }
       }
     `
-
-	logs = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -1248,10 +1240,18 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
           }
 
           execute {
-              log(ExampleToken.totalSupply)
-              log(self.vault.balance)
-              log(ExampleToken.getType())
-              log(self.vault.getType())
+              assert(ExampleToken.totalSupply == 4321.00000000)
+              assert(self.vault.balance == 1234.00000000)
+
+              let exampleTokenType = ExampleToken.getType()
+              assert(exampleTokenType == Type<ExampleToken>())
+              assert(exampleTokenType.isRecovered)
+              assert(Type<ExampleToken>().isRecovered)
+
+              let vaultType = self.vault.getType()
+              assert(vaultType == Type<@ExampleToken.Vault>())
+              assert(vaultType.isRecovered)
+              assert(Type<@ExampleToken.Vault>().isRecovered)
 
               let someVault <- self.vault
               let exampleVault <- someVault as! @ExampleToken.Vault
@@ -1260,8 +1260,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
           }
       }
     `
-
-	logs = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -1274,14 +1272,4 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-
-	require.Equal(t,
-		[]string{
-			"4321.00000000",
-			"1234.00000000",
-			"Type<A.0000000000000001.ExampleToken>()",
-			"Type<A.0000000000000001.ExampleToken.Vault>()",
-		},
-		logs,
-	)
 }

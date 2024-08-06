@@ -19,6 +19,7 @@
 package interpreter_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/onflow/cadence/runtime/activations"
@@ -913,4 +914,156 @@ func TestInterpretBrokenMetaTypeUsage(t *testing.T) {
 		resultArray.Get(inter, interpreter.EmptyLocationRange, 1),
 	)
 
+}
+
+func TestInterpretMetaTypeIsRecovered(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("built-in", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let type = Type<Int>()
+          let isRecovered = type.isRecovered
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.FalseValue,
+			inter.Globals.Get("isRecovered").GetValue(inter),
+		)
+	})
+
+	t.Run("Struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S {}
+
+          let type = Type<S>()
+          let isRecovered = type.isRecovered
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.FalseValue,
+			inter.Globals.Get("isRecovered").GetValue(inter),
+		)
+	})
+
+	t.Run("unknown", func(t *testing.T) {
+
+		t.Parallel()
+
+		valueDeclarations := []stdlib.StandardLibraryValue{
+			{
+				Name: "unknownType",
+				Type: sema.MetaType,
+				Value: interpreter.TypeValue{
+					Type: nil,
+				},
+				Kind: common.DeclarationKindConstant,
+			},
+		}
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		for _, valueDeclaration := range valueDeclarations {
+			baseValueActivation.DeclareValue(valueDeclaration)
+		}
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		for _, valueDeclaration := range valueDeclarations {
+			interpreter.Declare(baseActivation, valueDeclaration)
+		}
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+	         let isRecovered = unknownType.isRecovered
+	       `,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+				Config: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.FalseValue,
+			inter.Globals.Get("isRecovered").GetValue(inter),
+		)
+	})
+
+	t.Run("loading of program, recovery", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+	      fun test(_ type: Type): Bool {
+	          return type.isRecovered
+	      }
+	   `)
+
+		inter.SharedState.Config.ImportLocationHandler =
+			func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
+				elaboration := sema.NewElaboration(nil)
+				elaboration.IsRecovered = true
+				return interpreter.VirtualImport{
+					Elaboration: elaboration,
+				}
+			}
+
+		location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
+		staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
+		typeValue := interpreter.NewUnmeteredTypeValue(staticType)
+
+		result, err := inter.Invoke("test", typeValue)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.TrueValue,
+			result,
+		)
+	})
+
+	t.Run("loading of program, import failure", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+	      fun test(_ type: Type): Bool {
+	          return type.isRecovered
+	      }
+	   `)
+
+		importErr := errors.New("import failure")
+
+		inter.SharedState.Config.ImportLocationHandler =
+			func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
+				panic(importErr)
+			}
+
+		location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
+		staticType := interpreter.NewCompositeStaticTypeComputeTypeID(nil, location, "Foo.Bar")
+		typeValue := interpreter.NewUnmeteredTypeValue(staticType)
+
+		_, err := inter.Invoke("test", typeValue)
+		require.ErrorIs(t, err, importErr)
+	})
 }

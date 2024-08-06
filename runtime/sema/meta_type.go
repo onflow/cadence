@@ -18,18 +18,6 @@
 
 package sema
 
-const MetaTypeIdentifierFieldName = "identifier"
-
-const metaTypeIdentifierFieldDocString = `
-The fully-qualified identifier of the type
-`
-
-const MetaTypeIsSubtypeFunctionName = "isSubtype"
-
-const metaTypeIsSubtypeFunctionDocString = `
-Returns true if this type is a subtype of the given type at run-time
-`
-
 const MetaTypeName = "Type"
 
 // MetaType represents the type of a type.
@@ -49,6 +37,12 @@ var MetaType = &SimpleType{
 
 var MetaTypeAnnotation = NewTypeAnnotation(MetaType)
 
+const MetaTypeIdentifierFieldName = "identifier"
+
+const metaTypeIdentifierFieldDocString = `
+The fully-qualified identifier of the type
+`
+
 var MetaTypeIsSubtypeFunctionType = NewSimpleFunctionType(
 	FunctionPurityView,
 	[]Parameter{
@@ -60,6 +54,20 @@ var MetaTypeIsSubtypeFunctionType = NewSimpleFunctionType(
 	},
 	BoolTypeAnnotation,
 )
+
+const MetaTypeIsSubtypeFunctionName = "isSubtype"
+
+const metaTypeIsSubtypeFunctionDocString = `
+Returns true if this type is a subtype of the given type at run-time
+`
+
+const MetaTypeIsRecoveredFieldName = "isRecovered"
+
+var MetaTypeIsRecoveredFieldType = BoolType
+
+const metaTypeIsRecoveredFieldDocString = `
+The type was defined through a recovered program
+`
 
 func init() {
 	MetaType.Members = func(t *SimpleType) map[string]MemberResolver {
@@ -75,6 +83,12 @@ func init() {
 				MetaTypeIsSubtypeFunctionName,
 				MetaTypeIsSubtypeFunctionType,
 				metaTypeIsSubtypeFunctionDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				MetaTypeIsRecoveredFieldName,
+				MetaTypeIsRecoveredFieldType,
+				metaTypeIsRecoveredFieldDocString,
 			),
 		})
 	}

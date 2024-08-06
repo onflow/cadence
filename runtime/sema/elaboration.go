@@ -172,6 +172,8 @@ type Elaboration struct {
 	TransactionTypes                    []*TransactionType
 	semanticAccesses                    map[ast.Access]Access
 	isChecking                          bool
+	// IsRecovered is true if the program was recovered (see runtime.Interface.RecoverProgram)
+	IsRecovered bool
 }
 
 func NewElaboration(gauge common.MemoryGauge) *Elaboration {
