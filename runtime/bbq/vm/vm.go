@@ -79,6 +79,26 @@ func (vm *VM) pop() Value {
 	return value
 }
 
+// pop2 removes and returns the top two value of the stack.
+// It is efficient than calling `pop` twice.
+func (vm *VM) pop2() (Value, Value) {
+	lastIndex := len(vm.stack) - 1
+	value1, value2 := vm.stack[lastIndex], vm.stack[lastIndex-1]
+	vm.stack[lastIndex], vm.stack[lastIndex-1] = nil, nil
+	vm.stack = vm.stack[:lastIndex-1]
+	return value1, value2
+}
+
+// pop3 removes and returns the top three value of the stack.
+// It is efficient than calling `pop` thrice.
+func (vm *VM) pop3() (Value, Value, Value) {
+	lastIndex := len(vm.stack) - 1
+	value1, value2, value3 := vm.stack[lastIndex], vm.stack[lastIndex-1], vm.stack[lastIndex-2]
+	vm.stack[lastIndex], vm.stack[lastIndex-1], vm.stack[lastIndex-2] = nil, nil, nil
+	vm.stack = vm.stack[:lastIndex-2]
+	return value1, value2, value3
+}
+
 func (vm *VM) peek() Value {
 	lastIndex := len(vm.stack) - 1
 	return vm.stack[lastIndex]
@@ -306,6 +326,21 @@ func opSetGlobal(vm *VM) {
 	callFrame.context.Globals[index] = vm.pop()
 }
 
+func opSetIndex(vm *VM) {
+	index, array, element := vm.pop3()
+	indexValue := index.(IntValue)
+	arrayValue := array.(*ArrayValue)
+	arrayValue.Set(vm.config, int(indexValue.SmallInt), element)
+}
+
+func opGetIndex(vm *VM) {
+	index, array := vm.pop2()
+	indexValue := index.(IntValue)
+	arrayValue := array.(*ArrayValue)
+	element := arrayValue.Get(vm.config, int(indexValue.SmallInt))
+	vm.push(element)
+}
+
 func opInvoke(vm *VM) {
 	value := vm.pop()
 	stackHeight := len(vm.stack)
@@ -508,6 +543,23 @@ func opUnwrap(vm *VM) {
 	}
 }
 
+func opNewArray(vm *VM) {
+	typ := vm.loadType().(interpreter.ArrayStaticType)
+	size := int(vm.callFrame.getUint16())
+	isResourceKinded := vm.callFrame.getBool()
+
+	elements := make([]Value, size)
+
+	// Must be inserted in the reverse,
+	//since the stack if FILO.
+	for i := size - 1; i >= 0; i-- {
+		elements[i] = vm.pop()
+	}
+
+	array := NewArrayValue(vm.config, typ, isResourceKinded, elements...)
+	vm.push(array)
+}
+
 func (vm *VM) run() {
 	for {
 
@@ -553,6 +605,10 @@ func (vm *VM) run() {
 			opGetGlobal(vm)
 		case opcode.SetGlobal:
 			opSetGlobal(vm)
+		case opcode.SetIndex:
+			opSetIndex(vm)
+		case opcode.GetIndex:
+			opGetIndex(vm)
 		case opcode.Invoke:
 			opInvoke(vm)
 		case opcode.InvokeDynamic:
@@ -563,6 +619,8 @@ func (vm *VM) run() {
 			opDup(vm)
 		case opcode.New:
 			opNew(vm)
+		case opcode.NewArray:
+			opNewArray(vm)
 		case opcode.SetField:
 			opSetField(vm)
 		case opcode.GetField:

@@ -623,6 +623,10 @@ func (c *Compiler) VisitAssignmentStatement(statement *ast.AssignmentStatement) 
 		c.compileExpression(target.Expression)
 		c.stringConstLoad(target.Identifier.Identifier)
 		c.emit(opcode.SetField)
+	case *ast.IndexExpression:
+		c.compileExpression(target.TargetExpression)
+		c.compileExpression(target.IndexingExpression)
+		c.emit(opcode.SetIndex)
 	default:
 		// TODO:
 		panic(errors.NewUnreachableError())
@@ -680,9 +684,36 @@ func (c *Compiler) VisitFixedPointExpression(_ *ast.FixedPointExpression) (_ str
 	panic(errors.NewUnreachableError())
 }
 
-func (c *Compiler) VisitArrayExpression(_ *ast.ArrayExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler) VisitArrayExpression(array *ast.ArrayExpression) (_ struct{}) {
+	arrayTypes := c.Elaboration.ArrayExpressionTypes(array)
+
+	var isResource byte
+	if arrayTypes.ArrayType.IsResourceType() {
+		isResource = 1
+	}
+
+	typeIndex := c.getOrAddType(arrayTypes.ArrayType)
+	typeIndexFirst, typeIndexSecond := encodeUint16(typeIndex)
+
+	sizeFirst, sizeSecond := encodeUint16(uint16(len(array.Values)))
+
+	for _, expression := range array.Values {
+		//c.emit(opcode.Dup)
+		c.compileExpression(expression)
+		//first, second := encodeUint16(uint16(index))
+		//c.emit(opcode.SetIndex, first, second)
+	}
+
+	c.emit(
+		opcode.NewArray,
+		typeIndexFirst,
+		typeIndexSecond,
+		sizeFirst,
+		sizeSecond,
+		isResource,
+	)
+
+	return
 }
 
 func (c *Compiler) VisitDictionaryExpression(_ *ast.DictionaryExpression) (_ struct{}) {
@@ -857,9 +888,11 @@ func (c *Compiler) VisitMemberExpression(expression *ast.MemberExpression) (_ st
 	return
 }
 
-func (c *Compiler) VisitIndexExpression(_ *ast.IndexExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler) VisitIndexExpression(expression *ast.IndexExpression) (_ struct{}) {
+	c.compileExpression(expression.TargetExpression)
+	c.compileExpression(expression.IndexingExpression)
+	c.emit(opcode.GetIndex)
+	return
 }
 
 func (c *Compiler) VisitConditionalExpression(_ *ast.ConditionalExpression) (_ struct{}) {

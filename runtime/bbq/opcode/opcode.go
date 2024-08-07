@@ -31,6 +31,12 @@ const (
 	ReturnValue
 	Jump
 	JumpIfFalse
+	_
+	_
+	_
+	_
+	_
+	_
 
 	// Int operations
 
@@ -43,6 +49,17 @@ const (
 	IntGreater
 	IntLessOrEqual
 	IntGreaterOrEqual
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
 
 	// Unary/Binary operators
 
@@ -52,6 +69,10 @@ const (
 	Destroy
 	Transfer
 	Cast
+	_
+	_
+	_
+	_
 
 	// Value/Constant loading
 
@@ -60,6 +81,21 @@ const (
 	New
 	Path
 	Nil
+	NewArray
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
 
 	GetConstant
 	GetLocal
@@ -68,14 +104,38 @@ const (
 	SetGlobal
 	GetField
 	SetField
+	SetIndex
+	GetIndex
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
 
 	// Invocations
 
 	Invoke
 	InvokeDynamic
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
 
 	// Stack operations
 
 	Drop
 	Dup
+	_
+	_
+	_
 )

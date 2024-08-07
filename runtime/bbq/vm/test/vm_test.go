@@ -1951,3 +1951,88 @@ func BenchmarkMethodCall(b *testing.B) {
 		}
 	})
 }
+
+func TestArrayLiteral(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("array literal", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(): [Int] {
+                return [2, 5]
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(program, vmConfig)
+
+		result, err := vmInstance.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.IsType(t, &vm.ArrayValue{}, result)
+		array := result.(*vm.ArrayValue)
+		assert.Equal(t, 2, array.Count())
+		assert.Equal(t, vm.IntValue{SmallInt: 2}, array.Get(vmConfig, 0))
+		assert.Equal(t, vm.IntValue{SmallInt: 5}, array.Get(vmConfig, 1))
+	})
+
+	t.Run("array get", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(): Int {
+                var a = [2, 5, 7, 3]
+                return a[1]
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(program, vmConfig)
+
+		result, err := vmInstance.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+		assert.Equal(t, vm.IntValue{SmallInt: 5}, result)
+	})
+
+	t.Run("array set", func(t *testing.T) {
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+            fun test(): [Int] {
+                var a = [2, 5, 4]
+                a[2] = 8
+                return a
+            }
+        `)
+		require.NoError(t, err)
+
+		comp := compiler.NewCompiler(checker.Program, checker.Elaboration)
+		program := comp.Compile()
+
+		vmConfig := &vm.Config{}
+		vmInstance := vm.NewVM(program, vmConfig)
+
+		result, err := vmInstance.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, 0, vmInstance.StackSize())
+
+		require.IsType(t, &vm.ArrayValue{}, result)
+		array := result.(*vm.ArrayValue)
+		assert.Equal(t, 3, array.Count())
+		assert.Equal(t, vm.IntValue{SmallInt: 2}, array.Get(vmConfig, 0))
+		assert.Equal(t, vm.IntValue{SmallInt: 5}, array.Get(vmConfig, 1))
+		assert.Equal(t, vm.IntValue{SmallInt: 8}, array.Get(vmConfig, 2))
+	})
+}

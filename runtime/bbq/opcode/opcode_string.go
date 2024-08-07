@@ -13,46 +13,85 @@ func _() {
 	_ = x[ReturnValue-2]
 	_ = x[Jump-3]
 	_ = x[JumpIfFalse-4]
-	_ = x[IntAdd-5]
-	_ = x[IntSubtract-6]
-	_ = x[IntMultiply-7]
-	_ = x[IntDivide-8]
-	_ = x[IntMod-9]
-	_ = x[IntLess-10]
-	_ = x[IntGreater-11]
-	_ = x[IntLessOrEqual-12]
-	_ = x[IntGreaterOrEqual-13]
-	_ = x[Equal-14]
-	_ = x[NotEqual-15]
-	_ = x[Unwrap-16]
-	_ = x[Destroy-17]
-	_ = x[Transfer-18]
-	_ = x[Cast-19]
-	_ = x[True-20]
-	_ = x[False-21]
-	_ = x[New-22]
-	_ = x[Path-23]
-	_ = x[Nil-24]
-	_ = x[GetConstant-25]
-	_ = x[GetLocal-26]
-	_ = x[SetLocal-27]
-	_ = x[GetGlobal-28]
-	_ = x[SetGlobal-29]
-	_ = x[GetField-30]
-	_ = x[SetField-31]
-	_ = x[Invoke-32]
-	_ = x[InvokeDynamic-33]
-	_ = x[Drop-34]
-	_ = x[Dup-35]
+	_ = x[IntAdd-11]
+	_ = x[IntSubtract-12]
+	_ = x[IntMultiply-13]
+	_ = x[IntDivide-14]
+	_ = x[IntMod-15]
+	_ = x[IntLess-16]
+	_ = x[IntGreater-17]
+	_ = x[IntLessOrEqual-18]
+	_ = x[IntGreaterOrEqual-19]
+	_ = x[Equal-31]
+	_ = x[NotEqual-32]
+	_ = x[Unwrap-33]
+	_ = x[Destroy-34]
+	_ = x[Transfer-35]
+	_ = x[Cast-36]
+	_ = x[True-41]
+	_ = x[False-42]
+	_ = x[New-43]
+	_ = x[Path-44]
+	_ = x[Nil-45]
+	_ = x[NewArray-46]
+	_ = x[GetConstant-61]
+	_ = x[GetLocal-62]
+	_ = x[SetLocal-63]
+	_ = x[GetGlobal-64]
+	_ = x[SetGlobal-65]
+	_ = x[GetField-66]
+	_ = x[SetField-67]
+	_ = x[SetIndex-68]
+	_ = x[GetIndex-69]
+	_ = x[Invoke-81]
+	_ = x[InvokeDynamic-82]
+	_ = x[Drop-91]
+	_ = x[Dup-92]
 }
 
-const _Opcode_name = "UnknownReturnReturnValueJumpJumpIfFalseIntAddIntSubtractIntMultiplyIntDivideIntModIntLessIntGreaterIntLessOrEqualIntGreaterOrEqualEqualNotEqualUnwrapDestroyTransferCastTrueFalseNewPathNilGetConstantGetLocalSetLocalGetGlobalSetGlobalGetFieldSetFieldInvokeInvokeDynamicDropDup"
+const (
+	_Opcode_name_0 = "UnknownReturnReturnValueJumpJumpIfFalse"
+	_Opcode_name_1 = "IntAddIntSubtractIntMultiplyIntDivideIntModIntLessIntGreaterIntLessOrEqualIntGreaterOrEqual"
+	_Opcode_name_2 = "EqualNotEqualUnwrapDestroyTransferCast"
+	_Opcode_name_3 = "TrueFalseNewPathNilNewArray"
+	_Opcode_name_4 = "GetConstantGetLocalSetLocalGetGlobalSetGlobalGetFieldSetFieldSetIndexGetIndex"
+	_Opcode_name_5 = "InvokeInvokeDynamic"
+	_Opcode_name_6 = "DropDup"
+)
 
-var _Opcode_index = [...]uint16{0, 7, 13, 24, 28, 39, 45, 56, 67, 76, 82, 89, 99, 113, 130, 135, 143, 149, 156, 164, 168, 172, 177, 180, 184, 187, 198, 206, 214, 223, 232, 240, 248, 254, 267, 271, 274}
+var (
+	_Opcode_index_0 = [...]uint8{0, 7, 13, 24, 28, 39}
+	_Opcode_index_1 = [...]uint8{0, 6, 17, 28, 37, 43, 50, 60, 74, 91}
+	_Opcode_index_2 = [...]uint8{0, 5, 13, 19, 26, 34, 38}
+	_Opcode_index_3 = [...]uint8{0, 4, 9, 12, 16, 19, 27}
+	_Opcode_index_4 = [...]uint8{0, 11, 19, 27, 36, 45, 53, 61, 69, 77}
+	_Opcode_index_5 = [...]uint8{0, 6, 19}
+	_Opcode_index_6 = [...]uint8{0, 4, 7}
+)
 
 func (i Opcode) String() string {
-	if i >= Opcode(len(_Opcode_index)-1) {
+	switch {
+	case i <= 4:
+		return _Opcode_name_0[_Opcode_index_0[i]:_Opcode_index_0[i+1]]
+	case 11 <= i && i <= 19:
+		i -= 11
+		return _Opcode_name_1[_Opcode_index_1[i]:_Opcode_index_1[i+1]]
+	case 31 <= i && i <= 36:
+		i -= 31
+		return _Opcode_name_2[_Opcode_index_2[i]:_Opcode_index_2[i+1]]
+	case 41 <= i && i <= 46:
+		i -= 41
+		return _Opcode_name_3[_Opcode_index_3[i]:_Opcode_index_3[i+1]]
+	case 61 <= i && i <= 69:
+		i -= 61
+		return _Opcode_name_4[_Opcode_index_4[i]:_Opcode_index_4[i+1]]
+	case 81 <= i && i <= 82:
+		i -= 81
+		return _Opcode_name_5[_Opcode_index_5[i]:_Opcode_index_5[i+1]]
+	case 91 <= i && i <= 92:
+		i -= 91
+		return _Opcode_name_6[_Opcode_index_6[i]:_Opcode_index_6[i+1]]
+	default:
 		return "Opcode(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _Opcode_name[_Opcode_index[i]:_Opcode_index[i+1]]
 }

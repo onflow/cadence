@@ -84,7 +84,7 @@ const (
 func FromSemaType(ty sema.Type) ConstantKind {
 	switch ty {
 	// Int*
-	case sema.IntType:
+	case sema.IntType, sema.IntegerType:
 		return Int
 	case sema.Int8Type:
 		return Int8

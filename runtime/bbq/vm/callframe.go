@@ -43,6 +43,12 @@ func (f *callFrame) getByte() byte {
 	return byt
 }
 
+func (f *callFrame) getBool() bool {
+	byt := f.function.Code[f.ip]
+	f.ip++
+	return byt == 1
+}
+
 func (f *callFrame) getString() string {
 	strLen := f.getUint16()
 	str := string(f.function.Code[f.ip : f.ip+strLen])
