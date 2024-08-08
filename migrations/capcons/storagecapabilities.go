@@ -7,41 +7,57 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-// AccountStorageCapabilities maps path to borrow type
-type AccountStorageCapabilities map[interpreter.PathValue]interpreter.StaticType
-
-type StorageCapabilities struct {
-	// accountStorageCapabilities maps common.Address to AccountStorageCapabilities
-	accountStorageCapabilities sync.Map
+type AccountCapability struct {
+	Path       interpreter.PathValue
+	BorrowType interpreter.StaticType
 }
 
-func (m *StorageCapabilities) Record(
+type AccountCapabilities struct {
+	Capabilities []AccountCapability
+}
+
+func (c *AccountCapabilities) Record(path interpreter.PathValue, borrowType interpreter.StaticType) {
+	c.Capabilities = append(
+		c.Capabilities,
+		AccountCapability{
+			Path:       path,
+			BorrowType: borrowType,
+		},
+	)
+}
+
+type AccountsCapabilities struct {
+	// accountCapabilities maps common.Address to *AccountCapabilities
+	accountCapabilities sync.Map
+}
+
+func (m *AccountsCapabilities) Record(
 	addressPath interpreter.AddressPath,
 	borrowType interpreter.StaticType,
 ) {
-	var capabilityEntryMap AccountStorageCapabilities
-	rawCapabilityEntryMap, ok := m.accountStorageCapabilities.Load(addressPath.Address)
+	var accountCapabilities *AccountCapabilities
+	rawAccountCapabilities, ok := m.accountCapabilities.Load(addressPath.Address)
 	if ok {
-		capabilityEntryMap = rawCapabilityEntryMap.(AccountStorageCapabilities)
+		accountCapabilities = rawAccountCapabilities.(*AccountCapabilities)
 	} else {
-		capabilityEntryMap = AccountStorageCapabilities{}
-		m.accountStorageCapabilities.Store(addressPath.Address, capabilityEntryMap)
+		accountCapabilities = &AccountCapabilities{}
+		m.accountCapabilities.Store(addressPath.Address, accountCapabilities)
 	}
-	capabilityEntryMap[addressPath.Path] = borrowType
+	accountCapabilities.Record(addressPath.Path, borrowType)
 }
 
-func (m *StorageCapabilities) ForEach(
+func (m *AccountsCapabilities) ForEach(
 	address common.Address,
-	f func(path interpreter.PathValue, borrowType interpreter.StaticType) bool,
+	f func(AccountCapability) bool,
 ) {
-	rawCapabilityEntryMap, ok := m.accountStorageCapabilities.Load(address)
+	rawAccountCapabilities, ok := m.accountCapabilities.Load(address)
 	if !ok {
 		return
 	}
 
-	capabilityEntryMap := rawCapabilityEntryMap.(AccountStorageCapabilities)
-	for path, borrowType := range capabilityEntryMap {
-		if !f(path, borrowType) {
+	accountCapabilities := rawAccountCapabilities.(*AccountCapabilities)
+	for _, accountCapability := range accountCapabilities.Capabilities {
+		if !f(accountCapability) {
 			return
 		}
 	}

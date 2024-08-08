@@ -2883,13 +2883,13 @@ func TestStorageCapMigration(t *testing.T) {
 
 	reporter := &testMigrationReporter{}
 
-	storageCapabilities := &StorageCapabilities{}
+	storageDomainCapabilities := &AccountsCapabilities{}
 
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&StorageCapMigration{
-				AddressPaths: storageCapabilities,
+				StorageDomainCapabilities: storageDomainCapabilities,
 			},
 		),
 	)
@@ -2907,21 +2907,19 @@ func TestStorageCapMigration(t *testing.T) {
 
 	type actual struct {
 		address    common.Address
-		path       interpreter.PathValue
-		borrowType interpreter.StaticType
+		capability AccountCapability
 	}
 
 	var actuals []actual
 
-	storageCapabilities.ForEach(
+	storageDomainCapabilities.ForEach(
 		testAddress,
-		func(path interpreter.PathValue, borrowType interpreter.StaticType) bool {
+		func(accountCapability AccountCapability) bool {
 			actuals = append(
 				actuals,
 				actual{
 					address:    testAddress,
-					path:       path,
-					borrowType: borrowType,
+					capability: accountCapability,
 				},
 			)
 			return true
@@ -2932,11 +2930,13 @@ func TestStorageCapMigration(t *testing.T) {
 		[]actual{
 			{
 				address: testAddress,
-				path: interpreter.PathValue{
-					Domain:     common.PathDomainStorage,
-					Identifier: testPathIdentifier,
+				capability: AccountCapability{
+					Path: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: testPathIdentifier,
+					},
+					BorrowType: testBorrowType,
 				},
-				borrowType: testBorrowType,
 			},
 		},
 		actuals,

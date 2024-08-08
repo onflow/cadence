@@ -27,7 +27,7 @@ import (
 // StorageCapMigration records path capabilities with storage domain target.
 // It does not actually migrate any values.
 type StorageCapMigration struct {
-	AddressPaths *StorageCapabilities
+	StorageDomainCapabilities *AccountsCapabilities
 }
 
 var _ migrations.ValueMigration = &StorageCapMigration{}
@@ -56,7 +56,7 @@ func (m *StorageCapMigration) Migrate(
 	if pathCapabilityValue, ok := value.(*interpreter.PathCapabilityValue); ok && //nolint:staticcheck
 		pathCapabilityValue.Path.Domain == common.PathDomainStorage {
 
-		m.AddressPaths.Record(
+		m.StorageDomainCapabilities.Record(
 			pathCapabilityValue.AddressPath(),
 			pathCapabilityValue.BorrowType,
 		)
