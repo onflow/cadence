@@ -8,7 +8,7 @@ Date: 08 August, 2024
 > Some staged contracts might be insecure due to incorrect access modifiers usage.
 > Please make sure you have carefully reviewed and understood the section of [Cadence Migration Guide on Access Modifiers](https://cadence-lang.org/docs/cadence-migration-guide/nft-guide#update-all-pub-access-modfiers)
 
-* Stats: 745 contracts staged, 702 successfully upgraded, 43 failed to upgrade (4 failed with FiatToken)
+* Stats: 797 contracts staged, 756 successfully upgraded, 41 failed to upgrade (4 failed with FiatToken)
 * Testnet State Snapshot: devnet50-execution-snapshot-for-migration-19-aug-7
 * Flow-go build: v0.37.0-crescendo-RC3
 
