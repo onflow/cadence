@@ -82,8 +82,8 @@ const (
 	Path
 	Nil
 	NewArray
-	_
-	_
+	NewDictionary
+	NewRef
 	_
 	_
 	_

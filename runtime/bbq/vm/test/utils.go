@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"github.com/onflow/cadence/runtime/bbq/vm"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -444,4 +445,19 @@ func compile(t testing.TB, checker *sema.Checker, programs map[common.Location]c
 	program := comp.Compile()
 	printProgram(program)
 	return program
+}
+
+func compileAndInvoke(t testing.TB, code string, funcName string) (vm.Value, error) {
+	location := common.ScriptLocation{0x1}
+	program := compileCode(t, code, location, map[common.Location]compiledProgram{})
+	storage := interpreter.NewInMemoryStorage(nil)
+	barVM := vm.NewVM(
+		program,
+		&vm.Config{
+			Storage:        storage,
+			AccountHandler: &testAccountHandler{},
+		},
+	)
+
+	return barVM.Invoke("test")
 }

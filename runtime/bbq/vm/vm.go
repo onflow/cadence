@@ -560,6 +560,18 @@ func opNewArray(vm *VM) {
 	vm.push(array)
 }
 
+func opNewRef(vm *VM) {
+	borrowedType := vm.loadType().(*interpreter.ReferenceStaticType)
+	value := vm.pop()
+
+	ref := NewEphemeralReferenceValue(
+		value,
+		borrowedType.Authorization,
+		borrowedType.ReferencedType,
+	)
+	vm.push(ref)
+}
+
 func (vm *VM) run() {
 	for {
 
@@ -621,6 +633,8 @@ func (vm *VM) run() {
 			opNew(vm)
 		case opcode.NewArray:
 			opNewArray(vm)
+		case opcode.NewRef:
+			opNewRef(vm)
 		case opcode.SetField:
 			opSetField(vm)
 		case opcode.GetField:

@@ -992,9 +992,13 @@ func (c *Compiler) VisitDestroyExpression(expression *ast.DestroyExpression) (_ 
 	return
 }
 
-func (c *Compiler) VisitReferenceExpression(_ *ast.ReferenceExpression) (_ struct{}) {
-	// TODO
-	panic(errors.NewUnreachableError())
+func (c *Compiler) VisitReferenceExpression(expression *ast.ReferenceExpression) (_ struct{}) {
+	c.compileExpression(expression.Expression)
+	borrowType := c.Elaboration.ReferenceExpressionBorrowType(expression)
+	index := c.getOrAddType(borrowType)
+	typeIndexFirst, typeIndexSecond := encodeUint16(index)
+	c.emit(opcode.NewRef, typeIndexFirst, typeIndexSecond)
+	return
 }
 
 func (c *Compiler) VisitForceExpression(_ *ast.ForceExpression) (_ struct{}) {
