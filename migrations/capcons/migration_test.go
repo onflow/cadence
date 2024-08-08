@@ -494,6 +494,28 @@ func testPathCapabilityValueMigration(
 
 	handler := &testCapConHandler{}
 
+	storageDomainCapabilities := &AccountsCapabilities{}
+
+	migration.Migrate(
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			&StorageCapMigration{
+				StorageDomainCapabilities: storageDomainCapabilities,
+			},
+		),
+	)
+
+	storageCapabilities := storageDomainCapabilities.Get(testAddress)
+	if storageCapabilities != nil {
+		IssueAccountCapabilities(
+			inter,
+			testAddress,
+			storageCapabilities,
+			handler,
+			capabilityMapping,
+		)
+	}
+
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,

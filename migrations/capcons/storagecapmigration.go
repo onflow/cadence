@@ -22,6 +22,8 @@ import (
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 // StorageCapMigration records path capabilities with storage domain target.
@@ -67,4 +69,33 @@ func (m *StorageCapMigration) Migrate(
 
 func (m *StorageCapMigration) CanSkip(valueType interpreter.StaticType) bool {
 	return CanSkipCapabilityValueMigration(valueType)
+}
+
+func IssueAccountCapabilities(
+	inter *interpreter.Interpreter,
+	address common.Address,
+	capabilities *AccountCapabilities,
+	handler stdlib.CapabilityControllerIssueHandler,
+	mapping *CapabilityMapping,
+) {
+
+	for _, capability := range capabilities.Capabilities {
+		borrowType := inter.MustConvertStaticToSemaType(capability.BorrowType).(*sema.ReferenceType)
+
+		capabilityID, _ := stdlib.IssueStorageCapabilityController(
+			inter,
+			interpreter.EmptyLocationRange,
+			handler,
+			address,
+			borrowType,
+			capability.Path,
+		)
+
+		addressPath := interpreter.AddressPath{
+			Address: address,
+			Path:    capability.Path,
+		}
+
+		mapping.Record(addressPath, capabilityID, borrowType)
+	}
 }

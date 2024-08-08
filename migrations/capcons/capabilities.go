@@ -62,3 +62,11 @@ func (m *AccountsCapabilities) ForEach(
 		}
 	}
 }
+
+func (m *AccountsCapabilities) Get(address common.Address) *AccountCapabilities {
+	rawAccountCapabilities, ok := m.accountCapabilities.Load(address)
+	if !ok {
+		return nil
+	}
+	return rawAccountCapabilities.(*AccountCapabilities)
+}
