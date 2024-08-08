@@ -2797,10 +2797,15 @@ func TestCanSkipCapabilityValueMigration(t *testing.T) {
 func TestStorageCapMigration(t *testing.T) {
 	t.Parallel()
 
-	// Equivalent to: getCapability(/storage/test)
+	testBorrowType := interpreter.NewReferenceStaticType(
+		nil,
+		interpreter.UnauthorizedAccess,
+		interpreter.PrimitiveStaticTypeString,
+	)
+
+	// Equivalent to: getCapability<&String>(/storage/test)
 	capabilityValue := &interpreter.PathCapabilityValue{ //nolint:staticcheck
-		// NOTE: no borrow type
-		BorrowType: nil,
+		BorrowType: testBorrowType,
 		Path: interpreter.PathValue{
 			Domain:     common.PathDomainStorage,
 			Identifier: testPathIdentifier,
@@ -2881,13 +2886,13 @@ func TestStorageCapMigration(t *testing.T) {
 
 	reporter := &testMigrationReporter{}
 
-	addressPaths := &AddressPaths{}
+	storageCapabilities := &StorageCapabilities{}
 
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&StorageCapMigration{
-				AddressPaths: addressPaths,
+				AddressPaths: storageCapabilities,
 			},
 		),
 	)
@@ -2903,23 +2908,40 @@ func TestStorageCapMigration(t *testing.T) {
 	err = storage.CheckHealth()
 	require.NoError(t, err)
 
-	var actualAddressPaths []interpreter.AddressPath
+	type actual struct {
+		address    common.Address
+		path       interpreter.PathValue
+		borrowType interpreter.StaticType
+	}
 
-	addressPaths.ForEach(func(addressPath interpreter.AddressPath) bool {
-		actualAddressPaths = append(actualAddressPaths, addressPath)
-		return true
-	})
+	var actuals []actual
+
+	storageCapabilities.ForEach(
+		testAddress,
+		func(path interpreter.PathValue, borrowType interpreter.StaticType) bool {
+			actuals = append(
+				actuals,
+				actual{
+					address:    testAddress,
+					path:       path,
+					borrowType: borrowType,
+				},
+			)
+			return true
+		},
+	)
 
 	assert.Equal(t,
-		[]interpreter.AddressPath{
+		[]actual{
 			{
-				Address: testAddress,
-				Path: interpreter.PathValue{
+				address: testAddress,
+				path: interpreter.PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: testPathIdentifier,
 				},
+				borrowType: testBorrowType,
 			},
 		},
-		actualAddressPaths,
+		actuals,
 	)
 }
