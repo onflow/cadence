@@ -2793,3 +2793,133 @@ func TestCanSkipCapabilityValueMigration(t *testing.T) {
 		test(ty, expected)
 	}
 }
+
+func TestStorageCapMigration(t *testing.T) {
+	t.Parallel()
+
+	// Equivalent to: getCapability(/storage/test)
+	capabilityValue := &interpreter.PathCapabilityValue{ //nolint:staticcheck
+		// NOTE: no borrow type
+		BorrowType: nil,
+		Path: interpreter.PathValue{
+			Domain:     common.PathDomainStorage,
+			Identifier: testPathIdentifier,
+		},
+		Address: interpreter.AddressValue(testAddress),
+	}
+
+	rt := NewTestInterpreterRuntime()
+
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{testAddress}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Setup
+
+	setupTransactionLocation := nextTransactionLocation()
+
+	environment := runtime.NewScriptInterpreterEnvironment(runtime.Config{})
+
+	// Inject the path capability value.
+	//
+	// We don't have a way to create a path capability value in a Cadence program anymore,
+	// so we have to inject it manually.
+
+	environment.DeclareValue(
+		stdlib.StandardLibraryValue{
+			Name:  "cap",
+			Type:  &sema.CapabilityType{},
+			Kind:  common.DeclarationKindConstant,
+			Value: capabilityValue,
+		},
+		setupTransactionLocation,
+	)
+
+	// Save capability value into account
+
+	// language=cadence
+	setupTx := `
+      transaction {
+          prepare(signer: auth(SaveValue) &Account) {
+             signer.storage.save(cap, to: /storage/cap)
+          }
+      }
+    `
+
+	err := rt.ExecuteTransaction(
+		runtime.Script{
+			Source: []byte(setupTx),
+		},
+		runtime.Context{
+			Interface:   runtimeInterface,
+			Environment: environment,
+			Location:    setupTransactionLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	// Migrate
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
+
+	reporter := &testMigrationReporter{}
+
+	addressPaths := &AddressPaths{}
+
+	migration.Migrate(
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			&StorageCapMigration{
+				AddressPaths: addressPaths,
+			},
+		),
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	require.Empty(t, reporter.migrations)
+	require.Empty(t, reporter.errors)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	var actualAddressPaths []interpreter.AddressPath
+
+	addressPaths.ForEach(func(addressPath interpreter.AddressPath) bool {
+		actualAddressPaths = append(actualAddressPaths, addressPath)
+		return true
+	})
+
+	assert.Equal(t,
+		[]interpreter.AddressPath{
+			{
+				Address: testAddress,
+				Path: interpreter.PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: testPathIdentifier,
+				},
+			},
+		},
+		actualAddressPaths,
+	)
+}
