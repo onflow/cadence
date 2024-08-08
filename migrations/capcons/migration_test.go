@@ -511,7 +511,6 @@ func testPathCapabilityValueMigration(
 			reporter,
 			&CapabilityValueMigration{
 				CapabilityMapping: capabilityMapping,
-				IssueHandler:      handler,
 				Reporter:          reporter,
 			},
 		),
@@ -2369,7 +2368,6 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 			reporter,
 			&CapabilityValueMigration{
 				CapabilityMapping: capabilityMapping,
-				IssueHandler:      handler,
 				Reporter:          reporter,
 			},
 		),
@@ -2622,7 +2620,6 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 			reporter,
 			&CapabilityValueMigration{
 				CapabilityMapping: capabilityMapping,
-				IssueHandler:      handler,
 				Reporter:          reporter,
 			},
 		),
