@@ -328,8 +328,8 @@ func parseFunctionDeclaration(
 	nativePos *ast.Position,
 	docString string,
 ) (*ast.FunctionDeclaration, error) {
-
-	startPos := ast.EarliestPosition(p.current.StartPos, accessPos, purityPos, staticPos, nativePos)
+	startToken := p.current
+	startPos := ast.EarliestPosition(startToken.StartPos, accessPos, purityPos, staticPos, nativePos)
 
 	// Skip the `fun` keyword
 	p.nextSemanticToken()
@@ -360,7 +360,7 @@ func parseFunctionDeclaration(
 		return nil, err
 	}
 
-	return ast.NewFunctionDeclaration(
+	return ast.NewFunctionDeclarationWithComments(
 		p.memoryGauge,
 		access,
 		purity,
@@ -373,6 +373,7 @@ func parseFunctionDeclaration(
 		functionBlock,
 		startPos,
 		docString,
+		p.newCommentsFromTrivia(startToken.LeadingTrivia, []lexer.Trivia{}),
 	), nil
 }
 

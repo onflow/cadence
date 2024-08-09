@@ -74,6 +74,8 @@ type lexer struct {
 	prev rune
 	// canBackup indicates whether stepping back is allowed
 	canBackup bool
+	// currentTrivia stores the current leading or trailing Trivia
+	currentTrivia []Trivia
 }
 
 var _ TokenStream = &lexer{}
@@ -99,6 +101,9 @@ func (l *lexer) Next() Token {
 				pos,
 				pos,
 			),
+			LeadingTrivia: l.currentTrivia,
+			// EOF has no trailing Trivia
+			TrailingTrivia: []Trivia{},
 		}
 
 	}
@@ -188,6 +193,8 @@ func (l *lexer) run(state stateFn) {
 	for state != nil {
 		state = state(l)
 	}
+
+	l.updatePreviousTrailingTrivia()
 }
 
 // next decodes the next rune (UTF8 character) from the input string.
@@ -254,6 +261,8 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 
 	endPos := l.endPos()
 
+	l.updatePreviousTrailingTrivia()
+
 	token := Token{
 		Type:         ty,
 		SpaceOrError: spaceOrError,
@@ -267,23 +276,116 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 				endPos.column,
 			),
 		),
+		LeadingTrivia: l.currentTrivia,
+		// Trailing Trivia can't be determined, as it wasn't consumed yet at this point.
+		TrailingTrivia: []Trivia{},
 	}
+
+	// Mark as fully consumed
+	l.currentTrivia = []Trivia{}
 
 	l.tokens = append(l.tokens, token)
 	l.tokenCount = len(l.tokens)
 
 	if consume {
-		l.startOffset = l.endOffset
+		l.consume(endPos)
+	}
+}
 
-		l.startPos = endPos
-		r, _ := utf8.DecodeRune(l.input[l.endOffset-1:])
+func (l *lexer) updatePreviousTrailingTrivia() {
+	if l.tokenCount == 0 {
+		return
+	}
 
-		if r == '\n' {
-			l.startPos.line++
-			l.startPos.column = 0
-		} else {
-			l.startPos.column++
+	// Split the current trivia into trailing trivia of the previous token
+	// and leading trivia of the next token.
+	var trailingTrivia []Trivia
+	var leadingTrivia []Trivia
+	trailingTriviaEnded := false
+	for _, trivia := range l.currentTrivia {
+		if trivia.Type == TriviaTypeNewLine {
+			trailingTriviaEnded = true
 		}
+		if trailingTriviaEnded {
+			leadingTrivia = append(leadingTrivia, trivia)
+		} else {
+			trailingTrivia = append(trailingTrivia, trivia)
+		}
+	}
+
+	l.tokens[l.tokenCount-1].TrailingTrivia = trailingTrivia
+	l.currentTrivia = leadingTrivia
+}
+
+func (l *lexer) emitTrivia(triviaType TriviaType) {
+	endPos := l.endPos()
+
+	currentRange := ast.NewRange(
+		l.memoryGauge,
+		l.startPosition(),
+		ast.NewPosition(
+			l.memoryGauge,
+			l.endOffset-1,
+			endPos.line,
+			endPos.column,
+		),
+	)
+
+	if l.currentTrivia == nil {
+		l.currentTrivia = []Trivia{}
+	}
+
+	l.currentTrivia = append(l.currentTrivia, Trivia{
+		Type:  triviaType,
+		Range: currentRange,
+	})
+
+	l.consume(endPos)
+}
+
+const useLegacyTrivia = false
+
+// TODO(preserve-comments): Remove after refactoring is complete
+func (l *lexer) emitLegacyTrivia(legacyTriviaType TokenType) {
+	if !useLegacyTrivia {
+		return
+	}
+
+	if legacyTriviaType == TokenSpace {
+		trivia := l.input[l.startOffset:l.endOffset]
+
+		var containsNewline bool
+		for _, r := range trivia {
+			if r == '\n' {
+				containsNewline = true
+			}
+		}
+
+		l.emit(
+			TokenSpace,
+			Space{
+				ContainsNewline: containsNewline,
+			},
+			l.startPosition(),
+			true,
+		)
+	} else {
+		l.emitType(legacyTriviaType)
+	}
+}
+
+// endPos pre-computed end-position by calling l.endPos()
+func (l *lexer) consume(endPos position) {
+	l.startOffset = l.endOffset
+
+	l.startPos = endPos
+	r, _ := utf8.DecodeRune(l.input[l.endOffset-1:])
+
+	if r == '\n' {
+		l.startPos.line++
+		l.startPos.column = 0
+	} else {
+		l.startPos.column++
 	}
 }
 
@@ -337,15 +439,12 @@ func (l *lexer) emitError(err error) {
 	l.emit(TokenError, err, rangeStart, false)
 }
 
-func (l *lexer) scanSpace() (containsNewline bool) {
+func (l *lexer) scanSpace() {
 	// lookahead is already lexed.
 	// parse more, if any
 	l.acceptWhile(func(r rune) bool {
 		switch r {
 		case ' ', '\t', '\r':
-			return true
-		case '\n':
-			containsNewline = true
 			return true
 		default:
 			return false

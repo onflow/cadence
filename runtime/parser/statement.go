@@ -556,7 +556,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 
 	return ast.NewFunctionBlock(
 		p.memoryGauge,
-		ast.NewBlock(
+		ast.NewBlockWithComments(
 			p.memoryGauge,
 			statements,
 			ast.NewRange(
@@ -564,6 +564,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 				startToken.StartPos,
 				endToken.EndPos,
 			),
+			p.newCommentsFromTrivia(startToken.LeadingTrivia, endToken.TrailingTrivia),
 		),
 		preConditions,
 		postConditions,

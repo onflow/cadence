@@ -1845,7 +1845,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 				TypeAnnotation:    fieldTypeAnnotation,
 				VariableKind:      ast.VariableKindConstant,
 				ArgumentLabels:    argumentLabels,
-				DocString:         function.DocString,
+				DocString:         function.DeclarationDocString(),
 				HasImplementation: hasImplementation,
 				HasConditions:     hasConditions,
 			})

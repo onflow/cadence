@@ -20,7 +20,6 @@ package ast
 
 import (
 	"encoding/json"
-
 	"github.com/onflow/cadence/runtime/common"
 )
 

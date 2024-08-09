@@ -23,9 +23,14 @@ import (
 )
 
 type Token struct {
+	// TODO(preserve-comments): Rename to Error error
 	SpaceOrError any
 	ast.Range
 	Type TokenType
+	// leading Trivia up to and including the first contiguous sequence of newlines characters.
+	LeadingTrivia []Trivia
+	// trailing Trivia up to, but not including, the next newline character.
+	TrailingTrivia []Trivia
 }
 
 func (t Token) Is(ty TokenType) bool {
@@ -33,7 +38,5 @@ func (t Token) Is(ty TokenType) bool {
 }
 
 func (t Token) Source(input []byte) []byte {
-	startOffset := t.StartPos.Offset
-	endOffset := t.EndPos.Offset + 1
-	return input[startOffset:endOffset]
+	return t.Range.Source(input)
 }

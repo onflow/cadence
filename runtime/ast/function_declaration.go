@@ -20,6 +20,7 @@ package ast
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/turbolent/prettier"
 
@@ -69,16 +70,50 @@ type FunctionDeclaration struct {
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
-	DocString            string
 	Identifier           Identifier
 	StartPos             Position `json:"-"`
 	Access               Access
 	Flags                FunctionDeclarationFlags
+	Comments
 }
 
 var _ Element = &FunctionDeclaration{}
 var _ Declaration = &FunctionDeclaration{}
 var _ Statement = &FunctionDeclaration{}
+
+// TODO(preserve-comments): Temporary, add `comments` param to NewFunctionDeclaration in the future
+func NewFunctionDeclarationWithComments(
+	gauge common.MemoryGauge,
+	access Access,
+	purity FunctionPurity,
+	isStatic bool,
+	isNative bool,
+	identifier Identifier,
+	typeParameterList *TypeParameterList,
+	parameterList *ParameterList,
+	returnTypeAnnotation *TypeAnnotation,
+	functionBlock *FunctionBlock,
+	startPos Position,
+	docString string,
+	comments Comments,
+) *FunctionDeclaration {
+	decl := NewFunctionDeclaration(
+		gauge,
+		access,
+		purity,
+		isStatic,
+		isNative,
+		identifier,
+		typeParameterList,
+		parameterList,
+		returnTypeAnnotation,
+		functionBlock,
+		startPos,
+		docString,
+	)
+	decl.Comments = comments
+	return decl
+}
 
 func NewFunctionDeclaration(
 	gauge common.MemoryGauge,
@@ -114,7 +149,6 @@ func NewFunctionDeclaration(
 		ReturnTypeAnnotation: returnTypeAnnotation,
 		FunctionBlock:        functionBlock,
 		StartPos:             startPos,
-		DocString:            docString,
 	}
 }
 
@@ -176,7 +210,16 @@ func (d *FunctionDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *FunctionDeclaration) DeclarationDocString() string {
-	return d.DocString
+	var s strings.Builder
+	for _, comment := range d.Comments.Leading {
+		if comment.Doc() {
+			if s.Len() > 0 {
+				s.WriteRune('\n')
+			}
+			s.Write(comment.Text())
+		}
+	}
+	return s.String()
 }
 
 func (d *FunctionDeclaration) Doc() prettier.Doc {
@@ -200,16 +243,18 @@ func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 		*Alias
 		Type string
 		Range
-		IsStatic bool
-		IsNative bool
-		Flags    FunctionDeclarationFlags `json:",omitempty"`
+		IsStatic  bool
+		IsNative  bool
+		Flags     FunctionDeclarationFlags `json:",omitempty"`
+		DocString string
 	}{
-		Type:     "FunctionDeclaration",
-		Range:    NewUnmeteredRangeFromPositioned(d),
-		IsStatic: d.IsStatic(),
-		IsNative: d.IsNative(),
-		Alias:    (*Alias)(d),
-		Flags:    0,
+		Type:      "FunctionDeclaration",
+		Range:     NewUnmeteredRangeFromPositioned(d),
+		IsStatic:  d.IsStatic(),
+		IsNative:  d.IsNative(),
+		Alias:     (*Alias)(d),
+		Flags:     0,
+		DocString: d.DeclarationDocString(),
 	})
 }
 

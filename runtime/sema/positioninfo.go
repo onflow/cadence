@@ -111,7 +111,7 @@ func (i *PositionInfo) recordFunctionDeclarationOrigin(
 		DeclarationKind: common.DeclarationKindFunction,
 		StartPos:        &startPosition,
 		EndPos:          &endPosition,
-		DocString:       function.DocString,
+		DocString:       function.DeclarationDocString(),
 	}
 
 	i.Occurrences.Put(
