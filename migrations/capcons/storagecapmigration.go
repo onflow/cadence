@@ -73,6 +73,7 @@ func (m *StorageCapMigration) CanSkip(valueType interpreter.StaticType) bool {
 
 func IssueAccountCapabilities(
 	inter *interpreter.Interpreter,
+	reporter CapabilityMigrationReporter,
 	address common.Address,
 	capabilities *AccountCapabilities,
 	handler stdlib.CapabilityControllerIssueHandler,
@@ -80,7 +81,18 @@ func IssueAccountCapabilities(
 ) {
 
 	for _, capability := range capabilities.Capabilities {
-		borrowType := inter.MustConvertStaticToSemaType(capability.BorrowType).(*sema.ReferenceType)
+		addressPath := interpreter.AddressPath{
+			Address: address,
+			Path:    capability.Path,
+		}
+
+		borrowStaticType := capability.BorrowType
+		if borrowStaticType == nil {
+			reporter.MissingBorrowType(address, addressPath)
+			continue
+		}
+
+		borrowType := inter.MustConvertStaticToSemaType(borrowStaticType).(*sema.ReferenceType)
 
 		capabilityID, _ := stdlib.IssueStorageCapabilityController(
 			inter,
@@ -91,11 +103,13 @@ func IssueAccountCapabilities(
 			capability.Path,
 		)
 
-		addressPath := interpreter.AddressPath{
-			Address: address,
-			Path:    capability.Path,
-		}
-
 		mapping.Record(addressPath, capabilityID, borrowType)
+
+		reporter.IssuedStorageCapability(
+			address,
+			addressPath,
+			borrowStaticType.(*interpreter.ReferenceStaticType),
+			capabilityID,
+		)
 	}
 }

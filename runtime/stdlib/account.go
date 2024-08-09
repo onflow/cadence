@@ -2602,7 +2602,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				// Get borrow type type argument
+				// Get borrow-type type-argument
 
 				typeParameterPair := invocation.TypeParameterTypes.Oldest()
 				ty := typeParameterPair.Value
