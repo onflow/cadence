@@ -119,6 +119,7 @@ type testMigrationReporter struct {
 var _ migrations.Reporter = &testMigrationReporter{}
 var _ LinkMigrationReporter = &testMigrationReporter{}
 var _ CapabilityMigrationReporter = &testMigrationReporter{}
+var _ StorageCapabilityMigrationReporter = &testMigrationReporter{}
 
 func (t *testMigrationReporter) Migrated(
 	storageKey interpreter.StorageKey,
@@ -194,7 +195,7 @@ func (t *testMigrationReporter) MissingBorrowType(
 	)
 }
 
-func (t *testMigrationReporter) IssuedStorageCapability(
+func (t *testMigrationReporter) IssuedStorageCapabilityController(
 	accountAddress common.Address,
 	addressPath interpreter.AddressPath,
 	borrowType *interpreter.ReferenceStaticType,

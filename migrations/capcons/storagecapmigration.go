@@ -26,6 +26,19 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
+type StorageCapabilityMigrationReporter interface {
+	MissingBorrowType(
+		accountAddress common.Address,
+		addressPath interpreter.AddressPath,
+	)
+	IssuedStorageCapabilityController(
+		accountAddress common.Address,
+		addressPath interpreter.AddressPath,
+		borrowType *interpreter.ReferenceStaticType,
+		capabilityID interpreter.UInt64Value,
+	)
+}
+
 // StorageCapMigration records path capabilities with storage domain target.
 // It does not actually migrate any values.
 type StorageCapMigration struct {
@@ -73,7 +86,7 @@ func (m *StorageCapMigration) CanSkip(valueType interpreter.StaticType) bool {
 
 func IssueAccountCapabilities(
 	inter *interpreter.Interpreter,
-	reporter CapabilityMigrationReporter,
+	reporter StorageCapabilityMigrationReporter,
 	address common.Address,
 	capabilities *AccountCapabilities,
 	handler stdlib.CapabilityControllerIssueHandler,
@@ -105,7 +118,7 @@ func IssueAccountCapabilities(
 
 		mapping.Record(addressPath, capabilityID, borrowType)
 
-		reporter.IssuedStorageCapability(
+		reporter.IssuedStorageCapabilityController(
 			address,
 			addressPath,
 			borrowStaticType.(*interpreter.ReferenceStaticType),

@@ -37,16 +37,6 @@ type CapabilityMigrationReporter interface {
 		accountAddress common.Address,
 		addressPath interpreter.AddressPath,
 	)
-	MissingBorrowType(
-		accountAddress common.Address,
-		addressPath interpreter.AddressPath,
-	)
-	IssuedStorageCapability(
-		accountAddress common.Address,
-		addressPath interpreter.AddressPath,
-		borrowType *interpreter.ReferenceStaticType,
-		capabilityID interpreter.UInt64Value,
-	)
 }
 
 // CapabilityValueMigration migrates all path capabilities to ID capabilities,
