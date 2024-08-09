@@ -86,6 +86,18 @@ type testCapConsMissingCapabilityID struct {
 	addressPath    interpreter.AddressPath
 }
 
+type testStorageCapConIssued struct {
+	accountAddress common.Address
+	addressPath    interpreter.AddressPath
+	borrowType     *interpreter.ReferenceStaticType
+	capabilityID   interpreter.UInt64Value
+}
+
+type testStorageCapConsMissingBorrowType struct {
+	accountAddress common.Address
+	addressPath    interpreter.AddressPath
+}
+
 type testMigration struct {
 	storageKey    interpreter.StorageKey
 	storageMapKey interpreter.StorageMapKey
@@ -93,18 +105,21 @@ type testMigration struct {
 }
 
 type testMigrationReporter struct {
-	migrations               []testMigration
-	errors                   []error
-	linkMigrations           []testCapConsLinkMigration
-	pathCapabilityMigrations []testCapConsPathCapabilityMigration
-	missingCapabilityIDs     []testCapConsMissingCapabilityID
-	cyclicLinkErrors         []CyclicLinkError
-	missingTargets           []interpreter.AddressPath
+	migrations                      []testMigration
+	errors                          []error
+	linkMigrations                  []testCapConsLinkMigration
+	pathCapabilityMigrations        []testCapConsPathCapabilityMigration
+	missingCapabilityIDs            []testCapConsMissingCapabilityID
+	issuedStorageCapCons            []testStorageCapConIssued
+	missingStorageCapConBorrowTypes []testStorageCapConsMissingBorrowType
+	cyclicLinkErrors                []CyclicLinkError
+	missingTargets                  []interpreter.AddressPath
 }
 
 var _ migrations.Reporter = &testMigrationReporter{}
 var _ LinkMigrationReporter = &testMigrationReporter{}
 var _ CapabilityMigrationReporter = &testMigrationReporter{}
+var _ StorageCapabilityMigrationReporter = &testMigrationReporter{}
 
 func (t *testMigrationReporter) Migrated(
 	storageKey interpreter.StorageKey,
@@ -163,6 +178,36 @@ func (t *testMigrationReporter) MissingCapabilityID(
 		testCapConsMissingCapabilityID{
 			accountAddress: accountAddress,
 			addressPath:    addressPath,
+		},
+	)
+}
+
+func (t *testMigrationReporter) MissingBorrowType(
+	accountAddress common.Address,
+	addressPath interpreter.AddressPath,
+) {
+	t.missingStorageCapConBorrowTypes = append(
+		t.missingStorageCapConBorrowTypes,
+		testStorageCapConsMissingBorrowType{
+			accountAddress: accountAddress,
+			addressPath:    addressPath,
+		},
+	)
+}
+
+func (t *testMigrationReporter) IssuedStorageCapabilityController(
+	accountAddress common.Address,
+	addressPath interpreter.AddressPath,
+	borrowType *interpreter.ReferenceStaticType,
+	capabilityID interpreter.UInt64Value,
+) {
+	t.issuedStorageCapCons = append(
+		t.issuedStorageCapCons,
+		testStorageCapConIssued{
+			accountAddress: accountAddress,
+			addressPath:    addressPath,
+			borrowType:     borrowType,
+			capabilityID:   capabilityID,
 		},
 	)
 }
@@ -509,6 +554,7 @@ func testPathCapabilityValueMigration(
 	if storageCapabilities != nil {
 		IssueAccountCapabilities(
 			inter,
+			reporter,
 			testAddress,
 			storageCapabilities,
 			handler,
@@ -2958,6 +3004,180 @@ func TestStorageCapMigration(t *testing.T) {
 						Identifier: testPathIdentifier,
 					},
 					BorrowType: testBorrowType,
+				},
+			},
+		},
+		actuals,
+	)
+}
+
+func TestStorageCapWithoutBorrowTypeMigration(t *testing.T) {
+	t.Parallel()
+
+	capabilityValue := &interpreter.PathCapabilityValue{ //nolint:staticcheck
+		// Borrow type must be nil.
+		BorrowType: nil,
+
+		Path: interpreter.PathValue{
+			Domain:     common.PathDomainStorage,
+			Identifier: testPathIdentifier,
+		},
+		Address: interpreter.AddressValue(testAddress),
+	}
+
+	rt := NewTestInterpreterRuntime()
+
+	var events []cadence.Event
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]runtime.Address, error) {
+			return []runtime.Address{testAddress}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+
+	// Setup
+
+	setupTransactionLocation := nextTransactionLocation()
+
+	environment := runtime.NewScriptInterpreterEnvironment(runtime.Config{})
+
+	// Inject the path capability value.
+	//
+	// We don't have a way to create a path capability value in a Cadence program anymore,
+	// so we have to inject it manually.
+
+	environment.DeclareValue(
+		stdlib.StandardLibraryValue{
+			Name:  "cap",
+			Type:  &sema.CapabilityType{},
+			Kind:  common.DeclarationKindConstant,
+			Value: capabilityValue,
+		},
+		setupTransactionLocation,
+	)
+
+	// Save capability value into account
+
+	// language=cadence
+	setupTx := `
+      transaction {
+          prepare(signer: auth(SaveValue) &Account) {
+             signer.storage.save(cap, to: /storage/cap)
+          }
+      }
+    `
+
+	err := rt.ExecuteTransaction(
+		runtime.Script{
+			Source: []byte(setupTx),
+		},
+		runtime.Context{
+			Interface:   runtimeInterface,
+			Environment: environment,
+			Location:    setupTransactionLocation,
+		},
+	)
+	require.NoError(t, err)
+
+	// Migrate
+
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
+
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	require.NoError(t, err)
+
+	reporter := &testMigrationReporter{}
+	capabilityMapping := &CapabilityMapping{}
+	handler := &testCapConHandler{}
+	storageDomainCapabilities := &AccountsCapabilities{}
+
+	migration.Migrate(
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			&StorageCapMigration{
+				StorageDomainCapabilities: storageDomainCapabilities,
+			},
+		),
+	)
+
+	storageCapabilities := storageDomainCapabilities.Get(testAddress)
+	require.NotNil(t, storageCapabilities)
+	IssueAccountCapabilities(
+		inter,
+		reporter,
+		testAddress,
+		storageCapabilities,
+		handler,
+		capabilityMapping,
+	)
+
+	err = migration.Commit()
+	require.NoError(t, err)
+
+	// Assert
+
+	require.Empty(t, reporter.migrations)
+	require.Empty(t, reporter.errors)
+
+	require.Empty(t, reporter.missingCapabilityIDs)
+	require.Empty(t, reporter.issuedStorageCapCons)
+	require.Equal(
+		t,
+		[]testStorageCapConsMissingBorrowType{
+			{
+				accountAddress: testAddress,
+				addressPath: interpreter.AddressPath{
+					Address: testAddress,
+					Path:    interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+				},
+			},
+		},
+		reporter.missingStorageCapConBorrowTypes,
+	)
+
+	err = storage.CheckHealth()
+	require.NoError(t, err)
+
+	type actual struct {
+		address    common.Address
+		capability AccountCapability
+	}
+
+	var actuals []actual
+
+	storageDomainCapabilities.ForEach(
+		testAddress,
+		func(accountCapability AccountCapability) bool {
+			actuals = append(
+				actuals,
+				actual{
+					address:    testAddress,
+					capability: accountCapability,
+				},
+			)
+			return true
+		},
+	)
+
+	assert.Equal(t,
+		[]actual{
+			{
+				address: testAddress,
+				capability: AccountCapability{
+					Path: interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: testPathIdentifier,
+					},
 				},
 			},
 		},
