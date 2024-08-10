@@ -2862,20 +2862,42 @@ func TestCanSkipCapabilityValueMigration(t *testing.T) {
 func TestStorageCapMigration(t *testing.T) {
 	t.Parallel()
 
-	testBorrowType := interpreter.NewReferenceStaticType(
+	// &String
+	testBorrowType1 := interpreter.NewReferenceStaticType(
 		nil,
 		interpreter.UnauthorizedAccess,
 		interpreter.PrimitiveStaticTypeString,
 	)
 
+	// &Int
+	testBorrowType2 := interpreter.NewReferenceStaticType(
+		nil,
+		interpreter.UnauthorizedAccess,
+		interpreter.PrimitiveStaticTypeInt,
+	)
+
+	testPath := interpreter.PathValue{
+		Domain:     common.PathDomainStorage,
+		Identifier: testPathIdentifier,
+	}
+
+	testAddressPath := interpreter.AddressPath{
+		Address: testAddress,
+		Path:    testPath,
+	}
+
 	// Equivalent to: getCapability<&String>(/storage/test)
-	capabilityValue := &interpreter.PathCapabilityValue{ //nolint:staticcheck
-		BorrowType: testBorrowType,
-		Path: interpreter.PathValue{
-			Domain:     common.PathDomainStorage,
-			Identifier: testPathIdentifier,
-		},
-		Address: interpreter.AddressValue(testAddress),
+	capabilityValue1 := &interpreter.PathCapabilityValue{ //nolint:staticcheck
+		BorrowType: testBorrowType1,
+		Path:       testPath,
+		Address:    interpreter.AddressValue(testAddress),
+	}
+
+	// Equivalent to: getCapability<&Int>(/storage/test)
+	capabilityValue2 := &interpreter.PathCapabilityValue{ //nolint:staticcheck
+		BorrowType: testBorrowType2,
+		Path:       testPath,
+		Address:    interpreter.AddressValue(testAddress),
 	}
 
 	rt := NewTestInterpreterRuntime()
@@ -2901,20 +2923,25 @@ func TestStorageCapMigration(t *testing.T) {
 
 	environment := runtime.NewScriptInterpreterEnvironment(runtime.Config{})
 
-	// Inject the path capability value.
+	// Inject the path capability values.
 	//
 	// We don't have a way to create a path capability value in a Cadence program anymore,
 	// so we have to inject it manually.
 
-	environment.DeclareValue(
-		stdlib.StandardLibraryValue{
-			Name:  "cap",
-			Type:  &sema.CapabilityType{},
-			Kind:  common.DeclarationKindConstant,
-			Value: capabilityValue,
-		},
-		setupTransactionLocation,
-	)
+	for i, capabilityValue := range []*interpreter.PathCapabilityValue{
+		capabilityValue1,
+		capabilityValue2,
+	} {
+		environment.DeclareValue(
+			stdlib.StandardLibraryValue{
+				Name:  fmt.Sprintf("cap%d", i+1),
+				Type:  &sema.CapabilityType{},
+				Kind:  common.DeclarationKindConstant,
+				Value: capabilityValue,
+			},
+			setupTransactionLocation,
+		)
+	}
 
 	// Save capability value into account
 
@@ -2922,7 +2949,8 @@ func TestStorageCapMigration(t *testing.T) {
 	setupTx := `
       transaction {
           prepare(signer: auth(SaveValue) &Account) {
-             signer.storage.save(cap, to: /storage/cap)
+             signer.storage.save(cap1, to: /storage/cap1)
+             signer.storage.save(cap2, to: /storage/cap2)
           }
       }
     `
@@ -2950,8 +2978,9 @@ func TestStorageCapMigration(t *testing.T) {
 	require.NoError(t, err)
 
 	reporter := &testMigrationReporter{}
-
+	handler := &testCapConHandler{}
 	storageDomainCapabilities := &AccountsCapabilities{}
+	capabilityMapping := &CapabilityMapping{}
 
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
@@ -2962,13 +2991,92 @@ func TestStorageCapMigration(t *testing.T) {
 		),
 	)
 
+	storageCapabilities := storageDomainCapabilities.Get(testAddress)
+	require.NotNil(t, storageCapabilities)
+
+	IssueAccountCapabilities(
+		inter,
+		reporter,
+		testAddress,
+		storageCapabilities,
+		handler,
+		capabilityMapping,
+	)
+
+	migration.Migrate(
+		migration.NewValueMigrationsPathMigrator(
+			reporter,
+			&CapabilityValueMigration{
+				CapabilityMapping: capabilityMapping,
+				Reporter:          reporter,
+			},
+		),
+	)
+
 	err = migration.Commit()
 	require.NoError(t, err)
 
 	// Assert
 
-	require.Empty(t, reporter.migrations)
 	require.Empty(t, reporter.errors)
+
+	assert.Equal(t,
+		[]testMigration{
+			{
+				storageKey: interpreter.StorageKey{
+					Address: testAddress,
+					Key:     common.PathDomainStorage.Identifier(),
+				},
+				storageMapKey: interpreter.StringStorageMapKey("cap1"),
+				migration:     "CapabilityValueMigration",
+			},
+			{
+				storageKey: interpreter.StorageKey{
+					Address: testAddress,
+					Key:     common.PathDomainStorage.Identifier(),
+				},
+				storageMapKey: interpreter.StringStorageMapKey("cap2"),
+				migration:     "CapabilityValueMigration",
+			},
+		},
+		reporter.migrations,
+	)
+
+	assert.Equal(t,
+		[]testStorageCapConIssued{
+			{
+				accountAddress: testAddress,
+				addressPath:    testAddressPath,
+				capabilityID:   1,
+				borrowType:     testBorrowType1,
+			},
+			{
+				accountAddress: testAddress,
+				addressPath:    testAddressPath,
+				capabilityID:   2,
+				borrowType:     testBorrowType2,
+			},
+		},
+		reporter.issuedStorageCapCons,
+	)
+
+	assert.Equal(t,
+		[]testCapConsPathCapabilityMigration{
+			{
+				accountAddress: testAddress,
+				addressPath:    testAddressPath,
+				borrowType:     testBorrowType1,
+				capabilityID:   1,
+			},
+			{
+				accountAddress: testAddress,
+				addressPath:    testAddressPath,
+				borrowType:     testBorrowType2,
+				capabilityID:   2,
+			},
+		},
+		reporter.pathCapabilityMigrations,
+	)
 
 	err = storage.CheckHealth()
 	require.NoError(t, err)
@@ -2999,29 +3107,41 @@ func TestStorageCapMigration(t *testing.T) {
 			{
 				address: testAddress,
 				capability: AccountCapability{
-					Path: interpreter.PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: testPathIdentifier,
-					},
-					BorrowType: testBorrowType,
+					Path:       testPath,
+					BorrowType: testBorrowType1,
+				},
+			},
+			{
+				address: testAddress,
+				capability: AccountCapability{
+					Path:       testPath,
+					BorrowType: testBorrowType2,
 				},
 			},
 		},
 		actuals,
 	)
+
 }
 
 func TestStorageCapWithoutBorrowTypeMigration(t *testing.T) {
 	t.Parallel()
 
+	testPath := interpreter.PathValue{
+		Domain:     common.PathDomainStorage,
+		Identifier: testPathIdentifier,
+	}
+
+	testAddressPath := interpreter.AddressPath{
+		Address: testAddress,
+		Path:    testPath,
+	}
+
 	capabilityValue := &interpreter.PathCapabilityValue{ //nolint:staticcheck
 		// Borrow type must be nil.
 		BorrowType: nil,
 
-		Path: interpreter.PathValue{
-			Domain:     common.PathDomainStorage,
-			Identifier: testPathIdentifier,
-		},
+		Path:    testPath,
 		Address: interpreter.AddressValue(testAddress),
 	}
 
@@ -3112,6 +3232,7 @@ func TestStorageCapWithoutBorrowTypeMigration(t *testing.T) {
 
 	storageCapabilities := storageDomainCapabilities.Get(testAddress)
 	require.NotNil(t, storageCapabilities)
+
 	IssueAccountCapabilities(
 		inter,
 		reporter,
@@ -3136,10 +3257,7 @@ func TestStorageCapWithoutBorrowTypeMigration(t *testing.T) {
 		[]testStorageCapConsMissingBorrowType{
 			{
 				accountAddress: testAddress,
-				addressPath: interpreter.AddressPath{
-					Address: testAddress,
-					Path:    interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test"),
-				},
+				addressPath:    testAddressPath,
 			},
 		},
 		reporter.missingStorageCapConBorrowTypes,
@@ -3174,10 +3292,7 @@ func TestStorageCapWithoutBorrowTypeMigration(t *testing.T) {
 			{
 				address: testAddress,
 				capability: AccountCapability{
-					Path: interpreter.PathValue{
-						Domain:     common.PathDomainStorage,
-						Identifier: testPathIdentifier,
-					},
+					Path: testPath,
 				},
 			},
 		},
