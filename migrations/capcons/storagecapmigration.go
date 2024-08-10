@@ -100,13 +100,13 @@ func IssueAccountCapabilities(
 			Path:    capability.Path,
 		}
 
-		if _, ok := capabilityMapping.Get(addressPath, capability.BorrowType.ID()); ok {
-			continue
-		}
-
 		borrowStaticType := capability.BorrowType
 		if borrowStaticType == nil {
 			reporter.MissingBorrowType(address, addressPath)
+			continue
+		}
+
+		if _, ok := capabilityMapping.Get(addressPath, borrowStaticType.ID()); ok {
 			continue
 		}
 
