@@ -58,7 +58,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		}
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	_, err = p.mustOne(lexer.TokenBraceOpen)
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var prepare *ast.SpecialFunctionDeclaration
 	var execute *ast.SpecialFunctionDeclaration
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	if p.current.Is(lexer.TokenIdentifier) {
 
 		keyword := p.currentTokenSource()
@@ -123,7 +123,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var preConditions *ast.Conditions
 
 	if execute == nil {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
 			// Skip the `pre` keyword
 			p.next()
@@ -145,7 +145,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	sawPost := false
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
@@ -215,9 +215,10 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err error) {
 	for {
-		_, docString := p.parseTrivia(triviaOptions{
-			skipNewlines:    true,
-			parseDocStrings: true,
+		// TODO(preserve-comments): Compute doc string
+		var docString string
+		p.skipSpaceWithOptions(skipSpaceOptions{
+			skipNewlines: true,
 		})
 
 		switch p.current.Type {

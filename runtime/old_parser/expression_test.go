@@ -33,7 +33,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/parser/lexer"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -2134,71 +2133,6 @@ func TestParseBlockComment(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid content", func(t *testing.T) {
-
-		t.Parallel()
-
-		// The lexer should never produce such an invalid token stream in the first place
-
-		tokens := &testTokenStream{
-			tokens: []lexer.Token{
-				{
-					Type: lexer.TokenBlockCommentStart,
-					Range: ast.Range{
-						StartPos: ast.Position{
-							Line:   1,
-							Offset: 0,
-							Column: 0,
-						},
-						EndPos: ast.Position{
-							Line:   1,
-							Offset: 1,
-							Column: 1,
-						},
-					},
-				},
-				{
-					Type: lexer.TokenIdentifier,
-					Range: ast.Range{
-						StartPos: ast.Position{
-							Line:   1,
-							Offset: 2,
-							Column: 2,
-						},
-						EndPos: ast.Position{
-							Line:   1,
-							Offset: 4,
-							Column: 4,
-						},
-					},
-				},
-				{Type: lexer.TokenEOF},
-			},
-			input: []byte(`/*foo`),
-		}
-
-		_, errs := ParseTokenStream(
-			nil,
-			tokens,
-			func(p *parser) (ast.Expression, error) {
-				return parseExpression(p, lowestBindingPower)
-			},
-			Config{},
-		)
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "unexpected token identifier in block comment",
-					Pos: ast.Position{
-						Line:   1,
-						Offset: 2,
-						Column: 2,
-					},
-				},
-			},
-			errs,
-		)
-	})
 }
 
 func BenchmarkParseInfix(b *testing.B) {

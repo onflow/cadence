@@ -32,9 +32,10 @@ import (
 
 func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []ast.Declaration, err error) {
 	for {
-		_, docString := p.parseTrivia(triviaOptions{
-			skipNewlines:    true,
-			parseDocStrings: true,
+		// TODO(preserve-comments): Compute doc string
+		var docString string
+		p.skipSpaceWithOptions(skipSpaceOptions{
+			skipNewlines: true,
 		})
 
 		switch p.current.Type {
@@ -77,7 +78,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 	nativeModifierEnabled := p.config.NativeModifierEnabled
 
 	for {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		switch p.current.Type {
 		case lexer.TokenPragma:
@@ -373,7 +374,7 @@ func parseEntitlementList(p *parser) (ast.EntitlementSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	entitlements := []*ast.NominalType{firstTy}
 	var separator lexer.TokenType
 
@@ -432,7 +433,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 			return ast.AccessNotSpecified, err
 		}
 
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		if !p.current.Is(lexer.TokenIdentifier) {
 			return ast.AccessNotSpecified, p.syntaxError(
@@ -478,7 +479,7 @@ func parseAccess(p *parser) (ast.Access, error) {
 			}
 			access = ast.NewMappedAccess(entitlementMapName, keywordPos)
 
-			p.skipSpaceAndComments()
+			p.skipSpace()
 
 		default:
 			entitlements, err := parseEntitlementList(p)
@@ -545,7 +546,7 @@ func parseVariableDeclaration(
 		}
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	transfer := parseTransfer(p)
 	if transfer == nil {
 		return nil, p.syntaxError("expected transfer")
@@ -556,7 +557,7 @@ func parseVariableDeclaration(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	secondTransfer := parseTransfer(p)
 	var secondValue ast.Expression
@@ -1057,7 +1058,7 @@ func parseFieldWithVariableKind(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	typeAnnotation, err := parseTypeAnnotation(p)
 	if err != nil {
@@ -1097,14 +1098,14 @@ func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapRe
 		)
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	_, err = p.mustOne(lexer.TokenRightArrow)
 	if err != nil {
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	outputType, err := parseType(p, lowestBindingPower)
 	if err != nil {
@@ -1119,7 +1120,7 @@ func parseEntitlementMapping(p *parser, docString string) (*ast.EntitlementMapRe
 		)
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	return ast.NewEntitlementMapRelation(p.memoryGauge, inputNominalType, outputNominalType), nil
 }
@@ -1129,9 +1130,10 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 	var elements []ast.EntitlementMapElement
 
 	for {
-		_, docString := p.parseTrivia(triviaOptions{
-			skipNewlines:    true,
-			parseDocStrings: true,
+		// TODO(preserve-comments): Compute doc string
+		var docString string
+		p.skipSpaceWithOptions(skipSpaceOptions{
+			skipNewlines: true,
 		})
 
 		switch p.current.Type {
@@ -1156,7 +1158,7 @@ func parseEntitlementMappingsAndInclusions(p *parser, endTokenType lexer.TokenTy
 					)
 				}
 
-				p.skipSpaceAndComments()
+				p.skipSpace()
 				elements = append(elements, outputNominalType)
 			} else {
 				mapping, err := parseEntitlementMapping(p, docString)
@@ -1227,7 +1229,7 @@ func parseEntitlementOrMappingDeclaration(
 			return nil, err
 		}
 
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		endToken, err := p.mustOne(lexer.TokenBraceClose)
 		if err != nil {
@@ -1285,7 +1287,7 @@ func parseConformances(p *parser) ([]*ast.NominalType, error) {
 		}
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	return conformances, nil
 }
 
@@ -1319,7 +1321,7 @@ func parseCompositeOrInterfaceDeclaration(
 	var identifier ast.Identifier
 
 	for {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		if !p.current.Is(lexer.TokenIdentifier) {
 			return nil, p.syntaxError(
 				"expected %s, got %s",
@@ -1355,7 +1357,7 @@ func parseCompositeOrInterfaceDeclaration(
 		}
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	conformances, err := parseConformances(p)
 	if err != nil {
@@ -1372,7 +1374,7 @@ func parseCompositeOrInterfaceDeclaration(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	endToken, err := p.mustOne(lexer.TokenBraceClose)
 	if err != nil {
@@ -1429,7 +1431,7 @@ func parseAttachmentDeclaration(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordFor) {
 		return nil, p.syntaxError(
@@ -1461,7 +1463,7 @@ func parseAttachmentDeclaration(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	conformances, err := parseConformances(p)
 	if err != nil {
@@ -1473,14 +1475,14 @@ func parseAttachmentDeclaration(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	members, err := parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
 	if err != nil {
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	endToken, err := p.mustOne(lexer.TokenBraceClose)
 	if err != nil {
@@ -1514,9 +1516,10 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 	var declarations []ast.Declaration
 
 	for {
-		_, docString := p.parseTrivia(triviaOptions{
-			skipNewlines:    true,
-			parseDocStrings: true,
+		// TODO(preserve-comments): Compute doc string
+		var docString string
+		p.skipSpaceWithOptions(skipSpaceOptions{
+			skipNewlines: true,
 		})
 
 		switch p.current.Type {
@@ -1573,7 +1576,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 	nativeModifierEnabled := p.config.NativeModifierEnabled
 
 	for {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
@@ -1871,7 +1874,7 @@ func parseFieldDeclarationWithoutVariableKind(
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	typeAnnotation, err := parseTypeAnnotation(p)
 	if err != nil {

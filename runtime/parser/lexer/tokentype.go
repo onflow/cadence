@@ -69,11 +69,6 @@ const (
 	TokenEqualEqual
 	TokenExclamationMark
 	TokenNotEqual
-	// TODO(preserve-comments): Deprecate Trivia token types
-	TokenBlockCommentStart
-	TokenBlockCommentEnd
-	TokenBlockCommentContent
-	TokenLineComment
 	TokenAmpersand
 	TokenAmpersandAmpersand
 	TokenCaret
@@ -180,14 +175,6 @@ func (t TokenType) String() string {
 		return `'!'`
 	case TokenNotEqual:
 		return `'!='`
-	case TokenBlockCommentStart:
-		return `'/*'`
-	case TokenBlockCommentContent:
-		return "block comment"
-	case TokenLineComment:
-		return "line comment"
-	case TokenBlockCommentEnd:
-		return `'*/'`
 	case TokenAmpersand:
 		return `'&'`
 	case TokenAmpersandAmpersand:

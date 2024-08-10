@@ -605,7 +605,7 @@ func TestParseEOF(t *testing.T) {
 			if err != nil {
 				return struct{}{}, err
 			}
-			p.skipSpaceAndComments()
+			p.skipSpace()
 			_, err = p.mustToken(lexer.TokenIdentifier, "b")
 			if err != nil {
 				return struct{}{}, err

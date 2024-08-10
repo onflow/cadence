@@ -19,7 +19,6 @@
 package old_parser
 
 import (
-	"bytes"
 	"os"
 	"strings"
 
@@ -425,9 +424,6 @@ func (p *parser) skipSpaceAndComments() (containsNewline bool) {
 	return
 }
 
-var blockCommentDocStringPrefix = []byte("/**")
-var lineCommentDocStringPrefix = []byte("///")
-
 func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docString string) {
 	var docStringBuilder strings.Builder
 	defer func() {
@@ -436,7 +432,7 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 		}
 	}()
 
-	var atEnd, insideLineDocString bool
+	var atEnd bool
 
 	for !atEnd {
 		switch p.current.Type {
@@ -453,43 +449,6 @@ func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docSt
 
 			if containsNewline && !options.skipNewlines {
 				return
-			}
-
-			p.next()
-
-		case lexer.TokenBlockCommentStart:
-			commentStartOffset := p.current.StartPos.Offset
-			endToken, ok := p.parseBlockComment()
-
-			if ok && options.parseDocStrings {
-				commentEndOffset := endToken.EndPos.Offset
-
-				contentWithPrefix := p.tokens.Input()[commentStartOffset : commentEndOffset-1]
-
-				insideLineDocString = false
-				docStringBuilder.Reset()
-				if bytes.HasPrefix(contentWithPrefix, blockCommentDocStringPrefix) {
-					// Strip prefix (`/**`)
-					docStringBuilder.Write(contentWithPrefix[len(blockCommentDocStringPrefix):])
-				}
-			}
-
-		case lexer.TokenLineComment:
-			if options.parseDocStrings {
-				comment := p.currentTokenSource()
-				if bytes.HasPrefix(comment, lineCommentDocStringPrefix) {
-					if insideLineDocString {
-						docStringBuilder.WriteByte('\n')
-					} else {
-						insideLineDocString = true
-						docStringBuilder.Reset()
-					}
-					// Strip prefix
-					docStringBuilder.Write(comment[len(lineCommentDocStringPrefix):])
-				} else {
-					insideLineDocString = false
-					docStringBuilder.Reset()
-				}
 			}
 
 			p.next()

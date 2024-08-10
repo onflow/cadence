@@ -27,7 +27,7 @@ import (
 func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statements []ast.Statement, err error) {
 	sawSemicolon := false
 	for {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
 			sawSemicolon = true
@@ -71,7 +71,7 @@ func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statem
 }
 
 func parseStatement(p *parser) (ast.Statement, error) {
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	// Flag for cases where we can tell early-on that the current token isn't being used as a keyword
 	// e.g. soft keywords like `view`
@@ -148,7 +148,7 @@ func parseStatement(p *parser) (ast.Statement, error) {
 	// If the expression is followed by a transfer,
 	// it is actually the target of an assignment or swap statement
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	switch p.current.Type {
 	case lexer.TokenEqual, lexer.TokenLeftArrow, lexer.TokenLeftArrowExclamation:
 		transfer := parseTransfer(p)
@@ -251,7 +251,7 @@ func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
 	endPosition := tokenRange.EndPos
 	p.next()
 
-	sawNewLine, _ := p.parseTrivia(triviaOptions{
+	sawNewLine := p.skipSpaceWithOptions(skipSpaceOptions{
 		skipNewlines: false,
 	})
 
@@ -336,7 +336,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 
 		parseNested := false
 
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		if p.isToken(p.current, lexer.TokenIdentifier, KeywordElse) {
 			p.nextSemanticToken()
 			if p.isToken(p.current, lexer.TokenIdentifier, KeywordIf) {
@@ -431,7 +431,7 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	var index *ast.Identifier
 	var identifier ast.Identifier
@@ -444,7 +444,7 @@ func parseForStatement(p *parser) (*ast.ForStatement, error) {
 			return nil, err
 		}
 
-		p.skipSpaceAndComments()
+		p.skipSpace()
 	} else {
 		identifier = firstValue
 	}
@@ -509,14 +509,14 @@ func parseBlock(p *parser) (*ast.Block, error) {
 }
 
 func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	startToken, err := p.mustOne(lexer.TokenBraceOpen)
 	if err != nil {
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	var preConditions *ast.Conditions
 	if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
@@ -529,7 +529,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 		preConditions = &conditions
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	var postConditions *ast.Conditions
 	if p.isToken(p.current, lexer.TokenIdentifier, KeywordPost) {
@@ -574,7 +574,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 // parseConditions parses conditions (pre/post)
 func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	_, err = p.mustOne(lexer.TokenBraceOpen)
 	if err != nil {
 		return nil, err
@@ -582,7 +582,7 @@ func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 
 	var done bool
 	for !done {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
 			p.next()
@@ -602,7 +602,7 @@ func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 		}
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	_, err = p.mustOne(lexer.TokenBraceClose)
 	if err != nil {
 		return nil, err
@@ -633,7 +633,7 @@ func parseCondition(p *parser) (ast.Condition, error) {
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	var message ast.Expression
 	if p.current.Is(lexer.TokenColon) {
@@ -718,7 +718,7 @@ func parseSwitchCases(p *parser) (cases []*ast.SwitchCase, err error) {
 	}
 
 	for {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
@@ -772,7 +772,7 @@ func parseSwitchCase(p *parser, hasExpression bool) (*ast.SwitchCase, error) {
 			return nil, err
 		}
 	} else {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 	}
 
 	colonPos := p.current.StartPos
@@ -832,7 +832,7 @@ func parseRemoveStatement(
 
 	startPos := p.current.StartPos
 	p.next()
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	attachment, err := parseType(p, lowestBindingPower)
 	if err != nil {
@@ -847,7 +847,7 @@ func parseRemoveStatement(
 		)
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	// check and skip `from` keyword
 	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordFrom) {

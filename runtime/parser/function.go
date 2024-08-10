@@ -35,7 +35,7 @@ func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterList, error) {
 	var parameters []*ast.Parameter
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	if !p.current.Is(lexer.TokenParenOpen) {
 		return nil, p.syntaxError(
@@ -55,7 +55,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			if !expectParameter {
@@ -121,7 +121,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 }
 
 func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, error) {
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	startPos := p.current.StartPos
 
@@ -167,7 +167,7 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	var defaultArgument ast.Expression
 
@@ -204,7 +204,7 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 	var typeParameters []*ast.TypeParameter
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	if !p.current.Is(lexer.TokenLess) {
 		return nil, nil
@@ -220,7 +220,7 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			if !expectTypeParameter {
@@ -286,7 +286,7 @@ func parseTypeParameterList(p *parser) (*ast.TypeParameterList, error) {
 }
 
 func parseTypeParameter(p *parser) (*ast.TypeParameter, error) {
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	if !p.current.Is(lexer.TokenIdentifier) {
 		return nil, p.syntaxError(
@@ -397,7 +397,7 @@ func parseFunctionParameterListAndRest(
 
 	current := p.current
 	cursor := p.tokens.Cursor()
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
 		p.nextSemanticToken()
@@ -416,7 +416,7 @@ func parseFunctionParameterListAndRest(
 	if functionBlockIsOptional {
 		current = p.current
 		cursor := p.tokens.Cursor()
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		if !p.current.Is(lexer.TokenBraceOpen) {
 			p.tokens.Revert(cursor)
 			p.current = current
