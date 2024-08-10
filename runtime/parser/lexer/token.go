@@ -23,13 +23,14 @@ import (
 )
 
 type Token struct {
-	// TODO(preserve-comments): Rename to Error error
 	SpaceOrError any
 	ast.Range
 	Type TokenType
-	// leading Trivia up to and including the first contiguous sequence of newlines characters.
+	// LeadingTrivia up to and including the first contiguous sequence of newlines characters.
+	// Not tracked for space token, since those are usually ignored in the parser.
 	LeadingTrivia []Trivia
-	// trailing Trivia up to, but not including, the next newline character.
+	// TrailingTrivia up to, but not including, the next newline character.
+	// Not tracked for space token, since those are usually ignored in the parser.
 	TrailingTrivia []Trivia
 }
 

@@ -127,7 +127,7 @@ func parseStatement(p *parser) (ast.Statement, error) {
 	if !tokenIsIdentifier {
 		// If it is not a keyword for a statement,
 		// it might start with a keyword for a declaration
-		declaration, err := parseDeclaration(p, "")
+		declaration, err := parseDeclaration(p)
 		if err != nil {
 			return nil, err
 		}

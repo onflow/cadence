@@ -32,8 +32,6 @@ import (
 
 func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []ast.Declaration, err error) {
 	for {
-		// TODO(preserve-comments): Compute doc string
-		var docString string
 		p.skipSpaceWithOptions(skipSpaceOptions{
 			skipNewlines: true,
 		})
@@ -49,7 +47,7 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 
 		default:
 			var declaration ast.Declaration
-			declaration, err = parseDeclaration(p, docString)
+			declaration, err = parseDeclaration(p)
 			if err != nil {
 				return
 			}
@@ -63,7 +61,9 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 	}
 }
 
-func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
+func parseDeclaration(p *parser) (ast.Declaration, error) {
+	// TODO(preserve-comments): Refactor & remove
+	var docString string
 
 	var access ast.Access = ast.AccessNotSpecified
 	var accessPos *ast.Position

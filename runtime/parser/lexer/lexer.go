@@ -263,6 +263,17 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 
 	l.updatePreviousTrailingTrivia()
 
+	// Only track trivia for non-space tokens
+	leadingTrivia := []Trivia{}
+	shouldConsumeTrivia := ty != TokenSpace
+	if shouldConsumeTrivia {
+		leadingTrivia = l.currentTrivia
+		defer (func() {
+			// Mark as fully consumed
+			l.currentTrivia = []Trivia{}
+		})()
+	}
+
 	token := Token{
 		Type:         ty,
 		SpaceOrError: spaceOrError,
@@ -276,13 +287,10 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 				endPos.column,
 			),
 		),
-		LeadingTrivia: l.currentTrivia,
+		LeadingTrivia: leadingTrivia,
 		// Trailing Trivia can't be determined, as it wasn't consumed yet at this point.
 		TrailingTrivia: []Trivia{},
 	}
-
-	// Mark as fully consumed
-	l.currentTrivia = []Trivia{}
 
 	l.tokens = append(l.tokens, token)
 	l.tokenCount = len(l.tokens)
@@ -301,7 +309,9 @@ func (l *lexer) updatePreviousTrailingTrivia() {
 	// and leading trivia of the next token.
 	var trailingTrivia []Trivia
 	var leadingTrivia []Trivia
-	trailingTriviaEnded := false
+	previousToken := l.tokens[l.tokenCount-1]
+	// Only track trivia for non-space tokens.
+	trailingTriviaEnded := previousToken.Type == TokenSpace
 	for _, trivia := range l.currentTrivia {
 		if trivia.Type == TriviaTypeSpace && trivia.ContainsNewLine {
 			trailingTriviaEnded = true
@@ -313,7 +323,12 @@ func (l *lexer) updatePreviousTrailingTrivia() {
 		}
 	}
 
-	l.tokens[l.tokenCount-1].TrailingTrivia = trailingTrivia
+	// Only track trivia for non-space tokens.
+	for i := l.tokenCount - 1; i >= 0; i-- {
+		if l.tokens[i].Type != TokenSpace {
+			l.tokens[i].TrailingTrivia = trailingTrivia
+		}
+	}
 	l.currentTrivia = leadingTrivia
 }
 

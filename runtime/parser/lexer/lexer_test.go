@@ -1002,6 +1002,13 @@ transaction (
 	a: Int, // First operand 2
 	// Second operand 1
 	b: Int // Second operand 2
+	/*
+	Third operand 1
+	*/
+	c: Int /* Third operand 2
+
+	*/
+	// End of arguments comment
 ) {
 	// Logs the sum 1
 	log(a, b) // Logs the sum 2

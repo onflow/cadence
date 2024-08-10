@@ -11,6 +11,7 @@ type Trivia struct {
 
 type TriviaType uint8
 
+// TODO(preserve-comments): Refactor to Comment, since we now still track spaces using tokens
 const (
 	TriviaTypeUnknown TriviaType = iota
 	TriviaTypeInlineComment
