@@ -94,9 +94,14 @@ func IssueAccountCapabilities(
 ) {
 
 	for _, capability := range capabilities.Capabilities {
+
 		addressPath := interpreter.AddressPath{
 			Address: address,
 			Path:    capability.Path,
+		}
+
+		if _, ok := capabilityMapping.Get(addressPath, capability.BorrowType.ID()); ok {
+			continue
 		}
 
 		borrowStaticType := capability.BorrowType

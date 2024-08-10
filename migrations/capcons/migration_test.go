@@ -2892,6 +2892,11 @@ func TestStorageCapMigration(t *testing.T) {
 		Path:    testPath,
 	}
 
+	// Store 3 capabilities:
+	// - all target the same storage path
+	// - the first has a different borrow type than the last two
+	// - the last two have the same borrow type
+
 	// Equivalent to: getCapability<&String>(/storage/test)
 	capabilityValue1 := &interpreter.PathCapabilityValue{ //nolint:staticcheck
 		BorrowType: testBorrowType1,
@@ -2901,6 +2906,13 @@ func TestStorageCapMigration(t *testing.T) {
 
 	// Equivalent to: getCapability<&Int>(/storage/test)
 	capabilityValue2 := &interpreter.PathCapabilityValue{ //nolint:staticcheck
+		BorrowType: testBorrowType2,
+		Path:       testPath,
+		Address:    interpreter.AddressValue(testAddress),
+	}
+
+	// Equivalent to: getCapability<&Int>(/storage/test)
+	capabilityValue3 := &interpreter.PathCapabilityValue{ //nolint:staticcheck
 		BorrowType: testBorrowType2,
 		Path:       testPath,
 		Address:    interpreter.AddressValue(testAddress),
@@ -2937,6 +2949,7 @@ func TestStorageCapMigration(t *testing.T) {
 	for i, capabilityValue := range []*interpreter.PathCapabilityValue{
 		capabilityValue1,
 		capabilityValue2,
+		capabilityValue3,
 	} {
 		environment.DeclareValue(
 			stdlib.StandardLibraryValue{
@@ -2957,6 +2970,7 @@ func TestStorageCapMigration(t *testing.T) {
           prepare(signer: auth(SaveValue) &Account) {
              signer.storage.save(cap1, to: /storage/cap1)
              signer.storage.save(cap2, to: /storage/cap2)
+             signer.storage.save(cap3, to: /storage/cap3)
           }
       }
     `
@@ -3026,21 +3040,25 @@ func TestStorageCapMigration(t *testing.T) {
 
 	require.Empty(t, reporter.errors)
 
+	testStorageKey := interpreter.StorageKey{
+		Address: testAddress,
+		Key:     common.PathDomainStorage.Identifier(),
+	}
+
 	assert.Equal(t,
 		[]testMigration{
 			{
-				storageKey: interpreter.StorageKey{
-					Address: testAddress,
-					Key:     common.PathDomainStorage.Identifier(),
-				},
+				storageKey:    testStorageKey,
 				storageMapKey: interpreter.StringStorageMapKey("cap1"),
 				migration:     "CapabilityValueMigration",
 			},
 			{
-				storageKey: interpreter.StorageKey{
-					Address: testAddress,
-					Key:     common.PathDomainStorage.Identifier(),
-				},
+				storageKey:    testStorageKey,
+				storageMapKey: interpreter.StringStorageMapKey("cap3"),
+				migration:     "CapabilityValueMigration",
+			},
+			{
+				storageKey:    testStorageKey,
 				storageMapKey: interpreter.StringStorageMapKey("cap2"),
 				migration:     "CapabilityValueMigration",
 			},
@@ -3073,6 +3091,12 @@ func TestStorageCapMigration(t *testing.T) {
 				addressPath:    testAddressPath,
 				borrowType:     testBorrowType1,
 				capabilityID:   1,
+			},
+			{
+				accountAddress: testAddress,
+				addressPath:    testAddressPath,
+				borrowType:     testBorrowType2,
+				capabilityID:   2,
 			},
 			{
 				accountAddress: testAddress,
@@ -3115,6 +3139,13 @@ func TestStorageCapMigration(t *testing.T) {
 				capability: AccountCapability{
 					Path:       testPath,
 					BorrowType: testBorrowType1,
+				},
+			},
+			{
+				address: testAddress,
+				capability: AccountCapability{
+					Path:       testPath,
+					BorrowType: testBorrowType2,
 				},
 			},
 			{
