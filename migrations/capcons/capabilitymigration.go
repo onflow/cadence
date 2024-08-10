@@ -146,6 +146,9 @@ func (m *CapabilityValueMigration) migratePathCapabilityValue(
 			}
 			return nil, nil
 		}
+
+	default:
+		panic(errors.NewUnexpectedError("unexpected path domain: %s", targetPath.Domain))
 	}
 
 	newBorrowType, ok := oldBorrowType.(*interpreter.ReferenceStaticType)
