@@ -111,10 +111,9 @@ func rootState(l *lexer) stateFn {
 		case '_':
 			return identifierState
 		case ' ', '\t', '\r':
-			return spaceState
+			return spaceState(false)
 		case '\n':
-			l.emitTrivia(TriviaTypeNewLine)
-			return rootState
+			return spaceState(true)
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			return numberState
 		case '"':
@@ -122,11 +121,10 @@ func rootState(l *lexer) stateFn {
 		case '/':
 			r = l.next()
 			switch r {
-			// TODO(preserve-comments): Deprecate Trivia token types
 			case '/':
 				return lineCommentState
 			case '*':
-				return blockCommentState(l, 0)
+				return blockCommentState(l, 0, false)
 			default:
 				l.backupOne()
 				l.emitType(TokenSlash)
@@ -261,15 +259,20 @@ type Space struct {
 	ContainsNewline bool
 }
 
-func spaceState(l *lexer) stateFn {
-	l.scanSpace()
+func spaceState(startIsNewline bool) stateFn {
+	return func(l *lexer) stateFn {
+		containsNewline := l.scanSpace()
+		containsNewline = containsNewline || startIsNewline
 
-	// TODO(preserve-comments): Do we need to track memory for other token types as well?
-	common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
+		l.scanSpace()
 
-	l.emitTrivia(TriviaTypeSpace)
+		// TODO(preserve-comments): Do we need to track memory for other token types as well?
+		common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
 
-	return rootState
+		l.emitTrivia(TriviaTypeSpace, containsNewline)
+
+		return rootState
+	}
 }
 
 func identifierState(l *lexer) stateFn {
@@ -300,13 +303,13 @@ func stringState(l *lexer) stateFn {
 
 func lineCommentState(l *lexer) stateFn {
 	l.scanLineComment()
-	l.emitTrivia(TriviaTypeInlineComment)
+	l.emitTrivia(TriviaTypeInlineComment, false)
 	return rootState
 }
 
-func blockCommentState(l *lexer, nesting int) stateFn {
+func blockCommentState(l *lexer, nesting int, containsNewLine bool) stateFn {
 	if nesting < 0 {
-		l.emitTrivia(TriviaTypeMultiLineComment)
+		l.emitTrivia(TriviaTypeMultiLineComment, containsNewLine)
 		return rootState
 	}
 
@@ -314,7 +317,7 @@ func blockCommentState(l *lexer, nesting int) stateFn {
 		r := l.next()
 		switch r {
 		case EOF:
-			l.emitError(fmt.Errorf("end of the file in a comment"))
+			l.emitError(fmt.Errorf("missing comment end '*/'"))
 			return nil
 		case '/':
 			beforeSlashOffset := l.prevEndOffset
@@ -322,7 +325,7 @@ func blockCommentState(l *lexer, nesting int) stateFn {
 				starOffset := l.endOffset
 				l.endOffset = beforeSlashOffset
 				l.endOffset = starOffset
-				return blockCommentState(l, nesting+1)
+				return blockCommentState(l, nesting+1, containsNewLine)
 			}
 
 		case '*':
@@ -331,10 +334,14 @@ func blockCommentState(l *lexer, nesting int) stateFn {
 				slashOffset := l.endOffset
 				l.endOffset = beforeStarOffset
 				l.endOffset = slashOffset
-				return blockCommentState(l, nesting-1)
+				return blockCommentState(l, nesting-1, containsNewLine)
 			}
+
+		case '\n':
+			// TODO(preserve-comments): Test if this is correctly tracked
+			containsNewLine = true
 		}
 
-		return blockCommentState(l, nesting)
+		return blockCommentState(l, nesting, containsNewLine)
 	}
 }

@@ -464,7 +464,7 @@ func TestLexBasic(t *testing.T) {
 						},
 						LeadingTrivia: []Trivia{
 							{
-								Type: TriviaTypeNewLine,
+								Type: TriviaTypeSpace,
 								Range: ast.Range{
 									StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 									EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -490,7 +490,7 @@ func TestLexBasic(t *testing.T) {
 						},
 						LeadingTrivia: []Trivia{
 							{
-								Type: TriviaTypeNewLine,
+								Type: TriviaTypeSpace,
 								Range: ast.Range{
 									StartPos: ast.Position{Line: 2, Column: 3, Offset: 6},
 									EndPos:   ast.Position{Line: 2, Column: 3, Offset: 6},
@@ -862,7 +862,7 @@ func TestLexBasic(t *testing.T) {
 								},
 							},
 							{
-								Type: TriviaTypeNewLine,
+								Type: TriviaTypeSpace,
 								Range: ast.Range{
 									StartPos: ast.Position{
 										Offset: 24,
@@ -951,7 +951,7 @@ func TestLexBasic(t *testing.T) {
 						},
 						LeadingTrivia: []Trivia{
 							{
-								Type: TriviaTypeNewLine,
+								Type: TriviaTypeSpace,
 								Range: ast.Range{
 									StartPos: ast.Position{
 										Offset: 76,
@@ -1173,7 +1173,7 @@ func TestLexString(t *testing.T) {
 						},
 						LeadingTrivia: []Trivia{
 							{
-								Type: TriviaTypeNewLine,
+								Type: TriviaTypeSpace,
 								Range: ast.Range{
 									StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 									EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -1209,7 +1209,7 @@ func TestLexString(t *testing.T) {
 						},
 						LeadingTrivia: []Trivia{
 							{
-								Type: TriviaTypeNewLine,
+								Type: TriviaTypeSpace,
 								Range: ast.Range{
 									StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 									EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
@@ -1299,7 +1299,7 @@ func TestLexString(t *testing.T) {
 						},
 						LeadingTrivia: []Trivia{
 							{
-								Type: TriviaTypeNewLine,
+								Type: TriviaTypeSpace,
 								Range: ast.Range{
 									StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 									EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -1324,7 +1324,7 @@ func TestLexBlockComment(t *testing.T) {
 				{
 					Token: Token{
 						Type:         TokenError,
-						SpaceOrError: errors.New(`end of the file in a comment`),
+						SpaceOrError: errors.New(`missing comment end '*/'`),
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 20, Offset: 20},
 							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
@@ -2006,7 +2006,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 						},
 						LeadingTrivia: []Trivia{
 							{
-								Type: TriviaTypeNewLine,
+								Type: TriviaTypeSpace,
 								Range: ast.Range{
 									StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 									EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -2345,7 +2345,7 @@ func TestLexLineComment(t *testing.T) {
 						},
 						LeadingTrivia: []Trivia{
 							{
-								Type: TriviaTypeNewLine,
+								Type: TriviaTypeSpace,
 								Range: ast.Range{
 									StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
 									EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},

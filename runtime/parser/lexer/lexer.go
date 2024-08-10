@@ -303,7 +303,7 @@ func (l *lexer) updatePreviousTrailingTrivia() {
 	var leadingTrivia []Trivia
 	trailingTriviaEnded := false
 	for _, trivia := range l.currentTrivia {
-		if trivia.Type == TriviaTypeNewLine {
+		if trivia.Type == TriviaTypeSpace && trivia.ContainsNewLine {
 			trailingTriviaEnded = true
 		}
 		if trailingTriviaEnded {
@@ -317,7 +317,7 @@ func (l *lexer) updatePreviousTrailingTrivia() {
 	l.currentTrivia = leadingTrivia
 }
 
-func (l *lexer) emitTrivia(triviaType TriviaType) {
+func (l *lexer) emitTrivia(triviaType TriviaType, containsNewLine bool) {
 	endPos := l.endPos()
 
 	currentRange := ast.NewRange(
@@ -336,16 +336,17 @@ func (l *lexer) emitTrivia(triviaType TriviaType) {
 	}
 
 	l.currentTrivia = append(l.currentTrivia, Trivia{
-		Type:  triviaType,
-		Range: currentRange,
+		Type:            triviaType,
+		ContainsNewLine: containsNewLine,
+		Range:           currentRange,
 	})
 
 	// TODO(preserve-comments): Decide if we should refactor parsing logic to trivia tokens or keep using space token only
 	// Parsing logic depends on space tokens to determine how to parse certain sentences.
-	if triviaType == TriviaTypeSpace || triviaType == TriviaTypeNewLine {
+	if triviaType == TriviaTypeSpace {
 		l.emit(
 			TokenSpace,
-			Space{ContainsNewline: triviaType == TriviaTypeNewLine},
+			Space{ContainsNewline: containsNewLine},
 			l.startPosition(),
 			false,
 		)
@@ -421,12 +422,15 @@ func (l *lexer) emitError(err error) {
 	l.emit(TokenError, err, rangeStart, false)
 }
 
-func (l *lexer) scanSpace() {
+func (l *lexer) scanSpace() (containsNewline bool) {
 	// lookahead is already lexed.
 	// parse more, if any
 	l.acceptWhile(func(r rune) bool {
 		switch r {
 		case ' ', '\t', '\r':
+			return true
+		case '\n':
+			containsNewline = true
 			return true
 		default:
 			return false
