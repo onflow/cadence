@@ -535,7 +535,8 @@ func testPathCapabilityValueMigration(
 
 	reporter := &testMigrationReporter{}
 
-	capabilityMapping := &CapabilityMapping{}
+	privatePublicCapabilityMapping := &PathCapabilityMapping{}
+	storageCapabilityMapping := &PathTypeCapabilityMapping{}
 
 	handler := &testCapConHandler{}
 
@@ -558,7 +559,7 @@ func testPathCapabilityValueMigration(
 			testAddress,
 			storageCapabilities,
 			handler,
-			capabilityMapping,
+			storageCapabilityMapping,
 		)
 	}
 
@@ -566,7 +567,7 @@ func testPathCapabilityValueMigration(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
-				CapabilityMapping: capabilityMapping,
+				CapabilityMapping: privatePublicCapabilityMapping,
 				IssueHandler:      handler,
 				Handler:           handler,
 				Reporter:          reporter,
@@ -578,8 +579,9 @@ func testPathCapabilityValueMigration(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
-				CapabilityMapping: capabilityMapping,
-				Reporter:          reporter,
+				PrivatePublicCapabilityMapping: privatePublicCapabilityMapping,
+				StorageCapabilityMapping:       storageCapabilityMapping,
+				Reporter:                       reporter,
 			},
 		),
 	)
@@ -1592,7 +1594,7 @@ func testLinkMigration(
 
 	reporter := &testMigrationReporter{}
 
-	capabilityMapping := &CapabilityMapping{}
+	capabilityMapping := &PathCapabilityMapping{}
 
 	handler := &testCapConHandler{}
 
@@ -2415,7 +2417,8 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 
 	reporter := &testMigrationReporter{}
 
-	capabilityMapping := &CapabilityMapping{}
+	privatePublicCapabilityMapping := &PathCapabilityMapping{}
+	storageCapabilityMapping := &PathTypeCapabilityMapping{}
 
 	handler := &testCapConHandler{}
 
@@ -2423,7 +2426,7 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
-				CapabilityMapping: capabilityMapping,
+				CapabilityMapping: privatePublicCapabilityMapping,
 				IssueHandler:      handler,
 				Handler:           handler,
 				Reporter:          reporter,
@@ -2435,8 +2438,9 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
-				CapabilityMapping: capabilityMapping,
-				Reporter:          reporter,
+				PrivatePublicCapabilityMapping: privatePublicCapabilityMapping,
+				StorageCapabilityMapping:       storageCapabilityMapping,
+				Reporter:                       reporter,
 			},
 		),
 	)
@@ -2667,7 +2671,8 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 
 	reporter := &testMigrationReporter{}
 
-	capabilityMapping := &CapabilityMapping{}
+	privatePublicCapabilityMapping := &PathCapabilityMapping{}
+	storageCapabilityMapping := &PathTypeCapabilityMapping{}
 
 	handler := &testCapConHandler{}
 
@@ -2675,7 +2680,7 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&LinkValueMigration{
-				CapabilityMapping: capabilityMapping,
+				CapabilityMapping: privatePublicCapabilityMapping,
 				IssueHandler:      handler,
 				Handler:           handler,
 				Reporter:          reporter,
@@ -2687,8 +2692,9 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
-				CapabilityMapping: capabilityMapping,
-				Reporter:          reporter,
+				PrivatePublicCapabilityMapping: privatePublicCapabilityMapping,
+				StorageCapabilityMapping:       storageCapabilityMapping,
+				Reporter:                       reporter,
 			},
 		),
 	)
@@ -2980,7 +2986,7 @@ func TestStorageCapMigration(t *testing.T) {
 	reporter := &testMigrationReporter{}
 	handler := &testCapConHandler{}
 	storageDomainCapabilities := &AccountsCapabilities{}
-	capabilityMapping := &CapabilityMapping{}
+	capabilityMapping := &PathTypeCapabilityMapping{}
 
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
@@ -3007,8 +3013,8 @@ func TestStorageCapMigration(t *testing.T) {
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
-				CapabilityMapping: capabilityMapping,
-				Reporter:          reporter,
+				StorageCapabilityMapping: capabilityMapping,
+				Reporter:                 reporter,
 			},
 		),
 	)
@@ -3217,7 +3223,7 @@ func TestStorageCapWithoutBorrowTypeMigration(t *testing.T) {
 	require.NoError(t, err)
 
 	reporter := &testMigrationReporter{}
-	capabilityMapping := &CapabilityMapping{}
+	storageCapabilityMapping := &PathTypeCapabilityMapping{}
 	handler := &testCapConHandler{}
 	storageDomainCapabilities := &AccountsCapabilities{}
 
@@ -3239,7 +3245,7 @@ func TestStorageCapWithoutBorrowTypeMigration(t *testing.T) {
 		testAddress,
 		storageCapabilities,
 		handler,
-		capabilityMapping,
+		storageCapabilityMapping,
 	)
 
 	err = migration.Commit()

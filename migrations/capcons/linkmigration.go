@@ -40,7 +40,7 @@ type LinkMigrationReporter interface {
 
 // LinkValueMigration migrates all links to capability controllers.
 type LinkValueMigration struct {
-	CapabilityMapping *CapabilityMapping
+	CapabilityMapping *PathCapabilityMapping
 	IssueHandler      stdlib.CapabilityControllerIssueHandler
 	Handler           stdlib.CapabilityControllerHandler
 	Reporter          LinkMigrationReporter
