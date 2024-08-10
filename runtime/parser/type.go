@@ -48,7 +48,6 @@ type typeMetaLeftDenotationFunc func(
 
 var typeLeftBindingPowers [lexer.TokenMax]int
 var typeLeftDenotations [lexer.TokenMax]typeLeftDenotationFunc
-var typeMetaLeftDenotations [lexer.TokenMax]typeMetaLeftDenotationFunc
 
 func setTypeNullDenotation(tokenType lexer.TokenType, nullDenotation typeNullDenotationFunc) {
 	current := typeNullDenotations[tokenType]
@@ -78,17 +77,6 @@ func setTypeLeftDenotation(tokenType lexer.TokenType, leftDenotation typeLeftDen
 		))
 	}
 	typeLeftDenotations[tokenType] = leftDenotation
-}
-
-func setTypeMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation typeMetaLeftDenotationFunc) {
-	current := typeMetaLeftDenotations[tokenType]
-	if current != nil {
-		panic(errors.NewUnexpectedError(
-			"type meta left denotation for token %s already exists",
-			tokenType,
-		))
-	}
-	typeMetaLeftDenotations[tokenType] = metaLeftDenotation
 }
 
 type prefixTypeFunc func(parser *parser, right ast.Type, tokenRange ast.Range) ast.Type
@@ -479,21 +467,6 @@ func defineIntersectionOrDictionaryType() {
 		},
 	)
 
-	// While restricted types have been removed from Cadence, during the first few months of the
-	// migration period, leave a special error in place to help developers
-	// TODO: remove this after Stable Cadence migration period is finished
-	setTypeMetaLeftDenotation(
-		lexer.TokenBraceOpen,
-		func(p *parser, rightBindingPower int, left ast.Type) (result ast.Type, err error, done bool) {
-
-			// In case there is a space, the type is *not* considered a restricted type.
-			if p.isFollowedByTrivia(lexer.TriviaTypeSpace) {
-				return left, nil, true
-			}
-
-			return nil, &RestrictedTypeError{Range: p.current.Range}, true
-		},
-	)
 }
 
 func parseNominalType(
@@ -679,17 +652,8 @@ func applyTypeMetaLeftDenotation(
 ) {
 	// By default, left denotations are applied if the right binding power
 	// is less than the left binding power of the current token.
-	//
-	// Token-specific meta-left denotations allow customizing this,
-	// e.g. determining the left binding power based on parsing more tokens,
-	// or performing look-ahead
 
-	metaLeftDenotation := typeMetaLeftDenotations[p.current.Type]
-	if metaLeftDenotation == nil {
-		metaLeftDenotation = defaultTypeMetaLeftDenotation
-	}
-
-	return metaLeftDenotation(p, rightBindingPower, left)
+	return defaultTypeMetaLeftDenotation(p, rightBindingPower, left)
 }
 
 // defaultTypeMetaLeftDenotation is the default type left denotation, which applies
