@@ -113,7 +113,6 @@ func rootState(l *lexer) stateFn {
 		case ' ', '\t', '\r':
 			return spaceState
 		case '\n':
-			l.emitLegacyTrivia(TokenSpace)
 			l.emitTrivia(TriviaTypeNewLine)
 			return rootState
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
@@ -127,7 +126,6 @@ func rootState(l *lexer) stateFn {
 			case '/':
 				return lineCommentState
 			case '*':
-				l.emitLegacyTrivia(TokenBlockCommentStart)
 				return blockCommentState(l, 0)
 			default:
 				l.backupOne()
@@ -269,7 +267,6 @@ func spaceState(l *lexer) stateFn {
 	// TODO(preserve-comments): Do we need to track memory for other token types as well?
 	common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
 
-	l.emitLegacyTrivia(TokenSpace)
 	l.emitTrivia(TriviaTypeSpace)
 
 	return rootState
@@ -303,7 +300,6 @@ func stringState(l *lexer) stateFn {
 
 func lineCommentState(l *lexer) stateFn {
 	l.scanLineComment()
-	l.emitLegacyTrivia(TokenLineComment)
 	l.emitTrivia(TriviaTypeInlineComment)
 	return rootState
 }
@@ -325,9 +321,7 @@ func blockCommentState(l *lexer, nesting int) stateFn {
 			if l.acceptOne('*') {
 				starOffset := l.endOffset
 				l.endOffset = beforeSlashOffset
-				l.emitLegacyTrivia(TokenBlockCommentContent)
 				l.endOffset = starOffset
-				l.emitLegacyTrivia(TokenBlockCommentStart)
 				return blockCommentState(l, nesting+1)
 			}
 
@@ -336,9 +330,7 @@ func blockCommentState(l *lexer, nesting int) stateFn {
 			if l.acceptOne('/') {
 				slashOffset := l.endOffset
 				l.endOffset = beforeStarOffset
-				l.emitLegacyTrivia(TokenBlockCommentContent)
 				l.endOffset = slashOffset
-				l.emitLegacyTrivia(TokenBlockCommentEnd)
 				return blockCommentState(l, nesting-1)
 			}
 		}

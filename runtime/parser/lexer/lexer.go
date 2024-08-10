@@ -340,39 +340,21 @@ func (l *lexer) emitTrivia(triviaType TriviaType) {
 		Range: currentRange,
 	})
 
+	// TODO(preserve-comments): Decide if we should refactor parsing logic to trivia tokens or keep using space token only
+	// Parsing logic depends on space tokens to determine how to parse certain sentences.
+	if triviaType == TriviaTypeSpace || triviaType == TriviaTypeNewLine {
+		l.emit(
+			TokenSpace,
+			Space{ContainsNewline: triviaType == TriviaTypeNewLine},
+			l.startPosition(),
+			false,
+		)
+	}
+
 	l.consume(endPos)
 }
 
 const useLegacyTrivia = false
-
-// TODO(preserve-comments): Remove after refactoring is complete
-func (l *lexer) emitLegacyTrivia(legacyTriviaType TokenType) {
-	if !useLegacyTrivia {
-		return
-	}
-
-	if legacyTriviaType == TokenSpace {
-		trivia := l.input[l.startOffset:l.endOffset]
-
-		var containsNewline bool
-		for _, r := range trivia {
-			if r == '\n' {
-				containsNewline = true
-			}
-		}
-
-		l.emit(
-			TokenSpace,
-			Space{
-				ContainsNewline: containsNewline,
-			},
-			l.startPosition(),
-			true,
-		)
-	} else {
-		l.emitType(legacyTriviaType)
-	}
-}
 
 // endPos pre-computed end-position by calling l.endPos()
 func (l *lexer) consume(endPos position) {
