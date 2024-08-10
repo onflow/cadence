@@ -265,24 +265,6 @@ func (p *parser) next() {
 	}
 }
 
-func (p *parser) isFollowedByTrivia(triviaType lexer.TriviaType) bool {
-	if p.current.TrailingTrivia.Has(triviaType) {
-		return true
-	}
-
-	cursor := p.tokens.Cursor()
-	previous := p.current
-	p.next()
-
-	// The buffered tokens are replayed to allow them to be re-parsed.
-	defer func() {
-		p.tokens.Revert(cursor)
-		p.current = previous
-	}()
-
-	return p.current.LeadingTrivia.Has(triviaType)
-}
-
 // nextSemanticToken advances past the current token to the next semantic token.
 // It skips whitespace, including newlines, and comments
 func (p *parser) nextSemanticToken() {

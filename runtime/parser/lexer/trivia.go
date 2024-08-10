@@ -17,14 +17,3 @@ const (
 	TriviaTypeNewLine
 	TriviaTypeSpace
 )
-
-type TriviaCollection []Trivia
-
-func (t TriviaCollection) Has(triviaType TriviaType) bool {
-	for _, trivia := range t {
-		if trivia.Type == triviaType {
-			return true
-		}
-	}
-	return false
-}
