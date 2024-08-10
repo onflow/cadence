@@ -28,9 +28,9 @@ type Token struct {
 	ast.Range
 	Type TokenType
 	// leading Trivia up to and including the first contiguous sequence of newlines characters.
-	LeadingTrivia []Trivia
+	LeadingTrivia TriviaCollection
 	// trailing Trivia up to, but not including, the next newline character.
-	TrailingTrivia []Trivia
+	TrailingTrivia TriviaCollection
 }
 
 func (t Token) Is(ty TokenType) bool {

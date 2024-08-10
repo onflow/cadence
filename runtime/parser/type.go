@@ -486,20 +486,8 @@ func defineIntersectionOrDictionaryType() {
 		lexer.TokenBraceOpen,
 		func(p *parser, rightBindingPower int, left ast.Type) (result ast.Type, err error, done bool) {
 
-			// Perform a lookahead
-
-			current := p.current
-			cursor := p.tokens.Cursor()
-
-			// Skip the `{` token.
-			p.next()
-
 			// In case there is a space, the type is *not* considered a restricted type.
-			// The buffered tokens are replayed to allow them to be re-parsed.
-			if p.current.Is(lexer.TokenSpace) {
-				p.current = current
-				p.tokens.Revert(cursor)
-
+			if p.isFollowedByTrivia(lexer.TriviaTypeSpace) {
 				return left, nil, true
 			}
 
