@@ -89,8 +89,15 @@ func IssueAccountCapabilities(
 	address common.Address,
 	capabilities *AccountCapabilities,
 	handler stdlib.CapabilityControllerIssueHandler,
-	capabilityMapping *PathTypeCapabilityMapping,
+	typedCapabilityMapping *PathTypeCapabilityMapping,
+	untypedCapabilityMapping *PathCapabilityMapping,
+	storage interpreter.Storage,
 ) {
+	storageMap := storage.GetStorageMap(
+		address,
+		common.PathDomainStorage.Identifier(),
+		false,
+	)
 
 	for _, capability := range capabilities.Capabilities {
 
@@ -102,10 +109,25 @@ func IssueAccountCapabilities(
 		borrowStaticType := capability.BorrowType
 		if borrowStaticType == nil {
 			reporter.MissingBorrowType(address, addressPath)
-			continue
+
+			// If the borrow type is missing,
+			// infer the borrow type from the value stored at the target path (if any)
+
+			path := capability.Path.Identifier
+			value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(path))
+			if value == nil {
+				continue
+			}
+
+			borrowStaticType = interpreter.NewReferenceStaticType(
+				nil,
+				// TODO: might want to add all entitlements via sema.AllSupportedEntitlements
+				interpreter.UnauthorizedAccess,
+				value.StaticType(inter),
+			)
 		}
 
-		if _, ok := capabilityMapping.Get(addressPath, borrowStaticType.ID()); ok {
+		if _, ok := typedCapabilityMapping.Get(addressPath, borrowStaticType.ID()); ok {
 			continue
 		}
 
@@ -120,10 +142,16 @@ func IssueAccountCapabilities(
 			capability.Path,
 		)
 
-		capabilityMapping.Record(
+		typedCapabilityMapping.Record(
 			addressPath,
 			capabilityID,
 			borrowStaticType.ID(),
+		)
+
+		untypedCapabilityMapping.Record(
+			addressPath,
+			capabilityID,
+			borrowType,
 		)
 
 		reporter.IssuedStorageCapabilityController(
