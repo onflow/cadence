@@ -37,8 +37,9 @@ import (
 )
 
 type testCapConHandler struct {
-	ids    map[common.Address]uint64
-	events []cadence.Event
+	ids        map[common.Address]uint64
+	events     []cadence.Event
+	dropEvents bool
 }
 
 var _ stdlib.CapabilityControllerIssueHandler = &testCapConHandler{}
@@ -57,6 +58,10 @@ func (g *testCapConHandler) EmitEvent(
 	eventType *sema.CompositeType,
 	values []interpreter.Value,
 ) {
+	if g.dropEvents {
+		return
+	}
+
 	runtime.EmitEventFields(
 		inter,
 		locationRange,
@@ -585,6 +590,9 @@ func testPathCapabilityValueMigration(
 			handler,
 			typedStorageCapabilityMapping,
 			untypedStorageCapabilityMapping,
+			func(_ interpreter.StaticType) interpreter.Authorization {
+				return interpreter.UnauthorizedAccess
+			},
 		)
 	}
 
@@ -3050,6 +3058,9 @@ func TestStorageCapMigration(t *testing.T) {
 		handler,
 		typedCapabilityMapping,
 		untypedCapabilityMapping,
+		func(_ interpreter.StaticType) interpreter.Authorization {
+			return interpreter.UnauthorizedAccess
+		},
 	)
 
 	migration.Migrate(
@@ -3287,7 +3298,10 @@ func TestUntypedStorageCapMigration(t *testing.T) {
 	reporter := &testMigrationReporter{}
 	typedStorageCapabilityMapping := &PathTypeCapabilityMapping{}
 	untypedStorageCapabilityMapping := &PathCapabilityMapping{}
-	handler := &testCapConHandler{}
+	handler := &testCapConHandler{
+		// Avoid loading contract code for made-up entitlement
+		dropEvents: true,
+	}
 	storageDomainCapabilities := &AccountsCapabilities{}
 
 	migration.Migrate(
@@ -3302,6 +3316,20 @@ func TestUntypedStorageCapMigration(t *testing.T) {
 	storageCapabilities := storageDomainCapabilities.Get(testAddress)
 	require.NotNil(t, storageCapabilities)
 
+	inferredAuth := interpreter.NewEntitlementSetAuthorization(
+		nil,
+		func() []common.TypeID {
+			return []common.TypeID{
+				common.AddressLocation{
+					Address: testAddress,
+					Name:    "Foo",
+				}.TypeID(nil, "Bar"),
+			}
+		},
+		1,
+		sema.Conjunction,
+	)
+
 	IssueAccountCapabilities(
 		inter,
 		storage,
@@ -3311,6 +3339,9 @@ func TestUntypedStorageCapMigration(t *testing.T) {
 		handler,
 		typedStorageCapabilityMapping,
 		untypedStorageCapabilityMapping,
+		func(_ interpreter.StaticType) interpreter.Authorization {
+			return inferredAuth
+		},
 	)
 
 	migration.Migrate(
@@ -3357,7 +3388,7 @@ func TestUntypedStorageCapMigration(t *testing.T) {
 				addressPath:    testAddressPath,
 				borrowType: interpreter.NewReferenceStaticType(
 					nil,
-					interpreter.UnauthorizedAccess,
+					inferredAuth,
 					interpreter.PrimitiveStaticTypeString,
 				),
 				capabilityID: 1,
@@ -3374,7 +3405,7 @@ func TestUntypedStorageCapMigration(t *testing.T) {
 				addressPath:    testAddressPath,
 				borrowType: interpreter.NewReferenceStaticType(
 					nil,
-					interpreter.UnauthorizedAccess,
+					inferredAuth,
 					interpreter.PrimitiveStaticTypeString,
 				),
 			},
@@ -3539,6 +3570,9 @@ func TestUntypedStorageCapWithMissingTargetMigration(t *testing.T) {
 		handler,
 		typedStorageCapabilityMapping,
 		untypedStorageCapabilityMapping,
+		func(_ interpreter.StaticType) interpreter.Authorization {
+			return interpreter.UnauthorizedAccess
+		},
 	)
 
 	migration.Migrate(
