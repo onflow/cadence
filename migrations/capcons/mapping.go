@@ -23,14 +23,13 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
 // Path capability mappings map an address and path to a capability ID and borrow type
 
 type PathCapabilityEntry struct {
 	CapabilityID interpreter.UInt64Value
-	BorrowType   *sema.ReferenceType
+	BorrowType   *interpreter.ReferenceStaticType
 }
 
 type PathCapabilityEntryMap map[interpreter.PathValue]PathCapabilityEntry
@@ -43,7 +42,7 @@ type PathCapabilityMapping struct {
 func (m *PathCapabilityMapping) Record(
 	addressPath interpreter.AddressPath,
 	capabilityID interpreter.UInt64Value,
-	borrowType *sema.ReferenceType,
+	borrowType *interpreter.ReferenceStaticType,
 ) {
 	var capMap PathCapabilityEntryMap
 	rawCapMap, ok := m.capabilityEntries.Load(addressPath.Address)
@@ -59,7 +58,7 @@ func (m *PathCapabilityMapping) Record(
 	}
 }
 
-func (m *PathCapabilityMapping) Get(addressPath interpreter.AddressPath) (interpreter.UInt64Value, sema.Type, bool) {
+func (m *PathCapabilityMapping) Get(addressPath interpreter.AddressPath) (interpreter.UInt64Value, *interpreter.ReferenceStaticType, bool) {
 	rawCapabilityEntryMap, ok := m.capabilityEntries.Load(addressPath.Address)
 	if !ok {
 		return 0, nil, false

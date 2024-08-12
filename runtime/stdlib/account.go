@@ -2692,12 +2692,14 @@ func checkAndIssueStorageCapabilityControllerWithType(
 
 	// Issue capability controller
 
-	capabilityIDValue, borrowStaticType := IssueStorageCapabilityController(
+	borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, borrowType)
+
+	capabilityIDValue := IssueStorageCapabilityController(
 		inter,
 		locationRange,
 		handler,
 		address,
-		borrowType,
+		borrowStaticType,
 		targetPathValue,
 	)
 
@@ -2720,12 +2722,9 @@ func IssueStorageCapabilityController(
 	locationRange interpreter.LocationRange,
 	handler CapabilityControllerIssueHandler,
 	address common.Address,
-	borrowType *sema.ReferenceType,
+	borrowStaticType *interpreter.ReferenceStaticType,
 	targetPathValue interpreter.PathValue,
-) (
-	interpreter.UInt64Value,
-	*interpreter.ReferenceStaticType,
-) {
+) interpreter.UInt64Value {
 	if targetPathValue.Domain != common.PathDomainStorage {
 		panic(errors.NewDefaultUserError(
 			"invalid storage capability target path domain: %s",
@@ -2734,8 +2733,6 @@ func IssueStorageCapabilityController(
 	}
 
 	// Create and write StorageCapabilityController
-
-	borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, borrowType)
 
 	var capabilityID uint64
 	var err error
@@ -2776,7 +2773,7 @@ func IssueStorageCapabilityController(
 		},
 	)
 
-	return capabilityIDValue, borrowStaticType
+	return capabilityIDValue
 }
 
 func newAccountAccountCapabilitiesIssueFunction(
@@ -2882,13 +2879,15 @@ func checkAndIssueAccountCapabilityControllerWithType(
 
 	// Issue capability controller
 
-	capabilityIDValue, borrowStaticType :=
+	borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, borrowType)
+
+	capabilityIDValue :=
 		IssueAccountCapabilityController(
 			inter,
 			locationRange,
 			handler,
 			address,
-			borrowType,
+			borrowStaticType,
 		)
 
 	if capabilityIDValue == interpreter.InvalidCapabilityID {
@@ -2910,14 +2909,9 @@ func IssueAccountCapabilityController(
 	locationRange interpreter.LocationRange,
 	handler CapabilityControllerIssueHandler,
 	address common.Address,
-	borrowType *sema.ReferenceType,
-) (
-	interpreter.UInt64Value,
-	*interpreter.ReferenceStaticType,
-) {
+	borrowStaticType *interpreter.ReferenceStaticType,
+) interpreter.UInt64Value {
 	// Create and write AccountCapabilityController
-
-	borrowStaticType := interpreter.ConvertSemaReferenceTypeToStaticReferenceType(inter, borrowType)
 
 	var capabilityID uint64
 	var err error
@@ -2961,7 +2955,7 @@ func IssueAccountCapabilityController(
 		},
 	)
 
-	return capabilityIDValue, borrowStaticType
+	return capabilityIDValue
 }
 
 // CapabilityControllerStorageDomain is the storage domain which stores
