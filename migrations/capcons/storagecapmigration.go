@@ -20,6 +20,7 @@ package capcons
 
 import (
 	"github.com/onflow/cadence/migrations"
+	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -85,12 +86,20 @@ func (m *StorageCapMigration) CanSkip(valueType interpreter.StaticType) bool {
 
 func IssueAccountCapabilities(
 	inter *interpreter.Interpreter,
+	storage *runtime.Storage,
 	reporter StorageCapabilityMigrationReporter,
 	address common.Address,
 	capabilities *AccountCapabilities,
 	handler stdlib.CapabilityControllerIssueHandler,
-	capabilityMapping *PathTypeCapabilityMapping,
+	capabilityWithTypeMapping *PathTypeCapabilityMapping,
+	capabilityWithoutTypeMapping *PathCapabilityMapping,
 ) {
+
+	storageMap := storage.GetStorageMap(
+		address,
+		common.PathDomainStorage.Identifier(),
+		false,
+	)
 
 	for _, capability := range capabilities.Capabilities {
 
@@ -100,13 +109,36 @@ func IssueAccountCapabilities(
 		}
 
 		borrowStaticType := capability.BorrowType
-		if borrowStaticType == nil {
-			reporter.MissingBorrowType(address, addressPath)
-			continue
-		}
 
-		if _, ok := capabilityMapping.Get(addressPath, borrowStaticType.ID()); ok {
-			continue
+		hasBorrowType := borrowStaticType != nil
+
+		if hasBorrowType {
+			if _, ok := capabilityWithTypeMapping.Get(addressPath, borrowStaticType.ID()); ok {
+				continue
+			}
+		} else {
+			if _, _, ok := capabilityWithoutTypeMapping.Get(addressPath); ok {
+				continue
+			}
+
+			// If the borrow type is missing, then borrow it as the type of the value.
+			path := capability.Path.Identifier
+			value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(path))
+
+			// However, if there is no value at the target,
+			//it is not possible to migrate this cap.
+			if value == nil {
+				reporter.MissingBorrowType(address, addressPath)
+				continue
+			}
+
+			staticType := value.StaticType(inter)
+
+			borrowStaticType = interpreter.NewReferenceStaticType(
+				nil,
+				interpreter.UnauthorizedAccess,
+				staticType,
+			)
 		}
 
 		borrowType := borrowStaticType.(*interpreter.ReferenceStaticType)
@@ -120,11 +152,19 @@ func IssueAccountCapabilities(
 			capability.Path,
 		)
 
-		capabilityMapping.Record(
-			addressPath,
-			capabilityID,
-			borrowStaticType.ID(),
-		)
+		if hasBorrowType {
+			capabilityWithTypeMapping.Record(
+				addressPath,
+				capabilityID,
+				borrowStaticType.ID(),
+			)
+		} else {
+			capabilityWithoutTypeMapping.Record(
+				addressPath,
+				capabilityID,
+				borrowType,
+			)
+		}
 
 		reporter.IssuedStorageCapabilityController(
 			address,
