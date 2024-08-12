@@ -98,6 +98,7 @@ func IssueAccountCapabilities(
 	handler stdlib.CapabilityControllerIssueHandler,
 	typedCapabilityMapping *PathTypeCapabilityMapping,
 	untypedCapabilityMapping *PathCapabilityMapping,
+	inferAuth func(valueType interpreter.StaticType) interpreter.Authorization,
 ) {
 
 	storageMap := storage.GetStorageMap(
@@ -141,12 +142,12 @@ func IssueAccountCapabilities(
 				continue
 			}
 
-			staticType := value.StaticType(inter)
+			valueType := value.StaticType(inter)
 
 			borrowType = interpreter.NewReferenceStaticType(
 				nil,
-				interpreter.UnauthorizedAccess,
-				staticType,
+				inferAuth(valueType),
+				valueType,
 			)
 
 			reporter.InferredMissingBorrowType(address, addressPath, borrowType)
