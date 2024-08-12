@@ -98,6 +98,12 @@ type testStorageCapConsMissingBorrowType struct {
 	addressPath    interpreter.AddressPath
 }
 
+type testStorageCapConsInferredBorrowType struct {
+	accountAddress common.Address
+	addressPath    interpreter.AddressPath
+	borrowType     *interpreter.ReferenceStaticType
+}
+
 type testMigration struct {
 	storageKey    interpreter.StorageKey
 	storageMapKey interpreter.StorageMapKey
@@ -105,15 +111,16 @@ type testMigration struct {
 }
 
 type testMigrationReporter struct {
-	migrations                      []testMigration
-	errors                          []error
-	linkMigrations                  []testCapConsLinkMigration
-	pathCapabilityMigrations        []testCapConsPathCapabilityMigration
-	missingCapabilityIDs            []testCapConsMissingCapabilityID
-	issuedStorageCapCons            []testStorageCapConIssued
-	missingStorageCapConBorrowTypes []testStorageCapConsMissingBorrowType
-	cyclicLinkErrors                []CyclicLinkError
-	missingTargets                  []interpreter.AddressPath
+	migrations                       []testMigration
+	errors                           []error
+	linkMigrations                   []testCapConsLinkMigration
+	pathCapabilityMigrations         []testCapConsPathCapabilityMigration
+	missingCapabilityIDs             []testCapConsMissingCapabilityID
+	issuedStorageCapCons             []testStorageCapConIssued
+	missingStorageCapConBorrowTypes  []testStorageCapConsMissingBorrowType
+	inferredStorageCapConBorrowTypes []testStorageCapConsInferredBorrowType
+	cyclicLinkErrors                 []CyclicLinkError
+	missingTargets                   []interpreter.AddressPath
 }
 
 var _ migrations.Reporter = &testMigrationReporter{}
@@ -191,6 +198,21 @@ func (t *testMigrationReporter) MissingBorrowType(
 		testStorageCapConsMissingBorrowType{
 			accountAddress: accountAddress,
 			addressPath:    addressPath,
+		},
+	)
+}
+
+func (t *testMigrationReporter) InferredMissingBorrowType(
+	accountAddress common.Address,
+	addressPath interpreter.AddressPath,
+	borrowType *interpreter.ReferenceStaticType,
+) {
+	t.inferredStorageCapConBorrowTypes = append(
+		t.inferredStorageCapConBorrowTypes,
+		testStorageCapConsInferredBorrowType{
+			accountAddress: accountAddress,
+			addressPath:    addressPath,
+			borrowType:     borrowType,
 		},
 	)
 }
@@ -536,8 +558,8 @@ func testPathCapabilityValueMigration(
 	reporter := &testMigrationReporter{}
 
 	privatePublicCapabilityMapping := &PathCapabilityMapping{}
-	storageCapabilityWithTypeMapping := &PathTypeCapabilityMapping{}
-	storageCapabilityWithoutTypeMapping := &PathCapabilityMapping{}
+	typedStorageCapabilityMapping := &PathTypeCapabilityMapping{}
+	untypedStorageCapabilityMapping := &PathCapabilityMapping{}
 
 	handler := &testCapConHandler{}
 
@@ -561,8 +583,8 @@ func testPathCapabilityValueMigration(
 			testAddress,
 			storageCapabilities,
 			handler,
-			storageCapabilityWithTypeMapping,
-			storageCapabilityWithoutTypeMapping,
+			typedStorageCapabilityMapping,
+			untypedStorageCapabilityMapping,
 		)
 	}
 
@@ -582,10 +604,10 @@ func testPathCapabilityValueMigration(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
-				PrivatePublicCapabilityMapping:      privatePublicCapabilityMapping,
-				StorageCapabilityMapping:            storageCapabilityWithTypeMapping,
-				StorageCapabilityWithoutTypeMapping: storageCapabilityWithoutTypeMapping,
-				Reporter:                            reporter,
+				PrivatePublicCapabilityMapping:  privatePublicCapabilityMapping,
+				TypedStorageCapabilityMapping:   typedStorageCapabilityMapping,
+				UntypedStorageCapabilityMapping: untypedStorageCapabilityMapping,
+				Reporter:                        reporter,
 			},
 		),
 	)
@@ -2443,7 +2465,7 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 			reporter,
 			&CapabilityValueMigration{
 				PrivatePublicCapabilityMapping: privatePublicCapabilityMapping,
-				StorageCapabilityMapping:       storageCapabilityMapping,
+				TypedStorageCapabilityMapping:  storageCapabilityMapping,
 				Reporter:                       reporter,
 			},
 		),
@@ -2697,7 +2719,7 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 			reporter,
 			&CapabilityValueMigration{
 				PrivatePublicCapabilityMapping: privatePublicCapabilityMapping,
-				StorageCapabilityMapping:       storageCapabilityMapping,
+				TypedStorageCapabilityMapping:  storageCapabilityMapping,
 				Reporter:                       reporter,
 			},
 		),
@@ -3004,8 +3026,8 @@ func TestStorageCapMigration(t *testing.T) {
 	reporter := &testMigrationReporter{}
 	handler := &testCapConHandler{}
 	storageDomainCapabilities := &AccountsCapabilities{}
-	capabilityWithTypeMapping := &PathTypeCapabilityMapping{}
-	capabilityWithoutTypeMapping := &PathCapabilityMapping{}
+	typedCapabilityMapping := &PathTypeCapabilityMapping{}
+	untypedCapabilityMapping := &PathCapabilityMapping{}
 
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
@@ -3026,17 +3048,17 @@ func TestStorageCapMigration(t *testing.T) {
 		testAddress,
 		storageCapabilities,
 		handler,
-		capabilityWithTypeMapping,
-		capabilityWithoutTypeMapping,
+		typedCapabilityMapping,
+		untypedCapabilityMapping,
 	)
 
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
-				StorageCapabilityMapping:            capabilityWithTypeMapping,
-				StorageCapabilityWithoutTypeMapping: capabilityWithoutTypeMapping,
-				Reporter:                            reporter,
+				TypedStorageCapabilityMapping:   typedCapabilityMapping,
+				UntypedStorageCapabilityMapping: untypedCapabilityMapping,
+				Reporter:                        reporter,
 			},
 		),
 	)
@@ -3169,7 +3191,7 @@ func TestStorageCapMigration(t *testing.T) {
 
 }
 
-func TestStorageCapWithoutBorrowTypeMigration(t *testing.T) {
+func TestUntypedStorageCapMigration(t *testing.T) {
 	t.Parallel()
 
 	testPath := interpreter.PathValue{
@@ -3263,8 +3285,8 @@ func TestStorageCapWithoutBorrowTypeMigration(t *testing.T) {
 	require.NoError(t, err)
 
 	reporter := &testMigrationReporter{}
-	storageCapabilityWithTypeMapping := &PathTypeCapabilityMapping{}
-	storageCapabilityWithoutTypeMapping := &PathCapabilityMapping{}
+	typedStorageCapabilityMapping := &PathTypeCapabilityMapping{}
+	untypedStorageCapabilityMapping := &PathCapabilityMapping{}
 	handler := &testCapConHandler{}
 	storageDomainCapabilities := &AccountsCapabilities{}
 
@@ -3287,18 +3309,18 @@ func TestStorageCapWithoutBorrowTypeMigration(t *testing.T) {
 		testAddress,
 		storageCapabilities,
 		handler,
-		storageCapabilityWithTypeMapping,
-		storageCapabilityWithoutTypeMapping,
+		typedStorageCapabilityMapping,
+		untypedStorageCapabilityMapping,
 	)
 
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
-				PrivatePublicCapabilityMapping:      &PathCapabilityMapping{},
-				StorageCapabilityMapping:            storageCapabilityWithTypeMapping,
-				StorageCapabilityWithoutTypeMapping: storageCapabilityWithoutTypeMapping,
-				Reporter:                            reporter,
+				PrivatePublicCapabilityMapping:  &PathCapabilityMapping{},
+				TypedStorageCapabilityMapping:   typedStorageCapabilityMapping,
+				UntypedStorageCapabilityMapping: untypedStorageCapabilityMapping,
+				Reporter:                        reporter,
 			},
 		),
 	)
@@ -3344,6 +3366,22 @@ func TestStorageCapWithoutBorrowTypeMigration(t *testing.T) {
 		reporter.issuedStorageCapCons,
 	)
 
+	require.Equal(
+		t,
+		[]testStorageCapConsInferredBorrowType{
+			{
+				accountAddress: testAddress,
+				addressPath:    testAddressPath,
+				borrowType: interpreter.NewReferenceStaticType(
+					nil,
+					interpreter.UnauthorizedAccess,
+					interpreter.PrimitiveStaticTypeString,
+				),
+			},
+		},
+		reporter.inferredStorageCapConBorrowTypes,
+	)
+
 	err = storage.CheckHealth()
 	require.NoError(t, err)
 
@@ -3381,7 +3419,7 @@ func TestStorageCapWithoutBorrowTypeMigration(t *testing.T) {
 	)
 }
 
-func TestStorageCapWithoutBorrowTypeAndMissingTargetMigration(t *testing.T) {
+func TestUntypedStorageCapWithMissingTargetMigration(t *testing.T) {
 	t.Parallel()
 
 	testPath := interpreter.PathValue{
@@ -3475,8 +3513,8 @@ func TestStorageCapWithoutBorrowTypeAndMissingTargetMigration(t *testing.T) {
 	require.NoError(t, err)
 
 	reporter := &testMigrationReporter{}
-	storageCapabilityWithTypeMapping := &PathTypeCapabilityMapping{}
-	storageCapabilityWithoutTypeMapping := &PathCapabilityMapping{}
+	typedStorageCapabilityMapping := &PathTypeCapabilityMapping{}
+	untypedStorageCapabilityMapping := &PathCapabilityMapping{}
 	handler := &testCapConHandler{}
 	storageDomainCapabilities := &AccountsCapabilities{}
 
@@ -3499,18 +3537,18 @@ func TestStorageCapWithoutBorrowTypeAndMissingTargetMigration(t *testing.T) {
 		testAddress,
 		storageCapabilities,
 		handler,
-		storageCapabilityWithTypeMapping,
-		storageCapabilityWithoutTypeMapping,
+		typedStorageCapabilityMapping,
+		untypedStorageCapabilityMapping,
 	)
 
 	migration.Migrate(
 		migration.NewValueMigrationsPathMigrator(
 			reporter,
 			&CapabilityValueMigration{
-				PrivatePublicCapabilityMapping:      &PathCapabilityMapping{},
-				StorageCapabilityMapping:            storageCapabilityWithTypeMapping,
-				StorageCapabilityWithoutTypeMapping: storageCapabilityWithoutTypeMapping,
-				Reporter:                            reporter,
+				PrivatePublicCapabilityMapping:  &PathCapabilityMapping{},
+				TypedStorageCapabilityMapping:   typedStorageCapabilityMapping,
+				UntypedStorageCapabilityMapping: untypedStorageCapabilityMapping,
+				Reporter:                        reporter,
 			},
 		),
 	)
@@ -3523,6 +3561,7 @@ func TestStorageCapWithoutBorrowTypeAndMissingTargetMigration(t *testing.T) {
 	require.Empty(t, reporter.migrations)
 	require.Empty(t, reporter.errors)
 	require.Empty(t, reporter.issuedStorageCapCons)
+	require.Empty(t, reporter.inferredStorageCapConBorrowTypes)
 
 	require.Equal(
 		t,

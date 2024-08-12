@@ -37,6 +37,11 @@ type StorageCapabilityMigrationReporter interface {
 		borrowType *interpreter.ReferenceStaticType,
 		capabilityID interpreter.UInt64Value,
 	)
+	InferredMissingBorrowType(
+		accountAddress common.Address,
+		addressPath interpreter.AddressPath,
+		borrowType *interpreter.ReferenceStaticType,
+	)
 }
 
 // StorageCapMigration records path capabilities with storage domain target.
@@ -91,8 +96,8 @@ func IssueAccountCapabilities(
 	address common.Address,
 	capabilities *AccountCapabilities,
 	handler stdlib.CapabilityControllerIssueHandler,
-	capabilityWithTypeMapping *PathTypeCapabilityMapping,
-	capabilityWithoutTypeMapping *PathCapabilityMapping,
+	typedCapabilityMapping *PathTypeCapabilityMapping,
+	untypedCapabilityMapping *PathCapabilityMapping,
 ) {
 
 	storageMap := storage.GetStorageMap(
@@ -108,16 +113,20 @@ func IssueAccountCapabilities(
 			Path:    capability.Path,
 		}
 
-		borrowStaticType := capability.BorrowType
+		capabilityBorrowType := capability.BorrowType
+		hasBorrowType := capabilityBorrowType != nil
 
-		hasBorrowType := borrowStaticType != nil
+		var borrowType *interpreter.ReferenceStaticType
 
 		if hasBorrowType {
-			if _, ok := capabilityWithTypeMapping.Get(addressPath, borrowStaticType.ID()); ok {
+			if _, ok := typedCapabilityMapping.Get(addressPath, capabilityBorrowType.ID()); ok {
 				continue
 			}
+
+			borrowType = capabilityBorrowType.(*interpreter.ReferenceStaticType)
+
 		} else {
-			if _, _, ok := capabilityWithoutTypeMapping.Get(addressPath); ok {
+			if _, _, ok := untypedCapabilityMapping.Get(addressPath); ok {
 				continue
 			}
 
@@ -134,14 +143,14 @@ func IssueAccountCapabilities(
 
 			staticType := value.StaticType(inter)
 
-			borrowStaticType = interpreter.NewReferenceStaticType(
+			borrowType = interpreter.NewReferenceStaticType(
 				nil,
 				interpreter.UnauthorizedAccess,
 				staticType,
 			)
-		}
 
-		borrowType := borrowStaticType.(*interpreter.ReferenceStaticType)
+			reporter.InferredMissingBorrowType(address, addressPath, borrowType)
+		}
 
 		capabilityID := stdlib.IssueStorageCapabilityController(
 			inter,
@@ -153,13 +162,13 @@ func IssueAccountCapabilities(
 		)
 
 		if hasBorrowType {
-			capabilityWithTypeMapping.Record(
+			typedCapabilityMapping.Record(
 				addressPath,
 				capabilityID,
-				borrowStaticType.ID(),
+				capabilityBorrowType.ID(),
 			)
 		} else {
-			capabilityWithoutTypeMapping.Record(
+			untypedCapabilityMapping.Record(
 				addressPath,
 				capabilityID,
 				borrowType,
