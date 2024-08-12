@@ -90,10 +90,11 @@ func IssueAccountCapabilities(
 	address common.Address,
 	capabilities *AccountCapabilities,
 	handler stdlib.CapabilityControllerIssueHandler,
-	mapping *CapabilityMapping,
+	capabilityMapping *PathTypeCapabilityMapping,
 ) {
 
 	for _, capability := range capabilities.Capabilities {
+
 		addressPath := interpreter.AddressPath{
 			Address: address,
 			Path:    capability.Path,
@@ -102,6 +103,10 @@ func IssueAccountCapabilities(
 		borrowStaticType := capability.BorrowType
 		if borrowStaticType == nil {
 			reporter.MissingBorrowType(address, addressPath)
+			continue
+		}
+
+		if _, ok := capabilityMapping.Get(addressPath, borrowStaticType.ID()); ok {
 			continue
 		}
 
@@ -116,7 +121,11 @@ func IssueAccountCapabilities(
 			capability.Path,
 		)
 
-		mapping.Record(addressPath, capabilityID, borrowType)
+		capabilityMapping.Record(
+			addressPath,
+			capabilityID,
+			borrowType.ID(),
+		)
 
 		reporter.IssuedStorageCapabilityController(
 			address,
