@@ -2946,7 +2946,7 @@ func TestStorageCapMigration(t *testing.T) {
 	// We don't have a way to create a path capability value in a Cadence program anymore,
 	// so we have to inject it manually.
 
-	for i, capabilityValue := range []*interpreter.PathCapabilityValue{
+	for i, capabilityValue := range []*interpreter.PathCapabilityValue{ //nolint:staticcheck
 		capabilityValue1,
 		capabilityValue2,
 		capabilityValue3,
