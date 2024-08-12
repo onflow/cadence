@@ -25,6 +25,7 @@ import (
 type Token struct {
 	SpaceOrError any
 	ast.Range
+	ast.Comments
 	Type TokenType
 	// LeadingTrivia up to and including the first contiguous sequence of newlines characters.
 	// Not tracked for space token, since those are usually ignored in the parser.

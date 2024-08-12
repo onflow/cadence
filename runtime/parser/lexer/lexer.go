@@ -74,8 +74,10 @@ type lexer struct {
 	prev rune
 	// canBackup indicates whether stepping back is allowed
 	canBackup bool
-	// currentTrivia stores the current leading or trailing Trivia
-	currentTrivia []Trivia
+	// currentComments stores the current leading and/or trailing comments
+	// nil is used as sentinel value to track newlines
+	currentComments          []*ast.Comment
+	isInTrailingCommentState bool
 }
 
 var _ TokenStream = &lexer{}
@@ -101,9 +103,10 @@ func (l *lexer) Next() Token {
 				pos,
 				pos,
 			),
-			LeadingTrivia: l.currentTrivia,
-			// EOF has no trailing Trivia
-			TrailingTrivia: []Trivia{},
+			Comments: ast.Comments{
+				Leading:  l.currentComments,
+				Trailing: []*ast.Comment{},
+			},
 		}
 
 	}
@@ -194,7 +197,7 @@ func (l *lexer) run(state stateFn) {
 		state = state(l)
 	}
 
-	l.updatePreviousTrailingTrivia()
+	l.updatePreviousTrailingComments()
 }
 
 // next decodes the next rune (UTF8 character) from the input string.
@@ -261,16 +264,15 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 
 	endPos := l.endPos()
 
-	l.updatePreviousTrailingTrivia()
-
 	// Only track trivia for non-space tokens
-	leadingTrivia := []Trivia{}
+	var leadingComments []*ast.Comment
 	shouldConsumeTrivia := ty != TokenSpace
 	if shouldConsumeTrivia {
-		leadingTrivia = l.currentTrivia
+		l.updatePreviousTrailingComments()
+		leadingComments = l.currentComments
 		defer (func() {
 			// Mark as fully consumed
-			l.currentTrivia = []Trivia{}
+			l.currentComments = []*ast.Comment{}
 		})()
 	}
 
@@ -287,9 +289,11 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 				endPos.column,
 			),
 		),
-		LeadingTrivia: leadingTrivia,
-		// Trailing Trivia can't be determined, as it wasn't consumed yet at this point.
-		TrailingTrivia: []Trivia{},
+		Comments: ast.Comments{
+			Leading: leadingComments,
+			// Trailing comments can't be determined, as it wasn't consumed yet at this point.
+			Trailing: []*ast.Comment{},
+		},
 	}
 
 	l.tokens = append(l.tokens, token)
@@ -300,39 +304,53 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 	}
 }
 
-func (l *lexer) updatePreviousTrailingTrivia() {
+func (l *lexer) updatePreviousTrailingComments() {
 	if l.tokenCount == 0 {
 		return
 	}
 
-	// Split the current trivia into trailing trivia of the previous token
-	// and leading trivia of the next token.
-	var trailingTrivia []Trivia
-	var leadingTrivia []Trivia
-	previousToken := l.tokens[l.tokenCount-1]
-	// Only track trivia for non-space tokens.
-	trailingTriviaEnded := previousToken.Type == TokenSpace
-	for _, trivia := range l.currentTrivia {
-		if trivia.Type == TriviaTypeSpace && trivia.ContainsNewLine {
-			trailingTriviaEnded = true
-		}
-		if trailingTriviaEnded {
-			leadingTrivia = append(leadingTrivia, trivia)
-		} else {
-			trailingTrivia = append(trailingTrivia, trivia)
-		}
-	}
-
-	// Only track trivia for non-space tokens.
+	lastNonSpaceTokenIndex := -1
 	for i := l.tokenCount - 1; i >= 0; i-- {
 		if l.tokens[i].Type != TokenSpace {
-			l.tokens[i].TrailingTrivia = trailingTrivia
+			lastNonSpaceTokenIndex = i
+			break
 		}
 	}
-	l.currentTrivia = leadingTrivia
+
+	// Split the current comment into trailing comment of the previous token
+	// and leading comment of the next token.
+	var trailing []*ast.Comment
+	var leading []*ast.Comment
+
+	if lastNonSpaceTokenIndex == -1 {
+		l.isInTrailingCommentState = false
+	}
+
+	trailingTriviaEnded := lastNonSpaceTokenIndex == -1
+	for _, comment := range l.currentComments {
+		if comment == nil {
+			trailingTriviaEnded = true
+			continue
+		}
+		if trailingTriviaEnded {
+			leading = append(leading, comment)
+		} else {
+			trailing = append(trailing, comment)
+		}
+	}
+
+	l.currentComments = leading
+
+	if lastNonSpaceTokenIndex != -1 {
+		l.tokens[lastNonSpaceTokenIndex].Trailing = append(l.tokens[lastNonSpaceTokenIndex].Trailing, trailing...)
+	}
 }
 
-func (l *lexer) emitTrivia(triviaType TriviaType, containsNewLine bool) {
+func (l *lexer) emitNewlineSentinelComment() {
+	l.currentComments = append(l.currentComments, nil)
+}
+
+func (l *lexer) emitComment() {
 	endPos := l.endPos()
 
 	currentRange := ast.NewRange(
@@ -346,31 +364,16 @@ func (l *lexer) emitTrivia(triviaType TriviaType, containsNewLine bool) {
 		),
 	)
 
-	if l.currentTrivia == nil {
-		l.currentTrivia = []Trivia{}
+	if l.currentComments == nil {
+		l.currentComments = []*ast.Comment{}
 	}
 
-	l.currentTrivia = append(l.currentTrivia, Trivia{
-		Type:            triviaType,
-		ContainsNewLine: containsNewLine,
-		Range:           currentRange,
-	})
-
-	// TODO(preserve-comments): Decide if we should refactor parsing logic to trivia tokens or keep using space token only
-	// Parsing logic depends on space tokens to determine how to parse certain sentences.
-	if triviaType == TriviaTypeSpace {
-		l.emit(
-			TokenSpace,
-			Space{ContainsNewline: containsNewLine},
-			l.startPosition(),
-			false,
-		)
-	}
+	l.currentComments = append(l.currentComments,
+		ast.NewCommentV2(l.memoryGauge, currentRange.Source(l.input), currentRange),
+	)
 
 	l.consume(endPos)
 }
-
-const useLegacyTrivia = false
 
 // endPos pre-computed end-position by calling l.endPos()
 func (l *lexer) consume(endPos position) {

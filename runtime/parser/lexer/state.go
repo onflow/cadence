@@ -124,7 +124,7 @@ func rootState(l *lexer) stateFn {
 			case '/':
 				return lineCommentState
 			case '*':
-				return blockCommentState(l, 0, false)
+				return blockCommentState(l, 0)
 			default:
 				l.backupOne()
 				l.emitType(TokenSlash)
@@ -269,7 +269,16 @@ func spaceState(startIsNewline bool) stateFn {
 		// TODO(preserve-comments): Do we need to track memory for other token types as well?
 		common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
 
-		l.emitTrivia(TriviaTypeSpace, containsNewline)
+		if containsNewline {
+			l.emitNewlineSentinelComment()
+		}
+
+		l.emit(
+			TokenSpace,
+			Space{ContainsNewline: containsNewline},
+			l.startPosition(),
+			true,
+		)
 
 		return rootState
 	}
@@ -303,13 +312,13 @@ func stringState(l *lexer) stateFn {
 
 func lineCommentState(l *lexer) stateFn {
 	l.scanLineComment()
-	l.emitTrivia(TriviaTypeInlineComment, false)
+	l.emitComment()
 	return rootState
 }
 
-func blockCommentState(l *lexer, nesting int, containsNewLine bool) stateFn {
+func blockCommentState(l *lexer, nesting int) stateFn {
 	if nesting < 0 {
-		l.emitTrivia(TriviaTypeMultiLineComment, containsNewLine)
+		l.emitComment()
 		return rootState
 	}
 
@@ -325,7 +334,7 @@ func blockCommentState(l *lexer, nesting int, containsNewLine bool) stateFn {
 				starOffset := l.endOffset
 				l.endOffset = beforeSlashOffset
 				l.endOffset = starOffset
-				return blockCommentState(l, nesting+1, containsNewLine)
+				return blockCommentState(l, nesting+1)
 			}
 
 		case '*':
@@ -334,14 +343,12 @@ func blockCommentState(l *lexer, nesting int, containsNewLine bool) stateFn {
 				slashOffset := l.endOffset
 				l.endOffset = beforeStarOffset
 				l.endOffset = slashOffset
-				return blockCommentState(l, nesting-1, containsNewLine)
+				return blockCommentState(l, nesting-1)
 			}
 
-		case '\n':
-			// TODO(preserve-comments): Test if this is correctly tracked
-			containsNewLine = true
+			return blockCommentState(l, nesting)
 		}
 
-		return blockCommentState(l, nesting, containsNewLine)
+		return blockCommentState(l, nesting)
 	}
 }

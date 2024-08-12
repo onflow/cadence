@@ -6,18 +6,27 @@ import (
 )
 
 type Comments struct {
-	Leading  []Comment `json:"-"`
-	Trailing []Comment `json:"-"`
+	Leading  []*Comment `json:"-"`
+	Trailing []*Comment `json:"-"`
 }
 
 type Comment struct {
 	source []byte
+	Range
 }
 
 func NewComment(memoryGauge common.MemoryGauge, source []byte) Comment {
 	// TODO(preserve-comments): Track memory usage
 	return Comment{
 		source: source,
+	}
+}
+
+func NewCommentV2(memoryGauge common.MemoryGauge, source []byte, r Range) *Comment {
+	// TODO(preserve-comments): Track memory usage
+	return &Comment{
+		source: source,
+		Range:  r,
 	}
 }
 
