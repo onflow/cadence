@@ -100,7 +100,7 @@ func (m *CapabilityValueMigration) migratePathCapabilityValue(
 	oldBorrowType := oldCapability.BorrowType
 
 	var capabilityID interpreter.UInt64Value
-	var controllerBorrowType sema.Type
+	var controllerBorrowType *interpreter.ReferenceStaticType
 
 	targetPath := capabilityAddressPath.Path
 	switch targetPath.Domain {
@@ -120,7 +120,7 @@ func (m *CapabilityValueMigration) migratePathCapabilityValue(
 		// Convert untyped path capability value to typed ID capability value
 		// by using capability controller's borrow type
 		if oldBorrowType == nil {
-			oldBorrowType = interpreter.ConvertSemaToStaticType(nil, controllerBorrowType)
+			oldBorrowType = controllerBorrowType
 		}
 
 	case common.PathDomainStorage:

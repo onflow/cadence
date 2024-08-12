@@ -22,7 +22,6 @@ import (
 	"github.com/onflow/cadence/migrations"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
@@ -110,9 +109,9 @@ func IssueAccountCapabilities(
 			continue
 		}
 
-		borrowType := inter.MustConvertStaticToSemaType(borrowStaticType).(*sema.ReferenceType)
+		borrowType := borrowStaticType.(*interpreter.ReferenceStaticType)
 
-		capabilityID, _ := stdlib.IssueStorageCapabilityController(
+		capabilityID := stdlib.IssueStorageCapabilityController(
 			inter,
 			interpreter.EmptyLocationRange,
 			handler,
@@ -124,13 +123,13 @@ func IssueAccountCapabilities(
 		capabilityMapping.Record(
 			addressPath,
 			capabilityID,
-			borrowType.ID(),
+			borrowStaticType.ID(),
 		)
 
 		reporter.IssuedStorageCapabilityController(
 			address,
 			addressPath,
-			borrowStaticType.(*interpreter.ReferenceStaticType),
+			borrowType,
 			capabilityID,
 		)
 	}
