@@ -2788,7 +2788,6 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 					nil,
 					nil,
 					nil,
-					"",
 				)
 			},
 			Config{},
@@ -2873,10 +2872,7 @@ func TestParseField(t *testing.T) {
 			nil,
 			[]byte(input),
 			func(p *parser) (ast.Declaration, error) {
-				return parseMemberOrNestedDeclaration(
-					p,
-					"",
-				)
+				return parseMemberOrNestedDeclaration(p)
 			},
 			config,
 		)
@@ -8530,10 +8526,7 @@ func TestParseNestedPragma(t *testing.T) {
 			nil,
 			[]byte(input),
 			func(p *parser) (ast.Declaration, error) {
-				return parseMemberOrNestedDeclaration(
-					p,
-					"",
-				)
+				return parseMemberOrNestedDeclaration(p)
 			},
 			config,
 		)

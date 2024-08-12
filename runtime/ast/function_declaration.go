@@ -94,7 +94,6 @@ func NewFunctionDeclarationWithComments(
 	returnTypeAnnotation *TypeAnnotation,
 	functionBlock *FunctionBlock,
 	startPos Position,
-	docString string,
 	comments Comments,
 ) *FunctionDeclaration {
 	decl := NewFunctionDeclaration(
@@ -109,7 +108,7 @@ func NewFunctionDeclarationWithComments(
 		returnTypeAnnotation,
 		functionBlock,
 		startPos,
-		docString,
+		"",
 	)
 	decl.Comments = comments
 	return decl

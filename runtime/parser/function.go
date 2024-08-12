@@ -326,7 +326,6 @@ func parseFunctionDeclaration(
 	purityPos *ast.Position,
 	staticPos *ast.Position,
 	nativePos *ast.Position,
-	docString string,
 ) (*ast.FunctionDeclaration, error) {
 	startToken := p.current
 	startPos := ast.EarliestPosition(startToken.StartPos, accessPos, purityPos, staticPos, nativePos)
@@ -372,7 +371,6 @@ func parseFunctionDeclaration(
 		returnTypeAnnotation,
 		functionBlock,
 		startPos,
-		docString,
 		p.newCommentsFromTrivia(startToken.LeadingTrivia, []lexer.Trivia{}),
 	), nil
 }

@@ -41,7 +41,8 @@ import (
 //	    '}'
 func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionDeclaration, error) {
 
-	startPos := p.current.StartPos
+	startToken := p.current
+	startPos := startToken.StartPos
 
 	// Skip the `transaction` keyword
 	p.nextSemanticToken()
@@ -83,7 +84,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 		switch string(keyword) {
 		case KeywordPrepare:
-			identifier := p.tokenToIdentifier(p.current)
+			identifierToken := p.current
 			// Skip the `prepare` keyword
 			p.next()
 			prepare, err = parseSpecialFunctionDeclaration(
@@ -95,8 +96,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				nil,
 				nil,
 				nil,
-				identifier,
-				"",
+				identifierToken,
 			)
 			if err != nil {
 				return nil, err
@@ -215,8 +215,6 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 
 func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err error) {
 	for {
-		// TODO(preserve-comments): Compute doc string
-		var docString string
 		p.skipSpaceWithOptions(skipSpaceOptions{
 			skipNewlines: true,
 		})
@@ -239,7 +237,6 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 					nil,
 					nil,
 					nil,
-					docString,
 				)
 				if err != nil {
 					return nil, err
@@ -259,7 +256,8 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 }
 
 func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error) {
-	identifier := p.tokenToIdentifier(p.current)
+	identifierToken := p.current
+	identifier := p.tokenToIdentifier(identifierToken)
 
 	// Skip the `execute` keyword
 	p.nextSemanticToken()
@@ -272,7 +270,7 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 	return ast.NewSpecialFunctionDeclaration(
 		p.memoryGauge,
 		common.DeclarationKindExecute,
-		ast.NewFunctionDeclaration(
+		ast.NewFunctionDeclarationWithComments(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
 			ast.FunctionPurityUnspecified,
@@ -289,7 +287,7 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 				nil,
 			),
 			identifier.Pos,
-			"",
+			p.newCommentsFromTrivia(identifierToken.LeadingTrivia, []lexer.Trivia{}),
 		),
 	), nil
 }

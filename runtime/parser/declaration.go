@@ -114,7 +114,6 @@ func parseDeclaration(p *parser) (ast.Declaration, error) {
 					purityPos,
 					staticPos,
 					nativePos,
-					docString,
 				)
 
 			case KeywordImport:
@@ -1026,8 +1025,9 @@ func parseFieldWithVariableKind(
 	accessPos *ast.Position,
 	staticPos *ast.Position,
 	nativePos *ast.Position,
-	docString string,
 ) (*ast.FieldDeclaration, error) {
+	// TODO(preserve-comments): Implement
+	var docString string
 
 	startPos := ast.EarliestPosition(p.current.StartPos, accessPos, staticPos, nativePos)
 
@@ -1516,8 +1516,6 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 	var declarations []ast.Declaration
 
 	for {
-		// TODO(preserve-comments): Compute doc string
-		var docString string
 		p.skipSpaceWithOptions(skipSpaceOptions{
 			skipNewlines: true,
 		})
@@ -1532,7 +1530,7 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 			return ast.NewMembers(p.memoryGauge, declarations), nil
 
 		default:
-			memberOrNestedDeclaration, err := parseMemberOrNestedDeclaration(p, docString)
+			memberOrNestedDeclaration, err := parseMemberOrNestedDeclaration(p)
 			if err != nil {
 				return nil, err
 			}
@@ -1557,7 +1555,9 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 //	                          | eventDeclaration
 //	                          | enumCase
 //	                          | pragmaDeclaration
-func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaration, error) {
+func parseMemberOrNestedDeclaration(p *parser) (ast.Declaration, error) {
+	// TODO(preserve-comments): Implement
+	var docString string
 
 	const functionBlockIsOptional = true
 
@@ -1602,7 +1602,6 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 					accessPos,
 					staticPos,
 					nativePos,
-					docString,
 				)
 
 			case KeywordCase:
@@ -1613,7 +1612,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				if err != nil {
 					return nil, err
 				}
-				return parseEnumCase(p, access, accessPos, docString)
+				return parseEnumCase(p, access, accessPos)
 
 			case KeywordFun:
 				return parseFunctionDeclaration(
@@ -1625,7 +1624,6 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 					purityPos,
 					staticPos,
 					nativePos,
-					docString,
 				)
 
 			case KeywordEvent:
@@ -1801,7 +1799,6 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				staticPos,
 				nativePos,
 				identifier,
-				docString,
 			)
 
 		case lexer.TokenParenOpen:
@@ -1809,7 +1806,6 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				return nil, p.syntaxError("unexpected %s", p.current.Type)
 			}
 
-			identifier := p.tokenToIdentifier(*previousIdentifierToken)
 			return parseSpecialFunctionDeclaration(
 				p,
 				functionBlockIsOptional,
@@ -1819,8 +1815,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) (ast.Declaratio
 				purityPos,
 				staticPos,
 				nativePos,
-				identifier,
-				docString,
+				*previousIdentifierToken,
 			)
 		}
 
@@ -1864,8 +1859,9 @@ func parseFieldDeclarationWithoutVariableKind(
 	staticPos *ast.Position,
 	nativePos *ast.Position,
 	identifier ast.Identifier,
-	docString string,
 ) (*ast.FieldDeclaration, error) {
+	// TODO(preserve-comments): Implement
+	var docString string
 
 	startPos := ast.EarliestPosition(identifier.Pos, accessPos, staticPos, nativePos)
 
@@ -1907,10 +1903,10 @@ func parseSpecialFunctionDeclaration(
 	purityPos *ast.Position,
 	staticPos *ast.Position,
 	nativePos *ast.Position,
-	identifier ast.Identifier,
-	docString string,
+	identifierToken lexer.Token,
 ) (*ast.SpecialFunctionDeclaration, error) {
 
+	identifier := p.tokenToIdentifier(identifierToken)
 	startPos := ast.EarliestPosition(identifier.Pos, accessPos, purityPos, staticPos, nativePos)
 
 	parameterList, returnTypeAnnotation, functionBlock, err :=
@@ -1949,7 +1945,7 @@ func parseSpecialFunctionDeclaration(
 	return ast.NewSpecialFunctionDeclaration(
 		p.memoryGauge,
 		declarationKind,
-		ast.NewFunctionDeclaration(
+		ast.NewFunctionDeclarationWithComments(
 			p.memoryGauge,
 			access,
 			purity,
@@ -1961,7 +1957,7 @@ func parseSpecialFunctionDeclaration(
 			nil,
 			functionBlock,
 			startPos,
-			docString,
+			p.newCommentsFromTrivia(identifierToken.LeadingTrivia, []lexer.Trivia{}),
 		),
 	), nil
 }
@@ -1973,8 +1969,9 @@ func parseEnumCase(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
-	docString string,
 ) (*ast.EnumCaseDeclaration, error) {
+	// TODO(preserve-comments): Implement
+	var docString string
 
 	startPos := p.current.StartPos
 	if accessPos != nil {

@@ -100,7 +100,6 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 					accessPos,
 					staticPos,
 					nativePos,
-					docString,
 				)
 
 			case keywordImport:
