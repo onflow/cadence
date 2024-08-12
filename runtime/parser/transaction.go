@@ -287,7 +287,9 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 				nil,
 			),
 			identifier.Pos,
-			p.newCommentsFromTrivia(identifierToken.LeadingTrivia, []lexer.Trivia{}),
+			ast.Comments{
+				Leading: identifierToken.Leading,
+			},
 		),
 	), nil
 }

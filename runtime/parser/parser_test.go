@@ -1046,15 +1046,15 @@ Trailing multi-line comment of second
 		assert.True(t, ok)
 		assert.Equal(t, " Inline doc 1 of first\n Inline doc 2 of first", first.DeclarationDocString())
 		assert.Equal(t, ast.Comments{
-			Leading: []ast.Comment{
+			Leading: []*ast.Comment{
 				ast.NewComment(nil, []byte("/// Inline doc 1 of first")),
 				ast.NewComment(nil, []byte("/// Inline doc 2 of first")),
 			},
-			Trailing: []ast.Comment{},
+			Trailing: []*ast.Comment{},
 		}, first.Comments)
 		assert.Equal(t, ast.Comments{
-			Leading: []ast.Comment{},
-			Trailing: []ast.Comment{
+			Leading: []*ast.Comment{},
+			Trailing: []*ast.Comment{
 				ast.NewComment(nil, []byte("// Trailing inline comment of first")),
 			},
 		}, first.FunctionBlock.Block.Comments)
@@ -1063,15 +1063,15 @@ Trailing multi-line comment of second
 		assert.True(t, ok)
 		assert.Equal(t, "\nMulti-line doc 1 of second\n\n\nMulti-line doc 2 of second\n", second.DeclarationDocString())
 		assert.Equal(t, ast.Comments{
-			Leading: []ast.Comment{
+			Leading: []*ast.Comment{
 				ast.NewComment(nil, []byte("/**\nMulti-line doc 1 of second\n*/")),
 				ast.NewComment(nil, []byte("/**\nMulti-line doc 2 of second\n*/")),
 			},
-			Trailing: []ast.Comment{},
+			Trailing: []*ast.Comment{},
 		}, second.Comments)
 		assert.Equal(t, ast.Comments{
-			Leading: []ast.Comment{},
-			Trailing: []ast.Comment{
+			Leading: []*ast.Comment{},
+			Trailing: []*ast.Comment{
 				ast.NewComment(nil, []byte("/**\nTrailing multi-line comment of second\n*/")),
 			},
 		}, second.FunctionBlock.Block.Comments)

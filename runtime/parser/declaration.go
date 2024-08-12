@@ -1957,7 +1957,9 @@ func parseSpecialFunctionDeclaration(
 			nil,
 			functionBlock,
 			startPos,
-			p.newCommentsFromTrivia(identifierToken.LeadingTrivia, []lexer.Trivia{}),
+			ast.Comments{
+				Leading: identifierToken.Leading,
+			},
 		),
 	), nil
 }

@@ -564,7 +564,10 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 				startToken.StartPos,
 				endToken.EndPos,
 			),
-			p.newCommentsFromTrivia(startToken.LeadingTrivia, endToken.TrailingTrivia),
+			ast.Comments{
+				Leading:  startToken.Leading,
+				Trailing: endToken.Trailing,
+			},
 		),
 		preConditions,
 		postConditions,

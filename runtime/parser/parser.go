@@ -507,32 +507,6 @@ func (p *parser) tokenToIdentifier(token lexer.Token) ast.Identifier {
 	)
 }
 
-func (p *parser) newCommentsFromTrivia(leadingTrivia, trailingTrivia []lexer.Trivia) ast.Comments {
-	comments := ast.Comments{
-		Leading:  []ast.Comment{},
-		Trailing: []ast.Comment{},
-	}
-
-	for _, t := range leadingTrivia {
-		if isTriviaComment(t) {
-			comments.Leading = append(comments.Leading, ast.NewComment(p.memoryGauge, p.triviaSource(t)))
-		}
-	}
-
-	for _, t := range trailingTrivia {
-		if isTriviaComment(t) {
-			comments.Trailing = append(comments.Trailing, ast.NewComment(p.memoryGauge, p.triviaSource(t)))
-		}
-	}
-
-	return comments
-}
-
-func isTriviaComment(t lexer.Trivia) bool {
-	// Other trivia types (space, newlines) are not needed in further stages of the compiler
-	return t.Type == lexer.TriviaTypeInlineComment || t.Type == lexer.TriviaTypeMultiLineComment
-}
-
 func (p *parser) startAmbiguity() {
 	if p.ambiguityLevel == 0 {
 		p.localReplayedTokensCount = 0

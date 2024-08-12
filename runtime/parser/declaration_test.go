@@ -882,7 +882,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 						},
 					},
 					Comments: ast.Comments{
-						Leading: []ast.Comment{
+						Leading: []*ast.Comment{
 							ast.NewComment(nil, []byte("/// Test")),
 						},
 					},
@@ -924,7 +924,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 						},
 					},
 					Comments: ast.Comments{
-						Leading: []ast.Comment{
+						Leading: []*ast.Comment{
 							ast.NewComment(nil, []byte("/// First line")),
 							ast.NewComment(nil, []byte("/// Second line")),
 						},
@@ -967,7 +967,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 						},
 					},
 					Comments: ast.Comments{
-						Leading: []ast.Comment{
+						Leading: []*ast.Comment{
 							ast.NewComment(nil, []byte("/** Cool dogs.\n\n Cool cats!! */")),
 						},
 					},
@@ -1382,8 +1382,8 @@ func TestParseFunctionDeclaration(t *testing.T) {
 						PostConditions: (*ast.Conditions)(nil),
 					},
 					Comments: ast.Comments{
-						Leading:  []ast.Comment{},
-						Trailing: []ast.Comment{},
+						Leading:  []*ast.Comment{},
+						Trailing: []*ast.Comment{},
 					},
 					Identifier: ast.Identifier{
 						Identifier: "foo",
@@ -3524,8 +3524,8 @@ func TestParseCompositeDeclaration(t *testing.T) {
 									},
 								},
 								Comments: ast.Comments{
-									Leading:  []ast.Comment{},
-									Trailing: []ast.Comment{},
+									Leading:  []*ast.Comment{},
+									Trailing: []*ast.Comment{},
 								},
 								Identifier: ast.Identifier{
 									Identifier: "getFoo",
@@ -8903,7 +8903,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.FunctionDeclaration{
 								Access: ast.AccessNotSpecified,
 								Comments: ast.Comments{
-									Leading: []ast.Comment{
+									Leading: []*ast.Comment{
 										ast.NewComment(nil, []byte("/// noReturnNoBlock")),
 									},
 								},
@@ -8922,7 +8922,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.FunctionDeclaration{
 								Access: ast.AccessNotSpecified,
 								Comments: ast.Comments{
-									Leading: []ast.Comment{
+									Leading: []*ast.Comment{
 										ast.NewComment(nil, []byte("/// returnNoBlock")),
 									},
 								},
@@ -8951,7 +8951,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.FunctionDeclaration{
 								Access: ast.AccessNotSpecified,
 								Comments: ast.Comments{
-									Leading: []ast.Comment{
+									Leading: []*ast.Comment{
 										ast.NewComment(nil, []byte("/// returnAndBlock")),
 									},
 								},
@@ -9030,7 +9030,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 								FunctionDeclaration: &ast.FunctionDeclaration{
 									Access: ast.AccessNotSpecified,
 									Comments: ast.Comments{
-										Leading: []ast.Comment{
+										Leading: []*ast.Comment{
 											ast.NewComment(nil, []byte("/// unknown")),
 										},
 									},
@@ -9052,7 +9052,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 								FunctionDeclaration: &ast.FunctionDeclaration{
 									Access: ast.AccessNotSpecified,
 									Comments: ast.Comments{
-										Leading: []ast.Comment{
+										Leading: []*ast.Comment{
 											ast.NewComment(nil, []byte("/// initNoBlock")),
 										},
 									},

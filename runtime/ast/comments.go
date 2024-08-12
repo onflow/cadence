@@ -12,21 +12,12 @@ type Comments struct {
 
 type Comment struct {
 	source []byte
-	Range
 }
 
-func NewComment(memoryGauge common.MemoryGauge, source []byte) Comment {
-	// TODO(preserve-comments): Track memory usage
-	return Comment{
-		source: source,
-	}
-}
-
-func NewCommentV2(memoryGauge common.MemoryGauge, source []byte, r Range) *Comment {
+func NewComment(memoryGauge common.MemoryGauge, source []byte) *Comment {
 	// TODO(preserve-comments): Track memory usage
 	return &Comment{
 		source: source,
-		Range:  r,
 	}
 }
 

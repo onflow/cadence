@@ -341,7 +341,9 @@ func parseFunctionDeclaration(
 		returnTypeAnnotation,
 		functionBlock,
 		startPos,
-		p.newCommentsFromTrivia(startToken.LeadingTrivia, []lexer.Trivia{}),
+		ast.Comments{
+			Leading: startToken.Leading,
+		},
 	), nil
 }
 

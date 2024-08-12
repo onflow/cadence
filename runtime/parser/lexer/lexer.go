@@ -76,8 +76,7 @@ type lexer struct {
 	canBackup bool
 	// currentComments stores the current leading and/or trailing comments
 	// nil is used as sentinel value to track newlines
-	currentComments          []*ast.Comment
-	isInTrailingCommentState bool
+	currentComments []*ast.Comment
 }
 
 var _ TokenStream = &lexer{}
@@ -322,10 +321,6 @@ func (l *lexer) updatePreviousTrailingComments() {
 	var trailing []*ast.Comment
 	var leading []*ast.Comment
 
-	if lastNonSpaceTokenIndex == -1 {
-		l.isInTrailingCommentState = false
-	}
-
 	trailingTriviaEnded := lastNonSpaceTokenIndex == -1
 	for _, comment := range l.currentComments {
 		if comment == nil {
@@ -342,7 +337,8 @@ func (l *lexer) updatePreviousTrailingComments() {
 	l.currentComments = leading
 
 	if lastNonSpaceTokenIndex != -1 {
-		l.tokens[lastNonSpaceTokenIndex].Trailing = append(l.tokens[lastNonSpaceTokenIndex].Trailing, trailing...)
+		lastNonSpaceToken := &l.tokens[lastNonSpaceTokenIndex]
+		lastNonSpaceToken.Trailing = append(lastNonSpaceToken.Trailing, trailing...)
 	}
 }
 
@@ -368,9 +364,7 @@ func (l *lexer) emitComment() {
 		l.currentComments = []*ast.Comment{}
 	}
 
-	l.currentComments = append(l.currentComments,
-		ast.NewCommentV2(l.memoryGauge, currentRange.Source(l.input), currentRange),
-	)
+	l.currentComments = append(l.currentComments, ast.NewComment(l.memoryGauge, currentRange.Source(l.input)))
 
 	l.consume(endPos)
 }

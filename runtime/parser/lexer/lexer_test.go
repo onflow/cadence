@@ -989,11 +989,11 @@ func TestLexBasic(t *testing.T) {
 	})
 }
 
-func TestLexTrivia(t *testing.T) {
+func TestLexComments(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("Simple comments", func(t *testing.T) {
+	t.Run("simple", func(t *testing.T) {
 		testLex(t,
 			`/* before brace open */ { /* after brace open */ // after brace open 2
 // before brace close 1
@@ -1024,44 +1024,11 @@ func TestLexTrivia(t *testing.T) {
 						Type: TokenBraceOpen,
 						Comments: ast.Comments{
 							Leading: []*ast.Comment{
-								ast.NewCommentV2(nil, []byte("/* before brace open */"), ast.Range{
-									StartPos: ast.Position{
-										Offset: 0,
-										Line:   1,
-										Column: 0,
-									},
-									EndPos: ast.Position{
-										Offset: 22,
-										Line:   1,
-										Column: 22,
-									},
-								}),
+								ast.NewComment(nil, []byte("/* before brace open */")),
 							},
 							Trailing: []*ast.Comment{
-								ast.NewCommentV2(nil, []byte("/* after brace open */"), ast.Range{
-									StartPos: ast.Position{
-										Offset: 26,
-										Line:   1,
-										Column: 26,
-									},
-									EndPos: ast.Position{
-										Offset: 47,
-										Line:   1,
-										Column: 47,
-									},
-								}),
-								ast.NewCommentV2(nil, []byte("// after brace open 2"), ast.Range{
-									StartPos: ast.Position{
-										Offset: 49,
-										Line:   1,
-										Column: 49,
-									},
-									EndPos: ast.Position{
-										Offset: 69,
-										Line:   1,
-										Column: 69,
-									},
-								}),
+								ast.NewComment(nil, []byte("/* after brace open */")),
+								ast.NewComment(nil, []byte("// after brace open 2")),
 							},
 						},
 						Range: ast.Range{
@@ -1179,30 +1146,8 @@ func TestLexTrivia(t *testing.T) {
 						Type: TokenBraceClose,
 						Comments: ast.Comments{
 							Leading: []*ast.Comment{
-								ast.NewCommentV2(nil, []byte("// before brace close 1"), ast.Range{
-									StartPos: ast.Position{
-										Offset: 71,
-										Line:   2,
-										Column: 0,
-									},
-									EndPos: ast.Position{
-										Offset: 93,
-										Line:   2,
-										Column: 22,
-									},
-								}),
-								ast.NewCommentV2(nil, []byte("// before brace close 2"), ast.Range{
-									StartPos: ast.Position{
-										Offset: 95,
-										Line:   3,
-										Column: 0,
-									},
-									EndPos: ast.Position{
-										Offset: 117,
-										Line:   3,
-										Column: 22,
-									},
-								}),
+								ast.NewComment(nil, []byte("// before brace close 1")),
+								ast.NewComment(nil, []byte("// before brace close 2")),
 							},
 							Trailing: []*ast.Comment{},
 						},
@@ -1242,7 +1187,7 @@ func TestLexTrivia(t *testing.T) {
 		)
 	})
 
-	t.Run("Complex comments", func(t *testing.T) {
+	t.Run("complex", func(t *testing.T) {
 		testLex(t, `
 // Before transaction identifier
 transaction /* After transaction identifier */ (
@@ -1262,6 +1207,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 0,
+							Line:   1,
+							Column: 0,
+						},
+						EndPos: ast.Position{
+							Offset: 0,
+							Line:   1,
+							Column: 0,
+						},
+					},
 				},
 				Source: "\n",
 			},
@@ -1269,6 +1226,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 33,
+							Line:   2,
+							Column: 32,
+						},
+						EndPos: ast.Position{
+							Offset: 33,
+							Line:   2,
+							Column: 32,
+						},
+					},
 				},
 				Source: "\n",
 			},
@@ -1277,10 +1246,22 @@ transaction /* After transaction identifier */ (
 					Type: TokenIdentifier,
 					Comments: ast.Comments{
 						Leading: []*ast.Comment{
-							ast.NewCommentV2(nil, []byte("// Before transaction identifier"), ast.Range{}),
+							ast.NewComment(nil, []byte("// Before transaction identifier")),
 						},
 						Trailing: []*ast.Comment{
-							ast.NewCommentV2(nil, []byte("/* After transaction identifier */"), ast.Range{}),
+							ast.NewComment(nil, []byte("/* After transaction identifier */")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 34,
+							Line:   3,
+							Column: 0,
+						},
+						EndPos: ast.Position{
+							Offset: 44,
+							Line:   3,
+							Column: 10,
 						},
 					},
 				},
@@ -1288,19 +1269,57 @@ transaction /* After transaction identifier */ (
 			},
 			{
 				Token: Token{
-					Type: TokenSpace,
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 45,
+							Line:   3,
+							Column: 11,
+						},
+						EndPos: ast.Position{
+							Offset: 45,
+							Line:   3,
+							Column: 11,
+						},
+					},
 				},
 				Source: " ",
 			},
 			{
 				Token: Token{
-					Type: TokenSpace,
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 80,
+							Line:   3,
+							Column: 46,
+						},
+						EndPos: ast.Position{
+							Offset: 80,
+							Line:   3,
+							Column: 46,
+						},
+					},
 				},
 				Source: " ",
 			},
 			{
 				Token: Token{
 					Type: TokenParenOpen,
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 81,
+							Line:   3,
+							Column: 47,
+						},
+						EndPos: ast.Position{
+							Offset: 81,
+							Line:   3,
+							Column: 47,
+						},
+					},
 				},
 				Source: "(",
 			},
@@ -1308,13 +1327,37 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 82,
+							Line:   3,
+							Column: 48,
+						},
+						EndPos: ast.Position{
+							Offset: 83,
+							Line:   4,
+							Column: 0,
+						},
+					},
 				},
 				Source: "\n\t",
 			},
 			{
 				Token: Token{
 					Type:         TokenSpace,
-					SpaceOrError: Space{ContainsNewline: false},
+					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 103,
+							Line:   4,
+							Column: 20,
+						},
+						EndPos: ast.Position{
+							Offset: 104,
+							Line:   5,
+							Column: 0,
+						},
+					},
 				},
 				Source: "\n\t",
 			},
@@ -1323,9 +1366,21 @@ transaction /* After transaction identifier */ (
 					Type: TokenIdentifier,
 					Comments: ast.Comments{
 						Leading: []*ast.Comment{
-							ast.NewCommentV2(nil, []byte("// Before first arg"), ast.Range{}),
+							ast.NewComment(nil, []byte("// Before first arg")),
 						},
 						Trailing: []*ast.Comment{},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 105,
+							Line:   5,
+							Column: 1,
+						},
+						EndPos: ast.Position{
+							Offset: 105,
+							Line:   5,
+							Column: 1,
+						},
 					},
 				},
 				Source: "a",
@@ -1333,6 +1388,18 @@ transaction /* After transaction identifier */ (
 			{
 				Token: Token{
 					Type: TokenColon,
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 106,
+							Line:   5,
+							Column: 2,
+						},
+						EndPos: ast.Position{
+							Offset: 106,
+							Line:   5,
+							Column: 2,
+						},
+					},
 				},
 				Source: ":",
 			},
@@ -1340,12 +1407,36 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 107,
+							Line:   5,
+							Column: 3,
+						},
+						EndPos: ast.Position{
+							Offset: 107,
+							Line:   5,
+							Column: 3,
+						},
+					},
 				},
 				Source: " ",
 			},
 			{
 				Token: Token{
 					Type: TokenIdentifier,
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 108,
+							Line:   5,
+							Column: 4,
+						},
+						EndPos: ast.Position{
+							Offset: 110,
+							Line:   5,
+							Column: 6,
+						},
+					},
 				},
 				Source: "Int",
 			},
@@ -1355,7 +1446,19 @@ transaction /* After transaction identifier */ (
 					Comments: ast.Comments{
 						Leading: []*ast.Comment{},
 						Trailing: []*ast.Comment{
-							ast.NewCommentV2(nil, []byte("// After first arg"), ast.Range{}),
+							ast.NewComment(nil, []byte("// After first arg ")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 111,
+							Line:   5,
+							Column: 7,
+						},
+						EndPos: ast.Position{
+							Offset: 111,
+							Line:   5,
+							Column: 7,
 						},
 					},
 				},
@@ -1365,6 +1468,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 112,
+							Line:   5,
+							Column: 8,
+						},
+						EndPos: ast.Position{
+							Offset: 112,
+							Line:   5,
+							Column: 8,
+						},
+					},
 				},
 				Source: " ",
 			},
@@ -1372,6 +1487,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 132,
+							Line:   5,
+							Column: 28,
+						},
+						EndPos: ast.Position{
+							Offset: 133,
+							Line:   6,
+							Column: 0,
+						},
+					},
 				},
 				Source: "\n\t",
 			},
@@ -1379,6 +1506,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 159,
+							Line:   8,
+							Column: 3,
+						},
+						EndPos: ast.Position{
+							Offset: 160,
+							Line:   9,
+							Column: 0,
+						},
+					},
 				},
 				Source: "\n\t",
 			},
@@ -1387,9 +1526,21 @@ transaction /* After transaction identifier */ (
 					Type: TokenIdentifier,
 					Comments: ast.Comments{
 						Leading: []*ast.Comment{
-							ast.NewCommentV2(nil, []byte("/*\n\tBefore second arg\n\t*/"), ast.Range{}),
+							ast.NewComment(nil, []byte("/*\n\tBefore second arg\n\t*/")),
 						},
 						Trailing: []*ast.Comment{},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 161,
+							Line:   9,
+							Column: 1,
+						},
+						EndPos: ast.Position{
+							Offset: 161,
+							Line:   9,
+							Column: 1,
+						},
 					},
 				},
 				Source: "b",
@@ -1397,6 +1548,18 @@ transaction /* After transaction identifier */ (
 			{
 				Token: Token{
 					Type: TokenColon,
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 162,
+							Line:   9,
+							Column: 2,
+						},
+						EndPos: ast.Position{
+							Offset: 162,
+							Line:   9,
+							Column: 2,
+						},
+					},
 				},
 				Source: ":",
 			},
@@ -1404,6 +1567,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 163,
+							Line:   9,
+							Column: 3,
+						},
+						EndPos: ast.Position{
+							Offset: 163,
+							Line:   9,
+							Column: 3,
+						},
+					},
 				},
 				Source: " ",
 			},
@@ -1413,8 +1588,20 @@ transaction /* After transaction identifier */ (
 					Comments: ast.Comments{
 						Leading: []*ast.Comment{},
 						Trailing: []*ast.Comment{
-							ast.NewCommentV2(nil, []byte("/* After second arg\n\n\t*/"), ast.Range{}),
-							ast.NewCommentV2(nil, []byte("// After second arg 2"), ast.Range{}),
+							ast.NewComment(nil, []byte("/* After second arg\n\n\t*/")),
+							ast.NewComment(nil, []byte("// After second arg 2")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 164,
+							Line:   9,
+							Column: 4,
+						},
+						EndPos: ast.Position{
+							Offset: 166,
+							Line:   9,
+							Column: 6,
 						},
 					},
 				},
@@ -1424,6 +1611,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 167,
+							Line:   9,
+							Column: 7,
+						},
+						EndPos: ast.Position{
+							Offset: 167,
+							Line:   9,
+							Column: 7,
+						},
+					},
 				},
 				Source: " ",
 			},
@@ -1431,6 +1630,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 192,
+							Line:   11,
+							Column: 3,
+						},
+						EndPos: ast.Position{
+							Offset: 192,
+							Line:   11,
+							Column: 3,
+						},
+					},
 				},
 				Source: " ",
 			},
@@ -1438,6 +1649,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 214,
+							Line:   11,
+							Column: 25,
+						},
+						EndPos: ast.Position{
+							Offset: 215,
+							Line:   12,
+							Column: 0,
+						},
+					},
 				},
 				Source: "\n\t",
 			},
@@ -1445,6 +1668,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 237,
+							Line:   12,
+							Column: 22,
+						},
+						EndPos: ast.Position{
+							Offset: 237,
+							Line:   12,
+							Column: 22,
+						},
+					},
 				},
 				Source: "\n",
 			},
@@ -1453,10 +1688,22 @@ transaction /* After transaction identifier */ (
 					Type: TokenParenClose,
 					Comments: ast.Comments{
 						Leading: []*ast.Comment{
-							ast.NewCommentV2(nil, []byte("// Before paren close"), ast.Range{}),
+							ast.NewComment(nil, []byte("// Before paren close")),
 						},
 						Trailing: []*ast.Comment{
-							ast.NewCommentV2(nil, []byte("/* After paren close */"), ast.Range{}),
+							ast.NewComment(nil, []byte("/* After paren close */")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 238,
+							Line:   13,
+							Column: 0,
+						},
+						EndPos: ast.Position{
+							Offset: 238,
+							Line:   13,
+							Column: 0,
 						},
 					},
 				},
@@ -1466,6 +1713,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 239,
+							Line:   13,
+							Column: 1,
+						},
+						EndPos: ast.Position{
+							Offset: 239,
+							Line:   13,
+							Column: 1,
+						},
+					},
 				},
 				Source: " ",
 			},
@@ -1473,6 +1732,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 263,
+							Line:   13,
+							Column: 25,
+						},
+						EndPos: ast.Position{
+							Offset: 263,
+							Line:   13,
+							Column: 25,
+						},
+					},
 				},
 				Source: " ",
 			},
@@ -1482,7 +1753,19 @@ transaction /* After transaction identifier */ (
 					Comments: ast.Comments{
 						Leading: []*ast.Comment{},
 						Trailing: []*ast.Comment{
-							ast.NewCommentV2(nil, []byte("/* After brace open */"), ast.Range{}),
+							ast.NewComment(nil, []byte("/* After brace open */")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 264,
+							Line:   13,
+							Column: 26,
+						},
+						EndPos: ast.Position{
+							Offset: 264,
+							Line:   13,
+							Column: 26,
 						},
 					},
 				},
@@ -1492,6 +1775,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 265,
+							Line:   13,
+							Column: 27,
+						},
+						EndPos: ast.Position{
+							Offset: 265,
+							Line:   13,
+							Column: 27,
+						},
+					},
 				},
 				Source: " ",
 			},
@@ -1499,6 +1794,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 288,
+							Line:   13,
+							Column: 50,
+						},
+						EndPos: ast.Position{
+							Offset: 288,
+							Line:   13,
+							Column: 50,
+						},
+					},
 				},
 				Source: " ",
 			},
@@ -1508,7 +1815,19 @@ transaction /* After transaction identifier */ (
 					Comments: ast.Comments{
 						Leading: []*ast.Comment{},
 						Trailing: []*ast.Comment{
-							ast.NewCommentV2(nil, []byte("/* After brace close */"), ast.Range{}),
+							ast.NewComment(nil, []byte("// After brace close")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 289,
+							Line:   13,
+							Column: 51,
+						},
+						EndPos: ast.Position{
+							Offset: 289,
+							Line:   13,
+							Column: 51,
 						},
 					},
 				},
@@ -1518,6 +1837,18 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: false},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 290,
+							Line:   13,
+							Column: 52,
+						},
+						EndPos: ast.Position{
+							Offset: 290,
+							Line:   13,
+							Column: 52,
+						},
+					},
 				},
 				Source: " ",
 			},
@@ -1525,12 +1856,36 @@ transaction /* After transaction identifier */ (
 				Token: Token{
 					Type:         TokenSpace,
 					SpaceOrError: Space{ContainsNewline: true},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 311,
+							Line:   13,
+							Column: 73,
+						},
+						EndPos: ast.Position{
+							Offset: 312,
+							Line:   14,
+							Column: 0,
+						},
+					},
 				},
 				Source: "\n\n",
 			},
 			{
 				Token: Token{
 					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 313,
+							Line:   15,
+							Column: 0,
+						},
+						EndPos: ast.Position{
+							Offset: 313,
+							Line:   15,
+							Column: 0,
+						},
+					},
 				},
 			},
 		})
