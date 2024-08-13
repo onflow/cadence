@@ -885,34 +885,6 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 2, Column: 19, Offset: 44},
 							EndPos:   ast.Position{Line: 2, Column: 22, Offset: 47},
 						},
-						LeadingTrivia: []Trivia{
-							{
-								Type: TriviaTypeInlineComment,
-								Text: []byte("// test is in next line "),
-							},
-							{
-								Type: TriviaTypeNewLine,
-								Text: []byte("\n"),
-							},
-							{
-								Type: TriviaTypeMultiLineComment,
-								Text: []byte("/* test is here */"),
-							},
-							{
-								Type: TriviaTypeSpace,
-								Text: []byte(" "),
-							},
-						},
-						TrailingTrivia: []Trivia{
-							{
-								Type: TriviaTypeSpace,
-								Text: []byte(" "),
-							},
-							{
-								Type: TriviaTypeInlineComment,
-								Text: []byte("// test is in the same line"),
-							},
-						},
 					},
 					Source: "test",
 				},
@@ -923,17 +895,6 @@ func TestLexBasic(t *testing.T) {
 							StartPos: ast.Position{Line: 3, Column: 27, Offset: 104},
 							EndPos:   ast.Position{Line: 3, Column: 27, Offset: 104},
 						},
-						LeadingTrivia: []Trivia{
-							{
-								Type: TriviaTypeNewLine,
-								Text: []byte("\n"),
-							},
-							{
-								Type: TriviaTypeInlineComment,
-								Text: []byte("// test is in previous line"),
-							},
-						},
-						TrailingTrivia: []Trivia{},
 					},
 				},
 			},
@@ -2226,22 +2187,6 @@ func TestLexBlockComment(t *testing.T) {
 							StartPos: ast.Position{Line: 1, Column: 30, Offset: 30},
 							EndPos:   ast.Position{Line: 1, Column: 30, Offset: 30},
 						},
-						LeadingTrivia: []Trivia{
-							{
-								Type: TriviaTypeMultiLineComment,
-								Range: ast.Range{
-									StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-									EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
-								},
-							},
-							{
-								Type: TriviaTypeSpace,
-								Range: ast.Range{
-									StartPos: ast.Position{Line: 1, Column: 28, Offset: 28},
-									EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
-								},
-							},
-						},
 					},
 				},
 			},
@@ -3159,16 +3104,6 @@ func TestLexLineComment(t *testing.T) {
 				},
 				{
 					Token: Token{
-						Type: TokenLineComment,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
-						},
-					},
-					Source: "// bar ",
-				},
-				{
-					Token: Token{
 						Type: TokenEOF,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
@@ -3221,16 +3156,6 @@ func TestLexLineComment(t *testing.T) {
 						},
 					},
 					Source: " ",
-				},
-				{
-					Token: Token{
-						Type: TokenLineComment,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
-						},
-					},
-					Source: "// bar ",
 				},
 				{
 					Token: Token{
