@@ -39,7 +39,8 @@ type CapabilityMigrationReporter interface {
 	)
 	MissingBorrowType(
 		accountAddress common.Address,
-		addressPath interpreter.AddressPath,
+		targetPath interpreter.AddressPath,
+		storedPath Path,
 	)
 }
 

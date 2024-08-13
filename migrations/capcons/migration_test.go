@@ -100,13 +100,15 @@ type testStorageCapConIssued struct {
 
 type testStorageCapConsMissingBorrowType struct {
 	accountAddress common.Address
-	addressPath    interpreter.AddressPath
+	targetPath     interpreter.AddressPath
+	storedPath     Path
 }
 
 type testStorageCapConsInferredBorrowType struct {
 	accountAddress common.Address
-	addressPath    interpreter.AddressPath
+	targetPath     interpreter.AddressPath
 	borrowType     *interpreter.ReferenceStaticType
+	storedPath     Path
 }
 
 type testMigration struct {
@@ -196,28 +198,32 @@ func (t *testMigrationReporter) MissingCapabilityID(
 
 func (t *testMigrationReporter) MissingBorrowType(
 	accountAddress common.Address,
-	addressPath interpreter.AddressPath,
+	targetPath interpreter.AddressPath,
+	storedPath Path,
 ) {
 	t.missingStorageCapConBorrowTypes = append(
 		t.missingStorageCapConBorrowTypes,
 		testStorageCapConsMissingBorrowType{
 			accountAddress: accountAddress,
-			addressPath:    addressPath,
+			targetPath:     targetPath,
+			storedPath:     storedPath,
 		},
 	)
 }
 
 func (t *testMigrationReporter) InferredMissingBorrowType(
 	accountAddress common.Address,
-	addressPath interpreter.AddressPath,
+	targetPath interpreter.AddressPath,
 	borrowType *interpreter.ReferenceStaticType,
+	storedPath Path,
 ) {
 	t.inferredStorageCapConBorrowTypes = append(
 		t.inferredStorageCapConBorrowTypes,
 		testStorageCapConsInferredBorrowType{
 			accountAddress: accountAddress,
-			addressPath:    addressPath,
+			targetPath:     targetPath,
 			borrowType:     borrowType,
+			storedPath:     storedPath,
 		},
 	)
 }
@@ -3414,12 +3420,16 @@ func TestUntypedStorageCapMigration(t *testing.T) {
 		[]testStorageCapConsInferredBorrowType{
 			{
 				accountAddress: testAddress,
-				addressPath:    testAddressPath,
+				targetPath:     testAddressPath,
 				borrowType: interpreter.NewReferenceStaticType(
 					nil,
 					inferredAuth,
 					interpreter.PrimitiveStaticTypeString,
 				),
+				storedPath: Path{
+					Domain: "storage",
+					Path:   "cap",
+				},
 			},
 		},
 		reporter.inferredStorageCapConBorrowTypes,
@@ -3633,9 +3643,13 @@ func TestUntypedStorageCapWithMissingTargetMigration(t *testing.T) {
 		[]testStorageCapConsMissingBorrowType{
 			{
 				accountAddress: addressA,
-				addressPath: interpreter.AddressPath{
+				targetPath: interpreter.AddressPath{
 					Address: addressA,
 					Path:    targetPath,
+				},
+				storedPath: Path{
+					Domain: "storage",
+					Path:   "cap",
 				},
 			},
 		},

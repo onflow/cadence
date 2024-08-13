@@ -29,7 +29,8 @@ import (
 type StorageCapabilityMigrationReporter interface {
 	MissingBorrowType(
 		accountAddress common.Address,
-		addressPath interpreter.AddressPath,
+		targetPath interpreter.AddressPath,
+		storedPath Path,
 	)
 	IssuedStorageCapabilityController(
 		accountAddress common.Address,
@@ -39,8 +40,9 @@ type StorageCapabilityMigrationReporter interface {
 	)
 	InferredMissingBorrowType(
 		accountAddress common.Address,
-		addressPath interpreter.AddressPath,
+		targetPath interpreter.AddressPath,
 		borrowType *interpreter.ReferenceStaticType,
+		storedPath Path,
 	)
 }
 
@@ -129,10 +131,6 @@ func IssueAccountCapabilities(
 			borrowType = capabilityBorrowType.(*interpreter.ReferenceStaticType)
 
 		} else {
-			if _, _, ok := untypedCapabilityMapping.Get(addressPath); ok {
-				continue
-			}
-
 			// If the borrow type is missing, then borrow it as the type of the value.
 			path := capability.TargetPath.Identifier
 			value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(path))
@@ -140,7 +138,7 @@ func IssueAccountCapabilities(
 			// However, if there is no value at the target,
 			//it is not possible to migrate this cap.
 			if value == nil {
-				reporter.MissingBorrowType(address, addressPath)
+				reporter.MissingBorrowType(address, addressPath, capability.StoredPath)
 				continue
 			}
 
@@ -152,7 +150,12 @@ func IssueAccountCapabilities(
 				valueType,
 			)
 
-			reporter.InferredMissingBorrowType(address, addressPath, borrowType)
+			reporter.InferredMissingBorrowType(
+				address,
+				addressPath,
+				borrowType,
+				capability.StoredPath,
+			)
 		}
 
 		capabilityID := stdlib.IssueStorageCapabilityController(
