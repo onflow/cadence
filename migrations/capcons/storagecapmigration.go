@@ -63,8 +63,8 @@ func (*StorageCapMigration) Domains() map[string]struct{} {
 // Migrate records path capabilities with storage domain target.
 // It does not actually migrate any values.
 func (m *StorageCapMigration) Migrate(
-	_ interpreter.StorageKey,
-	_ interpreter.StorageMapKey,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 	value interpreter.Value,
 	_ *interpreter.Interpreter,
 	_ migrations.ValueMigrationPosition,
@@ -79,6 +79,8 @@ func (m *StorageCapMigration) Migrate(
 		m.StorageDomainCapabilities.Record(
 			pathCapabilityValue.AddressPath(),
 			pathCapabilityValue.BorrowType,
+			storageKey,
+			storageMapKey,
 		)
 	}
 
@@ -111,7 +113,7 @@ func IssueAccountCapabilities(
 
 		addressPath := interpreter.AddressPath{
 			Address: address,
-			Path:    capability.Path,
+			Path:    capability.TargetPath,
 		}
 
 		capabilityBorrowType := capability.BorrowType
@@ -132,7 +134,7 @@ func IssueAccountCapabilities(
 			}
 
 			// If the borrow type is missing, then borrow it as the type of the value.
-			path := capability.Path.Identifier
+			path := capability.TargetPath.Identifier
 			value := storageMap.ReadValue(nil, interpreter.StringStorageMapKey(path))
 
 			// However, if there is no value at the target,
@@ -159,7 +161,7 @@ func IssueAccountCapabilities(
 			handler,
 			address,
 			borrowType,
-			capability.Path,
+			capability.TargetPath,
 		)
 
 		if hasBorrowType {

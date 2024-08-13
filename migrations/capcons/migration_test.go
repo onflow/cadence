@@ -3178,22 +3178,34 @@ func TestStorageCapMigration(t *testing.T) {
 			{
 				address: testAddress,
 				capability: AccountCapability{
-					Path:       testPath,
+					TargetPath: testPath,
 					BorrowType: testBorrowType1,
+					StoredPath: Path{
+						Domain: "storage",
+						Path:   "cap1",
+					},
 				},
 			},
 			{
 				address: testAddress,
 				capability: AccountCapability{
-					Path:       testPath,
+					TargetPath: testPath,
 					BorrowType: testBorrowType2,
+					StoredPath: Path{
+						Domain: "storage",
+						Path:   "cap3",
+					},
 				},
 			},
 			{
 				address: testAddress,
 				capability: AccountCapability{
-					Path:       testPath,
+					TargetPath: testPath,
 					BorrowType: testBorrowType2,
+					StoredPath: Path{
+						Domain: "storage",
+						Path:   "cap2",
+					},
 				},
 			},
 		},
@@ -3442,7 +3454,11 @@ func TestUntypedStorageCapMigration(t *testing.T) {
 			{
 				address: testAddress,
 				capability: AccountCapability{
-					Path: testPath,
+					TargetPath: testPath,
+					StoredPath: Path{
+						Domain: "storage",
+						Path:   "cap",
+					},
 				},
 			},
 		},
@@ -3453,22 +3469,23 @@ func TestUntypedStorageCapMigration(t *testing.T) {
 func TestUntypedStorageCapWithMissingTargetMigration(t *testing.T) {
 	t.Parallel()
 
-	testPath := interpreter.PathValue{
+	addressA := common.MustBytesToAddress([]byte{0x1})
+	addressB := common.MustBytesToAddress([]byte{0x2})
+
+	targetPath := interpreter.PathValue{
 		Domain:     common.PathDomainStorage,
 		Identifier: testPathIdentifier,
 	}
 
-	testAddressPath := interpreter.AddressPath{
-		Address: testAddress,
-		Path:    testPath,
-	}
+	// Capability targets `addressB`.
+	// Capability itself is stored in `addressA`
 
 	capabilityValue := &interpreter.PathCapabilityValue{ //nolint:staticcheck
 		// Borrow type must be nil.
 		BorrowType: nil,
 
-		Path:    testPath,
-		Address: interpreter.AddressValue(testAddress),
+		Path:    targetPath,
+		Address: interpreter.AddressValue(addressB),
 	}
 
 	rt := NewTestInterpreterRuntime()
@@ -3478,7 +3495,7 @@ func TestUntypedStorageCapWithMissingTargetMigration(t *testing.T) {
 	runtimeInterface := &TestRuntimeInterface{
 		Storage: NewTestLedger(nil, nil),
 		OnGetSigningAccounts: func() ([]runtime.Address, error) {
-			return []runtime.Address{testAddress}, nil
+			return []runtime.Address{addressA}, nil
 		},
 		OnEmitEvent: func(event cadence.Event) error {
 			events = append(events, event)
@@ -3540,7 +3557,7 @@ func TestUntypedStorageCapWithMissingTargetMigration(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
+	migration, err := migrations.NewStorageMigration(inter, storage, "test", addressA)
 	require.NoError(t, err)
 
 	reporter := &testMigrationReporter{}
@@ -3558,14 +3575,14 @@ func TestUntypedStorageCapWithMissingTargetMigration(t *testing.T) {
 		),
 	)
 
-	storageCapabilities := storageDomainCapabilities.Get(testAddress)
+	storageCapabilities := storageDomainCapabilities.Get(addressB)
 	require.NotNil(t, storageCapabilities)
 
 	IssueAccountCapabilities(
 		inter,
 		storage,
 		reporter,
-		testAddress,
+		addressA,
 		storageCapabilities,
 		handler,
 		typedStorageCapabilityMapping,
@@ -3601,8 +3618,11 @@ func TestUntypedStorageCapWithMissingTargetMigration(t *testing.T) {
 		t,
 		[]testCapConsMissingCapabilityID{
 			{
-				accountAddress: testAddress,
-				addressPath:    testAddressPath,
+				accountAddress: addressA,
+				addressPath: interpreter.AddressPath{
+					Address: addressB,
+					Path:    targetPath,
+				},
 			},
 		},
 		reporter.missingCapabilityIDs,
@@ -3612,8 +3632,11 @@ func TestUntypedStorageCapWithMissingTargetMigration(t *testing.T) {
 		t,
 		[]testStorageCapConsMissingBorrowType{
 			{
-				accountAddress: testAddress,
-				addressPath:    testAddressPath,
+				accountAddress: addressA,
+				addressPath: interpreter.AddressPath{
+					Address: addressA,
+					Path:    targetPath,
+				},
 			},
 		},
 		reporter.missingStorageCapConBorrowTypes,
@@ -3630,12 +3653,12 @@ func TestUntypedStorageCapWithMissingTargetMigration(t *testing.T) {
 	var actuals []actual
 
 	storageDomainCapabilities.ForEach(
-		testAddress,
+		addressB,
 		func(accountCapability AccountCapability) bool {
 			actuals = append(
 				actuals,
 				actual{
-					address:    testAddress,
+					address:    addressA,
 					capability: accountCapability,
 				},
 			)
@@ -3646,9 +3669,13 @@ func TestUntypedStorageCapWithMissingTargetMigration(t *testing.T) {
 	assert.Equal(t,
 		[]actual{
 			{
-				address: testAddress,
+				address: addressA,
 				capability: AccountCapability{
-					Path: testPath,
+					TargetPath: targetPath,
+					StoredPath: Path{
+						Domain: "storage",
+						Path:   "cap",
+					},
 				},
 			},
 		},

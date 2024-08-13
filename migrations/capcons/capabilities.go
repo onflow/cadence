@@ -19,6 +19,7 @@
 package capcons
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -26,20 +27,35 @@ import (
 )
 
 type AccountCapability struct {
-	Path       interpreter.PathValue
+	TargetPath interpreter.PathValue
 	BorrowType interpreter.StaticType
+	StoredPath Path
+}
+
+type Path struct {
+	Domain string
+	Path   string
 }
 
 type AccountCapabilities struct {
 	Capabilities []AccountCapability
 }
 
-func (c *AccountCapabilities) Record(path interpreter.PathValue, borrowType interpreter.StaticType) {
+func (c *AccountCapabilities) Record(
+	path interpreter.PathValue,
+	borrowType interpreter.StaticType,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
+) {
 	c.Capabilities = append(
 		c.Capabilities,
 		AccountCapability{
-			Path:       path,
+			TargetPath: path,
 			BorrowType: borrowType,
+			StoredPath: Path{
+				Domain: storageKey.Key,
+				Path:   fmt.Sprintf("%s", storageMapKey),
+			},
 		},
 	)
 }
@@ -52,6 +68,8 @@ type AccountsCapabilities struct {
 func (m *AccountsCapabilities) Record(
 	addressPath interpreter.AddressPath,
 	borrowType interpreter.StaticType,
+	storageKey interpreter.StorageKey,
+	storageMapKey interpreter.StorageMapKey,
 ) {
 	var accountCapabilities *AccountCapabilities
 	rawAccountCapabilities, ok := m.accountCapabilities.Load(addressPath.Address)
@@ -61,7 +79,12 @@ func (m *AccountsCapabilities) Record(
 		accountCapabilities = &AccountCapabilities{}
 		m.accountCapabilities.Store(addressPath.Address, accountCapabilities)
 	}
-	accountCapabilities.Record(addressPath.Path, borrowType)
+	accountCapabilities.Record(
+		addressPath.Path,
+		borrowType,
+		storageKey,
+		storageMapKey,
+	)
 }
 
 func (m *AccountsCapabilities) ForEach(
