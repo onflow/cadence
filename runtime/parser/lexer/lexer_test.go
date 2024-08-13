@@ -1202,6 +1202,7 @@ transaction /* After transaction identifier */ (
 	// Before paren close
 ) /* After paren close */ { /* After brace open */ } // After brace close
 
+// Before EOF
 `, []token{
 			{
 				Token: Token{
@@ -1873,16 +1874,40 @@ transaction /* After transaction identifier */ (
 			},
 			{
 				Token: Token{
-					Type: TokenEOF,
+					Type:         TokenSpace,
+					SpaceOrError: Space{ContainsNewline: true},
 					Range: ast.Range{
 						StartPos: ast.Position{
-							Offset: 313,
+							Offset: 326,
 							Line:   15,
+							Column: 13,
+						},
+						EndPos: ast.Position{
+							Offset: 326,
+							Line:   15,
+							Column: 13,
+						},
+					},
+				},
+				Source: "\n",
+			},
+			{
+				Token: Token{
+					Type: TokenEOF,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before EOF")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 327,
+							Line:   16,
 							Column: 0,
 						},
 						EndPos: ast.Position{
-							Offset: 313,
-							Line:   15,
+							Offset: 327,
+							Line:   16,
 							Column: 0,
 						},
 					},
