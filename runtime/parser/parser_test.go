@@ -540,8 +540,8 @@ func TestParseBuffering(t *testing.T) {
 			[]error{
 				&RestrictedTypeError{
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 138, Line: 4, Column: 55},
-						EndPos:   ast.Position{Offset: 139, Line: 4, Column: 56},
+						StartPos: ast.Position{Offset: 145, Line: 4, Column: 62},
+						EndPos:   ast.Position{Offset: 145, Line: 4, Column: 62},
 					},
 				},
 			},
@@ -1050,10 +1050,8 @@ Trailing multi-line comment of second
 				ast.NewComment(nil, []byte("/// Inline doc 1 of first")),
 				ast.NewComment(nil, []byte("/// Inline doc 2 of first")),
 			},
-			Trailing: []*ast.Comment{},
 		}, first.Comments)
 		assert.Equal(t, ast.Comments{
-			Leading: []*ast.Comment{},
 			Trailing: []*ast.Comment{
 				ast.NewComment(nil, []byte("// Trailing inline comment of first")),
 			},
@@ -1067,10 +1065,8 @@ Trailing multi-line comment of second
 				ast.NewComment(nil, []byte("/**\nMulti-line doc 1 of second\n*/")),
 				ast.NewComment(nil, []byte("/**\nMulti-line doc 2 of second\n*/")),
 			},
-			Trailing: []*ast.Comment{},
 		}, second.Comments)
 		assert.Equal(t, ast.Comments{
-			Leading: []*ast.Comment{},
 			Trailing: []*ast.Comment{
 				ast.NewComment(nil, []byte("/**\nTrailing multi-line comment of second\n*/")),
 			},

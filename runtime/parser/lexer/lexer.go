@@ -103,8 +103,7 @@ func (l *lexer) Next() Token {
 				pos,
 			),
 			Comments: ast.Comments{
-				Leading:  l.currentComments,
-				Trailing: []*ast.Comment{},
+				Leading: l.currentComments,
 			},
 		}
 
