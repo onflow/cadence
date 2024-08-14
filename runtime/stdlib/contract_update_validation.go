@@ -280,6 +280,17 @@ func checkDeclarationUpdatability(
 		validator.setCurrentDeclaration(parentDecl)
 	}()
 
+	oldIdentifier := oldDeclaration.DeclarationIdentifier()
+	newIdentifier := newDeclaration.DeclarationIdentifier()
+	if oldIdentifier.Identifier != newIdentifier.Identifier {
+
+		validator.report(&NameMismatchError{
+			OldName: oldIdentifier.Identifier,
+			NewName: newIdentifier.Identifier,
+			Range:   ast.NewUnmeteredRangeFromPositioned(newIdentifier),
+		})
+	}
+
 	checkFields(validator, oldDeclaration, newDeclaration)
 
 	checkNestedDeclarations(validator, oldDeclaration, newDeclaration, checkConformance)
@@ -921,5 +932,24 @@ func (e *TypeRemovalPragmaRemovalError) Error() string {
 	return fmt.Sprintf(
 		"missing #removedType pragma for %s",
 		e.RemovedType,
+	)
+}
+
+// NameMismatchError is reported during a contract update, when an a composite
+// declaration has a different name than the existing declaration.
+type NameMismatchError struct {
+	OldName string
+	NewName string
+	ast.Range
+}
+
+var _ errors.UserError = &NameMismatchError{}
+
+func (*NameMismatchError) IsUserError() {}
+
+func (e *NameMismatchError) Error() string {
+	return fmt.Sprintf("name mismatch: got `%s`, expected `%s`",
+		e.NewName,
+		e.OldName,
 	)
 }
