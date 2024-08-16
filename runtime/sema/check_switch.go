@@ -185,6 +185,7 @@ func (checker *Checker) checkSwitchCaseStatements(switchCase *ast.SwitchCase) {
 			switchCase.Statements[0].StartPosition(),
 			switchCase.EndPos,
 		),
+		ast.Comments{},
 	)
 	checker.checkBlock(block)
 }

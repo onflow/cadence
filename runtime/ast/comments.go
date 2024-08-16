@@ -10,6 +10,13 @@ type Comments struct {
 	Trailing []*Comment `json:"-"`
 }
 
+func (c Comments) PackToList() []*Comment {
+	var comments []*Comment
+	comments = append(comments, c.Leading...)
+	comments = append(comments, c.Trailing...)
+	return comments
+}
+
 type Comment struct {
 	source []byte
 }

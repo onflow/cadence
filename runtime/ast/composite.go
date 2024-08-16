@@ -57,6 +57,7 @@ type CompositeDeclaration struct {
 	Range
 	Access        Access
 	CompositeKind common.CompositeKind
+	Comments
 }
 
 var _ Element = &CompositeDeclaration{}
@@ -73,6 +74,7 @@ func NewCompositeDeclaration(
 	members *Members,
 	docString string,
 	declarationRange Range,
+	comments Comments,
 ) *CompositeDeclaration {
 	common.UseMemory(memoryGauge, common.CompositeDeclarationMemoryUsage)
 
@@ -84,6 +86,7 @@ func NewCompositeDeclaration(
 		Members:       members,
 		DocString:     docString,
 		Range:         declarationRange,
+		Comments:      comments,
 	}
 }
 

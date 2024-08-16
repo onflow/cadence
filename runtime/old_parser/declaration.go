@@ -100,6 +100,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 					accessPos,
 					staticPos,
 					nativePos,
+					"",
 				)
 
 			case keywordImport:
@@ -824,6 +825,7 @@ func parseEventDeclaration(
 			startPos,
 			parameterList.EndPos,
 		),
+		ast.Comments{},
 	), nil
 }
 
@@ -1060,6 +1062,7 @@ func parseCompositeOrInterfaceDeclaration(
 			members,
 			docString,
 			declarationRange,
+			ast.Comments{},
 		), nil
 	}
 }

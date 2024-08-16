@@ -359,6 +359,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 			p.memoryGauge,
 			[]ast.Statement{result},
 			ast.NewRangeFromPositioned(p.memoryGauge, result),
+			ast.Comments{},
 		)
 		result = outer
 	}
@@ -476,6 +477,7 @@ func parseBlock(p *parser) (*ast.Block, error) {
 			startToken.StartPos,
 			endToken.EndPos,
 		),
+		ast.Comments{},
 	), nil
 }
 
@@ -535,6 +537,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 				startToken.StartPos,
 				endToken.EndPos,
 			),
+			ast.Comments{},
 		),
 		preConditions,
 		postConditions,

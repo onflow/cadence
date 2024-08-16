@@ -1014,9 +1014,40 @@ func TestParseWhitespaceAtEnd(t *testing.T) {
 	assert.Empty(t, errs)
 }
 
-func TestParseTrivia(t *testing.T) {
+func TestParseComments(t *testing.T) {
 
 	t.Parallel()
+
+	t.Run("special function declaration", func(t *testing.T) {
+		res, errs := ParseDeclarations(
+			nil,
+			[]byte(`
+/// Before MyEvent
+event MyEvent() // After MyEvent
+/// Before prepare
+prepare() {} // After prepare
+/// Before pre
+pre {} // After pre
+/// Before execute
+execute {} // After execute
+/// Before post
+post {} // After post
+`),
+			Config{},
+		)
+
+		assert.Empty(t, errs)
+		assert.NotNil(t, res)
+
+		event, ok := res[0].(*ast.SpecialFunctionDeclaration)
+		assert.True(t, ok)
+		assert.Equal(t, ast.Comments{
+			Leading:  []*ast.Comment{ast.NewComment(nil, []byte("/// Before MyEvent"))},
+			Trailing: []*ast.Comment{ast.NewComment(nil, []byte("// After MyEvent"))},
+		}, event.FunctionDeclaration.Comments)
+		assert.Equal(t, " Before MyEvent", event.FunctionDeclaration.DeclarationDocString())
+
+	})
 
 	t.Run("function declaration", func(t *testing.T) {
 		res, errs := ParseProgram(

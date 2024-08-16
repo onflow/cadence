@@ -388,6 +388,7 @@ func parseIfStatement(p *parser) (*ast.IfStatement, error) {
 			p.memoryGauge,
 			[]ast.Statement{result},
 			ast.NewRangeFromPositioned(p.memoryGauge, result),
+			ast.Comments{},
 		)
 		result = outer
 	}
@@ -505,6 +506,10 @@ func parseBlock(p *parser) (*ast.Block, error) {
 			startToken.StartPos,
 			endToken.EndPos,
 		),
+		ast.Comments{
+			Leading:  startToken.Comments.PackToList(),
+			Trailing: endToken.Comments.PackToList(),
+		},
 	), nil
 }
 
@@ -556,7 +561,7 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 
 	return ast.NewFunctionBlock(
 		p.memoryGauge,
-		ast.NewBlockWithComments(
+		ast.NewBlock(
 			p.memoryGauge,
 			statements,
 			ast.NewRange(

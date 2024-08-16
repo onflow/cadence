@@ -925,8 +925,8 @@ func parseEventDeclaration(
 	accessPos *ast.Position,
 	docString string,
 ) (*ast.CompositeDeclaration, error) {
-
-	startPos := p.current.StartPos
+	startToken := p.current
+	startPos := startToken.StartPos
 	if accessPos != nil {
 		startPos = *accessPos
 	}
@@ -943,7 +943,7 @@ func parseEventDeclaration(
 
 	// if this is a `ResourceDestroyed` event (i.e., a default event declaration), parse default arguments
 	parseDefaultArguments := ast.IsResourceDestructionDefaultEvent(identifier.Identifier)
-	parameterList, err := parseParameterList(p, parseDefaultArguments)
+	parameterList, endComments, err := parseParameterList(p, parseDefaultArguments)
 	if err != nil {
 		return nil, err
 	}
@@ -987,6 +987,10 @@ func parseEventDeclaration(
 			startPos,
 			parameterList.EndPos,
 		),
+		ast.Comments{
+			Leading:  startToken.Comments.Leading,
+			Trailing: endComments.PackToList(),
+		},
 	), nil
 }
 
@@ -1408,6 +1412,7 @@ func parseCompositeOrInterfaceDeclaration(
 			members,
 			docString,
 			declarationRange,
+			ast.Comments{},
 		), nil
 	}
 }

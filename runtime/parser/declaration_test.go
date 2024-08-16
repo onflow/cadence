@@ -389,7 +389,9 @@ func TestParseParameterList(t *testing.T) {
 			nil,
 			[]byte(input),
 			func(p *parser) (*ast.ParameterList, error) {
-				return parseParameterList(p, false)
+				// TODO(preserve-comments): Do we care about these comments (second return value)?
+				parameters, _, err := parseParameterList(p, false)
+				return parameters, err
 			},
 			Config{},
 		)
@@ -2477,6 +2479,61 @@ func TestParseEvent(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no parameters, with comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+// Before E
+event E() // After E
+// Should be ignored
+`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessNotSpecified,
+					CompositeKind: common.CompositeKindEvent,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Offset: 19, Line: 3, Column: 6},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before E")),
+						},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// After E")),
+						},
+					},
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindInitializer,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									Access: ast.AccessNotSpecified,
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 20, Line: 3, Column: 7},
+											EndPos:   ast.Position{Offset: 21, Line: 3, Column: 8},
+										},
+									},
+									StartPos: ast.Position{Offset: 20, Line: 3, Column: 7},
+								},
+							},
+						},
+					),
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 13, Line: 3, Column: 0},
+						EndPos:   ast.Position{Offset: 21, Line: 3, Column: 8},
 					},
 				},
 			},

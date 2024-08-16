@@ -283,11 +283,6 @@ func (p *parser) tokenSource(token lexer.Token) []byte {
 	return token.Source(input)
 }
 
-func (p *parser) triviaSource(trivia lexer.Trivia) []byte {
-	input := p.tokens.Input()
-	return trivia.Source(input)
-}
-
 func (p *parser) currentTokenSource() []byte {
 	return p.tokenSource(p.current)
 }

@@ -192,6 +192,7 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 				interpreter,
 				switchCase.Statements,
 				ast.EmptyRange,
+				ast.Comments{},
 			)
 
 			result := interpreter.visitBlock(block)
