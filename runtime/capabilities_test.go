@@ -812,4 +812,113 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 			require.NoError(t, err)
 		})
 	})
+
+	t.Run("multiple interfaces", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		// Deploy contract
+
+		const testContract = `
+          access(all)
+          contract Test {
+
+              access(all)
+              entitlement X
+
+              access(all)
+              resource interface I1: I2 {}
+
+              access(all)
+              resource interface I2 {}
+
+              access(all)
+              resource interface I3 {}
+
+              access(all)
+              resource R: I1, I2, I3 {
+
+                  access(all)
+                  let foo: Int
+
+                  access(X)
+                  let bar: Int
+
+                  init() {
+                      self.foo = 42
+                      self.bar = 21
+                  }
+              }
+
+              access(all)
+              fun setup() {
+                  let r <- create R()
+                  self.account.storage.save(<-r, to: /storage/r)
+
+                  let i2Cap = self.account.capabilities.storage.issue<&{I2}>(/storage/r)
+                  self.account.capabilities.publish(i2Cap, at: /public/i2)
+
+                  let i2I3Cap = self.account.capabilities.storage.issue<&{I2, I3}>(/storage/r)
+                  self.account.capabilities.publish(i2I3Cap, at: /public/i2i3)
+              }
+
+              access(all)
+              fun testI2AsI1() {
+                  let i1 = self.account.capabilities.get<&{I1}>(/public/i2).borrow()
+                  assert(i1 != nil, message: "i1 should not be nil")
+              }
+
+              access(all)
+              fun testI2I3AsI1() {
+                  let i1 = self.account.capabilities.get<&{I1}>(/public/i2i3).borrow()
+                  assert(i1 != nil, message: "i1 should not be nil")
+              }
+          }
+        `
+
+		contractLocation := common.NewAddressLocation(nil, address, "Test")
+
+		deployTestContractTx := DeploymentTransaction("Test", []byte(testContract))
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTestContractTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		invoke := func(name string) (cadence.Value, error) {
+			return runtime.InvokeContractFunction(
+				contractLocation,
+				name,
+				nil,
+				nil,
+				Context{Interface: runtimeInterface},
+			)
+		}
+
+		// Run tests
+
+		_, err = invoke("setup")
+		require.NoError(t, err)
+
+		t.Run("testI2AsI1", func(t *testing.T) {
+			_, err := invoke("testI2AsI1")
+			require.NoError(t, err)
+		})
+
+		t.Run("testI2I3AsI1", func(t *testing.T) {
+			_, err := invoke("testI2I3AsI1")
+			require.NoError(t, err)
+		})
+	})
+
 }
