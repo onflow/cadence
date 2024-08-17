@@ -441,6 +441,24 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 				return AsBoolValue(result)
 			},
 		)
+
+	case sema.MetaTypeIsRecoveredFieldName:
+		staticType := v.Type
+		if staticType == nil {
+			return FalseValue
+		}
+
+		location, _, err := common.DecodeTypeID(interpreter, string(staticType.ID()))
+		if err != nil || location == nil {
+			return FalseValue
+		}
+
+		elaboration := interpreter.getElaboration(location)
+		if elaboration == nil {
+			return FalseValue
+		}
+
+		return AsBoolValue(elaboration.IsRecovered)
 	}
 
 	return nil
