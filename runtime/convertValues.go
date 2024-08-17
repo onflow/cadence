@@ -232,6 +232,8 @@ func exportValueWithInterpreter(
 		return exportTypeValue(v, inter), nil
 	case *interpreter.IDCapabilityValue:
 		return exportCapabilityValue(v, inter)
+	case *interpreter.PathCapabilityValue: //nolint:staticcheck
+		return exportPathCapabilityValue(v, inter)
 	case *interpreter.EphemeralReferenceValue:
 		// Break recursion through references
 		if _, ok := seenReferences[v]; ok {
@@ -705,6 +707,29 @@ func exportCapabilityValue(
 		cadence.NewMeteredAddress(inter, v.Address),
 		exportedBorrowType,
 	), nil
+}
+
+func exportPathCapabilityValue(
+	v *interpreter.PathCapabilityValue, //nolint:staticcheck
+	inter *interpreter.Interpreter,
+) (cadence.Capability, error) {
+	borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
+	exportedBorrowType := ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{})
+
+	capability := cadence.NewMeteredCapability(
+		inter,
+		cadence.NewMeteredUInt64(inter, uint64(interpreter.InvalidCapabilityID)),
+		cadence.NewMeteredAddress(inter, v.Address),
+		exportedBorrowType,
+	)
+
+	path, err := exportPathValue(inter, v.Path)
+	if err != nil {
+		return cadence.Capability{}, err
+	}
+	capability.DeprecatedPath = &path
+
+	return capability, nil
 }
 
 // exportEvent converts a runtime event to its native Go representation.
