@@ -148,7 +148,11 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 
 	elaboration := interpreter.Program.Elaboration
 
-	indexExpressionTypes := elaboration.IndexExpressionTypes(indexExpression)
+	indexExpressionTypes, ok := elaboration.IndexExpressionTypes(indexExpression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
 	indexedType := indexExpressionTypes.IndexedType
 	indexingType := indexExpressionTypes.IndexingType
 
@@ -1096,7 +1100,7 @@ func (interpreter *Interpreter) maybeGetReference(
 	expression *ast.IndexExpression,
 	memberValue Value,
 ) Value {
-	indexExpressionTypes := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
+	indexExpressionTypes, _ := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
 
 	if indexExpressionTypes.ReturnReference {
 		expectedType := indexExpressionTypes.ResultType

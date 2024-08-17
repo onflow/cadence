@@ -598,3 +598,36 @@ func TestCheckResultVariable(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCheckViewFunctionWithErrors(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("index assignment", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            view fun foo() {
+                a[b] = 1
+            }`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.PurityError{}, errs[1])
+	})
+
+	t.Run("member assignment", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            view fun foo() {
+                a.b = 1
+            }`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.PurityError{}, errs[1])
+	})
+}
