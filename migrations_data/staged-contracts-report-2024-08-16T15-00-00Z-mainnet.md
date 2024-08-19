@@ -1,5 +1,5 @@
-## Cadence 1.0 staged contracts migration results
-Date: 19 August, 2024
+## Cadence 1.0 staged contracts migration results - Mainnet
+Date: 16 August, 2024
 
 > [!CAUTION]
 > **IMPORTANT SECURITY NOTICE**
