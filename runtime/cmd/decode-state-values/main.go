@@ -115,23 +115,13 @@ func decodeSlab(id atree.SlabID, data []byte) (atree.Slab, error) {
 }
 
 func slabIDToStorageKey(id atree.SlabID) storageKey {
-	const (
-		addressSize = len(atree.Address{})
-		indexSize   = len(atree.SlabIndex{})
-		slabIDSize  = addressSize + indexSize
-		indexPos    = addressSize
-	)
-
-	var b [slabIDSize]byte
-	_, err := id.ToRawBytes(b[:])
-	if err != nil {
-		panic(err)
-	}
+	address := id.Address()
+	index := id.Index()
 
 	return storageKey{
-		string(b[:addressSize]),
+		string(address[:]),
 		"",
-		"$" + string(b[indexPos:]),
+		"$" + string(index[:]),
 	}
 }
 
