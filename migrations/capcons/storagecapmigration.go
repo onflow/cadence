@@ -109,7 +109,7 @@ func IssueAccountCapabilities(
 		false,
 	)
 
-	for _, capability := range capabilities.Capabilities {
+	capabilities.ForEach(func(capability AccountCapability) bool {
 
 		addressPath := interpreter.AddressPath{
 			Address: address,
@@ -123,7 +123,7 @@ func IssueAccountCapabilities(
 
 		if hasBorrowType {
 			if _, ok := typedCapabilityMapping.Get(addressPath, capabilityBorrowType.ID()); ok {
-				continue
+				return true
 			}
 
 			borrowType = capabilityBorrowType.(*interpreter.ReferenceStaticType)
@@ -141,7 +141,7 @@ func IssueAccountCapabilities(
 			reporter.MissingBorrowType(addressPath, targetPath)
 
 			if _, _, ok := untypedCapabilityMapping.Get(addressPath); ok {
-				continue
+				return true
 			}
 
 			// If the borrow type is missing, then borrow it as the type of the value.
@@ -151,7 +151,7 @@ func IssueAccountCapabilities(
 			// However, if there is no value at the target,
 			//it is not possible to migrate this cap.
 			if value == nil {
-				continue
+				return true
 			}
 
 			valueType := value.StaticType(inter)
@@ -198,5 +198,7 @@ func IssueAccountCapabilities(
 			borrowType,
 			capabilityID,
 		)
-	}
+
+		return true
+	})
 }

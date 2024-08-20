@@ -20,7 +20,10 @@ package capcons
 
 import (
 	"fmt"
+	"strings"
 	"sync"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -60,6 +63,34 @@ func (c *AccountCapabilities) Record(
 	)
 }
 
+func (c *AccountCapabilities) ForEach(
+	f func(AccountCapability) bool,
+) {
+	slices.SortFunc(
+		c.Capabilities,
+		func(a, b AccountCapability) int {
+			pathA := a.TargetPath
+			pathB := b.TargetPath
+
+			if pathA.Domain == pathB.Domain {
+				return strings.Compare(pathA.Identifier, pathB.Identifier)
+			}
+
+			if pathA.Domain < pathB.Domain {
+				return -1
+			}
+
+			return +1
+		},
+	)
+
+	for _, accountCapability := range c.Capabilities {
+		if !f(accountCapability) {
+			return
+		}
+	}
+}
+
 type AccountsCapabilities struct {
 	// accountCapabilities maps common.Address to *AccountCapabilities
 	accountCapabilities sync.Map
@@ -97,11 +128,8 @@ func (m *AccountsCapabilities) ForEach(
 	}
 
 	accountCapabilities := rawAccountCapabilities.(*AccountCapabilities)
-	for _, accountCapability := range accountCapabilities.Capabilities {
-		if !f(accountCapability) {
-			return
-		}
-	}
+
+	accountCapabilities.ForEach(f)
 }
 
 func (m *AccountsCapabilities) Get(address common.Address) *AccountCapabilities {
