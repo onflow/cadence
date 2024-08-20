@@ -813,7 +813,7 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 		})
 	})
 
-	t.Run("multiple interfaces", func(t *testing.T) {
+	t.Run("multiple sibling interfaces", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -917,6 +917,106 @@ func TestRuntimeCapability_borrowAndCheck(t *testing.T) {
 
 		t.Run("testI2I3AsI1", func(t *testing.T) {
 			_, err := invoke("testI2I3AsI1")
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("multiple sibling interfaces complex", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime, runtimeInterface := newRuntime()
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		// Deploy contract
+
+		const testContract = `
+          access(all)
+          contract Test {
+
+              access(all)
+              entitlement X
+
+              access(all)
+              resource interface NFTReceiver {}
+
+              access(all)
+              resource interface ResolverCollection {}
+
+              access(all)
+              resource interface someCollectionPublic {}
+
+              access(all)
+              resource interface NFTCollectionPublic {}
+
+              access(all)
+              resource interface NFTCollection: NFTReceiver, NFTCollectionPublic, ResolverCollection {}
+
+              access(all)
+              resource Collection: NFTCollection, someCollectionPublic {
+
+                  access(all)
+                  let foo: Int
+
+                  access(X)
+                  let bar: Int
+
+                  init() {
+                      self.foo = 42
+                      self.bar = 21
+                  }
+              }
+
+              access(all)
+              fun setup() {
+                  let r <- create Collection()
+                  self.account.storage.save(<-r, to: /storage/collection)
+
+                  let collectionCap = self.account.capabilities.storage.issue<&{NFTCollectionPublic, ResolverCollection, someCollectionPublic}>(/storage/collection)
+                  self.account.capabilities.publish(collectionCap, at: /public/collectionCap)
+              }
+
+              access(all)
+              fun testBorrowCollectionCapAsReceiver() {
+                  let receiver = self.account.capabilities.get<&{NFTReceiver}>(/public/collectionCap).borrow()
+                  assert(receiver != nil, message: "receiver should not be nil")
+              }
+          }
+        `
+
+		contractLocation := common.NewAddressLocation(nil, address, "Test")
+
+		deployTestContractTx := DeploymentTransaction("Test", []byte(testContract))
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTestContractTx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		invoke := func(name string) (cadence.Value, error) {
+			return runtime.InvokeContractFunction(
+				contractLocation,
+				name,
+				nil,
+				nil,
+				Context{Interface: runtimeInterface},
+			)
+		}
+
+		// Run tests
+
+		_, err = invoke("setup")
+		require.NoError(t, err)
+
+		t.Run("testBorrowCollectionCapAsReceiver", func(t *testing.T) {
+			_, err := invoke("testBorrowCollectionCapAsReceiver")
 			require.NoError(t, err)
 		})
 	})
