@@ -505,6 +505,8 @@ func (e *interpreterEnvironment) parseAndCheckProgramWithRecovery(
 		return program, elaboration, err
 	}
 
+	recoveredElaboration.IsRecovered = true
+
 	// If recovery succeeded, return the recovered program and elaboration
 	return recoveredProgram, recoveredElaboration, nil
 }

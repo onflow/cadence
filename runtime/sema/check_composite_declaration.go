@@ -2049,7 +2049,10 @@ func (checker *Checker) checkDefaultDestroyParamExpressionKind(
 		checker.checkDefaultDestroyParamExpressionKind(arg.TargetExpression, containerDeclarationKind)
 		checker.checkDefaultDestroyParamExpressionKind(arg.IndexingExpression, containerDeclarationKind)
 
-		indexExprType := checker.Elaboration.IndexExpressionTypes(arg)
+		indexExprType, ok := checker.Elaboration.IndexExpressionTypes(arg)
+		if !ok {
+			return
+		}
 
 		// indexing expressions on arrays can fail, and must be disallowed, but
 		// indexing expressions on dicts, or composites (for attachments) will return `nil` and thus never fail

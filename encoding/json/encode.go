@@ -214,9 +214,10 @@ type jsonTypeValue struct {
 }
 
 type jsonCapabilityValue struct {
-	BorrowType jsonValue `json:"borrowType"`
-	Address    string    `json:"address"`
-	ID         string    `json:"id"`
+	BorrowType     jsonValue `json:"borrowType"`
+	Address        string    `json:"address"`
+	ID             string    `json:"id"`
+	DeprecatedPath jsonValue `json:"path,omitempty"` // Deprecated
 }
 
 type jsonFunctionValue struct {
@@ -981,13 +982,19 @@ func prepareTypeValue(typeValue cadence.TypeValue) jsonValue {
 }
 
 func prepareCapability(capability cadence.Capability) jsonValue {
+	capabilityJson := jsonCapabilityValue{
+		ID:         encodeUInt(uint64(capability.ID)),
+		Address:    encodeBytes(capability.Address.Bytes()),
+		BorrowType: PrepareType(capability.BorrowType, TypePreparationResults{}),
+	}
+
+	if capability.DeprecatedPath != nil {
+		capabilityJson.DeprecatedPath = preparePath(*capability.DeprecatedPath)
+	}
+
 	return jsonValueObject{
-		Type: capabilityTypeStr,
-		Value: jsonCapabilityValue{
-			ID:         encodeUInt(uint64(capability.ID)),
-			Address:    encodeBytes(capability.Address.Bytes()),
-			BorrowType: PrepareType(capability.BorrowType, TypePreparationResults{}),
-		},
+		Type:  capabilityTypeStr,
+		Value: capabilityJson,
 	}
 }
 

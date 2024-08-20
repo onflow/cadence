@@ -2781,15 +2781,18 @@ func TestEncodeCapability(t *testing.T) {
 
 	t.Parallel()
 
-	testEncodeAndDecode(
-		t,
-		cadence.NewCapability(
-			6,
-			cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-			cadence.IntType,
-		),
-		// language=json
-		`
+	t.Run("valid capability", func(t *testing.T) {
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.NewCapability(
+				6,
+				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				cadence.IntType,
+			),
+			// language=json
+			`
           {
             "type": "Capability",
             "value": {
@@ -2801,7 +2804,41 @@ func TestEncodeCapability(t *testing.T) {
             }
           }
         `,
-	)
+		)
+	})
+
+	t.Run("deprecated path capability", func(t *testing.T) {
+		t.Parallel()
+
+		testEncode(
+			t,
+			cadence.NewDeprecatedPathCapability( //nolint:staticcheck
+				cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+				cadence.MustNewPath(common.PathDomainPublic, "foo"),
+				cadence.AnyResourceType,
+			),
+			// language=json
+			`
+          {
+            "type": "Capability",
+            "value": {
+              "path": {
+                "type": "Path",
+                "value": {
+                  "domain": "public",
+                  "identifier": "foo"
+                }
+              },
+              "borrowType": {
+                "kind": "AnyResource"
+              },
+              "address": "0x0000000102030405",
+              "id": "0"
+            }
+          }
+        `,
+		)
+	})
 }
 
 func TestDecodeCapability(t *testing.T) {
@@ -2833,7 +2870,7 @@ func TestDecodeCapability(t *testing.T) {
 		)
 	})
 
-	t.Run("with backwards compatibility on a deprecated Path Capabliity", func(t *testing.T) {
+	t.Run("with backwards compatibility on a deprecated Path Capability", func(t *testing.T) {
 		t.Parallel()
 
 		testDecode(
