@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -67,17 +68,50 @@ func TestCapabilitiesIteration(t *testing.T) {
 		nil,
 	)
 
-	var paths []interpreter.PathValue
+	require.False(t, caps.sorted)
 
+	var paths []interpreter.PathValue
 	caps.ForEachSorted(func(capability AccountCapability) bool {
 		paths = append(paths, capability.TargetPath)
 		return true
 	})
 
+	require.True(t, caps.sorted)
+
 	assert.Equal(
 		t,
 		[]interpreter.PathValue{
 			interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "a"),
+			interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "b"),
+			interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "c"),
+			interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "a"),
+			interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "b"),
+		},
+		paths,
+	)
+
+	caps.Record(
+		interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "aa"),
+		nil,
+		interpreter.StorageKey{},
+		nil,
+	)
+
+	require.False(t, caps.sorted)
+
+	paths = make([]interpreter.PathValue, 0)
+	caps.ForEachSorted(func(capability AccountCapability) bool {
+		paths = append(paths, capability.TargetPath)
+		return true
+	})
+
+	require.True(t, caps.sorted)
+
+	assert.Equal(
+		t,
+		[]interpreter.PathValue{
+			interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "a"),
+			interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "aa"),
 			interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "b"),
 			interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "c"),
 			interpreter.NewUnmeteredPathValue(common.PathDomainPublic, "a"),

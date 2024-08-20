@@ -43,7 +43,7 @@ type Path struct {
 
 type AccountCapabilities struct {
 	capabilities []AccountCapability
-	sortOnce     sync.Once
+	sorted       bool
 }
 
 func (c *AccountCapabilities) Record(
@@ -63,6 +63,9 @@ func (c *AccountCapabilities) Record(
 			},
 		},
 	)
+
+	// Reset the sorted flag, if new entries are added.
+	c.sorted = false
 }
 
 // ForEachSorted will first sort the capabilities list,
@@ -79,22 +82,24 @@ func (c *AccountCapabilities) ForEachSorted(
 }
 
 func (c *AccountCapabilities) sort() {
-	c.sortOnce.Do(
-		func() {
-			slices.SortFunc(
-				c.capabilities,
-				func(a, b AccountCapability) int {
-					pathA := a.TargetPath
-					pathB := b.TargetPath
+	if c.sorted {
+		return
+	}
 
-					return cmp.Or(
-						cmp.Compare(pathA.Domain, pathB.Domain),
-						strings.Compare(pathA.Identifier, pathB.Identifier),
-					)
-				},
+	slices.SortFunc(
+		c.capabilities,
+		func(a, b AccountCapability) int {
+			pathA := a.TargetPath
+			pathB := b.TargetPath
+
+			return cmp.Or(
+				cmp.Compare(pathA.Domain, pathB.Domain),
+				strings.Compare(pathA.Identifier, pathB.Identifier),
 			)
 		},
 	)
+
+	c.sorted = true
 }
 
 type AccountsCapabilities struct {
