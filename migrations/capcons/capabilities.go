@@ -19,8 +19,12 @@
 package capcons
 
 import (
+	"cmp"
 	"fmt"
+	"strings"
 	"sync"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -38,7 +42,8 @@ type Path struct {
 }
 
 type AccountCapabilities struct {
-	Capabilities []AccountCapability
+	capabilities []AccountCapability
+	sorted       bool
 }
 
 func (c *AccountCapabilities) Record(
@@ -47,8 +52,8 @@ func (c *AccountCapabilities) Record(
 	storageKey interpreter.StorageKey,
 	storageMapKey interpreter.StorageMapKey,
 ) {
-	c.Capabilities = append(
-		c.Capabilities,
+	c.capabilities = append(
+		c.capabilities,
 		AccountCapability{
 			TargetPath: path,
 			BorrowType: borrowType,
@@ -58,6 +63,43 @@ func (c *AccountCapabilities) Record(
 			},
 		},
 	)
+
+	// Reset the sorted flag, if new entries are added.
+	c.sorted = false
+}
+
+// ForEachSorted will first sort the capabilities list,
+// and iterates through the sorted list.
+func (c *AccountCapabilities) ForEachSorted(
+	f func(AccountCapability) bool,
+) {
+	c.sort()
+	for _, accountCapability := range c.capabilities {
+		if !f(accountCapability) {
+			return
+		}
+	}
+}
+
+func (c *AccountCapabilities) sort() {
+	if c.sorted {
+		return
+	}
+
+	slices.SortFunc(
+		c.capabilities,
+		func(a, b AccountCapability) int {
+			pathA := a.TargetPath
+			pathB := b.TargetPath
+
+			return cmp.Or(
+				cmp.Compare(pathA.Domain, pathB.Domain),
+				strings.Compare(pathA.Identifier, pathB.Identifier),
+			)
+		},
+	)
+
+	c.sorted = true
 }
 
 type AccountsCapabilities struct {
@@ -97,11 +139,8 @@ func (m *AccountsCapabilities) ForEach(
 	}
 
 	accountCapabilities := rawAccountCapabilities.(*AccountCapabilities)
-	for _, accountCapability := range accountCapabilities.Capabilities {
-		if !f(accountCapability) {
-			return
-		}
-	}
+
+	accountCapabilities.ForEachSorted(f)
 }
 
 func (m *AccountsCapabilities) Get(address common.Address) *AccountCapabilities {
