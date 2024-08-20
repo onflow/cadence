@@ -62,16 +62,14 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) (_ struct{})
 
 	for _, side := range []ast.Expression{swap.Left, swap.Right} {
 		if indexExpression, ok := side.(*ast.IndexExpression); ok {
-			indexExpressionTypes := checker.Elaboration.IndexExpressionTypes(indexExpression)
+			indexExpressionTypes, ok := checker.Elaboration.IndexExpressionTypes(indexExpression)
 
 			// If the indexed type is a resource type,
 			// then the target expression must be considered as a nested resource move expression.
 			//
 			// The index expression might have been invalid,
 			// so the indexed type might be unavailable.
-
-			indexedType := indexExpressionTypes.IndexedType
-			if indexedType != nil && indexedType.IsResourceType() {
+			if ok && indexExpressionTypes.IndexedType.IsResourceType() {
 				targetExpression := indexExpression.TargetExpression
 				checker.elaborateNestedResourceMoveExpression(targetExpression)
 			}
