@@ -69,7 +69,7 @@ func TestCapabilitiesIteration(t *testing.T) {
 
 	var paths []interpreter.PathValue
 
-	caps.ForEach(func(capability AccountCapability) bool {
+	caps.ForEachSorted(func(capability AccountCapability) bool {
 		paths = append(paths, capability.TargetPath)
 		return true
 	})

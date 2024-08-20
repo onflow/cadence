@@ -109,7 +109,7 @@ func IssueAccountCapabilities(
 		false,
 	)
 
-	capabilities.ForEach(func(capability AccountCapability) bool {
+	capabilities.ForEachSorted(func(capability AccountCapability) bool {
 
 		addressPath := interpreter.AddressPath{
 			Address: address,

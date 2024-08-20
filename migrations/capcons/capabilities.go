@@ -19,6 +19,7 @@
 package capcons
 
 import (
+	"cmp"
 	"fmt"
 	"strings"
 	"sync"
@@ -41,7 +42,8 @@ type Path struct {
 }
 
 type AccountCapabilities struct {
-	Capabilities []AccountCapability
+	capabilities []AccountCapability
+	sortOnce     sync.Once
 }
 
 func (c *AccountCapabilities) Record(
@@ -50,8 +52,8 @@ func (c *AccountCapabilities) Record(
 	storageKey interpreter.StorageKey,
 	storageMapKey interpreter.StorageMapKey,
 ) {
-	c.Capabilities = append(
-		c.Capabilities,
+	c.capabilities = append(
+		c.capabilities,
 		AccountCapability{
 			TargetPath: path,
 			BorrowType: borrowType,
@@ -63,32 +65,36 @@ func (c *AccountCapabilities) Record(
 	)
 }
 
-func (c *AccountCapabilities) ForEach(
+// ForEachSorted will first sort the capabilities list,
+// and iterates through the sorted list.
+func (c *AccountCapabilities) ForEachSorted(
 	f func(AccountCapability) bool,
 ) {
-	slices.SortFunc(
-		c.Capabilities,
-		func(a, b AccountCapability) int {
-			pathA := a.TargetPath
-			pathB := b.TargetPath
-
-			if pathA.Domain == pathB.Domain {
-				return strings.Compare(pathA.Identifier, pathB.Identifier)
-			}
-
-			if pathA.Domain < pathB.Domain {
-				return -1
-			}
-
-			return +1
-		},
-	)
-
-	for _, accountCapability := range c.Capabilities {
+	c.sort()
+	for _, accountCapability := range c.capabilities {
 		if !f(accountCapability) {
 			return
 		}
 	}
+}
+
+func (c *AccountCapabilities) sort() {
+	c.sortOnce.Do(
+		func() {
+			slices.SortFunc(
+				c.capabilities,
+				func(a, b AccountCapability) int {
+					pathA := a.TargetPath
+					pathB := b.TargetPath
+
+					return cmp.Or(
+						cmp.Compare(pathA.Domain, pathB.Domain),
+						strings.Compare(pathA.Identifier, pathB.Identifier),
+					)
+				},
+			)
+		},
+	)
 }
 
 type AccountsCapabilities struct {
@@ -129,7 +135,7 @@ func (m *AccountsCapabilities) ForEach(
 
 	accountCapabilities := rawAccountCapabilities.(*AccountCapabilities)
 
-	accountCapabilities.ForEach(f)
+	accountCapabilities.ForEachSorted(f)
 }
 
 func (m *AccountsCapabilities) Get(address common.Address) *AccountCapabilities {
