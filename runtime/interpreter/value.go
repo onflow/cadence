@@ -20182,8 +20182,7 @@ func (v *DictionaryValue) Insert(
 	// Currently, we only need to handle enum composite type because it is the only type that:
 	// - can be used as dictionary key (hashable) and
 	// - is transferred to its own slab.
-	if keyComposite, ok := keyValue.(*CompositeValue); ok &&
-		keyComposite.Kind == common.CompositeKindEnum {
+	if keyComposite, ok := keyValue.(*CompositeValue); ok {
 
 		// Get SlabID of transferred enum value.
 		keyCompositeSlabID := keyComposite.SlabID()
