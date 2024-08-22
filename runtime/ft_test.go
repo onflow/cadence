@@ -30,7 +30,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -944,8 +943,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
 	signerAccount := contractsAddress
 
-	var memoryGauge common.MemoryGauge
-
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(location Location) (bytes []byte, err error) {
 			return accountCodes[location], nil
@@ -969,7 +966,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
 		},
-		OnRecoverProgram: func(program *ast.Program, location common.Location) (*ast.Program, error) {
+		OnRecoverProgram: func(program *ast.Program, location common.Location) ([]byte, error) {
 
 			// TODO: generalize
 
@@ -977,17 +974,31 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 				return nil, nil
 			}
 
-			code := `
+			return []byte(`
               import FungibleToken from 0x1
 
               access(all)
               contract ExampleToken: FungibleToken {
+
+                  access(self)
+                  view fun recoveryPanic(_ functionName: String): Never {
+                      return panic(
+                          "Contract ExampleToken is no longer functional. "
+                              .concat("A version of the contract has been recovered to allow access to the fields declared in the FT standard. ")
+                              .concat(functionName).concat(" is not available in recovered program.")
+                      )
+                  }
 
                   access(all)
                   var totalSupply: UFix64
 
                   init() {
                       self.totalSupply = 0.0
+                  }
+
+                  access(all)
+                  fun createEmptyVault(vaultType: Type): @{FungibleToken.Vault} {
+                      ExampleToken.recoveryPanic("createEmptyVault")
                   }
 
                   access(all)
@@ -1002,33 +1013,25 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
                       access(FungibleToken.Withdraw)
                       fun withdraw(amount: UFix64): @{FungibleToken.Vault} {
-                          panic("withdraw is not implemented")
+                          ExampleToken.recoveryPanic("Vault.withdraw")
                       }
 
                       access(all)
                       view fun isAvailableToWithdraw(amount: UFix64): Bool {
-                          panic("isAvailableToWithdraw is not implemented")
+                          ExampleToken.recoveryPanic("Vault.isAvailableToWithdraw")
                       }
 
                       access(all)
                       fun deposit(from: @{FungibleToken.Vault}) {
-                          panic("deposit is not implemented")
+                          ExampleToken.recoveryPanic("Vault.deposit")
                       }
 
                       access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
-                          panic("createEmptyVault is not implemented")
+                          ExampleToken.recoveryPanic("Vault.createEmptyVault")
                       }
                   }
-
-                  access(all)
-                  fun createEmptyVault(vaultType: Type): @{FungibleToken.Vault} {
-                      panic("createEmptyVault is not implemented")
-                  }
               }
-            `
-
-			// TODO: meter
-			return parser.ParseProgram(memoryGauge, []byte(code), parser.Config{})
+            `), nil
 		},
 	}
 
@@ -1220,7 +1223,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 	)
 	utils.RequireError(t, err)
-	require.ErrorContains(t, err, "panic: withdraw is not implemented")
+	require.ErrorContains(t, err, "Vault.withdraw is not available in recovered program")
+	t.Log(err.Error())
 
 	// Send another transaction that loads the broken ExampleToken contract and the broken ExampleToken.Vault.
 	// Accessing the broken ExampleToken contract value and ExampleToken.Vault resource again should not cause a panic.

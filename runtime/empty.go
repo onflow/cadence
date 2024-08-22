@@ -235,6 +235,6 @@ func (EmptyRuntimeInterface) GenerateAccountID(_ common.Address) (uint64, error)
 	panic("unexpected call to GenerateAccountID")
 }
 
-func (EmptyRuntimeInterface) RecoverProgram(_ *ast.Program, _ common.Location) (*ast.Program, error) {
+func (EmptyRuntimeInterface) RecoverProgram(_ *ast.Program, _ common.Location) ([]byte, error) {
 	panic("unexpected call to RecoverProgram")
 }
