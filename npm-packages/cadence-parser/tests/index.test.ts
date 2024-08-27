@@ -4,117 +4,83 @@ import * as fs from "fs"
 test("parse simple", async () => {
   const binary = fs.readFileSync(require.resolve('../dist/cadence-parser.wasm'))
   const parser = await CadenceParser.create(binary)
-  const res = parser.parse("pub fun main() {}")
+  const res = parser.parse("access(all) fun main() {}")
   expect(res).toEqual({
     "program": {
       "Type": "Program",
       "Declarations": [
         {
-          "Access": "AccessPublic",
+          "Access": "AccessAll",
           "DocString": "",
           "EndPos": {
-            "Column": 16,
+            "Column": 24,
             "Line": 1,
-            "Offset": 16,
+            "Offset": 24,
           },
           "FunctionBlock": {
             "Block": {
               "EndPos": {
-                "Column": 16,
+                "Column": 24,
                 "Line": 1,
-                "Offset": 16,
+                "Offset": 24,
               },
               "StartPos": {
-                "Column": 15,
+                "Column": 23,
                 "Line": 1,
-                "Offset": 15,
+                "Offset": 23,
               },
               "Statements": null,
               "Type": "Block",
             },
             "EndPos": {
-              "Column": 16,
+              "Column": 24,
               "Line": 1,
-              "Offset": 16,
+              "Offset": 24,
             },
             "StartPos": {
-              "Column": 15,
+              "Column": 23,
               "Line": 1,
-              "Offset": 15,
+              "Offset": 23,
             },
             "Type": "FunctionBlock",
           },
           "Identifier": {
             "EndPos": {
-              "Column": 11,
+              "Column": 19,
               "Line": 1,
-              "Offset": 11,
+              "Offset": 19,
             },
             "Identifier": "main",
             "StartPos": {
-              "Column": 8,
+              "Column": 16,
               "Line": 1,
-              "Offset": 8,
+              "Offset": 16,
             },
           },
+          "IsNative": false,
+          "IsStatic": false,
           "ParameterList": {
             "EndPos": {
-              "Column": 13,
+              "Column": 21,
               "Line": 1,
-              "Offset": 13,
+              "Offset": 21,
             },
             "Parameters": null,
             "StartPos": {
-              "Column": 12,
+              "Column": 20,
               "Line": 1,
-              "Offset": 12,
+              "Offset": 20,
             },
           },
-          "ReturnTypeAnnotation": {
-            "AnnotatedType": {
-              "EndPos": {
-                "Column": 12,
-                "Line": 1,
-                "Offset": 12,
-              },
-              "Identifier": {
-                "EndPos": {
-                  "Column": 12,
-                  "Line": 1,
-                  "Offset": 12,
-                },
-                "Identifier": "",
-                "StartPos": {
-                  "Column": 13,
-                  "Line": 1,
-                  "Offset": 13,
-                },
-              },
-              "StartPos": {
-                "Column": 13,
-                "Line": 1,
-                "Offset": 13,
-              },
-              "Type": "NominalType",
-            },
-            "EndPos": {
-              "Column": 12,
-              "Line": 1,
-              "Offset": 12,
-            },
-            "IsResource": false,
-            "StartPos": {
-              "Column": 13,
-              "Line": 1,
-              "Offset": 13,
-            },
-          },
+          "Purity": "Unspecified",
+          "ReturnTypeAnnotation": null,
           "StartPos": {
             "Column": 0,
             "Line": 1,
             "Offset": 0,
           },
           "Type": "FunctionDeclaration",
+          "TypeParameterList": null,
         },
       ],
     },
