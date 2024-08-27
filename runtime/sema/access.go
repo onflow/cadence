@@ -19,7 +19,6 @@
 package sema
 
 import (
-	"io"
 	"strings"
 	"sync"
 
@@ -134,7 +133,7 @@ func FormatEntitlementSetTypeID[T ~string](entitlementTypeIDs []T, kind Entitlem
 	return T(builder.String())
 }
 
-func (e EntitlementSetAccess) format(w io.StringWriter, typeFormatter func(Type) string) {
+func (e EntitlementSetAccess) format(sb *strings.Builder, typeFormatter func(Type) string) {
 	var separator string
 
 	switch e.SetKind {
@@ -150,9 +149,9 @@ func (e EntitlementSetAccess) format(w io.StringWriter, typeFormatter func(Type)
 
 	e.Entitlements.ForeachWithIndex(func(i int, entitlement *EntitlementType, _ struct{}) {
 		if i > 0 {
-			w.WriteString(separator)
+			sb.WriteString(separator)
 		}
-		w.WriteString(typeFormatter(entitlement))
+		sb.WriteString(typeFormatter(entitlement))
 	})
 }
 
