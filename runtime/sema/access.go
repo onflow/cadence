@@ -19,6 +19,7 @@
 package sema
 
 import (
+	"io"
 	"strings"
 	"sync"
 
@@ -39,6 +40,7 @@ type Access interface {
 	Equal(other Access) bool
 	// PermitsAccess returns whether receiver access permits argument access
 	PermitsAccess(Access) bool
+	QualifiedKeyword() string
 }
 
 type EntitlementSetKind uint8
@@ -132,8 +134,7 @@ func FormatEntitlementSetTypeID[T ~string](entitlementTypeIDs []T, kind Entitlem
 	return T(builder.String())
 }
 
-func (e EntitlementSetAccess) string(typeFormatter func(Type) string) string {
-	var builder strings.Builder
+func (e EntitlementSetAccess) format(w io.StringWriter, typeFormatter func(Type) string) {
 	var separator string
 
 	switch e.SetKind {
@@ -149,25 +150,36 @@ func (e EntitlementSetAccess) string(typeFormatter func(Type) string) string {
 
 	e.Entitlements.ForeachWithIndex(func(i int, entitlement *EntitlementType, _ struct{}) {
 		if i > 0 {
-			builder.WriteString(separator)
+			w.WriteString(separator)
 		}
-		builder.WriteString(typeFormatter(entitlement))
-
+		w.WriteString(typeFormatter(entitlement))
 	})
-
-	return builder.String()
 }
 
 func (e EntitlementSetAccess) String() string {
-	return e.string(func(t Type) string {
+	var sb strings.Builder
+	e.format(&sb, func(t Type) string {
 		return t.String()
 	})
+	return sb.String()
 }
 
 func (e EntitlementSetAccess) QualifiedString() string {
-	return e.string(func(t Type) string {
+	var sb strings.Builder
+	e.format(&sb, func(t Type) string {
 		return t.QualifiedString()
 	})
+	return sb.String()
+}
+
+func (e EntitlementSetAccess) QualifiedKeyword() string {
+	var sb strings.Builder
+	sb.WriteString("access(")
+	e.format(&sb, func(t Type) string {
+		return t.QualifiedString()
+	})
+	sb.WriteString(")")
+	return sb.String()
 }
 
 func (e EntitlementSetAccess) Equal(other Access) bool {
@@ -286,6 +298,14 @@ func (e *EntitlementMapAccess) String() string {
 
 func (e *EntitlementMapAccess) QualifiedString() string {
 	return e.Type.QualifiedString()
+}
+
+func (e *EntitlementMapAccess) QualifiedKeyword() string {
+	var sb strings.Builder
+	sb.WriteString("access(mapping ")
+	sb.WriteString(e.Type.QualifiedIdentifier())
+	sb.WriteString(")")
+	return sb.String()
 }
 
 func (e *EntitlementMapAccess) Equal(other Access) bool {
@@ -453,6 +473,10 @@ func (a PrimitiveAccess) String() string {
 
 func (a PrimitiveAccess) QualifiedString() string {
 	return ast.PrimitiveAccess(a).Description()
+}
+
+func (a PrimitiveAccess) QualifiedKeyword() string {
+	return ast.PrimitiveAccess(a).Keyword()
 }
 
 func (a PrimitiveAccess) Equal(other Access) bool {

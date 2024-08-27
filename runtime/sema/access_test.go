@@ -23,8 +23,31 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 )
+
+func TestPrimitiveAccess_QualifiedKeyword(t *testing.T) {
+
+	t.Parallel()
+
+	expected := map[ast.PrimitiveAccess]string{
+		ast.AccessNotSpecified:      "",
+		ast.AccessSelf:              "access(self)",
+		ast.AccessAll:               "access(all)",
+		ast.AccessAccount:           "access(account)",
+		ast.AccessContract:          "access(contract)",
+		ast.AccessPubSettableLegacy: "pub(set)",
+		ast.AccessNone:              "inaccessible",
+	}
+
+	for access := 0; access < ast.PrimitiveAccessCount(); access++ {
+		assert.Equal(t,
+			expected[ast.PrimitiveAccess(access)],
+			PrimitiveAccess(access).QualifiedKeyword(),
+		)
+	}
+}
 
 func TestNewEntitlementAccess(t *testing.T) {
 
@@ -179,6 +202,43 @@ func TestNewEntitlementAccess(t *testing.T) {
 			},
 		)
 	})
+}
+
+func TestEntitlementSetAccess_QualifiedKeyword(t *testing.T) {
+
+	t.Parallel()
+
+	location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
+
+	fooType := &CompositeType{
+		Location:   location,
+		Identifier: "Foo",
+	}
+
+	barType := NewEntitlementType(
+		nil,
+		location,
+		"Bar",
+	)
+	barType.SetContainerType(fooType)
+
+	bazType := NewEntitlementType(
+		nil,
+		location,
+		"Baz",
+	)
+	bazType.SetContainerType(fooType)
+
+	assert.Equal(t,
+		"access(Foo.Bar | Foo.Baz)",
+		newEntitlementAccess(
+			[]Type{
+				barType,
+				bazType,
+			},
+			Disjunction,
+		).QualifiedKeyword(),
+	)
 }
 
 func TestEntitlementMapAccess_ID(t *testing.T) {
@@ -549,4 +609,28 @@ func TestEntitlementSetAccess_QualifiedString(t *testing.T) {
 			access.QualifiedString(),
 		)
 	})
+}
+
+func TestEntitlementMapAccess_QualifiedKeyword(t *testing.T) {
+
+	t.Parallel()
+
+	location := common.NewAddressLocation(nil, common.MustBytesToAddress([]byte{0x1}), "Foo")
+
+	fooType := &CompositeType{
+		Location:   location,
+		Identifier: "Foo",
+	}
+
+	barType := NewEntitlementMapType(
+		nil,
+		location,
+		"Bar",
+	)
+	barType.SetContainerType(fooType)
+
+	assert.Equal(t,
+		"access(mapping Foo.Bar)",
+		NewEntitlementMapAccess(barType).QualifiedKeyword(),
+	)
 }
