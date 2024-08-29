@@ -373,34 +373,37 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 		require.Equal(t, 0, dictionary.Count())
 
-		newEntries := newValueMap(numberOfValues)
-
 		value1 := interpreter.NewUnmeteredIntValueFromInt64(1)
 		value2 := interpreter.NewUnmeteredIntValueFromInt64(2)
 
-		keyValues := make([][2]interpreter.Value, numberOfValues)
+		keys := make([]interpreter.Value, numberOfValues)
 		for i := 0; i < numberOfValues; i++ {
 			// Create a random enum as key
 			key := r.generateRandomHashableValue(inter, randomValueKindEnum)
 
-			newEntries.put(inter, key, value1)
-
-			keyValues[i][0] = key
-			keyValues[i][1] = value1
+			keys[i] = key
 		}
 
 		// Insert
-		for _, keyValue := range keyValues {
-			dictionary.Insert(inter, interpreter.EmptyLocationRange, keyValue[0], keyValue[1])
+		for _, key := range keys {
+			dictionary.Insert(
+				inter,
+				interpreter.EmptyLocationRange,
+				// Need to clone the key, as it is transferred, and we want to keep using it.
+				key.Clone(inter),
+				// Always insert value1
+				value1,
+			)
 		}
 
 		// Update
-		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
+		for _, key := range keys {
 			oldValue := dictionary.Insert(
 				inter,
 				interpreter.EmptyLocationRange,
-				orgKey.Clone(inter),
-				// change value1 to value2
+				// Need to clone the key, as it is transferred, and we want to keep using it.
+				key.Clone(inter),
+				// Change all value1 to value2
 				value2,
 			)
 
@@ -409,23 +412,24 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 			// Removed value must be same as the original value
 			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
-			utils.AssertValuesEqual(t, inter, orgValue, innerValue)
-
-			return false
-		})
+			utils.AssertValuesEqual(t, inter, value1, innerValue)
+		}
 
 		// Check the values
-		newEntries.foreach(func(key, _ interpreter.Value) (exit bool) {
-			readValue := dictionary.GetKey(inter, interpreter.EmptyLocationRange, key)
+		for _, key := range keys {
+			readValue := dictionary.GetKey(
+				inter,
+				interpreter.EmptyLocationRange,
+				key,
+			)
 
 			require.IsType(t, &interpreter.SomeValue{}, readValue)
 			someValue := readValue.(*interpreter.SomeValue)
 
+			// Read value must be updated value
 			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
-			utils.AssertValuesEqual(t, inter, value, innerValue)
-
-			return false
-		})
+			utils.AssertValuesEqual(t, inter, value2, innerValue)
+		}
 	})
 
 	t.Run("random insert & remove", func(t *testing.T) {
