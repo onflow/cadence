@@ -375,17 +375,18 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 		newEntries := newValueMap(numberOfValues)
 
-		value := interpreter.NewUnmeteredIntValueFromInt64(1)
+		value1 := interpreter.NewUnmeteredIntValueFromInt64(1)
+		value2 := interpreter.NewUnmeteredIntValueFromInt64(2)
 
 		keyValues := make([][2]interpreter.Value, numberOfValues)
 		for i := 0; i < numberOfValues; i++ {
 			// Create a random enum as key
 			key := r.generateRandomHashableValue(inter, randomValueKindEnum)
 
-			newEntries.put(inter, key, value)
+			newEntries.put(inter, key, value1)
 
 			keyValues[i][0] = key
-			keyValues[i][1] = value
+			keyValues[i][1] = value1
 		}
 
 		// Insert
@@ -393,11 +394,15 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 			dictionary.Insert(inter, interpreter.EmptyLocationRange, keyValue[0], keyValue[1])
 		}
 
-		value = interpreter.NewUnmeteredIntValueFromInt64(2)
-
 		// Update
 		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
-			oldValue := dictionary.Insert(inter, interpreter.EmptyLocationRange, orgKey.Clone(inter), value)
+			oldValue := dictionary.Insert(
+				inter,
+				interpreter.EmptyLocationRange,
+				orgKey.Clone(inter),
+				// change value1 to value2
+				value2,
+			)
 
 			require.IsType(t, &interpreter.SomeValue{}, oldValue)
 			someValue := oldValue.(*interpreter.SomeValue)
