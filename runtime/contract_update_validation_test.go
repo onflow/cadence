@@ -395,6 +395,54 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		assertExtraneousFieldError(t, cause, "TestResource", "c")
 	})
 
+	testWithValidators(t, "remove field from nested decl", func(t *testing.T, config Config) {
+
+		const oldCode = `
+            access(all) contract Test {
+
+                access(all) var a: @TestResource
+
+                init() {
+                    self.a <- create Test.TestResource()
+                }
+
+                access(all) resource TestResource {
+
+                    access(all) var b: String
+                    access(all) var c: Int
+
+                    init() {
+                        self.b = "hello"
+                        self.c = 0
+                    }
+                }
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+
+                access(all) var a: @Test.TestResource
+
+                init() {
+                    self.a <- create Test.TestResource()
+                }
+
+                access(all) resource TestResource {
+
+                    access(all) var b: String
+
+                    init() {
+                        self.b = "hello"
+                    }
+                }
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+		require.NoError(t, err)
+	})
+
 	testWithValidators(t, "change indirect field type", func(t *testing.T, config Config) {
 
 		const oldCode = `
