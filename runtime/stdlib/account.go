@@ -3529,7 +3529,7 @@ func newAccountCapabilitiesPublishFunction(
 					panic(errors.NewUnreachableError())
 				}
 
-				capabilityAddressValue := capabilityValue.Address
+				capabilityAddressValue := capabilityValue.Address()
 				if capabilityAddressValue != accountAddressValue {
 					panic(interpreter.CapabilityAddressPublishingError{
 						LocationRange:     locationRange,
@@ -3952,7 +3952,7 @@ func newAccountCapabilitiesGetFunction(
 				}
 
 				capabilityID := readCapabilityValue.ID
-				capabilityAddress := readCapabilityValue.Address
+				capabilityAddress := readCapabilityValue.Address()
 
 				var resultValue interpreter.Value
 				if borrow {

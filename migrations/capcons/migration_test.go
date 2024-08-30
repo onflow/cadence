@@ -731,14 +731,14 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		{
 			name: "Path links, working chain (public -> private -> storage)",
 			// Equivalent to: getCapability<&Test.R>(/public/test)
-			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: testRReferenceStaticType,
-				Path: interpreter.PathValue{
+			capabilityValue: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				testRReferenceStaticType,
+				interpreter.AddressValue(testAddress),
+				interpreter.PathValue{
 					Domain:     common.PathDomainPublic,
 					Identifier: testPathIdentifier,
 				},
-				Address: interpreter.AddressValue(testAddress),
-			},
+			),
 			pathLinks: []testLink{
 				// Equivalent to:
 				//   link<&Test.R>(/public/test, target: /private/test)
@@ -808,14 +808,14 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		{
 			name: "Path links, working chain (public -> storage)",
 			// Equivalent to: getCapability<&Test.R>(/public/test)
-			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: testRReferenceStaticType,
-				Path: interpreter.PathValue{
+			capabilityValue: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				testRReferenceStaticType,
+				interpreter.AddressValue(testAddress),
+				interpreter.PathValue{
 					Domain:     common.PathDomainPublic,
 					Identifier: testPathIdentifier,
 				},
-				Address: interpreter.AddressValue(testAddress),
-			},
+			),
 			pathLinks: []testLink{
 				// Equivalent to:
 				//   link<&Test.R>(/public/test, target: /storage/test)
@@ -863,14 +863,14 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		{
 			name: "Path links, working chain (private -> storage)",
 			// Equivalent to: getCapability<&Test.R>(/private/test)
-			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: testRReferenceStaticType,
-				Path: interpreter.PathValue{
+			capabilityValue: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				testRReferenceStaticType,
+				interpreter.AddressValue(testAddress),
+				interpreter.PathValue{
 					Domain:     common.PathDomainPrivate,
 					Identifier: testPathIdentifier,
 				},
-				Address: interpreter.AddressValue(testAddress),
-			},
+			),
 			pathLinks: []testLink{
 				// Equivalent to:
 				//   link<&Test.R>(/private/test, target: /storage/test)
@@ -923,14 +923,14 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		{
 			name: "Path links, working chain (private -> private -> storage)",
 			// Equivalent to: getCapability<&Test.R>(/private/test)
-			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: testRReferenceStaticType,
-				Path: interpreter.PathValue{
+			capabilityValue: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				testRReferenceStaticType,
+				interpreter.AddressValue(testAddress),
+				interpreter.PathValue{
 					Domain:     common.PathDomainPrivate,
 					Identifier: testPathIdentifier,
 				},
-				Address: interpreter.AddressValue(testAddress),
-			},
+			),
 			pathLinks: []testLink{
 				// Equivalent to:
 				//   link<&Test.R>(/private/test, target: /private/test2)
@@ -1001,14 +1001,14 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		{
 			name: "Path links, valid chain (public -> storage), different borrow type",
 			// Equivalent to: getCapability<&Test.R>(/public/test)
-			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: testRReferenceStaticType,
-				Path: interpreter.PathValue{
+			capabilityValue: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				testRReferenceStaticType,
+				interpreter.AddressValue(testAddress),
+				interpreter.PathValue{
 					Domain:     common.PathDomainPublic,
 					Identifier: testPathIdentifier,
 				},
-				Address: interpreter.AddressValue(testAddress),
-			},
+			),
 			pathLinks: []testLink{
 				// Equivalent to:
 				//   link<&Test.S>(/public/test, target: /storage/test)
@@ -1058,14 +1058,14 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		{
 			name: "Path links, cyclic chain (public -> private -> public)",
 			// Equivalent to: getCapability<&Test.R>(/public/test)
-			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: testRReferenceStaticType,
-				Path: interpreter.PathValue{
+			capabilityValue: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				testRReferenceStaticType,
+				interpreter.AddressValue(testAddress),
+				interpreter.PathValue{
 					Domain:     common.PathDomainPublic,
 					Identifier: testPathIdentifier,
 				},
-				Address: interpreter.AddressValue(testAddress),
-			},
+			),
 			pathLinks: []testLink{
 				// Equivalent to:
 				//   link<&Test.R>(/public/test, target: /private/test)
@@ -1112,14 +1112,14 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		{
 			name: "Path links, missing source (public -> private)",
 			// Equivalent to: getCapability<&Test.R>(/public/test)
-			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: testRReferenceStaticType,
-				Path: interpreter.PathValue{
+			capabilityValue: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				testRReferenceStaticType,
+				interpreter.AddressValue(testAddress),
+				interpreter.PathValue{
 					Domain:     common.PathDomainPublic,
 					Identifier: testPathIdentifier,
 				},
-				Address: interpreter.AddressValue(testAddress),
-			},
+			),
 			pathLinks:              nil,
 			expectedPathMigrations: nil,
 			expectedMissingCapabilityIDs: []testCapConsMissingCapabilityID{
@@ -1139,14 +1139,14 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		{
 			name: "Path links, missing target (public -> private)",
 			// Equivalent to: getCapability<&Test.R>(/public/test)
-			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: testRReferenceStaticType,
-				Path: interpreter.PathValue{
+			capabilityValue: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				testRReferenceStaticType,
+				interpreter.AddressValue(testAddress),
+				interpreter.PathValue{
 					Domain:     common.PathDomainPublic,
 					Identifier: testPathIdentifier,
 				},
-				Address: interpreter.AddressValue(testAddress),
-			},
+			),
 			pathLinks: []testLink{
 				// Equivalent to:
 				//   link<&Test.R>(/public/test, target: /private/test)
@@ -1180,14 +1180,14 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		{
 			name: "Path link, storage path",
 			// Equivalent to: getCapability<&Test.R>(/storage/test)
-			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: testRReferenceStaticType,
-				Path: interpreter.PathValue{
+			capabilityValue: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				testRReferenceStaticType,
+				interpreter.AddressValue(testAddress),
+				interpreter.PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: testPathIdentifier,
 				},
-				Address: interpreter.AddressValue(testAddress),
-			},
+			),
 			pathLinks: nil,
 			expectedMigrations: []testMigration{
 				expectedWrappedCapabilityValueMigration,
@@ -1213,14 +1213,14 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		{
 			name: "Account link, working chain (public), unauthorized",
 			// Equivalent to: getCapability<&Account>(/public/test)
-			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: unauthorizedAccountReferenceStaticType,
-				Path: interpreter.PathValue{
+			capabilityValue: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				unauthorizedAccountReferenceStaticType,
+				interpreter.AddressValue(testAddress),
+				interpreter.PathValue{
 					Domain:     common.PathDomainPublic,
 					Identifier: testPathIdentifier,
 				},
-				Address: interpreter.AddressValue(testAddress),
-			},
+			),
 			accountLinks: []interpreter.PathValue{
 				// Equivalent to:
 				//   linkAccount(/public/test)
@@ -1261,18 +1261,18 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		{
 			name: "Account link, working chain (public), authorized",
 			// Equivalent to: getCapability<auth(Capabilities, Contracts, Inbox, Keys, Storage) &Account>(/public/test)
-			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: interpreter.NewReferenceStaticType(
+			capabilityValue: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				interpreter.NewReferenceStaticType(
 					nil,
 					interpreter.FullyEntitledAccountAccess,
 					interpreter.PrimitiveStaticTypeAccount,
 				),
-				Path: interpreter.PathValue{
+				interpreter.AddressValue(testAddress),
+				interpreter.PathValue{
 					Domain:     common.PathDomainPublic,
 					Identifier: testPathIdentifier,
 				},
-				Address: interpreter.AddressValue(testAddress),
-			},
+			),
 			accountLinks: []interpreter.PathValue{
 				// Equivalent to:
 				//   linkAccount(/public/test)
@@ -1313,14 +1313,14 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		{
 			name: "Account link, working chain (private), unauthorized",
 			// Equivalent to: getCapability<&Account>(/public/test)
-			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: unauthorizedAccountReferenceStaticType,
-				Path: interpreter.PathValue{
+			capabilityValue: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				unauthorizedAccountReferenceStaticType,
+				interpreter.AddressValue(testAddress),
+				interpreter.PathValue{
 					Domain:     common.PathDomainPrivate,
 					Identifier: testPathIdentifier,
 				},
-				Address: interpreter.AddressValue(testAddress),
-			},
+			),
 			accountLinks: []interpreter.PathValue{
 				// Equivalent to:
 				//   linkAccount(/private/test)
@@ -1361,14 +1361,14 @@ func TestPathCapabilityValueMigration(t *testing.T) {
 		{
 			name: "Account link, working chain (private), authorized",
 			// Equivalent to: getCapability<auth(Capabilities, Contracts, Inbox, Keys, Storage) &Account>(/public/test)
-			capabilityValue: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: fullyEntitledAccountReferenceStaticType,
-				Path: interpreter.PathValue{
+			capabilityValue: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				fullyEntitledAccountReferenceStaticType,
+				interpreter.AddressValue(testAddress),
+				interpreter.PathValue{
 					Domain:     common.PathDomainPrivate,
 					Identifier: testPathIdentifier,
 				},
-				Address: interpreter.AddressValue(testAddress),
-			},
+			),
 			accountLinks: []interpreter.PathValue{
 				// Equivalent to:
 				//   linkAccount(/private/test)
@@ -2290,14 +2290,14 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 	)
 
 	// Equivalent to: getCapability<&Int>(/public/test)
-	capabilityValue := &interpreter.PathCapabilityValue{ //nolint:staticcheck
-		BorrowType: borrowType,
-		Path: interpreter.PathValue{
+	capabilityValue := interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+		borrowType,
+		interpreter.AddressValue(testAddress),
+		interpreter.PathValue{
 			Domain:     common.PathDomainPublic,
 			Identifier: testPathIdentifier,
 		},
-		Address: interpreter.AddressValue(testAddress),
-	}
+	)
 
 	pathLinks := []testLink{
 		// Equivalent to:
@@ -2541,15 +2541,15 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 	)
 
 	// Equivalent to: getCapability(/public/test)
-	capabilityValue := &interpreter.PathCapabilityValue{ //nolint:staticcheck
+	capabilityValue := interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
 		// NOTE: no borrow type
-		BorrowType: nil,
-		Path: interpreter.PathValue{
+		nil,
+		interpreter.AddressValue(testAddress),
+		interpreter.PathValue{
 			Domain:     common.PathDomainPublic,
 			Identifier: testPathIdentifier,
 		},
-		Address: interpreter.AddressValue(testAddress),
-	}
+	)
 
 	pathLinks := []testLink{
 		// Equivalent to:
@@ -2932,25 +2932,25 @@ func TestStorageCapMigration(t *testing.T) {
 	// - the last two have the same borrow type
 
 	// Equivalent to: getCapability<&String>(/storage/test)
-	capabilityValue1 := &interpreter.PathCapabilityValue{ //nolint:staticcheck
-		BorrowType: testBorrowType1,
-		Path:       testPath,
-		Address:    interpreter.AddressValue(testAddress),
-	}
+	capabilityValue1 := interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+		testBorrowType1,
+		interpreter.AddressValue(testAddress),
+		testPath,
+	)
 
 	// Equivalent to: getCapability<&Int>(/storage/test)
-	capabilityValue2 := &interpreter.PathCapabilityValue{ //nolint:staticcheck
-		BorrowType: testBorrowType2,
-		Path:       testPath,
-		Address:    interpreter.AddressValue(testAddress),
-	}
+	capabilityValue2 := interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+		testBorrowType2,
+		interpreter.AddressValue(testAddress),
+		testPath,
+	)
 
 	// Equivalent to: getCapability<&Int>(/storage/test)
-	capabilityValue3 := &interpreter.PathCapabilityValue{ //nolint:staticcheck
-		BorrowType: testBorrowType2,
-		Path:       testPath,
-		Address:    interpreter.AddressValue(testAddress),
-	}
+	capabilityValue3 := interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+		testBorrowType2,
+		interpreter.AddressValue(testAddress),
+		testPath,
+	)
 
 	rt := NewTestInterpreterRuntime()
 
@@ -3227,13 +3227,12 @@ func TestUntypedStorageCapMigration(t *testing.T) {
 		Path:    testPath,
 	}
 
-	capabilityValue := &interpreter.PathCapabilityValue{ //nolint:staticcheck
+	capabilityValue := interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
 		// Borrow type must be nil.
-		BorrowType: nil,
-
-		Path:    testPath,
-		Address: interpreter.AddressValue(testAddress),
-	}
+		nil,
+		interpreter.AddressValue(testAddress),
+		testPath,
+	)
 
 	rt := NewTestInterpreterRuntime()
 
@@ -3502,13 +3501,12 @@ func TestUntypedStorageCapWithMissingTargetMigration(t *testing.T) {
 	// Capability targets `addressB`.
 	// Capability itself is stored in `addressA`
 
-	capabilityValue := &interpreter.PathCapabilityValue{ //nolint:staticcheck
+	capabilityValue := interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
 		// Borrow type must be nil.
-		BorrowType: nil,
-
-		Path:    targetPath,
-		Address: interpreter.AddressValue(addressB),
-	}
+		nil,
+		interpreter.AddressValue(addressB),
+		targetPath,
+	)
 
 	rt := NewTestInterpreterRuntime()
 

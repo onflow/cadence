@@ -34,7 +34,7 @@ import (
 type PathCapabilityValue struct {
 	BorrowType StaticType
 	Path       PathValue
-	Address    AddressValue
+	address    AddressValue
 }
 
 var _ Value = &PathCapabilityValue{}
@@ -42,6 +42,18 @@ var _ atree.Storable = &PathCapabilityValue{}
 var _ EquatableValue = &PathCapabilityValue{}
 var _ MemberAccessibleValue = &PathCapabilityValue{}
 var _ CapabilityValue = &PathCapabilityValue{}
+
+func NewUnmeteredPathCapabilityValue(
+	borrowType StaticType,
+	address AddressValue,
+	path PathValue,
+) *PathCapabilityValue {
+	return &PathCapabilityValue{
+		BorrowType: borrowType,
+		address:    address,
+		Path:       path,
+	}
+}
 
 func (*PathCapabilityValue) isValue() {}
 
@@ -52,7 +64,7 @@ func (v *PathCapabilityValue) Accept(_ *Interpreter, _ Visitor, _ LocationRange)
 }
 
 func (v *PathCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
-	walkChild(v.Address)
+	walkChild(v.address)
 	walkChild(v.Path)
 }
 
@@ -75,14 +87,14 @@ func (v *PathCapabilityValue) RecursiveString(seenReferences SeenReferences) str
 	if borrowType == nil {
 		return fmt.Sprintf(
 			"Capability(address: %s, path: %s)",
-			v.Address.RecursiveString(seenReferences),
+			v.address.RecursiveString(seenReferences),
 			v.Path.RecursiveString(seenReferences),
 		)
 	} else {
 		return fmt.Sprintf(
 			"Capability<%s>(address: %s, path: %s)",
 			borrowType.String(),
-			v.Address.RecursiveString(seenReferences),
+			v.address.RecursiveString(seenReferences),
 			v.Path.RecursiveString(seenReferences),
 		)
 	}
@@ -99,14 +111,14 @@ func (v *PathCapabilityValue) MeteredString(
 	if borrowType == nil {
 		return fmt.Sprintf(
 			"Capability(address: %s, path: %s)",
-			v.Address.MeteredString(interpreter, seenReferences, locationRange),
+			v.address.MeteredString(interpreter, seenReferences, locationRange),
 			v.Path.MeteredString(interpreter, seenReferences, locationRange),
 		)
 	} else {
 		return fmt.Sprintf(
 			"Capability<%s>(address: %s, path: %s)",
 			borrowType.String(),
-			v.Address.MeteredString(interpreter, seenReferences, locationRange),
+			v.address.MeteredString(interpreter, seenReferences, locationRange),
 			v.Path.MeteredString(interpreter, seenReferences, locationRange),
 		)
 	}
@@ -161,7 +173,7 @@ func (v *PathCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRang
 		return v.newCheckFunction(interpreter, borrowType)
 
 	case sema.CapabilityTypeAddressFieldName:
-		return v.Address
+		return v.address
 
 	case sema.CapabilityTypeIDFieldName:
 		return InvalidCapabilityID
@@ -202,7 +214,7 @@ func (v *PathCapabilityValue) Equal(interpreter *Interpreter, locationRange Loca
 		return false
 	}
 
-	return otherCapability.Address.Equal(interpreter, locationRange, v.Address) &&
+	return otherCapability.address.Equal(interpreter, locationRange, v.address) &&
 		otherCapability.Path.Equal(interpreter, locationRange, v.Path)
 }
 
@@ -251,12 +263,12 @@ func (v *PathCapabilityValue) Clone(interpreter *Interpreter) Value {
 	return &PathCapabilityValue{
 		BorrowType: v.BorrowType,
 		Path:       v.Path.Clone(interpreter).(PathValue),
-		Address:    v.Address.Clone(interpreter).(AddressValue),
+		address:    v.address.Clone(interpreter).(AddressValue),
 	}
 }
 
 func (v *PathCapabilityValue) DeepRemove(interpreter *Interpreter, _ bool) {
-	v.Address.DeepRemove(interpreter, false)
+	v.address.DeepRemove(interpreter, false)
 	v.Path.DeepRemove(interpreter, false)
 }
 
@@ -270,14 +282,14 @@ func (v *PathCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, err
 
 func (v *PathCapabilityValue) ChildStorables() []atree.Storable {
 	return []atree.Storable{
-		v.Address,
+		v.address,
 		v.Path,
 	}
 }
 
 func (v *PathCapabilityValue) AddressPath() AddressPath {
 	return AddressPath{
-		Address: common.Address(v.Address),
+		Address: common.Address(v.address),
 		Path:    v.Path,
 	}
 }
@@ -318,7 +330,7 @@ func (v *PathCapabilityValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode address at array index encodedPathCapabilityValueAddressFieldKey
-	err = v.Address.Encode(e)
+	err = v.address.Encode(e)
 	if err != nil {
 		return err
 	}
@@ -336,4 +348,8 @@ func (v *PathCapabilityValue) Encode(e *atree.Encoder) error {
 	} else {
 		return v.BorrowType.Encode(e.CBOR)
 	}
+}
+
+func (v *PathCapabilityValue) Address() AddressValue {
+	return v.address
 }

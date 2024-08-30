@@ -704,7 +704,7 @@ func exportCapabilityValue(
 	return cadence.NewMeteredCapability(
 		inter,
 		cadence.NewMeteredUInt64(inter, uint64(v.ID)),
-		cadence.NewMeteredAddress(inter, v.Address),
+		cadence.NewMeteredAddress(inter, v.Address()),
 		exportedBorrowType,
 	), nil
 }
@@ -719,7 +719,7 @@ func exportPathCapabilityValue(
 	capability := cadence.NewMeteredCapability(
 		inter,
 		cadence.NewMeteredUInt64(inter, uint64(interpreter.InvalidCapabilityID)),
-		cadence.NewMeteredAddress(inter, v.Address),
+		cadence.NewMeteredAddress(inter, v.Address()),
 		exportedBorrowType,
 	)
 

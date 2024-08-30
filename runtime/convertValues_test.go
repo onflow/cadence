@@ -568,14 +568,14 @@ func TestRuntimeExportValue(t *testing.T) {
 		},
 		{
 			label: "path capability",
-			value: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: interpreter.PrimitiveStaticTypeAnyResource,
-				Path: interpreter.PathValue{
+			value: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				interpreter.PrimitiveStaticTypeAnyResource,
+				interpreter.AddressValue{0x1},
+				interpreter.PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
-				Address: interpreter.AddressValue{0x1},
-			},
+			),
 			expected: cadence.NewDeprecatedPathCapability( //nolint:staticcheck
 				cadence.Address{0x1},
 				cadence.MustNewPath(common.PathDomainStorage, "foo"),
