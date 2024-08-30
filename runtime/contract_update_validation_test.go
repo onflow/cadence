@@ -2482,6 +2482,45 @@ func TestRuntimeContractUpdateValidation(t *testing.T) {
 		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 		require.NoError(t, err)
 	})
+
+	testWithValidators(t, "Add event", func(t *testing.T, config Config) {
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) event Foo()
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) event Foo()
+                access(all) event Bar()
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+		require.NoError(t, err)
+	})
+
+	testWithValidators(t, "Update event", func(t *testing.T, config Config) {
+
+		const oldCode = `
+            access(all) contract Test {
+                access(all) event Foo()
+                access(all) event Bar()
+            }
+        `
+
+		const newCode = `
+            access(all) contract Test {
+                access(all) event Foo(a: Int)
+                access(all) event Bar(b: String)
+            }
+        `
+
+		err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+		require.NoError(t, err)
+	})
 }
 
 func assertContractRemovalError(t *testing.T, err error, name string) {
