@@ -3951,7 +3951,7 @@ func newAccountCapabilitiesGetFunction(
 					capabilityAddress = readValue.Address()
 					capabilityStaticBorrowType = readValue.BorrowType
 
-				case *interpreter.PathCapabilityValue:
+				case *interpreter.PathCapabilityValue: //nolint:staticcheck
 					capabilityID = interpreter.InvalidCapabilityID
 					capabilityAddress = readValue.Address()
 					capabilityStaticBorrowType = readValue.BorrowType

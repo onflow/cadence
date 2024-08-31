@@ -3799,7 +3799,7 @@ func TestRuntimeCapabilitiesGetBackwardCompatibility(t *testing.T) {
 	t.Run("path capability, typed", func(t *testing.T) {
 		t.Parallel()
 
-		test(t, interpreter.NewUnmeteredPathCapabilityValue(
+		test(t, interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
 			&interpreter.ReferenceStaticType{
 				Authorization:  interpreter.UnauthorizedAccess,
 				ReferencedType: interpreter.PrimitiveStaticTypeInt,
@@ -3815,7 +3815,7 @@ func TestRuntimeCapabilitiesGetBackwardCompatibility(t *testing.T) {
 	t.Run("path capability, untyped", func(t *testing.T) {
 		t.Parallel()
 
-		test(t, interpreter.NewUnmeteredPathCapabilityValue(
+		test(t, interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
 			// NOTE: no borrow type
 			nil,
 			interpreter.AddressValue(testAddress),
@@ -3829,7 +3829,7 @@ func TestRuntimeCapabilitiesGetBackwardCompatibility(t *testing.T) {
 	t.Run("path link", func(t *testing.T) {
 		t.Parallel()
 
-		test(t, interpreter.PathLinkValue{
+		test(t, interpreter.PathLinkValue{ //nolint:staticcheck
 			Type: &interpreter.ReferenceStaticType{
 				Authorization:  interpreter.UnauthorizedAccess,
 				ReferencedType: interpreter.PrimitiveStaticTypeInt,
@@ -3904,7 +3904,7 @@ func TestRuntimeCapabilitiesPublishBackwardCompatibility(t *testing.T) {
 	t.Run("path capability, untyped", func(t *testing.T) {
 		t.Parallel()
 
-		test(t, interpreter.NewUnmeteredPathCapabilityValue(
+		test(t, interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
 			// NOTE: no borrow type
 			nil,
 			interpreter.AddressValue(testAddress),
@@ -3918,7 +3918,7 @@ func TestRuntimeCapabilitiesPublishBackwardCompatibility(t *testing.T) {
 	t.Run("path capability, typed", func(t *testing.T) {
 		t.Parallel()
 
-		test(t, interpreter.NewUnmeteredPathCapabilityValue(
+		test(t, interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
 			&interpreter.ReferenceStaticType{
 				Authorization:  interpreter.UnauthorizedAccess,
 				ReferencedType: interpreter.PrimitiveStaticTypeInt,
@@ -3995,7 +3995,7 @@ func TestRuntimeCapabilitiesUnpublishBackwardCompatibility(t *testing.T) {
 	t.Run("path capability, untyped", func(t *testing.T) {
 		t.Parallel()
 
-		test(t, interpreter.NewUnmeteredPathCapabilityValue(
+		test(t, interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
 			// NOTE: no borrow type
 			nil,
 			interpreter.AddressValue(testAddress),
@@ -4009,7 +4009,7 @@ func TestRuntimeCapabilitiesUnpublishBackwardCompatibility(t *testing.T) {
 	t.Run("path capability, typed", func(t *testing.T) {
 		t.Parallel()
 
-		test(t, interpreter.NewUnmeteredPathCapabilityValue(
+		test(t, interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
 			&interpreter.ReferenceStaticType{
 				Authorization:  interpreter.UnauthorizedAccess,
 				ReferencedType: interpreter.PrimitiveStaticTypeInt,
@@ -4025,7 +4025,7 @@ func TestRuntimeCapabilitiesUnpublishBackwardCompatibility(t *testing.T) {
 	t.Run("path link", func(t *testing.T) {
 		t.Parallel()
 
-		test(t, interpreter.PathLinkValue{
+		test(t, interpreter.PathLinkValue{ //nolint:staticcheck
 			Type: &interpreter.ReferenceStaticType{
 				Authorization:  interpreter.UnauthorizedAccess,
 				ReferencedType: interpreter.PrimitiveStaticTypeInt,

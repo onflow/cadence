@@ -43,6 +43,7 @@ var _ EquatableValue = &PathCapabilityValue{}
 var _ MemberAccessibleValue = &PathCapabilityValue{}
 var _ CapabilityValue = &PathCapabilityValue{}
 
+// Deprecated: NewUnmeteredPathCapabilityValue
 func NewUnmeteredPathCapabilityValue(
 	borrowType StaticType,
 	address AddressValue,
