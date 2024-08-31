@@ -889,7 +889,7 @@ func (v *IDCapabilityValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode address at array index encodedCapabilityValueAddressFieldKey
-	err = v.Address.Encode(e)
+	err = v.address.Encode(e)
 	if err != nil {
 		return err
 	}

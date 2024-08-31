@@ -46,14 +46,14 @@ func TestInterpretPathCapability(t *testing.T) {
 			Type: &sema.CapabilityType{
 				BorrowType: borrowType,
 			},
-			Value: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: borrowStaticType,
-				Path: interpreter.PathValue{
+			Value: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				borrowStaticType,
+				interpreter.AddressValue{0x42},
+				interpreter.PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
-				Address: interpreter.AddressValue{0x42},
-			},
+			),
 			Name: "cap",
 			Kind: common.DeclarationKindConstant,
 		}

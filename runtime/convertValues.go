@@ -704,7 +704,7 @@ func exportCapabilityValue(
 	return cadence.NewMeteredCapability(
 		inter,
 		cadence.NewMeteredUInt64(inter, uint64(v.ID)),
-		cadence.NewMeteredAddress(inter, v.Address),
+		cadence.NewMeteredAddress(inter, v.Address()),
 		exportedBorrowType,
 	), nil
 }
@@ -713,13 +713,17 @@ func exportPathCapabilityValue(
 	v *interpreter.PathCapabilityValue, //nolint:staticcheck
 	inter *interpreter.Interpreter,
 ) (cadence.Capability, error) {
-	borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
-	exportedBorrowType := ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{})
+	var exportedBorrowType cadence.Type
+
+	if v.BorrowType != nil {
+		borrowType := inter.MustConvertStaticToSemaType(v.BorrowType)
+		exportedBorrowType = ExportMeteredType(inter, borrowType, map[sema.TypeID]cadence.Type{})
+	}
 
 	capability := cadence.NewMeteredCapability(
 		inter,
 		cadence.NewMeteredUInt64(inter, uint64(interpreter.InvalidCapabilityID)),
-		cadence.NewMeteredAddress(inter, v.Address),
+		cadence.NewMeteredAddress(inter, v.Address()),
 		exportedBorrowType,
 	)
 
