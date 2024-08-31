@@ -3518,14 +3518,8 @@ func newAccountCapabilitiesPublishFunction(
 
 				// Get capability argument
 
-				var capabilityValue *interpreter.IDCapabilityValue
-
-				firstValue := invocation.Arguments[0]
-				switch firstValue := firstValue.(type) {
-				case *interpreter.IDCapabilityValue:
-					capabilityValue = firstValue
-
-				default:
+				capabilityValue, ok := invocation.Arguments[0].(interpreter.CapabilityValue)
+				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
@@ -3572,7 +3566,7 @@ func newAccountCapabilitiesPublishFunction(
 					nil,
 					nil,
 					true, // capabilityValue is standalone because it is from invocation.Arguments[0].
-				).(*interpreter.IDCapabilityValue)
+				).(interpreter.CapabilityValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3639,10 +3633,21 @@ func newAccountCapabilitiesUnpublishFunction(
 					return interpreter.Nil
 				}
 
-				var capabilityValue *interpreter.IDCapabilityValue
+				var capabilityValue interpreter.CapabilityValue
 				switch readValue := readValue.(type) {
-				case *interpreter.IDCapabilityValue:
+				case interpreter.CapabilityValue:
 					capabilityValue = readValue
+
+				case interpreter.PathLinkValue: //nolint:staticcheck
+					// If the stored value is a path link,
+					// it failed to be migrated during the Cadence 1.0 migration.
+					// Use an invalid capability value instead
+
+					capabilityValue = interpreter.NewInvalidCapabilityValue(
+						inter,
+						addressValue,
+						readValue.Type,
+					)
 
 				default:
 					panic(errors.NewUnreachableError())
@@ -3656,7 +3661,7 @@ func newAccountCapabilitiesUnpublishFunction(
 					nil,
 					nil,
 					false, // capabilityValue is an element of storage map.
-				).(*interpreter.IDCapabilityValue)
+				).(interpreter.CapabilityValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3935,24 +3940,44 @@ func newAccountCapabilitiesGetFunction(
 					return failValue
 				}
 
-				var readCapabilityValue *interpreter.IDCapabilityValue
-
+				var (
+					capabilityID               interpreter.UInt64Value
+					capabilityAddress          interpreter.AddressValue
+					capabilityStaticBorrowType interpreter.StaticType
+				)
 				switch readValue := readValue.(type) {
 				case *interpreter.IDCapabilityValue:
-					readCapabilityValue = readValue
+					capabilityID = readValue.ID
+					capabilityAddress = readValue.Address()
+					capabilityStaticBorrowType = readValue.BorrowType
+
+				case *interpreter.PathCapabilityValue:
+					capabilityID = interpreter.InvalidCapabilityID
+					capabilityAddress = readValue.Address()
+					capabilityStaticBorrowType = readValue.BorrowType
+					if capabilityStaticBorrowType == nil {
+						capabilityStaticBorrowType = &interpreter.ReferenceStaticType{
+							Authorization:  interpreter.UnauthorizedAccess,
+							ReferencedType: interpreter.PrimitiveStaticTypeNever,
+						}
+					}
+
+				case interpreter.PathLinkValue: //nolint:staticcheck
+					// If the stored value is a path link,
+					// it failed to be migrated during the Cadence 1.0 migration.
+					capabilityID = interpreter.InvalidCapabilityID
+					capabilityAddress = addressValue
+					capabilityStaticBorrowType = readValue.Type
 
 				default:
 					panic(errors.NewUnreachableError())
 				}
 
 				capabilityBorrowType, ok :=
-					inter.MustConvertStaticToSemaType(readCapabilityValue.BorrowType).(*sema.ReferenceType)
+					inter.MustConvertStaticToSemaType(capabilityStaticBorrowType).(*sema.ReferenceType)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-
-				capabilityID := readCapabilityValue.ID
-				capabilityAddress := readCapabilityValue.Address()
 
 				var resultValue interpreter.Value
 				if borrow {
