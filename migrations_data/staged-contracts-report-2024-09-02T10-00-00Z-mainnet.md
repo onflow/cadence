@@ -21,7 +21,7 @@ Date: 02 Sep, 2024
 Height: 85853770
 ID: 8082e96ba40faf6a94ef9d1b0fda5878e86d8e076c9f9a24d5057d2265483f39
 ParentID: fea95c361a58bd1beab0ad2cdb50c24fe967a657ec60e1cc12d4fdc3f3847757
-State Commitment: deeefea22810de9514758965bfa188ce2c43747e66cc3e251c4dc9fafabb8b7f
+State Commitment: e0b1ea64768b55cbaab3b5c9cb7ad00251adf33a706192e4e7a46a14b56d1d52
 ```
 ## Migration Report
 
