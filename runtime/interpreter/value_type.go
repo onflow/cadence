@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"strings"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -197,6 +199,42 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 			interpreter,
 			addressValue,
 		)
+
+	case sema.MetaTypeContractNameFieldName:
+		staticType := v.Type
+		if staticType == nil {
+			return Nil
+		}
+
+		location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(staticType.ID()))
+		if err != nil || location == nil {
+			return Nil
+		}
+
+		switch location.(type) {
+		case common.AddressLocation,
+			common.StringLocation:
+
+			separatorIndex := strings.Index(qualifiedIdentifier, ".")
+			contractNameLength := len(qualifiedIdentifier)
+			if separatorIndex >= 0 {
+				contractNameLength = separatorIndex
+			}
+
+			contractNameValue := NewStringValue(
+				interpreter,
+				common.NewStringMemoryUsage(contractNameLength),
+				func() string {
+					return qualifiedIdentifier[0:contractNameLength]
+				},
+			)
+
+			return NewSomeValueNonCopying(interpreter, contractNameValue)
+
+		default:
+			return Nil
+		}
+
 	}
 
 	return nil

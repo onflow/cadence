@@ -330,3 +330,14 @@ func TestCheckMetaTypeAddress(t *testing.T) {
     `)
 	require.NoError(t, err)
 }
+
+func TestCheckMetaTypeContractName(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      let type: Type = Type<Int>()
+      let contractName: String = type.contractName!
+    `)
+	require.NoError(t, err)
+}
