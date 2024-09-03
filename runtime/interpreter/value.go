@@ -459,6 +459,32 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		}
 
 		return AsBoolValue(elaboration.IsRecovered)
+
+	case sema.MetaTypeAddressFieldName:
+		staticType := v.Type
+		if staticType == nil {
+			return Nil
+		}
+
+		location, _, err := common.DecodeTypeID(interpreter, string(staticType.ID()))
+		if err != nil || location == nil {
+			return Nil
+		}
+
+		addressLocation, ok := location.(common.AddressLocation)
+		if !ok {
+			return Nil
+		}
+
+		addressValue := NewAddressValue(
+			interpreter,
+			addressLocation.Address,
+		)
+		return NewSomeValueNonCopying(
+			interpreter,
+			addressValue,
+		)
+
 	}
 
 	return nil
