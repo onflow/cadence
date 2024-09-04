@@ -37,13 +37,14 @@ type CapabilityValue interface {
 	MemberAccessibleValue
 	atree.Storable
 	isCapabilityValue()
+	Address() AddressValue
 }
 
 // IDCapabilityValue
 
 type IDCapabilityValue struct {
 	BorrowType StaticType
-	Address    AddressValue
+	address    AddressValue
 	ID         UInt64Value
 }
 
@@ -54,7 +55,7 @@ func NewUnmeteredCapabilityValue(
 ) *IDCapabilityValue {
 	return &IDCapabilityValue{
 		ID:         id,
-		Address:    address,
+		address:    address,
 		BorrowType: borrowType,
 	}
 }
@@ -79,7 +80,7 @@ func NewInvalidCapabilityValue(
 	common.UseMemory(memoryGauge, common.CapabilityValueMemoryUsage)
 	return &IDCapabilityValue{
 		ID:         InvalidCapabilityID,
-		Address:    address,
+		address:    address,
 		BorrowType: borrowType,
 	}
 }
@@ -104,7 +105,7 @@ func (v *IDCapabilityValue) Accept(interpreter *Interpreter, visitor Visitor, _ 
 
 func (v *IDCapabilityValue) Walk(_ *Interpreter, walkChild func(Value), _ LocationRange) {
 	walkChild(v.ID)
-	walkChild(v.Address)
+	walkChild(v.address)
 }
 
 func (v *IDCapabilityValue) StaticType(inter *Interpreter) StaticType {
@@ -125,7 +126,7 @@ func (v *IDCapabilityValue) String() string {
 func (v *IDCapabilityValue) RecursiveString(seenReferences SeenReferences) string {
 	return format.Capability(
 		v.BorrowType.String(),
-		v.Address.RecursiveString(seenReferences),
+		v.address.RecursiveString(seenReferences),
 		v.ID.RecursiveString(seenReferences),
 	)
 }
@@ -135,7 +136,7 @@ func (v *IDCapabilityValue) MeteredString(interpreter *Interpreter, seenReferenc
 
 	return format.Capability(
 		v.BorrowType.MeteredString(interpreter),
-		v.Address.MeteredString(interpreter, seenReferences, locationRange),
+		v.address.MeteredString(interpreter, seenReferences, locationRange),
 		v.ID.MeteredString(interpreter, seenReferences, locationRange),
 	)
 }
@@ -145,15 +146,15 @@ func (v *IDCapabilityValue) GetMember(interpreter *Interpreter, _ LocationRange,
 	case sema.CapabilityTypeBorrowFunctionName:
 		// this function will panic already if this conversion fails
 		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-		return interpreter.capabilityBorrowFunction(v, v.Address, v.ID, borrowType)
+		return interpreter.capabilityBorrowFunction(v, v.address, v.ID, borrowType)
 
 	case sema.CapabilityTypeCheckFunctionName:
 		// this function will panic already if this conversion fails
 		borrowType, _ := interpreter.MustConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
-		return interpreter.capabilityCheckFunction(v, v.Address, v.ID, borrowType)
+		return interpreter.capabilityCheckFunction(v, v.address, v.ID, borrowType)
 
 	case sema.CapabilityTypeAddressFieldName:
-		return v.Address
+		return v.address
 
 	case sema.CapabilityTypeIDFieldName:
 		return v.ID
@@ -187,12 +188,16 @@ func (v *IDCapabilityValue) Equal(interpreter *Interpreter, locationRange Locati
 	}
 
 	return otherCapability.ID == v.ID &&
-		otherCapability.Address.Equal(interpreter, locationRange, v.Address) &&
+		otherCapability.address.Equal(interpreter, locationRange, v.address) &&
 		otherCapability.BorrowType.Equal(v.BorrowType)
 }
 
 func (*IDCapabilityValue) IsStorable() bool {
 	return true
+}
+
+func (v *IDCapabilityValue) Address() AddressValue {
+	return v.address
 }
 
 func (v *IDCapabilityValue) Storable(
@@ -235,13 +240,13 @@ func (v *IDCapabilityValue) Transfer(
 func (v *IDCapabilityValue) Clone(interpreter *Interpreter) Value {
 	return NewUnmeteredCapabilityValue(
 		v.ID,
-		v.Address.Clone(interpreter).(AddressValue),
+		v.address.Clone(interpreter).(AddressValue),
 		v.BorrowType,
 	)
 }
 
 func (v *IDCapabilityValue) DeepRemove(interpreter *Interpreter, _ bool) {
-	v.Address.DeepRemove(interpreter, false)
+	v.address.DeepRemove(interpreter, false)
 }
 
 func (v *IDCapabilityValue) ByteSize() uint32 {
@@ -254,6 +259,6 @@ func (v *IDCapabilityValue) StoredValue(_ atree.SlabStorage) (atree.Value, error
 
 func (v *IDCapabilityValue) ChildStorables() []atree.Storable {
 	return []atree.Storable{
-		v.Address,
+		v.address,
 	}
 }

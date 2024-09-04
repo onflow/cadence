@@ -339,7 +339,7 @@ func (m *LinkValueMigration) getPathCapabilityFinalTarget(
 				reference := stdlib.GetCheckedCapabilityControllerReference(
 					inter,
 					locationRange,
-					value.Address,
+					value.Address(),
 					value.ID,
 					wantedBorrowType,
 					capabilityBorrowType,

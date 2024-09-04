@@ -567,19 +567,36 @@ func TestRuntimeExportValue(t *testing.T) {
 			invalid: true,
 		},
 		{
-			label: "path capability",
-			value: &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: interpreter.PrimitiveStaticTypeAnyResource,
-				Path: interpreter.PathValue{
+			label: "path capability, typed",
+			value: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				interpreter.PrimitiveStaticTypeAnyResource,
+				interpreter.AddressValue{0x1},
+				interpreter.PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
-				Address: interpreter.AddressValue{0x1},
-			},
+			),
 			expected: cadence.NewDeprecatedPathCapability( //nolint:staticcheck
 				cadence.Address{0x1},
 				cadence.MustNewPath(common.PathDomainStorage, "foo"),
 				cadence.AnyResourceType,
+			),
+		},
+		{
+			label: "path capability, untyped",
+			value: interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				// NOTE: no borrow type
+				nil,
+				interpreter.AddressValue{0x1},
+				interpreter.PathValue{
+					Domain:     common.PathDomainStorage,
+					Identifier: "foo",
+				},
+			),
+			expected: cadence.NewDeprecatedPathCapability( //nolint:staticcheck
+				cadence.Address{0x1},
+				cadence.MustNewPath(common.PathDomainStorage, "foo"),
+				nil,
 			),
 		},
 	} {

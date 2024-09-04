@@ -192,7 +192,7 @@ func (testCapMigration) Migrate(
 		return interpreter.NewCapabilityValue(
 			nil,
 			value.ID+10,
-			value.Address,
+			value.Address(),
 			value.BorrowType,
 		), nil
 	}
@@ -2308,14 +2308,14 @@ func TestPublishedValueMigration(t *testing.T) {
 		interpreter.NewPublishedValue(
 			nil,
 			interpreter.AddressValue(testAddress),
-			&interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: nil,
-				Path: interpreter.PathValue{
+			interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				nil,
+				interpreter.AddressValue{0x2},
+				interpreter.PathValue{
 					Domain:     common.PathDomainStorage,
 					Identifier: "foo",
 				},
-				Address: interpreter.AddressValue{0x2},
-			},
+			),
 		),
 	)
 

@@ -1064,18 +1064,18 @@ func TestMigratingValuesWithAccountStaticType(t *testing.T) {
 		},
 		"path_capability_value": {
 			storedValue: func(_ *interpreter.Interpreter) interpreter.Value {
-				return &interpreter.PathCapabilityValue{ //nolint:staticcheck
-					Address:    interpreter.NewAddressValue(nil, common.Address{0x42}),
-					Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
-					BorrowType: interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
-				}
+				return interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+					interpreter.PrimitiveStaticTypePublicAccount, //nolint:staticcheck
+					interpreter.NewAddressValue(nil, common.Address{0x42}),
+					interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
+				)
 			},
 			expectedValue: func(_ *interpreter.Interpreter) interpreter.Value {
-				return &interpreter.PathCapabilityValue{ //nolint:staticcheck
-					Address:    interpreter.NewAddressValue(nil, common.Address{0x42}),
-					Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
-					BorrowType: unauthorizedAccountReferenceType,
-				}
+				return interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+					unauthorizedAccountReferenceType,
+					interpreter.NewAddressValue(nil, common.Address{0x42}),
+					interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "v1"),
+				)
 			},
 			validateStorage: true,
 		},

@@ -200,10 +200,23 @@ func TestDecodeInvalidAddress(t *testing.T) {
 
 	t.Parallel()
 
-	msg := `{"type":"Address","value":"000000000102030405"}`
+	t.Run("valid UTF-8 prefix", func(t *testing.T) {
+		t.Parallel()
 
-	_, err := Decode(nil, []byte(msg))
-	require.ErrorContains(t, err, "invalid address prefix: (shown as hex) expected 3078, got 3030")
+		msg := `{"type":"Address","value":"000000000102030405"}`
+
+		_, err := Decode(nil, []byte(msg))
+		require.ErrorContains(t, err, "invalid address prefix: expected 0x, got 00")
+	})
+
+	t.Run("invalid UTF-8 prefix", func(t *testing.T) {
+		t.Parallel()
+
+		msg := `{"type":"Address","value":"\u1234"}`
+
+		_, err := Decode(nil, []byte(msg))
+		require.ErrorContains(t, err, "invalid address prefix: (shown as hex) expected 3078, got e188")
+	})
 }
 
 func TestEncodeInt(t *testing.T) {

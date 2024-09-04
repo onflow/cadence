@@ -3543,3 +3543,45 @@ func TestInterpretResourceReferenceInvalidation(t *testing.T) {
 		require.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
 	})
 }
+
+func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
+
+	t.Parallel()
+
+	inter, err := parseCheckAndInterpretWithOptions(t,
+		`
+          access(all) resource R {
+               access(all) let answer: Int
+               init() {
+                   self.answer = 42
+               }
+          }
+
+          access(all) fun main(): Int {
+              let rs <- [<- create R(), nil]
+              rs[1] <-! (nil ?? rs[0])
+              let r1 <- rs.remove(at:0)!
+              let r2 <- rs.remove(at:0)!
+              let answer1 = r1.answer
+              let answer2 = r2.answer
+              destroy r1
+              destroy r2
+              destroy rs
+              return answer1 + answer2
+	    }
+	    `,
+		ParseCheckAndInterpretOptions{
+			HandleCheckerError: func(err error) {
+				errs := checker.RequireCheckerErrors(t, err, 1)
+				assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("main")
+	require.Error(t, err)
+
+	var destroyedResourceErr interpreter.DestroyedResourceError
+	require.ErrorAs(t, err, &destroyedResourceErr)
+}

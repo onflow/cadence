@@ -279,7 +279,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
 			removedValue := dictionary.Remove(inter, interpreter.EmptyLocationRange, orgKey)
 
-			assert.IsType(t, &interpreter.SomeValue{}, removedValue)
+			require.IsType(t, &interpreter.SomeValue{}, removedValue)
 			someValue := removedValue.(*interpreter.SomeValue)
 
 			// Removed value must be same as the original value
@@ -339,7 +339,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 		newEntries.foreach(func(orgKey, orgValue interpreter.Value) (exit bool) {
 			removedValue := dictionary.Remove(inter, interpreter.EmptyLocationRange, orgKey)
 
-			assert.IsType(t, &interpreter.SomeValue{}, removedValue)
+			require.IsType(t, &interpreter.SomeValue{}, removedValue)
 			someValue := removedValue.(*interpreter.SomeValue)
 
 			// Removed value must be same as the original value
@@ -357,6 +357,79 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 		// Storage size after removals should be same as the size before insertion.
 		assert.Equal(t, startingStorageSize, storageSize)
 		assert.Equal(t, startingSlabCounts, slabCounts)
+	})
+
+	t.Run("update enum key", func(t *testing.T) {
+
+		dictionary := interpreter.NewDictionaryValueWithAddress(
+			inter,
+			interpreter.EmptyLocationRange,
+			&interpreter.DictionaryStaticType{
+				KeyType:   interpreter.PrimitiveStaticTypeAnyStruct,
+				ValueType: interpreter.PrimitiveStaticTypeAnyStruct,
+			},
+			orgOwner,
+		)
+
+		require.Equal(t, 0, dictionary.Count())
+
+		value1 := interpreter.NewUnmeteredIntValueFromInt64(1)
+		value2 := interpreter.NewUnmeteredIntValueFromInt64(2)
+
+		keys := make([]interpreter.Value, numberOfValues)
+		for i := 0; i < numberOfValues; i++ {
+			// Create a random enum as key
+			key := r.generateRandomHashableValue(inter, randomValueKindEnum)
+
+			keys[i] = key
+		}
+
+		// Insert
+		for _, key := range keys {
+			dictionary.Insert(
+				inter,
+				interpreter.EmptyLocationRange,
+				// Need to clone the key, as it is transferred, and we want to keep using it.
+				key.Clone(inter),
+				// Always insert value1
+				value1,
+			)
+		}
+
+		// Update
+		for _, key := range keys {
+			oldValue := dictionary.Insert(
+				inter,
+				interpreter.EmptyLocationRange,
+				// Need to clone the key, as it is transferred, and we want to keep using it.
+				key.Clone(inter),
+				// Change all value1 to value2
+				value2,
+			)
+
+			require.IsType(t, &interpreter.SomeValue{}, oldValue)
+			someValue := oldValue.(*interpreter.SomeValue)
+
+			// Removed value must be same as the original value
+			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			utils.AssertValuesEqual(t, inter, value1, innerValue)
+		}
+
+		// Check the values
+		for _, key := range keys {
+			readValue := dictionary.GetKey(
+				inter,
+				interpreter.EmptyLocationRange,
+				key,
+			)
+
+			require.IsType(t, &interpreter.SomeValue{}, readValue)
+			someValue := readValue.(*interpreter.SomeValue)
+
+			// Read value must be updated value
+			innerValue := someValue.InnerValue(inter, interpreter.EmptyLocationRange)
+			utils.AssertValuesEqual(t, inter, value2, innerValue)
+		}
 	})
 
 	t.Run("random insert & remove", func(t *testing.T) {
@@ -437,7 +510,7 @@ func TestInterpretRandomMapOperations(t *testing.T) {
 
 				removedValue := dictionary.Remove(inter, interpreter.EmptyLocationRange, key)
 
-				assert.IsType(t, &interpreter.SomeValue{}, removedValue)
+				require.IsType(t, &interpreter.SomeValue{}, removedValue)
 				someValue := removedValue.(*interpreter.SomeValue)
 
 				// Removed value must be same as the original value

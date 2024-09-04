@@ -164,7 +164,7 @@ func (m *CapabilityValueMigration) migratePathCapabilityValue(
 
 	newCapability := interpreter.NewUnmeteredCapabilityValue(
 		capabilityID,
-		oldCapability.Address,
+		oldCapability.Address(),
 		newBorrowType,
 	)
 

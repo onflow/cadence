@@ -1470,6 +1470,32 @@ func newAccountContractsChangeFunction(
 	}
 }
 
+type OldProgramError struct {
+	Err      error
+	Location common.Location
+}
+
+var _ errors.UserError = &OldProgramError{}
+var _ errors.ParentError = &OldProgramError{}
+
+func (e *OldProgramError) IsUserError() {}
+
+func (e *OldProgramError) Error() string {
+	return "problem with old program"
+}
+
+func (e *OldProgramError) Unwrap() error {
+	return e.Err
+}
+
+func (e *OldProgramError) ChildErrors() []error {
+	return []error{e.Err}
+}
+
+func (e *OldProgramError) ImportLocation() common.Location {
+	return e.Location
+}
+
 func changeAccountContracts(
 	invocation interpreter.Invocation,
 	handler AccountContractAdditionAndNamesHandler,
@@ -1494,7 +1520,7 @@ func changeAccountContracts(
 	constructorArguments := invocation.Arguments[requiredArgumentCount:]
 	constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
 
-	code, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, newCodeValue, locationRange)
+	newCode, err := interpreter.ByteArrayValueToByteSlice(invocation.Interpreter, newCodeValue, locationRange)
 	if err != nil {
 		panic(errors.NewDefaultUserError("add requires the second argument to be an array"))
 	}
@@ -1548,12 +1574,13 @@ func changeAccountContracts(
 	}
 
 	// Check the code
-	handleContractUpdateError := func(err error) {
+	handleContractUpdateError := func(err error, code []byte) {
 		if err == nil {
 			return
 		}
 
-		// Update the code for the error pretty printing
+		// Update the code for the error pretty printing.
+		// The code may be the new code, or the old code if this is an update.
 		// NOTE: only do this when an error occurs
 
 		handler.TemporarilyRecordCode(location, code)
@@ -1573,11 +1600,11 @@ func changeAccountContracts(
 	const getAndSetProgram = false
 
 	program, err := handler.ParseAndCheckProgram(
-		code,
+		newCode,
 		location,
 		getAndSetProgram,
 	)
-	handleContractUpdateError(err)
+	handleContractUpdateError(err, newCode)
 
 	// The code may declare exactly one contract or one contract interface.
 
@@ -1621,7 +1648,7 @@ func changeAccountContracts(
 		// Update the code for the error pretty printing
 		// NOTE: only do this when an error occurs
 
-		handler.TemporarilyRecordCode(location, code)
+		handler.TemporarilyRecordCode(location, newCode)
 
 		panic(errors.NewDefaultUserError(
 			"invalid %s: the code must declare exactly one contract or contract interface",
@@ -1636,7 +1663,7 @@ func changeAccountContracts(
 		// Update the code for the error pretty printing
 		// NOTE: only do this when an error occurs
 
-		handler.TemporarilyRecordCode(location, code)
+		handler.TemporarilyRecordCode(location, newCode)
 
 		panic(errors.NewDefaultUserError(
 			"invalid %s: the name argument must match the name of the declaration: got %q, expected %q",
@@ -1652,7 +1679,7 @@ func changeAccountContracts(
 
 	if isUpdate {
 		oldCode, err := handler.GetAccountContractCode(location)
-		handleContractUpdateError(err)
+		handleContractUpdateError(err, newCode)
 
 		memoryGauge := invocation.Interpreter.SharedState.Config.MemoryGauge
 		legacyUpgradeEnabled := invocation.Interpreter.SharedState.Config.LegacyContractUpgradeEnabled
@@ -1679,8 +1706,14 @@ func changeAccountContracts(
 			)
 		}
 
-		if !ignoreUpdatedProgramParserError(err) {
-			handleContractUpdateError(err)
+		if err != nil && !ignoreUpdatedProgramParserError(err) {
+			// NOTE: Errors are usually in the new program / new code,
+			// but here we failed for the old program / old code.
+			err = &OldProgramError{
+				Err:      err,
+				Location: location,
+			}
+			handleContractUpdateError(err, oldCode)
 		}
 
 		var validator UpdateValidator
@@ -1706,14 +1739,14 @@ func changeAccountContracts(
 		validator = validator.WithTypeRemovalEnabled(contractUpdateTypeRemovalEnabled)
 
 		err = validator.Validate()
-		handleContractUpdateError(err)
+		handleContractUpdateError(err, newCode)
 	}
 
 	err = updateAccountContractCode(
 		handler,
 		location,
 		program,
-		code,
+		newCode,
 		contractType,
 		constructorArguments,
 		constructorArgumentTypes,
@@ -1725,7 +1758,7 @@ func changeAccountContracts(
 		// Update the code for the error pretty printing
 		// NOTE: only do this when an error occurs
 
-		handler.TemporarilyRecordCode(location, code)
+		handler.TemporarilyRecordCode(location, newCode)
 
 		panic(err)
 	}
@@ -1738,7 +1771,7 @@ func changeAccountContracts(
 		eventType = AccountContractAddedEventType
 	}
 
-	codeHashValue := CodeToHashValue(inter, code)
+	codeHashValue := CodeToHashValue(inter, newCode)
 
 	handler.EmitEvent(
 		inter,
@@ -3485,18 +3518,12 @@ func newAccountCapabilitiesPublishFunction(
 
 				// Get capability argument
 
-				var capabilityValue *interpreter.IDCapabilityValue
-
-				firstValue := invocation.Arguments[0]
-				switch firstValue := firstValue.(type) {
-				case *interpreter.IDCapabilityValue:
-					capabilityValue = firstValue
-
-				default:
+				capabilityValue, ok := invocation.Arguments[0].(interpreter.CapabilityValue)
+				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				capabilityAddressValue := capabilityValue.Address
+				capabilityAddressValue := capabilityValue.Address()
 				if capabilityAddressValue != accountAddressValue {
 					panic(interpreter.CapabilityAddressPublishingError{
 						LocationRange:     locationRange,
@@ -3539,7 +3566,7 @@ func newAccountCapabilitiesPublishFunction(
 					nil,
 					nil,
 					true, // capabilityValue is standalone because it is from invocation.Arguments[0].
-				).(*interpreter.IDCapabilityValue)
+				).(interpreter.CapabilityValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3606,10 +3633,21 @@ func newAccountCapabilitiesUnpublishFunction(
 					return interpreter.Nil
 				}
 
-				var capabilityValue *interpreter.IDCapabilityValue
+				var capabilityValue interpreter.CapabilityValue
 				switch readValue := readValue.(type) {
-				case *interpreter.IDCapabilityValue:
+				case interpreter.CapabilityValue:
 					capabilityValue = readValue
+
+				case interpreter.PathLinkValue: //nolint:staticcheck
+					// If the stored value is a path link,
+					// it failed to be migrated during the Cadence 1.0 migration.
+					// Use an invalid capability value instead
+
+					capabilityValue = interpreter.NewInvalidCapabilityValue(
+						inter,
+						addressValue,
+						readValue.Type,
+					)
 
 				default:
 					panic(errors.NewUnreachableError())
@@ -3623,7 +3661,7 @@ func newAccountCapabilitiesUnpublishFunction(
 					nil,
 					nil,
 					false, // capabilityValue is an element of storage map.
-				).(*interpreter.IDCapabilityValue)
+				).(interpreter.CapabilityValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3902,24 +3940,44 @@ func newAccountCapabilitiesGetFunction(
 					return failValue
 				}
 
-				var readCapabilityValue *interpreter.IDCapabilityValue
-
+				var (
+					capabilityID               interpreter.UInt64Value
+					capabilityAddress          interpreter.AddressValue
+					capabilityStaticBorrowType interpreter.StaticType
+				)
 				switch readValue := readValue.(type) {
 				case *interpreter.IDCapabilityValue:
-					readCapabilityValue = readValue
+					capabilityID = readValue.ID
+					capabilityAddress = readValue.Address()
+					capabilityStaticBorrowType = readValue.BorrowType
+
+				case *interpreter.PathCapabilityValue: //nolint:staticcheck
+					capabilityID = interpreter.InvalidCapabilityID
+					capabilityAddress = readValue.Address()
+					capabilityStaticBorrowType = readValue.BorrowType
+					if capabilityStaticBorrowType == nil {
+						capabilityStaticBorrowType = &interpreter.ReferenceStaticType{
+							Authorization:  interpreter.UnauthorizedAccess,
+							ReferencedType: interpreter.PrimitiveStaticTypeNever,
+						}
+					}
+
+				case interpreter.PathLinkValue: //nolint:staticcheck
+					// If the stored value is a path link,
+					// it failed to be migrated during the Cadence 1.0 migration.
+					capabilityID = interpreter.InvalidCapabilityID
+					capabilityAddress = addressValue
+					capabilityStaticBorrowType = readValue.Type
 
 				default:
 					panic(errors.NewUnreachableError())
 				}
 
 				capabilityBorrowType, ok :=
-					inter.MustConvertStaticToSemaType(readCapabilityValue.BorrowType).(*sema.ReferenceType)
+					inter.MustConvertStaticToSemaType(capabilityStaticBorrowType).(*sema.ReferenceType)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
-
-				capabilityID := readCapabilityValue.ID
-				capabilityAddress := readCapabilityValue.Address
 
 				var resultValue interpreter.Value
 				if borrow {

@@ -2194,12 +2194,12 @@ func (interpreter *Interpreter) convert(value Value, valueType, targetType sema.
 				valueBorrowType := capability.BorrowType.(*ReferenceStaticType)
 				borrowType := interpreter.convertStaticType(valueBorrowType, targetBorrowType)
 				if capability.isInvalid() {
-					return NewInvalidCapabilityValue(interpreter, capability.Address, borrowType)
+					return NewInvalidCapabilityValue(interpreter, capability.address, borrowType)
 				}
 				return NewCapabilityValue(
 					interpreter,
 					capability.ID,
-					capability.Address,
+					capability.address,
 					borrowType,
 				)
 			default:
@@ -4244,7 +4244,7 @@ func (interpreter *Interpreter) checkValue(
 		_ = interpreter.SharedState.Config.CapabilityCheckHandler(
 			interpreter,
 			locationRange,
-			capability.Address,
+			capability.address,
 			capability.ID,
 			referenceType,
 			referenceType,
