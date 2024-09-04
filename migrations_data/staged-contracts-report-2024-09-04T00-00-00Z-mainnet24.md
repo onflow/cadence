@@ -3,9 +3,7 @@ Date: 04 September, 2024
 
 ## Stats
 * 1705 contracts staged, 1694 successfully upgraded, 11 failed to upgrade
-* Mainnet State Snapshot: 
 * Flow-go build: v0.37.10-pr6434-2
-
 
 ## Last Sealed Block
 ```
