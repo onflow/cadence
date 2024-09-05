@@ -1132,3 +1132,16 @@ func (ReferencedValueChangedError) IsUserError() {}
 func (e ReferencedValueChangedError) Error() string {
 	return "referenced value has been changed after taking the reference"
 }
+
+// GetCapabilityError
+type GetCapabilityError struct {
+	LocationRange
+}
+
+var _ errors.UserError = GetCapabilityError{}
+
+func (GetCapabilityError) IsUserError() {}
+
+func (e GetCapabilityError) Error() string {
+	return "cannot get capability"
+}

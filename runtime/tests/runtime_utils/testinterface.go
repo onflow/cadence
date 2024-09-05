@@ -116,12 +116,20 @@ type TestRuntimeInterface struct {
 		duration time.Duration,
 		attrs []attribute.KeyValue,
 	)
-	OnMeterMemory       func(usage common.MemoryUsage) error
-	OnComputationUsed   func() (uint64, error)
-	OnMemoryUsed        func() (uint64, error)
-	OnInteractionUsed   func() (uint64, error)
-	OnGenerateAccountID func(address common.Address) (uint64, error)
-	OnRecoverProgram    func(program *ast.Program, location common.Location) ([]byte, error)
+	OnMeterMemory                    func(usage common.MemoryUsage) error
+	OnComputationUsed                func() (uint64, error)
+	OnMemoryUsed                     func() (uint64, error)
+	OnInteractionUsed                func() (uint64, error)
+	OnGenerateAccountID              func(address common.Address) (uint64, error)
+	OnRecoverProgram                 func(program *ast.Program, location common.Location) ([]byte, error)
+	OnValidateAccountCapabilitiesGet func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		wantedBorrowType *sema.ReferenceType,
+		capabilityBorrowType *sema.ReferenceType,
+	) (bool, error)
 
 	lastUUID            uint64
 	accountIDs          map[common.Address]uint64
@@ -613,4 +621,25 @@ func (i *TestRuntimeInterface) RecoverProgram(program *ast.Program, location com
 		return nil, nil
 	}
 	return i.OnRecoverProgram(program, location)
+}
+
+func (i *TestRuntimeInterface) ValidateAccountCapabilitiesGet(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	address interpreter.AddressValue,
+	path interpreter.PathValue,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) (bool, error) {
+	if i.OnValidateAccountCapabilitiesGet == nil {
+		return true, nil
+	}
+	return i.OnValidateAccountCapabilitiesGet(
+		inter,
+		locationRange,
+		address,
+		path,
+		wantedBorrowType,
+		capabilityBorrowType,
+	)
 }

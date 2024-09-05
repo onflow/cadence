@@ -155,6 +155,16 @@ type AccountHandlerFunc func(
 	address AddressValue,
 ) Value
 
+// ValidateAccountCapabilitiesGetHandlerFunc is a function that is used to handle when a capability of an account is got.
+type ValidateAccountCapabilitiesGetHandlerFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	path PathValue,
+	wantedBorrowType *sema.ReferenceType,
+	capabilityBorrowType *sema.ReferenceType,
+) (bool, error)
+
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() (uint64, error)
 

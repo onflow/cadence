@@ -185,16 +185,17 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled),
 		// see interpreterEnvironment.CommitStorage
-		AtreeStorageValidationEnabled:    false,
-		Debugger:                         e.config.Debugger,
-		OnStatement:                      e.newOnStatementHandler(),
-		OnMeterComputation:               e.newOnMeterComputation(),
-		OnFunctionInvocation:             e.newOnFunctionInvocationHandler(),
-		OnInvokedFunctionReturn:          e.newOnInvokedFunctionReturnHandler(),
-		CapabilityBorrowHandler:          e.newCapabilityBorrowHandler(),
-		CapabilityCheckHandler:           e.newCapabilityCheckHandler(),
-		LegacyContractUpgradeEnabled:     e.config.LegacyContractUpgradeEnabled,
-		ContractUpdateTypeRemovalEnabled: e.config.ContractUpdateTypeRemovalEnabled,
+		AtreeStorageValidationEnabled:         false,
+		Debugger:                              e.config.Debugger,
+		OnStatement:                           e.newOnStatementHandler(),
+		OnMeterComputation:                    e.newOnMeterComputation(),
+		OnFunctionInvocation:                  e.newOnFunctionInvocationHandler(),
+		OnInvokedFunctionReturn:               e.newOnInvokedFunctionReturnHandler(),
+		CapabilityBorrowHandler:               e.newCapabilityBorrowHandler(),
+		CapabilityCheckHandler:                e.newCapabilityCheckHandler(),
+		LegacyContractUpgradeEnabled:          e.config.LegacyContractUpgradeEnabled,
+		ContractUpdateTypeRemovalEnabled:      e.config.ContractUpdateTypeRemovalEnabled,
+		ValidateAccountCapabilitiesGetHandler: e.newValidateAccountCapabilitiesGetHandler(),
 	}
 }
 
@@ -1395,5 +1396,35 @@ func (e *interpreterEnvironment) newCapabilityCheckHandler() interpreter.Capabil
 			capabilityBorrowType,
 			e,
 		)
+	}
+}
+
+func (e *interpreterEnvironment) newValidateAccountCapabilitiesGetHandler() interpreter.ValidateAccountCapabilitiesGetHandlerFunc {
+	return func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		wantedBorrowType *sema.ReferenceType,
+		capabilityBorrowType *sema.ReferenceType,
+	) (bool, error) {
+		var (
+			ok  bool
+			err error
+		)
+		errors.WrapPanic(func() {
+			ok, err = e.runtimeInterface.ValidateAccountCapabilitiesGet(
+				inter,
+				locationRange,
+				address,
+				path,
+				wantedBorrowType,
+				capabilityBorrowType,
+			)
+		})
+		if err != nil {
+			err = interpreter.WrappedExternalError(err)
+		}
+		return ok, err
 	}
 }

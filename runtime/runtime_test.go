@@ -10967,3 +10967,193 @@ func TestRuntimeAccountStorageBorrowEphemeralReferenceValue(t *testing.T) {
 	var nestedReferenceErr interpreter.NestedReferenceError
 	require.ErrorAs(t, err, &nestedReferenceErr)
 }
+
+func TestRuntimeForbidPublicEntitlementBorrow(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	script1 := []byte(`
+      transaction {
+
+        prepare(signer: auth (Storage, Capabilities) &Account) {
+          signer.storage.save(42, to: /storage/number)
+          let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+          signer.capabilities.publish(cap, at: /public/number)
+        }
+      }
+    `)
+
+	script2 := []byte(`
+      access(all)
+      fun main() {
+          let number = getAccount(0x1).capabilities.borrow<auth(Insert) &Int>(/public/number)
+          assert(number == nil)
+      }
+    `)
+
+	var loggedMessages []string
+	var events []cadence.Event
+	var validatedPaths []interpreter.PathValue
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{
+				common.MustBytesToAddress([]byte{0x1}),
+			}, nil
+		},
+		OnProgramLog: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnValidateAccountCapabilitiesGet: func(
+			inter *interpreter.Interpreter,
+			locationRange interpreter.LocationRange,
+			address interpreter.AddressValue,
+			path interpreter.PathValue,
+			wantedBorrowType *sema.ReferenceType,
+			capabilityBorrowType *sema.ReferenceType,
+		) (bool, error) {
+
+			validatedPaths = append(validatedPaths, path)
+
+			_, wantedHasEntitlements := wantedBorrowType.Authorization.(sema.EntitlementSetAccess)
+			return !wantedHasEntitlements, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nexScriptLocation := NewScriptLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nexScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]interpreter.PathValue{
+			{
+				Domain:     common.PathDomainPublic,
+				Identifier: "number",
+			},
+		},
+		validatedPaths,
+	)
+}
+
+func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	script1 := []byte(`
+      transaction {
+
+        prepare(signer: auth (Storage, Capabilities) &Account) {
+          signer.storage.save(42, to: /storage/number)
+          let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+          signer.capabilities.publish(cap, at: /public/number)
+        }
+      }
+    `)
+
+	script2 := []byte(`
+      access(all)
+      fun main() {
+          let cap = getAccount(0x1).capabilities.get<auth(Insert) &Int>(/public/number)
+          assert(cap.id == 0)
+      }
+    `)
+
+	var loggedMessages []string
+	var events []cadence.Event
+	var validatedPaths []interpreter.PathValue
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{
+				common.MustBytesToAddress([]byte{0x1}),
+			}, nil
+		},
+		OnProgramLog: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+		OnValidateAccountCapabilitiesGet: func(
+			inter *interpreter.Interpreter,
+			locationRange interpreter.LocationRange,
+			address interpreter.AddressValue,
+			path interpreter.PathValue,
+			wantedBorrowType *sema.ReferenceType,
+			capabilityBorrowType *sema.ReferenceType,
+		) (bool, error) {
+
+			validatedPaths = append(validatedPaths, path)
+
+			_, wantedHasEntitlements := wantedBorrowType.Authorization.(sema.EntitlementSetAccess)
+			return !wantedHasEntitlements, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nexScriptLocation := NewScriptLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nexScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]interpreter.PathValue{
+			{
+				Domain:     common.PathDomainPublic,
+				Identifier: "number",
+			},
+		},
+		validatedPaths,
+	)
+}

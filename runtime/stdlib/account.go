@@ -3865,7 +3865,7 @@ func CheckCapabilityController(
 func newAccountCapabilitiesGetFunction(
 	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
-	handler CapabilityControllerHandler,
+	controllerHandler CapabilityControllerHandler,
 	borrow bool,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
@@ -3979,6 +3979,24 @@ func newAccountCapabilitiesGetFunction(
 					panic(errors.NewUnreachableError())
 				}
 
+				getHandler := inter.SharedState.Config.ValidateAccountCapabilitiesGetHandler
+				if getHandler != nil {
+					valid, err := getHandler(
+						inter,
+						locationRange,
+						addressValue,
+						pathValue,
+						wantedBorrowType,
+						capabilityBorrowType,
+					)
+					if err != nil {
+						panic(err)
+					}
+					if !valid {
+						return failValue
+					}
+				}
+
 				var resultValue interpreter.Value
 				if borrow {
 					// When borrowing,
@@ -3992,7 +4010,7 @@ func newAccountCapabilitiesGetFunction(
 						capabilityID,
 						wantedBorrowType,
 						capabilityBorrowType,
-						handler,
+						controllerHandler,
 					)
 				} else {
 					// When not borrowing,
@@ -4005,7 +4023,7 @@ func newAccountCapabilitiesGetFunction(
 						capabilityID,
 						wantedBorrowType,
 						capabilityBorrowType,
-						handler,
+						controllerHandler,
 					)
 					if controller != nil {
 						resultBorrowStaticType :=
