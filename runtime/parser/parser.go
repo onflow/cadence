@@ -100,8 +100,13 @@ func Parse[T any](
 	config Config,
 ) (result T, errors []error) {
 	// create a lexer, which turns the input string into tokens
-	tokens := lexer.Lex(input, memoryGauge)
+	tokens, err := lexer.Lex(input, memoryGauge)
+	if err != nil {
+		errors = append(errors, err)
+		return
+	}
 	defer tokens.Reclaim()
+
 	return ParseTokenStream(
 		memoryGauge,
 		tokens,
@@ -127,29 +132,34 @@ func ParseTokenStream[T any](
 
 	defer func() {
 		if r := recover(); r != nil {
+			var err error
 			switch r := r.(type) {
 			case ParseError:
 				// Report parser errors.
 				p.report(r)
 
 			// Do not treat non-parser errors as syntax errors.
-			case errors.InternalError, errors.UserError:
-				// Also do not wrap non-parser errors, that are already
-				// known cadence errors. i.e: internal errors / user errors.
-				// e.g: `errors.MemoryError`
-				panic(r)
+			// Also do not wrap non-parser errors, that are already
+			// known cadence errors. i.e: internal errors / user errors.
+			// e.g: `errors.MemoryError`
+			case errors.UserError:
+				err = r
+			case errors.InternalError:
+				err = r
 			case error:
 				// Any other error/panic is an internal error.
 				// Thus, wrap with an UnexpectedError to mark it as an internal error
 				// and propagate up the call stack.
-				panic(errors.NewUnexpectedErrorFromCause(r))
+				err = errors.NewUnexpectedErrorFromCause(r)
 			default:
-				panic(errors.NewUnexpectedError("parser: %v", r))
+				err = errors.NewUnexpectedError("parser: %v", r)
 			}
 
 			var zero T
 			result = zero
 			errs = p.errors
+
+			errs = append(errs, err)
 		}
 
 		for _, bufferedErrors := range p.bufferedErrorsStack {
@@ -677,8 +687,12 @@ func ParseArgumentList(
 }
 
 func ParseProgram(memoryGauge common.MemoryGauge, code []byte, config Config) (program *ast.Program, err error) {
-	tokens := lexer.Lex(code, memoryGauge)
+	tokens, err := lexer.Lex(code, memoryGauge)
+	if err != nil {
+		return
+	}
 	defer tokens.Reclaim()
+
 	return ParseProgramFromTokenStream(memoryGauge, tokens, config)
 }
 

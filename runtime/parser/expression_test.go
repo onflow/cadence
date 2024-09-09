@@ -324,17 +324,11 @@ func TestParseAdvancedExpression(t *testing.T) {
 		gauge.debug = true
 		gauge.Limit(common.MemoryKindPosition, 11)
 
-		var panicMsg any
-		(func() {
-			defer func() {
-				panicMsg = recover()
-			}()
-			ParseExpression(gauge, []byte("1 < 2"), Config{})
-		})()
+		_, errs := ParseExpression(gauge, []byte("1 < 2"), Config{})
+		require.Len(t, errs, 1)
+		require.IsType(t, errors.MemoryError{}, errs[0])
 
-		require.IsType(t, errors.MemoryError{}, panicMsg)
-
-		fatalError, _ := panicMsg.(errors.MemoryError)
+		fatalError, _ := errs[0].(errors.MemoryError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})
@@ -346,18 +340,11 @@ func TestParseAdvancedExpression(t *testing.T) {
 		gauge := makeLimitingMemoryGauge()
 		gauge.Limit(common.MemoryKindIntegerExpression, 1)
 
-		var panicMsg any
-		(func() {
-			defer func() {
-				panicMsg = recover()
-			}()
+		_, errs := ParseExpression(gauge, []byte("1 < 2 > 3"), Config{})
+		require.Len(t, errs, 1)
+		require.IsType(t, errors.MemoryError{}, errs[0])
 
-			ParseExpression(gauge, []byte("1 < 2 > 3"), Config{})
-		})()
-
-		require.IsType(t, errors.MemoryError{}, panicMsg)
-
-		fatalError, _ := panicMsg.(errors.MemoryError)
+		fatalError, _ := errs[0].(errors.MemoryError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})

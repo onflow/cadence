@@ -732,18 +732,11 @@ func TestParseArgumentList(t *testing.T) {
 		gauge := makeLimitingMemoryGauge()
 		gauge.Limit(common.MemoryKindTypeToken, 0)
 
-		var panicMsg any
-		(func() {
-			defer func() {
-				panicMsg = recover()
-			}()
+		_, err := ParseArgumentList(gauge, []byte(`(1, b: true)`), Config{})
+		require.Len(t, err, 1)
+		require.IsType(t, errors.MemoryError{}, err[0])
 
-			ParseArgumentList(gauge, []byte(`(1, b: true)`), Config{})
-		})()
-
-		require.IsType(t, errors.MemoryError{}, panicMsg)
-
-		fatalError, _ := panicMsg.(errors.MemoryError)
+		fatalError, _ := err[0].(errors.MemoryError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})

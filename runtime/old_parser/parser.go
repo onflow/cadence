@@ -91,8 +91,13 @@ func Parse[T any](
 	config Config,
 ) (result T, errors []error) {
 	// create a lexer, which turns the input string into tokens
-	tokens := lexer.Lex(input, memoryGauge)
+	tokens, err := lexer.Lex(input, memoryGauge)
+	if err != nil {
+		errors = append(errors, err)
+		return
+	}
 	defer tokens.Reclaim()
+
 	return ParseTokenStream(
 		memoryGauge,
 		tokens,
@@ -637,8 +642,12 @@ func ParseArgumentList(
 }
 
 func ParseProgram(memoryGauge common.MemoryGauge, code []byte, config Config) (program *ast.Program, err error) {
-	tokens := lexer.Lex(code, memoryGauge)
+	tokens, err := lexer.Lex(code, memoryGauge)
+	if err != nil {
+		return
+	}
 	defer tokens.Reclaim()
+
 	return ParseProgramFromTokenStream(memoryGauge, tokens, config)
 }
 

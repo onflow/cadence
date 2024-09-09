@@ -522,9 +522,15 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 	err error,
 ) {
 	wrapParsingCheckingError := func(err error) error {
-		return &ParsingCheckingError{
-			Err:      err,
-			Location: location,
+		switch err.(type) {
+		// Wrap only parsing and checking errors.
+		case *sema.CheckerError, parser.Error:
+			return &ParsingCheckingError{
+				Err:      err,
+				Location: location,
+			}
+		default:
+			return err
 		}
 	}
 
