@@ -3870,3 +3870,43 @@ func TestInterpretDynamicCastingReferenceCasting(t *testing.T) {
 		}
 	})
 }
+func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("as?", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t,
+			fmt.Sprintf(`
+				 let x: Int? = 42
+				 let y: Int? = x %[1]s Int
+			   `,
+				"as?",
+			),
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
+
+	t.Run("as!", func(t *testing.T) {
+		inter := parseCheckAndInterpret(t,
+			fmt.Sprintf(`
+				 let x: Int? = 42
+				 let y: Int = x %[1]s Int
+			   `,
+				"as!",
+			),
+		)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(42),
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
+}
