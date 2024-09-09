@@ -826,7 +826,7 @@ func TestInterpretInvalidArrayIndexing(t *testing.T) {
 			assert.Equal(t, index, indexErr.Index)
 			assert.Equal(t, 2, indexErr.Size)
 			assert.Equal(t,
-				ast.Position{Offset: 107, Line: 4, Column: 27},
+				ast.Position{Offset: 106, Line: 4, Column: 26},
 				indexErr.HasPosition.StartPosition(),
 			)
 			assert.Equal(t,
@@ -901,7 +901,7 @@ func TestInterpretInvalidArrayIndexingAssignment(t *testing.T) {
 			assert.Equal(t, index, indexErr.Index)
 			assert.Equal(t, 2, indexErr.Size)
 			assert.Equal(t,
-				ast.Position{Offset: 95, Line: 4, Column: 20},
+				ast.Position{Offset: 94, Line: 4, Column: 19},
 				indexErr.HasPosition.StartPosition(),
 			)
 			assert.Equal(t,
@@ -971,7 +971,7 @@ func TestInterpretInvalidStringIndexing(t *testing.T) {
 			assert.Equal(t, index, indexErr.Index)
 			assert.Equal(t, 2, indexErr.Length)
 			assert.Equal(t,
-				ast.Position{Offset: 93, Line: 4, Column: 20},
+				ast.Position{Offset: 92, Line: 4, Column: 19},
 				indexErr.HasPosition.StartPosition(),
 			)
 			assert.Equal(t,

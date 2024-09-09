@@ -952,7 +952,7 @@ func TestParseIndexExpression(t *testing.T) {
 					},
 				},
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 				},
 			},
@@ -984,7 +984,7 @@ func TestParseIndexExpression(t *testing.T) {
 					},
 				},
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
 				},
 			},
@@ -1013,7 +1013,7 @@ func TestParseIndexExpression(t *testing.T) {
 					},
 				},
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
 				},
 			},
@@ -2425,7 +2425,7 @@ func TestParseReference(t *testing.T) {
 						},
 					},
 					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
 					},
 				},
@@ -2500,9 +2500,9 @@ func TestParseNilCoelesceReference(t *testing.T) {
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{
-								Offset: 14,
+								Offset: 12,
 								Line:   2,
-								Column: 13,
+								Column: 11,
 							},
 							EndPos: ast.Position{
 								Offset: 18,
@@ -5076,7 +5076,7 @@ func TestParseIndexExpressionInVariableDeclaration(t *testing.T) {
 						},
 					},
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
+						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 						EndPos:   ast.Position{Offset: 17, Line: 2, Column: 16},
 					},
 				},
@@ -6558,7 +6558,7 @@ func TestParseReferenceInVariableDeclaration(t *testing.T) {
 						},
 					},
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 32, Line: 2, Column: 31},
+						StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
 						EndPos:   ast.Position{Offset: 34, Line: 2, Column: 33},
 					},
 				},
