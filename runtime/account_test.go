@@ -2676,6 +2676,49 @@ func TestRuntimeGetAuthAccount(t *testing.T) {
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
+
+	t.Run("update names index expression start position", func(t *testing.T) {
+		t.Parallel()
+
+		rt := NewTestInterpreterRuntime()
+
+		script := []byte(`
+            transaction {
+                prepare(signer: auth(Mutate) &Account) {
+                    signer.contracts.names[0] = "baz"
+                }
+            }
+        `)
+
+		runtimeInterface := &TestRuntimeInterface{
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
+			},
+			OnGetAccountContractNames: func(_ Address) ([]string, error) {
+				return []string{"foo", "bar"}, nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := rt.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		errs := checker.RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.UnauthorizedReferenceAssignmentError{}, errs[0])
+
+		unauthorizedReferenceAssignmentError := errs[0].(*sema.UnauthorizedReferenceAssignmentError)
+		assert.Equal(t, 20, unauthorizedReferenceAssignmentError.StartPos.Column)
+		assert.Equal(t, 44, unauthorizedReferenceAssignmentError.EndPos.Column)
+	})
 }
 
 type fakeError struct{}

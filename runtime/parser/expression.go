@@ -1262,7 +1262,7 @@ func defineIndexExpression() {
 				firstIndexExpr,
 				ast.NewRange(
 					p.memoryGauge,
-					token.StartPos,
+					left.StartPosition(),
 					endToken.EndPos,
 				),
 			), nil
