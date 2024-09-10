@@ -397,7 +397,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		assert.Equal(
 			t,
 			ast.Range{
-				StartPos: ast.Position{Offset: 66, Line: 5, Column: 15},
+				StartPos: ast.Position{Offset: 65, Line: 5, Column: 14},
 				EndPos:   ast.Position{Offset: 72, Line: 5, Column: 21},
 			},
 			errs[0].(*sema.PurityError).Range,
@@ -552,7 +552,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		assert.Equal(
 			t,
 			ast.Range{
-				StartPos: ast.Position{Offset: 133, Line: 7, Column: 15},
+				StartPos: ast.Position{Offset: 132, Line: 7, Column: 14},
 				EndPos:   ast.Position{Offset: 145, Line: 7, Column: 27},
 			},
 			errs[0].(*sema.PurityError).Range,
@@ -666,7 +666,7 @@ func TestCheckPurityEnforcement(t *testing.T) {
 		assert.Equal(
 			t,
 			ast.Range{
-				StartPos: ast.Position{Offset: 183, Line: 9, Column: 19},
+				StartPos: ast.Position{Offset: 182, Line: 9, Column: 18},
 				EndPos:   ast.Position{Offset: 191, Line: 9, Column: 27},
 			},
 			errs[0].(*sema.PurityError).Range,
@@ -929,7 +929,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 		assert.Equal(
 			t,
 			ast.Range{
-				StartPos: ast.Position{Offset: 202, Line: 10, Column: 19},
+				StartPos: ast.Position{Offset: 201, Line: 10, Column: 18},
 				EndPos:   ast.Position{Offset: 210, Line: 10, Column: 27},
 			},
 			errs[0].(*sema.PurityError).Range,
@@ -960,7 +960,7 @@ func TestCheckResourceWritePurity(t *testing.T) {
 		assert.Equal(
 			t,
 			ast.Range{
-				StartPos: ast.Position{Offset: 209, Line: 10, Column: 22},
+				StartPos: ast.Position{Offset: 205, Line: 10, Column: 18},
 				EndPos:   ast.Position{Offset: 217, Line: 10, Column: 30},
 			},
 			errs[0].(*sema.PurityError).Range,
@@ -1104,7 +1104,7 @@ func TestCheckCompositeWritePurity(t *testing.T) {
 		assert.Equal(
 			t,
 			ast.Range{
-				StartPos: ast.Position{Offset: 124, Line: 8, Column: 19},
+				StartPos: ast.Position{Offset: 123, Line: 8, Column: 18},
 				EndPos:   ast.Position{Offset: 130, Line: 8, Column: 25},
 			},
 			errs[0].(*sema.PurityError).Range,
@@ -1136,7 +1136,7 @@ func TestCheckCompositeWritePurity(t *testing.T) {
 		require.IsType(t, &sema.PurityError{}, errs[0])
 		assert.Equal(t,
 			ast.Range{
-				StartPos: ast.Position{Offset: 126, Line: 8, Column: 19},
+				StartPos: ast.Position{Offset: 125, Line: 8, Column: 18},
 				EndPos:   ast.Position{Offset: 132, Line: 8, Column: 25},
 			},
 			errs[0].(*sema.PurityError).Range)
