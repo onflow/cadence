@@ -1079,17 +1079,19 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 
 					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
 
+						code := fmt.Sprintf(
+							`
+							  let x: Int? = 42
+							  let y: %[1]s = x
+							  let z: %[2]s? = y %[3]s %[2]s
+							`,
+							fromType,
+							targetType,
+							operation.Symbol(),
+						)
+
 						inter := parseCheckAndInterpret(t,
-							fmt.Sprintf(
-								`
-                                  let x: Int? = 42
-                                  let y: %[1]s = x
-                                  let z: %[2]s? = y %[3]s %[2]s
-                                `,
-								fromType,
-								targetType,
-								operation.Symbol(),
-							),
+							code,
 						)
 
 						expectedValue := interpreter.NewUnmeteredSomeValueNonCopying(
@@ -3875,14 +3877,32 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 	t.Parallel()
 
 	t.Run("as?", func(t *testing.T) {
-		inter := parseCheckAndInterpret(t,
-			fmt.Sprintf(`
-				 let x: Int? = 42
-				 let y: Int? = x %[1]s Int
-			   `,
-				"as?",
-			),
+		t.Parallel()
+
+		code := `
+			let x: Int? = 42
+			let y: Int? = x as? Int
+		`
+
+		inter := parseCheckAndInterpret(t, code)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
+			inter.Globals.Get("y").GetValue(inter),
 		)
+	})
+
+	t.Run("as!", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			let x: Int? = 42
+			let y: Int = x as! Int
+		`
+
+		inter := parseCheckAndInterpret(t, code)
 
 		AssertValuesEqual(
 			t,
@@ -3892,15 +3912,15 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 		)
 	})
 
-	t.Run("as!", func(t *testing.T) {
-		inter := parseCheckAndInterpret(t,
-			fmt.Sprintf(`
-				 let x: Int? = 42
-				 let y: Int = x %[1]s Int
-			   `,
-				"as!",
-			),
-		)
+	t.Run("multi optional as!", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			let x: Int??? = 42
+			let y: Int = x as! Int
+		`
+
+		inter := parseCheckAndInterpret(t, code)
 
 		AssertValuesEqual(
 			t,
@@ -3908,5 +3928,77 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			interpreter.NewUnmeteredIntValueFromInt64(42),
 			inter.Globals.Get("y").GetValue(inter),
 		)
+	})
+
+	t.Run("multi optional as?", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			let x: Int??? = 42
+			let y: Int? = x as? Int
+		`
+
+		inter := parseCheckAndInterpret(t, code)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(interpreter.NewUnmeteredIntValueFromInt64(42)),
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
+
+	t.Run("nil as?", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			let x: Int? = nil
+			let y: Int? = x as? Int
+		`
+
+		inter := parseCheckAndInterpret(t, code)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.Nil,
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
+
+	t.Run("nil as!", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			fun test() {
+				let x: Int? = nil
+				let y: Int = x as! Int
+			}
+        `
+
+		inter := parseCheckAndInterpret(t, code)
+
+		_, err := inter.Invoke("test")
+		RequireError(t, err)
+
+		assert.ErrorAs(t, err, &interpreter.ValueTransferTypeError{})
+	})
+
+	t.Run("string as!", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			fun test(): String {
+				let hello: String???? = "hello"
+				let something: AnyStruct = hello 
+				return something as! String
+			}
+        `
+
+		inter := parseCheckAndInterpret(t, code)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.Equal(t, interpreter.NewUnmeteredStringValue("hello"), result)
 	})
 }
