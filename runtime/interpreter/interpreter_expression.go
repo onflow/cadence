@@ -1367,6 +1367,12 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		if isUnwrappable {
 			// dynamic cast now unboxes optionals
 			value = interpreter.Unbox(locationRange, value)
+
+			// we should not process nil further
+			switch value.(type) {
+			case NilValue:
+				return Nil
+			}
 		}
 
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box

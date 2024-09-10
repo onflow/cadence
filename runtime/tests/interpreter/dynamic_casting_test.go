@@ -1105,8 +1105,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							inter.Globals.Get("y").GetValue(inter),
 						)
 
-						if targetType == sema.AnyStructType && !returnsOptional {
-
+						if _, ok := targetType.(*sema.OptionalType); !ok {
 							AssertValuesEqual(
 								t,
 								inter,
