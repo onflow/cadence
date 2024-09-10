@@ -1369,8 +1369,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			value = interpreter.Unbox(locationRange, value)
 
 			// we should not process nil further
-			switch value.(type) {
-			case NilValue:
+			if _, ok := value.(NilValue); ok {
 				return Nil
 			}
 		}

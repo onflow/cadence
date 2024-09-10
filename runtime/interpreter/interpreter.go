@@ -4028,8 +4028,7 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(staticSubType StaticType, su
 func (interpreter *Interpreter) IsUnwrappable(staticSubType StaticType, superType sema.Type) bool {
 	// this is a specific check for if a subtype (which must be an optional) is unwrappable to supertype
 	// which is essentially just unwrapping the subtype first before checking
-	switch staticSubType := staticSubType.(type) {
-	case *OptionalStaticType:
+	if staticSubType, ok := staticSubType.(*OptionalStaticType); ok {
 		return interpreter.IsUnwrappable(staticSubType.Type, superType)
 	}
 
