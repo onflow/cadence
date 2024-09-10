@@ -1337,16 +1337,17 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		// so we don't substitute them.
 		valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
+		isUnwrappable := interpreter.IsUnwrappable(valueStaticType, expectedType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:
-			if !isSubType {
+			if !isSubType && !isUnwrappable {
 				return Nil
 			}
 
 		case ast.OperationForceCast:
-			if !isSubType {
+			if !isSubType && !isUnwrappable {
 				locationRange := LocationRange{
 					Location:    interpreter.Location,
 					HasPosition: expression.Expression,
@@ -1361,6 +1362,11 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 		default:
 			panic(errors.NewUnreachableError())
+		}
+
+		if isUnwrappable {
+			// dynamic cast now unboxes optionals
+			value = interpreter.Unbox(locationRange, value)
 		}
 
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box
