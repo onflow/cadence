@@ -3557,9 +3557,9 @@ func newAccountCapabilitiesPublishFunction(
 						panic(errors.NewUnreachableError())
 					}
 
-					getHandler := inter.SharedState.Config.ValidateAccountCapabilitiesPublishHandler
-					if getHandler != nil {
-						valid, err := getHandler(
+					publishHandler := inter.SharedState.Config.ValidateAccountCapabilitiesPublishHandler
+					if publishHandler != nil {
+						valid, err := publishHandler(
 							inter,
 							locationRange,
 							capabilityAddressValue,
@@ -3570,7 +3570,7 @@ func newAccountCapabilitiesPublishFunction(
 							panic(err)
 						}
 						if !valid {
-							panic(interpreter.PublicEntitledCapabilityPublishingError{
+							panic(interpreter.EntitledCapabilityPublishingError{
 								LocationRange: locationRange,
 								BorrowType:    capabilityBorrowType,
 								Path:          pathValue,

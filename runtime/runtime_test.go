@@ -11207,7 +11207,7 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 		)
 
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.PublicEntitledCapabilityPublishingError{})
+		require.ErrorAs(t, err, &interpreter.EntitledCapabilityPublishingError{})
 	})
 
 	t.Run("non entitled capability", func(t *testing.T) {
@@ -11321,6 +11321,6 @@ func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
 		)
 
 		RequireError(t, err)
-		require.ErrorAs(t, err, &interpreter.PublicEntitledCapabilityPublishingError{})
+		require.ErrorAs(t, err, &interpreter.EntitledCapabilityPublishingError{})
 	})
 }

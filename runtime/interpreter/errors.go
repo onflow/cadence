@@ -1027,18 +1027,18 @@ func (e CapabilityAddressPublishingError) Error() string {
 	)
 }
 
-// PublicEntitledCapabilityPublishingError
-type PublicEntitledCapabilityPublishingError struct {
+// EntitledCapabilityPublishingError
+type EntitledCapabilityPublishingError struct {
 	LocationRange
 	BorrowType *ReferenceStaticType
 	Path       PathValue
 }
 
-var _ errors.UserError = PublicEntitledCapabilityPublishingError{}
+var _ errors.UserError = EntitledCapabilityPublishingError{}
 
-func (PublicEntitledCapabilityPublishingError) IsUserError() {}
+func (EntitledCapabilityPublishingError) IsUserError() {}
 
-func (e PublicEntitledCapabilityPublishingError) Error() string {
+func (e EntitledCapabilityPublishingError) Error() string {
 	return fmt.Sprintf(
 		"cannot publish capability of type `%s` to the path %s",
 		e.BorrowType.ID(),
