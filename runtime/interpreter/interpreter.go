@@ -165,6 +165,15 @@ type ValidateAccountCapabilitiesGetHandlerFunc func(
 	capabilityBorrowType *sema.ReferenceType,
 ) (bool, error)
 
+// ValidateAccountCapabilitiesPublishHandlerFunc is a function that is used to handle when a capability of an account is got.
+type ValidateAccountCapabilitiesPublishHandlerFunc func(
+	inter *Interpreter,
+	locationRange LocationRange,
+	address AddressValue,
+	path PathValue,
+	capabilityBorrowType *ReferenceStaticType,
+) (bool, error)
+
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() (uint64, error)
 

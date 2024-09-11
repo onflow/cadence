@@ -130,6 +130,13 @@ type TestRuntimeInterface struct {
 		wantedBorrowType *sema.ReferenceType,
 		capabilityBorrowType *sema.ReferenceType,
 	) (bool, error)
+	OnValidateAccountCapabilitiesPublish func(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		capabilityBorrowType *interpreter.ReferenceStaticType,
+	) (bool, error)
 
 	lastUUID            uint64
 	accountIDs          map[common.Address]uint64
@@ -640,6 +647,25 @@ func (i *TestRuntimeInterface) ValidateAccountCapabilitiesGet(
 		address,
 		path,
 		wantedBorrowType,
+		capabilityBorrowType,
+	)
+}
+
+func (i *TestRuntimeInterface) ValidateAccountCapabilitiesPublish(
+	inter *interpreter.Interpreter,
+	locationRange interpreter.LocationRange,
+	address interpreter.AddressValue,
+	path interpreter.PathValue,
+	capabilityBorrowType *interpreter.ReferenceStaticType,
+) (bool, error) {
+	if i.OnValidateAccountCapabilitiesPublish == nil {
+		return true, nil
+	}
+	return i.OnValidateAccountCapabilitiesPublish(
+		inter,
+		locationRange,
+		address,
+		path,
 		capabilityBorrowType,
 	)
 }

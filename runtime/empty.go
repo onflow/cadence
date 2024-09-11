@@ -250,3 +250,13 @@ func (EmptyRuntimeInterface) ValidateAccountCapabilitiesGet(
 ) (bool, error) {
 	panic("unexpected call to ValidateAccountCapabilitiesGet")
 }
+
+func (EmptyRuntimeInterface) ValidateAccountCapabilitiesPublish(
+	_ *interpreter.Interpreter,
+	_ interpreter.LocationRange,
+	_ interpreter.AddressValue,
+	_ interpreter.PathValue,
+	_ *interpreter.ReferenceStaticType,
+) (bool, error) {
+	panic("unexpected call to ValidateAccountCapabilitiesPublish")
+}

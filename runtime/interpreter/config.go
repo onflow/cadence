@@ -76,4 +76,6 @@ type Config struct {
 	ContractUpdateTypeRemovalEnabled bool
 	// ValidateAccountCapabilitiesGetHandler is used to handle when a capability of an account is got.
 	ValidateAccountCapabilitiesGetHandler ValidateAccountCapabilitiesGetHandlerFunc
+	// ValidateAccountCapabilitiesPublishHandler is used to handle when a capability of an account is got.
+	ValidateAccountCapabilitiesPublishHandler ValidateAccountCapabilitiesPublishHandlerFunc
 }

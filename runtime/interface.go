@@ -154,6 +154,13 @@ type Interface interface {
 		wantedBorrowType *sema.ReferenceType,
 		capabilityBorrowType *sema.ReferenceType,
 	) (bool, error)
+	ValidateAccountCapabilitiesPublish(
+		inter *interpreter.Interpreter,
+		locationRange interpreter.LocationRange,
+		address interpreter.AddressValue,
+		path interpreter.PathValue,
+		capabilityBorrowType *interpreter.ReferenceStaticType,
+	) (bool, error)
 }
 
 type MeterInterface interface {

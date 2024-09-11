@@ -1027,6 +1027,25 @@ func (e CapabilityAddressPublishingError) Error() string {
 	)
 }
 
+// PublicEntitledCapabilityPublishingError
+type PublicEntitledCapabilityPublishingError struct {
+	LocationRange
+	BorrowType *ReferenceStaticType
+	Path       PathValue
+}
+
+var _ errors.UserError = PublicEntitledCapabilityPublishingError{}
+
+func (PublicEntitledCapabilityPublishingError) IsUserError() {}
+
+func (e PublicEntitledCapabilityPublishingError) Error() string {
+	return fmt.Sprintf(
+		"cannot publish capability of type `%s` to the path %s",
+		e.BorrowType.ID(),
+		e.Path.String(),
+	)
+}
+
 // NestedReferenceError
 type NestedReferenceError struct {
 	Value ReferenceValue
