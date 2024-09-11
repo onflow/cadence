@@ -1335,19 +1335,24 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
 		// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
 		// so we don't substitute them.
+
+		// if the target is anystruct or anyresource we want to preserve optionals
+		if !(expectedType == sema.AnyStructType || expectedType == sema.AnyResourceType) {
+			// otherwise dynamic cast now always unboxes optionals
+			value = interpreter.Unbox(locationRange, value)
+		}
 		valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
-		isUnwrappable := interpreter.IsUnwrappable(valueStaticType, expectedType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
 
 		switch expression.Operation {
 		case ast.OperationFailableCast:
-			if !isSubType && !isUnwrappable {
+			if !isSubType {
 				return Nil
 			}
 
 		case ast.OperationForceCast:
-			if !isSubType && !isUnwrappable {
+			if !isSubType {
 				locationRange := LocationRange{
 					Location:    interpreter.Location,
 					HasPosition: expression.Expression,
@@ -1362,16 +1367,6 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 
 		default:
 			panic(errors.NewUnreachableError())
-		}
-
-		if isUnwrappable {
-			// dynamic cast now unboxes optionals
-			value = interpreter.Unbox(locationRange, value)
-
-			// we should not process nil further
-			if _, ok := value.(NilValue); ok {
-				return Nil
-			}
 		}
 
 		// The failable cast may upcast to an optional type, e.g. `1 as? Int?`, so box

@@ -4025,16 +4025,6 @@ func (interpreter *Interpreter) IsSubTypeOfSemaType(staticSubType StaticType, su
 	return sema.IsSubType(semaSubType, superType)
 }
 
-func (interpreter *Interpreter) IsUnwrappable(staticSubType StaticType, superType sema.Type) bool {
-	// this is a specific check for if a subtype (which must be an optional) is unwrappable to supertype
-	// which is essentially just unwrapping the subtype first before checking
-	if staticSubType, ok := staticSubType.(*OptionalStaticType); ok {
-		return interpreter.IsUnwrappable(staticSubType.Type, superType)
-	}
-
-	return interpreter.IsSubTypeOfSemaType(staticSubType, superType)
-}
-
 func (interpreter *Interpreter) domainPaths(address common.Address, domain common.PathDomain) []Value {
 	storageMap := interpreter.Storage().GetStorageMap(address, domain.Identifier(), false)
 	if storageMap == nil {
