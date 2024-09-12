@@ -151,7 +151,7 @@ func ReadSize(inp []byte, startIndex int) (isString bool, dataStartIndex, dataSi
 	copy(lenData[start:], inp[startIndex:endIndex])
 
 	startIndex += int(bytesToReadForLen)
-	strLen := uint(binary.BigEndian.Uint64(lenData))
+	strLen := binary.BigEndian.Uint64(lenData)
 
 	// no need to check strLen <= MaxShortLengthAllowed since bytesToReadForLen is at least 2 here
 	// and can not contain leading zero byte.
