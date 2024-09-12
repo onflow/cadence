@@ -659,7 +659,7 @@ func (d StorableDecoder) decodeUInt32() (UInt32Value, error) {
 		return 0, err
 	}
 
-	const max = math.MaxUint32
+	const max uint64 = math.MaxUint32
 	if value > max {
 		return 0, errors.NewUnexpectedError("invalid UInt32: got %d, expected max %d", value, max)
 	}
@@ -765,7 +765,7 @@ func (d StorableDecoder) decodeWord32() (Word32Value, error) {
 		}
 		return 0, err
 	}
-	const max = math.MaxUint32
+	const max uint64 = math.MaxUint32
 	if value > max {
 		return 0, errors.NewUnexpectedError("invalid Word32: got %d, expected max %d", value, max)
 	}
@@ -1711,7 +1711,7 @@ func (d TypeDecoder) decodeConstantSizedStaticType() (*ConstantSizedStaticType, 
 		return nil, err
 	}
 
-	const max = math.MaxInt64
+	const max uint64 = math.MaxInt64
 	if size > max {
 		return nil, errors.NewUnexpectedError(
 			"invalid constant-sized static type size: got %d, expected max %d",

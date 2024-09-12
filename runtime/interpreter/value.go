@@ -9865,7 +9865,7 @@ func ConvertUnsigned[T Unsigned](
 	memoryGauge common.MemoryGauge,
 	value Value,
 	maxBigNumber *big.Int,
-	maxNumber int,
+	maxNumber int64,
 	locationRange LocationRange,
 ) T {
 	switch value := value.(type) {
@@ -9883,7 +9883,7 @@ func ConvertUnsigned[T Unsigned](
 		return T(v.Int64())
 
 	case NumberValue:
-		v := value.ToInt(locationRange)
+		v := int64(value.ToInt(locationRange))
 		if maxNumber > 0 && v > maxNumber {
 			panic(OverflowError{
 				LocationRange: locationRange,
