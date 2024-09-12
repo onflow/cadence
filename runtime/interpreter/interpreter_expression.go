@@ -1337,7 +1337,8 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		// so we don't substitute them.
 
 		// if the target is anystruct or anyresource we want to preserve optionals
-		if !(expectedType == sema.AnyStructType || expectedType == sema.AnyResourceType) {
+		unboxedExpectedType := sema.UnwrapOptionalType(expectedType)
+		if !(unboxedExpectedType == sema.AnyStructType || unboxedExpectedType == sema.AnyResourceType) {
 			// otherwise dynamic cast now always unboxes optionals
 			value = interpreter.Unbox(locationRange, value)
 		}

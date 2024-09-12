@@ -4043,4 +4043,192 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			inter.Globals.Get("y").GetValue(inter),
 		)
 	})
+
+	t.Run("AnyResource as!", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			resource R {}
+
+			let x: @R? <- create R() 
+			let y: @AnyResource <- x as! @AnyResource
+		`
+
+		inter := parseCheckAndInterpret(t, code)
+
+		value := inter.Globals.Get("y").GetValue(inter)
+
+		require.IsType(t,
+			&interpreter.SomeValue{},
+			value,
+		)
+
+		require.IsType(t,
+			&interpreter.CompositeValue{},
+			value.(*interpreter.SomeValue).
+				InnerValue(inter, interpreter.EmptyLocationRange),
+		)
+	})
+
+	t.Run("resource cast as!", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			resource R {}
+
+			let x: @R?? <- create R() 
+			let y: @R <- x as! @R
+		`
+
+		inter := parseCheckAndInterpret(t, code)
+
+		value := inter.Globals.Get("y").GetValue(inter)
+
+		require.IsType(t,
+			&interpreter.CompositeValue{},
+			value,
+		)
+	})
+
+	t.Run("resource cast as?", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			resource R {}
+
+			fun test(): @R? {
+
+				let x: @R? <- create R() 
+				
+				if let z <- x as? @R {
+					return <-z
+				} else {
+					destroy x
+					return nil
+				}
+			}
+
+		`
+
+		inter := parseCheckAndInterpret(t, code)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.IsType(t,
+			&interpreter.SomeValue{},
+			result,
+		)
+
+		require.IsType(t,
+			&interpreter.CompositeValue{},
+			result.(*interpreter.SomeValue).
+				InnerValue(inter, interpreter.EmptyLocationRange),
+		)
+
+	})
+
+	t.Run("resource cast AnyResource as?", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			resource R {}
+
+			fun test(): @AnyResource? {
+
+				let x: @R? <- create R() 
+				
+				if let z <- x as? @AnyResource {
+					return <-z
+				} else {
+					destroy x
+					return nil
+				}
+			}
+
+		`
+
+		inter := parseCheckAndInterpret(t, code)
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+		require.IsType(t,
+			&interpreter.SomeValue{},
+			result,
+		)
+
+		require.IsType(t,
+			&interpreter.CompositeValue{},
+			result.(*interpreter.SomeValue).
+				InnerValue(inter, interpreter.EmptyLocationRange),
+		)
+
+	})
+
+	t.Run("AnyStruct boxing as!", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			let x: Int? = 42
+			let y: AnyStruct??? = x as! AnyStruct??
+		`
+
+		inter := parseCheckAndInterpret(t, code)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredSomeValueNonCopying(
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredIntValueFromInt64(42),
+					),
+				),
+			),
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
+
+	t.Run("AnyStruct unboxing as!", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			let x: Int??? = 42
+			let y: AnyStruct = x as! AnyStruct??
+		`
+
+		inter := parseCheckAndInterpret(t, code)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredSomeValueNonCopying(
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredIntValueFromInt64(42),
+					),
+				),
+			),
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
+
+	t.Run("AnyStruct cast to Int? as!", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			let x: AnyStruct = 42
+			let y: Int? = x as! Int?
+		`
+
+		inter := parseCheckAndInterpret(t, code)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(42),
+			),
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
 }
