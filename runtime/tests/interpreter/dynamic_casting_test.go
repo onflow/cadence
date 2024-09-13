@@ -4022,6 +4022,26 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 		)
 	})
 
+	t.Run("return optional as!", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			let x: Int??? = 42
+			let y: Int? = x as! Int?
+		`
+
+		inter := parseCheckAndInterpret(t, code)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(42),
+			),
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
+
 	t.Run("return nested optional as!", func(t *testing.T) {
 		t.Parallel()
 
@@ -4038,6 +4058,30 @@ func TestInterpretDynamicCastingOptionalUnwrapping(t *testing.T) {
 			interpreter.NewUnmeteredSomeValueNonCopying(
 				interpreter.NewUnmeteredSomeValueNonCopying(
 					interpreter.NewUnmeteredIntValueFromInt64(42),
+				),
+			),
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
+
+	t.Run("return optional as?", func(t *testing.T) {
+		t.Parallel()
+
+		code := `
+			let x: Int??? = 42
+			let y: Int??? = x as? Int??
+		`
+
+		inter := parseCheckAndInterpret(t, code)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredSomeValueNonCopying(
+					interpreter.NewUnmeteredSomeValueNonCopying(
+						interpreter.NewUnmeteredIntValueFromInt64(42),
+					),
 				),
 			),
 			inter.Globals.Get("y").GetValue(inter),
