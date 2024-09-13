@@ -28,11 +28,14 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+const typeRemovalPragmaName = "removedType"
+
 type UpdateValidator interface {
 	ast.TypeEqualityChecker
 
 	Validate() error
 	report(error)
+	Location() common.Location
 
 	getCurrentDeclaration() ast.Declaration
 	setCurrentDeclaration(ast.Declaration)
@@ -99,6 +102,10 @@ func NewContractUpdateValidator(
 	}
 }
 
+func (validator *ContractUpdateValidator) Location() common.Location {
+	return validator.location
+}
+
 func (validator *ContractUpdateValidator) isTypeRemovalEnabled() bool {
 	return validator.typeRemovalEnabled
 }
@@ -122,7 +129,7 @@ func (validator *ContractUpdateValidator) getAccountContractNames(address common
 
 // Validate validates the contract update, and returns an error if it is an invalid update.
 func (validator *ContractUpdateValidator) Validate() error {
-	oldRootDecl := getRootDeclaration(validator, validator.oldProgram)
+	oldRootDecl := getRootDeclarationOfOldProgram(validator, validator.oldProgram, validator.newProgram)
 	if validator.hasErrors() {
 		return validator.getContractUpdateError()
 	}
@@ -210,6 +217,21 @@ func getRootDeclaration(validator UpdateValidator, program *ast.Program) ast.Dec
 	return decl
 }
 
+func getRootDeclarationOfOldProgram(validator UpdateValidator, program *ast.Program, position ast.HasPosition) ast.Declaration {
+	decl, err := getRootDeclarationOfProgram(program)
+
+	if err != nil {
+		validator.report(&OldProgramError{
+			Err: &ContractNotFoundError{
+				Range: ast.NewUnmeteredRangeFromPositioned(position),
+			},
+			Location: validator.Location(),
+		})
+	}
+
+	return decl
+}
+
 func getRootDeclarationOfProgram(program *ast.Program) (ast.Declaration, error) {
 	compositeDecl := program.SoleContractDeclaration()
 	if compositeDecl != nil {
@@ -230,7 +252,11 @@ func (validator *ContractUpdateValidator) hasErrors() bool {
 	return len(validator.errors) > 0
 }
 
-func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaDeclaration) *orderedmap.OrderedMap[string, struct{}] {
+func collectRemovedTypePragmas(
+	validator UpdateValidator,
+	pragmas []*ast.PragmaDeclaration,
+	reportErrors bool,
+) *orderedmap.OrderedMap[string, struct{}] {
 	removedTypes := orderedmap.New[orderedmap.OrderedMap[string, struct{}]](len(pragmas))
 
 	for _, pragma := range pragmas {
@@ -238,25 +264,33 @@ func collectRemovedTypePragmas(validator UpdateValidator, pragmas []*ast.PragmaD
 		if !isInvocation {
 			continue
 		}
+
 		invokedIdentifier, isIdentifier := invocationExpression.InvokedExpression.(*ast.IdentifierExpression)
-		if !isIdentifier || invokedIdentifier.Identifier.Identifier != "removedType" {
+		if !isIdentifier || invokedIdentifier.Identifier.Identifier != typeRemovalPragmaName {
 			continue
 		}
+
 		if len(invocationExpression.Arguments) != 1 {
-			validator.report(&InvalidTypeRemovalPragmaError{
-				Expression: pragma.Expression,
-				Range:      ast.NewUnmeteredRangeFromPositioned(pragma.Expression),
-			})
+			if reportErrors {
+				validator.report(&InvalidTypeRemovalPragmaError{
+					Expression: pragma.Expression,
+					Range:      ast.NewUnmeteredRangeFromPositioned(pragma.Expression),
+				})
+			}
 			continue
 		}
-		removedTypeName, isIdentifer := invocationExpression.Arguments[0].Expression.(*ast.IdentifierExpression)
-		if !isIdentifer {
-			validator.report(&InvalidTypeRemovalPragmaError{
-				Expression: pragma.Expression,
-				Range:      ast.NewUnmeteredRangeFromPositioned(pragma.Expression),
-			})
+
+		removedTypeName, isIdentifier := invocationExpression.Arguments[0].Expression.(*ast.IdentifierExpression)
+		if !isIdentifier {
+			if reportErrors {
+				validator.report(&InvalidTypeRemovalPragmaError{
+					Expression: pragma.Expression,
+					Range:      ast.NewUnmeteredRangeFromPositioned(pragma.Expression),
+				})
+			}
 			continue
 		}
+
 		removedTypes.Set(removedTypeName.Identifier.Identifier, struct{}{})
 	}
 
@@ -282,8 +316,8 @@ func checkDeclarationUpdatability(
 
 	oldIdentifier := oldDeclaration.DeclarationIdentifier()
 	newIdentifier := newDeclaration.DeclarationIdentifier()
-	if oldIdentifier.Identifier != newIdentifier.Identifier {
 
+	if oldIdentifier.Identifier != newIdentifier.Identifier {
 		validator.report(&NameMismatchError{
 			OldName: oldIdentifier.Identifier,
 			NewName: newIdentifier.Identifier,
@@ -431,8 +465,20 @@ func checkNestedDeclarations(
 	var removedTypes *orderedmap.OrderedMap[string, struct{}]
 	if validator.isTypeRemovalEnabled() {
 		// process pragmas first, as they determine whether types can later be removed
-		oldRemovedTypes := collectRemovedTypePragmas(validator, oldDeclaration.DeclarationMembers().Pragmas())
-		removedTypes = collectRemovedTypePragmas(validator, newDeclaration.DeclarationMembers().Pragmas())
+		oldRemovedTypes := collectRemovedTypePragmas(
+			validator,
+			oldDeclaration.DeclarationMembers().Pragmas(),
+			// Do not report errors for pragmas in the old code.
+			// We are only interested in collecting the pragmas in old code.
+			// This also avoid reporting mixed errors from both old and new codes.
+			false,
+		)
+
+		removedTypes = collectRemovedTypePragmas(
+			validator,
+			newDeclaration.DeclarationMembers().Pragmas(),
+			true,
+		)
 
 		// #typeRemoval pragmas cannot be removed, so any that appear in the old program must appear in the new program
 		// they can however, be added, so use the new program's type removals for the purposes of checking the upgrade
