@@ -1466,7 +1466,16 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		script := `
 	  import C from 0x1
 
-	  transaction(arg: C.Alpha) {}
+	  transaction(arg: C.Alpha) {
+		execute {
+			let values: [AnyStruct] = []
+			values.append(arg)
+			if arg == C.Alpha.A {
+				values.append(C.Alpha.B)
+			}
+			assert(values.length == 2)
+		}
+	  }
 	`
 
 		err := executeTransaction(t, script, contracts, newEnumType())
