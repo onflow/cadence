@@ -326,32 +326,32 @@ func TestInterpretTransactions(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-          access(all)
-		  enum Alpha: Int {
 			access(all)
-			case A
+			enum Alpha: Int {
+				access(all)
+				case A
 
-			access(all)
-			case B
-		  }
+				access(all)
+				case B
+			}
 
-		  let a = Alpha.A
-		  let b = Alpha.B
+			let a = Alpha.A
+			let b = Alpha.B
 
-		  let values: [AnyStruct] = []
+			let values: [AnyStruct] = []
 
-          transaction(x: Alpha) {
+			transaction(x: Alpha) {
 
-            prepare(signer: &Account) {
-			  values.append(signer.address)
-			  values.append(x)
-			  if x == Alpha.A {
-			  	values.append(Alpha.B)
-			  } else {
-			 	values.append(-1) 
-			  }
-            }
-          }
+				prepare(signer: &Account) {
+					values.append(signer.address)
+					values.append(x)
+					if x == Alpha.A {
+						values.append(Alpha.B)
+					} else {
+						values.append(-1) 
+					}
+				}
+			}
         `)
 
 		arguments := []interpreter.Value{

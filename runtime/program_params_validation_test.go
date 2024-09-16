@@ -1419,24 +1419,24 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "C",
 			}: []byte(`
-		   access(all) contract C {
-			   access(all) 
-			   enum Alpha: Int {
-				  access(all)
-				  case A
+			access(all) contract C {
+				access(all) 
+				enum Alpha: Int {
+					access(all)
+					case A
 
-				  access(all)
-				  case B
-			  }
-		   }
+					access(all)
+					case B
+				}
+			}
 		`),
 		}
 
 		script := `
-	  import C from 0x1
+			import C from 0x1
 
-	  transaction(arg: C.Alpha?) {}
-	`
+			transaction(arg: C.Alpha?) {}
+		`
 
 		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
 		assert.NoError(t, err)
@@ -1450,33 +1450,33 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 				Address: common.MustBytesToAddress([]byte{0x1}),
 				Name:    "C",
 			}: []byte(`
-		   access(all) contract C {
-			   access(all) 
-			   enum Alpha: Int {
-				  access(all)
-				  case A
+				access(all) contract C {
+					access(all) 
+					enum Alpha: Int {
+						access(all)
+						case A
 
-				  access(all)
-				  case B
-			  }
-		   }
-		`),
+						access(all)
+						case B
+					}
+				}
+			`),
 		}
 
 		script := `
-	  import C from 0x1
+			import C from 0x1
 
-	  transaction(arg: C.Alpha) {
-		execute {
-			let values: [AnyStruct] = []
-			values.append(arg)
-			if arg == C.Alpha.A {
-				values.append(C.Alpha.B)
+			transaction(arg: C.Alpha) {
+				execute {
+					let values: [AnyStruct] = []
+					values.append(arg)
+					if arg == C.Alpha.A {
+						values.append(C.Alpha.B)
+					}
+					assert(values.length == 2)
+				}
 			}
-			assert(values.length == 2)
-		}
-	  }
-	`
+		`
 
 		err := executeTransaction(t, script, contracts, newEnumType())
 		assert.NoError(t, err)
