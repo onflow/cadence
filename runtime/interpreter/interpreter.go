@@ -1248,16 +1248,7 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 		functions.Set(resourceDefaultDestroyEventName(compositeType), destroyEventConstructor)
 	}
 
-	wrapFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
-
-		// Wrap initializer
-
-		initializerFunctionWrapper :=
-			code.InitializerFunctionWrapper
-
-		if initializerFunctionWrapper != nil {
-			initializerFunction = initializerFunctionWrapper(initializerFunction)
-		}
+	applyDefaultFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
 
 		// Apply default functions, if conforming type does not provide the function
 
@@ -1275,6 +1266,18 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 				}
 				functions.Set(name, function)
 			})
+		}
+	}
+
+	wrapFunctions := func(ty *sema.InterfaceType, code WrapperCode) {
+
+		// Wrap initializer
+
+		initializerFunctionWrapper :=
+			code.InitializerFunctionWrapper
+
+		if initializerFunctionWrapper != nil {
+			initializerFunction = initializerFunctionWrapper(initializerFunction)
 		}
 
 		// Wrap functions
@@ -1294,9 +1297,21 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 	}
 
 	conformances := compositeType.EffectiveInterfaceConformances()
+	interfaceCodes := declarationInterpreter.SharedState.typeCodes.InterfaceCodes
+
+	// First apply the default functions, and then wrap with conditions.
+	// These needs to be done in separate phases.
+	// Otherwise, if the condition and the default implementation are coming from two different inherited interfaces,
+	// then the condition would wrap an empty implementation, because the default impl is not resolved by the time.
+
 	for i := len(conformances) - 1; i >= 0; i-- {
 		conformance := conformances[i].InterfaceType
-		wrapFunctions(conformance, declarationInterpreter.SharedState.typeCodes.InterfaceCodes[conformance.ID()])
+		applyDefaultFunctions(conformance, interfaceCodes[conformance.ID()])
+	}
+
+	for i := len(conformances) - 1; i >= 0; i-- {
+		conformance := conformances[i].InterfaceType
+		wrapFunctions(conformance, interfaceCodes[conformance.ID()])
 	}
 
 	declarationInterpreter.SharedState.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{

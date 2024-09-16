@@ -871,6 +871,131 @@ func TestInterpretInterfaceFunctionConditionsInheritance(t *testing.T) {
 		// A.Nested and B.Nested are two distinct separate functions
 		assert.Equal(t, []string{"B"}, logs)
 	})
+
+	t.Run("pre condition in parent, default impl in child", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource interface A {
+                access(all) fun get(): Int {
+                   pre {
+                       true
+                   }
+                }
+            }
+
+            access(all) resource interface B: A {
+                access(all) fun get(): Int {
+                    return 4
+                }
+            }
+
+            access(all) resource R: B {}
+
+            access(all) fun main(): Int {
+                let r <- create R()
+                let value = r.get()
+                destroy r
+                return value
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(4),
+			value,
+		)
+	})
+
+	t.Run("post condition in parent, default impl in child", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource interface A {
+                access(all) fun get(): Int {
+                   post {
+                       true
+                   }
+                }
+            }
+
+            access(all) resource interface B: A {
+                access(all) fun get(): Int {
+                    return 4
+                }
+            }
+
+            access(all) resource R: B {}
+
+            access(all) fun main(): Int {
+                let r <- create R()
+                let value = r.get()
+                destroy r
+                return value
+            }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredIntValueFromInt64(4),
+			value,
+		)
+	})
+
+	t.Run("result variable in conditions", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter, getLogs, err := parseCheckAndInterpretWithLogs(t, `
+            access(all) resource interface I1 {
+                access(all) let s: String
+
+                access(all) fun echo(_ s: String): String {
+                    post {
+                        result == self.s: "result must match stored input, got: ".concat(result)
+                    }
+                }
+            }
+
+            access(all) resource interface I2: I1 {
+                access(all) let s: String
+
+                access(all) fun echo(_ s: String): String {
+                    log(s)
+                    return self.s
+                }
+            }
+
+            access(all) resource R: I2 {
+                access(all) let s: String
+
+                init() {
+                    self.s = "hello"
+                }
+            }
+
+            access(all) fun main() {
+                let r <- create R()
+                r.echo("hello")
+                destroy r
+            }
+        `)
+		require.NoError(t, err)
+
+		_, err = inter.Invoke("main")
+		require.NoError(t, err)
+
+		logs := getLogs()
+		require.Len(t, logs, 1)
+		assert.Equal(t, "\"hello\"", logs[0])
+	})
+
 }
 
 func TestInterpretNestedInterfaceCast(t *testing.T) {
