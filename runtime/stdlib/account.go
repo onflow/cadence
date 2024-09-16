@@ -1100,7 +1100,7 @@ func newAccountInboxClaimFunction(
 		return interpreter.NewBoundHostFunctionValue(
 			inter,
 			accountInbox,
-			sema.Account_InboxTypePublishFunctionType,
+			sema.Account_InboxTypeClaimFunctionType,
 			func(invocation interpreter.Invocation) interpreter.Value {
 				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 				if !ok {
