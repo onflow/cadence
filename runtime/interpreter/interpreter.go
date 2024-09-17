@@ -1287,7 +1287,11 @@ func (declarationInterpreter *Interpreter) declareNonEnumCompositeValue(
 		// the order does not matter.
 
 		for name, functionWrapper := range code.FunctionWrappers { //nolint:maprange
-			fn, _ := functions.Get(name)
+			fn, ok := functions.Get(name)
+			// If there is a wrapper, there MUST be a body.
+			if !ok {
+				panic(errors.NewUnreachableError())
+			}
 			functions.Set(name, functionWrapper(fn))
 		}
 
@@ -2447,6 +2451,13 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 
 	return func(inner FunctionValue) FunctionValue {
+
+		// NOTE: The `inner` function cannot be nil.
+		// An executing function always have a body.
+		if inner == nil {
+			panic(errors.NewUnreachableError())
+		}
+
 		// Condition wrapper is a static function.
 		return NewStaticHostFunctionValue(
 			interpreter,
@@ -2472,72 +2483,66 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 					interpreter.declareVariable(sema.BaseIdentifier, invocation.Base)
 				}
 
-				// NOTE: The `inner` function might be nil.
-				//   This is the case if the conforming type did not declare a function.
+				// NOTE: It is important to wrap the invocation in a function,
+				//  so the inner function isn't invoked here
 
-				var body func() StatementResult
-				if inner != nil {
-					// NOTE: It is important to wrap the invocation in a function,
-					//  so the inner function isn't invoked here
+				body := func() StatementResult {
 
-					body = func() StatementResult {
+					// Pre- and post-condition wrappers "re-declare" the same
+					// parameters as are used in the actual body of the function,
+					// see the use of bindParameterArguments at the start of this function wrapper.
+					//
+					// When these parameters are given resource-kinded arguments,
+					// this can trick the resource analysis into believing that these
+					// resources exist in multiple variables at once
+					// (one for each condition wrapper + the function itself).
+					//
+					// This is not the case, however, as execution of the pre- and post-conditions
+					// occurs strictly before and after execution of the body respectively.
+					//
+					// To prevent the analysis from reporting a false positive here,
+					// when we enter the body of the wrapped function,
+					// we invalidate any resources that were assigned to parameters by the precondition block,
+					// and then restore them after execution of the wrapped function,
+					// for use by the post-condition block.
 
-						// Pre- and post-condition wrappers "re-declare" the same
-						// parameters as are used in the actual body of the function,
-						// see the use of bindParameterArguments at the start of this function wrapper.
-						//
-						// When these parameters are given resource-kinded arguments,
-						// this can trick the resource analysis into believing that these
-						// resources exist in multiple variables at once
-						// (one for each condition wrapper + the function itself).
-						//
-						// This is not the case, however, as execution of the pre- and post-conditions
-						// occurs strictly before and after execution of the body respectively.
-						//
-						// To prevent the analysis from reporting a false positive here,
-						// when we enter the body of the wrapped function,
-						// we invalidate any resources that were assigned to parameters by the precondition block,
-						// and then restore them after execution of the wrapped function,
-						// for use by the post-condition block.
-
-						type argumentVariable struct {
-							variable Variable
-							value    ResourceKindedValue
-						}
-
-						var argumentVariables []argumentVariable
-						for _, argument := range invocation.Arguments {
-							resourceKindedValue := interpreter.resourceForValidation(argument)
-							if resourceKindedValue == nil {
-								continue
-							}
-
-							argumentVariables = append(
-								argumentVariables,
-								argumentVariable{
-									variable: interpreter.SharedState.resourceVariables[resourceKindedValue],
-									value:    resourceKindedValue,
-								},
-							)
-
-							interpreter.invalidateResource(resourceKindedValue)
-						}
-
-						// NOTE: It is important to actually return the value returned
-						//   from the inner function, otherwise it is lost
-
-						returnValue := inner.invoke(invocation)
-
-						// Restore the resources which were temporarily invalidated
-						// before execution of the inner function
-
-						for _, argumentVariable := range argumentVariables {
-							value := argumentVariable.value
-							interpreter.invalidateResource(value)
-							interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
-						}
-						return ReturnResult{Value: returnValue}
+					type argumentVariable struct {
+						variable Variable
+						value    ResourceKindedValue
 					}
+
+					var argumentVariables []argumentVariable
+					for _, argument := range invocation.Arguments {
+						resourceKindedValue := interpreter.resourceForValidation(argument)
+						if resourceKindedValue == nil {
+							continue
+						}
+
+						argumentVariables = append(
+							argumentVariables,
+							argumentVariable{
+								variable: interpreter.SharedState.resourceVariables[resourceKindedValue],
+								value:    resourceKindedValue,
+							},
+						)
+
+						interpreter.invalidateResource(resourceKindedValue)
+					}
+
+					// NOTE: It is important to actually return the value returned
+					//   from the inner function, otherwise it is lost
+
+					returnValue := inner.invoke(invocation)
+
+					// Restore the resources which were temporarily invalidated
+					// before execution of the inner function
+
+					for _, argumentVariable := range argumentVariables {
+						value := argumentVariable.value
+						interpreter.invalidateResource(value)
+						interpreter.SharedState.resourceVariables[value] = argumentVariable.variable
+					}
+					return ReturnResult{Value: returnValue}
 				}
 
 				declarationLocationRange := LocationRange{
