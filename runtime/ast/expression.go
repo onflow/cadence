@@ -220,6 +220,63 @@ func (*StringExpression) precedence() precedence {
 	return precedenceLiteral
 }
 
+// StringTemplateExpression
+
+type StringTemplateExpression struct {
+	Values      []string
+	Expressions []Expression
+	Range
+}
+
+var _ Expression = &StringTemplateExpression{}
+
+func NewStringTemplateExpression(gauge common.MemoryGauge, values []string, exprs []Expression, exprRange Range) *StringTemplateExpression {
+	common.UseMemory(gauge, common.StringExpressionMemoryUsage)
+	return &StringTemplateExpression{
+		Values:      values,
+		Expressions: exprs,
+		Range:       exprRange,
+	}
+}
+
+var _ Element = &StringExpression{}
+var _ Expression = &StringExpression{}
+
+func (*StringTemplateExpression) ElementType() ElementType {
+	return ElementTypeStringExpression
+}
+
+func (*StringTemplateExpression) isExpression() {}
+
+func (*StringTemplateExpression) isIfStatementTest() {}
+
+func (*StringTemplateExpression) Walk(_ func(Element)) {
+	// NO-OP
+}
+
+func (e *StringTemplateExpression) String() string {
+	return Prettier(e)
+}
+
+func (e *StringTemplateExpression) Doc() prettier.Doc {
+	return prettier.Text(QuoteString("String template"))
+}
+
+func (e *StringTemplateExpression) MarshalJSON() ([]byte, error) {
+	type Alias StringTemplateExpression
+	return json.Marshal(&struct {
+		*Alias
+		Type string
+	}{
+		Type:  "StringTemplateExpression",
+		Alias: (*Alias)(e),
+	})
+}
+
+func (*StringTemplateExpression) precedence() precedence {
+	return precedenceLiteral
+}
+
 // IntegerExpression
 
 type IntegerExpression struct {

@@ -6055,6 +6055,70 @@ func TestParseStringWithUnicode(t *testing.T) {
 	utils.AssertEqualWithDiff(t, expected, actual)
 }
 
+func TestParseStringTemplates(t *testing.T) {
+
+	t.Parallel()
+
+	actual, errs := testParseExpression(`
+      "this is a test $abc $def test"
+	`)
+
+	var err error
+	if len(errs) > 0 {
+		err = Error{
+			Errors: errs,
+		}
+	}
+
+	require.NoError(t, err)
+
+	expected := &ast.StringTemplateExpression{
+		Values: []string{
+			"this is a test ",
+			" ",
+			" test",
+		},
+		Expressions: []ast.Expression{
+			&ast.IdentifierExpression{
+				Identifier: ast.Identifier{
+					Identifier: "abc",
+					Pos:        ast.Position{Offset: 24, Line: 2, Column: 23},
+				},
+			},
+			&ast.IdentifierExpression{
+				Identifier: ast.Identifier{
+					Identifier: "def",
+					Pos:        ast.Position{Offset: 29, Line: 2, Column: 28},
+				},
+			},
+		},
+		Range: ast.Range{
+			StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
+			EndPos:   ast.Position{Offset: 37, Line: 2, Column: 36},
+		},
+	}
+
+	utils.AssertEqualWithDiff(t, expected, actual)
+}
+
+func TestParseStringTemplateFail(t *testing.T) {
+
+	t.Parallel()
+
+	_, errs := testParseExpression(`
+      "this is a test $FOO
+	`)
+
+	var err error
+	if len(errs) > 0 {
+		err = Error{
+			Errors: errs,
+		}
+	}
+
+	require.Error(t, err)
+}
+
 func TestParseNilCoalescing(t *testing.T) {
 
 	t.Parallel()
