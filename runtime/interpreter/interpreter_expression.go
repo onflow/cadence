@@ -957,6 +957,34 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 	return NewUnmeteredStringValue(expression.Value)
 }
 
+func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) Value {
+	values := interpreter.visitExpressionsNonCopying(expression.Expressions)
+
+	templateExpressionTypes := interpreter.Program.Elaboration.StringTemplateExpressionTypes(expression)
+	argumentTypes := templateExpressionTypes.ArgumentTypes
+
+	var copies []Value
+
+	count := len(values)
+	if count > 0 {
+		copies = make([]Value, count)
+		for i, argument := range values {
+			argumentType := argumentTypes[i]
+			argumentExpression := expression.Expressions[i]
+			locationRange := LocationRange{
+				Location:    interpreter.Location,
+				HasPosition: argumentExpression,
+			}
+			copies[i] = interpreter.transferAndConvert(argument, argumentType, sema.StringType, locationRange)
+		}
+	}
+
+	result := ""
+
+	// NOTE: already metered in lexer/parser
+	return NewUnmeteredStringValue(result)
+}
+
 func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) Value {
 	values := interpreter.visitExpressionsNonCopying(expression.Values)
 

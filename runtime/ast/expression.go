@@ -243,7 +243,7 @@ var _ Element = &StringExpression{}
 var _ Expression = &StringExpression{}
 
 func (*StringTemplateExpression) ElementType() ElementType {
-	return ElementTypeStringExpression
+	return ElementTypeStringTemplateExpression
 }
 
 func (*StringTemplateExpression) isExpression() {}

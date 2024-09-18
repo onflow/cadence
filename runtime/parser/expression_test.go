@@ -6055,7 +6055,46 @@ func TestParseStringWithUnicode(t *testing.T) {
 	utils.AssertEqualWithDiff(t, expected, actual)
 }
 
-func TestParseStringTemplates(t *testing.T) {
+func TestParseStringTemplateSimple(t *testing.T) {
+
+	t.Parallel()
+
+	actual, errs := testParseExpression(`
+      "$test"
+	`)
+
+	var err error
+	if len(errs) > 0 {
+		err = Error{
+			Errors: errs,
+		}
+	}
+
+	require.NoError(t, err)
+
+	expected := &ast.StringTemplateExpression{
+		Values: []string{
+			"",
+			"",
+		},
+		Expressions: []ast.Expression{
+			&ast.IdentifierExpression{
+				Identifier: ast.Identifier{
+					Identifier: "test",
+					Pos:        ast.Position{Offset: 9, Line: 2, Column: 8},
+				},
+			},
+		},
+		Range: ast.Range{
+			StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
+			EndPos:   ast.Position{Offset: 13, Line: 2, Column: 12},
+		},
+	}
+
+	utils.AssertEqualWithDiff(t, expected, actual)
+}
+
+func TestParseStringTemplateMulti(t *testing.T) {
 
 	t.Parallel()
 
