@@ -1014,6 +1014,120 @@ func TestLexString(t *testing.T) {
 		)
 	})
 
+	t.Run("valid, string template", func(t *testing.T) {
+		testLex(t,
+			`"$abc.length"`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenStringTemplate,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					Source: `$`,
+				},
+				{
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					Source: `abc`,
+				},
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+						},
+					},
+					Source: `.length"`,
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+						},
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("invalid, string template", func(t *testing.T) {
+		testLex(t,
+			`"$1"`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenStringTemplate,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					Source: `$`,
+				},
+				{
+					Token: Token{
+						Type: TokenDecimalIntegerLiteral,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					Source: `1`,
+				},
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+				},
+			},
+		)
+	})
+
 	t.Run("invalid, empty, not terminated at line end", func(t *testing.T) {
 		testLex(t,
 			"\"\n",

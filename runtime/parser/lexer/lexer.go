@@ -49,6 +49,14 @@ type position struct {
 	column int
 }
 
+type LexerMode int
+
+const (
+	NORMAL = iota
+	STR_IDENTIFIER
+	STR_EXPRESSION
+)
+
 type lexer struct {
 	// memoryGauge is used for metering memory usage
 	memoryGauge common.MemoryGauge
@@ -74,6 +82,8 @@ type lexer struct {
 	prev rune
 	// canBackup indicates whether stepping back is allowed
 	canBackup bool
+	// lexer mode is used for string templates
+	mode LexerMode
 }
 
 var _ TokenStream = &lexer{}
@@ -414,6 +424,11 @@ func (l *lexer) scanString(quote rune) {
 				l.backupOne()
 				return
 			}
+		case '$':
+			// string template, stop and set mode
+			l.backupOne()
+			l.mode = STR_IDENTIFIER
+			return
 		}
 		r = l.next()
 	}

@@ -40,6 +40,12 @@ func rootState(l *lexer) stateFn {
 		switch r {
 		case EOF:
 			return nil
+		case '$':
+			if l.mode == STR_EXPRESSION || l.mode == STR_IDENTIFIER {
+				l.emitType(TokenStringTemplate)
+			} else {
+				return l.error(fmt.Errorf("unrecognized character: %#U", r))
+			}
 		case '+':
 			l.emitType(TokenPlus)
 		case '-':
@@ -296,6 +302,10 @@ func identifierState(l *lexer) stateFn {
 		}
 	}
 	l.emitType(TokenIdentifier)
+	if l.mode == STR_IDENTIFIER {
+		l.mode = NORMAL
+		return stringState
+	}
 	return rootState
 }
 
