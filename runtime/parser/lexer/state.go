@@ -30,122 +30,128 @@ const keywordAs = "as"
 //
 // It either returns nil when reaching end of file,
 // or returns another stateFn for more scanning work.
-type stateFn func(*lexer) stateFn
+type stateFn func(*lexer) (stateFn, error)
 
 // rootState returns a stateFn that scans the file and emits tokens until
 // reaching the end of the file.
-func rootState(l *lexer) stateFn {
+func rootState(l *lexer) (stateFn, error) {
+
 	for {
+		var ty TokenType
+
 		r := l.next()
 		switch r {
 		case EOF:
-			return nil
+			return nil, nil
 		case '+':
-			l.emitType(TokenPlus)
+			ty = TokenPlus
 		case '-':
 			r = l.next()
 			switch r {
 			case '>':
-				l.emitType(TokenRightArrow)
+				ty = TokenRightArrow
 			default:
 				l.backupOne()
-				l.emitType(TokenMinus)
+				ty = TokenMinus
 			}
 		case '*':
-			l.emitType(TokenStar)
+			ty = TokenStar
 		case '%':
-			l.emitType(TokenPercent)
+			ty = TokenPercent
 		case '(':
-			l.emitType(TokenParenOpen)
+			ty = TokenParenOpen
 		case ')':
-			l.emitType(TokenParenClose)
+			ty = TokenParenClose
 		case '{':
-			l.emitType(TokenBraceOpen)
+			ty = TokenBraceOpen
 		case '}':
-			l.emitType(TokenBraceClose)
+			ty = TokenBraceClose
 		case '[':
-			l.emitType(TokenBracketOpen)
+			ty = TokenBracketOpen
 		case ']':
-			l.emitType(TokenBracketClose)
+			ty = TokenBracketClose
 		case ',':
-			l.emitType(TokenComma)
+			ty = TokenComma
 		case ';':
-			l.emitType(TokenSemicolon)
+			ty = TokenSemicolon
 		case ':':
-			l.emitType(TokenColon)
+			ty = TokenColon
 		case '.':
-			l.emitType(TokenDot)
+			ty = TokenDot
 		case '=':
 			if l.acceptOne('=') {
-				l.emitType(TokenEqualEqual)
+				ty = TokenEqualEqual
 			} else {
-				l.emitType(TokenEqual)
+				ty = TokenEqual
 			}
 		case '@':
-			l.emitType(TokenAt)
+			ty = TokenAt
 		case '#':
-			l.emitType(TokenPragma)
+			ty = TokenPragma
 		case '&':
 			if l.acceptOne('&') {
-				l.emitType(TokenAmpersandAmpersand)
+				ty = TokenAmpersandAmpersand
 			} else {
-				l.emitType(TokenAmpersand)
+				ty = TokenAmpersand
 			}
 		case '^':
-			l.emitType(TokenCaret)
+			ty = TokenCaret
 		case '|':
 			if l.acceptOne('|') {
-				l.emitType(TokenVerticalBarVerticalBar)
+				ty = TokenVerticalBarVerticalBar
 			} else {
-				l.emitType(TokenVerticalBar)
+				ty = TokenVerticalBar
 			}
 		case '>':
 			r = l.next()
 			switch r {
 			case '=':
-				l.emitType(TokenGreaterEqual)
+				ty = TokenGreaterEqual
 			default:
 				l.backupOne()
-				l.emitType(TokenGreater)
+				ty = TokenGreater
 			}
 		case '_':
-			return identifierState
+			return identifierState, nil
 		case ' ', '\t', '\r':
-			return spaceState(false)
+			return spaceState(false), nil
 		case '\n':
-			return spaceState(true)
+			return spaceState(true), nil
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-			return numberState
+			return numberState, nil
 		case '"':
-			return stringState
+			return stringState, nil
 		case '/':
 			r = l.next()
 			switch r {
 			case '/':
-				return lineCommentState
+				return lineCommentState, nil
 			case '*':
-				l.emitType(TokenBlockCommentStart)
-				return blockCommentState(0)
+				err := l.emitType(TokenBlockCommentStart)
+				if err != nil {
+					return nil, err
+				}
+				return blockCommentState(0), nil
 			default:
 				l.backupOne()
-				l.emitType(TokenSlash)
+				ty = TokenSlash
 			}
 		case '?':
 			r = l.next()
 			switch r {
 			case '?':
-				l.emitType(TokenDoubleQuestionMark)
+				ty = TokenDoubleQuestionMark
 			case '.':
-				l.emitType(TokenQuestionMarkDot)
+				ty = TokenQuestionMarkDot
 			default:
 				l.backupOne()
-				l.emitType(TokenQuestionMark)
+				ty = TokenQuestionMark
 			}
 		case '!':
 			if l.acceptOne('=') {
-				l.emitType(TokenNotEqual)
+				ty = TokenNotEqual
 			} else {
-				l.emitType(TokenExclamationMark)
+				ty = TokenExclamationMark
 			}
 		case '<':
 			r = l.next()
@@ -154,43 +160,47 @@ func rootState(l *lexer) stateFn {
 				r = l.next()
 				switch r {
 				case '!':
-					l.emitType(TokenLeftArrowExclamation)
+					ty = TokenLeftArrowExclamation
 				case '>':
-					l.emitType(TokenSwap)
+					ty = TokenSwap
 				default:
 					l.backupOne()
-					l.emitType(TokenLeftArrow)
+					ty = TokenLeftArrow
 				}
 			case '<':
-				l.emitType(TokenLessLess)
+				ty = TokenLessLess
 			case '=':
-				l.emitType(TokenLessEqual)
+				ty = TokenLessEqual
 			default:
 				l.backupOne()
-				l.emitType(TokenLess)
+				ty = TokenLess
 			}
 		default:
 			switch {
 			case r >= 'a' && r <= 'z' ||
 				r >= 'A' && r <= 'Z':
 
-				return identifierState
+				return identifierState, nil
 
 			default:
 				return l.error(fmt.Errorf("unrecognized character: %#U", r))
 			}
 		}
+
+		err := l.emitType(ty)
+		if err != nil {
+			return nil, err
+		}
 	}
 }
 
-func (l *lexer) error(err error) stateFn {
-	l.emitError(err)
-	return nil
+func (l *lexer) error(err error) (stateFn, error) {
+	return nil, l.emitError(err)
 }
 
 // numberState returns a stateFn that scans the following runes as a number
 // and emits a corresponding token
-func numberState(l *lexer) stateFn {
+func numberState(l *lexer) (stateFn, error) {
 	// lookahead is already lexed.
 	// parse more, if any
 	r := l.current
@@ -200,60 +210,83 @@ func numberState(l *lexer) stateFn {
 		case 'b':
 			l.scanBinaryRemainder()
 			if l.endOffset-l.startOffset <= 2 {
-				l.emitError(fmt.Errorf("missing digits"))
+				err := l.emitError(fmt.Errorf("missing digits"))
+				if err != nil {
+					return nil, err
+				}
 			}
-			l.emitType(TokenBinaryIntegerLiteral)
+			return l.emitTokenAndReturnRootState(TokenBinaryIntegerLiteral)
 
 		case 'o':
 			l.scanOctalRemainder()
 			if l.endOffset-l.startOffset <= 2 {
-				l.emitError(fmt.Errorf("missing digits"))
+				err := l.emitError(fmt.Errorf("missing digits"))
+				if err != nil {
+					return nil, err
+				}
 			}
-			l.emitType(TokenOctalIntegerLiteral)
+			return l.emitTokenAndReturnRootState(TokenOctalIntegerLiteral)
 
 		case 'x':
 			l.scanHexadecimalRemainder()
 			if l.endOffset-l.startOffset <= 2 {
-				l.emitError(fmt.Errorf("missing digits"))
+				err := l.emitError(fmt.Errorf("missing digits"))
+				if err != nil {
+					return nil, err
+				}
 			}
-			l.emitType(TokenHexadecimalIntegerLiteral)
+			return l.emitTokenAndReturnRootState(TokenHexadecimalIntegerLiteral)
 
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '_':
-			tokenType := l.scanDecimalOrFixedPointRemainder()
-			l.emitType(tokenType)
+			tokenType, err := l.scanDecimalOrFixedPointRemainder()
+			if err != nil {
+				return nil, err
+			}
+
+			return l.emitTokenAndReturnRootState(tokenType)
 
 		case '.':
-			l.scanFixedPointRemainder()
-			l.emitType(TokenFixedPointNumberLiteral)
+			err := l.scanFixedPointRemainder()
+			if err != nil {
+				return nil, err
+			}
+			return l.emitTokenAndReturnRootState(TokenFixedPointNumberLiteral)
 
 		case EOF:
 			l.backupOne()
-			l.emitType(TokenDecimalIntegerLiteral)
+			return l.emitTokenAndReturnRootState(TokenDecimalIntegerLiteral)
 
 		default:
 			prefixChar := r
 
 			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
-				l.emitError(fmt.Errorf("invalid number literal prefix: %q", prefixChar))
+				err := l.emitError(fmt.Errorf("invalid number literal prefix: %q", prefixChar))
+				if err != nil {
+					return nil, err
+				}
 				l.next()
 
-				tokenType := l.scanDecimalOrFixedPointRemainder()
+				tokenType, err := l.scanDecimalOrFixedPointRemainder()
+				if err != nil {
+					return nil, err
+				}
 				if tokenType == TokenDecimalIntegerLiteral {
 					tokenType = TokenUnknownBaseIntegerLiteral
 				}
-				l.emitType(tokenType)
+				return l.emitTokenAndReturnRootState(tokenType)
 			} else {
 				l.backupOne()
-				l.emitType(TokenDecimalIntegerLiteral)
+				return l.emitTokenAndReturnRootState(TokenDecimalIntegerLiteral)
 			}
 		}
 
 	} else {
-		tokenType := l.scanDecimalOrFixedPointRemainder()
-		l.emitType(tokenType)
+		tokenType, err := l.scanDecimalOrFixedPointRemainder()
+		if err != nil {
+			return nil, err
+		}
+		return l.emitTokenAndReturnRootState(tokenType)
 	}
-
-	return rootState
 }
 
 type Space struct {
@@ -261,13 +294,13 @@ type Space struct {
 }
 
 func spaceState(startIsNewline bool) stateFn {
-	return func(l *lexer) stateFn {
+	return func(l *lexer) (stateFn, error) {
 		containsNewline := l.scanSpace()
 		containsNewline = containsNewline || startIsNewline
 
 		common.UseMemory(l.memoryGauge, common.SpaceTokenMemoryUsage)
 
-		l.emit(
+		err := l.emit(
 			TokenSpace,
 			Space{
 				ContainsNewline: containsNewline,
@@ -275,40 +308,47 @@ func spaceState(startIsNewline bool) stateFn {
 			l.startPosition(),
 			true,
 		)
-		return rootState
+
+		if err != nil {
+			return nil, err
+		}
+		return rootState, nil
 	}
 }
 
-func identifierState(l *lexer) stateFn {
+func identifierState(l *lexer) (stateFn, error) {
 	l.scanIdentifier()
 	// https://github.com/golang/go/commit/69cd91a5981c49eaaa59b33196bdb5586c18d289
 	if string(l.word()) == keywordAs {
 		r := l.next()
 		switch r {
 		case '?':
-			l.emitType(TokenAsQuestionMark)
-			return rootState
+			return l.emitTokenAndReturnRootState(TokenAsQuestionMark)
 		case '!':
-			l.emitType(TokenAsExclamationMark)
-			return rootState
+			return l.emitTokenAndReturnRootState(TokenAsExclamationMark)
 		default:
 			l.backupOne()
 		}
 	}
-	l.emitType(TokenIdentifier)
-	return rootState
+	return l.emitTokenAndReturnRootState(TokenIdentifier)
 }
 
-func stringState(l *lexer) stateFn {
+func stringState(l *lexer) (stateFn, error) {
 	l.scanString('"')
-	l.emitType(TokenString)
-	return rootState
+	return l.emitTokenAndReturnRootState(TokenString)
 }
 
-func lineCommentState(l *lexer) stateFn {
+func lineCommentState(l *lexer) (stateFn, error) {
 	l.scanLineComment()
-	l.emitType(TokenLineComment)
-	return rootState
+	return l.emitTokenAndReturnRootState(TokenLineComment)
+}
+
+func (l *lexer) emitTokenAndReturnRootState(token TokenType) (stateFn, error) {
+	err := l.emitType(token)
+	if err != nil {
+		return nil, err
+	}
+	return rootState, nil
 }
 
 func blockCommentState(nesting int) stateFn {
@@ -316,20 +356,28 @@ func blockCommentState(nesting int) stateFn {
 		return rootState
 	}
 
-	return func(l *lexer) stateFn {
+	return func(l *lexer) (stateFn, error) {
 		r := l.next()
 		switch r {
 		case EOF:
-			return nil
+			return nil, nil
 		case '/':
 			beforeSlashOffset := l.prevEndOffset
 			if l.acceptOne('*') {
 				starOffset := l.endOffset
 				l.endOffset = beforeSlashOffset
-				l.emitType(TokenBlockCommentContent)
+				err := l.emitType(TokenBlockCommentContent)
+				if err != nil {
+					return nil, err
+				}
+
 				l.endOffset = starOffset
-				l.emitType(TokenBlockCommentStart)
-				return blockCommentState(nesting + 1)
+				err = l.emitType(TokenBlockCommentStart)
+				if err != nil {
+					return nil, err
+				}
+
+				return blockCommentState(nesting + 1), nil
 			}
 
 		case '*':
@@ -337,13 +385,19 @@ func blockCommentState(nesting int) stateFn {
 			if l.acceptOne('/') {
 				slashOffset := l.endOffset
 				l.endOffset = beforeStarOffset
-				l.emitType(TokenBlockCommentContent)
+				err := l.emitType(TokenBlockCommentContent)
+				if err != nil {
+					return nil, err
+				}
 				l.endOffset = slashOffset
-				l.emitType(TokenBlockCommentEnd)
-				return blockCommentState(nesting - 1)
+				err = l.emitType(TokenBlockCommentEnd)
+				if err != nil {
+					return nil, err
+				}
+				return blockCommentState(nesting - 1), nil
 			}
 		}
 
-		return blockCommentState(nesting)
+		return blockCommentState(nesting), nil
 	}
 }
