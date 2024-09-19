@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/onflow/atree"
@@ -960,29 +961,28 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) Value {
 	values := interpreter.visitExpressionsNonCopying(expression.Expressions)
 
-	templateExpressionTypes := interpreter.Program.Elaboration.StringTemplateExpressionTypes(expression)
-	argumentTypes := templateExpressionTypes.ArgumentTypes
+	templatesType := interpreter.Program.Elaboration.StringTemplateExpressionTypes(expression)
+	argumentTypes := templatesType.ArgumentTypes
 
-	var copies []Value
-
-	count := len(values)
-	if count > 0 {
-		copies = make([]Value, count)
-		for i, argument := range values {
-			argumentType := argumentTypes[i]
-			argumentExpression := expression.Expressions[i]
-			locationRange := LocationRange{
-				Location:    interpreter.Location,
-				HasPosition: argumentExpression,
+	var builder strings.Builder
+	for i, str := range expression.Values {
+		builder.WriteString(str)
+		if i < len(values) {
+			// STRINGTODO: is this how the conversion should happen?
+			s := values[i].String()
+			switch argumentTypes[i] {
+			case sema.StringType:
+				// remove quotations
+				s = s[1 : len(s)-1]
+				builder.WriteString(s)
+			default:
+				builder.WriteString(s)
 			}
-			copies[i] = interpreter.transferAndConvert(argument, argumentType, sema.StringType, locationRange)
 		}
 	}
 
-	result := ""
-
-	// NOTE: already metered in lexer/parser
-	return NewUnmeteredStringValue(result)
+	// STRINGTODO: already metered as a string constant in parser?
+	return NewUnmeteredStringValue(builder.String())
 }
 
 func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) Value {

@@ -12283,3 +12283,64 @@ func TestInterpretOptionalAddressInConditional(t *testing.T) {
 		value,
 	)
 }
+
+func TestInterpretStringTemplates(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("int", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		let x = 123
+		let y = "x = $x"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredIntValueFromInt64(123),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("x = 123"),
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
+
+	t.Run("multiple", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		let x = 123.321
+		let y = "abc"
+		let z = "$y and $x"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("abc and 123.32100000"),
+			inter.Globals.Get("z").GetValue(inter),
+		)
+	})
+
+	t.Run("nested template", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		let x = "{}"
+		let y = "[$x]"
+		let z = "($y)"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("([{}])"),
+			inter.Globals.Get("z").GetValue(inter),
+		)
+	})
+}
