@@ -1167,15 +1167,14 @@ func defineStringExpression() {
 				literal = p.tokenSource(curToken)
 				length = len(literal)
 
-				// this order of removal matters in case the token is the single quotation "
-				if length >= 1 && literal[length-1] == '"' {
-					literal = literal[:length-1]
+				if curToken == startToken {
+					literal = literal[1:]
 					length = len(literal)
-					missingEnd = false
 				}
 
-				if length >= 1 && literal[0] == '"' {
-					literal = literal[1:]
+				if length >= 1 && literal[length-1] == '"' {
+					literal = literal[:length-1]
+					missingEnd = false
 				}
 
 				parsedString := parseStringLiteralContent(p, literal)
