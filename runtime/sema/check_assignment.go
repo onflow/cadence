@@ -500,22 +500,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 		reportAssignmentToConstant()
 	}
 
-	if memberType.IsResourceType() {
-		// if the member is a resource, check that it is not captured in a function,
-		// based off the activation depth of the root of the access chain, i.e. `a` in `a.b.c`
-		// we only want to make this check for transactions, as they are the only "resource-like" types
-		// (that can contain resources and must destroy them in their `execute` blocks), that are themselves
-		// not checked by the capturing logic, since they are not themselves resources.
-		baseVariable, _ := checker.rootOfAccessChain(target)
-
-		if baseVariable == nil {
-			return
-		}
-
-		if _, isTransaction := baseVariable.Type.(*TransactionType); isTransaction {
-			checker.checkResourceVariableCapturingInFunction(baseVariable, member.Identifier)
-		}
-	}
+	checker.checkResourceMemberCapturingInFunction(target, member, memberType)
 
 	return
 }

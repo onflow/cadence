@@ -177,6 +177,26 @@ func (checker *Checker) checkSelfVariableUseInInitializer(variable *Variable, po
 	}
 }
 
+func (checker *Checker) checkResourceMemberCapturingInFunction(target *ast.MemberExpression, member *Member, memberType Type) {
+	if !memberType.IsResourceType() {
+		return
+	}
+	// if the member is a resource, check that it is not captured in a function,
+	// based off the activation depth of the root of the access chain, i.e. `a` in `a.b.c`
+	// we only want to make this check for transactions, as they are the only "resource-like" types
+	// (that can contain resources and must destroy them in their `execute` blocks), that are themselves
+	// not checked by the capturing logic, since they are not themselves resources.
+	baseVariable, _ := checker.rootOfAccessChain(target)
+
+	if baseVariable == nil {
+		return
+	}
+
+	if _, isTransaction := baseVariable.Type.(*TransactionType); isTransaction {
+		checker.checkResourceVariableCapturingInFunction(baseVariable, member.Identifier)
+	}
+}
+
 // checkResourceVariableCapturingInFunction checks if a resource variable is captured in a function
 func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Variable, useIdentifier ast.Identifier) {
 	currentFunctionDepth := -1
