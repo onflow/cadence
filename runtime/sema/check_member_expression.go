@@ -81,6 +81,8 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 		}
 	}
 
+	checker.checkResourceMemberCapturingInFunction(expression, member, memberType)
+
 	// If the member access is optional chaining, only wrap the result value
 	// in an optional, if it is not already an optional value
 	if isOptional {
