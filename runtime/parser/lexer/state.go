@@ -69,7 +69,7 @@ func rootState(l *lexer) stateFn {
 			l.emitType(TokenBraceOpen)
 			if l.mode == STR_IDENTIFIER {
 				l.mode = STR_EXPRESSION
-			} else {
+			} else if l.mode == STR_EXPRESSION {
 				return l.error(fmt.Errorf("string template cannot contain {"))
 			}
 		case '}':
