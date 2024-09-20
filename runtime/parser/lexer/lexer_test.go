@@ -1071,7 +1071,7 @@ func TestLexString(t *testing.T) {
 		)
 	})
 
-	t.Run("invalid, string template", func(t *testing.T) {
+	t.Run("invalid, number string template", func(t *testing.T) {
 		testLex(t,
 			`"$1"`,
 			[]token{
@@ -1121,6 +1121,150 @@ func TestLexString(t *testing.T) {
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("invalid, string template", func(t *testing.T) {
+		testLex(t,
+			`"$a + 2`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenStringTemplate,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					Source: `$`,
+				},
+				{
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					Source: `a`,
+				},
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					Source: ` + 2`,
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("valid, multi string template", func(t *testing.T) {
+		testLex(t,
+			`"$a$b"`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenStringTemplate,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					Source: `$`,
+				},
+				{
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					Source: `a`,
+				},
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 2},
+						},
+					},
+					Source: ``,
+				},
+				{
+					Token: Token{
+						Type: TokenStringTemplate,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 3},
+						},
+					},
+					Source: `$`,
+				},
+				{
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 4},
+						},
+					},
+					Source: `b`,
+				},
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 5},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 6},
 						},
 					},
 				},

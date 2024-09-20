@@ -726,6 +726,20 @@ func TestCheckStringTemplate(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("valid, struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+		  access(all)
+      struct SomeStruct {}
+		  let a = SomeStruct()
+		  let x: String = "$a" 
+		`)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("invalid, missing variable", func(t *testing.T) {
 
 		t.Parallel()

@@ -6055,107 +6055,175 @@ func TestParseStringWithUnicode(t *testing.T) {
 	utils.AssertEqualWithDiff(t, expected, actual)
 }
 
-func TestParseStringTemplateSimple(t *testing.T) {
+func TestParseStringTemplate(t *testing.T) {
 
 	t.Parallel()
 
-	actual, errs := testParseExpression(`
-      "$test"
-	`)
+	t.Run("simple", func(t *testing.T) {
 
-	var err error
-	if len(errs) > 0 {
-		err = Error{
-			Errors: errs,
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+		"$test"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
 		}
-	}
 
-	require.NoError(t, err)
+		require.NoError(t, err)
 
-	expected := &ast.StringTemplateExpression{
-		Values: []string{
-			"",
-			"",
-		},
-		Expressions: []ast.Expression{
-			&ast.IdentifierExpression{
-				Identifier: ast.Identifier{
-					Identifier: "test",
-					Pos:        ast.Position{Offset: 9, Line: 2, Column: 8},
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"",
+				"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "test",
+						Pos:        ast.Position{Offset: 5, Line: 2, Column: 4},
+					},
 				},
 			},
-		},
-		Range: ast.Range{
-			StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
-			EndPos:   ast.Position{Offset: 13, Line: 2, Column: 12},
-		},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
-}
-
-func TestParseStringTemplateMulti(t *testing.T) {
-
-	t.Parallel()
-
-	actual, errs := testParseExpression(`
-      "this is a test $abc $def test"
-	`)
-
-	var err error
-	if len(errs) > 0 {
-		err = Error{
-			Errors: errs,
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+				EndPos:   ast.Position{Offset: 9, Line: 2, Column: 8},
+			},
 		}
-	}
 
-	require.NoError(t, err)
+		utils.AssertEqualWithDiff(t, expected, actual)
+	})
 
-	expected := &ast.StringTemplateExpression{
-		Values: []string{
-			"this is a test ",
-			" ",
-			" test",
-		},
-		Expressions: []ast.Expression{
-			&ast.IdentifierExpression{
-				Identifier: ast.Identifier{
-					Identifier: "abc",
-					Pos:        ast.Position{Offset: 24, Line: 2, Column: 23},
+	t.Run("multi", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+		"this is a test $abc$def test"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.NoError(t, err)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"this is a test ",
+				"",
+				" test",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "abc",
+						Pos:        ast.Position{Offset: 20, Line: 2, Column: 19},
+					},
+				},
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "def",
+						Pos:        ast.Position{Offset: 24, Line: 2, Column: 24},
+					},
 				},
 			},
-			&ast.IdentifierExpression{
-				Identifier: ast.Identifier{
-					Identifier: "def",
-					Pos:        ast.Position{Offset: 29, Line: 2, Column: 28},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+				EndPos:   ast.Position{Offset: 32, Line: 2, Column: 32},
+			},
+		}
+
+		utils.AssertEqualWithDiff(t, expected, actual)
+	})
+
+	t.Run("missing end", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+		  "this is a test $FOO
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos:     ast.Position{Offset: 25, Line: 2, Column: 25},
 				},
 			},
-		},
-		Range: ast.Range{
-			StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
-			EndPos:   ast.Position{Offset: 37, Line: 2, Column: 36},
-		},
-	}
+			errs,
+		)
+	})
 
-	utils.AssertEqualWithDiff(t, expected, actual)
-}
+	t.Run("invalid identifier", func(t *testing.T) {
 
-func TestParseStringTemplateFail(t *testing.T) {
+		t.Parallel()
 
-	t.Parallel()
+		_, errs := testParseExpression(`
+		  "$$"
+		`)
 
-	_, errs := testParseExpression(`
-      "this is a test $FOO
-	`)
-
-	var err error
-	if len(errs) > 0 {
-		err = Error{
-			Errors: errs,
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
 		}
-	}
 
-	require.Error(t, err)
+		require.Error(t, err)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected an identifier got: $",
+					Pos:     ast.Position{Offset: 7, Line: 2, Column: 6},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, num", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+		  "$(2 + 2) is a"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected an identifier got: (",
+					Pos:     ast.Position{Offset: 7, Line: 2, Column: 6},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseNilCoalescing(t *testing.T) {

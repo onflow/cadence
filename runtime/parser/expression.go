@@ -1186,6 +1186,9 @@ func defineStringExpression() {
 				if curToken.Is(lexer.TokenStringTemplate) {
 					p.next()
 					// advance to the expression
+					if !p.current.Is(lexer.TokenIdentifier) {
+						return nil, p.syntaxError("expected an identifier got: %s", p.currentTokenSource())
+					}
 					value, err := parseExpression(p, lowestBindingPower)
 					if err != nil {
 						return nil, err

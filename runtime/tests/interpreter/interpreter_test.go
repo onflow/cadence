@@ -12343,4 +12343,59 @@ func TestInterpretStringTemplates(t *testing.T) {
 			inter.Globals.Get("z").GetValue(inter),
 		)
 	})
+
+	t.Run("struct", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+	 	  access(all)
+      	  struct SomeStruct {}
+		  let a = SomeStruct()
+		  let x: String = "$a" 
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("S.test.SomeStruct()"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
+
+	t.Run("func", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+	 	  let add = fun(): Int {
+        return 2+2
+      }
+      let x: String = "$add()"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("fun(): Int()"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
+
+	t.Run("func", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+	 	  let add = fun(): Int {
+        return 2+2
+      }
+      let y = add()
+      let x: String = "$y"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("4"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
 }
