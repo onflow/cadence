@@ -67,8 +67,17 @@ func rootState(l *lexer) stateFn {
 			l.emitType(TokenParenClose)
 		case '{':
 			l.emitType(TokenBraceOpen)
+			if l.mode == STR_IDENTIFIER {
+				l.mode = STR_EXPRESSION
+			} else {
+				return l.error(fmt.Errorf("string template cannot contain {"))
+			}
 		case '}':
 			l.emitType(TokenBraceClose)
+			if l.mode == STR_EXPRESSION {
+				l.mode = NORMAL
+				return stringState
+			}
 		case '[':
 			l.emitType(TokenBracketOpen)
 		case ']':

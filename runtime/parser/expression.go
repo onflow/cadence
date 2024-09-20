@@ -1164,6 +1164,8 @@ func defineStringExpression() {
 			missingEnd := true
 
 			for curToken.Is(lexer.TokenString) {
+				// this loop alternates between parsing a string and then a string template
+				// it is expected that any valid StringTemplateExpression will end with a string
 				literal = p.tokenSource(curToken)
 				length = len(literal)
 
@@ -1184,12 +1186,21 @@ func defineStringExpression() {
 				// parser already points to next token
 				curToken = p.current
 				if curToken.Is(lexer.TokenStringTemplate) {
+					// move on to what is after the $
 					p.next()
-					// advance to the expression
-					if !p.current.Is(lexer.TokenIdentifier) {
+
+					// check if $identifier or ${expression}
+					var isCurly = p.current.Is(lexer.TokenBraceOpen)
+					if !isCurly && !p.current.Is(lexer.TokenIdentifier) {
 						return nil, p.syntaxError("expected an identifier got: %s", p.currentTokenSource())
 					}
+					if isCurly {
+						p.next() // move on to expression
+					}
 					value, err := parseExpression(p, lowestBindingPower)
+					if isCurly {
+						_, err = p.mustOne(lexer.TokenBraceClose)
+					}
 					if err != nil {
 						return nil, err
 					}

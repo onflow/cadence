@@ -12348,10 +12348,10 @@ func TestInterpretStringTemplates(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-	 	  access(all)
-      	  struct SomeStruct {}
-		  let a = SomeStruct()
-		  let x: String = "$a" 
+		access(all)
+		struct SomeStruct {}
+		let a = SomeStruct()
+		let x: String = "$a" 
 		`)
 
 		AssertValuesEqual(
@@ -12366,10 +12366,10 @@ func TestInterpretStringTemplates(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-	 	  let add = fun(): Int {
-        return 2+2
-      }
-      let x: String = "$add()"
+	 	let add = fun(): Int {
+			return 2+2
+		}
+		let x: String = "$add()"
 		`)
 
 		AssertValuesEqual(
@@ -12384,17 +12384,66 @@ func TestInterpretStringTemplates(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-	 	  let add = fun(): Int {
-        return 2+2
-      }
-      let y = add()
-      let x: String = "$y"
+	 	  	let add = fun(): Int {
+				return 2+2
+			}
+			let y = add()
+			let x: String = "$y"
 		`)
 
 		AssertValuesEqual(
 			t,
 			inter,
 			interpreter.NewUnmeteredStringValue("4"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
+
+	t.Run("expression", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+      	let x: String = "${2+2}"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("4"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
+
+	t.Run("expr func", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		let add = fun(): Int {
+			return 2+2
+		}
+		let x: String = "${add()}"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("4"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
+
+	t.Run("simple expr", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+		let y: String = "abcde"
+		let x: String = "$y.length = ${y.length}"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("abcde.length = 5"),
 			inter.Globals.Get("x").GetValue(inter),
 		)
 	})

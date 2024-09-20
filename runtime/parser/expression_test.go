@@ -6224,6 +6224,51 @@ func TestParseStringTemplate(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("valid, expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+		  "2+2 = ${2+2}"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid, missing brace", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+		  "2+2 = ${2+2"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '}'",
+					Pos:     ast.Position{Offset: 17, Line: 2, Column: 16},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseNilCoalescing(t *testing.T) {

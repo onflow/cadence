@@ -1272,6 +1272,83 @@ func TestLexString(t *testing.T) {
 		)
 	})
 
+	t.Run("valid, str expr template", func(t *testing.T) {
+		testLex(t,
+			`"${abc}.length"`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Source: `"`,
+				},
+				{
+					Token: Token{
+						Type: TokenStringTemplate,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					Source: `$`,
+				},
+				{
+					Token: Token{
+						Type: TokenBraceOpen,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					Source: `{`,
+				},
+				{
+					Token: Token{
+						Type: TokenIdentifier,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
+					},
+					Source: `abc`,
+				},
+				{
+					Token: Token{
+						Type: TokenBraceClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					Source: `}`,
+				},
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					Source: `.length"`,
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
+							EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+						},
+					},
+				},
+			},
+		)
+	})
+
 	t.Run("invalid, empty, not terminated at line end", func(t *testing.T) {
 		testLex(t,
 			"\"\n",
