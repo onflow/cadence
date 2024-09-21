@@ -227,6 +227,7 @@ type IntegerExpression struct {
 	PositiveLiteral []byte
 	Range
 	Base int
+	Comments
 }
 
 var _ Element = &IntegerExpression{}
@@ -238,6 +239,7 @@ func NewIntegerExpression(
 	value *big.Int,
 	base int,
 	tokenRange Range,
+	comments Comments,
 ) *IntegerExpression {
 	common.UseMemory(gauge, common.IntegerExpressionMemoryUsage)
 
@@ -246,6 +248,7 @@ func NewIntegerExpression(
 		Value:           value,
 		Base:            base,
 		Range:           tokenRange,
+		Comments:        comments,
 	}
 }
 

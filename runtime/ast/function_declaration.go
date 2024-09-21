@@ -20,8 +20,6 @@ package ast
 
 import (
 	"encoding/json"
-	"strings"
-
 	"github.com/turbolent/prettier"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -209,16 +207,7 @@ func (d *FunctionDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *FunctionDeclaration) DeclarationDocString() string {
-	var s strings.Builder
-	for _, comment := range d.Comments.Leading {
-		if comment.Doc() {
-			if s.Len() > 0 {
-				s.WriteRune('\n')
-			}
-			s.Write(comment.Text())
-		}
-	}
-	return s.String()
+	return d.Comments.LeadingDocString()
 }
 
 func (d *FunctionDeclaration) Doc() prettier.Doc {

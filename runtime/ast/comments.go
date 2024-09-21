@@ -3,6 +3,7 @@ package ast
 import (
 	"bytes"
 	"github.com/onflow/cadence/runtime/common"
+	"strings"
 )
 
 type Comments struct {
@@ -15,6 +16,20 @@ func (c Comments) PackToList() []*Comment {
 	comments = append(comments, c.Leading...)
 	comments = append(comments, c.Trailing...)
 	return comments
+}
+
+// LeadingDocString prints the leading doc comments to string
+func (c Comments) LeadingDocString() string {
+	var s strings.Builder
+	for _, comment := range c.Leading {
+		if comment.Doc() {
+			if s.Len() > 0 {
+				s.WriteRune('\n')
+			}
+			s.Write(comment.Text())
+		}
+	}
+	return s.String()
 }
 
 type Comment struct {

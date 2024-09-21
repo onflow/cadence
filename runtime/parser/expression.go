@@ -360,7 +360,7 @@ func init() {
 				literal,
 				literal[2:],
 				common.IntegerLiteralKindBinary,
-				token.Range,
+				token,
 			), nil
 		},
 	})
@@ -374,7 +374,7 @@ func init() {
 				literal,
 				literal[2:],
 				common.IntegerLiteralKindOctal,
-				token.Range,
+				token,
 			), nil
 		},
 	})
@@ -388,7 +388,7 @@ func init() {
 				literal,
 				literal,
 				common.IntegerLiteralKindDecimal,
-				token.Range,
+				token,
 			), nil
 		},
 	})
@@ -402,7 +402,7 @@ func init() {
 				literal,
 				literal[2:],
 				common.IntegerLiteralKindHexadecimal,
-				token.Range,
+				token,
 			), nil
 		},
 	})
@@ -416,7 +416,7 @@ func init() {
 				literal,
 				literal[2:],
 				common.IntegerLiteralKindUnknown,
-				token.Range,
+				token,
 			), nil
 		},
 	})
@@ -1730,7 +1730,7 @@ func parseHex(r rune) rune {
 	return -1
 }
 
-func parseIntegerLiteral(p *parser, literal, text []byte, kind common.IntegerLiteralKind, tokenRange ast.Range) *ast.IntegerExpression {
+func parseIntegerLiteral(p *parser, literal, text []byte, kind common.IntegerLiteralKind, token lexer.Token) *ast.IntegerExpression {
 
 	report := func(invalidKind InvalidNumberLiteralKind) {
 		p.report(
@@ -1739,7 +1739,7 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind common.IntegerLit
 				InvalidIntegerLiteralKind: invalidKind,
 				// NOTE: not using text, because it has the base-prefix stripped
 				Literal: string(literal),
-				Range:   tokenRange,
+				Range:   token.Range,
 			},
 		)
 	}
@@ -1789,7 +1789,7 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind common.IntegerLit
 		value = new(big.Int)
 	}
 
-	return ast.NewIntegerExpression(p.memoryGauge, literal, value, base, tokenRange)
+	return ast.NewIntegerExpression(p.memoryGauge, literal, value, base, token.Range, token.Comments)
 }
 
 func parseFixedPointPart(gauge common.MemoryGauge, part string) (integer *big.Int, scale uint) {

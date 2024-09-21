@@ -102,7 +102,7 @@ func parseDeclaration(p *parser) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for variable")
 				}
-				return parseVariableDeclaration(p, access, accessPos, docString)
+				return parseVariableDeclaration(p, access, accessPos)
 
 			case KeywordFun:
 				return parseFunctionDeclaration(
@@ -512,10 +512,10 @@ func parseVariableDeclaration(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
-	docString string,
 ) (*ast.VariableDeclaration, error) {
 
-	startPos := p.current.StartPos
+	startToken := p.current
+	startPos := startToken.StartPos
 	if accessPos != nil {
 		startPos = *accessPos
 	}
@@ -524,6 +524,8 @@ func parseVariableDeclaration(
 
 	// Skip the `let` or `var` keyword
 	p.nextSemanticToken()
+
+	identifierToken := p.current
 
 	identifier, err := p.nonReservedIdentifier("after start of variable declaration")
 	if err != nil {
@@ -546,6 +548,8 @@ func parseVariableDeclaration(
 	}
 
 	p.skipSpace()
+
+	transferToken := p.current
 	transfer := parseTransfer(p)
 	if transfer == nil {
 		return nil, p.syntaxError("expected transfer")
@@ -578,7 +582,12 @@ func parseVariableDeclaration(
 		startPos,
 		secondTransfer,
 		secondValue,
-		docString,
+		ast.Comments{
+			Leading: append(
+				append(startToken.PackToList(), identifierToken.PackToList()...),
+				transferToken.PackToList()...,
+			),
+		},
 	)
 
 	castingExpression, leftIsCasting := value.(*ast.CastingExpression)

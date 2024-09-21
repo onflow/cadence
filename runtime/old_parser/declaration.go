@@ -415,7 +415,7 @@ func parseVariableDeclaration(
 		startPos,
 		secondTransfer,
 		secondValue,
-		docString,
+		ast.Comments{},
 	)
 
 	castingExpression, leftIsCasting := value.(*ast.CastingExpression)

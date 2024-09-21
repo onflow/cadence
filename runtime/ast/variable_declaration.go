@@ -33,11 +33,11 @@ type VariableDeclaration struct {
 	Transfer          *Transfer
 	SecondTransfer    *Transfer
 	ParentIfStatement *IfStatement `json:"-"`
-	DocString         string
 	Identifier        Identifier
 	StartPos          Position `json:"-"`
 	Access            Access
 	IsConstant        bool
+	Comments
 }
 
 var _ Element = &VariableDeclaration{}
@@ -55,7 +55,7 @@ func NewVariableDeclaration(
 	startPos Position,
 	secondTransfer *Transfer,
 	secondValue Expression,
-	docString string,
+	comments Comments,
 ) *VariableDeclaration {
 	common.UseMemory(gauge, common.VariableDeclarationMemoryUsage)
 
@@ -69,7 +69,7 @@ func NewVariableDeclaration(
 		StartPos:       startPos,
 		SecondTransfer: secondTransfer,
 		SecondValue:    secondValue,
-		DocString:      docString,
+		Comments:       comments,
 	}
 }
 
@@ -127,7 +127,7 @@ func (d *VariableDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *VariableDeclaration) DeclarationDocString() string {
-	return d.DocString
+	return d.Comments.LeadingDocString()
 }
 
 var varKeywordDoc prettier.Doc = prettier.Text("var")

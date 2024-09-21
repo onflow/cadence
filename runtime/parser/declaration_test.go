@@ -72,6 +72,59 @@ func TestParseVariableDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("var, no type annotation, copy, one value, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+// Before x
+var x = /* Before 1 */ 1 // After 1
+// Ignored
+`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.VariableDeclaration{
+					Access:     ast.AccessNotSpecified,
+					IsConstant: false,
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Line: 3, Column: 4, Offset: 17},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before x")),
+							ast.NewComment(nil, []byte("/* Before 1 */")),
+						},
+						Trailing: []*ast.Comment{},
+					},
+					Value: &ast.IntegerExpression{
+						PositiveLiteral: []byte("1"),
+						Value:           big.NewInt(1),
+						Base:            10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 3, Column: 23, Offset: 36},
+							EndPos:   ast.Position{Line: 3, Column: 23, Offset: 36},
+						},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{},
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("// After 1")),
+							},
+						},
+					},
+					Transfer: &ast.Transfer{
+						Operation: ast.TransferOperationCopy,
+						Pos:       ast.Position{Line: 3, Column: 6, Offset: 19},
+					},
+					StartPos: ast.Position{Line: 3, Column: 0, Offset: 13},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("var, no type annotation, copy, one value, access(all)", func(t *testing.T) {
 
 		t.Parallel()
@@ -2493,7 +2546,7 @@ func TestParseEvent(t *testing.T) {
 		result, errs := testParseDeclarations(`
 // Before E
 event E() // After E
-// Should be ignored
+// Ignored
 `)
 		require.Empty(t, errs)
 

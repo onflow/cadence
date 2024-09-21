@@ -246,7 +246,7 @@ func (i *PositionInfo) recordVariableDeclarationRange(
 			Identifier:      identifier,
 			DeclarationKind: declaration.DeclarationKind(),
 			Type:            declarationType,
-			DocString:       declaration.DocString,
+			DocString:       declaration.DeclarationDocString(),
 		},
 	)
 }
