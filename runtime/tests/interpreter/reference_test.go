@@ -3291,3 +3291,73 @@ func TestInterpretHostFunctionReferenceInvalidation(t *testing.T) {
 		AssertValuesEqual(t, inter, expectedResult, result)
 	})
 }
+
+func TestInterpretCreatingCircularDependentResource(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource container field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource A {
+                access(mapping Identity) var b: @[B]
+                init() {
+                    self.b <- []
+                }
+            }
+
+            access(all) resource B {
+                access(all) let a: @A
+                init(_ a: @A) {
+                    self.a <- a
+                }
+            }
+
+            access(all) fun main() {
+                var a <- create A()
+                var b <- create B(<-a)
+                let aRef = &b.a as auth(Mutate) &A
+                aRef.b.append(<-b)
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+
+	t.Run("resource field", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            access(all) resource A {
+                access(self) var b: @B?
+                init() {
+                    self.b <- nil
+                }
+                access(all) fun setB(_ b: @B) {
+                    self.b <-! b
+                }
+            }
+
+            access(all) resource B {
+                access(all) let a: @A
+                init(_ a: @A) {
+                    self.a <- a
+                }
+            }
+
+            access(all) fun main() {
+                var a <- create A()
+                var b <- create B(<-a)
+                let aRef = &b.a as auth(Mutate) &A
+                aRef.setB(<-b)
+            }
+        `)
+
+		_, err := inter.Invoke("main")
+		RequireError(t, err)
+		assert.ErrorAs(t, err, &interpreter.InvalidatedResourceReferenceError{})
+	})
+}
