@@ -140,6 +140,7 @@ func (l *lexer) clear() {
 	l.cursor = 0
 	l.tokens = l.tokens[:0]
 	l.tokenCount = 0
+	l.mode = NORMAL
 }
 
 func (l *lexer) Reclaim() {
