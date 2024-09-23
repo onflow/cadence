@@ -1735,6 +1735,8 @@ func parseStringLiteralContent(p *parser, s []byte) (result string) {
 			builder.WriteByte('\t')
 		case '"':
 			builder.WriteByte('"')
+		case '$':
+			builder.WriteByte('$')
 		case '\'':
 			builder.WriteByte('\'')
 		case '\\':

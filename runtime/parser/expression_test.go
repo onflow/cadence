@@ -6098,6 +6098,34 @@ func TestParseStringTemplate(t *testing.T) {
 		utils.AssertEqualWithDiff(t, expected, actual)
 	})
 
+	t.Run("escaped", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+		"\$1.00"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.NoError(t, err)
+
+		expected := &ast.StringExpression{
+			Value: "$1.00",
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
+				EndPos:   ast.Position{Offset: 10, Line: 2, Column: 9},
+			},
+		}
+
+		utils.AssertEqualWithDiff(t, expected, actual)
+	})
+
 	t.Run("multi", func(t *testing.T) {
 
 		t.Parallel()

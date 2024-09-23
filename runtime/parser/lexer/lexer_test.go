@@ -1071,6 +1071,33 @@ func TestLexString(t *testing.T) {
 		)
 	})
 
+	t.Run("valid, escaped string template", func(t *testing.T) {
+		testLex(t,
+			`"\$1.00"`,
+			[]token{
+				{
+					Token: Token{
+						Type: TokenString,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					Source: `"\$1.00"`,
+				},
+				{
+					Token: Token{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+				},
+			},
+		)
+	})
+
 	t.Run("invalid, number string template", func(t *testing.T) {
 		testLex(t,
 			`"$1"`,

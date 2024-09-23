@@ -12398,4 +12398,20 @@ func TestInterpretStringTemplates(t *testing.T) {
 			inter.Globals.Get("x").GetValue(inter),
 		)
 	})
+
+	t.Run("escaped", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let x = 123
+			let y = "x is worth \$$x"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("x is worth $123"),
+			inter.Globals.Get("y").GetValue(inter),
+		)
+	})
 }
