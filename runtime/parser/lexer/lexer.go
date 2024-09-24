@@ -54,7 +54,6 @@ type LexerMode int
 const (
 	NORMAL = iota
 	STR_IDENTIFIER
-	STR_EXPRESSION
 )
 
 type lexer struct {
@@ -84,6 +83,8 @@ type lexer struct {
 	canBackup bool
 	// lexer mode is used for string templates
 	mode LexerMode
+	// counts the number of unclosed brackets for string templates \((()))
+	openBrackets int
 }
 
 var _ TokenStream = &lexer{}
@@ -141,6 +142,7 @@ func (l *lexer) clear() {
 	l.tokens = l.tokens[:0]
 	l.tokenCount = 0
 	l.mode = NORMAL
+	l.openBrackets = 0
 }
 
 func (l *lexer) Reclaim() {
@@ -418,18 +420,24 @@ func (l *lexer) scanString(quote rune) {
 			l.backupOne()
 			return
 		case '\\':
+			// might have to backup twice due to string template
+			tmpBackupOffset := l.prevEndOffset
+			tmpBackup := l.prev
 			r = l.next()
 			switch r {
+			case '(':
+				// string template, stop and set mode
+				l.mode = STR_IDENTIFIER
+				// no need to update prev values because these next tokens will not backup
+				l.endOffset = tmpBackupOffset
+				l.current = tmpBackup
+				l.canBackup = false
+				return
 			case '\n', EOF:
 				// NOTE: invalid end of string handled by parser
 				l.backupOne()
 				return
 			}
-		case '$':
-			// string template, stop and set mode
-			l.backupOne()
-			l.mode = STR_IDENTIFIER
-			return
 		}
 		r = l.next()
 	}

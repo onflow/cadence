@@ -207,7 +207,7 @@ func (t TokenType) String() string {
 	case TokenPragma:
 		return `'#'`
 	case TokenStringTemplate:
-		return `'$'`
+		return `'\('`
 	default:
 		panic(errors.NewUnreachableError())
 	}

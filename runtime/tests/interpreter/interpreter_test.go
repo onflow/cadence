@@ -12292,8 +12292,8 @@ func TestInterpretStringTemplates(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-		let x = 123
-		let y = "x = $x"
+			let x = 123
+			let y = "x = \(x)"
 		`)
 
 		AssertValuesEqual(
@@ -12314,9 +12314,9 @@ func TestInterpretStringTemplates(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-		let x = 123.321
-		let y = "abc"
-		let z = "$y and $x"
+			let x = 123.321
+			let y = "abc"
+			let z = "\(y) and \(x)"
 		`)
 
 		AssertValuesEqual(
@@ -12331,9 +12331,9 @@ func TestInterpretStringTemplates(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-		let x = "{}"
-		let y = "[$x]"
-		let z = "($y)"
+			let x = "{}"
+			let y = "[\(x)]"
+			let z = "(\(y))"
 		`)
 
 		AssertValuesEqual(
@@ -12348,10 +12348,10 @@ func TestInterpretStringTemplates(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-	 	  access(all)
-      	  struct SomeStruct {}
-		  let a = SomeStruct()
-		  let x: String = "$a" 
+			access(all)
+			struct SomeStruct {}
+			let a = SomeStruct()
+			let x: String = "\(a)" 
 		`)
 
 		AssertValuesEqual(
@@ -12366,29 +12366,10 @@ func TestInterpretStringTemplates(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-	 	  let add = fun(): Int {
-        return 2+2
-      }
-      let x: String = "$add()"
-		`)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredStringValue("fun(): Int()"),
-			inter.Globals.Get("x").GetValue(inter),
-		)
-	})
-
-	t.Run("func", func(t *testing.T) {
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-	 	  let add = fun(): Int {
-        return 2+2
-      }
-      let y = add()
-      let x: String = "$y"
+			let add = fun(): Int {
+				return 2+2
+			}
+			let x: String = "\(add())"
 		`)
 
 		AssertValuesEqual(
@@ -12399,19 +12380,48 @@ func TestInterpretStringTemplates(t *testing.T) {
 		)
 	})
 
-	t.Run("escaped", func(t *testing.T) {
+	t.Run("func", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-			let x = 123
-			let y = "x is worth \$$x"
+			let add = fun(): Int {
+				return 2+2
+			}
+			let y = add()
+			let x: String = "\(y)"
 		`)
 
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewUnmeteredStringValue("x is worth $123"),
-			inter.Globals.Get("y").GetValue(inter),
+			interpreter.NewUnmeteredStringValue("4"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
+
+	t.Run("resource reference", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			resource R {}
+
+			fun test(): String {
+				let r <- create R()
+				let ref = &r as &R
+				let y = "\(ref)"
+				destroy r
+				return y
+			}
+		`)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("S.test.R(uuid: 1)"),
+			value,
 		)
 	})
 }

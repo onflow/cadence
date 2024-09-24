@@ -708,7 +708,7 @@ func TestCheckStringTemplate(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
 		  let a = 1
-		  let x: String = "The value of a is: $a" 
+		  let x: String = "The value of a is: \(a)" 
 		`)
 
 		require.NoError(t, err)
@@ -720,7 +720,7 @@ func TestCheckStringTemplate(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
 		  let a = "abc def"
-		  let x: String = "$a ghi" 
+		  let x: String = "\(a) ghi" 
 		`)
 
 		require.NoError(t, err)
@@ -734,7 +734,7 @@ func TestCheckStringTemplate(t *testing.T) {
 		  access(all)
       struct SomeStruct {}
 		  let a = SomeStruct()
-		  let x: String = "$a" 
+		  let x: String = "\(a)" 
 		`)
 
 		require.NoError(t, err)
@@ -745,11 +745,30 @@ func TestCheckStringTemplate(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
-		  let x: String = "$a" 
+		  let x: String = "\(a)" 
 		`)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
+	t.Run("invalid, resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) resource TestResource {}
+			fun test(): String {
+				var x <- create TestResource()
+				var y = "\(x)"
+				destroy x
+				return y
+			} 
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingMoveOperationError{}, errs[0])
 	})
 }

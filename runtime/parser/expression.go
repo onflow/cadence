@@ -1193,6 +1193,10 @@ func defineStringExpression() {
 					if err != nil {
 						return nil, err
 					}
+					_, err = p.mustOne(lexer.TokenParenClose)
+					if err != nil {
+						return nil, err
+					}
 					values = append(values, value)
 					// parser already points to next token
 					curToken = p.current
