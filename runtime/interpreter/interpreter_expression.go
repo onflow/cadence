@@ -1237,6 +1237,23 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 
 	// Only convert and box.
 	// No need to transfer, since transfer would happen later, when the return value gets assigned.
+	//
+	// The conversion is needed because, the runtime function's return type could be a
+	// subtype of the invocation's return type.
+	// e.g:
+	//   struct interface I {
+	//     fun foo(): T?
+	//   }
+	//
+	//   struct S: I {
+	//     fun foo(): T {...}
+	//   }
+	//
+	//   var i: {I} = S()
+	//   return i.foo()?.bar
+	//
+	// Here runtime function's return type is `T`, but invocation's return type is `T?`.
+
 	resultValue = interpreter.ConvertAndBox(
 		locationRange,
 		resultValue,
