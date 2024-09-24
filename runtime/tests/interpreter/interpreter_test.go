@@ -12344,21 +12344,19 @@ func TestInterpretStringTemplates(t *testing.T) {
 		)
 	})
 
-	t.Run("struct", func(t *testing.T) {
+	t.Run("boolean", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-			access(all)
-			struct SomeStruct {}
-			let a = SomeStruct()
-			let x: String = "\(a)" 
+			let x = false
+			let y = "\(x)"
 		`)
 
 		AssertValuesEqual(
 			t,
 			inter,
-			interpreter.NewUnmeteredStringValue("S.test.SomeStruct()"),
-			inter.Globals.Get("x").GetValue(inter),
+			interpreter.NewUnmeteredStringValue("false"),
+			inter.Globals.Get("y").GetValue(inter),
 		)
 	})
 
@@ -12396,32 +12394,6 @@ func TestInterpretStringTemplates(t *testing.T) {
 			inter,
 			interpreter.NewUnmeteredStringValue("4"),
 			inter.Globals.Get("x").GetValue(inter),
-		)
-	})
-
-	t.Run("resource reference", func(t *testing.T) {
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-			resource R {}
-
-			fun test(): String {
-				let r <- create R()
-				let ref = &r as &R
-				let y = "\(ref)"
-				destroy r
-				return y
-			}
-		`)
-
-		value, err := inter.Invoke("test")
-		require.NoError(t, err)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredStringValue("S.test.R(uuid: 1)"),
-			value,
 		)
 	})
 }

@@ -37,6 +37,18 @@ func (checker *Checker) VisitStringTemplateExpression(stringTemplateExpression *
 
 			argumentTypes[i] = valueType
 
+			// All number types, addresses, path types, bool and strings are supported in string template
+			if !(IsSubType(valueType, NumberType) || IsSubType(valueType, TheAddressType) ||
+				IsSubType(valueType, PathType) || IsSubType(valueType, StringType) || IsSubType(valueType, BoolType)) {
+				checker.report(
+					&TypeMismatchWithDescriptionError{
+						ActualType:              valueType,
+						ExpectedTypeDescription: "a type with built-in toString() or bool",
+						Range:                   ast.NewRangeFromPositioned(checker.memoryGauge, element),
+					},
+				)
+			}
+
 			checker.checkResourceMoveOperation(element, valueType)
 		}
 	}
