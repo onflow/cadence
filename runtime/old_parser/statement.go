@@ -492,12 +492,10 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	var preConditions *ast.Conditions
 	if p.isToken(p.current, lexer.TokenIdentifier, keywordPre) {
 		p.next()
-		conditions, err := parseConditions(p, ast.ConditionKindPre)
+		preConditions, err = parseConditions(p, ast.ConditionKindPre)
 		if err != nil {
 			return nil, err
 		}
-
-		preConditions = &conditions
 	}
 
 	p.skipSpaceAndComments()
@@ -505,12 +503,10 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 	var postConditions *ast.Conditions
 	if p.isToken(p.current, lexer.TokenIdentifier, keywordPost) {
 		p.next()
-		conditions, err := parseConditions(p, ast.ConditionKindPost)
+		postConditions, err = parseConditions(p, ast.ConditionKindPost)
 		if err != nil {
 			return nil, err
 		}
-
-		postConditions = &conditions
 	}
 
 	statements, err := parseStatements(p, func(token lexer.Token) bool {
@@ -542,13 +538,15 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 }
 
 // parseConditions parses conditions (pre/post)
-func parseConditions(p *parser, kind ast.ConditionKind) (conditions ast.Conditions, err error) {
+func parseConditions(p *parser, kind ast.ConditionKind) (conditions *ast.Conditions, err error) {
 
 	p.skipSpaceAndComments()
 	_, err = p.mustOne(lexer.TokenBraceOpen)
 	if err != nil {
 		return nil, err
 	}
+
+	conditions = &ast.Conditions{}
 
 	defer func() {
 		p.skipSpaceAndComments()
@@ -572,7 +570,7 @@ func parseConditions(p *parser, kind ast.ConditionKind) (conditions ast.Conditio
 				return
 			}
 
-			conditions = append(conditions, condition)
+			conditions.Conditions = append(conditions.Conditions, condition)
 		}
 	}
 }

@@ -45,9 +45,9 @@ type InterpretedFunctionValue struct {
 	Type             *sema.FunctionType
 	Activation       *VariableActivation
 	BeforeStatements []ast.Statement
-	PreConditions    ast.Conditions
+	PreConditions    []ast.Condition
 	Statements       []ast.Statement
-	PostConditions   ast.Conditions
+	PostConditions   []ast.Condition
 }
 
 func NewInterpretedFunctionValue(
@@ -56,9 +56,9 @@ func NewInterpretedFunctionValue(
 	functionType *sema.FunctionType,
 	lexicalScope *VariableActivation,
 	beforeStatements []ast.Statement,
-	preConditions ast.Conditions,
+	preConditions []ast.Condition,
 	statements []ast.Statement,
-	postConditions ast.Conditions,
+	postConditions []ast.Condition,
 ) *InterpretedFunctionValue {
 
 	common.UseMemory(interpreter, common.InterpretedFunctionValueMemoryUsage)

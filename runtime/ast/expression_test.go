@@ -4623,22 +4623,26 @@ func TestFunctionExpression_Doc(t *testing.T) {
 			},
 			FunctionBlock: &FunctionBlock{
 				PreConditions: &Conditions{
-					&TestCondition{
-						Test: &BoolExpression{
-							Value: true,
-						},
-						Message: &StringExpression{
-							Value: "pre",
+					Conditions: []Condition{
+						&TestCondition{
+							Test: &BoolExpression{
+								Value: true,
+							},
+							Message: &StringExpression{
+								Value: "pre",
+							},
 						},
 					},
 				},
 				PostConditions: &Conditions{
-					&TestCondition{
-						Test: &BoolExpression{
-							Value: false,
-						},
-						Message: &StringExpression{
-							Value: "post",
+					Conditions: []Condition{
+						&TestCondition{
+							Test: &BoolExpression{
+								Value: false,
+							},
+							Message: &StringExpression{
+								Value: "post",
+							},
 						},
 					},
 				},
@@ -4877,22 +4881,26 @@ func TestFunctionExpression_String(t *testing.T) {
 			},
 			FunctionBlock: &FunctionBlock{
 				PreConditions: &Conditions{
-					&TestCondition{
-						Test: &BoolExpression{
-							Value: true,
-						},
-						Message: &StringExpression{
-							Value: "pre",
+					Conditions: []Condition{
+						&TestCondition{
+							Test: &BoolExpression{
+								Value: true,
+							},
+							Message: &StringExpression{
+								Value: "pre",
+							},
 						},
 					},
 				},
 				PostConditions: &Conditions{
-					&TestCondition{
-						Test: &BoolExpression{
-							Value: false,
-						},
-						Message: &StringExpression{
-							Value: "post",
+					Conditions: []Condition{
+						&TestCondition{
+							Test: &BoolExpression{
+								Value: false,
+							},
+							Message: &StringExpression{
+								Value: "post",
+							},
 						},
 					},
 				},

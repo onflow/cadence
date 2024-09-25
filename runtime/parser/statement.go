@@ -520,26 +520,26 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 
 	var preConditions *ast.Conditions
 	if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
+		prePos := p.current.StartPos
+		// Skip the `pre` keyword
 		p.next()
-		conditions, err := parseConditions(p)
+		preConditions, err = parseConditions(p, prePos)
 		if err != nil {
 			return nil, err
 		}
-
-		preConditions = &conditions
 	}
 
 	p.skipSpaceAndComments()
 
 	var postConditions *ast.Conditions
 	if p.isToken(p.current, lexer.TokenIdentifier, KeywordPost) {
+		startPos := p.current.StartPos
+		// Skip the `post` keyword
 		p.next()
-		conditions, err := parseConditions(p)
+		postConditions, err = parseConditions(p, startPos)
 		if err != nil {
 			return nil, err
 		}
-
-		postConditions = &conditions
 	}
 
 	statements, err := parseStatements(p, func(token lexer.Token) bool {
@@ -571,13 +571,15 @@ func parseFunctionBlock(p *parser) (*ast.FunctionBlock, error) {
 }
 
 // parseConditions parses conditions (pre/post)
-func parseConditions(p *parser) (conditions ast.Conditions, err error) {
+func parseConditions(p *parser, startPos ast.Position) (*ast.Conditions, error) {
 
 	p.skipSpaceAndComments()
-	_, err = p.mustOne(lexer.TokenBraceOpen)
+	_, err := p.mustOne(lexer.TokenBraceOpen)
 	if err != nil {
 		return nil, err
 	}
+
+	var conditions []ast.Condition
 
 	var done bool
 	for !done {
@@ -594,7 +596,7 @@ func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 			var condition ast.Condition
 			condition, err = parseCondition(p)
 			if err != nil || condition == nil {
-				return
+				return nil, err
 			}
 
 			conditions = append(conditions, condition)
@@ -602,12 +604,18 @@ func parseConditions(p *parser) (conditions ast.Conditions, err error) {
 	}
 
 	p.skipSpaceAndComments()
+
+	endPos := p.current.StartPos
+
 	_, err = p.mustOne(lexer.TokenBraceClose)
 	if err != nil {
 		return nil, err
 	}
 
-	return conditions, nil
+	return &ast.Conditions{
+		Conditions: conditions,
+		Range:      ast.NewRange(p.memoryGauge, startPos, endPos),
+	}, nil
 }
 
 // parseCondition parses a condition (pre/post)

@@ -696,7 +696,7 @@ func TestCheckInvalidFunctionWithReturnTypeAndLocalResultAndPostConditionWithRes
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+		assert.IsType(t, &sema.ResultVariableConflictError{}, errs[0])
 	})
 
 	t.Run("emit condition", func(t *testing.T) {
@@ -716,7 +716,7 @@ func TestCheckInvalidFunctionWithReturnTypeAndLocalResultAndPostConditionWithRes
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+		assert.IsType(t, &sema.ResultVariableConflictError{}, errs[0])
 	})
 }
 
@@ -738,7 +738,7 @@ func TestCheckInvalidFunctionWithReturnTypeAndResultParameterAndPostConditionWit
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+		assert.IsType(t, &sema.ResultVariableConflictError{}, errs[0])
 	})
 
 	t.Run("test condition", func(t *testing.T) {
@@ -757,7 +757,7 @@ func TestCheckInvalidFunctionWithReturnTypeAndResultParameterAndPostConditionWit
 
 		errs := RequireCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+		assert.IsType(t, &sema.ResultVariableConflictError{}, errs[0])
 	})
 }
 

@@ -699,63 +699,67 @@ func TestParseFunctionDeclaration(t *testing.T) {
 					},
 					FunctionBlock: &ast.FunctionBlock{
 						PreConditions: &ast.Conditions{
-							&ast.TestCondition{
-								Test: &ast.BoolExpression{
-									Value: true,
-									Range: ast.Range{
-										StartPos: ast.Position{Line: 4, Column: 17, Offset: 61},
-										EndPos:   ast.Position{Line: 4, Column: 20, Offset: 64},
-									},
-								},
-								Message: &ast.StringExpression{
-									Value: "test",
-									Range: ast.Range{
-										StartPos: ast.Position{Line: 4, Column: 24, Offset: 68},
-										EndPos:   ast.Position{Line: 4, Column: 29, Offset: 73},
-									},
-								},
-							},
-							&ast.TestCondition{
-								Test: &ast.BinaryExpression{
-									Operation: ast.OperationGreater,
-									Left: &ast.IntegerExpression{
-										PositiveLiteral: []byte("2"),
-										Value:           big.NewInt(2),
-										Base:            10,
+							Conditions: []ast.Condition{
+								&ast.TestCondition{
+									Test: &ast.BoolExpression{
+										Value: true,
 										Range: ast.Range{
-											StartPos: ast.Position{Line: 5, Column: 17, Offset: 92},
-											EndPos:   ast.Position{Line: 5, Column: 17, Offset: 92},
+											StartPos: ast.Position{Line: 4, Column: 17, Offset: 61},
+											EndPos:   ast.Position{Line: 4, Column: 20, Offset: 64},
 										},
 									},
-									Right: &ast.IntegerExpression{
-										PositiveLiteral: []byte("1"),
-										Value:           big.NewInt(1),
-										Base:            10,
+									Message: &ast.StringExpression{
+										Value: "test",
 										Range: ast.Range{
-											StartPos: ast.Position{Line: 5, Column: 21, Offset: 96},
-											EndPos:   ast.Position{Line: 5, Column: 21, Offset: 96},
+											StartPos: ast.Position{Line: 4, Column: 24, Offset: 68},
+											EndPos:   ast.Position{Line: 4, Column: 29, Offset: 73},
 										},
 									},
 								},
-								Message: &ast.StringExpression{
-									Value: "foo",
-									Range: ast.Range{
-										StartPos: ast.Position{Line: 5, Column: 25, Offset: 100},
-										EndPos:   ast.Position{Line: 5, Column: 29, Offset: 104},
+								&ast.TestCondition{
+									Test: &ast.BinaryExpression{
+										Operation: ast.OperationGreater,
+										Left: &ast.IntegerExpression{
+											PositiveLiteral: []byte("2"),
+											Value:           big.NewInt(2),
+											Base:            10,
+											Range: ast.Range{
+												StartPos: ast.Position{Line: 5, Column: 17, Offset: 92},
+												EndPos:   ast.Position{Line: 5, Column: 17, Offset: 92},
+											},
+										},
+										Right: &ast.IntegerExpression{
+											PositiveLiteral: []byte("1"),
+											Value:           big.NewInt(1),
+											Base:            10,
+											Range: ast.Range{
+												StartPos: ast.Position{Line: 5, Column: 21, Offset: 96},
+												EndPos:   ast.Position{Line: 5, Column: 21, Offset: 96},
+											},
+										},
+									},
+									Message: &ast.StringExpression{
+										Value: "foo",
+										Range: ast.Range{
+											StartPos: ast.Position{Line: 5, Column: 25, Offset: 100},
+											EndPos:   ast.Position{Line: 5, Column: 29, Offset: 104},
+										},
 									},
 								},
 							},
 						},
 						PostConditions: &ast.Conditions{
-							&ast.TestCondition{
-								Test: &ast.BoolExpression{
-									Value: false,
-									Range: ast.Range{
-										StartPos: ast.Position{Line: 9, Column: 17, Offset: 161},
-										EndPos:   ast.Position{Line: 9, Column: 21, Offset: 165},
+							Conditions: []ast.Condition{
+								&ast.TestCondition{
+									Test: &ast.BoolExpression{
+										Value: false,
+										Range: ast.Range{
+											StartPos: ast.Position{Line: 9, Column: 17, Offset: 161},
+											EndPos:   ast.Position{Line: 9, Column: 21, Offset: 165},
+										},
 									},
+									Message: nil,
 								},
-								Message: nil,
 							},
 						},
 						Block: &ast.Block{
@@ -3883,44 +3887,48 @@ func TestParseTransactionDeclaration(t *testing.T) {
 						},
 					},
 					PreConditions: &ast.Conditions{
-						&ast.TestCondition{
-							Test: &ast.BinaryExpression{
-								Operation: ast.OperationEqual,
-								Left: &ast.IdentifierExpression{
-									Identifier: ast.Identifier{
-										Identifier: "x",
-										Pos:        ast.Position{Offset: 117, Line: 11, Column: 10},
+						Conditions: []ast.Condition{
+							&ast.TestCondition{
+								Test: &ast.BinaryExpression{
+									Operation: ast.OperationEqual,
+									Left: &ast.IdentifierExpression{
+										Identifier: ast.Identifier{
+											Identifier: "x",
+											Pos:        ast.Position{Offset: 117, Line: 11, Column: 10},
+										},
 									},
-								},
-								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte("0"),
-									Value:           new(big.Int),
-									Base:            10,
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 122, Line: 11, Column: 15},
-										EndPos:   ast.Position{Offset: 122, Line: 11, Column: 15},
+									Right: &ast.IntegerExpression{
+										PositiveLiteral: []byte("0"),
+										Value:           new(big.Int),
+										Base:            10,
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 122, Line: 11, Column: 15},
+											EndPos:   ast.Position{Offset: 122, Line: 11, Column: 15},
+										},
 									},
 								},
 							},
 						},
 					},
 					PostConditions: &ast.Conditions{
-						&ast.TestCondition{
-							Test: &ast.BinaryExpression{
-								Operation: ast.OperationEqual,
-								Left: &ast.IdentifierExpression{
-									Identifier: ast.Identifier{
-										Identifier: "x",
-										Pos:        ast.Position{Offset: 197, Line: 19, Column: 11},
+						Conditions: []ast.Condition{
+							&ast.TestCondition{
+								Test: &ast.BinaryExpression{
+									Operation: ast.OperationEqual,
+									Left: &ast.IdentifierExpression{
+										Identifier: ast.Identifier{
+											Identifier: "x",
+											Pos:        ast.Position{Offset: 197, Line: 19, Column: 11},
+										},
 									},
-								},
-								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte("2"),
-									Value:           big.NewInt(2),
-									Base:            10,
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 202, Line: 19, Column: 16},
-										EndPos:   ast.Position{Offset: 202, Line: 19, Column: 16},
+									Right: &ast.IntegerExpression{
+										PositiveLiteral: []byte("2"),
+										Value:           big.NewInt(2),
+										Base:            10,
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 202, Line: 19, Column: 16},
+											EndPos:   ast.Position{Offset: 202, Line: 19, Column: 16},
+										},
 									},
 								},
 							},
@@ -4118,44 +4126,48 @@ func TestParseTransactionDeclaration(t *testing.T) {
 						},
 					},
 					PreConditions: &ast.Conditions{
-						&ast.TestCondition{
-							Test: &ast.BinaryExpression{
-								Operation: ast.OperationEqual,
-								Left: &ast.IdentifierExpression{
-									Identifier: ast.Identifier{
-										Identifier: "x",
-										Pos:        ast.Position{Offset: 117, Line: 11, Column: 10},
+						Conditions: []ast.Condition{
+							&ast.TestCondition{
+								Test: &ast.BinaryExpression{
+									Operation: ast.OperationEqual,
+									Left: &ast.IdentifierExpression{
+										Identifier: ast.Identifier{
+											Identifier: "x",
+											Pos:        ast.Position{Offset: 117, Line: 11, Column: 10},
+										},
 									},
-								},
-								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte("0"),
-									Value:           new(big.Int),
-									Base:            10,
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 122, Line: 11, Column: 15},
-										EndPos:   ast.Position{Offset: 122, Line: 11, Column: 15},
+									Right: &ast.IntegerExpression{
+										PositiveLiteral: []byte("0"),
+										Value:           new(big.Int),
+										Base:            10,
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 122, Line: 11, Column: 15},
+											EndPos:   ast.Position{Offset: 122, Line: 11, Column: 15},
+										},
 									},
 								},
 							},
 						},
 					},
 					PostConditions: &ast.Conditions{
-						&ast.TestCondition{
-							Test: &ast.BinaryExpression{
-								Operation: ast.OperationEqual,
-								Left: &ast.IdentifierExpression{
-									Identifier: ast.Identifier{
-										Identifier: "x",
-										Pos:        ast.Position{Offset: 154, Line: 15, Column: 11},
+						Conditions: []ast.Condition{
+							&ast.TestCondition{
+								Test: &ast.BinaryExpression{
+									Operation: ast.OperationEqual,
+									Left: &ast.IdentifierExpression{
+										Identifier: ast.Identifier{
+											Identifier: "x",
+											Pos:        ast.Position{Offset: 154, Line: 15, Column: 11},
+										},
 									},
-								},
-								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte("2"),
-									Value:           big.NewInt(2),
-									Base:            10,
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 159, Line: 15, Column: 16},
-										EndPos:   ast.Position{Offset: 159, Line: 15, Column: 16},
+									Right: &ast.IntegerExpression{
+										PositiveLiteral: []byte("2"),
+										Value:           big.NewInt(2),
+										Base:            10,
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 159, Line: 15, Column: 16},
+											EndPos:   ast.Position{Offset: 159, Line: 15, Column: 16},
+										},
 									},
 								},
 							},
@@ -4721,64 +4733,69 @@ func TestParsePreAndPostConditions(t *testing.T) {
 						},
 					},
 					PreConditions: &ast.Conditions{
-						&ast.TestCondition{
-							Test: &ast.BinaryExpression{
-								Operation: ast.OperationNotEqual,
-								Left: &ast.IdentifierExpression{
-									Identifier: ast.Identifier{
-										Identifier: "n",
-										Pos:        ast.Position{Offset: 62, Line: 4, Column: 16},
+						Conditions: []ast.Condition{
+							&ast.TestCondition{
+								Test: &ast.BinaryExpression{
+									Operation: ast.OperationNotEqual,
+									Left: &ast.IdentifierExpression{
+										Identifier: ast.Identifier{
+											Identifier: "n",
+											Pos:        ast.Position{Offset: 62, Line: 4, Column: 16},
+										},
 									},
-								},
-								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte("0"),
-									Value:           new(big.Int),
-									Base:            10,
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 67, Line: 4, Column: 21},
-										EndPos:   ast.Position{Offset: 67, Line: 4, Column: 21},
+									Right: &ast.IntegerExpression{
+										PositiveLiteral: []byte("0"),
+										Value:           new(big.Int),
+										Base:            10,
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 67, Line: 4, Column: 21},
+											EndPos:   ast.Position{Offset: 67, Line: 4, Column: 21},
+										},
 									},
 								},
 							},
-						},
-						&ast.TestCondition{
-							Test: &ast.BinaryExpression{
-								Operation: ast.OperationGreater,
-								Left: &ast.IdentifierExpression{
-									Identifier: ast.Identifier{
-										Identifier: "n",
-										Pos:        ast.Position{Offset: 85, Line: 5, Column: 16},
+							&ast.TestCondition{
+								Test: &ast.BinaryExpression{
+									Operation: ast.OperationGreater,
+									Left: &ast.IdentifierExpression{
+										Identifier: ast.Identifier{
+											Identifier: "n",
+											Pos:        ast.Position{Offset: 85, Line: 5, Column: 16},
+										},
 									},
-								},
-								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte("0"),
-									Value:           new(big.Int),
-									Base:            10,
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 89, Line: 5, Column: 20},
-										EndPos:   ast.Position{Offset: 89, Line: 5, Column: 20},
+									Right: &ast.IntegerExpression{
+										PositiveLiteral: []byte("0"),
+										Value:           new(big.Int),
+										Base:            10,
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 89, Line: 5, Column: 20},
+											EndPos:   ast.Position{Offset: 89, Line: 5, Column: 20},
+										},
 									},
 								},
 							},
 						},
 					},
 					PostConditions: &ast.Conditions{
-						&ast.TestCondition{
-							Test: &ast.BinaryExpression{
-								Operation: ast.OperationEqual,
-								Left: &ast.IdentifierExpression{
-									Identifier: ast.Identifier{
-										Identifier: "result",
-										Pos:        ast.Position{Offset: 140, Line: 8, Column: 16},
+						Conditions: []ast.Condition{
+
+							&ast.TestCondition{
+								Test: &ast.BinaryExpression{
+									Operation: ast.OperationEqual,
+									Left: &ast.IdentifierExpression{
+										Identifier: ast.Identifier{
+											Identifier: "result",
+											Pos:        ast.Position{Offset: 140, Line: 8, Column: 16},
+										},
 									},
-								},
-								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte("0"),
-									Value:           new(big.Int),
-									Base:            10,
-									Range: ast.Range{
-										StartPos: ast.Position{Offset: 150, Line: 8, Column: 26},
-										EndPos:   ast.Position{Offset: 150, Line: 8, Column: 26},
+									Right: &ast.IntegerExpression{
+										PositiveLiteral: []byte("0"),
+										Value:           new(big.Int),
+										Base:            10,
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 150, Line: 8, Column: 26},
+											EndPos:   ast.Position{Offset: 150, Line: 8, Column: 26},
+										},
 									},
 								},
 							},
@@ -4862,30 +4879,32 @@ func TestParseConditionMessage(t *testing.T) {
 						},
 					},
 					PreConditions: &ast.Conditions{
-						&ast.TestCondition{
-							Test: &ast.BinaryExpression{
-								Operation: ast.OperationGreaterEqual,
-								Left: &ast.IdentifierExpression{
-									Identifier: ast.Identifier{
-										Identifier: "n",
-										Pos:        ast.Position{Offset: 62, Line: 4, Column: 16},
+						Conditions: []ast.Condition{
+							&ast.TestCondition{
+								Test: &ast.BinaryExpression{
+									Operation: ast.OperationGreaterEqual,
+									Left: &ast.IdentifierExpression{
+										Identifier: ast.Identifier{
+											Identifier: "n",
+											Pos:        ast.Position{Offset: 62, Line: 4, Column: 16},
+										},
+									},
+									Right: &ast.IntegerExpression{
+										PositiveLiteral: []byte("0"),
+										Value:           new(big.Int),
+										Base:            10,
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 67, Line: 4, Column: 21},
+											EndPos:   ast.Position{Offset: 67, Line: 4, Column: 21},
+										},
 									},
 								},
-								Right: &ast.IntegerExpression{
-									PositiveLiteral: []byte("0"),
-									Value:           new(big.Int),
-									Base:            10,
+								Message: &ast.StringExpression{
+									Value: "n must be positive",
 									Range: ast.Range{
-										StartPos: ast.Position{Offset: 67, Line: 4, Column: 21},
-										EndPos:   ast.Position{Offset: 67, Line: 4, Column: 21},
+										StartPos: ast.Position{Offset: 70, Line: 4, Column: 24},
+										EndPos:   ast.Position{Offset: 89, Line: 4, Column: 43},
 									},
-								},
-							},
-							Message: &ast.StringExpression{
-								Value: "n must be positive",
-								Range: ast.Range{
-									StartPos: ast.Position{Offset: 70, Line: 4, Column: 24},
-									EndPos:   ast.Position{Offset: 89, Line: 4, Column: 43},
 								},
 							},
 						},
@@ -6139,39 +6158,42 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 						},
 					},
 					PreConditions: &ast.Conditions{
-						&ast.TestCondition{
-							Test: &ast.BoolExpression{
-								Value: true,
-								Range: ast.Range{
-									StartPos: ast.Position{Offset: 47, Line: 4, Column: 14},
-									EndPos:   ast.Position{Offset: 50, Line: 4, Column: 17},
-								},
-							},
-							Message: &ast.StringExpression{
-								Value: "one",
-								Range: ast.Range{
-									StartPos: ast.Position{Offset: 53, Line: 4, Column: 20},
-									EndPos:   ast.Position{Offset: 57, Line: 4, Column: 24},
-								},
-							},
-						},
-						&ast.TestCondition{
-							Test: &ast.UnaryExpression{
-								Operation: ast.OperationNegate,
-								Expression: &ast.BoolExpression{
-									Value: false,
+						Conditions: []ast.Condition{
+
+							&ast.TestCondition{
+								Test: &ast.BoolExpression{
+									Value: true,
 									Range: ast.Range{
-										StartPos: ast.Position{Offset: 74, Line: 5, Column: 15},
-										EndPos:   ast.Position{Offset: 78, Line: 5, Column: 19},
+										StartPos: ast.Position{Offset: 47, Line: 4, Column: 14},
+										EndPos:   ast.Position{Offset: 50, Line: 4, Column: 17},
 									},
 								},
-								StartPos: ast.Position{Offset: 73, Line: 5, Column: 14},
+								Message: &ast.StringExpression{
+									Value: "one",
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 53, Line: 4, Column: 20},
+										EndPos:   ast.Position{Offset: 57, Line: 4, Column: 24},
+									},
+								},
 							},
-							Message: &ast.StringExpression{
-								Value: "two",
-								Range: ast.Range{
-									StartPos: ast.Position{Offset: 81, Line: 5, Column: 22},
-									EndPos:   ast.Position{Offset: 85, Line: 5, Column: 26},
+							&ast.TestCondition{
+								Test: &ast.UnaryExpression{
+									Operation: ast.OperationNegate,
+									Expression: &ast.BoolExpression{
+										Value: false,
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 74, Line: 5, Column: 15},
+											EndPos:   ast.Position{Offset: 78, Line: 5, Column: 19},
+										},
+									},
+									StartPos: ast.Position{Offset: 73, Line: 5, Column: 14},
+								},
+								Message: &ast.StringExpression{
+									Value: "two",
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 81, Line: 5, Column: 22},
+										EndPos:   ast.Position{Offset: 85, Line: 5, Column: 26},
+									},
 								},
 							},
 						},
