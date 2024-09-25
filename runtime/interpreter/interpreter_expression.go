@@ -968,7 +968,7 @@ func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.St
 	for i, str := range expression.Values {
 		builder.WriteString(str)
 		if i < len(values) {
-			// STRINGTODO: is this how the conversion should happen?
+			// this is equivalent to toString() for supported types
 			s := values[i].String()
 			switch argumentTypes[i] {
 			case sema.StringType:
@@ -981,7 +981,6 @@ func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.St
 		}
 	}
 
-	// STRINGTODO: already metered as a string constant in parser?
 	return NewUnmeteredStringValue(builder.String())
 }
 

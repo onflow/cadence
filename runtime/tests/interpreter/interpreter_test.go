@@ -12378,4 +12378,20 @@ func TestInterpretStringTemplates(t *testing.T) {
 			inter.Globals.Get("x").GetValue(inter),
 		)
 	})
+
+	t.Run("path expr", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let a = /public/foo
+			let x = "file at \(a)"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("file at /public/foo"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
 }

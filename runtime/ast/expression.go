@@ -231,7 +231,6 @@ type StringTemplateExpression struct {
 var _ Expression = &StringTemplateExpression{}
 
 func NewStringTemplateExpression(gauge common.MemoryGauge, values []string, exprs []Expression, exprRange Range) *StringTemplateExpression {
-	// STRINGTODO: change to be similar to array memory usage?
 	common.UseMemory(gauge, common.StringExpressionMemoryUsage)
 	return &StringTemplateExpression{
 		Values:      values,

@@ -1141,7 +1141,7 @@ func defineStringExpression() {
 			curToken := startToken
 			endToken := startToken
 
-			// early check for start " of string literal because of string templates
+			// check for start " of string literal
 			literal := p.tokenSource(curToken)
 			length := len(literal)
 			if length == 0 {
@@ -1160,13 +1160,14 @@ func defineStringExpression() {
 				}
 			}
 
-			// flag for late end " check
+			// flag for ending " check
 			missingEnd := true
 
 			for curToken.Is(lexer.TokenString) {
 				literal = p.tokenSource(curToken)
 				length = len(literal)
 
+				// remove quotation marks if they exist
 				if curToken == startToken {
 					literal = literal[1:]
 					length = len(literal)
@@ -1208,7 +1209,7 @@ func defineStringExpression() {
 				}
 			}
 
-			// late check for end " of string literal because of string templates
+			// check for end " of string literal
 			if missingEnd {
 				p.reportSyntaxError("invalid end of string literal: missing '\"'")
 			}
@@ -1741,8 +1742,6 @@ func parseStringLiteralContent(p *parser, s []byte) (result string) {
 			builder.WriteByte('\t')
 		case '"':
 			builder.WriteByte('"')
-		case '$':
-			builder.WriteByte('$')
 		case '\'':
 			builder.WriteByte('\'')
 		case '\\':
