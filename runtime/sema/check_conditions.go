@@ -66,11 +66,11 @@ func (checker *Checker) checkCondition(condition ast.Condition) {
 	}
 }
 
-func (checker *Checker) rewritePostConditions(postConditions ast.Conditions) PostConditionsRewrite {
+func (checker *Checker) rewritePostConditions(postConditions []ast.Condition) PostConditionsRewrite {
 
 	var beforeStatements []ast.Statement
 
-	var rewrittenPostConditions ast.Conditions
+	var rewrittenPostConditions []ast.Condition
 	var allExtractedExpressions []ast.ExtractedExpression
 
 	count := len(postConditions)

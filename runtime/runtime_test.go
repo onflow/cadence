@@ -10967,3 +10967,30 @@ func TestRuntimeAccountStorageBorrowEphemeralReferenceValue(t *testing.T) {
 	var nestedReferenceErr interpreter.NestedReferenceError
 	require.ErrorAs(t, err, &nestedReferenceErr)
 }
+
+func TestResultRedeclared(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	script := []byte(`
+      access(all) fun main(): Int { let result = 1; return result }
+    `)
+
+	runtimeInterface := &TestRuntimeInterface{}
+
+	nextScriptLocation := NewScriptLocationGenerator()
+
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+}
