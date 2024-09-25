@@ -30,6 +30,7 @@ type ParameterList struct {
 	_parametersByIdentifier map[string]*Parameter
 	Parameters              []*Parameter
 	Range
+	Comments
 	once sync.Once
 }
 
@@ -37,11 +38,13 @@ func NewParameterList(
 	gauge common.MemoryGauge,
 	parameters []*Parameter,
 	astRange Range,
+	comments Comments,
 ) *ParameterList {
 	common.UseMemory(gauge, common.ParameterListMemoryUsage)
 	return &ParameterList{
 		Parameters: parameters,
 		Range:      astRange,
+		Comments:   comments,
 	}
 }
 

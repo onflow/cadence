@@ -53,8 +53,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var err error
 
 	if p.current.Is(lexer.TokenParenOpen) {
-		// TODO(preserve-comments): Do we care about these comments (second return value)?
-		parameterList, _, err = parseParameterList(p, false)
+		parameterList, err = parseParameterList(p, false)
 		if err != nil {
 			return nil, err
 		}

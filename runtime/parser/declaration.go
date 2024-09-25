@@ -952,7 +952,7 @@ func parseEventDeclaration(
 
 	// if this is a `ResourceDestroyed` event (i.e., a default event declaration), parse default arguments
 	parseDefaultArguments := ast.IsResourceDestructionDefaultEvent(identifier.Identifier)
-	parameterList, endComments, err := parseParameterList(p, parseDefaultArguments)
+	parameterList, err := parseParameterList(p, parseDefaultArguments)
 	if err != nil {
 		return nil, err
 	}
@@ -997,8 +997,7 @@ func parseEventDeclaration(
 			parameterList.EndPos,
 		),
 		ast.Comments{
-			Leading:  startToken.Comments.Leading,
-			Trailing: endComments.PackToList(),
+			Leading: startToken.Comments.Leading,
 		},
 	), nil
 }

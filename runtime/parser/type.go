@@ -168,12 +168,14 @@ func defineParenthesizedTypes() {
 
 func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, error) {
 	var nestedIdentifiers []ast.Identifier
+	// Stores the last token at the end of the loop
+	var nestedToken *lexer.Token
 
 	for p.current.Is(lexer.TokenDot) {
 		// Skip the dot
 		p.next()
 
-		nestedToken := p.current
+		nestedToken = &p.current
 
 		if !nestedToken.Is(lexer.TokenIdentifier) {
 			return nil, p.syntaxError(
@@ -183,7 +185,7 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, 
 			)
 		}
 
-		nestedIdentifier := p.tokenToIdentifier(nestedToken)
+		nestedIdentifier := p.tokenToIdentifier(*nestedToken)
 
 		// Skip the identifier
 		p.next()
@@ -195,10 +197,21 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, 
 
 	}
 
-	return ast.NewNominalType(
+	var trailingComments []*ast.Comment
+	if nestedToken == nil {
+		trailingComments = token.Comments.Trailing
+	} else {
+		trailingComments = nestedToken.Comments.PackToList()
+	}
+
+	return ast.NewNominalTypeWithComments(
 		p.memoryGauge,
 		p.tokenToIdentifier(token),
 		nestedIdentifiers,
+		ast.Comments{
+			Leading:  token.Comments.Leading,
+			Trailing: trailingComments,
+		},
 	), nil
 }
 
@@ -731,13 +744,20 @@ func defaultTypeMetaLeftDenotation(
 func parseTypeAnnotation(p *parser) (*ast.TypeAnnotation, error) {
 	p.skipSpace()
 
-	startPos := p.current.StartPos
+	startToken := p.current
 
 	isResource := false
 	if p.current.Is(lexer.TokenAt) {
 		// Skip the `@`
 		p.next()
 		isResource = true
+
+		// Append @ token comments to type token,
+		// so that we don't need to store them in TypeAnnotation node.
+		var leadingComments []*ast.Comment
+		leadingComments = append(leadingComments, startToken.Comments.Leading...)
+		leadingComments = append(leadingComments, p.current.Comments.Leading...)
+		p.current.Comments.Leading = leadingComments
 	}
 
 	ty, err := parseType(p, lowestBindingPower)
@@ -749,7 +769,7 @@ func parseTypeAnnotation(p *parser) (*ast.TypeAnnotation, error) {
 		p.memoryGauge,
 		isResource,
 		ty,
-		startPos,
+		startToken.StartPos,
 	), nil
 }
 

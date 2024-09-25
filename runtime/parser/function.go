@@ -32,14 +32,15 @@ func parsePurityAnnotation(p *parser) ast.FunctionPurity {
 	return ast.FunctionPurityUnspecified
 }
 
-func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterList, ast.Comments, error) {
+func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterList, error) {
 	var parameters []*ast.Parameter
+	var endToken lexer.Token
 	var comments ast.Comments
 
 	p.skipSpace()
 
 	if !p.current.Is(lexer.TokenParenOpen) {
-		return nil, comments, p.syntaxError(
+		return nil, p.syntaxError(
 			"expected %s as start of parameter list, got %s",
 			lexer.TokenParenOpen,
 			p.current.Type,
@@ -47,13 +48,8 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 	}
 
 	startToken := p.current
-	startPos := startToken.StartPos
 	// Skip the opening paren
 	p.next()
-
-	comments.Leading = startToken.PackToList()
-
-	var endPos ast.Position
 
 	expectParameter := true
 
@@ -69,7 +65,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 			}
 			parameter, err := parseParameter(p, expectDefaultArguments)
 			if err != nil {
-				return nil, comments, err
+				return nil, err
 			}
 
 			parameters = append(parameters, parameter)
@@ -77,7 +73,7 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 
 		case lexer.TokenComma:
 			if expectParameter {
-				return nil, comments, p.syntaxError(
+				return nil, p.syntaxError(
 					"expected parameter or end of parameter list, got %s",
 					p.current.Type,
 				)
@@ -87,27 +83,25 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 			expectParameter = true
 
 		case lexer.TokenParenClose:
-			endToken := p.current
-			endPos = endToken.EndPos
+			endToken = p.current
 			// Skip the closing paren
 			p.next()
-			comments.Trailing = endToken.PackToList()
 			atEnd = true
 
 		case lexer.TokenEOF:
-			return nil, comments, p.syntaxError(
+			return nil, p.syntaxError(
 				"missing %s at end of parameter list",
 				lexer.TokenParenClose,
 			)
 
 		default:
 			if expectParameter {
-				return nil, comments, p.syntaxError(
+				return nil, p.syntaxError(
 					"expected parameter or end of parameter list, got %s",
 					p.current.Type,
 				)
 			} else {
-				return nil, comments, p.syntaxError(
+				return nil, p.syntaxError(
 					"expected comma or end of parameter list, got %s",
 					p.current.Type,
 				)
@@ -115,21 +109,43 @@ func parseParameterList(p *parser, expectDefaultArguments bool) (*ast.ParameterL
 		}
 	}
 
+	if len(parameters) == 0 {
+		comments.Leading = append(
+			comments.Leading,
+			startToken.Comments.PackToList()...,
+		)
+	} else {
+		comments.Leading = append(
+			comments.Leading,
+			startToken.Comments.Leading...,
+		)
+
+		var patched []*ast.Comment
+		patched = append(patched, startToken.Comments.Trailing...)
+		patched = append(patched, parameters[0].Comments.Leading...)
+		parameters[0].Comments.Leading = patched
+	}
+	comments.Trailing = append(
+		comments.Trailing,
+		endToken.Comments.PackToList()...,
+	)
+
 	return ast.NewParameterList(
 		p.memoryGauge,
 		parameters,
 		ast.NewRange(
 			p.memoryGauge,
-			startPos,
-			endPos,
+			startToken.StartPos,
+			endToken.EndPos,
 		),
-	), comments, nil
+		comments,
+	), nil
 }
 
 func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, error) {
 	p.skipSpace()
 
-	startPos := p.current.StartPos
+	startToken := p.current
 
 	argumentLabel := ""
 	identifier, err := p.nonReservedIdentifier("for argument label or parameter name")
@@ -156,11 +172,12 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 		p.nextSemanticToken()
 	}
 
-	if !p.current.Is(lexer.TokenColon) {
+	colonToken := p.current
+	if !colonToken.Is(lexer.TokenColon) {
 		return nil, p.syntaxError(
 			"expected %s after parameter name, got %s",
 			lexer.TokenColon,
-			p.current.Type,
+			colonToken.Type,
 		)
 	}
 
@@ -203,7 +220,13 @@ func parseParameter(p *parser, expectDefaultArgument bool) (*ast.Parameter, erro
 		identifier,
 		typeAnnotation,
 		defaultArgument,
-		startPos,
+		startToken.StartPos,
+		ast.Comments{
+			Leading: append(
+				startToken.Comments.PackToList(),
+				colonToken.Comments.PackToList()...,
+			),
+		},
 	), nil
 }
 
@@ -394,8 +417,7 @@ func parseFunctionParameterListAndRest(
 ) {
 	// Parameter list
 
-	// TODO(preserve-comments): Do we care about these comments (second return value)?
-	parameterList, _, err = parseParameterList(p, false)
+	parameterList, err = parseParameterList(p, false)
 	if err != nil {
 		return
 	}

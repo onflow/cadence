@@ -442,8 +442,7 @@ func TestParseParameterList(t *testing.T) {
 			nil,
 			[]byte(input),
 			func(p *parser) (*ast.ParameterList, error) {
-				// TODO(preserve-comments): Do we care about these comments (second return value)?
-				parameters, _, err := parseParameterList(p, false)
+				parameters, err := parseParameterList(p, false)
 				return parameters, err
 			},
 			Config{},
@@ -518,6 +517,62 @@ func TestParseParameterList(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("one, resource type, with comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse(`( a : /* After colon */ 
+// Before type
+@Int /* After type */ )`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ParameterList{
+				Parameters: []*ast.Parameter{
+					{
+						Label: "",
+						Identifier: ast.Identifier{
+							Identifier: "a",
+							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+						TypeAnnotation: &ast.TypeAnnotation{
+							IsResource: true,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int",
+									Pos:        ast.Position{Line: 3, Column: 1, Offset: 41},
+								},
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{
+										// This comment should be attached to Type instead of TypeAnnotation
+										// (even tho it's technically attached to the @ resource symbol) for simplicity.
+										ast.NewComment(nil, []byte("// Before type")),
+									},
+									Trailing: []*ast.Comment{
+										ast.NewComment(nil, []byte("/* After type */")),
+									},
+								},
+							},
+							StartPos: ast.Position{Line: 3, Column: 0, Offset: 40},
+						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("/* After colon */")),
+							},
+							Trailing: []*ast.Comment{},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 3, Column: 22, Offset: 62},
 				},
 			},
 			result,
@@ -612,6 +667,91 @@ func TestParseParameterList(t *testing.T) {
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 22, Offset: 22},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("two, with comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse(`( /* Before param b */ a b : /* Before b type annotation */ Int /* After param b */, 
+// Before param c
+c /* After c identifier */ : Int // After param c 
+)`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ParameterList{
+				Parameters: []*ast.Parameter{
+					{
+						Label: "a",
+						Identifier: ast.Identifier{
+							Identifier: "b",
+							Pos:        ast.Position{Line: 1, Column: 25, Offset: 25},
+						},
+						TypeAnnotation: &ast.TypeAnnotation{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int",
+									Pos:        ast.Position{Line: 1, Column: 60, Offset: 60},
+								},
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{},
+									Trailing: []*ast.Comment{
+										ast.NewComment(nil, []byte("/* After param b */")),
+									},
+								},
+							},
+							StartPos: ast.Position{Line: 1, Column: 60, Offset: 60},
+						},
+						StartPos: ast.Position{Line: 1, Column: 23, Offset: 23},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("/* Before param b */")),
+								ast.NewComment(nil, []byte("/* Before b type annotation */")),
+							},
+							Trailing: []*ast.Comment{},
+						},
+					},
+					{
+						Label: "",
+						Identifier: ast.Identifier{
+							Identifier: "c",
+							Pos:        ast.Position{Line: 3, Column: 0, Offset: 104},
+						},
+						TypeAnnotation: &ast.TypeAnnotation{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int",
+									Pos:        ast.Position{Line: 3, Column: 29, Offset: 133},
+								},
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{},
+									Trailing: []*ast.Comment{
+										ast.NewComment(nil, []byte("// After param c ")),
+									},
+								},
+							},
+							StartPos: ast.Position{Line: 3, Column: 29, Offset: 133},
+						},
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 104},
+						Comments: ast.Comments{
+							Leading: []*ast.Comment{
+								ast.NewComment(nil, []byte("// Before param c")),
+								ast.NewComment(nil, []byte("/* After c identifier */")),
+							},
+							Trailing: []*ast.Comment{},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 4, Column: 0, Offset: 155},
 				},
 			},
 			result,
