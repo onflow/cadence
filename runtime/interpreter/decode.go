@@ -1409,7 +1409,7 @@ func (d StorableDecoder) decodePathCapability() (*PathCapabilityValue, error) {
 	}
 
 	return &PathCapabilityValue{
-		Address:    address,
+		address:    address,
 		Path:       pathValue,
 		BorrowType: borrowType,
 	}, nil

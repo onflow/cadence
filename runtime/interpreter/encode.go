@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"bytes"
+	"fmt"
 	"math"
 	"math/big"
 
@@ -252,6 +253,40 @@ var CBOREncMode = func() cbor.EncMode {
 	}
 	return encMode
 }()
+
+func init() {
+	// Here, init is only used for sanity checks (coding errors) and does not perform any initialization.
+
+	// Check if the CBOR tag number range is not reserved for internal use by atree.
+	// Cadence must only use available (unreserved by atree) CBOR tag numbers to encode elements in atree managed containers.
+
+	// As of Aug 15, 2024:
+	// - Atree reserves CBOR tag numbers from 240 to 255 for atree internal use.
+	// - Cadence uses CBOR tag numbers from 128 to 230 to encode internal Cadence values.
+
+	// When a new tag number is needed, Atree will use higher tag number first from its reserved range.
+	// In contrast, Cadence will use lower tag numbers first from its own (different) reserved range.
+	// This allows Atree and Cadence more flexibility in case we need to revisit the
+	// allocation of adjacent unused ranges for Atree and Cadence.
+
+	minCBORTagNum := uint64(CBORTagBase)
+	maxCBORTagNum := uint64(CBORTag_Count) - 1
+
+	tagNumOK, err := atree.IsCBORTagNumberRangeAvailable(minCBORTagNum, maxCBORTagNum)
+	if err != nil {
+		panic(err)
+	}
+
+	if !tagNumOK {
+		atreeMinCBORTagNum, atreeMaxCBORTagNum := atree.ReservedCBORTagNumberRange()
+		panic(fmt.Errorf(
+			"cadence internal tag numbers [%d, %d] overlaps with atree internal tag numbers [%d, %d]",
+			minCBORTagNum,
+			maxCBORTagNum,
+			atreeMinCBORTagNum,
+			atreeMaxCBORTagNum))
+	}
+}
 
 // Encode encodes the value as a CBOR nil
 func (v NilValue) Encode(e *atree.Encoder) error {
@@ -854,7 +889,7 @@ func (v *IDCapabilityValue) Encode(e *atree.Encoder) error {
 	}
 
 	// Encode address at array index encodedCapabilityValueAddressFieldKey
-	err = v.Address.Encode(e)
+	err = v.address.Encode(e)
 	if err != nil {
 		return err
 	}

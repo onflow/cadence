@@ -240,19 +240,19 @@ func TestStaticTypeMigration(t *testing.T) {
 
 		actual := migrate(t,
 			staticTypeMigration,
-			&interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: nil,
-				Path:       path,
-				Address:    interpreter.AddressValue(testAddress),
-			},
+			interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				nil,
+				interpreter.AddressValue(testAddress),
+				path,
+			),
 			true,
 		)
 		assert.Equal(t,
-			&interpreter.PathCapabilityValue{ //nolint:staticcheck
-				BorrowType: nil,
-				Path:       path,
-				Address:    interpreter.AddressValue(testAddress),
-			},
+			interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				nil,
+				interpreter.AddressValue(testAddress),
+				path,
+			),
 			actual,
 		)
 	})

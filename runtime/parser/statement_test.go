@@ -2106,7 +2106,7 @@ func TestParseAccessAssignment(t *testing.T) {
 												},
 											},
 											Range: ast.Range{
-												StartPos: ast.Position{Offset: 40, Line: 3, Column: 21},
+												StartPos: ast.Position{Offset: 31, Line: 3, Column: 12},
 												EndPos:   ast.Position{Offset: 42, Line: 3, Column: 23},
 											},
 										},
@@ -2120,7 +2120,7 @@ func TestParseAccessAssignment(t *testing.T) {
 											},
 										},
 										Range: ast.Range{
-											StartPos: ast.Position{Offset: 43, Line: 3, Column: 24},
+											StartPos: ast.Position{Offset: 31, Line: 3, Column: 12},
 											EndPos:   ast.Position{Offset: 45, Line: 3, Column: 26},
 										},
 									},
@@ -2219,7 +2219,7 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 												},
 											},
 											Range: ast.Range{
-												StartPos: ast.Position{Offset: 28, Line: 2, Column: 27},
+												StartPos: ast.Position{Offset: 19, Line: 2, Column: 18},
 												EndPos:   ast.Position{Offset: 30, Line: 2, Column: 29},
 											},
 										},
@@ -2233,7 +2233,7 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 											},
 										},
 										Range: ast.Range{
-											StartPos: ast.Position{Offset: 31, Line: 2, Column: 30},
+											StartPos: ast.Position{Offset: 19, Line: 2, Column: 18},
 											EndPos:   ast.Position{Offset: 33, Line: 2, Column: 32},
 										},
 									},
@@ -2531,7 +2531,7 @@ func TestParseSwapStatementInFunctionDeclaration(t *testing.T) {
 										},
 									},
 									Range: ast.Range{
-										StartPos: ast.Position{Offset: 33, Line: 3, Column: 13},
+										StartPos: ast.Position{Offset: 30, Line: 3, Column: 10},
 										EndPos:   ast.Position{Offset: 35, Line: 3, Column: 15},
 									},
 								},

@@ -505,6 +505,8 @@ func (e *interpreterEnvironment) parseAndCheckProgramWithRecovery(
 		return program, elaboration, err
 	}
 
+	recoveredElaboration.IsRecovered = true
+
 	// If recovery succeeded, return the recovered program and elaboration
 	return recoveredProgram, recoveredElaboration, nil
 }
@@ -520,9 +522,15 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 	err error,
 ) {
 	wrapParsingCheckingError := func(err error) error {
-		return &ParsingCheckingError{
-			Err:      err,
-			Location: location,
+		switch err.(type) {
+		// Wrap only parsing and checking errors.
+		case *sema.CheckerError, parser.Error:
+			return &ParsingCheckingError{
+				Err:      err,
+				Location: location,
+			}
+		default:
+			return err
 		}
 	}
 
@@ -554,7 +562,7 @@ func (e *interpreterEnvironment) parseAndCheckProgram(
 // recoverProgram parses and checks the given program with the old parser,
 // and recovers the elaboration from the old program.
 func (e *interpreterEnvironment) recoverProgram(
-	code []byte,
+	oldCode []byte,
 	location common.Location,
 	checkedImports importResolutionResults,
 ) (
@@ -566,7 +574,7 @@ func (e *interpreterEnvironment) recoverProgram(
 	var err error
 	reportMetric(
 		func() {
-			program, err = old_parser.ParseProgram(e, code, old_parser.Config{})
+			program, err = old_parser.ParseProgram(e, oldCode, old_parser.Config{})
 		},
 		e.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -579,10 +587,18 @@ func (e *interpreterEnvironment) recoverProgram(
 
 	// Recover elaboration from the old program
 
+	var newCode []byte
 	errors.WrapPanic(func() {
-		program, err = e.runtimeInterface.RecoverProgram(program, location)
+		newCode, err = e.runtimeInterface.RecoverProgram(program, location)
 	})
-	if err != nil || program == nil {
+	if err != nil || newCode == nil {
+		return nil, nil
+	}
+
+	// Parse and check the recovered program
+
+	program, err = parser.ParseProgram(e, newCode, parser.Config{})
+	if err != nil {
 		return nil, nil
 	}
 
@@ -590,6 +606,8 @@ func (e *interpreterEnvironment) recoverProgram(
 	if err != nil || elaboration == nil {
 		return nil, nil
 	}
+
+	e.codesAndPrograms.setCode(location, newCode)
 
 	return program, elaboration
 }

@@ -1245,7 +1245,7 @@ func defineIndexExpression() {
 	setExprLeftBindingPower(lexer.TokenBracketOpen, exprLeftBindingPowerAccess)
 	setExprLeftDenotation(
 		lexer.TokenBracketOpen,
-		func(p *parser, token lexer.Token, left ast.Expression) (ast.Expression, error) {
+		func(p *parser, _ lexer.Token, left ast.Expression) (ast.Expression, error) {
 			firstIndexExpr, err := parseExpression(p, lowestBindingPower)
 			if err != nil {
 				return nil, err
@@ -1262,7 +1262,7 @@ func defineIndexExpression() {
 				firstIndexExpr,
 				ast.NewRange(
 					p.memoryGauge,
-					token.StartPos,
+					left.StartPosition(),
 					endToken.EndPos,
 				),
 			), nil

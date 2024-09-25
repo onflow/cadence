@@ -1391,4 +1391,95 @@ func TestRuntimeTransactionParameterTypeValidation(t *testing.T) {
 		expectRuntimeError(t, err, &ArgumentNotImportableError{})
 	})
 
+	newEnumType := func() cadence.Enum {
+		return cadence.NewEnum([]cadence.Value{
+			cadence.NewInt(0),
+		}).WithType(cadence.NewEnumType(
+			common.AddressLocation{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+				Name:    "C",
+			},
+			"C.Alpha",
+			cadence.IntType,
+			[]cadence.Field{
+				{
+					Identifier: sema.EnumRawValueFieldName,
+					Type:       cadence.IntType,
+				},
+			},
+			nil,
+		))
+	}
+
+	t.Run("Enum Optional Type", func(t *testing.T) {
+		t.Parallel()
+
+		contracts := map[common.AddressLocation][]byte{
+			{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+				Name:    "C",
+			}: []byte(`
+			access(all) contract C {
+				access(all) 
+				enum Alpha: Int {
+					access(all)
+					case A
+
+					access(all)
+					case B
+				}
+			}
+		`),
+		}
+
+		script := `
+			import C from 0x1
+
+			transaction(arg: C.Alpha?) {}
+		`
+
+		err := executeTransaction(t, script, contracts, cadence.NewOptional(nil))
+		assert.NoError(t, err)
+	})
+
+	t.Run("Enum Type", func(t *testing.T) {
+		t.Parallel()
+
+		contracts := map[common.AddressLocation][]byte{
+			{
+				Address: common.MustBytesToAddress([]byte{0x1}),
+				Name:    "C",
+			}: []byte(`
+				access(all) contract C {
+					access(all) 
+					enum Alpha: Int {
+						access(all)
+						case A
+
+						access(all)
+						case B
+					}
+				}
+			`),
+		}
+
+		script := `
+			import C from 0x1
+
+			transaction(arg: C.Alpha) {
+				execute {
+					let values: [AnyStruct] = []
+					values.append(arg)
+					if arg == C.Alpha.A {
+						values.append(C.Alpha.B)
+					}
+					assert(values.length == 2)
+				}
+			}
+		`
+
+		err := executeTransaction(t, script, contracts, newEnumType())
+		assert.NoError(t, err)
+	})
+
 }

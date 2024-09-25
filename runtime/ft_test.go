@@ -30,7 +30,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/runtime_utils"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -941,11 +940,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 	}
 
 	var events []cadence.Event
-	var logs []string
 
 	signerAccount := contractsAddress
-
-	var memoryGauge common.MemoryGauge
 
 	runtimeInterface := &TestRuntimeInterface{
 		OnGetCode: func(location Location) (bytes []byte, err error) {
@@ -970,10 +966,7 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		OnDecodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 			return json.Decode(nil, b)
 		},
-		OnProgramLog: func(message string) {
-			logs = append(logs, message)
-		},
-		OnRecoverProgram: func(program *ast.Program, location common.Location) (*ast.Program, error) {
+		OnRecoverProgram: func(program *ast.Program, location common.Location) ([]byte, error) {
 
 			// TODO: generalize
 
@@ -981,17 +974,31 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 				return nil, nil
 			}
 
-			code := `
+			return []byte(`
               import FungibleToken from 0x1
 
               access(all)
               contract ExampleToken: FungibleToken {
+
+                  access(self)
+                  view fun recoveryPanic(_ functionName: String): Never {
+                      return panic(
+                          "Contract ExampleToken is no longer functional. "
+                              .concat("A version of the contract has been recovered to allow access to the fields declared in the FT standard. ")
+                              .concat(functionName).concat(" is not available in recovered program.")
+                      )
+                  }
 
                   access(all)
                   var totalSupply: UFix64
 
                   init() {
                       self.totalSupply = 0.0
+                  }
+
+                  access(all)
+                  fun createEmptyVault(vaultType: Type): @{FungibleToken.Vault} {
+                      ExampleToken.recoveryPanic("createEmptyVault")
                   }
 
                   access(all)
@@ -1006,33 +1013,25 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 
                       access(FungibleToken.Withdraw)
                       fun withdraw(amount: UFix64): @{FungibleToken.Vault} {
-                          panic("withdraw is not implemented")
+                          ExampleToken.recoveryPanic("Vault.withdraw")
                       }
 
                       access(all)
                       view fun isAvailableToWithdraw(amount: UFix64): Bool {
-                          panic("isAvailableToWithdraw is not implemented")
+                          ExampleToken.recoveryPanic("Vault.isAvailableToWithdraw")
                       }
 
                       access(all)
                       fun deposit(from: @{FungibleToken.Vault}) {
-                          panic("deposit is not implemented")
+                          ExampleToken.recoveryPanic("Vault.deposit")
                       }
 
                       access(all) fun createEmptyVault(): @{FungibleToken.Vault} {
-                          panic("createEmptyVault is not implemented")
+                          ExampleToken.recoveryPanic("Vault.createEmptyVault")
                       }
                   }
-
-                  access(all)
-                  fun createEmptyVault(vaultType: Type): @{FungibleToken.Vault} {
-                      panic("createEmptyVault is not implemented")
-                  }
               }
-            `
-
-			// TODO: meter
-			return parser.ParseProgram(memoryGauge, []byte(code), parser.Config{})
+            `), nil
 		},
 	}
 
@@ -1153,10 +1152,18 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
           }
 
           execute {
-              log(ExampleToken.totalSupply)
-              log(self.vault.balance)
-              log(ExampleToken.getType())
-              log(self.vault.getType())
+              assert(ExampleToken.totalSupply == 4321.00000000)
+              assert(self.vault.balance == 1234.00000000)
+
+              let exampleTokenType = ExampleToken.getType()
+              assert(exampleTokenType == Type<ExampleToken>())
+              assert(exampleTokenType.isRecovered)
+              assert(Type<ExampleToken>().isRecovered)
+
+              let vaultType = self.vault.getType()
+              assert(vaultType == Type<@ExampleToken.Vault>())
+              assert(vaultType.isRecovered)
+              assert(Type<@ExampleToken.Vault>().isRecovered)
 
               let exampleVault <- self.vault
               let someVault <- exampleVault as! @{FungibleToken.Vault}
@@ -1179,16 +1186,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-
-	require.Equal(t,
-		[]string{
-			"4321.00000000",
-			"1234.00000000",
-			"Type<A.0000000000000001.ExampleToken>()",
-			"Type<A.0000000000000001.ExampleToken.Vault>()",
-		},
-		logs,
-	)
 
 	// Send another transaction that calls a function on the stored vault.
 	// Function calls on recovered values should panic.
@@ -1215,8 +1212,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
       }
     `
 
-	logs = nil
-
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(transaction2),
@@ -1228,7 +1223,8 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 	)
 	utils.RequireError(t, err)
-	require.ErrorContains(t, err, "panic: withdraw is not implemented")
+	require.ErrorContains(t, err, "Vault.withdraw is not available in recovered program")
+	t.Log(err.Error())
 
 	// Send another transaction that loads the broken ExampleToken contract and the broken ExampleToken.Vault.
 	// Accessing the broken ExampleToken contract value and ExampleToken.Vault resource again should not cause a panic.
@@ -1248,10 +1244,18 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
           }
 
           execute {
-              log(ExampleToken.totalSupply)
-              log(self.vault.balance)
-              log(ExampleToken.getType())
-              log(self.vault.getType())
+              assert(ExampleToken.totalSupply == 4321.00000000)
+              assert(self.vault.balance == 1234.00000000)
+
+              let exampleTokenType = ExampleToken.getType()
+              assert(exampleTokenType == Type<ExampleToken>())
+              assert(exampleTokenType.isRecovered)
+              assert(Type<ExampleToken>().isRecovered)
+
+              let vaultType = self.vault.getType()
+              assert(vaultType == Type<@ExampleToken.Vault>())
+              assert(vaultType.isRecovered)
+              assert(Type<@ExampleToken.Vault>().isRecovered)
 
               let someVault <- self.vault
               let exampleVault <- someVault as! @ExampleToken.Vault
@@ -1260,8 +1264,6 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
           }
       }
     `
-
-	logs = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -1274,14 +1276,4 @@ func TestRuntimeBrokenFungibleTokenRecovery(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-
-	require.Equal(t,
-		[]string{
-			"4321.00000000",
-			"1234.00000000",
-			"Type<A.0000000000000001.ExampleToken>()",
-			"Type<A.0000000000000001.ExampleToken.Vault>()",
-		},
-		logs,
-	)
 }

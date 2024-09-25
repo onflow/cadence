@@ -305,7 +305,7 @@ func (m EntitlementsMigration) ConvertValueToEntitlements(v interpreter.Value) (
 			return interpreter.NewCapabilityValue(
 				inter,
 				v.ID,
-				v.Address,
+				v.Address(),
 				entitledBorrowType,
 			), nil
 		}
@@ -319,11 +319,11 @@ func (m EntitlementsMigration) ConvertValueToEntitlements(v interpreter.Value) (
 		}
 
 		if entitledBorrowType != nil {
-			return &interpreter.PathCapabilityValue{ //nolint:staticcheck
-				Path:       v.Path,
-				Address:    v.Address,
-				BorrowType: entitledBorrowType,
-			}, nil
+			return interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+				entitledBorrowType,
+				v.Address(),
+				v.Path,
+			), nil
 		}
 
 	case interpreter.TypeValue:

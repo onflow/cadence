@@ -148,7 +148,13 @@ func (checker *Checker) rootOfAccessChain(target ast.Expression) (baseVariable *
 			inAccessChain = false
 		case *ast.IndexExpression:
 			target = targetExp.TargetExpression
-			elementType := checker.Elaboration.IndexExpressionTypes(targetExp).IndexedType.ElementType(true)
+			indexExprTypes, ok := checker.Elaboration.IndexExpressionTypes(targetExp)
+			var elementType Type
+			if !ok {
+				elementType = InvalidType
+			} else {
+				elementType = indexExprTypes.IndexedType.ElementType(true)
+			}
 			accessChain = append(accessChain, elementType)
 		case *ast.MemberExpression:
 			target = targetExp.Expression
@@ -361,7 +367,11 @@ func (checker *Checker) visitIndexExpressionAssignment(
 		return checker.visitIndexExpression(indexExpression, true)
 	})
 
-	indexExprTypes := checker.Elaboration.IndexExpressionTypes(indexExpression)
+	indexExprTypes, ok := checker.Elaboration.IndexExpressionTypes(indexExpression)
+	if !ok {
+		return InvalidType
+	}
+
 	indexedRefType, isReference := MaybeReferenceType(indexExprTypes.IndexedType)
 
 	if isReference &&

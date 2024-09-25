@@ -150,13 +150,13 @@ var pool = sync.Pool{
 	},
 }
 
-func Lex(input []byte, memoryGauge common.MemoryGauge) TokenStream {
+func Lex(input []byte, memoryGauge common.MemoryGauge) (TokenStream, error) {
 	l := pool.Get().(*lexer)
 	l.clear()
 	l.memoryGauge = memoryGauge
 	l.input = input
-	l.run(rootState)
-	return l
+	err := l.run(rootState)
+	return l, err
 }
 
 // run executes the stateFn, which will scan the runes in the input
@@ -168,26 +168,21 @@ func Lex(input []byte, memoryGauge common.MemoryGauge) TokenStream {
 // stateFn is returned, which for example happens when reaching the end of the file.
 //
 // When all stateFn have been executed, an EOF token is emitted.
-func (l *lexer) run(state stateFn) {
+func (l *lexer) run(state stateFn) (err error) {
 
 	// catch panic exceptions, emit it to the tokens channel before
 	// closing it
 	defer func() {
 		if r := recover(); r != nil {
-			var err error
 			switch r := r.(type) {
-			case errors.MemoryError, errors.InternalError:
-				// fatal errors and internal errors percolates up.
-				// Note: not all fatal errors are internal errors.
-				// e.g: memory limit exceeding is a fatal error, but also a user error.
-				panic(r)
+			// fatal errors and internal errors percolates up.
+			// Note: not all fatal errors are internal errors.
+			// e.g: memory limit exceeding is a fatal error, but also a user error.
 			case error:
 				err = r
 			default:
 				err = fmt.Errorf("lexer: %v", r)
 			}
-
-			l.emitError(err)
 		}
 	}()
 
@@ -196,6 +191,8 @@ func (l *lexer) run(state stateFn) {
 	}
 
 	l.updatePreviousTrailingComments()
+
+	return
 }
 
 // next decodes the next rune (UTF8 character) from the input string.

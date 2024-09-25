@@ -1182,29 +1182,30 @@ func TestStringer(t *testing.T) {
 		},
 		"Path capability with borrow type": {
 			value: func(_ *Interpreter) Value {
-				return &PathCapabilityValue{ //nolint:staticcheck
-					BorrowType: &ReferenceStaticType{
+				return NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+					&ReferenceStaticType{
 						Authorization:  UnauthorizedAccess,
 						ReferencedType: PrimitiveStaticTypeInt,
 					},
-					Path: NewUnmeteredPathValue(
+					NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
+					NewUnmeteredPathValue(
 						common.PathDomainStorage,
 						"foo",
 					),
-					Address: NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
-				}
+				)
 			},
 			expected: "Capability<&Int>(address: 0x0000000102030405, path: /storage/foo)",
 		},
 		"Path capability without borrow type": {
 			value: func(_ *Interpreter) Value {
-				return &PathCapabilityValue{ //nolint:staticcheck
-					Path: NewUnmeteredPathValue(
+				return NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+					nil,
+					NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
+					NewUnmeteredPathValue(
 						common.PathDomainStorage,
 						"foo",
 					),
-					Address: NewUnmeteredAddressValueFromBytes([]byte{1, 2, 3, 4, 5}),
-				}
+				)
 			},
 			expected: "Capability(address: 0x0000000102030405, path: /storage/foo)",
 		},

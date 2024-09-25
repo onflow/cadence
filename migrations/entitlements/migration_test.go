@@ -1232,11 +1232,11 @@ func TestConvertToEntitledValue(t *testing.T) {
 		{
 			name: "path capability value",
 			wrap: func(staticType interpreter.StaticType) interpreter.Value {
-				return &interpreter.PathCapabilityValue{ //nolint:staticcheck
-					BorrowType: staticType,
-					Address:    interpreter.AddressValue{},
-					Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test"),
-				}
+				return interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+					staticType,
+					interpreter.AddressValue{},
+					interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+				)
 			},
 		},
 		{
@@ -1595,11 +1595,11 @@ func TestNilPathCapabilityValue(t *testing.T) {
 
 	migration := NewEntitlementsMigration(NewTestInterpreter(t))
 	result, err := migration.ConvertValueToEntitlements(
-		&interpreter.PathCapabilityValue{ //nolint:staticcheck
-			Address:    interpreter.NewAddressValue(nil, common.MustBytesToAddress([]byte{0x1})),
-			Path:       interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test"),
-			BorrowType: nil,
-		},
+		interpreter.NewUnmeteredPathCapabilityValue( //nolint:staticcheck
+			nil,
+			interpreter.NewAddressValue(nil, common.MustBytesToAddress([]byte{0x1})),
+			interpreter.NewUnmeteredPathValue(common.PathDomainStorage, "test"),
+		),
 	)
 	require.NoError(t, err)
 	require.Nil(t, result)

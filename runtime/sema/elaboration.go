@@ -172,6 +172,8 @@ type Elaboration struct {
 	TransactionTypes                    []*TransactionType
 	semanticAccesses                    map[ast.Access]Access
 	isChecking                          bool
+	// IsRecovered is true if the program was recovered (see runtime.Interface.RecoverProgram)
+	IsRecovered bool
 }
 
 func NewElaboration(gauge common.MemoryGauge) *Elaboration {
@@ -882,11 +884,13 @@ func (e *Elaboration) SetReferenceExpressionBorrowType(expression *ast.Reference
 	e.referenceExpressionBorrowTypes[expression] = ty
 }
 
-func (e *Elaboration) IndexExpressionTypes(expression *ast.IndexExpression) (types IndexExpressionTypes) {
+func (e *Elaboration) IndexExpressionTypes(expression *ast.IndexExpression) (types IndexExpressionTypes, contains bool) {
 	if e.indexExpressionTypes == nil {
 		return
 	}
-	return e.indexExpressionTypes[expression]
+
+	types, contains = e.indexExpressionTypes[expression]
+	return
 }
 
 func (e *Elaboration) SetIndexExpressionTypes(expression *ast.IndexExpression, types IndexExpressionTypes) {

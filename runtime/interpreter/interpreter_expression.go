@@ -148,7 +148,11 @@ func (interpreter *Interpreter) valueIndexExpressionGetterSetter(
 
 	elaboration := interpreter.Program.Elaboration
 
-	indexExpressionTypes := elaboration.IndexExpressionTypes(indexExpression)
+	indexExpressionTypes, ok := elaboration.IndexExpressionTypes(indexExpression)
+	if !ok {
+		panic(errors.NewUnreachableError())
+	}
+
 	indexedType := indexExpressionTypes.IndexedType
 	indexingType := indexExpressionTypes.IndexingType
 
@@ -1096,7 +1100,7 @@ func (interpreter *Interpreter) maybeGetReference(
 	expression *ast.IndexExpression,
 	memberValue Value,
 ) Value {
-	indexExpressionTypes := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
+	indexExpressionTypes, _ := interpreter.Program.Elaboration.IndexExpressionTypes(expression)
 
 	if indexExpressionTypes.ReturnReference {
 		expectedType := indexExpressionTypes.ResultType
@@ -1331,6 +1335,13 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		// thus this is the only place where it becomes necessary to "instantiate" the result of a map to its
 		// concrete outputs. In other places (e.g. interface conformance checks) we want to leave maps generic,
 		// so we don't substitute them.
+
+		// if the target is anystruct or anyresource we want to preserve optionals
+		unboxedExpectedType := sema.UnwrapOptionalType(expectedType)
+		if !(unboxedExpectedType == sema.AnyStructType || unboxedExpectedType == sema.AnyResourceType) {
+			// otherwise dynamic cast now always unboxes optionals
+			value = interpreter.Unbox(locationRange, value)
+		}
 		valueSemaType := interpreter.SubstituteMappedEntitlements(interpreter.MustSemaTypeOfValue(value))
 		valueStaticType := ConvertSemaToStaticType(interpreter, valueSemaType)
 		isSubType := interpreter.IsSubTypeOfSemaType(valueStaticType, expectedType)
