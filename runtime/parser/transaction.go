@@ -125,14 +125,13 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	if execute == nil {
 		p.skipSpaceAndComments()
 		if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
+			preStartPos := p.current.StartPos
 			// Skip the `pre` keyword
 			p.next()
-			conditions, err := parseConditions(p)
+			preConditions, err = parseConditions(p, preStartPos)
 			if err != nil {
 				return nil, err
 			}
-
-			preConditions = &conditions
 		}
 	}
 
@@ -166,14 +165,13 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				if sawPost {
 					return nil, p.syntaxError("unexpected second post-conditions")
 				}
+				postStartPos := p.current.StartPos
 				// Skip the `post` keyword
 				p.next()
-				conditions, err := parseConditions(p)
+				postConditions, err = parseConditions(p, postStartPos)
 				if err != nil {
 					return nil, err
 				}
-
-				postConditions = &conditions
 				sawPost = true
 
 			default:

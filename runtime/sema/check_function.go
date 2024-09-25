@@ -222,7 +222,8 @@ func (checker *Checker) checkFunction(
 					checker.InNewPurityScope(functionType.Purity == FunctionPurityView, func() {
 						checker.visitFunctionBlock(
 							functionBlock,
-							functionType.ReturnTypeAnnotation,
+							functionType.ReturnTypeAnnotation.Type,
+							returnTypeAnnotation,
 							checkResourceLoss,
 						)
 					})
@@ -357,8 +358,14 @@ func (checker *Checker) declareParameters(
 	}
 }
 
-func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, returnType Type, body func()) {
+func (checker *Checker) visitWithPostConditions(
+	postConditions *ast.Conditions,
+	returnType Type,
+	returnTypePos ast.HasPosition,
+	body func(),
+) {
 
+	var postConditionsPos ast.Position
 	var rewrittenPostConditions *PostConditionsRewrite
 
 	// If there are post-conditions, rewrite them, extracting `before` expressions.
@@ -366,7 +373,9 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 	// the function body
 
 	if postConditions != nil {
-		rewriteResult := checker.rewritePostConditions(*postConditions)
+		postConditionsPos = postConditions.StartPos
+
+		rewriteResult := checker.rewritePostConditions(postConditions.Conditions)
 		rewrittenPostConditions = &rewriteResult
 
 		checker.Elaboration.SetPostConditionsRewrite(postConditions, rewriteResult)
@@ -384,85 +393,96 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 	// TODO: improve: only declare when a condition actually refers to `before`?
 
 	if postConditions != nil &&
-		len(*postConditions) > 0 {
+		len(postConditions.Conditions) > 0 {
 
 		checker.declareBefore()
 	}
 
-	// If there is a return type, declare the constant `result`.
-	// If it is a resource type, the constant has the same type as a referecne to the return type.
-	// If it is not a resource type, the constant has the same type as the return type.
-
-	if returnType != VoidType {
-		var resultType Type
-		if returnType.IsResourceType() {
-
-			innerType := returnType
-			optType, isOptional := returnType.(*OptionalType)
-			if isOptional {
-				innerType = optType.Type
-			}
-
-			auth := UnauthorizedAccess
-			// reference is authorized to the entire resource, since it is only accessible in a function where a resource value is owned.
-			// To create a "fully authorized" reference, we scan the resource type and produce a conjunction of all the entitlements mentioned within.
-			// So, for example,
-			//
-			// resource R {
-			//		access(E) let x: Int
-			//      access(X | Y) fun foo() {}
-			// }
-			//
-			// fun test(): @R {
-			//    post {
-			//	      // do something with result here
-			//    }
-			//    return <- create R()
-			// }
-			//
-			// here the `result` value in the `post` block will have type `auth(E, X, Y) &R`
-			if entitlementSupportingType, ok := innerType.(EntitlementSupportingType); ok {
-				supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
-				auth = supportedEntitlements.Access()
-			}
-
-			resultType = &ReferenceType{
-				Type:          innerType,
-				Authorization: auth,
-			}
-
-			if isOptional {
-				// If the return type is an optional type T?, then create an optional reference (&T)?.
-				resultType = &OptionalType{
-					Type: resultType,
-				}
-			}
-		} else {
-			resultType = returnType
-		}
-		checker.declareResult(resultType)
-	}
-
 	if rewrittenPostConditions != nil {
+
+		// If there is a return type, declare the constant `result`.
+		// If it is a resource type, the constant has the same type as a reference to the return type.
+		// If it is not a resource type, the constant has the same type as the return type.
+
+		if returnType != VoidType {
+			var resultType Type
+			if returnType.IsResourceType() {
+
+				innerType := returnType
+				optType, isOptional := returnType.(*OptionalType)
+				if isOptional {
+					innerType = optType.Type
+				}
+
+				auth := UnauthorizedAccess
+				// reference is authorized to the entire resource,
+				// since it is only accessible in a function where a resource value is owned.
+				// To create a "fully authorized" reference,
+				// we scan the resource type and produce a conjunction of all the entitlements mentioned within.
+				// So, for example,
+				//
+				// resource R {
+				//		access(E) let x: Int
+				//      access(X | Y) fun foo() {}
+				// }
+				//
+				// fun test(): @R {
+				//    post {
+				//	      // do something with result here
+				//    }
+				//    return <- create R()
+				// }
+				//
+				// Here, the `result` value in the `post` block will have type `auth(E, X, Y) &R`.
+
+				if entitlementSupportingType, ok := innerType.(EntitlementSupportingType); ok {
+					supportedEntitlements := entitlementSupportingType.SupportedEntitlements()
+					auth = supportedEntitlements.Access()
+				}
+
+				resultType = &ReferenceType{
+					Type:          innerType,
+					Authorization: auth,
+				}
+
+				if isOptional {
+					// If the return type is an optional type T?, then create an optional reference (&T)?.
+					resultType = &OptionalType{
+						Type: resultType,
+					}
+				}
+			} else {
+				resultType = returnType
+			}
+
+			checker.declareResultVariable(
+				resultType,
+				returnTypePos,
+				postConditionsPos,
+			)
+		}
+
 		checker.visitConditions(rewrittenPostConditions.RewrittenPostConditions)
 	}
 }
 
 func (checker *Checker) visitFunctionBlock(
 	functionBlock *ast.FunctionBlock,
-	returnTypeAnnotation TypeAnnotation,
+	returnType Type,
+	returnTypePos ast.HasPosition,
 	checkResourceLoss bool,
 ) {
 	checker.enterValueScope()
 	defer checker.leaveValueScope(functionBlock.EndPosition, checkResourceLoss)
 
 	if functionBlock.PreConditions != nil {
-		checker.visitConditions(*functionBlock.PreConditions)
+		checker.visitConditions(functionBlock.PreConditions.Conditions)
 	}
 
 	checker.visitWithPostConditions(
 		functionBlock.PostConditions,
-		returnTypeAnnotation.Type,
+		returnType,
+		returnTypePos,
 		func() {
 			// NOTE: not checking block as it enters a new scope
 			// and post-conditions need to be able to refer to block's declarations
@@ -472,7 +492,31 @@ func (checker *Checker) visitFunctionBlock(
 	)
 }
 
-func (checker *Checker) declareResult(ty Type) {
+func (checker *Checker) declareResultVariable(
+	ty Type,
+	returnTypePos ast.HasPosition,
+	postConditionsPos ast.Position,
+) {
+	existingVariable := checker.valueActivations.Current().Find(ResultIdentifier)
+	if existingVariable != nil {
+		checker.report(
+			&ResultVariableConflictError{
+				Kind: existingVariable.DeclarationKind,
+				Pos:  *existingVariable.Pos,
+				ReturnTypeRange: ast.NewRangeFromPositioned(
+					checker.memoryGauge,
+					returnTypePos,
+				),
+				PostConditionsRange: ast.NewRange(
+					checker.memoryGauge,
+					postConditionsPos,
+					postConditionsPos.Shifted(checker.memoryGauge, len(ast.ConditionKindPost.Keyword())-1),
+				),
+			},
+		)
+		return
+	}
+
 	_, err := checker.valueActivations.declareImplicitConstant(
 		ResultIdentifier,
 		ty,

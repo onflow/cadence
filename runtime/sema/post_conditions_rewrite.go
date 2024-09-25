@@ -24,5 +24,5 @@ import (
 
 type PostConditionsRewrite struct {
 	BeforeStatements        []ast.Statement
-	RewrittenPostConditions ast.Conditions
+	RewrittenPostConditions []ast.Condition
 }

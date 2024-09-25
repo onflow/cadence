@@ -66,12 +66,13 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 	checker.visitTransactionPrepareFunction(declaration.Prepare, transactionType, fieldMembers)
 
 	if declaration.PreConditions != nil {
-		checker.visitConditions(*declaration.PreConditions)
+		checker.visitConditions(declaration.PreConditions.Conditions)
 	}
 
 	checker.visitWithPostConditions(
 		declaration.PostConditions,
 		VoidType,
+		nil,
 		func() {
 			checker.withSelfResourceInvalidationAllowed(func() {
 				checker.visitTransactionExecuteFunction(declaration.Execute, transactionType)

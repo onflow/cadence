@@ -1297,13 +1297,13 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 
 	functionType := interpreter.Program.Elaboration.FunctionExpressionFunctionType(expression)
 
-	var preConditions ast.Conditions
+	var preConditions []ast.Condition
 	if expression.FunctionBlock.PreConditions != nil {
-		preConditions = *expression.FunctionBlock.PreConditions
+		preConditions = expression.FunctionBlock.PreConditions.Conditions
 	}
 
 	var beforeStatements []ast.Statement
-	var rewrittenPostConditions ast.Conditions
+	var rewrittenPostConditions []ast.Condition
 
 	if expression.FunctionBlock.PostConditions != nil {
 		postConditionsRewrite :=

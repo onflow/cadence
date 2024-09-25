@@ -740,13 +740,13 @@ func (interpreter *Interpreter) functionDeclarationValue(
 	lexicalScope *VariableActivation,
 ) *InterpretedFunctionValue {
 
-	var preConditions ast.Conditions
+	var preConditions []ast.Condition
 	if declaration.FunctionBlock.PreConditions != nil {
-		preConditions = *declaration.FunctionBlock.PreConditions
+		preConditions = declaration.FunctionBlock.PreConditions.Conditions
 	}
 
 	var beforeStatements []ast.Statement
-	var rewrittenPostConditions ast.Conditions
+	var rewrittenPostConditions []ast.Condition
 
 	if declaration.FunctionBlock.PostConditions != nil {
 		postConditionsRewrite :=
@@ -778,9 +778,9 @@ func (interpreter *Interpreter) visitBlock(block *ast.Block) StatementResult {
 
 func (interpreter *Interpreter) visitFunctionBody(
 	beforeStatements []ast.Statement,
-	preConditions ast.Conditions,
+	preConditions []ast.Condition,
 	body func() StatementResult,
-	postConditions ast.Conditions,
+	postConditions []ast.Condition,
 	returnType sema.Type,
 	declarationLocationRange LocationRange,
 ) Value {
@@ -875,7 +875,7 @@ func (interpreter *Interpreter) resultValue(returnValue Value, returnType sema.T
 	)
 }
 
-func (interpreter *Interpreter) visitConditions(conditions ast.Conditions, kind ast.ConditionKind) {
+func (interpreter *Interpreter) visitConditions(conditions []ast.Condition, kind ast.ConditionKind) {
 	for _, condition := range conditions {
 		interpreter.visitCondition(condition, kind)
 	}
@@ -1674,15 +1674,15 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 
 	parameterList := initializer.FunctionDeclaration.ParameterList
 
-	var preConditions ast.Conditions
+	var preConditions []ast.Condition
 	if initializer.FunctionDeclaration.FunctionBlock.PreConditions != nil {
-		preConditions = *initializer.FunctionDeclaration.FunctionBlock.PreConditions
+		preConditions = initializer.FunctionDeclaration.FunctionBlock.PreConditions.Conditions
 	}
 
 	statements := initializer.FunctionDeclaration.FunctionBlock.Block.Statements
 
 	var beforeStatements []ast.Statement
-	var rewrittenPostConditions ast.Conditions
+	var rewrittenPostConditions []ast.Condition
 
 	postConditions := initializer.FunctionDeclaration.FunctionBlock.PostConditions
 	if postConditions != nil {
@@ -1791,14 +1791,14 @@ func (interpreter *Interpreter) compositeFunction(
 
 	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionType(functionDeclaration)
 
-	var preConditions ast.Conditions
+	var preConditions []ast.Condition
 
 	if functionDeclaration.FunctionBlock.PreConditions != nil {
-		preConditions = *functionDeclaration.FunctionBlock.PreConditions
+		preConditions = functionDeclaration.FunctionBlock.PreConditions.Conditions
 	}
 
 	var beforeStatements []ast.Statement
-	var rewrittenPostConditions ast.Conditions
+	var rewrittenPostConditions []ast.Condition
 
 	if functionDeclaration.FunctionBlock.PostConditions != nil {
 
@@ -2456,13 +2456,13 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 		return nil
 	}
 
-	var preConditions ast.Conditions
+	var preConditions []ast.Condition
 	if declaration.FunctionBlock.PreConditions != nil {
-		preConditions = *declaration.FunctionBlock.PreConditions
+		preConditions = declaration.FunctionBlock.PreConditions.Conditions
 	}
 
 	var beforeStatements []ast.Statement
-	var rewrittenPostConditions ast.Conditions
+	var rewrittenPostConditions []ast.Condition
 
 	if declaration.FunctionBlock.PostConditions != nil {
 

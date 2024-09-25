@@ -41,12 +41,22 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
 				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
 			},
 		},
-		Fields:         []*FieldDeclaration{},
-		Prepare:        nil,
-		PreConditions:  &Conditions{},
-		PostConditions: &Conditions{},
-		DocString:      "test",
-		Execute:        nil,
+		Fields:  []*FieldDeclaration{},
+		Prepare: nil,
+		PreConditions: &Conditions{
+			Range: Range{
+				StartPos: Position{Offset: 13, Line: 14, Column: 15},
+				EndPos:   Position{Offset: 16, Line: 17, Column: 18},
+			},
+		},
+		PostConditions: &Conditions{
+			Range: Range{
+				StartPos: Position{Offset: 19, Line: 20, Column: 21},
+				EndPos:   Position{Offset: 22, Line: 23, Column: 24},
+			},
+		},
+		DocString: "test",
+		Execute:   nil,
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
@@ -68,8 +78,16 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
             },
 		    "Fields":         [],
 		    "Prepare":        null,
-		    "PreConditions":  [],
-		    "PostConditions": [],
+		    "PreConditions":  {
+                "Conditions": null,
+                "StartPos": {"Offset": 13, "Line": 14, "Column": 15},
+                "EndPos":  {"Offset": 16, "Line": 17, "Column": 18}
+		    },
+		    "PostConditions": {
+                "Conditions": null,
+                "StartPos": {"Offset": 19, "Line": 20, "Column": 21},
+                "EndPos": {"Offset": 22, "Line": 23, "Column": 24}
+		    },
 		    "Execute":        null,
             "DocString":      "test",
             "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
@@ -146,12 +164,14 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 			},
 		},
 		PreConditions: &Conditions{
-			&TestCondition{
-				Test: &BoolExpression{
-					Value: true,
-				},
-				Message: &StringExpression{
-					Value: "pre",
+			Conditions: []Condition{
+				&TestCondition{
+					Test: &BoolExpression{
+						Value: true,
+					},
+					Message: &StringExpression{
+						Value: "pre",
+					},
 				},
 			},
 		},
@@ -173,12 +193,14 @@ func TestTransactionDeclaration_Doc(t *testing.T) {
 			},
 		},
 		PostConditions: &Conditions{
-			&TestCondition{
-				Test: &BoolExpression{
-					Value: false,
-				},
-				Message: &StringExpression{
-					Value: "post",
+			Conditions: []Condition{
+				&TestCondition{
+					Test: &BoolExpression{
+						Value: false,
+					},
+					Message: &StringExpression{
+						Value: "post",
+					},
 				},
 			},
 		},
@@ -418,12 +440,14 @@ func TestTransactionDeclaration_String(t *testing.T) {
 			},
 		},
 		PreConditions: &Conditions{
-			&TestCondition{
-				Test: &BoolExpression{
-					Value: true,
-				},
-				Message: &StringExpression{
-					Value: "pre",
+			Conditions: []Condition{
+				&TestCondition{
+					Test: &BoolExpression{
+						Value: true,
+					},
+					Message: &StringExpression{
+						Value: "pre",
+					},
 				},
 			},
 		},
@@ -445,12 +469,14 @@ func TestTransactionDeclaration_String(t *testing.T) {
 			},
 		},
 		PostConditions: &Conditions{
-			&TestCondition{
-				Test: &BoolExpression{
-					Value: false,
-				},
-				Message: &StringExpression{
-					Value: "post",
+			Conditions: []Condition{
+				&TestCondition{
+					Test: &BoolExpression{
+						Value: false,
+					},
+					Message: &StringExpression{
+						Value: "post",
+					},
 				},
 			},
 		},
