@@ -1184,14 +1184,16 @@ func defineStringExpression() {
 				// parser already points to next token
 				curToken = p.current
 				if curToken.Is(lexer.TokenStringTemplate) {
-					p.next()
 					// advance to the expression
-					if !p.current.Is(lexer.TokenIdentifier) {
-						return nil, p.syntaxError("expected an identifier got: %s", p.currentTokenSource())
-					}
+					p.next()
 					value, err := parseExpression(p, lowestBindingPower)
+					// consider invalid expression first
 					if err != nil {
 						return nil, err
+					}
+					// limit string templates to identifiers only
+					if _, ok := value.(*ast.IdentifierExpression); !ok {
+						return nil, p.syntaxError("expected identifier got: %s", value.String())
 					}
 					_, err = p.mustOne(lexer.TokenParenClose)
 					if err != nil {

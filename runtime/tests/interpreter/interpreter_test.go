@@ -12360,25 +12360,7 @@ func TestInterpretStringTemplates(t *testing.T) {
 		)
 	})
 
-	t.Run("func", func(t *testing.T) {
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
-			let add = fun(): Int {
-				return 2+2
-			}
-			let x: String = "\(add())"
-		`)
-
-		AssertValuesEqual(
-			t,
-			inter,
-			interpreter.NewUnmeteredStringValue("4"),
-			inter.Globals.Get("x").GetValue(inter),
-		)
-	})
-
-	t.Run("func", func(t *testing.T) {
+	t.Run("func extracted", func(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `

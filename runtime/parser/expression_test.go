@@ -6190,8 +6190,8 @@ func TestParseStringTemplate(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected an identifier got: .",
-					Pos:     ast.Position{Offset: 8, Line: 2, Column: 7},
+					Message: "unexpected token in expression: '.'",
+					Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
 				},
 			},
 			errs,
@@ -6217,19 +6217,19 @@ func TestParseStringTemplate(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected an identifier got: 2",
-					Pos:     ast.Position{Offset: 8, Line: 2, Column: 7},
+					Message: "expected identifier got: 2 + 2",
+					Pos:     ast.Position{Offset: 13, Line: 2, Column: 12},
 				},
 			},
 			errs,
 		)
 	})
 
-	t.Run("invalid, nested identifier", func(t *testing.T) {
+	t.Run("valid, nested identifier", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := testParseExpression(`
+		actual, errs := testParseExpression(`
 		  "\((a))"
 		`)
 
@@ -6240,16 +6240,29 @@ func TestParseStringTemplate(t *testing.T) {
 			}
 		}
 
-		require.Error(t, err)
-		utils.AssertEqualWithDiff(t,
-			[]error{
-				&SyntaxError{
-					Message: "expected an identifier got: (",
-					Pos:     ast.Position{Offset: 8, Line: 2, Column: 7},
+		require.NoError(t, err)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"",
+				"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Offset: 9, Line: 2, Column: 8},
+					},
 				},
 			},
-			errs,
-		)
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 5, Line: 2, Column: 4},
+				EndPos:   ast.Position{Offset: 12, Line: 2, Column: 11},
+			},
+		}
+
+		utils.AssertEqualWithDiff(t, expected, actual)
+
 	})
 	t.Run("invalid, empty", func(t *testing.T) {
 
@@ -6270,8 +6283,35 @@ func TestParseStringTemplate(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
-					Message: "expected an identifier got: )",
-					Pos:     ast.Position{Offset: 8, Line: 2, Column: 7},
+					Message: "unexpected token in expression: ')'",
+					Pos:     ast.Position{Offset: 9, Line: 2, Column: 8},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, function identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+			"\(add())"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected identifier got: add()",
+					Pos:     ast.Position{Offset: 12, Line: 2, Column: 11},
 				},
 			},
 			errs,
