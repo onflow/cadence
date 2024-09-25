@@ -464,7 +464,11 @@ func (interpreter *Interpreter) InvokeExternally(
 	var base *EphemeralReferenceValue
 	var boundAuth Authorization
 	if boundFunc, ok := functionValue.(BoundFunctionValue); ok {
-		self = boundFunc.Self
+		self = boundFunc.SelfReference.ReferencedValue(
+			interpreter,
+			EmptyLocationRange,
+			true,
+		)
 		base = boundFunc.Base
 		boundAuth = boundFunc.BoundAuthorization
 	}
@@ -5043,7 +5047,14 @@ func (interpreter *Interpreter) mapMemberValueAuthorization(
 		case *StorageReferenceValue:
 			return NewStorageReferenceValue(interpreter, auth, refValue.TargetStorageAddress, refValue.TargetPath, refValue.BorrowedType)
 		case BoundFunctionValue:
-			return NewBoundFunctionValue(interpreter, refValue.Function, refValue.Self, refValue.Base, auth)
+			return NewBoundFunctionValueFromSelfReference(
+				interpreter,
+				refValue.Function,
+				refValue.SelfReference,
+				refValue.selfIsReference,
+				refValue.Base,
+				auth,
+			)
 		}
 	}
 	return resultValue

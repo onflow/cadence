@@ -21435,13 +21435,13 @@ func (v *StorageReferenceValue) GetMember(
 	member := interpreter.getMember(referencedValue, locationRange, name)
 
 	// If the member is a function, it is always a bound-function.
-	// By default, bound functions create and hold an ephemeral reference (`selfRef`).
+	// By default, bound functions create and hold an ephemeral reference (`SelfReference`).
 	// For storage references, replace this default one with the actual storage reference.
 	// It is not possible (or a lot of work), to create the bound function with the storage reference
 	// when it was created originally, because `getMember(referencedValue, ...)` doesn't know
 	// whether the member was accessed directly, or via a reference.
 	if boundFunction, isBoundFunction := member.(BoundFunctionValue); isBoundFunction {
-		boundFunction.selfRef = v
+		boundFunction.SelfReference = v
 		return boundFunction
 	}
 

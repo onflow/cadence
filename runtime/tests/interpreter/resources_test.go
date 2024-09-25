@@ -3585,3 +3585,59 @@ func TestInterpretInvalidNilCoalescingResourceDuplication(t *testing.T) {
 	var destroyedResourceErr interpreter.DestroyedResourceError
 	require.ErrorAs(t, err, &destroyedResourceErr)
 }
+
+func TestInterpretStorageReferenceBoundFunction(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("user-defined function", func(t *testing.T) {
+
+		t.Parallel()
+
+		address := interpreter.NewUnmeteredAddressValueFromBytes([]byte{42})
+
+		inter, _ := testAccount(t, address, true, nil, `
+          resource R {
+              access(all) let collection: @[T]
+              init() {
+                  self.collection <- []
+              }
+              access(all) fun append(_ id: @T) {
+                  self.collection.append( <- id)
+              }
+          }
+
+         resource T {
+              access(all) let id: Int
+              init() {
+                  self.id = 1
+              }
+         }
+
+          fun test() {
+              account.storage.save(<- create R(), to: /storage/x)
+
+              let rRef = account.storage.borrow<&R>(from: /storage/x)!
+              var append = rRef.append
+
+              // Replace with a new one
+              var old <- account.storage.load<@R>(from:/storage/x)!
+              account.storage.save(<- create R(), to:/storage/x)
+
+              append(<- create T())
+
+              var new <- account.storage.load<@R>(from:/storage/x)!
+
+              // Index out of bound.
+              // Appended resource 'T' is neither in 'old' nor 'new'.
+              var id = new.collection[0].id
+
+              destroy old
+              destroy new
+          }
+        `, sema.Config{})
+
+		_, err := inter.Invoke("test")
+		require.NoError(t, err)
+	})
+}
