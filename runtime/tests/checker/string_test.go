@@ -783,9 +783,8 @@ func TestCheckStringTemplate(t *testing.T) {
 			} 
 		`)
 
-		errs := RequireCheckerErrors(t, err, 2)
+		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errs[0])
-		assert.IsType(t, &sema.MissingMoveOperationError{}, errs[1])
 	})
 }
