@@ -219,7 +219,7 @@ func newPublicKeyVerifySignatureFunction(
 		inter,
 		publicKeyValue,
 		sema.PublicKeyVerifyFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
+		func(_ *interpreter.CompositeValue, invocation interpreter.Invocation) interpreter.Value {
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -309,7 +309,7 @@ func newPublicKeyVerifyPoPFunction(
 		inter,
 		publicKeyValue,
 		sema.PublicKeyVerifyPoPFunctionType,
-		func(invocation interpreter.Invocation) interpreter.Value {
+		func(_ *interpreter.CompositeValue, invocation interpreter.Invocation) interpreter.Value {
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
 				panic(errors.NewUnreachableError())

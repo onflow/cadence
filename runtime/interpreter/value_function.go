@@ -514,14 +514,22 @@ func (BoundFunctionValue) DeepRemove(_ *Interpreter, _ bool) {
 }
 
 // NewBoundHostFunctionValue creates a bound-function value for a host-function.
-func NewBoundHostFunctionValue(
+func NewBoundHostFunctionValue[T Value](
 	interpreter *Interpreter,
 	self Value,
 	funcType *sema.FunctionType,
-	function HostFunction,
+	function func(self T, invocation Invocation) Value,
 ) BoundFunctionValue {
 
-	hostFunc := NewStaticHostFunctionValue(interpreter, funcType, function)
+	wrappedFunction := func(invocation Invocation) Value {
+		self, ok := (*invocation.Self).(T)
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
+		return function(self, invocation)
+	}
+
+	hostFunc := NewStaticHostFunctionValue(interpreter, funcType, wrappedFunction)
 
 	return NewBoundFunctionValue(
 		interpreter,

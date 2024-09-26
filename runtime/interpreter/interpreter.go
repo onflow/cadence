@@ -4151,7 +4151,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 		interpreter,
 		storageValue,
 		functionType,
-		func(invocation Invocation) Value {
+		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
 			fn, ok := invocation.Arguments[0].(FunctionValue)
@@ -4314,7 +4314,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(
 		interpreter,
 		storageValue,
 		sema.Account_StorageTypeSaveFunctionType,
-		func(invocation Invocation) Value {
+		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
 			value := invocation.Arguments[0]
@@ -4379,7 +4379,7 @@ func (interpreter *Interpreter) authAccountTypeFunction(
 		interpreter,
 		storageValue,
 		sema.Account_StorageTypeTypeFunctionType,
-		func(invocation Invocation) Value {
+		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
 			path, ok := invocation.Arguments[0].(PathValue)
@@ -4437,7 +4437,7 @@ func (interpreter *Interpreter) authAccountReadFunction(
 		storageValue,
 		// same as sema.Account_StorageTypeCopyFunctionType
 		sema.Account_StorageTypeLoadFunctionType,
-		func(invocation Invocation) Value {
+		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
 			path, ok := invocation.Arguments[0].(PathValue)
@@ -4521,7 +4521,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(
 		interpreter,
 		storageValue,
 		sema.Account_StorageTypeBorrowFunctionType,
-		func(invocation Invocation) Value {
+		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
 			path, ok := invocation.Arguments[0].(PathValue)
@@ -4578,7 +4578,7 @@ func (interpreter *Interpreter) authAccountCheckFunction(
 		interpreter,
 		storageValue,
 		sema.Account_StorageTypeCheckFunctionType,
-		func(invocation Invocation) Value {
+		func(_ *SimpleCompositeValue, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
 			path, ok := invocation.Arguments[0].(PathValue)
@@ -5109,7 +5109,7 @@ func (interpreter *Interpreter) isInstanceFunction(self Value) FunctionValue {
 		interpreter,
 		self,
 		sema.IsInstanceFunctionType,
-		func(invocation Invocation) Value {
+		func(self Value, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 
 			firstArgument := invocation.Arguments[0]
@@ -5140,7 +5140,7 @@ func (interpreter *Interpreter) getTypeFunction(self Value) FunctionValue {
 		interpreter,
 		self,
 		sema.GetTypeFunctionType,
-		func(invocation Invocation) Value {
+		func(self Value, invocation Invocation) Value {
 			interpreter := invocation.Interpreter
 			staticType := self.StaticType(interpreter)
 			return NewTypeValue(interpreter, staticType)
@@ -5577,7 +5577,7 @@ func (interpreter *Interpreter) capabilityBorrowFunction(
 		interpreter,
 		capabilityValue,
 		sema.CapabilityTypeBorrowFunctionType(capabilityBorrowType),
-		func(invocation Invocation) Value {
+		func(_ CapabilityValue, invocation Invocation) Value {
 
 			inter := invocation.Interpreter
 			locationRange := invocation.LocationRange
@@ -5624,7 +5624,7 @@ func (interpreter *Interpreter) capabilityCheckFunction(
 		interpreter,
 		capabilityValue,
 		sema.CapabilityTypeCheckFunctionType(capabilityBorrowType),
-		func(invocation Invocation) Value {
+		func(_ CapabilityValue, invocation Invocation) Value {
 
 			if capabilityID == InvalidCapabilityID {
 				return FalseValue
