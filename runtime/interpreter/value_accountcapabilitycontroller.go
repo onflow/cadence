@@ -341,7 +341,7 @@ func (v *AccountCapabilityControllerValue) newHostFunctionValue(
 			inter,
 			v,
 			funcType,
-			func(invocation Invocation) Value {
+			func(v *AccountCapabilityControllerValue, invocation Invocation) Value {
 				// NOTE: check if controller is already deleted
 				v.checkDeleted()
 

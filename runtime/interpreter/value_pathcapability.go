@@ -133,7 +133,7 @@ func (v *PathCapabilityValue) newBorrowFunction(
 		interpreter,
 		v,
 		sema.CapabilityTypeBorrowFunctionType(borrowType),
-		func(_ Invocation) Value {
+		func(_ Value, _ Invocation) Value {
 			// Borrowing is never allowed
 			return Nil
 		},
@@ -148,7 +148,7 @@ func (v *PathCapabilityValue) newCheckFunction(
 		interpreter,
 		v,
 		sema.CapabilityTypeCheckFunctionType(borrowType),
-		func(_ Invocation) Value {
+		func(_ Value, _ Invocation) Value {
 			// Borrowing is never allowed
 			return FalseValue
 		},

@@ -365,7 +365,7 @@ func (v *StorageCapabilityControllerValue) newHostFunctionValue(
 			inter,
 			v,
 			funcType,
-			func(invocation Invocation) Value {
+			func(v *StorageCapabilityControllerValue, invocation Invocation) Value {
 				// NOTE: check if controller is already deleted
 				v.checkDeleted()
 

@@ -79,7 +79,7 @@ func newPublicTypesFunctionValue(
 		inter,
 		self,
 		sema.DeployedContractTypePublicTypesFunctionType,
-		func(inv Invocation) Value {
+		func(_ MemberAccessibleValue, inv Invocation) Value {
 			if publicTypes == nil {
 				innerInter := inv.Interpreter
 				contractLocation := common.NewAddressLocation(innerInter, address, name.Str)
