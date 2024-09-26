@@ -56,11 +56,13 @@ func TestCheckInvalidStringer(t *testing.T) {
 		let a: {Stringer} = <-create R()
 		let b: {Stringer} = [<-create R()]
 		let c: {Stringer} = {1: true}
+		struct Foo: Stringer {}
 	  `)
 
-	errs := RequireCheckerErrors(t, err, 3)
+	errs := RequireCheckerErrors(t, err, 4)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+	assert.IsType(t, &sema.ConformanceError{}, errs[3])
 }
