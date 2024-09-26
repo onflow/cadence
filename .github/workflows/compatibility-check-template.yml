@@ -95,7 +95,7 @@ jobs:
       - name: Check contracts using ${{ inputs.base-branch }}
         working-directory: ./tools/compatibility-check
         run: |
-          go mod edit -replace github.com/onflow/cadence=github.com/${{ inputs.repo }}@${{ inputs.base-branch }}
+          GOPROXY=direct go mod edit -replace github.com/onflow/cadence=github.com/${{ inputs.repo }}@`git rev-parse origin/${{ inputs.base-branch }}`
           go mod tidy
           go run ./cmd/check_contracts/main.go ../../tmp/contracts.csv ../../tmp/output-old.txt
 
