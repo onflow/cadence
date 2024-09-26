@@ -3542,6 +3542,43 @@ func newAccountCapabilitiesPublishFunction(
 				domain := pathValue.Domain.Identifier()
 				identifier := pathValue.Identifier
 
+				capabilityType, ok := capabilityValue.StaticType(inter).(*interpreter.CapabilityStaticType)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				borrowType := capabilityType.BorrowType
+
+				// It is possible to have legacy capabilities without borrow type.
+				// So perform the validation only if the borrow type is present.
+				if borrowType != nil {
+					capabilityBorrowType, ok := borrowType.(*interpreter.ReferenceStaticType)
+					if !ok {
+						panic(errors.NewUnreachableError())
+					}
+
+					publishHandler := inter.SharedState.Config.ValidateAccountCapabilitiesPublishHandler
+					if publishHandler != nil {
+						valid, err := publishHandler(
+							inter,
+							locationRange,
+							capabilityAddressValue,
+							pathValue,
+							capabilityBorrowType,
+						)
+						if err != nil {
+							panic(err)
+						}
+						if !valid {
+							panic(interpreter.EntitledCapabilityPublishingError{
+								LocationRange: locationRange,
+								BorrowType:    capabilityBorrowType,
+								Path:          pathValue,
+							})
+						}
+					}
+				}
+
 				// Prevent an overwrite
 
 				storageMapKey := interpreter.StringStorageMapKey(identifier)
@@ -3865,7 +3902,7 @@ func CheckCapabilityController(
 func newAccountCapabilitiesGetFunction(
 	inter *interpreter.Interpreter,
 	addressValue interpreter.AddressValue,
-	handler CapabilityControllerHandler,
+	controllerHandler CapabilityControllerHandler,
 	borrow bool,
 ) interpreter.BoundFunctionGenerator {
 	return func(accountCapabilities interpreter.MemberAccessibleValue) interpreter.BoundFunctionValue {
@@ -3979,6 +4016,24 @@ func newAccountCapabilitiesGetFunction(
 					panic(errors.NewUnreachableError())
 				}
 
+				getHandler := inter.SharedState.Config.ValidateAccountCapabilitiesGetHandler
+				if getHandler != nil {
+					valid, err := getHandler(
+						inter,
+						locationRange,
+						addressValue,
+						pathValue,
+						wantedBorrowType,
+						capabilityBorrowType,
+					)
+					if err != nil {
+						panic(err)
+					}
+					if !valid {
+						return failValue
+					}
+				}
+
 				var resultValue interpreter.Value
 				if borrow {
 					// When borrowing,
@@ -3992,7 +4047,7 @@ func newAccountCapabilitiesGetFunction(
 						capabilityID,
 						wantedBorrowType,
 						capabilityBorrowType,
-						handler,
+						controllerHandler,
 					)
 				} else {
 					// When not borrowing,
@@ -4005,7 +4060,7 @@ func newAccountCapabilitiesGetFunction(
 						capabilityID,
 						wantedBorrowType,
 						capabilityBorrowType,
-						handler,
+						controllerHandler,
 					)
 					if controller != nil {
 						resultBorrowStaticType :=
