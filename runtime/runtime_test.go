@@ -10967,3 +10967,360 @@ func TestRuntimeAccountStorageBorrowEphemeralReferenceValue(t *testing.T) {
 	var nestedReferenceErr interpreter.NestedReferenceError
 	require.ErrorAs(t, err, &nestedReferenceErr)
 }
+
+func TestRuntimeForbidPublicEntitlementBorrow(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	script1 := []byte(`
+      transaction {
+
+        prepare(signer: auth (Storage, Capabilities) &Account) {
+          signer.storage.save(42, to: /storage/number)
+          let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+          signer.capabilities.publish(cap, at: /public/number)
+        }
+      }
+    `)
+
+	script2 := []byte(`
+      access(all)
+      fun main() {
+          let number = getAccount(0x1).capabilities.borrow<auth(Insert) &Int>(/public/number)
+          assert(number == nil)
+      }
+    `)
+
+	var validatedPaths []interpreter.PathValue
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{
+				common.MustBytesToAddress([]byte{0x1}),
+			}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnValidateAccountCapabilitiesGet: func(
+			inter *interpreter.Interpreter,
+			locationRange interpreter.LocationRange,
+			address interpreter.AddressValue,
+			path interpreter.PathValue,
+			wantedBorrowType *sema.ReferenceType,
+			capabilityBorrowType *sema.ReferenceType,
+		) (bool, error) {
+
+			validatedPaths = append(validatedPaths, path)
+
+			_, wantedHasEntitlements := wantedBorrowType.Authorization.(sema.EntitlementSetAccess)
+			return !wantedHasEntitlements, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nexScriptLocation := NewScriptLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nexScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]interpreter.PathValue{
+			{
+				Domain:     common.PathDomainPublic,
+				Identifier: "number",
+			},
+		},
+		validatedPaths,
+	)
+}
+
+func TestRuntimeForbidPublicEntitlementGet(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	script1 := []byte(`
+      transaction {
+
+        prepare(signer: auth (Storage, Capabilities) &Account) {
+          signer.storage.save(42, to: /storage/number)
+          let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+          signer.capabilities.publish(cap, at: /public/number)
+        }
+      }
+    `)
+
+	script2 := []byte(`
+      access(all)
+      fun main() {
+          let cap = getAccount(0x1).capabilities.get<auth(Insert) &Int>(/public/number)
+          assert(cap.id == 0)
+      }
+    `)
+
+	var validatedPaths []interpreter.PathValue
+
+	runtimeInterface := &TestRuntimeInterface{
+		Storage: NewTestLedger(nil, nil),
+		OnGetSigningAccounts: func() ([]Address, error) {
+			return []Address{
+				common.MustBytesToAddress([]byte{0x1}),
+			}, nil
+		},
+		OnEmitEvent: func(event cadence.Event) error {
+			return nil
+		},
+		OnValidateAccountCapabilitiesGet: func(
+			inter *interpreter.Interpreter,
+			locationRange interpreter.LocationRange,
+			address interpreter.AddressValue,
+			path interpreter.PathValue,
+			wantedBorrowType *sema.ReferenceType,
+			capabilityBorrowType *sema.ReferenceType,
+		) (bool, error) {
+
+			validatedPaths = append(validatedPaths, path)
+
+			_, wantedHasEntitlements := wantedBorrowType.Authorization.(sema.EntitlementSetAccess)
+			return !wantedHasEntitlements, nil
+		},
+	}
+
+	nextTransactionLocation := NewTransactionLocationGenerator()
+	nexScriptLocation := NewScriptLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	_, err = runtime.ExecuteScript(
+		Script{
+			Source: script2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nexScriptLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]interpreter.PathValue{
+			{
+				Domain:     common.PathDomainPublic,
+				Identifier: "number",
+			},
+		},
+		validatedPaths,
+	)
+}
+
+func TestRuntimeForbidPublicEntitlementPublish(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewTestInterpreterRuntime()
+
+	t.Run("entitled capability", func(t *testing.T) {
+
+		t.Parallel()
+
+		script1 := []byte(`
+          transaction {
+
+            prepare(signer: auth (Storage, Capabilities) &Account) {
+              signer.storage.save(42, to: /storage/number)
+              let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+              signer.capabilities.publish(cap, at: /public/number)
+            }
+          }
+        `)
+
+		var validatedPaths []interpreter.PathValue
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{
+					common.MustBytesToAddress([]byte{0x1}),
+				}, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnValidateAccountCapabilitiesPublish: func(
+				inter *interpreter.Interpreter,
+				locationRange interpreter.LocationRange,
+				address interpreter.AddressValue,
+				path interpreter.PathValue,
+				capabilityBorrowType *interpreter.ReferenceStaticType,
+			) (bool, error) {
+
+				validatedPaths = append(validatedPaths, path)
+
+				_, isEntitledCapability := capabilityBorrowType.Authorization.(interpreter.EntitlementSetAuthorization)
+				return !isEntitledCapability, nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: script1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.EntitledCapabilityPublishingError{})
+	})
+
+	t.Run("non entitled capability", func(t *testing.T) {
+		t.Parallel()
+
+		script1 := []byte(`
+          transaction {
+
+            prepare(signer: auth (Storage, Capabilities) &Account) {
+              signer.storage.save(42, to: /storage/number)
+              let cap = signer.capabilities.storage.issue<&Int>(/storage/number)
+              signer.capabilities.publish(cap, at: /public/number)
+            }
+          }
+        `)
+
+		var validatedPaths []interpreter.PathValue
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{
+					common.MustBytesToAddress([]byte{0x1}),
+				}, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnValidateAccountCapabilitiesPublish: func(
+				inter *interpreter.Interpreter,
+				locationRange interpreter.LocationRange,
+				address interpreter.AddressValue,
+				path interpreter.PathValue,
+				capabilityBorrowType *interpreter.ReferenceStaticType,
+			) (bool, error) {
+
+				validatedPaths = append(validatedPaths, path)
+
+				_, isEntitledCapability := capabilityBorrowType.Authorization.(interpreter.EntitlementSetAuthorization)
+				return !isEntitledCapability, nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: script1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("untyped entitled capability", func(t *testing.T) {
+
+		t.Parallel()
+
+		script1 := []byte(`
+          transaction {
+
+            prepare(signer: auth (Storage, Capabilities) &Account) {
+              signer.storage.save(42, to: /storage/number)
+              let cap = signer.capabilities.storage.issue<auth(Insert) &Int>(/storage/number)
+              let untypedCap: Capability = cap
+              signer.capabilities.publish(untypedCap, at: /public/number)
+            }
+          }
+        `)
+
+		var validatedPaths []interpreter.PathValue
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]Address, error) {
+				return []Address{
+					common.MustBytesToAddress([]byte{0x1}),
+				}, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+			OnValidateAccountCapabilitiesPublish: func(
+				inter *interpreter.Interpreter,
+				locationRange interpreter.LocationRange,
+				address interpreter.AddressValue,
+				path interpreter.PathValue,
+				capabilityBorrowType *interpreter.ReferenceStaticType,
+			) (bool, error) {
+
+				validatedPaths = append(validatedPaths, path)
+
+				_, isEntitledCapability := capabilityBorrowType.Authorization.(interpreter.EntitlementSetAuthorization)
+				return !isEntitledCapability, nil
+			},
+		}
+
+		nextTransactionLocation := NewTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: script1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+
+		RequireError(t, err)
+		require.ErrorAs(t, err, &interpreter.EntitledCapabilityPublishingError{})
+	})
+}
