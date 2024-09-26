@@ -74,4 +74,8 @@ type Config struct {
 	LegacyContractUpgradeEnabled bool
 	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates
 	ContractUpdateTypeRemovalEnabled bool
+	// ValidateAccountCapabilitiesGetHandler is used to handle when a capability of an account is got.
+	ValidateAccountCapabilitiesGetHandler ValidateAccountCapabilitiesGetHandlerFunc
+	// ValidateAccountCapabilitiesPublishHandler is used to handle when a capability of an account is got.
+	ValidateAccountCapabilitiesPublishHandler ValidateAccountCapabilitiesPublishHandlerFunc
 }
