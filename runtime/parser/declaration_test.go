@@ -2318,7 +2318,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("no identifiers, string location, leading/trailing comments", func(t *testing.T) {
+	t.Run("no identifiers, string location, with leading/trailing comments", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2488,7 +2488,7 @@ import "foo" /* After foo */`)
 		)
 	})
 
-	t.Run("three identifiers, address location, trailing comment", func(t *testing.T) {
+	t.Run("three identifiers, address location, with trailing comment", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2572,7 +2572,7 @@ import "foo" /* After foo */`)
 		utils.AssertEqualWithDiff(t, expected, result)
 	})
 
-	t.Run("no identifiers, identifier location, trailing comment", func(t *testing.T) {
+	t.Run("no identifiers, identifier location, with trailing comment", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -2904,6 +2904,120 @@ event E() // After E
 						},
 					},
 					Access:        ast.AccessSelf,
+					CompositeKind: common.CompositeKindEvent,
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("one parameter with comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`event E2 (
+	// Before a
+	a: Int // After a
+)`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.SpecialFunctionDeclaration{
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									ParameterList: &ast.ParameterList{
+										Parameters: []*ast.Parameter{
+											{
+												TypeAnnotation: &ast.TypeAnnotation{
+													Type: &ast.NominalType{
+														Identifier: ast.Identifier{
+															Identifier: "Int",
+															Pos: ast.Position{
+																Offset: 28,
+																Line:   3,
+																Column: 4,
+															},
+														},
+														Comments: ast.Comments{
+															Trailing: []*ast.Comment{
+																ast.NewComment(nil, []byte("// After a")),
+															},
+														},
+													},
+													StartPos: ast.Position{
+														Offset: 28,
+														Line:   3,
+														Column: 4,
+													},
+												},
+												Identifier: ast.Identifier{
+													Identifier: "a",
+													Pos: ast.Position{
+														Offset: 25,
+														Line:   3,
+														Column: 1,
+													},
+												},
+												StartPos: ast.Position{
+													Offset: 25,
+													Line:   3,
+													Column: 1,
+												},
+												Comments: ast.Comments{
+													Leading: []*ast.Comment{
+														ast.NewComment(nil, []byte("// Before a")),
+													},
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 9,
+												Line:   1,
+												Column: 9,
+											},
+											EndPos: ast.Position{
+												Offset: 43,
+												Line:   4,
+												Column: 0,
+											},
+										},
+									},
+									StartPos: ast.Position{
+										Offset: 9,
+										Line:   1,
+										Column: 9,
+									},
+									Access: ast.AccessNotSpecified,
+								},
+								Kind: common.DeclarationKindInitializer,
+							},
+						},
+					),
+					Identifier: ast.Identifier{
+						Identifier: "E2",
+						Pos: ast.Position{
+							Offset: 6,
+							Line:   1,
+							Column: 6,
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 0,
+							Line:   1,
+							Column: 0,
+						},
+						EndPos: ast.Position{
+							Offset: 43,
+							Line:   4,
+							Column: 0,
+						},
+					},
+					Access:        ast.AccessNotSpecified,
 					CompositeKind: common.CompositeKindEvent,
 				},
 			},
