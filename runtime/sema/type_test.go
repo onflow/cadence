@@ -2378,6 +2378,10 @@ func TestTypeInclusions(t *testing.T) {
 					return
 				}
 
+				if _, ok := typ.(*InterfaceType); ok {
+					return
+				}
+
 				if typ.IsResourceType() {
 					return
 				}

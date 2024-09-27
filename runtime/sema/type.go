@@ -4198,7 +4198,7 @@ func init() {
 			DeploymentResultType,
 			HashableStructType,
 			&InclusiveRangeType{},
-			&StringerType,
+			StringerType,
 		},
 	)
 
@@ -9549,6 +9549,37 @@ func init() {
 			}
 
 			compositeTypes = append(compositeTypes, nestedCompositeType)
+		})
+	}
+}
+
+var NativeInterfaceTypes = map[string]*InterfaceType{}
+
+func init() {
+	interfaceTypes := []*InterfaceType{
+		StringerType,
+	}
+
+	for len(interfaceTypes) > 0 {
+		lastIndex := len(interfaceTypes) - 1
+		interfaceType := interfaceTypes[lastIndex]
+		interfaceTypes[lastIndex] = nil
+		interfaceTypes = interfaceTypes[:lastIndex]
+
+		NativeInterfaceTypes[interfaceType.QualifiedIdentifier()] = interfaceType
+
+		nestedTypes := interfaceType.NestedTypes
+		if nestedTypes == nil {
+			continue
+		}
+
+		nestedTypes.Foreach(func(_ string, nestedType Type) {
+			nestedInterfaceType, ok := nestedType.(*InterfaceType)
+			if !ok {
+				return
+			}
+
+			interfaceTypes = append(interfaceTypes, nestedInterfaceType)
 		})
 	}
 }

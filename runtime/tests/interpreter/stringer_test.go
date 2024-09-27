@@ -21,9 +21,10 @@ package interpreter_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/onflow/cadence/runtime/interpreter"
 	. "github.com/onflow/cadence/runtime/tests/utils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestStringerBasic(t *testing.T) {
@@ -49,6 +50,29 @@ func TestStringerBasic(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredStringValue("example"),
+		result,
+	)
+}
+
+func TestStringerBuiltIn(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		access(all)
+		fun test() :String {
+			let v = 1
+			return v.toString()
+		}
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredStringValue("1"),
 		result,
 	)
 }

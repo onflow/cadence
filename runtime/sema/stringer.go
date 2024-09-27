@@ -23,43 +23,37 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-const StringerTypeToStringFunctionName = "toString"
-
-var StringerTypeToStringFunctionType = &FunctionType{
-	Purity: FunctionPurityView,
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		StringType,
-	),
-}
-
-const StringerTypeToStringFunctionDocString = `
- Returns this object as a String.
- `
-
 const StringerTypeName = "Stringer"
 
-var StringerType = InterfaceType{
-	Location:      nil,
-	Identifier:    StringerTypeName,
-	CompositeKind: common.CompositeKindStructure,
-	Members:       &StringMemberOrderedMap{},
-}
+var StringerType = func() *InterfaceType {
 
-func init() {
-	StringerType.Members.Set(StringerTypeToStringFunctionName, NewUnmeteredFunctionMember(
-		&StringerType,
-		PrimitiveAccess(ast.AccessAll),
-		StringerTypeToStringFunctionName,
-		StringerTypeToStringFunctionType,
-		StringerTypeToStringFunctionDocString,
-	))
-	StringerType.memberResolvers = MembersAsResolvers([]*Member{
+	stringerType := &InterfaceType{
+		Identifier:    StringerTypeName,
+		CompositeKind: common.CompositeKindStructure,
+		Members:       &StringMemberOrderedMap{},
+	}
+
+	const StringerTypeToStringFunctionDocString = `Returns this object as a String.`
+
+	const StringerTypeToStringFunctionName = "toString"
+
+	var StringerTypeToStringFunctionType = &FunctionType{
+		Purity: FunctionPurityView,
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			StringType,
+		),
+	}
+
+	var members = []*Member{
 		NewUnmeteredFunctionMember(
-			&StringerType,
+			stringerType,
 			PrimitiveAccess(ast.AccessAll),
 			StringerTypeToStringFunctionName,
 			StringerTypeToStringFunctionType,
 			StringerTypeToStringFunctionDocString,
 		),
-	})
-}
+	}
+
+	stringerType.Members = MembersAsMap(members)
+	return stringerType
+}()

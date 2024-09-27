@@ -4866,6 +4866,10 @@ func (interpreter *Interpreter) GetInterfaceType(
 	typeID TypeID,
 ) (*sema.InterfaceType, error) {
 	if location == nil {
+		var interfaceType = sema.NativeInterfaceTypes[qualifiedIdentifier]
+		if interfaceType != nil {
+			return interfaceType, nil
+		}
 		return nil, InterfaceMissingLocationError{
 			QualifiedIdentifier: qualifiedIdentifier,
 		}
