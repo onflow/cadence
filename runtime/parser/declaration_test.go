@@ -2318,6 +2318,39 @@ func TestParseImportDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("no identifiers, string location, leading/trailing comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+// Before foo
+import "foo" /* After foo */`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Identifiers: nil,
+					Location:    common.StringLocation("foo"),
+					LocationPos: ast.Position{Line: 3, Column: 7, Offset: 22},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 15},
+						EndPos:   ast.Position{Line: 3, Column: 11, Offset: 26},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before foo")),
+						},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("/* After foo */")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("no identifiers, address location", func(t *testing.T) {
 
 		t.Parallel()
@@ -2455,11 +2488,11 @@ func TestParseImportDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("three identifiers, address location", func(t *testing.T) {
+	t.Run("three identifiers, address location, trailing comment", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseDeclarations(` import foo , bar , baz from 0x42`)
+		result, errs := testParseDeclarations(` import foo , bar , baz from 0x42 // After address`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2486,6 +2519,11 @@ func TestParseImportDeclaration(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 32, Offset: 32},
+					},
+					Comments: ast.Comments{
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// After address")),
+						},
 					},
 				},
 			},
@@ -2534,11 +2572,11 @@ func TestParseImportDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t, expected, result)
 	})
 
-	t.Run("no identifiers, identifier location", func(t *testing.T) {
+	t.Run("no identifiers, identifier location, trailing comment", func(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := testParseDeclarations(` import foo`)
+		result, errs := testParseDeclarations(` import foo // After foo`)
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -2550,6 +2588,11 @@ func TestParseImportDeclaration(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+					},
+					Comments: ast.Comments{
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// After foo")),
+						},
 					},
 				},
 			},
@@ -2570,6 +2613,7 @@ func TestParseImportDeclaration(t *testing.T) {
 		}, errs)
 
 	})
+
 	t.Run("from keyword as second identifier", func(t *testing.T) {
 
 		t.Parallel()

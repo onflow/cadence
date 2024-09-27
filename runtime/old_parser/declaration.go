@@ -698,6 +698,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			endPos,
 		),
 		locationPos,
+		ast.Comments{},
 	), nil
 }
 

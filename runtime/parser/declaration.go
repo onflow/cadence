@@ -658,17 +658,19 @@ func parsePragmaDeclaration(p *parser) (*ast.PragmaDeclaration, error) {
 //	    ( string | hexadecimalLiteral | identifier )
 func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
-	startPosition := p.current.StartPos
+	startToken := p.current
 
 	var identifiers []ast.Identifier
 
 	var location common.Location
 	var locationPos ast.Position
 	var endPos ast.Position
+	var trailingComments []*ast.Comment
 
 	parseStringOrAddressLocation := func() {
 		locationPos = p.current.StartPos
 		endPos = p.current.EndPos
+		trailingComments = p.current.Comments.Trailing
 
 		switch p.current.Type {
 		case lexer.TokenString:
@@ -687,10 +689,11 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		p.next()
 	}
 
-	setIdentifierLocation := func(identifier ast.Identifier) {
+	setIdentifierLocation := func(identifier ast.Identifier, identifierToken lexer.Token) {
 		location = common.IdentifierLocation(identifier.Identifier)
 		locationPos = identifier.Pos
 		endPos = identifier.EndPosition(p.memoryGauge)
+		trailingComments = identifierToken.Comments.Trailing
 	}
 
 	parseLocation := func() error {
@@ -700,7 +703,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 
 		case lexer.TokenIdentifier:
 			identifier := p.tokenToIdentifier(p.current)
-			setIdentifierLocation(identifier)
+			setIdentifierLocation(identifier, p.current)
 			p.next()
 
 		default:
@@ -787,7 +790,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		return nil
 	}
 
-	maybeParseFromIdentifier := func(identifier ast.Identifier) error {
+	maybeParseFromIdentifier := func(identifier ast.Identifier, identifierToken lexer.Token) error {
 		// The current identifier is maybe the `from` keyword,
 		// in which case the given (previous) identifier was
 		// an imported identifier and not the import location.
@@ -805,7 +808,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 				return err
 			}
 		} else {
-			setIdentifierLocation(identifier)
+			setIdentifierLocation(identifier, identifierToken)
 		}
 
 		return nil
@@ -819,6 +822,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		parseStringOrAddressLocation()
 
 	case lexer.TokenIdentifier:
+		identifierToken := p.current
 		identifier := p.tokenToIdentifier(p.current)
 		// Skip the identifier
 		p.nextSemanticToken()
@@ -833,13 +837,13 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 				return nil, err
 			}
 		case lexer.TokenIdentifier:
-			err := maybeParseFromIdentifier(identifier)
+			err := maybeParseFromIdentifier(identifier, identifierToken)
 			if err != nil {
 				return nil, err
 			}
 		case lexer.TokenEOF:
 			// The previous identifier is the identifier location
-			setIdentifierLocation(identifier)
+			setIdentifierLocation(identifier, identifierToken)
 
 		default:
 			return nil, p.syntaxError(
@@ -866,10 +870,14 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 		location,
 		ast.NewRange(
 			p.memoryGauge,
-			startPosition,
+			startToken.StartPos,
 			endPos,
 		),
 		locationPos,
+		ast.Comments{
+			Leading:  startToken.Comments.PackToList(),
+			Trailing: trailingComments,
+		},
 	), nil
 }
 
