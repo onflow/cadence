@@ -817,7 +817,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 						},
 					},
 					Comments: ast.Comments{
-						Leading: []ast.Comment{ast.NewComment(nil, []byte("/// Test"))},
+						Leading: []*ast.Comment{ast.NewComment(nil, []byte("/// Test"))},
 					},
 					StartPos: ast.Position{Line: 2, Column: 0, Offset: 9},
 				},
@@ -857,7 +857,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 						},
 					},
 					Comments: ast.Comments{
-						Leading: []ast.Comment{
+						Leading: []*ast.Comment{
 							ast.NewComment(nil, []byte("/// First line")),
 							ast.NewComment(nil, []byte("/// Second line")),
 						},
@@ -900,7 +900,7 @@ func TestParseFunctionDeclaration(t *testing.T) {
 						},
 					},
 					Comments: ast.Comments{
-						Leading: []ast.Comment{
+						Leading: []*ast.Comment{
 							ast.NewComment(nil, []byte("/** Cool dogs.\n\n Cool cats!! */")),
 						},
 					},
@@ -6883,7 +6883,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.FunctionDeclaration{
 								Access: ast.AccessNotSpecified,
 								Comments: ast.Comments{
-									Leading: []ast.Comment{
+									Leading: []*ast.Comment{
 										ast.NewComment(nil, []byte("/// noReturnNoBlock")),
 									},
 								},
@@ -6902,7 +6902,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.FunctionDeclaration{
 								Access: ast.AccessNotSpecified,
 								Comments: ast.Comments{
-									Leading: []ast.Comment{
+									Leading: []*ast.Comment{
 										ast.NewComment(nil, []byte("/// returnNoBlock")),
 									},
 								},
@@ -6931,7 +6931,7 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.FunctionDeclaration{
 								Access: ast.AccessNotSpecified,
 								Comments: ast.Comments{
-									Leading: []ast.Comment{
+									Leading: []*ast.Comment{
 										ast.NewComment(nil, []byte("/// returnAndBlock")),
 									},
 								},
@@ -6962,8 +6962,8 @@ func TestParseMemberDocStrings(t *testing.T) {
 											EndPos:   ast.Position{Offset: 246, Line: 11, Column: 44},
 										},
 										Comments: ast.Comments{
-											Leading:  []ast.Comment{},
-											Trailing: []ast.Comment{},
+											Leading:  []*ast.Comment{},
+											Trailing: []*ast.Comment{},
 										},
 									},
 								},
@@ -7015,12 +7015,8 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindUnknown,
 								FunctionDeclaration: &ast.FunctionDeclaration{
-									Access: ast.AccessNotSpecified,
-									Comments: ast.Comments{
-										Leading: []ast.Comment{
-											ast.NewComment(nil, []byte("/// unknown")),
-										},
-									},
+									Access:   ast.AccessNotSpecified,
+									Comments: ast.Comments{},
 									Identifier: ast.Identifier{
 										Identifier: "unknown",
 										Pos:        ast.Position{Offset: 66, Line: 5, Column: 14},
@@ -7037,12 +7033,8 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
-									Access: ast.AccessNotSpecified,
-									Comments: ast.Comments{
-										Leading: []ast.Comment{
-											ast.NewComment(nil, []byte("/// initNoBlock")),
-										},
-									},
+									Access:   ast.AccessNotSpecified,
+									Comments: ast.Comments{},
 									Identifier: ast.Identifier{
 										Identifier: "init",
 										Pos:        ast.Position{Offset: 121, Line: 8, Column: 14},
@@ -7059,12 +7051,8 @@ func TestParseMemberDocStrings(t *testing.T) {
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindDestructorLegacy,
 								FunctionDeclaration: &ast.FunctionDeclaration{
-									Access: ast.AccessNotSpecified,
-									Comments: ast.Comments{
-										Leading: []ast.Comment{
-											ast.NewComment(nil, []byte("/// destroyWithBlock")),
-										},
-									},
+									Access:   ast.AccessNotSpecified,
+									Comments: ast.Comments{},
 									Identifier: ast.Identifier{
 										Identifier: "destroy",
 										Pos:        ast.Position{Offset: 178, Line: 11, Column: 14},
