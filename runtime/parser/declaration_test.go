@@ -4573,6 +4573,45 @@ func TestParseAttachmentDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("no conformances, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+    // Before E
+    access(all) attachment E for S {}`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.AttachmentDeclaration{
+					Access: ast.AccessAll,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Line: 3, Column: 27, Offset: 44},
+					},
+					BaseType: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "S",
+							Pos:        ast.Position{Line: 3, Column: 33, Offset: 50},
+						},
+					},
+					Members: &ast.Members{},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 4, Offset: 21},
+						EndPos:   ast.Position{Line: 3, Column: 36, Offset: 53},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before E")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("nested in contract", func(t *testing.T) {
 
 		t.Parallel()

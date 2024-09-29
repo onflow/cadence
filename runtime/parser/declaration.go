@@ -173,7 +173,7 @@ func parseDeclaration(p *parser) (ast.Declaration, error) {
 				if err != nil {
 					return nil, err
 				}
-				return parseAttachmentDeclaration(p, access, accessPos, docString)
+				return parseAttachmentDeclaration(p, access, accessPos, startComments)
 
 			case KeywordContract:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindContract)
@@ -1450,9 +1450,11 @@ func parseAttachmentDeclaration(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
-	docString string,
+	startComments []*ast.Comment,
 ) (ast.Declaration, error) {
-	startPos := p.current.StartPos
+
+	startToken := p.current
+	startPos := startToken.StartPos
 	if accessPos != nil {
 		startPos = *accessPos
 	}
@@ -1529,6 +1531,10 @@ func parseAttachmentDeclaration(
 		endToken.EndPos,
 	)
 
+	var leadingComments []*ast.Comment
+	leadingComments = append(leadingComments, startComments...)
+	leadingComments = append(leadingComments, startToken.Comments.Leading...)
+
 	return ast.NewAttachmentDeclaration(
 		p.memoryGauge,
 		access,
@@ -1536,8 +1542,10 @@ func parseAttachmentDeclaration(
 		baseNominalType,
 		conformances,
 		members,
-		docString,
 		declarationRange,
+		ast.Comments{
+			Leading: leadingComments,
+		},
 	), nil
 }
 
@@ -1724,7 +1732,7 @@ func parseMemberOrNestedDeclaration(p *parser) (ast.Declaration, error) {
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, startComments)
 
 			case KeywordAttachment:
-				return parseAttachmentDeclaration(p, access, accessPos, docString)
+				return parseAttachmentDeclaration(p, access, accessPos, startComments)
 
 			case KeywordView:
 				if purity != ast.FunctionPurityUnspecified {
