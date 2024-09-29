@@ -39,7 +39,7 @@ import (
 //	    | /* no execute or postConditions */
 //	    )
 //	    '}'
-func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionDeclaration, error) {
+func parseTransactionDeclaration(p *parser, startComments []*ast.Comment) (*ast.TransactionDeclaration, error) {
 
 	startToken := p.current
 	startPos := startToken.StartPos
@@ -196,6 +196,10 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		}
 	}
 
+	var leadingComments []*ast.Comment
+	leadingComments = append(leadingComments, startComments...)
+	leadingComments = append(leadingComments, startToken.Comments.Leading...)
+
 	return ast.NewTransactionDeclaration(
 		p.memoryGauge,
 		parameterList,
@@ -204,12 +208,14 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		preConditions,
 		postConditions,
 		execute,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			endPos,
 		),
+		ast.Comments{
+			Leading: leadingComments,
+		},
 	), nil
 }
 

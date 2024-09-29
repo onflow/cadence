@@ -204,7 +204,7 @@ func parseDeclaration(p *parser) (ast.Declaration, error) {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for transaction")
 				}
 
-				return parseTransactionDeclaration(p, docString)
+				return parseTransactionDeclaration(p, startComments)
 
 			case KeywordView:
 				if purity != ast.FunctionPurityUnspecified {

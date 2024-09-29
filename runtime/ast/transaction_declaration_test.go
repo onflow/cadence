@@ -45,8 +45,12 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
 		Prepare:        nil,
 		PreConditions:  &Conditions{},
 		PostConditions: &Conditions{},
-		DocString:      "test",
-		Execute:        nil,
+		Comments: Comments{
+			Leading: []*Comment{
+				NewComment(nil, []byte("///test")),
+			},
+		},
+		Execute: nil,
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
 			EndPos:   Position{Offset: 10, Line: 11, Column: 12},

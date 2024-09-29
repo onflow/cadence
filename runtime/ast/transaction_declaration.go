@@ -35,6 +35,7 @@ type TransactionDeclaration struct {
 	DocString      string
 	Fields         []*FieldDeclaration
 	Range
+	Comments
 }
 
 var _ Element = &TransactionDeclaration{}
@@ -49,8 +50,8 @@ func NewTransactionDeclaration(
 	preConditions *Conditions,
 	postConditions *Conditions,
 	execute *SpecialFunctionDeclaration,
-	docString string,
 	declRange Range,
+	comments Comments,
 ) *TransactionDeclaration {
 	common.UseMemory(gauge, common.TransactionDeclarationMemoryUsage)
 
@@ -61,8 +62,8 @@ func NewTransactionDeclaration(
 		PreConditions:  preConditions,
 		PostConditions: postConditions,
 		Execute:        execute,
-		DocString:      docString,
 		Range:          declRange,
+		Comments:       comments,
 	}
 }
 
@@ -111,10 +112,12 @@ func (d *TransactionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias TransactionDeclaration
 	return json.Marshal(&struct {
 		*Alias
-		Type string
+		Type      string
+		DocString string
 	}{
-		Type:  "TransactionDeclaration",
-		Alias: (*Alias)(d),
+		Type:      "TransactionDeclaration",
+		Alias:     (*Alias)(d),
+		DocString: d.DeclarationDocString(),
 	})
 }
 

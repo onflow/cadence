@@ -5159,6 +5159,40 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("struct, no conformances, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+// Before S
+access(all) struct interface S { }`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.InterfaceDeclaration{
+					Access:        ast.AccessAll,
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "S",
+						Pos:        ast.Position{Line: 3, Column: 29, Offset: 42},
+					},
+					Members: &ast.Members{},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 13},
+						EndPos:   ast.Position{Line: 3, Column: 33, Offset: 46},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before S")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("struct, interface keyword as name", func(t *testing.T) {
 
 		t.Parallel()
@@ -5732,6 +5766,38 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 5, Line: 2, Column: 4},
 						EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+					},
+				},
+			},
+			result.Declarations(),
+		)
+	})
+
+	t.Run("EmptyTransaction, comments", func(t *testing.T) {
+
+		const code = `
+		  // Before tx
+		  transaction {}
+		`
+		result, errs := testParseProgram(code)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.TransactionDeclaration{
+					Fields:         nil,
+					Prepare:        nil,
+					PreConditions:  nil,
+					PostConditions: nil,
+					Execute:        nil,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before tx")),
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 22, Line: 3, Column: 4},
+						EndPos:   ast.Position{Offset: 35, Line: 3, Column: 17},
 					},
 				},
 			},
