@@ -1873,7 +1873,10 @@ func TestParseAccess(t *testing.T) {
 		return Parse(
 			nil,
 			[]byte(input),
-			parseAccess,
+			func(p *parser) (ast.Access, error) {
+				access, _, err := parseAccess(p)
+				return access, err
+			},
 			Config{},
 		)
 	}
@@ -3196,6 +3199,7 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 					nil,
 					nil,
 					nil,
+					nil,
 				)
 			},
 			Config{},
@@ -3975,6 +3979,368 @@ func TestParseCompositeDeclaration(t *testing.T) {
 					},
 					Access:        ast.AccessNotSpecified,
 					CompositeKind: 0x1,
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("struct, with fields, functions, special functions, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+      // Before Test
+      struct Test {
+          // Before foo
+          access(all) var foo: Int
+
+          // Before init
+          init(foo: Int) {
+              self.foo = foo
+          }
+
+          // Before getFoo
+          access(all) fun getFoo(): Int {
+              return self.foo
+          }
+      }
+    `)
+
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Members: ast.NewUnmeteredMembers(
+						[]ast.Declaration{
+							&ast.FieldDeclaration{
+								TypeAnnotation: &ast.TypeAnnotation{
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos: ast.Position{
+												Offset: 97,
+												Line:   5,
+												Column: 31,
+											},
+										},
+									},
+									StartPos: ast.Position{
+										Offset: 97,
+										Line:   5,
+										Column: 31,
+									},
+									IsResource: false,
+								},
+								Identifier: ast.Identifier{
+									Identifier: "foo",
+									Pos: ast.Position{
+										Offset: 92,
+										Line:   5,
+										Column: 26,
+									},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{
+										Offset: 76,
+										Line:   5,
+										Column: 10,
+									},
+									EndPos: ast.Position{
+										Offset: 99,
+										Line:   5,
+										Column: 33,
+									},
+								},
+								Access:       ast.AccessAll,
+								VariableKind: 0x1,
+								Flags:        0x00,
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{
+										ast.NewComment(nil, []byte("// Before foo")),
+									},
+								},
+							},
+							&ast.SpecialFunctionDeclaration{
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									ParameterList: &ast.ParameterList{
+										Parameters: []*ast.Parameter{
+											{
+												TypeAnnotation: &ast.TypeAnnotation{
+													Type: &ast.NominalType{
+														Identifier: ast.Identifier{
+															Identifier: "Int",
+															Pos: ast.Position{
+																Offset: 147,
+																Line:   8,
+																Column: 20,
+															},
+														},
+													},
+													StartPos: ast.Position{
+														Offset: 147,
+														Line:   8,
+														Column: 20,
+													},
+													IsResource: false,
+												},
+												Identifier: ast.Identifier{
+													Identifier: "foo",
+													Pos: ast.Position{
+														Offset: 142,
+														Line:   8,
+														Column: 15,
+													},
+												},
+												StartPos: ast.Position{
+													Offset: 142,
+													Line:   8,
+													Column: 15,
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 141,
+												Line:   8,
+												Column: 14,
+											},
+											EndPos: ast.Position{
+												Offset: 150,
+												Line:   8,
+												Column: 23,
+											},
+										},
+									},
+									FunctionBlock: &ast.FunctionBlock{
+										Block: &ast.Block{
+											Statements: []ast.Statement{
+												&ast.AssignmentStatement{
+													Target: &ast.MemberExpression{
+														Expression: &ast.IdentifierExpression{
+															Identifier: ast.Identifier{
+																Identifier: "self",
+																Pos: ast.Position{
+																	Offset: 168,
+																	Line:   9,
+																	Column: 14,
+																},
+															},
+														},
+														Identifier: ast.Identifier{
+															Identifier: "foo",
+															Pos: ast.Position{
+																Offset: 173,
+																Line:   9,
+																Column: 19,
+															},
+														},
+														AccessPos: ast.Position{
+															Offset: 172,
+															Line:   9,
+															Column: 18,
+														},
+														Optional: false,
+													},
+													Transfer: &ast.Transfer{
+														Operation: 0x1,
+														Pos: ast.Position{
+															Offset: 177,
+															Line:   9,
+															Column: 23,
+														},
+													},
+													Value: &ast.IdentifierExpression{
+														Identifier: ast.Identifier{
+															Identifier: "foo",
+															Pos: ast.Position{
+																Offset: 179,
+																Line:   9,
+																Column: 25,
+															},
+														},
+													},
+												},
+											},
+											Range: ast.Range{
+												StartPos: ast.Position{
+													Offset: 152,
+													Line:   8,
+													Column: 25,
+												},
+												EndPos: ast.Position{
+													Offset: 193,
+													Line:   10,
+													Column: 10,
+												},
+											},
+										},
+									},
+									Identifier: ast.Identifier{
+										Identifier: "init",
+										Pos: ast.Position{
+											Offset: 137,
+											Line:   8,
+											Column: 10,
+										},
+									},
+									StartPos: ast.Position{
+										Offset: 137,
+										Line:   8,
+										Column: 10,
+									},
+									Access: ast.AccessNotSpecified,
+									Flags:  0x00,
+									Comments: ast.Comments{
+										Leading: []*ast.Comment{
+											ast.NewComment(nil, []byte("// Before init")),
+										},
+									},
+								},
+								Kind: 0xd,
+							},
+							&ast.FunctionDeclaration{
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{
+											Offset: 255,
+											Line:   13,
+											Column: 32,
+										},
+										EndPos: ast.Position{
+											Offset: 256,
+											Line:   13,
+											Column: 33,
+										},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos: ast.Position{
+												Offset: 259,
+												Line:   13,
+												Column: 36,
+											},
+										},
+									},
+									StartPos: ast.Position{
+										Offset: 259,
+										Line:   13,
+										Column: 36,
+									},
+									IsResource: false,
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Statements: []ast.Statement{
+											&ast.ReturnStatement{
+												Expression: &ast.MemberExpression{
+													Expression: &ast.IdentifierExpression{
+														Identifier: ast.Identifier{
+															Identifier: "self",
+															Pos: ast.Position{
+																Offset: 286,
+																Line:   14,
+																Column: 21,
+															},
+														},
+													},
+													Identifier: ast.Identifier{
+														Identifier: "foo",
+														Pos: ast.Position{
+															Offset: 291,
+															Line:   14,
+															Column: 26,
+														},
+													},
+													AccessPos: ast.Position{
+														Offset: 290,
+														Line:   14,
+														Column: 25,
+													},
+													Optional: false,
+												},
+												Range: ast.Range{
+													StartPos: ast.Position{
+														Offset: 279,
+														Line:   14,
+														Column: 14,
+													},
+													EndPos: ast.Position{
+														Offset: 293,
+														Line:   14,
+														Column: 28,
+													},
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{
+												Offset: 263,
+												Line:   13,
+												Column: 40,
+											},
+											EndPos: ast.Position{
+												Offset: 305,
+												Line:   15,
+												Column: 10,
+											},
+										},
+									},
+								},
+								Comments: ast.Comments{
+									Leading: []*ast.Comment{
+										ast.NewComment(nil, []byte("// Before getFoo")),
+									},
+								},
+								Identifier: ast.Identifier{
+									Identifier: "getFoo",
+									Pos: ast.Position{
+										Offset: 249,
+										Line:   13,
+										Column: 26,
+									},
+								},
+								StartPos: ast.Position{
+									Offset: 233,
+									Line:   13,
+									Column: 10,
+								},
+								Access: ast.AccessAll,
+								Flags:  0x00,
+							},
+						},
+					),
+					Identifier: ast.Identifier{
+						Identifier: "Test",
+						Pos: ast.Position{
+							Offset: 35,
+							Line:   3,
+							Column: 13,
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{
+							Offset: 28,
+							Line:   3,
+							Column: 6,
+						},
+						EndPos: ast.Position{
+							Offset: 313,
+							Line:   16,
+							Column: 6,
+						},
+					},
+					Access:        ast.AccessNotSpecified,
+					CompositeKind: common.CompositeKindStructure,
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before Test")),
+						},
+					},
 				},
 			},
 			result,

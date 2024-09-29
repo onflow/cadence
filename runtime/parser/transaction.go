@@ -237,6 +237,7 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 					nil,
 					nil,
 					nil,
+					nil,
 				)
 				if err != nil {
 					return nil, err

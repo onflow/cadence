@@ -476,7 +476,7 @@ func TestCheckerContractValueHandler(
 	return StandardLibraryValue{
 		Name:           declaration.Identifier.Identifier,
 		Type:           constructorType,
-		DocString:      declaration.DocString,
+		DocString:      declaration.DeclarationDocString(),
 		Kind:           declaration.DeclarationKind(),
 		Position:       &declaration.Identifier.Pos,
 		ArgumentLabels: constructorArgumentLabels,

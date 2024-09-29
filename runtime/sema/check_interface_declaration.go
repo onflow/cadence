@@ -286,7 +286,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		ty:                       interfaceType,
 		declarationKind:          declaration.DeclarationKind(),
 		access:                   checker.accessFromAstAccess(declaration.Access),
-		docString:                declaration.DocString,
+		docString:                declaration.DeclarationDocString(),
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)

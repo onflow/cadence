@@ -820,7 +820,6 @@ func parseEventDeclaration(
 		identifier,
 		nil,
 		members,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
@@ -912,12 +911,12 @@ func parseFieldWithVariableKind(
 		variableKind,
 		identifier,
 		typeAnnotation,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
+		ast.Comments{},
 	), nil
 }
 
@@ -1061,7 +1060,6 @@ func parseCompositeOrInterfaceDeclaration(
 			identifier,
 			conformances,
 			members,
-			docString,
 			declarationRange,
 			ast.Comments{},
 		), nil
@@ -1468,12 +1466,12 @@ func parseFieldDeclarationWithoutVariableKind(
 		ast.VariableKindNotSpecified,
 		identifier,
 		typeAnnotation,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
+		ast.Comments{},
 	), nil
 }
 

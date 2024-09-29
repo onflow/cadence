@@ -355,6 +355,7 @@ func parseFunctionDeclaration(
 	purityPos *ast.Position,
 	staticPos *ast.Position,
 	nativePos *ast.Position,
+	startComments []*ast.Comment,
 ) (*ast.FunctionDeclaration, error) {
 	startToken := p.current
 	startPos := ast.EarliestPosition(startToken.StartPos, accessPos, purityPos, staticPos, nativePos)
@@ -388,6 +389,10 @@ func parseFunctionDeclaration(
 		return nil, err
 	}
 
+	var leadingComments []*ast.Comment
+	leadingComments = append(leadingComments, startComments...)
+	leadingComments = append(leadingComments, startToken.Comments.Leading...)
+
 	return ast.NewFunctionDeclarationWithComments(
 		p.memoryGauge,
 		access,
@@ -401,7 +406,7 @@ func parseFunctionDeclaration(
 		functionBlock,
 		startPos,
 		ast.Comments{
-			Leading: startToken.Leading,
+			Leading: leadingComments,
 		},
 	), nil
 }

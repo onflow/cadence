@@ -71,7 +71,11 @@ func TestVariableDeclaration_MarshalJSON(t *testing.T) {
 				EndPos:   Position{Offset: 28, Line: 29, Column: 30},
 			},
 		},
-		DocString: "test",
+		Comments: Comments{
+			Leading: []*Comment{
+				NewComment(nil, []byte("///test")),
+			},
+		},
 	}
 
 	actual, err := json.Marshal(decl)

@@ -30,12 +30,12 @@ import (
 
 type InterfaceDeclaration struct {
 	Members      *Members
-	DocString    string
 	Identifier   Identifier
 	Conformances []*NominalType
 	Range
 	Access        Access
 	CompositeKind common.CompositeKind
+	Comments
 }
 
 var _ Element = &InterfaceDeclaration{}
@@ -49,8 +49,8 @@ func NewInterfaceDeclaration(
 	identifier Identifier,
 	conformances []*NominalType,
 	members *Members,
-	docString string,
 	declRange Range,
+	comments Comments,
 ) *InterfaceDeclaration {
 	common.UseMemory(gauge, common.InterfaceDeclarationMemoryUsage)
 
@@ -60,8 +60,8 @@ func NewInterfaceDeclaration(
 		Identifier:    identifier,
 		Conformances:  conformances,
 		Members:       members,
-		DocString:     docString,
 		Range:         declRange,
+		Comments:      comments,
 	}
 }
 
@@ -96,17 +96,19 @@ func (d *InterfaceDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *InterfaceDeclaration) DeclarationDocString() string {
-	return d.DocString
+	return d.Comments.LeadingDocString()
 }
 
 func (d *InterfaceDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias InterfaceDeclaration
 	return json.Marshal(&struct {
 		*Alias
-		Type string
+		Type      string
+		DocString string
 	}{
-		Type:  "InterfaceDeclaration",
-		Alias: (*Alias)(d),
+		Type:      "InterfaceDeclaration",
+		Alias:     (*Alias)(d),
+		DocString: d.DeclarationDocString(),
 	})
 }
 

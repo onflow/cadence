@@ -228,12 +228,14 @@ func (d *VariableDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias VariableDeclaration
 	return json.Marshal(&struct {
 		*Alias
-		Type string
+		Type      string
+		DocString string
 		Range
 	}{
-		Type:  "VariableDeclaration",
-		Range: NewUnmeteredRangeFromPositioned(d),
-		Alias: (*Alias)(d),
+		Type:      "VariableDeclaration",
+		Range:     NewUnmeteredRangeFromPositioned(d),
+		Alias:     (*Alias)(d),
+		DocString: d.DeclarationDocString(),
 	})
 }
 
