@@ -62,8 +62,6 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 }
 
 func parseDeclaration(p *parser) (ast.Declaration, error) {
-	// TODO(preserve-comments): Refactor & remove
-	var docString string
 	var startComments []*ast.Comment
 
 	var access ast.Access = ast.AccessNotSpecified
@@ -166,7 +164,7 @@ func parseDeclaration(p *parser) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for entitlement")
 				}
-				return parseEntitlementOrMappingDeclaration(p, access, accessPos, docString)
+				return parseEntitlementOrMappingDeclaration(p, access, accessPos, startComments)
 
 			case KeywordAttachment:
 				err := rejectStaticAndNativeModifiers(p, staticPos, nativePos, common.DeclarationKindAttachment)
@@ -1207,9 +1205,10 @@ func parseEntitlementOrMappingDeclaration(
 	p *parser,
 	access ast.Access,
 	accessPos *ast.Position,
-	docString string,
+	startComments []*ast.Comment,
 ) (ast.Declaration, error) {
-	startPos := p.current.StartPos
+	startToken := p.current
+	startPos := startToken.StartPos
 	if accessPos != nil {
 		startPos = *accessPos
 	}
@@ -1244,6 +1243,10 @@ func parseEntitlementOrMappingDeclaration(
 	}
 	p.nextSemanticToken()
 
+	var leadingComments []*ast.Comment
+	leadingComments = append(leadingComments, startComments...)
+	leadingComments = append(leadingComments, startToken.Comments.Leading...)
+
 	if isMapping {
 		_, err = p.mustOne(lexer.TokenBraceOpen)
 		if err != nil {
@@ -1271,8 +1274,10 @@ func parseEntitlementOrMappingDeclaration(
 			access,
 			identifier,
 			elements,
-			docString,
 			declarationRange,
+			ast.Comments{
+				Leading: leadingComments,
+			},
 		), nil
 	} else {
 		declarationRange := ast.NewRange(
@@ -1285,8 +1290,10 @@ func parseEntitlementOrMappingDeclaration(
 			p.memoryGauge,
 			access,
 			identifier,
-			docString,
 			declarationRange,
+			ast.Comments{
+				Leading: leadingComments,
+			},
 		), nil
 	}
 }
@@ -1598,8 +1605,6 @@ func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) 
 //	                          | enumCase
 //	                          | pragmaDeclaration
 func parseMemberOrNestedDeclaration(p *parser) (ast.Declaration, error) {
-	// TODO(preserve-comments): Remove
-	var docString string
 	var startComments []*ast.Comment
 
 	const functionBlockIsOptional = true
@@ -1719,7 +1724,7 @@ func parseMemberOrNestedDeclaration(p *parser) (ast.Declaration, error) {
 				if purity != ast.FunctionPurityUnspecified {
 					return nil, NewSyntaxError(*purityPos, "invalid view modifier for entitlement")
 				}
-				return parseEntitlementOrMappingDeclaration(p, access, accessPos, docString)
+				return parseEntitlementOrMappingDeclaration(p, access, accessPos, startComments)
 
 			case KeywordEnum:
 				if purity != ast.FunctionPurityUnspecified {

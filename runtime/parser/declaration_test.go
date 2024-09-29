@@ -9640,6 +9640,38 @@ func TestParseEntitlementDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("basic, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+			// Before ABC
+			access(all) entitlement ABC`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementDeclaration{
+					Access: ast.AccessAll,
+					Identifier: ast.Identifier{
+						Identifier: "ABC",
+						Pos:        ast.Position{Line: 3, Column: 27, Offset: 45},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 3, Offset: 21},
+						EndPos:   ast.Position{Line: 3, Column: 29, Offset: 47},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before ABC")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("nested entitlement", func(t *testing.T) {
 
 		t.Parallel()
@@ -9991,6 +10023,38 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("empty, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseDeclarations(`
+			// Before M
+			access(all) entitlement mapping M { }`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.EntitlementMappingDeclaration{
+					Access: ast.AccessAll,
+					Identifier: ast.Identifier{
+						Identifier: "M",
+						Pos:        ast.Position{Line: 3, Column: 35, Offset: 51},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 3, Offset: 19},
+						EndPos:   ast.Position{Line: 3, Column: 39, Offset: 55},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before M")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("mappings", func(t *testing.T) {
 
 		t.Parallel()
@@ -10004,8 +10068,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementMappingDeclaration{
-					Access:    ast.AccessAll,
-					DocString: "",
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "M",
 						Pos: ast.Position{
@@ -10093,8 +10156,7 @@ func TestParseEntitlementMappingDeclaration(t *testing.T) {
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
 				&ast.EntitlementMappingDeclaration{
-					Access:    ast.AccessAll,
-					DocString: "",
+					Access: ast.AccessAll,
 					Identifier: ast.Identifier{
 						Identifier: "M",
 						Pos: ast.Position{

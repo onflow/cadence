@@ -105,7 +105,7 @@ func (d *TransactionDeclaration) DeclarationMembers() *Members {
 }
 
 func (d *TransactionDeclaration) DeclarationDocString() string {
-	return ""
+	return d.Comments.LeadingDocString()
 }
 
 func (d *TransactionDeclaration) MarshalJSON() ([]byte, error) {

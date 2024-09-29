@@ -485,7 +485,7 @@ func (checker *Checker) declareEntitlementType(declaration *ast.EntitlementDecla
 		ty:                       entitlementType,
 		declarationKind:          declaration.DeclarationKind(),
 		access:                   checker.accessFromAstAccess(declaration.Access),
-		docString:                declaration.DocString,
+		docString:                declaration.DeclarationDocString(),
 		allowOuterScopeShadowing: false,
 	})
 
@@ -532,7 +532,7 @@ func (checker *Checker) declareEntitlementMappingType(declaration *ast.Entitleme
 		ty:                       entitlementMapType,
 		declarationKind:          declaration.DeclarationKind(),
 		access:                   checker.accessFromAstAccess(declaration.Access),
-		docString:                declaration.DocString,
+		docString:                declaration.DeclarationDocString(),
 		allowOuterScopeShadowing: false,
 	})
 
