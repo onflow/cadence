@@ -2985,6 +2985,21 @@ func TestCheckReferenceCreationWithInvalidType(t *testing.T) {
 		var nonReferenceTypeReferenceError *sema.NonReferenceTypeReferenceError
 		require.ErrorAs(t, errs[0], &nonReferenceTypeReferenceError)
 	})
+
+	t.Run("invalid optional", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            access(all) fun main() {
+                var a: Int? = 4
+                var b = &a as Int?
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		var nonReferenceTypeReferenceError *sema.NonReferenceTypeReferenceError
+		require.ErrorAs(t, errs[0], &nonReferenceTypeReferenceError)
+	})
 }
 
 func TestCheckResourceReferenceFieldNilAssignment(t *testing.T) {

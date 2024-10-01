@@ -139,6 +139,8 @@ func (checker *Checker) expectedTypeForReferencedExpr(
 				Range:      ast.NewRangeFromPositioned(checker.memoryGauge, hasPosition),
 			},
 		)
+
+		return InvalidType, InvalidType, nil
 	}
 
 	return
@@ -151,7 +153,7 @@ func (checker *Checker) checkOptionalityMatch(
 ) {
 
 	// Do not report an error if the `expectedType` is unknown
-	if expectedType == nil {
+	if expectedType == nil || expectedType.IsInvalidType() {
 		return
 	}
 
