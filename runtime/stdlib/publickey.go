@@ -219,7 +219,7 @@ func newPublicKeyVerifySignatureFunction(
 		inter,
 		publicKeyValue,
 		sema.PublicKeyVerifyFunctionType,
-		func(_ *interpreter.CompositeValue, invocation interpreter.Invocation) interpreter.Value {
+		func(publicKeyValue *interpreter.CompositeValue, invocation interpreter.Invocation) interpreter.Value {
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
@@ -236,11 +236,6 @@ func newPublicKeyVerifySignatureFunction(
 			}
 
 			hashAlgorithmValue, ok := invocation.Arguments[3].(*interpreter.SimpleCompositeValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			publicKeyValue, ok := (*invocation.Self).(interpreter.MemberAccessibleValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
@@ -309,13 +304,8 @@ func newPublicKeyVerifyPoPFunction(
 		inter,
 		publicKeyValue,
 		sema.PublicKeyVerifyPoPFunctionType,
-		func(_ *interpreter.CompositeValue, invocation interpreter.Invocation) interpreter.Value {
+		func(publicKeyValue *interpreter.CompositeValue, invocation interpreter.Invocation) interpreter.Value {
 			signatureValue, ok := invocation.Arguments[0].(*interpreter.ArrayValue)
-			if !ok {
-				panic(errors.NewUnreachableError())
-			}
-
-			publicKeyValue, ok := (*invocation.Self).(interpreter.MemberAccessibleValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
