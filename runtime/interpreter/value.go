@@ -20936,11 +20936,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name st
 					panic(errors.NewUnreachableError())
 				}
 
-				transformFunctionType, ok := invocation.ArgumentTypes[0].(*sema.FunctionType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
+				transformFunctionType := transformFunction.FunctionType()
 				parameterType := transformFunctionType.Parameters[0].TypeAnnotation.Type
 				returnType := transformFunctionType.ReturnTypeAnnotation.Type
 
