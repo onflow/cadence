@@ -12394,4 +12394,22 @@ func TestInterpretStringTemplates(t *testing.T) {
 			inter.Globals.Get("x").GetValue(inter),
 		)
 	})
+
+	t.Run("consecutive", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+			let c = "C"
+			let a: Character = "A"
+			let n = "N"
+			let x = "\(c)\(a)\(n)"
+		`)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredStringValue("CAN"),
+			inter.Globals.Get("x").GetValue(inter),
+		)
+	})
 }

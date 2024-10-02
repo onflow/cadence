@@ -961,22 +961,18 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) Value {
 	values := interpreter.visitExpressionsNonCopying(expression.Expressions)
 
-	templatesType := interpreter.Program.Elaboration.StringTemplateExpressionTypes(expression)
-	argumentTypes := templatesType.ArgumentTypes
-
 	var builder strings.Builder
 	for i, str := range expression.Values {
 		builder.WriteString(str)
 		if i < len(values) {
-			// this is equivalent to toString() for supported types
-			s := values[i].String()
-			switch argumentTypes[i] {
-			case sema.StringType:
-				// remove quotations
-				s = s[1 : len(s)-1]
-				builder.WriteString(s)
+			// switch on value instead of type
+			switch value := values[i].(type) {
+			case *StringValue:
+				builder.WriteString(value.Str)
+			case CharacterValue:
+				builder.WriteString(value.Str)
 			default:
-				builder.WriteString(s)
+				builder.WriteString(value.String())
 			}
 		}
 	}

@@ -20,6 +20,12 @@ package sema
 
 import "github.com/onflow/cadence/runtime/ast"
 
+// All number types, addresses, path types, bool, strings and characters are supported in string template
+func isValidStringTemplateValue(valueType Type) bool {
+	return valueType == TheAddressType || valueType == StringType || valueType == BoolType || valueType == CharacterType ||
+		IsSubType(valueType, NumberType) || IsSubType(valueType, PathType)
+}
+
 func (checker *Checker) VisitStringTemplateExpression(stringTemplateExpression *ast.StringTemplateExpression) Type {
 
 	// visit all elements
@@ -37,11 +43,7 @@ func (checker *Checker) VisitStringTemplateExpression(stringTemplateExpression *
 
 			argumentTypes[i] = valueType
 
-			// All number types, addresses, path types, bool and strings are supported in string template
-			if IsSubType(valueType, NumberType) || IsSubType(valueType, TheAddressType) ||
-				IsSubType(valueType, PathType) || IsSubType(valueType, StringType) || IsSubType(valueType, BoolType) {
-				checker.checkResourceMoveOperation(element, valueType)
-			} else {
+			if !isValidStringTemplateValue(valueType) {
 				checker.report(
 					&TypeMismatchWithDescriptionError{
 						ActualType:              valueType,

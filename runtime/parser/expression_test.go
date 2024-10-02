@@ -6317,6 +6317,60 @@ func TestParseStringTemplate(t *testing.T) {
 			errs,
 		)
 	})
+
+	t.Run("unbalanced paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+			"\(add"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token ')'",
+					Pos:     ast.Position{Offset: 10, Line: 2, Column: 9},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("nested templates", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+			"outer string \( "\(inner template)" )"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token ')'",
+					Pos:     ast.Position{Offset: 30, Line: 2, Column: 29},
+				},
+			},
+			errs,
+		)
+	})
 }
 
 func TestParseNilCoalescing(t *testing.T) {

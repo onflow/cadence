@@ -230,8 +230,13 @@ type StringTemplateExpression struct {
 
 var _ Expression = &StringTemplateExpression{}
 
-func NewStringTemplateExpression(gauge common.MemoryGauge, values []string, exprs []Expression, exprRange Range) *StringTemplateExpression {
-	common.UseMemory(gauge, common.StringExpressionMemoryUsage)
+func NewStringTemplateExpression(
+	gauge common.MemoryGauge,
+	values []string,
+	exprs []Expression,
+	exprRange Range,
+) *StringTemplateExpression {
+	common.UseMemory(gauge, common.NewStringTemplateExpressionMemoryUsage(len(values)+len(exprs)))
 	return &StringTemplateExpression{
 		Values:      values,
 		Expressions: exprs,

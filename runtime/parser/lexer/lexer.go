@@ -49,11 +49,11 @@ type position struct {
 	column int
 }
 
-type LexerMode int
+type lexerMode uint8
 
 const (
-	NORMAL = iota
-	STR_IDENTIFIER
+	NORMAL lexerMode = iota
+	STR_INTERPOLATION
 )
 
 type lexer struct {
@@ -82,7 +82,7 @@ type lexer struct {
 	// canBackup indicates whether stepping back is allowed
 	canBackup bool
 	// lexer mode is used for string templates
-	mode LexerMode
+	mode lexerMode
 	// counts the number of unclosed brackets for string templates \((()))
 	openBrackets int
 }
@@ -427,7 +427,7 @@ func (l *lexer) scanString(quote rune) {
 			switch r {
 			case '(':
 				// string template, stop and set mode
-				l.mode = STR_IDENTIFIER
+				l.mode = STR_INTERPOLATION
 				// no need to update prev values because these next tokens will not backup
 				l.endOffset = tmpBackupOffset
 				l.current = tmpBackup
