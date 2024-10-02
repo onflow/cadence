@@ -3851,6 +3851,8 @@ func TestInterpretOptionalMap(t *testing.T) {
 
 	t.Run("some", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           let one: Int? = 42
           let result = one.map(fun (v: Int): String {
@@ -3870,6 +3872,8 @@ func TestInterpretOptionalMap(t *testing.T) {
 
 	t.Run("nil", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter := parseCheckAndInterpret(t, `
           let none: Int? = nil
           let result = none.map(fun (v: Int): String {
@@ -3886,6 +3890,8 @@ func TestInterpretOptionalMap(t *testing.T) {
 	})
 
 	t.Run("box and convert argument", func(t *testing.T) {
+
+		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
           struct S {
@@ -11203,6 +11209,54 @@ func TestInterpretArrayMap(t *testing.T) {
 				interpreter.NewUnmeteredIntValueFromInt64(2),
 				interpreter.NewUnmeteredIntValueFromInt64(3),
 			),
+		)
+	})
+
+	t.Run("box and convert argument", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct S {
+              fun map(f: fun(AnyStruct): String): String {
+                  return "S.map"
+              }
+          }
+
+          fun test(): [String?] {
+              let ss = [S()]
+              // NOTE: The outer map has a parameter of type S? instead of just S
+              return ss.map(fun(s2: S?): String? {
+                  // The inner map should call Optional.map, not S.map,
+                  // because s2 is S?, not S
+                  return s2.map(fun(s3: AnyStruct): String {
+                      return "Optional.map"
+                  })
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewArrayValue(
+				inter,
+				interpreter.EmptyLocationRange,
+				interpreter.NewVariableSizedStaticType(
+					nil,
+					interpreter.NewOptionalStaticType(
+						nil,
+						interpreter.PrimitiveStaticTypeString,
+					),
+				),
+				common.ZeroAddress,
+				interpreter.NewSomeValueNonCopying(
+					nil,
+					interpreter.NewUnmeteredStringValue("Optional.map"),
+				),
+			),
+			value,
 		)
 	})
 }

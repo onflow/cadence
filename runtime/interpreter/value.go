@@ -3181,16 +3181,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 					panic(errors.NewUnreachableError())
 				}
 
-				transformFunctionType, ok := invocation.ArgumentTypes[0].(*sema.FunctionType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
 				return v.Map(
 					interpreter,
 					invocation.LocationRange,
 					funcArgument,
-					transformFunctionType,
 				)
 			},
 		)
@@ -3842,40 +3836,30 @@ func (v *ArrayValue) Map(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	procedure FunctionValue,
-	transformFunctionType *sema.FunctionType,
 ) Value {
 
-	elementTypeSlice := []sema.Type{v.semaType.ElementType(false)}
-	iterationInvocation := func(arrayElement Value) Invocation {
-		return NewInvocation(
-			interpreter,
-			nil,
-			nil,
-			nil,
-			[]Value{arrayElement},
-			elementTypeSlice,
-			nil,
-			locationRange,
-		)
-	}
+	elementType := v.semaType.ElementType(false)
 
-	procedureStaticType, ok := ConvertSemaToStaticType(interpreter, transformFunctionType).(FunctionStaticType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	returnType := procedureStaticType.ReturnType(interpreter)
+	argumentTypes := []sema.Type{elementType}
+
+	procedureFunctionType := procedure.FunctionType()
+	parameterType := procedureFunctionType.Parameters[0].TypeAnnotation.Type
+	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
+	parameterTypes := []sema.Type{parameterType}
+
+	returnStaticType := ConvertSemaToStaticType(interpreter, returnType)
 
 	var returnArrayStaticType ArrayStaticType
 	switch v.Type.(type) {
 	case *VariableSizedStaticType:
 		returnArrayStaticType = NewVariableSizedStaticType(
 			interpreter,
-			returnType,
+			returnStaticType,
 		)
 	case *ConstantSizedStaticType:
 		returnArrayStaticType = NewConstantSizedStaticType(
 			interpreter,
-			returnType,
+			returnStaticType,
 			int64(v.Count()),
 		)
 	default:
@@ -3909,8 +3893,18 @@ func (v *ArrayValue) Map(
 
 			value := MustConvertStoredValue(interpreter, atreeValue)
 
-			mappedValue := procedure.invoke(iterationInvocation(value))
-			return mappedValue.Transfer(
+			result := interpreter.invokeFunctionValue(
+				procedure,
+				[]Value{value},
+				nil,
+				argumentTypes,
+				parameterTypes,
+				returnType,
+				nil,
+				locationRange,
+			)
+
+			return result.Transfer(
 				interpreter,
 				locationRange,
 				atree.Address{},
