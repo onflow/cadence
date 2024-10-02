@@ -941,6 +941,7 @@ func (e *interpreterEnvironment) newContractValueHandler() interpreter.ContractV
 					invocation.ConstructorArguments,
 					invocation.ArgumentTypes,
 					invocation.ParameterTypes,
+					invocation.ContractType,
 					invocationRange,
 				)
 				if err != nil {

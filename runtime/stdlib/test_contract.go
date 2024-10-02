@@ -1305,11 +1305,13 @@ func (t *TestContractType) NewTestContract(
 		testFramework.EmulatorBackend(),
 		interpreter.EmptyLocationRange,
 	)
+	returnType := constructor.FunctionType().ReturnTypeAnnotation.Type
 	value, err := inter.InvokeFunctionValue(
 		constructor,
 		[]interpreter.Value{emulatorBackend},
 		initializerTypes,
 		initializerTypes,
+		returnType,
 		invocationRange,
 	)
 	if err != nil {

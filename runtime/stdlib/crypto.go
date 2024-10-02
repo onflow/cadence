@@ -112,6 +112,7 @@ func NewCryptoContract(
 		nil,
 		initializerTypes,
 		initializerTypes,
+		CryptoContractType(),
 		invocationRange,
 	)
 	if err != nil {

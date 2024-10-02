@@ -331,6 +331,7 @@ func makeContractValueHandler(
 			arguments,
 			argumentTypes,
 			parameterTypes,
+			compositeType,
 			ast.Range{},
 		)
 		if err != nil {
@@ -5458,6 +5459,7 @@ func TestInterpretStructureFunctionBindingInside(t *testing.T) {
 
 	value, err := inter.InvokeFunctionValue(
 		functionValue.(interpreter.FunctionValue),
+		nil,
 		nil,
 		nil,
 		nil,
