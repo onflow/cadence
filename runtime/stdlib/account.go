@@ -759,25 +759,17 @@ func newAccountKeysForEachFunction(
 			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				fnValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
 
+				fnValueType := fnValue.FunctionType()
+				parameterType := fnValueType.Parameters[0].TypeAnnotation.Type
+				returnType := fnValueType.ReturnTypeAnnotation.Type
+				parameterTypes := []sema.Type{parameterType}
+
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
-
-				newSubInvocation := func(key interpreter.Value) interpreter.Invocation {
-					return interpreter.NewInvocation(
-						inter,
-						nil,
-						nil,
-						nil,
-						[]interpreter.Value{key},
-						accountKeysForEachCallbackTypeParams,
-						nil,
-						locationRange,
-					)
-				}
 
 				liftKeyToValue := func(key *AccountKey) interpreter.Value {
 					return NewAccountKeyValue(
@@ -818,9 +810,13 @@ func newAccountKeysForEachFunction(
 
 					liftedKey := liftKeyToValue(accountKey)
 
-					res, err := inter.InvokeFunction(
+					res, err := inter.InvokeFunctionValue(
 						fnValue,
-						newSubInvocation(liftedKey),
+						[]interpreter.Value{liftedKey},
+						accountKeysForEachCallbackTypeParams,
+						parameterTypes,
+						returnType,
+						locationRange,
 					)
 					if err != nil {
 						// interpreter panicked while invoking the inner function value
