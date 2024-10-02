@@ -4152,21 +4152,27 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 		storageValue,
 		functionType,
 		func(_ *SimpleCompositeValue, invocation Invocation) Value {
-			interpreter := invocation.Interpreter
+			inter := invocation.Interpreter
+			locationRange := invocation.LocationRange
 
 			fn, ok := invocation.Arguments[0].(FunctionValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
-			locationRange := invocation.LocationRange
-			inter := invocation.Interpreter
+			fnType := fn.FunctionType()
+			parameterTypes := make([]sema.Type, 0, len(fnType.Parameters))
+			for _, parameter := range fnType.Parameters {
+				parameterTypes = append(parameterTypes, parameter.TypeAnnotation.Type)
+			}
+			returnType := fnType.ReturnTypeAnnotation.Type
+
 			storageMap := config.Storage.GetStorageMap(address, domain.Identifier(), false)
 			if storageMap == nil {
 				// if nothing is stored, no iteration is required
 				return Void
 			}
-			storageIterator := storageMap.Iterator(interpreter)
+			storageIterator := storageMap.Iterator(inter)
 
 			invocationArgumentTypes := []sema.Type{pathType, sema.MetaType}
 
@@ -4178,7 +4184,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 
 			for key, value := storageIterator.Next(); key != nil && value != nil; key, value = storageIterator.Next() {
 
-				staticType := value.StaticType(interpreter)
+				staticType := value.StaticType(inter)
 
 				// Perform a forced value de-referencing to see if the associated type is not broken.
 				// If broken, skip this value from the iteration.
@@ -4197,18 +4203,18 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 				pathValue := NewPathValue(inter, domain, identifier)
 				runtimeType := NewTypeValue(inter, staticType)
 
-				subInvocation := NewInvocation(
-					inter,
-					nil,
-					nil,
-					nil,
+				result := inter.invokeFunctionValue(
+					fn,
 					[]Value{pathValue, runtimeType},
+					nil,
 					invocationArgumentTypes,
+					parameterTypes,
+					returnType,
 					nil,
 					locationRange,
 				)
 
-				shouldContinue, ok := fn.invoke(subInvocation).(BoolValue)
+				shouldContinue, ok := result.(BoolValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
