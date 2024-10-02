@@ -10692,6 +10692,45 @@ func TestInterpretArrayFilter(t *testing.T) {
 			),
 		)
 	})
+
+	t.Run("box and convert argument", func(t *testing.T) {
+		t.Parallel()
+
+		inter, err := parseCheckAndInterpretWithOptions(t, `
+              struct S {
+                  fun map(f: fun(AnyStruct): String): Bool {
+                      return true
+                  }
+              }
+
+              fun test(): [S] {
+                  let ss = [S()]
+                  // NOTE: The filter has a parameter of type S? instead of just S
+                  return ss.filter(view fun(s2: S?): Bool {
+                      // The map should call Optional.map, not S.map,
+                      // because s2 is S?, not S
+                      return s2.map(fun(s3: AnyStruct): Bool {
+                          return false
+                      })!
+                  })
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := checker.RequireCheckerErrors(t, err, 1)
+					require.IsType(t, &sema.PurityError{}, errs[0])
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		require.IsType(t, &interpreter.ArrayValue{}, value)
+		array := value.(*interpreter.ArrayValue)
+		require.Equal(t, 0, array.Count())
+	})
 }
 
 func TestInterpretArrayMap(t *testing.T) {

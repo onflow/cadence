@@ -3760,20 +3760,14 @@ func (v *ArrayValue) Filter(
 	procedure FunctionValue,
 ) Value {
 
-	elementTypeSlice := []sema.Type{v.semaType.ElementType(false)}
-	iterationInvocation := func(arrayElement Value) Invocation {
-		invocation := NewInvocation(
-			interpreter,
-			nil,
-			nil,
-			nil,
-			[]Value{arrayElement},
-			elementTypeSlice,
-			nil,
-			locationRange,
-		)
-		return invocation
-	}
+	elementType := v.semaType.ElementType(false)
+
+	argumentTypes := []sema.Type{elementType}
+
+	procedureFunctionType := procedure.FunctionType()
+	parameterType := procedureFunctionType.Parameters[0].TypeAnnotation.Type
+	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
+	parameterTypes := []sema.Type{parameterType}
 
 	// TODO: Use ReadOnlyIterator here if procedure doesn't change array elements.
 	iterator, err := v.array.Iterator()
@@ -3809,7 +3803,18 @@ func (v *ArrayValue) Filter(
 					return nil
 				}
 
-				shouldInclude, ok := procedure.invoke(iterationInvocation(value)).(BoolValue)
+				result := interpreter.invokeFunctionValue(
+					procedure,
+					[]Value{value},
+					nil,
+					argumentTypes,
+					parameterTypes,
+					returnType,
+					nil,
+					locationRange,
+				)
+
+				shouldInclude, ok := result.(BoolValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
