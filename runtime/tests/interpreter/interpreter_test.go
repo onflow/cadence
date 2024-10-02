@@ -6379,86 +6379,130 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 func TestInterpretDictionaryForEachKey(t *testing.T) {
 	t.Parallel()
 
-	type testcase struct {
-		n        int64
-		endPoint int64
-	}
-	testcases := []testcase{
-		{10, 1},
-		{20, 5},
-		{100, 10},
-		{100, 0},
-	}
-	code := `
-	fun testForEachKey(n: Int, stopIter: Int): {Int: Int} {
-		var dict: {Int:Int} = {}
-		var counts: {Int:Int} = {}
-		var i = 0
-		while i < n {
-			dict[i] = i
-			counts[i] = 0
-			i = i + 1
+	t.Run("iter", func(t *testing.T) {
+
+		type testcase struct {
+			n        int64
+			endPoint int64
 		}
-		dict.forEachKey(fun(k: Int): Bool {
-			if k == stopIter {
-				return false
-			}
-			let curVal = counts[k]!
-			counts[k] = curVal + 1
-			return true
-		})
-
-		return counts
-	}`
-	inter := parseCheckAndInterpret(t, code)
-
-	for _, test := range testcases {
-		name := fmt.Sprintf("n = %d", test.n)
-		t.Run(name, func(t *testing.T) {
-			n := test.n
-			endPoint := test.endPoint
-			// t.Parallel()
-
-			nVal := interpreter.NewUnmeteredIntValueFromInt64(n)
-			stopIter := interpreter.NewUnmeteredIntValueFromInt64(endPoint)
-			res, err := inter.Invoke("testForEachKey", nVal, stopIter)
-
-			require.NoError(t, err)
-
-			dict, ok := res.(*interpreter.DictionaryValue)
-			assert.True(t, ok)
-
-			toInt := func(val interpreter.Value) (int, bool) {
-				intVal, ok := val.(interpreter.IntValue)
-				if !ok {
-					return 0, ok
+		testcases := []testcase{
+			{10, 1},
+			{20, 5},
+			{100, 10},
+			{100, 0},
+		}
+		inter := parseCheckAndInterpret(t, `
+			fun testForEachKey(n: Int, stopIter: Int): {Int: Int} {
+				var dict: {Int:Int} = {}
+				var counts: {Int:Int} = {}
+				var i = 0
+				while i < n {
+					dict[i] = i
+					counts[i] = 0
+					i = i + 1
 				}
-				return intVal.ToInt(interpreter.EmptyLocationRange), true
+				dict.forEachKey(fun(k: Int): Bool {
+					if k == stopIter {
+						return false
+					}
+					let curVal = counts[k]!
+					counts[k] = curVal + 1
+					return true
+				})
+
+				return counts
 			}
+		`)
 
-			entries, ok := DictionaryEntries(inter, dict, toInt, toInt)
+		for _, test := range testcases {
+			name := fmt.Sprintf("n = %d", test.n)
+			t.Run(name, func(t *testing.T) {
+				n := test.n
+				endPoint := test.endPoint
 
-			assert.True(t, ok)
+				nVal := interpreter.NewUnmeteredIntValueFromInt64(n)
+				stopIter := interpreter.NewUnmeteredIntValueFromInt64(endPoint)
+				res, err := inter.Invoke("testForEachKey", nVal, stopIter)
 
-			for _, entry := range entries {
-				// iteration order is undefined, so the only thing we can deterministically test is
-				// whether visited keys exist in the dict
-				// and whether iteration is affine
+				require.NoError(t, err)
 
-				key := int64(entry.Key)
-				require.True(t, 0 <= key && key < n, "Visited key not present in the original dictionary: %d", key)
-				// assert that we exited early
-				if int64(entry.Key) == endPoint {
-					AssertEqualWithDiff(t, 0, entry.Value)
-				} else {
-					// make sure no key was visited twice
-					require.LessOrEqual(t, entry.Value, 1, "Dictionary entry visited twice during iteration")
+				dict, ok := res.(*interpreter.DictionaryValue)
+				assert.True(t, ok)
+
+				toInt := func(val interpreter.Value) (int, bool) {
+					intVal, ok := val.(interpreter.IntValue)
+					if !ok {
+						return 0, ok
+					}
+					return intVal.ToInt(interpreter.EmptyLocationRange), true
 				}
 
-			}
+				entries, ok := DictionaryEntries(inter, dict, toInt, toInt)
 
-		})
-	}
+				assert.True(t, ok)
+
+				for _, entry := range entries {
+					// iteration order is undefined, so the only thing we can deterministically test is
+					// whether visited keys exist in the dict
+					// and whether iteration is affine
+
+					key := int64(entry.Key)
+					require.True(t,
+						0 <= key && key < n,
+						"Visited key not present in the original dictionary: %d",
+						key,
+					)
+					// assert that we exited early
+					if int64(entry.Key) == endPoint {
+						AssertEqualWithDiff(t, 0, entry.Value)
+					} else {
+						// make sure no key was visited twice
+						require.LessOrEqual(t,
+							entry.Value,
+							1,
+							"Dictionary entry visited twice during iteration",
+						)
+					}
+
+				}
+
+			})
+		}
+	})
+
+	t.Run("box and convert argument", func(t *testing.T) {
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun test(): String? {
+              let dict = {"answer": 42}
+              var res: String? = nil
+              // NOTE: The function has a parameter of type String? instead of just String
+              dict.forEachKey(fun(key: String?): Bool {
+                  // The map should call Optional.map, not fail,
+                  // because key is String?, not String
+                  res = key.map(fun(string: AnyStruct): String {
+                      return "Optional.map"
+                  })
+                  return true
+              })
+              return res
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewSomeValueNonCopying(
+				nil,
+				interpreter.NewUnmeteredStringValue("Optional.map"),
+			),
+			value,
+		)
+	})
+
 }
 
 func TestInterpretDictionaryValues(t *testing.T) {

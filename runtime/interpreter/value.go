@@ -19632,25 +19632,30 @@ func (v *DictionaryValue) ForEachKey(
 ) {
 	keyType := v.SemaType(interpreter).KeyType
 
-	iterationInvocation := func(key Value) Invocation {
-		return NewInvocation(
-			interpreter,
-			nil,
-			nil,
-			nil,
-			[]Value{key},
-			[]sema.Type{keyType},
-			nil,
-			locationRange,
-		)
-	}
+	argumentTypes := []sema.Type{keyType}
+
+	procedureFunctionType := procedure.FunctionType()
+	parameterType := procedureFunctionType.Parameters[0].TypeAnnotation.Type
+	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
+	parameterTypes := []sema.Type{parameterType}
 
 	iterate := func() {
 		err := v.dictionary.IterateReadOnlyKeys(
 			func(item atree.Value) (bool, error) {
 				key := MustConvertStoredValue(interpreter, item)
 
-				shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
+				result := interpreter.invokeFunctionValue(
+					procedure,
+					[]Value{key},
+					nil,
+					argumentTypes,
+					parameterTypes,
+					returnType,
+					nil,
+					locationRange,
+				)
+
+				shouldContinue, ok := result.(BoolValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
