@@ -3883,6 +3883,44 @@ func TestInterpretOptionalMap(t *testing.T) {
 			inter.Globals.Get("result").GetValue(inter),
 		)
 	})
+
+	t.Run("box and convert argument", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+          struct S {
+              fun map(f: fun(AnyStruct): String): String {
+                  return "S.map"
+              }
+          }
+
+          fun test(): String?? {
+              let s: S? = S()
+              // NOTE: The outer map has a parameter of type S? instead of just S
+              return s.map(fun(s2: S?): String? {
+                  // The inner map should call Optional.map, not S.map,
+                  // because s2 is S?, not S
+                  return s2.map(fun(s3: AnyStruct): String {
+                      return "Optional.map"
+                  })
+              })
+          }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewSomeValueNonCopying(
+				nil,
+				interpreter.NewSomeValueNonCopying(
+					nil,
+					interpreter.NewUnmeteredStringValue("Optional.map"),
+				),
+			),
+			value,
+		)
+	})
 }
 
 func TestInterpretCompositeNilEquality(t *testing.T) {
