@@ -1757,7 +1757,10 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 		goKeyValue("Exportable", goBoolLit(ty.exportable)),
 		goKeyValue("Importable", goBoolLit(ty.importable)),
 		goKeyValue("ContainFields", goBoolLit(ty.memberAccessible)),
-		goKeyValue("conformances", &dst.CompositeLit{
+	}
+
+	if ty.structStringer {
+		elements = append(elements, goKeyValue("conformances", &dst.CompositeLit{
 			Type: &dst.ArrayType{
 				Elt: &dst.StarExpr{
 					X: &dst.Ident{
@@ -1771,7 +1774,7 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 					Path: semaPath,
 				},
 			},
-		}),
+		}))
 	}
 
 	return &dst.UnaryExpr{
