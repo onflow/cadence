@@ -20914,15 +20914,19 @@ func (v *SomeValue) MeteredString(interpreter *Interpreter, seenReferences SeenR
 func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
+		innerValueType := interpreter.MustConvertStaticToSemaType(
+			v.value.StaticType(interpreter),
+		)
 		return NewBoundHostFunctionValue(
 			interpreter,
 			v,
 			sema.OptionalTypeMapFunctionType(
-				interpreter.MustConvertStaticToSemaType(
-					v.value.StaticType(interpreter),
-				),
+				innerValueType,
 			),
 			func(v *SomeValue, invocation Invocation) Value {
+				inter := invocation.Interpreter
+				locationRange := invocation.LocationRange
+
 				transformFunction, ok := invocation.Arguments[0].(FunctionValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -20933,23 +20937,24 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name st
 					panic(errors.NewUnreachableError())
 				}
 
-				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
+				parameterType := transformFunctionType.Parameters[0].TypeAnnotation.Type
+				returnType := transformFunctionType.ReturnTypeAnnotation.Type
 
-				f := func(v Value) Value {
-					transformInvocation := NewInvocation(
-						invocation.Interpreter,
-						nil,
-						nil,
-						nil,
-						[]Value{v},
-						[]sema.Type{valueType},
-						nil,
-						invocation.LocationRange,
-					)
-					return transformFunction.invoke(transformInvocation)
-				}
-
-				return v.fmap(invocation.Interpreter, f)
+				return v.fmap(
+					inter,
+					func(v Value) Value {
+						return inter.invokeFunctionValue(
+							transformFunction,
+							[]Value{v},
+							nil,
+							[]sema.Type{innerValueType},
+							[]sema.Type{parameterType},
+							returnType,
+							invocation.TypeParameterTypes,
+							locationRange,
+						)
+					},
+				)
 			},
 		)
 	}
