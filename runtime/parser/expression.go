@@ -1165,14 +1165,13 @@ func defineStringExpression() {
 
 			for curToken.Is(lexer.TokenString) {
 				literal = p.tokenSource(curToken)
-				length = len(literal)
 
 				// remove quotation marks if they exist
 				if curToken == startToken {
 					literal = literal[1:]
-					length = len(literal)
 				}
 
+				length = len(literal)
 				if length >= 1 && literal[length-1] == '"' {
 					literal = literal[:length-1]
 					missingEnd = false

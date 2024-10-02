@@ -22,8 +22,16 @@ import "github.com/onflow/cadence/runtime/ast"
 
 // All number types, addresses, path types, bool, strings and characters are supported in string template
 func isValidStringTemplateValue(valueType Type) bool {
-	return valueType == TheAddressType || valueType == StringType || valueType == BoolType || valueType == CharacterType ||
-		IsSubType(valueType, NumberType) || IsSubType(valueType, PathType)
+	switch valueType {
+	case TheAddressType,
+		StringType,
+		BoolType,
+		CharacterType:
+		return true
+	default:
+		return IsSubType(valueType, NumberType) ||
+			IsSubType(valueType, PathType)
+	}
 }
 
 func (checker *Checker) VisitStringTemplateExpression(stringTemplateExpression *ast.StringTemplateExpression) Type {
@@ -54,13 +62,6 @@ func (checker *Checker) VisitStringTemplateExpression(stringTemplateExpression *
 			}
 		}
 	}
-
-	checker.Elaboration.SetStringTemplateExpressionTypes(
-		stringTemplateExpression,
-		StringTemplateExpressionTypes{
-			ArgumentTypes: argumentTypes,
-		},
-	)
 
 	return StringType
 }
