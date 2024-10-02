@@ -2527,6 +2527,11 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 					panic(errors.NewUnreachableError())
 				}
 
+				functionValueType := functionValue.FunctionType()
+				parameterType := functionValueType.Parameters[0].TypeAnnotation.Type
+				returnType := functionValueType.ReturnTypeAnnotation.Type
+				parameterTypes := []sema.Type{parameterType}
+
 				// Prevent mutations (record/unrecord) to storage capability controllers
 				// for this address/path during iteration
 
@@ -2565,18 +2570,14 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 						panic(errors.NewUnreachableError())
 					}
 
-					subInvocation := interpreter.NewInvocation(
-						inter,
-						nil,
-						nil,
-						nil,
+					res, err := inter.InvokeFunctionValue(
+						functionValue,
 						[]interpreter.Value{referenceValue},
 						accountStorageCapabilitiesForEachControllerCallbackTypeParams,
-						nil,
+						parameterTypes,
+						returnType,
 						locationRange,
 					)
-
-					res, err := inter.InvokeFunction(functionValue, subInvocation)
 					if err != nil {
 						// interpreter panicked while invoking the inner function value
 						panic(err)
@@ -4317,6 +4318,11 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 					panic(errors.NewUnreachableError())
 				}
 
+				functionValueType := functionValue.FunctionType()
+				parameterType := functionValueType.Parameters[0].TypeAnnotation.Type
+				returnType := functionValueType.ReturnTypeAnnotation.Type
+				parameterTypes := []sema.Type{parameterType}
+
 				// Prevent mutations (record/unrecord) to account capability controllers
 				// for this address during iteration
 
@@ -4354,18 +4360,14 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 						panic(errors.NewUnreachableError())
 					}
 
-					subInvocation := interpreter.NewInvocation(
-						inter,
-						nil,
-						nil,
-						nil,
+					res, err := inter.InvokeFunctionValue(
+						functionValue,
 						[]interpreter.Value{referenceValue},
 						accountAccountCapabilitiesForEachControllerCallbackTypeParams,
-						nil,
+						parameterTypes,
+						returnType,
 						locationRange,
 					)
-
-					res, err := inter.InvokeFunction(functionValue, subInvocation)
 					if err != nil {
 						// interpreter panicked while invoking the inner function value
 						panic(err)
