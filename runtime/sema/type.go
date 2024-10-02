@@ -4198,7 +4198,7 @@ func init() {
 			DeploymentResultType,
 			HashableStructType,
 			&InclusiveRangeType{},
-			StringerType,
+			StructStringerType,
 		},
 	)
 
@@ -4900,7 +4900,7 @@ func IsHashableStructType(t Type) bool {
 	}
 }
 
-// which simple types conform to stringer interface (except Bool?)
+// which simple types conform to stringer interface
 func IsStringerType(t Type) bool {
 	switch t {
 	case BoolType, CharacterType, StringType:
@@ -7723,6 +7723,14 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	case *IntersectionType:
 
+		switch typedSubType := subType.(type) {
+		case *SimpleType:
+			// An simple type `T` is a subtype of an intersection type `{Vs}` / `{Vs}` / `{Vs}`:
+			//	when `T` conforms to `Vs`.
+			return typedSuperType.EffectiveIntersectionSet().
+				IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
+		}
+
 		// TODO: replace with
 		//
 		//switch typedSubType := subType.(type) {
@@ -7837,9 +7845,8 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 					IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
 			}
 
-			// STRINGERTODO: other options? how to make existing simple types
-			// conform to an intersection type?
-			if typedSuperType.Types[0].Identifier == StringerTypeName {
+			// deal with non-simple types such as NumberType and AddressType
+			if typedSuperType.EffectiveIntersectionSet().Contains(StructStringerType) {
 				return IsStringerType(subType)
 			}
 
@@ -9517,10 +9524,57 @@ func (t *EntitlementMapType) CheckInstantiated(_ ast.HasPosition, _ common.Memor
 	// NO-OP
 }
 
+func extractNativeTypes(
+	types []Type,
+) {
+	for len(types) > 0 {
+		lastIndex := len(types) - 1
+		curType := types[lastIndex]
+		types[lastIndex] = nil
+		types = types[:lastIndex]
+
+		switch actualType := curType.(type) {
+		case *CompositeType:
+			NativeCompositeTypes[actualType.QualifiedIdentifier()] = actualType
+
+			nestedTypes := actualType.NestedTypes
+			if nestedTypes == nil {
+				continue
+			}
+
+			nestedTypes.Foreach(func(_ string, nestedType Type) {
+				nestedCompositeType, ok := nestedType.(*CompositeType)
+				if !ok {
+					return
+				}
+
+				types = append(types, nestedCompositeType)
+			})
+		case *InterfaceType:
+			NativeInterfaceTypes[actualType.QualifiedIdentifier()] = actualType
+
+			nestedTypes := actualType.NestedTypes
+			if nestedTypes == nil {
+				continue
+			}
+
+			nestedTypes.Foreach(func(_ string, nestedType Type) {
+				nestedInterfaceType, ok := nestedType.(*InterfaceType)
+				if !ok {
+					return
+				}
+
+				types = append(types, nestedInterfaceType)
+			})
+		}
+
+	}
+}
+
 var NativeCompositeTypes = map[string]*CompositeType{}
 
 func init() {
-	compositeTypes := []*CompositeType{
+	compositeTypes := []Type{
 		AccountKeyType,
 		PublicKeyType,
 		HashAlgorithmType,
@@ -9529,57 +9583,15 @@ func init() {
 		DeploymentResultType,
 	}
 
-	for len(compositeTypes) > 0 {
-		lastIndex := len(compositeTypes) - 1
-		compositeType := compositeTypes[lastIndex]
-		compositeTypes[lastIndex] = nil
-		compositeTypes = compositeTypes[:lastIndex]
-
-		NativeCompositeTypes[compositeType.QualifiedIdentifier()] = compositeType
-
-		nestedTypes := compositeType.NestedTypes
-		if nestedTypes == nil {
-			continue
-		}
-
-		nestedTypes.Foreach(func(_ string, nestedType Type) {
-			nestedCompositeType, ok := nestedType.(*CompositeType)
-			if !ok {
-				return
-			}
-
-			compositeTypes = append(compositeTypes, nestedCompositeType)
-		})
-	}
+	extractNativeTypes(compositeTypes)
 }
 
 var NativeInterfaceTypes = map[string]*InterfaceType{}
 
 func init() {
-	interfaceTypes := []*InterfaceType{
-		StringerType,
+	interfaceTypes := []Type{
+		StructStringerType,
 	}
 
-	for len(interfaceTypes) > 0 {
-		lastIndex := len(interfaceTypes) - 1
-		interfaceType := interfaceTypes[lastIndex]
-		interfaceTypes[lastIndex] = nil
-		interfaceTypes = interfaceTypes[:lastIndex]
-
-		NativeInterfaceTypes[interfaceType.QualifiedIdentifier()] = interfaceType
-
-		nestedTypes := interfaceType.NestedTypes
-		if nestedTypes == nil {
-			continue
-		}
-
-		nestedTypes.Foreach(func(_ string, nestedType Type) {
-			nestedInterfaceType, ok := nestedType.(*InterfaceType)
-			if !ok {
-				return
-			}
-
-			interfaceTypes = append(interfaceTypes, nestedInterfaceType)
-		})
-	}
+	extractNativeTypes(interfaceTypes)
 }

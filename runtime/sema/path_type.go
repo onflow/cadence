@@ -31,6 +31,9 @@ var PathType = &SimpleType{
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
+	conformances: []*InterfaceType{
+		StructStringerType,
+	},
 }
 
 var PathTypeAnnotation = NewTypeAnnotation(PathType)

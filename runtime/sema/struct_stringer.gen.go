@@ -1,3 +1,4 @@
+// Code generated from struct_stringer.cdc. DO NOT EDIT.
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -23,37 +24,41 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
-const StringerTypeName = "Stringer"
+const StructStringerTypeToStringFunctionName = "toString"
 
-var StringerType = func() *InterfaceType {
+var StructStringerTypeToStringFunctionType = &FunctionType{
+	Purity: FunctionPurityView,
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		StringType,
+	),
+}
 
-	stringerType := &InterfaceType{
-		Identifier:    StringerTypeName,
+const StructStringerTypeToStringFunctionDocString = `
+Returns the string representation of this object.
+`
+
+const StructStringerTypeName = "StructStringer"
+
+var StructStringerType = func() *InterfaceType {
+	var t = &InterfaceType{
+		Identifier:    StructStringerTypeName,
 		CompositeKind: common.CompositeKindStructure,
-		Members:       &StringMemberOrderedMap{},
 	}
 
-	const StringerTypeToStringFunctionDocString = `Returns this object as a String.`
+	return t
+}()
 
-	const StringerTypeToStringFunctionName = "toString"
-
-	var StringerTypeToStringFunctionType = &FunctionType{
-		Purity: FunctionPurityView,
-		ReturnTypeAnnotation: NewTypeAnnotation(
-			StringType,
-		),
-	}
-
+func init() {
 	var members = []*Member{
 		NewUnmeteredFunctionMember(
-			stringerType,
+			StructStringerType,
 			PrimitiveAccess(ast.AccessAll),
-			StringerTypeToStringFunctionName,
-			StringerTypeToStringFunctionType,
-			StringerTypeToStringFunctionDocString,
+			StructStringerTypeToStringFunctionName,
+			StructStringerTypeToStringFunctionType,
+			StructStringerTypeToStringFunctionDocString,
 		),
 	}
 
-	stringerType.Members = MembersAsMap(members)
-	return stringerType
-}()
+	StructStringerType.Members = MembersAsMap(members)
+	StructStringerType.Fields = MembersFieldNames(members)
+}
