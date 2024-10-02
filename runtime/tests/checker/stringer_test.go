@@ -31,16 +31,16 @@ func TestCheckStringer(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
-		let a: {Stringer} = 1
-		let b: {Stringer} = false
-		let c: {Stringer} = "hey"
+		let a: {StructStringer} = 1
+		let b: {StructStringer} = false
+		let c: {StructStringer} = "hey"
 		access(all) 
-		struct Foo: Stringer {
+		struct Foo: StructStringer {
 			view fun toString():String {
 				return "foo"
 			}
 		}
-		let d: {Stringer} = Foo()
+		let d: {StructStringer} = Foo()
 	  `)
 
 	assert.NoError(t, err)
@@ -53,10 +53,10 @@ func TestCheckInvalidStringer(t *testing.T) {
 	_, err := ParseAndCheck(t, `
 		resource R {}
   
-		let a: {Stringer} = <-create R()
-		let b: {Stringer} = [<-create R()]
-		let c: {Stringer} = {1: true}
-		struct Foo: Stringer {}
+		let a: {StructStringer} = <-create R()
+		let b: {StructStringer} = [<-create R()]
+		let c: {StructStringer} = {1: true}
+		struct Foo: StructStringer {}
 	  `)
 
 	errs := RequireCheckerErrors(t, err, 4)

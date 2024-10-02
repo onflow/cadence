@@ -33,12 +33,12 @@ func TestStringerBasic(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
 		access(all)
-		struct Example: Stringer {
-			view fun toString():String {
+		struct Example: StructStringer {
+			view fun toString(): String {
 				return "example"
 			}  
 		}
-		fun test() :String {
+		fun test(): String {
 			return Example().toString()
 		}
 	`)
@@ -60,9 +60,33 @@ func TestStringerBuiltIn(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
 		access(all)
-		fun test() :String {
+		fun test(): String {
 			let v = 1
 			return v.toString()
+		}
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredStringValue("1"),
+		result,
+	)
+}
+
+func TestStringerAsValue(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		access(all)
+		fun test(): String {
+			var s = 1
+			var somevalue = s as {StructStringer}
+			return somevalue.toString()
 		}
 	`)
 
