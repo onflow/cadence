@@ -41,6 +41,7 @@ func TestCheckStringer(t *testing.T) {
 			}
 		}
 		let d: {StructStringer} = Foo()
+		let e: {StructStringer} = /public/foo
 	  `)
 
 	assert.NoError(t, err)

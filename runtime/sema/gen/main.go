@@ -164,7 +164,9 @@ type typeDecl struct {
 	memberDeclarations []ast.Declaration
 	nestedTypes        []*typeDecl
 	hasConstructor     bool
-	structStringer     bool
+
+	// used in simpleType generation
+	conformances []string
 }
 
 type generator struct {
@@ -574,7 +576,7 @@ func (g *generator) VisitCompositeDeclaration(decl *ast.CompositeDeclaration) (_
 			}
 			typeDecl.memberAccessible = true
 		case "StructStringer":
-			typeDecl.structStringer = true
+			typeDecl.conformances = append(typeDecl.conformances, "StructStringerType")
 		}
 	}
 
@@ -1759,7 +1761,14 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 		goKeyValue("ContainFields", goBoolLit(ty.memberAccessible)),
 	}
 
-	if ty.structStringer {
+	if len(ty.conformances) > 0 {
+		var elts = []dst.Expr{}
+		for _, conformance := range ty.conformances {
+			elts = append(elts, &dst.Ident{
+				Name: conformance,
+				Path: semaPath,
+			})
+		}
 		elements = append(elements, goKeyValue("conformances", &dst.CompositeLit{
 			Type: &dst.ArrayType{
 				Elt: &dst.StarExpr{
@@ -1768,12 +1777,7 @@ func simpleTypeLiteral(ty *typeDecl) dst.Expr {
 					},
 				},
 			},
-			Elts: []dst.Expr{
-				&dst.Ident{
-					Name: "StructStringerType",
-					Path: semaPath,
-				},
-			},
+			Elts: elts,
 		}))
 	}
 

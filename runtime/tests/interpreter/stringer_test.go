@@ -77,7 +77,7 @@ func TestStringerBuiltIn(t *testing.T) {
 	)
 }
 
-func TestStringerAsValue(t *testing.T) {
+func TestStringerCast(t *testing.T) {
 
 	t.Parallel()
 
@@ -97,6 +97,29 @@ func TestStringerAsValue(t *testing.T) {
 		t,
 		inter,
 		interpreter.NewUnmeteredStringValue("1"),
+		result,
+	)
+}
+
+func TestStringerAsValue(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+		access(all)
+		fun test(): String {
+			var v = Type<{StructStringer}>()
+			return v.identifier
+		}
+	`)
+
+	result, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	RequireValuesEqual(
+		t,
+		inter,
+		interpreter.NewUnmeteredStringValue("{StructStringer}"),
 		result,
 	)
 }

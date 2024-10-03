@@ -312,6 +312,12 @@ func TypeActivationNestedType(typeActivation *VariableActivation, qualifiedIdent
 	return ty
 }
 
+// allow all types to specify interface conformances
+type ConformingType interface {
+	Type
+	EffectiveInterfaceConformanceSet() *InterfaceSet
+}
+
 // CompositeKindedType is a type which has a composite kind
 type CompositeKindedType interface {
 	Type
@@ -1190,6 +1196,11 @@ type NumericType struct {
 	memberResolversOnce  sync.Once
 	saturatingArithmetic SaturatingArithmeticSupport
 	isSuperType          bool
+
+	// allow numeric types to conform to interfaces
+	conformances                         []*InterfaceType
+	effectiveInterfaceConformanceSet     *InterfaceSet
+	effectiveInterfaceConformanceSetOnce sync.Once
 }
 
 var _ Type = &NumericType{}
@@ -1197,7 +1208,12 @@ var _ IntegerRangedType = &NumericType{}
 var _ SaturatingArithmeticType = &NumericType{}
 
 func NewNumericType(typeName string) *NumericType {
-	return &NumericType{name: typeName}
+	return &NumericType{
+		name: typeName,
+		conformances: []*InterfaceType{
+			StructStringerType,
+		},
+	}
 }
 
 func (t *NumericType) Tag() TypeTag {
@@ -1373,6 +1389,21 @@ func (t *NumericType) IsSuperType() bool {
 
 func (*NumericType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
 	// NO-OP
+}
+
+func (t *NumericType) EffectiveInterfaceConformanceSet() *InterfaceSet {
+	t.initializeEffectiveInterfaceConformanceSet()
+	return t.effectiveInterfaceConformanceSet
+}
+
+func (t *NumericType) initializeEffectiveInterfaceConformanceSet() {
+	t.effectiveInterfaceConformanceSetOnce.Do(func() {
+		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
+
+		for _, conformance := range t.conformances {
+			t.effectiveInterfaceConformanceSet.Add(conformance)
+		}
+	})
 }
 
 // FixedPointNumericType represents all the types in the fixed-point range.
@@ -7256,11 +7287,18 @@ const AddressTypeName = "Address"
 
 // AddressType represents the address type
 type AddressType struct {
-	memberResolvers     map[string]MemberResolver
-	memberResolversOnce sync.Once
+	memberResolvers                      map[string]MemberResolver
+	memberResolversOnce                  sync.Once
+	conformances                         []*InterfaceType
+	effectiveInterfaceConformanceSet     *InterfaceSet
+	effectiveInterfaceConformanceSetOnce sync.Once
 }
 
-var TheAddressType = &AddressType{}
+var TheAddressType = &AddressType{
+	conformances: []*InterfaceType{
+		StructStringerType,
+	},
+}
 var AddressTypeAnnotation = NewTypeAnnotation(TheAddressType)
 
 var _ Type = &AddressType{}
@@ -7402,6 +7440,21 @@ func (t *AddressType) initializeMemberResolvers() {
 			),
 		})
 		t.memberResolvers = withBuiltinMembers(t, memberResolvers)
+	})
+}
+
+func (t *AddressType) EffectiveInterfaceConformanceSet() *InterfaceSet {
+	t.initializeEffectiveInterfaceConformanceSet()
+	return t.effectiveInterfaceConformanceSet
+}
+
+func (t *AddressType) initializeEffectiveInterfaceConformanceSet() {
+	t.effectiveInterfaceConformanceSetOnce.Do(func() {
+		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
+
+		for _, conformance := range t.conformances {
+			t.effectiveInterfaceConformanceSet.Add(conformance)
+		}
 	})
 }
 
@@ -7723,14 +7776,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 	case *IntersectionType:
 
-		switch typedSubType := subType.(type) {
-		case *SimpleType:
-			// An simple type `T` is a subtype of an intersection type `{Vs}` / `{Vs}` / `{Vs}`:
-			//	when `T` conforms to `Vs`.
-			return typedSuperType.EffectiveIntersectionSet().
-				IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
-		}
-
 		// TODO: replace with
 		//
 		//switch typedSubType := subType.(type) {
@@ -7829,7 +7874,7 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 						IsSubsetOf(intersectionSubtype.EffectiveInterfaceConformanceSet())
 				}
 
-			case *CompositeType:
+			case ConformingType:
 				// A type `T`
 				// is a subtype of an intersection type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
 				// if `T` is a subtype of the intersection supertype,
