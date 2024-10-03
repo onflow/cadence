@@ -204,6 +204,7 @@ const (
 	MemoryKindIntegerExpression
 	MemoryKindFixedPointExpression
 	MemoryKindArrayExpression
+	MemoryKindStringTemplateExpression
 	MemoryKindDictionaryExpression
 	MemoryKindIdentifierExpression
 	MemoryKindInvocationExpression

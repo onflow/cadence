@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/onflow/atree"
@@ -955,6 +956,28 @@ func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpr
 
 	// NOTE: already metered in lexer/parser
 	return NewUnmeteredStringValue(expression.Value)
+}
+
+func (interpreter *Interpreter) VisitStringTemplateExpression(expression *ast.StringTemplateExpression) Value {
+	values := interpreter.visitExpressionsNonCopying(expression.Expressions)
+
+	var builder strings.Builder
+	for i, str := range expression.Values {
+		builder.WriteString(str)
+		if i < len(values) {
+			// switch on value instead of type
+			switch value := values[i].(type) {
+			case *StringValue:
+				builder.WriteString(value.Str)
+			case CharacterValue:
+				builder.WriteString(value.Str)
+			default:
+				builder.WriteString(value.String())
+			}
+		}
+	}
+
+	return NewUnmeteredStringValue(builder.String())
 }
 
 func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpression) Value {
