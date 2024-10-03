@@ -3759,9 +3759,8 @@ func (v *ArrayValue) Filter(
 	argumentTypes := []sema.Type{elementType}
 
 	procedureFunctionType := procedure.FunctionType()
-	parameterType := procedureFunctionType.Parameters[0].TypeAnnotation.Type
+	parameterTypes := procedureFunctionType.ParameterTypes()
 	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
-	parameterTypes := []sema.Type{parameterType}
 
 	// TODO: Use ReadOnlyIterator here if procedure doesn't change array elements.
 	iterator, err := v.array.Iterator()
@@ -3843,9 +3842,8 @@ func (v *ArrayValue) Map(
 	argumentTypes := []sema.Type{elementType}
 
 	procedureFunctionType := procedure.FunctionType()
-	parameterType := procedureFunctionType.Parameters[0].TypeAnnotation.Type
+	parameterTypes := procedureFunctionType.ParameterTypes()
 	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
-	parameterTypes := []sema.Type{parameterType}
 
 	returnStaticType := ConvertSemaToStaticType(interpreter, returnType)
 
@@ -18849,9 +18847,8 @@ func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, loc
 			}
 
 			functionValueType := functionValue.FunctionType()
-			parameterType := functionValueType.Parameters[0].TypeAnnotation.Type
+			parameterTypes := functionValueType.ParameterTypes()
 			returnType := functionValueType.ReturnTypeAnnotation.Type
-			parameterTypes := []sema.Type{parameterType}
 
 			fn := func(attachment *CompositeValue) {
 
@@ -19647,9 +19644,8 @@ func (v *DictionaryValue) ForEachKey(
 	argumentTypes := []sema.Type{keyType}
 
 	procedureFunctionType := procedure.FunctionType()
-	parameterType := procedureFunctionType.Parameters[0].TypeAnnotation.Type
+	parameterTypes := procedureFunctionType.ParameterTypes()
 	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
-	parameterTypes := []sema.Type{parameterType}
 
 	iterate := func() {
 		err := v.dictionary.IterateReadOnlyKeys(
@@ -20949,7 +20945,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name st
 				}
 
 				transformFunctionType := transformFunction.FunctionType()
-				parameterType := transformFunctionType.Parameters[0].TypeAnnotation.Type
+				parameterTypes := transformFunctionType.ParameterTypes()
 				returnType := transformFunctionType.ReturnTypeAnnotation.Type
 
 				return v.fmap(
@@ -20960,7 +20956,7 @@ func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name st
 							[]Value{v},
 							nil,
 							[]sema.Type{innerValueType},
-							[]sema.Type{parameterType},
+							parameterTypes,
 							returnType,
 							invocation.TypeParameterTypes,
 							locationRange,

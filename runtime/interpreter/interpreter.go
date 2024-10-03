@@ -4161,10 +4161,7 @@ func (interpreter *Interpreter) newStorageIterationFunction(
 			}
 
 			fnType := fn.FunctionType()
-			parameterTypes := make([]sema.Type, 0, len(fnType.Parameters))
-			for _, parameter := range fnType.Parameters {
-				parameterTypes = append(parameterTypes, parameter.TypeAnnotation.Type)
-			}
+			parameterTypes := fnType.ParameterTypes()
 			returnType := fnType.ReturnTypeAnnotation.Type
 
 			storageMap := config.Storage.GetStorageMap(address, domain.Identifier(), false)

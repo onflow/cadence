@@ -760,9 +760,8 @@ func newAccountKeysForEachFunction(
 				fnValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
 
 				fnValueType := fnValue.FunctionType()
-				parameterType := fnValueType.Parameters[0].TypeAnnotation.Type
+				parameterTypes := fnValueType.ParameterTypes()
 				returnType := fnValueType.ReturnTypeAnnotation.Type
-				parameterTypes := []sema.Type{parameterType}
 
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -2524,9 +2523,8 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 				}
 
 				functionValueType := functionValue.FunctionType()
-				parameterType := functionValueType.Parameters[0].TypeAnnotation.Type
+				parameterTypes := functionValueType.ParameterTypes()
 				returnType := functionValueType.ReturnTypeAnnotation.Type
-				parameterTypes := []sema.Type{parameterType}
 
 				// Prevent mutations (record/unrecord) to storage capability controllers
 				// for this address/path during iteration
@@ -4315,9 +4313,8 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 				}
 
 				functionValueType := functionValue.FunctionType()
-				parameterType := functionValueType.Parameters[0].TypeAnnotation.Type
+				parameterTypes := functionValueType.ParameterTypes()
 				returnType := functionValueType.ReturnTypeAnnotation.Type
-				parameterTypes := []sema.Type{parameterType}
 
 				// Prevent mutations (record/unrecord) to account capability controllers
 				// for this address during iteration
