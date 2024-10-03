@@ -143,6 +143,9 @@ var StringType = &SimpleType{
 		},
 		IndexingType: IntegerType,
 	},
+	conformances: []*InterfaceType{
+		StructStringerType,
+	},
 }
 
 var StringTypeAnnotation = NewTypeAnnotation(StringType)

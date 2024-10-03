@@ -51,6 +51,12 @@ type SimpleType struct {
 	Primitive           bool
 	IsResource          bool
 	ContainFields       bool
+
+	// allow simple types to define a set of interfaces it conforms to
+	// e.g. StructStringer
+	conformances                         []*InterfaceType
+	effectiveInterfaceConformanceSet     *InterfaceSet
+	effectiveInterfaceConformanceSetOnce sync.Once
 }
 
 var _ Type = &SimpleType{}
@@ -194,4 +200,19 @@ func (t *SimpleType) CompositeKind() common.CompositeKind {
 
 func (t *SimpleType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _ func(err error)) {
 	// NO-OP
+}
+
+func (t *SimpleType) EffectiveInterfaceConformanceSet() *InterfaceSet {
+	t.initializeEffectiveInterfaceConformanceSet()
+	return t.effectiveInterfaceConformanceSet
+}
+
+func (t *SimpleType) initializeEffectiveInterfaceConformanceSet() {
+	t.effectiveInterfaceConformanceSetOnce.Do(func() {
+		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
+
+		for _, conformance := range t.conformances {
+			t.effectiveInterfaceConformanceSet.Add(conformance)
+		}
+	})
 }
