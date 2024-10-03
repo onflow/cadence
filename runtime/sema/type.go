@@ -4931,17 +4931,6 @@ func IsHashableStructType(t Type) bool {
 	}
 }
 
-// which simple types conform to stringer interface
-func IsStringerType(t Type) bool {
-	switch t {
-	case BoolType, CharacterType, StringType:
-		return true
-	default:
-		return IsSubType(t, NumberType) ||
-			IsSubType(t, PathType) || IsSubType(t, TheAddressType)
-	}
-}
-
 func (t *CompositeType) GetBaseType() Type {
 	return t.baseType
 }
@@ -7888,11 +7877,6 @@ func checkSubTypeWithoutEquality(subType Type, superType Type) bool {
 
 				return typedSuperType.EffectiveIntersectionSet().
 					IsSubsetOf(typedSubType.EffectiveInterfaceConformanceSet())
-			}
-
-			// deal with non-simple types such as NumberType and AddressType
-			if typedSuperType.EffectiveIntersectionSet().Contains(StructStringerType) {
-				return IsStringerType(subType)
 			}
 
 		default:
