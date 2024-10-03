@@ -79,10 +79,6 @@ type ArrayExpressionTypes struct {
 	ArgumentTypes []Type
 }
 
-type StringTemplateExpressionTypes struct {
-	ArgumentTypes []Type
-}
-
 type DictionaryExpressionTypes struct {
 	DictionaryType *DictionaryType
 	EntryTypes     []DictionaryEntryType
@@ -144,7 +140,6 @@ type Elaboration struct {
 	dictionaryExpressionTypes         map[*ast.DictionaryExpression]DictionaryExpressionTypes
 	integerExpressionTypes            map[*ast.IntegerExpression]Type
 	stringExpressionTypes             map[*ast.StringExpression]Type
-	stringTemplateExpressionTypes     map[*ast.StringTemplateExpression]StringTemplateExpressionTypes
 	returnStatementTypes              map[*ast.ReturnStatement]ReturnStatementTypes
 	functionDeclarationFunctionTypes  map[*ast.FunctionDeclaration]*FunctionType
 	variableDeclarationTypes          map[*ast.VariableDeclaration]VariableDeclarationTypes
@@ -483,21 +478,6 @@ func (e *Elaboration) SetStringExpressionType(expression *ast.StringExpression, 
 		e.stringExpressionTypes = map[*ast.StringExpression]Type{}
 	}
 	e.stringExpressionTypes[expression] = ty
-}
-
-func (e *Elaboration) StringTemplateExpressionTypes(expression *ast.StringTemplateExpression) (types StringTemplateExpressionTypes) {
-	if e.stringTemplateExpressionTypes == nil {
-		return
-	}
-	// default, Elaboration.SetStringExpressionType
-	return e.stringTemplateExpressionTypes[expression]
-}
-
-func (e *Elaboration) SetStringTemplateExpressionTypes(expression *ast.StringTemplateExpression, types StringTemplateExpressionTypes) {
-	if e.stringTemplateExpressionTypes == nil {
-		e.stringTemplateExpressionTypes = map[*ast.StringTemplateExpression]StringTemplateExpressionTypes{}
-	}
-	e.stringTemplateExpressionTypes[expression] = types
 }
 
 func (e *Elaboration) ReturnStatementTypes(statement *ast.ReturnStatement) (types ReturnStatementTypes) {
