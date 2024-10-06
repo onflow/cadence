@@ -78,6 +78,66 @@ func TestParseReturnStatement(t *testing.T) {
 		)
 	})
 
+	t.Run("no expression, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+// Before return
+return // After return
+`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ReturnStatement{
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 18},
+						EndPos:   ast.Position{Line: 3, Column: 5, Offset: 23},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before return")),
+							ast.NewComment(nil, []byte("// After return")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no expression, semicolon, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+// Before return
+return ; // After return
+`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ReturnStatement{
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 18},
+						EndPos:   ast.Position{Line: 3, Column: 5, Offset: 23},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before return")),
+						},
+						Trailing: []*ast.Comment{
+							ast.NewComment(nil, []byte("// After return")),
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("expression on same line", func(t *testing.T) {
 
 		t.Parallel()
@@ -100,6 +160,49 @@ func TestParseReturnStatement(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("expression on same line, comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := testParseStatements(`
+// Before return
+return 1 // After return
+`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ReturnStatement{
+					Expression: &ast.IntegerExpression{
+						PositiveLiteral: []byte("1"),
+						Value:           big.NewInt(1),
+						Base:            10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 3, Column: 7, Offset: 25},
+							EndPos:   ast.Position{Line: 3, Column: 7, Offset: 25},
+						},
+						Comments: ast.Comments{
+							// TODO(preserve-comments): Should we attach this to expression or statement node?
+							Trailing: []*ast.Comment{
+								ast.NewComment(nil, []byte("// After return")),
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 18},
+						EndPos:   ast.Position{Line: 3, Column: 7, Offset: 25},
+					},
+					Comments: ast.Comments{
+						Leading: []*ast.Comment{
+							ast.NewComment(nil, []byte("// Before return")),
+						},
 					},
 				},
 			},

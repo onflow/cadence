@@ -250,6 +250,7 @@ func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
 			tokenRange.StartPos,
 			endPosition,
 		),
+		ast.Comments{},
 	), nil
 }
 

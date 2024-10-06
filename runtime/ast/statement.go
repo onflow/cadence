@@ -39,16 +39,23 @@ type Statement interface {
 type ReturnStatement struct {
 	Expression Expression
 	Range
+	Comments
 }
 
 var _ Element = &ReturnStatement{}
 var _ Statement = &ReturnStatement{}
 
-func NewReturnStatement(gauge common.MemoryGauge, expression Expression, stmtRange Range) *ReturnStatement {
+func NewReturnStatement(
+	gauge common.MemoryGauge,
+	expression Expression,
+	stmtRange Range,
+	comments Comments,
+) *ReturnStatement {
 	common.UseMemory(gauge, common.ReturnStatementMemoryUsage)
 	return &ReturnStatement{
 		Expression: expression,
 		Range:      stmtRange,
+		Comments:   comments,
 	}
 }
 

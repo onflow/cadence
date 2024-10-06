@@ -247,7 +247,9 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(
 }
 
 func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
-	tokenRange := p.current.Range
+	var endToken lexer.Token
+	startToken := p.current
+	tokenRange := startToken.Range
 	endPosition := tokenRange.EndPos
 	p.next()
 
@@ -259,6 +261,7 @@ func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
 	var err error
 	switch p.current.Type {
 	case lexer.TokenEOF, lexer.TokenSemicolon, lexer.TokenBraceClose:
+		endToken = p.current
 		break
 	default:
 		if !sawNewLine {
@@ -279,6 +282,10 @@ func parseReturnStatement(p *parser) (*ast.ReturnStatement, error) {
 			tokenRange.StartPos,
 			endPosition,
 		),
+		ast.Comments{
+			Leading:  startToken.Comments.PackToList(),
+			Trailing: endToken.Comments.PackToList(),
+		},
 	), nil
 }
 
