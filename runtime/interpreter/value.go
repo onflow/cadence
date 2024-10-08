@@ -20181,6 +20181,39 @@ func (v *DictionaryValue) Insert(
 		return NilOptionalValue
 	}
 
+	// At this point, existingValueStorable is not nil, which means previous op updated existing
+	// dictionary element (instead of inserting new element).
+
+	// When existing dictionary element is updated, atree.OrderedMap reuses existing stored key
+	// so new key isn't stored or referenced in atree.OrderedMap.  This aspect of atree cannot change
+	// without API changes in atree to return existing key storable for updated element.
+
+	// Given this, remove the transferred key used to update existing dictionary element to
+	// prevent transferred key (in owner address) remaining in storage when it isn't
+	// referenced from dictionary.
+
+	// Remove content of transferred keyValue.
+	keyValue.DeepRemove(interpreter, true)
+
+	// Remove slab containing transferred keyValue from storage if needed.
+	// Currently, we only need to handle enum composite type because it is the only type that:
+	// - can be used as dictionary key (hashable) and
+	// - is transferred to its own slab.
+	if keyComposite, ok := keyValue.(*CompositeValue); ok {
+
+		// Get SlabID of transferred enum value.
+		keyCompositeSlabID := keyComposite.SlabID()
+
+		if keyCompositeSlabID == atree.SlabIDUndefined {
+			// It isn't possible for transferred enum value to be inlined in another container
+			// (SlabID as SlabIDUndefined) because it is transferred from stack by itself.
+			panic(errors.NewUnexpectedError("transferred enum value as dictionary key should not be inlined"))
+		}
+
+		// Remove slab containing transferred enum value from storage.
+		interpreter.RemoveReferencedSlab(atree.SlabIDStorable(keyCompositeSlabID))
+	}
+
 	storage := interpreter.Storage()
 
 	existingValue := StoredValue(
