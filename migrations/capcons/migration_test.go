@@ -511,18 +511,20 @@ func testPathCapabilityValueMigration(
 	)
 
 	// Create and store path and account links
+	{
+		// Create new runtime.Storage used for storing path and account links
+		storage, inter, err := rt.Storage(runtime.Context{
+			Interface: runtimeInterface,
+		})
+		require.NoError(t, err)
 
-	storage, inter, err := rt.Storage(runtime.Context{
-		Interface: runtimeInterface,
-	})
-	require.NoError(t, err)
+		storeTestPathLinks(t, pathLinks, storage, inter)
 
-	storeTestPathLinks(t, pathLinks, storage, inter)
+		storeTestAccountLinks(accountLinks, storage, inter)
 
-	storeTestAccountLinks(accountLinks, storage, inter)
-
-	err = storage.Commit(inter, false)
-	require.NoError(t, err)
+		err = storage.Commit(inter, false)
+		require.NoError(t, err)
+	}
 
 	// Save capability values into account
 
@@ -556,6 +558,15 @@ func testPathCapabilityValueMigration(
 	require.NoError(t, err)
 
 	// Migrate
+
+	// Create new runtime.Storage for migration.
+	// WARNING: don't reuse old storage (created for storing path and account links)
+	// because it has outdated cache after ExecuteTransaction() commits new data
+	// to underlying ledger.
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
 
 	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
 	require.NoError(t, err)
@@ -2410,16 +2421,17 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 	)
 
 	// Create and store path links
+	{
+		storage, inter, err := rt.Storage(runtime.Context{
+			Interface: runtimeInterface,
+		})
+		require.NoError(t, err)
 
-	storage, inter, err := rt.Storage(runtime.Context{
-		Interface: runtimeInterface,
-	})
-	require.NoError(t, err)
+		storeTestPathLinks(t, pathLinks, storage, inter)
 
-	storeTestPathLinks(t, pathLinks, storage, inter)
-
-	err = storage.Commit(inter, false)
-	require.NoError(t, err)
+		err = storage.Commit(inter, false)
+		require.NoError(t, err)
+	}
 
 	// Save capability values into account
 
@@ -2432,7 +2444,7 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
       }
     `
 
-	err = rt.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		runtime.Script{
 			Source: []byte(setupTx),
 		},
@@ -2445,6 +2457,15 @@ func TestPublishedPathCapabilityValueMigration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Migrate
+
+	// Create new runtime.Storage for migration.
+	// WARNING: don't reuse old storage (created for storing path links)
+	// because it has outdated cache after ExecuteTransaction() commits new data
+	// to underlying ledger.
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
 
 	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
 	require.NoError(t, err)
@@ -2663,16 +2684,17 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 	)
 
 	// Create and store path links
+	{
+		storage, inter, err := rt.Storage(runtime.Context{
+			Interface: runtimeInterface,
+		})
+		require.NoError(t, err)
 
-	storage, inter, err := rt.Storage(runtime.Context{
-		Interface: runtimeInterface,
-	})
-	require.NoError(t, err)
+		storeTestPathLinks(t, pathLinks, storage, inter)
 
-	storeTestPathLinks(t, pathLinks, storage, inter)
-
-	err = storage.Commit(inter, false)
-	require.NoError(t, err)
+		err = storage.Commit(inter, false)
+		require.NoError(t, err)
+	}
 
 	// Save capability values into account
 
@@ -2686,7 +2708,7 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
       }
     `
 
-	err = rt.ExecuteTransaction(
+	err := rt.ExecuteTransaction(
 		runtime.Script{
 			Source: []byte(setupTx),
 		},
@@ -2699,6 +2721,15 @@ func TestUntypedPathCapabilityValueMigration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Migrate
+
+	// Create new runtime.Storage for migration.
+	// WARNING: don't reuse old storage (created for storing path links)
+	// because it has outdated cache after ExecuteTransaction() commits new data
+	// to underlying ledger.
+	storage, inter, err := rt.Storage(runtime.Context{
+		Interface: runtimeInterface,
+	})
+	require.NoError(t, err)
 
 	migration, err := migrations.NewStorageMigration(inter, storage, "test", testAddress)
 	require.NoError(t, err)
