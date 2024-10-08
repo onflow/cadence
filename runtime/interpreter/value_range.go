@@ -170,7 +170,7 @@ func createInclusiveRange(
 			sema.InclusiveRangeContainsFunctionType(
 				rangeSemaType.MemberType,
 			),
-			func(invocation Invocation) Value {
+			func(rangeValue *CompositeValue, invocation Invocation) Value {
 				needleInteger := convertAndAssertIntegerValue(invocation.Arguments[0])
 
 				return rangeContains(

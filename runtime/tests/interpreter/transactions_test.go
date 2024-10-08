@@ -351,8 +351,10 @@ func TestRuntimeInvalidTransferInExecute(t *testing.T) {
 		}
 	`, ParseCheckAndInterpretOptions{
 		HandleCheckerError: func(err error) {
-			errs := checker.RequireCheckerErrors(t, err, 1)
+			errs := checker.RequireCheckerErrors(t, err, 3)
 			require.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+			require.IsType(t, &sema.ResourceCapturingError{}, errs[1])
+			require.IsType(t, &sema.ResourceCapturingError{}, errs[2])
 		},
 	})
 
