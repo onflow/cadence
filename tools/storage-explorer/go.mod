@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/gorilla/mux v1.8.1
-	github.com/onflow/atree v0.8.0-rc.6
+	github.com/onflow/atree v0.8.0
 	github.com/onflow/cadence v1.0.0-preview.52
 	github.com/onflow/flow-go v0.37.10
 	github.com/rs/zerolog v1.32.0

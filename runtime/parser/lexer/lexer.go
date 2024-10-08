@@ -74,6 +74,9 @@ type lexer struct {
 	prev rune
 	// canBackup indicates whether stepping back is allowed
 	canBackup bool
+	// currentComments stores the current leading and/or trailing comments
+	// nil is used as sentinel value to track newlines
+	currentComments []*ast.Comment
 }
 
 var _ TokenStream = &lexer{}
@@ -99,6 +102,9 @@ func (l *lexer) Next() Token {
 				pos,
 				pos,
 			),
+			Comments: ast.Comments{
+				Leading: l.currentComments,
+			},
 		}
 
 	}
@@ -184,6 +190,8 @@ func (l *lexer) run(state stateFn) (err error) {
 		state = state(l)
 	}
 
+	l.updatePreviousTrailingComments()
+
 	return
 }
 
@@ -251,6 +259,18 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 
 	endPos := l.endPos()
 
+	// Only track trivia for non-space tokens
+	var leadingComments []*ast.Comment
+	shouldConsumeTrivia := ty != TokenSpace
+	if shouldConsumeTrivia {
+		l.updatePreviousTrailingComments()
+		leadingComments = l.currentComments
+		defer (func() {
+			// Mark as fully consumed
+			l.currentComments = []*ast.Comment{}
+		})()
+	}
+
 	token := Token{
 		Type:         ty,
 		SpaceOrError: spaceOrError,
@@ -264,23 +284,99 @@ func (l *lexer) emit(ty TokenType, spaceOrError any, rangeStart ast.Position, co
 				endPos.column,
 			),
 		),
+		Comments: ast.Comments{
+			Leading: leadingComments,
+			// Trailing comments can't be determined, as it wasn't consumed yet at this point.
+			Trailing: []*ast.Comment{},
+		},
 	}
 
 	l.tokens = append(l.tokens, token)
 	l.tokenCount = len(l.tokens)
 
 	if consume {
-		l.startOffset = l.endOffset
+		l.consume(endPos)
+	}
+}
 
-		l.startPos = endPos
-		r, _ := utf8.DecodeRune(l.input[l.endOffset-1:])
+func (l *lexer) updatePreviousTrailingComments() {
+	if l.tokenCount == 0 {
+		return
+	}
 
-		if r == '\n' {
-			l.startPos.line++
-			l.startPos.column = 0
-		} else {
-			l.startPos.column++
+	lastNonSpaceTokenIndex := -1
+	for i := l.tokenCount - 1; i >= 0; i-- {
+		if l.tokens[i].Type != TokenSpace {
+			lastNonSpaceTokenIndex = i
+			break
 		}
+	}
+
+	// Split the current comment into trailing comment of the previous token
+	// and leading comment of the next token.
+	var trailing []*ast.Comment
+	var leading []*ast.Comment
+
+	trailingTriviaEnded := lastNonSpaceTokenIndex == -1
+	for _, comment := range l.currentComments {
+		if comment == nil {
+			trailingTriviaEnded = true
+			continue
+		}
+		if trailingTriviaEnded {
+			leading = append(leading, comment)
+		} else {
+			trailing = append(trailing, comment)
+		}
+	}
+
+	l.currentComments = leading
+
+	if lastNonSpaceTokenIndex != -1 {
+		lastNonSpaceToken := &l.tokens[lastNonSpaceTokenIndex]
+		lastNonSpaceToken.Trailing = append(lastNonSpaceToken.Trailing, trailing...)
+	}
+}
+
+func (l *lexer) emitNewlineSentinelComment() {
+	l.currentComments = append(l.currentComments, nil)
+}
+
+func (l *lexer) emitComment() {
+	endPos := l.endPos()
+
+	currentRange := ast.NewRange(
+		l.memoryGauge,
+		l.startPosition(),
+		ast.NewPosition(
+			l.memoryGauge,
+			l.endOffset-1,
+			endPos.line,
+			endPos.column,
+		),
+	)
+
+	if l.currentComments == nil {
+		l.currentComments = []*ast.Comment{}
+	}
+
+	l.currentComments = append(l.currentComments, ast.NewComment(l.memoryGauge, currentRange.Source(l.input)))
+
+	l.consume(endPos)
+}
+
+// endPos pre-computed end-position by calling l.endPos()
+func (l *lexer) consume(endPos position) {
+	l.startOffset = l.endOffset
+
+	l.startPos = endPos
+	r, _ := utf8.DecodeRune(l.input[l.endOffset-1:])
+
+	if r == '\n' {
+		l.startPos.line++
+		l.startPos.column = 0
+	} else {
+		l.startPos.column++
 	}
 }
 

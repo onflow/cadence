@@ -155,12 +155,12 @@ func init() {
 
 func defineParenthesizedTypes() {
 	setTypeNullDenotation(lexer.TokenParenOpen, func(p *parser, token lexer.Token) (ast.Type, error) {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		innerType, err := parseType(p, lowestBindingPower)
 		if err != nil {
 			return nil, err
 		}
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		_, err = p.mustOne(lexer.TokenParenClose)
 		return innerType, err
 	})
@@ -168,12 +168,14 @@ func defineParenthesizedTypes() {
 
 func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, error) {
 	var nestedIdentifiers []ast.Identifier
+	// Stores the last token at the end of the loop
+	var nestedToken *lexer.Token
 
 	for p.current.Is(lexer.TokenDot) {
 		// Skip the dot
 		p.next()
 
-		nestedToken := p.current
+		nestedToken = &p.current
 
 		if !nestedToken.Is(lexer.TokenIdentifier) {
 			return nil, p.syntaxError(
@@ -183,7 +185,7 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, 
 			)
 		}
 
-		nestedIdentifier := p.tokenToIdentifier(nestedToken)
+		nestedIdentifier := p.tokenToIdentifier(*nestedToken)
 
 		// Skip the identifier
 		p.next()
@@ -195,10 +197,21 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) (*ast.NominalType, 
 
 	}
 
-	return ast.NewNominalType(
+	var trailingComments []*ast.Comment
+	if nestedToken == nil {
+		trailingComments = token.Comments.Trailing
+	} else {
+		trailingComments = nestedToken.Comments.PackToList()
+	}
+
+	return ast.NewNominalTypeWithComments(
 		p.memoryGauge,
 		p.tokenToIdentifier(token),
 		nestedIdentifiers,
+		ast.Comments{
+			Leading:  token.Comments.Leading,
+			Trailing: trailingComments,
+		},
 	), nil
 }
 
@@ -212,7 +225,7 @@ func defineArrayType() {
 				return nil, err
 			}
 
-			p.skipSpaceAndComments()
+			p.skipSpace()
 
 			var size *ast.IntegerExpression
 
@@ -241,7 +254,7 @@ func defineArrayType() {
 				}
 			}
 
-			p.skipSpaceAndComments()
+			p.skipSpace()
 
 			endToken, err := p.mustOne(lexer.TokenBracketClose)
 			if err != nil {
@@ -341,7 +354,7 @@ func defineIntersectionOrDictionaryType() {
 			expectType := true
 
 			for !atEnd {
-				p.skipSpaceAndComments()
+				p.skipSpace()
 
 				switch p.current.Type {
 				case lexer.TokenComma:
@@ -537,7 +550,7 @@ func parseNominalTypes(
 	expectType := true
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		switch p.current.Type {
 		case separator:
@@ -588,7 +601,7 @@ func parseNominalTypes(
 
 func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnotation, err error) {
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	_, err = p.mustOne(lexer.TokenParenOpen)
 	if err != nil {
 		return
@@ -598,7 +611,7 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		switch p.current.Type {
 		case lexer.TokenComma:
 			if expectTypeAnnotation {
@@ -656,7 +669,7 @@ func parseType(p *parser, rightBindingPower int) (ast.Type, error) {
 		p.typeDepth--
 	}()
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	t := p.current
 	p.next()
 
@@ -729,15 +742,22 @@ func defaultTypeMetaLeftDenotation(
 }
 
 func parseTypeAnnotation(p *parser) (*ast.TypeAnnotation, error) {
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
-	startPos := p.current.StartPos
+	startToken := p.current
 
 	isResource := false
 	if p.current.Is(lexer.TokenAt) {
 		// Skip the `@`
 		p.next()
 		isResource = true
+
+		// Append @ token comments to type token,
+		// so that we don't need to store them in TypeAnnotation node.
+		var leadingComments []*ast.Comment
+		leadingComments = append(leadingComments, startToken.Comments.Leading...)
+		leadingComments = append(leadingComments, p.current.Comments.Leading...)
+		p.current.Comments.Leading = leadingComments
 	}
 
 	ty, err := parseType(p, lowestBindingPower)
@@ -749,7 +769,7 @@ func parseTypeAnnotation(p *parser) (*ast.TypeAnnotation, error) {
 		p.memoryGauge,
 		isResource,
 		ty,
-		startPos,
+		startToken.StartPos,
 	), nil
 }
 
@@ -771,7 +791,7 @@ func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) (ast.T
 }
 
 func parseNominalTypeInvocationRemainder(p *parser) (*ast.InvocationExpression, error) {
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	identifier, err := p.mustOne(lexer.TokenIdentifier)
 	if err != nil {
 		return nil, err
@@ -782,7 +802,7 @@ func parseNominalTypeInvocationRemainder(p *parser) (*ast.InvocationExpression, 
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	parenOpenToken, err := p.mustOne(lexer.TokenParenOpen)
 	if err != nil {
 		return nil, err
@@ -830,7 +850,7 @@ func parseCommaSeparatedTypeAnnotations(
 	expectTypeAnnotation := true
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		switch p.current.Type {
 		case lexer.TokenComma:
@@ -912,14 +932,14 @@ func defineIdentifierTypes() {
 		func(p *parser, token lexer.Token) (ast.Type, error) {
 			switch string(p.tokenSource(token)) {
 			case KeywordAuth:
-				p.skipSpaceAndComments()
+				p.skipSpace()
 
 				var authorization ast.Authorization
 
 				if p.current.Is(lexer.TokenParenOpen) {
 					p.next()
 
-					p.skipSpaceAndComments()
+					p.skipSpace()
 
 					var err error
 					authorization, err = parseAuthorization(p)
@@ -930,7 +950,7 @@ func defineIdentifierTypes() {
 					p.reportSyntaxError("expected authorization (entitlement list)")
 				}
 
-				p.skipSpaceAndComments()
+				p.skipSpace()
 
 				_, err := p.mustOne(lexer.TokenAmpersand)
 				if err != nil {
@@ -950,7 +970,7 @@ func defineIdentifierTypes() {
 				), nil
 
 			case KeywordFun:
-				p.skipSpaceAndComments()
+				p.skipSpace()
 				return parseFunctionType(p, token.StartPos, ast.FunctionPurityUnspecified)
 
 			case KeywordView:
@@ -959,7 +979,7 @@ func defineIdentifierTypes() {
 				cursor := p.tokens.Cursor()
 
 				// look ahead for the `fun` keyword, if it exists
-				p.skipSpaceAndComments()
+				p.skipSpace()
 
 				if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
 					// skip the `fun` keyword
@@ -990,7 +1010,7 @@ func parseAuthorization(p *parser) (auth ast.Authorization, err error) {
 			return nil, err
 		}
 		auth = ast.NewMappedAccess(entitlementMapName, keywordPos)
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 	default:
 		entitlements, err := parseEntitlementList(p)
