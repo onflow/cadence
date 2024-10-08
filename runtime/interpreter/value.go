@@ -401,8 +401,8 @@ func (v TypeValue) Equal(_ *Interpreter, _ LocationRange, other Value) bool {
 	return staticType.Equal(otherStaticType)
 }
 
-func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
-	switch name {
+func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, memberName string) Value {
+	switch memberName {
 	case sema.MetaTypeIdentifierFieldName:
 		var typeID string
 		staticType := v.Type
@@ -459,6 +459,67 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		}
 
 		return AsBoolValue(elaboration.IsRecovered)
+
+	case sema.MetaTypeAddressFieldName:
+		staticType := v.Type
+		if staticType == nil {
+			return Nil
+		}
+
+		location, _, err := common.DecodeTypeID(interpreter, string(staticType.ID()))
+		if err != nil || location == nil {
+			return Nil
+		}
+
+		addressLocation, ok := location.(common.AddressLocation)
+		if !ok {
+			return Nil
+		}
+
+		addressValue := NewAddressValue(
+			interpreter,
+			addressLocation.Address,
+		)
+		return NewSomeValueNonCopying(
+			interpreter,
+			addressValue,
+		)
+
+	case sema.MetaTypeContractNameFieldName:
+		staticType := v.Type
+		if staticType == nil {
+			return Nil
+		}
+
+		location, qualifiedIdentifier, err := common.DecodeTypeID(interpreter, string(staticType.ID()))
+		if err != nil || location == nil {
+			return Nil
+		}
+
+		switch location.(type) {
+		case common.AddressLocation,
+			common.StringLocation:
+
+			separatorIndex := strings.Index(qualifiedIdentifier, ".")
+			contractNameLength := len(qualifiedIdentifier)
+			if separatorIndex >= 0 {
+				contractNameLength = separatorIndex
+			}
+
+			contractNameValue := NewStringValue(
+				interpreter,
+				common.NewStringMemoryUsage(contractNameLength),
+				func() string {
+					return qualifiedIdentifier[0:contractNameLength]
+				},
+			)
+
+			return NewSomeValueNonCopying(interpreter, contractNameValue)
+
+		default:
+			return Nil
+		}
+
 	}
 
 	return nil
