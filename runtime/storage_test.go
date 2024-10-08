@@ -4259,6 +4259,102 @@ func TestRuntimeStorageIteration(t *testing.T) {
 			test(false, t)
 		})
 	})
+
+	t.Run("box and convert arguments, forEachStored", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := NewTestInterpreterRuntime()
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+		}
+
+		const script = `
+          access(all)
+		  fun main(): String? {
+			  let account = getAuthAccount<auth(Storage) &Account>(0x1)
+
+			  account.storage.save(1, to: /storage/foo1)
+
+              var res: String? = nil
+              // NOTE: The function has a parameter of type StoragePath? instead of just StoragePath
+			  account.storage.forEachStored(fun (path: StoragePath?, type: Type): Bool {
+                  // The map should call Optional.map, not fail,
+                  // because path is StoragePath?, not StoragePath
+                  res = path.map(fun(string: AnyStruct): String {
+                      return "Optional.map"
+                  })
+                  return true
+              })
+              return res
+		  }
+        `
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			cadence.NewOptional(cadence.String("Optional.map")),
+			result,
+		)
+	})
+
+	t.Run("box and convert arguments, forEachPublic", func(t *testing.T) {
+		t.Parallel()
+
+		runtime := NewTestInterpreterRuntime()
+
+		runtimeInterface := &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnEmitEvent: func(event cadence.Event) error {
+				return nil
+			},
+		}
+
+		const script = `
+          access(all)
+		  fun main(): String? {
+			  let account = getAuthAccount<auth(Storage, Capabilities) &Account>(0x1)
+
+              let cap = account.capabilities.storage.issue<&AnyStruct>(/storage/foo)
+			  account.capabilities.publish(cap, at: /public/bar)
+
+              var res: String? = nil
+              // NOTE: The function has a parameter of type PublicPath? instead of just PublicPath
+			  account.storage.forEachPublic(fun (path: PublicPath?, type: Type): Bool {
+                  // The map should call Optional.map, not fail,
+                  // because path is PublicPath?, not PublicPath
+                  res = path.map(fun(string: AnyStruct): String {
+                      return "Optional.map"
+                  })
+                  return true
+              })
+              return res
+		  }
+        `
+		result, err := runtime.ExecuteScript(
+			Script{
+				Source: []byte(script),
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			cadence.NewOptional(cadence.String("Optional.map")),
+			result,
+		)
+	})
 }
 
 func TestRuntimeStorageIteration2(t *testing.T) {

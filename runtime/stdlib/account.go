@@ -609,7 +609,7 @@ func newAccountKeysAddFunction(
 			inter,
 			accountKeys,
 			sema.Account_KeysTypeAddFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				publicKeyValue, ok := invocation.Arguments[0].(*interpreter.CompositeValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -698,7 +698,7 @@ func newAccountKeysGetFunction(
 			inter,
 			accountKeys,
 			functionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -756,8 +756,12 @@ func newAccountKeysForEachFunction(
 			inter,
 			accountKeys,
 			functionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				fnValue, ok := invocation.Arguments[0].(interpreter.FunctionValue)
+
+				fnValueType := fnValue.FunctionType()
+				parameterTypes := fnValueType.ParameterTypes()
+				returnType := fnValueType.ReturnTypeAnnotation.Type
 
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -765,19 +769,6 @@ func newAccountKeysForEachFunction(
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
-
-				newSubInvocation := func(key interpreter.Value) interpreter.Invocation {
-					return interpreter.NewInvocation(
-						inter,
-						nil,
-						nil,
-						nil,
-						[]interpreter.Value{key},
-						accountKeysForEachCallbackTypeParams,
-						nil,
-						locationRange,
-					)
-				}
 
 				liftKeyToValue := func(key *AccountKey) interpreter.Value {
 					return NewAccountKeyValue(
@@ -818,9 +809,13 @@ func newAccountKeysForEachFunction(
 
 					liftedKey := liftKeyToValue(accountKey)
 
-					res, err := inter.InvokeFunction(
+					res, err := inter.InvokeFunctionValue(
 						fnValue,
-						newSubInvocation(liftedKey),
+						[]interpreter.Value{liftedKey},
+						accountKeysForEachCallbackTypeParams,
+						parameterTypes,
+						returnType,
+						locationRange,
 					)
 					if err != nil {
 						// interpreter panicked while invoking the inner function value
@@ -893,7 +888,7 @@ func newAccountKeysRevokeFunction(
 			inter,
 			accountKeys,
 			sema.Account_KeysTypeRevokeFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				indexValue, ok := invocation.Arguments[0].(interpreter.IntValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -956,7 +951,7 @@ func newAccountInboxPublishFunction(
 			inter,
 			accountInbox,
 			sema.Account_InboxTypePublishFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				value, ok := invocation.Arguments[0].(interpreter.CapabilityValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -1023,7 +1018,7 @@ func newAccountInboxUnpublishFunction(
 			inter,
 			accountInbox,
 			sema.Account_InboxTypeUnpublishFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -1101,7 +1096,7 @@ func newAccountInboxClaimFunction(
 			inter,
 			accountInbox,
 			sema.Account_InboxTypeClaimFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -1275,7 +1270,7 @@ func newAccountContractsGetFunction(
 			inter,
 			accountContracts,
 			functionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -1328,7 +1323,7 @@ func newAccountContractsBorrowFunction(
 			inter,
 			accountContracts,
 			functionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -1463,7 +1458,7 @@ func newAccountContractsChangeFunction(
 			inter,
 			accountContracts,
 			functionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				return changeAccountContracts(invocation, handler, addressValue, isUpdate)
 			},
 		)
@@ -1803,7 +1798,7 @@ func newAccountContractsTryUpdateFunction(
 			inter,
 			accountContracts,
 			functionType,
-			func(invocation interpreter.Invocation) (deploymentResult interpreter.Value) {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) (deploymentResult interpreter.Value) {
 				var deployedContract interpreter.Value
 
 				defer func() {
@@ -2107,7 +2102,7 @@ func newAccountContractsRemoveFunction(
 			inter,
 			accountContracts,
 			sema.Account_ContractsTypeRemoveFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				nameValue, ok := invocation.Arguments[0].(*interpreter.StringValue)
@@ -2384,7 +2379,7 @@ func newAccountStorageCapabilitiesGetControllerFunction(
 			inter,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeGetControllerFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -2433,7 +2428,7 @@ func newAccountStorageCapabilitiesGetControllersFunction(
 			inter,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeGetControllersFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -2508,7 +2503,7 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 			inter,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeForEachControllerFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -2526,6 +2521,10 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
+
+				functionValueType := functionValue.FunctionType()
+				parameterTypes := functionValueType.ParameterTypes()
+				returnType := functionValueType.ReturnTypeAnnotation.Type
 
 				// Prevent mutations (record/unrecord) to storage capability controllers
 				// for this address/path during iteration
@@ -2565,18 +2564,14 @@ func newAccountStorageCapabilitiesForEachControllerFunction(
 						panic(errors.NewUnreachableError())
 					}
 
-					subInvocation := interpreter.NewInvocation(
-						inter,
-						nil,
-						nil,
-						nil,
+					res, err := inter.InvokeFunctionValue(
+						functionValue,
 						[]interpreter.Value{referenceValue},
 						accountStorageCapabilitiesForEachControllerCallbackTypeParams,
-						nil,
+						parameterTypes,
+						returnType,
 						locationRange,
 					)
-
-					res, err := inter.InvokeFunction(functionValue, subInvocation)
 					if err != nil {
 						// interpreter panicked while invoking the inner function value
 						panic(err)
@@ -2623,7 +2618,7 @@ func newAccountStorageCapabilitiesIssueFunction(
 			inter,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -2666,7 +2661,7 @@ func newAccountStorageCapabilitiesIssueWithTypeFunction(
 			inter,
 			storageCapabilities,
 			sema.Account_StorageCapabilitiesTypeIssueFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -2820,7 +2815,7 @@ func newAccountAccountCapabilitiesIssueFunction(
 			inter,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -2855,7 +2850,7 @@ func newAccountAccountCapabilitiesIssueWithTypeFunction(
 			inter,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeIssueFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -3512,7 +3507,7 @@ func newAccountCapabilitiesPublishFunction(
 			inter,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypePublishFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
 
@@ -3646,7 +3641,7 @@ func newAccountCapabilitiesUnpublishFunction(
 			inter,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypeUnpublishFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -3920,7 +3915,7 @@ func newAccountCapabilitiesGetFunction(
 			inter,
 			accountCapabilities,
 			funcType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -4106,7 +4101,7 @@ func newAccountCapabilitiesExistsFunction(
 			inter,
 			accountCapabilities,
 			sema.Account_CapabilitiesTypeExistsFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 
@@ -4175,7 +4170,7 @@ func newAccountAccountCapabilitiesGetControllerFunction(
 			inter,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeGetControllerFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -4224,7 +4219,7 @@ func newAccountAccountCapabilitiesGetControllersFunction(
 			inter,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeGetControllersFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -4305,7 +4300,7 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 			inter,
 			accountCapabilities,
 			sema.Account_AccountCapabilitiesTypeForEachControllerFunctionType,
-			func(invocation interpreter.Invocation) interpreter.Value {
+			func(_ interpreter.MemberAccessibleValue, invocation interpreter.Invocation) interpreter.Value {
 
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
@@ -4316,6 +4311,10 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
+
+				functionValueType := functionValue.FunctionType()
+				parameterTypes := functionValueType.ParameterTypes()
+				returnType := functionValueType.ReturnTypeAnnotation.Type
 
 				// Prevent mutations (record/unrecord) to account capability controllers
 				// for this address during iteration
@@ -4354,18 +4353,14 @@ func newAccountAccountCapabilitiesForEachControllerFunction(
 						panic(errors.NewUnreachableError())
 					}
 
-					subInvocation := interpreter.NewInvocation(
-						inter,
-						nil,
-						nil,
-						nil,
+					res, err := inter.InvokeFunctionValue(
+						functionValue,
 						[]interpreter.Value{referenceValue},
 						accountAccountCapabilitiesForEachControllerCallbackTypeParams,
-						nil,
+						parameterTypes,
+						returnType,
 						locationRange,
 					)
-
-					res, err := inter.InvokeFunction(functionValue, subInvocation)
 					if err != nil {
 						// interpreter panicked while invoking the inner function value
 						panic(err)

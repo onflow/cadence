@@ -620,25 +620,6 @@ func (e UseBeforeInitializationError) Error() string {
 	return fmt.Sprintf("member `%s` is used before it has been initialized", e.Name)
 }
 
-// InvocationArgumentTypeError
-type InvocationArgumentTypeError struct {
-	LocationRange
-	ParameterType sema.Type
-	Index         int
-}
-
-var _ errors.UserError = InvocationArgumentTypeError{}
-
-func (InvocationArgumentTypeError) IsUserError() {}
-
-func (e InvocationArgumentTypeError) Error() string {
-	return fmt.Sprintf(
-		"invalid invocation with argument at index %d: expected `%s`",
-		e.Index,
-		e.ParameterType.QualifiedString(),
-	)
-}
-
 // MemberAccessTypeError
 type MemberAccessTypeError struct {
 	ExpectedType sema.Type

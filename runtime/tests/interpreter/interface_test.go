@@ -154,9 +154,48 @@ func TestInterpretInterfaceDefaultImplementation(t *testing.T) {
 			value,
 		)
 	})
+
+	t.Run("interface method subtyping", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          struct A {
+              var bar: Int
+              init() {
+                  self.bar = 4
+              }
+          }
+
+          struct interface I {
+              fun foo(): A?
+          }
+
+          struct S: I {
+              fun foo(): A {
+                  return A()
+              }
+          }
+
+          fun main(): Int? {
+              var s: {I} = S()
+              return s.foo()?.bar
+          }
+        `)
+
+		value, err := inter.Invoke("main")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredIntValueFromInt64(4),
+			),
+			value,
+		)
+	})
 }
 
-func TestInterpretInterfaceDefaultImplementationWhenOverriden(t *testing.T) {
+func TestInterpretInterfaceDefaultImplementationWhenOverridden(t *testing.T) {
 
 	t.Parallel()
 

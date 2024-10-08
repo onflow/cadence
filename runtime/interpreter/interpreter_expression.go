@@ -397,6 +397,18 @@ func (interpreter *Interpreter) checkMemberAccess(
 
 	targetStaticType := target.StaticType(interpreter)
 
+	if _, ok := expectedType.(*sema.OptionalType); ok {
+		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
+			targetSemaType := interpreter.MustConvertStaticToSemaType(targetStaticType)
+
+			panic(MemberAccessTypeError{
+				ExpectedType:  expectedType,
+				ActualType:    targetSemaType,
+				LocationRange: locationRange,
+			})
+		}
+	}
+
 	if !interpreter.IsSubTypeOfSemaType(targetStaticType, expectedType) {
 		targetSemaType := interpreter.MustConvertStaticToSemaType(targetStaticType)
 
@@ -1207,6 +1219,7 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	typeParameterTypes := invocationExpressionTypes.TypeArguments
 	argumentTypes := invocationExpressionTypes.ArgumentTypes
 	parameterTypes := invocationExpressionTypes.TypeParameterTypes
+	returnType := invocationExpressionTypes.ReturnType
 
 	// add the implicit argument to the end of the argument list, if it exists
 	if implicitArg != nil {
@@ -1222,6 +1235,7 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		argumentExpressions,
 		argumentTypes,
 		parameterTypes,
+		returnType,
 		typeParameterTypes,
 		invocationExpression,
 	)

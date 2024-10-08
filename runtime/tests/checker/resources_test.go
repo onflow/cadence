@@ -9483,7 +9483,8 @@ func TestCheckInvalidNestedResourceCaptureOnLeft(t *testing.T) {
                 }
             }
       `)
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 	})
 
 	t.Run("resource field on right", func(t *testing.T) {
@@ -10281,7 +10282,7 @@ func TestCheckInvalidNestedResourceCapture(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("on right", func(t *testing.T) {
+	t.Run("transaction field on right, inlined function", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -10298,10 +10299,31 @@ func TestCheckInvalidNestedResourceCapture(t *testing.T) {
                 }
             }
       `)
-		require.NoError(t, err)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 	})
 
-	t.Run("resource field on right", func(t *testing.T) {
+	t.Run("transaction field destroy, inlined function", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+            transaction {
+                var x: @AnyResource?
+                prepare() {
+                   self.x <- nil
+                }
+                execute {
+                    fun() {
+                        destroy self.x
+                    }
+                }
+            }
+      `)
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
+	})
+
+	t.Run("resource field on right, inlined function", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -10319,11 +10341,10 @@ func TestCheckInvalidNestedResourceCapture(t *testing.T) {
             }
       `)
 		errs := RequireCheckerErrors(t, err, 1)
-
 		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 	})
 
-	t.Run("on left", func(t *testing.T) {
+	t.Run("transaction field on left, inlined function", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -10341,11 +10362,10 @@ func TestCheckInvalidNestedResourceCapture(t *testing.T) {
             }
     `)
 		errs := RequireCheckerErrors(t, err, 1)
-
 		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 	})
 
-	t.Run("on left method scope", func(t *testing.T) {
+	t.Run("transaction field on left, method scope", func(t *testing.T) {
 		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
@@ -10397,6 +10417,26 @@ func TestCheckInvalidNestedResourceCapture(t *testing.T) {
             }
     `)
 		require.NoError(t, err)
+	})
+
+	t.Run("local variable", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+            transaction() {
+
+                execute {
+                    var r: @AnyResource? <- nil
+                    var f = fun() {
+                        destroy r
+                    }
+                }
+            }
+        `)
+
+		errs := RequireCheckerErrors(t, err, 1)
+		assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 	})
 }
 

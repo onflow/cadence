@@ -419,7 +419,7 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 			interpreter,
 			v,
 			sema.MetaTypeIsSubtypeFunctionType,
-			func(invocation Invocation) Value {
+			func(v TypeValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 
 				staticType := v.Type
@@ -1029,7 +1029,7 @@ func (v CharacterValue) GetMember(interpreter *Interpreter, _ LocationRange, nam
 			interpreter,
 			v,
 			sema.ToStringFunctionType,
-			func(invocation Invocation) Value {
+			func(v CharacterValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 
 				memoryUsage := common.NewStringMemoryUsage(len(v.Str))
@@ -1392,7 +1392,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			interpreter,
 			v,
 			sema.StringTypeConcatFunctionType,
-			func(invocation Invocation) Value {
+			func(v *StringValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 				otherArray, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
@@ -1407,7 +1407,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			interpreter,
 			v,
 			sema.StringTypeSliceFunctionType,
-			func(invocation Invocation) Value {
+			func(v *StringValue, invocation Invocation) Value {
 				from, ok := invocation.Arguments[0].(IntValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -1427,7 +1427,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			interpreter,
 			v,
 			sema.StringTypeContainsFunctionType,
-			func(invocation Invocation) Value {
+			func(v *StringValue, invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -1442,7 +1442,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			interpreter,
 			v,
 			sema.StringTypeIndexFunctionType,
-			func(invocation Invocation) Value {
+			func(v *StringValue, invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -1457,7 +1457,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			interpreter,
 			v,
 			sema.StringTypeIndexFunctionType,
-			func(invocation Invocation) Value {
+			func(v *StringValue, invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -1476,7 +1476,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			interpreter,
 			v,
 			sema.StringTypeDecodeHexFunctionType,
-			func(invocation Invocation) Value {
+			func(v *StringValue, invocation Invocation) Value {
 				return v.DecodeHex(
 					invocation.Interpreter,
 					invocation.LocationRange,
@@ -1489,7 +1489,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			interpreter,
 			v,
 			sema.StringTypeToLowerFunctionType,
-			func(invocation Invocation) Value {
+			func(v *StringValue, invocation Invocation) Value {
 				return v.ToLower(invocation.Interpreter)
 			},
 		)
@@ -1499,7 +1499,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			interpreter,
 			v,
 			sema.StringTypeSplitFunctionType,
-			func(invocation Invocation) Value {
+			func(v *StringValue, invocation Invocation) Value {
 				separator, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -1518,7 +1518,7 @@ func (v *StringValue) GetMember(interpreter *Interpreter, locationRange Location
 			interpreter,
 			v,
 			sema.StringTypeReplaceAllFunctionType,
-			func(invocation Invocation) Value {
+			func(v *StringValue, invocation Invocation) Value {
 				original, ok := invocation.Arguments[0].(*StringValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -2932,7 +2932,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 			sema.ArrayAppendFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				v.Append(
 					invocation.Interpreter,
 					invocation.LocationRange,
@@ -2949,7 +2949,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 			sema.ArrayAppendAllFunctionType(
 				v.SemaType(interpreter),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -2970,7 +2970,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 			sema.ArrayConcatFunctionType(
 				v.SemaType(interpreter),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				otherArray, ok := invocation.Arguments[0].(*ArrayValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -2990,7 +2990,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 			sema.ArrayInsertFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
 
@@ -3019,7 +3019,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 			sema.ArrayRemoveFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				inter := invocation.Interpreter
 				locationRange := invocation.LocationRange
 
@@ -3044,7 +3044,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 			sema.ArrayRemoveFirstFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				return v.RemoveFirst(
 					invocation.Interpreter,
 					invocation.LocationRange,
@@ -3059,7 +3059,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 			sema.ArrayRemoveLastFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				return v.RemoveLast(
 					invocation.Interpreter,
 					invocation.LocationRange,
@@ -3074,7 +3074,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 			sema.ArrayFirstIndexFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				return v.FirstIndex(
 					invocation.Interpreter,
 					invocation.LocationRange,
@@ -3090,7 +3090,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 			sema.ArrayContainsFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				return v.Contains(
 					invocation.Interpreter,
 					invocation.LocationRange,
@@ -3106,7 +3106,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 			sema.ArraySliceFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				from, ok := invocation.Arguments[0].(IntValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
@@ -3133,7 +3133,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 			sema.ArrayReverseFunctionType(
 				v.SemaType(interpreter),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				return v.Reverse(
 					invocation.Interpreter,
 					invocation.LocationRange,
@@ -3149,7 +3149,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 				interpreter,
 				v.SemaType(interpreter).ElementType(false),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 
 				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
@@ -3173,15 +3173,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 				interpreter,
 				v.SemaType(interpreter),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 
 				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
-				transformFunctionType, ok := invocation.ArgumentTypes[0].(*sema.FunctionType)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3190,7 +3185,6 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 					interpreter,
 					invocation.LocationRange,
 					funcArgument,
-					transformFunctionType,
 				)
 			},
 		)
@@ -3202,7 +3196,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 			sema.ArrayToVariableSizedFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 
 				return v.ToVariableSized(
@@ -3219,7 +3213,7 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 			sema.ArrayToConstantSizedFunctionType(
 				v.SemaType(interpreter).ElementType(false),
 			),
-			func(invocation Invocation) Value {
+			func(v *ArrayValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 
 				typeParameterPair := invocation.TypeParameterTypes.Oldest()
@@ -3760,20 +3754,13 @@ func (v *ArrayValue) Filter(
 	procedure FunctionValue,
 ) Value {
 
-	elementTypeSlice := []sema.Type{v.semaType.ElementType(false)}
-	iterationInvocation := func(arrayElement Value) Invocation {
-		invocation := NewInvocation(
-			interpreter,
-			nil,
-			nil,
-			nil,
-			[]Value{arrayElement},
-			elementTypeSlice,
-			nil,
-			locationRange,
-		)
-		return invocation
-	}
+	elementType := v.semaType.ElementType(false)
+
+	argumentTypes := []sema.Type{elementType}
+
+	procedureFunctionType := procedure.FunctionType()
+	parameterTypes := procedureFunctionType.ParameterTypes()
+	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
 
 	// TODO: Use ReadOnlyIterator here if procedure doesn't change array elements.
 	iterator, err := v.array.Iterator()
@@ -3809,7 +3796,18 @@ func (v *ArrayValue) Filter(
 					return nil
 				}
 
-				shouldInclude, ok := procedure.invoke(iterationInvocation(value)).(BoolValue)
+				result := interpreter.invokeFunctionValue(
+					procedure,
+					[]Value{value},
+					nil,
+					argumentTypes,
+					parameterTypes,
+					returnType,
+					nil,
+					locationRange,
+				)
+
+				shouldInclude, ok := result.(BoolValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3837,40 +3835,29 @@ func (v *ArrayValue) Map(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	procedure FunctionValue,
-	transformFunctionType *sema.FunctionType,
 ) Value {
 
-	elementTypeSlice := []sema.Type{v.semaType.ElementType(false)}
-	iterationInvocation := func(arrayElement Value) Invocation {
-		return NewInvocation(
-			interpreter,
-			nil,
-			nil,
-			nil,
-			[]Value{arrayElement},
-			elementTypeSlice,
-			nil,
-			locationRange,
-		)
-	}
+	elementType := v.semaType.ElementType(false)
 
-	procedureStaticType, ok := ConvertSemaToStaticType(interpreter, transformFunctionType).(FunctionStaticType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	returnType := procedureStaticType.ReturnType(interpreter)
+	argumentTypes := []sema.Type{elementType}
+
+	procedureFunctionType := procedure.FunctionType()
+	parameterTypes := procedureFunctionType.ParameterTypes()
+	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
+
+	returnStaticType := ConvertSemaToStaticType(interpreter, returnType)
 
 	var returnArrayStaticType ArrayStaticType
 	switch v.Type.(type) {
 	case *VariableSizedStaticType:
 		returnArrayStaticType = NewVariableSizedStaticType(
 			interpreter,
-			returnType,
+			returnStaticType,
 		)
 	case *ConstantSizedStaticType:
 		returnArrayStaticType = NewConstantSizedStaticType(
 			interpreter,
-			returnType,
+			returnStaticType,
 			int64(v.Count()),
 		)
 	default:
@@ -3904,8 +3891,18 @@ func (v *ArrayValue) Map(
 
 			value := MustConvertStoredValue(interpreter, atreeValue)
 
-			mappedValue := procedure.invoke(iterationInvocation(value))
-			return mappedValue.Transfer(
+			result := interpreter.invokeFunctionValue(
+				procedure,
+				[]Value{value},
+				nil,
+				argumentTypes,
+				parameterTypes,
+				returnType,
+				nil,
+				locationRange,
+			)
+
+			return result.Transfer(
 				interpreter,
 				locationRange,
 				atree.Address{},
@@ -4093,8 +4090,9 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 			interpreter,
 			v,
 			sema.ToStringFunctionType,
-			func(invocation Invocation) Value {
+			func(v NumberValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
+
 				memoryUsage := common.NewStringMemoryUsage(
 					OverEstimateNumberStringLength(interpreter, v),
 				)
@@ -4113,7 +4111,7 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 			interpreter,
 			v,
 			sema.ToBigEndianBytesFunctionType,
-			func(invocation Invocation) Value {
+			func(v NumberValue, invocation Invocation) Value {
 				return ByteSliceToByteArrayValue(
 					invocation.Interpreter,
 					v.ToBigEndianBytes(),
@@ -4126,11 +4124,12 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 			interpreter,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(invocation Invocation) Value {
+			func(v NumberValue, invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
+
 				return v.SaturatingPlus(
 					invocation.Interpreter,
 					other,
@@ -4144,11 +4143,12 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 			interpreter,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(invocation Invocation) Value {
+			func(v NumberValue, invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
+
 				return v.SaturatingMinus(
 					invocation.Interpreter,
 					other,
@@ -4162,11 +4162,12 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 			interpreter,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(invocation Invocation) Value {
+			func(v NumberValue, invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
+
 				return v.SaturatingMul(
 					invocation.Interpreter,
 					other,
@@ -4180,11 +4181,12 @@ func getNumberValueMember(interpreter *Interpreter, v NumberValue, name string, 
 			interpreter,
 			v,
 			sema.SaturatingArithmeticTypeFunctionTypes[typ],
-			func(invocation Invocation) Value {
+			func(v NumberValue, invocation Invocation) Value {
 				other, ok := invocation.Arguments[0].(NumberValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
+
 				return v.SaturatingDiv(
 					invocation.Interpreter,
 					other,
@@ -18829,47 +18831,58 @@ func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange 
 }
 
 func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, locationRange LocationRange) Value {
+	compositeType := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
 	return NewBoundHostFunctionValue(
 		interpreter,
 		v,
-		sema.CompositeForEachAttachmentFunctionType(interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType).GetCompositeKind()),
-		func(invocation Invocation) Value {
-			interpreter := invocation.Interpreter
+		sema.CompositeForEachAttachmentFunctionType(
+			compositeType.GetCompositeKind(),
+		),
+		func(v *CompositeValue, invocation Invocation) Value {
+			inter := invocation.Interpreter
 
 			functionValue, ok := invocation.Arguments[0].(FunctionValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
+			functionValueType := functionValue.FunctionType()
+			parameterTypes := functionValueType.ParameterTypes()
+			returnType := functionValueType.ReturnTypeAnnotation.Type
+
 			fn := func(attachment *CompositeValue) {
 
-				attachmentType := interpreter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
-
-				// attachments are unauthorized during iteration
-				attachmentReferenceAuth := UnauthorizedAccess
+				attachmentType := inter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
 
 				attachmentReference := NewEphemeralReferenceValue(
-					interpreter,
-					attachmentReferenceAuth,
+					inter,
+					// attachments are unauthorized during iteration
+					UnauthorizedAccess,
 					attachment,
 					attachmentType,
 					locationRange,
 				)
 
-				invocation := NewInvocation(
-					interpreter,
-					nil,
-					nil,
-					nil,
+				referenceType := sema.NewReferenceType(
+					inter,
+					// attachments are unauthorized during iteration
+					sema.UnauthorizedAccess,
+					attachmentType,
+				)
+
+				inter.invokeFunctionValue(
+					functionValue,
 					[]Value{attachmentReference},
-					[]sema.Type{sema.NewReferenceType(interpreter, sema.UnauthorizedAccess, attachmentType)},
+					nil,
+					[]sema.Type{referenceType},
+					parameterTypes,
+					returnType,
 					nil,
 					locationRange,
 				)
-				functionValue.invoke(invocation)
 			}
 
-			v.forEachAttachment(interpreter, locationRange, fn)
+			v.forEachAttachment(inter, locationRange, fn)
 			return Void
 		},
 	)
@@ -19628,25 +19641,29 @@ func (v *DictionaryValue) ForEachKey(
 ) {
 	keyType := v.SemaType(interpreter).KeyType
 
-	iterationInvocation := func(key Value) Invocation {
-		return NewInvocation(
-			interpreter,
-			nil,
-			nil,
-			nil,
-			[]Value{key},
-			[]sema.Type{keyType},
-			nil,
-			locationRange,
-		)
-	}
+	argumentTypes := []sema.Type{keyType}
+
+	procedureFunctionType := procedure.FunctionType()
+	parameterTypes := procedureFunctionType.ParameterTypes()
+	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
 
 	iterate := func() {
 		err := v.dictionary.IterateReadOnlyKeys(
 			func(item atree.Value) (bool, error) {
 				key := MustConvertStoredValue(interpreter, item)
 
-				shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
+				result := interpreter.invokeFunctionValue(
+					procedure,
+					[]Value{key},
+					nil,
+					argumentTypes,
+					parameterTypes,
+					returnType,
+					nil,
+					locationRange,
+				)
+
+				shouldContinue, ok := result.(BoolValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -19910,7 +19927,7 @@ func (v *DictionaryValue) GetMember(
 			sema.DictionaryRemoveFunctionType(
 				v.SemaType(interpreter),
 			),
-			func(invocation Invocation) Value {
+			func(v *DictionaryValue, invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
 
 				return v.Remove(
@@ -19928,7 +19945,7 @@ func (v *DictionaryValue) GetMember(
 			sema.DictionaryInsertFunctionType(
 				v.SemaType(interpreter),
 			),
-			func(invocation Invocation) Value {
+			func(v *DictionaryValue, invocation Invocation) Value {
 				keyValue := invocation.Arguments[0]
 				newValue := invocation.Arguments[1]
 
@@ -19948,7 +19965,7 @@ func (v *DictionaryValue) GetMember(
 			sema.DictionaryContainsKeyFunctionType(
 				v.SemaType(interpreter),
 			),
-			func(invocation Invocation) Value {
+			func(v *DictionaryValue, invocation Invocation) Value {
 				return v.ContainsKey(
 					invocation.Interpreter,
 					invocation.LocationRange,
@@ -19963,7 +19980,7 @@ func (v *DictionaryValue) GetMember(
 			sema.DictionaryForEachKeyFunctionType(
 				v.SemaType(interpreter),
 			),
-			func(invocation Invocation) Value {
+			func(v *DictionaryValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 
 				funcArgument, ok := invocation.Arguments[0].(FunctionValue)
@@ -20162,6 +20179,39 @@ func (v *DictionaryValue) Insert(
 
 	if existingValueStorable == nil {
 		return NilOptionalValue
+	}
+
+	// At this point, existingValueStorable is not nil, which means previous op updated existing
+	// dictionary element (instead of inserting new element).
+
+	// When existing dictionary element is updated, atree.OrderedMap reuses existing stored key
+	// so new key isn't stored or referenced in atree.OrderedMap.  This aspect of atree cannot change
+	// without API changes in atree to return existing key storable for updated element.
+
+	// Given this, remove the transferred key used to update existing dictionary element to
+	// prevent transferred key (in owner address) remaining in storage when it isn't
+	// referenced from dictionary.
+
+	// Remove content of transferred keyValue.
+	keyValue.DeepRemove(interpreter, true)
+
+	// Remove slab containing transferred keyValue from storage if needed.
+	// Currently, we only need to handle enum composite type because it is the only type that:
+	// - can be used as dictionary key (hashable) and
+	// - is transferred to its own slab.
+	if keyComposite, ok := keyValue.(*CompositeValue); ok {
+
+		// Get SlabID of transferred enum value.
+		keyCompositeSlabID := keyComposite.SlabID()
+
+		if keyCompositeSlabID == atree.SlabIDUndefined {
+			// It isn't possible for transferred enum value to be inlined in another container
+			// (SlabID as SlabIDUndefined) because it is transferred from stack by itself.
+			panic(errors.NewUnexpectedError("transferred enum value as dictionary key should not be inlined"))
+		}
+
+		// Remove slab containing transferred enum value from storage.
+		interpreter.RemoveReferencedSlab(atree.SlabIDStorable(keyCompositeSlabID))
 	}
 
 	storage := interpreter.Storage()
@@ -20909,43 +20959,43 @@ func (v *SomeValue) MeteredString(interpreter *Interpreter, seenReferences SeenR
 func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
+		innerValueType := interpreter.MustConvertStaticToSemaType(
+			v.value.StaticType(interpreter),
+		)
 		return NewBoundHostFunctionValue(
 			interpreter,
 			v,
 			sema.OptionalTypeMapFunctionType(
-				interpreter.MustConvertStaticToSemaType(
-					v.value.StaticType(interpreter),
-				),
+				innerValueType,
 			),
-			func(invocation Invocation) Value {
+			func(v *SomeValue, invocation Invocation) Value {
+				inter := invocation.Interpreter
+				locationRange := invocation.LocationRange
 
 				transformFunction, ok := invocation.Arguments[0].(FunctionValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				transformFunctionType, ok := invocation.ArgumentTypes[0].(*sema.FunctionType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				transformFunctionType := transformFunction.FunctionType()
+				parameterTypes := transformFunctionType.ParameterTypes()
+				returnType := transformFunctionType.ReturnTypeAnnotation.Type
 
-				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
-
-				f := func(v Value) Value {
-					transformInvocation := NewInvocation(
-						invocation.Interpreter,
-						nil,
-						nil,
-						nil,
-						[]Value{v},
-						[]sema.Type{valueType},
-						nil,
-						invocation.LocationRange,
-					)
-					return transformFunction.invoke(transformInvocation)
-				}
-
-				return v.fmap(invocation.Interpreter, f)
+				return v.fmap(
+					inter,
+					func(v Value) Value {
+						return inter.invokeFunctionValue(
+							transformFunction,
+							[]Value{v},
+							nil,
+							[]sema.Type{innerValueType},
+							parameterTypes,
+							returnType,
+							invocation.TypeParameterTypes,
+							locationRange,
+						)
+					},
+				)
 			},
 		)
 	}
@@ -21435,13 +21485,13 @@ func (v *StorageReferenceValue) GetMember(
 	member := interpreter.getMember(referencedValue, locationRange, name)
 
 	// If the member is a function, it is always a bound-function.
-	// By default, bound functions create and hold an ephemeral reference (`selfRef`).
+	// By default, bound functions create and hold an ephemeral reference (`SelfReference`).
 	// For storage references, replace this default one with the actual storage reference.
 	// It is not possible (or a lot of work), to create the bound function with the storage reference
 	// when it was created originally, because `getMember(referencedValue, ...)` doesn't know
 	// whether the member was accessed directly, or via a reference.
 	if boundFunction, isBoundFunction := member.(BoundFunctionValue); isBoundFunction {
-		boundFunction.selfRef = v
+		boundFunction.SelfReference = v
 		return boundFunction
 	}
 
@@ -22188,7 +22238,7 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name 
 			interpreter,
 			v,
 			sema.ToStringFunctionType,
-			func(invocation Invocation) Value {
+			func(v AddressValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 				locationRange := invocation.LocationRange
 
@@ -22211,7 +22261,7 @@ func (v AddressValue) GetMember(interpreter *Interpreter, _ LocationRange, name 
 			interpreter,
 			v,
 			sema.AddressTypeToBytesFunctionType,
-			func(invocation Invocation) Value {
+			func(v AddressValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 				address := common.Address(v)
 				return ByteSliceToByteArrayValue(interpreter, address[:])
@@ -22412,7 +22462,7 @@ func (v PathValue) GetMember(inter *Interpreter, locationRange LocationRange, na
 			inter,
 			v,
 			sema.ToStringFunctionType,
-			func(invocation Invocation) Value {
+			func(v PathValue, invocation Invocation) Value {
 				interpreter := invocation.Interpreter
 
 				domainLength := len(v.Domain.Identifier())
