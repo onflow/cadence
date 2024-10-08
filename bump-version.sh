@@ -27,8 +27,6 @@ esac
 echo "$v => $v2"
 
 for f in $VERSIONED_FILES; do \
-  prevCount=$(grep -c -i "$v2" "$f")
-
   # Replace the version.
   echo "- $f"; \
   if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -38,9 +36,9 @@ for f in $VERSIONED_FILES; do \
   fi
 
   # Check if the version has being properly replaced.
-  newCount=$(grep -c -i "$v2" "$f")
-  if [[ $newCount -le $prevCount ]]; then
-    echo "fail to update version in '$f'"
+  git diff --exit-code -s "$f"
+  if [[ $? -ne 1 ]]; then
+    echo "failed to update version in '$f'"
     exit 1
   fi
 done

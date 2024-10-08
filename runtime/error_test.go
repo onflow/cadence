@@ -59,6 +59,7 @@ func TestRuntimeError(t *testing.T) {
 				Location:  location,
 			},
 		)
+
 		require.EqualError(
 			t,
 			err,

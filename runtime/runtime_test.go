@@ -7497,7 +7497,7 @@ func TestRuntimeInternalErrors(t *testing.T) {
 
 		RequireError(t, err)
 
-		assertRuntimeErrorIsInternalError(t, err)
+		assertRuntimeErrorIsExternalError(t, err)
 	})
 
 }

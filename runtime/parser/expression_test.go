@@ -324,17 +324,11 @@ func TestParseAdvancedExpression(t *testing.T) {
 		gauge.debug = true
 		gauge.Limit(common.MemoryKindPosition, 11)
 
-		var panicMsg any
-		(func() {
-			defer func() {
-				panicMsg = recover()
-			}()
-			ParseExpression(gauge, []byte("1 < 2"), Config{})
-		})()
+		_, errs := ParseExpression(gauge, []byte("1 < 2"), Config{})
+		require.Len(t, errs, 1)
+		require.IsType(t, errors.MemoryError{}, errs[0])
 
-		require.IsType(t, errors.MemoryError{}, panicMsg)
-
-		fatalError, _ := panicMsg.(errors.MemoryError)
+		fatalError, _ := errs[0].(errors.MemoryError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})
@@ -346,18 +340,11 @@ func TestParseAdvancedExpression(t *testing.T) {
 		gauge := makeLimitingMemoryGauge()
 		gauge.Limit(common.MemoryKindIntegerExpression, 1)
 
-		var panicMsg any
-		(func() {
-			defer func() {
-				panicMsg = recover()
-			}()
+		_, errs := ParseExpression(gauge, []byte("1 < 2 > 3"), Config{})
+		require.Len(t, errs, 1)
+		require.IsType(t, errors.MemoryError{}, errs[0])
 
-			ParseExpression(gauge, []byte("1 < 2 > 3"), Config{})
-		})()
-
-		require.IsType(t, errors.MemoryError{}, panicMsg)
-
-		fatalError, _ := panicMsg.(errors.MemoryError)
+		fatalError, _ := errs[0].(errors.MemoryError)
 		var expectedError limitingMemoryGaugeError
 		assert.ErrorAs(t, fatalError, &expectedError)
 	})
@@ -952,7 +939,7 @@ func TestParseIndexExpression(t *testing.T) {
 					},
 				},
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 				},
 			},
@@ -984,7 +971,7 @@ func TestParseIndexExpression(t *testing.T) {
 					},
 				},
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
 				},
 			},
@@ -1013,7 +1000,7 @@ func TestParseIndexExpression(t *testing.T) {
 					},
 				},
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
 				},
 			},
@@ -2425,7 +2412,7 @@ func TestParseReference(t *testing.T) {
 						},
 					},
 					Range: ast.Range{
-						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
 					},
 				},
@@ -2500,9 +2487,9 @@ func TestParseNilCoelesceReference(t *testing.T) {
 						},
 						Range: ast.Range{
 							StartPos: ast.Position{
-								Offset: 14,
+								Offset: 12,
 								Line:   2,
-								Column: 13,
+								Column: 11,
 							},
 							EndPos: ast.Position{
 								Offset: 18,
@@ -5076,7 +5063,7 @@ func TestParseIndexExpressionInVariableDeclaration(t *testing.T) {
 						},
 					},
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
+						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
 						EndPos:   ast.Position{Offset: 17, Line: 2, Column: 16},
 					},
 				},
@@ -6558,7 +6545,7 @@ func TestParseReferenceInVariableDeclaration(t *testing.T) {
 						},
 					},
 					Range: ast.Range{
-						StartPos: ast.Position{Offset: 32, Line: 2, Column: 31},
+						StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
 						EndPos:   ast.Position{Offset: 34, Line: 2, Column: 33},
 					},
 				},
