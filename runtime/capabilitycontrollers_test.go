@@ -2036,6 +2036,48 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				nonDeploymentEventStrings(events),
 			)
 		})
+
+		t.Run("forEachController, box and convert argument", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				t,
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          let storagePath = /storage/r
+
+                          // Arrange
+						  signer.capabilities.storage.issue<&Test.R>(storagePath)
+
+                          // Act
+                          var res: String? = nil
+                          signer.capabilities.storage.forEachController(
+                              forPath: storagePath,
+                              // NOTE: The function has a parameter of type &StorageCapabilityController?
+                              // instead of just &StorageCapabilityController
+                              fun (controller: &StorageCapabilityController?): Bool {
+                                  // The map should call Optional.map, not fail,
+                                  // because path is PublicPath?, not PublicPath
+                                  res = controller.map(fun(string: AnyStruct): String {
+                                      return "Optional.map"
+                                  })
+                                  return true
+                              }
+                          )
+
+                          // Assert
+                          assert(res == "Optional.map")
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
+		})
 	})
 
 	t.Run("Account.AccountCapabilities", func(t *testing.T) {
@@ -2605,6 +2647,45 @@ func TestRuntimeCapabilityControllers(t *testing.T) {
 				},
 				nonDeploymentEventStrings(events),
 			)
+		})
+
+		t.Run("forEachController, box and convert argument", func(t *testing.T) {
+
+			t.Parallel()
+
+			err, _, _ := test(
+				t,
+				// language=cadence
+				`
+                  import Test from 0x1
+
+                  transaction {
+                      prepare(signer: auth(Capabilities) &Account) {
+                          // Arrange
+						  signer.capabilities.account.issue<&Account>()
+
+                          // Act
+                          var res: String? = nil
+                          signer.capabilities.account.forEachController(
+                              // NOTE: The function has a parameter of type &AccountCapabilityController?
+                              // instead of just &AccountCapabilityController
+                              fun (controller: &AccountCapabilityController?): Bool {
+                                  // The map should call Optional.map, not fail,
+                                  // because path is PublicPath?, not PublicPath
+                                  res = controller.map(fun(string: AnyStruct): String {
+                                      return "Optional.map"
+                                  })
+                                  return true
+                              }
+                          )
+
+                          // Assert
+                          assert(res == "Optional.map")
+                      }
+                  }
+                `,
+			)
+			require.NoError(t, err)
 		})
 	})
 

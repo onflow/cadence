@@ -1016,6 +1016,38 @@ func TestRuntimePublicAccountKeys(t *testing.T) {
 			keys[keyIdx] = nil // no key should be passed to the callback twice
 		}
 	})
+
+	t.Run("keys.forEach, box and convert argument", func(t *testing.T) {
+		t.Parallel()
+
+		testEnv := initTestEnv(revokedAccountKeyA, accountKeyB)
+		test := accountKeyTestCase{
+			//language=Cadence
+			code: `
+                access(all)
+                fun main(): String? {
+                    var res: String? = nil
+                    // NOTE: The function has a parameter of type AccountKey? instead of just AccountKey
+                    getAccount(0x02).keys.forEach(fun(key: AccountKey?): Bool {
+                        // The map should call Optional.map, not fail,
+                        // because path is AccountKey?, not AccountKey
+                        res = key.map(fun(string: AnyStruct): String {
+                            return "Optional.map"
+                        })
+                        return true
+                    })
+                    return res
+                }
+            `,
+		}
+
+		value, err := test.executeScript(testEnv.runtime, testEnv.runtimeInterface)
+		require.NoError(t, err)
+		utils.AssertEqualWithDiff(t,
+			cadence.NewOptional(cadence.String("Optional.map")),
+			value,
+		)
+	})
 }
 
 func TestRuntimeHashAlgorithm(t *testing.T) {

@@ -2214,6 +2214,49 @@ func TestInterpretForEachAttachment(t *testing.T) {
 		// order of interation over the attachment is not defined, but must be deterministic nonetheless
 		AssertValuesEqual(t, inter, interpreter.NewUnmeteredStringValue(" WorldHello"), value)
 	})
+
+	t.Run("box and convert argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+            resource R {}
+
+            attachment A for R {
+                fun map(f: fun(AnyStruct): String): String {
+                    return "A.map"
+                }
+            }
+
+            fun test(): String? {
+                var res: String? = nil
+                var r <- attach A() to <- create R()
+                // NOTE: The function has a parameter of type &AnyResourceAttachment?
+                // instead of just &AnyResourceAttachment?
+                r.forEachAttachment(fun (ref: &AnyResourceAttachment?) {
+                    // The map should call Optional.map, not fail,
+                    // because path is &AnyResourceAttachment?, not &AnyResourceAttachment
+                    res = ref.map(fun(string: AnyStruct): String {
+                        return "Optional.map"
+                    })
+                })
+                destroy r
+                return res
+            }
+        `)
+
+		value, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(t,
+			inter,
+			interpreter.NewSomeValueNonCopying(
+				nil,
+				interpreter.NewUnmeteredStringValue("Optional.map"),
+			),
+			value,
+		)
+	})
 }
 
 func TestInterpretMutationDuringForEachAttachment(t *testing.T) {

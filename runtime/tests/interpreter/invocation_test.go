@@ -134,5 +134,40 @@ func TestInterpretSelfDeclaration(t *testing.T) {
         `
 		test(t, code, true)
 	})
+}
 
+func TestInterpretRejectUnboxedInvocation(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+      fun test(n: Int?): Int? {
+		  return n.map(fun(n: Int): Int {
+			  return n + 1
+		  })
+      }
+    `)
+
+	value := interpreter.NewUnmeteredUIntValueFromUint64(42)
+
+	test := inter.Globals.Get("test").GetValue(inter).(interpreter.FunctionValue)
+
+	invocation := interpreter.NewInvocation(
+		inter,
+		nil,
+		nil,
+		nil,
+		[]interpreter.Value{value},
+		[]sema.Type{sema.IntType},
+		nil,
+		interpreter.EmptyLocationRange,
+	)
+
+	_, err := inter.InvokeFunction(
+		test,
+		invocation,
+	)
+	RequireError(t, err)
+
+	require.ErrorAs(t, err, &interpreter.MemberAccessTypeError{})
 }

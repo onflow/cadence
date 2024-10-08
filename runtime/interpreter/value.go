@@ -3181,16 +3181,10 @@ func (v *ArrayValue) GetMember(interpreter *Interpreter, _ LocationRange, name s
 					panic(errors.NewUnreachableError())
 				}
 
-				transformFunctionType, ok := invocation.ArgumentTypes[0].(*sema.FunctionType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
-
 				return v.Map(
 					interpreter,
 					invocation.LocationRange,
 					funcArgument,
-					transformFunctionType,
 				)
 			},
 		)
@@ -3760,20 +3754,13 @@ func (v *ArrayValue) Filter(
 	procedure FunctionValue,
 ) Value {
 
-	elementTypeSlice := []sema.Type{v.semaType.ElementType(false)}
-	iterationInvocation := func(arrayElement Value) Invocation {
-		invocation := NewInvocation(
-			interpreter,
-			nil,
-			nil,
-			nil,
-			[]Value{arrayElement},
-			elementTypeSlice,
-			nil,
-			locationRange,
-		)
-		return invocation
-	}
+	elementType := v.semaType.ElementType(false)
+
+	argumentTypes := []sema.Type{elementType}
+
+	procedureFunctionType := procedure.FunctionType()
+	parameterTypes := procedureFunctionType.ParameterTypes()
+	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
 
 	// TODO: Use ReadOnlyIterator here if procedure doesn't change array elements.
 	iterator, err := v.array.Iterator()
@@ -3809,7 +3796,18 @@ func (v *ArrayValue) Filter(
 					return nil
 				}
 
-				shouldInclude, ok := procedure.invoke(iterationInvocation(value)).(BoolValue)
+				result := interpreter.invokeFunctionValue(
+					procedure,
+					[]Value{value},
+					nil,
+					argumentTypes,
+					parameterTypes,
+					returnType,
+					nil,
+					locationRange,
+				)
+
+				shouldInclude, ok := result.(BoolValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -3837,40 +3835,29 @@ func (v *ArrayValue) Map(
 	interpreter *Interpreter,
 	locationRange LocationRange,
 	procedure FunctionValue,
-	transformFunctionType *sema.FunctionType,
 ) Value {
 
-	elementTypeSlice := []sema.Type{v.semaType.ElementType(false)}
-	iterationInvocation := func(arrayElement Value) Invocation {
-		return NewInvocation(
-			interpreter,
-			nil,
-			nil,
-			nil,
-			[]Value{arrayElement},
-			elementTypeSlice,
-			nil,
-			locationRange,
-		)
-	}
+	elementType := v.semaType.ElementType(false)
 
-	procedureStaticType, ok := ConvertSemaToStaticType(interpreter, transformFunctionType).(FunctionStaticType)
-	if !ok {
-		panic(errors.NewUnreachableError())
-	}
-	returnType := procedureStaticType.ReturnType(interpreter)
+	argumentTypes := []sema.Type{elementType}
+
+	procedureFunctionType := procedure.FunctionType()
+	parameterTypes := procedureFunctionType.ParameterTypes()
+	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
+
+	returnStaticType := ConvertSemaToStaticType(interpreter, returnType)
 
 	var returnArrayStaticType ArrayStaticType
 	switch v.Type.(type) {
 	case *VariableSizedStaticType:
 		returnArrayStaticType = NewVariableSizedStaticType(
 			interpreter,
-			returnType,
+			returnStaticType,
 		)
 	case *ConstantSizedStaticType:
 		returnArrayStaticType = NewConstantSizedStaticType(
 			interpreter,
-			returnType,
+			returnStaticType,
 			int64(v.Count()),
 		)
 	default:
@@ -3904,8 +3891,18 @@ func (v *ArrayValue) Map(
 
 			value := MustConvertStoredValue(interpreter, atreeValue)
 
-			mappedValue := procedure.invoke(iterationInvocation(value))
-			return mappedValue.Transfer(
+			result := interpreter.invokeFunctionValue(
+				procedure,
+				[]Value{value},
+				nil,
+				argumentTypes,
+				parameterTypes,
+				returnType,
+				nil,
+				locationRange,
+			)
+
+			return result.Transfer(
 				interpreter,
 				locationRange,
 				atree.Address{},
@@ -18834,47 +18831,58 @@ func (v *CompositeValue) GetAttachments(interpreter *Interpreter, locationRange 
 }
 
 func (v *CompositeValue) forEachAttachmentFunction(interpreter *Interpreter, locationRange LocationRange) Value {
+	compositeType := interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType)
 	return NewBoundHostFunctionValue(
 		interpreter,
 		v,
-		sema.CompositeForEachAttachmentFunctionType(interpreter.MustSemaTypeOfValue(v).(*sema.CompositeType).GetCompositeKind()),
+		sema.CompositeForEachAttachmentFunctionType(
+			compositeType.GetCompositeKind(),
+		),
 		func(v *CompositeValue, invocation Invocation) Value {
-			interpreter := invocation.Interpreter
+			inter := invocation.Interpreter
 
 			functionValue, ok := invocation.Arguments[0].(FunctionValue)
 			if !ok {
 				panic(errors.NewUnreachableError())
 			}
 
+			functionValueType := functionValue.FunctionType()
+			parameterTypes := functionValueType.ParameterTypes()
+			returnType := functionValueType.ReturnTypeAnnotation.Type
+
 			fn := func(attachment *CompositeValue) {
 
-				attachmentType := interpreter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
-
-				// attachments are unauthorized during iteration
-				attachmentReferenceAuth := UnauthorizedAccess
+				attachmentType := inter.MustSemaTypeOfValue(attachment).(*sema.CompositeType)
 
 				attachmentReference := NewEphemeralReferenceValue(
-					interpreter,
-					attachmentReferenceAuth,
+					inter,
+					// attachments are unauthorized during iteration
+					UnauthorizedAccess,
 					attachment,
 					attachmentType,
 					locationRange,
 				)
 
-				invocation := NewInvocation(
-					interpreter,
-					nil,
-					nil,
-					nil,
+				referenceType := sema.NewReferenceType(
+					inter,
+					// attachments are unauthorized during iteration
+					sema.UnauthorizedAccess,
+					attachmentType,
+				)
+
+				inter.invokeFunctionValue(
+					functionValue,
 					[]Value{attachmentReference},
-					[]sema.Type{sema.NewReferenceType(interpreter, sema.UnauthorizedAccess, attachmentType)},
+					nil,
+					[]sema.Type{referenceType},
+					parameterTypes,
+					returnType,
 					nil,
 					locationRange,
 				)
-				functionValue.invoke(invocation)
 			}
 
-			v.forEachAttachment(interpreter, locationRange, fn)
+			v.forEachAttachment(inter, locationRange, fn)
 			return Void
 		},
 	)
@@ -19633,25 +19641,29 @@ func (v *DictionaryValue) ForEachKey(
 ) {
 	keyType := v.SemaType(interpreter).KeyType
 
-	iterationInvocation := func(key Value) Invocation {
-		return NewInvocation(
-			interpreter,
-			nil,
-			nil,
-			nil,
-			[]Value{key},
-			[]sema.Type{keyType},
-			nil,
-			locationRange,
-		)
-	}
+	argumentTypes := []sema.Type{keyType}
+
+	procedureFunctionType := procedure.FunctionType()
+	parameterTypes := procedureFunctionType.ParameterTypes()
+	returnType := procedureFunctionType.ReturnTypeAnnotation.Type
 
 	iterate := func() {
 		err := v.dictionary.IterateReadOnlyKeys(
 			func(item atree.Value) (bool, error) {
 				key := MustConvertStoredValue(interpreter, item)
 
-				shouldContinue, ok := procedure.invoke(iterationInvocation(key)).(BoolValue)
+				result := interpreter.invokeFunctionValue(
+					procedure,
+					[]Value{key},
+					nil,
+					argumentTypes,
+					parameterTypes,
+					returnType,
+					nil,
+					locationRange,
+				)
+
+				shouldContinue, ok := result.(BoolValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
@@ -20947,42 +20959,43 @@ func (v *SomeValue) MeteredString(interpreter *Interpreter, seenReferences SeenR
 func (v *SomeValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case sema.OptionalTypeMapFunctionName:
+		innerValueType := interpreter.MustConvertStaticToSemaType(
+			v.value.StaticType(interpreter),
+		)
 		return NewBoundHostFunctionValue(
 			interpreter,
 			v,
 			sema.OptionalTypeMapFunctionType(
-				interpreter.MustConvertStaticToSemaType(
-					v.value.StaticType(interpreter),
-				),
+				innerValueType,
 			),
 			func(v *SomeValue, invocation Invocation) Value {
+				inter := invocation.Interpreter
+				locationRange := invocation.LocationRange
+
 				transformFunction, ok := invocation.Arguments[0].(FunctionValue)
 				if !ok {
 					panic(errors.NewUnreachableError())
 				}
 
-				transformFunctionType, ok := invocation.ArgumentTypes[0].(*sema.FunctionType)
-				if !ok {
-					panic(errors.NewUnreachableError())
-				}
+				transformFunctionType := transformFunction.FunctionType()
+				parameterTypes := transformFunctionType.ParameterTypes()
+				returnType := transformFunctionType.ReturnTypeAnnotation.Type
 
-				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
-
-				f := func(v Value) Value {
-					transformInvocation := NewInvocation(
-						invocation.Interpreter,
-						nil,
-						nil,
-						nil,
-						[]Value{v},
-						[]sema.Type{valueType},
-						nil,
-						invocation.LocationRange,
-					)
-					return transformFunction.invoke(transformInvocation)
-				}
-
-				return v.fmap(invocation.Interpreter, f)
+				return v.fmap(
+					inter,
+					func(v Value) Value {
+						return inter.invokeFunctionValue(
+							transformFunction,
+							[]Value{v},
+							nil,
+							[]sema.Type{innerValueType},
+							parameterTypes,
+							returnType,
+							invocation.TypeParameterTypes,
+							locationRange,
+						)
+					},
+				)
 			},
 		)
 	}

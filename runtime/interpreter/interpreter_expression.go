@@ -397,6 +397,18 @@ func (interpreter *Interpreter) checkMemberAccess(
 
 	targetStaticType := target.StaticType(interpreter)
 
+	if _, ok := expectedType.(*sema.OptionalType); ok {
+		if _, ok := targetStaticType.(*OptionalStaticType); !ok {
+			targetSemaType := interpreter.MustConvertStaticToSemaType(targetStaticType)
+
+			panic(MemberAccessTypeError{
+				ExpectedType:  expectedType,
+				ActualType:    targetSemaType,
+				LocationRange: locationRange,
+			})
+		}
+	}
+
 	if !interpreter.IsSubTypeOfSemaType(targetStaticType, expectedType) {
 		targetSemaType := interpreter.MustConvertStaticToSemaType(targetStaticType)
 
@@ -1207,6 +1219,7 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 	typeParameterTypes := invocationExpressionTypes.TypeArguments
 	argumentTypes := invocationExpressionTypes.ArgumentTypes
 	parameterTypes := invocationExpressionTypes.TypeParameterTypes
+	returnType := invocationExpressionTypes.ReturnType
 
 	// add the implicit argument to the end of the argument list, if it exists
 	if implicitArg != nil {
@@ -1222,44 +1235,12 @@ func (interpreter *Interpreter) visitInvocationExpressionWithImplicitArgument(in
 		argumentExpressions,
 		argumentTypes,
 		parameterTypes,
+		returnType,
 		typeParameterTypes,
 		invocationExpression,
 	)
 
 	interpreter.reportInvokedFunctionReturn()
-
-	locationRange := LocationRange{
-		Location:    interpreter.Location,
-		HasPosition: invocationExpression.InvokedExpression,
-	}
-
-	functionReturnType := function.FunctionType().ReturnTypeAnnotation.Type
-
-	// Only convert and box.
-	// No need to transfer, since transfer would happen later, when the return value gets assigned.
-	//
-	// The conversion is needed because, the runtime function's return type could be a
-	// subtype of the invocation's return type.
-	// e.g:
-	//   struct interface I {
-	//     fun foo(): T?
-	//   }
-	//
-	//   struct S: I {
-	//     fun foo(): T {...}
-	//   }
-	//
-	//   var i: {I} = S()
-	//   return i.foo()?.bar
-	//
-	// Here runtime function's return type is `T`, but invocation's return type is `T?`.
-
-	resultValue = interpreter.ConvertAndBox(
-		locationRange,
-		resultValue,
-		functionReturnType,
-		invocationExpressionTypes.ReturnType,
-	)
 
 	// If this is invocation is optional chaining, wrap the result
 	// as an optional, as the result is expected to be an optional
