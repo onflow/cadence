@@ -4757,7 +4757,7 @@ func TestCheckAttachmentForEachAttachment(t *testing.T) {
 		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
 	})
 
-	t.Run("cannot redeclare forEachAttachment", func(t *testing.T) {
+	t.Run("cannot redeclare forEachAttachment as function", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -4771,6 +4771,27 @@ func TestCheckAttachmentForEachAttachment(t *testing.T) {
 
 		errs := RequireCheckerErrors(t, err, 1)
 		assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+	})
+
+	t.Run("cannot redeclare forEachAttachment as field", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t,
+			`
+              access(all) struct S {
+                  let forEachAttachment: Int
+
+                  init() {
+                      self.forEachAttachment = 1
+                  }
+			}
+		`,
+		)
+
+		errs := RequireCheckerErrors(t, err, 2)
+		assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("downcasting reference with entitlements", func(t *testing.T) {
