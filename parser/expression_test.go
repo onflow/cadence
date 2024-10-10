@@ -34,6 +34,7 @@ import (
 	"github.com/onflow/cadence/common"
 	"github.com/onflow/cadence/errors"
 	"github.com/onflow/cadence/parser/lexer"
+	"github.com/onflow/cadence/runtime/tests/utils"
 	. "github.com/onflow/cadence/test_utils/common_utils"
 )
 
@@ -6287,7 +6288,7 @@ func TestParseStringTemplate(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("invalid, unbalanced paren", func(t *testing.T) {
+	t.Run("invalid, missing paren", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -6308,6 +6309,33 @@ func TestParseStringTemplate(t *testing.T) {
 				&SyntaxError{
 					Message: "expected token ')'",
 					Pos:     ast.Position{Offset: 10, Line: 2, Column: 9},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, nested expression paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, errs := testParseExpression(`
+			"\((2+2)/2()"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.Error(t, err)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token ')'",
+					Pos:     ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
 			},
 			errs,
@@ -6477,6 +6505,45 @@ func TestParseStringTemplate(t *testing.T) {
 		}
 
 		AssertEqualWithDiff(t, expected, actual)
+	})
+
+	t.Run("valid, extra closing paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+			"\(a))"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.NoError(t, err)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"",
+				")",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 4, Line: 2, Column: 3},
+				EndPos:   ast.Position{Offset: 10, Line: 2, Column: 9},
+			},
+		}
+
+		utils.AssertEqualWithDiff(t, expected, actual)
 	})
 }
 
