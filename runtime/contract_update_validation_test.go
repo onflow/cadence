@@ -3666,3 +3666,52 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
 		},
 	)
 }
+
+func TestAttachmentsUpdates(t *testing.T) {
+	t.Parallel()
+
+	testWithValidators(t,
+		"Keep base type",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyResource {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyResource {}
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			require.NoError(t, err)
+		},
+	)
+
+	testWithValidators(t,
+		"Change base type",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyResource {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyStruct {}
+                }
+            `
+
+			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+
+			var expectedErr *stdlib.TypeMismatchError
+			require.ErrorAs(t, err, &expectedErr)
+		},
+	)
+
+}
