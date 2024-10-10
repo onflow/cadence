@@ -37,6 +37,8 @@ type Config struct {
 	CoverageReport *CoverageReport
 	// AttachmentsEnabled specifies if attachments are enabled
 	AttachmentsEnabled bool
+	// AttachmentConformancesEnabled specifies if attachment conformances are enabled
+	AttachmentConformancesEnabled bool
 	// LegacyContractUpgradeEnabled enabled specifies whether to use the old parser when parsing an old contract
 	LegacyContractUpgradeEnabled bool
 	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates

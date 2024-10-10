@@ -623,34 +623,96 @@ func TestCheckInvalidAttachmentConformance(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("struct", func(t *testing.T) {
+	t.Run("struct, enabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t, `
-			struct S {}
+		_, err := ParseAndCheckWithOptions(t,
+			`
+                struct S {}
 
-			struct interface SI {}
+                struct interface SI {}
 
-			attachment Test for S: SI {}
-        `)
+            	attachment Test for S: SI {}
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					AttachmentsEnabled:            true,
+					AttachmentConformancesEnabled: true,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+                struct S {}
+
+                struct interface SI {}
+
+            	attachment Test for S: SI {}
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					AttachmentsEnabled:            true,
+					AttachmentConformancesEnabled: false,
+				},
+			},
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidAttachmentConformancesError{}, errs[0])
 	})
 
-	t.Run("resource", func(t *testing.T) {
+	t.Run("resource, enabled", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, err := ParseAndCheck(t, `
-			resource R {}
+		_, err := ParseAndCheckWithOptions(t,
+			`
+                resource R {}
 
-			resource interface RI {}
+                resource interface RI {}
 
-			attachment Test for R: RI {}
-        `)
+            	attachment Test for R: RI {}
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					AttachmentsEnabled:            true,
+					AttachmentConformancesEnabled: true,
+				},
+			},
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource, disabled", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheckWithOptions(t,
+			`
+                resource R {}
+
+                resource interface RI {}
+
+            	attachment Test for R: RI {}
+            `,
+			ParseAndCheckOptions{
+				Config: &sema.Config{
+					AttachmentsEnabled:            true,
+					AttachmentConformancesEnabled: false,
+				},
+			},
+		)
 
 		errs := RequireCheckerErrors(t, err, 1)
 

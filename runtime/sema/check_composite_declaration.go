@@ -686,23 +686,30 @@ func (checker *Checker) declareCompositeType(declaration ast.CompositeLikeDeclar
 		compositeType.EnumRawType = checker.enumRawType(declaration.(*ast.CompositeDeclaration))
 
 	case common.CompositeKindAttachment:
-		// Attachments may not conform to interfaces
 
-		conformanceList := declaration.ConformanceList()
-		conformanceCount := len(conformanceList)
-		if conformanceCount > 0 {
-			firstConformance := conformanceList[0]
-			lastConformance := conformanceList[conformanceCount-1]
+		if checker.Config.AttachmentConformancesEnabled {
+			compositeType.ExplicitInterfaceConformances =
+				checker.explicitInterfaceConformances(declaration, compositeType)
 
-			checker.report(
-				&InvalidAttachmentConformancesError{
-					Range: ast.NewRange(
-						checker.memoryGauge,
-						firstConformance.StartPosition(),
-						lastConformance.EndPosition(checker.memoryGauge),
-					),
-				},
-			)
+		} else {
+			// Attachments may not conform to interfaces
+
+			conformanceList := declaration.ConformanceList()
+			conformanceCount := len(conformanceList)
+			if conformanceCount > 0 {
+				firstConformance := conformanceList[0]
+				lastConformance := conformanceList[conformanceCount-1]
+
+				checker.report(
+					&InvalidAttachmentConformancesError{
+						Range: ast.NewRange(
+							checker.memoryGauge,
+							firstConformance.StartPosition(),
+							lastConformance.EndPosition(checker.memoryGauge),
+						),
+					},
+				)
+			}
 		}
 
 	default:

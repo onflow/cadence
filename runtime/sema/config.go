@@ -55,4 +55,6 @@ type Config struct {
 	AllowStaticDeclarations bool
 	// AttachmentsEnabled determines if attachments are enabled
 	AttachmentsEnabled bool
+	// AttachmentConformancesEnabled determines if attachment conformances are enabled
+	AttachmentConformancesEnabled bool
 }
