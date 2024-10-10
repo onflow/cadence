@@ -681,9 +681,31 @@ func (checker *Checker) declareCompositeType(declaration ast.CompositeLikeDeclar
 
 	// Resolve conformances
 
-	if declaration.Kind() == common.CompositeKindEnum {
+	switch declaration.Kind() {
+	case common.CompositeKindEnum:
 		compositeType.EnumRawType = checker.enumRawType(declaration.(*ast.CompositeDeclaration))
-	} else {
+
+	case common.CompositeKindAttachment:
+		// Attachments may not conform to interfaces
+
+		conformanceList := declaration.ConformanceList()
+		conformanceCount := len(conformanceList)
+		if conformanceCount > 0 {
+			firstConformance := conformanceList[0]
+			lastConformance := conformanceList[conformanceCount-1]
+
+			checker.report(
+				&InvalidAttachmentConformancesError{
+					Range: ast.NewRange(
+						checker.memoryGauge,
+						firstConformance.StartPosition(),
+						lastConformance.EndPosition(checker.memoryGauge),
+					),
+				},
+			)
+		}
+
+	default:
 		compositeType.ExplicitInterfaceConformances =
 			checker.explicitInterfaceConformances(declaration, compositeType)
 	}
