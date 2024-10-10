@@ -814,8 +814,7 @@ func (g *generator) VisitInterfaceDeclaration(decl *ast.InterfaceDeclaration) (_
 		// func init() {
 		//   members := []*Member{...}
 		//   t.Members = MembersAsMap(members)
-		//   t.Fields = MembersFieldNames(members)
-		//   t.ConstructorParameters = ...
+		//   t.Fields = MembersFieldNames(members)=
 		// }
 
 		members := membersExpr(

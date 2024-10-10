@@ -36,7 +36,7 @@ func TestCheckStringer(t *testing.T) {
 		let c: {StructStringer} = "hey"
 		access(all) 
 		struct Foo: StructStringer {
-			view fun toString():String {
+			view fun toString(): String {
 				return "foo"
 			}
 		}
@@ -58,12 +58,18 @@ func TestCheckInvalidStringer(t *testing.T) {
 		let b: {StructStringer} = [<-create R()]
 		let c: {StructStringer} = {1: true}
 		struct Foo: StructStringer {}
+		struct Bar: StructStringer {
+			fun toString(): String {
+				return "bar"
+			}	
+		}
 	  `)
 
-	errs := RequireCheckerErrors(t, err, 4)
+	errs := RequireCheckerErrors(t, err, 5)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
 	assert.IsType(t, &sema.ConformanceError{}, errs[3])
+	assert.IsType(t, &sema.ConformanceError{}, errs[4])
 }
