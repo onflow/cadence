@@ -53,6 +53,9 @@ type UpdateValidator interface {
 
 	isTypeRemovalEnabled() bool
 	WithTypeRemovalEnabled(enabled bool) UpdateValidator
+
+	isAttachmentBaseTypeChangeEnabled() bool
+	WithAttachmentBaseTypeChangeEnabled(enabled bool) UpdateValidator
 }
 
 type checkConformanceFunc func(
@@ -63,15 +66,16 @@ type checkConformanceFunc func(
 type ContractUpdateValidator struct {
 	*TypeComparator
 
-	location                     common.Location
-	contractName                 string
-	oldProgram                   *ast.Program
-	newProgram                   *ast.Program
-	currentDecl                  ast.Declaration
-	importLocations              map[ast.Identifier]common.Location
-	accountContractNamesProvider AccountContractNamesProvider
-	errors                       []error
-	typeRemovalEnabled           bool
+	location                        common.Location
+	contractName                    string
+	oldProgram                      *ast.Program
+	newProgram                      *ast.Program
+	currentDecl                     ast.Declaration
+	importLocations                 map[ast.Identifier]common.Location
+	accountContractNamesProvider    AccountContractNamesProvider
+	errors                          []error
+	typeRemovalEnabled              bool
+	attachmentBaseTypeChangeEnabled bool
 }
 
 // ContractUpdateValidator should implement ast.TypeEqualityChecker
@@ -105,6 +109,15 @@ func (validator *ContractUpdateValidator) isTypeRemovalEnabled() bool {
 
 func (validator *ContractUpdateValidator) WithTypeRemovalEnabled(enabled bool) UpdateValidator {
 	validator.typeRemovalEnabled = enabled
+	return validator
+}
+
+func (validator *ContractUpdateValidator) isAttachmentBaseTypeChangeEnabled() bool {
+	return validator.attachmentBaseTypeChangeEnabled
+}
+
+func (validator *ContractUpdateValidator) WithAttachmentBaseTypeChangeEnabled(enabled bool) UpdateValidator {
+	validator.attachmentBaseTypeChangeEnabled = enabled
 	return validator
 }
 
@@ -309,18 +322,21 @@ func checkDeclarationUpdatability(
 		}
 	}
 
-	// Check if the base type of the attachment has changed.
-	if oldAttachment, ok := oldDeclaration.(*ast.AttachmentDeclaration); ok &&
-		oldAttachment.DeclarationKind() == common.DeclarationKindAttachment {
+	if !validator.isAttachmentBaseTypeChangeEnabled() {
 
-		// NOTE: no need to check declaration kinds match, already checked above
-		if newAttachment, ok := newDeclaration.(*ast.AttachmentDeclaration); ok {
-			err := typeComparator.CheckNominalTypeEquality(
-				oldAttachment.BaseType,
-				newAttachment.BaseType,
-			)
-			if err != nil {
-				validator.report(err)
+		// Check if the base type of the attachment has changed.
+		if oldAttachment, ok := oldDeclaration.(*ast.AttachmentDeclaration); ok &&
+			oldAttachment.DeclarationKind() == common.DeclarationKindAttachment {
+
+			// NOTE: no need to check declaration kinds match, already checked above
+			if newAttachment, ok := newDeclaration.(*ast.AttachmentDeclaration); ok {
+				err := typeComparator.CheckNominalTypeEquality(
+					oldAttachment.BaseType,
+					newAttachment.BaseType,
+				)
+				if err != nil {
+					validator.report(err)
+				}
 			}
 		}
 	}

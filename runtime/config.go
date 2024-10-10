@@ -41,4 +41,6 @@ type Config struct {
 	LegacyContractUpgradeEnabled bool
 	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates
 	ContractUpdateTypeRemovalEnabled bool
+	// ContractUpdateAttachmentBaseTypeChangeEnabled specifies if attachment base type change is enabled in contract updates
+	ContractUpdateAttachmentBaseTypeChangeEnabled bool
 }

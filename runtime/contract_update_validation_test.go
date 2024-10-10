@@ -205,6 +205,43 @@ func testWithValidatorsAndTypeRemovalEnabled(
 	}
 }
 
+func testWithValidatorsAndAttachmentBaseTypeChangeEnabled(
+	t *testing.T,
+	name string,
+	testFunc func(t *testing.T, config Config),
+) {
+	for _, withC1Upgrade := range []bool{true, false} {
+		withC1Upgrade := withC1Upgrade
+		name := name
+
+		for _, withAttachmentBaseTypeChangeEnabled := range []bool{true, false} {
+			withAttachmentBaseTypeChangeEnabled := withAttachmentBaseTypeChangeEnabled
+			name := name
+
+			switch {
+			case withC1Upgrade && withAttachmentBaseTypeChangeEnabled:
+				name = fmt.Sprintf("%s (with C1 validator and attachment base type change enabled)", name)
+
+			case withC1Upgrade:
+				name = fmt.Sprintf("%s (with C1 validator)", name)
+
+			case withAttachmentBaseTypeChangeEnabled:
+				name = fmt.Sprintf("%s (with attachment base type change enabled)", name)
+			}
+
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				config := DefaultTestInterpreterConfig
+				config.LegacyContractUpgradeEnabled = withC1Upgrade
+				config.ContractUpdateAttachmentBaseTypeChangeEnabled = withAttachmentBaseTypeChangeEnabled
+
+				testFunc(t, config)
+			})
+		}
+	}
+}
+
 func TestRuntimeContractUpdateValidation(t *testing.T) {
 
 	t.Parallel()
@@ -3670,7 +3707,7 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
 func TestAttachmentsUpdates(t *testing.T) {
 	t.Parallel()
 
-	testWithValidators(t,
+	testWithValidatorsAndAttachmentBaseTypeChangeEnabled(t,
 		"Keep base type",
 		func(t *testing.T, config Config) {
 
@@ -3691,7 +3728,7 @@ func TestAttachmentsUpdates(t *testing.T) {
 		},
 	)
 
-	testWithValidators(t,
+	testWithValidatorsAndAttachmentBaseTypeChangeEnabled(t,
 		"Change base type",
 		func(t *testing.T, config Config) {
 
@@ -3709,9 +3746,12 @@ func TestAttachmentsUpdates(t *testing.T) {
 
 			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
 
-			var expectedErr *stdlib.TypeMismatchError
-			require.ErrorAs(t, err, &expectedErr)
+			if config.ContractUpdateAttachmentBaseTypeChangeEnabled {
+				require.NoError(t, err)
+			} else {
+				var expectedErr *stdlib.TypeMismatchError
+				require.ErrorAs(t, err, &expectedErr)
+			}
 		},
 	)
-
 }

@@ -185,18 +185,19 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled),
 		// see interpreterEnvironment.CommitStorage
-		AtreeStorageValidationEnabled:             false,
-		Debugger:                                  e.config.Debugger,
-		OnStatement:                               e.newOnStatementHandler(),
-		OnMeterComputation:                        e.newOnMeterComputation(),
-		OnFunctionInvocation:                      e.newOnFunctionInvocationHandler(),
-		OnInvokedFunctionReturn:                   e.newOnInvokedFunctionReturnHandler(),
-		CapabilityBorrowHandler:                   e.newCapabilityBorrowHandler(),
-		CapabilityCheckHandler:                    e.newCapabilityCheckHandler(),
-		LegacyContractUpgradeEnabled:              e.config.LegacyContractUpgradeEnabled,
-		ContractUpdateTypeRemovalEnabled:          e.config.ContractUpdateTypeRemovalEnabled,
-		ValidateAccountCapabilitiesGetHandler:     e.newValidateAccountCapabilitiesGetHandler(),
-		ValidateAccountCapabilitiesPublishHandler: e.newValidateAccountCapabilitiesPublishHandler(),
+		AtreeStorageValidationEnabled:                 false,
+		Debugger:                                      e.config.Debugger,
+		OnStatement:                                   e.newOnStatementHandler(),
+		OnMeterComputation:                            e.newOnMeterComputation(),
+		OnFunctionInvocation:                          e.newOnFunctionInvocationHandler(),
+		OnInvokedFunctionReturn:                       e.newOnInvokedFunctionReturnHandler(),
+		CapabilityBorrowHandler:                       e.newCapabilityBorrowHandler(),
+		CapabilityCheckHandler:                        e.newCapabilityCheckHandler(),
+		LegacyContractUpgradeEnabled:                  e.config.LegacyContractUpgradeEnabled,
+		ContractUpdateTypeRemovalEnabled:              e.config.ContractUpdateTypeRemovalEnabled,
+		ContractUpdateAttachmentBaseTypeChangeEnabled: e.config.ContractUpdateAttachmentBaseTypeChangeEnabled,
+		ValidateAccountCapabilitiesGetHandler:         e.newValidateAccountCapabilitiesGetHandler(),
+		ValidateAccountCapabilitiesPublishHandler:     e.newValidateAccountCapabilitiesPublishHandler(),
 	}
 }
 
