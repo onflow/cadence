@@ -1191,10 +1191,6 @@ func defineStringExpression() {
 					if err != nil {
 						return nil, err
 					}
-					// limit string templates to identifiers only
-					if _, ok := value.(*ast.IdentifierExpression); !ok {
-						return nil, p.syntaxError("expected identifier got: %s", value.String())
-					}
 					_, err = p.mustOne(lexer.TokenParenClose)
 					if err != nil {
 						return nil, err
