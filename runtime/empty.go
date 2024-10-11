@@ -260,3 +260,7 @@ func (EmptyRuntimeInterface) ValidateAccountCapabilitiesPublish(
 ) (bool, error) {
 	panic("unexpected call to ValidateAccountCapabilitiesPublish")
 }
+
+func (EmptyRuntimeInterface) CurrentVersion() string {
+	panic("unexpected call to CurrentVersion")
+}

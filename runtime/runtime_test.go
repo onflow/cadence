@@ -11497,6 +11497,8 @@ func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
 
 	address := common.MustBytesToAddress([]byte{0x1})
 
+	var currentVersion string
+
 	newRuntimeInterface := func() Interface {
 
 		accountCodes := map[common.AddressLocation][]byte{}
@@ -11524,17 +11526,19 @@ func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
 			OnProgramLog: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},
+			OnCurrentVersion: func() string {
+				return currentVersion
+			},
 		}
 	}
+
+	runtime := NewTestInterpreterRuntime()
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
 	// Deploy contract without check enabled
 
-	err := NewTestInterpreterRuntimeWithConfig(Config{
-		AtreeValidationEnabled:           true,
-		MemberSiblingTypeOverrideEnabled: true,
-	}).ExecuteTransaction(
+	err := runtime.ExecuteTransaction(
 		Script{
 			Source: DeploymentTransaction(
 				"Foo",
@@ -11550,10 +11554,9 @@ func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
 
 	// Deploy contract with check enabled
 
-	err = NewTestInterpreterRuntimeWithConfig(Config{
-		AtreeValidationEnabled:           true,
-		MemberSiblingTypeOverrideEnabled: false,
-	}).ExecuteTransaction(
+	currentVersion = "v1.0.2"
+
+	err = runtime.ExecuteTransaction(
 		Script{
 			Source: DeploymentTransaction(
 				"Foo",

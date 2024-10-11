@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	"golang.org/x/mod/semver"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/activations"
@@ -185,19 +186,18 @@ func (e *interpreterEnvironment) newInterpreterConfig() *interpreter.Config {
 		// and disable storage validation after each value modification.
 		// Instead, storage is validated after commits (if validation is enabled),
 		// see interpreterEnvironment.CommitStorage
-		AtreeStorageValidationEnabled:                 false,
-		Debugger:                                      e.config.Debugger,
-		OnStatement:                                   e.newOnStatementHandler(),
-		OnMeterComputation:                            e.newOnMeterComputation(),
-		OnFunctionInvocation:                          e.newOnFunctionInvocationHandler(),
-		OnInvokedFunctionReturn:                       e.newOnInvokedFunctionReturnHandler(),
-		CapabilityBorrowHandler:                       e.newCapabilityBorrowHandler(),
-		CapabilityCheckHandler:                        e.newCapabilityCheckHandler(),
-		LegacyContractUpgradeEnabled:                  e.config.LegacyContractUpgradeEnabled,
-		ContractUpdateTypeRemovalEnabled:              e.config.ContractUpdateTypeRemovalEnabled,
-		ContractUpdateAttachmentBaseTypeChangeEnabled: e.config.ContractUpdateAttachmentBaseTypeChangeEnabled,
-		ValidateAccountCapabilitiesGetHandler:         e.newValidateAccountCapabilitiesGetHandler(),
-		ValidateAccountCapabilitiesPublishHandler:     e.newValidateAccountCapabilitiesPublishHandler(),
+		AtreeStorageValidationEnabled:             false,
+		Debugger:                                  e.config.Debugger,
+		OnStatement:                               e.newOnStatementHandler(),
+		OnMeterComputation:                        e.newOnMeterComputation(),
+		OnFunctionInvocation:                      e.newOnFunctionInvocationHandler(),
+		OnInvokedFunctionReturn:                   e.newOnInvokedFunctionReturnHandler(),
+		CapabilityBorrowHandler:                   e.newCapabilityBorrowHandler(),
+		CapabilityCheckHandler:                    e.newCapabilityCheckHandler(),
+		LegacyContractUpgradeEnabled:              e.config.LegacyContractUpgradeEnabled,
+		ContractUpdateTypeRemovalEnabled:          e.config.ContractUpdateTypeRemovalEnabled,
+		ValidateAccountCapabilitiesGetHandler:     e.newValidateAccountCapabilitiesGetHandler(),
+		ValidateAccountCapabilitiesPublishHandler: e.newValidateAccountCapabilitiesPublishHandler(),
 	}
 }
 
@@ -211,8 +211,6 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		ImportHandler:                    e.resolveImport,
 		CheckHandler:                     e.newCheckHandler(),
 		AttachmentsEnabled:               e.config.AttachmentsEnabled,
-		AttachmentConformancesEnabled:    e.config.AttachmentConformancesEnabled,
-		MemberSiblingTypeOverrideEnabled: e.config.MemberSiblingTypeOverrideEnabled,
 	}
 }
 
@@ -244,6 +242,8 @@ func (e *interpreterEnvironment) Configure(
 	e.InterpreterConfig.Storage = storage
 	e.coverageReport = coverageReport
 	e.stackDepthLimiter.depth = 0
+
+	e.configureVersionedFeatures()
 }
 
 func (e *interpreterEnvironment) DeclareValue(valueDeclaration stdlib.StandardLibraryValue, location common.Location) {
@@ -1460,4 +1460,21 @@ func (e *interpreterEnvironment) newValidateAccountCapabilitiesPublishHandler() 
 		}
 		return ok, err
 	}
+}
+
+func (e *interpreterEnvironment) configureVersionedFeatures() {
+	var currentVersion string
+	errors.WrapPanic(func() {
+		currentVersion = e.runtimeInterface.CurrentVersion()
+	})
+	enableOldBehaviour := useV101Behaviour(currentVersion)
+
+	e.CheckerConfig.AttachmentConformancesEnabled = enableOldBehaviour
+	e.CheckerConfig.MemberSiblingTypeOverrideEnabled = enableOldBehaviour
+	e.InterpreterConfig.ContractUpdateAttachmentBaseTypeChangeEnabled = enableOldBehaviour
+}
+
+func useV101Behaviour(currentVersion string) bool {
+	return currentVersion == "" ||
+		semver.Compare(currentVersion, "v1.0.1") <= 0
 }

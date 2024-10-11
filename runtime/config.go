@@ -37,14 +37,8 @@ type Config struct {
 	CoverageReport *CoverageReport
 	// AttachmentsEnabled specifies if attachments are enabled
 	AttachmentsEnabled bool
-	// AttachmentConformancesEnabled specifies if attachment conformances are enabled
-	AttachmentConformancesEnabled bool
-	// MemberSiblingTypeOverrideEnabled specifies if declaring members checks for sibling type declarations
-	MemberSiblingTypeOverrideEnabled bool
 	// LegacyContractUpgradeEnabled enabled specifies whether to use the old parser when parsing an old contract
 	LegacyContractUpgradeEnabled bool
 	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates
 	ContractUpdateTypeRemovalEnabled bool
-	// ContractUpdateAttachmentBaseTypeChangeEnabled specifies if attachment base type change is enabled in contract updates
-	ContractUpdateAttachmentBaseTypeChangeEnabled bool
 }

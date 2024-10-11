@@ -137,6 +137,7 @@ type TestRuntimeInterface struct {
 		path interpreter.PathValue,
 		capabilityBorrowType *interpreter.ReferenceStaticType,
 	) (bool, error)
+	OnCurrentVersion func() string
 
 	lastUUID            uint64
 	accountIDs          map[common.Address]uint64
@@ -668,4 +669,11 @@ func (i *TestRuntimeInterface) ValidateAccountCapabilitiesPublish(
 		path,
 		capabilityBorrowType,
 	)
+}
+
+func (i *TestRuntimeInterface) CurrentVersion() string {
+	if i.OnCurrentVersion == nil {
+		return ""
+	}
+	return i.OnCurrentVersion()
 }

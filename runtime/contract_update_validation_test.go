@@ -83,6 +83,10 @@ func newContractRemovalTransaction(contractName string) string {
 }
 
 func newContractDeploymentTransactor(t *testing.T, config Config) func(code string) error {
+	return newContractDeploymentTransactorWithVersion(t, config, "")
+}
+
+func newContractDeploymentTransactorWithVersion(t *testing.T, config Config, version string) func(code string) error {
 
 	rt := NewTestInterpreterRuntimeWithConfig(config)
 
@@ -112,6 +116,9 @@ func newContractDeploymentTransactor(t *testing.T, config Config) func(code stri
 			events = append(events, event)
 			return nil
 		},
+		OnCurrentVersion: func() string {
+			return version
+		},
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
@@ -132,7 +139,18 @@ func newContractDeploymentTransactor(t *testing.T, config Config) func(code stri
 // testDeployAndUpdate deploys a contract in one transaction,
 // then updates the contract in another transaction
 func testDeployAndUpdate(t *testing.T, name string, oldCode string, newCode string, config Config) error {
-	executeTransaction := newContractDeploymentTransactor(t, config)
+	return testDeployAndUpdateWithVersion(t, name, oldCode, newCode, config, "")
+}
+
+func testDeployAndUpdateWithVersion(
+	t *testing.T,
+	name string,
+	oldCode string,
+	newCode string,
+	config Config,
+	version string,
+) error {
+	executeTransaction := newContractDeploymentTransactorWithVersion(t, config, version)
 	err := executeTransaction(newContractAddTransaction(name, oldCode))
 	require.NoError(t, err)
 
@@ -198,43 +216,6 @@ func testWithValidatorsAndTypeRemovalEnabled(
 				config := DefaultTestInterpreterConfig
 				config.LegacyContractUpgradeEnabled = withC1Upgrade
 				config.ContractUpdateTypeRemovalEnabled = withTypeRemovalEnabled
-
-				testFunc(t, config)
-			})
-		}
-	}
-}
-
-func testWithValidatorsAndAttachmentBaseTypeChangeEnabled(
-	t *testing.T,
-	name string,
-	testFunc func(t *testing.T, config Config),
-) {
-	for _, withC1Upgrade := range []bool{true, false} {
-		withC1Upgrade := withC1Upgrade
-		name := name
-
-		for _, withAttachmentBaseTypeChangeEnabled := range []bool{true, false} {
-			withAttachmentBaseTypeChangeEnabled := withAttachmentBaseTypeChangeEnabled
-			name := name
-
-			switch {
-			case withC1Upgrade && withAttachmentBaseTypeChangeEnabled:
-				name = fmt.Sprintf("%s (with C1 validator and attachment base type change enabled)", name)
-
-			case withC1Upgrade:
-				name = fmt.Sprintf("%s (with C1 validator)", name)
-
-			case withAttachmentBaseTypeChangeEnabled:
-				name = fmt.Sprintf("%s (with attachment base type change enabled)", name)
-			}
-
-			t.Run(name, func(t *testing.T) {
-				t.Parallel()
-
-				config := DefaultTestInterpreterConfig
-				config.LegacyContractUpgradeEnabled = withC1Upgrade
-				config.ContractUpdateAttachmentBaseTypeChangeEnabled = withAttachmentBaseTypeChangeEnabled
 
 				testFunc(t, config)
 			})
@@ -3707,8 +3688,8 @@ func TestTypeRemovalPragmaUpdates(t *testing.T) {
 func TestAttachmentsUpdates(t *testing.T) {
 	t.Parallel()
 
-	testWithValidatorsAndAttachmentBaseTypeChangeEnabled(t,
-		"Keep base type",
+	testWithValidators(t,
+		"Keep base type, v1.0.1",
 		func(t *testing.T, config Config) {
 
 			const oldCode = `
@@ -3723,13 +3704,34 @@ func TestAttachmentsUpdates(t *testing.T) {
                 }
             `
 
-			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			err := testDeployAndUpdateWithVersion(t, "Test", oldCode, newCode, config, "v1.0.1")
 			require.NoError(t, err)
 		},
 	)
 
-	testWithValidatorsAndAttachmentBaseTypeChangeEnabled(t,
-		"Change base type",
+	testWithValidators(t,
+		"Keep base type, v1.0.2",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyResource {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyResource {}
+                }
+            `
+
+			err := testDeployAndUpdateWithVersion(t, "Test", oldCode, newCode, config, "v1.0.2")
+			require.NoError(t, err)
+		},
+	)
+
+	testWithValidators(t,
+		"Change base type, v1.0.1",
 		func(t *testing.T, config Config) {
 
 			const oldCode = `
@@ -3744,14 +3746,29 @@ func TestAttachmentsUpdates(t *testing.T) {
                 }
             `
 
-			err := testDeployAndUpdate(t, "Test", oldCode, newCode, config)
+			err := testDeployAndUpdateWithVersion(t, "Test", oldCode, newCode, config, "v1.0.1")
+			require.NoError(t, err)
+		})
 
-			if config.ContractUpdateAttachmentBaseTypeChangeEnabled {
-				require.NoError(t, err)
-			} else {
-				var expectedErr *stdlib.TypeMismatchError
-				require.ErrorAs(t, err, &expectedErr)
-			}
-		},
-	)
+	testWithValidators(t,
+		"Change base type, v1.0.2",
+		func(t *testing.T, config Config) {
+
+			const oldCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyResource {}
+                }
+            `
+
+			const newCode = `
+                access(all) contract Test {
+                    access(all) attachment A for AnyStruct {}
+                }
+            `
+
+			err := testDeployAndUpdateWithVersion(t, "Test", oldCode, newCode, config, "v1.0.2")
+
+			var expectedErr *stdlib.TypeMismatchError
+			require.ErrorAs(t, err, &expectedErr)
+		})
 }
