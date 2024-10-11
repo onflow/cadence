@@ -57,6 +57,6 @@ type Config struct {
 	AttachmentsEnabled bool
 	// AttachmentConformancesEnabled determines if attachment conformances are enabled
 	AttachmentConformancesEnabled bool
-	// MemberSiblingTypeCheckEnabled determines if declaring members checks for sibling type declarations
-	MemberSiblingTypeCheckEnabled bool
+	// MemberSiblingTypeOverrideEnabled determines if declaring members checks for sibling type declarations
+	MemberSiblingTypeOverrideEnabled bool
 }

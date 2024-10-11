@@ -11532,8 +11532,8 @@ func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
 	// Deploy contract without check enabled
 
 	err := NewTestInterpreterRuntimeWithConfig(Config{
-		AtreeValidationEnabled:        true,
-		MemberSiblingTypeCheckEnabled: false,
+		AtreeValidationEnabled:           true,
+		MemberSiblingTypeOverrideEnabled: true,
 	}).ExecuteTransaction(
 		Script{
 			Source: DeploymentTransaction(
@@ -11551,8 +11551,8 @@ func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
 	// Deploy contract with check enabled
 
 	err = NewTestInterpreterRuntimeWithConfig(Config{
-		AtreeValidationEnabled:        true,
-		MemberSiblingTypeCheckEnabled: true,
+		AtreeValidationEnabled:           true,
+		MemberSiblingTypeOverrideEnabled: false,
 	}).ExecuteTransaction(
 		Script{
 			Source: DeploymentTransaction(

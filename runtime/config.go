@@ -39,8 +39,8 @@ type Config struct {
 	AttachmentsEnabled bool
 	// AttachmentConformancesEnabled specifies if attachment conformances are enabled
 	AttachmentConformancesEnabled bool
-	// MemberSiblingTypeCheckEnabled specifies if declaring members checks for sibling type declarations
-	MemberSiblingTypeCheckEnabled bool
+	// MemberSiblingTypeOverrideEnabled specifies if declaring members checks for sibling type declarations
+	MemberSiblingTypeOverrideEnabled bool
 	// LegacyContractUpgradeEnabled enabled specifies whether to use the old parser when parsing an old contract
 	LegacyContractUpgradeEnabled bool
 	// ContractUpdateTypeRemovalEnabled specifies if type removal is enabled in contract updates

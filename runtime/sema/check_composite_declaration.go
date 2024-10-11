@@ -1748,7 +1748,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			}
 		}
 
-		if nestedTypes != nil && checker.Config.MemberSiblingTypeCheckEnabled {
+		if nestedTypes != nil && !checker.Config.MemberSiblingTypeOverrideEnabled {
 			if _, ok := nestedTypes.Get(name); ok {
 				// TODO: provide previous position
 				checker.report(

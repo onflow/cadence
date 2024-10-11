@@ -212,7 +212,7 @@ func (e *interpreterEnvironment) newCheckerConfig() *sema.Config {
 		CheckHandler:                     e.newCheckHandler(),
 		AttachmentsEnabled:               e.config.AttachmentsEnabled,
 		AttachmentConformancesEnabled:    e.config.AttachmentConformancesEnabled,
-		MemberSiblingTypeCheckEnabled:    e.config.MemberSiblingTypeCheckEnabled,
+		MemberSiblingTypeOverrideEnabled: e.config.MemberSiblingTypeOverrideEnabled,
 	}
 }
 
