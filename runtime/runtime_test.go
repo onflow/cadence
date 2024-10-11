@@ -11495,42 +11495,46 @@ func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
       }
     `
 
-	runtime := NewTestInterpreterRuntime()
-
 	address := common.MustBytesToAddress([]byte{0x1})
 
-	accountCodes := map[common.AddressLocation][]byte{}
-	var events []cadence.Event
-	var loggedMessages []string
+	newRuntimeInterface := func() Interface {
 
-	runtimeInterface := &TestRuntimeInterface{
-		Storage: NewTestLedger(nil, nil),
-		OnGetSigningAccounts: func() ([]common.Address, error) {
-			return []common.Address{address}, nil
-		},
-		OnResolveLocation: NewSingleIdentifierLocationResolver(t),
-		OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
-			accountCodes[location] = code
-			return nil
-		},
-		OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
-			code = accountCodes[location]
-			return code, nil
-		},
-		OnEmitEvent: func(event cadence.Event) error {
-			events = append(events, event)
-			return nil
-		},
-		OnProgramLog: func(message string) {
-			loggedMessages = append(loggedMessages, message)
-		},
+		accountCodes := map[common.AddressLocation][]byte{}
+		var events []cadence.Event
+		var loggedMessages []string
+
+		return &TestRuntimeInterface{
+			Storage: NewTestLedger(nil, nil),
+			OnGetSigningAccounts: func() ([]common.Address, error) {
+				return []common.Address{address}, nil
+			},
+			OnResolveLocation: NewSingleIdentifierLocationResolver(t),
+			OnUpdateAccountContractCode: func(location common.AddressLocation, code []byte) error {
+				accountCodes[location] = code
+				return nil
+			},
+			OnGetAccountContractCode: func(location common.AddressLocation) (code []byte, err error) {
+				code = accountCodes[location]
+				return code, nil
+			},
+			OnEmitEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+			OnProgramLog: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
 	}
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 
-	// Deploy contract
+	// Deploy contract without check enabled
 
-	err := runtime.ExecuteTransaction(
+	err := NewTestInterpreterRuntimeWithConfig(Config{
+		AtreeValidationEnabled:        true,
+		MemberSiblingTypeCheckEnabled: false,
+	}).ExecuteTransaction(
 		Script{
 			Source: DeploymentTransaction(
 				"Foo",
@@ -11538,7 +11542,26 @@ func TestRuntimeBuiltInFunctionConfusion(t *testing.T) {
 			),
 		},
 		Context{
-			Interface: runtimeInterface,
+			Interface: newRuntimeInterface(),
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	// Deploy contract with check enabled
+
+	err = NewTestInterpreterRuntimeWithConfig(Config{
+		AtreeValidationEnabled:        true,
+		MemberSiblingTypeCheckEnabled: true,
+	}).ExecuteTransaction(
+		Script{
+			Source: DeploymentTransaction(
+				"Foo",
+				[]byte(contract),
+			),
+		},
+		Context{
+			Interface: newRuntimeInterface(),
 			Location:  nextTransactionLocation(),
 		},
 	)
