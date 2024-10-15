@@ -11485,25 +11485,81 @@ func TestResultRedeclared(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewTestInterpreterRuntime()
+	t.Run("function", func(t *testing.T) {
 
-	script := []byte(`
-      access(all) fun main(): Int { let result = 1; return result }
-    `)
+		t.Parallel()
 
-	runtimeInterface := &TestRuntimeInterface{}
+		runtime := NewTestInterpreterRuntime()
 
-	nextScriptLocation := NewScriptLocationGenerator()
+		script := []byte(`
+          access(all) fun main(): Int {
+              let result = 1
+              return result
+          }
+        `)
 
-	_, err := runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextScriptLocation(),
-		},
-	)
-	require.NoError(t, err)
+		runtimeInterface := &TestRuntimeInterface{}
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("method with inherited post-condition using result", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewTestInterpreterRuntime()
+
+		script := []byte(`
+          access(all)
+          struct interface SI {
+              access(all)
+              fun test(): Int {
+                  post {
+                      result == 1
+                  }
+              }
+          }
+
+          access(all)
+          struct S: SI {
+
+              access(all)
+              fun test(): Int {
+                  let result = 1
+                  return result
+              }
+          }
+
+          access(all) fun main(): Int {
+			  return S().test()
+          }
+        `)
+
+		runtimeInterface := &TestRuntimeInterface{}
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
 
 }
