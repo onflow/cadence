@@ -39,9 +39,10 @@ import (
 //	    | /* no execute or postConditions */
 //	    )
 //	    '}'
-func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionDeclaration, error) {
+func parseTransactionDeclaration(p *parser, startComments []*ast.Comment) (*ast.TransactionDeclaration, error) {
 
-	startPos := p.current.StartPos
+	startToken := p.current
+	startPos := startToken.StartPos
 
 	// Skip the `transaction` keyword
 	p.nextSemanticToken()
@@ -58,7 +59,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		}
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	_, err = p.mustOne(lexer.TokenBraceOpen)
 	if err != nil {
 		return nil, err
@@ -76,14 +77,14 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var prepare *ast.SpecialFunctionDeclaration
 	var execute *ast.SpecialFunctionDeclaration
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	if p.current.Is(lexer.TokenIdentifier) {
 
 		keyword := p.currentTokenSource()
 
 		switch string(keyword) {
 		case KeywordPrepare:
-			identifier := p.tokenToIdentifier(p.current)
+			identifierToken := p.current
 			// Skip the `prepare` keyword
 			p.next()
 			prepare, err = parseSpecialFunctionDeclaration(
@@ -95,8 +96,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 				nil,
 				nil,
 				nil,
-				identifier,
-				"",
+				identifierToken,
 			)
 			if err != nil {
 				return nil, err
@@ -123,7 +123,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	var preConditions *ast.Conditions
 
 	if execute == nil {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		if p.isToken(p.current, lexer.TokenIdentifier, KeywordPre) {
 			// Skip the `pre` keyword
 			p.next()
@@ -145,7 +145,7 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 	sawPost := false
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
@@ -196,6 +196,10 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		}
 	}
 
+	var leadingComments []*ast.Comment
+	leadingComments = append(leadingComments, startComments...)
+	leadingComments = append(leadingComments, startToken.Comments.Leading...)
+
 	return ast.NewTransactionDeclaration(
 		p.memoryGauge,
 		parameterList,
@@ -204,20 +208,21 @@ func parseTransactionDeclaration(p *parser, docString string) (*ast.TransactionD
 		preConditions,
 		postConditions,
 		execute,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			endPos,
 		),
+		ast.Comments{
+			Leading: leadingComments,
+		},
 	), nil
 }
 
 func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err error) {
 	for {
-		_, docString := p.parseTrivia(triviaOptions{
-			skipNewlines:    true,
-			parseDocStrings: true,
+		p.skipSpaceWithOptions(skipSpaceOptions{
+			skipNewlines: true,
 		})
 
 		switch p.current.Type {
@@ -238,7 +243,7 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 					nil,
 					nil,
 					nil,
-					docString,
+					nil,
 				)
 				if err != nil {
 					return nil, err
@@ -258,7 +263,8 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration, err erro
 }
 
 func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error) {
-	identifier := p.tokenToIdentifier(p.current)
+	identifierToken := p.current
+	identifier := p.tokenToIdentifier(identifierToken)
 
 	// Skip the `execute` keyword
 	p.nextSemanticToken()
@@ -271,7 +277,7 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 	return ast.NewSpecialFunctionDeclaration(
 		p.memoryGauge,
 		common.DeclarationKindExecute,
-		ast.NewFunctionDeclaration(
+		ast.NewFunctionDeclarationWithComments(
 			p.memoryGauge,
 			ast.AccessNotSpecified,
 			ast.FunctionPurityUnspecified,
@@ -288,7 +294,9 @@ func parseTransactionExecute(p *parser) (*ast.SpecialFunctionDeclaration, error)
 				nil,
 			),
 			identifier.Pos,
-			"",
+			ast.Comments{
+				Leading: identifierToken.Leading,
+			},
 		),
 	), nil
 }

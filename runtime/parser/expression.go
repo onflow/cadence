@@ -360,7 +360,7 @@ func init() {
 				literal,
 				literal[2:],
 				common.IntegerLiteralKindBinary,
-				token.Range,
+				token,
 			), nil
 		},
 	})
@@ -374,7 +374,7 @@ func init() {
 				literal,
 				literal[2:],
 				common.IntegerLiteralKindOctal,
-				token.Range,
+				token,
 			), nil
 		},
 	})
@@ -388,7 +388,7 @@ func init() {
 				literal,
 				literal,
 				common.IntegerLiteralKindDecimal,
-				token.Range,
+				token,
 			), nil
 		},
 	})
@@ -402,7 +402,7 @@ func init() {
 				literal,
 				literal[2:],
 				common.IntegerLiteralKindHexadecimal,
-				token.Range,
+				token,
 			), nil
 		},
 	})
@@ -416,7 +416,7 @@ func init() {
 				literal,
 				literal[2:],
 				common.IntegerLiteralKindUnknown,
-				token.Range,
+				token,
 			), nil
 		},
 	})
@@ -597,7 +597,7 @@ func defineLessThanOrTypeArgumentsExpression() {
 					return err
 				}
 
-				p.skipSpaceAndComments()
+				p.skipSpace()
 				parenOpenToken, err := p.mustOne(lexer.TokenParenOpen)
 				if err != nil {
 					return err
@@ -832,7 +832,7 @@ func defineIdentifierExpression() {
 				current := p.current
 				cursor := p.tokens.Cursor()
 
-				p.skipSpaceAndComments()
+				p.skipSpace()
 
 				if p.isToken(p.current, lexer.TokenIdentifier, KeywordFun) {
 					// skip the `fun` keyword
@@ -965,7 +965,7 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	if !p.isToken(p.current, lexer.TokenIdentifier, KeywordTo) {
 		return nil, p.syntaxError(
@@ -982,7 +982,7 @@ func parseAttachExpressionRemainder(p *parser, token lexer.Token) (*ast.AttachEx
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	return ast.NewAttachExpression(p.memoryGauge, base, attachment, token.StartPos), nil
 }
@@ -1017,7 +1017,7 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 	atEnd := false
 	expectArgument := true
 	for !atEnd {
-		p.skipSpaceAndComments()
+		p.skipSpace()
 
 		switch p.current.Type {
 		case lexer.TokenComma:
@@ -1057,7 +1057,7 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 				return nil, ast.EmptyPosition, err
 			}
 
-			p.skipSpaceAndComments()
+			p.skipSpace()
 
 			argument.TrailingSeparatorPos = p.current.StartPos
 
@@ -1081,7 +1081,7 @@ func parseArgument(p *parser) (*ast.Argument, error) {
 		return nil, err
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 
 	// If a colon follows the expression, the expression was our label.
 	if p.current.Is(lexer.TokenColon) {
@@ -1122,7 +1122,7 @@ func defineNestedExpression() {
 	setExprNullDenotation(
 		lexer.TokenParenOpen,
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
-			p.skipSpaceAndComments()
+			p.skipSpace()
 
 			// special case: parse a Void literal `()`
 			if p.current.Type == lexer.TokenParenClose {
@@ -1148,11 +1148,11 @@ func defineArrayExpression() {
 	setExprNullDenotation(
 		lexer.TokenBracketOpen,
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
-			p.skipSpaceAndComments()
+			p.skipSpace()
 
 			var values []ast.Expression
 			for !p.current.Is(lexer.TokenBracketClose) {
-				p.skipSpaceAndComments()
+				p.skipSpace()
 				if len(values) > 0 {
 					if !p.current.Is(lexer.TokenComma) {
 						break
@@ -1189,11 +1189,11 @@ func defineDictionaryExpression() {
 	setExprNullDenotation(
 		lexer.TokenBraceOpen,
 		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
-			p.skipSpaceAndComments()
+			p.skipSpace()
 
 			var entries []ast.DictionaryEntry
 			for !p.current.Is(lexer.TokenBraceClose) {
-				p.skipSpaceAndComments()
+				p.skipSpace()
 				if len(entries) > 0 {
 					if !p.current.Is(lexer.TokenComma) {
 						break
@@ -1370,7 +1370,7 @@ func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, option
 
 	if p.current.Is(lexer.TokenSpace) {
 		errorPos := p.current.StartPos
-		p.skipSpaceAndComments()
+		p.skipSpace()
 		p.report(NewSyntaxError(
 			errorPos,
 			"invalid whitespace after %s",
@@ -1438,7 +1438,7 @@ func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 		p.expressionDepth--
 	}()
 
-	p.skipSpaceAndComments()
+	p.skipSpace()
 	t := p.current
 	p.next()
 
@@ -1453,7 +1453,7 @@ func parseExpression(p *parser, rightBindingPower int) (ast.Expression, error) {
 		// Some left denotations do not support newlines before them,
 		// to avoid ambiguities and potential underhanded code
 
-		p.parseTrivia(triviaOptions{
+		p.skipSpaceWithOptions(skipSpaceOptions{
 			skipNewlines: false,
 		})
 
@@ -1730,7 +1730,7 @@ func parseHex(r rune) rune {
 	return -1
 }
 
-func parseIntegerLiteral(p *parser, literal, text []byte, kind common.IntegerLiteralKind, tokenRange ast.Range) *ast.IntegerExpression {
+func parseIntegerLiteral(p *parser, literal, text []byte, kind common.IntegerLiteralKind, token lexer.Token) *ast.IntegerExpression {
 
 	report := func(invalidKind InvalidNumberLiteralKind) {
 		p.report(
@@ -1739,7 +1739,7 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind common.IntegerLit
 				InvalidIntegerLiteralKind: invalidKind,
 				// NOTE: not using text, because it has the base-prefix stripped
 				Literal: string(literal),
-				Range:   tokenRange,
+				Range:   token.Range,
 			},
 		)
 	}
@@ -1789,7 +1789,7 @@ func parseIntegerLiteral(p *parser, literal, text []byte, kind common.IntegerLit
 		value = new(big.Int)
 	}
 
-	return ast.NewIntegerExpression(p.memoryGauge, literal, value, base, tokenRange)
+	return ast.NewIntegerExpression(p.memoryGauge, literal, value, base, token.Range, token.Comments)
 }
 
 func parseFixedPointPart(gauge common.MemoryGauge, part string) (integer *big.Int, scale uint) {

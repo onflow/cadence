@@ -33,6 +33,7 @@ type ImportDeclaration struct {
 	Identifiers []Identifier
 	Range
 	LocationPos Position
+	Comments
 }
 
 var _ Element = &ImportDeclaration{}
@@ -44,6 +45,7 @@ func NewImportDeclaration(
 	location common.Location,
 	declRange Range,
 	locationPos Position,
+	comments Comments,
 ) *ImportDeclaration {
 	common.UseMemory(gauge, common.ImportDeclarationMemoryUsage)
 
@@ -52,6 +54,7 @@ func NewImportDeclaration(
 		Location:    location,
 		Range:       declRange,
 		LocationPos: locationPos,
+		Comments:    comments,
 	}
 }
 

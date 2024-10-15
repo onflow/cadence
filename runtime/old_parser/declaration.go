@@ -100,7 +100,7 @@ func parseDeclaration(p *parser, docString string) (ast.Declaration, error) {
 					accessPos,
 					staticPos,
 					nativePos,
-					docString,
+					"",
 				)
 
 			case keywordImport:
@@ -415,7 +415,7 @@ func parseVariableDeclaration(
 		startPos,
 		secondTransfer,
 		secondValue,
-		docString,
+		ast.Comments{},
 	)
 
 	castingExpression, leftIsCasting := value.(*ast.CastingExpression)
@@ -698,6 +698,7 @@ func parseImportDeclaration(p *parser) (*ast.ImportDeclaration, error) {
 			endPos,
 		),
 		locationPos,
+		ast.Comments{},
 	), nil
 }
 
@@ -819,12 +820,12 @@ func parseEventDeclaration(
 		identifier,
 		nil,
 		members,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			parameterList.EndPos,
 		),
+		ast.Comments{},
 	), nil
 }
 
@@ -910,12 +911,12 @@ func parseFieldWithVariableKind(
 		variableKind,
 		identifier,
 		typeAnnotation,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
+		ast.Comments{},
 	), nil
 }
 
@@ -1059,8 +1060,8 @@ func parseCompositeOrInterfaceDeclaration(
 			identifier,
 			conformances,
 			members,
-			docString,
 			declarationRange,
+			ast.Comments{},
 		), nil
 	}
 }
@@ -1465,12 +1466,12 @@ func parseFieldDeclarationWithoutVariableKind(
 		ast.VariableKindNotSpecified,
 		identifier,
 		typeAnnotation,
-		docString,
 		ast.NewRange(
 			p.memoryGauge,
 			startPos,
 			typeAnnotation.EndPosition(p.memoryGauge),
 		),
+		ast.Comments{},
 	), nil
 }
 
