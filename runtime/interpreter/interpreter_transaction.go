@@ -129,9 +129,9 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 				}
 			}
 
-			var preConditions ast.Conditions
+			var preConditions []ast.Condition
 			if declaration.PreConditions != nil {
-				preConditions = *declaration.PreConditions
+				preConditions = declaration.PreConditions.Conditions
 			}
 
 			declarationLocationRange := LocationRange{

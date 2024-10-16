@@ -11480,3 +11480,86 @@ func TestRuntimeStorageEnumAsDictionaryKey(t *testing.T) {
 		loggedMessages,
 	)
 }
+
+func TestResultRedeclared(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewTestInterpreterRuntime()
+
+		script := []byte(`
+          access(all) fun main(): Int {
+              let result = 1
+              return result
+          }
+        `)
+
+		runtimeInterface := &TestRuntimeInterface{}
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+	t.Run("method with inherited post-condition using result", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewTestInterpreterRuntime()
+
+		script := []byte(`
+          access(all)
+          struct interface SI {
+              access(all)
+              fun test(): Int {
+                  post {
+                      result == 2
+                  }
+              }
+          }
+
+          access(all)
+          struct S: SI {
+
+              access(all)
+              fun test(): Int {
+                  let result = 1
+                  return 2  // return a different value than the local variable
+              }
+          }
+
+          access(all) fun main(): Int {
+			  return S().test()
+          }
+        `)
+
+		runtimeInterface := &TestRuntimeInterface{}
+
+		nextScriptLocation := NewScriptLocationGenerator()
+
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextScriptLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
+
+}
