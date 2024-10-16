@@ -1067,3 +1067,347 @@ func TestInterpretMetaTypeIsRecovered(t *testing.T) {
 		require.ErrorIs(t, err, importErr)
 	})
 }
+
+func TestInterpretMetaTypeAddress(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("built-in", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let type = Type<Int>()
+          let address = type.address
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.Nil,
+			inter.Globals.Get("address").GetValue(inter),
+		)
+	})
+
+	t.Run("address location", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun test(): Address? {
+              let type = CompositeType("A.0000000000000001.X.Y")!
+              return type.address
+          }
+        `)
+
+		addressLocation := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{0x1}),
+			Name:    "X",
+		}
+
+		inter.SharedState.Config.ImportLocationHandler =
+			func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
+				elaboration := sema.NewElaboration(nil)
+				elaboration.SetCompositeType(
+					addressLocation.TypeID(nil, "X.Y"),
+					&sema.CompositeType{
+						Location: addressLocation,
+						Kind:     common.CompositeKindStructure,
+					},
+				)
+				return interpreter.VirtualImport{
+					Elaboration: elaboration,
+				}
+			}
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredAddressValueFromBytes([]byte{0x1}),
+			),
+			result,
+		)
+	})
+
+	t.Run("string location", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun test(): Address? {
+		      let type = CompositeType("S.test2.X.Y")!
+              return type.address
+          }
+        `)
+
+		stringLocation := common.StringLocation("test2")
+
+		inter.SharedState.Config.ImportLocationHandler =
+			func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
+				elaboration := sema.NewElaboration(nil)
+				elaboration.SetCompositeType(
+					stringLocation.TypeID(nil, "X.Y"),
+					&sema.CompositeType{
+						Location: stringLocation,
+						Kind:     common.CompositeKindStructure,
+					},
+				)
+				return interpreter.VirtualImport{
+					Elaboration: elaboration,
+				}
+			}
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.Nil,
+			result,
+		)
+	})
+
+	t.Run("unknown", func(t *testing.T) {
+
+		t.Parallel()
+
+		valueDeclarations := []stdlib.StandardLibraryValue{
+			{
+				Name: "unknownType",
+				Type: sema.MetaType,
+				Value: interpreter.TypeValue{
+					Type: nil,
+				},
+				Kind: common.DeclarationKindConstant,
+			},
+		}
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		for _, valueDeclaration := range valueDeclarations {
+			baseValueActivation.DeclareValue(valueDeclaration)
+		}
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		for _, valueDeclaration := range valueDeclarations {
+			interpreter.Declare(baseActivation, valueDeclaration)
+		}
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+	         let address = unknownType.address
+	       `,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+				Config: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.Nil,
+			inter.Globals.Get("address").GetValue(inter),
+		)
+	})
+}
+
+func TestInterpretMetaTypeContractName(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("built-in", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let type = Type<Int>()
+          let contractName = type.contractName
+        `)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.Nil,
+			inter.Globals.Get("contractName").GetValue(inter),
+		)
+	})
+
+	t.Run("address location", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun test(): String? {
+              let type = CompositeType("A.0000000000000001.X.Y")!
+              return type.contractName
+          }
+        `)
+
+		addressLocation := common.AddressLocation{
+			Address: common.MustBytesToAddress([]byte{0x1}),
+			Name:    "X",
+		}
+
+		yType := &sema.CompositeType{
+			Location:   addressLocation,
+			Kind:       common.CompositeKindStructure,
+			Identifier: "Y",
+		}
+		xType := &sema.CompositeType{
+			Location:   addressLocation,
+			Kind:       common.CompositeKindContract,
+			Identifier: "X",
+		}
+		xType.SetNestedType("Y", yType)
+		yType.SetContainerType(xType)
+
+		inter.SharedState.Config.ImportLocationHandler =
+			func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
+				elaboration := sema.NewElaboration(nil)
+				elaboration.SetCompositeType(
+					addressLocation.TypeID(nil, "X"),
+					xType,
+				)
+				elaboration.SetCompositeType(
+					addressLocation.TypeID(nil, "X.Y"),
+					yType,
+				)
+				return interpreter.VirtualImport{
+					Elaboration: elaboration,
+				}
+			}
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredStringValue("X"),
+			),
+			result,
+		)
+	})
+
+	t.Run("string location", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          fun test(): String? {
+		      let type = CompositeType("S.test2.X.Y")!
+              return type.contractName
+          }
+        `)
+
+		stringLocation := common.StringLocation("test2")
+
+		yType := &sema.CompositeType{
+			Location:   stringLocation,
+			Kind:       common.CompositeKindStructure,
+			Identifier: "Y",
+		}
+		xType := &sema.CompositeType{
+			Location:   stringLocation,
+			Kind:       common.CompositeKindContract,
+			Identifier: "X",
+		}
+		xType.SetNestedType("Y", yType)
+		yType.SetContainerType(xType)
+
+		inter.SharedState.Config.ImportLocationHandler =
+			func(_ *interpreter.Interpreter, _ common.Location) interpreter.Import {
+				elaboration := sema.NewElaboration(nil)
+				elaboration.SetCompositeType(
+					stringLocation.TypeID(nil, "X"),
+					xType,
+				)
+				elaboration.SetCompositeType(
+					stringLocation.TypeID(nil, "X.Y"),
+					yType,
+				)
+				return interpreter.VirtualImport{
+					Elaboration: elaboration,
+				}
+			}
+
+		result, err := inter.Invoke("test")
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.NewUnmeteredSomeValueNonCopying(
+				interpreter.NewUnmeteredStringValue("X"),
+			),
+			result,
+		)
+	})
+
+	t.Run("unknown", func(t *testing.T) {
+
+		t.Parallel()
+
+		valueDeclarations := []stdlib.StandardLibraryValue{
+			{
+				Name: "unknownType",
+				Type: sema.MetaType,
+				Value: interpreter.TypeValue{
+					Type: nil,
+				},
+				Kind: common.DeclarationKindConstant,
+			},
+		}
+
+		baseValueActivation := sema.NewVariableActivation(sema.BaseValueActivation)
+		for _, valueDeclaration := range valueDeclarations {
+			baseValueActivation.DeclareValue(valueDeclaration)
+		}
+
+		baseActivation := activations.NewActivation(nil, interpreter.BaseActivation)
+		for _, valueDeclaration := range valueDeclarations {
+			interpreter.Declare(baseActivation, valueDeclaration)
+		}
+
+		inter, err := parseCheckAndInterpretWithOptions(t,
+			`
+	         let contractName = unknownType.contractName
+	       `,
+			ParseCheckAndInterpretOptions{
+				CheckerConfig: &sema.Config{
+					BaseValueActivationHandler: func(_ common.Location) *sema.VariableActivation {
+						return baseValueActivation
+					},
+				},
+				Config: &interpreter.Config{
+					BaseActivationHandler: func(_ common.Location) *interpreter.VariableActivation {
+						return baseActivation
+					},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		AssertValuesEqual(
+			t,
+			inter,
+			interpreter.Nil,
+			inter.Globals.Get("contractName").GetValue(inter),
+		)
+	})
+}

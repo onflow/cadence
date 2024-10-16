@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"strings"
+
 	"github.com/onflow/atree"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -172,6 +174,86 @@ func (v TypeValue) GetMember(interpreter *Interpreter, _ LocationRange, name str
 		}
 
 		return AsBoolValue(elaboration.IsRecovered)
+
+	case sema.MetaTypeAddressFieldName:
+		staticType := v.Type
+		if staticType == nil {
+			return Nil
+		}
+
+		var location common.Location
+
+		switch staticType := staticType.(type) {
+		case *CompositeStaticType:
+			location = staticType.Location
+
+		case *InterfaceStaticType:
+			location = staticType.Location
+
+		default:
+			return Nil
+		}
+
+		addressLocation, ok := location.(common.AddressLocation)
+		if !ok {
+			return Nil
+		}
+
+		addressValue := NewAddressValue(
+			interpreter,
+			addressLocation.Address,
+		)
+		return NewSomeValueNonCopying(
+			interpreter,
+			addressValue,
+		)
+
+	case sema.MetaTypeContractNameFieldName:
+		staticType := v.Type
+		if staticType == nil {
+			return Nil
+		}
+
+		var location common.Location
+		var qualifiedIdentifier string
+
+		switch staticType := staticType.(type) {
+		case *CompositeStaticType:
+			location = staticType.Location
+			qualifiedIdentifier = staticType.QualifiedIdentifier
+
+		case *InterfaceStaticType:
+			location = staticType.Location
+			qualifiedIdentifier = staticType.QualifiedIdentifier
+
+		default:
+			return Nil
+		}
+
+		switch location.(type) {
+		case common.AddressLocation,
+			common.StringLocation:
+
+			separatorIndex := strings.Index(qualifiedIdentifier, ".")
+			contractNameLength := len(qualifiedIdentifier)
+			if separatorIndex >= 0 {
+				contractNameLength = separatorIndex
+			}
+
+			contractNameValue := NewStringValue(
+				interpreter,
+				common.NewStringMemoryUsage(contractNameLength),
+				func() string {
+					return qualifiedIdentifier[0:contractNameLength]
+				},
+			)
+
+			return NewSomeValueNonCopying(interpreter, contractNameValue)
+
+		default:
+			return Nil
+		}
+
 	}
 
 	return nil

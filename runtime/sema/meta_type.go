@@ -69,6 +69,26 @@ const metaTypeIsRecoveredFieldDocString = `
 The type was defined through a recovered program
 `
 
+const MetaTypeAddressFieldName = "address"
+
+var MetaTypeAddressFieldType = &OptionalType{
+	Type: TheAddressType,
+}
+
+const metaTypeAddressFieldDocString = `
+The address of the type, if it was declared in a contract deployed to an account
+`
+
+const MetaTypeContractNameFieldName = "contractName"
+
+var MetaTypeContractNameFieldType = &OptionalType{
+	Type: StringType,
+}
+
+const metaTypeContractNameFieldDocString = `
+The contract name of the type, if it was declared in a contract
+`
+
 func init() {
 	MetaType.Members = func(t *SimpleType) map[string]MemberResolver {
 		return MembersAsResolvers([]*Member{
@@ -89,6 +109,18 @@ func init() {
 				MetaTypeIsRecoveredFieldName,
 				MetaTypeIsRecoveredFieldType,
 				metaTypeIsRecoveredFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				MetaTypeAddressFieldName,
+				MetaTypeAddressFieldType,
+				metaTypeAddressFieldDocString,
+			),
+			NewUnmeteredPublicConstantFieldMember(
+				t,
+				MetaTypeContractNameFieldName,
+				MetaTypeContractNameFieldType,
+				metaTypeContractNameFieldDocString,
 			),
 		})
 	}

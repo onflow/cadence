@@ -317,6 +317,27 @@ func TestCheckMetaTypeIsRecovered(t *testing.T) {
       let type: Type = Type<Int>()
       let isRecovered: Bool = type.isRecovered
     `)
+	require.NoError(t, err)
+}
 
+func TestCheckMetaTypeAddress(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      let type: Type = Type<Int>()
+      let address: Address = type.address!
+    `)
+	require.NoError(t, err)
+}
+
+func TestCheckMetaTypeContractName(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      let type: Type = Type<Int>()
+      let contractName: String = type.contractName!
+    `)
 	require.NoError(t, err)
 }
