@@ -83,6 +83,7 @@ const (
 	// - BoolExpression
 	// - NilExpression
 	// - StringExpression
+	// - StringTemplateExpression
 	// - IntegerExpression
 	// - FixedPointExpression
 	// - ArrayExpression

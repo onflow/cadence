@@ -697,3 +697,94 @@ func TestCheckStringCount(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestCheckStringTemplate(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid, int", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			let a = 1
+			let x: String = "The value of a is: \(a)" 
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("valid, string", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			let a = "abc def"
+			let x: String = "\(a) ghi" 
+		`)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid, struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all)
+			struct SomeStruct {}
+			let a = SomeStruct()
+			let x: String = "\(a)" 
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errs[0])
+	})
+
+	t.Run("invalid, array", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			let x: [AnyStruct] = ["tmp", 1]
+			let y = "\(x)"
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errs[0])
+	})
+
+	t.Run("invalid, missing variable", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			let x: String = "\(a)" 
+		`)
+
+		errs := RequireCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errs[1])
+	})
+
+	t.Run("invalid, resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+			access(all) resource TestResource {}
+			fun test(): String {
+				var x <- create TestResource()
+				var y = "\(x)"
+				destroy x
+				return y
+			} 
+		`)
+
+		errs := RequireCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errs[0])
+	})
+}

@@ -433,19 +433,6 @@ func init() {
 		},
 	})
 
-	defineExpr(literalExpr{
-		tokenType: lexer.TokenString,
-		nullDenotation: func(p *parser, token lexer.Token) (ast.Expression, error) {
-			literal := p.tokenSource(token)
-			parsedString := parseStringLiteral(p, literal)
-			return ast.NewStringExpression(
-				p.memoryGauge,
-				parsedString,
-				token.Range,
-			), nil
-		},
-	})
-
 	defineExpr(prefixExpr{
 		tokenType:    lexer.TokenMinus,
 		bindingPower: exprLeftBindingPowerUnaryPrefix,
@@ -510,6 +497,7 @@ func init() {
 	defineNestedExpression()
 	defineInvocationExpression()
 	defineArrayExpression()
+	defineStringExpression()
 	defineDictionaryExpression()
 	defineIndexExpression()
 	definePathExpression()
@@ -1140,6 +1128,107 @@ func defineNestedExpression() {
 
 			_, err = p.mustOne(lexer.TokenParenClose)
 			return expression, err
+		},
+	)
+}
+
+func defineStringExpression() {
+	setExprNullDenotation(
+		lexer.TokenString,
+		func(p *parser, startToken lexer.Token) (ast.Expression, error) {
+			var literals []string
+			var values []ast.Expression
+			curToken := startToken
+			endToken := startToken
+
+			// check for start " of string literal
+			literal := p.tokenSource(curToken)
+			length := len(literal)
+			if length == 0 {
+				p.reportSyntaxError("invalid end of string literal: missing '\"'")
+				return ast.NewStringExpression(
+					p.memoryGauge,
+					"",
+					startToken.Range,
+				), nil
+			}
+
+			if length >= 1 {
+				first := literal[0]
+				if first != '"' {
+					p.reportSyntaxError("invalid start of string literal: expected '\"', got %q", first)
+				}
+			}
+
+			// flag for ending " check
+			missingEnd := true
+
+			for curToken.Is(lexer.TokenString) {
+				literal = p.tokenSource(curToken)
+
+				// remove quotation marks if they exist
+				if curToken == startToken {
+					literal = literal[1:]
+				}
+
+				length = len(literal)
+				if length >= 1 && literal[length-1] == '"' {
+					literal = literal[:length-1]
+					missingEnd = false
+				}
+
+				parsedString := parseStringLiteralContent(p, literal)
+				literals = append(literals, parsedString)
+				endToken = curToken
+
+				// parser already points to next token
+				curToken = p.current
+				if curToken.Is(lexer.TokenStringTemplate) {
+					// advance to the expression
+					p.next()
+					value, err := parseExpression(p, lowestBindingPower)
+					// consider invalid expression first
+					if err != nil {
+						return nil, err
+					}
+					// limit string templates to identifiers only
+					if _, ok := value.(*ast.IdentifierExpression); !ok {
+						return nil, p.syntaxError("expected identifier got: %s", value.String())
+					}
+					_, err = p.mustOne(lexer.TokenParenClose)
+					if err != nil {
+						return nil, err
+					}
+					values = append(values, value)
+					// parser already points to next token
+					curToken = p.current
+					// safely call next because this should always be a string
+					p.next()
+					missingEnd = true
+				}
+			}
+
+			// check for end " of string literal
+			if missingEnd {
+				p.reportSyntaxError("invalid end of string literal: missing '\"'")
+			}
+
+			if len(values) == 0 {
+				return ast.NewStringExpression(
+					p.memoryGauge,
+					literals[0], // must exist
+					startToken.Range,
+				), nil
+			} else {
+				return ast.NewStringTemplateExpression(
+					p.memoryGauge,
+					literals, values,
+					ast.NewRange(p.memoryGauge,
+						startToken.StartPos,
+						endToken.EndPos),
+				), nil
+			}
+
 		},
 	)
 }
