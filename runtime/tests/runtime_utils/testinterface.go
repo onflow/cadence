@@ -121,6 +121,7 @@ type TestRuntimeInterface struct {
 	OnComputationUsed                func() (uint64, error)
 	OnMemoryUsed                     func() (uint64, error)
 	OnInteractionUsed                func() (uint64, error)
+	OnComputationRemaining           func(kind common.ComputationKind) uint
 	OnGenerateAccountID              func(address common.Address) (uint64, error)
 	OnRecoverProgram                 func(program *ast.Program, location common.Location) ([]byte, error)
 	OnValidateAccountCapabilitiesGet func(
