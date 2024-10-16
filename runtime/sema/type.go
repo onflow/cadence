@@ -312,7 +312,7 @@ func TypeActivationNestedType(typeActivation *VariableActivation, qualifiedIdent
 	return ty
 }
 
-// allow all types to specify interface conformances
+// ConformingType is a type that can conform to interfaces
 type ConformingType interface {
 	Type
 	EffectiveInterfaceConformanceSet() *InterfaceSet
@@ -1196,11 +1196,6 @@ type NumericType struct {
 	memberResolversOnce  sync.Once
 	saturatingArithmetic SaturatingArithmeticSupport
 	isSuperType          bool
-
-	// allow numeric types to conform to interfaces
-	conformances                         []*InterfaceType
-	effectiveInterfaceConformanceSet     *InterfaceSet
-	effectiveInterfaceConformanceSetOnce sync.Once
 }
 
 var _ Type = &NumericType{}
@@ -1210,9 +1205,6 @@ var _ SaturatingArithmeticType = &NumericType{}
 func NewNumericType(typeName string) *NumericType {
 	return &NumericType{
 		name: typeName,
-		conformances: []*InterfaceType{
-			StructStringerType,
-		},
 	}
 }
 
@@ -1391,19 +1383,15 @@ func (*NumericType) CheckInstantiated(_ ast.HasPosition, _ common.MemoryGauge, _
 	// NO-OP
 }
 
-func (t *NumericType) EffectiveInterfaceConformanceSet() *InterfaceSet {
-	t.initializeEffectiveInterfaceConformanceSet()
-	return t.effectiveInterfaceConformanceSet
+var numericTypeEffectiveInterfaceConformanceSet *InterfaceSet
+
+func init() {
+	numericTypeEffectiveInterfaceConformanceSet = NewInterfaceSet()
+	numericTypeEffectiveInterfaceConformanceSet.Add(StructStringerType)
 }
 
-func (t *NumericType) initializeEffectiveInterfaceConformanceSet() {
-	t.effectiveInterfaceConformanceSetOnce.Do(func() {
-		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
-
-		for _, conformance := range t.conformances {
-			t.effectiveInterfaceConformanceSet.Add(conformance)
-		}
-	})
+func (t *NumericType) EffectiveInterfaceConformanceSet() *InterfaceSet {
+	return numericTypeEffectiveInterfaceConformanceSet
 }
 
 // FixedPointNumericType represents all the types in the fixed-point range.
@@ -7276,18 +7264,11 @@ const AddressTypeName = "Address"
 
 // AddressType represents the address type
 type AddressType struct {
-	memberResolvers                      map[string]MemberResolver
-	memberResolversOnce                  sync.Once
-	conformances                         []*InterfaceType
-	effectiveInterfaceConformanceSet     *InterfaceSet
-	effectiveInterfaceConformanceSetOnce sync.Once
+	memberResolvers     map[string]MemberResolver
+	memberResolversOnce sync.Once
 }
 
-var TheAddressType = &AddressType{
-	conformances: []*InterfaceType{
-		StructStringerType,
-	},
-}
+var TheAddressType = &AddressType{}
 var AddressTypeAnnotation = NewTypeAnnotation(TheAddressType)
 
 var _ Type = &AddressType{}
@@ -7432,19 +7413,14 @@ func (t *AddressType) initializeMemberResolvers() {
 	})
 }
 
-func (t *AddressType) EffectiveInterfaceConformanceSet() *InterfaceSet {
-	t.initializeEffectiveInterfaceConformanceSet()
-	return t.effectiveInterfaceConformanceSet
+var addressTypeEffectiveInterfaceConformanceSet *InterfaceSet
+
+func init() {
+	addressTypeEffectiveInterfaceConformanceSet = NewInterfaceSet()
+	addressTypeEffectiveInterfaceConformanceSet.Add(StructStringerType)
 }
-
-func (t *AddressType) initializeEffectiveInterfaceConformanceSet() {
-	t.effectiveInterfaceConformanceSetOnce.Do(func() {
-		t.effectiveInterfaceConformanceSet = NewInterfaceSet()
-
-		for _, conformance := range t.conformances {
-			t.effectiveInterfaceConformanceSet.Add(conformance)
-		}
-	})
+func (t *AddressType) AddressInterfaceConformanceSet() *InterfaceSet {
+	return numericTypeEffectiveInterfaceConformanceSet
 }
 
 func IsPrimitiveOrContainerOfPrimitive(referencedType Type) bool {
@@ -9572,12 +9548,7 @@ func extractNativeTypes(
 			}
 
 			nestedTypes.Foreach(func(_ string, nestedType Type) {
-				nestedCompositeType, ok := nestedType.(*CompositeType)
-				if !ok {
-					return
-				}
-
-				types = append(types, nestedCompositeType)
+				types = append(types, nestedType)
 			})
 		case *InterfaceType:
 			NativeInterfaceTypes[actualType.QualifiedIdentifier()] = actualType
@@ -9588,13 +9559,10 @@ func extractNativeTypes(
 			}
 
 			nestedTypes.Foreach(func(_ string, nestedType Type) {
-				nestedInterfaceType, ok := nestedType.(*InterfaceType)
-				if !ok {
-					return
-				}
-
-				types = append(types, nestedInterfaceType)
+				types = append(types, nestedType)
 			})
+		default:
+			panic("Expected only composite or interface type")
 		}
 
 	}
