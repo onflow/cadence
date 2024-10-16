@@ -30,7 +30,7 @@ require (
 
 require (
 	github.com/SaveTheRbtz/mph v0.1.1-0.20240117162131-4166ec7869bc
-	github.com/bytecodealliance/wasmtime-go/v22 v22.0.1
+	github.com/bytecodealliance/wasmtime-go/v25 v25.0.0
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/kodova/html-to-markdown v1.0.1
 	github.com/onflow/crypto v0.25.0

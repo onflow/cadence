@@ -21,7 +21,7 @@ package runtime
 import (
 	"fmt"
 
-	"github.com/bytecodealliance/wasmtime-go/v22"
+	"github.com/bytecodealliance/wasmtime-go/v25"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
