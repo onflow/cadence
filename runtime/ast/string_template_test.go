@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-package ast_test
+package ast
 
 import (
 	"testing"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/stretchr/testify/assert"
 	"github.com/turbolent/prettier"
 )
@@ -30,14 +29,14 @@ func TestStringTemplate_Doc(t *testing.T) {
 
 	t.Parallel()
 
-	stmt := &ast.StringTemplateExpression{
+	stmt := &StringTemplateExpression{
 		Values: []string{
 			"abc",
 		},
-		Expressions: []ast.Expression{},
-		Range: ast.Range{
-			StartPos: ast.Position{Offset: 4, Line: 2, Column: 3},
-			EndPos:   ast.Position{Offset: 11, Line: 2, Column: 10},
+		Expressions: []Expression{},
+		Range: Range{
+			StartPos: Position{Offset: 4, Line: 2, Column: 3},
+			EndPos:   Position{Offset: 11, Line: 2, Column: 10},
 		},
 	}
 
