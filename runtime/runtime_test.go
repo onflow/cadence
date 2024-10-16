@@ -11526,7 +11526,7 @@ func TestResultRedeclared(t *testing.T) {
               access(all)
               fun test(): Int {
                   post {
-                      result == 1
+                      result == 2
                   }
               }
           }
@@ -11537,7 +11537,7 @@ func TestResultRedeclared(t *testing.T) {
               access(all)
               fun test(): Int {
                   let result = 1
-                  return result
+                  return 2  // return a different value than the local variable
               }
           }
 
