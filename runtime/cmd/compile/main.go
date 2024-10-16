@@ -46,7 +46,10 @@ func main() {
 	program, must := cmd.PrepareProgramFromFile(location, codes)
 
 	// standard library handler is only needed for execution, but we're only checking
-	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(nil)
+	standardLibraryValues := stdlib.DefaultScriptStandardLibraryValues(
+		nil,
+		stdlib.DefaultStandardLibraryOptions,
+	)
 
 	checker, must := cmd.PrepareChecker(
 		program,

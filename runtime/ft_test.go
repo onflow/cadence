@@ -688,10 +688,10 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 	err = runtime.ExecuteTransaction(
 		Script{
 			Source: []byte(realMintFlowTokenTransaction),
-			Arguments: encodeArgs([]cadence.Value{
+			Arguments: encodeArgs(
 				cadence.Address(senderAddress),
 				mintAmount,
-			}),
+			),
 		},
 		Context{
 			Interface:   runtimeInterface,
@@ -716,10 +716,10 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		err = runtime.ExecuteTransaction(
 			Script{
 				Source: []byte(realFlowTokenTransferTransaction),
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					sendAmount,
 					cadence.Address(receiverAddress),
-				}),
+				),
 			},
 			Context{
 				Interface:   runtimeInterface,
@@ -748,9 +748,9 @@ func BenchmarkRuntimeFungibleTokenTransfer(b *testing.B) {
 		result, err := runtime.ExecuteScript(
 			Script{
 				Source: []byte(realFlowTokenBalanceScript),
-				Arguments: encodeArgs([]cadence.Value{
+				Arguments: encodeArgs(
 					cadence.Address(address),
-				}),
+				),
 			},
 			Context{
 				Interface:   runtimeInterface,

@@ -346,7 +346,7 @@ func TestRuntimeAccountInboxUnpublishRemove(t *testing.T) {
 	nameArgument, err := cadence.NewString(strings.Repeat("x", 10_000))
 	require.NoError(t, err)
 
-	args := encodeArgs([]cadence.Value{nameArgument})
+	args := encodeArgs(nameArgument)
 
 	nextTransactionLocation := NewTransactionLocationGenerator()
 	// publish from 1 to 2
