@@ -42,9 +42,8 @@ func (checker *Checker) VisitStringTemplateExpression(stringTemplateExpression *
 
 	elementCount := len(stringTemplateExpression.Expressions)
 
-	var argumentTypes []Type
 	if elementCount > 0 {
-		argumentTypes = make([]Type, elementCount)
+		argumentTypes := make([]Type, elementCount)
 
 		for i, element := range stringTemplateExpression.Expressions {
 			valueType := checker.VisitExpression(element, stringTemplateExpression, elementType)

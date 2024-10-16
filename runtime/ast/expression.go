@@ -264,7 +264,12 @@ func (e *StringTemplateExpression) String() string {
 }
 
 func (e *StringTemplateExpression) Doc() prettier.Doc {
-	return prettier.Text(QuoteString("String template"))
+	if len(e.Expressions) == 0 {
+		return prettier.Text(e.Values[0])
+	}
+
+	// TODO: must reproduce expressions as literals
+	panic("not implemented")
 }
 
 func (e *StringTemplateExpression) MarshalJSON() ([]byte, error) {

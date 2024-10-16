@@ -52,8 +52,8 @@ type position struct {
 type lexerMode uint8
 
 const (
-	normal lexerMode = iota
-	stringInterpolation
+	lexerModeNormal lexerMode = iota
+	lexerModeStringInterpolation
 )
 
 type lexer struct {
@@ -141,7 +141,7 @@ func (l *lexer) clear() {
 	l.cursor = 0
 	l.tokens = l.tokens[:0]
 	l.tokenCount = 0
-	l.mode = normal
+	l.mode = lexerModeNormal
 	l.openBrackets = 0
 }
 
@@ -427,7 +427,7 @@ func (l *lexer) scanString(quote rune) {
 			switch r {
 			case '(':
 				// string template, stop and set mode
-				l.mode = stringInterpolation
+				l.mode = lexerModeStringInterpolation
 				// no need to update prev values because these next tokens will not backup
 				l.endOffset = tmpBackupOffset
 				l.current = tmpBackup

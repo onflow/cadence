@@ -6318,7 +6318,7 @@ func TestParseStringTemplate(t *testing.T) {
 		)
 	})
 
-	t.Run("unbalanced paren", func(t *testing.T) {
+	t.Run("invalid, unbalanced paren", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -6345,7 +6345,7 @@ func TestParseStringTemplate(t *testing.T) {
 		)
 	})
 
-	t.Run("nested templates", func(t *testing.T) {
+	t.Run("invalid, nested templates", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -6370,6 +6370,144 @@ func TestParseStringTemplate(t *testing.T) {
 			},
 			errs,
 		)
+	})
+
+	t.Run("valid, alternating", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+			"a\(b)c"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.NoError(t, err)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"a",
+				"c",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "b",
+						Pos:        ast.Position{Offset: 8, Line: 2, Column: 7},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 4, Line: 2, Column: 3},
+				EndPos:   ast.Position{Offset: 11, Line: 2, Column: 10},
+			},
+		}
+
+		utils.AssertEqualWithDiff(t, expected, actual)
+	})
+
+	t.Run("valid, surrounded", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+			"\(a)b\(c)"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.NoError(t, err)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"",
+				"b",
+				"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
+					},
+				},
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "c",
+						Pos:        ast.Position{Offset: 12, Line: 2, Column: 11},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 4, Line: 2, Column: 3},
+				EndPos:   ast.Position{Offset: 14, Line: 2, Column: 13},
+			},
+		}
+
+		utils.AssertEqualWithDiff(t, expected, actual)
+	})
+
+	t.Run("valid, adjacent", func(t *testing.T) {
+
+		t.Parallel()
+
+		actual, errs := testParseExpression(`
+			"\(a)\(b)\(c)"
+		`)
+
+		var err error
+		if len(errs) > 0 {
+			err = Error{
+				Errors: errs,
+			}
+		}
+
+		require.NoError(t, err)
+
+		expected := &ast.StringTemplateExpression{
+			Values: []string{
+				"",
+				"",
+				"",
+				"",
+			},
+			Expressions: []ast.Expression{
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Offset: 7, Line: 2, Column: 6},
+					},
+				},
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "b",
+						Pos:        ast.Position{Offset: 11, Line: 2, Column: 11},
+					},
+				},
+				&ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "c",
+						Pos:        ast.Position{Offset: 15, Line: 2, Column: 16},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 4, Line: 2, Column: 3},
+				EndPos:   ast.Position{Offset: 17, Line: 2, Column: 18},
+			},
+		}
+
+		utils.AssertEqualWithDiff(t, expected, actual)
 	})
 }
 

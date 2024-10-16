@@ -56,17 +56,17 @@ func rootState(l *lexer) stateFn {
 		case '%':
 			l.emitType(TokenPercent)
 		case '(':
-			if l.mode == stringInterpolation {
+			if l.mode == lexerModeStringInterpolation {
 				// it is necessary to balance brackets when generating tokens for string templates to know when to change modes
 				l.openBrackets++
 			}
 			l.emitType(TokenParenOpen)
 		case ')':
 			l.emitType(TokenParenClose)
-			if l.mode == stringInterpolation {
+			if l.mode == lexerModeStringInterpolation {
 				l.openBrackets--
 				if l.openBrackets == 0 {
-					l.mode = normal
+					l.mode = lexerModeNormal
 					return stringState
 				}
 			}
@@ -130,7 +130,7 @@ func rootState(l *lexer) stateFn {
 		case '"':
 			return stringState
 		case '\\':
-			if l.mode == stringInterpolation {
+			if l.mode == lexerModeStringInterpolation {
 				r = l.next()
 				switch r {
 				case '(':
