@@ -31,6 +31,9 @@ var PathType = &SimpleType{
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
+	conformances: []*InterfaceType{
+		StructStringerType,
+	},
 }
 
 var PathTypeAnnotation = NewTypeAnnotation(PathType)
@@ -48,6 +51,9 @@ var StoragePathType = &SimpleType{
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
+	conformances: []*InterfaceType{
+		StructStringerType,
+	},
 }
 
 var StoragePathTypeAnnotation = NewTypeAnnotation(StoragePathType)
@@ -65,6 +71,9 @@ var CapabilityPathType = &SimpleType{
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
+	conformances: []*InterfaceType{
+		StructStringerType,
+	},
 }
 
 var CapabilityPathTypeAnnotation = NewTypeAnnotation(CapabilityPathType)
@@ -82,6 +91,9 @@ var PublicPathType = &SimpleType{
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
+	conformances: []*InterfaceType{
+		StructStringerType,
+	},
 }
 
 var PublicPathTypeAnnotation = NewTypeAnnotation(PublicPathType)
@@ -99,6 +111,9 @@ var PrivatePathType = &SimpleType{
 	Comparable:    false,
 	Exportable:    true,
 	Importable:    true,
+	conformances: []*InterfaceType{
+		StructStringerType,
+	},
 }
 
 var PrivatePathTypeAnnotation = NewTypeAnnotation(PrivatePathType)
